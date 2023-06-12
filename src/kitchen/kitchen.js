@@ -1,8 +1,6 @@
 import {
   urlIsInsideOf,
   moveUrl,
-  getCallerPosition,
-  stringifyUrlSite,
   normalizeUrl,
   setUrlFilename,
 } from "@jsenv/urls";
@@ -12,6 +10,8 @@ import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
+import { createUrlGraph } from "./url_graph.js";
+import { createReference } from "./references.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
@@ -21,17 +21,11 @@ import {
   createTransformUrlContentError,
   createFinalizeUrlContentError,
 } from "./errors.js";
-import { GRAPH_VISITOR } from "./url_graph/url_graph_visitor.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { isWebWorkerEntryPointReference } from "./web_workers.js";
-import { prependContent } from "./prepend_content.js";
-
-const inlineContentClientFileUrl = new URL(
-  "./client/inline_content.js",
-  import.meta.url,
-).href;
 
 export const createKitchen = ({
+  name,
   signal,
   logLevel,
 
@@ -40,7 +34,7 @@ export const createKitchen = ({
   ignore,
   ignoreProtocol = "remove",
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  urlGraph,
+  urlGraph = createUrlGraph({ name }),
   dev = false,
   build = false,
   runtimeCompat,
@@ -56,7 +50,7 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  const sideEffectForwardCallbacks = [];
+  const callbacksToConsiderGraphLoaded = [];
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -110,128 +104,6 @@ export const createKitchen = ({
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
 
-  /*
-   * - "http_request"
-   * - "entry_point"
-   * - "link_href"
-   * - "style"
-   * - "script"
-   * - "a_href"
-   * - "iframe_src
-   * - "img_src"
-   * - "img_srcset"
-   * - "source_src"
-   * - "source_srcset"
-   * - "image_href"
-   * - "use_href"
-   * - "css_@import"
-   * - "css_url"
-   * - "js_import"
-   * - "js_import_script"
-   * - "js_url"
-   * - "js_inline_content"
-   * - "sourcemap_comment"
-   * - "webmanifest_icon_src"
-   * - "package_json"
-   * - "side_effect_file"
-   * */
-  const createReference = ({
-    data = {},
-    node,
-    trace,
-    parentUrl,
-    type,
-    subtype,
-    expectedContentType,
-    expectedType,
-    expectedSubtype,
-    filename,
-    integrity,
-    crossorigin,
-    specifier,
-    specifierStart,
-    specifierEnd,
-    specifierLine,
-    specifierColumn,
-    baseUrl,
-    isOriginalPosition,
-    isEntryPoint = false,
-    isResourceHint = false,
-    isImplicit = false,
-    hasVersioningEffect = false,
-    injected = false,
-    isInline = false,
-    content,
-    contentType,
-    assert,
-    assertNode,
-    typePropertyNode,
-    leadsToADirectory = false,
-    debug = false,
-  }) => {
-    if (typeof specifier !== "string") {
-      if (specifier instanceof URL) {
-        specifier = specifier.href;
-      } else {
-        throw new TypeError(`"specifier" must be a string, got ${specifier}`);
-      }
-    }
-    const reference = {
-      original: null,
-      prev: null,
-      next: null,
-      data,
-      node,
-      trace,
-      parentUrl,
-      url: null,
-      searchParams: null,
-      generatedUrl: null,
-      generatedSpecifier: null,
-      type,
-      subtype,
-      expectedContentType,
-      expectedType,
-      expectedSubtype,
-      filename,
-      integrity,
-      crossorigin,
-      specifier,
-      specifierStart,
-      specifierEnd,
-      specifierLine,
-      specifierColumn,
-      isOriginalPosition,
-      baseUrl,
-      isEntryPoint,
-      isResourceHint,
-      isImplicit,
-      hasVersioningEffect,
-      version: null,
-      injected,
-      timing: {},
-      // for inline resources the reference contains the content
-      isInline,
-      content,
-      contentType,
-      escape: null,
-      // import assertions (maybe move to data?)
-      assert,
-      assertNode,
-      typePropertyNode,
-      leadsToADirectory,
-      mutation: null,
-      debug,
-    };
-    // Object.preventExtensions(reference) // useful to ensure all properties are declared here
-    return reference;
-  };
-  const updateReference = (reference, newReference) => {
-    reference.next = newReference;
-    newReference.original = reference.original || reference;
-
-    newReference.prev = reference;
-  };
   const resolveReference = (reference, context = kitchenContext) => {
     const referenceContext = {
       ...context,
@@ -310,7 +182,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             );
           }
           const prevReference = { ...reference };
-          updateReference(prevReference, reference);
+          prevReference.becomes(reference);
           setReferenceUrl(normalizedReturnValue);
         },
       );
@@ -371,53 +243,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     sourcemapsSourcesContent,
     sourcemapsSourcesRelative,
     clientRuntimeCompat,
-    injectSourcemapPlaceholder: ({ urlInfo, specifier }) => {
-      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
-        createReference({
-          trace: {
-            message: `sourcemap comment placeholder`,
-            url: urlInfo.url,
-          },
-          type: "sourcemap_comment",
-          expectedType: "sourcemap",
-          subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-          parentUrl: urlInfo.url,
-          specifier,
-        }),
-      );
-      sourcemapUrlInfo.type = "sourcemap";
-      return [sourcemapReference, sourcemapUrlInfo];
-    },
-    foundSourcemap: ({
-      urlInfo,
-      type,
-      specifier,
-      specifierLine,
-      specifierColumn,
-    }) => {
-      const sourcemapUrlSite = adjustUrlSite(urlInfo, {
-        urlGraph,
-        url: urlInfo.url,
-        line: specifierLine,
-        column: specifierColumn,
-      });
-      const [sourcemapReference, sourcemapUrlInfo] = resolveReference(
-        createReference({
-          trace: traceFromUrlSite(sourcemapUrlSite),
-          type,
-          expectedType: "sourcemap",
-          parentUrl: urlInfo.url,
-          specifier,
-          specifierLine,
-          specifierColumn,
-        }),
-      );
-      if (sourcemapReference.isInline) {
-        sourcemapUrlInfo.isInline = true;
-      }
-      sourcemapUrlInfo.type = "sourcemap";
-      return [sourcemapReference, sourcemapUrlInfo];
-    },
   });
 
   const fetchUrlContent = async (
@@ -558,303 +383,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     };
 
     if (!urlInfo.url.startsWith("ignore:")) {
-      // references
-      const references = [];
-      const addReference = (props) => {
-        const [reference, referencedUrlInfo] = resolveReference(
-          createReference({
-            parentUrl: urlInfo.url,
-            ...props,
-          }),
-          context,
-        );
-        references.push(reference);
-        return [reference, referencedUrlInfo];
-      };
-      const mutateReference = (currentReference, newReferenceParams) => {
-        const index = references.indexOf(currentReference);
-        if (index === -1) {
-          throw new Error(`reference do not exists`);
-        }
-        const ref = createReference({
-          ...currentReference,
-          ...newReferenceParams,
-        });
-        const [newReference, newUrlInfo] = resolveReference(ref, context);
-        updateReference(currentReference, newReference);
-        references[index] = newReference;
-        const currentUrlInfo = context.urlGraph.getUrlInfo(
-          currentReference.url,
-        );
-        if (
-          currentUrlInfo &&
-          currentUrlInfo !== newUrlInfo &&
-          !urlGraph.isUsed(currentUrlInfo)
-        ) {
-          context.urlGraph.deleteUrlInfo(currentReference.url);
-        }
-        return [newReference, newUrlInfo];
-      };
-
-      const beforeFinalizeCallbacks = [];
-      context.referenceUtils = {
-        inlineContentClientFileUrl,
-        _references: references,
-        find: (predicate) => references.find(predicate),
-        readGeneratedSpecifier,
-        found: ({ trace, ...rest }) => {
-          if (trace === undefined) {
-            trace = traceFromUrlSite(
-              adjustUrlSite(urlInfo, {
-                urlGraph,
-                url: urlInfo.url,
-                line: rest.specifierLine,
-                column: rest.specifierColumn,
-              }),
-            );
-          }
-          // console.log(trace.message)
-          return addReference({
-            trace,
-            ...rest,
-          });
+      const callbacksToConsiderDishLoaded = [];
+      const stopCollectingReferences = urlInfo.references.startCollecting({
+        context,
+        onCallbackToConsiderDishLoaded: (callback) => {
+          callbacksToConsiderDishLoaded.push(callback);
         },
-        foundInline: ({
-          isOriginalPosition,
-          specifierLine,
-          specifierColumn,
-          ...rest
-        }) => {
-          const parentUrl = isOriginalPosition
-            ? urlInfo.url
-            : urlInfo.generatedUrl;
-          const parentContent = isOriginalPosition
-            ? urlInfo.originalContent
-            : urlInfo.content;
-          return addReference({
-            trace: traceFromUrlSite({
-              url: parentUrl,
-              content: parentContent,
-              line: specifierLine,
-              column: specifierColumn,
-            }),
-            isOriginalPosition,
-            specifierLine,
-            specifierColumn,
-            isInline: true,
-            ...rest,
-          });
+        onCallbackToConsiderGraphLoaded: (callback) => {
+          callbacksToConsiderGraphLoaded.push(callback);
         },
-        foundSideEffectFile: async ({ sideEffectFileUrl, trace, ...rest }) => {
-          if (trace === undefined) {
-            const { url, line, column } = getCallerPosition();
-            trace = traceFromUrlSite({
-              url,
-              line,
-              column,
-            });
-          }
-
-          const addRef = () =>
-            addReference({
-              trace,
-              type: "side_effect_file",
-              isImplicit: true,
-              injected: true,
-              specifier: sideEffectFileUrl,
-              ...rest,
-            });
-
-          const injectAsBannerCodeBeforeFinalize = (
-            sideEffectFileReference,
-            sideEffectFileUrlInfo,
-          ) => {
-            beforeFinalizeCallbacks.push(async () => {
-              await context.cook(sideEffectFileUrlInfo, {
-                reference: sideEffectFileReference,
-              });
-              await context.referenceUtils.readGeneratedSpecifier(
-                sideEffectFileReference,
-              );
-              await prependContent(
-                urlInfoTransformer,
-                urlInfo,
-                sideEffectFileUrlInfo,
-              );
-              context.referenceUtils.becomesInline(sideEffectFileReference, {
-                specifierLine: 0,
-                specifierColumn: 0,
-                specifier: sideEffectFileReference.generatedSpecifier,
-                content: sideEffectFileUrlInfo.content,
-                contentType: sideEffectFileUrlInfo.contentType,
-                parentUrl: urlInfo.url,
-                parentContent: urlInfo.content,
-              });
-            });
-            return [sideEffectFileReference, sideEffectFileUrlInfo];
-          };
-
-          // When possible we inject code inside the file in the HTML
-          // -> less duplication
-
-          // Case #1: Not possible to inject in other files -> inject as banner code
-          if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
-            const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
-            return injectAsBannerCodeBeforeFinalize(
-              sideEffectFileReference,
-              sideEffectFileUrlInfo,
-            );
-          }
-
-          // Case #2: During dev
-          // during dev cooking files is incremental
-          // so HTML is already executed by the browser
-          // but if we find that ref in a dependent we are good
-          // and it's possible to find it in dependents when using
-          // dynamic import for instance
-          // (in that case we find the side effect file as it was injected in parent)
-          if (context.dev) {
-            const urlsBeforeInjection = Array.from(urlGraph.urlInfoMap.keys());
-            const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
-            if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
-              return injectAsBannerCodeBeforeFinalize(
-                sideEffectFileReference,
-                sideEffectFileUrlInfo,
-              );
-            }
-            const isReferencingSideEffectFile = (urlInfo) =>
-              urlInfo.references.some(
-                (ref) => ref.url === sideEffectFileReference.url,
-              );
-            const selfOrAncestorIsReferencingSideEffectFile = (
-              dependentUrl,
-            ) => {
-              const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
-              if (isReferencingSideEffectFile(dependentUrlInfo)) {
-                return true;
-              }
-              const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
-                urlGraph,
-                urlInfo,
-                (ancestorUrlInfo) =>
-                  isReferencingSideEffectFile(ancestorUrlInfo),
-              );
-              return Boolean(dependentReferencingThatFile);
-            };
-            for (const dependentUrl of urlInfo.dependents) {
-              if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
-                return injectAsBannerCodeBeforeFinalize(
-                  sideEffectFileReference,
-                  sideEffectFileUrlInfo,
-                );
-              }
-            }
-            return [sideEffectFileReference, sideEffectFileUrlInfo];
-          }
-
-          // Case #3: During build
-          // during build, files are not executed so it's
-          // possible to inject reference when discovering a side effect file
-          if (urlInfo.isEntryPoint) {
-            const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
-            return injectAsBannerCodeBeforeFinalize(
-              sideEffectFileReference,
-              sideEffectFileUrlInfo,
-            );
-          }
-          const entryPoints = urlGraph.getEntryPoints();
-          const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
-          for (const entryPointUrlInfo of entryPoints) {
-            sideEffectForwardCallbacks.push(async () => {
-              // do not inject if already there
-              const { dependencies } = entryPointUrlInfo;
-              if (dependencies.has(sideEffectFileUrlInfo.url)) {
-                return;
-              }
-              dependencies.add(sideEffectFileUrlInfo.url);
-              await prependContent(
-                urlInfoTransformer,
-                entryPointUrlInfo,
-                sideEffectFileUrlInfo,
-              );
-              await context.referenceUtils.readGeneratedSpecifier(
-                sideEffectFileReference,
-              );
-              context.referenceUtils.becomesInline(sideEffectFileReference, {
-                specifier: sideEffectFileReference.generatedSpecifier,
-                // ideally get the correct line and column
-                // (for js it's 0, but for html it's different)
-                specifierLine: 0,
-                specifierColumn: 0,
-                content: sideEffectFileUrlInfo.content,
-                contentType: sideEffectFileUrlInfo.contentType,
-                parentUrl: entryPointUrlInfo.url,
-                parentContent: entryPointUrlInfo.content,
-              });
-            });
-          }
-          return [sideEffectFileReference, sideEffectFileUrlInfo];
-        },
-        inject: ({ trace, ...rest }) => {
-          if (trace === undefined) {
-            const { url, line, column } = getCallerPosition();
-            trace = traceFromUrlSite({
-              url,
-              line,
-              column,
-            });
-          }
-          return addReference({
-            trace,
-            injected: true,
-            ...rest,
-          });
-        },
-        becomesInline: (
-          reference,
-          {
-            isOriginalPosition = reference.isOriginalPosition,
-            specifier,
-            specifierLine,
-            specifierColumn,
-            contentType,
-            content,
-            parentUrl = reference.parentUrl,
-            parentContent,
-          },
-        ) => {
-          const trace = traceFromUrlSite({
-            url:
-              parentUrl === undefined
-                ? isOriginalPosition
-                  ? urlInfo.url
-                  : urlInfo.generatedUrl
-                : parentUrl,
-            content:
-              parentContent === undefined
-                ? isOriginalPosition
-                  ? urlInfo.originalContent
-                  : urlInfo.content
-                : parentContent,
-            line: specifierLine,
-            column: specifierColumn,
-          });
-          return mutateReference(reference, {
-            trace,
-            parentUrl,
-            isOriginalPosition,
-            isInline: true,
-            specifier,
-            specifierLine,
-            specifierColumn,
-            contentType,
-            content,
-          });
-        },
-        becomesExternal: () => {
-          throw new Error("not implemented yet");
-        },
-      };
+      });
 
       // "fetchUrlContent" hook
       await fetchUrlContent(urlInfo, {
@@ -876,7 +414,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           },
         );
       } catch (error) {
-        urlGraph.updateReferences(urlInfo, references); // ensure reference are updated even in case of error
+        stopCollectingReferences(); // ensure reference are updated even in case of error
         const transformError = createTransformUrlContentError({
           pluginController,
           reference: context.reference,
@@ -889,14 +427,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
       // after "transform" all references from originalContent
       // and the one injected by plugin are known
-      urlGraph.updateReferences(urlInfo, references);
+      stopCollectingReferences();
 
       // "finalize" hook
       try {
-        for (const beforeFinalizeCallback of beforeFinalizeCallbacks) {
-          await beforeFinalizeCallback();
+        for (const callback of callbacksToConsiderDishLoaded) {
+          await callback();
         }
-        beforeFinalizeCallbacks.length = 0;
+        callbacksToConsiderDishLoaded.length = 0;
 
         const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
           "finalizeUrlContent",
@@ -1038,37 +576,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.getWithoutSearchParam = getWithoutSearchParam;
 
   return {
+    graph: urlGraph,
     pluginController,
     urlInfoTransformer,
     rootDirectoryUrl,
     kitchenContext,
     cook,
-    createReference,
     injectReference,
     injectForwardedSideEffectFiles: async () => {
       await Promise.all(
-        sideEffectForwardCallbacks.map(async (callback) => {
+        callbacksToConsiderGraphLoaded.map(async (callback) => {
           await callback();
         }),
       );
     },
   };
-};
-
-// "formatReferencedUrl" can be async BUT this is an exception
-// for most cases it will be sync. We want to favor the sync signature to keep things simpler
-// The only case where it needs to be async is when
-// the specifier is a `data:*` url
-// in this case we'll wait for the promise returned by
-// "formatReferencedUrl"
-const readGeneratedSpecifier = (reference) => {
-  if (reference.generatedSpecifier.then) {
-    return reference.generatedSpecifier.then((value) => {
-      reference.generatedSpecifier = value;
-      return value;
-    });
-  }
-  return reference.generatedSpecifier;
 };
 
 const memoizeCook = (cook) => {
@@ -1111,15 +633,6 @@ const memoizeIsSupported = (runtimeCompat) => {
     const supported = RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
     cache.set(feature, supported);
     return supported;
-  };
-};
-
-const traceFromUrlSite = (urlSite) => {
-  return {
-    message: stringifyUrlSite(urlSite),
-    url: urlSite.url,
-    line: urlSite.line,
-    column: urlSite.column,
   };
 };
 
@@ -1166,46 +679,6 @@ const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
   if (reference.expectedSubtype) {
     urlInfo.subtypeHint = reference.expectedSubtype;
   }
-};
-
-const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
-  const isOriginal = url === urlInfo.url;
-  const adjust = (urlSite, urlInfo) => {
-    if (!urlSite.isOriginal) {
-      return urlSite;
-    }
-    const inlineUrlSite = urlInfo.inlineUrlSite;
-    if (!inlineUrlSite) {
-      return urlSite;
-    }
-    const parentUrlInfo = urlGraph.getUrlInfo(inlineUrlSite.url);
-    return adjust(
-      {
-        isOriginal: true,
-        url: inlineUrlSite.url,
-        content: inlineUrlSite.content,
-        line:
-          inlineUrlSite.line === undefined
-            ? urlSite.line
-            : inlineUrlSite.line + urlSite.line,
-        column:
-          inlineUrlSite.column === undefined
-            ? urlSite.column
-            : inlineUrlSite.column + urlSite.column,
-      },
-      parentUrlInfo,
-    );
-  };
-  return adjust(
-    {
-      isOriginal,
-      url,
-      content: isOriginal ? urlInfo.originalContent : urlInfo.content,
-      line,
-      column,
-    },
-    urlInfo,
-  );
 };
 
 const inferUrlInfoType = (urlInfo) => {

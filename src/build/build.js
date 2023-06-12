@@ -5,7 +5,7 @@
  * 3. refine
  *
  * craft: prepare all the materials
- *  - resolve, fetch and transform all source files into "rawGraph"
+ *  - resolve, fetch and transform all source files into "rawKitchen.graph"
  * shape: this step can drastically change url content and their relationships
  *  - bundling
  *  - optimizations (minification)
@@ -58,7 +58,6 @@ import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
-import { createUrlGraph } from "../kitchen/url_graph.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js";
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
@@ -292,7 +291,6 @@ build ${entryPointKeys.length} entry points`);
     const finalRedirections = new Map();
     const versioningRedirections = new Map();
     const entryUrls = [];
-    const rawGraph = createUrlGraph();
     const contextSharedDuringBuild = {
       systemJsTranspilation: (() => {
         const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
@@ -315,7 +313,7 @@ build ${entryPointKeys.length} entry points`);
         (plugin) => plugin.name === "jsenv:minification",
       ),
     };
-    const rawGraphKitchen = createKitchen({
+    const rawKitchen = createKitchen({
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
@@ -323,7 +321,6 @@ build ${entryPointKeys.length} entry points`);
       // during first pass (craft) we keep "ignore:" when a reference is ignored
       // so that the second pass (shape) properly ignore those urls
       ignoreProtocol: "keep",
-      urlGraph: rawGraph,
       build: true,
       runtimeCompat,
       ...contextSharedDuringBuild,
@@ -342,7 +339,6 @@ build ${entryPointKeys.length} entry points`);
         },
         ...getCorePlugins({
           rootDirectoryUrl: sourceDirectoryUrl,
-          urlGraph: rawGraph,
           runtimeCompat,
           referenceAnalysis,
           nodeEsmResolution,
@@ -385,8 +381,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const buildUrls = new Map();
     const bundleUrlInfos = {};
     const bundlers = {};
-    const finalGraph = createUrlGraph();
-    let finalGraphKitchen;
+    let finalKitchen;
     let finalEntryUrls = [];
 
     craft: {
@@ -396,11 +391,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
         const rawUrlGraphLoader = createUrlGraphLoader(
-          rawGraphKitchen.kitchenContext,
+          rawKitchen.kitchenContext,
         );
         Object.keys(entryPoints).forEach((key) => {
           const [entryReference, entryUrlInfo] =
-            rawGraphKitchen.kitchenContext.prepareEntryPoint({
+            rawKitchen.kitchenContext.prepareEntryPoint({
               trace: { message: `"${key}" in entryPoints parameter` },
               parentUrl: sourceDirectoryUrl,
               type: "entry_point",
@@ -412,7 +407,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference });
         });
         await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-        await rawGraphKitchen.injectForwardedSideEffectFiles();
+        await rawKitchen.injectForwardedSideEffectFiles();
       } catch (e) {
         generateSourceGraph.fail();
         throw e;
@@ -421,7 +416,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     }
 
     shape: {
-      finalGraphKitchen = createKitchen({
+      finalKitchen = createKitchen({
         logLevel,
         rootDirectoryUrl: buildDirectoryUrl,
         // here most plugins are not there
@@ -432,7 +427,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
         ignore,
         ignoreProtocol: versioning ? "keep" : "remove",
-        urlGraph: finalGraph,
+        urlGraph: finalKitchen.graph,
         build: true,
         runtimeCompat,
         ...contextSharedDuringBuild,
@@ -491,12 +486,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return reference.url;
               }
               if (reference.isInline) {
-                const parentUrlInfo = finalGraph.getUrlInfo(
+                const parentUrlInfo = finalKitchen.graph.getUrlInfo(
                   reference.parentUrl,
                 );
                 const parentRawUrl = parentUrlInfo.originalUrl;
                 const rawUrlInfo = GRAPH_VISITOR.find(
-                  rawGraph,
+                  rawKitchen.graph,
                   (rawUrlInfo) => {
                     const { inlineUrlSite } = rawUrlInfo;
                     // not inline
@@ -595,8 +590,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 finalRedirections.set(buildUrl, buildUrl);
                 return buildUrl;
               }
-              const rawUrlInfo = rawGraph.getUrlInfo(reference.url);
-              const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+              const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
+              const parentUrlInfo = finalKitchen.graph.getUrlInfo(
+                reference.parentUrl,
+              );
               // files from root directory but not given to rollup nor postcss
               if (rawUrlInfo) {
                 const referencedUrlObject = new URL(reference.url);
@@ -671,7 +668,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return bundleUrlInfo;
                 }
                 const rawUrl = buildDirectoryRedirections.get(url) || url;
-                const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
+                const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
                 if (!rawUrlInfo) {
                   throw new Error(
                     createDetailedMessage(`Cannot find url`, {
@@ -705,13 +702,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // reference injected during "postbuild":
               // - happens for "js_module_fallback" injecting "s.js"
               if (reference.injected) {
-                const [ref, rawUrlInfo] = rawGraphKitchen.injectReference({
+                const [ref, rawUrlInfo] = rawKitchen.injectReference({
                   ...reference,
                   parentUrl: buildDirectoryRedirections.get(
                     reference.parentUrl,
                   ),
                 });
-                await rawGraphKitchen.cook(rawUrlInfo, { reference: ref });
+                await rawKitchen.cook(rawUrlInfo, { reference: ref });
                 return rawUrlInfo;
               }
               if (reference.isInline) {
@@ -735,12 +732,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             name: "jsenv:optimize",
             appliesDuring: "build",
             transformUrlContent: async (urlInfo, context) => {
-              await rawGraphKitchen.pluginController.callAsyncHooks(
+              await rawKitchen.pluginController.callAsyncHooks(
                 "optimizeUrlContent",
                 urlInfo,
                 context,
                 (optimizeReturnValue) => {
-                  finalGraphKitchen.urlInfoTransformer.applyTransformations(
+                  finalKitchen.urlInfoTransformer.applyTransformations(
                     urlInfo,
                     optimizeReturnValue,
                   );
@@ -757,7 +754,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           : undefined,
       });
       bundle: {
-        rawGraphKitchen.pluginController.plugins.forEach((plugin) => {
+        rawKitchen.pluginController.plugins.forEach((plugin) => {
           const bundle = plugin.bundle;
           if (!bundle) {
             return;
@@ -790,13 +787,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             bundler.urlInfos.push(rawUrlInfo);
           }
         };
-        GRAPH_VISITOR.forEach(rawGraph, (rawUrlInfo) => {
+        GRAPH_VISITOR.forEach(rawKitchen.graph, (rawUrlInfo) => {
           // cleanup unused urls (avoid bundling things that are not actually used)
           // happens for:
           // - js import assertions
           // - conversion to js classic using ?as_js_classic or ?js_module_fallback
-          if (!rawGraph.isUsed(rawUrlInfo)) {
-            rawGraph.deleteUrlInfo(rawUrlInfo.url);
+          if (!rawKitchen.graph.isUsed(rawUrlInfo)) {
+            rawKitchen.graph.deleteUrlInfo(rawUrlInfo.url);
             return;
           }
           if (rawUrlInfo.isEntryPoint) {
@@ -804,13 +801,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           if (rawUrlInfo.type === "html") {
             rawUrlInfo.dependencies.forEach((dependencyUrl) => {
-              const dependencyUrlInfo = rawGraph.getUrlInfo(dependencyUrl);
+              const dependencyUrlInfo =
+                rawKitchen.graph.getUrlInfo(dependencyUrl);
               if (dependencyUrlInfo.isInline) {
                 if (dependencyUrlInfo.type === "js_module") {
                   // bundle inline script type module deps
                   dependencyUrlInfo.references.forEach((inlineScriptRef) => {
                     if (inlineScriptRef.type === "js_import") {
-                      const inlineUrlInfo = rawGraph.getUrlInfo(
+                      const inlineUrlInfo = rawKitchen.graph.getUrlInfo(
                         inlineScriptRef.url,
                       );
                       addToBundlerIfAny(inlineUrlInfo);
@@ -827,7 +825,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 reference.isResourceHint &&
                 reference.expectedType === "js_module"
               ) {
-                const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+                const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
+                  reference.url,
+                );
                 if (
                   referencedUrlInfo &&
                   // something else than the resource hint is using this url
@@ -847,7 +847,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (reference.type !== "js_url") {
                 return;
               }
-              const referencedUrlInfo = rawGraph.getUrlInfo(reference.url);
+              const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
+                reference.url,
+              );
               const bundler = bundlers[referencedUrlInfo.type];
               if (!bundler) {
                 return;
@@ -855,7 +857,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
               let willAlreadyBeBundled = true;
               for (const dependent of referencedUrlInfo.dependents) {
-                const dependentUrlInfo = rawGraph.getUrlInfo(dependent);
+                const dependentUrlInfo = rawKitchen.graph.getUrlInfo(dependent);
                 for (const reference of dependentUrlInfo.references) {
                   if (reference.url === referencedUrlInfo.url) {
                     willAlreadyBeBundled =
@@ -880,7 +882,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const bundleTask = createBuildTask(`bundle "${type}"`);
           try {
             const bundlerGeneratedUrlInfos =
-              await rawGraphKitchen.pluginController.callAsyncHook(
+              await rawKitchen.pluginController.callAsyncHook(
                 {
                   plugin: bundler.plugin,
                   hookName: "bundle",
@@ -888,13 +890,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
                 urlInfosToBundle,
                 {
-                  ...rawGraphKitchen.kitchenContext,
+                  ...rawKitchen.kitchenContext,
                   buildDirectoryUrl,
                   assetsDirectory,
                 },
               );
             Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
-              const rawUrlInfo = rawGraph.getUrlInfo(url);
+              const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
               const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
               const bundleUrlInfo = {
                 type,
@@ -914,7 +916,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               };
               if (bundlerGeneratedUrlInfo.sourceUrls) {
                 bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
-                  const sourceRawUrlInfo = rawGraph.getUrlInfo(sourceUrl);
+                  const sourceRawUrlInfo =
+                    rawKitchen.graph.getUrlInfo(sourceUrl);
                   if (sourceRawUrlInfo) {
                     sourceRawUrlInfo.data.bundled = true;
                   }
@@ -926,7 +929,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               bundleRedirections.set(url, buildUrl);
               if (urlIsInsideOf(url, buildDirectoryUrl)) {
                 if (bundlerGeneratedUrlInfo.data.isDynamicEntry) {
-                  const rawUrlInfo = rawGraph.getUrlInfo(
+                  const rawUrlInfo = rawKitchen.graph.getUrlInfo(
                     bundlerGeneratedUrlInfo.originalUrl,
                   );
                   rawUrlInfo.data.bundled = false;
@@ -973,11 +976,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
           const finalUrlGraphLoader = createUrlGraphLoader(
-            finalGraphKitchen.kitchenContext,
+            finalKitchen.kitchenContext,
           );
           entryUrls.forEach((entryUrl) => {
             const [finalEntryReference, finalEntryUrlInfo] =
-              finalGraphKitchen.kitchenContext.prepareEntryPoint({
+              finalKitchen.kitchenContext.prepareEntryPoint({
                 trace: { message: `entryPoint` },
                 parentUrl: sourceDirectoryUrl,
                 type: "entry_point",
@@ -989,7 +992,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           });
           await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-          await finalGraphKitchen.injectForwardedSideEffectFiles();
+          await finalKitchen.injectForwardedSideEffectFiles();
         } catch (e) {
           generateBuildGraph.fail();
           throw e;
@@ -1010,10 +1013,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const canUseImportmap =
             versioningViaImportmap &&
             finalEntryUrls.every((finalEntryUrl) => {
-              const finalEntryUrlInfo = finalGraph.getUrlInfo(finalEntryUrl);
+              const finalEntryUrlInfo =
+                finalKitchen.graph.getUrlInfo(finalEntryUrl);
               return finalEntryUrlInfo.type === "html";
             }) &&
-            finalGraphKitchen.kitchenContext.isSupportedOnCurrentClients(
+            finalKitchen.kitchenContext.isSupportedOnCurrentClients(
               "importmap",
             );
           const workerReferenceSet = new Set();
@@ -1036,7 +1040,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return Boolean(dependentWorker);
           };
           const preferWithoutVersioning = (reference) => {
-            const parentUrlInfo = finalGraph.getUrlInfo(reference.parentUrl);
+            const parentUrlInfo = finalKitchen.graph.getUrlInfo(
+              reference.parentUrl,
+            );
             if (parentUrlInfo.jsQuote) {
               return {
                 type: "global",
@@ -1066,7 +1072,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               if (
                 canUseImportmap &&
-                !isReferencedByWorker(reference, finalGraph)
+                !isReferencedByWorker(reference, finalKitchen.graph)
               ) {
                 return {
                   type: "importmap",
@@ -1080,7 +1086,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // see also https://github.com/rollup/rollup/pull/4543
           const contentVersionMap = new Map();
           const hashCallbacks = [];
-          GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
+          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
             if (urlInfo.type === "sourcemap") {
               return;
             }
@@ -1129,7 +1135,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               urlInfo.references.forEach((reference) => {
                 if (seen.has(reference)) return;
                 seen.add(reference);
-                const referencedUrlInfo = finalGraph.getUrlInfo(reference.url);
+                const referencedUrlInfo = finalKitchen.graph.getUrlInfo(
+                  reference.url,
+                );
                 versionMutations.push(() => {
                   const dependencyContentVersion = contentVersionMap.get(
                     reference.url,
@@ -1204,7 +1212,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             rootDirectoryUrl: buildDirectoryUrl,
             ignore,
             ignoreProtocol: "remove",
-            urlGraph: finalGraph,
+            urlGraph: finalKitchen.graph,
             build: true,
             runtimeCompat,
             ...contextSharedDuringBuild,
@@ -1267,7 +1275,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   // specifier comes from "normalize" hook done a bit earlier in this file
                   // we want to get back their build url to access their infos
-                  const referencedUrlInfo = finalGraph.getUrlInfo(
+                  const referencedUrlInfo = finalKitchen.graph.getUrlInfo(
                     reference.url,
                   );
                   if (!canUseVersionedUrl(referencedUrlInfo)) {
@@ -1304,8 +1312,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   if (versionedUrlInfo.isInline) {
                     const versionedUrl = versionedUrlInfo.url;
                     const rawUrl = buildDirectoryRedirections.get(versionedUrl);
-                    const rawUrlInfo = rawGraph.getUrlInfo(rawUrl);
-                    const finalUrlInfo = finalGraph.getUrlInfo(versionedUrl);
+                    const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+                    const finalUrlInfo =
+                      finalKitchen.graph.getUrlInfo(versionedUrl);
                     return {
                       content: versionedUrlInfo.content,
                       contentType: versionedUrlInfo.contentType,
@@ -1333,7 +1342,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           );
           finalEntryUrls.forEach((finalEntryUrl) => {
             const [finalEntryReference, finalEntryUrlInfo] =
-              finalGraphKitchen.kitchenContext.prepareEntryPoint({
+              finalKitchen.kitchenContext.prepareEntryPoint({
                 trace: { message: `entryPoint` },
                 parentUrl: buildDirectoryUrl,
                 type: "entry_point",
@@ -1356,7 +1365,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
                 actions.push(async () => {
                   await injectVersionMappingsAsImportmap({
-                    kitchen: finalGraphKitchen,
+                    kitchen: finalKitchen,
                     urlInfo,
                     versionMappings: versionMappingsNeeded,
                   });
@@ -1373,7 +1382,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (urlInfo.isEntryPoint) {
                 actions.push(async () => {
                   await injectVersionMappingsAsGlobal({
-                    kitchen: finalGraphKitchen,
+                    kitchen: finalKitchen,
                     urlInfo,
                     versionMappings: versionMappingsNeeded,
                   });
@@ -1382,7 +1391,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           }
           if (visitors.length) {
-            GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
+            GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
               visitors.forEach((visitor) => visitor(urlInfo));
             });
             if (actions.length) {
@@ -1396,7 +1405,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         versioningTask.done();
       }
       cleanup_jsenv_attributes_from_html: {
-        GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
+        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
           if (!urlInfo.url.startsWith("file:")) {
             return;
           }
@@ -1419,7 +1428,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
        */
       resync_resource_hints: {
         const actions = [];
-        GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
+        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
           if (urlInfo.type !== "html") {
             return;
           }
@@ -1447,7 +1456,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               const onBuildUrl = (buildUrl) => {
                 const buildUrlInfo = buildUrl
-                  ? finalGraph.getUrlInfo(buildUrl)
+                  ? finalKitchen.graph.getUrlInfo(buildUrl)
                   : null;
                 if (!buildUrlInfo) {
                   logger.warn(
@@ -1484,7 +1493,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 });
                 for (const dependencyUrl of buildUrlInfo.dependencies) {
                   const dependencyUrlInfo =
-                    finalGraph.urlInfoMap.get(dependencyUrl);
+                    finalKitchen.graph.urlInfoMap.get(dependencyUrl);
                   if (dependencyUrlInfo.data.generatedToShareCode) {
                     hintsToInject[dependencyUrl] = node;
                   }
@@ -1493,7 +1502,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (href.startsWith("file:")) {
                 let url = href;
                 url = rawRedirections.get(url) || url;
-                const rawUrlInfo = rawGraph.getUrlInfo(url);
+                const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
                 if (rawUrlInfo && rawUrlInfo.data.bundled) {
                   logger.warn(
                     `remove resource hint on "${href}" because it was bundled`,
@@ -1542,12 +1551,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (mutations.length > 0) {
             actions.push(() => {
               mutations.forEach((mutation) => mutation());
-              finalGraphKitchen.urlInfoTransformer.applyTransformations(
-                urlInfo,
-                {
-                  content: stringifyHtmlAst(htmlAst),
-                },
-              );
+              finalKitchen.urlInfoTransformer.applyTransformations(urlInfo, {
+                content: stringifyHtmlAst(htmlAst),
+              });
             });
           }
         });
@@ -1560,10 +1566,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       delete_unused_urls: {
         const actions = [];
-        GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
-          if (!finalGraph.isUsed(urlInfo)) {
+        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+          if (!finalKitchen.graph.isUsed(urlInfo)) {
             actions.push(() => {
-              finalGraph.deleteUrlInfo(urlInfo.url);
+              finalKitchen.graph.deleteUrlInfo(urlInfo.url);
             });
           }
         });
@@ -1571,7 +1577,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       inject_urls_in_service_workers: {
         const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
-          finalGraph,
+          finalKitchen.graph,
           (finalUrlInfo) => {
             return (
               finalUrlInfo.subtype === "service_worker" &&
@@ -1584,7 +1590,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             "inject urls in service worker",
           );
           const serviceWorkerResources = {};
-          GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
+          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
             if (!urlInfo.url.startsWith("file:")) {
               return;
             }
@@ -1631,7 +1637,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )};\n`,
             );
             const { content, sourcemap } = magicSource.toContentAndSourcemap();
-            finalGraphKitchen.urlInfoTransformer.applyTransformations(
+            finalKitchen.urlInfoTransformer.applyTransformations(
               serviceWorkerEntryUrlInfo,
               {
                 content,
@@ -1658,7 +1664,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
       return buildRelativeUrl;
     };
-    GRAPH_VISITOR.forEach(finalGraph, (urlInfo) => {
+    GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
       if (!urlInfo.url.startsWith("file:")) {
         return;
       }
@@ -1719,7 +1725,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       writingFiles.done();
     }
-    logger.info(createUrlGraphSummary(finalGraph, { title: "build files" }));
+    logger.info(
+      createUrlGraphSummary(finalKitchen.graph, { title: "build files" }),
+    );
     return {
       buildFileContents,
       buildInlineContents,

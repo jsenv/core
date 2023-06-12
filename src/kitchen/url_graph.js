@@ -1,6 +1,7 @@
 import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
+import { createReferences } from "./references.js";
 
 export const createUrlGraph = ({ name = "anonymous" } = {}) => {
   const urlGraph = {};
@@ -64,99 +65,6 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
       return null;
     };
     return search(parentUrlInfo);
-  };
-
-  const updateReferences = (urlInfo, references) => {
-    const setOfDependencyUrls = new Set();
-    const setOfImplicitUrls = new Set();
-    references.forEach((reference) => {
-      if (reference.isResourceHint) {
-        // resource hint are a special kind of reference.
-        // They are a sort of weak reference to an url.
-        // We ignore them so that url referenced only by resource hints
-        // have url.dependents.size === 0 and can be considered as not used
-        // It means html won't consider url referenced solely
-        // by <link> as dependency and it's fine
-        return;
-      }
-      const dependencyUrl = reference.url;
-      setOfDependencyUrls.add(dependencyUrl);
-      // an implicit reference do not appear in the file but the non explicited file
-      // have an impact on it
-      // -> package.json on import resolution for instance
-      // in that case:
-      // - file depends on the implicit file (it must autoreload if package.json is modified)
-      // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
-      if (reference.isImplicit) {
-        setOfImplicitUrls.add(dependencyUrl);
-      }
-    });
-    setOfDependencyUrls.forEach((dependencyUrl) => {
-      urlInfo.dependencies.add(dependencyUrl);
-      const dependencyUrlInfo = reuseOrCreateUrlInfo(dependencyUrl);
-      dependencyUrlInfo.dependents.add(urlInfo.url);
-    });
-    setOfImplicitUrls.forEach((implicitUrl) => {
-      urlInfo.implicitUrls.add(implicitUrl);
-      if (urlInfo.isInline) {
-        const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url);
-        parentUrlInfo.implicitUrls.add(implicitUrl);
-      }
-    });
-    const prunedUrlInfos = [];
-    const pruneDependency = (urlInfo, urlToClean) => {
-      urlInfo.dependencies.delete(urlToClean);
-      const dependencyUrlInfo = getUrlInfo(urlToClean);
-      if (!dependencyUrlInfo) {
-        return;
-      }
-      dependencyUrlInfo.dependents.delete(urlInfo.url);
-      if (dependencyUrlInfo.dependents.size === 0) {
-        dependencyUrlInfo.dependencies.forEach((dependencyUrl) => {
-          pruneDependency(dependencyUrlInfo, dependencyUrl);
-        });
-        prunedUrlInfos.push(dependencyUrlInfo);
-      }
-    };
-    urlInfo.dependencies.forEach((dependencyUrl) => {
-      if (!setOfDependencyUrls.has(dependencyUrl)) {
-        pruneDependency(urlInfo, dependencyUrl);
-      }
-    });
-    if (prunedUrlInfos.length) {
-      prunedUrlInfos.forEach((prunedUrlInfo) => {
-        prunedUrlInfo.modifiedTimestamp = Date.now();
-        if (prunedUrlInfo.isInline) {
-          // should we always delete?
-          deleteUrlInfo(prunedUrlInfo.url);
-        }
-      });
-      prunedUrlInfosCallbackRef.current(prunedUrlInfos, urlInfo);
-    }
-    urlInfo.implicitUrls.forEach((implicitUrl) => {
-      if (!setOfDependencyUrls.has(implicitUrl)) {
-        let implicitUrlComesFromInlineContent = false;
-        for (const dependencyUrl of urlInfo.dependencies) {
-          const dependencyUrlInfo = getUrlInfo(dependencyUrl);
-          if (
-            dependencyUrlInfo.isInline &&
-            dependencyUrlInfo.implicitUrls.has(implicitUrl)
-          ) {
-            implicitUrlComesFromInlineContent = true;
-            break;
-          }
-        }
-        if (!implicitUrlComesFromInlineContent) {
-          urlInfo.implicitUrls.delete(implicitUrl);
-        }
-        if (urlInfo.isInline) {
-          const parentUrlInfo = getUrlInfo(urlInfo.inlineUrlSite.url);
-          parentUrlInfo.implicitUrls.delete(implicitUrl);
-        }
-      }
-    });
-    urlInfo.references = references;
-    return urlInfo;
   };
 
   const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
@@ -250,7 +158,6 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     isUsed,
 
     inferReference,
-    updateReferences,
     considerModified,
 
     toObject: () => {
@@ -322,6 +229,8 @@ const createUrlInfo = (url) => {
     headers: {},
     debug: false,
   };
+  urlInfo.references = createReferences(urlInfo);
+
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo;
 };

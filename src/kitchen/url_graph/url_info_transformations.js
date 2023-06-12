@@ -16,8 +16,6 @@ export const createUrlInfoTransformer = ({
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
   urlGraph,
-  injectSourcemapPlaceholder,
-  foundSourcemap,
 }) => {
   if (sourcemapsSourcesProtocol === undefined) {
     sourcemapsSourcesProtocol = "file:///";
@@ -170,14 +168,9 @@ export const createUrlInfoTransformer = ({
     // - happens during build
     // - happens for url converted during fetch (js_module_fallback for instance)
     if (urlInfo.sourcemap) {
-      const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder(
-        {
-          urlInfo,
-          specifier: urlInfo.sourcemapGeneratedUrl,
-        },
-      );
-      sourcemapUrlInfo.isInline = sourcemaps === "inline";
-      urlInfo.sourcemapReference = sourcemapReference;
+      urlInfo.references.injectSourcemapPlaceholder({
+        specifier: urlInfo.sourcemapGeneratedUrl,
+      });
       urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
       return;
     }
@@ -189,13 +182,13 @@ export const createUrlInfoTransformer = ({
     });
     if (sourcemapFound) {
       const { type, line, column, specifier } = sourcemapFound;
-      const [sourcemapReference, sourcemapUrlInfo] = foundSourcemap({
-        urlInfo,
-        type,
-        specifier,
-        specifierLine: line,
-        specifierColumn: column,
-      });
+      const [sourcemapReference, sourcemapUrlInfo] =
+        urlInfo.references.foundSourcemap({
+          type,
+          specifier,
+          specifierLine: line,
+          specifierColumn: column,
+        });
       try {
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference });
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
@@ -210,12 +203,9 @@ export const createUrlInfoTransformer = ({
     }
 
     // case #3: prepare a sourcemap
-    const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
-      urlInfo,
+    urlInfo.references.injectSourcemapPlaceholder({
       specifier: urlInfo.sourcemapGeneratedUrl,
     });
-    urlInfo.sourcemapReference = sourcemapReference;
-    sourcemapUrlInfo.isInline = sourcemaps === "inline";
   };
 
   const applyTransformations = (urlInfo, transformations) => {

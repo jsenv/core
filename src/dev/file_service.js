@@ -72,18 +72,16 @@ export const createFileService = ({
       { watch: stopWatchingSourceFiles.watchPatterns },
       sourceDirectoryUrl,
     );
-    const urlGraph = createUrlGraph({
-      name: runtimeId,
-    });
+    let kitchen;
     clientFileChangeCallbackList.push(({ url }) => {
       const onUrlInfo = (urlInfo) => {
-        urlGraph.considerModified(urlInfo);
+        kitchen.graph.considerModified(urlInfo);
       };
-      const exactUrlInfo = urlGraph.getUrlInfo(url);
+      const exactUrlInfo = kitchen.graph.getUrlInfo(url);
       if (exactUrlInfo) {
         onUrlInfo(exactUrlInfo);
       }
-      urlGraph.urlInfoMap.forEach((urlInfo) => {
+      kitchen.graph.urlInfoMap.forEach((urlInfo) => {
         if (urlInfo === exactUrlInfo) return;
         const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
         if (urlWithoutSearch !== url) return;
@@ -93,13 +91,13 @@ export const createFileService = ({
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
 
-    const kitchen = createKitchen({
+    kitchen = createKitchen({
+      name: runtimeId,
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
       mainFilePath: sourceMainFilePath,
       ignore,
-      urlGraph,
       dev: true,
       runtimeCompat,
       clientRuntimeCompat,
