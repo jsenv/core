@@ -3361,7 +3361,7 @@ const relativeUrlToEmptyCoverage = async (
     const { metadata } = await applyBabelPlugins({
       babelPlugins: [babelPluginInstrument],
       input: content,
-      inputIsJsModule: false,
+      inputIsJsModule: true,
       inputUrl: fileUrl,
     });
     const { coverage } = metadata;
@@ -4297,7 +4297,7 @@ const executeSteps = async (
             rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
-            coverageMethodForBrowsers,
+            coverageMethodForNodeJs,
             coverageV8ConflictWarning,
           });
           executePlanReturnValue.planCoverage = planCoverage;
