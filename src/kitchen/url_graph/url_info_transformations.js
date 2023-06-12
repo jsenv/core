@@ -103,6 +103,7 @@ export const createUrlInfoTransformer = ({
       originalContent,
       originalContentAst, // most of the time will be undefined
       originalContentEtag, // in practice always undefined
+      sourcemap,
     },
     context,
   ) => {
@@ -140,6 +141,7 @@ export const createUrlInfoTransformer = ({
     urlInfo.content = content;
     defineGettersOnPropertiesDerivedFromContent(urlInfo);
 
+    urlInfo.sourcemap = sourcemap;
     if (!sourcemapsEnabled) {
       return;
     }
@@ -163,7 +165,10 @@ export const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("as_js_classic");
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
-    // already loaded during "load" hook (happens during build)
+
+    // case #1: already loaded during "load" hook
+    // - happens during build
+    // - happens for url converted during fetch (js_module_fallback for instance)
     if (urlInfo.sourcemap) {
       const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder(
         {
@@ -176,7 +181,8 @@ export const createUrlInfoTransformer = ({
       urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
       return;
     }
-    // check for existing sourcemap for this content
+
+    // case #2: check for existing sourcemap for this content
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: urlInfo.contentType,
       content: urlInfo.content,
@@ -194,18 +200,22 @@ export const createUrlInfoTransformer = ({
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference });
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
+        urlInfo.sourcemapReference = sourcemapReference;
         urlInfo.sourcemap = sourcemap;
+        return;
       } catch (e) {
         logger.error(`Error while handling existing sourcemap: ${e.message}`);
         return;
       }
-    } else {
-      const [, sourcemapUrlInfo] = injectSourcemapPlaceholder({
-        urlInfo,
-        specifier: urlInfo.sourcemapGeneratedUrl,
-      });
-      sourcemapUrlInfo.isInline = sourcemaps === "inline";
     }
+
+    // case #3: prepare a sourcemap
+    const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
+      urlInfo,
+      specifier: urlInfo.sourcemapGeneratedUrl,
+    });
+    urlInfo.sourcemapReference = sourcemapReference;
+    sourcemapUrlInfo.isInline = sourcemaps === "inline";
   };
 
   const applyTransformations = (urlInfo, transformations) => {
