@@ -1,11 +1,6 @@
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
-import {
-  createMagicSource,
-  composeTwoSourcemaps,
-  SOURCEMAP,
-} from "@jsenv/sourcemap";
+import { composeTwoSourcemaps } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
 
 import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
@@ -13,19 +8,15 @@ import { babelPluginTransformImportMetaResolve } from "./internal/babel_plugin_t
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
 import customAsyncToPromises from "./internal/async-to-promises.js";
 
-const require = createRequire(import.meta.url);
-
 export const systemJsClientFileUrlDefault = new URL(
   "./client/s.js",
   import.meta.url,
 ).href;
 
-export const convertJsModuleToJsClassic = async ({
-  systemJsInjection,
-  systemJsClientFileUrl = systemJsClientFileUrlDefault,
+const require = createRequire(import.meta.url);
 
+export const convertJsModuleToJsClassic = async ({
   input,
-  inputIsEntryPoint,
   inputSourcemap,
   inputUrl,
   outputUrl,
@@ -38,8 +29,8 @@ export const convertJsModuleToJsClassic = async ({
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             require("@babel/plugin-proposal-dynamic-import"),
-            require("@babel/plugin-transform-modules-systemjs"),
             [babelPluginRelativeImports, { rootUrl: inputUrl }],
+            require("@babel/plugin-transform-modules-systemjs"),
             [
               customAsyncToPromises,
               {
@@ -58,8 +49,8 @@ export const convertJsModuleToJsClassic = async ({
             ],
             babelPluginTransformImportMetaUrl,
             babelPluginTransformImportMetaResolve,
-            require("@babel/plugin-transform-modules-umd"),
             [babelPluginRelativeImports, { rootUrl: inputUrl }],
+            require("@babel/plugin-transform-modules-umd"),
           ]),
     ],
     input,
@@ -67,35 +58,7 @@ export const convertJsModuleToJsClassic = async ({
     inputUrl,
     outputUrl,
   });
-  let sourcemap = inputSourcemap;
-  sourcemap = await composeTwoSourcemaps(sourcemap, map);
-  if (systemJsInjection && outputFormat === "system" && inputIsEntryPoint) {
-    const magicSource = createMagicSource(code);
-    let systemJsFileContent = readFileSync(
-      new URL(systemJsClientFileUrl),
-      "utf8",
-    );
-    const sourcemapFound = SOURCEMAP.readComment({
-      contentType: "text/javascript",
-      content: systemJsFileContent,
-    });
-    if (sourcemapFound) {
-      // for now let's remove s.js sourcemap
-      // because it would likely mess the sourcemap of the entry point itself
-      systemJsFileContent = SOURCEMAP.writeComment({
-        contentType: "text/javascript",
-        content: systemJsFileContent,
-        specifier: "",
-      });
-    }
-    magicSource.prepend(`${systemJsFileContent}\n\n`);
-    const magicResult = magicSource.toContentAndSourcemap();
-    sourcemap = await composeTwoSourcemaps(sourcemap, magicResult.sourcemap);
-    return {
-      content: magicResult.content,
-      sourcemap,
-    };
-  }
+  const sourcemap = await composeTwoSourcemaps(inputSourcemap, map);
   return {
     content: code,
     sourcemap,
@@ -114,8 +77,12 @@ const babelPluginRelativeImports = (babel) => {
   const t = babel.types;
 
   const replaceSpecifierAtPath = (path, state) => {
-    const specifier = path.node.value;
+    let specifier = path.node.value;
     if (specifier.startsWith("file://")) {
+      const specifierUrlObject = new URL(specifier);
+      const { searchParams } = specifierUrlObject;
+      searchParams.delete("dynamic_import");
+      specifier = specifierUrlObject.href;
       const specifierRelative = urlToRelativeUrl(specifier, state.opts.rootUrl);
       path.replaceWith(t.stringLiteral(specifierRelative));
     }

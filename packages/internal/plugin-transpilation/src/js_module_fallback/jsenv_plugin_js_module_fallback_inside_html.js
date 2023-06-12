@@ -5,7 +5,7 @@
  * - <link rel="modulepreload"> are converted to <link rel="preload">
  */
 
-import { readFileSync } from "node:fs";
+import { injectQueryParams } from "@jsenv/urls";
 import {
   parseHtmlString,
   visitHtmlNodes,
@@ -13,16 +13,9 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
   analyzeScriptNode,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
 } from "@jsenv/ast";
-import { injectQueryParams, urlToRelativeUrl } from "@jsenv/urls";
-import { SOURCEMAP } from "@jsenv/sourcemap";
 
-export const jsenvPluginJsModuleFallbackInsideHtml = ({
-  systemJsInjection,
-  systemJsClientFileUrl,
-}) => {
+export const jsenvPluginJsModuleFallbackInsideHtml = () => {
   const turnIntoJsClassicProxy = (reference) => {
     return injectQueryParams(reference.url, { js_module_fallback: "" });
   };
@@ -86,13 +79,10 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
                 ref.type === "link_href" &&
                 ref.subtype === rel,
             );
-            if (!isOrWasExpectingJsModule(reference)) {
+            if (!wasOrWillBeConvertedToJsClassic(reference)) {
               return;
             }
-            if (
-              rel === "modulepreload" &&
-              reference.expectedType === "js_classic"
-            ) {
+            if (rel === "modulepreload") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, {
                   rel: "preload",
@@ -101,7 +91,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
                 });
               });
             }
-            if (rel === "preload" && reference.expectedType === "js_classic") {
+            if (rel === "preload") {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { crossorigin: undefined });
               });
@@ -135,83 +125,6 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
             }
           },
         });
-        if (systemJsInjection) {
-          let needsSystemJs = false;
-          for (const reference of urlInfo.references) {
-            if (reference.isResourceHint) {
-              // we don't cook resource hints
-              // because they might refer to resource that will be modified during build
-              // It also means something else HAVE to reference that url in order to cook it
-              // so that the preload is deleted by "resync_resource_hints.js" otherwise
-              continue;
-            }
-            if (isOrWasExpectingJsModule(reference)) {
-              const dependencyUrlInfo = context.urlGraph.getUrlInfo(
-                reference.url,
-              );
-              try {
-                await context.cook(dependencyUrlInfo, { reference });
-                if (dependencyUrlInfo.data.jsClassicFormat === "system") {
-                  needsSystemJs = true;
-                  break;
-                }
-              } catch (e) {
-                if (context.dev && e.code !== "PARSE_ERROR") {
-                  needsSystemJs = true;
-                  // ignore cooking error, the browser will trigger it again on fetch
-                  // + disable cache for this html file because when browser will reload
-                  // the error might be gone and we might need to inject systemjs
-                  urlInfo.headers["cache-control"] = "no-store";
-                } else {
-                  throw e;
-                }
-              }
-            }
-          }
-          if (needsSystemJs) {
-            mutations.push(async () => {
-              let systemJsFileContent = readFileSync(
-                new URL(systemJsClientFileUrl),
-                { encoding: "utf8" },
-              );
-              const sourcemapFound = SOURCEMAP.readComment({
-                contentType: "text/javascript",
-                content: systemJsFileContent,
-              });
-              if (sourcemapFound) {
-                const sourcemapFileUrl = new URL(
-                  sourcemapFound.specifier,
-                  systemJsClientFileUrl,
-                );
-                systemJsFileContent = SOURCEMAP.writeComment({
-                  contentType: "text/javascript",
-                  content: systemJsFileContent,
-                  specifier: urlToRelativeUrl(sourcemapFileUrl, urlInfo.url),
-                });
-              }
-              const [systemJsReference, systemJsUrlInfo] =
-                context.referenceUtils.inject({
-                  type: "script",
-                  expectedType: "js_classic",
-                  isInline: true,
-                  contentType: "text/javascript",
-                  content: systemJsFileContent,
-                  specifier: "s.js",
-                });
-              await context.cook(systemJsUrlInfo, {
-                reference: systemJsReference,
-              });
-              injectHtmlNodeAsEarlyAsPossible(
-                htmlAst,
-                createHtmlNode({
-                  tagName: "script",
-                  textContent: systemJsUrlInfo.content,
-                }),
-                "jsenv:js_module_fallback",
-              );
-            });
-          }
-        }
         await Promise.all(mutations.map((mutation) => mutation()));
         return stringifyHtmlAst(htmlAst, {
           cleanupPositionAttributes: context.dev,
@@ -221,19 +134,29 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
   };
 };
 
-const isOrWasExpectingJsModule = (reference) => {
-  if (isExpectingJsModule(reference)) {
+const wasOrWillBeConvertedToJsClassic = (reference) => {
+  if (reference.expectedType !== "js_module") {
+    return false;
+  }
+  if (willBeConvertedToJsClassic(reference)) {
     return true;
   }
-  if (reference.original && isExpectingJsModule(reference.original)) {
-    return true;
+  let prev = reference.prev;
+  while (prev) {
+    if (prev.expectedType === "js_classic") {
+      return true;
+    }
+    if (willBeConvertedToJsClassic(prev)) {
+      return true;
+    }
+    prev = prev.prev;
   }
+
   return false;
 };
 
-const isExpectingJsModule = (reference) => {
+const willBeConvertedToJsClassic = (reference) => {
   return (
-    reference.expectedType === "js_module" ||
     reference.searchParams.has("js_module_fallback") ||
     reference.searchParams.has("as_js_classic")
   );

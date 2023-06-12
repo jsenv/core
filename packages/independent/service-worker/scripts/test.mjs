@@ -6,6 +6,7 @@ await executeTestPlan({
     "./tests/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
+        allocatedMs: 90_000,
       },
     },
   },

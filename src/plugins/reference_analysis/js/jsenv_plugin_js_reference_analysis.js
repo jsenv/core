@@ -132,9 +132,10 @@ const parseAndTransformJsReferences = async (
       }
     });
   };
-  const jsReferenceInfos = await parseJsUrls({
+  const jsReferenceInfos = parseJsUrls({
     js: urlInfo.content,
     url: urlInfo.originalUrl,
+    ast: urlInfo.contentAst,
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
     inlineContent,

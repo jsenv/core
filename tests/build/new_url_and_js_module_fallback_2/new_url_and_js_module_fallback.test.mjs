@@ -30,7 +30,7 @@ const test = async (params) => {
     new URL("./snapshots/", import.meta.url),
   );
   const actual = returnValue;
-  const expected = `${server.origin}/js/main.nomodule.js?v=efe67714`;
+  const expected = `${server.origin}/js/main.nomodule.js?v=9798f172`;
   assert({ actual, expected });
 };
 

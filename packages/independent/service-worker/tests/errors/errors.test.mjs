@@ -3,8 +3,8 @@ import {
   assertSnapshots,
 } from "@jsenv/core/tests/snapshots_directory.js";
 
-// https certificate only generated on linux
-if (process.platform === "linux") {
+// https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
+if (!process.env.CI) {
   const snapshotsHtmlDirectoryUrl = new URL(
     "./snapshots/html/",
     import.meta.url,

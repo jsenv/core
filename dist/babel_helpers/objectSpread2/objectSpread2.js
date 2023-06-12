@@ -1,4 +1,4 @@
-import defineProperty from "../defineProperty/defineProperty.js";
+import defineProperty from "../defineProperty/defineProperty.js"
 
 // This function is different to "Reflect.ownKeys". The enumerableOnly
 // filters on symbol properties only. Returned string properties are always
@@ -17,6 +17,7 @@ function ownKeys(object, enumerableOnly) {
   }
   return keys;
 }
+
 export default function _objectSpread2(target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i] != null ? arguments[i] : {};
@@ -28,7 +29,11 @@ export default function _objectSpread2(target) {
       Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
     } else {
       ownKeys(Object(source)).forEach(function (key) {
-        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        Object.defineProperty(
+          target,
+          key,
+          Object.getOwnPropertyDescriptor(source, key)
+        );
       });
     }
   }

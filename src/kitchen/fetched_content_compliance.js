@@ -1,6 +1,10 @@
 import { validateResponseIntegrity } from "@jsenv/integrity";
 
-export const assertFetchedContentCompliance = ({ reference, urlInfo }) => {
+export const assertFetchedContentCompliance = ({
+  reference,
+  urlInfo,
+  content,
+}) => {
   const { expectedContentType } = reference;
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
     throw new Error(
@@ -18,7 +22,7 @@ export const assertFetchedContentCompliance = ({ reference, urlInfo }) => {
     validateResponseIntegrity({
       url: urlInfo.url,
       type: "basic",
-      dataRepresentation: urlInfo.content,
+      dataRepresentation: content,
     });
   }
 };

@@ -61,6 +61,7 @@ export const takeFileSnapshot = (fileUrl, snapshotFileUrl) => {
   assertSnapshots({
     content: fileContent,
     snapshotContent: snapshotFileContent,
+    snapshotUrl: snapshotFileUrl,
   });
 };
 
@@ -77,16 +78,18 @@ export const takeDirectorySnapshot = (
     assertSnapshots({
       content: directoryContent,
       snapshotContent: snapshotDirectoryContent,
+      snapshotUrl: snapshotDirectoryUrl,
     });
   }
 };
 
-export const assertSnapshots = ({ content, snapshotContent }) => {
+export const assertSnapshots = ({ content, snapshotContent, snapshotUrl }) => {
   if (process.env.NO_SNAPSHOT_ASSERTION) {
     return;
   }
   assert({
     actual: content,
     expected: snapshotContent,
+    context: snapshotUrl,
   });
 };

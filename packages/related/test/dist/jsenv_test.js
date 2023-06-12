@@ -21,22 +21,25 @@ import { fork } from "node:child_process";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 
-const urlToScheme = url => {
+const urlToScheme = (url) => {
   const urlString = String(url);
   const colonIndex = urlString.indexOf(":");
   if (colonIndex === -1) {
     return "";
   }
+
   const scheme = urlString.slice(0, colonIndex);
   return scheme;
 };
 
-const urlToResource = url => {
+const urlToResource = (url) => {
   const scheme = urlToScheme(url);
+
   if (scheme === "file") {
     const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
     return urlAsStringWithoutFileProtocol;
   }
+
   if (scheme === "https" || scheme === "http") {
     // remove origin
     const afterProtocol = String(url).slice(scheme.length + "://".length);
@@ -44,16 +47,18 @@ const urlToResource = url => {
     const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
     return urlAsStringWithoutOrigin;
   }
+
   const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
   return urlAsStringWithoutProtocol;
 };
 
-const urlToPathname = url => {
+const urlToPathname = (url) => {
   const resource = urlToResource(url);
   const pathname = resourceToPathname(resource);
   return pathname;
 };
-const resourceToPathname = resource => {
+
+const resourceToPathname = (resource) => {
   const searchSeparatorIndex = resource.indexOf("?");
   if (searchSeparatorIndex > -1) {
     return resource.slice(0, searchSeparatorIndex);
@@ -65,15 +70,17 @@ const resourceToPathname = resource => {
   return resource;
 };
 
-const urlToExtension = url => {
+const urlToExtension = (url) => {
   const pathname = urlToPathname(url);
   return pathnameToExtension(pathname);
 };
-const pathnameToExtension = pathname => {
+
+const pathnameToExtension = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex !== -1) {
     pathname = pathname.slice(slashLastIndex + 1);
   }
+
   const dotLastIndex = pathname.lastIndexOf(".");
   if (dotLastIndex === -1) return "";
   // if (dotLastIndex === pathname.length - 1) return ""
@@ -81,46 +88,44 @@ const pathnameToExtension = pathname => {
   return extension;
 };
 
-const ensurePathnameTrailingSlash = url => {
+const ensurePathnameTrailingSlash = (url) => {
   const urlObject = new URL(url);
-  const {
-    pathname
-  } = urlObject;
+  const { pathname } = urlObject;
   if (pathname.endsWith("/")) {
     return url;
   }
-  let {
-    origin
-  } = urlObject;
+  let { origin } = urlObject;
   // origin is "null" for "file://" urls with Node.js
   if (origin === "null" && urlObject.href.startsWith("file:")) {
     origin = "file://";
   }
-  const {
-    search,
-    hash
-  } = urlObject;
+  const { search, hash } = urlObject;
   return `${origin}${pathname}/${search}${hash}`;
 };
 
-const isFileSystemPath = value => {
+const isFileSystemPath = (value) => {
   if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
   }
   if (value[0] === "/") {
     return true;
   }
   return startsWithWindowsDriveLetter(value);
 };
-const startsWithWindowsDriveLetter = string => {
+
+const startsWithWindowsDriveLetter = (string) => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
+
   const secondChar = string[1];
   if (secondChar !== ":") return false;
+
   return true;
 };
 
-const fileSystemPathToUrl = value => {
+const fileSystemPathToUrl = (value) => {
   if (!isFileSystemPath(value)) {
     throw new Error(`value must be a filesystem path, got ${value}`);
   }
@@ -174,23 +179,27 @@ const getCommonPathname = (pathname, otherPathname) => {
 const urlToRelativeUrl = (url, baseUrl) => {
   const urlObject = new URL(url);
   const baseUrlObject = new URL(baseUrl);
+
   if (urlObject.protocol !== baseUrlObject.protocol) {
     const urlAsString = String(url);
     return urlAsString;
   }
-  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
+
+  if (
+    urlObject.username !== baseUrlObject.username ||
+    urlObject.password !== baseUrlObject.password ||
+    urlObject.host !== baseUrlObject.host
+  ) {
     const afterUrlScheme = String(url).slice(urlObject.protocol.length);
     return afterUrlScheme;
   }
-  const {
-    pathname,
-    hash,
-    search
-  } = urlObject;
+
+  const { pathname, hash, search } = urlObject;
   if (pathname === "/") {
     const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
     return baseUrlResourceWithoutLeadingSlash;
   }
+
   const basePathname = baseUrlObject.pathname;
   const commonPathname = getCommonPathname(pathname, basePathname);
   if (!commonPathname) {
@@ -200,15 +209,21 @@ const urlToRelativeUrl = (url, baseUrl) => {
   const specificPathname = pathname.slice(commonPathname.length);
   const baseSpecificPathname = basePathname.slice(commonPathname.length);
   if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
-    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
+    const baseSpecificParentPathname =
+      pathnameToParentPathname(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
+      /.*?\//g,
+      "../",
+    );
     const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
     return relativeUrl;
   }
+
   const relativeUrl = `${specificPathname}${search}${hash}`;
   return relativeUrl;
 };
-const pathnameToParentPathname = pathname => {
+
+const pathnameToParentPathname = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex === -1) {
     return "/";
@@ -216,12 +231,7 @@ const pathnameToParentPathname = pathname => {
   return pathname.slice(0, slashLastIndex + 1);
 };
 
-const moveUrl = ({
-  url,
-  from,
-  to,
-  preferRelative
-}) => {
+const moveUrl = ({ url, from, to, preferRelative }) => {
   let relativeUrl = urlToRelativeUrl(url, from);
   if (relativeUrl.slice(0, 2) === "//") {
     // restore the protocol
@@ -237,19 +247,22 @@ const moveUrl = ({
 const urlIsInsideOf = (url, otherUrl) => {
   const urlObject = new URL(url);
   const otherUrlObject = new URL(otherUrl);
+
   if (urlObject.origin !== otherUrlObject.origin) {
     return false;
   }
+
   const urlPathname = urlObject.pathname;
   const otherUrlPathname = otherUrlObject.pathname;
   if (urlPathname === otherUrlPathname) {
     return false;
   }
+
   const isInside = urlPathname.startsWith(otherUrlPathname);
   return isInside;
 };
 
-const urlToFileSystemPath = url => {
+const urlToFileSystemPath = (url) => {
   let urlString = String(url);
   if (urlString[urlString.length - 1] === "/") {
     // remove trailing / so that nodejs path becomes predictable otherwise it logs
@@ -260,8 +273,9 @@ const urlToFileSystemPath = url => {
   return fileSystemPath;
 };
 
-const validateDirectoryUrl = value => {
+const validateDirectoryUrl = (value) => {
   let urlString;
+
   if (value instanceof URL) {
     urlString = value.href;
   } else if (typeof value === "string") {
@@ -274,7 +288,7 @@ const validateDirectoryUrl = value => {
         return {
           valid: false,
           value,
-          message: `must be a valid url`
+          message: `must be a valid url`,
         };
       }
     }
@@ -282,27 +296,27 @@ const validateDirectoryUrl = value => {
     return {
       valid: false,
       value,
-      message: `must be a string or an url`
+      message: `must be a string or an url`,
     };
   }
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
       value,
-      message: 'must start with "file://"'
+      message: 'must start with "file://"',
     };
   }
   return {
     valid: true,
-    value: ensurePathnameTrailingSlash(urlString)
+    value: ensurePathnameTrailingSlash(urlString),
   };
 };
-const assertAndNormalizeDirectoryUrl = (directoryUrl, name = "directoryUrl") => {
-  const {
-    valid,
-    message,
-    value
-  } = validateDirectoryUrl(directoryUrl);
+
+const assertAndNormalizeDirectoryUrl = (
+  directoryUrl,
+  name = "directoryUrl",
+) => {
+  const { valid, message, value } = validateDirectoryUrl(directoryUrl);
   if (!valid) {
     throw new TypeError(`${name} ${message}, got ${value}`);
   }
@@ -311,6 +325,7 @@ const assertAndNormalizeDirectoryUrl = (directoryUrl, name = "directoryUrl") => 
 
 const validateFileUrl = (value, baseUrl) => {
   let urlString;
+
   if (value instanceof URL) {
     urlString = value.href;
   } else if (typeof value === "string") {
@@ -323,7 +338,7 @@ const validateFileUrl = (value, baseUrl) => {
         return {
           valid: false,
           value,
-          message: "must be a valid url"
+          message: "must be a valid url",
         };
       }
     }
@@ -331,34 +346,37 @@ const validateFileUrl = (value, baseUrl) => {
     return {
       valid: false,
       value,
-      message: "must be a string or an url"
+      message: "must be a string or an url",
     };
   }
+
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
       value,
-      message: 'must start with "file://"'
+      message: 'must start with "file://"',
     };
   }
+
   return {
     valid: true,
-    value: urlString
+    value: urlString,
   };
 };
-const assertAndNormalizeFileUrl = (fileUrl, baseUrl, name = "fileUrl") => {
-  const {
-    valid,
-    message,
-    value
-  } = validateFileUrl(fileUrl, baseUrl);
+
+const assertAndNormalizeFileUrl = (
+  fileUrl,
+  baseUrl,
+  name = "fileUrl",
+) => {
+  const { valid, message, value } = validateFileUrl(fileUrl, baseUrl);
   if (!valid) {
     throw new TypeError(`${name} ${message}, got ${fileUrl}`);
   }
   return value;
 };
 
-const statsToType = stats => {
+const statsToType = (stats) => {
   if (stats.isFile()) return "file";
   if (stats.isDirectory()) return "directory";
   if (stats.isSymbolicLink()) return "symbolic-link";
@@ -383,51 +401,58 @@ const S_IXGRP = 8; /* 0000010 execute/search permission, group */
 const S_IROTH = 4; /* 0000004 read permission, others */
 const S_IWOTH = 2; /* 0000002 write permission, others */
 const S_IXOTH = 1; /* 0000001 execute/search permission, others */
-const permissionsToBinaryFlags = ({
-  owner,
-  group,
-  others
-}) => {
+
+const permissionsToBinaryFlags = ({ owner, group, others }) => {
   let binaryFlags = 0;
+
   if (owner.read) binaryFlags |= S_IRUSR;
   if (owner.write) binaryFlags |= S_IWUSR;
   if (owner.execute) binaryFlags |= S_IXUSR;
+
   if (group.read) binaryFlags |= S_IRGRP;
   if (group.write) binaryFlags |= S_IWGRP;
   if (group.execute) binaryFlags |= S_IXGRP;
+
   if (others.read) binaryFlags |= S_IROTH;
   if (others.write) binaryFlags |= S_IWOTH;
   if (others.execute) binaryFlags |= S_IXOTH;
+
   return binaryFlags;
 };
 
 const writeEntryPermissions = async (source, permissions) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
+
   let binaryFlags;
   if (typeof permissions === "object") {
     permissions = {
       owner: {
         read: getPermissionOrComputeDefault("read", "owner", permissions),
         write: getPermissionOrComputeDefault("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions),
       },
       group: {
         read: getPermissionOrComputeDefault("read", "group", permissions),
         write: getPermissionOrComputeDefault("write", "group", permissions),
-        execute: getPermissionOrComputeDefault("execute", "group", permissions)
+        execute: getPermissionOrComputeDefault("execute", "group", permissions),
       },
       others: {
         read: getPermissionOrComputeDefault("read", "others", permissions),
         write: getPermissionOrComputeDefault("write", "others", permissions),
-        execute: getPermissionOrComputeDefault("execute", "others", permissions)
-      }
+        execute: getPermissionOrComputeDefault(
+          "execute",
+          "others",
+          permissions,
+        ),
+      },
     };
     binaryFlags = permissionsToBinaryFlags(permissions);
   } else {
     binaryFlags = permissions;
   }
+
   return new Promise((resolve, reject) => {
-    chmod(new URL(sourceUrl), binaryFlags, error => {
+    chmod(new URL(sourceUrl), binaryFlags, (error) => {
       if (error) {
         reject(error);
       } else {
@@ -436,36 +461,43 @@ const writeEntryPermissions = async (source, permissions) => {
     });
   });
 };
-const actionLevels = {
-  read: 0,
-  write: 1,
-  execute: 2
-};
-const subjectLevels = {
-  others: 0,
-  group: 1,
-  owner: 2
-};
+
+const actionLevels = { read: 0, write: 1, execute: 2 };
+const subjectLevels = { others: 0, group: 1, owner: 2 };
+
 const getPermissionOrComputeDefault = (action, subject, permissions) => {
   if (subject in permissions) {
     const subjectPermissions = permissions[subject];
     if (action in subjectPermissions) {
       return subjectPermissions[action];
     }
+
     const actionLevel = actionLevels[action];
-    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+    const actionFallback = Object.keys(actionLevels).find(
+      (actionFallbackCandidate) =>
+        actionLevels[actionFallbackCandidate] > actionLevel &&
+        actionFallbackCandidate in subjectPermissions,
+    );
     if (actionFallback) {
       return subjectPermissions[actionFallback];
     }
   }
+
   const subjectLevel = subjectLevels[subject];
   // do we have a subject with a stronger level (group or owner)
   // where we could read the action permission ?
-  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+  const subjectFallback = Object.keys(subjectLevels).find(
+    (subjectFallbackCandidate) =>
+      subjectLevels[subjectFallbackCandidate] > subjectLevel &&
+      subjectFallbackCandidate in permissions,
+  );
   if (subjectFallback) {
     const subjectPermissions = permissions[subjectFallback];
-    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+    return action in subjectPermissions
+      ? subjectPermissions[action]
+      : getPermissionOrComputeDefault(action, subjectFallback, permissions);
   }
+
   return false;
 };
 
@@ -474,59 +506,81 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
+
 const isWindows$2 = process.platform === "win32";
-const readEntryStat = async (source, {
-  nullIfNotFound = false,
-  followLink = true
-} = {}) => {
+
+const readEntryStat = async (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
   let sourceUrl = assertAndNormalizeFileUrl(source);
   if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
   const sourcePath = urlToFileSystemPath(sourceUrl);
-  const handleNotFoundOption = nullIfNotFound ? {
-    handleNotFoundError: () => null
-  } : {};
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2 ? {
-      // Windows can EPERM on stat
-      handlePermissionDeniedError: async error => {
-        console.error(`trying to fix windows EPERM after stats on ${sourcePath}`);
-        try {
-          // unfortunately it means we mutate the permissions
-          // without being able to restore them to the previous value
-          // (because reading current permission would also throw)
-          await writeEntryPermissions(sourceUrl, 0o666);
-          const stats = await readStat(sourcePath, {
-            followLink,
-            ...handleNotFoundOption,
-            // could not fix the permission error, give up and throw original error
-            handlePermissionDeniedError: () => {
-              console.error(`still got EPERM after stats on ${sourcePath}`);
+    ...(isWindows$2
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: async (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              await writeEntryPermissions(sourceUrl, 0o666);
+              const stats = await readStat(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+              );
               throw error;
             }
-          });
-          return stats;
-        } catch (e) {
-          console.error(`error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`);
-          throw error;
+          },
         }
-      }
-    } : {})
+      : {}),
   });
 };
-const readStat = (sourcePath, {
-  followLink,
-  handleNotFoundError = null,
-  handlePermissionDeniedError = null
-} = {}) => {
+
+const readStat = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
   const nodeMethod = followLink ? stat : lstat;
+
   return new Promise((resolve, reject) => {
     nodeMethod(sourcePath, (error, statsObject) => {
       if (error) {
         if (handleNotFoundError && error.code === "ENOENT") {
           resolve(handleNotFoundError(error));
-        } else if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+        } else if (
+          handlePermissionDeniedError &&
+          (error.code === "EPERM" || error.code === "EACCES")
+        ) {
           resolve(handlePermissionDeniedError(error));
         } else {
           reject(error);
@@ -545,12 +599,14 @@ const readStat = (sourcePath, {
 const raceCallbacks = (raceDescription, winnerCallback) => {
   let cleanCallbacks = [];
   let status = "racing";
+
   const clean = () => {
-    cleanCallbacks.forEach(clean => {
+    cleanCallbacks.forEach((clean) => {
       clean();
     });
     cleanCallbacks = null;
   };
+
   const cancel = () => {
     if (status !== "racing") {
       return;
@@ -558,9 +614,10 @@ const raceCallbacks = (raceDescription, winnerCallback) => {
     status = "cancelled";
     clean();
   };
-  Object.keys(raceDescription).forEach(candidateName => {
+
+  Object.keys(raceDescription).forEach((candidateName) => {
     const register = raceDescription[candidateName];
-    const returnValue = register(data => {
+    const returnValue = register((data) => {
       if (status !== "racing") {
         return;
       }
@@ -568,13 +625,14 @@ const raceCallbacks = (raceDescription, winnerCallback) => {
       clean();
       winnerCallback({
         name: candidateName,
-        data
+        data,
       });
     });
     if (typeof returnValue === "function") {
       cleanCallbacks.push(returnValue);
     }
   });
+
   return cancel;
 };
 
@@ -582,27 +640,28 @@ const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
   let status = "waiting";
   let currentCallbackIndex = -1;
+
   const callbackListOnce = {};
-  const add = callback => {
+
+  const add = (callback) => {
     if (status !== "waiting") {
-      emitUnexpectedActionWarning({
-        action: "add",
-        status
-      });
+      emitUnexpectedActionWarning({ action: "add", status });
       return removeNoop;
     }
+
     if (typeof callback !== "function") {
       throw new Error(`callback must be a function, got ${callback}`);
     }
 
     // don't register twice
-    const existingCallback = callbacks.find(callbackCandidate => {
+    const existingCallback = callbacks.find((callbackCandidate) => {
       return callbackCandidate === callback;
     });
     if (existingCallback) {
       emitCallbackDuplicationWarning();
       return removeNoop;
     }
+
     callbacks.push(callback);
     return () => {
       if (status === "notified") {
@@ -610,10 +669,12 @@ const createCallbackListNotifiedOnce = () => {
         // as the callbacks array is frozen to null
         return;
       }
+
       const index = callbacks.indexOf(callback);
       if (index === -1) {
         return;
       }
+
       if (status === "looping") {
         if (index <= currentCallbackIndex) {
           // The callback was already called (or is the current callback)
@@ -630,12 +691,10 @@ const createCallbackListNotifiedOnce = () => {
       callbacks.splice(index, 1);
     };
   };
-  const notify = param => {
+
+  const notify = (param) => {
     if (status !== "waiting") {
-      emitUnexpectedActionWarning({
-        action: "call",
-        status
-      });
+      emitUnexpectedActionWarning({ action: "call", status });
       return [];
     }
     status = "looping";
@@ -649,58 +708,70 @@ const createCallbackListNotifiedOnce = () => {
     // so that it's possible to remove during the loop
     callbacks = null;
     currentCallbackIndex = -1;
+
     return values;
   };
+
   callbackListOnce.notified = false;
   callbackListOnce.add = add;
   callbackListOnce.notify = notify;
+
   return callbackListOnce;
 };
-const emitUnexpectedActionWarning = ({
-  action,
-  status
-}) => {
+
+const emitUnexpectedActionWarning = ({ action, status }) => {
   if (typeof process.emitWarning === "function") {
-    process.emitWarning(`"${action}" should not happen when callback list is ${status}`, {
-      CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
-      detail: `Code is potentially executed when it should not`
-    });
+    process.emitWarning(
+      `"${action}" should not happen when callback list is ${status}`,
+      {
+        CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+        detail: `Code is potentially executed when it should not`,
+      },
+    );
   } else {
-    console.warn(`"${action}" should not happen when callback list is ${status}`);
+    console.warn(
+      `"${action}" should not happen when callback list is ${status}`,
+    );
   }
 };
+
 const emitCallbackDuplicationWarning = () => {
   if (typeof process.emitWarning === "function") {
     process.emitWarning(`Trying to add a callback already in the list`, {
       CODE: "CALLBACK_DUPLICATION",
-      detail: `Code is potentially executed more than it should`
+      detail: `Code is potentially executed more than it should`,
     });
   } else {
     console.warn(`Trying to add same callback twice`);
   }
 };
+
 const removeNoop = () => {};
 
 /*
  * https://github.com/whatwg/dom/issues/920
  */
 
+
 const Abort = {
-  isAbortError: error => {
+  isAbortError: (error) => {
     return error && error.name === "AbortError";
   },
+
   startOperation: () => {
     return createOperation();
   },
-  throwIfAborted: signal => {
+
+  throwIfAborted: (signal) => {
     if (signal.aborted) {
       const error = new Error(`The operation was aborted`);
       error.name = "AbortError";
       error.type = "aborted";
       throw error;
     }
-  }
+  },
 };
+
 const createOperation = () => {
   const operationAbortController = new AbortController();
   // const abortOperation = (value) => abortController.abort(value)
@@ -713,9 +784,12 @@ const createOperation = () => {
   // uses abortCallbackList to know when something is aborted
   const abortCallbackList = createCallbackListNotifiedOnce();
   const endCallbackList = createCallbackListNotifiedOnce();
+
   let isAbortAfterEnd = false;
+
   operationSignal.onabort = () => {
     operationSignal.onabort = null;
+
     const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
     if (!isAbortAfterEnd) {
       addEndCallback(async () => {
@@ -723,6 +797,7 @@ const createOperation = () => {
       });
     }
   };
+
   const throwIfAborted = () => {
     Abort.throwIfAborted(operationSignal);
   };
@@ -732,7 +807,7 @@ const createOperation = () => {
   // - operation.end awaits the return value of this callback
   // - It won't increase the count of listeners for "abort" that would
   //   trigger max listeners warning when count > 10
-  const addAbortCallback = callback => {
+  const addAbortCallback = (callback) => {
     // It would be painful and not super redable to check if signal is aborted
     // before deciding if it's an abort or end callback
     // with pseudo-code below where we want to stop server either
@@ -745,12 +820,12 @@ const createOperation = () => {
     }
     return abortCallbackList.add(callback);
   };
-  const addEndCallback = callback => {
+
+  const addEndCallback = (callback) => {
     return endCallbackList.add(callback);
   };
-  const end = async ({
-    abortAfterEnd = false
-  } = {}) => {
+
+  const end = async ({ abortAfterEnd = false } = {}) => {
     await Promise.all(endCallbackList.notify());
 
     // "abortAfterEnd" can be handy to ensure "abort" callbacks
@@ -768,10 +843,11 @@ const createOperation = () => {
       }
     }
   };
-  const addAbortSignal = (signal, {
-    onAbort = callbackNoop,
-    onRemove = callbackNoop
-  } = {}) => {
+
+  const addAbortSignal = (
+    signal,
+    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
+  ) => {
     const applyAbortEffects = () => {
       const onAbortCallback = onAbort;
       onAbort = callbackNoop;
@@ -783,64 +859,72 @@ const createOperation = () => {
       onAbort = callbackNoop;
       onRemoveCallback();
     };
+
     if (operationSignal.aborted) {
       applyAbortEffects();
       applyRemoveEffects();
       return callbackNoop;
     }
+
     if (signal.aborted) {
       operationAbortController.abort();
       applyAbortEffects();
       applyRemoveEffects();
       return callbackNoop;
     }
-    const cancelRace = raceCallbacks({
-      operation_abort: cb => {
-        return addAbortCallback(cb);
-      },
-      operation_end: cb => {
-        return addEndCallback(cb);
-      },
-      child_abort: cb => {
-        return addEventListener(signal, "abort", cb);
-      }
-    }, winner => {
-      const raceEffects = {
-        // Both "operation_abort" and "operation_end"
-        // means we don't care anymore if the child aborts.
-        // So we can:
-        // - remove "abort" event listener on child (done by raceCallback)
-        // - remove abort callback on operation (done by raceCallback)
-        // - remove end callback on operation (done by raceCallback)
-        // - call any custom cancel function
-        operation_abort: () => {
-          applyAbortEffects();
-          applyRemoveEffects();
+
+    const cancelRace = raceCallbacks(
+      {
+        operation_abort: (cb) => {
+          return addAbortCallback(cb);
         },
-        operation_end: () => {
-          // Exists to
-          // - remove abort callback on operation
-          // - remove "abort" event listener on child
+        operation_end: (cb) => {
+          return addEndCallback(cb);
+        },
+        child_abort: (cb) => {
+          return addEventListener(signal, "abort", cb);
+        },
+      },
+      (winner) => {
+        const raceEffects = {
+          // Both "operation_abort" and "operation_end"
+          // means we don't care anymore if the child aborts.
+          // So we can:
+          // - remove "abort" event listener on child (done by raceCallback)
+          // - remove abort callback on operation (done by raceCallback)
+          // - remove end callback on operation (done by raceCallback)
           // - call any custom cancel function
-          applyRemoveEffects();
-        },
-        child_abort: () => {
-          applyAbortEffects();
-          operationAbortController.abort();
-        }
-      };
-      raceEffects[winner.name](winner.value);
-    });
+          operation_abort: () => {
+            applyAbortEffects();
+            applyRemoveEffects();
+          },
+          operation_end: () => {
+            // Exists to
+            // - remove abort callback on operation
+            // - remove "abort" event listener on child
+            // - call any custom cancel function
+            applyRemoveEffects();
+          },
+          child_abort: () => {
+            applyAbortEffects();
+            operationAbortController.abort();
+          },
+        };
+        raceEffects[winner.name](winner.value);
+      },
+    );
+
     return () => {
       cancelRace();
       applyRemoveEffects();
     };
   };
-  const addAbortSource = abortSourceCallback => {
+
+  const addAbortSource = (abortSourceCallback) => {
     const abortSource = {
       cleaned: false,
       signal: null,
-      remove: callbackNoop
+      remove: callbackNoop,
     };
     const abortSourceController = new AbortController();
     const abortSourceSignal = abortSourceController.signal;
@@ -848,7 +932,7 @@ const createOperation = () => {
     if (operationSignal.aborted) {
       return abortSource;
     }
-    const returnValue = abortSourceCallback(value => {
+    const returnValue = abortSourceCallback((value) => {
       abortSourceController.abort(value);
     });
     const removeAbortSignal = addAbortSignal(abortSourceSignal, {
@@ -857,13 +941,14 @@ const createOperation = () => {
           returnValue();
         }
         abortSource.cleaned = true;
-      }
+      },
     });
     abortSource.remove = removeAbortSignal;
     return abortSource;
   };
-  const timeout = ms => {
-    return addAbortSource(abort => {
+
+  const timeout = (ms) => {
+    return addAbortSource((abort) => {
       const timeoutId = setTimeout(abort, ms);
       // an abort source return value is called when:
       // - operation is aborted (by an other source)
@@ -873,13 +958,14 @@ const createOperation = () => {
       };
     });
   };
-  const withSignal = async asyncCallback => {
+
+  const withSignal = async (asyncCallback) => {
     const abortController = new AbortController();
     const signal = abortController.signal;
     const removeAbortSignal = addAbortSignal(signal, {
       onAbort: () => {
         abortController.abort();
-      }
+      },
     });
     try {
       const value = await asyncCallback(signal);
@@ -890,13 +976,14 @@ const createOperation = () => {
       throw e;
     }
   };
-  const withSignalSync = callback => {
+
+  const withSignalSync = (callback) => {
     const abortController = new AbortController();
     const signal = abortController.signal;
     const removeAbortSignal = addAbortSignal(signal, {
       onAbort: () => {
         abortController.abort();
-      }
+      },
     });
     try {
       const value = callback(signal);
@@ -907,12 +994,14 @@ const createOperation = () => {
       throw e;
     }
   };
+
   return {
     // We could almost hide the operationSignal
     // But it can be handy for 2 things:
     // - know if operation is aborted (operation.signal.aborted)
     // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
     signal: operationSignal,
+
     throwIfAborted,
     addAbortCallback,
     addAbortSignal,
@@ -921,10 +1010,12 @@ const createOperation = () => {
     withSignal,
     withSignalSync,
     addEndCallback,
-    end
+    end,
   };
 };
+
 const callbackNoop = () => {};
+
 const addEventListener = (target, eventName, cb) => {
   target.addEventListener(eventName, cb);
   return () => {
@@ -933,62 +1024,69 @@ const addEventListener = (target, eventName, cb) => {
 };
 
 const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
-  return raceCallbacks({
-    ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
-    ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
-    ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
-    ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
-    ...(processTeardownEvents.exit ? EXIT_CALLBACK : {})
-  }, callback);
+  return raceCallbacks(
+    {
+      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+      ...(processTeardownEvents.exit ? EXIT_CALLBACK : {}),
+    },
+    callback,
+  );
 };
+
 const SIGHUP_CALLBACK = {
-  SIGHUP: cb => {
+  SIGHUP: (cb) => {
     process.on("SIGHUP", cb);
     return () => {
       process.removeListener("SIGHUP", cb);
     };
-  }
+  },
 };
+
 const SIGTERM_CALLBACK = {
-  SIGTERM: cb => {
+  SIGTERM: (cb) => {
     process.on("SIGTERM", cb);
     return () => {
       process.removeListener("SIGTERM", cb);
     };
-  }
+  },
 };
+
 const BEFORE_EXIT_CALLBACK = {
-  beforeExit: cb => {
+  beforeExit: (cb) => {
     process.on("beforeExit", cb);
     return () => {
       process.removeListener("beforeExit", cb);
     };
-  }
+  },
 };
+
 const EXIT_CALLBACK = {
-  exit: cb => {
+  exit: (cb) => {
     process.on("exit", cb);
     return () => {
       process.removeListener("exit", cb);
     };
-  }
+  },
 };
+
 const SIGINT_CALLBACK = {
-  SIGINT: cb => {
+  SIGINT: (cb) => {
     process.on("SIGINT", cb);
     return () => {
       process.removeListener("SIGINT", cb);
     };
-  }
+  },
 };
 
-const readDirectory = async (url, {
-  emfileMaxWait = 1000
-} = {}) => {
+const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
   const directoryUrl = assertAndNormalizeDirectoryUrl(url);
   const directoryUrlObject = new URL(directoryUrl);
   const startMs = Date.now();
   let attemptCount = 0;
+
   const attempt = async () => {
     try {
       const names = await new Promise((resolve, reject) => {
@@ -1010,25 +1108,28 @@ const readDirectory = async (url, {
         if (timeSpentWaiting > emfileMaxWait) {
           throw e;
         }
-        await new Promise(resolve => setTimeout(resolve), attemptCount);
+        await new Promise((resolve) => setTimeout(resolve), attemptCount);
         return await attempt();
       }
       throw e;
     }
   };
+
   return attempt();
 };
 
 const comparePathnames = (leftPathame, rightPathname) => {
   const leftPartArray = leftPathame.split("/");
   const rightPartArray = rightPathname.split("/");
+
   const leftLength = leftPartArray.length;
   const rightLength = rightPartArray.length;
+
   const maxLength = Math.max(leftLength, rightLength);
   let i = 0;
   while (i < maxLength) {
-    const leftPartExists = (i in leftPartArray);
-    const rightPartExists = (i in rightPartArray);
+    const leftPartExists = i in leftPartArray;
+    const rightPartExists = i in rightPartArray;
 
     // longer comes first
     if (!leftPartExists) {
@@ -1037,6 +1138,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
     if (!rightPartExists) {
       return -1;
     }
+
     const leftPartIsLast = i === leftPartArray.length - 1;
     const rightPartIsLast = i === rightPartArray.length - 1;
     // folder comes first
@@ -1046,6 +1148,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
     if (!leftPartIsLast && rightPartIsLast) {
       return -1;
     }
+
     const leftPart = leftPartArray[i];
     const rightPart = rightPartArray[i];
     i++;
@@ -1055,6 +1158,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
       return comparison;
     }
   }
+
   if (leftLength < rightLength) {
     return +1;
   }
@@ -1068,60 +1172,77 @@ const collectFiles = async ({
   signal = new AbortController().signal,
   directoryUrl,
   associations,
-  predicate
+  predicate,
 }) => {
   const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   if (typeof predicate !== "function") {
     throw new TypeError(`predicate must be a function, got ${predicate}`);
   }
   associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
+
   const collectOperation = Abort.startOperation();
   collectOperation.addAbortSignal(signal);
+
   const matchingFileResultArray = [];
-  const visitDirectory = async directoryUrl => {
+  const visitDirectory = async (directoryUrl) => {
     collectOperation.throwIfAborted();
     const directoryItems = await readDirectory(directoryUrl);
-    await Promise.all(directoryItems.map(async directoryItem => {
-      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
-      collectOperation.throwIfAborted();
-      const directoryChildNodeStats = await readEntryStat(directoryChildNodeUrl, {
-        // we ignore symlink because recursively traversed
-        // so symlinked file will be discovered.
-        // Moreover if they lead outside of directoryPath it can become a problem
-        // like infinite recursion of whatever.
-        // that we could handle using an object of pathname already seen but it will be useless
-        // because directoryPath is recursively traversed
-        followLink: false
-      });
-      if (directoryChildNodeStats.isDirectory()) {
-        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
-        if (!URL_META.urlChildMayMatch({
-          url: subDirectoryUrl,
-          associations,
-          predicate
-        })) {
+
+    await Promise.all(
+      directoryItems.map(async (directoryItem) => {
+        const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
+        collectOperation.throwIfAborted();
+        const directoryChildNodeStats = await readEntryStat(
+          directoryChildNodeUrl,
+          {
+            // we ignore symlink because recursively traversed
+            // so symlinked file will be discovered.
+            // Moreover if they lead outside of directoryPath it can become a problem
+            // like infinite recursion of whatever.
+            // that we could handle using an object of pathname already seen but it will be useless
+            // because directoryPath is recursively traversed
+            followLink: false,
+          },
+        );
+
+        if (directoryChildNodeStats.isDirectory()) {
+          const subDirectoryUrl = `${directoryChildNodeUrl}/`;
+          if (
+            !URL_META.urlChildMayMatch({
+              url: subDirectoryUrl,
+              associations,
+              predicate,
+            })
+          ) {
+            return;
+          }
+          await visitDirectory(subDirectoryUrl);
           return;
         }
-        await visitDirectory(subDirectoryUrl);
-        return;
-      }
-      if (directoryChildNodeStats.isFile()) {
-        const meta = URL_META.applyAssociations({
-          url: directoryChildNodeUrl,
-          associations
-        });
-        if (!predicate(meta)) return;
-        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
-        matchingFileResultArray.push({
-          url: new URL(relativeUrl, rootDirectoryUrl).href,
-          relativeUrl: decodeURIComponent(relativeUrl),
-          meta,
-          fileStats: directoryChildNodeStats
-        });
-        return;
-      }
-    }));
+
+        if (directoryChildNodeStats.isFile()) {
+          const meta = URL_META.applyAssociations({
+            url: directoryChildNodeUrl,
+            associations,
+          });
+          if (!predicate(meta)) return;
+
+          const relativeUrl = urlToRelativeUrl(
+            directoryChildNodeUrl,
+            rootDirectoryUrl,
+          );
+          matchingFileResultArray.push({
+            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            relativeUrl: decodeURIComponent(relativeUrl),
+            meta,
+            fileStats: directoryChildNodeStats,
+          });
+          return;
+        }
+      }),
+    );
   };
+
   try {
     await visitDirectory(rootDirectoryUrl);
 
@@ -1139,19 +1260,20 @@ const collectFiles = async ({
 };
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
-const {
-  mkdir
-} = promises;
-const writeDirectory = async (destination, {
-  recursive = true,
-  allowUseless = false
-} = {}) => {
+const { mkdir } = promises;
+
+const writeDirectory = async (
+  destination,
+  { recursive = true, allowUseless = false } = {},
+) => {
   const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
   const destinationPath = urlToFileSystemPath(destinationUrl);
+
   const destinationStats = await readEntryStat(destinationUrl, {
     nullIfNotFound: true,
-    followLink: false
+    followLink: false,
   });
+
   if (destinationStats) {
     if (destinationStats.isDirectory()) {
       if (allowUseless) {
@@ -1159,13 +1281,15 @@ const writeDirectory = async (destination, {
       }
       throw new Error(`directory already exists at ${destinationPath}`);
     }
+
     const destinationType = statsToType(destinationStats);
-    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
+    throw new Error(
+      `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
+    );
   }
+
   try {
-    await mkdir(destinationPath, {
-      recursive
-    });
+    await mkdir(destinationPath, { recursive });
   } catch (error) {
     if (allowUseless && error.code === "EEXIST") {
       return;
@@ -1174,22 +1298,27 @@ const writeDirectory = async (destination, {
   }
 };
 
-const removeEntry = async (source, {
-  signal = new AbortController().signal,
-  allowUseless = false,
-  recursive = false,
-  maxRetries = 3,
-  retryDelay = 100,
-  onlyContent = false
-} = {}) => {
+const removeEntry = async (
+  source,
+  {
+    signal = new AbortController().signal,
+    allowUseless = false,
+    recursive = false,
+    maxRetries = 3,
+    retryDelay = 100,
+    onlyContent = false,
+  } = {},
+) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
+
   const removeOperation = Abort.startOperation();
   removeOperation.addAbortSignal(signal);
+
   try {
     removeOperation.throwIfAborted();
     const sourceStats = await readEntryStat(sourceUrl, {
       nullIfNotFound: true,
-      followLink: false
+      followLink: false,
     });
     if (!sourceStats) {
       if (allowUseless) {
@@ -1201,55 +1330,69 @@ const removeEntry = async (source, {
     // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
     // FIFO and socket are ignored, not sure what they are exactly and what to do with them
     // other libraries ignore them, let's do the same.
-    if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
-      await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
-        maxRetries,
-        retryDelay
-      });
+    if (
+      sourceStats.isFile() ||
+      sourceStats.isSymbolicLink() ||
+      sourceStats.isCharacterDevice() ||
+      sourceStats.isBlockDevice()
+    ) {
+      await removeNonDirectory(
+        sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
+        {
+          maxRetries,
+          retryDelay,
+        },
+      );
     } else if (sourceStats.isDirectory()) {
       await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
         signal: removeOperation.signal,
         recursive,
         maxRetries,
         retryDelay,
-        onlyContent
+        onlyContent,
       });
     }
   } finally {
     await removeOperation.end();
   }
 };
-const removeNonDirectory = (sourceUrl, {
-  maxRetries,
-  retryDelay
-}) => {
+
+const removeNonDirectory = (sourceUrl, { maxRetries, retryDelay }) => {
   const sourcePath = urlToFileSystemPath(sourceUrl);
+
   let retryCount = 0;
   const attempt = () => {
     return unlinkNaive(sourcePath, {
-      ...(retryCount >= maxRetries ? {} : {
-        handleTemporaryError: async () => {
-          retryCount++;
-          return new Promise(resolve => {
-            setTimeout(() => {
-              resolve(attempt());
-            }, retryCount * retryDelay);
-          });
-        }
-      })
+      ...(retryCount >= maxRetries
+        ? {}
+        : {
+            handleTemporaryError: async () => {
+              retryCount++;
+              return new Promise((resolve) => {
+                setTimeout(() => {
+                  resolve(attempt());
+                }, retryCount * retryDelay);
+              });
+            },
+          }),
     });
   };
   return attempt();
 };
-const unlinkNaive = (sourcePath, {
-  handleTemporaryError = null
-} = {}) => {
+
+const unlinkNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
   return new Promise((resolve, reject) => {
-    unlink(sourcePath, error => {
+    unlink(sourcePath, (error) => {
       if (error) {
         if (error.code === "ENOENT") {
           resolve();
-        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
+        } else if (
+          handleTemporaryError &&
+          (error.code === "EBUSY" ||
+            error.code === "EMFILE" ||
+            error.code === "ENFILE" ||
+            error.code === "ENOENT")
+        ) {
           resolve(handleTemporaryError(error));
         } else {
           reject(error);
@@ -1260,27 +1403,31 @@ const unlinkNaive = (sourcePath, {
     });
   });
 };
-const removeDirectory = async (rootDirectoryUrl, {
-  signal,
-  maxRetries,
-  retryDelay,
-  recursive,
-  onlyContent
-}) => {
+
+const removeDirectory = async (
+  rootDirectoryUrl,
+  { signal, maxRetries, retryDelay, recursive, onlyContent },
+) => {
   const removeDirectoryOperation = Abort.startOperation();
   removeDirectoryOperation.addAbortSignal(signal);
-  const visit = async sourceUrl => {
+
+  const visit = async (sourceUrl) => {
     removeDirectoryOperation.throwIfAborted();
     const sourceStats = await readEntryStat(sourceUrl, {
       nullIfNotFound: true,
-      followLink: false
+      followLink: false,
     });
 
     // file/directory not found
     if (sourceStats === null) {
       return;
     }
-    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+
+    if (
+      sourceStats.isFile() ||
+      sourceStats.isCharacterDevice() ||
+      sourceStats.isBlockDevice()
+    ) {
       await visitFile(sourceUrl);
     } else if (sourceStats.isSymbolicLink()) {
       await visitSymbolicLink(sourceUrl);
@@ -1288,62 +1435,74 @@ const removeDirectory = async (rootDirectoryUrl, {
       await visitDirectory(`${sourceUrl}/`);
     }
   };
-  const visitDirectory = async directoryUrl => {
+
+  const visitDirectory = async (directoryUrl) => {
     const directoryPath = urlToFileSystemPath(directoryUrl);
-    const optionsFromRecursive = recursive ? {
-      handleNotEmptyError: async () => {
-        await removeDirectoryContent(directoryUrl);
-        await visitDirectory(directoryUrl);
-      }
-    } : {};
+    const optionsFromRecursive = recursive
+      ? {
+          handleNotEmptyError: async () => {
+            await removeDirectoryContent(directoryUrl);
+            await visitDirectory(directoryUrl);
+          },
+        }
+      : {};
     removeDirectoryOperation.throwIfAborted();
     await removeDirectoryNaive(directoryPath, {
       ...optionsFromRecursive,
       // Workaround for https://github.com/joyent/node/issues/4337
-      ...(process.platform === "win32" ? {
-        handlePermissionError: async error => {
-          console.error(`trying to fix windows EPERM after readir on ${directoryPath}`);
-          let openOrCloseError;
-          try {
-            const fd = openSync(directoryPath);
-            closeSync(fd);
-          } catch (e) {
-            openOrCloseError = e;
+      ...(process.platform === "win32"
+        ? {
+            handlePermissionError: async (error) => {
+              console.error(
+                `trying to fix windows EPERM after readir on ${directoryPath}`,
+              );
+
+              let openOrCloseError;
+              try {
+                const fd = openSync(directoryPath);
+                closeSync(fd);
+              } catch (e) {
+                openOrCloseError = e;
+              }
+
+              if (openOrCloseError) {
+                if (openOrCloseError.code === "ENOENT") {
+                  return;
+                }
+                console.error(
+                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                );
+                throw error;
+              }
+
+              await removeDirectoryNaive(directoryPath, {
+                ...optionsFromRecursive,
+              });
+            },
           }
-          if (openOrCloseError) {
-            if (openOrCloseError.code === "ENOENT") {
-              return;
-            }
-            console.error(`error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`);
-            throw error;
-          }
-          await removeDirectoryNaive(directoryPath, {
-            ...optionsFromRecursive
-          });
-        }
-      } : {})
+        : {}),
     });
   };
-  const removeDirectoryContent = async directoryUrl => {
+
+  const removeDirectoryContent = async (directoryUrl) => {
     removeDirectoryOperation.throwIfAborted();
     const names = await readDirectory(directoryUrl);
-    await Promise.all(names.map(async name => {
-      const url = resolveUrl(name, directoryUrl);
-      await visit(url);
-    }));
+    await Promise.all(
+      names.map(async (name) => {
+        const url = resolveUrl(name, directoryUrl);
+        await visit(url);
+      }),
+    );
   };
-  const visitFile = async fileUrl => {
-    await removeNonDirectory(fileUrl, {
-      maxRetries,
-      retryDelay
-    });
+
+  const visitFile = async (fileUrl) => {
+    await removeNonDirectory(fileUrl, { maxRetries, retryDelay });
   };
-  const visitSymbolicLink = async symbolicLinkUrl => {
-    await removeNonDirectory(symbolicLinkUrl, {
-      maxRetries,
-      retryDelay
-    });
+
+  const visitSymbolicLink = async (symbolicLinkUrl) => {
+    await removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
   };
+
   try {
     if (onlyContent) {
       await removeDirectoryContent(rootDirectoryUrl);
@@ -1354,10 +1513,11 @@ const removeDirectory = async (rootDirectoryUrl, {
     await removeDirectoryOperation.end();
   }
 };
-const removeDirectoryNaive = (directoryPath, {
-  handleNotEmptyError = null,
-  handlePermissionError = null
-} = {}) => {
+
+const removeDirectoryNaive = (
+  directoryPath,
+  { handleNotEmptyError = null, handlePermissionError = null } = {},
+) => {
   return new Promise((resolve, reject) => {
     rmdir(directoryPath, (error, lstatObject) => {
       if (error) {
@@ -1365,11 +1525,13 @@ const removeDirectoryNaive = (directoryPath, {
           resolve(handlePermissionError(error));
         } else if (error.code === "ENOENT") {
           resolve();
-        } else if (handleNotEmptyError && (
-        // linux os
-        error.code === "ENOTEMPTY" ||
-        // SunOS
-        error.code === "EEXIST")) {
+        } else if (
+          handleNotEmptyError &&
+          // linux os
+          (error.code === "ENOTEMPTY" ||
+            // SunOS
+            error.code === "EEXIST")
+        ) {
           resolve(handleNotEmptyError(error));
         } else {
           reject(error);
@@ -1381,37 +1543,39 @@ const removeDirectoryNaive = (directoryPath, {
   });
 };
 
-const ensureEmptyDirectory = async source => {
+const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
     nullIfNotFound: true,
-    followLink: false
+    followLink: false,
   });
   if (stats === null) {
     // if there is nothing, create a directory
-    return writeDirectory(source, {
-      allowUseless: true
-    });
+    return writeDirectory(source, { allowUseless: true });
   }
   if (stats.isDirectory()) {
     // if there is a directory remove its content and done
     return removeEntry(source, {
       allowUseless: true,
       recursive: true,
-      onlyContent: true
+      onlyContent: true,
     });
   }
+
   const sourceType = statsToType(stats);
   const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
-  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
+  throw new Error(
+    `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
+  );
 };
 
-const ensureParentDirectories = async destination => {
+const ensureParentDirectories = async (destination) => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationPath = urlToFileSystemPath(destinationUrl);
   const destinationParentPath = dirname(destinationPath);
+
   return writeDirectory(destinationParentPath, {
     recursive: true,
-    allowUseless: true
+    allowUseless: true,
   });
 };
 
@@ -1437,14 +1601,19 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   } catch (e) {
     throw new Error(`absolute url expected but got ${url}`);
   }
+
   if (!isWindows$1) {
     return url;
   }
+
   try {
     baseUrl = String(new URL(baseUrl));
   } catch (e) {
-    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
+    throw new Error(
+      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    );
   }
+
   if (!url.startsWith("file://")) {
     return url;
   }
@@ -1455,14 +1624,21 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   }
 
   // drive letter was lost, restore it
-  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
-  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
+  const baseUrlOrFallback = baseUrl.startsWith("file://")
+    ? baseUrl
+    : baseUrlFallback;
+  const driveLetter = extractDriveLetter(
+    baseUrlOrFallback.slice("file://".length),
+  );
   if (!driveLetter) {
-    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
+    throw new Error(
+      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    );
   }
   return `file:///${driveLetter}:${afterProtocol}`;
 };
-const extractDriveLetter = resource => {
+
+const extractDriveLetter = (resource) => {
   // we still have the windows drive letter
   if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
     return resource[1];
@@ -1472,9 +1648,7 @@ const extractDriveLetter = resource => {
 
 process.platform === "win32";
 
-const readFile = async (value, {
-  as = "buffer"
-} = {}) => {
+const readFile = async (value, { as = "buffer" } = {}) => {
   const fileUrl = assertAndNormalizeFileUrl(value);
   const buffer = await new Promise((resolve, reject) => {
     readFile$1(new URL(fileUrl), (error, buffer) => {
@@ -1494,7 +1668,9 @@ const readFile = async (value, {
   if (as === "json") {
     return JSON.parse(buffer.toString());
   }
-  throw new Error(`"as" must be one of "buffer","string","json" received "${as}"`);
+  throw new Error(
+    `"as" must be one of "buffer","string","json" received "${as}"`,
+  );
 };
 
 process.platform === "win32";
@@ -1515,9 +1691,10 @@ const writeFile = async (destination, content = "") => {
     throw error;
   }
 };
+
 const writeFileNaive = (urlObject, content) => {
   return new Promise((resolve, reject) => {
-    writeFile$1(urlObject, content, error => {
+    writeFile$1(urlObject, content, (error) => {
       if (error) {
         reject(error);
       } else {
@@ -1535,7 +1712,7 @@ const writeFileSync = (destination, content = "") => {
   } catch (error) {
     if (error.code === "ENOENT") {
       mkdirSync(new URL("./", destinationUrlObject), {
-        recursive: true
+        recursive: true,
       });
       writeFileSync$1(destinationUrlObject, content);
       return;
@@ -1545,87 +1722,64 @@ const writeFileSync = (destination, content = "") => {
 };
 
 const LOG_LEVEL_OFF = "off";
+
 const LOG_LEVEL_DEBUG = "debug";
+
 const LOG_LEVEL_INFO = "info";
+
 const LOG_LEVEL_WARN = "warn";
+
 const LOG_LEVEL_ERROR = "error";
 
-const createLogger = ({
-  logLevel = LOG_LEVEL_INFO
-} = {}) => {
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
   if (logLevel === LOG_LEVEL_DEBUG) {
     return {
       level: "debug",
-      levels: {
-        debug: true,
-        info: true,
-        warn: true,
-        error: true
-      },
+      levels: { debug: true, info: true, warn: true, error: true },
       debug,
       info,
       warn,
-      error
+      error,
     };
   }
   if (logLevel === LOG_LEVEL_INFO) {
     return {
       level: "info",
-      levels: {
-        debug: false,
-        info: true,
-        warn: true,
-        error: true
-      },
+      levels: { debug: false, info: true, warn: true, error: true },
       debug: debugDisabled,
       info,
       warn,
-      error
+      error,
     };
   }
   if (logLevel === LOG_LEVEL_WARN) {
     return {
       level: "warn",
-      levels: {
-        debug: false,
-        info: false,
-        warn: true,
-        error: true
-      },
+      levels: { debug: false, info: false, warn: true, error: true },
       debug: debugDisabled,
       info: infoDisabled,
       warn,
-      error
+      error,
     };
   }
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
       level: "error",
-      levels: {
-        debug: false,
-        info: false,
-        warn: false,
-        error: true
-      },
+      levels: { debug: false, info: false, warn: false, error: true },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
-      error
+      error,
     };
   }
   if (logLevel === LOG_LEVEL_OFF) {
     return {
       level: "off",
-      levels: {
-        debug: false,
-        info: false,
-        warn: false,
-        error: false
-      },
+      levels: { debug: false, info: false, warn: false, error: false },
       debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
-      error: errorDisabled
+      error: errorDisabled,
     };
   }
   throw new Error(`unexpected logLevel.
@@ -1638,154 +1792,198 @@ ${LOG_LEVEL_WARN}
 ${LOG_LEVEL_INFO}
 ${LOG_LEVEL_DEBUG}`);
 };
+
 const debug = (...args) => console.debug(...args);
+
 const debugDisabled = () => {};
+
 const info = (...args) => console.info(...args);
+
 const infoDisabled = () => {};
+
 const warn = (...args) => console.warn(...args);
+
 const warnDisabled = () => {};
+
 const error = (...args) => console.error(...args);
+
 const errorDisabled = () => {};
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
 function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
-  const position = argv.indexOf(prefix + flag);
-  const terminatorPosition = argv.indexOf('--');
-  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
+	const position = argv.indexOf(prefix + flag);
+	const terminatorPosition = argv.indexOf('--');
+	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
 }
-const {
-  env
-} = process$1;
+
+const {env} = process$1;
+
 let flagForceColor;
-if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
-  flagForceColor = 0;
-} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
-  flagForceColor = 1;
+if (
+	hasFlag('no-color')
+	|| hasFlag('no-colors')
+	|| hasFlag('color=false')
+	|| hasFlag('color=never')
+) {
+	flagForceColor = 0;
+} else if (
+	hasFlag('color')
+	|| hasFlag('colors')
+	|| hasFlag('color=true')
+	|| hasFlag('color=always')
+) {
+	flagForceColor = 1;
 }
+
 function envForceColor() {
-  if ('FORCE_COLOR' in env) {
-    if (env.FORCE_COLOR === 'true') {
-      return 1;
-    }
-    if (env.FORCE_COLOR === 'false') {
-      return 0;
-    }
-    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-  }
+	if ('FORCE_COLOR' in env) {
+		if (env.FORCE_COLOR === 'true') {
+			return 1;
+		}
+
+		if (env.FORCE_COLOR === 'false') {
+			return 0;
+		}
+
+		return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+	}
 }
+
 function translateLevel(level) {
-  if (level === 0) {
-    return false;
-  }
-  return {
-    level,
-    hasBasic: true,
-    has256: level >= 2,
-    has16m: level >= 3
-  };
-}
-function _supportsColor(haveStream, {
-  streamIsTTY,
-  sniffFlags = true
-} = {}) {
-  const noFlagForceColor = envForceColor();
-  if (noFlagForceColor !== undefined) {
-    flagForceColor = noFlagForceColor;
-  }
-  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-  if (forceColor === 0) {
-    return 0;
-  }
-  if (sniffFlags) {
-    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
-      return 3;
-    }
-    if (hasFlag('color=256')) {
-      return 2;
-    }
-  }
+	if (level === 0) {
+		return false;
+	}
 
-  // Check for Azure DevOps pipelines.
-  // Has to be above the `!streamIsTTY` check.
-  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-    return 1;
-  }
-  if (haveStream && !streamIsTTY && forceColor === undefined) {
-    return 0;
-  }
-  const min = forceColor || 0;
-  if (env.TERM === 'dumb') {
-    return min;
-  }
-  if (process$1.platform === 'win32') {
-    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
-    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-    const osRelease = os.release().split('.');
-    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10_586) {
-      return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-    }
-    return 1;
-  }
-  if ('CI' in env) {
-    if ('GITHUB_ACTIONS' in env) {
-      return 3;
-    }
-    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-      return 1;
-    }
-    return min;
-  }
-  if ('TEAMCITY_VERSION' in env) {
-    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-  }
-  if (env.COLORTERM === 'truecolor') {
-    return 3;
-  }
-  if (env.TERM === 'xterm-kitty') {
-    return 3;
-  }
-  if ('TERM_PROGRAM' in env) {
-    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-    switch (env.TERM_PROGRAM) {
-      case 'iTerm.app':
-        {
-          return version >= 3 ? 3 : 2;
-        }
-      case 'Apple_Terminal':
-        {
-          return 2;
-        }
-      // No default
-    }
-  }
-
-  if (/-256(color)?$/i.test(env.TERM)) {
-    return 2;
-  }
-  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-    return 1;
-  }
-  if ('COLORTERM' in env) {
-    return 1;
-  }
-  return min;
+	return {
+		level,
+		hasBasic: true,
+		has256: level >= 2,
+		has16m: level >= 3,
+	};
 }
+
+function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
+	const noFlagForceColor = envForceColor();
+	if (noFlagForceColor !== undefined) {
+		flagForceColor = noFlagForceColor;
+	}
+
+	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+	if (forceColor === 0) {
+		return 0;
+	}
+
+	if (sniffFlags) {
+		if (hasFlag('color=16m')
+			|| hasFlag('color=full')
+			|| hasFlag('color=truecolor')) {
+			return 3;
+		}
+
+		if (hasFlag('color=256')) {
+			return 2;
+		}
+	}
+
+	// Check for Azure DevOps pipelines.
+	// Has to be above the `!streamIsTTY` check.
+	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+		return 1;
+	}
+
+	if (haveStream && !streamIsTTY && forceColor === undefined) {
+		return 0;
+	}
+
+	const min = forceColor || 0;
+
+	if (env.TERM === 'dumb') {
+		return min;
+	}
+
+	if (process$1.platform === 'win32') {
+		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
+		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		const osRelease = os.release().split('.');
+		if (
+			Number(osRelease[0]) >= 10
+			&& Number(osRelease[2]) >= 10_586
+		) {
+			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+		}
+
+		return 1;
+	}
+
+	if ('CI' in env) {
+		if ('GITHUB_ACTIONS' in env) {
+			return 3;
+		}
+
+		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+			return 1;
+		}
+
+		return min;
+	}
+
+	if ('TEAMCITY_VERSION' in env) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+	}
+
+	if (env.COLORTERM === 'truecolor') {
+		return 3;
+	}
+
+	if (env.TERM === 'xterm-kitty') {
+		return 3;
+	}
+
+	if ('TERM_PROGRAM' in env) {
+		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+		switch (env.TERM_PROGRAM) {
+			case 'iTerm.app': {
+				return version >= 3 ? 3 : 2;
+			}
+
+			case 'Apple_Terminal': {
+				return 2;
+			}
+			// No default
+		}
+	}
+
+	if (/-256(color)?$/i.test(env.TERM)) {
+		return 2;
+	}
+
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+		return 1;
+	}
+
+	if ('COLORTERM' in env) {
+		return 1;
+	}
+
+	return min;
+}
+
 function createSupportsColor(stream, options = {}) {
-  const level = _supportsColor(stream, {
-    streamIsTTY: stream && stream.isTTY,
-    ...options
-  });
-  return translateLevel(level);
+	const level = _supportsColor(stream, {
+		streamIsTTY: stream && stream.isTTY,
+		...options,
+	});
+
+	return translateLevel(level);
 }
+
 ({
-  stdout: createSupportsColor({
-    isTTY: tty.isatty(1)
-  }),
-  stderr: createSupportsColor({
-    isTTY: tty.isatty(2)
-  })
+	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
+	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
 });
 
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
@@ -1810,9 +2008,14 @@ const BLUE = "\x1b[34m";
 const MAGENTA = "\x1b[35m";
 const GREY = "\x1b[90m";
 const RESET = "\x1b[0m";
-const setANSIColor = canUseColors ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}` : text => text;
+
+const setANSIColor = canUseColors
+  ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}`
+  : (text) => text;
+
 const ANSI = {
   supported: canUseColors,
+
   RED,
   GREEN,
   YELLOW,
@@ -1820,23 +2023,31 @@ const ANSI = {
   MAGENTA,
   GREY,
   RESET,
-  color: setANSIColor
+
+  color: setANSIColor,
 };
 
 function isUnicodeSupported() {
-  if (process$1.platform !== 'win32') {
-    return process$1.env.TERM !== 'linux'; // Linux console (kernel)
-  }
+	if (process$1.platform !== 'win32') {
+		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+	}
 
-  return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) // Windows Terminal
-  || Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-  || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-  || process$1.env.TERM_PROGRAM === 'Terminus-Sublime' || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+	return Boolean(process$1.env.CI)
+		|| Boolean(process$1.env.WT_SESSION) // Windows Terminal
+		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
+		|| process$1.env.TERM_PROGRAM === 'vscode'
+		|| process$1.env.TERM === 'xterm-256color'
+		|| process$1.env.TERM === 'alacritty'
+		|| process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
 }
 
 // see also https://github.com/sindresorhus/figures
 
+
 const canUseUnicode = isUnicodeSupported();
+
 const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
 const OK_RAW = canUseUnicode ? `✔` : `√`;
 const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
@@ -1844,6 +2055,7 @@ const DEBUG_RAW = canUseUnicode ? `◆` : `♦`;
 const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
 const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
 const CIRCLE_CROSS_RAW = canUseUnicode ? `ⓧ` : `(×)`;
+
 const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
 const OK = ANSI.color(OK_RAW, ANSI.GREEN);
 const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
@@ -1851,6 +2063,7 @@ const DEBUG = ANSI.color(DEBUG_RAW, ANSI.GREY);
 const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
 const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
 const CIRCLE_CROSS = ANSI.color(CIRCLE_CROSS_RAW, ANSI.RED);
+
 const UNICODE = {
   COMMAND,
   OK,
@@ -1859,6 +2072,7 @@ const UNICODE = {
   INFO,
   WARNING,
   CIRCLE_CROSS,
+
   COMMAND_RAW,
   OK_RAW,
   FAILURE_RAW,
@@ -1866,37 +2080,47 @@ const UNICODE = {
   INFO_RAW,
   WARNING_RAW,
   CIRCLE_CROSS_RAW,
-  supported: canUseUnicode
+
+  supported: canUseUnicode,
 };
 
 const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
-  Object.keys(details).forEach(key => {
+
+  Object.keys(details).forEach((key) => {
     const value = details[key];
     string += `
 --- ${key} ---
-${Array.isArray(value) ? value.join(`
-`) : value}`;
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
   });
+
   return string;
 };
 
-const setRoundedPrecision = (number, {
-  decimals = 1,
-  decimalsWhenSmall = decimals
-} = {}) => {
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
   return setDecimalsPrecision(number, {
     decimals,
     decimalsWhenSmall,
-    transform: Math.round
+    transform: Math.round,
   });
 };
-const setDecimalsPrecision = (number, {
-  transform,
-  decimals,
-  // max decimals for number in [-Infinity, -1[]1, Infinity]
-  decimalsWhenSmall // max decimals for number in [-1,1]
-} = {}) => {
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
   if (number === 0) {
     return 0;
   }
@@ -1935,27 +2159,28 @@ const setDecimalsPrecision = (number, {
 //   return numberTruncated
 // }
 
-const msAsEllapsedTime = ms => {
+const msAsEllapsedTime = (ms) => {
   if (ms < 1000) {
     return "0 second";
   }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
+  const { primary, remaining } = parseMs(ms);
   if (!remaining) {
     return formatEllapsedUnit(primary);
   }
   return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
 };
-const formatEllapsedUnit = unit => {
-  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+
+const formatEllapsedUnit = (unit) => {
+  const count =
+    unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+
   if (count <= 1) {
     return `${count} ${unit.name}`;
   }
   return `${count} ${unit.name}s`;
 };
-const msAsDuration = ms => {
+
+const msAsDuration = (ms) => {
   // ignore ms below meaningfulMs so that:
   // msAsDuration(0.5) -> "0 second"
   // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
@@ -1966,24 +2191,26 @@ const msAsDuration = ms => {
   if (ms < 1) {
     return "0 second";
   }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
+  const { primary, remaining } = parseMs(ms);
   if (!remaining) {
     return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
   }
-  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(remaining, 0)}`;
+  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(
+    remaining,
+    0,
+  )}`;
 };
+
 const formatDurationUnit = (unit, decimals) => {
   const count = setRoundedPrecision(unit.count, {
-    decimals
+    decimals,
   });
   if (count <= 1) {
     return `${count} ${unit.name}`;
   }
   return `${count} ${unit.name}s`;
 };
+
 const MS_PER_UNITS = {
   year: 31_557_600_000,
   month: 2_629_000_000,
@@ -1991,14 +2218,15 @@ const MS_PER_UNITS = {
   day: 86_400_000,
   hour: 3_600_000,
   minute: 60_000,
-  second: 1000
+  second: 1000,
 };
-const parseMs = ms => {
+
+const parseMs = (ms) => {
   const unitNames = Object.keys(MS_PER_UNITS);
   const smallestUnitName = unitNames[unitNames.length - 1];
   let firstUnitName = smallestUnitName;
   let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex(unitName => {
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
     if (unitName === smallestUnitName) {
       return false;
     }
@@ -2015,8 +2243,8 @@ const parseMs = ms => {
     return {
       primary: {
         name: firstUnitName,
-        count: firstUnitCount
-      }
+        count: firstUnitCount,
+      },
     };
   }
   const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
@@ -2030,50 +2258,52 @@ const parseMs = ms => {
     return {
       primary: {
         name: firstUnitName,
-        count: firstUnitCount
-      }
+        count: firstUnitCount,
+      },
     };
   }
   // - 1 year and 1 month is great
   return {
     primary: {
       name: firstUnitName,
-      count: firstUnitCount
+      count: firstUnitCount,
     },
     remaining: {
       name: remainingUnitName,
-      count: remainingUnitCount
-    }
+      count: remainingUnitCount,
+    },
   };
 };
 
-const byteAsFileSize = numberOfBytes => {
+const byteAsFileSize = (numberOfBytes) => {
   return formatBytes(numberOfBytes);
 };
-const byteAsMemoryUsage = metricValue => {
-  return formatBytes(metricValue, {
-    fixedDecimals: true
-  });
+
+const byteAsMemoryUsage = (metricValue) => {
+  return formatBytes(metricValue, { fixedDecimals: true });
 };
-const formatBytes = (number, {
-  fixedDecimals = false
-} = {}) => {
+
+const formatBytes = (number, { fixedDecimals = false } = {}) => {
   if (number === 0) {
     return `0 B`;
   }
-  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
+  const exponent = Math.min(
+    Math.floor(Math.log10(number) / 3),
+    BYTE_UNITS.length - 1,
+  );
   const unitNumber = number / Math.pow(1000, exponent);
   const unitName = BYTE_UNITS[exponent];
   const maxDecimals = unitNumber < 100 ? 1 : 0;
   const unitNumberRounded = setRoundedPrecision(unitNumber, {
     decimals: maxDecimals,
-    decimalsWhenSmall: 1
+    decimalsWhenSmall: 1,
   });
   if (fixedDecimals) {
     return `${unitNumberRounded.toFixed(maxDecimals)} ${unitName}`;
   }
   return `${unitNumberRounded} ${unitName}`;
 };
+
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
 const ESC = '\u001B[';
@@ -2083,42 +2313,54 @@ const SEP = ';';
 
 /* global window */
 const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+
 const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
 const isWindows = !isBrowser && process$1.platform === 'win32';
 const cwdFunction = isBrowser ? () => {
-  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
+
 const ansiEscapes = {};
+
 ansiEscapes.cursorTo = (x, y) => {
-  if (typeof x !== 'number') {
-    throw new TypeError('The `x` argument is required');
-  }
-  if (typeof y !== 'number') {
-    return ESC + (x + 1) + 'G';
-  }
-  return ESC + (y + 1) + SEP + (x + 1) + 'H';
+	if (typeof x !== 'number') {
+		throw new TypeError('The `x` argument is required');
+	}
+
+	if (typeof y !== 'number') {
+		return ESC + (x + 1) + 'G';
+	}
+
+	return ESC + (y + 1) + SEP + (x + 1) + 'H';
 };
+
 ansiEscapes.cursorMove = (x, y) => {
-  if (typeof x !== 'number') {
-    throw new TypeError('The `x` argument is required');
-  }
-  let returnValue = '';
-  if (x < 0) {
-    returnValue += ESC + -x + 'D';
-  } else if (x > 0) {
-    returnValue += ESC + x + 'C';
-  }
-  if (y < 0) {
-    returnValue += ESC + -y + 'A';
-  } else if (y > 0) {
-    returnValue += ESC + y + 'B';
-  }
-  return returnValue;
+	if (typeof x !== 'number') {
+		throw new TypeError('The `x` argument is required');
+	}
+
+	let returnValue = '';
+
+	if (x < 0) {
+		returnValue += ESC + (-x) + 'D';
+	} else if (x > 0) {
+		returnValue += ESC + x + 'C';
+	}
+
+	if (y < 0) {
+		returnValue += ESC + (-y) + 'A';
+	} else if (y > 0) {
+		returnValue += ESC + y + 'B';
+	}
+
+	return returnValue;
 };
+
 ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
 ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
 ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
 ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
+
 ansiEscapes.cursorLeft = ESC + 'G';
 ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
 ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
@@ -2127,16 +2369,21 @@ ansiEscapes.cursorNextLine = ESC + 'E';
 ansiEscapes.cursorPrevLine = ESC + 'F';
 ansiEscapes.cursorHide = ESC + '?25l';
 ansiEscapes.cursorShow = ESC + '?25h';
+
 ansiEscapes.eraseLines = count => {
-  let clear = '';
-  for (let i = 0; i < count; i++) {
-    clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
-  }
-  if (count) {
-    clear += ansiEscapes.cursorLeft;
-  }
-  return clear;
+	let clear = '';
+
+	for (let i = 0; i < count; i++) {
+		clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+	}
+
+	if (count) {
+		clear += ansiEscapes.cursorLeft;
+	}
+
+	return clear;
 };
+
 ansiEscapes.eraseEndLine = ESC + 'K';
 ansiEscapes.eraseStartLine = ESC + '1K';
 ansiEscapes.eraseLine = ESC + '2K';
@@ -2145,48 +2392,83 @@ ansiEscapes.eraseUp = ESC + '1J';
 ansiEscapes.eraseScreen = ESC + '2J';
 ansiEscapes.scrollUp = ESC + 'S';
 ansiEscapes.scrollDown = ESC + 'T';
+
 ansiEscapes.clearScreen = '\u001Bc';
-ansiEscapes.clearTerminal = isWindows ? `${ansiEscapes.eraseScreen}${ESC}0f`
-// 1. Erases the screen (Only done in case `2` is not supported)
-// 2. Erases the whole screen including scrollback buffer
-// 3. Moves cursor to the top-left position
-// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+
+ansiEscapes.clearTerminal = isWindows
+	? `${ansiEscapes.eraseScreen}${ESC}0f`
+	// 1. Erases the screen (Only done in case `2` is not supported)
+	// 2. Erases the whole screen including scrollback buffer
+	// 3. Moves cursor to the top-left position
+	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+	: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+
 ansiEscapes.enterAlternativeScreen = ESC + '?1049h';
 ansiEscapes.exitAlternativeScreen = ESC + '?1049l';
+
 ansiEscapes.beep = BEL;
-ansiEscapes.link = (text, url) => [OSC, '8', SEP, SEP, url, BEL, text, OSC, '8', SEP, SEP, BEL].join('');
+
+ansiEscapes.link = (text, url) => [
+	OSC,
+	'8',
+	SEP,
+	SEP,
+	url,
+	BEL,
+	text,
+	OSC,
+	'8',
+	SEP,
+	SEP,
+	BEL,
+].join('');
+
 ansiEscapes.image = (buffer, options = {}) => {
-  let returnValue = `${OSC}1337;File=inline=1`;
-  if (options.width) {
-    returnValue += `;width=${options.width}`;
-  }
-  if (options.height) {
-    returnValue += `;height=${options.height}`;
-  }
-  if (options.preserveAspectRatio === false) {
-    returnValue += ';preserveAspectRatio=0';
-  }
-  return returnValue + ':' + buffer.toString('base64') + BEL;
+	let returnValue = `${OSC}1337;File=inline=1`;
+
+	if (options.width) {
+		returnValue += `;width=${options.width}`;
+	}
+
+	if (options.height) {
+		returnValue += `;height=${options.height}`;
+	}
+
+	if (options.preserveAspectRatio === false) {
+		returnValue += ';preserveAspectRatio=0';
+	}
+
+	return returnValue + ':' + buffer.toString('base64') + BEL;
 };
+
 ansiEscapes.iTerm = {
-  setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
-  annotation(message, options = {}) {
-    let returnValue = `${OSC}1337;`;
-    const hasX = typeof options.x !== 'undefined';
-    const hasY = typeof options.y !== 'undefined';
-    if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
-      throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
-    }
-    message = message.replace(/\|/g, '');
-    returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
-    if (options.length > 0) {
-      returnValue += (hasX ? [message, options.length, options.x, options.y] : [options.length, message]).join('|');
-    } else {
-      returnValue += message;
-    }
-    return returnValue + BEL;
-  }
+	setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+
+	annotation(message, options = {}) {
+		let returnValue = `${OSC}1337;`;
+
+		const hasX = typeof options.x !== 'undefined';
+		const hasY = typeof options.y !== 'undefined';
+		if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
+			throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
+		}
+
+		message = message.replace(/\|/g, '');
+
+		returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
+
+		if (options.length > 0) {
+			returnValue += (
+				hasX
+					? [message, options.length, options.x, options.y]
+					: [options.length, message]
+			).join('|');
+		} else {
+			returnValue += message;
+		}
+
+		return returnValue + BEL;
+	},
 };
 
 /*
@@ -2197,14 +2479,17 @@ ansiEscapes.iTerm = {
 // the problem with listening data on stdout
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
-const spyStreamOutput = stream => {
+const spyStreamOutput = (stream) => {
   const originalWrite = stream.write;
+
   let output = "";
   let installed = true;
+
   stream.write = function (...args /* chunk, encoding, callback */) {
     output += args;
     return originalWrite.call(stream, ...args);
   };
+
   const uninstall = () => {
     if (!installed) {
       return;
@@ -2212,6 +2497,7 @@ const spyStreamOutput = stream => {
     stream.write = originalWrite;
     installed = false;
   };
+
   return () => {
     uninstall();
     return output;
@@ -2222,20 +2508,21 @@ const spyStreamOutput = stream => {
  * see also https://github.com/vadimdemedes/ink
  */
 
+
 const createLog = ({
   stream = process.stdout,
-  newLine = "after"
+  newLine = "after",
 } = {}) => {
-  const {
-    columns = 80,
-    rows = 24
-  } = stream;
+  const { columns = 80, rows = 24 } = stream;
+
   const log = {
-    onVerticalOverflow: () => {}
+    onVerticalOverflow: () => {},
   };
+
   let lastOutput = "";
   let clearAttemptResult;
   let streamOutputSpy = noopStreamSpy;
+
   const getErasePreviousOutput = () => {
     // nothing to clear
     if (!lastOutput) {
@@ -2244,12 +2531,14 @@ const createLog = ({
     if (clearAttemptResult !== undefined) {
       return "";
     }
+
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
-    logLines.forEach(logLine => {
+    logLines.forEach((logLine) => {
       const width = stringWidth(logLine);
       visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
     });
+
     if (visualLineCount > rows) {
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -2260,9 +2549,11 @@ const createLog = ({
       log.onVerticalOverflow();
       return "";
     }
+
     clearAttemptResult = true;
     return ansiEscapes.eraseLines(visualLineCount);
   };
+
   const spyStream = () => {
     if (stream === process.stdout) {
       const stdoutSpy = spyStreamOutput(process.stdout);
@@ -2273,7 +2564,8 @@ const createLog = ({
     }
     return spyStreamOutput(stream);
   };
-  const doWrite = string => {
+
+  const doWrite = (string) => {
     string = addNewLines(string, newLine);
     stream.write(string);
     lastOutput = string;
@@ -2286,6 +2578,7 @@ const createLog = ({
     // otherwise tryToClear() won't do a thing so spy is useless
     streamOutputSpy = string ? spyStream() : noopStreamSpy;
   };
+
   const write = (string, outputFromOutside = streamOutputSpy()) => {
     if (!lastOutput) {
       doWrite(string);
@@ -2299,13 +2592,13 @@ const createLog = ({
       doWrite(`${getErasePreviousOutput()}${string}`);
     }
   };
-  const dynamicWrite = callback => {
+
+  const dynamicWrite = (callback) => {
     const outputFromOutside = streamOutputSpy();
-    const string = callback({
-      outputFromOutside
-    });
+    const string = callback({ outputFromOutside });
     return write(string, outputFromOutside);
   };
+
   const destroy = () => {
     if (streamOutputSpy) {
       streamOutputSpy(); // this uninstalls the spy
@@ -2313,13 +2606,15 @@ const createLog = ({
       lastOutput = "";
     }
   };
+
   Object.assign(log, {
     write,
     dynamicWrite,
-    destroy
+    destroy,
   });
   return log;
 };
+
 const noopStreamSpy = () => "";
 
 // could be inlined but vscode do not correctly
@@ -2349,29 +2644,32 @@ const startSpinner = ({
   stopOnWriteFromOutside = true,
   stopOnVerticalOverflow = true,
   render = () => "",
-  effect = () => {}
+  effect = () => {},
+  animated = true,
 }) => {
   let frameIndex = 0;
   let interval;
   let running = true;
+
   const spinner = {
-    message: undefined
+    message: undefined,
   };
-  const update = message => {
+
+  const update = (message) => {
     spinner.message = running ? `${frames[frameIndex]} ${message}` : message;
     return spinner.message;
   };
   spinner.update = update;
+
   let cleanup;
-  if (ANSI.supported) {
+  if (animated && ANSI.supported) {
     running = true;
     cleanup = effect();
     log.write(update(render()));
+
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      log.dynamicWrite(({
-        outputFromOutside
-      }) => {
+      log.dynamicWrite(({ outputFromOutside }) => {
         if (outputFromOutside && stopOnWriteFromOutside) {
           stop();
           return "";
@@ -2385,7 +2683,8 @@ const startSpinner = ({
   } else {
     log.write(update(render()));
   }
-  const stop = message => {
+
+  const stop = (message) => {
     running = false;
     if (interval) {
       clearInterval(interval);
@@ -2401,82 +2700,93 @@ const startSpinner = ({
     }
   };
   spinner.stop = stop;
+
   if (stopOnVerticalOverflow) {
     log.onVerticalOverflow = stop;
   }
+
   return spinner;
 };
 
 const generateCoverageJsonFile = async ({
   coverage,
   coverageJsonFileUrl,
-  logger
+  logger,
 }) => {
   const coverageAsText = JSON.stringify(coverage, null, "  ");
-  logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(Buffer.byteLength(coverageAsText))})`);
+  logger.info(
+    `-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(
+      Buffer.byteLength(coverageAsText),
+    )})`,
+  );
   await writeFile(coverageJsonFileUrl, coverageAsText);
 };
 
 const importWithRequire = createRequire(import.meta.url);
 
-const istanbulCoverageMapFromCoverage = coverage => {
-  const {
-    createCoverageMap
-  } = importWithRequire("istanbul-lib-coverage");
+const istanbulCoverageMapFromCoverage = (coverage) => {
+  const { createCoverageMap } = importWithRequire("istanbul-lib-coverage");
+
   const coverageAdjusted = {};
-  Object.keys(coverage).forEach(key => {
+  Object.keys(coverage).forEach((key) => {
     coverageAdjusted[key.slice(2)] = {
       ...coverage[key],
-      path: key.slice(2)
+      path: key.slice(2),
     };
   });
+
   const coverageMap = createCoverageMap(coverageAdjusted);
   return coverageMap;
 };
 
-const generateCoverageHtmlDirectory = async (coverage, {
-  rootDirectoryUrl,
-  coverageHtmlDirectoryRelativeUrl,
-  coverageReportSkipEmpty,
-  coverageReportSkipFull
-}) => {
+const generateCoverageHtmlDirectory = async (
+  coverage,
+  {
+    rootDirectoryUrl,
+    coverageHtmlDirectoryRelativeUrl,
+    coverageReportSkipEmpty,
+    coverageReportSkipFull,
+  },
+) => {
   const libReport = importWithRequire("istanbul-lib-report");
   const reports = importWithRequire("istanbul-reports");
+
   const context = libReport.createContext({
     dir: fileURLToPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(coverage),
-    sourceFinder: path => readFileSync(new URL(path, rootDirectoryUrl), "utf8")
+    sourceFinder: (path) =>
+      readFileSync(new URL(path, rootDirectoryUrl), "utf8"),
   });
+
   const report = reports.create("html", {
     skipEmpty: coverageReportSkipEmpty,
     skipFull: coverageReportSkipFull,
-    subdir: coverageHtmlDirectoryRelativeUrl
+    subdir: coverageHtmlDirectoryRelativeUrl,
   });
   report.execute(context);
 };
 
-const generateCoverageTextLog = (coverage, {
-  coverageReportSkipEmpty,
-  coverageReportSkipFull
-}) => {
+const generateCoverageTextLog = (
+  coverage,
+  { coverageReportSkipEmpty, coverageReportSkipFull },
+) => {
   const libReport = importWithRequire("istanbul-lib-report");
   const reports = importWithRequire("istanbul-reports");
+
   const context = libReport.createContext({
-    coverageMap: istanbulCoverageMapFromCoverage(coverage)
+    coverageMap: istanbulCoverageMapFromCoverage(coverage),
   });
   const report = reports.create("text", {
     skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull
+    skipFull: coverageReportSkipFull,
   });
   report.execute(context);
 };
 
-const pingServer = async url => {
+const pingServer = async (url) => {
   const server = createServer();
-  const {
-    hostname,
-    port
-  } = new URL(url);
+  const { hostname, port } = new URL(url);
+
   try {
     await new Promise((resolve, reject) => {
       server.on("error", reject);
@@ -2502,21 +2812,20 @@ const pingServer = async url => {
   return false;
 };
 
-const basicFetch = async (url, {
-  rejectUnauthorized = true,
-  method = "GET",
-  headers = {}
-} = {}) => {
+const basicFetch = async (
+  url,
+  { rejectUnauthorized = true, method = "GET", headers = {} } = {},
+) => {
   let requestModule;
   if (url.startsWith("http:")) {
     requestModule = await import("node:http");
   } else {
     requestModule = await import("node:https");
   }
-  const {
-    request
-  } = requestModule;
+  const { request } = requestModule;
+
   const urlObject = new URL(url);
+
   return new Promise((resolve, reject) => {
     const req = request({
       rejectUnauthorized,
@@ -2524,32 +2833,32 @@ const basicFetch = async (url, {
       port: urlObject.port,
       path: urlObject.pathname,
       method,
-      headers
+      headers,
     });
-    req.on("response", response => {
+    req.on("response", (response) => {
       resolve({
         status: response.statusCode,
         headers: response.headers,
         json: () => {
           req.setTimeout(0);
           req.destroy();
-          return new Promise(resolve => {
+          return new Promise((resolve) => {
             if (response.headers["content-type"] !== "application/json") {
               console.warn("not json");
             }
             let responseBody = "";
             response.setEncoding("utf8");
-            response.on("data", chunk => {
+            response.on("data", (chunk) => {
               responseBody += chunk;
             });
             response.on("end", () => {
               resolve(JSON.parse(responseBody));
             });
-            response.on("error", e => {
+            response.on("error", (e) => {
               reject(e);
             });
           });
-        }
+        },
       });
     });
     req.on("error", reject);
@@ -2557,87 +2866,96 @@ const basicFetch = async (url, {
   });
 };
 
-const assertAndNormalizeWebServer = async webServer => {
+const assertAndNormalizeWebServer = async (webServer) => {
   if (!webServer) {
-    throw new TypeError(`webServer is required when running tests on browser(s)`);
+    throw new TypeError(
+      `webServer is required when running tests on browser(s)`,
+    );
   }
-  const unexpectedParamNames = Object.keys(webServer).filter(key => {
+  const unexpectedParamNames = Object.keys(webServer).filter((key) => {
     return !["origin", "moduleUrl", "rootDirectoryUrl"].includes(key);
   });
   if (unexpectedParamNames.length > 0) {
-    throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param to webServer`);
+    throw new TypeError(
+      `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
+    );
   }
+
   let aServerIsListening = await pingServer(webServer.origin);
   if (!aServerIsListening) {
     if (!webServer.moduleUrl) {
-      throw new TypeError(`webServer.moduleUrl is required as there is no server listening "${webServer.origin}"`);
+      throw new TypeError(
+        `webServer.moduleUrl is required as there is no server listening "${webServer.origin}"`,
+      );
     }
     try {
       process.env.IMPORTED_BY_TEST_PLAN = "1";
       await import(webServer.moduleUrl);
       delete process.env.IMPORTED_BY_TEST_PLAN;
     } catch (e) {
-      if (e.code === "ERR_MODULE_NOT_FOUND" && e.message.includes(fileURLToPath(webServer.moduleUrl))) {
-        throw new Error(`webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`);
+      if (
+        e.code === "ERR_MODULE_NOT_FOUND" &&
+        e.message.includes(fileURLToPath(webServer.moduleUrl))
+      ) {
+        throw new Error(
+          `webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`,
+        );
       }
       throw e;
     }
     aServerIsListening = await pingServer(webServer.origin);
     if (!aServerIsListening) {
-      throw new Error(`webServer.moduleUrl did not start a server listening at "${webServer.origin}", check file at "${webServer.moduleUrl}"`);
+      throw new Error(
+        `webServer.moduleUrl did not start a server listening at "${webServer.origin}", check file at "${webServer.moduleUrl}"`,
+      );
     }
   }
-  const {
-    headers
-  } = await basicFetch(webServer.origin, {
+  const { headers } = await basicFetch(webServer.origin, {
     method: "GET",
     rejectUnauthorized: false,
     headers: {
-      "x-server-inspect": "1"
-    }
+      "x-server-inspect": "1",
+    },
   });
   if (String(headers["server"]).includes("jsenv_dev_server")) {
     webServer.isJsenvDevServer = true;
-    const {
-      json
-    } = await basicFetch(`${webServer.origin}/__params__.json`, {
-      rejectUnauthorized: false
+    const { json } = await basicFetch(`${webServer.origin}/__params__.json`, {
+      rejectUnauthorized: false,
     });
     if (webServer.rootDirectoryUrl === undefined) {
       const jsenvDevServerParams = await json();
       webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
     } else {
-      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(webServer.rootDirectoryUrl, "webServer.rootDirectoryUrl");
+      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        webServer.rootDirectoryUrl,
+        "webServer.rootDirectoryUrl",
+      );
     }
   } else {
-    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(webServer.rootDirectoryUrl, "webServer.rootDirectoryUrl");
+    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      webServer.rootDirectoryUrl,
+      "webServer.rootDirectoryUrl",
+    );
   }
 };
 
 const executionStepsFromTestPlan = async ({
   signal,
   rootDirectoryUrl,
-  testPlan
+  testPlan,
 }) => {
   try {
     const fileResultArray = await collectFiles({
       signal,
       directoryUrl: rootDirectoryUrl,
-      associations: {
-        testPlan
-      },
-      predicate: ({
-        testPlan
-      }) => testPlan
+      associations: { testPlan },
+      predicate: ({ testPlan }) => testPlan,
     });
     const executionSteps = [];
-    fileResultArray.forEach(({
-      relativeUrl,
-      meta
-    }) => {
+    fileResultArray.forEach(({ relativeUrl, meta }) => {
       const fileExecutionSteps = generateFileExecutionSteps({
         fileRelativeUrl: relativeUrl,
-        filePlan: meta.testPlan
+        filePlan: meta.testPlan,
       });
       executionSteps.push(...fileExecutionSteps);
     });
@@ -2648,33 +2966,36 @@ const executionStepsFromTestPlan = async ({
         aborted: true,
         planSummary: {},
         planReport: {},
-        planCoverage: null
+        planCoverage: null,
       };
     }
     throw e;
   }
 };
-const generateFileExecutionSteps = ({
-  fileRelativeUrl,
-  filePlan
-}) => {
+
+const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
   const fileExecutionSteps = [];
-  Object.keys(filePlan).forEach(executionName => {
+  Object.keys(filePlan).forEach((executionName) => {
     const stepConfig = filePlan[executionName];
     if (stepConfig === null || stepConfig === undefined) {
       return;
     }
     if (typeof stepConfig !== "object") {
-      throw new TypeError(createDetailedMessage(`found unexpected value in plan, they must be object`, {
-        ["file relative path"]: fileRelativeUrl,
-        ["execution name"]: executionName,
-        ["value"]: stepConfig
-      }));
+      throw new TypeError(
+        createDetailedMessage(
+          `found unexpected value in plan, they must be object`,
+          {
+            ["file relative path"]: fileRelativeUrl,
+            ["execution name"]: executionName,
+            ["value"]: stepConfig,
+          },
+        ),
+      );
     }
     fileExecutionSteps.push({
       executionName,
       fileRelativeUrl,
-      ...stepConfig
+      ...stepConfig,
     });
   });
   return fileExecutionSteps;
@@ -2684,11 +3005,12 @@ const readNodeV8CoverageDirectory = async ({
   logger,
   signal,
   onV8Coverage,
-  maxMsWaitingForNodeToWriteCoverageFile = 2000
+  maxMsWaitingForNodeToWriteCoverageFile = 2000,
 }) => {
   const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
+
   let timeSpentTrying = 0;
   const tryReadDirectory = async () => {
     const dirContent = readdirSync(NODE_V8_COVERAGE);
@@ -2696,7 +3018,7 @@ const readNodeV8CoverageDirectory = async ({
       return dirContent;
     }
     if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       timeSpentTrying += 200;
       logger.debug("retry to read coverage directory");
       return tryReadDirectory();
@@ -2704,41 +3026,52 @@ const readNodeV8CoverageDirectory = async ({
     logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`);
     return dirContent;
   };
+
   try {
     operation.throwIfAborted();
     const dirContent = await tryReadDirectory();
-    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(NODE_V8_COVERAGE, "NODE_V8_COVERAGE");
+
+    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      NODE_V8_COVERAGE,
+      "NODE_V8_COVERAGE",
+    );
+
     await dirContent.reduce(async (previous, dirEntry) => {
       operation.throwIfAborted();
       await previous;
+
       const dirEntryUrl = new URL(dirEntry, coverageDirectoryUrl);
       const tryReadJsonFile = async () => {
         const fileContent = String(readFileSync(dirEntryUrl));
         if (fileContent === "") {
           if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, 200));
             timeSpentTrying += 200;
             return tryReadJsonFile();
           }
           console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`);
           return null;
         }
+
         try {
           const fileAsJson = JSON.parse(fileContent);
           return fileAsJson;
         } catch (e) {
           if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise((resolve) => setTimeout(resolve, 200));
             timeSpentTrying += 200;
             return tryReadJsonFile();
           }
-          console.warn(createDetailedMessage(`Error while reading coverage file`, {
-            "error stack": e.stack,
-            "file": dirEntryUrl
-          }));
+          console.warn(
+            createDetailedMessage(`Error while reading coverage file`, {
+              "error stack": e.stack,
+              "file": dirEntryUrl,
+            }),
+          );
           return null;
         }
       };
+
       const fileContent = await tryReadJsonFile();
       if (fileContent) {
         await onV8Coverage(fileContent);
@@ -2755,13 +3088,11 @@ const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   }
 
   // eslint-disable-next-line import/no-unresolved
-  const {
-    mergeProcessCovs
-  } = importWithRequire("@c88/v8-coverage");
+  const { mergeProcessCovs } = importWithRequire("@c88/v8-coverage");
   // "mergeProcessCovs" do not preserves source-map-cache during the merge
   // so we store sourcemap cache now
   const sourceMapCache = {};
-  const visit = coverageReport => {
+  const visit = (coverageReport) => {
     if (coverageReport["source-map-cache"]) {
       Object.assign(sourceMapCache, coverageReport["source-map-cache"]);
     }
@@ -2770,67 +3101,82 @@ const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   visit(secondV8Coverage);
   const v8Coverage = mergeProcessCovs([firstV8Coverage, secondV8Coverage]);
   v8Coverage["source-map-cache"] = sourceMapCache;
+
   return v8Coverage;
 };
 
-const composeTwoFileByFileIstanbulCoverages = (firstFileByFileIstanbulCoverage, secondFileByFileIstanbulCoverage) => {
+const composeTwoFileByFileIstanbulCoverages = (
+  firstFileByFileIstanbulCoverage,
+  secondFileByFileIstanbulCoverage,
+) => {
   const fileByFileIstanbulCoverage = {};
-  Object.keys(firstFileByFileIstanbulCoverage).forEach(key => {
+  Object.keys(firstFileByFileIstanbulCoverage).forEach((key) => {
     fileByFileIstanbulCoverage[key] = firstFileByFileIstanbulCoverage[key];
   });
-  Object.keys(secondFileByFileIstanbulCoverage).forEach(key => {
+  Object.keys(secondFileByFileIstanbulCoverage).forEach((key) => {
     const firstCoverage = firstFileByFileIstanbulCoverage[key];
     const secondCoverage = secondFileByFileIstanbulCoverage[key];
-    fileByFileIstanbulCoverage[key] = firstCoverage ? merge(firstCoverage, secondCoverage) : secondCoverage;
+    fileByFileIstanbulCoverage[key] = firstCoverage
+      ? merge(firstCoverage, secondCoverage)
+      : secondCoverage;
   });
+
   return fileByFileIstanbulCoverage;
 };
+
 const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
-  const {
-    createFileCoverage
-  } = importWithRequire("istanbul-lib-coverage");
+  const { createFileCoverage } = importWithRequire("istanbul-lib-coverage");
   const istanbulFileCoverageObject = createFileCoverage(firstIstanbulCoverage);
   istanbulFileCoverageObject.merge(secondIstanbulCoverage);
   const istanbulCoverage = istanbulFileCoverageObject.toJSON();
   return istanbulCoverage;
 };
 
-const v8CoverageToIstanbul = async (v8Coverage, {
-  signal
-}) => {
+const v8CoverageToIstanbul = async (v8Coverage, { signal }) => {
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
+
   try {
     const v8ToIstanbul = importWithRequire("v8-to-istanbul");
     const sourcemapCache = v8Coverage["source-map-cache"];
     let istanbulCoverageComposed = null;
+
     await v8Coverage.result.reduce(async (previous, fileV8Coverage) => {
       operation.throwIfAborted();
       await previous;
-      const {
-        source
-      } = fileV8Coverage;
+
+      const { source } = fileV8Coverage;
       let sources;
       // when v8 coverage comes from playwright (chromium) v8Coverage.source is set
       if (typeof source === "string") {
-        sources = {
-          source
-        };
+        sources = { source };
       }
       // when v8 coverage comes from Node.js, the source can be read from sourcemapCache
       else if (sourcemapCache) {
         sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourcemapCache);
       }
       const path = urlToFileSystemPath(fileV8Coverage.url);
-      const converter = v8ToIstanbul(path,
-      // wrapperLength is undefined we don't need it
-      // https://github.com/istanbuljs/v8-to-istanbul/blob/2b54bc97c5edf8a37b39a171ec29134ba9bfd532/lib/v8-to-istanbul.js#L27
-      undefined, sources);
+
+      const converter = v8ToIstanbul(
+        path,
+        // wrapperLength is undefined we don't need it
+        // https://github.com/istanbuljs/v8-to-istanbul/blob/2b54bc97c5edf8a37b39a171ec29134ba9bfd532/lib/v8-to-istanbul.js#L27
+        undefined,
+        sources,
+      );
       await converter.load();
+
       converter.applyCoverage(fileV8Coverage.functions);
       const istanbulCoverage = converter.toIstanbul();
-      istanbulCoverageComposed = istanbulCoverageComposed ? composeTwoFileByFileIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage) : istanbulCoverage;
+
+      istanbulCoverageComposed = istanbulCoverageComposed
+        ? composeTwoFileByFileIstanbulCoverages(
+            istanbulCoverageComposed,
+            istanbulCoverage,
+          )
+        : istanbulCoverage;
     }, Promise.resolve());
+
     if (!istanbulCoverageComposed) {
       return {};
     }
@@ -2840,85 +3186,98 @@ const v8CoverageToIstanbul = async (v8Coverage, {
     await operation.end();
   }
 };
-const markAsConvertedFromV8 = fileByFileCoverage => {
+
+const markAsConvertedFromV8 = (fileByFileCoverage) => {
   const fileByFileMarked = {};
-  Object.keys(fileByFileCoverage).forEach(key => {
+  Object.keys(fileByFileCoverage).forEach((key) => {
     const fileCoverage = fileByFileCoverage[key];
     fileByFileMarked[key] = {
       ...fileCoverage,
-      fromV8: true
+      fromV8: true,
     };
   });
   return fileByFileMarked;
 };
+
 const sourcesFromSourceMapCache = (url, sourceMapCache) => {
   const sourceMapAndLineLengths = sourceMapCache[url];
   if (!sourceMapAndLineLengths) {
     return {};
   }
-  const {
-    data,
-    lineLengths
-  } = sourceMapAndLineLengths;
+
+  const { data, lineLengths } = sourceMapAndLineLengths;
   // See: https://github.com/nodejs/node/pull/34305
   if (!data) {
     return undefined;
   }
+
   const sources = {
     sourcemap: data,
-    ...(lineLengths ? {
-      source: sourcesFromLineLengths(lineLengths)
-    } : {})
+    ...(lineLengths ? { source: sourcesFromLineLengths(lineLengths) } : {}),
   };
   return sources;
 };
-const sourcesFromLineLengths = lineLengths => {
+
+const sourcesFromLineLengths = (lineLengths) => {
   let source = "";
-  lineLengths.forEach(length => {
+  lineLengths.forEach((length) => {
     source += `${"".padEnd(length, ".")}\n`;
   });
   return source;
 };
 
-const composeV8AndIstanbul = (v8FileByFileCoverage, istanbulFileByFileCoverage, {
-  coverageV8ConflictWarning
-}) => {
+const composeV8AndIstanbul = (
+  v8FileByFileCoverage,
+  istanbulFileByFileCoverage,
+  { coverageV8ConflictWarning },
+) => {
   const fileByFileCoverage = {};
   const v8Files = Object.keys(v8FileByFileCoverage);
   const istanbulFiles = Object.keys(istanbulFileByFileCoverage);
-  v8Files.forEach(key => {
+
+  v8Files.forEach((key) => {
     fileByFileCoverage[key] = v8FileByFileCoverage[key];
   });
-  istanbulFiles.forEach(key => {
+  istanbulFiles.forEach((key) => {
     const v8Coverage = v8FileByFileCoverage[key];
     if (v8Coverage) {
       if (coverageV8ConflictWarning) {
-        console.warn(createDetailedMessage(`Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`, {
-          "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
-          "suggestion": "disable this warning with coverageV8ConflictWarning: false",
-          "suggestion 2": `force coverage using istanbul with coverageMethodForBrowsers: "istanbul"`
-        }));
+        console.warn(
+          createDetailedMessage(
+            `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
+            {
+              "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
+              "suggestion":
+                "disable this warning with coverageV8ConflictWarning: false",
+              "suggestion 2": `force coverage using istanbul with coverageMethodForBrowsers: "istanbul"`,
+            },
+          ),
+        );
       }
       fileByFileCoverage[key] = v8Coverage;
     } else {
       fileByFileCoverage[key] = istanbulFileByFileCoverage[key];
     }
   });
+
   return fileByFileCoverage;
 };
 
-const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) => {
+const normalizeFileByFileCoveragePaths = (
+  fileByFileCoverage,
+  rootDirectoryUrl,
+) => {
   const fileByFileNormalized = {};
-  Object.keys(fileByFileCoverage).forEach(key => {
+  Object.keys(fileByFileCoverage).forEach((key) => {
     const fileCoverage = fileByFileCoverage[key];
-    const {
-      path
-    } = fileCoverage;
-    const url = isFileSystemPath(path) ? fileSystemPathToUrl(path) : new URL(path, rootDirectoryUrl).href;
+    const { path } = fileCoverage;
+    const url = isFileSystemPath(path)
+      ? fileSystemPathToUrl(path)
+      : new URL(path, rootDirectoryUrl).href;
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
     fileByFileNormalized[`./${relativeUrl}`] = {
       ...fileCoverage,
-      path: `./${relativeUrl}`
+      path: `./${relativeUrl}`,
     };
   });
   return fileByFileNormalized;
@@ -2927,98 +3286,85 @@ const normalizeFileByFileCoveragePaths = (fileByFileCoverage, rootDirectoryUrl) 
 const listRelativeFileUrlToCover = async ({
   signal,
   rootDirectoryUrl,
-  coverageConfig
+  coverageConfig,
 }) => {
   const matchingFileResultArray = await collectFiles({
     signal,
     directoryUrl: rootDirectoryUrl,
-    associations: {
-      cover: coverageConfig
-    },
-    predicate: ({
-      cover
-    }) => cover
+    associations: { cover: coverageConfig },
+    predicate: ({ cover }) => cover,
   });
-  return matchingFileResultArray.map(({
-    relativeUrl
-  }) => relativeUrl);
+  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);
 };
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
-const babelPluginInstrument = (api, {
-  useInlineSourceMaps = false
-}) => {
-  const {
-    programVisitor
-  } = importWithRequire("istanbul-lib-instrument");
-  const {
-    types
-  } = api;
+const babelPluginInstrument = (api, { useInlineSourceMaps = false }) => {
+  const { programVisitor } = importWithRequire("istanbul-lib-instrument");
+  const { types } = api;
+
   return {
     name: "transform-instrument",
     visitor: {
       Program: {
         enter(path, state) {
-          const {
-            file
-          } = state;
-          const {
-            opts
-          } = file;
+          const { file } = state;
+          const { opts } = file;
           let inputSourceMap;
           if (useInlineSourceMaps) {
             // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
-            inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null;
+            inputSourceMap =
+              opts.inputSourceMap || file.inputMap
+                ? file.inputMap.sourcemap
+                : null;
           } else {
             inputSourceMap = opts.inputSourceMap;
           }
-          const __dv__ = programVisitor(types, opts.filenameRelative || opts.filename, {
-            coverageVariable: "__coverage__",
-            inputSourceMap
-          });
+          const __dv__ = programVisitor(
+            types,
+            opts.filenameRelative || opts.filename,
+            {
+              coverageVariable: "__coverage__",
+              inputSourceMap,
+            },
+          );
           __dv__.enter(path);
           file.metadata.__dv__ = __dv__;
         },
+
         exit(path, state) {
-          const {
-            __dv__
-          } = state.file.metadata;
+          const { __dv__ } = state.file.metadata;
           if (!__dv__) {
             return;
           }
           const object = __dv__.exit(path);
           // object got two properties: fileCoverage and sourceMappingURL
           state.file.metadata.coverage = object.fileCoverage;
-        }
-      }
-    }
+        },
+      },
+    },
   };
 };
 
-const relativeUrlToEmptyCoverage = async (relativeUrl, {
-  signal,
-  rootDirectoryUrl
-}) => {
+const relativeUrlToEmptyCoverage = async (
+  relativeUrl,
+  { signal, rootDirectoryUrl },
+) => {
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
+
   try {
     const fileUrl = resolveUrl(relativeUrl, rootDirectoryUrl);
-    const content = await readFile(fileUrl, {
-      as: "string"
-    });
+    const content = await readFile(fileUrl, { as: "string" });
+
     operation.throwIfAborted();
-    const {
-      metadata
-    } = await applyBabelPlugins({
+    const { metadata } = await applyBabelPlugins({
       babelPlugins: [babelPluginInstrument],
       input: content,
-      inputIsJsModule: false,
-      inputUrl: fileUrl
+      inputIsJsModule: true,
+      inputUrl: fileUrl,
     });
-    const {
-      coverage
-    } = metadata;
+    const { coverage } = metadata;
     if (!coverage) {
       throw new Error(`missing coverage for file`);
     }
@@ -3038,10 +3384,9 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
     await operation.end();
   }
 };
-const createEmptyCoverage = relativeUrl => {
-  const {
-    createFileCoverage
-  } = importWithRequire("istanbul-lib-coverage");
+
+const createEmptyCoverage = (relativeUrl) => {
+  const { createFileCoverage } = importWithRequire("istanbul-lib-coverage");
   return createFileCoverage(relativeUrl).toJSON();
 };
 
@@ -3049,54 +3394,56 @@ const getMissingFileByFileCoverage = async ({
   signal,
   rootDirectoryUrl,
   coverageConfig,
-  fileByFileCoverage
+  fileByFileCoverage,
 }) => {
   const relativeUrlsToCover = await listRelativeFileUrlToCover({
     signal,
     rootDirectoryUrl,
-    coverageConfig
+    coverageConfig,
   });
-  const relativeUrlsMissing = relativeUrlsToCover.filter(relativeUrlToCover => Object.keys(fileByFileCoverage).every(key => {
-    return key !== `./${relativeUrlToCover}`;
-  }));
+  const relativeUrlsMissing = relativeUrlsToCover.filter((relativeUrlToCover) =>
+    Object.keys(fileByFileCoverage).every((key) => {
+      return key !== `./${relativeUrlToCover}`;
+    }),
+  );
+
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   const missingFileByFileCoverage = {};
   await relativeUrlsMissing.reduce(async (previous, relativeUrlMissing) => {
     operation.throwIfAborted();
     await previous;
-    await operation.withSignal(async signal => {
-      const emptyCoverage = await relativeUrlToEmptyCoverage(relativeUrlMissing, {
-        signal,
-        rootDirectoryUrl
-      });
+    await operation.withSignal(async (signal) => {
+      const emptyCoverage = await relativeUrlToEmptyCoverage(
+        relativeUrlMissing,
+        {
+          signal,
+          rootDirectoryUrl,
+        },
+      );
       missingFileByFileCoverage[`./${relativeUrlMissing}`] = emptyCoverage;
     });
   }, Promise.resolve());
   return missingFileByFileCoverage;
 };
 
-const reportToCoverage = async (report, {
-  signal,
-  logger,
-  rootDirectoryUrl,
-  coverageConfig,
-  coverageIncludeMissing,
-  coverageMethodForNodeJs,
-  coverageV8ConflictWarning
-}) => {
+const reportToCoverage = async (
+  report,
+  {
+    signal,
+    logger,
+    rootDirectoryUrl,
+    coverageConfig,
+    coverageIncludeMissing,
+    coverageMethodForNodeJs,
+    coverageV8ConflictWarning,
+  },
+) => {
   // collect v8 and istanbul coverage from executions
-  let {
-    v8Coverage,
-    fileByFileIstanbulCoverage
-  } = await getCoverageFromReport({
+  let { v8Coverage, fileByFileIstanbulCoverage } = await getCoverageFromReport({
     signal,
     report,
-    onMissing: ({
-      file,
-      executionResult,
-      executionName
-    }) => {
+    onMissing: ({ file, executionResult, executionName }) => {
       // several reasons not to have coverage here:
       // 1. the file we executed did not import an instrumented file.
       // - a test file without import
@@ -3114,22 +3461,31 @@ const reportToCoverage = async (report, {
       // in any scenario we are fine because
       // coverDescription will generate empty coverage for files
       // that were suppose to be coverage but were not.
-      if (executionResult.status === "completed" && executionResult.type === "node" && coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
-        logger.warn(`"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`);
+      if (
+        executionResult.status === "completed" &&
+        executionResult.type === "node" &&
+        coverageMethodForNodeJs !== "NODE_V8_COVERAGE"
+      ) {
+        logger.warn(
+          `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
+        );
       }
-    }
+    },
   });
+
   if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
     await readNodeV8CoverageDirectory({
       logger,
       signal,
-      onV8Coverage: async nodeV8Coverage => {
+      onV8Coverage: async (nodeV8Coverage) => {
         const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
           rootDirectoryUrl,
-          coverageConfig
+          coverageConfig,
         });
-        v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight) : nodeV8CoverageLight;
-      }
+        v8Coverage = v8Coverage
+          ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight)
+          : nodeV8CoverageLight;
+      },
     });
   }
 
@@ -3137,21 +3493,34 @@ const reportToCoverage = async (report, {
   let fileByFileCoverage;
   if (v8Coverage) {
     let v8FileByFileCoverage = await v8CoverageToIstanbul(v8Coverage, {
-      signal
+      signal,
     });
-    v8FileByFileCoverage = normalizeFileByFileCoveragePaths(v8FileByFileCoverage, rootDirectoryUrl);
+
+    v8FileByFileCoverage = normalizeFileByFileCoveragePaths(
+      v8FileByFileCoverage,
+      rootDirectoryUrl,
+    );
+
     if (fileByFileIstanbulCoverage) {
-      fileByFileIstanbulCoverage = normalizeFileByFileCoveragePaths(fileByFileIstanbulCoverage, rootDirectoryUrl);
-      fileByFileCoverage = composeV8AndIstanbul(v8FileByFileCoverage, fileByFileIstanbulCoverage, {
-        coverageV8ConflictWarning
-      });
+      fileByFileIstanbulCoverage = normalizeFileByFileCoveragePaths(
+        fileByFileIstanbulCoverage,
+        rootDirectoryUrl,
+      );
+      fileByFileCoverage = composeV8AndIstanbul(
+        v8FileByFileCoverage,
+        fileByFileIstanbulCoverage,
+        { coverageV8ConflictWarning },
+      );
     } else {
       fileByFileCoverage = v8FileByFileCoverage;
     }
   }
   // get istanbul only
   else if (fileByFileIstanbulCoverage) {
-    fileByFileCoverage = normalizeFileByFileCoveragePaths(fileByFileIstanbulCoverage, rootDirectoryUrl);
+    fileByFileCoverage = normalizeFileByFileCoveragePaths(
+      fileByFileIstanbulCoverage,
+      rootDirectoryUrl,
+    );
   }
   // no coverage found in execution (or zero file where executed)
   else {
@@ -3164,19 +3533,24 @@ const reportToCoverage = async (report, {
       signal,
       rootDirectoryUrl,
       coverageConfig,
-      fileByFileCoverage
+      fileByFileCoverage,
     });
-    Object.assign(fileByFileCoverage, normalizeFileByFileCoveragePaths(missingFileByFileCoverage, rootDirectoryUrl));
+    Object.assign(
+      fileByFileCoverage,
+      normalizeFileByFileCoveragePaths(
+        missingFileByFileCoverage,
+        rootDirectoryUrl,
+      ),
+    );
   }
+
   return fileByFileCoverage;
 };
-const getCoverageFromReport = async ({
-  signal,
-  report,
-  onMissing
-}) => {
+
+const getCoverageFromReport = async ({ signal, report, onMissing }) => {
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
+
   try {
     let v8Coverage;
     let fileByFileIstanbulCoverage;
@@ -3185,44 +3559,60 @@ const getCoverageFromReport = async ({
     await Object.keys(report).reduce(async (previous, file) => {
       operation.throwIfAborted();
       await previous;
+
       const executionResultForFile = report[file];
-      await Object.keys(executionResultForFile).reduce(async (previous, executionName) => {
-        operation.throwIfAborted();
-        await previous;
-        const executionResultForFileOnRuntime = executionResultForFile[executionName];
-        const {
-          coverageFileUrl
-        } = executionResultForFileOnRuntime;
-        let executionCoverage;
-        try {
-          executionCoverage = JSON.parse(String(readFileSync(new URL(coverageFileUrl))));
-        } catch (e) {
-          if (e.code === "ENOENT" || e.name === "SyntaxError") {
-            onMissing({
-              executionName,
-              file,
-              executionResult: executionResultForFileOnRuntime
-            });
-            return;
+      await Object.keys(executionResultForFile).reduce(
+        async (previous, executionName) => {
+          operation.throwIfAborted();
+          await previous;
+
+          const executionResultForFileOnRuntime =
+            executionResultForFile[executionName];
+          const { coverageFileUrl } = executionResultForFileOnRuntime;
+          let executionCoverage;
+          try {
+            executionCoverage = JSON.parse(
+              String(readFileSync(new URL(coverageFileUrl))),
+            );
+          } catch (e) {
+            if (e.code === "ENOENT" || e.name === "SyntaxError") {
+              onMissing({
+                executionName,
+                file,
+                executionResult: executionResultForFileOnRuntime,
+              });
+              return;
+            }
+            throw e;
           }
-          throw e;
-        }
-        if (isV8Coverage(executionCoverage)) {
-          v8Coverage = v8Coverage ? composeTwoV8Coverages(v8Coverage, executionCoverage) : executionCoverage;
-        } else {
-          fileByFileIstanbulCoverage = fileByFileIstanbulCoverage ? composeTwoFileByFileIstanbulCoverages(fileByFileIstanbulCoverage, executionCoverage) : executionCoverage;
-        }
-      }, Promise.resolve());
+
+          if (isV8Coverage(executionCoverage)) {
+            v8Coverage = v8Coverage
+              ? composeTwoV8Coverages(v8Coverage, executionCoverage)
+              : executionCoverage;
+          } else {
+            fileByFileIstanbulCoverage = fileByFileIstanbulCoverage
+              ? composeTwoFileByFileIstanbulCoverages(
+                  fileByFileIstanbulCoverage,
+                  executionCoverage,
+                )
+              : executionCoverage;
+          }
+        },
+        Promise.resolve(),
+      );
     }, Promise.resolve());
+
     return {
       v8Coverage,
-      fileByFileIstanbulCoverage
+      fileByFileIstanbulCoverage,
     };
   } finally {
     await operation.end();
   }
 };
-const isV8Coverage = coverage => Boolean(coverage.result);
+
+const isV8Coverage = (coverage) => Boolean(coverage.result);
 
 /*
  * Export a function capable to run a file on a runtime.
@@ -3236,6 +3626,7 @@ const isV8Coverage = coverage => Boolean(coverage.result);
  * - File execution result is returned, it contains status/errors/namespace/consoleCalls
  */
 
+
 const run = async ({
   signal = new AbortController().signal,
   logger,
@@ -3247,35 +3638,33 @@ const run = async ({
   coverageTempDirectoryUrl,
   collectPerformance = false,
   runtime,
-  runtimeParams
+  runtimeParams,
 }) => {
   const result = {
     status: "pending",
     errors: [],
-    namespace: null
+    namespace: null,
   };
   const callbacks = [];
-  const onConsoleRef = {
-    current: () => {}
-  };
-  const stopSignal = {
-    notify: () => {}
-  };
+
+  const onConsoleRef = { current: () => {} };
+  const stopSignal = { notify: () => {} };
   const runtimeLabel = `${runtime.name}/${runtime.version}`;
+
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
   let timeoutAbortSource;
   if (
-  // ideally we would rather log than the timeout is ignored
-  // when keepRunning is true
-  !keepRunning && typeof allocatedMs === "number" && allocatedMs !== Infinity) {
+    // ideally we would rather log than the timeout is ignored
+    // when keepRunning is true
+    !keepRunning &&
+    typeof allocatedMs === "number" &&
+    allocatedMs !== Infinity
+  ) {
     timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
   const consoleCalls = [];
-  onConsoleRef.current = ({
-    type,
-    text
-  }) => {
+  onConsoleRef.current = ({ type, text }) => {
     if (mirrorConsole) {
       if (type === "error") {
         process.stderr.write(text);
@@ -3284,10 +3673,7 @@ const run = async ({
       }
     }
     if (collectConsole) {
-      consoleCalls.push({
-        type,
-        text
-      });
+      consoleCalls.push({ type, text });
     }
   };
   if (collectConsole) {
@@ -3299,7 +3685,10 @@ const run = async ({
   // and they can be read later at "coverageFileUrl"
   let coverageFileUrl;
   if (coverageEnabled) {
-    coverageFileUrl = new URL(`./${runtime.name}/${createId()}.json`, coverageTempDirectoryUrl).href;
+    coverageFileUrl = new URL(
+      `./${runtime.name}/${createId()}.json`,
+      coverageTempDirectoryUrl,
+    ).href;
     await ensureParentDirectories(coverageFileUrl);
     if (coverageEnabled) {
       result.coverageFileUrl = coverageFileUrl;
@@ -3313,50 +3702,49 @@ const run = async ({
   callbacks.push(() => {
     result.duration = Date.now() - startMs;
   });
+
   try {
     logger.debug(`run() ${runtimeLabel}`);
     runOperation.throwIfAborted();
-    const winnerPromise = new Promise(resolve => {
-      raceCallbacks({
-        aborted: cb => {
-          runOperation.signal.addEventListener("abort", cb);
-          return () => {
-            runOperation.signal.removeEventListener("abort", cb);
-          };
+    const winnerPromise = new Promise((resolve) => {
+      raceCallbacks(
+        {
+          aborted: (cb) => {
+            runOperation.signal.addEventListener("abort", cb);
+            return () => {
+              runOperation.signal.removeEventListener("abort", cb);
+            };
+          },
+          runned: async (cb) => {
+            try {
+              const runResult = await runtime.run({
+                signal: runOperation.signal,
+                logger,
+                ...runtimeParams,
+                collectConsole,
+                collectPerformance,
+                coverageFileUrl,
+                keepRunning,
+                stopSignal,
+                onConsole: (log) => onConsoleRef.current(log),
+              });
+              cb(runResult);
+            } catch (e) {
+              cb({
+                status: "failed",
+                errors: [e],
+              });
+            }
+          },
         },
-        runned: async cb => {
-          try {
-            const runResult = await runtime.run({
-              signal: runOperation.signal,
-              logger,
-              ...runtimeParams,
-              collectConsole,
-              collectPerformance,
-              coverageFileUrl,
-              keepRunning,
-              stopSignal,
-              onConsole: log => onConsoleRef.current(log)
-            });
-            cb(runResult);
-          } catch (e) {
-            cb({
-              status: "failed",
-              errors: [e]
-            });
-          }
-        }
-      }, resolve);
+        resolve,
+      );
     });
     const winner = await winnerPromise;
     if (winner.name === "aborted") {
       runOperation.throwIfAborted();
     }
-    const {
-      status,
-      namespace,
-      errors,
-      performance
-    } = winner.data;
+    const { status, namespace, errors, performance } = winner.data;
     result.status = status;
     result.errors.push(...errors);
     result.namespace = namespace;
@@ -3377,7 +3765,8 @@ const run = async ({
   } finally {
     await runOperation.end();
   }
-  callbacks.forEach(callback => {
+
+  callbacks.forEach((callback) => {
     callback();
   });
   return result;
@@ -3396,73 +3785,73 @@ const EXECUTION_COLORS = {
   timedout: ANSI.MAGENTA,
   failed: ANSI.RED,
   completed: ANSI.GREEN,
-  cancelled: ANSI.GREY
+  cancelled: ANSI.GREY,
 };
 
-const createExecutionLog = ({
-  executionIndex,
-  fileRelativeUrl,
-  runtimeName,
-  runtimeVersion,
-  executionParams,
-  executionResult,
-  startMs,
-  endMs
-}, {
-  logShortForCompletedExecutions,
-  counters,
-  logRuntime,
-  logEachDuration,
-  timeEllapsed,
-  memoryHeap
-}) => {
-  const {
-    status
-  } = executionResult;
+const createExecutionLog = (
+  {
+    executionIndex,
+    fileRelativeUrl,
+    runtimeName,
+    runtimeVersion,
+    executionParams,
+    executionResult,
+    startMs,
+    endMs,
+  },
+  {
+    logShortForCompletedExecutions,
+    counters,
+    logRuntime,
+    logEachDuration,
+    timeEllapsed,
+    memoryHeap,
+  },
+) => {
+  const { status } = executionResult;
   const descriptionFormatter = descriptionFormatters[status];
   const description = descriptionFormatter({
     index: executionIndex,
     total: counters.total,
-    executionParams
+    executionParams,
   });
   const summary = createIntermediateSummary({
     executionIndex,
     counters,
     timeEllapsed,
-    memoryHeap
+    memoryHeap,
   });
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
     log = `${description}${summary}`;
   } else {
-    const {
-      consoleCalls = [],
-      errors = []
-    } = executionResult;
+    const { consoleCalls = [], errors = [] } = executionResult;
     const consoleOutput = formatConsoleCalls(consoleCalls);
     const errorsOutput = formatErrors(errors);
     log = formatExecution({
       label: `${description}${summary}`,
       details: {
         file: fileRelativeUrl,
-        ...(logRuntime ? {
-          runtime: `${runtimeName}/${runtimeVersion}`
-        } : {}),
-        ...(logEachDuration ? {
-          duration: status === "executing" ? msAsEllapsedTime(Date.now() - startMs) : msAsDuration(endMs - startMs)
-        } : {})
+        ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
+        ...(logEachDuration
+          ? {
+              duration:
+                status === "executing"
+                  ? msAsEllapsedTime(Date.now() - startMs)
+                  : msAsDuration(endMs - startMs),
+            }
+          : {}),
       },
       consoleOutput,
-      errorsOutput
+      errorsOutput,
     });
   }
-  const {
-    columns = 80
-  } = process.stdout;
+
+  const { columns = 80 } = process.stdout;
   log = wrapAnsi(log, columns, {
     trim: false,
     hard: true,
-    wordWrap: false
+    wordWrap: false,
   });
   if (endMs) {
     if (logShortForCompletedExecutions) {
@@ -3475,57 +3864,68 @@ const createExecutionLog = ({
   }
   return log;
 };
-const formatErrors = errors => {
+
+const formatErrors = (errors) => {
   if (errors.length === 0) {
     return "";
   }
-  const formatError = error => error.stack || error.message || error;
+  const formatError = (error) => error.stack || error.message || error;
+
   if (errors.length === 1) {
     return `${ANSI.color(`-------- error --------`, ANSI.RED)}
 ${formatError(errors[0])}
 ${ANSI.color(`-------------------------`, ANSI.RED)}`;
   }
+
   let output = [];
-  errors.forEach(error => {
-    output.push(prefixFirstAndIndentRemainingLines({
-      prefix: `${UNICODE.CIRCLE_CROSS} `,
-      indentation: "   ",
-      text: formatError(error)
-    }));
+  errors.forEach((error) => {
+    output.push(
+      prefixFirstAndIndentRemainingLines({
+        prefix: `${UNICODE.CIRCLE_CROSS} `,
+        indentation: "   ",
+        text: formatError(error),
+      }),
+    );
   });
   return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
 ${output.join(`\n`)}
 ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 };
-const createSummaryLog = summary => `-------------- summary -----------------
+
+const createSummaryLog = (
+  summary,
+) => `-------------- summary -----------------
 ${createAllExecutionsSummary(summary)}
 total duration: ${msAsDuration(summary.duration)}
 ----------------------------------------`;
-const createAllExecutionsSummary = ({
-  counters
-}) => {
+
+const createAllExecutionsSummary = ({ counters }) => {
   if (counters.total === 0) {
     return `no execution`;
   }
-  const executionLabel = counters.total === 1 ? `1 execution` : `${counters.total} executions`;
+  const executionLabel =
+    counters.total === 1 ? `1 execution` : `${counters.total} executions`;
   return `${executionLabel}: ${createStatusSummary({
-    counters
+    counters,
   })}`;
 };
+
 const createIntermediateSummary = ({
   executionIndex,
   counters,
   memoryHeap,
-  timeEllapsed
+  timeEllapsed,
 }) => {
   const parts = [];
   if (executionIndex > 0 || counters.done > 0) {
-    parts.push(createStatusSummary({
-      counters: {
-        ...counters,
-        total: executionIndex + 1
-      }
-    }));
+    parts.push(
+      createStatusSummary({
+        counters: {
+          ...counters,
+          total: executionIndex + 1,
+        },
+      }),
+    );
   }
   if (timeEllapsed) {
     parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
@@ -3538,9 +3938,8 @@ const createIntermediateSummary = ({
   }
   return ` (${parts.join(` / `)})`;
 };
-const createStatusSummary = ({
-  counters
-}) => {
+
+const createStatusSummary = ({ counters }) => {
   if (counters.aborted === counters.total) {
     return `all ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`;
   }
@@ -3557,69 +3956,103 @@ const createStatusSummary = ({
     return `all ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`;
   }
   return createMixedDetails({
-    counters
+    counters,
   });
 };
-const createMixedDetails = ({
-  counters
-}) => {
+
+const createMixedDetails = ({ counters }) => {
   const parts = [];
   if (counters.timedout) {
-    parts.push(`${counters.timedout} ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`);
+    parts.push(
+      `${counters.timedout} ${ANSI.color(
+        `timed out`,
+        EXECUTION_COLORS.timedout,
+      )}`,
+    );
   }
   if (counters.failed) {
-    parts.push(`${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`);
+    parts.push(
+      `${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`,
+    );
   }
   if (counters.completed) {
-    parts.push(`${counters.completed} ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`);
+    parts.push(
+      `${counters.completed} ${ANSI.color(
+        `completed`,
+        EXECUTION_COLORS.completed,
+      )}`,
+    );
   }
   if (counters.aborted) {
-    parts.push(`${counters.aborted} ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`);
+    parts.push(
+      `${counters.aborted} ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`,
+    );
   }
   if (counters.cancelled) {
-    parts.push(`${counters.cancelled} ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`);
+    parts.push(
+      `${counters.cancelled} ${ANSI.color(
+        `cancelled`,
+        EXECUTION_COLORS.cancelled,
+      )}`,
+    );
   }
   return `${parts.join(", ")}`;
 };
+
 const descriptionFormatters = {
-  executing: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`executing ${padNumber(index, total)} of ${total}`, EXECUTION_COLORS.executing);
+  executing: ({ index, total }) => {
+    return ANSI.color(
+      `executing ${padNumber(index, total)} of ${total}`,
+      EXECUTION_COLORS.executing,
+    );
   },
-  aborted: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} aborted`, EXECUTION_COLORS.aborted);
+  aborted: ({ index, total }) => {
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} aborted`,
+      EXECUTION_COLORS.aborted,
+    );
   },
-  timedout: ({
-    index,
-    total,
-    executionParams
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} timeout after ${executionParams.allocatedMs}ms`, EXECUTION_COLORS.timedout);
+  timedout: ({ index, total, executionParams }) => {
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} timeout after ${executionParams.allocatedMs}ms`,
+      EXECUTION_COLORS.timedout,
+    );
   },
-  failed: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} failed`, EXECUTION_COLORS.failed);
+  failed: ({ index, total }) => {
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} failed`,
+      EXECUTION_COLORS.failed,
+    );
   },
-  completed: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.OK_RAW} execution ${padNumber(index, total)} of ${total} completed`, EXECUTION_COLORS.completed);
+  completed: ({ index, total }) => {
+    return ANSI.color(
+      `${UNICODE.OK_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} completed`,
+      EXECUTION_COLORS.completed,
+    );
   },
-  cancelled: ({
-    index,
-    total
-  }) => {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} execution ${padNumber(index, total)} of ${total} cancelled`, EXECUTION_COLORS.cancelled);
-  }
+  cancelled: ({ index, total }) => {
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} execution ${padNumber(
+        index,
+        total,
+      )} of ${total} cancelled`,
+      EXECUTION_COLORS.cancelled,
+    );
+  },
 };
+
 const padNumber = (index, total) => {
   const number = index + 1;
   const numberWidth = String(number).length;
@@ -3632,7 +4065,8 @@ const padNumber = (index, total) => {
   padded += number;
   return padded;
 };
-const formatConsoleCalls = consoleCalls => {
+
+const formatConsoleCalls = (consoleCalls) => {
   if (consoleCalls.length === 0) {
     return "";
   }
@@ -3641,17 +4075,22 @@ const formatConsoleCalls = consoleCalls => {
     info: 0,
     warning: 0,
     error: 0,
-    log: 0
+    log: 0,
   };
-  consoleCalls.forEach(consoleCall => {
+  consoleCalls.forEach((consoleCall) => {
     repartition[consoleCall.type]++;
   });
   const consoleOutput = formatConsoleOutput(consoleCalls);
-  return `${ANSI.color(`-------- ${formatConsoleSummary(repartition)} --------`, ANSI.GREY)}
+
+  return `${ANSI.color(
+    `-------- ${formatConsoleSummary(repartition)} --------`,
+    ANSI.GREY,
+  )}
 ${consoleOutput}
 ${ANSI.color(`-------------------------`, ANSI.GREY)}`;
 };
-const formatConsoleOutput = consoleCalls => {
+
+const formatConsoleOutput = (consoleCalls) => {
   // inside Node.js you can do process.stdout.write()
   // and in that case the consoleCall is not suffixed with "\n"
   // we want to keep these calls together in the output
@@ -3678,6 +4117,7 @@ const formatConsoleOutput = consoleCalls => {
     const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
     previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
   });
+
   let consoleOutput = ``;
   regroupedCalls.forEach((regroupedCall, index) => {
     const text = regroupedCall.text;
@@ -3685,18 +4125,19 @@ const formatConsoleOutput = consoleCalls => {
       prefix: CONSOLE_ICONS[regroupedCall.type],
       text,
       trimLines: true,
-      trimLastLine: index === regroupedCalls.length - 1
+      trimLastLine: index === regroupedCalls.length - 1,
     });
     consoleOutput += textFormatted;
   });
   return consoleOutput;
 };
+
 const prefixFirstAndIndentRemainingLines = ({
   prefix,
   indentation = "  ",
   text,
   trimLines,
-  trimLastLine
+  trimLastLine,
 }) => {
   const lines = text.split(/\r?\n/);
   const firstLine = lines.shift();
@@ -3705,24 +4146,25 @@ const prefixFirstAndIndentRemainingLines = ({
   while (i < lines.length) {
     const line = trimLines ? lines[i].trim() : lines[i];
     i++;
-    result += line.length ? `\n${indentation}${line}` : trimLastLine && i === lines.length ? "" : `\n`;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+      ? ""
+      : `\n`;
   }
   return result;
 };
+
 const CONSOLE_ICONS = {
   debug: UNICODE.DEBUG,
   info: UNICODE.INFO,
   warning: UNICODE.WARNING,
   error: UNICODE.FAILURE,
-  log: " "
+  log: " ",
 };
-const formatConsoleSummary = repartition => {
-  const {
-    debug,
-    info,
-    warning,
-    error
-  } = repartition;
+
+const formatConsoleSummary = (repartition) => {
+  const { debug, info, warning, error } = repartition;
   const parts = [];
   if (error) {
     parts.push(`${CONSOLE_ICONS.error} ${error}`);
@@ -3741,15 +4183,16 @@ const formatConsoleSummary = repartition => {
   }
   return `console (${parts.join(" ")})`;
 };
+
 const formatExecution = ({
   label,
   details = {},
   consoleOutput,
-  errorsOutput
+  errorsOutput,
 }) => {
   let message = ``;
   message += label;
-  Object.keys(details).forEach(key => {
+  Object.keys(details).forEach((key) => {
     message += `
 ${key}: ${details[key]}`;
   });
@@ -3762,64 +4205,77 @@ ${key}: ${details[key]}`;
   return message;
 };
 
-const executeSteps = async (executionSteps, {
-  signal,
-  handleSIGINT,
-  logger,
-  logRefresh,
-  logRuntime,
-  logEachDuration,
-  logSummary,
-  logTimeUsage,
-  logMemoryHeapUsage,
-  logFileRelativeUrl,
-  logMergeForCompletedExecutions,
-  logShortForCompletedExecutions,
-  rootDirectoryUrl,
-  webServer,
-  keepRunning,
-  defaultMsAllocatedPerExecution,
-  maxExecutionsInParallel,
-  failFast,
-  gcBetweenExecutions,
-  cooldownBetweenExecutions,
-  coverageEnabled,
-  coverageConfig,
-  coverageIncludeMissing,
-  coverageMethodForBrowsers,
-  coverageMethodForNodeJs,
-  coverageV8ConflictWarning,
-  coverageTempDirectoryUrl,
-  beforeExecutionCallback = () => {},
-  afterExecutionCallback = () => {}
-} = {}) => {
-  executionSteps = executionSteps.filter(executionStep => !executionStep.runtime?.disabled);
+const executeSteps = async (
+  executionSteps,
+  {
+    signal,
+    handleSIGINT,
+    logger,
+    logRefresh,
+    logRuntime,
+    logEachDuration,
+    logSummary,
+    logTimeUsage,
+    logMemoryHeapUsage,
+    logFileRelativeUrl,
+    logMergeForCompletedExecutions,
+    logShortForCompletedExecutions,
+    rootDirectoryUrl,
+    webServer,
+
+    keepRunning,
+    defaultMsAllocatedPerExecution,
+    maxExecutionsInParallel,
+    failFast,
+    gcBetweenExecutions,
+    cooldownBetweenExecutions,
+
+    coverageEnabled,
+    coverageConfig,
+    coverageIncludeMissing,
+    coverageMethodForBrowsers,
+    coverageMethodForNodeJs,
+    coverageV8ConflictWarning,
+    coverageTempDirectoryUrl,
+
+    beforeExecutionCallback = () => {},
+    afterExecutionCallback = () => {},
+  } = {},
+) => {
+  executionSteps = executionSteps.filter(
+    (executionStep) => !executionStep.runtime?.disabled,
+  );
+
   const executePlanReturnValue = {};
   const report = {};
   const callbacks = [];
-  const stopAfterAllSignal = {
-    notify: () => {}
-  };
+  const stopAfterAllSignal = { notify: () => {} };
+
   const multipleExecutionsOperation = Abort.startOperation();
   multipleExecutionsOperation.addAbortSignal(signal);
   if (handleSIGINT) {
-    multipleExecutionsOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGINT: true
-      }, () => {
-        logger.debug(`SIGINT abort`);
-        abort();
-      });
+    multipleExecutionsOperation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        () => {
+          logger.debug(`SIGINT abort`);
+          abort();
+        },
+      );
     });
   }
   const failFastAbortController = new AbortController();
   if (failFast) {
     multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
   }
+
   try {
     if (gcBetweenExecutions) {
       ensureGlobalGc();
     }
+
     if (coverageEnabled) {
       // when runned multiple times, we don't want to keep previous files in this directory
       await ensureEmptyDirectory(coverageTempDirectoryUrl);
@@ -3835,15 +4291,14 @@ const executeSteps = async (executionSteps, {
             // good to call v8.stopCoverage()
             // but it logs a strange message about "result is not an object"
           }
-
           const planCoverage = await reportToCoverage(report, {
             signal: multipleExecutionsOperation.signal,
             logger,
             rootDirectoryUrl,
             coverageConfig,
             coverageIncludeMissing,
-            coverageMethodForBrowsers,
-            coverageV8ConflictWarning
+            coverageMethodForNodeJs,
+            coverageV8ConflictWarning,
           });
           executePlanReturnValue.planCoverage = planCoverage;
         } catch (e) {
@@ -3854,51 +4309,55 @@ const executeSteps = async (executionSteps, {
         }
       });
     }
+
     const runtimeParams = {
       rootDirectoryUrl,
       webServer,
+
       coverageEnabled,
       coverageConfig,
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
-      stopAfterAllSignal
+      stopAfterAllSignal,
     };
+
     if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
       logMergeForCompletedExecutions = false;
-      logger.debug(`Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`);
+      logger.debug(
+        `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
+      );
     }
     const debugLogsEnabled = logger.levels.debug;
     const executionLogsEnabled = logger.levels.info;
-    const executionSpinner = logRefresh && !debugLogsEnabled && executionLogsEnabled && process.stdout.isTTY &&
-    // if there is an error during execution npm will mess up the output
-    // (happens when npm runs several command in a workspace)
-    // so we enable spinner only when !process.exitCode (no error so far)
-    process.exitCode !== 1;
+    const executionSpinner =
+      logRefresh &&
+      !debugLogsEnabled &&
+      executionLogsEnabled &&
+      process.stdout.isTTY &&
+      // if there is an error during execution npm will mess up the output
+      // (happens when npm runs several command in a workspace)
+      // so we enable spinner only when !process.exitCode (no error so far)
+      process.exitCode !== 1;
+
     const startMs = Date.now();
     let rawOutput = "";
-    let executionLog = createLog({
-      newLine: ""
-    });
+    let executionLog = createLog({ newLine: "" });
     const counters = {
       total: executionSteps.length,
       aborted: 0,
       timedout: 0,
       failed: 0,
       completed: 0,
-      done: 0
+      done: 0,
     };
     await executeInParallel({
       multipleExecutionsOperation,
       maxExecutionsInParallel,
       cooldownBetweenExecutions,
       executionSteps,
-      start: async paramsFromStep => {
+      start: async (paramsFromStep) => {
         const executionIndex = executionSteps.indexOf(paramsFromStep);
-        const {
-          executionName,
-          fileRelativeUrl,
-          runtime
-        } = paramsFromStep;
+        const { executionName, fileRelativeUrl, runtime } = paramsFromStep;
         const runtimeType = runtime.type;
         const runtimeName = runtime.name;
         const runtimeVersion = runtime.version;
@@ -3910,8 +4369,8 @@ const executeSteps = async (executionSteps, {
           ...paramsFromStep,
           runtimeParams: {
             fileRelativeUrl,
-            ...paramsFromStep.runtimeParams
-          }
+            ...paramsFromStep.runtimeParams,
+          },
         };
         const beforeExecutionInfo = {
           fileRelativeUrl,
@@ -3922,8 +4381,8 @@ const executeSteps = async (executionSteps, {
           executionParams,
           startMs: Date.now(),
           executionResult: {
-            status: "executing"
-          }
+            status: "executing",
+          },
         };
         let spinner;
         if (executionSpinner) {
@@ -3934,40 +4393,49 @@ const executeSteps = async (executionSteps, {
                 counters,
                 logRuntime,
                 logEachDuration,
-                ...(logTimeUsage ? {
-                  timeEllapsed: Date.now() - startMs
-                } : {}),
-                ...(logMemoryHeapUsage ? {
-                  memoryHeap: memoryUsage().heapUsed
-                } : {})
+                ...(logTimeUsage
+                  ? {
+                      timeEllapsed: Date.now() - startMs,
+                    }
+                  : {}),
+                ...(logMemoryHeapUsage
+                  ? { memoryHeap: memoryUsage().heapUsed }
+                  : {}),
               });
-            }
+            },
           });
         }
         beforeExecutionCallback(beforeExecutionInfo);
+
         const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
         let executionResult;
         if (existsSync(new URL(fileUrl))) {
           executionResult = await run({
             signal: multipleExecutionsOperation.signal,
             logger,
-            allocatedMs: typeof executionParams.allocatedMs === "function" ? executionParams.allocatedMs(beforeExecutionInfo) : executionParams.allocatedMs,
+            allocatedMs:
+              typeof executionParams.allocatedMs === "function"
+                ? executionParams.allocatedMs(beforeExecutionInfo)
+                : executionParams.allocatedMs,
             keepRunning,
-            mirrorConsole: false,
-            // file are executed in parallel, log would be a mess to read
+            mirrorConsole: false, // file are executed in parallel, log would be a mess to read
             collectConsole: executionParams.collectConsole,
             coverageEnabled,
             coverageTempDirectoryUrl,
             runtime: executionParams.runtime,
             runtimeParams: {
               ...runtimeParams,
-              ...executionParams.runtimeParams
-            }
+              ...executionParams.runtimeParams,
+            },
           });
         } else {
           executionResult = {
             status: "failed",
-            errors: [new Error(`No file at ${fileRelativeUrl} for execution "${executionName}"`)]
+            errors: [
+              new Error(
+                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
+              ),
+            ],
           };
         }
         counters.done++;
@@ -3976,16 +4444,18 @@ const executeSteps = async (executionSteps, {
           fileReport[executionName] = executionResult;
         } else {
           report[fileRelativeUrl] = {
-            [executionName]: executionResult
+            [executionName]: executionResult,
           };
         }
+
         const afterExecutionInfo = {
           ...beforeExecutionInfo,
           runtimeVersion: runtime.version,
           endMs: Date.now(),
-          executionResult
+          executionResult,
         };
         afterExecutionCallback(afterExecutionInfo);
+
         if (executionResult.status === "aborted") {
           counters.aborted++;
         } else if (executionResult.status === "timedout") {
@@ -4004,50 +4474,56 @@ const executeSteps = async (executionSteps, {
             counters,
             logRuntime,
             logEachDuration,
-            ...(logTimeUsage ? {
-              timeEllapsed: Date.now() - startMs
-            } : {}),
-            ...(logMemoryHeapUsage ? {
-              memoryHeap: memoryUsage().heapUsed
-            } : {})
+            ...(logTimeUsage
+              ? {
+                  timeEllapsed: Date.now() - startMs,
+                }
+              : {}),
+            ...(logMemoryHeapUsage
+              ? { memoryHeap: memoryUsage().heapUsed }
+              : {}),
           });
           // replace spinner with this execution result
           if (spinner) spinner.stop();
           executionLog.write(log);
           rawOutput += stripAnsi(log);
+
           const canOverwriteLog = canOverwriteLogGetter({
             logMergeForCompletedExecutions,
-            executionResult
+            executionResult,
           });
           if (canOverwriteLog) {
             // nothing to do, we reuse the current executionLog object
           } else {
             executionLog.destroy();
-            executionLog = createLog({
-              newLine: ""
-            });
+            executionLog = createLog({ newLine: "" });
           }
         }
         const isLastExecutionLog = executionIndex === executionSteps.length - 1;
-        const cancelRemaining = failFast && executionResult.status !== "completed" && counters.done < counters.total;
+        const cancelRemaining =
+          failFast &&
+          executionResult.status !== "completed" &&
+          counters.done < counters.total;
         if (isLastExecutionLog && logger.levels.info) {
           executionLog.write("\n");
         }
+
         if (cancelRemaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
         }
-      }
+      },
     });
     if (!keepRunning) {
       logger.debug("stopAfterAllSignal.notify()");
       await stopAfterAllSignal.notify();
     }
+
     counters.cancelled = counters.total - counters.done;
     const summary = {
       counters,
       // when execution is aborted, the remaining executions are "cancelled"
-      duration: Date.now() - startMs
+      duration: Date.now() - startMs,
     };
     if (logSummary) {
       const summaryLog = createSummaryLog(summary);
@@ -4071,9 +4547,10 @@ const executeSteps = async (executionSteps, {
     await multipleExecutionsOperation.end();
   }
 };
+
 const canOverwriteLogGetter = ({
   logMergeForCompletedExecutions,
-  executionResult
+  executionResult,
 }) => {
   if (!logMergeForCompletedExecutions) {
     return false;
@@ -4084,30 +4561,33 @@ const canOverwriteLogGetter = ({
   if (executionResult.status !== "completed") {
     return false;
   }
-  const {
-    consoleCalls = []
-  } = executionResult;
+  const { consoleCalls = [] } = executionResult;
   if (consoleCalls.length > 0) {
     return false;
   }
   return true;
 };
+
 const executeInParallel = async ({
   multipleExecutionsOperation,
   maxExecutionsInParallel,
   cooldownBetweenExecutions,
   executionSteps,
-  start
+  start,
 }) => {
   const executionResults = [];
   let progressionIndex = 0;
   let remainingExecutionCount = executionSteps.length;
+
   const nextChunk = async () => {
     if (multipleExecutionsOperation.signal.aborted) {
       return;
     }
     const outputPromiseArray = [];
-    while (remainingExecutionCount > 0 && outputPromiseArray.length < maxExecutionsInParallel) {
+    while (
+      remainingExecutionCount > 0 &&
+      outputPromiseArray.length < maxExecutionsInParallel
+    ) {
       remainingExecutionCount--;
       const outputPromise = executeOne(progressionIndex);
       progressionIndex++;
@@ -4120,17 +4600,22 @@ const executeInParallel = async ({
       }
     }
   };
-  const executeOne = async index => {
+
+  const executeOne = async (index) => {
     const input = executionSteps[index];
     const output = await start(input);
     if (!multipleExecutionsOperation.signal.aborted) {
       executionResults[index] = output;
     }
     if (cooldownBetweenExecutions) {
-      await new Promise(resolve => setTimeout(resolve, cooldownBetweenExecutions));
+      await new Promise((resolve) =>
+        setTimeout(resolve, cooldownBetweenExecutions),
+      );
     }
   };
+
   await nextChunk();
+
   return executionResults;
 };
 
@@ -4164,6 +4649,7 @@ const executeTestPlan = async ({
   logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
   logShortForCompletedExecutions = false,
   logMergeForCompletedExecutions = false,
+
   rootDirectoryUrl,
   webServer,
   testPlan,
@@ -4179,6 +4665,7 @@ const executeTestPlan = async ({
   keepRunning = false,
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
+
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
     "file:///**/node_modules/": false,
@@ -4192,11 +4679,13 @@ const executeTestPlan = async ({
     "./**/*.test.html": false,
     "./**/*.test.html@*.js": false,
     "./**/*.test.js": false,
-    "./**/*.test.mjs": false
+    "./**/*.test.mjs": false,
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE ? "NODE_V8_COVERAGE" : "Profiler",
+  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE
+    ? "NODE_V8_COVERAGE"
+    : "Profiler",
   // - When chromium only -> coverage generated by v8
   // - When chromium + node -> coverage generated by v8 are merged
   // - When firefox only -> coverage generated by babel+istanbul
@@ -4204,8 +4693,7 @@ const executeTestPlan = async ({
   //   -> by default only coverage from chromium is used
   //   and a warning is logged according to coverageV8ConflictWarning
   //   -> to collect coverage from both browsers, pass coverageMethodForBrowsers: "istanbul"
-  coverageMethodForBrowsers,
-  // undefined | "playwright" | "istanbul"
+  coverageMethodForBrowsers, // undefined | "playwright" | "istanbul"
   coverageV8ConflictWarning = true,
   coverageTempDirectoryUrl,
   // skip empty means empty files won't appear in the coverage reports (json and html)
@@ -4227,23 +4715,27 @@ const executeTestPlan = async ({
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
-      throw new TypeError(`${unexpectedParamNames.join(",")}: there is no such param`);
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      );
     }
-    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl, "rootDirectoryUrl");
+    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      rootDirectoryUrl,
+      "rootDirectoryUrl",
+    );
     if (!existsSync(new URL(rootDirectoryUrl))) {
       throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
     }
     if (typeof testPlan !== "object") {
       throw new Error(`testPlan must be an object, got ${testPlan}`);
     }
-    Object.keys(testPlan).forEach(filePattern => {
+
+    Object.keys(testPlan).forEach((filePattern) => {
       const filePlan = testPlan[filePattern];
       if (!filePlan) return;
-      Object.keys(filePlan).forEach(executionName => {
+      Object.keys(filePlan).forEach((executionName) => {
         const executionConfig = filePlan[executionName];
-        const {
-          runtime
-        } = executionConfig;
+        const { runtime } = executionConfig;
         if (runtime) {
           runtimes[runtime.name] = runtime.version;
           if (runtime.type === "browser") {
@@ -4258,100 +4750,146 @@ const executeTestPlan = async ({
         }
       });
     });
+
     if (someNeedsServer) {
       await assertAndNormalizeWebServer(webServer);
     }
+
     if (coverageEnabled) {
       if (coverageMethodForBrowsers === undefined) {
-        coverageMethodForBrowsers = someHasCoverageV8 ? "playwright" : "istanbul";
+        coverageMethodForBrowsers = someHasCoverageV8
+          ? "playwright"
+          : "istanbul";
       }
       if (typeof coverageConfig !== "object") {
-        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
+        throw new TypeError(
+          `coverageConfig must be an object, got ${coverageConfig}`,
+        );
       }
       if (!coverageAndExecutionAllowed) {
-        const associationsForExecute = URL_META.resolveAssociations({
-          execute: testPlan
-        }, "file:///");
-        const associationsForCover = URL_META.resolveAssociations({
-          cover: coverageConfig
-        }, "file:///");
-        const patternsMatchingCoverAndExecute = Object.keys(associationsForExecute.execute).filter(testPlanPattern => {
-          const {
-            cover
-          } = URL_META.applyAssociations({
+        const associationsForExecute = URL_META.resolveAssociations(
+          { execute: testPlan },
+          "file:///",
+        );
+        const associationsForCover = URL_META.resolveAssociations(
+          { cover: coverageConfig },
+          "file:///",
+        );
+        const patternsMatchingCoverAndExecute = Object.keys(
+          associationsForExecute.execute,
+        ).filter((testPlanPattern) => {
+          const { cover } = URL_META.applyAssociations({
             url: testPlanPattern,
-            associations: associationsForCover
+            associations: associationsForCover,
           });
           return cover;
         });
         if (patternsMatchingCoverAndExecute.length) {
           // It would be strange, for a given file to be both covered and executed
-          throw new Error(createDetailedMessage(`some file will be both covered and executed`, {
-            patterns: patternsMatchingCoverAndExecute
-          }));
+          throw new Error(
+            createDetailedMessage(
+              `some file will be both covered and executed`,
+              {
+                patterns: patternsMatchingCoverAndExecute,
+              },
+            ),
+          );
         }
       }
+
       if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL("./.coverage/tmp/", rootDirectoryUrl);
+        coverageTempDirectoryUrl = new URL(
+          "./.coverage/tmp/",
+          rootDirectoryUrl,
+        );
       } else {
-        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageTempDirectoryUrl, "coverageTempDirectoryUrl");
+        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          coverageTempDirectoryUrl,
+          "coverageTempDirectoryUrl",
+        );
       }
       if (coverageReportJson) {
         if (coverageReportJsonFileUrl === undefined) {
-          coverageReportJsonFileUrl = new URL("./.coverage/coverage.json", rootDirectoryUrl);
+          coverageReportJsonFileUrl = new URL(
+            "./.coverage/coverage.json",
+            rootDirectoryUrl,
+          );
         } else {
-          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(coverageReportJsonFileUrl, "coverageReportJsonFileUrl");
+          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(
+            coverageReportJsonFileUrl,
+            "coverageReportJsonFileUrl",
+          );
         }
       }
       if (coverageReportHtml) {
         if (coverageReportHtmlDirectoryUrl === undefined) {
-          coverageReportHtmlDirectoryUrl = new URL("./.coverage/", rootDirectoryUrl);
+          coverageReportHtmlDirectoryUrl = new URL(
+            "./.coverage/",
+            rootDirectoryUrl,
+          );
         } else {
-          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(coverageReportHtmlDirectoryUrl, "coverageReportHtmlDirectoryUrl");
+          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(
+            coverageReportHtmlDirectoryUrl,
+            "coverageReportHtmlDirectoryUrl",
+          );
         }
       }
     }
   }
-  const logger = createLogger({
-    logLevel
-  });
-  logger.debug(createDetailedMessage(`Prepare executing plan`, {
-    runtimes: JSON.stringify(runtimes, null, "  ")
-  }));
+
+  const logger = createLogger({ logLevel });
+  logger.debug(
+    createDetailedMessage(`Prepare executing plan`, {
+      runtimes: JSON.stringify(runtimes, null, "  "),
+    }),
+  );
 
   // param normalization
   {
     if (coverageEnabled) {
       if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
+        logger.warn(
+          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+        );
       }
-      if (someNodeRuntime && coverageEnabled && coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+      if (
+        someNodeRuntime &&
+        coverageEnabled &&
+        coverageMethodForNodeJs === "NODE_V8_COVERAGE"
+      ) {
         if (process.env.NODE_V8_COVERAGE) {
           // when runned multiple times, we don't want to keep previous files in this directory
           await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
         } else {
           coverageMethodForNodeJs = "Profiler";
-          logger.warn(createDetailedMessage(`process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`, {
-            "suggestion": `set process.env.NODE_V8_COVERAGE`,
-            "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`
-          }));
+          logger.warn(
+            createDetailedMessage(
+              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              {
+                "suggestion": `set process.env.NODE_V8_COVERAGE`,
+                "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+              },
+            ),
+          );
         }
       }
     }
   }
+
   testPlan = {
     "file:///**/node_modules/": null,
     "**/*./": null,
     ...testPlan,
-    "**/.jsenv/": null
+    "**/.jsenv/": null,
   };
   logger.debug(`Generate executions`);
   const executionSteps = await executionStepsFromTestPlan({
     signal,
     testPlan,
-    rootDirectoryUrl
+    rootDirectoryUrl,
   });
   logger.debug(`${executionSteps.length} executions planned`);
+
   const result = await executeSteps(executionSteps, {
     signal,
     handleSIGINT,
@@ -4367,21 +4905,26 @@ const executeTestPlan = async ({
     logMergeForCompletedExecutions,
     rootDirectoryUrl,
     webServer,
+
     maxExecutionsInParallel,
     defaultMsAllocatedPerExecution,
     failFast,
     keepRunning,
     cooldownBetweenExecutions,
     gcBetweenExecutions,
+
     coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
     coverageMethodForBrowsers,
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
-    coverageTempDirectoryUrl
+    coverageTempDirectoryUrl,
   });
-  if (updateProcessExitCode && result.planSummary.counters.total !== result.planSummary.counters.completed) {
+  if (
+    updateProcessExitCode &&
+    result.planSummary.counters.total !== result.planSummary.counters.completed
+  ) {
     process.exitCode = 1;
   }
   const planCoverage = result.planCoverage;
@@ -4394,26 +4937,37 @@ const executeTestPlan = async ({
     if (coverageEnabled && coverageReportHtml) {
       await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
       const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
-      logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
-      promises.push(generateCoverageHtmlDirectory(planCoverage, {
-        rootDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(coverageReportHtmlDirectoryUrl, rootDirectoryUrl),
-        coverageReportSkipEmpty,
-        coverageReportSkipFull
-      }));
+      logger.info(
+        `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
+      );
+      promises.push(
+        generateCoverageHtmlDirectory(planCoverage, {
+          rootDirectoryUrl,
+          coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
+            coverageReportHtmlDirectoryUrl,
+            rootDirectoryUrl,
+          ),
+          coverageReportSkipEmpty,
+          coverageReportSkipFull,
+        }),
+      );
     }
     if (coverageEnabled && coverageReportJson) {
-      promises.push(generateCoverageJsonFile({
-        coverage: result.planCoverage,
-        coverageJsonFileUrl: coverageReportJsonFileUrl,
-        logger
-      }));
+      promises.push(
+        generateCoverageJsonFile({
+          coverage: result.planCoverage,
+          coverageJsonFileUrl: coverageReportJsonFileUrl,
+          logger,
+        }),
+      );
     }
     if (coverageEnabled && coverageReportTextLog) {
-      promises.push(generateCoverageTextLog(result.planCoverage, {
-        coverageReportSkipEmpty,
-        coverageReportSkipFull
-      }));
+      promises.push(
+        generateCoverageTextLog(result.planCoverage, {
+          coverageReportSkipEmpty,
+          coverageReportSkipFull,
+        }),
+      );
     }
     await Promise.all(promises);
   }
@@ -4421,13 +4975,14 @@ const executeTestPlan = async ({
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
-    testPlanCoverage: planCoverage
+    testPlanCoverage: planCoverage,
   };
 };
 
-const memoize = compute => {
+const memoize = (compute) => {
   let memoized = false;
   let memoizedValue;
+
   const fnWithMemoization = (...args) => {
     if (memoized) {
       return memoizedValue;
@@ -4438,12 +4993,14 @@ const memoize = compute => {
     memoized = true;
     return memoizedValue;
   };
+
   fnWithMemoization.forget = () => {
     const value = memoizedValue;
     memoized = false;
     memoizedValue = undefined;
     return value;
   };
+
   return fnWithMemoization;
 };
 
@@ -4453,17 +5010,14 @@ const WEB_URL_CONVERTER = {
       return moveUrl({
         url: fileUrl,
         from: webServer.rootDirectoryUrl,
-        to: `${webServer.origin}/`
+        to: `${webServer.origin}/`,
       });
     }
     const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
     return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
   },
   asFileUrl: (webUrl, webServer) => {
-    const {
-      pathname,
-      search
-    } = new URL(webUrl);
+    const { pathname, search } = new URL(webUrl);
     if (pathname.startsWith("/@fs/")) {
       const fsRootRelativeUrl = pathname.slice("/@fs/".length);
       return `file:///${fsRootRelativeUrl}${search}`;
@@ -4471,65 +5025,61 @@ const WEB_URL_CONVERTER = {
     return moveUrl({
       url: webUrl,
       from: `${webServer.origin}/`,
-      to: webServer.rootDirectoryUrl
+      to: webServer.rootDirectoryUrl,
     });
-  }
+  },
 };
 
-const initJsSupervisorMiddleware = async (page, {
-  webServer,
-  fileUrl,
-  fileServerUrl
-}) => {
+const initJsSupervisorMiddleware = async (
+  page,
+  { webServer, fileUrl, fileServerUrl },
+) => {
   const inlineScriptContents = new Map();
-  const interceptHtmlToExecute = async ({
-    route
-  }) => {
+
+  const interceptHtmlToExecute = async ({ route }) => {
     const response = await route.fetch();
     const originalBody = await response.text();
-    const injectionResult = await injectSupervisorIntoHTML({
-      content: originalBody,
-      url: fileUrl
-    }, {
-      supervisorScriptSrc: `/@fs/${supervisorFileUrl.slice("file:///".length)}`,
-      supervisorOptions: {},
-      inlineAsRemote: true,
-      webServer,
-      onInlineScript: ({
-        src,
-        textContent
-      }) => {
-        const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href;
-        inlineScriptContents.set(inlineScriptWebUrl, textContent);
-      }
-    });
+    const injectionResult = await injectSupervisorIntoHTML(
+      {
+        content: originalBody,
+        url: fileUrl,
+      },
+      {
+        supervisorScriptSrc: `/@fs/${supervisorFileUrl.slice(
+          "file:///".length,
+        )}`,
+        supervisorOptions: {},
+        inlineAsRemote: true,
+        webServer,
+        onInlineScript: ({ src, textContent }) => {
+          const inlineScriptWebUrl = new URL(src, `${webServer.origin}/`).href;
+          inlineScriptContents.set(inlineScriptWebUrl, textContent);
+        },
+      },
+    );
     route.fulfill({
       response,
       body: injectionResult.content,
       headers: {
         ...response.headers(),
-        "content-length": Buffer.byteLength(injectionResult.content)
-      }
+        "content-length": Buffer.byteLength(injectionResult.content),
+      },
     });
   };
-  const interceptInlineScript = ({
-    url,
-    route
-  }) => {
+
+  const interceptInlineScript = ({ url, route }) => {
     const inlineScriptContent = inlineScriptContents.get(url);
     route.fulfill({
       status: 200,
       body: inlineScriptContent,
       headers: {
         "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(inlineScriptContent)
-      }
+        "content-length": Buffer.byteLength(inlineScriptContent),
+      },
     });
   };
-  const interceptFileSystemUrl = ({
-    url,
-    route
-  }) => {
+
+  const interceptFileSystemUrl = ({ url, route }) => {
     const relativeUrl = url.slice(webServer.origin.length);
     const fsPath = relativeUrl.slice("/@fs/".length);
     const fsUrl = `file:///${fsPath}`;
@@ -4539,18 +5089,19 @@ const initJsSupervisorMiddleware = async (page, {
       body: fileContent,
       headers: {
         "content-type": "text/javascript",
-        "content-length": Buffer.byteLength(fileContent)
-      }
+        "content-length": Buffer.byteLength(fileContent),
+      },
     });
   };
-  await page.route("**", async route => {
+
+  await page.route("**", async (route) => {
     const request = route.request();
     const url = request.url();
     if (url === fileServerUrl && urlToExtension(url) === ".html") {
       interceptHtmlToExecute({
         url,
         request,
-        route
+        route,
       });
       return;
     }
@@ -4558,38 +5109,34 @@ const initJsSupervisorMiddleware = async (page, {
       interceptInlineScript({
         url,
         request,
-        route
+        route,
       });
       return;
     }
     const fsServerUrl = new URL("/@fs/", webServer.origin);
     if (url.startsWith(fsServerUrl)) {
-      interceptFileSystemUrl({
-        url,
-        request,
-        route
-      });
+      interceptFileSystemUrl({ url, request, route });
       return;
     }
     route.fallback();
   });
 };
 
-const initIstanbulMiddleware = async (page, {
-  webServer,
-  rootDirectoryUrl,
-  coverageConfig
-}) => {
-  const associations = URL_META.resolveAssociations({
-    cover: coverageConfig
-  }, rootDirectoryUrl);
-  await page.route("**", async route => {
+const initIstanbulMiddleware = async (
+  page,
+  { webServer, rootDirectoryUrl, coverageConfig },
+) => {
+  const associations = URL_META.resolveAssociations(
+    { cover: coverageConfig },
+    rootDirectoryUrl,
+  );
+  await page.route("**", async (route) => {
     const request = route.request();
     const url = request.url(); // transform into a local url
     const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer);
     const needsInstrumentation = URL_META.applyAssociations({
       url: fileUrl,
-      associations
+      associations,
     }).cover;
     if (!needsInstrumentation) {
       route.fallback();
@@ -4605,48 +5152,45 @@ const initIstanbulMiddleware = async (page, {
         // but in the end it's not super important
         // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
         inputIsJsModule: true,
-        inputUrl: fileUrl
+        inputUrl: fileUrl,
       });
       let code = result.code;
       code = SOURCEMAP.writeComment({
         contentType: "text/javascript",
         content: code,
-        specifier: generateSourcemapDataUrl(result.map)
+        specifier: generateSourcemapDataUrl(result.map),
       });
       route.fulfill({
         response,
         body: code,
         headers: {
           ...response.headers(),
-          "content-length": Buffer.byteLength(code)
-        }
+          "content-length": Buffer.byteLength(code),
+        },
       });
     } catch (e) {
       if (e.code === "PARSE_ERROR") {
-        route.fulfill({
-          response
-        });
+        route.fulfill({ response });
       } else {
         console.error(e);
-        route.fulfill({
-          response
-        });
+        route.fulfill({ response });
       }
     }
   });
 };
 
 const browserPromiseCache = new Map();
+
 const createRuntimeUsingPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
   shouldIgnoreError = () => false,
-  transformErrorHook = error => error,
+  transformErrorHook = (error) => error,
   isolatedTab = false,
   headful,
   playwrightLaunchOptions = {},
-  ignoreHTTPSErrors = true
+  ignoreHTTPSErrors = true,
 }) => {
   const label = `${browserName}${browserVersion}`;
   const runtime = {
@@ -4654,25 +5198,28 @@ const createRuntimeUsingPlaywright = ({
     name: browserName,
     version: browserVersion,
     capabilities: {
-      coverageV8: coveragePlaywrightAPIAvailable
-    }
+      coverageV8: coveragePlaywrightAPIAvailable,
+    },
   };
+
   runtime.run = async ({
     signal = new AbortController().signal,
     logger,
     rootDirectoryUrl,
     webServer,
     fileRelativeUrl,
+
     // measurePerformance,
     collectPerformance,
     coverageEnabled = false,
     coverageConfig,
     coverageMethodForBrowsers,
     coverageFileUrl,
+
     stopAfterAllSignal,
     stopSignal,
     keepRunning,
-    onConsole
+    onConsole,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
@@ -4684,13 +5231,14 @@ const createRuntimeUsingPlaywright = ({
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
     const cleanupCallbackList = createCallbackListNotifiedOnce();
-    const cleanup = memoize(async reason => {
-      await cleanupCallbackList.notify({
-        reason
-      });
+    const cleanup = memoize(async (reason) => {
+      await cleanupCallbackList.notify({ reason });
     });
+
     const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal;
-    let browserAndContextPromise = isBrowserDedicatedToExecution ? null : browserPromiseCache.get(label);
+    let browserAndContextPromise = isBrowserDedicatedToExecution
+      ? null
+      : browserPromiseCache.get(label);
     if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
         const browser = await launchBrowserUsingPlaywright({
@@ -4699,19 +5247,14 @@ const createRuntimeUsingPlaywright = ({
           stopOnExit: true,
           playwrightLaunchOptions: {
             ...playwrightLaunchOptions,
-            headless: headful === undefined ? !keepRunning : !headful
-          }
+            headless: headful === undefined ? !keepRunning : !headful,
+          },
         });
         if (browser._initializer.version) {
           runtime.version = browser._initializer.version;
         }
-        const browserContext = await browser.newContext({
-          ignoreHTTPSErrors
-        });
-        return {
-          browser,
-          browserContext
-        };
+        const browserContext = await browser.newContext({ ignoreHTTPSErrors });
+        return { browser, browserContext };
       })();
       if (!isBrowserDedicatedToExecution) {
         browserPromiseCache.set(label, browserAndContextPromise);
@@ -4720,21 +5263,20 @@ const createRuntimeUsingPlaywright = ({
         });
       }
     }
-    const {
-      browser,
-      browserContext
-    } = await browserAndContextPromise;
+    const { browser, browserContext } = await browserAndContextPromise;
     const closeBrowser = async () => {
-      const disconnected = browser.isConnected() ? new Promise(resolve => {
-        const disconnectedCallback = () => {
-          browser.removeListener("disconnected", disconnectedCallback);
-          resolve();
-        };
-        browser.on("disconnected", disconnectedCallback);
-      }) : Promise.resolve();
+      const disconnected = browser.isConnected()
+        ? new Promise((resolve) => {
+            const disconnectedCallback = () => {
+              browser.removeListener("disconnected", disconnectedCallback);
+              resolve();
+            };
+            browser.on("disconnected", disconnectedCallback);
+          })
+        : Promise.resolve();
       // for some reason without this 150ms timeout
       // browser.close() never resolves (playwright does not like something)
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
       try {
         await browser.close();
       } catch (e) {
@@ -4745,20 +5287,25 @@ const createRuntimeUsingPlaywright = ({
       }
       await disconnected;
     };
+
     const page = await browserContext.newPage();
-    const istanbulInstrumentationEnabled = coverageEnabled && (!runtime.capabilities.coverageV8 || coverageMethodForBrowsers === "istanbul");
+
+    const istanbulInstrumentationEnabled =
+      coverageEnabled &&
+      (!runtime.capabilities.coverageV8 ||
+        coverageMethodForBrowsers === "istanbul");
     if (istanbulInstrumentationEnabled) {
       await initIstanbulMiddleware(page, {
         webServer,
         rootDirectoryUrl,
-        coverageConfig
+        coverageConfig,
       });
     }
     if (!webServer.isJsenvDevServer) {
       await initJsSupervisorMiddleware(page, {
         webServer,
         fileUrl,
-        fileServerUrl
+        fileServerUrl,
       });
     }
     const closePage = async () => {
@@ -4771,14 +5318,18 @@ const createRuntimeUsingPlaywright = ({
         throw e;
       }
     };
+
     const result = {
       status: "pending",
       namespace: null,
-      errors: []
+      errors: [],
     };
     const callbacks = [];
     if (coverageEnabled) {
-      if (runtime.capabilities.coverageV8 && coverageMethodForBrowsers === "playwright") {
+      if (
+        runtime.capabilities.coverageV8 &&
+        coverageMethodForBrowsers === "playwright"
+      ) {
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         });
@@ -4786,27 +5337,40 @@ const createRuntimeUsingPlaywright = ({
           const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage();
           // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
-          const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(v8CoveragesWithWebUrl => {
-            const fsUrl = WEB_URL_CONVERTER.asFileUrl(v8CoveragesWithWebUrl.url, webServer);
-            return {
-              ...v8CoveragesWithWebUrl,
-              url: fsUrl
-            };
-          });
-          const coverage = await filterV8Coverage({
-            result: v8CoveragesWithFsUrls
-          }, {
-            rootDirectoryUrl,
-            coverageConfig
-          });
-          writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
+          const v8CoveragesWithFsUrls = v8CoveragesWithWebUrls.map(
+            (v8CoveragesWithWebUrl) => {
+              const fsUrl = WEB_URL_CONVERTER.asFileUrl(
+                v8CoveragesWithWebUrl.url,
+                webServer,
+              );
+              return {
+                ...v8CoveragesWithWebUrl,
+                url: fsUrl,
+              };
+            },
+          );
+          const coverage = await filterV8Coverage(
+            { result: v8CoveragesWithFsUrls },
+            {
+              rootDirectoryUrl,
+              coverageConfig,
+            },
+          );
+          writeFileSync$1(
+            new URL(coverageFileUrl),
+            JSON.stringify(coverage, null, "  "),
+          );
         });
       } else {
         callbacks.push(() => {
           const scriptExecutionResults = result.namespace;
           if (scriptExecutionResults) {
-            const coverage = generateCoverageForPage(scriptExecutionResults) || {};
-            writeFileSync$1(new URL(coverageFileUrl), JSON.stringify(coverage, null, "  "));
+            const coverage =
+              generateCoverageForPage(scriptExecutionResults) || {};
+            writeFileSync$1(
+              new URL(coverageFileUrl),
+              JSON.stringify(coverage, null, "  "),
+            );
           }
         });
       }
@@ -4814,37 +5378,37 @@ const createRuntimeUsingPlaywright = ({
       callbacks.push(() => {
         const scriptExecutionResults = result.namespace;
         if (scriptExecutionResults) {
-          Object.keys(scriptExecutionResults).forEach(fileRelativeUrl => {
+          Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
             delete scriptExecutionResults[fileRelativeUrl].coverage;
           });
         }
       });
     }
+
     if (collectPerformance) {
       callbacks.push(async () => {
-        const performance = await page.evaluate( /* eslint-disable no-undef */
-        /* istanbul ignore next */
-        () => {
-          const {
-            performance
-          } = window;
-          if (!performance) {
-            return null;
-          }
-          const measures = {};
-          const measurePerfEntries = performance.getEntriesByType("measure");
-          measurePerfEntries.forEach(measurePerfEntry => {
-            measures[measurePerfEntry.name] = measurePerfEntry.duration;
-          });
-          return {
-            timeOrigin: performance.timeOrigin,
-            timing: performance.timing.toJSON(),
-            navigation: performance.navigation.toJSON(),
-            measures
-          };
-        }
-        /* eslint-enable no-undef */);
-
+        const performance = await page.evaluate(
+          /* eslint-disable no-undef */
+          /* istanbul ignore next */
+          () => {
+            const { performance } = window;
+            if (!performance) {
+              return null;
+            }
+            const measures = {};
+            const measurePerfEntries = performance.getEntriesByType("measure");
+            measurePerfEntries.forEach((measurePerfEntry) => {
+              measures[measurePerfEntry.name] = measurePerfEntry.duration;
+            });
+            return {
+              timeOrigin: performance.timeOrigin,
+              timing: performance.timing.toJSON(),
+              navigation: performance.navigation.toJSON(),
+              measures,
+            };
+          },
+          /* eslint-enable no-undef */
+        );
         result.performance = performance;
       });
     }
@@ -4854,117 +5418,121 @@ const createRuntimeUsingPlaywright = ({
       object: page,
       eventType: "console",
       // https://github.com/microsoft/playwright/blob/master/docs/api.md#event-console
-      callback: async consoleMessage => {
+      callback: async (consoleMessage) => {
         onConsole({
           type: consoleMessage.type(),
-          text: `${extractTextFromConsoleMessage(consoleMessage)}\n`
+          text: `${extractTextFromConsoleMessage(consoleMessage)}\n`,
         });
-      }
+      },
     });
     cleanupCallbackList.add(removeConsoleListener);
     const actionOperation = Abort.startOperation();
     actionOperation.addAbortSignal(signal);
+
     const winnerPromise = new Promise((resolve, reject) => {
-      raceCallbacks({
-        aborted: cb => {
-          return actionOperation.addAbortCallback(cb);
-        },
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-        error: cb => {
-          return registerEvent({
-            object: page,
-            eventType: "error",
-            callback: error => {
-              if (shouldIgnoreError(error, "error")) {
-                return;
-              }
-              cb(transformErrorHook(error));
-            }
-          });
-        },
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-        // pageerror: () => {
-        //   return registerEvent({
-        //     object: page,
-        //     eventType: "pageerror",
-        //     callback: (error) => {
-        //       if (
-        //         webServer.isJsenvDevServer ||
-        //         shouldIgnoreError(error, "pageerror")
-        //       ) {
-        //         return
-        //       }
-        //       result.errors.push(transformErrorHook(error))
-        //     },
-        //   })
-        // },
-        closed: cb => {
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-          if (isBrowserDedicatedToExecution) {
-            browser.on("disconnected", async () => {
-              cb({
-                reason: "browser disconnected"
+      raceCallbacks(
+        {
+          aborted: (cb) => {
+            return actionOperation.addAbortCallback(cb);
+          },
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+          error: (cb) => {
+            return registerEvent({
+              object: page,
+              eventType: "error",
+              callback: (error) => {
+                if (shouldIgnoreError(error, "error")) {
+                  return;
+                }
+                cb(transformErrorHook(error));
+              },
+            });
+          },
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+          // pageerror: () => {
+          //   return registerEvent({
+          //     object: page,
+          //     eventType: "pageerror",
+          //     callback: (error) => {
+          //       if (
+          //         webServer.isJsenvDevServer ||
+          //         shouldIgnoreError(error, "pageerror")
+          //       ) {
+          //         return
+          //       }
+          //       result.errors.push(transformErrorHook(error))
+          //     },
+          //   })
+          // },
+          closed: (cb) => {
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+            if (isBrowserDedicatedToExecution) {
+              browser.on("disconnected", async () => {
+                cb({ reason: "browser disconnected" });
               });
-            });
-            cleanupCallbackList.add(closePage);
-            cleanupCallbackList.add(closeBrowser);
-          } else {
-            const disconnectedCallback = async () => {
-              throw new Error("browser disconnected during execution");
-            };
-            browser.on("disconnected", disconnectedCallback);
-            page.on("close", () => {
-              cb({
-                reason: "page closed"
+              cleanupCallbackList.add(closePage);
+              cleanupCallbackList.add(closeBrowser);
+            } else {
+              const disconnectedCallback = async () => {
+                throw new Error("browser disconnected during execution");
+              };
+              browser.on("disconnected", disconnectedCallback);
+              page.on("close", () => {
+                cb({ reason: "page closed" });
               });
-            });
-            cleanupCallbackList.add(closePage);
-            cleanupCallbackList.add(() => {
-              browser.removeListener("disconnected", disconnectedCallback);
-            });
-            const notifyPrevious = stopAfterAllSignal.notify;
-            stopAfterAllSignal.notify = async () => {
-              await notifyPrevious();
-              browser.removeListener("disconnected", disconnectedCallback);
-              logger.debug(`stopAfterAllSignal notified -> closing ${browserName}`);
-              await closeBrowser();
-            };
-          }
-        },
-        response: async cb => {
-          try {
-            await page.goto(fileServerUrl, {
-              timeout: 0
-            });
-            const returnValue = await page.evaluate( /* eslint-disable no-undef */
-            /* istanbul ignore next */
-            async () => {
-              let startTime;
-              try {
-                startTime = window.performance.timing.navigationStart;
-              } catch (e) {
-                startTime = Date.now();
-              }
-              if (!window.__supervisor__) {
-                throw new Error("window.__supervisor__ is undefined");
-              }
-              const executionResultFromJsenvSupervisor = await window.__supervisor__.getDocumentExecutionResult();
-              return {
-                type: "window_supervisor",
-                startTime,
-                endTime: Date.now(),
-                executionResults: executionResultFromJsenvSupervisor.executionResults
+              cleanupCallbackList.add(closePage);
+              cleanupCallbackList.add(() => {
+                browser.removeListener("disconnected", disconnectedCallback);
+              });
+              const notifyPrevious = stopAfterAllSignal.notify;
+              stopAfterAllSignal.notify = async () => {
+                await notifyPrevious();
+                browser.removeListener("disconnected", disconnectedCallback);
+                logger.debug(
+                  `stopAfterAllSignal notified -> closing ${browserName}`,
+                );
+                await closeBrowser();
               };
             }
-            /* eslint-enable no-undef */);
-
-            cb(returnValue);
-          } catch (e) {
-            reject(e);
-          }
-        }
-      }, resolve);
+          },
+          response: async (cb) => {
+            try {
+              await page.goto(fileServerUrl, { timeout: 0 });
+              const returnValue = await page.evaluate(
+                /* eslint-disable no-undef */
+                /* istanbul ignore next */
+                async () => {
+                  let startTime;
+                  try {
+                    startTime = window.performance.timing.navigationStart;
+                  } catch (e) {
+                    startTime = Date.now();
+                  }
+                  if (!window.__supervisor__) {
+                    throw new Error("window.__supervisor__ is undefined");
+                  }
+                  const executionResultFromJsenvSupervisor =
+                    await window.__supervisor__.getDocumentExecutionResult();
+                  return {
+                    type: "window_supervisor",
+                    startTime,
+                    endTime: Date.now(),
+                    executionResults:
+                      executionResultFromJsenvSupervisor.executionResults,
+                  };
+                },
+                /* eslint-enable no-undef */
+              );
+              cb(returnValue);
+            } catch (e) {
+              reject(e);
+            }
+          },
+        },
+        resolve,
+      );
     });
+
     const writeResult = async () => {
       const winner = await winnerPromise;
       if (winner.name === "aborted") {
@@ -4985,33 +5553,36 @@ const createRuntimeUsingPlaywright = ({
       }
       if (winner.name === "closed") {
         result.status = "failed";
-        result.errors.push(isBrowserDedicatedToExecution ? new Error(`browser disconnected during execution`) : new Error(`page closed during execution`));
+        result.errors.push(
+          isBrowserDedicatedToExecution
+            ? new Error(`browser disconnected during execution`)
+            : new Error(`page closed during execution`),
+        );
         return;
       }
       // winner.name === "response"
-      const {
-        executionResults
-      } = winner.data;
+      const { executionResults } = winner.data;
       result.status = "completed";
       result.namespace = executionResults;
-      Object.keys(executionResults).forEach(key => {
+      Object.keys(executionResults).forEach((key) => {
         const executionResult = executionResults[key];
         if (executionResult.status === "failed") {
           result.status = "failed";
           if (executionResult.exception) {
             result.errors.push({
               ...executionResult.exception,
-              stack: executionResult.exception.text
+              stack: executionResult.exception.text,
             });
           } else {
             result.errors.push({
               ...executionResult.error,
-              stack: executionResult.error.stack
+              stack: executionResult.error.stack,
             });
           }
         }
       });
     };
+
     try {
       await writeResult();
       if (collectPerformance) {
@@ -5034,34 +5605,42 @@ const createRuntimeUsingPlaywright = ({
   };
   return runtime;
 };
-const generateCoverageForPage = scriptExecutionResults => {
+
+const generateCoverageForPage = (scriptExecutionResults) => {
   let istanbulCoverageComposed = null;
-  Object.keys(scriptExecutionResults).forEach(fileRelativeUrl => {
+  Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
     const istanbulCoverage = scriptExecutionResults[fileRelativeUrl].coverage;
-    istanbulCoverageComposed = istanbulCoverageComposed ? composeTwoFileByFileIstanbulCoverages(istanbulCoverageComposed, istanbulCoverage) : istanbulCoverage;
+    istanbulCoverageComposed = istanbulCoverageComposed
+      ? composeTwoFileByFileIstanbulCoverages(
+          istanbulCoverageComposed,
+          istanbulCoverage,
+        )
+      : istanbulCoverage;
   });
   return istanbulCoverageComposed;
 };
+
 const launchBrowserUsingPlaywright = async ({
   signal,
   browserName,
   stopOnExit,
-  playwrightLaunchOptions
+  playwrightLaunchOptions,
 }) => {
   const launchBrowserOperation = Abort.startOperation();
   launchBrowserOperation.addAbortSignal(signal);
-  const playwright = await importPlaywright({
-    browserName
-  });
+  const playwright = await importPlaywright({ browserName });
   if (stopOnExit) {
-    launchBrowserOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGHUP: true,
-        SIGTERM: true,
-        SIGINT: true,
-        beforeExit: true,
-        exit: true
-      }, abort);
+    launchBrowserOperation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGHUP: true,
+          SIGTERM: true,
+          SIGINT: true,
+          beforeExit: true,
+          exit: true,
+        },
+        abort,
+      );
     });
   }
   const browserClass = playwright[browserName];
@@ -5072,7 +5651,7 @@ const launchBrowserUsingPlaywright = async ({
       // instead of relying on playwright to do so
       handleSIGINT: false,
       handleSIGTERM: false,
-      handleSIGHUP: false
+      handleSIGHUP: false,
     });
     launchBrowserOperation.throwIfAborted();
     return browser;
@@ -5086,24 +5665,28 @@ const launchBrowserUsingPlaywright = async ({
     await launchBrowserOperation.end();
   }
 };
-const importPlaywright = async ({
-  browserName
-}) => {
+
+const importPlaywright = async ({ browserName }) => {
   try {
     const namespace = await import("playwright");
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
-      throw new Error(createDetailedMessage(`"playwright" not found. You need playwright in your dependencies to use "${browserName}"`, {
-        suggestion: `npm install --save-dev playwright`
-      }), {
-        cause: e
-      });
+      throw new Error(
+        createDetailedMessage(
+          `"playwright" not found. You need playwright in your dependencies to use "${browserName}"`,
+          {
+            suggestion: `npm install --save-dev playwright`,
+          },
+        ),
+        { cause: e },
+      );
     }
     throw e;
   }
 };
-const isTargetClosedError = error => {
+
+const isTargetClosedError = (error) => {
   if (error.message.match(/Protocol error \(.*?\): Target closed/)) {
     return true;
   }
@@ -5112,7 +5695,8 @@ const isTargetClosedError = error => {
   }
   return error.message.includes("browserContext.close: Browser closed");
 };
-const extractTextFromConsoleMessage = consoleMessage => {
+
+const extractTextFromConsoleMessage = (consoleMessage) => {
   return consoleMessage.text();
   // ensure we use a string so that istanbul won't try
   // to put any coverage statement inside it
@@ -5145,46 +5729,46 @@ const extractTextFromConsoleMessage = consoleMessage => {
   //   return text
 };
 
-const registerEvent = ({
-  object,
-  eventType,
-  callback
-}) => {
+const registerEvent = ({ object, eventType, callback }) => {
   object.on(eventType, callback);
   return () => {
     object.removeListener(eventType, callback);
   };
 };
 
-const chromium = params => {
+const chromium = (params) => {
   return createChromiumRuntine(params);
 };
-const chromiumIsolatedTab = params => {
+
+const chromiumIsolatedTab = (params) => {
   return createChromiumRuntine({
     ...params,
-    isolatedTab: true
+    isolatedTab: true,
   });
 };
-const createChromiumRuntine = params => {
+
+const createChromiumRuntine = (params) => {
   return createRuntimeUsingPlaywright({
     browserName: "chromium",
     // browserVersion will be set by "browser._initializer.version"
     // see also https://github.com/microsoft/playwright/releases
     browserVersion: "unset",
     coveragePlaywrightAPIAvailable: true,
-    ...params
+    ...params,
   });
 };
 
-const firefox = params => {
+const firefox = (params) => {
   return createFirefoxRuntime(params);
 };
-const firefoxIsolatedTab = params => {
+
+const firefoxIsolatedTab = (params) => {
   return createRuntimeUsingPlaywright({
     ...params,
-    isolatedTab: true
+    isolatedTab: true,
   });
 };
+
 const createFirefoxRuntime = ({
   disableOnWindowsBecauseFlaky,
   ...params
@@ -5192,43 +5776,48 @@ const createFirefoxRuntime = ({
   if (process.platform === "win32") {
     if (disableOnWindowsBecauseFlaky === undefined) {
       // https://github.com/microsoft/playwright/issues/1396
-      console.warn(`Windows + firefox detected: executions on firefox will be ignored  (firefox is flaky on windows).
+      console.warn(
+        `Windows + firefox detected: executions on firefox will be ignored  (firefox is flaky on windows).
 To disable this warning, use disableOnWindowsBecauseFlaky: true
-To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`);
+To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
+      );
       disableOnWindowsBecauseFlaky = true;
     }
     if (disableOnWindowsBecauseFlaky) {
       return {
-        disabled: true
+        disabled: true,
       };
     }
   }
+
   return createRuntimeUsingPlaywright({
     browserName: "firefox",
     // browserVersion will be set by "browser._initializer.version"
     // see also https://github.com/microsoft/playwright/releases
     browserVersion: "unset",
     isolatedTab: true,
-    ...params
+    ...params,
   });
 };
 
-const webkit = params => {
+const webkit = (params) => {
   return createWekbitRuntime(params);
 };
-const webkitIsolatedTab = params => {
+
+const webkitIsolatedTab = (params) => {
   return createWekbitRuntime({
     ...params,
-    isolatedTab: true
+    isolatedTab: true,
   });
 };
-const createWekbitRuntime = params => {
+
+const createWekbitRuntime = (params) => {
   return createRuntimeUsingPlaywright({
     browserName: "webkit",
     // browserVersion will be set by "browser._initializer.version"
     // see also https://github.com/microsoft/playwright/releases
     browserVersion: "unset",
-    shouldIgnoreError: error => {
+    shouldIgnoreError: (error) => {
       // we catch error during execution but safari throw unhandled rejection
       // in a non-deterministic way.
       // I suppose it's due to some race condition to decide if the promise is catched or not
@@ -5238,19 +5827,19 @@ const createWekbitRuntime = params => {
       }
       return false;
     },
-    transformErrorHook: error => {
+    transformErrorHook: (error) => {
       // Force error stack to contain the error message
       // because it's not the case on webkit
       error.stack = `${error.message}
     at ${error.stack}`;
       return error;
     },
-    ...params
+    ...params,
   });
 };
 
 const ExecOptions = {
-  fromExecArgv: execArgv => {
+  fromExecArgv: (execArgv) => {
     const execOptions = {};
     let i = 0;
     while (i < execArgv.length) {
@@ -5258,7 +5847,9 @@ const ExecOptions = {
       const option = execOptionFromExecArg(execArg);
       const existing = execOptions[option.name];
       if (existing) {
-        execOptions[option.name] = Array.isArray(existing) ? [...existing, option.value] : [existing, option.value];
+        execOptions[option.name] = Array.isArray(existing)
+          ? [...existing, option.value]
+          : [existing, option.value];
       } else {
         execOptions[option.name] = option.value;
       }
@@ -5266,9 +5857,9 @@ const ExecOptions = {
     }
     return execOptions;
   },
-  toExecArgv: execOptions => {
+  toExecArgv: (execOptions) => {
     const execArgv = [];
-    Object.keys(execOptions).forEach(optionName => {
+    Object.keys(execOptions).forEach((optionName) => {
       const optionValue = execOptions[optionName];
       if (optionValue === "unset") {
         return;
@@ -5278,7 +5869,7 @@ const ExecOptions = {
         return;
       }
       if (Array.isArray(optionValue)) {
-        optionValue.forEach(subValue => {
+        optionValue.forEach((subValue) => {
           execArgv.push(`${optionName}=${subValue}`);
         });
       } else {
@@ -5286,21 +5877,22 @@ const ExecOptions = {
       }
     });
     return execArgv;
-  }
+  },
 };
-const execOptionFromExecArg = execArg => {
+
+const execOptionFromExecArg = (execArg) => {
   const equalCharIndex = execArg.indexOf("=");
   if (equalCharIndex === -1) {
     return {
       name: execArg,
-      value: ""
+      value: "",
     };
   }
   const name = execArg.slice(0, equalCharIndex);
   const value = execArg.slice(equalCharIndex + 1);
   return {
     name,
-    value
+    value,
   };
 };
 
@@ -5309,15 +5901,21 @@ const createChildExecOptions = async ({
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
   processExecArgv = process.execArgv,
   processDebugPort = process.debugPort,
+
   debugPort = 0,
   debugMode = "inherit",
-  debugModeInheritBreak = true
+  debugModeInheritBreak = true,
 } = {}) => {
-  if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
-    throw new TypeError(createDetailedMessage(`unexpected debug mode.`, {
-      ["debug mode"]: debugMode,
-      ["allowed debug mode"]: AVAILABLE_DEBUG_MODE
-    }));
+  if (
+    typeof debugMode === "string" &&
+    AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1
+  ) {
+    throw new TypeError(
+      createDetailedMessage(`unexpected debug mode.`, {
+        ["debug mode"]: debugMode,
+        ["allowed debug mode"]: AVAILABLE_DEBUG_MODE,
+      }),
+    );
   }
   const childExecOptions = ExecOptions.fromExecArgv(processExecArgv);
   await mutateDebuggingOptions(childExecOptions, {
@@ -5325,27 +5923,40 @@ const createChildExecOptions = async ({
     processDebugPort,
     debugMode,
     debugPort,
-    debugModeInheritBreak
+    debugModeInheritBreak,
   });
   return childExecOptions;
 };
-const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
-const mutateDebuggingOptions = async (childExecOptions, {
-  // ensure multiline
-  signal,
-  processDebugPort,
-  debugMode,
-  debugPort,
-  debugModeInheritBreak
-}) => {
+
+const AVAILABLE_DEBUG_MODE = [
+  "none",
+  "inherit",
+  "inspect",
+  "inspect-brk",
+  "debug",
+  "debug-brk",
+];
+
+const mutateDebuggingOptions = async (
+  childExecOptions,
+  {
+    // ensure multiline
+    signal,
+    processDebugPort,
+    debugMode,
+    debugPort,
+    debugModeInheritBreak,
+  },
+) => {
   const parentDebugInfo = getDebugInfo(childExecOptions);
   const parentDebugModeOptionName = parentDebugInfo.debugModeOptionName;
   const parentDebugPortOptionName = parentDebugInfo.debugPortOptionName;
   const childDebugModeOptionName = getChildDebugModeOptionName({
     parentDebugModeOptionName,
     debugMode,
-    debugModeInheritBreak
+    debugModeInheritBreak,
   });
+
   if (!childDebugModeOptionName) {
     // remove debug mode and debug port fron child options
     if (parentDebugModeOptionName) {
@@ -5358,26 +5969,33 @@ const mutateDebuggingOptions = async (childExecOptions, {
   }
 
   // replace child debug mode
-  if (parentDebugModeOptionName && parentDebugModeOptionName !== childDebugModeOptionName) {
+  if (
+    parentDebugModeOptionName &&
+    parentDebugModeOptionName !== childDebugModeOptionName
+  ) {
     delete childExecOptions[parentDebugModeOptionName];
   }
   childExecOptions[childDebugModeOptionName] = "";
 
   // this is required because vscode does not
   // support assigning a child spawned without a specific port
-  const childDebugPortOptionValue = debugPort === 0 ? await findFreePort(processDebugPort + 37, {
-    signal
-  }) : debugPort;
+  const childDebugPortOptionValue =
+    debugPort === 0
+      ? await findFreePort(processDebugPort + 37, { signal })
+      : debugPort;
   // replace child debug port
   if (parentDebugPortOptionName) {
     delete childExecOptions[parentDebugPortOptionName];
   }
-  childExecOptions[childDebugModeOptionName] = portToArgValue(childDebugPortOptionValue);
+  childExecOptions[childDebugModeOptionName] = portToArgValue(
+    childDebugPortOptionValue,
+  );
 };
+
 const getChildDebugModeOptionName = ({
   parentDebugModeOptionName,
   debugMode,
-  debugModeInheritBreak
+  debugModeInheritBreak,
 }) => {
   if (debugMode === "none") {
     return undefined;
@@ -5396,40 +6014,41 @@ const getChildDebugModeOptionName = ({
   }
   return parentDebugModeOptionName;
 };
-const portToArgValue = port => {
+
+const portToArgValue = (port) => {
   if (typeof port !== "number") return "";
   if (port === 0) return "";
   return port;
 };
 
 // https://nodejs.org/en/docs/guides/debugging-getting-started/
-const getDebugInfo = processOptions => {
+const getDebugInfo = (processOptions) => {
   const inspectOption = processOptions["--inspect"];
   if (inspectOption !== undefined) {
     return {
       debugModeOptionName: "--inspect",
-      debugPortOptionName: "--inspect-port"
+      debugPortOptionName: "--inspect-port",
     };
   }
   const inspectBreakOption = processOptions["--inspect-brk"];
   if (inspectBreakOption !== undefined) {
     return {
       debugModeOptionName: "--inspect-brk",
-      debugPortOptionName: "--inspect-port"
+      debugPortOptionName: "--inspect-port",
     };
   }
   const debugOption = processOptions["--debug"];
   if (debugOption !== undefined) {
     return {
       debugModeOptionName: "--debug",
-      debugPortOptionName: "--debug-port"
+      debugPortOptionName: "--debug-port",
     };
   }
   const debugBreakOption = processOptions["--debug-brk"];
   if (debugBreakOption !== undefined) {
     return {
       debugModeOptionName: "--debug-brk",
-      debugPortOptionName: "--debug-port"
+      debugPortOptionName: "--debug-port",
     };
   }
   return {};
@@ -5440,11 +6059,12 @@ const getDebugInfo = processOptions => {
 // }
 
 // see also https://github.com/sindresorhus/execa/issues/96
-const killProcessTree = async (processId, {
-  signal,
-  timeout = 2000
-}) => {
+const killProcessTree = async (
+  processId,
+  { signal, timeout = 2000 },
+) => {
   const pidtree = importWithRequire("pidtree");
+
   let descendantProcessIds;
   try {
     descendantProcessIds = await pidtree(processId);
@@ -5455,13 +6075,14 @@ const killProcessTree = async (processId, {
       throw e;
     }
   }
-  descendantProcessIds.forEach(descendantProcessId => {
+  descendantProcessIds.forEach((descendantProcessId) => {
     try {
       process.kill(descendantProcessId, signal);
     } catch (error) {
       // ignore
     }
   });
+
   try {
     process.kill(processId, signal);
   } catch (e) {
@@ -5469,9 +6090,11 @@ const killProcessTree = async (processId, {
       throw e;
     }
   }
+
   let remainingIds = [...descendantProcessIds, processId];
+
   const updateRemainingIds = () => {
-    remainingIds = remainingIds.filter(remainingId => {
+    remainingIds = remainingIds.filter((remainingId) => {
       try {
         process.kill(remainingId, 0);
         return true;
@@ -5480,22 +6103,31 @@ const killProcessTree = async (processId, {
       }
     });
   };
+
   let timeSpentWaiting = 0;
+
   const check = async () => {
     updateRemainingIds();
     if (remainingIds.length === 0) {
       return;
     }
+
     if (timeSpentWaiting > timeout) {
-      const timeoutError = new Error(`timed out waiting for ${remainingIds.length} process to exit (${remainingIds.join(" ")})`);
+      const timeoutError = new Error(
+        `timed out waiting for ${
+          remainingIds.length
+        } process to exit (${remainingIds.join(" ")})`,
+      );
       timeoutError.code = "TIMEOUT";
       throw timeoutError;
     }
-    await new Promise(resolve => setTimeout(resolve, 400));
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
     timeSpentWaiting += 400;
     await check();
   };
-  await new Promise(resolve => {
+
+  await new Promise((resolve) => {
     setTimeout(resolve, 0);
   });
   await check();
@@ -5508,14 +6140,24 @@ const SIGTERM_SIGNAL_NUMBER = 15;
 const EXIT_CODES = {
   SIGINT: 128 + SIGINT_SIGNAL_NUMBER,
   SIGABORT: 128 + SIGABORT_SIGNAL_NUMBER,
-  SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER
+  SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER,
 };
 
-const IMPORTMAP_NODE_LOADER_FILE_URL = new URL("./importmap_node_loader.mjs?entry_point=", import.meta.url).href;
+const IMPORTMAP_NODE_LOADER_FILE_URL = new URL(
+  "./importmap_node_loader.mjs?entry_point=",
+  import.meta.url,
+).href;
 
-const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL("./no_experimental_warnings.cjs?entry_point=", import.meta.url).href;
+const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL(
+  "./no_experimental_warnings.cjs?entry_point=",
+  import.meta.url,
+).href;
 
-const CONTROLLABLE_CHILD_PROCESS_URL = new URL("./controllable_child_process.mjs?entry_point=", import.meta.url).href;
+const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
+  "./controllable_child_process.mjs?entry_point=",
+  import.meta.url,
+).href;
+
 const nodeChildProcess = ({
   logProcessCommand = false,
   importMap,
@@ -5528,15 +6170,16 @@ const nodeChildProcess = ({
   commandLineOptions = [],
   stdin = "pipe",
   stdout = "pipe",
-  stderr = "pipe"
+  stderr = "pipe",
 } = {}) => {
   if (env !== undefined && typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`);
   }
   env = {
     ...env,
-    JSENV: true
+    JSENV: true,
   };
+
   return {
     type: "node",
     name: "node_child_process",
@@ -5544,57 +6187,77 @@ const nodeChildProcess = ({
     run: async ({
       signal = new AbortController().signal,
       logger,
+
       rootDirectoryUrl,
       fileRelativeUrl,
+
       keepRunning,
       stopSignal,
       onConsole,
+
       coverageEnabled = false,
       coverageConfig,
       coverageMethodForNodeJs,
       coverageFileUrl,
-      collectPerformance
+      collectPerformance,
     }) => {
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
       }
-      commandLineOptions = ["--experimental-import-meta-resolve", ...commandLineOptions];
+      commandLineOptions = [
+        "--experimental-import-meta-resolve",
+        ...commandLineOptions,
+      ];
+
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-        commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
-        commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
+        commandLineOptions.push(
+          `--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`,
+        );
+        commandLineOptions.push(
+          `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
+        );
       }
+
       const cleanupCallbackList = createCallbackListNotifiedOnce();
-      const cleanup = async reason => {
-        await cleanupCallbackList.notify({
-          reason
-        });
+      const cleanup = async (reason) => {
+        await cleanupCallbackList.notify({ reason });
       };
+
       const childExecOptions = await createChildExecOptions({
         signal,
         debugPort,
         debugMode,
-        debugModeInheritBreak
+        debugModeInheritBreak,
       });
       const execArgv = ExecOptions.toExecArgv({
         ...childExecOptions,
-        ...ExecOptions.fromExecArgv(commandLineOptions)
+        ...ExecOptions.fromExecArgv(commandLineOptions),
       });
       const envForChildProcess = {
         ...(inheritProcessEnv ? process.env : {}),
-        ...env
+        ...env,
       };
-      logger[logProcessCommand ? "info" : "debug"](`${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL)}`);
+      logger[logProcessCommand ? "info" : "debug"](
+        `${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(
+          CONTROLLABLE_CHILD_PROCESS_URL,
+        )}`,
+      );
       const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
         execArgv,
         // silent: true
         stdio: ["pipe", "pipe", "pipe", "ipc"],
-        env: envForChildProcess
+        env: envForChildProcess,
       });
-      logger.debug(createDetailedMessage(`child process forked (pid ${childProcess.pid})`, {
-        "custom env": JSON.stringify(env, null, "  ")
-      }));
+      logger.debug(
+        createDetailedMessage(
+          `child process forked (pid ${childProcess.pid})`,
+          {
+            "custom env": JSON.stringify(env, null, "  "),
+          },
+        ),
+      );
       // if we pass stream, pipe them https://github.com/sindresorhus/execa/issues/81
       if (typeof stdin === "object") {
         stdin.pipe(childProcess.stdin);
@@ -5605,21 +6268,16 @@ const nodeChildProcess = ({
       if (typeof stderr === "object") {
         childProcess.stderr.pipe(stderr);
       }
-      const childProcessReadyPromise = new Promise(resolve => {
+      const childProcessReadyPromise = new Promise((resolve) => {
         onceChildProcessMessage(childProcess, "ready", resolve);
       });
-      const removeOutputListener = installChildProcessOutputListener(childProcess, ({
-        type,
-        text
-      }) => {
-        onConsole({
-          type,
-          text
-        });
-      });
-      const stop = memoize(async ({
-        gracefulStopAllocatedMs
-      } = {}) => {
+      const removeOutputListener = installChildProcessOutputListener(
+        childProcess,
+        ({ type, text }) => {
+          onConsole({ type, text });
+        },
+      );
+      const stop = memoize(async ({ gracefulStopAllocatedMs } = {}) => {
         // all libraries are facing problem on windows when trying
         // to kill a process spawning other processes.
         // "killProcessTree" is theorically correct but sometimes keep process handing forever.
@@ -5634,58 +6292,64 @@ const nodeChildProcess = ({
           try {
             await killProcessTree(childProcess.pid, {
               signal: GRACEFUL_STOP_SIGNAL,
-              timeout: gracefulStopAllocatedMs
+              timeout: gracefulStopAllocatedMs,
             });
             return;
           } catch (e) {
             if (e.code === "TIMEOUT") {
-              logger.debug(`kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
+              logger.debug(
+                `kill with SIGTERM because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
+              );
               await killProcessTree(childProcess.pid, {
-                signal: GRACEFUL_STOP_FAILED_SIGNAL
+                signal: GRACEFUL_STOP_FAILED_SIGNAL,
               });
               return;
             }
             throw e;
           }
         }
-        await killProcessTree(childProcess.pid, {
-          signal: STOP_SIGNAL
-        });
+        await killProcessTree(childProcess.pid, { signal: STOP_SIGNAL });
         return;
       });
+
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
-      const winnerPromise = new Promise(resolve => {
-        raceCallbacks({
-          aborted: cb => {
-            return actionOperation.addAbortCallback(cb);
+      const winnerPromise = new Promise((resolve) => {
+        raceCallbacks(
+          {
+            aborted: (cb) => {
+              return actionOperation.addAbortCallback(cb);
+            },
+            // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+            // disconnect: (cb) => {
+            //   return onceProcessEvent(childProcess, "disconnect", cb)
+            // },
+            // https://nodejs.org/api/child_process.html#child_process_event_error
+            error: (cb) => {
+              return onceChildProcessEvent(childProcess, "error", cb);
+            },
+            exit: (cb) => {
+              return onceChildProcessEvent(
+                childProcess,
+                "exit",
+                (code, signal) => {
+                  cb({ code, signal });
+                },
+              );
+            },
+            response: (cb) => {
+              return onceChildProcessMessage(childProcess, "action-result", cb);
+            },
           },
-          // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-          // disconnect: (cb) => {
-          //   return onceProcessEvent(childProcess, "disconnect", cb)
-          // },
-          // https://nodejs.org/api/child_process.html#child_process_event_error
-          error: cb => {
-            return onceChildProcessEvent(childProcess, "error", cb);
-          },
-          exit: cb => {
-            return onceChildProcessEvent(childProcess, "exit", (code, signal) => {
-              cb({
-                code,
-                signal
-              });
-            });
-          },
-          response: cb => {
-            return onceChildProcessMessage(childProcess, "action-result", cb);
-          }
-        }, resolve);
+          resolve,
+        );
       });
       const result = {
         status: "executing",
         errors: [],
-        namespace: null
+        namespace: null,
       };
+
       const writeResult = async () => {
         actionOperation.throwIfAborted();
         await childProcessReadyPromise;
@@ -5702,9 +6366,9 @@ const nodeChildProcess = ({
               coverageConfig,
               coverageMethodForNodeJs,
               coverageFileUrl,
-              exitAfterAction: true
-            }
-          }
+              exitAfterAction: true,
+            },
+          },
         });
         const winner = await winnerPromise;
         if (winner.name === "aborted") {
@@ -5719,45 +6383,51 @@ const nodeChildProcess = ({
           return;
         }
         if (winner.name === "exit") {
-          const {
-            code
-          } = winner.data;
+          const { code } = winner.data;
           await cleanup("process exit");
           if (code === 12) {
             result.status = "failed";
-            result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+            result.errors.push(
+              new Error(
+                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+              ),
+            );
             return;
           }
-          if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
+          if (
+            code === null ||
+            code === 0 ||
+            code === EXIT_CODES.SIGINT ||
+            code === EXIT_CODES.SIGTERM ||
+            code === EXIT_CODES.SIGABORT
+          ) {
             result.status = "failed";
-            result.errors.push(new Error(`node process exited during execution`));
+            result.errors.push(
+              new Error(`node process exited during execution`),
+            );
             return;
           }
           // process.exit(1) in child process or process.exitCode = 1 + process.exit()
           // means there was an error even if we don't know exactly what.
           result.status = "failed";
-          result.errors.push(new Error(`node process exited with code ${code} during execution`));
+          result.errors.push(
+            new Error(`node process exited with code ${code} during execution`),
+          );
           return;
         }
-        const {
-          status,
-          value
-        } = winner.data;
+        const { status, value } = winner.data;
         if (status === "action-failed") {
           result.status = "failed";
           result.errors.push(value);
           return;
         }
-        const {
-          namespace,
-          performance,
-          coverage
-        } = value;
+        const { namespace, performance, coverage } = value;
         result.status = "completed";
         result.namespace = namespace;
         result.performance = performance;
         result.coverage = coverage;
       };
+
       try {
         await writeResult();
       } catch (e) {
@@ -5768,12 +6438,12 @@ const nodeChildProcess = ({
         stopSignal.notify = stop;
       } else {
         await stop({
-          gracefulStopAllocatedMs
+          gracefulStopAllocatedMs,
         });
       }
       await actionOperation.end();
       return result;
-    }
+    },
   };
 };
 
@@ -5784,38 +6454,34 @@ const STOP_SIGNAL = "SIGKILL";
 // it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
 // but I'm not sure and it changes nothing so just use SIGKILL
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
-const sendToChildProcess = async (childProcess, {
-  type,
-  data
-}) => {
+
+const sendToChildProcess = async (childProcess, { type, data }) => {
   return new Promise((resolve, reject) => {
-    childProcess.send({
-      jsenv: true,
-      type,
-      data
-    }, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
+    childProcess.send(
+      {
+        jsenv: true,
+        type,
+        data,
+      },
+      (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      },
+    );
   });
 };
+
 const installChildProcessOutputListener = (childProcess, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
-  const stdoutDataCallback = chunk => {
-    callback({
-      type: "log",
-      text: String(chunk)
-    });
+  const stdoutDataCallback = (chunk) => {
+    callback({ type: "log", text: String(chunk) });
   };
   childProcess.stdout.on("data", stdoutDataCallback);
-  const stdErrorDataCallback = chunk => {
-    callback({
-      type: "error",
-      text: String(chunk)
-    });
+  const stdErrorDataCallback = (chunk) => {
+    callback({ type: "error", text: String(chunk) });
   };
   childProcess.stderr.on("data", stdErrorDataCallback);
   return () => {
@@ -5823,8 +6489,9 @@ const installChildProcessOutputListener = (childProcess, callback) => {
     childProcess.stderr.removeListener("data", stdoutDataCallback);
   };
 };
+
 const onceChildProcessMessage = (childProcess, type, callback) => {
-  const onmessage = message => {
+  const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       childProcess.removeListener("message", onmessage);
       // eslint-disable-next-line no-eval
@@ -5836,6 +6503,7 @@ const onceChildProcessMessage = (childProcess, type, callback) => {
     childProcess.removeListener("message", onmessage);
   };
 };
+
 const onceChildProcessEvent = (childProcess, type, callback) => {
   childProcess.once(type, callback);
   return () => {
@@ -5846,7 +6514,12 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
 // https://nodejs.org/api/worker_threads.html
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
-const CONTROLLABLE_WORKER_THREAD_URL = new URL("./controllable_worker_thread.mjs?entry_point=", import.meta.url).href;
+
+const CONTROLLABLE_WORKER_THREAD_URL = new URL(
+  "./controllable_worker_thread.mjs?entry_point=",
+  import.meta.url,
+).href;
+
 const nodeWorkerThread = ({
   importMap,
   env,
@@ -5854,15 +6527,16 @@ const nodeWorkerThread = ({
   debugMode,
   debugModeInheritBreak,
   inheritProcessEnv = true,
-  commandLineOptions = []
+  commandLineOptions = [],
 } = {}) => {
   if (env !== undefined && typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`);
   }
   env = {
     ...env,
-    JSENV: true
+    JSENV: true,
   };
+
   return {
     type: "node",
     name: "node_worker_thread",
@@ -5872,15 +6546,17 @@ const nodeWorkerThread = ({
       // logger,
       rootDirectoryUrl,
       fileRelativeUrl,
+
       keepRunning,
       stopSignal,
       onConsole,
+
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
       coverageConfig,
       coverageMethodForNodeJs,
-      coverageFileUrl
+      coverageFileUrl,
     }) => {
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
@@ -5888,89 +6564,101 @@ const nodeWorkerThread = ({
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-        commandLineOptions.push(`--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
-        commandLineOptions.push(`--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`);
+        commandLineOptions.push(
+          `--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`,
+        );
+        commandLineOptions.push(
+          `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
+        );
       }
+
       const workerThreadExecOptions = await createChildExecOptions({
         signal,
         debugPort,
         debugMode,
-        debugModeInheritBreak
+        debugModeInheritBreak,
       });
       const execArgvForWorkerThread = ExecOptions.toExecArgv({
         ...workerThreadExecOptions,
-        ...ExecOptions.fromExecArgv(commandLineOptions)
+        ...ExecOptions.fromExecArgv(commandLineOptions),
       });
       const envForWorkerThread = {
         ...(inheritProcessEnv ? process.env : {}),
-        ...env
+        ...env,
       };
+
       const cleanupCallbackList = createCallbackListNotifiedOnce();
-      const cleanup = async reason => {
-        await cleanupCallbackList.notify({
-          reason
-        });
+      const cleanup = async (reason) => {
+        await cleanupCallbackList.notify({ reason });
       };
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
-      const workerThread = new Worker(fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL), {
-        env: envForWorkerThread,
-        execArgv: execArgvForWorkerThread,
-        // workerData: { options },
-        stdin: true,
-        stdout: true,
-        stderr: true
-      });
-      const removeOutputListener = installWorkerThreadOutputListener(workerThread, ({
-        type,
-        text
-      }) => {
-        onConsole({
-          type,
-          text
-        });
-      });
-      const workerThreadReadyPromise = new Promise(resolve => {
+      const workerThread = new Worker(
+        fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL),
+        {
+          env: envForWorkerThread,
+          execArgv: execArgvForWorkerThread,
+          // workerData: { options },
+          stdin: true,
+          stdout: true,
+          stderr: true,
+        },
+      );
+      const removeOutputListener = installWorkerThreadOutputListener(
+        workerThread,
+        ({ type, text }) => {
+          onConsole({ type, text });
+        },
+      );
+      const workerThreadReadyPromise = new Promise((resolve) => {
         onceWorkerThreadMessage(workerThread, "ready", resolve);
       });
+
       const stop = memoize(async () => {
         // read all stdout before terminating
         // (no need for stderr because it's sync)
         if (collectConsole) {
           while (workerThread.stdout.read() !== null) {}
-          await new Promise(resolve => {
+          await new Promise((resolve) => {
             setTimeout(resolve, 50);
           });
         }
         await workerThread.terminate();
       });
-      const winnerPromise = new Promise(resolve => {
-        raceCallbacks({
-          aborted: cb => {
-            return actionOperation.addAbortCallback(cb);
+
+      const winnerPromise = new Promise((resolve) => {
+        raceCallbacks(
+          {
+            aborted: (cb) => {
+              return actionOperation.addAbortCallback(cb);
+            },
+            error: (cb) => {
+              return onceWorkerThreadEvent(workerThread, "error", cb);
+            },
+            exit: (cb) => {
+              return onceWorkerThreadEvent(
+                workerThread,
+                "exit",
+                (code, signal) => {
+                  cb({ code, signal });
+                },
+              );
+            },
+            response: (cb) => {
+              return onceWorkerThreadMessage(workerThread, "action-result", cb);
+            },
           },
-          error: cb => {
-            return onceWorkerThreadEvent(workerThread, "error", cb);
-          },
-          exit: cb => {
-            return onceWorkerThreadEvent(workerThread, "exit", (code, signal) => {
-              cb({
-                code,
-                signal
-              });
-            });
-          },
-          response: cb => {
-            return onceWorkerThreadMessage(workerThread, "action-result", cb);
-          }
-        }, resolve);
+          resolve,
+        );
       });
+
       const result = {
         status: "executing",
         errors: [],
-        namespace: null
+        namespace: null,
       };
+
       const writeResult = async () => {
         actionOperation.throwIfAborted();
         await workerThreadReadyPromise;
@@ -5987,9 +6675,9 @@ const nodeWorkerThread = ({
               coverageConfig,
               coverageMethodForNodeJs,
               coverageFileUrl,
-              exitAfterAction: true
-            }
-          }
+              exitAfterAction: true,
+            },
+          },
         });
         const winner = await winnerPromise;
         if (winner.name === "aborted") {
@@ -6004,50 +6692,59 @@ const nodeWorkerThread = ({
           return;
         }
         if (winner.name === "exit") {
-          const {
-            code
-          } = winner.data;
+          const { code } = winner.data;
           await cleanup("process exit");
           if (code === 12) {
             result.status = "failed";
-            result.errors.push(new Error(`node process exited with 12 (the forked child process wanted to use a non-available port for debug)`));
+            result.errors.push(
+              new Error(
+                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+              ),
+            );
             return;
           }
-          if (code === null || code === 0 || code === EXIT_CODES.SIGINT || code === EXIT_CODES.SIGTERM || code === EXIT_CODES.SIGABORT) {
+          if (
+            code === null ||
+            code === 0 ||
+            code === EXIT_CODES.SIGINT ||
+            code === EXIT_CODES.SIGTERM ||
+            code === EXIT_CODES.SIGABORT
+          ) {
             result.status = "failed";
-            result.errors.push(new Error(`node worker thread exited during execution`));
+            result.errors.push(
+              new Error(`node worker thread exited during execution`),
+            );
             return;
           }
           // process.exit(1) in child process or process.exitCode = 1 + process.exit()
           // means there was an error even if we don't know exactly what.
           result.status = "failed";
-          result.errors.push(new Error(`node worker thread exited with code ${code} during execution`));
+          result.errors.push(
+            new Error(
+              `node worker thread exited with code ${code} during execution`,
+            ),
+          );
         }
-        const {
-          status,
-          value
-        } = winner.data;
+        const { status, value } = winner.data;
         if (status === "action-failed") {
           result.status = "failed";
           result.errors.push(value);
           return;
         }
-        const {
-          namespace,
-          performance,
-          coverage
-        } = value;
+        const { namespace, performance, coverage } = value;
         result.status = "completed";
         result.namespace = namespace;
         result.performance = performance;
         result.coverage = coverage;
       };
+
       try {
         await writeResult();
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);
       }
+
       if (keepRunning) {
         stopSignal.notify = stop;
       } else {
@@ -6055,25 +6752,20 @@ const nodeWorkerThread = ({
       }
       await actionOperation.end();
       return result;
-    }
+    },
   };
 };
+
 const installWorkerThreadOutputListener = (workerThread, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
-  const stdoutDataCallback = chunk => {
+  const stdoutDataCallback = (chunk) => {
     const text = String(chunk);
-    callback({
-      type: "log",
-      text
-    });
+    callback({ type: "log", text });
   };
   workerThread.stdout.on("data", stdoutDataCallback);
-  const stdErrorDataCallback = chunk => {
+  const stdErrorDataCallback = (chunk) => {
     const text = String(chunk);
-    callback({
-      type: "error",
-      text
-    });
+    callback({ type: "error", text });
   };
   workerThread.stderr.on("data", stdErrorDataCallback);
   return () => {
@@ -6081,18 +6773,13 @@ const installWorkerThreadOutputListener = (workerThread, callback) => {
     workerThread.stderr.removeListener("data", stdErrorDataCallback);
   };
 };
-const sendToWorkerThread = (worker, {
-  type,
-  data
-}) => {
-  worker.postMessage({
-    jsenv: true,
-    type,
-    data
-  });
+
+const sendToWorkerThread = (worker, { type, data }) => {
+  worker.postMessage({ jsenv: true, type, data });
 };
+
 const onceWorkerThreadMessage = (workerThread, type, callback) => {
-  const onmessage = message => {
+  const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       workerThread.removeListener("message", onmessage);
       // eslint-disable-next-line no-eval
@@ -6104,6 +6791,7 @@ const onceWorkerThreadMessage = (workerThread, type, callback) => {
     workerThread.removeListener("message", onmessage);
   };
 };
+
 const onceWorkerThreadEvent = (worker, type, callback) => {
   worker.once(type, callback);
   return () => {
@@ -6123,6 +6811,7 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
  * - Most of the logic lives in "./run.js" used by executeTestPlan to run tests
  */
 
+
 const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -6130,42 +6819,52 @@ const execute = async ({
   rootDirectoryUrl,
   webServer,
   importMap,
+
   fileRelativeUrl,
   allocatedMs,
   mirrorConsole = true,
   keepRunning = false,
+
   collectConsole,
   collectCoverage,
   coverageTempDirectoryUrl,
   collectPerformance = false,
   runtime,
   runtimeParams,
-  ignoreError = false
+
+  ignoreError = false,
 }) => {
-  const logger = createLogger({
-    logLevel
-  });
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(rootDirectoryUrl, "rootDirectoryUrl");
+  const logger = createLogger({ logLevel });
+  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+    rootDirectoryUrl,
+    "rootDirectoryUrl",
+  );
   const executeOperation = Abort.startOperation();
   executeOperation.addAbortSignal(signal);
   if (handleSIGINT) {
-    executeOperation.addAbortSource(abort => {
-      return raceProcessTeardownEvents({
-        SIGINT: true
-      }, abort);
+    executeOperation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        abort,
+      );
     });
   }
+
   if (runtime.type === "browser") {
     await assertAndNormalizeWebServer(webServer);
   }
-  let resultTransformer = result => result;
+
+  let resultTransformer = (result) => result;
   runtimeParams = {
     rootDirectoryUrl,
     webServer,
     fileRelativeUrl,
     importMap,
-    ...runtimeParams
+    ...runtimeParams,
   };
+
   let result = await run({
     signal: executeOperation.signal,
     logger,
@@ -6177,25 +6876,27 @@ const execute = async ({
     coverageTempDirectoryUrl,
     collectPerformance,
     runtime,
-    runtimeParams
+    runtimeParams,
   });
   result = resultTransformer(result);
+
   try {
     if (result.status === "failed") {
       if (ignoreError) {
         return result;
       }
       /*
-      Warning: when node launched with --unhandled-rejections=strict, despites
-      this promise being rejected by throw result.error node will completely ignore it.
-      The error can be logged by doing
-      ```js
-      process.setUncaughtExceptionCaptureCallback((error) => {
-      console.error(error.stack)
-      })
-      ```
-      But it feels like a hack.
-      */
+  Warning: when node launched with --unhandled-rejections=strict, despites
+  this promise being rejected by throw result.error node will completely ignore it.
+
+  The error can be logged by doing
+  ```js
+  process.setUncaughtExceptionCaptureCallback((error) => {
+    console.error(error.stack)
+  })
+  ```
+  But it feels like a hack.
+  */
       throw result.errors[result.errors.length - 1];
     }
     return result;

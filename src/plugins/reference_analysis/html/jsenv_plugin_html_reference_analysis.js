@@ -37,7 +37,6 @@ const parseAndTransformHtmlReferences = async (
   context,
   { inlineContent, inlineConvertedScript },
 ) => {
-  const url = urlInfo.originalUrl;
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content);
 
@@ -75,6 +74,7 @@ const parseAndTransformHtmlReferences = async (
       "modulepreload",
     ].includes(subtype);
     const [reference] = context.referenceUtils.found({
+      node,
       type,
       subtype,
       expectedType,
@@ -94,20 +94,12 @@ const parseAndTransformHtmlReferences = async (
         });
       });
     });
+    return reference;
   };
   const visitHref = (node, referenceProps) => {
     const href = getHtmlNodeAttribute(node, "href");
     if (href) {
       return createExternalReference(node, "href", href, referenceProps);
-    }
-    const inlinedFromHref = getHtmlNodeAttribute(node, "inlined-from-href");
-    if (inlinedFromHref) {
-      return createExternalReference(
-        node,
-        "inlined-from-href",
-        new URL(inlinedFromHref, url).href,
-        referenceProps,
-      );
     }
     return null;
   };
@@ -115,15 +107,6 @@ const parseAndTransformHtmlReferences = async (
     const src = getHtmlNodeAttribute(node, "src");
     if (src) {
       return createExternalReference(node, "src", src, referenceProps);
-    }
-    const inlinedFromSrc = getHtmlNodeAttribute(node, "inlined-from-src");
-    if (inlinedFromSrc) {
-      return createExternalReference(
-        node,
-        "inlined-from-src",
-        new URL(inlinedFromSrc, url).href,
-        referenceProps,
-      );
     }
     return null;
   };
@@ -146,7 +129,7 @@ const parseAndTransformHtmlReferences = async (
   const createInlineReference = (
     node,
     inlineContent,
-    { extension, type, expectedType, contentType },
+    { extension, type, subtype, expectedType, contentType },
   ) => {
     const hotAccept = getHtmlNodeAttribute(node, "hot-accept") !== undefined;
     const { line, column, lineEnd, columnEnd, isOriginal } =
@@ -177,6 +160,35 @@ const parseAndTransformHtmlReferences = async (
         debug,
       },
     );
+
+    const externalSpecifierAttributeName =
+      type === "script"
+        ? "inlined-from-src"
+        : type === "style"
+        ? "inlined-from-href"
+        : null;
+    if (externalSpecifierAttributeName) {
+      const externalSpecifier = getHtmlNodeAttribute(
+        node,
+        externalSpecifierAttributeName,
+      );
+      if (externalSpecifier) {
+        // create an external ref
+        // the goal is only to have the url in the graph (and in dependencies/implitic urls for reload)
+        // not to consider the url is actually used (at least during build)
+        // maybe we can just exlcude these urls in a special if during build, we'll see
+        const externalRef = createExternalReference(
+          node,
+          externalSpecifierAttributeName,
+          externalSpecifier,
+          { type, subtype, expectedType },
+        );
+        inlineReference.prev = externalRef;
+        inlineReference.original = externalRef;
+        externalRef.next = inlineReference;
+      }
+    }
+
     actions.push(async () => {
       await cookInlineContent({
         context,
@@ -199,12 +211,11 @@ const parseAndTransformHtmlReferences = async (
         }
       });
     });
-
     return inlineReference;
   };
   const visitTextContent = (
     node,
-    { extension, type, expectedType, contentType },
+    { extension, type, subtype, expectedType, contentType },
   ) => {
     const inlineContent = getHtmlNodeText(node);
     if (!inlineContent) {
@@ -213,6 +224,7 @@ const parseAndTransformHtmlReferences = async (
     return createInlineReference(node, inlineContent, {
       extension,
       type,
+      subtype,
       expectedType,
       contentType,
     });
@@ -254,7 +266,8 @@ const parseAndTransformHtmlReferences = async (
         return;
       }
 
-      const { type, contentType, extension } = analyzeScriptNode(scriptNode);
+      const { type, subtype, contentType, extension } =
+        analyzeScriptNode(scriptNode);
       // ignore <script type="whatever">foobar</script>
       // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
       if (type !== "text") {
@@ -286,6 +299,7 @@ const parseAndTransformHtmlReferences = async (
       const inlineRef = visitTextContent(scriptNode, {
         extension: extension || CONTENT_TYPE.asFileExtension(contentType),
         type: "script",
+        subtype,
         expectedType: type,
         contentType,
       });
@@ -427,3 +441,10 @@ const decideLinkExpectedType = (linkReference, context) => {
   }
   return undefined;
 };
+
+// const applyWebUrlResolution = (url, baseUrl) => {
+//   if (url[0] === "/") {
+//     return new URL(url.slice(1), baseUrl).href;
+//   }
+//   return new URL(url, baseUrl).href;
+// };

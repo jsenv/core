@@ -1,18 +1,14 @@
 import { urlToFilename } from "@jsenv/urls";
-import { convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
+import {
+  convertJsModuleToJsClassic,
+  systemJsClientFileUrlDefault,
+} from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 
 import { createUrlGraphLoader } from "./url_graph_loader.js";
 
-export const jsenvPluginAsJsClassic = ({
-  systemJsInjection = true,
-  systemJsClientFileUrl,
-} = {}) => {
+export const jsenvPluginAsJsClassic = () => {
   const markAsJsClassicProxy = (reference) => {
-    if (reference.searchParams.has("dynamic_import")) {
-    } else {
-      reference.isEntryPoint = true;
-    }
     reference.expectedType = "js_classic";
     reference.filename = generateJsClassicFilename(reference.url);
   };
@@ -64,6 +60,29 @@ export const jsenvPluginAsJsClassic = ({
         },
       });
       const jsModuleBundledUrlInfo = bundleUrlInfos[jsModuleUrlInfo.url];
+
+      let outputFormat;
+      // if imported by js, we have to use systemjs
+      // or if import things
+      if (
+        jsModuleBundledUrlInfo.data.usesImport ||
+        isImportedByJs(urlInfo, context.urlGraph)
+      ) {
+        // we have to use system when it uses import
+        outputFormat = "system";
+        urlInfo.type = "js_classic";
+        context.referenceUtils.foundSideEffectFile({
+          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          expectedType: "js_classic",
+          line: 0,
+          column: 0,
+        });
+      } else {
+        // if there is no dependency (it does not use import)
+        // then we can use UMD
+        outputFormat = "umd";
+      }
+
       if (context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           context.referenceUtils.inject({
@@ -75,30 +94,15 @@ export const jsenvPluginAsJsClassic = ({
       } else if (context.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
-          if (sourceUrlInfo && sourceUrlInfo.dependents.size === 0) {
+          if (sourceUrlInfo && !context.urlGraph.hasDependent(sourceUrlInfo)) {
             context.urlGraph.deleteUrlInfo(sourceUrl);
           }
         });
       }
 
-      let outputFormat;
-      if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
-        // if it's an entry point without dependency (it does not use import)
-        // then we can use UMD
-        outputFormat = "umd";
-      } else {
-        // otherwise we have to use system in case it's imported
-        // by an other file (for entry points)
-        // or to be able to import when it uses import
-        outputFormat = "system";
-      }
-      urlInfo.data.jsClassicFormat = outputFormat;
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
-        systemJsInjection,
-        systemJsClientFileUrl,
         input: jsModuleBundledUrlInfo.content,
-        inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleBundledUrlInfo.sourcemap,
         inputUrl: jsModuleBundledUrlInfo.url,
         outputUrl: jsModuleBundledUrlInfo.generatedUrl,
@@ -115,6 +119,19 @@ export const jsenvPluginAsJsClassic = ({
       };
     },
   };
+};
+
+const isImportedByJs = (jsModuleUrlInfo, urlGraph) => {
+  for (const dependentUrl of jsModuleUrlInfo.dependents) {
+    const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+    if (
+      dependentUrlInfo.type === "js_module" ||
+      dependentUrlInfo.type === "js_classic"
+    ) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const generateJsClassicFilename = (url) => {

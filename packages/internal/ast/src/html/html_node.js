@@ -1,6 +1,9 @@
 import { parseFragment } from "parse5";
 
-import { setHtmlNodeAttributes } from "./html_node_attributes.js";
+import {
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+} from "./html_node_attributes.js";
 import { findHtmlNode } from "./html_search.js";
 import { analyzeScriptNode } from "./html_analysis.js";
 import {
@@ -56,9 +59,43 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     "jsenv-injected-by": jsenvPluginName,
   });
   const isScript = node.nodeName === "script";
-
   if (isScript) {
-    const isJsModule = analyzeScriptNode(node).type === "js_module";
+    const { type } = analyzeScriptNode(node);
+    const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
+      .childNodes[0];
+
+    // <script type="importmap">
+    // - after any <link>
+    // - but before first <link rel="modulepreload">
+    // - and before <script type="module">
+    const isImportmap = type === "importmap";
+    if (isImportmap) {
+      let after = headNode.childNodes[0];
+      for (const child of headNode.childNodes) {
+        if (child.nodeName === "link") {
+          if (getHtmlNodeAttribute(child, "rel") === "modulepreload") {
+            return insertHtmlNodeBefore(node, child);
+          }
+          after = child;
+          continue;
+        }
+        if (
+          child.nodeName === "script" &&
+          analyzeScriptNode(child).type === "module"
+        ) {
+          return insertHtmlNodeBefore(node, child);
+        }
+      }
+      if (after) {
+        return insertHtmlNodeAfter(node, after);
+      }
+      return injectHtmlNode(htmlAst, node);
+    }
+    // <script type="module">
+    // - after <script type="importmap">
+    // - and after any <link>
+    // - and before first <script type="module">
+    const isJsModule = type === "js_module";
     if (isJsModule) {
       const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
         return (
@@ -66,47 +103,46 @@ export const injectHtmlNodeAsEarlyAsPossible = (
           analyzeScriptNode(node).type === "importmap"
         );
       });
-
       if (firstImportmapScript) {
-        const importmapParent = firstImportmapScript.parentNode;
-        const importmapSiblings = importmapParent.childNodes;
-        const nextSiblings = importmapSiblings.slice(
-          importmapSiblings.indexOf(firstImportmapScript) + 1,
-        );
-        let after = firstImportmapScript;
-        for (const nextSibling of nextSiblings) {
-          if (nextSibling.nodeName === "script") {
-            insertHtmlNodeBefore(node, nextSibling);
-            return;
-          }
-          if (nextSibling.nodeName === "link") {
-            after = nextSibling;
-          }
-        }
-        insertHtmlNodeAfter(node, after);
-        return;
+        return insertHtmlNodeAfter(node, firstImportmapScript);
       }
+      let after = headNode.childNodes[0];
+      for (const child of headNode.childNodes) {
+        if (child.nodeName === "link") {
+          after = child;
+          continue;
+        }
+        if (
+          child.nodeName === "script" &&
+          analyzeScriptNode(child).type === "module"
+        ) {
+          return insertHtmlNodeBefore(node, child);
+        }
+      }
+      if (after) {
+        return insertHtmlNodeAfter(node, after);
+      }
+      return injectHtmlNode(htmlAst, node);
     }
-    const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
-      .childNodes[0];
+    // <script> or <script type="text/jsx">, ...
+    // - after any <link>
+    // - before any <script>
     let after = headNode.childNodes[0];
     for (const child of headNode.childNodes) {
-      if (child.nodeName === "script") {
-        insertHtmlNodeBefore(node, child);
-        return;
-      }
       if (child.nodeName === "link") {
         after = child;
+        continue;
+      }
+      if (child.nodeName === "script") {
+        return insertHtmlNodeBefore(node, child);
       }
     }
     if (after) {
-      insertHtmlNodeAfter(node, after);
+      return insertHtmlNodeAfter(node, after);
     }
-    return;
+    return injectHtmlNode(htmlAst, node);
   }
-
-  injectHtmlNode(htmlAst, node);
-  return;
+  return injectHtmlNode(htmlAst, node);
 };
 
 export const insertHtmlNodeBefore = (nodeToInsert, futureNextSibling) => {

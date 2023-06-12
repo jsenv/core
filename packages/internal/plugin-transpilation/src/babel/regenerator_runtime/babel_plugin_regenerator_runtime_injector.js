@@ -1,10 +1,5 @@
-import { pathToFileURL } from "node:url";
-import { injectPolyfillIntoBabelAst } from "../polyfill_injection_in_babel_ast.js";
-
-const regeneratorRuntimeClientFileUrl = new URL(
-  "./client/regenerator_runtime.js",
-  import.meta.url,
-).href;
+import { injectSideEffectFileIntoBabelAst } from "../side_effect_injection_in_babel_ast.js";
+import { regeneratorRuntimeClientFileUrl } from "./regenerator_runtime_client_file_url.js";
 
 export const babelPluginRegeneratorRuntimeInjector = (
   babel,
@@ -14,35 +9,16 @@ export const babelPluginRegeneratorRuntimeInjector = (
     name: "regenerator-runtime-injector",
     visitor: {
       Program: (path, state) => {
-        let regeneratorRuntimeDetected = false;
-        const { filename } = state;
-        const fileUrl = pathToFileURL(filename).href;
-        if (fileUrl === regeneratorRuntimeClientFileUrl) {
-          return;
-        }
-        path.traverse({
-          Identifier(path) {
-            const { node } = path;
-            if (node.name === "regeneratorRuntime") {
-              regeneratorRuntimeDetected = true;
-              path.stop();
-            }
-          },
+        const { sourceType } = state.file.opts.parserOpts;
+        const isJsModule = sourceType === "module";
+        injectSideEffectFileIntoBabelAst({
+          programPath: path,
+          isJsModule,
+          asImport: babelHelpersAsImport,
+          sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
+          getSideEffectFileSpecifier: getImportSpecifier,
+          babel,
         });
-        state.file.metadata.regeneratorRuntimeDetected =
-          regeneratorRuntimeDetected;
-        if (regeneratorRuntimeDetected) {
-          const { sourceType } = state.file.opts.parserOpts;
-          const isJsModule = sourceType === "module";
-          injectPolyfillIntoBabelAst({
-            programPath: path,
-            isJsModule,
-            asImport: babelHelpersAsImport,
-            polyfillFileUrl: regeneratorRuntimeClientFileUrl,
-            getPolyfillImportSpecifier: getImportSpecifier,
-            babel,
-          });
-        }
       },
     },
   };

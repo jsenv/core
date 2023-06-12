@@ -32,7 +32,19 @@ button:focus, a:focus, input:focus, [data-contains-hidden-input] input:focus + *
   outline-width: 4px;
 }
 
-button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidden-input] input:focus-visible + * {
+[data-contains-hidden-input] input:focus-visible + * {
+  outline-style: auto;
+}
+
+button:focus-visible {
+  outline-style: auto;
+}
+
+a:focus-visible {
+  outline-style: auto;
+}
+
+input:focus-visible {
   outline-style: auto;
 }
 
@@ -41,7 +53,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
 }
 
 @-moz-document url-prefix() {
-  button:focus-visible, a:focus-visible, input:focus-visible, [data-input-customized] input:focus-visible + * {
+  [data-input-customized] input:focus-visible + * {
+    outline-offset: 0;
+    outline: 2px solid #0096ff;
+  }
+
+  button:focus-visible {
+    outline-offset: 0;
+    outline: 2px solid #0096ff;
+  }
+
+  a:focus-visible {
+    outline-offset: 0;
+    outline: 2px solid #0096ff;
+  }
+
+  input:focus-visible {
     outline-offset: 0;
     outline: 2px solid #0096ff;
   }
@@ -57,27 +84,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
 }
 
 #toolbar_overlay {
-  width: 100%;
-  height: 100%;
   filter: url(#better-blur);
   background-color: #0003;
+  width: 100%;
+  height: 100%;
   position: fixed;
   top: 0;
   left: 0;
 }
 
 #toolbar {
-  height: 40px;
-  width: 100%;
   background: #404040;
+  width: 100%;
+  height: 40px;
   position: fixed;
   bottom: 0;
 }
 
 #execution_pending_icon {
+  color: #cecece;
   width: 20px;
   height: 20px;
-  color: #cecece;
   margin: 10px;
   transform: scaleX(-1);
 }
@@ -105,10 +132,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
 }
 
 #execution_completed_icon {
-  width: 25px;
-  height: 25px;
   opacity: 0;
   stroke-width: 5px;
+  width: 25px;
+  height: 25px;
 }
 
 #execution_completed_icon[data-animate] {
@@ -130,17 +157,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
 }
 
 #execution_failed_icon {
-  width: 20px;
-  height: 20px;
   opacity: 0;
   stroke-width: 5px;
+  width: 20px;
+  height: 20px;
   margin: 10px;
 }
 
 #execution_failed_icon rect {
+  fill: #d74640;
   width: 33px;
   height: 0;
-  fill: #d74640;
 }
 
 #execution_failed_icon[data-animate] {
@@ -157,8 +184,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, [data-contains-hidde
 
 @keyframes draw {
   100% {
-    height: 376.964px;
     width: 45px;
+    height: 376.964px;
   }
 }
 
@@ -372,11 +399,11 @@ html[data-theme="light"] .execution-link {
 #settings_box {
   text-align: center;
   color: #fff;
-  min-width: 250px;
-  min-height: 150px;
   z-index: -1;
   background-color: #030713;
   border-radius: 5px 5px 0 0;
+  min-width: 250px;
+  min-height: 150px;
   padding: 17px;
   font-size: 14px;
   display: none;
@@ -404,24 +431,24 @@ html[data-theme="light"] .execution-link {
 
 #settings_box_body {
   text-align: left;
-  max-height: 80vh;
-  width: 100vw;
   justify-content: center;
+  width: 100vw;
+  max-height: 80vh;
   padding: 18px 0;
   display: flex;
   overflow: auto;
 }
 
 .settings_box_items_wrapper {
-  max-width: 700px;
   flex-wrap: wrap;
   justify-content: center;
+  max-width: 700px;
   display: flex;
 }
 
 .settings_box_item {
-  width: 250px;
   background: #0c111b;
+  width: 250px;
   margin: 9px 18px;
   padding: 15px;
 }
@@ -484,9 +511,9 @@ label {
 
 .switch {
   float: right;
+  cursor: pointer;
   width: 3.5em;
   height: 2em;
-  cursor: pointer;
   padding: 0;
   position: relative;
 }
@@ -500,9 +527,9 @@ label {
 
 .switch .slider {
   vertical-align: middle;
-  height: .3em;
   background-color: #4c4c4c;
   border-radius: .15em;
+  height: .3em;
   margin-top: -.15em;
   transition: all .4s;
   position: absolute;
@@ -513,11 +540,11 @@ label {
 
 .switch .square {
   content: "";
-  height: 1em;
-  width: 1em;
   color: #030713;
   background-color: #4c4c4c;
   border-radius: .15em;
+  width: 1em;
+  height: 1em;
   margin-top: -.5em;
   transition: all .4s;
   position: absolute;
@@ -526,9 +553,9 @@ label {
 }
 
 .switch input + * {
+  border: 1px solid #0000;
   width: 100%;
   height: 100%;
-  border: 1px solid #0000;
   position: relative;
 }
 
@@ -559,8 +586,8 @@ label {
 }
 
 #menu_overflow_button {
-  width: 40px;
   background: #404040;
+  width: 40px;
   display: none;
   position: absolute;
   top: 0;
@@ -573,10 +600,10 @@ label {
 
 #menu_overflow {
   visibility: hidden;
-  width: 100%;
-  height: 100%;
   opacity: 0;
   background: #404040;
+  width: 100%;
+  height: 100%;
   display: none;
   position: absolute;
   top: 0;
@@ -621,10 +648,10 @@ label {
 .tooltip {
   color: #fff;
   text-align: center;
-  max-width: 260px;
   cursor: default;
   background-color: #5e5e5e;
   border-radius: 6px;
+  max-width: 260px;
   margin-bottom: 6px;
   padding: 10px;
   font-size: 14px;
@@ -681,18 +708,18 @@ label {
 
 .tooltip_icon {
   fill: #fff;
+  vertical-align: middle;
   width: 20px;
   height: 20px;
-  vertical-align: middle;
 }
 
 .toolbar_control {
-  height: 40px;
-  width: 40px;
   background: none;
   border: none;
   justify-content: center;
   align-items: center;
+  width: 40px;
+  height: 40px;
   padding: 0;
   display: flex;
 }
@@ -706,9 +733,9 @@ label {
 }
 
 .toolbar_icon {
-  height: 40px;
   fill: #cecece;
   color: #cecece;
+  height: 40px;
 }
 
 .toolbar_icon:hover {
@@ -716,9 +743,9 @@ label {
 }
 
 .toolbar_icon_wrapper {
-  height: 100%;
   text-align: center;
   width: 40px;
+  height: 100%;
   display: inline-block;
 }
 
@@ -739,9 +766,9 @@ label {
 }
 
 #changes_indicator button {
-  width: auto;
   justify-content: center;
   align-items: stretch;
+  width: auto;
   display: flex;
 }
 

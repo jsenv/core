@@ -3,13 +3,18 @@ const assertUrlLike = (value, name = "url") => {
     throw new TypeError(`${name} must be a url string, got ${value}`);
   }
   if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
+    throw new TypeError(
+      `${name} must be a url but looks like a windows pathname, got ${value}`,
+    );
   }
   if (!hasScheme(value)) {
-    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
+    throw new TypeError(
+      `${name} must be a url and no scheme found, got ${value}`,
+    );
   }
 };
-const isPlainObject = value => {
+
+const isPlainObject = (value) => {
   if (value === null) {
     return false;
   }
@@ -21,7 +26,8 @@ const isPlainObject = value => {
   }
   return false;
 };
-const isWindowsPathnameSpecifier = specifier => {
+
+const isWindowsPathnameSpecifier = (specifier) => {
   const firstChar = specifier[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
   const secondChar = specifier[1];
@@ -29,16 +35,17 @@ const isWindowsPathnameSpecifier = specifier => {
   const thirdChar = specifier[2];
   return thirdChar === "/" || thirdChar === "\\";
 };
-const hasScheme = specifier => /^[a-zA-Z]+:/.test(specifier);
+
+const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
 const resolveAssociations = (associations, baseUrl) => {
   assertUrlLike(baseUrl, "baseUrl");
   const associationsResolved = {};
-  Object.keys(associations).forEach(key => {
+  Object.keys(associations).forEach((key) => {
     const value = associations[key];
     if (typeof value === "object" && value !== null) {
       const valueMapResolved = {};
-      Object.keys(value).forEach(pattern => {
+      Object.keys(value).forEach((pattern) => {
         const valueAssociated = value[pattern];
         const patternResolved = normalizeUrlPattern(pattern, baseUrl);
         valueMapResolved[patternResolved] = valueAssociated;
@@ -50,6 +57,7 @@ const resolveAssociations = (associations, baseUrl) => {
   });
   return associationsResolved;
 };
+
 const normalizeUrlPattern = (urlPattern, baseUrl) => {
   try {
     return String(new URL(urlPattern, baseUrl));
@@ -59,25 +67,27 @@ const normalizeUrlPattern = (urlPattern, baseUrl) => {
   }
 };
 
-const asFlatAssociations = associations => {
+const asFlatAssociations = (associations) => {
   if (!isPlainObject(associations)) {
-    throw new TypeError(`associations must be a plain object, got ${associations}`);
+    throw new TypeError(
+      `associations must be a plain object, got ${associations}`,
+    );
   }
   const flatAssociations = {};
-  Object.keys(associations).forEach(associationName => {
+  Object.keys(associations).forEach((associationName) => {
     const associationValue = associations[associationName];
     if (isPlainObject(associationValue)) {
-      Object.keys(associationValue).forEach(pattern => {
+      Object.keys(associationValue).forEach((pattern) => {
         const patternValue = associationValue[pattern];
         const previousValue = flatAssociations[pattern];
         if (isPlainObject(previousValue)) {
           flatAssociations[pattern] = {
             ...previousValue,
-            [associationName]: patternValue
+            [associationName]: patternValue,
           };
         } else {
           flatAssociations[pattern] = {
-            [associationName]: patternValue
+            [associationName]: patternValue,
           };
         }
       });
@@ -110,21 +120,13 @@ const asFlatAssociations = associations => {
  * @param {string} applyPatternMatchingParams.url a string representing an url
  * @return {MatchResult}
  */
-const applyPatternMatching = ({
-  url,
-  pattern
-}) => {
+const applyPatternMatching = ({ url, pattern }) => {
   assertUrlLike(pattern, "pattern");
   assertUrlLike(url, "url");
-  const {
-    matched,
-    patternIndex,
-    index,
-    groups
-  } = applyMatching(pattern, url);
+  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];
   let groupIndex = 0;
-  groups.forEach(group => {
+  groups.forEach((group) => {
     if (group.name) {
       matchGroups[group.name] = group.string;
     } else {
@@ -136,9 +138,10 @@ const applyPatternMatching = ({
     matched,
     patternIndex,
     urlIndex: index,
-    matchGroups
+    matchGroups,
   };
 };
+
 const applyMatching = (pattern, string) => {
   const groups = [];
   let patternIndex = 0;
@@ -146,13 +149,14 @@ const applyMatching = (pattern, string) => {
   let remainingPattern = pattern;
   let remainingString = string;
   let restoreIndexes = true;
-  const consumePattern = count => {
+
+  const consumePattern = (count) => {
     const subpattern = remainingPattern.slice(0, count);
     remainingPattern = remainingPattern.slice(count);
     patternIndex += count;
     return subpattern;
   };
-  const consumeString = count => {
+  const consumeString = (count) => {
     const substring = remainingString.slice(0, count);
     remainingString = remainingString.slice(count);
     index += count;
@@ -161,6 +165,7 @@ const applyMatching = (pattern, string) => {
   const consumeRemainingString = () => {
     return consumeString(remainingString.length);
   };
+
   let matched;
   const iterate = () => {
     const patternIndexBefore = patternIndex;
@@ -195,9 +200,7 @@ const applyMatching = (pattern, string) => {
         return true;
       }
       if (remainingPattern === "*") {
-        groups.push({
-          string: ""
-        });
+        groups.push({ string: "" });
       }
       return false; // fail because string shorter than expected
     }
@@ -207,9 +210,7 @@ const applyMatching = (pattern, string) => {
       if (remainingString[0] === "/") {
         // trailing slash match remaining
         consumePattern(1);
-        groups.push({
-          string: consumeRemainingString()
-        });
+        groups.push({ string: consumeRemainingString() });
         return true;
       }
       return false;
@@ -242,7 +243,7 @@ const applyMatching = (pattern, string) => {
         const skipResult = skipUntilMatch({
           pattern: remainingPattern,
           string: remainingString,
-          canSkipSlash: true
+          canSkipSlash: true,
         });
         groups.push(...skipResult.groups);
         consumePattern(skipResult.patternIndex);
@@ -257,29 +258,23 @@ const applyMatching = (pattern, string) => {
         // matches everything except "/"
         const slashIndex = remainingString.indexOf("/");
         if (slashIndex === -1) {
-          groups.push({
-            string: consumeRemainingString()
-          });
+          groups.push({ string: consumeRemainingString() });
           return true;
         }
-        groups.push({
-          string: consumeString(slashIndex)
-        });
+        groups.push({ string: consumeString(slashIndex) });
         return false;
       }
       // the next char must not the one expected by remainingPattern[0]
       // because * is greedy and expect to skip at least one char
       if (remainingPattern[0] === remainingString[0]) {
-        groups.push({
-          string: ""
-        });
+        groups.push({ string: "" });
         patternIndex = patternIndex - 1;
         return false;
       }
       const skipResult = skipUntilMatch({
         pattern: remainingPattern,
         string: remainingString,
-        canSkipSlash: false
+        canSkipSlash: false,
       });
       groups.push(skipResult.group, ...skipResult.groups);
       consumePattern(skipResult.patternIndex);
@@ -293,22 +288,21 @@ const applyMatching = (pattern, string) => {
     return undefined;
   };
   iterate();
+
   return {
     matched,
     patternIndex,
     index,
-    groups
+    groups,
   };
 };
-const skipUntilMatch = ({
-  pattern,
-  string,
-  canSkipSlash
-}) => {
+
+const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
   let index = 0;
   let remainingString = string;
   let longestAttemptRange = null;
   let isLastAttempt = false;
+
   const failure = () => {
     return {
       matched: false,
@@ -316,10 +310,11 @@ const skipUntilMatch = ({
       index: longestAttemptRange.index + longestAttemptRange.length,
       groups: longestAttemptRange.groups,
       group: {
-        string: string.slice(0, longestAttemptRange.index)
-      }
+        string: string.slice(0, longestAttemptRange.index),
+      },
     };
   };
+
   const tryToMatch = () => {
     const matchAttempt = applyMatching(pattern, remainingString);
     if (matchAttempt.matched) {
@@ -329,8 +324,11 @@ const skipUntilMatch = ({
         index: index + matchAttempt.index,
         groups: matchAttempt.groups,
         group: {
-          string: remainingString === "" ? string : string.slice(0, -remainingString.length)
-        }
+          string:
+            remainingString === ""
+              ? string
+              : string.slice(0, -remainingString.length),
+        },
       };
     }
     const attemptIndex = matchAttempt.index;
@@ -338,9 +336,12 @@ const skipUntilMatch = ({
       patternIndex: matchAttempt.patternIndex,
       index,
       length: attemptIndex,
-      groups: matchAttempt.groups
+      groups: matchAttempt.groups,
     };
-    if (!longestAttemptRange || longestAttemptRange.length < attemptRange.length) {
+    if (
+      !longestAttemptRange ||
+      longestAttemptRange.length < attemptRange.length
+    ) {
       longestAttemptRange = attemptRange;
     }
     if (isLastAttempt) {
@@ -367,25 +368,20 @@ const skipUntilMatch = ({
   return tryToMatch();
 };
 
-const applyAssociations = ({
-  url,
-  associations
-}) => {
+const applyAssociations = ({ url, associations }) => {
   assertUrlLike(url);
   const flatAssociations = asFlatAssociations(associations);
   return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
-    const {
-      matched
-    } = applyPatternMatching({
+    const { matched } = applyPatternMatching({
       pattern,
-      url
+      url,
     });
     if (matched) {
       const value = flatAssociations[pattern];
       if (isPlainObject(previousValue) && isPlainObject(value)) {
         return {
           ...previousValue,
-          ...value
+          ...value,
         };
       }
       return value;
@@ -394,15 +390,12 @@ const applyAssociations = ({
   }, {});
 };
 
-const applyAliases = ({
-  url,
-  aliases
-}) => {
+const applyAliases = ({ url, aliases }) => {
   let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find(key => {
+  const aliasMatchingKey = Object.keys(aliases).find((key) => {
     const aliasMatchResult = applyPatternMatching({
       pattern: key,
-      url
+      url,
     });
     if (aliasMatchResult.matched) {
       aliasFullMatchResult = aliasMatchResult;
@@ -413,22 +406,18 @@ const applyAliases = ({
   if (!aliasMatchingKey) {
     return url;
   }
-  const {
-    matchGroups
-  } = aliasFullMatchResult;
+  const { matchGroups } = aliasFullMatchResult;
   const alias = aliases[aliasMatchingKey];
   const parts = alias.split("*");
   const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${index === parts.length - 1 ? "" : matchGroups[index]}`;
+    return `${previous}${value}${
+      index === parts.length - 1 ? "" : matchGroups[index]
+    }`;
   }, "");
   return newUrl;
 };
 
-const urlChildMayMatch = ({
-  url,
-  associations,
-  predicate
-}) => {
+const urlChildMayMatch = ({ url, associations, predicate }) => {
   assertUrlLike(url, "url");
   // the function was meants to be used on url ending with '/'
   if (!url.endsWith("/")) {
@@ -444,18 +433,18 @@ const urlChildMayMatch = ({
   // for partial match, any meta satisfying predicate will be valid because
   // we don't know for sure if pattern will still match for a file inside pathname
   const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach(pattern => {
+  Object.keys(flatAssociations).forEach((pattern) => {
     const value = flatAssociations[pattern];
     const matchResult = applyPatternMatching({
       pattern,
-      url
+      url,
     });
     if (matchResult.matched) {
       someFullMatch = true;
       if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
         fullMatchMeta = {
           ...fullMatchMeta,
-          ...value
+          ...value,
         };
       } else {
         fullMatchMeta = value;
@@ -467,7 +456,9 @@ const urlChildMayMatch = ({
   if (someFullMatch) {
     return Boolean(predicate(fullMatchMeta));
   }
-  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
+  return partialMatchMetaArray.some((partialMatchMeta) =>
+    predicate(partialMatchMeta),
+  );
 };
 
 const URL_META = {
@@ -475,28 +466,30 @@ const URL_META = {
   applyAssociations,
   urlChildMayMatch,
   applyPatternMatching,
-  applyAliases
+  applyAliases,
 };
 
-const filterV8Coverage = async (v8Coverage, {
-  rootDirectoryUrl,
-  coverageConfig
-}) => {
-  const associations = URL_META.resolveAssociations({
-    cover: coverageConfig
-  }, rootDirectoryUrl);
-  const urlShouldBeCovered = url => {
-    const {
-      cover
-    } = URL_META.applyAssociations({
+const filterV8Coverage = async (
+  v8Coverage,
+  { rootDirectoryUrl, coverageConfig },
+) => {
+  const associations = URL_META.resolveAssociations(
+    { cover: coverageConfig },
+    rootDirectoryUrl,
+  );
+  const urlShouldBeCovered = (url) => {
+    const { cover } = URL_META.applyAssociations({
       url: new URL(url, rootDirectoryUrl).href,
-      associations
+      associations,
     });
     return cover;
   };
+
   const v8CoverageFiltered = {
     ...v8Coverage,
-    result: v8Coverage.result.filter(fileReport => urlShouldBeCovered(fileReport.url))
+    result: v8Coverage.result.filter((fileReport) =>
+      urlShouldBeCovered(fileReport.url),
+    ),
   };
   return v8CoverageFiltered;
 };

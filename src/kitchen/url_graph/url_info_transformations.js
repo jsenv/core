@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { parseJsWithAcorn } from "@jsenv/ast";
 import { bufferToEtag } from "@jsenv/filesystem";
 import { urlToRelativeUrl, isFileSystemPath } from "@jsenv/urls";
 import {
@@ -65,10 +66,82 @@ export const createUrlInfoTransformer = ({
     return sourcemap;
   };
 
-  const initTransformations = async (urlInfo, context) => {
-    urlInfo.originalContentEtag =
-      urlInfo.originalContentEtag ||
-      bufferToEtag(Buffer.from(urlInfo.originalContent));
+  const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
+    const contentAstDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "contentAst",
+    );
+    if (contentAstDescriptor.value === undefined) {
+      defineVolaliteGetter(urlInfo, "contentAst", () => {
+        if (urlInfo.content === urlInfo.originalContent) {
+          return urlInfo.originalContentAst;
+        }
+        const ast = getContentAst(urlInfo.content, urlInfo.type, urlInfo.url);
+        return ast;
+      });
+    }
+    const contentEtagDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "contentEtag",
+    );
+    if (contentEtagDescriptor.value === undefined) {
+      defineVolaliteGetter(urlInfo, "contentEtag", () => {
+        if (urlInfo.content === urlInfo.originalContent) {
+          return urlInfo.originalContentEtag;
+        }
+        return getContentEtag(urlInfo.content);
+      });
+    }
+  };
+
+  const initTransformations = async (
+    urlInfo,
+    {
+      content,
+      contentAst, // most of the time will be undefined
+      contentEtag, // in practice it's always undefined
+      originalContent,
+      originalContentAst, // most of the time will be undefined
+      originalContentEtag, // in practice always undefined
+      sourcemap,
+    },
+    context,
+  ) => {
+    urlInfo.contentFinalized = false;
+    urlInfo.originalContentAst = originalContentAst;
+    urlInfo.originalContentEtag = originalContentEtag;
+    if (originalContent !== urlInfo.originalContent) {
+      urlInfo.originalContent = originalContent;
+    }
+    const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "originalContentAst",
+    );
+    if (originalContentAstDescriptor.value === undefined) {
+      defineVolaliteGetter(urlInfo, "originalContentAst", () => {
+        return getContentAst(
+          urlInfo.originalContent,
+          urlInfo.type,
+          urlInfo.url,
+        );
+      });
+    }
+    const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
+      urlInfo,
+      "originalContentEtag",
+    );
+    if (originalContentEtagDescriptor.value === undefined) {
+      defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
+        return bufferToEtag(Buffer.from(urlInfo.originalContent));
+      });
+    }
+
+    urlInfo.contentAst = contentAst;
+    urlInfo.contentEtag = contentEtag;
+    urlInfo.content = content;
+    defineGettersOnPropertiesDerivedFromContent(urlInfo);
+
+    urlInfo.sourcemap = sourcemap;
     if (!sourcemapsEnabled) {
       return;
     }
@@ -93,7 +166,9 @@ export const createUrlInfoTransformer = ({
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
 
-    // already loaded during "load" hook (happens during build)
+    // case #1: already loaded during "load" hook
+    // - happens during build
+    // - happens for url converted during fetch (js_module_fallback for instance)
     if (urlInfo.sourcemap) {
       const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder(
         {
@@ -107,7 +182,7 @@ export const createUrlInfoTransformer = ({
       return;
     }
 
-    // check for existing sourcemap for this content
+    // case #2: check for existing sourcemap for this content
     const sourcemapFound = SOURCEMAP.readComment({
       contentType: urlInfo.contentType,
       content: urlInfo.content,
@@ -125,34 +200,48 @@ export const createUrlInfoTransformer = ({
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference });
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
+        urlInfo.sourcemapReference = sourcemapReference;
         urlInfo.sourcemap = sourcemap;
+        return;
       } catch (e) {
         logger.error(`Error while handling existing sourcemap: ${e.message}`);
         return;
       }
-    } else {
-      const [, sourcemapUrlInfo] = injectSourcemapPlaceholder({
-        urlInfo,
-        specifier: urlInfo.sourcemapGeneratedUrl,
-      });
-      sourcemapUrlInfo.isInline = sourcemaps === "inline";
     }
+
+    // case #3: prepare a sourcemap
+    const [sourcemapReference, sourcemapUrlInfo] = injectSourcemapPlaceholder({
+      urlInfo,
+      specifier: urlInfo.sourcemapGeneratedUrl,
+    });
+    urlInfo.sourcemapReference = sourcemapReference;
+    sourcemapUrlInfo.isInline = sourcemaps === "inline";
   };
 
-  const applyIntermediateTransformations = (urlInfo, transformations) => {
+  const applyTransformations = (urlInfo, transformations) => {
     if (!transformations) {
       return;
     }
-    const { type, contentType, content, sourcemap, sourcemapIsWrong } =
-      transformations;
+    const {
+      type,
+      contentType,
+      content,
+      contentAst, // undefined most of the time
+      contentEtag, // in practice always undefined
+      sourcemap,
+      sourcemapIsWrong,
+    } = transformations;
     if (type) {
       urlInfo.type = type;
     }
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    if (content) {
+    if (content && content !== urlInfo.content) {
       urlInfo.content = content;
+      urlInfo.contentAst = contentAst;
+      urlInfo.contentEtag = contentEtag;
+      defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }
     if (sourcemapsEnabled && sourcemap) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
@@ -176,12 +265,14 @@ export const createUrlInfoTransformer = ({
       // "no sourcemap is better than wrong sourcemap"
       urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
     }
+
+    if (urlInfo.contentFinalized) {
+      applyTransformationsEffects(urlInfo);
+    }
   };
 
-  const applyFinalTransformations = (urlInfo, transformations) => {
-    if (transformations) {
-      applyIntermediateTransformations(urlInfo, transformations);
-    }
+  const applyTransformationsEffects = (urlInfo) => {
+    urlInfo.contentFinalized = true;
     if (urlInfo.sourcemapReference) {
       if (
         sourcemapsEnabled &&
@@ -235,16 +326,54 @@ export const createUrlInfoTransformer = ({
         urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
       }
     }
-
-    urlInfo.contentEtag =
-      urlInfo.content === urlInfo.originalContent
-        ? urlInfo.originalContentEtag
-        : bufferToEtag(Buffer.from(urlInfo.content));
   };
 
   return {
     initTransformations,
-    applyIntermediateTransformations,
-    applyFinalTransformations,
+    applyTransformations,
+    applyTransformationsEffects,
   };
+};
+
+const defineVolaliteGetter = (object, property, getter) => {
+  const restore = (value) => {
+    Object.defineProperty(object, property, {
+      enumerable: true,
+      configurable: true,
+      writable: true,
+      value,
+    });
+  };
+
+  Object.defineProperty(object, property, {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const value = getter();
+      restore(value);
+      return value;
+    },
+    set: restore,
+  });
+};
+
+const getContentAst = (content, type, url) => {
+  if (type === "js_module") {
+    return parseJsWithAcorn({
+      js: content,
+      url,
+      isJsModule: true,
+    });
+  }
+  if (type === "js_classic") {
+    return parseJsWithAcorn({
+      js: content,
+      url,
+    });
+  }
+  return null;
+};
+
+const getContentEtag = (content) => {
+  return bufferToEtag(Buffer.from(content));
 };

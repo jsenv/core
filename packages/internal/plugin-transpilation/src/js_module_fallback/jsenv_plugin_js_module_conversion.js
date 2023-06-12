@@ -4,11 +4,12 @@
  */
 
 import { injectQueryParams } from "@jsenv/urls";
-import { convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
+import {
+  convertJsModuleToJsClassic,
+  systemJsClientFileUrlDefault,
+} from "@jsenv/js-module-fallback";
 
 export const jsenvPluginJsModuleConversion = ({
-  systemJsInjection,
-  systemJsClientFileUrl,
   generateJsClassicFilename,
 }) => {
   const isReferencingJsModule = (reference) => {
@@ -95,7 +96,10 @@ export const jsenvPluginJsModuleConversion = ({
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && jsModuleUrlInfo.dependents.size === 0) {
+      } else if (
+        context.build &&
+        !context.urlGraph.hasDependent(jsModuleUrlInfo)
+      ) {
         context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
       }
 
@@ -109,12 +113,16 @@ export const jsenvPluginJsModuleConversion = ({
         // by an other file (for entry points)
         // or to be able to import when it uses import
         outputFormat = "system";
+        urlInfo.type = "js_classic";
+        context.referenceUtils.foundSideEffectFile({
+          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          expectedType: "js_classic",
+          line: 0,
+          column: 0,
+        });
       }
-      urlInfo.data.jsClassicFormat = outputFormat;
       const { content, sourcemap } = await convertJsModuleToJsClassic({
         rootDirectoryUrl: context.rootDirectoryUrl,
-        systemJsInjection,
-        systemJsClientFileUrl,
         input: jsModuleUrlInfo.content,
         inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleUrlInfo.sourcemap,

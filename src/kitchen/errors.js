@@ -110,8 +110,8 @@ export const createFetchUrlContentError = ({
   if (error.code === "PARSE_ERROR") {
     return createFailedToFetchUrlContentError({
       "code": "PARSE_ERROR",
-      "reason": error.reason,
-      "parse error message": error.cause.message,
+      "reason": error.reasonCode,
+      ...(error.cause ? { "parse error message": error.cause.message } : {}),
       "parse error trace": error.traceMessage,
     });
   }

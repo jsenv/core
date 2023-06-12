@@ -1,5 +1,6 @@
 import toPropertyKey from "../toPropertyKey/toPropertyKey.js";
-export default ((obj, key, value) => {
+
+export default (obj, key, value) => {
   key = toPropertyKey(key);
   // Shortcircuit the slow defineProperty path when possible.
   // We are trying to avoid issues where setters defined on the
@@ -11,10 +12,10 @@ export default ((obj, key, value) => {
       value,
       enumerable: true,
       configurable: true,
-      writable: true
-    });
+      writable: true,
+    })
   } else {
-    obj[key] = value;
+    obj[key] = value
   }
-  return obj;
-});
+  return obj
+}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script>
+      window.aPromise = new Promise((resolve) => {
+        window.resolveAPromise = resolve;
+      });
+      window.bPromise = new Promise((resolve) => {
+        window.resolveBPromise = resolve;
+      });
+    </script>
+    <script type="module" src="./a.js"></script>
+    <script src="./b.js?as_js_classic"></script>
+    <script>
+      window.resultPromise = Promise.all([
+        window.aPromise,
+        window.bPromise,
+      ]).then(([a, b]) => {
+        return a + b;
+      });
+    </script>
+  </body>
+</html>

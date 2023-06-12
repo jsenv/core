@@ -1,6 +1,5 @@
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 
-import { createMagicSource } from "@jsenv/sourcemap";
 import {
   parseHtmlString,
   injectHtmlNodeAsEarlyAsPossible,
@@ -9,56 +8,34 @@ import {
 } from "@jsenv/ast";
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
+import { prependContent } from "../kitchen/prepend_content.js";
 
 export const injectVersionMappingsAsGlobal = async ({
-  urlInfo,
   kitchen,
+  urlInfo,
   versionMappings,
 }) => {
-  const injector = injectors[urlInfo.type];
-  if (injector) {
-    const { content, sourcemap } = await injector(urlInfo, {
-      versionMappings,
-      minification: kitchen.kitchenContext.minification,
-    });
-    kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
-      content,
-      sourcemap,
+  if (urlInfo.type === "html") {
+    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
+      type: "js_classic",
+      content: generateClientCodeForVersionMappings(versionMappings, {
+        globalName: "window",
+        minification: kitchen.kitchenContext.minification,
+      }),
     });
   }
-};
-const injectors = {
-  html: (urlInfo, { versionMappings, minification }) => {
-    const htmlAst = parseHtmlString(urlInfo.content, {
-      storeOriginalPositions: false,
-    });
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        textContent: generateClientCodeForVersionMappings(versionMappings, {
-          globalName: "window",
-          minification,
-        }),
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
+      type: "js_classic",
+      content: generateClientCodeForVersionMappings(versionMappings, {
+        globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+        minification: kitchen.kitchenContext.minification,
       }),
-      "jsenv:versioning",
-    );
-    return {
-      content: stringifyHtmlAst(htmlAst),
-    };
-  },
-  js_classic: (...args) => jsInjector(...args),
-  js_module: (...args) => jsInjector(...args),
+    });
+  }
+  return null;
 };
-const jsInjector = (urlInfo, { versionMappings, minification }) => {
-  const magicSource = createMagicSource(urlInfo.content);
-  const code = generateClientCodeForVersionMappings(versionMappings, {
-    globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-    minification,
-  });
-  magicSource.prepend(`${code}\n\n`);
-  return magicSource.toContentAndSourcemap();
-};
+
 const generateClientCodeForVersionMappings = (
   versionMappings,
   { globalName, minification },
@@ -77,8 +54,8 @@ const generateClientCodeForVersionMappings = (
 };
 
 export const injectVersionMappingsAsImportmap = async ({
-  urlInfo,
   kitchen,
+  urlInfo,
   versionMappings,
 }) => {
   const htmlAst = parseHtmlString(urlInfo.content, {
@@ -98,7 +75,7 @@ export const injectVersionMappingsAsImportmap = async ({
     }),
     "jsenv:versioning",
   );
-  kitchen.urlInfoTransformer.applyFinalTransformations(urlInfo, {
+  kitchen.urlInfoTransformer.applyTransformations(urlInfo, {
     content: stringifyHtmlAst(htmlAst),
   });
 };

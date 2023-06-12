@@ -124,7 +124,7 @@ const jsenvPluginAsModules = () => {
           specifier: jsonReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && jsonUrlInfo.dependents.size === 0) {
+      } else if (context.build && !context.urlGraph.hasDependent(jsonUrlInfo)) {
         context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
@@ -165,7 +165,7 @@ const jsenvPluginAsModules = () => {
           specifier: cssReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && cssUrlInfo.dependents.size === 0) {
+      } else if (context.build && !context.urlGraph.hasDependent(cssUrlInfo)) {
         context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
@@ -215,7 +215,7 @@ export default stylesheet;`,
           specifier: textReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && textUrlInfo.dependents.size === 0) {
+      } else if (context.build && !context.urlGraph.hasDependent(textUrlInfo)) {
         context.urlGraph.deleteUrlInfo(textUrlInfo.url);
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {

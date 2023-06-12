@@ -2,6 +2,7 @@ import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
@@ -17,6 +18,10 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./snapshots/build/", import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });

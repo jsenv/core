@@ -1,6 +1,6 @@
 ;(function() {
   var __versionMappings__ = {
-  "/js/file.nomodule.js?dynamic_import=": "/js/file.nomodule.js?dynamic_import&v=60e5d8ae"
+  "/js/file.nomodule.js": "/js/file.nomodule.js?v=60e5d8ae"
 };
   window.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
@@ -490,7 +490,7 @@ System.register([], function (_export, _context) {
       window.getResult = async () => {
         const {
           answer
-        } = await _context.import(__v__("/js/file.nomodule.js?dynamic_import="));
+        } = await _context.import(__v__("/js/file.nomodule.js"));
         await new Promise(resolve => {
           setTimeout(resolve, 100);
         });

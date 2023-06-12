@@ -7,8 +7,10 @@ import { buildServer } from "./update_build_server.mjs";
 
 await ensureEmptyDirectory(new URL("./snapshots/html/a/", import.meta.url));
 await ensureEmptyDirectory(new URL("./snapshots/html/b/", import.meta.url));
-await ensureEmptyDirectory(new URL("./snapshots/screen/a/", import.meta.url));
-await ensureEmptyDirectory(new URL("./snapshots/screen/b/", import.meta.url));
+if (!process.env.FROM_TESTS) {
+  await ensureEmptyDirectory(new URL("./snapshots/screen/a/", import.meta.url));
+  await ensureEmptyDirectory(new URL("./snapshots/screen/b/", import.meta.url));
+}
 const debug = false;
 const browser = await chromium.launch({
   headless: !debug, // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)

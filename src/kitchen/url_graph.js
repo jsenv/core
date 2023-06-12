@@ -62,31 +62,6 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     };
     return search(parentUrlInfo);
   };
-  const findDependent = (urlInfo, visitor) => {
-    const seen = [urlInfo.url];
-    let found = null;
-    const iterate = (currentUrlInfo) => {
-      for (const dependentUrl of currentUrlInfo.dependents) {
-        if (seen.includes(dependentUrl)) {
-          continue;
-        }
-        if (found) {
-          break;
-        }
-        seen.push(dependentUrl);
-        const dependentUrlInfo = getUrlInfo(dependentUrl);
-        if (visitor(dependentUrlInfo)) {
-          found = dependentUrlInfo;
-        }
-        if (found) {
-          break;
-        }
-        iterate(dependentUrlInfo);
-      }
-    };
-    iterate(urlInfo);
-    return found;
-  };
 
   const updateReferences = (urlInfo, references) => {
     const setOfDependencyUrls = new Set();
@@ -103,11 +78,12 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
       }
       const dependencyUrl = reference.url;
       setOfDependencyUrls.add(dependencyUrl);
-      // an implicit reference do not appear in the file but a non-explicited file have an impact on it
-      // (package.json on import resolution for instance)
+      // an implicit reference do not appear in the file but the non explicited file
+      // have an impact on it
+      // -> package.json on import resolution for instance
       // in that case:
       // - file depends on the implicit file (it must autoreload if package.json is modified)
-      // - cache validity for the file depends on the implicit file (it must be re-cooked in package.json is modified)
+      // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
       if (reference.isImplicit) {
         setOfImplicitUrls.add(dependencyUrl);
       }
@@ -207,6 +183,55 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     iterate(urlInfo);
   };
 
+  const getEntryPoints = () => {
+    const entryPoints = [];
+    urlInfoMap.forEach((urlInfo) => {
+      if (urlInfo.isEntryPoint) {
+        entryPoints.push(urlInfo);
+      }
+    });
+    return entryPoints;
+  };
+
+  const hasDependent = (urlInfo) => {
+    for (const dependentUrl of urlInfo.dependents) {
+      const dependentUrlInfo = getUrlInfo(dependentUrl);
+      for (const reference of dependentUrlInfo.references) {
+        if (reference.url === urlInfo.url) {
+          if (
+            !reference.isInline &&
+            reference.next &&
+            reference.next.isInline
+          ) {
+            // the url info was inlined, an other reference is required
+            // to consider the non-inlined urlInfo as used
+            continue;
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  const isUsed = (urlInfo) => {
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion or js_classic conversion
+    // - urlInfo for a file that is now inlined
+    if (urlInfo.isEntryPoint) {
+      return true;
+    }
+    // if (urlInfo.type === "sourcemap") {
+    //   return true;
+    // }
+    // check if there is a valid reference to this urlInfo
+    if (hasDependent(urlInfo)) {
+      return true;
+    }
+    return false;
+  };
+
   return {
     name,
     createUrlInfoCallbackRef,
@@ -217,11 +242,13 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     getUrlInfo,
     deleteUrlInfo,
     getParentIfInline,
+    getEntryPoints,
+    hasDependent,
+    isUsed,
 
     inferReference,
     updateReferences,
     considerModified,
-    findDependent,
 
     toObject: () => {
       const data = {};
@@ -269,7 +296,10 @@ const createUrlInfo = (url) => {
     filename: "",
     isEntryPoint: false,
     originalContent: undefined,
+    originalContentAst: undefined,
     content: undefined,
+    contentAst: undefined,
+    contentFinalized: false,
 
     sourcemap: null,
     sourcemapReference: null,

@@ -4,68 +4,74 @@
  */
 
 const urlHotMetas = {};
-const createImportMetaHot = importMetaUrl => {
+
+const createImportMetaHot = (importMetaUrl) => {
   const data = {};
   const url = asUrlWithoutHmrQuery(importMetaUrl);
+
   return {
     data,
     accept: (firstArg, secondArg) => {
       if (!firstArg) {
         addUrlMeta(url, {
           dependencies: [url],
-          acceptCallback: () => {}
+          acceptCallback: () => {},
         });
         return;
       }
       if (typeof firstArg === "function") {
         addUrlMeta(url, {
           dependencies: [url],
-          acceptCallback: firstArg
+          acceptCallback: firstArg,
         });
         return;
       }
       if (typeof firstArg === "string") {
         addUrlMeta(url, {
           dependencies: [firstArg],
-          acceptCallback: secondArg
+          acceptCallback: secondArg,
         });
         return;
       }
       if (Array.isArray(firstArg)) {
         addUrlMeta(url, {
           dependencies: firstArg,
-          acceptCallback: secondArg
+          acceptCallback: secondArg,
         });
         return;
       }
-      throw new Error(`invalid call to import.meta.hot.accept(), received ${firstArg}`);
+      throw new Error(
+        `invalid call to import.meta.hot.accept(), received ${firstArg}`,
+      );
     },
-    dispose: callback => {
+    dispose: (callback) => {
       addUrlMeta(url, {
         disposeCallback: () => {
           return callback(data);
-        }
+        },
       });
     },
     decline: () => {
       addUrlMeta(url, {
-        declined: true
+        declined: true,
       });
     },
     invalidate: () => {
       addUrlMeta(url, {
-        invalidated: true
+        invalidated: true,
       });
-    }
+    },
   };
 };
+
 const addUrlMeta = (url, meta) => {
   urlHotMetas[url] = {
     ...urlHotMetas[url],
-    ...meta
+    ...meta,
   };
 };
-const asUrlWithoutHmrQuery = url => {
+
+const asUrlWithoutHmrQuery = (url) => {
   const urlObject = new URL(url);
   if (urlObject.searchParams.has("hmr")) {
     urlObject.searchParams.delete("hmr");

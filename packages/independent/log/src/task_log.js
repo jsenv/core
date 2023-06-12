@@ -5,7 +5,7 @@ import { startSpinner } from "./spinner.js";
 
 export const createTaskLog = (
   label,
-  { disabled = false, stopOnWriteFromOutside } = {},
+  { disabled = false, animated = true, stopOnWriteFromOutside } = {},
 ) => {
   if (disabled) {
     return {
@@ -22,6 +22,7 @@ export const createTaskLog = (
     log,
     render: () => message,
     stopOnWriteFromOutside,
+    animated,
   });
   return {
     setRightText: (value) => {

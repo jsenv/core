@@ -110,8 +110,8 @@ const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
   });
   const magicSource = createMagicSource(urlInfo.content);
   magicSource.prepend(
-    `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier}
-import.meta.hot = createImportMetaHot(import.meta.url)
+    `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier};
+import.meta.hot = createImportMetaHot(import.meta.url);
 `,
   );
   return magicSource.toContentAndSourcemap();
