@@ -44,7 +44,7 @@ jobs:
         run: npm install
       - name: Install playwright
         run: npm run playwright:install
-      - name: Install certificate # needed for @jsenv/server and @jsenv/service-worker tests
+      - name: Install certificate # needed for @jsenv/service-worker tests
         if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
         run: node ./scripts/test/certificate_install.mjs
       - name: Run ESLint
