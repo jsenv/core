@@ -11,7 +11,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { createUrlGraph } from "./url_graph.js";
-import { createReference } from "./references.js";
+import { createReference } from "./url_graph/reference.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
@@ -34,7 +34,7 @@ export const createKitchen = ({
   ignore,
   ignoreProtocol = "remove",
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  urlGraph = createUrlGraph({ name }),
+  urlGraph,
   dev = false,
   build = false,
   runtimeCompat,
@@ -50,6 +50,9 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
+  if (urlGraph === undefined) {
+    urlGraph = createUrlGraph({ name });
+  }
   const callbacksToConsiderGraphLoaded = [];
 
   const logger = createLogger({ logLevel });
@@ -234,6 +237,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     }
   };
   kitchenContext.resolveReference = resolveReference;
+
+  kitchenContext.prepareReference = (props) => {
+    const ref = createReference(props);
+    return resolveReference(ref);
+  };
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
@@ -517,20 +525,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.cook = cook;
 
-  const prepareEntryPoint = (params) => {
-    return resolveReference(
-      createReference({
-        ...params,
-        isEntryPoint: true,
-      }),
-    );
-  };
+  const prepareEntryPoint = (params) =>
+    kitchenContext.prepareReference({
+      ...params,
+      isEntryPoint: true,
+    });
   kitchenContext.prepareEntryPoint = prepareEntryPoint;
-
-  const injectReference = (params) => {
-    return resolveReference(createReference(params));
-  };
-  kitchenContext.injectReference = injectReference;
 
   const getWithoutSearchParam = ({
     urlInfo,
@@ -582,7 +582,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     rootDirectoryUrl,
     kitchenContext,
     cook,
-    injectReference,
+    prepareReference: kitchenContext.prepareReference,
     injectForwardedSideEffectFiles: async () => {
       await Promise.all(
         callbacksToConsiderGraphLoaded.map(async (callback) => {

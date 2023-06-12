@@ -702,7 +702,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // reference injected during "postbuild":
               // - happens for "js_module_fallback" injecting "s.js"
               if (reference.injected) {
-                const [ref, rawUrlInfo] = rawKitchen.injectReference({
+                const [ref, rawUrlInfo] = rawKitchen.prepareReference({
                   ...reference,
                   parentUrl: buildDirectoryRedirections.get(
                     reference.parentUrl,

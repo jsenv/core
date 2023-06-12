@@ -3,9 +3,8 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createReferences } from "./references.js";
 
-export const createUrlGraph = ({ name = "anonymous" } = {}) => {
+export const createUrlGraph = ({ rootDirectoryUrl, name = "anonymous" }) => {
   const urlGraph = {};
-
   const createUrlInfoCallbackRef = { current: () => {} };
   const prunedUrlInfosCallbackRef = { current: () => {} };
 
@@ -31,9 +30,6 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     urlInfoMap.set(url, urlInfo);
     createUrlInfoCallbackRef.current(urlInfo);
     return urlInfo;
-  };
-  const getParentIfInline = (urlInfo) => {
-    return urlInfo.isInline ? getUrlInfo(urlInfo.inlineUrlSite.url) : urlInfo;
   };
 
   const inferReference = (specifier, parentUrl) => {
@@ -67,33 +63,6 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return search(parentUrlInfo);
   };
 
-  const considerModified = (urlInfo, modifiedTimestamp = Date.now()) => {
-    const seen = [];
-    const iterate = (urlInfo) => {
-      if (seen.includes(urlInfo.url)) {
-        return;
-      }
-      seen.push(urlInfo.url);
-      urlInfo.modifiedTimestamp = modifiedTimestamp;
-      urlInfo.originalContentEtag = undefined;
-      urlInfo.contentEtag = undefined;
-      urlInfo.dependents.forEach((dependentUrl) => {
-        const dependentUrlInfo = getUrlInfo(dependentUrl);
-        const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
-        if (!hotAcceptDependencies.includes(urlInfo.url)) {
-          iterate(dependentUrlInfo);
-        }
-      });
-      urlInfo.dependencies.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
-        if (dependencyUrlInfo.isInline) {
-          iterate(dependencyUrlInfo);
-        }
-      });
-    };
-    iterate(urlInfo);
-  };
-
   const getEntryPoints = () => {
     const entryPoints = [];
     urlInfoMap.forEach((urlInfo) => {
@@ -104,47 +73,12 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     return entryPoints;
   };
 
-  const hasDependent = (urlInfo) => {
-    for (const dependentUrl of urlInfo.dependents) {
-      const dependentUrlInfo = getUrlInfo(dependentUrl);
-      for (const reference of dependentUrlInfo.references) {
-        if (reference.url === urlInfo.url) {
-          if (
-            !reference.isInline &&
-            reference.next &&
-            reference.next.isInline
-          ) {
-            // the url info was inlined, an other reference is required
-            // to consider the non-inlined urlInfo as used
-            continue;
-          }
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-
-  const isUsed = (urlInfo) => {
-    // nothing uses this url anymore
-    // - versioning update inline content
-    // - file converted for import assertion or js_classic conversion
-    // - urlInfo for a file that is now inlined
-    if (urlInfo.isEntryPoint) {
-      return true;
-    }
-    // if (urlInfo.type === "sourcemap") {
-    //   return true;
-    // }
-    // check if there is a valid reference to this urlInfo
-    if (hasDependent(urlInfo)) {
-      return true;
-    }
-    return false;
-  };
+  const rootUrlInfo = createUrlInfo(rootDirectoryUrl);
+  rootUrlInfo.graph = urlGraph;
 
   Object.assign(urlGraph, {
     name,
+    rootUrlInfo,
     createUrlInfoCallbackRef,
     prunedUrlInfosCallbackRef,
 
@@ -152,13 +86,9 @@ export const createUrlGraph = ({ name = "anonymous" } = {}) => {
     reuseOrCreateUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
-    getParentIfInline,
     getEntryPoints,
-    hasDependent,
-    isUsed,
 
     inferReference,
-    considerModified,
 
     toObject: () => {
       const data = {};
@@ -230,6 +160,74 @@ const createUrlInfo = (url) => {
     debug: false,
   };
   urlInfo.references = createReferences(urlInfo);
+  urlInfo.hasDependent = () => {
+    for (const dependentUrl of urlInfo.dependents) {
+      const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
+      for (const reference of dependentUrlInfo.references) {
+        if (reference.url === urlInfo.url) {
+          if (
+            !reference.isInline &&
+            reference.next &&
+            reference.next.isInline
+          ) {
+            // the url info was inlined, an other reference is required
+            // to consider the non-inlined urlInfo as used
+            continue;
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  urlInfo.isUsed = () => {
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion or js_classic conversion
+    // - urlInfo for a file that is now inlined
+    if (urlInfo.isEntryPoint) {
+      return true;
+    }
+    // if (urlInfo.type === "sourcemap") {
+    //   return true;
+    // }
+    // check if there is a valid reference to this urlInfo
+    if (urlInfo.hasDependent()) {
+      return true;
+    }
+    return false;
+  };
+  urlInfo.getParentIfInline = (urlInfo) => {
+    return urlInfo.isInline
+      ? urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url)
+      : urlInfo;
+  };
+  urlInfo.considerModified = (modifiedTimestamp = Date.now()) => {
+    const seen = [];
+    const iterate = (urlInfo) => {
+      if (seen.includes(urlInfo.url)) {
+        return;
+      }
+      seen.push(urlInfo.url);
+      urlInfo.modifiedTimestamp = modifiedTimestamp;
+      urlInfo.originalContentEtag = undefined;
+      urlInfo.contentEtag = undefined;
+      urlInfo.dependents.forEach((dependentUrl) => {
+        const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
+        const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
+        if (!hotAcceptDependencies.includes(urlInfo.url)) {
+          iterate(dependentUrlInfo);
+        }
+      });
+      urlInfo.dependencies.forEach((dependencyUrl) => {
+        const dependencyUrlInfo = urlInfo.graph.getUrlInfo(dependencyUrl);
+        if (dependencyUrlInfo.isInline) {
+          iterate(dependencyUrlInfo);
+        }
+      });
+    };
+    iterate(urlInfo);
+  };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo;

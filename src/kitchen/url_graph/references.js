@@ -1,7 +1,7 @@
 import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 
-import { GRAPH_VISITOR } from "./url_graph/url_graph_visitor.js";
-import { prependContent } from "./prepend_content.js";
+import { prependContent } from "../prepend_content.js";
+import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
 // const inlineContentClientFileUrl = new URL(
 //   "./client/inline_content.js",
@@ -228,15 +228,23 @@ export const createReferences = (urlInfo) => {
             urlInfo,
             sideEffectFileUrlInfo,
           );
-          sideEffectFileReference.becomesInline({
+          const inlineProps = getInlineReferenceProps(sideEffectFileReference, {
+            urlInfo,
+            line: 0,
+            column: 0,
+          });
+          const sideEffectFileReferenceInlined = createAndResolve({
+            ...inlineProps,
             specifierLine: 0,
             specifierColumn: 0,
             specifier: sideEffectFileReference.generatedSpecifier,
             content: sideEffectFileUrlInfo.content,
             contentType: sideEffectFileUrlInfo.contentType,
-            parentUrl: urlInfo.url,
-            parentContent: urlInfo.content,
           });
+          urlInfo.references.replace(
+            sideEffectFileReference,
+            sideEffectFileReferenceInlined,
+          );
         });
         return [sideEffectFileReference, sideEffectFileUrlInfo];
       };
@@ -321,16 +329,18 @@ export const createReferences = (urlInfo) => {
             sideEffectFileUrlInfo,
           );
           await sideEffectFileReference.readGeneratedSpecifier();
-          sideEffectFileReference.becomesInline({
-            specifier: sideEffectFileReference.generatedSpecifier,
+          const inlineProps = getInlineReferenceProps(sideEffectFileReference, {
+            urlInfo: entryPointUrlInfo,
             // ideally get the correct line and column
             // (for js it's 0, but for html it's different)
-            specifierLine: 0,
-            specifierColumn: 0,
+            line: 0,
+            column: 0,
+          });
+          sideEffectFileReference.movesTo(entryPointUrlInfo, {
+            specifier: sideEffectFileReference.generatedSpecifier,
             content: sideEffectFileUrlInfo.content,
             contentType: sideEffectFileUrlInfo.contentType,
-            parentUrl: entryPointUrlInfo.url,
-            parentContent: entryPointUrlInfo.content,
+            ...inlineProps,
           });
         });
       }
@@ -399,203 +409,33 @@ export const createReferences = (urlInfo) => {
   return references;
 };
 
-/*
- * - "http_request"
- * - "entry_point"
- * - "link_href"
- * - "style"
- * - "script"
- * - "a_href"
- * - "iframe_src
- * - "img_src"
- * - "img_srcset"
- * - "source_src"
- * - "source_srcset"
- * - "image_href"
- * - "use_href"
- * - "css_@import"
- * - "css_url"
- * - "js_import"
- * - "js_import_script"
- * - "js_url"
- * - "js_inline_content"
- * - "sourcemap_comment"
- * - "webmanifest_icon_src"
- * - "package_json"
- * - "side_effect_file"
- * */
-export const createReference = ({
-  urlInfo,
-  data = {},
-  node,
-  trace,
-  type,
-  subtype,
-  expectedContentType,
-  expectedType,
-  expectedSubtype,
-  filename,
-  integrity,
-  crossorigin,
-  specifier,
-  specifierStart,
-  specifierEnd,
-  specifierLine,
-  specifierColumn,
-  baseUrl,
-  isOriginalPosition,
-  isEntryPoint = false,
-  isResourceHint = false,
-  isImplicit = false,
-  hasVersioningEffect = false,
-  injected = false,
-  isInline = false,
-  content,
-  contentType,
-  assert,
-  assertNode,
-  typePropertyNode,
-  leadsToADirectory = false,
-  debug = false,
-}) => {
-  if (typeof specifier !== "string") {
-    if (specifier instanceof URL) {
-      specifier = specifier.href;
-    } else {
-      throw new TypeError(`"specifier" must be a string, got ${specifier}`);
-    }
-  }
-  const reference = {
-    urlInfo,
-    original: null,
-    prev: null,
-    next: null,
-    data,
-    node,
+const getInlineReferenceProps = (
+  reference,
+  { urlInfo, isOriginalPosition, line, column, ...rest },
+) => {
+  const trace = traceFromUrlSite({
+    url:
+      urlInfo === undefined
+        ? isOriginalPosition
+          ? reference.urlInfo.url
+          : reference.urlInfo.generatedUrl
+        : reference.urlInfo.url,
+    content:
+      urlInfo === undefined
+        ? isOriginalPosition
+          ? reference.urlInfo.originalContent
+          : reference.urlInfo.content
+        : urlInfo.content,
+    line,
+    column,
+  });
+  return {
     trace,
-    url: null,
-    searchParams: null,
-    generatedUrl: null,
-    generatedSpecifier: null,
-    type,
-    subtype,
-    expectedContentType,
-    expectedType,
-    expectedSubtype,
-    filename,
-    integrity,
-    crossorigin,
-    specifier,
-    specifierStart,
-    specifierEnd,
-    specifierLine,
-    specifierColumn,
-    isOriginalPosition,
-    baseUrl,
-    isEntryPoint,
-    isResourceHint,
-    isImplicit,
-    hasVersioningEffect,
-    version: null,
-    injected,
-    timing: {},
-    // for inline resources the reference contains the content
-    isInline,
-    content,
-    contentType,
-    escape: null,
-    // import assertions (maybe move to data?)
-    assert,
-    assertNode,
-    typePropertyNode,
-    leadsToADirectory,
-    mutation: null,
-    debug,
+    isInline: true,
+    line,
+    column,
+    ...rest,
   };
-  // "formatReferencedUrl" can be async BUT this is an exception
-  // for most cases it will be sync. We want to favor the sync signature to keep things simpler
-  // The only case where it needs to be async is when
-  // the specifier is a `data:*` url
-  // in this case we'll wait for the promise returned by
-  // "formatReferencedUrl"
-  reference.readGeneratedSpecifier = () => {
-    if (reference.generatedSpecifier.then) {
-      return reference.generatedSpecifier.then((value) => {
-        reference.generatedSpecifier = value;
-        return value;
-      });
-    }
-    return reference.generatedSpecifier;
-  };
-
-  reference.becomes = (newReference) => {
-    reference.next = newReference;
-    newReference.original = reference.original || reference;
-    newReference.prev = reference;
-  };
-  reference.becomesInline = ({
-    isOriginalPosition = reference.isOriginalPosition,
-    specifier,
-    specifierLine,
-    specifierColumn,
-    contentType,
-    content,
-    parentUrl = reference.parentUrl,
-    parentContent,
-  }) => {
-    const index = urlInfo.references.current.indexOf(reference);
-    if (index === -1) {
-      throw new Error(`reference do not exists`);
-    }
-    const trace = traceFromUrlSite({
-      url:
-        parentUrl === undefined
-          ? isOriginalPosition
-            ? urlInfo.url
-            : urlInfo.generatedUrl
-          : parentUrl,
-      content:
-        parentContent === undefined
-          ? isOriginalPosition
-            ? urlInfo.originalContent
-            : urlInfo.content
-          : parentContent,
-      line: specifierLine,
-      column: specifierColumn,
-    });
-    const [newReference, newUrlInfo] = urlInfo.references.add(
-      {
-        ...reference,
-        trace,
-        parentUrl,
-        isOriginalPosition,
-        isInline: true,
-        specifier,
-        specifierLine,
-        specifierColumn,
-        contentType,
-        content,
-      },
-      true,
-    );
-    urlInfo.references.current[index] = newReference;
-    reference.becomes(newReference);
-    const currentUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
-    if (
-      currentUrlInfo &&
-      currentUrlInfo !== newUrlInfo &&
-      !urlInfo.graph.isUsed(currentUrlInfo)
-    ) {
-      urlInfo.graph.deleteUrlInfo(reference.url);
-    }
-    return [newReference, newUrlInfo];
-  };
-  reference.becomesExternal = () => {
-    throw new Error("not implemented yet");
-  };
-
-  // Object.preventExtensions(reference) // useful to ensure all properties are declared here
-  return reference;
 };
 
 const traceFromUrlSite = (urlSite) => {
