@@ -4,24 +4,17 @@ import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
 export const createReferences = (urlInfo) => {
-  let _collecting = false;
-  let _context;
-  let _onCallbackToConsiderDishLoaded;
-  let _onCallbackToConsiderGraphLoaded;
-
-  const createAndResolve = (props) => {
-    if (!_collecting) {
-      throw new Error("reference can be created only while collecting");
-    }
-    const [reference, referencedUrlInfo] = _context.prepareReference({
-      urlInfo,
-      ...props,
-    });
-    return [reference, referencedUrlInfo];
-  };
-
   const add = (props) => {
-    const [reference, referencedUrlInfo] = createAndResolve(props);
+    if (urlInfo.contentFinalized && urlInfo.kitchen.context.dev) {
+      throw new Error(
+        `cannot add reference to an urlInfo already sent to the browser
+--- reference specifier ---
+${props.specifier}
+--- url ---
+${urlInfo.url}`,
+      );
+    }
+    const [reference, referencedUrlInfo] = references.prepare(props);
     references.current.push(reference);
     return [reference, referencedUrlInfo];
   };
@@ -30,24 +23,11 @@ export const createReferences = (urlInfo) => {
     prev: [],
     current: [],
     find: (predicate) => references.current.find(predicate),
-
-    startCollecting: ({
-      context,
-      onCallbackToConsiderDishLoaded,
-      onCallbackToConsiderGraphLoaded,
-    }) => {
-      _collecting = true;
-      _context = context;
-      _onCallbackToConsiderDishLoaded = onCallbackToConsiderDishLoaded;
-      _onCallbackToConsiderGraphLoaded = onCallbackToConsiderGraphLoaded;
-
+    startCollecting: () => {
       references.prev = references.current;
       references.current = [];
 
       return () => {
-        _collecting = false;
-        _context = undefined;
-
         const setOfDependencyUrls = new Set();
         const setOfImplicitUrls = new Set();
         references.current.forEach((reference) => {
@@ -146,6 +126,13 @@ export const createReferences = (urlInfo) => {
         });
       };
     },
+    prepare: (props) => {
+      const [reference, referencedUrlInfo] = urlInfo.kitchen.prepareReference({
+        urlInfo,
+        ...props,
+      });
+      return [reference, referencedUrlInfo];
+    },
     found: ({ trace, ...rest }) => {
       if (trace === undefined) {
         trace = traceFromUrlSite(
@@ -213,7 +200,7 @@ export const createReferences = (urlInfo) => {
         line: specifierLine,
         column: specifierColumn,
       });
-      const [sourcemapReference, sourcemapUrlInfo] = createAndResolve(
+      const [sourcemapReference, sourcemapUrlInfo] = references.prepare(
         {
           trace: traceFromUrlSite(sourcemapUrlSite),
           type,
@@ -232,7 +219,7 @@ export const createReferences = (urlInfo) => {
       return [sourcemapReference, sourcemapUrlInfo];
     },
     injectSourcemapPlaceholder: ({ specifier }) => {
-      const [sourcemapReference, sourcemapUrlInfo] = createAndResolve({
+      const [sourcemapReference, sourcemapUrlInfo] = references.prepare({
         trace: {
           message: `sourcemap comment placeholder`,
           url: urlInfo.url,
@@ -245,7 +232,8 @@ export const createReferences = (urlInfo) => {
       });
       urlInfo.sourcemapReference = sourcemapReference;
       sourcemapUrlInfo.type = "sourcemap";
-      sourcemapUrlInfo.isInline = _context.sourcemaps === "inline";
+      sourcemapUrlInfo.isInline =
+        urlInfo.kitchen.context.sourcemaps === "inline";
       return [sourcemapReference, sourcemapUrlInfo];
     },
     // side effect file
@@ -273,16 +261,12 @@ export const createReferences = (urlInfo) => {
         sideEffectFileReference,
         sideEffectFileUrlInfo,
       ) => {
-        _onCallbackToConsiderDishLoaded(async (kitchen) => {
-          await kitchen.cook(sideEffectFileUrlInfo, {
+        urlInfo.kitchen.callbacksToConsiderGraphLoaded.push(async () => {
+          await urlInfo.kitchen.cook(sideEffectFileUrlInfo, {
             reference: sideEffectFileReference,
           });
           await sideEffectFileReference.readGeneratedSpecifier();
-          await prependContent(
-            kitchen.urlInfoTransformer,
-            urlInfo,
-            sideEffectFileUrlInfo,
-          );
+          await prependContent(urlInfo, sideEffectFileUrlInfo);
           const inlineProps = getInlineReferenceProps(sideEffectFileReference, {
             urlInfo,
             line: 0,
@@ -321,7 +305,7 @@ export const createReferences = (urlInfo) => {
       // and it's possible to find it in dependents when using
       // dynamic import for instance
       // (in that case we find the side effect file as it was injected in parent)
-      if (_context.dev) {
+      if (urlInfo.kitchen.context.dev) {
         const urlsBeforeInjection = Array.from(urlInfo.graph.urlInfoMap.keys());
         const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
         if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {

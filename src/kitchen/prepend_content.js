@@ -7,11 +7,7 @@ import {
   applyBabelPlugins,
 } from "@jsenv/ast";
 
-export const prependContent = (
-  urlInfoTransformer,
-  urlInfoReceivingCode,
-  urlInfoToPrepend,
-) => {
+export const prependContent = (urlInfoReceivingCode, urlInfoToPrepend) => {
   // we could also implement:
   // - prepend svg in html
   // - prepend css in html
@@ -22,42 +18,26 @@ export const prependContent = (
     urlInfoReceivingCode.type === "html" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInHtml(
-      urlInfoTransformer,
-      urlInfoReceivingCode,
-      urlInfoToPrepend,
-    );
+    return prependJsClassicInHtml(urlInfoReceivingCode, urlInfoToPrepend);
   }
   if (
     urlInfoReceivingCode.type === "js_classic" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInJsClassic(
-      urlInfoTransformer,
-      urlInfoReceivingCode,
-      urlInfoToPrepend,
-    );
+    return prependJsClassicInJsClassic(urlInfoReceivingCode, urlInfoToPrepend);
   }
   if (
     urlInfoReceivingCode.type === "js_module" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInJsModule(
-      urlInfoTransformer,
-      urlInfoReceivingCode,
-      urlInfoToPrepend,
-    );
+    return prependJsClassicInJsModule(urlInfoReceivingCode, urlInfoToPrepend);
   }
   throw new Error(
     `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,
   );
 };
 
-const prependJsClassicInHtml = (
-  urlInfoTransformer,
-  htmlUrlInfo,
-  urlInfoToPrepend,
-) => {
+const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
   const htmlAst = parseHtmlString(htmlUrlInfo.content);
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
@@ -71,14 +51,12 @@ const prependJsClassicInHtml = (
     "jsenv:core",
   );
   const content = stringifyHtmlAst(htmlAst);
-  urlInfoTransformer.applyTransformations(htmlUrlInfo, { content });
+  htmlUrlInfo.kitchen.urlInfoTransformer.applyTransformations(htmlUrlInfo, {
+    content,
+  });
 };
 
-const prependJsClassicInJsClassic = (
-  urlInfoTransformer,
-  jsUrlInfo,
-  urlInfoToPrepend,
-) => {
+const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
@@ -86,17 +64,13 @@ const prependJsClassicInJsClassic = (
     jsUrlInfo.sourcemap,
     magicResult.sourcemap,
   );
-  urlInfoTransformer.applyTransformations(jsUrlInfo, {
+  jsUrlInfo.kitchen.urlInfoTransformer.applyTransformations(jsUrlInfo, {
     content: magicResult.content,
     sourcemap,
   });
 };
 
-const prependJsClassicInJsModule = async (
-  urlInfoTransformer,
-  jsUrlInfo,
-  urlInfoToPrepend,
-) => {
+const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
   const { code, map } = await applyBabelPlugins({
     babelPlugins: [
       [
@@ -108,7 +82,7 @@ const prependJsClassicInJsModule = async (
     inputIsJsModule: true,
     inputUrl: jsUrlInfo.originalUrl,
   });
-  urlInfoTransformer.applyTransformations(jsUrlInfo, {
+  jsUrlInfo.kitchen.urlInfoTransformer.applyTransformations(jsUrlInfo, {
     content: code,
     sourcemap: map,
   });

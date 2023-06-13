@@ -112,6 +112,7 @@ export const createReference = ({
     mutation: null,
     debug,
   };
+
   // "formatReferencedUrl" can be async BUT this is an exception
   // for most cases it will be sync. We want to favor the sync signature to keep things simpler
   // The only case where it needs to be async is when
@@ -134,17 +135,21 @@ export const createReference = ({
       throw new Error(`reference do not exists`);
     }
     urlInfo.references.current[index] = newReference;
-    // update dependents + dependencies
-    const currentUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
-    if (currentUrlInfo) {
-      const newUrlInfo = urlInfo.graph.getUrlInfo(newReference.url);
+    // remove urlInfo previously referenced if not used anymore
+    const previouslyReferencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
+    if (previouslyReferencedUrlInfo) {
+      const referencedUrlInfo = urlInfo.graph.getUrlInfo(newReference.url);
       if (
-        currentUrlInfo !== newUrlInfo &&
-        !urlInfo.graph.isUsed(currentUrlInfo)
+        previouslyReferencedUrlInfo !== referencedUrlInfo &&
+        !previouslyReferencedUrlInfo.isUsed()
       ) {
         urlInfo.graph.deleteUrlInfo(reference.url);
       }
     }
+    // if this function is called while collecting urlInfo references
+    // there is no need to update dependents + dependencies
+    // because it will be done at the end of reference collection
+    // otherwise we should update dependents + dependencies (TODO)
     storeReferenceTransformation(reference, newReference);
   };
 
@@ -155,7 +160,10 @@ export const createReference = ({
     }
     urlInfo.references.current.splice(index, 1);
     newUrlInfo.references.current.push(newReference);
-    // TODO: update dependents + dependencies
+    // if this function is called while collecting urlInfo references
+    // there is no need to update dependents + dependencies
+    // because it will be done at the end of reference collection
+    // otherwise we should update dependents + dependencies (TODO)
     storeReferenceTransformation(reference, newReference);
   };
 

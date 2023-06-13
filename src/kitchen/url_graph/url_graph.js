@@ -3,7 +3,11 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createReferences } from "./references.js";
 
-export const createUrlGraph = ({ rootDirectoryUrl, name = "anonymous" }) => {
+export const createUrlGraph = ({
+  rootDirectoryUrl,
+  kitchen,
+  name = "anonymous",
+}) => {
   const urlGraph = {};
   const createUrlInfoCallbackRef = { current: () => {} };
   const prunedUrlInfosCallbackRef = { current: () => {} };
@@ -27,6 +31,7 @@ export const createUrlGraph = ({ rootDirectoryUrl, name = "anonymous" }) => {
     if (existingUrlInfo) return existingUrlInfo;
     const urlInfo = createUrlInfo(url);
     urlInfo.graph = urlGraph;
+    urlInfo.kitchen = kitchen;
     urlInfoMap.set(url, urlInfo);
     createUrlInfoCallbackRef.current(urlInfo);
     return urlInfo;
@@ -142,6 +147,7 @@ const createUrlInfo = (url) => {
     content: undefined,
     contentAst: undefined,
     contentFinalized: false,
+    callbacksToConsiderContentReady: [],
 
     sourcemap: null,
     sourcemapReference: null,

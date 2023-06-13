@@ -37,7 +37,7 @@ export const createKitchen = ({
   ignore,
   ignoreProtocol = "remove",
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  urlGraph,
+  graph,
   dev = false,
   build = false,
   runtimeCompat,
@@ -53,10 +53,12 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  if (urlGraph === undefined) {
-    urlGraph = createUrlGraph({ name });
+  const kitchen = {};
+
+  if (graph === undefined) {
+    graph = createUrlGraph({ name });
   }
-  const callbacksToConsiderGraphLoaded = [];
+  kitchen.callbacksToConsiderGraphLoaded = [];
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -64,7 +66,7 @@ export const createKitchen = ({
     logger,
     rootDirectoryUrl,
     mainFilePath,
-    urlGraph,
+    graph,
     dev,
     build,
     runtimeCompat,
@@ -194,7 +196,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       );
       reference.generatedUrl = reference.url;
 
-      const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
+      const urlInfo = graph.reuseOrCreateUrlInfo(reference.url);
       applyReferenceEffectsOnUrlInfo(reference, urlInfo, context);
 
       // This hook must touch reference.generatedUrl, NOT reference.url
@@ -247,7 +249,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
 
   const prepareEntryPoint = (...props) => {
-    return urlGraph.rootUrlInfo.references.prepare({
+    return graph.rootUrlInfo.references.prepare({
       isEntryPoint: true,
       ...props,
     });
@@ -255,7 +257,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
-    urlGraph,
+    graph,
     sourcemaps,
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
@@ -381,41 +383,32 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.fetchUrlContent = fetchUrlContent;
 
-  const _cook = async (urlInfo, dishContext) => {
-    const context = {
+  const _cook = async (urlInfo, customContext) => {
+    const dishContext = {
       ...kitchenContext,
-      ...dishContext,
+      ...customContext,
     };
-    const { cookDuringCook = cook } = dishContext;
-    context.cook = (urlInfo, nestedDishContext) => {
+    const { cookDuringCook = cook } = customContext;
+    dishContext.cook = (urlInfo, nestedCustomContext) => {
       return cookDuringCook(urlInfo, {
-        ...dishContext,
-        ...nestedDishContext,
+        ...customContext,
+        ...nestedCustomContext,
       });
     };
-    context.fetchUrlContent = (urlInfo, { reference }) => {
+    dishContext.fetchUrlContent = (urlInfo, { reference }) => {
       return fetchUrlContent(urlInfo, {
         reference,
-        contextDuringFetch: context,
+        contextDuringFetch: dishContext,
       });
     };
 
     if (!urlInfo.url.startsWith("ignore:")) {
-      const callbacksToConsiderDishLoaded = [];
-      const stopCollectingReferences = urlInfo.references.startCollecting({
-        context,
-        onCallbackToConsiderDishLoaded: (callback) => {
-          callbacksToConsiderDishLoaded.push(callback);
-        },
-        onCallbackToConsiderGraphLoaded: (callback) => {
-          callbacksToConsiderGraphLoaded.push(callback);
-        },
-      });
+      const stopCollectingReferences = urlInfo.references.startCollecting();
 
       // "fetchUrlContent" hook
       await fetchUrlContent(urlInfo, {
-        reference: context.reference,
-        contextDuringFetch: context,
+        reference: dishContext.reference,
+        contextDuringFetch: dishContext,
       });
 
       // "transform" hook
@@ -423,7 +416,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         await pluginController.callAsyncHooks(
           "transformUrlContent",
           urlInfo,
-          context,
+          dishContext,
           (transformReturnValue) => {
             urlInfoTransformer.applyTransformations(
               urlInfo,
@@ -435,7 +428,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         stopCollectingReferences(); // ensure reference are updated even in case of error
         const transformError = createTransformUrlContentError({
           pluginController,
-          reference: context.reference,
+          reference: dishContext.reference,
           urlInfo,
           error,
         });
@@ -449,22 +442,22 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
       // "finalize" hook
       try {
-        for (const callback of callbacksToConsiderDishLoaded) {
+        for (const callback of urlInfo.callbacksToConsiderContentReady) {
           await callback();
         }
-        callbacksToConsiderDishLoaded.length = 0;
+        urlInfo.callbacksToConsiderContentReady.length = 0;
 
         const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
           "finalizeUrlContent",
           urlInfo,
-          context,
+          dishContext,
         );
         urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
         urlInfoTransformer.applyTransformationsEffects(urlInfo);
       } catch (error) {
         throw createFinalizeUrlContentError({
           pluginController,
-          reference: context.reference,
+          reference: dishContext.reference,
           urlInfo,
           error,
         });
@@ -478,7 +471,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       context,
       (cookedReturnValue) => {
         if (typeof cookedReturnValue === "function") {
-          const removePrunedCallback = urlGraph.prunedCallbackList.add(
+          const removePrunedCallback = graph.prunedCallbackList.add(
             ({ prunedUrlInfos, firstUrlInfo }) => {
               const pruned = prunedUrlInfos.find(
                 (prunedUrlInfo) => prunedUrlInfo.url === urlInfo.url,
@@ -515,7 +508,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           if (
             contentIsInlined &&
             context.supervisor &&
-            urlGraph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
+            graph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
           ) {
             contentIsInlined = false;
           }
@@ -578,23 +571,24 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.getWithoutSearchParam = getWithoutSearchParam;
 
-  return {
-    graph: urlGraph,
+  Object.assign(kitchen, {
+    graph,
     pluginController,
     urlInfoTransformer,
     rootDirectoryUrl,
-    kitchenContext,
+    context: kitchenContext,
     cook,
     prepareEntryPoint,
     prepareReference,
     injectForwardedSideEffectFiles: async () => {
       await Promise.all(
-        callbacksToConsiderGraphLoaded.map(async (callback) => {
+        kitchen.callbacksToConsiderGraphLoaded.map(async (callback) => {
           await callback();
         }),
       );
     },
-  };
+  });
+  return kitchen;
 };
 
 const memoizeCook = (cook) => {
