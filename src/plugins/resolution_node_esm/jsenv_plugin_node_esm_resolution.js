@@ -1,4 +1,3 @@
-import { urlTypeFromReference } from "./url_type_from_reference.js";
 import { createNodeEsmResolver } from "./node_esm_resolver.js";
 
 export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
@@ -54,7 +53,7 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
       }
     },
     resolveReference: (reference, context) => {
-      const urlType = urlTypeFromReference(reference, context);
+      const urlType = urlTypeFromReference(reference);
       const resolver = resolvers[urlType];
       return resolver ? resolver(reference, context) : null;
     },
@@ -71,4 +70,15 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
       return null;
     },
   };
+};
+
+const urlTypeFromReference = (reference) => {
+  if (reference.type === "sourcemap_comment") {
+    return "sourcemap";
+  }
+  if (reference.injected) {
+    return reference.expectedType;
+  }
+
+  return reference.urlInfo.type;
 };

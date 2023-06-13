@@ -41,7 +41,7 @@ export const createNodeEsmResolver = ({
       return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
         .href;
     }
-    const parentUrl = reference.baseUrl || reference.parentUrl;
+    const parentUrl = reference.baseUrl || reference.urlInfo.url;
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href;
     }

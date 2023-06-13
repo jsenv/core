@@ -16,7 +16,7 @@ export const jsenvPluginCommonJs = ({
     const packageFileUrl = defaultLookupPackageScope(reference.url);
     if (packageFileUrl) {
       reference.filename = `${reference.specifier}${urlToExtension(
-        reference.parentUrl,
+        reference.urlInfo.url,
       )}`;
     }
   };

@@ -66,7 +66,7 @@ export const jsenvPluginImportmap = () => {
           let fromMapping = false;
           const result = resolveImport({
             specifier: reference.specifier,
-            importer: reference.parentUrl,
+            importer: reference.urlInfo.url,
             importMap: finalImportmap,
             onImportMapping: () => {
               fromMapping = true;

@@ -28,14 +28,10 @@ export const jsenvPluginJsModuleConversion = ({
 
   const shouldPropagateJsModuleConversion = (reference, context) => {
     if (isReferencingJsModule(reference, context)) {
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-      if (!parentUrlInfo) {
-        return false;
-      }
-      const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has(
+      const insideJsClassic = new URL(reference.urlInfo.url).searchParams.has(
         "js_module_fallback",
       );
-      return parentGotAsJsClassic;
+      return insideJsClassic;
     }
     return false;
   };

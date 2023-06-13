@@ -84,7 +84,7 @@ export const jsenvPluginProtocolFile = ({
             magicDirectoryIndex,
             magicExtensions: getExtensionsToTry(
               magicExtensions,
-              reference.parentUrl,
+              reference.urlInfo.url,
             ),
           });
           if (filesystemResolution.stat) {
@@ -166,10 +166,7 @@ export const jsenvPluginProtocolFile = ({
           const directoryEntries = readdirSync(urlObject);
           let filename;
           if (context.reference.type === "filesystem") {
-            const parentUrlInfo = context.urlGraph.getUrlInfo(
-              context.reference.parentUrl,
-            );
-            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
+            filename = `${context.reference.urlInfo.filename}${context.reference.specifier}/`;
           } else {
             filename = `${urlToFilename(urlInfo.url)}/`;
           }
