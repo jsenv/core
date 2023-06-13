@@ -35,14 +35,14 @@ export const jsenvPluginAsJsClassic = () => {
       }
       // cook it to get content + dependencies
       await context.cook(jsModuleUrlInfo, { reference: jsModuleReference });
-      const loader = createUrlGraphLoader(context);
-      loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
+      const graphLoader = createUrlGraphLoader(urlInfo.kitchen);
+      graphLoader.loadReferencedUrlInfos(jsModuleUrlInfo, {
         // we ignore dynamic import to cook lazyly (as browser request the server)
         // these dynamic imports must inherit "?as_js_classic"
         // This is done inside rollup for convenience
         ignoreDynamicImport: true,
       });
-      await loader.getAllLoadDonePromise();
+      await graphLoader.getAllLoadDonePromise();
       const bundleUrlInfos = await bundleJsModules({
         jsModuleUrlInfos: [jsModuleUrlInfo],
         context: {
@@ -92,8 +92,8 @@ export const jsenvPluginAsJsClassic = () => {
       } else if (context.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
-          if (sourceUrlInfo && !context.urlGraph.hasDependent(sourceUrlInfo)) {
-            context.urlGraph.deleteUrlInfo(sourceUrl);
+          if (sourceUrlInfo && !sourceUrlInfo.hasDependent()) {
+            sourceUrlInfo.deleteFromGraph();
           }
         });
       }

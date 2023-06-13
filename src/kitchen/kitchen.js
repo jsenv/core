@@ -55,7 +55,7 @@ export const createKitchen = ({
   const kitchen = {};
 
   if (graph === undefined) {
-    graph = createUrlGraph({ name });
+    graph = createUrlGraph({ name, rootDirectoryUrl, kitchen });
   }
   kitchen.callbacksToConsiderGraphLoaded = [];
 
@@ -401,42 +401,37 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     };
 
     if (!urlInfo.url.startsWith("ignore:")) {
-      const stopCollectingReferences = urlInfo.references.startCollecting();
-
-      // "fetchUrlContent" hook
-      await fetchUrlContent(urlInfo, {
-        reference: dishContext.reference,
-        contextDuringFetch: dishContext,
-      });
-
-      // "transform" hook
-      try {
-        await pluginController.callAsyncHooks(
-          "transformUrlContent",
-          urlInfo,
-          dishContext,
-          (transformReturnValue) => {
-            urlInfoTransformer.applyTransformations(
-              urlInfo,
-              transformReturnValue,
-            );
-          },
-        );
-      } catch (error) {
-        stopCollectingReferences(); // ensure reference are updated even in case of error
-        const transformError = createTransformUrlContentError({
-          pluginController,
+      urlInfo.references.startCollecting(async () => {
+        // "fetchUrlContent" hook
+        await fetchUrlContent(urlInfo, {
           reference: dishContext.reference,
-          urlInfo,
-          error,
+          contextDuringFetch: dishContext,
         });
-        urlInfo.error = transformError;
-        throw transformError;
-      }
 
-      // after "transform" all references from originalContent
-      // and the one injected by plugin are known
-      stopCollectingReferences();
+        // "transform" hook
+        try {
+          await pluginController.callAsyncHooks(
+            "transformUrlContent",
+            urlInfo,
+            dishContext,
+            (transformReturnValue) => {
+              urlInfoTransformer.applyTransformations(
+                urlInfo,
+                transformReturnValue,
+              );
+            },
+          );
+        } catch (error) {
+          const transformError = createTransformUrlContentError({
+            pluginController,
+            reference: dishContext.reference,
+            urlInfo,
+            error,
+          });
+          urlInfo.error = transformError;
+          throw transformError;
+        }
+      });
 
       // "finalize" hook
       try {
@@ -535,7 +530,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     cook,
     prepareEntryPoint,
     prepareReference,
-    injectForwardedSideEffectFiles: async () => {
+    executePendingCallbacks: async () => {
       await Promise.all(
         kitchen.callbacksToConsiderGraphLoaded.map(async (callback) => {
           await callback();

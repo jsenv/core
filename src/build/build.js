@@ -390,24 +390,23 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (outDirectoryUrl) {
           await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
-        const rawUrlGraphLoader = createUrlGraphLoader(
-          rawKitchen.kitchenContext,
-        );
-        Object.keys(entryPoints).forEach((key) => {
-          const [entryReference, entryUrlInfo] =
-            rawKitchen.kitchenContext.prepareEntryPoint({
+        const rawGraphLoader = createUrlGraphLoader(rawKitchen);
+        const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
+        rawRootUrlInfo.references.startCollecting(() => {
+          Object.keys(entryPoints).forEach((key) => {
+            const [, entryUrlInfo] = rawRootUrlInfo.references.found({
               trace: { message: `"${key}" in entryPoints parameter` },
-              parentUrl: sourceDirectoryUrl,
+              isEntryPoint: true,
               type: "entry_point",
               specifier: key,
+              filename: entryPoints[key],
             });
-          entryUrls.push(entryUrlInfo.url);
-          entryUrlInfo.filename = entryPoints[key];
-          entryUrlInfo.isEntryPoint = true;
-          rawUrlGraphLoader.load(entryUrlInfo, { reference: entryReference });
+            entryUrls.push(entryUrlInfo.url);
+          });
         });
-        await rawUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-        await rawKitchen.injectForwardedSideEffectFiles();
+        rawGraphLoader.loadReferencedUrlInfos(rawRootUrlInfo);
+        await rawGraphLoader.getAllLoadDonePromise(buildOperation);
+        await rawKitchen.executePendingCallbacks();
       } catch (e) {
         generateSourceGraph.fail();
         throw e;
@@ -427,7 +426,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
         ignore,
         ignoreProtocol: versioning ? "keep" : "remove",
-        urlGraph: finalKitchen.graph,
         build: true,
         runtimeCompat,
         ...contextSharedDuringBuild,
@@ -789,8 +787,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // happens for:
           // - js import assertions
           // - conversion to js classic using ?as_js_classic or ?js_module_fallback
-          if (!rawKitchen.graph.isUsed(rawUrlInfo)) {
-            rawKitchen.graph.deleteUrlInfo(rawUrlInfo.url);
+          if (!rawUrlInfo.isUsed()) {
+            rawUrlInfo.delete();
+
             return;
           }
           if (rawUrlInfo.isEntryPoint) {
@@ -972,24 +971,22 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (outDirectoryUrl) {
             await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
-          const finalUrlGraphLoader = createUrlGraphLoader(
-            finalKitchen.kitchenContext,
-          );
-          entryUrls.forEach((entryUrl) => {
-            const [finalEntryReference, finalEntryUrlInfo] =
-              finalKitchen.kitchenContext.prepareEntryPoint({
+          const finalGraphLoader = createUrlGraphLoader(finalKitchen);
+          const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
+          finalRootUrlInfo.references.startCollecting(() => {
+            entryUrls.forEach((entryUrl) => {
+              const [, finalEntryUrlInfo] = finalRootUrlInfo.found({
                 trace: { message: `entryPoint` },
-                parentUrl: sourceDirectoryUrl,
+                isEntryPoint: true,
                 type: "entry_point",
                 specifier: entryUrl,
               });
-            finalEntryUrls.push(finalEntryUrlInfo.url);
-            finalUrlGraphLoader.load(finalEntryUrlInfo, {
-              reference: finalEntryReference,
+              finalEntryUrls.push(finalEntryUrlInfo.url);
             });
           });
-          await finalUrlGraphLoader.getAllLoadDonePromise(buildOperation);
-          await finalKitchen.injectForwardedSideEffectFiles();
+          finalGraphLoader.loadReferencedUrlInfos(finalRootUrlInfo);
+          await finalGraphLoader.getAllLoadDonePromise(buildOperation);
+          await finalKitchen.executePendingCallbacks();
         } catch (e) {
           generateBuildGraph.fail();
           throw e;
@@ -1334,12 +1331,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               ? new URL("postbuild/", outDirectoryUrl)
               : undefined,
           });
-          const versioningUrlGraphLoader = createUrlGraphLoader(
-            versioningKitchen.kitchenContext,
-          );
+          const versioningUrlGraphLoader =
+            createUrlGraphLoader(versioningKitchen);
           finalEntryUrls.forEach((finalEntryUrl) => {
             const [finalEntryReference, finalEntryUrlInfo] =
-              finalKitchen.kitchenContext.prepareEntryPoint({
+              finalKitchen.prepareEntryPoint({
                 trace: { message: `entryPoint` },
                 parentUrl: buildDirectoryUrl,
                 type: "entry_point",
@@ -1564,9 +1560,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       delete_unused_urls: {
         const actions = [];
         GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (!finalKitchen.graph.isUsed(urlInfo)) {
+          if (!urlInfo.isUsed()) {
             actions.push(() => {
-              finalKitchen.graph.deleteUrlInfo(urlInfo.url);
+              urlInfo.delete();
             });
           }
         });

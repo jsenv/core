@@ -27,7 +27,7 @@ export const createUrlGraphLoader = (context) => {
 
   const loadReferencedUrlInfos = (
     urlInfo,
-    { ignoreRessourceHint, ignoreDynamicImport },
+    { ignoreRessourceHint, ignoreDynamicImport } = {},
   ) => {
     const { references } = urlInfo;
     references.forEach((reference) => {

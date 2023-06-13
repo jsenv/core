@@ -1,4 +1,4 @@
-export const createUrlGraphLoader = (context) => {
+export const createUrlGraphLoader = (kitchen) => {
   const promises = [];
   const promiseMap = new Map();
   const load = (
@@ -9,7 +9,7 @@ export const createUrlGraphLoader = (context) => {
     const promiseFromData = promiseMap.get(urlInfo);
     if (promiseFromData) return promiseFromData;
     const promise = (async () => {
-      await context.cook(urlInfo, {
+      await kitchen.cook(urlInfo, {
         cookDuringCook: load,
         ...dishContext,
       });
@@ -25,10 +25,10 @@ export const createUrlGraphLoader = (context) => {
 
   const loadReferencedUrlInfos = (
     urlInfo,
-    { ignoreRessourceHint, ignoreDynamicImport },
+    { ignoreRessourceHint, ignoreDynamicImport } = {},
   ) => {
     const { references } = urlInfo;
-    references.forEach((reference) => {
+    references.current.forEach((reference) => {
       // we don't cook resource hints
       // because they might refer to resource that will be modified during build
       // It also means something else have to reference that url in order to cook it
@@ -41,7 +41,7 @@ export const createUrlGraphLoader = (context) => {
       }
       // we use reference.generatedUrl to mimic what a browser would do:
       // do a fetch to the specifier as found in the file
-      const referencedUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
+      const referencedUrlInfo = kitchen.graph.reuseOrCreateUrlInfo(
         reference,
         true,
       );
@@ -71,7 +71,6 @@ export const createUrlGraphLoader = (context) => {
   };
 
   return {
-    load,
     loadReferencedUrlInfos,
     getAllLoadDonePromise,
   };

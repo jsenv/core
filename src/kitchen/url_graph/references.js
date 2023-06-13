@@ -23,11 +23,11 @@ ${urlInfo.url}`,
     prev: [],
     current: [],
     find: (predicate) => references.current.find(predicate),
-    startCollecting: () => {
+    startCollecting: async (callback) => {
       references.prev = references.current;
       references.current = [];
 
-      return () => {
+      const stopCollecting = () => {
         const setOfDependencyUrls = new Set();
         const dependencyReferenceMap = new Map();
         const setOfImplicitUrls = new Set();
@@ -95,7 +95,7 @@ ${urlInfo.url}`,
             prunedUrlInfo.modifiedTimestamp = Date.now();
             if (prunedUrlInfo.isInline) {
               // should we always delete?
-              urlInfo.graph.deleteUrlInfo(prunedUrlInfo.url);
+              prunedUrlInfo.deleteFromGraph();
             }
           });
           urlInfo.graph.prunedUrlInfosCallbackRef.current(
@@ -128,6 +128,13 @@ ${urlInfo.url}`,
           }
         });
       };
+
+      try {
+        await callback();
+      } finally {
+        // finally to ensure reference are updated even in case of error
+        stopCollecting();
+      }
     },
     prepare: (props) => {
       const [reference, referencedUrlInfo] = urlInfo.kitchen.prepareReference({

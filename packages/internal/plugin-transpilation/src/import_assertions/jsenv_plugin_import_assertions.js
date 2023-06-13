@@ -123,8 +123,8 @@ const jsenvPluginAsModules = () => {
           specifier: jsonReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !context.urlGraph.hasDependent(jsonUrlInfo)) {
-        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
+      } else if (context.build && !jsonUrlInfo.hasDependent()) {
+        jsonUrlInfo.deleteFromGraph();
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
@@ -163,8 +163,8 @@ const jsenvPluginAsModules = () => {
           specifier: cssReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !context.urlGraph.hasDependent(cssUrlInfo)) {
-        context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
+      } else if (context.build && !cssUrlInfo.hasDependent()) {
+        cssUrlInfo.deleteFromGraph();
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
@@ -212,8 +212,8 @@ export default stylesheet;`,
           specifier: textReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !context.urlGraph.hasDependent(textUrlInfo)) {
-        context.urlGraph.deleteUrlInfo(textUrlInfo.url);
+      } else if (context.build && !textUrlInfo.hasDependent()) {
+        textUrlInfo.deleteFromGraph();
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
