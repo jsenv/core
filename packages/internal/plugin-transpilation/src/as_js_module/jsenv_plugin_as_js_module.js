@@ -41,7 +41,7 @@ export const jsenvPluginAsJsModule = () => {
         reference: jsClassicReference,
       });
       if (context.dev) {
-        context.referenceUtils.found({
+        urlInfo.references.found({
           type: "js_import",
           subtype: jsClassicReference.subtype,
           specifier: jsClassicReference.url,

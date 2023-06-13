@@ -10,18 +10,19 @@ export const jsenvPluginWebmanifestReferenceAnalysis = () => {
   };
 };
 
-const parseAndTransformWebmanifestUrls = async (urlInfo, context) => {
+const parseAndTransformWebmanifestUrls = async (urlInfo) => {
   const content = urlInfo.content;
   const manifest = JSON.parse(content);
   const actions = [];
   const { icons = [] } = manifest;
   icons.forEach((icon) => {
-    const [reference] = context.referenceUtils.found({
+    const [reference] = urlInfo.references.found({
       type: "webmanifest_icon_src",
       specifier: icon.src,
     });
     actions.push(async () => {
-      icon.src = await context.referenceUtils.readGeneratedSpecifier(reference);
+      await reference.readGeneratedSpecifier();
+      icon.src = reference.generatedSpecifier;
     });
   });
 

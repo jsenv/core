@@ -117,7 +117,7 @@ const jsenvPluginAsModules = () => {
         reference: jsonReference,
       });
       if (context.dev) {
-        context.referenceUtils.found({
+        urlInfo.references.found({
           type: "js_import",
           subtype: jsonReference.subtype,
           specifier: jsonReference.url,
@@ -145,11 +145,11 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
-        context,
-        searchParam: "as_css_module",
-        expectedType: "css",
-      });
+      const [cssReference, cssUrlInfo] =
+        context.reference.getWithoutSearchParam({
+          searchParam: "as_css_module",
+          expectedType: "css",
+        });
       if (!cssReference) {
         return null;
       }
@@ -157,7 +157,7 @@ const jsenvPluginAsModules = () => {
         reference: cssReference,
       });
       if (context.dev) {
-        context.referenceUtils.found({
+        urlInfo.references.found({
           type: "js_import",
           subtype: cssReference.subtype,
           specifier: cssReference.url,
@@ -173,9 +173,7 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(
-          context.referenceUtils.inlineContentClientFileUrl,
-        )};
+        content: `import ${JSON.stringify(context.inlineContentClientFileUrl)};
 
 const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" });
 const stylesheet = new CSSStyleSheet();
@@ -194,11 +192,11 @@ export default stylesheet;`,
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const [textReference, textUrlInfo] = context.getWithoutSearchParam({
-        context,
-        searchParam: "as_text_module",
-        expectedType: "text",
-      });
+      const [textReference, textUrlInfo] =
+        context.reference.getWithoutSearchParam({
+          searchParam: "as_text_module",
+          expectedType: "text",
+        });
       if (!textReference) {
         return null;
       }
@@ -206,7 +204,7 @@ export default stylesheet;`,
         reference: textReference,
       });
       if (context.dev) {
-        context.referenceUtils.found({
+        urlInfo.references.found({
           type: "js_import",
           subtype: textReference.subtype,
           specifier: textReference.url,
@@ -222,9 +220,7 @@ export default stylesheet;`,
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(
-          context.referenceUtils.inlineContentClientFileUrl,
-        )};
+        content: `import ${JSON.stringify(context.inlineContentClientFileUrl)};
 
 const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" });
 export default inlineContent.text;`,

@@ -73,7 +73,7 @@ export const jsenvPluginPreact = ({
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [preactDevtoolsReference] = context.referenceUtils.inject({
+        const [preactDevtoolsReference] = urlInfo.references.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: context.dev ? "preact/debug" : "preact/devtools",
@@ -149,7 +149,7 @@ export const jsenvPluginPreact = ({
             let index = code.indexOf(importSpecifier);
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1);
-              const [injectedReference] = context.referenceUtils.inject({
+              const [injectedReference] = urlInfo.references.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier,
@@ -167,21 +167,20 @@ export const jsenvPluginPreact = ({
           const hasReg = /\$RefreshReg\$\(/.test(code);
           const hasSig = /\$RefreshSig\$\(/.test(code);
           if (hasReg || hasSig) {
-            const [preactRefreshClientReference] =
-              context.referenceUtils.inject({
-                type: "js_import",
-                expectedType: "js_module",
-                specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
-              });
+            const [preactRefreshClientReference] = urlInfo.references.inject({
+              type: "js_import",
+              expectedType: "js_module",
+              specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
+            });
             magicSource.prepend(`import { installPreactRefresh } from ${
               preactRefreshClientReference.generatedSpecifier
-            }
-const __preact_refresh__ = installPreactRefresh(${JSON.stringify(urlInfo.url)})
+            };
+const __preact_refresh__ = installPreactRefresh(${JSON.stringify(urlInfo.url)});
 `);
             if (hasReg) {
               magicSource.append(`
-__preact_refresh__.end()
-import.meta.hot.accept(__preact_refresh__.acceptCallback)`);
+__preact_refresh__.end();
+import.meta.hot.accept(__preact_refresh__.acceptCallback);`);
             }
           }
         }

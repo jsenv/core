@@ -120,7 +120,7 @@ export const jsenvPluginImportmap = () => {
             columnEnd,
           });
           const [inlineImportmapReference, inlineImportmapUrlInfo] =
-            context.referenceUtils.foundInline({
+            htmlUrlInfo.references.foundInline({
               type: "script",
               isOriginalPosition: isOriginal,
               specifierLine: line - 1,
@@ -149,10 +149,10 @@ export const jsenvPluginImportmap = () => {
           // We must precook the importmap to know its content and inline it into the HTML
           // In this situation the ref to the importmap was already discovered
           // when parsing the HTML
-          const importmapReference = context.referenceUtils.find(
+          const importmapReference = htmlUrlInfo.references.find(
             (ref) => ref.generatedSpecifier === src,
           );
-          const importmapUrlInfo = context.urlGraph.getUrlInfo(
+          const importmapUrlInfo = htmlUrlInfo.graphs.getUrlInfo(
             importmapReference.url,
           );
           await context.cook(importmapUrlInfo, {
@@ -183,7 +183,7 @@ export const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
           });
-          context.referenceUtils.becomesInline(importmapReference, {
+          importmapReference.becomesInline({
             specifierLine: line - 1,
             specifierColumn: column,
             isOriginal,

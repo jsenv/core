@@ -43,7 +43,7 @@ ${urlInfo.url}`,
           }
           const dependencyUrl = reference.url;
           setOfDependencyUrls.add(dependencyUrl);
-          dependencyReferenceMap.add(dependencyUrl, reference);
+          dependencyReferenceMap.set(dependencyUrl, reference);
           // an implicit reference do not appear in the file but the non explicited file
           // have an impact on it
           // -> package.json on import resolution for instance

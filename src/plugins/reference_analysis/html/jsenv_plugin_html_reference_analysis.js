@@ -23,8 +23,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
     name: "jsenv:html_reference_analysis",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (urlInfo, context) =>
-        parseAndTransformHtmlReferences(urlInfo, context, {
+      html: (urlInfo) =>
+        parseAndTransformHtmlReferences(urlInfo, {
           inlineContent,
           inlineConvertedScript,
         }),
@@ -34,7 +34,6 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
 const parseAndTransformHtmlReferences = async (
   urlInfo,
-  context,
   { inlineContent, inlineConvertedScript },
 ) => {
   const content = urlInfo.content;
@@ -73,7 +72,7 @@ const parseAndTransformHtmlReferences = async (
       "preload",
       "modulepreload",
     ].includes(subtype);
-    const [reference] = context.referenceUtils.found({
+    const [reference] = urlInfo.references.found({
       node,
       type,
       subtype,
@@ -87,7 +86,7 @@ const parseAndTransformHtmlReferences = async (
       debug,
     });
     actions.push(async () => {
-      await context.referenceUtils.readGeneratedSpecifier(reference);
+      await reference.readGeneratedSpecifier();
       mutations.push(() => {
         setHtmlNodeAttributes(node, {
           [attributeName]: reference.generatedSpecifier,
@@ -143,23 +142,21 @@ const parseAndTransformHtmlReferences = async (
       columnEnd,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline(
-      {
-        node,
-        type,
-        expectedType,
-        isOriginalPosition: isOriginal,
-        // we remove 1 to the line because imagine the following html:
-        // <style>body { color: red; }</style>
-        // -> content starts same line as <style> (same for <script>)
-        specifierLine: line - 1,
-        specifierColumn: column,
-        specifier: inlineContentUrl,
-        contentType,
-        content: inlineContent,
-        debug,
-      },
-    );
+    const [inlineReference, inlineUrlInfo] = urlInfo.references.foundInline({
+      node,
+      type,
+      expectedType,
+      isOriginalPosition: isOriginal,
+      // we remove 1 to the line because imagine the following html:
+      // <style>body { color: red; }</style>
+      // -> content starts same line as <style> (same for <script>)
+      specifierLine: line - 1,
+      specifierColumn: column,
+      specifier: inlineContentUrl,
+      contentType,
+      content: inlineContent,
+      debug,
+    });
 
     const externalSpecifierAttributeName =
       type === "script"
@@ -242,7 +239,7 @@ const parseAndTransformHtmlReferences = async (
       });
       if (ref) {
         finalizeCallbacks.push(() => {
-          ref.expectedType = decideLinkExpectedType(ref, context);
+          ref.expectedType = decideLinkExpectedType(ref, urlInfo);
         });
       }
     },
@@ -407,7 +404,7 @@ const readFetchMetas = (node) => {
   return meta;
 };
 
-const decideLinkExpectedType = (linkReference, context) => {
+const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
   const rel = getHtmlNodeAttribute(linkReference.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
@@ -428,7 +425,7 @@ const decideLinkExpectedType = (linkReference, context) => {
       return "css";
     }
     if (as === "script") {
-      const firstScriptOnThisUrl = context.referenceUtils.find(
+      const firstScriptOnThisUrl = htmlUrlInfo.references.find(
         (refCandidate) =>
           refCandidate.url === linkReference.url &&
           refCandidate.type === "script",

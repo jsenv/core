@@ -15,7 +15,7 @@ export const jsenvPluginCssReferenceAnalysis = () => {
   };
 };
 
-const parseAndTransformCssUrls = async (urlInfo, context) => {
+const parseAndTransformCssUrls = async (urlInfo) => {
   const cssUrls = await parseCssUrls({
     css: urlInfo.content,
     url: urlInfo.originalUrl,
@@ -23,7 +23,7 @@ const parseAndTransformCssUrls = async (urlInfo, context) => {
   const actions = [];
   const magicSource = createMagicSource(urlInfo.content);
   for (const cssUrl of cssUrls) {
-    const [reference] = context.referenceUtils.found({
+    const [reference] = urlInfo.references.found({
       type: cssUrl.type,
       specifier: cssUrl.specifier,
       specifierStart: cssUrl.start,
@@ -32,9 +32,8 @@ const parseAndTransformCssUrls = async (urlInfo, context) => {
       specifierColumn: cssUrl.column,
     });
     actions.push(async () => {
-      const replacement = await context.referenceUtils.readGeneratedSpecifier(
-        reference,
-      );
+      await reference.readGeneratedSpecifier();
+      const replacement = reference.generatedSpecifier;
       magicSource.replace({
         start: cssUrl.start,
         end: cssUrl.end,

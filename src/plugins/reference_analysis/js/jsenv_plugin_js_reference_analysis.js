@@ -16,14 +16,18 @@ export const jsenvPluginJsReferenceAnalysis = ({
       appliesDuring: "*",
       transformUrlContent: {
         js_classic: (urlInfo, context) =>
-          parseAndTransformJsReferences(urlInfo, context, {
+          parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             allowEscapeForVersioning,
+            canUseTemplateLiterals:
+              context.isSupportedOnCurrentClients("template_literals"),
           }),
         js_module: (urlInfo, context) =>
-          parseAndTransformJsReferences(urlInfo, context, {
+          parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             allowEscapeForVersioning,
+            canUseTemplateLiterals:
+              context.isSupportedOnCurrentClients("template_literals"),
           }),
       },
     },
@@ -32,8 +36,7 @@ export const jsenvPluginJsReferenceAnalysis = ({
 
 const parseAndTransformJsReferences = async (
   urlInfo,
-  context,
-  { inlineContent, allowEscapeForVersioning },
+  { inlineContent, allowEscapeForVersioning, canUseTemplateLiterals },
 ) => {
   const magicSource = createMagicSource(urlInfo.content);
   const parallelActions = [];
@@ -49,33 +52,28 @@ const parseAndTransformJsReferences = async (
       columnEnd: inlineReferenceInfo.columnEnd,
     });
     let { quote } = inlineReferenceInfo;
-    if (
-      quote === "`" &&
-      !context.isSupportedOnCurrentClients("template_literals")
-    ) {
+    if (quote === "`" && !canUseTemplateLiterals) {
       // if quote is "`" and template literals are not supported
       // we'll use a regular string (single or double quote)
       // when rendering the string
       quote = JS_QUOTES.pickBest(inlineReferenceInfo.content);
     }
-    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline(
-      {
-        type: "js_inline_content",
-        subtype: inlineReferenceInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
-        isOriginalPosition: urlInfo.content === urlInfo.originalContent,
-        specifierLine: inlineReferenceInfo.line,
-        specifierColumn: inlineReferenceInfo.column,
-        specifier: inlineUrl,
-        contentType: inlineReferenceInfo.contentType,
-        content: inlineReferenceInfo.content,
-      },
-    );
+    const [inlineReference, inlineUrlInfo] = urlInfo.references.foundInline({
+      type: "js_inline_content",
+      subtype: inlineReferenceInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
+      isOriginalPosition: urlInfo.content === urlInfo.originalContent,
+      specifierLine: inlineReferenceInfo.line,
+      specifierColumn: inlineReferenceInfo.column,
+      specifier: inlineUrl,
+      contentType: inlineReferenceInfo.contentType,
+      content: inlineReferenceInfo.content,
+    });
     inlineUrlInfo.jsQuote = quote;
     inlineReference.escape = (value) =>
       JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
 
     sequentialActions.push(async () => {
-      await context.cook(inlineUrlInfo, { reference: inlineReference });
+      await urlInfo.kitchen.cook(inlineUrlInfo, { reference: inlineReference });
       const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
         quote,
         allowEscapeForVersioning,
@@ -94,7 +92,7 @@ const parseAndTransformJsReferences = async (
     ) {
       urlInfo.data.usesImport = true;
     }
-    const [reference] = context.referenceUtils.found({
+    const [reference] = urlInfo.references.found({
       node: externalReferenceInfo.node,
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
@@ -109,7 +107,7 @@ const parseAndTransformJsReferences = async (
       baseUrl: {
         "StringLiteral": externalReferenceInfo.baseUrl,
         "window.location": urlInfo.url,
-        "window.origin": context.rootDirectoryUrl,
+        "window.origin": urlInfo.kitchen.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,
@@ -119,9 +117,8 @@ const parseAndTransformJsReferences = async (
       typePropertyNode: externalReferenceInfo.typePropertyNode,
     });
     parallelActions.push(async () => {
-      const replacement = await context.referenceUtils.readGeneratedSpecifier(
-        reference,
-      );
+      await reference.readGeneratedSpecifier();
+      const replacement = reference.generatedSpecifier;
       magicSource.replace({
         start: externalReferenceInfo.start,
         end: externalReferenceInfo.end,

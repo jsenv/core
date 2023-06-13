@@ -32,12 +32,12 @@ export const jsenvPluginToolbar = ({
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [toolbarInjectorReference] = context.referenceUtils.inject({
+        const [toolbarInjectorReference] = urlInfo.references.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl,
         });
-        const [toolbarClientFileReference] = context.referenceUtils.inject({
+        const [toolbarClientFileReference] = urlInfo.references.inject({
           type: "iframe_src",
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,

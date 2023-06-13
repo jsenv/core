@@ -162,8 +162,8 @@ export const jsenvPluginSupervisor = ({
       return null;
     },
     transformUrlContent: {
-      html: ({ url, content }, context) => {
-        const [supervisorFileReference] = context.referenceUtils.inject({
+      html: (htmlUrlInfo) => {
+        const [supervisorFileReference] = htmlUrlInfo.references.inject({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl,
@@ -171,8 +171,8 @@ export const jsenvPluginSupervisor = ({
 
         return injectSupervisorIntoHTML(
           {
-            content,
-            url,
+            content: htmlUrlInfo.content,
+            url: htmlUrlInfo.url,
           },
           {
             supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
@@ -184,7 +184,7 @@ export const jsenvPluginSupervisor = ({
               openInEditor,
             },
             webServer: {
-              rootDirectoryUrl: context.rootDirectoryUrl,
+              rootDirectoryUrl: htmlUrlInfo.kitchen.rootDirectoryUrl,
               isJsenvDevServer: true,
             },
             inlineAsRemote: true,
@@ -197,7 +197,7 @@ export const jsenvPluginSupervisor = ({
               column,
             }) => {
               const [inlineScriptReference] =
-                context.referenceUtils.foundInline({
+                htmlUrlInfo.references.foundInline({
                   type: "script",
                   subtype: "inline",
                   expectedType: type,

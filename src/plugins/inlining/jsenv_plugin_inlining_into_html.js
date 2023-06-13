@@ -21,7 +21,7 @@ export const jsenvPluginInliningIntoHtml = () => {
         const actions = [];
 
         const onStyleSheet = (linkNode, { href }) => {
-          const linkReference = context.referenceUtils.find(
+          const linkReference = urlInfo.references.find(
             (ref) =>
               ref.generatedSpecifier === href &&
               ref.type === "link_href" &&
@@ -41,7 +41,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
               preferOriginal: true,
             });
-            context.referenceUtils.becomesInline(linkReference, {
+            linkReference.becomesInline({
               line: line - 1,
               column,
               isOriginal,
@@ -69,7 +69,7 @@ export const jsenvPluginInliningIntoHtml = () => {
           });
         };
         const onScriptWithSrc = (scriptNode, { src }) => {
-          const scriptReference = context.referenceUtils.find(
+          const scriptReference = urlInfo.references.find(
             (ref) => ref.generatedSpecifier === src && ref.type === "script",
           );
           if (
@@ -91,7 +91,7 @@ export const jsenvPluginInliningIntoHtml = () => {
                 preferOriginal: true,
               },
             );
-            context.referenceUtils.becomesInline(scriptReference, {
+            scriptReference.becomesInline({
               line: line - 1,
               column,
               isOriginal,

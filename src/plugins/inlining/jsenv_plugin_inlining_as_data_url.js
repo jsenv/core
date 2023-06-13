@@ -42,7 +42,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
             base64Flag: true,
             data: contentAsBase64,
           });
-          context.referenceUtils.becomesInline(reference, {
+          reference.becomesInline({
             line: reference.line,
             column: reference.column,
             isOriginal: reference.isOriginal,

@@ -20,9 +20,9 @@ export const jsenvPluginServerEventsClientInjection = () => {
     name: "jsenv:server_events_client_injection",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (htmlUrlInfo, context) => {
+      html: (htmlUrlInfo) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const [serverEventsClientFileReference] = context.referenceUtils.inject(
+        const [serverEventsClientFileReference] = htmlUrlInfo.references.inject(
           {
             type: "script",
             subtype: "js_module",

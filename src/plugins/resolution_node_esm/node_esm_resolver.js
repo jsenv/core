@@ -62,7 +62,6 @@ export const createNodeEsmResolver = ({
         // must be invalidated when corresponding package.json changes
         addRelationshipWithPackageJson({
           reference,
-          context,
           packageJsonUrl: `${packageDirectoryUrl}package.json`,
           field: type.startsWith("field:")
             ? `#${type.slice("field:".length)}`
@@ -86,7 +85,6 @@ export const createNodeEsmResolver = ({
           if (packageVersion) {
             addRelationshipWithPackageJson({
               reference,
-              context,
               packageJsonUrl: `${packageDirectoryUrl}package.json`,
               field: "version",
               hasVersioningEffect: true,
@@ -101,18 +99,18 @@ export const createNodeEsmResolver = ({
 };
 
 const addRelationshipWithPackageJson = ({
-  context,
+  reference,
   packageJsonUrl,
   field,
   hasVersioningEffect = false,
 }) => {
-  const referenceFound = context.referenceUtils.find(
+  const referenceFound = reference.urlInfo.references.find(
     (ref) => ref.type === "package_json" && ref.subtype === field,
   );
   if (referenceFound) {
     return;
   }
-  const [, packageJsonUrlInfo] = context.referenceUtils.inject({
+  const [, packageJsonUrlInfo] = reference.urlInfo.references.inject({
     type: "package_json",
     subtype: field,
     specifier: packageJsonUrl,

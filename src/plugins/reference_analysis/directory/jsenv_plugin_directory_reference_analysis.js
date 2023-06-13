@@ -14,7 +14,7 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
           context.rootDirectoryUrl,
         );
         JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
-          context.referenceUtils.found({
+          urlInfo.references.found({
             type: "filesystem",
             subtype: "directory_entry",
             specifier: directoryEntryName,

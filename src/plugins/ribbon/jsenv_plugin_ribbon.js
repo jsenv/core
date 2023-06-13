@@ -36,7 +36,7 @@ export const jsenvPluginRibbon = ({
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [ribbonClientFileReference] = context.referenceUtils.inject({
+        const [ribbonClientFileReference] = urlInfo.references.inject({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",

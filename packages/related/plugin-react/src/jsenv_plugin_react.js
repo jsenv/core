@@ -129,7 +129,7 @@ const jsenvPluginJsxAndRefresh = ({
             let index = code.indexOf(importSpecifier);
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1);
-              const [injectedReference] = context.referenceUtils.inject({
+              const [injectedReference] = urlInfo.references.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier,
@@ -147,22 +147,20 @@ const jsenvPluginJsxAndRefresh = ({
           const hasReg = /\$RefreshReg\$\(/.test(code);
           const hasSig = /\$RefreshSig\$\(/.test(code);
           if (hasReg || hasSig) {
-            const [reactRefreshClientReference] = context.referenceUtils.inject(
-              {
-                type: "js_import",
-                expectedType: "js_module",
-                specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
-              },
-            );
+            const [reactRefreshClientReference] = urlInfo.references.inject({
+              type: "js_import",
+              expectedType: "js_module",
+              specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
+            });
             magicSource.prepend(`import { installReactRefresh } from ${
               reactRefreshClientReference.generatedSpecifier
             }
-const __react_refresh__ = installReactRefresh(${JSON.stringify(urlInfo.url)})
+const __react_refresh__ = installReactRefresh(${JSON.stringify(urlInfo.url)});
 `);
             if (hasReg) {
               magicSource.append(`
-__react_refresh__.end()
-import.meta.hot.accept(__react_refresh__.acceptCallback)`);
+__react_refresh__.end();
+import.meta.hot.accept(__react_refresh__.acceptCallback);`);
             }
           }
         }

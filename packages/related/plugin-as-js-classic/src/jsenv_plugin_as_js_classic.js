@@ -69,7 +69,7 @@ export const jsenvPluginAsJsClassic = () => {
         // we have to use system when it uses import
         outputFormat = "system";
         urlInfo.type = "js_classic";
-        context.referenceUtils.foundSideEffectFile({
+        urlInfo.references.foundSideEffectFile({
           sideEffectFileUrl: systemJsClientFileUrlDefault,
           expectedType: "js_classic",
           line: 0,
@@ -83,7 +83,7 @@ export const jsenvPluginAsJsClassic = () => {
 
       if (context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          context.referenceUtils.inject({
+          urlInfo.references.inject({
             type: "js_url",
             specifier: sourceUrl,
             isImplicit: true,
@@ -91,7 +91,7 @@ export const jsenvPluginAsJsClassic = () => {
         });
       } else if (context.build) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
+          const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
           if (sourceUrlInfo && !sourceUrlInfo.hasDependent()) {
             sourceUrlInfo.deleteFromGraph();
           }

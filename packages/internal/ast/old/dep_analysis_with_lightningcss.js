@@ -1,4 +1,4 @@
-export const parseAndTransformCssUrls = async (urlInfo, context) => {
+export const parseAndTransformCssUrls = async (urlInfo) => {
   const { transform } = await import("lightningcss");
 
   const css = urlInfo.content;
@@ -36,13 +36,12 @@ export const parseAndTransformCssUrls = async (urlInfo, context) => {
   // create a reference for each css url
   await Promise.all(
     cssUrls.map(async (cssUrl) => {
-      const [reference] = context.referenceUtils.found({
+      const [reference] = urlInfo.references.found({
         type: cssUrl.type === "import" ? "css_@import" : "css_url",
         specifier: cssUrl.specifier,
       });
-      const replacement = await context.referenceUtils.readGeneratedSpecifier(
-        reference,
-      );
+      await reference.readGeneratedSpecifier();
+      const replacement = reference.generatedSpecifier;
       cssUrl.replacement = replacement.slice(1, -1);
     }),
   );
