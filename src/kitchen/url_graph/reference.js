@@ -1,4 +1,4 @@
-import { normalizeUrl } from "@jsenv/urls";
+import { normalizeUrl, stringifyUrlSite } from "@jsenv/urls";
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 
 /*
@@ -132,42 +132,33 @@ export const createReference = ({
     return reference.generatedSpecifier;
   };
 
-  reference.replace = (newReference) => {
-    const index = urlInfo.references.current.indexOf(reference);
-    if (index === -1) {
-      throw new Error(`reference do not exists`);
-    }
-    urlInfo.references.current[index] = newReference;
-    // remove urlInfo previously referenced if not used anymore
-    const previouslyReferencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
-    if (previouslyReferencedUrlInfo) {
-      const referencedUrlInfo = urlInfo.graph.getUrlInfo(newReference.url);
-      if (
-        previouslyReferencedUrlInfo !== referencedUrlInfo &&
-        !previouslyReferencedUrlInfo.isUsed()
-      ) {
-        previouslyReferencedUrlInfo.deleteFromGraph();
-      }
-    }
-    // if this function is called while collecting urlInfo references
-    // there is no need to update dependents + dependencies
-    // because it will be done at the end of reference collection
-    // otherwise we should update dependents + dependencies (TODO)
-    storeReferenceTransformation(reference, newReference);
-  };
-
-  reference.movesTo = (newUrlInfo, newReference) => {
-    const index = urlInfo.references.current.indexOf(reference);
-    if (index === -1) {
-      throw new Error(`reference do not exists`);
-    }
-    urlInfo.references.current.splice(index, 1);
-    newUrlInfo.references.current.push(newReference);
-    // if this function is called while collecting urlInfo references
-    // there is no need to update dependents + dependencies
-    // because it will be done at the end of reference collection
-    // otherwise we should update dependents + dependencies (TODO)
-    storeReferenceTransformation(reference, newReference);
+  reference.becomesInline = ({
+    specifier,
+    content,
+    contentType,
+    line,
+    column,
+    // when urlInfo is given it means reference is moved into an other file
+    urlInfo = reference.urlInfo,
+    ...props
+  }) => {
+    const inlineProps = getInlineReferenceProps(reference, {
+      urlInfo,
+      line,
+      column,
+    });
+    const inlineCopy = urlInfo.references.prepare({
+      ...inlineProps,
+      specifierLine: line,
+      specifierColumn: column,
+      specifier,
+      content,
+      contentType,
+      prev: reference,
+      ...props,
+    });
+    replaceReference(reference, inlineCopy);
+    return inlineCopy;
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
@@ -200,6 +191,58 @@ export const createReference = ({
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
   return reference;
+};
+
+const replaceReference = (reference, newReference) => {
+  const index = reference.urlInfo.references.current.indexOf(reference);
+  if (index === -1) {
+    throw new Error(`reference do not exists`);
+  }
+
+  // override in place
+  if (reference.urlInfo === newReference.urlInfo) {
+    reference.urlInfo.references.current[index] = newReference;
+    // if this function is called while collecting urlInfo references
+    // there is no need to update dependents + dependencies
+    // because it will be done at the end of reference collection
+    // otherwise we should update dependents + dependencies (TODO)
+  }
+  // move (remove current + insert new)
+  else {
+    reference.urlInfo.references.current.splice(index, 1);
+    newReference.urlInfo.references.current.push(newReference);
+    // if this function is called while collecting urlInfo references
+    // there is no need to update dependents + dependencies
+    // because it will be done at the end of reference collection
+    // otherwise we should update dependents + dependencies (TODO)
+    storeReferenceTransformation(reference, newReference);
+  }
+
+  // remove urlInfo previously referenced if not used anymore
+  const previouslyReferencedUrlInfo = reference.urlInfo.graph.getUrlInfo(
+    reference.url,
+  );
+  if (previouslyReferencedUrlInfo) {
+    const referencedUrlInfo = reference.urlInfo.graph.getUrlInfo(
+      newReference.url,
+    );
+    if (
+      previouslyReferencedUrlInfo !== referencedUrlInfo &&
+      !previouslyReferencedUrlInfo.isUsed()
+    ) {
+      previouslyReferencedUrlInfo.deleteFromGraph();
+    }
+  }
+  storeReferenceTransformation(reference, newReference);
+};
+
+export const traceFromUrlSite = (urlSite) => {
+  return {
+    message: stringifyUrlSite(urlSite),
+    url: urlSite.url,
+    line: urlSite.line,
+    column: urlSite.column,
+  };
 };
 
 export const storeReferenceTransformation = (current, next) => {
@@ -250,4 +293,33 @@ export const applyReferenceEffectsOnUrlInfo = (reference, urlInfo) => {
   if (reference.expectedSubtype) {
     urlInfo.subtypeHint = reference.expectedSubtype;
   }
+};
+
+const getInlineReferenceProps = (
+  reference,
+  { urlInfo, isOriginalPosition, line, column, ...rest },
+) => {
+  const trace = traceFromUrlSite({
+    url:
+      urlInfo === undefined
+        ? isOriginalPosition
+          ? reference.urlInfo.url
+          : reference.urlInfo.generatedUrl
+        : reference.urlInfo.url,
+    content:
+      urlInfo === undefined
+        ? isOriginalPosition
+          ? reference.urlInfo.originalContent
+          : reference.urlInfo.content
+        : urlInfo.content,
+    line,
+    column,
+  });
+  return {
+    trace,
+    isInline: true,
+    line,
+    column,
+    ...rest,
+  };
 };

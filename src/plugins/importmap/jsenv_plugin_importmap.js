@@ -184,12 +184,12 @@ export const jsenvPluginImportmap = () => {
             columnEnd,
           });
           importmapReference.becomesInline({
-            specifierLine: line - 1,
-            specifierColumn: column,
+            line: line - 1,
+            column,
             isOriginal,
             specifier: inlineImportmapUrl,
-            contentType: "application/importmap+json",
             content: importmapUrlInfo.content,
+            contentType: "application/importmap+json",
           });
         };
 

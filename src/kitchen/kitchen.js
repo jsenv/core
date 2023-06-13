@@ -11,10 +11,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { createUrlGraph } from "./url_graph/url_graph.js";
-import {
-  createReference,
-  storeReferenceTransformation,
-} from "./url_graph/reference.js";
+import { storeReferenceTransformation } from "./url_graph/reference.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
@@ -240,18 +237,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     }
   };
   kitchenContext.resolveReference = resolveReference;
-
-  const prepareReference = (props) => {
-    const ref = createReference(props);
-    return resolveReference(ref);
-  };
-
-  const prepareEntryPoint = (...props) => {
-    return graph.rootUrlInfo.references.prepare({
-      isEntryPoint: true,
-      ...props,
-    });
-  };
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
@@ -528,8 +513,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     rootDirectoryUrl,
     context: kitchenContext,
     cook,
-    prepareEntryPoint,
-    prepareReference,
     executePendingCallbacks: async () => {
       await Promise.all(
         kitchen.callbacksToConsiderGraphLoaded.map(async (callback) => {

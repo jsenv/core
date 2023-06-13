@@ -1,5 +1,6 @@
-import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
+import { getCallerPosition } from "@jsenv/urls";
 
+import { createReference, traceFromUrlSite } from "./reference.js";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
@@ -137,10 +138,12 @@ ${urlInfo.url}`,
       }
     },
     prepare: (props) => {
-      const [reference, referencedUrlInfo] = urlInfo.kitchen.prepareReference({
+      const originalReference = createReference({
         urlInfo,
         ...props,
       });
+      const [reference, referencedUrlInfo] =
+        urlInfo.kitchen.resolveReference(originalReference);
       return [reference, referencedUrlInfo];
     },
     found: ({ trace, ...rest }) => {
@@ -275,23 +278,15 @@ ${urlInfo.url}`,
           await urlInfo.kitchen.cook(sideEffectFileUrlInfo, {
             reference: sideEffectFileReference,
           });
-          await sideEffectFileReference.readGeneratedSpecifier();
           await prependContent(urlInfo, sideEffectFileUrlInfo);
-          const inlineProps = getInlineReferenceProps(sideEffectFileReference, {
-            urlInfo,
-            line: 0,
-            column: 0,
-          });
-          const sideEffectFileReferenceInlined = urlInfo.references.prepare({
-            ...inlineProps,
-            specifierLine: 0,
-            specifierColumn: 0,
+          await sideEffectFileReference.readGeneratedSpecifier();
+          sideEffectFileReference.becomesInline({
             specifier: sideEffectFileReference.generatedSpecifier,
             content: sideEffectFileUrlInfo.content,
             contentType: sideEffectFileUrlInfo.contentType,
-            prev: sideEffectFileReference,
+            line: 0,
+            column: 0,
           });
-          sideEffectFileReference.replace(sideEffectFileReferenceInlined);
         });
         return [sideEffectFileReference, sideEffectFileUrlInfo];
       };
@@ -372,23 +367,16 @@ ${urlInfo.url}`,
           dependencies.add(sideEffectFileUrlInfo.url);
           await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
           await sideEffectFileReference.readGeneratedSpecifier();
-          const inlineProps = getInlineReferenceProps(sideEffectFileReference, {
+          sideEffectFileReference.becomesInline({
+            specifier: sideEffectFileReference.generatedSpecifier,
             urlInfo: entryPointUrlInfo,
+            content: sideEffectFileUrlInfo.content,
+            contentType: sideEffectFileUrlInfo.contentType,
             // ideally get the correct line and column
             // (for js it's 0, but for html it's different)
             line: 0,
             column: 0,
           });
-          const sideEffectFileReferenceInlined =
-            entryPointUrlInfo.references.prepare({
-              ...inlineProps,
-              urlInfo: entryPointUrlInfo,
-              specifier: sideEffectFileReference.generatedSpecifier,
-              content: sideEffectFileUrlInfo.content,
-              contentType: sideEffectFileUrlInfo.contentType,
-              prev: sideEffectFileReference,
-            });
-          sideEffectFileReference.movesTo(sideEffectFileReferenceInlined);
         });
       }
       return [sideEffectFileReference, sideEffectFileUrlInfo];
@@ -396,44 +384,6 @@ ${urlInfo.url}`,
   };
 
   return references;
-};
-
-const getInlineReferenceProps = (
-  reference,
-  { urlInfo, isOriginalPosition, line, column, ...rest },
-) => {
-  const trace = traceFromUrlSite({
-    url:
-      urlInfo === undefined
-        ? isOriginalPosition
-          ? reference.urlInfo.url
-          : reference.urlInfo.generatedUrl
-        : reference.urlInfo.url,
-    content:
-      urlInfo === undefined
-        ? isOriginalPosition
-          ? reference.urlInfo.originalContent
-          : reference.urlInfo.content
-        : urlInfo.content,
-    line,
-    column,
-  });
-  return {
-    trace,
-    isInline: true,
-    line,
-    column,
-    ...rest,
-  };
-};
-
-const traceFromUrlSite = (urlSite) => {
-  return {
-    message: stringifyUrlSite(urlSite),
-    url: urlSite.url,
-    line: urlSite.line,
-    column: urlSite.column,
-  };
 };
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
