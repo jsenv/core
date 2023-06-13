@@ -268,7 +268,7 @@ export const createFileService = ({
       });
       reference = entryPoint[0];
     }
-    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
+    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference);
     const ifNoneMatch = request.headers["if-none-match"];
     const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo);
 

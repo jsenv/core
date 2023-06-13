@@ -25,7 +25,6 @@ import {
   createFinalizeUrlContentError,
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
-import { isWebWorkerEntryPointReference } from "./web_workers.js";
 
 export const createKitchen = ({
   name,
@@ -196,8 +195,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       );
       reference.generatedUrl = reference.url;
 
-      const urlInfo = graph.reuseOrCreateUrlInfo(reference.url);
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo, context);
+      const urlInfo = graph.reuseOrCreateUrlInfo(reference);
 
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -468,7 +466,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     pluginController.callHooks(
       "cooked",
       urlInfo,
-      context,
+      dishContext,
       (cookedReturnValue) => {
         if (typeof cookedReturnValue === "function") {
           const removePrunedCallback = graph.prunedCallbackList.add(
@@ -527,49 +525,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     }
   });
   kitchenContext.cook = cook;
-
-  const getWithoutSearchParam = ({
-    urlInfo,
-    reference,
-    context,
-    searchParam,
-    expectedType,
-  }) => {
-    const urlObject = new URL(urlInfo.url);
-    const { searchParams } = urlObject;
-    if (!searchParams.has(searchParam)) {
-      return [null, null];
-    }
-    searchParams.delete(searchParam);
-    const originalRef =
-      reference || context.reference.original || context.reference;
-    const referenceWithoutSearchParam = {
-      ...originalRef,
-      original: originalRef,
-      searchParams,
-      data: { ...originalRef.data },
-      expectedType,
-      specifier: originalRef.specifier
-        .replace(`?${searchParam}`, "")
-        .replace(`&${searchParam}`, ""),
-      url: normalizeUrl(urlObject.href),
-      generatedSpecifier: null,
-      generatedUrl: null,
-      filename: null,
-    };
-    const urlInfoWithoutSearchParam = context.urlGraph.reuseOrCreateUrlInfo(
-      referenceWithoutSearchParam.url,
-    );
-    if (urlInfoWithoutSearchParam.originalUrl === undefined) {
-      applyReferenceEffectsOnUrlInfo(
-        referenceWithoutSearchParam,
-        urlInfoWithoutSearchParam,
-        context,
-      );
-    }
-    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
-  };
-  kitchenContext.getWithoutSearchParam = getWithoutSearchParam;
 
   Object.assign(kitchen, {
     graph,
@@ -632,51 +587,6 @@ const memoizeIsSupported = (runtimeCompat) => {
     cache.set(feature, supported);
     return supported;
   };
-};
-
-const applyReferenceEffectsOnUrlInfo = (reference, urlInfo, context) => {
-  urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
-
-  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
-    urlInfo.isEntryPoint = true;
-  }
-  Object.assign(urlInfo.data, reference.data);
-  Object.assign(urlInfo.timing, reference.timing);
-  if (reference.injected) {
-    urlInfo.injected = true;
-  }
-  if (reference.filename && !urlInfo.filename) {
-    urlInfo.filename = reference.filename;
-  }
-  if (reference.isInline) {
-    urlInfo.isInline = true;
-    const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-    urlInfo.inlineUrlSite = {
-      url: parentUrlInfo.url,
-      content: reference.isOriginalPosition
-        ? parentUrlInfo.originalContent
-        : parentUrlInfo.content,
-      line: reference.specifierLine,
-      column: reference.specifierColumn,
-    };
-    urlInfo.contentType = reference.contentType;
-    urlInfo.originalContent = context.build
-      ? urlInfo.originalContent === undefined
-        ? reference.content
-        : urlInfo.originalContent
-      : reference.content;
-    urlInfo.content = reference.content;
-  }
-
-  if (reference.debug) {
-    urlInfo.debug = true;
-  }
-  if (reference.expectedType) {
-    urlInfo.typeHint = reference.expectedType;
-  }
-  if (reference.expectedSubtype) {
-    urlInfo.subtypeHint = reference.expectedSubtype;
-  }
 };
 
 const inferUrlInfoType = (urlInfo) => {

@@ -105,12 +105,11 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const [jsonReference, jsonUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_json_module",
-        expectedType: "json",
-      });
+      const [jsonReference, jsonUrlInfo] =
+        context.reference.getWithoutSearchParam({
+          searchParam: "as_json_module",
+          expectedType: "json",
+        });
       if (!jsonReference) {
         return null;
       }
@@ -147,7 +146,6 @@ const jsenvPluginAsModules = () => {
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
         context,
         searchParam: "as_css_module",
         expectedType: "css",
@@ -197,7 +195,6 @@ export default stylesheet;`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [textReference, textUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
         context,
         searchParam: "as_text_module",
         expectedType: "text",

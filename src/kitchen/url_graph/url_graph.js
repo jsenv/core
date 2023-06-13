@@ -1,5 +1,6 @@
 import { urlToRelativeUrl } from "@jsenv/urls";
 
+import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createReferences } from "./references.js";
 
@@ -26,13 +27,17 @@ export const createUrlGraph = ({
       }
     }
   };
-  const reuseOrCreateUrlInfo = (url) => {
+  const reuseOrCreateUrlInfo = (reference, useGeneratedUrl) => {
+    const url = useGeneratedUrl ? reference.generatedUrl : reference.url;
     const existingUrlInfo = getUrlInfo(url);
     if (existingUrlInfo) return existingUrlInfo;
     const urlInfo = createUrlInfo(url);
     urlInfo.graph = urlGraph;
     urlInfo.kitchen = kitchen;
     urlInfoMap.set(url, urlInfo);
+    if (urlInfo.originalUrl === undefined) {
+      applyReferenceEffectsOnUrlInfo(reference, urlInfo);
+    }
     createUrlInfoCallbackRef.current(urlInfo);
     return urlInfo;
   };
@@ -117,6 +122,50 @@ export const createUrlGraph = ({
     },
   });
   return urlGraph;
+};
+
+const applyReferenceEffectsOnUrlInfo = (reference, urlInfo) => {
+  urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
+
+  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
+    urlInfo.isEntryPoint = true;
+  }
+  Object.assign(urlInfo.data, reference.data);
+  Object.assign(urlInfo.timing, reference.timing);
+  if (reference.injected) {
+    urlInfo.injected = true;
+  }
+  if (reference.filename && !urlInfo.filename) {
+    urlInfo.filename = reference.filename;
+  }
+  if (reference.isInline) {
+    urlInfo.isInline = true;
+    urlInfo.inlineUrlSite = {
+      url: reference.urlInfo.url,
+      content: reference.isOriginalPosition
+        ? reference.urlInfo.originalContent
+        : reference.urlInfo.content,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
+    };
+    urlInfo.contentType = reference.contentType;
+    urlInfo.originalContent = urlInfo.kitchen.context.build
+      ? urlInfo.originalContent === undefined
+        ? reference.content
+        : urlInfo.originalContent
+      : reference.content;
+    urlInfo.content = reference.content;
+  }
+
+  if (reference.debug) {
+    urlInfo.debug = true;
+  }
+  if (reference.expectedType) {
+    urlInfo.typeHint = reference.expectedType;
+  }
+  if (reference.expectedSubtype) {
+    urlInfo.subtypeHint = reference.expectedSubtype;
+  }
 };
 
 const createUrlInfo = (url) => {

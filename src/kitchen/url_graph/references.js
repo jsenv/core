@@ -29,6 +29,7 @@ ${urlInfo.url}`,
 
       return () => {
         const setOfDependencyUrls = new Set();
+        const dependencyReferenceMap = new Map();
         const setOfImplicitUrls = new Set();
         references.current.forEach((reference) => {
           if (reference.isResourceHint) {
@@ -42,6 +43,7 @@ ${urlInfo.url}`,
           }
           const dependencyUrl = reference.url;
           setOfDependencyUrls.add(dependencyUrl);
+          dependencyReferenceMap.add(dependencyUrl, reference);
           // an implicit reference do not appear in the file but the non explicited file
           // have an impact on it
           // -> package.json on import resolution for instance
@@ -54,8 +56,9 @@ ${urlInfo.url}`,
         });
         setOfDependencyUrls.forEach((dependencyUrl) => {
           urlInfo.dependencies.add(dependencyUrl);
-          const dependencyUrlInfo =
-            urlInfo.graph.reuseOrCreateUrlInfo(dependencyUrl);
+          const dependencyUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
+            dependencyReferenceMap.get(dependencyUrl),
+          );
           dependencyUrlInfo.dependents.add(urlInfo.url);
         });
         setOfImplicitUrls.forEach((implicitUrl) => {
@@ -353,18 +356,14 @@ ${urlInfo.url}`,
       const entryPoints = urlInfo.graph.getEntryPoints();
       const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
       for (const entryPointUrlInfo of entryPoints) {
-        _onCallbackToConsiderGraphLoaded(async (kitchen) => {
+        urlInfo.kitchen.callbacksToConsiderGraphLoaded.push(async () => {
           // do not inject if already there
           const { dependencies } = entryPointUrlInfo;
           if (dependencies.has(sideEffectFileUrlInfo.url)) {
             return;
           }
           dependencies.add(sideEffectFileUrlInfo.url);
-          await prependContent(
-            kitchen.urlInfoTransformer,
-            entryPointUrlInfo,
-            sideEffectFileUrlInfo,
-          );
+          await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
           await sideEffectFileReference.readGeneratedSpecifier();
           const inlineProps = getInlineReferenceProps(sideEffectFileReference, {
             urlInfo: entryPointUrlInfo,

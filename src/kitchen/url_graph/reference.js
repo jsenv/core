@@ -1,3 +1,5 @@
+import { normalizeUrl } from "@jsenv/urls";
+
 /*
  * - "http_request"
  * - "entry_point"
@@ -165,6 +167,34 @@ export const createReference = ({
     // because it will be done at the end of reference collection
     // otherwise we should update dependents + dependencies (TODO)
     storeReferenceTransformation(reference, newReference);
+  };
+
+  reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
+    const urlObject = new URL(urlInfo.url);
+    const { searchParams } = urlObject;
+    if (!searchParams.has(searchParam)) {
+      return [null, null];
+    }
+    searchParams.delete(searchParam);
+    const originalRef = reference || reference.original || reference;
+    const referenceWithoutSearchParam = {
+      ...originalRef,
+      original: originalRef,
+      searchParams,
+      data: { ...originalRef.data },
+      expectedType,
+      specifier: originalRef.specifier
+        .replace(`?${searchParam}`, "")
+        .replace(`&${searchParam}`, ""),
+      url: normalizeUrl(urlObject.href),
+      generatedSpecifier: null,
+      generatedUrl: null,
+      filename: null,
+    };
+    const urlInfoWithoutSearchParam = urlInfo.graph.reuseOrCreateUrlInfo(
+      referenceWithoutSearchParam,
+    );
+    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
   };
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here

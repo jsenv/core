@@ -44,7 +44,8 @@ export const createUrlGraphLoader = (context) => {
       // we use reference.generatedUrl to mimic what a browser would do:
       // do a fetch to the specifier as found in the file
       const referencedUrlInfo = context.urlGraph.reuseOrCreateUrlInfo(
-        reference.generatedUrl,
+        reference,
+        true,
       );
       load(referencedUrlInfo, {
         reference,
