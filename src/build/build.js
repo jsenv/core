@@ -59,7 +59,6 @@ import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { createKitchen } from "../kitchen/kitchen.js";
-import { createUrlGraphLoader } from "../kitchen/url_graph/url_graph_loader.js";
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
 import {
   isWebWorkerEntryPointReference,
@@ -390,7 +389,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         if (outDirectoryUrl) {
           await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
-        const rawGraphLoader = createUrlGraphLoader(rawKitchen);
         const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
         rawRootUrlInfo.references.startCollecting(() => {
           Object.keys(entryPoints).forEach((key) => {
@@ -404,9 +402,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             entryUrls.push(entryUrlInfo.url);
           });
         });
-        rawGraphLoader.loadReferencedUrlInfos(rawRootUrlInfo);
-        await rawGraphLoader.getAllLoadDonePromise(buildOperation);
-        await rawKitchen.executePendingCallbacks();
+        await rawKitchen.cookReferences(rawRootUrlInfo);
+        await rawKitchen.getAllCookedPromise(buildOperation);
       } catch (e) {
         generateSourceGraph.fail();
         throw e;
@@ -970,7 +967,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (outDirectoryUrl) {
             await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
-          const finalGraphLoader = createUrlGraphLoader(finalKitchen);
           const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
           finalRootUrlInfo.references.startCollecting(() => {
             entryUrls.forEach((entryUrl) => {
@@ -983,9 +979,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               finalEntryUrls.push(finalEntryUrlInfo.url);
             });
           });
-          finalGraphLoader.loadReferencedUrlInfos(finalRootUrlInfo);
-          await finalGraphLoader.getAllLoadDonePromise(buildOperation);
-          await finalKitchen.executePendingCallbacks();
+          await finalKitchen.cookReferences(finalRootUrlInfo);
+          await finalKitchen.getAllCookedPromise(buildOperation);
         } catch (e) {
           generateBuildGraph.fail();
           throw e;
@@ -1330,21 +1325,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               ? new URL("postbuild/", outDirectoryUrl)
               : undefined,
           });
-          const versioningUrlGraphLoader =
-            createUrlGraphLoader(versioningKitchen);
-          finalEntryUrls.forEach((finalEntryUrl) => {
-            const [finalEntryReference, finalEntryUrlInfo] =
-              finalKitchen.prepareEntryPoint({
+
+          const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
+          versioningRootUrlInfo.references.startCollecting(() => {
+            finalEntryUrls.forEach((finalEntryUrl) => {
+              versioningRootUrlInfo.references.found({
                 trace: { message: `entryPoint` },
                 parentUrl: buildDirectoryUrl,
                 type: "entry_point",
                 specifier: finalEntryUrl,
               });
-            versioningUrlGraphLoader.load(finalEntryUrlInfo, {
-              reference: finalEntryReference,
             });
           });
-          await versioningUrlGraphLoader.getAllLoadDonePromise(buildOperation);
+          await versioningKitchen.cookReferences(versioningRootUrlInfo);
+          await versioningKitchen.getAllCookedPromise(buildOperation);
           workerReferenceSet.clear();
           const actions = [];
           const visitors = [];

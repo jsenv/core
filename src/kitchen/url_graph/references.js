@@ -274,7 +274,7 @@ ${urlInfo.url}`,
         sideEffectFileReference,
         sideEffectFileUrlInfo,
       ) => {
-        urlInfo.kitchen.callbacksToConsiderGraphLoaded.push(async () => {
+        urlInfo.kitchen.callbacksToConsiderContentReady.push(async () => {
           await urlInfo.kitchen.cook(sideEffectFileUrlInfo, {
             reference: sideEffectFileReference,
           });
@@ -358,7 +358,7 @@ ${urlInfo.url}`,
       const entryPoints = urlInfo.graph.getEntryPoints();
       const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
       for (const entryPointUrlInfo of entryPoints) {
-        urlInfo.kitchen.callbacksToConsiderGraphLoaded.push(async () => {
+        urlInfo.kitchen.callbacksToConsiderGraphCooked.push(async () => {
           // do not inject if already there
           const { dependencies } = entryPointUrlInfo;
           if (dependencies.has(sideEffectFileUrlInfo.url)) {

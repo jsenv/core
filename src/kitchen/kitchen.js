@@ -54,7 +54,7 @@ export const createKitchen = ({
   if (graph === undefined) {
     graph = createUrlGraph({ name, rootDirectoryUrl, kitchen });
   }
-  kitchen.callbacksToConsiderGraphLoaded = [];
+  kitchen.callbacksToConsiderGraphCooked = [];
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -506,6 +506,73 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.cook = cook;
 
+  const cookReferences = (
+    urlInfo,
+    { ignoreRessourceHint, ignoreDynamicImport } = {},
+  ) => {
+    const promises = [];
+    const promiseMap = new Map();
+
+    const cook = (urlInfo, dishContext) => {
+      const promiseFromData = promiseMap.get(urlInfo);
+      if (promiseFromData) return promiseFromData;
+      const promise = (async () => {
+        await urlInfo.kitchen.cook(urlInfo, dishContext);
+        startCookingReferences(urlInfo);
+      })();
+      promises.push(promise);
+      promiseMap.set(urlInfo, promise);
+      return promise;
+    };
+
+    const startCookingReferences = (urlInfo) => {
+      const { references } = urlInfo;
+      references.current.forEach((reference) => {
+        // we don't cook resource hints
+        // because they might refer to resource that will be modified during build
+        // It also means something else have to reference that url in order to cook it
+        // so that the preload is deleted by "resync_resource_hints.js" otherwise
+        if (ignoreRessourceHint && reference.isResourceHint) {
+          return;
+        }
+        if (ignoreDynamicImport && reference.subtype === "import_dynamic") {
+          return;
+        }
+        // we use reference.generatedUrl to mimic what a browser would do:
+        // do a fetch to the specifier as found in the file
+        const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
+          reference,
+          true,
+        );
+        cook(referencedUrlInfo, {
+          reference,
+          cookDuringCook: cook,
+        });
+      });
+    };
+
+    const getAllDishesAreCookedPromise = async (operation) => {
+      const waitAll = async () => {
+        if (operation) {
+          operation.throwIfAborted();
+        }
+        if (promises.length === 0) {
+          return;
+        }
+        const promisesToWait = promises.slice();
+        promises.length = 0;
+        await Promise.all(promisesToWait);
+        await waitAll();
+      };
+      await waitAll();
+      promiseMap.clear();
+    };
+
+    startCookingReferences(urlInfo);
+    return getAllDishesAreCookedPromise();
+  };
+  kitchenContext.cookReferences = cookReferences;
+
   Object.assign(kitchen, {
     graph,
     pluginController,
@@ -513,9 +580,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     rootDirectoryUrl,
     context: kitchenContext,
     cook,
-    executePendingCallbacks: async () => {
+    getAllCookedPromise: async () => {
       await Promise.all(
-        kitchen.callbacksToConsiderGraphLoaded.map(async (callback) => {
+        kitchen.callbacksToConsiderGraphCooked.map(async (callback) => {
           await callback();
         }),
       );
