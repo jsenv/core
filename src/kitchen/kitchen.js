@@ -53,7 +53,6 @@ export const createKitchen = ({
   if (graph === undefined) {
     graph = createUrlGraph({ name, rootDirectoryUrl, kitchen });
   }
-  kitchen.callbacksToConsiderGraphCooked = [];
 
   const logger = createLogger({ logLevel });
   const kitchenContext = {
@@ -412,7 +411,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           urlInfo.error = transformError;
           throw transformError;
         }
-      });
+      }, dishContext);
 
       // "finalize" hook
       try {
@@ -502,9 +501,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.cook = cook;
 
-  const cookReferences = (
+  const cookReferences = async (
     urlInfo,
-    { ignoreRessourceHint, ignoreDynamicImport } = {},
+    { operation, ignoreRessourceHint, ignoreDynamicImport } = {},
   ) => {
     const promises = [];
     const promiseMap = new Map();
@@ -519,6 +518,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       promises.push(promise);
       promiseMap.set(urlInfo, promise);
       return promise;
+    };
+
+    const callbacksToConsiderGraphCooked = [];
+    const baseContext = {
+      cookDuringCook: cook,
+      addCallbackToConsiderGraphCooked: (callback) => {
+        callbacksToConsiderGraphCooked.push(callback);
+      },
     };
 
     const startCookingReferences = (urlInfo) => {
@@ -541,13 +548,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           true,
         );
         cook(referencedUrlInfo, {
+          ...baseContext,
           reference,
-          cookDuringCook: cook,
         });
       });
     };
 
-    const getAllDishesAreCookedPromise = async (operation) => {
+    const getAllDishesAreCookedPromise = async () => {
       const waitAll = async () => {
         if (operation) {
           operation.throwIfAborted();
@@ -565,7 +572,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     };
 
     startCookingReferences(urlInfo);
-    return getAllDishesAreCookedPromise();
+    await getAllDishesAreCookedPromise();
+    await Promise.all(
+      callbacksToConsiderGraphCooked.map(async (callback) => {
+        await callback();
+      }),
+    );
+    callbacksToConsiderGraphCooked.length = 0;
   };
   kitchenContext.cookReferences = cookReferences;
 
@@ -576,13 +589,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     rootDirectoryUrl,
     context: kitchenContext,
     cook,
-    getAllCookedPromise: async () => {
-      await Promise.all(
-        kitchen.callbacksToConsiderGraphCooked.map(async (callback) => {
-          await callback();
-        }),
-      );
-    },
   });
   return kitchen;
 };

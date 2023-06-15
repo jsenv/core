@@ -1,8 +1,10 @@
 import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
-import { applyReferenceEffectsOnUrlInfo } from "./reference.js";
-import { createReferences } from "./references.js";
+import {
+  applyReferenceEffectsOnUrlInfo,
+  createReferences,
+} from "./references.js";
 
 export const createUrlGraph = ({
   rootDirectoryUrl,

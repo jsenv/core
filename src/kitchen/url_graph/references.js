@@ -54,10 +54,11 @@ export const createReferences = (urlInfo) => {
     current: [],
     isCollecting: false,
     find: (predicate) => references.current.find(predicate),
-    startCollecting: async (callback) => {
+    startCollecting: async (callback, context = urlInfo.kitchen.context) => {
       references.isCollecting = true;
       references.prev = references.current;
       references.current = [];
+      references.context = context;
 
       const stopCollecting = () => {
         const setOfDependencyUrls = new Set();
@@ -286,7 +287,7 @@ export const createReferences = (urlInfo) => {
         sideEffectFileReference,
         sideEffectFileUrlInfo,
       ) => {
-        urlInfo.kitchen.callbacksToConsiderContentReady.push(async () => {
+        urlInfo.callbacksToConsiderContentReady.push(async () => {
           await urlInfo.kitchen.cook(sideEffectFileUrlInfo, {
             reference: sideEffectFileReference,
           });
@@ -374,28 +375,26 @@ export const createReferences = (urlInfo) => {
       const [sideEffectFileReference, sideEffectFileUrlInfo] =
         addSideEffectFileRef();
       for (const entryPointUrlInfo of entryPoints) {
-        urlInfo.kitchen.context.callbacksToConsiderGraphCooked.push(
-          async () => {
-            // do not inject if already there
-            const { dependencies } = entryPointUrlInfo;
-            if (dependencies.has(sideEffectFileUrlInfo.url)) {
-              return;
-            }
-            dependencies.add(sideEffectFileUrlInfo.url);
-            await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
-            await sideEffectFileReference.readGeneratedSpecifier();
-            sideEffectFileReference.becomesInline({
-              specifier: sideEffectFileReference.generatedSpecifier,
-              urlInfo: entryPointUrlInfo,
-              content: sideEffectFileUrlInfo.content,
-              contentType: sideEffectFileUrlInfo.contentType,
-              // ideally get the correct line and column
-              // (for js it's 0, but for html it's different)
-              line: 0,
-              column: 0,
-            });
-          },
-        );
+        references.context.addCallbackToConsiderGraphCooked(async () => {
+          // do not inject if already there
+          const { dependencies } = entryPointUrlInfo;
+          if (dependencies.has(sideEffectFileUrlInfo.url)) {
+            return;
+          }
+          dependencies.add(sideEffectFileUrlInfo.url);
+          await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
+          await sideEffectFileReference.readGeneratedSpecifier();
+          sideEffectFileReference.becomesInline({
+            specifier: sideEffectFileReference.generatedSpecifier,
+            urlInfo: entryPointUrlInfo,
+            content: sideEffectFileUrlInfo.content,
+            contentType: sideEffectFileUrlInfo.contentType,
+            // ideally get the correct line and column
+            // (for js it's 0, but for html it's different)
+            line: 0,
+            column: 0,
+          });
+        });
       }
       return [sideEffectFileReference, sideEffectFileUrlInfo];
     },

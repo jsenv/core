@@ -402,8 +402,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             entryUrls.push(entryUrlInfo.url);
           });
         });
-        await rawKitchen.cookReferences(rawRootUrlInfo);
-        await rawKitchen.getAllCookedPromise(buildOperation);
+        await rawKitchen.cookReferences(rawRootUrlInfo, {
+          operation: buildOperation,
+        });
       } catch (e) {
         generateSourceGraph.fail();
         throw e;
@@ -979,8 +980,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               finalEntryUrls.push(finalEntryUrlInfo.url);
             });
           });
-          await finalKitchen.cookReferences(finalRootUrlInfo);
-          await finalKitchen.getAllCookedPromise(buildOperation);
+          await finalKitchen.cookReferences(finalRootUrlInfo, {
+            operation: buildOperation,
+          });
         } catch (e) {
           generateBuildGraph.fail();
           throw e;
@@ -1337,8 +1339,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               });
             });
           });
-          await versioningKitchen.cookReferences(versioningRootUrlInfo);
-          await versioningKitchen.getAllCookedPromise(buildOperation);
+          await versioningKitchen.cookReferences(versioningRootUrlInfo, {
+            operation: buildOperation,
+          });
           workerReferenceSet.clear();
           const actions = [];
           const visitors = [];
