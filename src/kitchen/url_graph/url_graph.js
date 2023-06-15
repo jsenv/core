@@ -148,7 +148,7 @@ const createUrlInfo = (url) => {
     typeHint: undefined,
     subtypeHint: undefined,
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
-    url,
+    url: null,
     originalUrl: undefined,
     filename: "",
     isEntryPoint: false,
@@ -175,6 +175,13 @@ const createUrlInfo = (url) => {
     headers: {},
     debug: false,
   };
+  Object.defineProperty(urlInfo, "url", {
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: url,
+  });
+
   urlInfo.references = createReferences(urlInfo);
   urlInfo.hasDependent = () => {
     for (const dependentUrl of urlInfo.dependents) {

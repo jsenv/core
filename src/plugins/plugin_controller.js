@@ -191,10 +191,14 @@ export const createPluginController = (kitchenContext) => {
   const callHooks = (hookName, info, context, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
+      const setHookParams = (firstArg = info, secondArg = context) => {
+        info = firstArg;
+        context = secondArg;
+      };
       for (const hook of hooks) {
         const returnValue = callHook(hook, info, context);
         if (returnValue && callback) {
-          callback(returnValue, hook.plugin);
+          callback(returnValue, hook.plugin, setHookParams);
         }
       }
     }

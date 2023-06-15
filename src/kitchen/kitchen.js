@@ -11,7 +11,6 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { createUrlGraph } from "./url_graph/url_graph.js";
-import { storeReferenceTransformation } from "./url_graph/reference.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
@@ -108,17 +107,12 @@ export const createKitchen = ({
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
 
-  const resolveReference = (reference, context = kitchenContext) => {
-    const referenceContext = {
-      ...context,
-      resolveReference: (reference, context = referenceContext) =>
-        resolveReference(reference, context),
-    };
+  const resolveReference = (reference) => {
     try {
       let url = pluginController.callHooksUntil(
         "resolveReference",
         reference,
-        referenceContext,
+        kitchenContext,
       );
       if (!url) {
         throw new Error(`NO_RESOLVE`);
@@ -127,8 +121,6 @@ export const createKitchen = ({
         reference.debug = true;
       }
       url = normalizeUrl(url);
-      let referencedUrlObject;
-      let searchParams;
       const setReferenceUrl = (referenceUrl) => {
         // ignored urls are prefixed with "ignore:" so that reference are associated
         // to a dedicated urlInfo that is ignored.
@@ -152,11 +144,13 @@ export const createKitchen = ({
         ) {
           reference.specifier = `ignore:${reference.specifier}`;
         }
-
-        referencedUrlObject = new URL(referenceUrl);
-        searchParams = referencedUrlObject.searchParams;
-        reference.url = referenceUrl;
-        reference.searchParams = searchParams;
+        Object.defineProperty(reference, "url", {
+          enumerable: true,
+          configurable: false,
+          writable: false,
+          value: referenceUrl,
+        });
+        reference.searchParams = new URL(referenceUrl).searchParams;
       };
       setReferenceUrl(url);
 
@@ -171,8 +165,8 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
       pluginController.callHooks(
         "redirectReference",
         reference,
-        referenceContext,
-        (returnValue, plugin) => {
+        kitchenContext,
+        (returnValue, plugin, setReference) => {
           const normalizedReturnValue = normalizeUrl(returnValue);
           if (normalizedReturnValue === reference.url) {
             return;
@@ -185,9 +179,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
             );
           }
-          const prevReference = { ...reference };
-          storeReferenceTransformation(prevReference, reference);
+          const newReference = { ...reference };
+          reference.becomes(newReference);
+          reference = newReference;
           setReferenceUrl(normalizedReturnValue);
+          setReference(newReference);
         },
       );
       reference.generatedUrl = reference.url;
@@ -203,19 +199,19 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       pluginController.callHooks(
         "transformReferenceSearchParams",
         reference,
-        referenceContext,
+        kitchenContext,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
-            searchParams.set(key, returnValue[key]);
+            reference.searchParams.set(key, returnValue[key]);
           });
-          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
+          reference.generatedUrl = normalizeUrl(new URL(reference.url).href);
         },
       );
 
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
         reference,
-        referenceContext,
+        kitchenContext,
       );
       if (reference.url.startsWith("ignore:")) {
         if (ignoreProtocol === "remove") {
@@ -635,8 +631,8 @@ const memoizeIsSupported = (runtimeCompat) => {
 };
 
 const inferUrlInfoType = (urlInfo) => {
-  const { type } = urlInfo;
-  if (type === "sourcemap") {
+  const { type, typeHint } = urlInfo;
+  if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
   const { contentType } = urlInfo;

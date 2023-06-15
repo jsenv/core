@@ -1,30 +1,17 @@
-import { getCallerPosition } from "@jsenv/urls";
+import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 
-import { createReference, traceFromUrlSite } from "./reference.js";
+import { createReference } from "./reference.js";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
 export const createReferences = (urlInfo) => {
-  const add = (props) => {
-    if (urlInfo.contentFinalized && urlInfo.kitchen.context.dev) {
-      throw new Error(
-        `cannot add reference to an urlInfo already sent to the browser
---- reference specifier ---
-${props.specifier}
---- url ---
-${urlInfo.url}`,
-      );
-    }
-    const [reference, referencedUrlInfo] = references.prepare(props);
-    references.current.push(reference);
-    return [reference, referencedUrlInfo];
-  };
-
   const references = {
     prev: [],
     current: [],
+    isCollecting: false,
     find: (predicate) => references.current.find(predicate),
     startCollecting: async (callback) => {
+      references.isCollecting = true;
       references.prev = references.current;
       references.current = [];
 
@@ -128,6 +115,7 @@ ${urlInfo.url}`,
             }
           }
         });
+        references.isCollecting = false;
       };
 
       try {
@@ -144,6 +132,35 @@ ${urlInfo.url}`,
       });
       const [reference, referencedUrlInfo] =
         urlInfo.kitchen.resolveReference(originalReference);
+      reference.becomesInline = ({
+        specifier,
+        content,
+        contentType,
+        line,
+        column,
+        // when urlInfo is given it means reference is moved into an other file
+        urlInfo = reference.urlInfo,
+        ...props
+      }) => {
+        const inlineProps = getInlineReferenceProps(reference, {
+          urlInfo,
+          line,
+          column,
+        });
+        const inlineCopy = urlInfo.references.prepare({
+          ...inlineProps,
+          specifierLine: line,
+          specifierColumn: column,
+          specifier,
+          content,
+          contentType,
+          prev: reference,
+          ...props,
+        });
+        replaceReference(reference, inlineCopy);
+        return inlineCopy;
+      };
+
       return [reference, referencedUrlInfo];
     },
     found: ({ trace, ...rest }) => {
@@ -156,11 +173,12 @@ ${urlInfo.url}`,
           }),
         );
       }
-      // console.log(trace.message)
-      return add({
+      const [ref, referencedUrlInfo] = references.prepare({
         trace,
         ...rest,
       });
+      addReference(ref);
+      return [ref, referencedUrlInfo];
     },
     foundInline: ({
       isOriginalPosition,
@@ -172,7 +190,7 @@ ${urlInfo.url}`,
       const parentContent = isOriginalPosition
         ? urlInfo.originalContent
         : urlInfo.content;
-      return add({
+      const [ref, referencedUrlInfo] = references.prepare({
         trace: traceFromUrlSite({
           url: parentUrl,
           content: parentContent,
@@ -185,6 +203,8 @@ ${urlInfo.url}`,
         isInline: true,
         ...rest,
       });
+      addReference(ref);
+      return [ref, referencedUrlInfo];
     },
     inject: ({ trace, ...rest }) => {
       if (trace === undefined) {
@@ -195,44 +215,23 @@ ${urlInfo.url}`,
           column,
         });
       }
-      return add({
+      const [ref, referencedUrlInfo] = references.prepare({
         trace,
         injected: true,
         ...rest,
       });
+      addReference(ref);
+      return [ref, referencedUrlInfo];
     },
-    // sourcemap
-    // they are not put into urlInfo.references
-    // why?
-    //   - likely because we are unable to delete them if become unused because of placeholder
-    //   - it's no longer going to happen so the'll likely come back to references.current array
-    // instead they are put on urlInfo.sourcemapReference
-    foundSourcemap: ({ type, specifier, specifierLine, specifierColumn }) => {
-      const sourcemapUrlSite = adjustUrlSite(urlInfo, {
-        url: urlInfo.url,
-        line: specifierLine,
-        column: specifierColumn,
+
+    foundSourcemap: (props) => {
+      return references.found({
+        expectedType: "sourcemap",
+        ...props,
       });
-      const [sourcemapReference, sourcemapUrlInfo] = references.prepare(
-        {
-          trace: traceFromUrlSite(sourcemapUrlSite),
-          type,
-          expectedType: "sourcemap",
-          parentUrl: urlInfo.url,
-          specifier,
-          specifierLine,
-          specifierColumn,
-        },
-        true,
-      );
-      if (sourcemapReference.isInline) {
-        sourcemapUrlInfo.isInline = true;
-      }
-      sourcemapUrlInfo.type = "sourcemap";
-      return [sourcemapReference, sourcemapUrlInfo];
     },
     injectSourcemapPlaceholder: ({ specifier }) => {
-      const [sourcemapReference, sourcemapUrlInfo] = references.prepare({
+      return references.found({
         trace: {
           message: `sourcemap comment placeholder`,
           url: urlInfo.url,
@@ -240,14 +239,9 @@ ${urlInfo.url}`,
         type: "sourcemap_comment",
         expectedType: "sourcemap",
         subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-        parentUrl: urlInfo.url,
         specifier,
+        isInline: urlInfo.kitchen.context.sourcemaps === "inline",
       });
-      urlInfo.sourcemapReference = sourcemapReference;
-      sourcemapUrlInfo.type = "sourcemap";
-      sourcemapUrlInfo.isInline =
-        urlInfo.kitchen.context.sourcemaps === "inline";
-      return [sourcemapReference, sourcemapUrlInfo];
     },
     // side effect file
     foundSideEffectFile: async ({ sideEffectFileUrl, trace, ...rest }) => {
@@ -260,8 +254,8 @@ ${urlInfo.url}`,
         });
       }
 
-      const addRef = () =>
-        add({
+      const addSideEffectFileRef = () => {
+        const [ref, referencedUrlInfo] = references.prepare({
           trace,
           type: "side_effect_file",
           isImplicit: true,
@@ -269,6 +263,9 @@ ${urlInfo.url}`,
           specifier: sideEffectFileUrl,
           ...rest,
         });
+        addReference(ref);
+        return [ref, referencedUrlInfo];
+      };
 
       const injectAsBannerCodeBeforeFinalize = (
         sideEffectFileReference,
@@ -296,7 +293,8 @@ ${urlInfo.url}`,
 
       // Case #1: Not possible to inject in other files -> inject as banner code
       if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
-        const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+        const [sideEffectFileReference, sideEffectFileUrlInfo] =
+          addSideEffectFileRef();
         return injectAsBannerCodeBeforeFinalize(
           sideEffectFileReference,
           sideEffectFileUrlInfo,
@@ -312,7 +310,8 @@ ${urlInfo.url}`,
       // (in that case we find the side effect file as it was injected in parent)
       if (urlInfo.kitchen.context.dev) {
         const urlsBeforeInjection = Array.from(urlInfo.graph.urlInfoMap.keys());
-        const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+        const [sideEffectFileReference, sideEffectFileUrlInfo] =
+          addSideEffectFileRef();
         if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
           return injectAsBannerCodeBeforeFinalize(
             sideEffectFileReference,
@@ -349,14 +348,16 @@ ${urlInfo.url}`,
       // during build, files are not executed so it's
       // possible to inject reference when discovering a side effect file
       if (urlInfo.isEntryPoint) {
-        const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+        const [sideEffectFileReference, sideEffectFileUrlInfo] =
+          addSideEffectFileRef();
         return injectAsBannerCodeBeforeFinalize(
           sideEffectFileReference,
           sideEffectFileUrlInfo,
         );
       }
       const entryPoints = urlInfo.graph.getEntryPoints();
-      const [sideEffectFileReference, sideEffectFileUrlInfo] = addRef();
+      const [sideEffectFileReference, sideEffectFileUrlInfo] =
+        addSideEffectFileRef();
       for (const entryPointUrlInfo of entryPoints) {
         urlInfo.kitchen.callbacksToConsiderGraphCooked.push(async () => {
           // do not inject if already there
@@ -384,6 +385,126 @@ ${urlInfo.url}`,
   };
 
   return references;
+};
+
+const addReference = (reference) => {
+  const { urlInfo } = reference;
+  if (urlInfo.contentFinalized && urlInfo.kitchen.context.dev) {
+    throw new Error(
+      `cannot add reference for content already sent to the browser
+--- reference url ---
+${reference.url}
+--- content url ---
+${urlInfo.url}`,
+    );
+  }
+
+  const { references } = urlInfo;
+  references.current.push(reference);
+  if (references.isCollecting) {
+    // if this function is called while collecting urlInfo references
+    // there is no need to update dependents + dependencies
+    // because it will be done at the end of reference collection
+    return;
+  }
+  if (reference.isResourceHint) {
+    return;
+  }
+  if (
+    reference.isImplicit &&
+    !reference.isInline &&
+    !urlInfo.implicitUrls.has(reference.url)
+  ) {
+    urlInfo.implicitUrls.add(reference.url);
+    if (urlInfo.isInline) {
+      const parentUrlInfo = urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url);
+      parentUrlInfo.implicitUrls.add(reference.url);
+    }
+  }
+  urlInfo.dependencies.add(reference.url);
+  const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(reference);
+  referencedUrlInfo.dependents.add(urlInfo.url);
+};
+
+const removeReference = (reference) => {
+  const { urlInfo } = reference;
+  if (urlInfo.contentFinalized && urlInfo.kitchen.context.dev) {
+    throw new Error(
+      `cannot remove reference for content already sent to the browser
+--- reference url ---
+${reference.url}
+--- content url ---
+${urlInfo.url}`,
+    );
+  }
+  const { references } = urlInfo;
+  const index = references.current.indexOf(reference);
+  if (index === -1) {
+    throw new Error(`reference not found in ${urlInfo.url}`);
+  }
+
+  references.current.splice(index, 1);
+  if (references.isCollecting) {
+    // if this function is called while collecting urlInfo references
+    // there is no need to update dependents + dependencies
+    // because it will be done at the end of reference collectio
+    return;
+  }
+  if (reference.isImplicit && !reference.isInline) {
+    const hasAnOtherImplicitRef = references.current.some(
+      (ref) => ref.isImplicit && ref.url === reference.url,
+    );
+    if (!hasAnOtherImplicitRef) {
+      urlInfo.implicitUrls.delete(reference.url);
+    }
+  }
+  const hasAnOtherRef = references.current.some(
+    (ref) => ref.url === reference.url,
+  );
+  if (!hasAnOtherRef) {
+    urlInfo.dependencies.delete(reference.url);
+    const referencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
+    referencedUrlInfo.dependents.delete(urlInfo.url);
+    if (!referencedUrlInfo.isUsed()) {
+      referencedUrlInfo.deleteFromGraph();
+    }
+  }
+};
+
+const replaceReference = (reference, newReference) => {
+  const { urlInfo } = reference;
+  const newUrlInfo = newReference.urlInfo;
+  if (urlInfo === newUrlInfo) {
+    const { references } = urlInfo;
+    const index = references.current.indexOf(reference);
+    if (index === -1) {
+      throw new Error(`reference not found in ${reference.urlInfo.url}`);
+    }
+    if (references.isCollecting) {
+      // if this function is called while collecting urlInfo references
+      // there is no need to update dependents + dependencies
+      // because it will be done at the end of reference collection
+      references.current[index] = newReference;
+      reference.becomes(newReference);
+
+      return;
+    }
+    removeReference(reference);
+    addReference(newReference, index);
+    return;
+  }
+  removeReference(reference);
+  addReference(newReference);
+  reference.becomes(newReference);
+};
+
+const traceFromUrlSite = (urlSite) => {
+  return {
+    message: stringifyUrlSite(urlSite),
+    url: urlSite.url,
+    line: urlSite.line,
+    column: urlSite.column,
+  };
 };
 
 const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
@@ -424,4 +545,33 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
     },
     urlInfo,
   );
+};
+
+const getInlineReferenceProps = (
+  reference,
+  { urlInfo, isOriginalPosition, line, column, ...rest },
+) => {
+  const trace = traceFromUrlSite({
+    url:
+      urlInfo === undefined
+        ? isOriginalPosition
+          ? reference.urlInfo.url
+          : reference.urlInfo.generatedUrl
+        : reference.urlInfo.url,
+    content:
+      urlInfo === undefined
+        ? isOriginalPosition
+          ? reference.urlInfo.originalContent
+          : reference.urlInfo.content
+        : urlInfo.content,
+    line,
+    column,
+  });
+  return {
+    trace,
+    isInline: true,
+    line,
+    column,
+    ...rest,
+  };
 };
