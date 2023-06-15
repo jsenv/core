@@ -402,7 +402,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             entryUrls.push(entryUrlInfo.url);
           });
         });
-        await rawKitchen.cookReferences(rawRootUrlInfo, {
+        await rawRootUrlInfo.cookReferences({
           operation: buildOperation,
         });
       } catch (e) {
@@ -701,7 +701,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const [ref, rawUrlInfo] = reference.urlInfo.prepareReference(
                   ...reference,
                 );
-                await rawKitchen.cook(rawUrlInfo, { reference: ref });
+                await rawUrlInfo.cook({ reference: ref });
                 return rawUrlInfo;
               }
               if (reference.isInline) {
@@ -971,7 +971,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
           finalRootUrlInfo.references.startCollecting(() => {
             entryUrls.forEach((entryUrl) => {
-              const [, finalEntryUrlInfo] = finalRootUrlInfo.found({
+              const [, finalEntryUrlInfo] = finalRootUrlInfo.references.found({
                 trace: { message: `entryPoint` },
                 isEntryPoint: true,
                 type: "entry_point",
@@ -980,7 +980,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               finalEntryUrls.push(finalEntryUrlInfo.url);
             });
           });
-          await finalKitchen.cookReferences(finalRootUrlInfo, {
+          await finalRootUrlInfo.cookReferences({
             operation: buildOperation,
           });
         } catch (e) {
@@ -1007,9 +1007,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 finalKitchen.graph.getUrlInfo(finalEntryUrl);
               return finalEntryUrlInfo.type === "html";
             }) &&
-            finalKitchen.kitchenContext.isSupportedOnCurrentClients(
-              "importmap",
-            );
+            finalKitchen.context.isSupportedOnCurrentClients("importmap");
           const workerReferenceSet = new Set();
           const isReferencedByWorker = (reference, graph) => {
             if (workerReferenceSet.has(reference)) {
@@ -1339,7 +1337,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               });
             });
           });
-          await versioningKitchen.cookReferences(versioningRootUrlInfo, {
+          await versioningRootUrlInfo.cookReferences({
             operation: buildOperation,
           });
           workerReferenceSet.clear();

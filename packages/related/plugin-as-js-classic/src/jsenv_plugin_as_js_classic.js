@@ -33,7 +33,7 @@ export const jsenvPluginAsJsClassic = () => {
       }
       // cook it to get content + dependencies
       await context.cook(jsModuleUrlInfo, { reference: jsModuleReference });
-      await context.cookReferences(jsModuleUrlInfo, {
+      await jsModuleUrlInfo.cookReferences({
         // we ignore dynamic import to cook lazyly (as browser request the server)
         // these dynamic imports must inherit "?as_js_classic"
         // This is done inside rollup for convenience

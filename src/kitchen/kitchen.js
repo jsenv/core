@@ -178,11 +178,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
             );
           }
-          const newReference = { ...reference };
-          reference.becomes(newReference);
-          reference = newReference;
+          const referenceRedirected = reference.redirect(normalizedReturnValue);
+          reference = referenceRedirected;
           setReferenceUrl(normalizedReturnValue);
-          setReference(newReference);
+          setReference(referenceRedirected);
         },
       );
       reference.generatedUrl = reference.url;
@@ -508,11 +507,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     const promises = [];
     const promiseMap = new Map();
 
-    const cook = (urlInfo, dishContext) => {
+    const cookOne = (urlInfo, dishContext) => {
       const promiseFromData = promiseMap.get(urlInfo);
       if (promiseFromData) return promiseFromData;
       const promise = (async () => {
-        await urlInfo.kitchen.cook(urlInfo, dishContext);
+        await cook(urlInfo, dishContext);
         startCookingReferences(urlInfo);
       })();
       promises.push(promise);
@@ -522,7 +521,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     const callbacksToConsiderGraphCooked = [];
     const baseContext = {
-      cookDuringCook: cook,
+      cookDuringCook: cookOne,
       addCallbackToConsiderGraphCooked: (callback) => {
         callbacksToConsiderGraphCooked.push(callback);
       },

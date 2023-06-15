@@ -73,7 +73,7 @@ const parseAndTransformJsReferences = async (
       JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
 
     sequentialActions.push(async () => {
-      await urlInfo.kitchen.cook(inlineUrlInfo, { reference: inlineReference });
+      await inlineUrlInfo.cook({ reference: inlineReference });
       const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
         quote,
         allowEscapeForVersioning,
@@ -107,7 +107,7 @@ const parseAndTransformJsReferences = async (
       baseUrl: {
         "StringLiteral": externalReferenceInfo.baseUrl,
         "window.location": urlInfo.url,
-        "window.origin": urlInfo.kitchen.rootDirectoryUrl,
+        "window.origin": urlInfo.kitchen.context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,

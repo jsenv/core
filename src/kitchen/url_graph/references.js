@@ -176,7 +176,7 @@ export const createReferences = (urlInfo) => {
         ...props,
       });
       const [reference, referencedUrlInfo] =
-        urlInfo.kitchen.resolveReference(originalReference);
+        urlInfo.kitchen.context.resolveReference(originalReference);
       return [reference, referencedUrlInfo];
     },
     found: ({ trace, ...rest }) => {
@@ -288,7 +288,7 @@ export const createReferences = (urlInfo) => {
         sideEffectFileUrlInfo,
       ) => {
         urlInfo.callbacksToConsiderContentReady.push(async () => {
-          await urlInfo.kitchen.cook(sideEffectFileUrlInfo, {
+          await sideEffectFileUrlInfo.cook({
             reference: sideEffectFileReference,
           });
           await prependContent(urlInfo, sideEffectFileUrlInfo);
@@ -534,10 +534,13 @@ const createReference = ({
     return reference.generatedSpecifier;
   };
 
-  reference.becomes = (next) => {
-    reference.next = next;
-    next.original = reference.original || reference;
-    next.prev = reference;
+  reference.redirect = (url) => {
+    const referenceRedirected = createReference({
+      ...reference,
+    });
+    referenceRedirected.url = url;
+    storeReferenceChain(reference, referenceRedirected);
+    return referenceRedirected;
   };
 
   reference.becomesInline = ({
@@ -699,8 +702,7 @@ const replaceReference = (reference, newReference) => {
       // there is no need to update dependents + dependencies
       // because it will be done at the end of reference collection
       references.current[index] = newReference;
-      reference.becomes(newReference);
-
+      storeReferenceChain(reference, newReference);
       return;
     }
     removeReference(reference);
@@ -709,7 +711,13 @@ const replaceReference = (reference, newReference) => {
   }
   removeReference(reference);
   addReference(newReference);
-  reference.becomes(newReference);
+  storeReferenceChain(reference, newReference);
+};
+
+const storeReferenceChain = (ref, nextRef) => {
+  ref.next = nextRef;
+  nextRef.original = ref.original || ref;
+  nextRef.prev = ref;
 };
 
 const traceFromUrlSite = (urlSite) => {

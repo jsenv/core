@@ -313,7 +313,7 @@ export const createFileService = ({
         urlInfo.subtype = null;
         urlInfo.timing = {};
       }
-      await kitchen.cook(urlInfo, {
+      await urlInfo.cook({
         request,
         reference,
       });

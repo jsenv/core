@@ -256,6 +256,12 @@ const createUrlInfo = (url) => {
   urlInfo.deleteFromGraph = () => {
     urlInfo.graph.deleteUrlInfo(urlInfo.url);
   };
+  urlInfo.cook = (context) => {
+    return urlInfo.kitchen.context.cook(urlInfo, context);
+  };
+  urlInfo.cookReferences = (context) => {
+    return urlInfo.kitchen.context.cookReferences(urlInfo, context);
+  };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo;
