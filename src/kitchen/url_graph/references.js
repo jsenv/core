@@ -1,8 +1,52 @@
-import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
+import { normalizeUrl, getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 
-import { createReference } from "./reference.js";
+import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
+
+export const applyReferenceEffectsOnUrlInfo = (reference, urlInfo) => {
+  urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
+
+  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
+    urlInfo.isEntryPoint = true;
+  }
+  Object.assign(urlInfo.data, reference.data);
+  Object.assign(urlInfo.timing, reference.timing);
+  if (reference.injected) {
+    urlInfo.injected = true;
+  }
+  if (reference.filename && !urlInfo.filename) {
+    urlInfo.filename = reference.filename;
+  }
+  if (reference.isInline) {
+    urlInfo.isInline = true;
+    urlInfo.inlineUrlSite = {
+      url: reference.urlInfo.url,
+      content: reference.isOriginalPosition
+        ? reference.urlInfo.originalContent
+        : reference.urlInfo.content,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
+    };
+    urlInfo.contentType = reference.contentType;
+    urlInfo.originalContent = urlInfo.kitchen.context.build
+      ? urlInfo.originalContent === undefined
+        ? reference.content
+        : urlInfo.originalContent
+      : reference.content;
+    urlInfo.content = reference.content;
+  }
+
+  if (reference.debug) {
+    urlInfo.debug = true;
+  }
+  if (reference.expectedType) {
+    urlInfo.typeHint = reference.expectedType;
+  }
+  if (reference.expectedSubtype) {
+    urlInfo.subtypeHint = reference.expectedSubtype;
+  }
+};
 
 export const createReferences = (urlInfo) => {
   const references = {
@@ -132,35 +176,6 @@ export const createReferences = (urlInfo) => {
       });
       const [reference, referencedUrlInfo] =
         urlInfo.kitchen.resolveReference(originalReference);
-      reference.becomesInline = ({
-        specifier,
-        content,
-        contentType,
-        line,
-        column,
-        // when urlInfo is given it means reference is moved into an other file
-        urlInfo = reference.urlInfo,
-        ...props
-      }) => {
-        const inlineProps = getInlineReferenceProps(reference, {
-          urlInfo,
-          line,
-          column,
-        });
-        const inlineCopy = urlInfo.references.prepare({
-          ...inlineProps,
-          specifierLine: line,
-          specifierColumn: column,
-          specifier,
-          content,
-          contentType,
-          prev: reference,
-          ...props,
-        });
-        replaceReference(reference, inlineCopy);
-        return inlineCopy;
-      };
-
       return [reference, referencedUrlInfo];
     },
     found: ({ trace, ...rest }) => {
@@ -359,32 +374,232 @@ export const createReferences = (urlInfo) => {
       const [sideEffectFileReference, sideEffectFileUrlInfo] =
         addSideEffectFileRef();
       for (const entryPointUrlInfo of entryPoints) {
-        urlInfo.kitchen.callbacksToConsiderGraphCooked.push(async () => {
-          // do not inject if already there
-          const { dependencies } = entryPointUrlInfo;
-          if (dependencies.has(sideEffectFileUrlInfo.url)) {
-            return;
-          }
-          dependencies.add(sideEffectFileUrlInfo.url);
-          await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
-          await sideEffectFileReference.readGeneratedSpecifier();
-          sideEffectFileReference.becomesInline({
-            specifier: sideEffectFileReference.generatedSpecifier,
-            urlInfo: entryPointUrlInfo,
-            content: sideEffectFileUrlInfo.content,
-            contentType: sideEffectFileUrlInfo.contentType,
-            // ideally get the correct line and column
-            // (for js it's 0, but for html it's different)
-            line: 0,
-            column: 0,
-          });
-        });
+        urlInfo.kitchen.context.callbacksToConsiderGraphCooked.push(
+          async () => {
+            // do not inject if already there
+            const { dependencies } = entryPointUrlInfo;
+            if (dependencies.has(sideEffectFileUrlInfo.url)) {
+              return;
+            }
+            dependencies.add(sideEffectFileUrlInfo.url);
+            await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
+            await sideEffectFileReference.readGeneratedSpecifier();
+            sideEffectFileReference.becomesInline({
+              specifier: sideEffectFileReference.generatedSpecifier,
+              urlInfo: entryPointUrlInfo,
+              content: sideEffectFileUrlInfo.content,
+              contentType: sideEffectFileUrlInfo.contentType,
+              // ideally get the correct line and column
+              // (for js it's 0, but for html it's different)
+              line: 0,
+              column: 0,
+            });
+          },
+        );
       }
       return [sideEffectFileReference, sideEffectFileUrlInfo];
     },
   };
 
   return references;
+};
+
+/*
+ * - "http_request"
+ * - "entry_point"
+ * - "link_href"
+ * - "style"
+ * - "script"
+ * - "a_href"
+ * - "iframe_src
+ * - "img_src"
+ * - "img_srcset"
+ * - "source_src"
+ * - "source_srcset"
+ * - "image_href"
+ * - "use_href"
+ * - "css_@import"
+ * - "css_url"
+ * - "js_import"
+ * - "js_import_script"
+ * - "js_url"
+ * - "js_inline_content"
+ * - "sourcemap_comment"
+ * - "webmanifest_icon_src"
+ * - "package_json"
+ * - "side_effect_file"
+ * */
+const createReference = ({
+  urlInfo,
+  data = {},
+  node,
+  trace,
+  type,
+  subtype,
+  expectedContentType,
+  expectedType,
+  expectedSubtype,
+  filename,
+  integrity,
+  crossorigin,
+  specifier,
+  specifierStart,
+  specifierEnd,
+  specifierLine,
+  specifierColumn,
+  baseUrl,
+  isOriginalPosition,
+  isEntryPoint = false,
+  isResourceHint = false,
+  isImplicit = false,
+  hasVersioningEffect = false,
+  injected = false,
+  isInline = false,
+  content,
+  contentType,
+  assert,
+  assertNode,
+  typePropertyNode,
+  leadsToADirectory = false,
+  debug = false,
+  prev = null,
+}) => {
+  if (typeof specifier !== "string") {
+    if (specifier instanceof URL) {
+      specifier = specifier.href;
+    } else {
+      throw new TypeError(`"specifier" must be a string, got ${specifier}`);
+    }
+  }
+  const reference = {
+    urlInfo,
+    original: null,
+    prev,
+    next: null,
+    data,
+    node,
+    trace,
+    url: null,
+    searchParams: null,
+    generatedUrl: null,
+    generatedSpecifier: null,
+    type,
+    subtype,
+    expectedContentType,
+    expectedType,
+    expectedSubtype,
+    filename,
+    integrity,
+    crossorigin,
+    specifier,
+    specifierStart,
+    specifierEnd,
+    specifierLine,
+    specifierColumn,
+    isOriginalPosition,
+    baseUrl,
+    isEntryPoint,
+    isResourceHint,
+    isImplicit,
+    hasVersioningEffect,
+    version: null,
+    injected,
+    timing: {},
+    // for inline resources the reference contains the content
+    isInline,
+    content,
+    contentType,
+    escape: null,
+    // import assertions (maybe move to data?)
+    assert,
+    assertNode,
+    typePropertyNode,
+    leadsToADirectory,
+    mutation: null,
+    debug,
+  };
+
+  // "formatReferencedUrl" can be async BUT this is an exception
+  // for most cases it will be sync. We want to favor the sync signature to keep things simpler
+  // The only case where it needs to be async is when
+  // the specifier is a `data:*` url
+  // in this case we'll wait for the promise returned by
+  // "formatReferencedUrl"
+  reference.readGeneratedSpecifier = () => {
+    if (reference.generatedSpecifier.then) {
+      return reference.generatedSpecifier.then((value) => {
+        reference.generatedSpecifier = value;
+        return value;
+      });
+    }
+    return reference.generatedSpecifier;
+  };
+
+  reference.becomes = (next) => {
+    reference.next = next;
+    next.original = reference.original || reference;
+    next.prev = reference;
+  };
+
+  reference.becomesInline = ({
+    specifier,
+    content,
+    contentType,
+    line,
+    column,
+    // when urlInfo is given it means reference is moved into an other file
+    urlInfo = reference.urlInfo,
+    ...props
+  }) => {
+    const inlineProps = getInlineReferenceProps(reference, {
+      urlInfo,
+      line,
+      column,
+    });
+    const inlineCopy = urlInfo.references.prepare({
+      ...inlineProps,
+      specifierLine: line,
+      specifierColumn: column,
+      specifier,
+      content,
+      contentType,
+      prev: reference,
+      ...props,
+    });
+    replaceReference(reference, inlineCopy);
+    return inlineCopy;
+  };
+
+  reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
+    const urlObject = new URL(urlInfo.url);
+    const { searchParams } = urlObject;
+    if (!searchParams.has(searchParam)) {
+      return [null, null];
+    }
+    searchParams.delete(searchParam);
+    const originalRef = reference || reference.original || reference;
+    const referenceWithoutSearchParam = {
+      ...originalRef,
+      original: originalRef,
+      searchParams,
+      data: { ...originalRef.data },
+      expectedType,
+      specifier: originalRef.specifier
+        .replace(`?${searchParam}`, "")
+        .replace(`&${searchParam}`, ""),
+      url: normalizeUrl(urlObject.href),
+      generatedSpecifier: null,
+      generatedUrl: null,
+      filename: null,
+    };
+    const urlInfoWithoutSearchParam = urlInfo.graph.reuseOrCreateUrlInfo(
+      referenceWithoutSearchParam,
+    );
+    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
+  };
+
+  // Object.preventExtensions(reference) // useful to ensure all properties are declared here
+  return reference;
 };
 
 const addReference = (reference) => {
