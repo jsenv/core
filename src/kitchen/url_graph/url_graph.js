@@ -188,7 +188,7 @@ const createUrlInfo = (url) => {
   urlInfo.hasDependent = () => {
     for (const dependentUrl of urlInfo.dependents) {
       const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
-      for (const reference of dependentUrlInfo.references) {
+      for (const reference of dependentUrlInfo.references.current) {
         if (reference.url === urlInfo.url) {
           if (
             !reference.isInline &&

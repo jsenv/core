@@ -380,7 +380,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     };
 
     if (!urlInfo.url.startsWith("ignore:")) {
-      urlInfo.references.startCollecting(async () => {
+      await urlInfo.references.startCollecting(async () => {
         // "fetchUrlContent" hook
         await fetchUrlContent(urlInfo, {
           reference: dishContext.reference,
@@ -507,24 +507,27 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     const promises = [];
     const promiseMap = new Map();
 
-    const cookOne = (urlInfo, dishContext) => {
+    const callbacksToConsiderGraphCooked = [];
+    const baseContext = {
+      addCallbackToConsiderGraphCooked: (callback) => {
+        callbacksToConsiderGraphCooked.push(callback);
+      },
+    };
+
+    const cookOne = (urlInfo, { reference }) => {
       const promiseFromData = promiseMap.get(urlInfo);
       if (promiseFromData) return promiseFromData;
       const promise = (async () => {
-        await cook(urlInfo, dishContext);
+        await cook(urlInfo, {
+          ...baseContext,
+          cookDuringCook: cookOne,
+          reference,
+        });
         startCookingReferences(urlInfo);
       })();
       promises.push(promise);
       promiseMap.set(urlInfo, promise);
       return promise;
-    };
-
-    const callbacksToConsiderGraphCooked = [];
-    const baseContext = {
-      cookDuringCook: cookOne,
-      addCallbackToConsiderGraphCooked: (callback) => {
-        callbacksToConsiderGraphCooked.push(callback);
-      },
     };
 
     const startCookingReferences = (urlInfo) => {
@@ -546,10 +549,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           reference,
           true,
         );
-        cook(referencedUrlInfo, {
-          ...baseContext,
-          reference,
-        });
+        cookOne(referencedUrlInfo, { reference });
       });
     };
 

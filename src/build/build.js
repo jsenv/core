@@ -390,7 +390,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
         const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
-        rawRootUrlInfo.references.startCollecting(() => {
+        await rawRootUrlInfo.references.startCollecting(() => {
           Object.keys(entryPoints).forEach((key) => {
             const [, entryUrlInfo] = rawRootUrlInfo.references.found({
               trace: { message: `"${key}" in entryPoints parameter` },
@@ -969,7 +969,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
           const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
-          finalRootUrlInfo.references.startCollecting(() => {
+          await finalRootUrlInfo.references.startCollecting(() => {
             entryUrls.forEach((entryUrl) => {
               const [, finalEntryUrlInfo] = finalRootUrlInfo.references.found({
                 trace: { message: `entryPoint` },
@@ -1327,7 +1327,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
 
           const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
-          versioningRootUrlInfo.references.startCollecting(() => {
+          await versioningRootUrlInfo.references.startCollecting(() => {
             finalEntryUrls.forEach((finalEntryUrl) => {
               versioningRootUrlInfo.references.found({
                 trace: { message: `entryPoint` },

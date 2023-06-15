@@ -54,6 +54,7 @@ export const createReferences = (urlInfo) => {
     current: [],
     isCollecting: false,
     find: (predicate) => references.current.find(predicate),
+    forEach: (callback) => references.current.forEach(callback),
     startCollecting: async (callback, context = urlInfo.kitchen.context) => {
       references.isCollecting = true;
       references.prev = references.current;
