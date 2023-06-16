@@ -15,7 +15,7 @@ export const jsenvPluginWebResolution = () => {
         reference.specifier,
         // baseUrl happens second argument to new URL() is different from
         // import.meta.url or document.currentScript.src
-        reference.baseUrl || reference.urlInfo.url,
+        reference.baseUrl || reference.ownerUrlInfo.url,
       ).href;
     },
   };

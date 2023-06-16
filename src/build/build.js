@@ -245,9 +245,9 @@ export const build = async ({
     if (base === "./") {
       const urlRelativeToParent = urlToRelativeUrl(
         generatedUrl,
-        reference.urlInfo.url === sourceDirectoryUrl
+        reference.ownerUrlInfo.url === sourceDirectoryUrl
           ? buildDirectoryUrl
-          : reference.urlInfo.url,
+          : reference.ownerUrlInfo.url,
       );
       if (urlRelativeToParent[0] !== ".") {
         // ensure "./" on relative url (otherwise it could be a "bare specifier")
@@ -443,11 +443,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             resolveReference: (reference) => {
               const getUrl = () => {
                 if (reference.type === "filesystem") {
-                  const parentRawUrl = buildDirectoryRedirections.get(
-                    reference.urlInfo.url,
+                  const ownerRawUrl = buildDirectoryRedirections.get(
+                    reference.ownerUrlInfo.url,
                   );
-                  const parentUrl = ensurePathnameTrailingSlash(parentRawUrl);
-                  return new URL(reference.specifier, parentUrl).href;
+                  const ownerUrl = ensurePathnameTrailingSlash(ownerRawUrl);
+                  return new URL(reference.specifier, ownerUrl).href;
                 }
                 if (reference.specifier[0] === "/") {
                   return new URL(
@@ -457,7 +457,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 }
                 return new URL(
                   reference.specifier,
-                  reference.baseUrl || reference.urlInfo.url,
+                  reference.baseUrl || reference.ownerUrlInfo.url,
                 ).href;
               };
               let url = getUrl();
@@ -482,10 +482,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return reference.url;
               }
               if (reference.isInline) {
-                const parentFinalUrlInfo = finalKitchen.graph.getUrlInfo(
-                  reference.urlInfo.url,
+                const ownerFinalUrlInfo = finalKitchen.graph.getUrlInfo(
+                  reference.ownerUrlInfo.url,
                 );
-                const parentRawUrl = parentFinalUrlInfo.originalUrl;
+                const ownerRawUrl = ownerFinalUrlInfo.originalUrl;
                 const rawUrlInfo = GRAPH_VISITOR.find(
                   rawKitchen.graph,
                   (rawUrlInfo) => {
@@ -493,7 +493,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // not inline
                     if (!inlineUrlSite) return false;
                     if (
-                      inlineUrlSite.url === parentRawUrl &&
+                      inlineUrlSite.url === ownerRawUrl &&
                       inlineUrlSite.line === reference.specifierLine &&
                       inlineUrlSite.column === reference.specifierColumn
                     ) {
@@ -517,7 +517,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 }
                 const buildUrl = buildUrlsGenerator.generate(reference.url, {
                   urlInfo: rawUrlInfo,
-                  parentUrlInfo: parentFinalUrlInfo,
+                  ownerUrlInfo: ownerFinalUrlInfo,
                 });
                 associateBuildUrlAndRawUrl(
                   buildUrl,
@@ -587,8 +587,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return buildUrl;
               }
               const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
-              const parentFinalUrlInfo = finalKitchen.graph.getUrlInfo(
-                reference.urlInfo.url,
+              const ownerFinalUrlInfo = finalKitchen.graph.getUrlInfo(
+                reference.ownerUrlInfo.url,
               );
               // files from root directory but not given to rollup nor postcss
               if (rawUrlInfo) {
@@ -598,7 +598,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   referencedUrlObject.href,
                   {
                     urlInfo: rawUrlInfo,
-                    parentUrlInfo: parentFinalUrlInfo,
+                    ownerUrlInfo: ownerFinalUrlInfo,
                   },
                 );
                 associateBuildUrlAndRawUrl(
@@ -617,7 +617,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
               if (reference.type === "sourcemap_comment") {
                 // inherit parent build url
-                return generateSourcemapFileUrl(reference.urlInfo.url);
+                return generateSourcemapFileUrl(reference.ownerUrlInfo.url);
               }
               // files generated during the final graph:
               // - sourcemaps
@@ -698,9 +698,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // reference injected during "postbuild":
               // - happens for "js_module_fallback" injecting "s.js"
               if (reference.injected) {
-                const [ref, rawUrlInfo] = reference.urlInfo.prepareReference(
-                  ...reference,
-                );
+                const [ref, rawUrlInfo] =
+                  reference.ownerUrlInfo.prepareReference(...reference);
                 await rawUrlInfo.cook({ reference: ref });
                 return rawUrlInfo;
               }
@@ -883,7 +882,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
                 urlInfosToBundle,
                 {
-                  ...rawKitchen.kitchenContext,
+                  ...rawKitchen.context,
                   buildDirectoryUrl,
                   assetsDirectory,
                 },
@@ -1028,15 +1027,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return Boolean(dependentWorker);
           };
           const preferWithoutVersioning = (reference) => {
-            const parentFinalUrlInfo = finalKitchen.graph.getUrlInfo(
-              reference.urlInfo.url,
+            const ownerFinalUrlInfo = finalKitchen.graph.getUrlInfo(
+              reference.ownerUrlInfo.url,
             );
-            if (parentFinalUrlInfo.jsQuote) {
+            if (ownerFinalUrlInfo.jsQuote) {
               return {
                 type: "global",
-                source: `${parentFinalUrlInfo.jsQuote}+__v__(${JSON.stringify(
+                source: `${ownerFinalUrlInfo.jsQuote}+__v__(${JSON.stringify(
                   reference.specifier,
-                )})+${parentFinalUrlInfo.jsQuote}`,
+                )})+${ownerFinalUrlInfo.jsQuote}`,
               };
             }
             if (reference.type === "js_url") {
@@ -1228,7 +1227,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   } else {
                     urlObject = new URL(
                       reference.specifier,
-                      reference.baseUrl || reference.urlInfo.url,
+                      reference.baseUrl || reference.ownerUrlInfo.url,
                     );
                   }
                   const url = urlObject.href;
@@ -1274,7 +1273,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     // happens for inline content and sourcemaps
                     return urlToRelativeUrl(
                       referencedUrlInfo.url,
-                      reference.urlInfo.url,
+                      reference.ownerUrlInfo.url,
                     );
                   }
                   const versionedSpecifier = asFormattedBuildUrl(

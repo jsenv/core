@@ -41,7 +41,7 @@ export const createNodeEsmResolver = ({
       return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
         .href;
     }
-    const parentUrl = reference.baseUrl || reference.urlInfo.url;
+    const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href;
     }
@@ -104,13 +104,13 @@ const addRelationshipWithPackageJson = ({
   field,
   hasVersioningEffect = false,
 }) => {
-  const referenceFound = reference.urlInfo.references.find(
+  const referenceFound = reference.ownerUrlInfo.references.find(
     (ref) => ref.type === "package_json" && ref.subtype === field,
   );
   if (referenceFound) {
     return;
   }
-  const [, packageJsonUrlInfo] = reference.urlInfo.references.inject({
+  const [, packageJsonUrlInfo] = reference.ownerUrlInfo.references.inject({
     type: "package_json",
     subtype: field,
     specifier: packageJsonUrl,

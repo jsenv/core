@@ -191,7 +191,7 @@ export const createFileService = ({
       });
     };
     serverStopCallbacks.push(() => {
-      kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext);
+      kitchen.pluginController.callHooks("destroy", kitchen.context);
     });
     server_events: {
       const allServerEvents = {};
@@ -245,7 +245,7 @@ export const createFileService = ({
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
         request,
-        kitchen.kitchenContext,
+        kitchen.context,
       );
     if (responseFromPlugin) {
       return responseFromPlugin;
@@ -348,7 +348,7 @@ export const createFileService = ({
       kitchen.pluginController.callHooks(
         "augmentResponse",
         { reference, urlInfo },
-        kitchen.kitchenContext,
+        kitchen.context,
         (returnValue) => {
           response = composeTwoResponses(response, returnValue);
         },

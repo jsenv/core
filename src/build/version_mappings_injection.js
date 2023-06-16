@@ -20,7 +20,7 @@ export const injectVersionMappingsAsGlobal = async ({
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
-        minification: kitchen.kitchenContext.minification,
+        minification: kitchen.context.minification,
       }),
     });
   }
@@ -29,7 +29,7 @@ export const injectVersionMappingsAsGlobal = async ({
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: kitchen.kitchenContext.minification,
+        minification: kitchen.context.minification,
       }),
     });
   }
@@ -69,7 +69,7 @@ export const injectVersionMappingsAsImportmap = async ({
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: kitchen.kitchenContext.minification
+      textContent: kitchen.context.minification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),

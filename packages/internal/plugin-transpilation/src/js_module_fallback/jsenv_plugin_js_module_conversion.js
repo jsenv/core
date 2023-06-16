@@ -28,9 +28,9 @@ export const jsenvPluginJsModuleConversion = ({
 
   const shouldPropagateJsModuleConversion = (reference, context) => {
     if (isReferencingJsModule(reference, context)) {
-      const insideJsClassic = new URL(reference.urlInfo.url).searchParams.has(
-        "js_module_fallback",
-      );
+      const insideJsClassic = new URL(
+        reference.ownerUrlInfo.url,
+      ).searchParams.has("js_module_fallback");
       return insideJsClassic;
     }
     return false;

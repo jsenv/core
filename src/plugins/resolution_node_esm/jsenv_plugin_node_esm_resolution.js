@@ -80,5 +80,5 @@ const urlTypeFromReference = (reference) => {
     return reference.expectedType;
   }
 
-  return reference.urlInfo.type;
+  return reference.ownerUrlInfo.type;
 };

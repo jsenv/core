@@ -24,7 +24,7 @@ export const bundleJsModules = async ({
     rootDirectoryUrl,
     buildDirectoryUrl,
     assetsDirectory,
-    urlGraph,
+    graph,
     runtimeCompat,
     sourcemaps,
   } = context;
@@ -64,7 +64,7 @@ export const bundleJsModules = async ({
           rootDirectoryUrl,
           buildDirectoryUrl,
           assetsDirectory,
-          urlGraph,
+          graph,
           jsModuleUrlInfos,
 
           runtimeCompat,
@@ -124,7 +124,7 @@ const rollupPluginJsenv = ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory,
-  urlGraph,
+  graph,
   jsModuleUrlInfos,
   sourcemaps,
 
@@ -324,7 +324,7 @@ const rollupPluginJsenv = ({
       if (!importCanBeBundled(url)) {
         return { id: url, external: true };
       }
-      const urlInfo = urlGraph.getUrlInfo(url);
+      const urlInfo = graph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by referenceAnalysis.include
         return { id: url, external: true };
@@ -337,7 +337,7 @@ const rollupPluginJsenv = ({
     },
     async load(rollupId) {
       const fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      const urlInfo = urlGraph.getUrlInfo(fileUrl);
+      const urlInfo = graph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,
         map:

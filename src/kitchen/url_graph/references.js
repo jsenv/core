@@ -25,10 +25,10 @@ export const applyReferenceEffectsOnUrlInfo = (
   if (reference.isInline) {
     referencedUrlInfo.isInline = true;
     referencedUrlInfo.inlineUrlSite = {
-      url: reference.urlInfo.url,
+      url: reference.ownerUrlInfo.url,
       content: reference.isOriginalPosition
-        ? reference.urlInfo.originalContent
-        : reference.urlInfo.content,
+        ? reference.ownerUrlInfo.originalContent
+        : reference.ownerUrlInfo.content,
       line: reference.specifierLine,
       column: reference.specifierColumn,
     };
@@ -399,7 +399,7 @@ export const createReferences = (ownerUrlInfo) => {
           await sideEffectFileReference.readGeneratedSpecifier();
           sideEffectFileReference.becomesInline({
             specifier: sideEffectFileReference.generatedSpecifier,
-            urlInfo: entryPointUrlInfo,
+            ownerUrlInfo: entryPointUrlInfo,
             content: sideEffectFileUrlInfo.content,
             contentType: sideEffectFileUrlInfo.contentType,
             // ideally get the correct line and column
@@ -442,7 +442,7 @@ export const createReferences = (ownerUrlInfo) => {
  * - "side_effect_file"
  * */
 const createReference = ({
-  urlInfo,
+  ownerUrlInfo,
   data = {},
   node,
   trace,
@@ -484,7 +484,7 @@ const createReference = ({
     }
   }
   const reference = {
-    urlInfo,
+    ownerUrlInfo,
     original: null,
     prev,
     next: null,
@@ -563,15 +563,15 @@ const createReference = ({
     line,
     column,
     // when urlInfo is given it means reference is moved into an other file
-    urlInfo = reference.urlInfo,
+    ownerUrlInfo = reference.ownerUrlInfo,
     ...props
   }) => {
     const inlineProps = getInlineReferenceProps(reference, {
-      urlInfo,
+      ownerUrlInfo,
       line,
       column,
     });
-    const inlineCopy = urlInfo.references.prepare({
+    const inlineCopy = ownerUrlInfo.references.prepare({
       ...inlineProps,
       specifierLine: line,
       specifierColumn: column,
@@ -586,7 +586,7 @@ const createReference = ({
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
-    const urlObject = new URL(urlInfo.url);
+    const urlObject = new URL(ownerUrlInfo.url);
     const { searchParams } = urlObject;
     if (!searchParams.has(searchParam)) {
       return [null, null];
@@ -607,7 +607,7 @@ const createReference = ({
       generatedUrl: null,
       filename: null,
     };
-    const urlInfoWithoutSearchParam = urlInfo.graph.reuseOrCreateUrlInfo(
+    const urlInfoWithoutSearchParam = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
       referenceWithoutSearchParam,
     );
     return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
@@ -618,18 +618,18 @@ const createReference = ({
 };
 
 const addReference = (reference) => {
-  const { urlInfo } = reference;
-  if (urlInfo.contentFinalized && urlInfo.kitchen.context.dev) {
+  const { ownerUrlInfo } = reference;
+  if (ownerUrlInfo.contentFinalized && ownerUrlInfo.kitchen.context.dev) {
     throw new Error(
       `cannot add reference for content already sent to the browser
 --- reference url ---
 ${reference.url}
 --- content url ---
-${urlInfo.url}`,
+${ownerUrlInfo.url}`,
     );
   }
 
-  const { references } = urlInfo;
+  const { references } = ownerUrlInfo;
   references.current.push(reference);
   if (references.isCollecting) {
     // if this function is called while collecting urlInfo references
@@ -643,34 +643,36 @@ ${urlInfo.url}`,
   if (
     reference.isImplicit &&
     !reference.isInline &&
-    !urlInfo.implicitUrls.has(reference.url)
+    !ownerUrlInfo.implicitUrls.has(reference.url)
   ) {
-    urlInfo.implicitUrls.add(reference.url);
-    if (urlInfo.isInline) {
-      const parentUrlInfo = urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url);
+    ownerUrlInfo.implicitUrls.add(reference.url);
+    if (ownerUrlInfo.isInline) {
+      const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
+        ownerUrlInfo.inlineUrlSite.url,
+      );
       parentUrlInfo.implicitUrls.add(reference.url);
     }
   }
-  urlInfo.dependencies.add(reference.url);
-  const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(reference);
-  referencedUrlInfo.dependents.add(urlInfo.url);
+  ownerUrlInfo.dependencies.add(reference.url);
+  const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
+  referencedUrlInfo.dependents.add(ownerUrlInfo.url);
 };
 
 const removeReference = (reference) => {
-  const { urlInfo } = reference;
-  if (urlInfo.contentFinalized && urlInfo.kitchen.context.dev) {
+  const { ownerUrlInfo } = reference;
+  if (ownerUrlInfo.contentFinalized && ownerUrlInfo.kitchen.context.dev) {
     throw new Error(
       `cannot remove reference for content already sent to the browser
 --- reference url ---
 ${reference.url}
 --- content url ---
-${urlInfo.url}`,
+${ownerUrlInfo.url}`,
     );
   }
-  const { references } = urlInfo;
+  const { references } = ownerUrlInfo;
   const index = references.current.indexOf(reference);
   if (index === -1) {
-    throw new Error(`reference not found in ${urlInfo.url}`);
+    throw new Error(`reference not found in ${ownerUrlInfo.url}`);
   }
 
   references.current.splice(index, 1);
@@ -685,16 +687,16 @@ ${urlInfo.url}`,
       (ref) => ref.isImplicit && ref.url === reference.url,
     );
     if (!hasAnOtherImplicitRef) {
-      urlInfo.implicitUrls.delete(reference.url);
+      ownerUrlInfo.implicitUrls.delete(reference.url);
     }
   }
   const hasAnOtherRef = references.current.some(
     (ref) => ref.url === reference.url,
   );
   if (!hasAnOtherRef) {
-    urlInfo.dependencies.delete(reference.url);
-    const referencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
-    referencedUrlInfo.dependents.delete(urlInfo.url);
+    ownerUrlInfo.dependencies.delete(reference.url);
+    const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
+    referencedUrlInfo.dependents.delete(ownerUrlInfo.url);
     if (!referencedUrlInfo.isUsed()) {
       referencedUrlInfo.deleteFromGraph();
     }
@@ -702,13 +704,13 @@ ${urlInfo.url}`,
 };
 
 const replaceReference = (reference, newReference) => {
-  const { urlInfo } = reference;
-  const newUrlInfo = newReference.urlInfo;
-  if (urlInfo === newUrlInfo) {
-    const { references } = urlInfo;
+  const { ownerUrlInfo } = reference;
+  const newOwnerUrlInfo = newReference.ownerUrlInfo;
+  if (ownerUrlInfo === newOwnerUrlInfo) {
+    const { references } = ownerUrlInfo;
     const index = references.current.indexOf(reference);
     if (index === -1) {
-      throw new Error(`reference not found in ${reference.urlInfo.url}`);
+      throw new Error(`reference not found in ${reference.ownerUrlInfo.url}`);
     }
     if (references.isCollecting) {
       // if this function is called while collecting urlInfo references
@@ -784,21 +786,21 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
 
 const getInlineReferenceProps = (
   reference,
-  { urlInfo, isOriginalPosition, line, column, ...rest },
+  { ownerUrlInfo, isOriginalPosition, line, column, ...rest },
 ) => {
   const trace = traceFromUrlSite({
     url:
-      urlInfo === undefined
+      ownerUrlInfo === undefined
         ? isOriginalPosition
-          ? reference.urlInfo.url
-          : reference.urlInfo.generatedUrl
-        : reference.urlInfo.url,
+          ? reference.ownerUrlInfo.url
+          : reference.ownerUrlInfo.generatedUrl
+        : reference.ownerUrlInfo.url,
     content:
-      urlInfo === undefined
+      ownerUrlInfo === undefined
         ? isOriginalPosition
-          ? reference.urlInfo.originalContent
-          : reference.urlInfo.content
-        : urlInfo.content,
+          ? reference.ownerUrlInfo.originalContent
+          : reference.ownerUrlInfo.content
+        : ownerUrlInfo.content,
     line,
     column,
   });
