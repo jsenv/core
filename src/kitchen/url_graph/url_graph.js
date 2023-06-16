@@ -35,16 +35,18 @@ export const createUrlGraph = ({
     urlInfoMap.set(urlInfo.url, urlInfo);
   };
   const reuseOrCreateUrlInfo = (reference, useGeneratedUrl) => {
-    const url = useGeneratedUrl ? reference.generatedUrl : reference.url;
-    const existingUrlInfo = getUrlInfo(url);
+    const referencedUrl = useGeneratedUrl
+      ? reference.generatedUrl
+      : reference.url;
+    const existingUrlInfo = getUrlInfo(referencedUrl);
     if (existingUrlInfo) return existingUrlInfo;
-    const urlInfo = createUrlInfo(url);
-    if (urlInfo.originalUrl === undefined) {
-      applyReferenceEffectsOnUrlInfo(reference, urlInfo);
+    const referencedUrlInfo = createUrlInfo(referencedUrl);
+    if (referencedUrlInfo.originalUrl === undefined) {
+      applyReferenceEffectsOnUrlInfo(reference, referencedUrlInfo);
     }
-    createUrlInfoCallbackRef.current(urlInfo);
-    addUrlInfo(urlInfo);
-    return urlInfo;
+    createUrlInfoCallbackRef.current(referencedUrlInfo);
+    addUrlInfo(referencedUrlInfo);
+    return referencedUrlInfo;
   };
 
   const inferReference = (specifier, parentUrl) => {

@@ -4,23 +4,27 @@ import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
-export const applyReferenceEffectsOnUrlInfo = (reference, urlInfo) => {
-  urlInfo.originalUrl = urlInfo.originalUrl || reference.url;
+export const applyReferenceEffectsOnUrlInfo = (
+  reference,
+  referencedUrlInfo,
+) => {
+  referencedUrlInfo.originalUrl =
+    referencedUrlInfo.originalUrl || reference.url;
 
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
-    urlInfo.isEntryPoint = true;
+    referencedUrlInfo.isEntryPoint = true;
   }
-  Object.assign(urlInfo.data, reference.data);
-  Object.assign(urlInfo.timing, reference.timing);
+  Object.assign(referencedUrlInfo.data, reference.data);
+  Object.assign(referencedUrlInfo.timing, reference.timing);
   if (reference.injected) {
-    urlInfo.injected = true;
+    referencedUrlInfo.injected = true;
   }
-  if (reference.filename && !urlInfo.filename) {
-    urlInfo.filename = reference.filename;
+  if (reference.filename && !referencedUrlInfo.filename) {
+    referencedUrlInfo.filename = reference.filename;
   }
   if (reference.isInline) {
-    urlInfo.isInline = true;
-    urlInfo.inlineUrlSite = {
+    referencedUrlInfo.isInline = true;
+    referencedUrlInfo.inlineUrlSite = {
       url: reference.urlInfo.url,
       content: reference.isOriginalPosition
         ? reference.urlInfo.originalContent
@@ -28,34 +32,37 @@ export const applyReferenceEffectsOnUrlInfo = (reference, urlInfo) => {
       line: reference.specifierLine,
       column: reference.specifierColumn,
     };
-    urlInfo.contentType = reference.contentType;
-    urlInfo.originalContent = urlInfo.kitchen.context.build
-      ? urlInfo.originalContent === undefined
+    referencedUrlInfo.contentType = reference.contentType;
+    referencedUrlInfo.originalContent = referencedUrlInfo.kitchen.context.build
+      ? referencedUrlInfo.originalContent === undefined
         ? reference.content
-        : urlInfo.originalContent
+        : referencedUrlInfo.originalContent
       : reference.content;
-    urlInfo.content = reference.content;
+    referencedUrlInfo.content = reference.content;
   }
 
   if (reference.debug) {
-    urlInfo.debug = true;
+    referencedUrlInfo.debug = true;
   }
   if (reference.expectedType) {
-    urlInfo.typeHint = reference.expectedType;
+    referencedUrlInfo.typeHint = reference.expectedType;
   }
   if (reference.expectedSubtype) {
-    urlInfo.subtypeHint = reference.expectedSubtype;
+    referencedUrlInfo.subtypeHint = reference.expectedSubtype;
   }
 };
 
-export const createReferences = (urlInfo) => {
+export const createReferences = (ownerUrlInfo) => {
   const references = {
     prev: [],
     current: [],
     isCollecting: false,
     find: (predicate) => references.current.find(predicate),
     forEach: (callback) => references.current.forEach(callback),
-    startCollecting: async (callback, context = urlInfo.kitchen.context) => {
+    startCollecting: async (
+      callback,
+      context = ownerUrlInfo.kitchen.context,
+    ) => {
       references.isCollecting = true;
       references.prev = references.current;
       references.current = [];
@@ -89,17 +96,17 @@ export const createReferences = (urlInfo) => {
           }
         });
         setOfDependencyUrls.forEach((dependencyUrl) => {
-          urlInfo.dependencies.add(dependencyUrl);
-          const dependencyUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
+          ownerUrlInfo.dependencies.add(dependencyUrl);
+          const dependencyUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
             dependencyReferenceMap.get(dependencyUrl),
           );
-          dependencyUrlInfo.dependents.add(urlInfo.url);
+          dependencyUrlInfo.dependents.add(ownerUrlInfo.url);
         });
         setOfImplicitUrls.forEach((implicitUrl) => {
-          urlInfo.implicitUrls.add(implicitUrl);
-          if (urlInfo.isInline) {
-            const parentUrlInfo = urlInfo.graph.getUrlInfo(
-              urlInfo.inlineUrlSite.url,
+          ownerUrlInfo.implicitUrls.add(implicitUrl);
+          if (ownerUrlInfo.isInline) {
+            const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
+              ownerUrlInfo.inlineUrlSite.url,
             );
             parentUrlInfo.implicitUrls.add(implicitUrl);
           }
@@ -119,9 +126,9 @@ export const createReferences = (urlInfo) => {
             prunedUrlInfos.push(dependencyUrlInfo);
           }
         };
-        urlInfo.dependencies.forEach((dependencyUrl) => {
+        ownerUrlInfo.dependencies.forEach((dependencyUrl) => {
           if (!setOfDependencyUrls.has(dependencyUrl)) {
-            pruneDependency(urlInfo, dependencyUrl);
+            pruneDependency(ownerUrlInfo, dependencyUrl);
           }
         });
         if (prunedUrlInfos.length) {
@@ -132,16 +139,17 @@ export const createReferences = (urlInfo) => {
               prunedUrlInfo.deleteFromGraph();
             }
           });
-          urlInfo.graph.prunedUrlInfosCallbackRef.current(
+          ownerUrlInfo.graph.prunedUrlInfosCallbackRef.current(
             prunedUrlInfos,
-            urlInfo,
+            ownerUrlInfo,
           );
         }
-        urlInfo.implicitUrls.forEach((implicitUrl) => {
+        ownerUrlInfo.implicitUrls.forEach((implicitUrl) => {
           if (!setOfDependencyUrls.has(implicitUrl)) {
             let implicitUrlComesFromInlineContent = false;
-            for (const dependencyUrl of urlInfo.dependencies) {
-              const dependencyUrlInfo = urlInfo.graph.getUrlInfo(dependencyUrl);
+            for (const dependencyUrl of ownerUrlInfo.dependencies) {
+              const dependencyUrlInfo =
+                ownerUrlInfo.graph.getUrlInfo(dependencyUrl);
               if (
                 dependencyUrlInfo.isInline &&
                 dependencyUrlInfo.implicitUrls.has(implicitUrl)
@@ -151,11 +159,11 @@ export const createReferences = (urlInfo) => {
               }
             }
             if (!implicitUrlComesFromInlineContent) {
-              urlInfo.implicitUrls.delete(implicitUrl);
+              ownerUrlInfo.implicitUrls.delete(implicitUrl);
             }
-            if (urlInfo.isInline) {
-              const parentUrlInfo = urlInfo.graph.getUrlInfo(
-                urlInfo.inlineUrlSite.url,
+            if (ownerUrlInfo.isInline) {
+              const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
+                ownerUrlInfo.inlineUrlSite.url,
               );
               parentUrlInfo.implicitUrls.delete(implicitUrl);
             }
@@ -173,18 +181,18 @@ export const createReferences = (urlInfo) => {
     },
     prepare: (props) => {
       const originalReference = createReference({
-        urlInfo,
+        ownerUrlInfo,
         ...props,
       });
       const [reference, referencedUrlInfo] =
-        urlInfo.kitchen.context.resolveReference(originalReference);
+        ownerUrlInfo.kitchen.context.resolveReference(originalReference);
       return [reference, referencedUrlInfo];
     },
     found: ({ trace, ...rest }) => {
       if (trace === undefined) {
         trace = traceFromUrlSite(
-          adjustUrlSite(urlInfo, {
-            url: urlInfo.url,
+          adjustUrlSite(ownerUrlInfo, {
+            url: ownerUrlInfo.url,
             line: rest.specifierLine,
             column: rest.specifierColumn,
           }),
@@ -203,10 +211,12 @@ export const createReferences = (urlInfo) => {
       specifierColumn,
       ...rest
     }) => {
-      const parentUrl = isOriginalPosition ? urlInfo.url : urlInfo.generatedUrl;
+      const parentUrl = isOriginalPosition
+        ? ownerUrlInfo.url
+        : ownerUrlInfo.generatedUrl;
       const parentContent = isOriginalPosition
-        ? urlInfo.originalContent
-        : urlInfo.content;
+        ? ownerUrlInfo.originalContent
+        : ownerUrlInfo.content;
       const [ref, referencedUrlInfo] = references.prepare({
         trace: traceFromUrlSite({
           url: parentUrl,
@@ -251,13 +261,13 @@ export const createReferences = (urlInfo) => {
       return references.found({
         trace: {
           message: `sourcemap comment placeholder`,
-          url: urlInfo.url,
+          url: ownerUrlInfo.url,
         },
         type: "sourcemap_comment",
         expectedType: "sourcemap",
-        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+        subtype: ownerUrlInfo.contentType === "text/javascript" ? "js" : "css",
         specifier,
-        isInline: urlInfo.kitchen.context.sourcemaps === "inline",
+        isInline: ownerUrlInfo.kitchen.context.sourcemaps === "inline",
       });
     },
     // side effect file
@@ -288,11 +298,11 @@ export const createReferences = (urlInfo) => {
         sideEffectFileReference,
         sideEffectFileUrlInfo,
       ) => {
-        urlInfo.callbacksToConsiderContentReady.push(async () => {
+        ownerUrlInfo.callbacksToConsiderContentReady.push(async () => {
           await sideEffectFileUrlInfo.cook({
             reference: sideEffectFileReference,
           });
-          await prependContent(urlInfo, sideEffectFileUrlInfo);
+          await prependContent(ownerUrlInfo, sideEffectFileUrlInfo);
           await sideEffectFileReference.readGeneratedSpecifier();
           sideEffectFileReference.becomesInline({
             specifier: sideEffectFileReference.generatedSpecifier,
@@ -309,7 +319,7 @@ export const createReferences = (urlInfo) => {
       // -> less duplication
 
       // Case #1: Not possible to inject in other files -> inject as banner code
-      if (!["js_classic", "js_module", "css"].includes(urlInfo.type)) {
+      if (!["js_classic", "js_module", "css"].includes(ownerUrlInfo.type)) {
         const [sideEffectFileReference, sideEffectFileUrlInfo] =
           addSideEffectFileRef();
         return injectAsBannerCodeBeforeFinalize(
@@ -325,8 +335,10 @@ export const createReferences = (urlInfo) => {
       // and it's possible to find it in dependents when using
       // dynamic import for instance
       // (in that case we find the side effect file as it was injected in parent)
-      if (urlInfo.kitchen.context.dev) {
-        const urlsBeforeInjection = Array.from(urlInfo.graph.urlInfoMap.keys());
+      if (ownerUrlInfo.kitchen.context.dev) {
+        const urlsBeforeInjection = Array.from(
+          ownerUrlInfo.graph.urlInfoMap.keys(),
+        );
         const [sideEffectFileReference, sideEffectFileUrlInfo] =
           addSideEffectFileRef();
         if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
@@ -340,17 +352,17 @@ export const createReferences = (urlInfo) => {
             (ref) => ref.url === sideEffectFileReference.url,
           );
         const selfOrAncestorIsReferencingSideEffectFile = (dependentUrl) => {
-          const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
+          const dependentUrlInfo = ownerUrlInfo.graph.getUrlInfo(dependentUrl);
           if (isReferencingSideEffectFile(dependentUrlInfo)) {
             return true;
           }
           const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
-            urlInfo,
+            ownerUrlInfo,
             (ancestorUrlInfo) => isReferencingSideEffectFile(ancestorUrlInfo),
           );
           return Boolean(dependentReferencingThatFile);
         };
-        for (const dependentUrl of urlInfo.dependents) {
+        for (const dependentUrl of ownerUrlInfo.dependents) {
           if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
             return injectAsBannerCodeBeforeFinalize(
               sideEffectFileReference,
@@ -364,7 +376,7 @@ export const createReferences = (urlInfo) => {
       // Case #3: During build
       // during build, files are not executed so it's
       // possible to inject reference when discovering a side effect file
-      if (urlInfo.isEntryPoint) {
+      if (ownerUrlInfo.isEntryPoint) {
         const [sideEffectFileReference, sideEffectFileUrlInfo] =
           addSideEffectFileRef();
         return injectAsBannerCodeBeforeFinalize(
@@ -372,7 +384,7 @@ export const createReferences = (urlInfo) => {
           sideEffectFileUrlInfo,
         );
       }
-      const entryPoints = urlInfo.graph.getEntryPoints();
+      const entryPoints = ownerUrlInfo.graph.getEntryPoints();
       const [sideEffectFileReference, sideEffectFileUrlInfo] =
         addSideEffectFileRef();
       for (const entryPointUrlInfo of entryPoints) {

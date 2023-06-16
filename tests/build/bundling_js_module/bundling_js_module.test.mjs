@@ -1,4 +1,4 @@
-// import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -11,7 +11,8 @@ const test = async (params) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    // plugins: [jsenvPluginBundling()],
+    plugins: [jsenvPluginBundling()],
+    // TODO: restore versioning
     versioning: false,
     ...params,
   });
