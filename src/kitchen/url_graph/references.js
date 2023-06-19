@@ -53,364 +53,379 @@ export const applyReferenceEffectsOnUrlInfo = (
 };
 
 export const createReferences = (ownerUrlInfo) => {
-  const references = {
-    prev: [],
-    current: [],
-    isCollecting: false,
-    find: (predicate) => references.current.find(predicate),
-    forEach: (callback) => references.current.forEach(callback),
-    startCollecting: async (
-      callback,
-      context = ownerUrlInfo.kitchen.context,
-    ) => {
-      references.isCollecting = true;
-      references.prev = references.current;
-      references.current = [];
-      references.context = context;
+  const current = [];
+  const startCollecting = async (
+    callback,
+    context = ownerUrlInfo.kitchen.context,
+  ) => {
+    references.isCollecting = true;
+    // let prev = current.slice();
+    current.length = 0;
+    references.context = context;
 
-      const stopCollecting = () => {
-        const setOfDependencyUrls = new Set();
-        const dependencyReferenceMap = new Map();
-        const setOfImplicitUrls = new Set();
-        references.current.forEach((reference) => {
-          if (reference.isResourceHint) {
-            // resource hint are a special kind of reference.
-            // They are a sort of weak reference to an url.
-            // We ignore them so that url referenced only by resource hints
-            // have url.dependents.size === 0 and can be considered as not used
-            // It means html won't consider url referenced solely
-            // by <link> as dependency and it's fine
-            return;
-          }
-          const dependencyUrl = reference.url;
-          setOfDependencyUrls.add(dependencyUrl);
-          dependencyReferenceMap.set(dependencyUrl, reference);
-          // an implicit reference do not appear in the file but the non explicited file
-          // have an impact on it
-          // -> package.json on import resolution for instance
-          // in that case:
-          // - file depends on the implicit file (it must autoreload if package.json is modified)
-          // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
-          if (reference.isImplicit) {
-            setOfImplicitUrls.add(dependencyUrl);
-          }
-        });
-        setOfDependencyUrls.forEach((dependencyUrl) => {
-          ownerUrlInfo.dependencies.add(dependencyUrl);
-          const dependencyUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
-            dependencyReferenceMap.get(dependencyUrl),
+    const stopCollecting = () => {
+      const setOfDependencyUrls = new Set();
+      const dependencyReferenceMap = new Map();
+      const setOfImplicitUrls = new Set();
+      current.forEach((reference) => {
+        if (reference.isResourceHint) {
+          // resource hint are a special kind of reference.
+          // They are a sort of weak reference to an url.
+          // We ignore them so that url referenced only by resource hints
+          // have url.dependents.size === 0 and can be considered as not used
+          // It means html won't consider url referenced solely
+          // by <link> as dependency and it's fine
+          return;
+        }
+        const dependencyUrl = reference.url;
+        setOfDependencyUrls.add(dependencyUrl);
+        dependencyReferenceMap.set(dependencyUrl, reference);
+        // an implicit reference do not appear in the file but the non explicited file
+        // have an impact on it
+        // -> package.json on import resolution for instance
+        // in that case:
+        // - file depends on the implicit file (it must autoreload if package.json is modified)
+        // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
+        if (reference.isImplicit) {
+          setOfImplicitUrls.add(dependencyUrl);
+        }
+      });
+      setOfDependencyUrls.forEach((dependencyUrl) => {
+        ownerUrlInfo.dependencies.add(dependencyUrl);
+        const dependencyUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
+          dependencyReferenceMap.get(dependencyUrl),
+        );
+        dependencyUrlInfo.dependents.add(ownerUrlInfo.url);
+      });
+      setOfImplicitUrls.forEach((implicitUrl) => {
+        ownerUrlInfo.implicitUrls.add(implicitUrl);
+        if (ownerUrlInfo.isInline) {
+          const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
+            ownerUrlInfo.inlineUrlSite.url,
           );
-          dependencyUrlInfo.dependents.add(ownerUrlInfo.url);
+          parentUrlInfo.implicitUrls.add(implicitUrl);
+        }
+      });
+      const prunedUrlInfos = [];
+      const pruneDependency = (urlInfo, urlToClean) => {
+        urlInfo.dependencies.delete(urlToClean);
+        const dependencyUrlInfo = urlInfo.graph.getUrlInfo(urlToClean);
+        if (!dependencyUrlInfo) {
+          return;
+        }
+        dependencyUrlInfo.dependents.delete(urlInfo.url);
+        if (dependencyUrlInfo.dependents.size === 0) {
+          dependencyUrlInfo.dependencies.forEach((dependencyUrl) => {
+            pruneDependency(dependencyUrlInfo, dependencyUrl);
+          });
+          prunedUrlInfos.push(dependencyUrlInfo);
+        }
+      };
+      ownerUrlInfo.dependencies.forEach((dependencyUrl) => {
+        if (!setOfDependencyUrls.has(dependencyUrl)) {
+          pruneDependency(ownerUrlInfo, dependencyUrl);
+        }
+      });
+      if (prunedUrlInfos.length) {
+        prunedUrlInfos.forEach((prunedUrlInfo) => {
+          prunedUrlInfo.modifiedTimestamp = Date.now();
+          if (prunedUrlInfo.isInline) {
+            // should we always delete?
+            prunedUrlInfo.deleteFromGraph();
+          }
         });
-        setOfImplicitUrls.forEach((implicitUrl) => {
-          ownerUrlInfo.implicitUrls.add(implicitUrl);
+        ownerUrlInfo.graph.prunedUrlInfosCallbackRef.current(
+          prunedUrlInfos,
+          ownerUrlInfo,
+        );
+      }
+      ownerUrlInfo.implicitUrls.forEach((implicitUrl) => {
+        if (!setOfDependencyUrls.has(implicitUrl)) {
+          let implicitUrlComesFromInlineContent = false;
+          for (const dependencyUrl of ownerUrlInfo.dependencies) {
+            const dependencyUrlInfo =
+              ownerUrlInfo.graph.getUrlInfo(dependencyUrl);
+            if (
+              dependencyUrlInfo.isInline &&
+              dependencyUrlInfo.implicitUrls.has(implicitUrl)
+            ) {
+              implicitUrlComesFromInlineContent = true;
+              break;
+            }
+          }
+          if (!implicitUrlComesFromInlineContent) {
+            ownerUrlInfo.implicitUrls.delete(implicitUrl);
+          }
           if (ownerUrlInfo.isInline) {
             const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
               ownerUrlInfo.inlineUrlSite.url,
             );
-            parentUrlInfo.implicitUrls.add(implicitUrl);
+            parentUrlInfo.implicitUrls.delete(implicitUrl);
           }
-        });
-        const prunedUrlInfos = [];
-        const pruneDependency = (urlInfo, urlToClean) => {
-          urlInfo.dependencies.delete(urlToClean);
-          const dependencyUrlInfo = urlInfo.graph.getUrlInfo(urlToClean);
-          if (!dependencyUrlInfo) {
-            return;
-          }
-          dependencyUrlInfo.dependents.delete(urlInfo.url);
-          if (dependencyUrlInfo.dependents.size === 0) {
-            dependencyUrlInfo.dependencies.forEach((dependencyUrl) => {
-              pruneDependency(dependencyUrlInfo, dependencyUrl);
-            });
-            prunedUrlInfos.push(dependencyUrlInfo);
-          }
-        };
-        ownerUrlInfo.dependencies.forEach((dependencyUrl) => {
-          if (!setOfDependencyUrls.has(dependencyUrl)) {
-            pruneDependency(ownerUrlInfo, dependencyUrl);
-          }
-        });
-        if (prunedUrlInfos.length) {
-          prunedUrlInfos.forEach((prunedUrlInfo) => {
-            prunedUrlInfo.modifiedTimestamp = Date.now();
-            if (prunedUrlInfo.isInline) {
-              // should we always delete?
-              prunedUrlInfo.deleteFromGraph();
-            }
-          });
-          ownerUrlInfo.graph.prunedUrlInfosCallbackRef.current(
-            prunedUrlInfos,
-            ownerUrlInfo,
-          );
         }
-        ownerUrlInfo.implicitUrls.forEach((implicitUrl) => {
-          if (!setOfDependencyUrls.has(implicitUrl)) {
-            let implicitUrlComesFromInlineContent = false;
-            for (const dependencyUrl of ownerUrlInfo.dependencies) {
-              const dependencyUrlInfo =
-                ownerUrlInfo.graph.getUrlInfo(dependencyUrl);
-              if (
-                dependencyUrlInfo.isInline &&
-                dependencyUrlInfo.implicitUrls.has(implicitUrl)
-              ) {
-                implicitUrlComesFromInlineContent = true;
-                break;
-              }
-            }
-            if (!implicitUrlComesFromInlineContent) {
-              ownerUrlInfo.implicitUrls.delete(implicitUrl);
-            }
-            if (ownerUrlInfo.isInline) {
-              const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
-                ownerUrlInfo.inlineUrlSite.url,
-              );
-              parentUrlInfo.implicitUrls.delete(implicitUrl);
-            }
-          }
-        });
-        references.isCollecting = false;
-      };
+      });
+      references.isCollecting = false;
+    };
 
-      try {
-        await callback();
-      } finally {
-        // finally to ensure reference are updated even in case of error
-        stopCollecting();
-      }
-    },
-    prepare: (props) => {
-      const originalReference = createReference({
-        ownerUrlInfo,
-        ...props,
-      });
-      const [reference, referencedUrlInfo] =
-        ownerUrlInfo.kitchen.context.resolveReference(originalReference);
-      return [reference, referencedUrlInfo];
-    },
-    found: ({ trace, ...rest }) => {
-      if (trace === undefined) {
-        trace = traceFromUrlSite(
-          adjustUrlSite(ownerUrlInfo, {
-            url: ownerUrlInfo.url,
-            line: rest.specifierLine,
-            column: rest.specifierColumn,
-          }),
-        );
-      }
-      const [ref, referencedUrlInfo] = references.prepare({
-        trace,
-        ...rest,
-      });
-      addReference(ref);
-      return [ref, referencedUrlInfo];
-    },
-    foundInline: ({
+    try {
+      await callback();
+    } finally {
+      // finally to ensure reference are updated even in case of error
+      stopCollecting();
+    }
+  };
+  const prepare = (props) => {
+    const originalReference = createReference({
+      ownerUrlInfo,
+      ...props,
+    });
+    const [reference, referencedUrlInfo] =
+      ownerUrlInfo.kitchen.context.resolveReference(originalReference);
+    return [reference, referencedUrlInfo];
+  };
+
+  const found = ({ trace, ...rest }) => {
+    if (trace === undefined) {
+      trace = traceFromUrlSite(
+        adjustUrlSite(ownerUrlInfo, {
+          url: ownerUrlInfo.url,
+          line: rest.specifierLine,
+          column: rest.specifierColumn,
+        }),
+      );
+    }
+    const [ref, referencedUrlInfo] = prepare({
+      trace,
+      ...rest,
+    });
+    addReference(ref);
+    return [ref, referencedUrlInfo];
+  };
+  const foundInline = ({
+    isOriginalPosition,
+    specifierLine,
+    specifierColumn,
+    ...rest
+  }) => {
+    const parentUrl = isOriginalPosition
+      ? ownerUrlInfo.url
+      : ownerUrlInfo.generatedUrl;
+    const parentContent = isOriginalPosition
+      ? ownerUrlInfo.originalContent
+      : ownerUrlInfo.content;
+    const [ref, referencedUrlInfo] = prepare({
+      trace: traceFromUrlSite({
+        url: parentUrl,
+        content: parentContent,
+        line: specifierLine,
+        column: specifierColumn,
+      }),
       isOriginalPosition,
       specifierLine,
       specifierColumn,
-      ...rest
-    }) => {
-      const parentUrl = isOriginalPosition
-        ? ownerUrlInfo.url
-        : ownerUrlInfo.generatedUrl;
-      const parentContent = isOriginalPosition
-        ? ownerUrlInfo.originalContent
-        : ownerUrlInfo.content;
-      const [ref, referencedUrlInfo] = references.prepare({
-        trace: traceFromUrlSite({
-          url: parentUrl,
-          content: parentContent,
-          line: specifierLine,
-          column: specifierColumn,
-        }),
-        isOriginalPosition,
-        specifierLine,
-        specifierColumn,
-        isInline: true,
-        ...rest,
+      isInline: true,
+      ...rest,
+    });
+    addReference(ref);
+    return [ref, referencedUrlInfo];
+  };
+  // side effect file
+  const foundSideEffectFile = async ({ sideEffectFileUrl, trace, ...rest }) => {
+    if (trace === undefined) {
+      const { url, line, column } = getCallerPosition();
+      trace = traceFromUrlSite({
+        url,
+        line,
+        column,
       });
-      addReference(ref);
-      return [ref, referencedUrlInfo];
-    },
-    inject: ({ trace, ...rest }) => {
-      if (trace === undefined) {
-        const { url, line, column } = getCallerPosition();
-        trace = traceFromUrlSite({
-          url,
-          line,
-          column,
-        });
-      }
-      const [ref, referencedUrlInfo] = references.prepare({
+    }
+
+    const addSideEffectFileRef = () => {
+      const [ref, referencedUrlInfo] = prepare({
         trace,
+        type: "side_effect_file",
+        isImplicit: true,
         injected: true,
+        specifier: sideEffectFileUrl,
         ...rest,
       });
       addReference(ref);
       return [ref, referencedUrlInfo];
-    },
+    };
 
-    foundSourcemap: (props) => {
-      return references.found({
-        expectedType: "sourcemap",
-        ...props,
-      });
-    },
-    injectSourcemapPlaceholder: ({ specifier }) => {
-      return references.found({
-        trace: {
-          message: `sourcemap comment placeholder`,
-          url: ownerUrlInfo.url,
-        },
-        type: "sourcemap_comment",
-        expectedType: "sourcemap",
-        subtype: ownerUrlInfo.contentType === "text/javascript" ? "js" : "css",
-        specifier,
-        isInline: ownerUrlInfo.kitchen.context.sourcemaps === "inline",
-      });
-    },
-    // side effect file
-    foundSideEffectFile: async ({ sideEffectFileUrl, trace, ...rest }) => {
-      if (trace === undefined) {
-        const { url, line, column } = getCallerPosition();
-        trace = traceFromUrlSite({
-          url,
-          line,
-          column,
+    const injectAsBannerCodeBeforeFinalize = (
+      sideEffectFileReference,
+      sideEffectFileUrlInfo,
+    ) => {
+      ownerUrlInfo.callbacksToConsiderContentReady.push(async () => {
+        await sideEffectFileUrlInfo.cook({
+          reference: sideEffectFileReference,
         });
-      }
-
-      const addSideEffectFileRef = () => {
-        const [ref, referencedUrlInfo] = references.prepare({
-          trace,
-          type: "side_effect_file",
-          isImplicit: true,
-          injected: true,
-          specifier: sideEffectFileUrl,
-          ...rest,
+        await prependContent(ownerUrlInfo, sideEffectFileUrlInfo);
+        await sideEffectFileReference.readGeneratedSpecifier();
+        sideEffectFileReference.becomesInline({
+          specifier: sideEffectFileReference.generatedSpecifier,
+          content: sideEffectFileUrlInfo.content,
+          contentType: sideEffectFileUrlInfo.contentType,
+          line: 0,
+          column: 0,
         });
-        addReference(ref);
-        return [ref, referencedUrlInfo];
-      };
+      });
+      return [sideEffectFileReference, sideEffectFileUrlInfo];
+    };
 
-      const injectAsBannerCodeBeforeFinalize = (
+    // When possible we inject code inside the file in the HTML
+    // -> less duplication
+
+    // Case #1: Not possible to inject in other files -> inject as banner code
+    if (!["js_classic", "js_module", "css"].includes(ownerUrlInfo.type)) {
+      const [sideEffectFileReference, sideEffectFileUrlInfo] =
+        addSideEffectFileRef();
+      return injectAsBannerCodeBeforeFinalize(
         sideEffectFileReference,
         sideEffectFileUrlInfo,
-      ) => {
-        ownerUrlInfo.callbacksToConsiderContentReady.push(async () => {
-          await sideEffectFileUrlInfo.cook({
-            reference: sideEffectFileReference,
-          });
-          await prependContent(ownerUrlInfo, sideEffectFileUrlInfo);
-          await sideEffectFileReference.readGeneratedSpecifier();
-          sideEffectFileReference.becomesInline({
-            specifier: sideEffectFileReference.generatedSpecifier,
-            content: sideEffectFileUrlInfo.content,
-            contentType: sideEffectFileUrlInfo.contentType,
-            line: 0,
-            column: 0,
-          });
-        });
-        return [sideEffectFileReference, sideEffectFileUrlInfo];
-      };
+      );
+    }
 
-      // When possible we inject code inside the file in the HTML
-      // -> less duplication
-
-      // Case #1: Not possible to inject in other files -> inject as banner code
-      if (!["js_classic", "js_module", "css"].includes(ownerUrlInfo.type)) {
-        const [sideEffectFileReference, sideEffectFileUrlInfo] =
-          addSideEffectFileRef();
+    // Case #2: During dev
+    // during dev cooking files is incremental
+    // so HTML is already executed by the browser
+    // but if we find that ref in a dependent we are good
+    // and it's possible to find it in dependents when using
+    // dynamic import for instance
+    // (in that case we find the side effect file as it was injected in parent)
+    if (ownerUrlInfo.kitchen.context.dev) {
+      const urlsBeforeInjection = Array.from(
+        ownerUrlInfo.graph.urlInfoMap.keys(),
+      );
+      const [sideEffectFileReference, sideEffectFileUrlInfo] =
+        addSideEffectFileRef();
+      if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
         return injectAsBannerCodeBeforeFinalize(
           sideEffectFileReference,
           sideEffectFileUrlInfo,
         );
       }
-
-      // Case #2: During dev
-      // during dev cooking files is incremental
-      // so HTML is already executed by the browser
-      // but if we find that ref in a dependent we are good
-      // and it's possible to find it in dependents when using
-      // dynamic import for instance
-      // (in that case we find the side effect file as it was injected in parent)
-      if (ownerUrlInfo.kitchen.context.dev) {
-        const urlsBeforeInjection = Array.from(
-          ownerUrlInfo.graph.urlInfoMap.keys(),
+      const isReferencingSideEffectFile = (urlInfo) =>
+        urlInfo.references.some(
+          (ref) => ref.url === sideEffectFileReference.url,
         );
-        const [sideEffectFileReference, sideEffectFileUrlInfo] =
-          addSideEffectFileRef();
-        if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
+      const selfOrAncestorIsReferencingSideEffectFile = (dependentUrl) => {
+        const dependentUrlInfo = ownerUrlInfo.graph.getUrlInfo(dependentUrl);
+        if (isReferencingSideEffectFile(dependentUrlInfo)) {
+          return true;
+        }
+        const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
+          ownerUrlInfo,
+          (ancestorUrlInfo) => isReferencingSideEffectFile(ancestorUrlInfo),
+        );
+        return Boolean(dependentReferencingThatFile);
+      };
+      for (const dependentUrl of ownerUrlInfo.dependents) {
+        if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
           return injectAsBannerCodeBeforeFinalize(
             sideEffectFileReference,
             sideEffectFileUrlInfo,
           );
         }
-        const isReferencingSideEffectFile = (urlInfo) =>
-          urlInfo.references.some(
-            (ref) => ref.url === sideEffectFileReference.url,
-          );
-        const selfOrAncestorIsReferencingSideEffectFile = (dependentUrl) => {
-          const dependentUrlInfo = ownerUrlInfo.graph.getUrlInfo(dependentUrl);
-          if (isReferencingSideEffectFile(dependentUrlInfo)) {
-            return true;
-          }
-          const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
-            ownerUrlInfo,
-            (ancestorUrlInfo) => isReferencingSideEffectFile(ancestorUrlInfo),
-          );
-          return Boolean(dependentReferencingThatFile);
-        };
-        for (const dependentUrl of ownerUrlInfo.dependents) {
-          if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
-            return injectAsBannerCodeBeforeFinalize(
-              sideEffectFileReference,
-              sideEffectFileUrlInfo,
-            );
-          }
-        }
-        return [sideEffectFileReference, sideEffectFileUrlInfo];
-      }
-
-      // Case #3: During build
-      // during build, files are not executed so it's
-      // possible to inject reference when discovering a side effect file
-      if (ownerUrlInfo.isEntryPoint) {
-        const [sideEffectFileReference, sideEffectFileUrlInfo] =
-          addSideEffectFileRef();
-        return injectAsBannerCodeBeforeFinalize(
-          sideEffectFileReference,
-          sideEffectFileUrlInfo,
-        );
-      }
-      const entryPoints = ownerUrlInfo.graph.getEntryPoints();
-      const [sideEffectFileReference, sideEffectFileUrlInfo] =
-        addSideEffectFileRef();
-      for (const entryPointUrlInfo of entryPoints) {
-        references.context.addCallbackToConsiderGraphCooked(async () => {
-          // do not inject if already there
-          const { dependencies } = entryPointUrlInfo;
-          if (dependencies.has(sideEffectFileUrlInfo.url)) {
-            return;
-          }
-          dependencies.add(sideEffectFileUrlInfo.url);
-          await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
-          await sideEffectFileReference.readGeneratedSpecifier();
-          sideEffectFileReference.becomesInline({
-            specifier: sideEffectFileReference.generatedSpecifier,
-            ownerUrlInfo: entryPointUrlInfo,
-            content: sideEffectFileUrlInfo.content,
-            contentType: sideEffectFileUrlInfo.contentType,
-            // ideally get the correct line and column
-            // (for js it's 0, but for html it's different)
-            line: 0,
-            column: 0,
-          });
-        });
       }
       return [sideEffectFileReference, sideEffectFileUrlInfo];
-    },
+    }
+
+    // Case #3: During build
+    // during build, files are not executed so it's
+    // possible to inject reference when discovering a side effect file
+    if (ownerUrlInfo.isEntryPoint) {
+      const [sideEffectFileReference, sideEffectFileUrlInfo] =
+        addSideEffectFileRef();
+      return injectAsBannerCodeBeforeFinalize(
+        sideEffectFileReference,
+        sideEffectFileUrlInfo,
+      );
+    }
+    const entryPoints = ownerUrlInfo.graph.getEntryPoints();
+    const [sideEffectFileReference, sideEffectFileUrlInfo] =
+      addSideEffectFileRef();
+    for (const entryPointUrlInfo of entryPoints) {
+      references.context.addCallbackToConsiderGraphCooked(async () => {
+        // do not inject if already there
+        const { dependencies } = entryPointUrlInfo;
+        if (dependencies.has(sideEffectFileUrlInfo.url)) {
+          return;
+        }
+        dependencies.add(sideEffectFileUrlInfo.url);
+        await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
+        await sideEffectFileReference.readGeneratedSpecifier();
+        sideEffectFileReference.becomesInline({
+          specifier: sideEffectFileReference.generatedSpecifier,
+          ownerUrlInfo: entryPointUrlInfo,
+          content: sideEffectFileUrlInfo.content,
+          contentType: sideEffectFileUrlInfo.contentType,
+          // ideally get the correct line and column
+          // (for js it's 0, but for html it's different)
+          line: 0,
+          column: 0,
+        });
+      });
+    }
+    return [sideEffectFileReference, sideEffectFileUrlInfo];
+  };
+  const foundSourcemap = (props) => {
+    return found({
+      expectedType: "sourcemap",
+      ...props,
+    });
+  };
+  const injectSourcemapPlaceholder = ({ specifier }) => {
+    return found({
+      trace: {
+        message: `sourcemap comment placeholder`,
+        url: ownerUrlInfo.url,
+      },
+      type: "sourcemap_comment",
+      expectedType: "sourcemap",
+      subtype: ownerUrlInfo.contentType === "text/javascript" ? "js" : "css",
+      specifier,
+      isInline: ownerUrlInfo.kitchen.context.sourcemaps === "inline",
+    });
+  };
+
+  const inject = ({ trace, ...rest }) => {
+    if (trace === undefined) {
+      const { url, line, column } = getCallerPosition();
+      trace = traceFromUrlSite({
+        url,
+        line,
+        column,
+      });
+    }
+    const [ref, referencedUrlInfo] = prepare({
+      trace,
+      injected: true,
+      ...rest,
+    });
+    addReference(ref);
+    return [ref, referencedUrlInfo];
+  };
+
+  const find = (predicate) => current.find(predicate);
+  const forEach = (callback) => current.forEach(callback);
+
+  const references = {
+    prev: [],
+    current,
+    isCollecting: false,
+    find,
+    forEach,
+    startCollecting,
+    prepare,
+    found,
+    foundInline,
+    foundSideEffectFile,
+    inject,
+
+    foundSourcemap,
+    injectSourcemapPlaceholder,
   };
 
   return references;
