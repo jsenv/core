@@ -414,6 +414,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
     shape: {
       finalKitchen = createKitchen({
+        name: "shape",
         logLevel,
         rootDirectoryUrl: buildDirectoryUrl,
         // here most plugins are not there
@@ -1188,6 +1189,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const versionMappingsOnGlobalMap = new Set();
           const versionMappingsOnImportmap = new Set();
           const versioningKitchen = createKitchen({
+            name: "versioning",
             logLevel: logger.level,
             rootDirectoryUrl: buildDirectoryUrl,
             ignore,
@@ -1306,10 +1308,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                         : undefined,
                     };
                   }
-                  const finalUrlInfo = finalKitchen.graph.getUrlInfo(
-                    versionedUrlInfo.url,
-                  );
-                  return finalUrlInfo;
+                  return versionedUrlInfo;
                 },
               },
             ],
@@ -1320,6 +1319,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               ? new URL("postbuild/", outDirectoryUrl)
               : undefined,
           });
+          finalKitchen.context = versioningKitchen.context;
 
           const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
           await versioningRootUrlInfo.dependencies.startCollecting(() => {
