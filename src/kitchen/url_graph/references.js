@@ -392,18 +392,8 @@ export const createDependencies = (ownerUrlInfo) => {
     return [ref, referencedUrlInfo];
   };
 
-  const find = (predicate) =>
-    Array.from(dependencyReferenceSet).find(predicate);
-  const some = (predicate) =>
-    Array.from(dependencyReferenceSet).some(predicate);
-  const forEach = (callback) => dependencyReferenceSet.forEach(callback);
-
   Object.assign(dependencies, {
     isCollecting: false,
-
-    forEach,
-    find,
-    some,
     startCollecting,
     prepare,
     found,

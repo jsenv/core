@@ -73,13 +73,18 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             if (!href) {
               return;
             }
-            const dependencyReference = urlInfo.dependencyReferenceSet.find(
-              (ref) =>
-                ref.generatedSpecifier === href &&
-                ref.type === "link_href" &&
-                ref.subtype === rel,
-            );
-            if (!wasOrWillBeConvertedToJsClassic(dependencyReference)) {
+            let linkHintReference = null;
+            for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+              if (
+                dependencyReference.generatedSpecifier === href &&
+                dependencyReference.type === "link_href" &&
+                dependencyReference.subtype === rel
+              ) {
+                linkHintReference = dependencyReference;
+                break;
+              }
+            }
+            if (!wasOrWillBeConvertedToJsClassic(linkHintReference)) {
               return;
             }
             if (rel === "modulepreload") {
@@ -104,16 +109,21 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             }
             const src = getHtmlNodeAttribute(node, "src");
             if (src) {
-              const dependencyReference = urlInfo.dependencyReferenceSet.find(
-                (ref) =>
-                  ref.generatedSpecifier === src &&
-                  ref.type === "script" &&
-                  ref.subtype === "js_module",
-              );
-              if (!dependencyReference) {
+              let scriptTypeModuleReference = null;
+              for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+                if (
+                  dependencyReference.generatedSpecifier === src &&
+                  dependencyReference.type === "script" &&
+                  dependencyReference.subtype === "js_module"
+                ) {
+                  scriptTypeModuleReference = dependencyReference;
+                  break;
+                }
+              }
+              if (!scriptTypeModuleReference) {
                 return;
               }
-              if (dependencyReference.expectedType === "js_classic") {
+              if (scriptTypeModuleReference.expectedType === "js_classic") {
                 mutations.push(() => {
                   setHtmlNodeAttributes(node, { type: undefined });
                 });
