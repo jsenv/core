@@ -75,7 +75,7 @@ export const createReferences = (ownerUrlInfo) => {
           // resource hint are a special kind of reference.
           // They are a sort of weak reference to an url.
           // We ignore them so that url referenced only by resource hints
-          // have url.dependents.size === 0 and can be considered as not used
+          // have url.dependentUrlSet.size === 0 and can be considered as not used
           // It means html won't consider url referenced solely
           // by <link> as dependency and it's fine
           return;
@@ -98,7 +98,7 @@ export const createReferences = (ownerUrlInfo) => {
         const reference = dependencyReferenceMap.get(dependencyUrl);
         const referencedUrlInfo =
           ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
-        referencedUrlInfo.dependents.add(ownerUrlInfo.url);
+        referencedUrlInfo.dependentUrlSet.add(ownerUrlInfo.url);
         referencedUrlInfo.references.inverted.add(reference);
       });
       setOfImplicitUrls.forEach((implicitUrl) => {
@@ -117,9 +117,9 @@ export const createReferences = (ownerUrlInfo) => {
         if (!referencedUrlInfo) {
           return;
         }
-        referencedUrlInfo.dependents.delete(urlInfo.url);
+        referencedUrlInfo.dependentUrlSet.delete(urlInfo.url);
         referencedUrlInfo.references.inverted.delete(reference);
-        if (referencedUrlInfo.dependents.size === 0) {
+        if (referencedUrlInfo.dependentUrlSet.size === 0) {
           referencedUrlInfo.references.forEach((reference) => {
             prune(referencedUrlInfo, reference);
           });
@@ -325,7 +325,7 @@ export const createReferences = (ownerUrlInfo) => {
         );
         return Boolean(dependentReferencingThatFile);
       };
-      for (const dependentUrl of ownerUrlInfo.dependents) {
+      for (const dependentUrl of ownerUrlInfo.dependentUrlSet) {
         if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
           return injectAsBannerCodeBeforeFinalize(
             sideEffectFileReference,
@@ -655,7 +655,7 @@ ${ownerUrlInfo.url}`,
   }
   ownerUrlInfo.dependencyUrlSet.add(reference.url);
   const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
-  referencedUrlInfo.dependents.add(ownerUrlInfo.url);
+  referencedUrlInfo.dependentUrlSet.add(ownerUrlInfo.url);
   referencedUrlInfo.dependentReferences.add(reference);
 };
 
@@ -679,7 +679,7 @@ ${ownerUrlInfo.url}`,
   references.collection.delete(reference);
   if (references.isCollecting) {
     // if this function is called while collecting urlInfo references
-    // there is no need to update dependents + dependencyUrlSet
+    // there is no need to update dependentUrlSet + dependencyUrlSet
     // because it will be done at the end of reference collectio
     return;
   }
@@ -695,7 +695,7 @@ ${ownerUrlInfo.url}`,
   if (!hasAnOtherRef) {
     ownerUrlInfo.dependencyUrlSet.delete(reference.url);
     const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
-    referencedUrlInfo.dependents.delete(ownerUrlInfo.url);
+    referencedUrlInfo.dependentUrlSet.delete(ownerUrlInfo.url);
     referencedUrlInfo.references.inverted.delete(reference);
     if (!referencedUrlInfo.isUsed()) {
       referencedUrlInfo.deleteFromGraph();
@@ -713,7 +713,7 @@ const replaceReference = (reference, newReference) => {
     }
     if (references.isCollecting) {
       // if this function is called while collecting urlInfo references
-      // there is no need to update dependents + dependencyUrlSet
+      // there is no need to update dependentUrlSet + dependencyUrlSet
       // because it will be done at the end of reference collection
       references.collection.delete(reference);
       references.collection.add(newReference);

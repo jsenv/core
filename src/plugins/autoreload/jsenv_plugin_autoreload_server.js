@@ -63,9 +63,9 @@ export const jsenvPluginAutoreloadServer = ({
                 ],
               };
             }
-            const { dependents } = urlInfo;
+            const { dependentUrlSet } = urlInfo;
             const instructions = [];
-            for (const dependentUrl of dependents) {
+            for (const dependentUrl of dependentUrlSet) {
               const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
               if (dependentUrlInfo.data.hotDecline) {
                 return {
@@ -147,7 +147,7 @@ export const jsenvPluginAutoreloadServer = ({
             if (urlInfo === exactUrlInfo) return;
             const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
             if (urlWithoutSearch !== url) return;
-            if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url))
+            if (exactUrlInfo && exactUrlInfo.dependentUrlSet.has(urlInfo.url))
               return;
             onUrlInfo(urlInfo);
           });

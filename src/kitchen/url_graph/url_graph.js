@@ -23,7 +23,7 @@ export const createUrlGraph = ({
       urlInfoMap.delete(url);
       urlInfo.references.forEach((reference) => {
         const referencedUrlInfo = getUrlInfo(reference.url);
-        referencedUrlInfo.dependents.delete(url);
+        referencedUrlInfo.dependentUrlSet.delete(url);
         referencedUrlInfo.references.inverted.delete(reference);
       });
     }
@@ -233,7 +233,7 @@ const createUrlInfo = (url) => {
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.originalContentEtag = undefined;
       urlInfo.contentEtag = undefined;
-      urlInfo.dependents.forEach((dependentUrl) => {
+      urlInfo.dependentUrlSet.forEach((dependentUrl) => {
         const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
         const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
         if (!hotAcceptDependencies.includes(urlInfo.url)) {

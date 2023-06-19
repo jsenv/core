@@ -30,7 +30,7 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
 
 const findOriginalDirectoryReference = (urlInfo, context) => {
   const findNonFileSystemAncestor = (urlInfo) => {
-    for (const dependentUrl of urlInfo.dependents) {
+    for (const dependentUrl of urlInfo.dependentUrlSet) {
       const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl);
       if (dependentUrlInfo.type !== "directory") {
         return [dependentUrlInfo, urlInfo];
