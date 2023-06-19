@@ -508,14 +508,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       },
     };
 
-    const cookOne = (urlInfo, { reference }) => {
+    const cookOne = (urlInfo) => {
       const promiseFromData = promiseMap.get(urlInfo);
       if (promiseFromData) return promiseFromData;
       const promise = (async () => {
         await cook(urlInfo, {
           ...baseContext,
           cookDuringCook: cookOne,
-          reference,
         });
         startCookingDependencies(urlInfo);
       })();

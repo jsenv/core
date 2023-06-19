@@ -657,7 +657,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               buildUrls.set(specifier, reference.generatedUrl);
               return specifier;
             },
-            fetchUrlContent: async (finalUrlInfo, context) => {
+            fetchUrlContent: (finalUrlInfo) => {
               const fromBundleOrRawGraph = (url) => {
                 const bundleUrlInfo = bundleUrlInfos[url];
                 if (bundleUrlInfo) {
@@ -694,20 +694,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 }
                 return rawUrlInfo;
               };
-              const { reference } = context;
-              if (reference.isInline) {
-                if (reference.prev && !reference.prev.isInline) {
+              const { firstReference } = finalUrlInfo;
+              if (firstReference.isInline) {
+                if (firstReference.prev && !firstReference.prev.isInline) {
                   const urlBeforeRedirect =
-                    findKey(finalRedirections, reference.prev.url) ||
-                    reference.prev.url;
+                    findKey(finalRedirections, firstReference.prev.url) ||
+                    firstReference.prev.url;
                   return fromBundleOrRawGraph(urlBeforeRedirect);
                 }
-                return fromBundleOrRawGraph(reference.url);
+                return fromBundleOrRawGraph(firstReference.url);
               }
               // reference updated during "postbuild":
               // - happens for "js_module_fallback"
-              if (reference.original) {
-                return fromBundleOrRawGraph(reference.original.url);
+              if (firstReference.original) {
+                return fromBundleOrRawGraph(firstReference.original.url);
               }
               return fromBundleOrRawGraph(finalUrlInfo.url);
             },

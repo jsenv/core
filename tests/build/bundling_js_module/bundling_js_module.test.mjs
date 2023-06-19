@@ -11,8 +11,8 @@ const test = async (params) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    // plugins: [jsenvPluginBundling()],
-    // versioning: true,
+    plugins: [jsenvPluginBundling()],
+    versioning: false,
     ...params,
   });
   takeDirectorySnapshot(
