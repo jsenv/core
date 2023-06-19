@@ -119,8 +119,8 @@ export const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
           });
-          const [, inlineImportmapUrlInfo] = htmlUrlInfo.references.foundInline(
-            {
+          const [, inlineImportmapUrlInfo] =
+            htmlUrlInfo.dependencies.foundInline({
               type: "script",
               isOriginalPosition: isOriginal,
               specifierLine: line - 1,
@@ -128,8 +128,7 @@ export const jsenvPluginImportmap = () => {
               specifier: inlineImportmapUrl,
               contentType: "application/importmap+json",
               content: htmlNodeText,
-            },
-          );
+            });
           await inlineImportmapUrlInfo.cook();
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content, {
             indentation: "auto",
@@ -148,9 +147,13 @@ export const jsenvPluginImportmap = () => {
           // We must precook the importmap to know its content and inline it into the HTML
           // In this situation the ref to the importmap was already discovered
           // when parsing the HTML
-          const importmapReference = htmlUrlInfo.references.find(
-            (ref) => ref.generatedSpecifier === src,
-          );
+          let importmapReference = null;
+          for (const dependencyReference of htmlUrlInfo.dependencyReferenceSet) {
+            if (dependencyReference.generatedSpecifier === src) {
+              importmapReference = dependencyReference;
+              break;
+            }
+          }
           const importmapUrlInfo = htmlUrlInfo.graphs.getUrlInfo(
             importmapReference.url,
           );

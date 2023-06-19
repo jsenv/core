@@ -374,7 +374,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     };
 
     if (!urlInfo.url.startsWith("ignore:")) {
-      await urlInfo.references.startCollecting(async () => {
+      await urlInfo.dependencies.startCollecting(async () => {
         // "fetchUrlContent" hook
         await fetchUrlContent(urlInfo, {
           contextDuringFetch: dishContext,
@@ -426,9 +426,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           });
         }
       }, dishContext);
-      if (global.versioning) {
-        debugger;
-      }
     }
 
     // "cooked" hook
@@ -495,7 +492,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.cook = cook;
 
-  const cookReferences = async (
+  const cookDependencies = async (
     urlInfo,
     { operation, ignoreRessourceHint, ignoreDynamicImport } = {},
   ) => {
@@ -518,38 +515,41 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           cookDuringCook: cookOne,
           reference,
         });
-        startCookingReferences(urlInfo);
+        startCookingDependencies(urlInfo);
       })();
       promises.push(promise);
       promiseMap.set(urlInfo, promise);
       return promise;
     };
 
-    const startCookingReferences = (urlInfo) => {
-      const { references } = urlInfo;
-      references.forEach((reference) => {
-        if (reference.type === "sourcemap_comment") {
+    const startCookingDependencies = (urlInfo) => {
+      const { dependencyReferenceSet } = urlInfo;
+      dependencyReferenceSet.forEach((dependencyReference) => {
+        if (dependencyReference.type === "sourcemap_comment") {
           // we don't cook sourcemap reference by sourcemap comments
           // because this is already done in "initTransformations"
           return;
         }
-        if (ignoreRessourceHint && reference.isResourceHint) {
+        if (ignoreRessourceHint && dependencyReference.isResourceHint) {
           // we don't cook resource hints
           // because they might refer to resource that will be modified during build
           // It also means something else have to reference that url in order to cook it
           // so that the preload is deleted by "resync_resource_hints.js" otherwise
           return;
         }
-        if (ignoreDynamicImport && reference.subtype === "import_dynamic") {
+        if (
+          ignoreDynamicImport &&
+          dependencyReference.subtype === "import_dynamic"
+        ) {
           return;
         }
         // we use reference.generatedUrl to mimic what a browser would do:
         // do a fetch to the specifier as found in the file
         const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
-          reference,
+          dependencyReference,
           true,
         );
-        cookOne(referencedUrlInfo, { reference });
+        cookOne(referencedUrlInfo);
       });
     };
 
@@ -570,7 +570,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       promiseMap.clear();
     };
 
-    startCookingReferences(urlInfo);
+    startCookingDependencies(urlInfo);
     await getAllDishesAreCookedPromise();
     await Promise.all(
       callbacksToConsiderGraphCooked.map(async (callback) => {
@@ -579,7 +579,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     );
     callbacksToConsiderGraphCooked.length = 0;
   };
-  kitchenContext.cookReferences = cookReferences;
+  kitchenContext.cookDependencies = cookDependencies;
 
   Object.assign(kitchen, {
     graph,

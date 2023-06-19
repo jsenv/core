@@ -17,7 +17,7 @@ export const jsenvPluginAutoreloadClient = () => {
     transformUrlContent: {
       html: (htmlUrlInfo) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const [autoreloadClientReference] = htmlUrlInfo.references.inject({
+        const [autoreloadClientReference] = htmlUrlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",

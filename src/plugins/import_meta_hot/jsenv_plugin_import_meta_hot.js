@@ -25,18 +25,20 @@ export const jsenvPluginImportMetaHot = () => {
         htmlUrlInfo.data.hotAcceptSelf = false;
         htmlUrlInfo.data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
-            const existingReference = htmlUrlInfo.references.find(
-              (existingReference) => {
-                return (
-                  existingReference.type === type &&
-                  existingReference.specifier === specifier
-                );
-              },
-            );
+            let existingReference = null;
+            for (const dependencyReference of htmlUrlInfo.dependencyReferenceSet) {
+              if (
+                dependencyReference.type === type &&
+                dependencyReference.specifier === specifier
+              ) {
+                existingReference = dependencyReference;
+                break;
+              }
+            }
             if (existingReference) {
               return existingReference.url;
             }
-            const [reference] = htmlUrlInfo.references.found({
+            const [reference] = htmlUrlInfo.dependencies.found({
               type,
               specifier,
             });
@@ -75,11 +77,7 @@ export const jsenvPluginImportMetaHot = () => {
         if (context.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths);
         }
-        return injectImportMetaHot(
-          urlInfo,
-          context,
-          importMetaHotClientFileUrl,
-        );
+        return injectImportMetaHot(urlInfo, importMetaHotClientFileUrl);
       },
     },
   };
@@ -101,8 +99,8 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 // better sourcemap than doing the equivalent with babel
 // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
 // which is likely not well supported by babel
-const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
-  const [importMetaHotClientFileReference] = urlInfo.references.inject({
+const injectImportMetaHot = (urlInfo, importMetaHotClientFileUrl) => {
+  const [importMetaHotClientFileReference] = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
     expectedType: "js_module",

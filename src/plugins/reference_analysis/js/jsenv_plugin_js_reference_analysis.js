@@ -58,7 +58,7 @@ const parseAndTransformJsReferences = async (
       // when rendering the string
       quote = JS_QUOTES.pickBest(inlineReferenceInfo.content);
     }
-    const [inlineReference, inlineUrlInfo] = urlInfo.references.foundInline({
+    const [inlineReference, inlineUrlInfo] = urlInfo.dependencies.foundInline({
       type: "js_inline_content",
       subtype: inlineReferenceInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
       isOriginalPosition: urlInfo.content === urlInfo.originalContent,
@@ -92,7 +92,7 @@ const parseAndTransformJsReferences = async (
     ) {
       urlInfo.data.usesImport = true;
     }
-    const [reference] = urlInfo.references.found({
+    const [reference] = urlInfo.dependencies.found({
       node: externalReferenceInfo.node,
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,

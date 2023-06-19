@@ -1115,23 +1115,23 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             contentVersionMap.set(urlInfo.url, contentVersion);
             const versionMutations = [];
             const seen = new Set();
-            const visitReferences = (urlInfo) => {
-              urlInfo.references.forEach((reference) => {
-                if (seen.has(reference)) return;
-                seen.add(reference);
+            const visitDependencies = (urlInfo) => {
+              urlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
+                if (seen.has(dependencyReference)) return;
+                seen.add(dependencyReference);
                 const referencedUrlInfo = finalKitchen.graph.getUrlInfo(
-                  reference.url,
+                  dependencyReference.url,
                 );
                 versionMutations.push(() => {
                   const dependencyContentVersion = contentVersionMap.get(
-                    reference.url,
+                    dependencyReference.url,
                   );
                   if (!dependencyContentVersion) {
                     // no content generated for this dependency
                     // (inline, data:, ignore:, sourcemap, ...)
                     return null;
                   }
-                  if (preferWithoutVersioning(reference)) {
+                  if (preferWithoutVersioning(dependencyReference)) {
                     // when versioning is dynamic no need to take into account
                     // happens for:
                     // - specifier mapped by window.__v__()
@@ -1140,10 +1140,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   }
                   return dependencyContentVersion;
                 });
-                visitReferences(referencedUrlInfo);
+                visitDependencies(referencedUrlInfo);
               });
             };
-            visitReferences(urlInfo);
+            visitDependencies(urlInfo);
 
             hashCallbacks.push(() => {
               let version;
@@ -1326,9 +1326,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
 
           const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
-          await versioningRootUrlInfo.references.startCollecting(() => {
+          await versioningRootUrlInfo.dependencies.startCollecting(() => {
             finalEntryUrls.forEach((finalEntryUrl) => {
-              versioningRootUrlInfo.references.found({
+              versioningRootUrlInfo.dependencies.found({
                 trace: { message: `entryPoint` },
                 parentUrl: buildDirectoryUrl,
                 type: "entry_point",
@@ -1337,7 +1337,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             });
           });
           global.versioning = true;
-          await versioningRootUrlInfo.cookReferences({
+          await versioningRootUrlInfo.cookDependencies({
             operation: buildOperation,
           });
           workerReferenceSet.clear();

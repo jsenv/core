@@ -73,7 +73,7 @@ const parseAndTransformHtmlReferences = async (
       "preload",
       "modulepreload",
     ].includes(subtype);
-    const [reference] = urlInfo.references.found({
+    const [reference] = urlInfo.dependencies.found({
       node,
       type,
       subtype,
@@ -143,7 +143,7 @@ const parseAndTransformHtmlReferences = async (
       columnEnd,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const [inlineReference, inlineUrlInfo] = urlInfo.references.foundInline({
+    const [inlineReference, inlineUrlInfo] = urlInfo.dependencies.foundInline({
       node,
       type,
       expectedType,
@@ -419,13 +419,13 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
       return "css";
     }
     if (as === "script") {
-      const firstScriptOnThisUrl = htmlUrlInfo.references.find(
-        (refCandidate) =>
-          refCandidate.url === linkReference.url &&
-          refCandidate.type === "script",
-      );
-      if (firstScriptOnThisUrl) {
-        return firstScriptOnThisUrl.expectedType;
+      for (const dependencyReference of htmlUrlInfo.dependencyReferenceSet) {
+        if (
+          dependencyReference.url === linkReference.url &&
+          dependencyReference.type === "script"
+        ) {
+          return dependencyReference.expectedType;
+        }
       }
       return undefined;
     }

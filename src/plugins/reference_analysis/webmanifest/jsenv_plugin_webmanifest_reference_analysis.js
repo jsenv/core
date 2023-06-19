@@ -16,13 +16,13 @@ const parseAndTransformWebmanifestUrls = async (urlInfo) => {
   const actions = [];
   const { icons = [] } = manifest;
   icons.forEach((icon) => {
-    const [reference] = urlInfo.references.found({
+    const [iconReference] = urlInfo.dependencies.found({
       type: "webmanifest_icon_src",
       specifier: icon.src,
     });
     actions.push(async () => {
-      await reference.readGeneratedSpecifier();
-      icon.src = reference.generatedSpecifier;
+      await iconReference.readGeneratedSpecifier();
+      icon.src = iconReference.generatedSpecifier;
     });
   });
 

@@ -104,13 +104,16 @@ const addRelationshipWithPackageJson = ({
   field,
   hasVersioningEffect = false,
 }) => {
-  const referenceFound = reference.ownerUrlInfo.references.find(
-    (ref) => ref.type === "package_json" && ref.subtype === field,
-  );
-  if (referenceFound) {
-    return;
+  const { ownerUrlInfo } = reference;
+  for (const dependencyReference of ownerUrlInfo.dependencyReferenceSet) {
+    if (
+      dependencyReference.type === "package_json" &&
+      dependencyReference.subtype === field
+    ) {
+      return;
+    }
   }
-  const [, packageJsonUrlInfo] = reference.ownerUrlInfo.references.inject({
+  const [, packageJsonUrlInfo] = ownerUrlInfo.dependencies.inject({
     type: "package_json",
     subtype: field,
     specifier: packageJsonUrl,

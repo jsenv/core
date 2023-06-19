@@ -175,7 +175,7 @@ export const createUrlInfoTransformer = ({
     });
     if (sourcemapFound) {
       const { type, subtype, line, column, specifier } = sourcemapFound;
-      const [, sourcemapUrlInfo] = urlInfo.references.found({
+      const [, sourcemapUrlInfo] = urlInfo.dependencies.found({
         type,
         subtype,
         expectedType: "sourcemap",
@@ -273,11 +273,15 @@ export const createUrlInfoTransformer = ({
     // in this scenarion we don't want to inject sourcemap reference
     // just update the content
 
-    let sourcemapReference = urlInfo.references.find(
-      (ref) => ref.type === "sourcemap_comment",
-    );
+    let sourcemapReference = null;
+    for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+      if (dependencyReference.type === "sourcemap_comment") {
+        sourcemapReference = dependencyReference;
+        break;
+      }
+    }
     if (!sourcemapReference) {
-      const result = urlInfo.references.inject({
+      const result = urlInfo.dependencies.inject({
         trace: {
           message: `sourcemap comment placeholder`,
           url: urlInfo.url,

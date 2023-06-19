@@ -21,12 +21,17 @@ export const jsenvPluginInliningIntoHtml = () => {
         const actions = [];
 
         const onStyleSheet = (linkNode, { href }) => {
-          const linkReference = urlInfo.references.find(
-            (ref) =>
-              ref.generatedSpecifier === href &&
-              ref.type === "link_href" &&
-              ref.subtype === "stylesheet",
-          );
+          let linkReference = null;
+          for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+            if (
+              dependencyReference.generatedSpecifier === href &&
+              dependencyReference.type === "link_href" &&
+              dependencyReference.subtype === "stylesheet"
+            ) {
+              linkReference = dependencyReference;
+              break;
+            }
+          }
           if (
             !linkReference.original ||
             !linkReference.original.searchParams.has("inline")
@@ -67,9 +72,16 @@ export const jsenvPluginInliningIntoHtml = () => {
           });
         };
         const onScriptWithSrc = (scriptNode, { src }) => {
-          const scriptReference = urlInfo.references.find(
-            (ref) => ref.generatedSpecifier === src && ref.type === "script",
-          );
+          let scriptReference;
+          for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+            if (
+              dependencyReference.generatedSpecifier === src &&
+              dependencyReference.type === "script"
+            ) {
+              scriptReference = dependencyReference;
+              break;
+            }
+          }
           if (
             !scriptReference.original ||
             !scriptReference.original.searchParams.has("inline")

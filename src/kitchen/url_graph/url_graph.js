@@ -21,10 +21,10 @@ export const createUrlGraph = ({
     const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
       urlInfoMap.delete(url);
-      urlInfo.references.forEach((reference) => {
-        const referencedUrlInfo = getUrlInfo(reference.url);
+      urlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
+        const referencedUrlInfo = getUrlInfo(dependencyReference.url);
+        referencedUrlInfo.dependentReferenceSet.delete(dependencyReference);
         referencedUrlInfo.dependentUrlSet.delete(url);
-        referencedUrlInfo.references.inverted.delete(reference);
       });
     }
   };
@@ -55,11 +55,10 @@ export const createUrlGraph = ({
     }
     const seen = [];
     const search = (urlInfo) => {
-      const firstReferenceFound = urlInfo.references.find((reference) => {
-        return urlSpecifierEncoding.decode(reference) === specifier;
-      });
-      if (firstReferenceFound) {
-        return firstReferenceFound;
+      for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+        if (urlSpecifierEncoding.decode(dependencyReference) === specifier) {
+          return dependencyReference;
+        }
       }
       for (const dependencyUrl of parentUrlInfo.dependencyUrlSet) {
         if (seen.includes(dependencyUrl)) {
@@ -259,8 +258,8 @@ const createUrlInfo = (url) => {
   urlInfo.cook = (context) => {
     return urlInfo.kitchen.context.cook(urlInfo, context);
   };
-  urlInfo.cookReferences = (context) => {
-    return urlInfo.kitchen.context.cookReferences(urlInfo, context);
+  urlInfo.cookDependencies = (context) => {
+    return urlInfo.kitchen.context.cookDependencies(urlInfo, context);
   };
   urlInfo.fetchUrlContent = (context) => {
     return urlInfo.kitchen.context.fetchUrlContent(urlInfo, context);

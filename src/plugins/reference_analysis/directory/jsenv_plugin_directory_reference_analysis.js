@@ -14,7 +14,7 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
           context.rootDirectoryUrl,
         );
         JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
-          urlInfo.references.found({
+          urlInfo.dependencies.found({
             type: "filesystem",
             subtype: "directory_entry",
             specifier: directoryEntryName,
@@ -46,6 +46,10 @@ const findOriginalDirectoryReference = (urlInfo, context) => {
   if (!ancestor) {
     return null;
   }
-  const ref = ancestor.references.find((ref) => ref.url === child.url);
-  return ref;
+  for (const dependencyReference of ancestor.dependencyReferenceSet) {
+    if (dependencyReference.url === child.url) {
+      return dependencyReference;
+    }
+  }
+  return null;
 };
