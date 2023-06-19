@@ -5,15 +5,14 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async (params) => {
   await build({
-    logLevel: "warn",
+    logLevel: "debug",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.js": "main.js",
     },
     plugins: [jsenvPluginBundling()],
-    // TODO: restore versioning
-    versioning: false,
+    versioning: true,
     ...params,
   });
   takeDirectorySnapshot(

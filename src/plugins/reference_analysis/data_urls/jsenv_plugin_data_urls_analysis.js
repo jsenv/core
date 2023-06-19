@@ -20,7 +20,7 @@ export const jsenvPluginDataUrlsAnalysis = () => {
       }
       return (async () => {
         const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-        await context.cook(urlInfo, { reference });
+        await urlInfo.cook();
         if (urlInfo.originalContent === urlInfo.content) {
           return reference.generatedUrl;
         }

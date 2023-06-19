@@ -242,10 +242,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     clientRuntimeCompat,
   });
 
-  const fetchUrlContent = async (
-    urlInfo,
-    { reference, contextDuringFetch },
-  ) => {
+  const fetchUrlContent = async (urlInfo, { contextDuringFetch }) => {
     try {
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
@@ -259,7 +256,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
             {
               "url": urlInfo.url,
-              "url reference trace": reference.trace.message,
+              "url reference trace": urlInfo.reference.trace.message,
             },
           ),
         );
@@ -293,9 +290,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
       urlInfo.type =
-        type || reference.expectedType || inferUrlInfoType(urlInfo);
+        type || urlInfo.reference.expectedType || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
-        subtype || reference.expectedSubtype || urlInfo.subtypeHint || "";
+        subtype ||
+        urlInfo.reference.expectedSubtype ||
+        urlInfo.subtypeHint ||
+        "";
       // during build urls info are reused and load returns originalUrl/originalContent
       urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
       if (data) {
@@ -308,7 +308,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo.filename = filename;
       }
       assertFetchedContentCompliance({
-        reference,
         urlInfo,
         content,
       });
@@ -330,30 +329,25 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         fetchUrlContentReturnValue,
         "originalContentAst",
       );
-      await urlInfoTransformer.initTransformations(
-        urlInfo,
-        {
-          content,
-          sourcemap,
-          originalContent,
-          contentAst: contentAstDescriptor
-            ? contentAstDescriptor.get
-              ? undefined
-              : contentAstDescriptor.value
-            : undefined,
-          originalContentAst: originalContentAstDescriptor
-            ? originalContentAstDescriptor.get
-              ? undefined
-              : originalContentAstDescriptor.value
-            : undefined,
-        },
-        contextDuringFetch,
-      );
+      await urlInfoTransformer.initTransformations(urlInfo, {
+        content,
+        sourcemap,
+        originalContent,
+        contentAst: contentAstDescriptor
+          ? contentAstDescriptor.get
+            ? undefined
+            : contentAstDescriptor.value
+          : undefined,
+        originalContentAst: originalContentAstDescriptor
+          ? originalContentAstDescriptor.get
+            ? undefined
+            : originalContentAstDescriptor.value
+          : undefined,
+      });
     } catch (error) {
       throw createFetchUrlContentError({
         pluginController,
         urlInfo,
-        reference,
         error,
       });
     }
@@ -383,7 +377,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       await urlInfo.references.startCollecting(async () => {
         // "fetchUrlContent" hook
         await fetchUrlContent(urlInfo, {
-          reference: dishContext.reference,
           contextDuringFetch: dishContext,
         });
 
@@ -403,36 +396,38 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         } catch (error) {
           const transformError = createTransformUrlContentError({
             pluginController,
-            reference: dishContext.reference,
             urlInfo,
             error,
           });
           urlInfo.error = transformError;
           throw transformError;
         }
-      }, dishContext);
 
-      // "finalize" hook
-      try {
-        for (const callback of urlInfo.callbacksToConsiderContentReady) {
-          await callback();
+        // "finalize" hook
+        try {
+          for (const callback of urlInfo.callbacksToConsiderContentReady) {
+            await callback();
+          }
+          urlInfo.callbacksToConsiderContentReady.length = 0;
+
+          const finalizeReturnValue =
+            await pluginController.callAsyncHooksUntil(
+              "finalizeUrlContent",
+              urlInfo,
+              dishContext,
+            );
+          urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
+          urlInfoTransformer.applyTransformationsEffects(urlInfo);
+        } catch (error) {
+          throw createFinalizeUrlContentError({
+            pluginController,
+            urlInfo,
+            error,
+          });
         }
-        urlInfo.callbacksToConsiderContentReady.length = 0;
-
-        const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
-          "finalizeUrlContent",
-          urlInfo,
-          dishContext,
-        );
-        urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
-        urlInfoTransformer.applyTransformationsEffects(urlInfo);
-      } catch (error) {
-        throw createFinalizeUrlContentError({
-          pluginController,
-          reference: dishContext.reference,
-          urlInfo,
-          error,
-        });
+      }, dishContext);
+      if (global.versioning) {
+        debugger;
       }
     }
 

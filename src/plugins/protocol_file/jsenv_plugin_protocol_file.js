@@ -157,16 +157,16 @@ export const jsenvPluginProtocolFile = ({
     {
       name: "jsenv:file_url_fetching",
       appliesDuring: "*",
-      fetchUrlContent: (urlInfo, context) => {
+      fetchUrlContent: (urlInfo) => {
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
         const urlObject = new URL(urlInfo.url);
-        if (context.reference.leadsToADirectory) {
+        if (urlInfo.reference.leadsToADirectory) {
           const directoryEntries = readdirSync(urlObject);
           let filename;
-          if (context.reference.type === "filesystem") {
-            filename = `${context.reference.ownerUrlInfo.filename}${context.reference.specifier}/`;
+          if (urlInfo.reference.type === "filesystem") {
+            filename = `${urlInfo.reference.ownerUrlInfo.filename}${urlInfo.reference.specifier}/`;
           } else {
             filename = `${urlToFilename(urlInfo.url)}/`;
           }

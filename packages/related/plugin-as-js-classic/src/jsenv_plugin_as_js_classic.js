@@ -21,7 +21,7 @@ export const jsenvPluginAsJsClassic = () => {
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "as_js_classic",
           // override the expectedType to "js_module"
           // because when there is ?as_js_classic it means the underlying resource
@@ -32,7 +32,7 @@ export const jsenvPluginAsJsClassic = () => {
         return null;
       }
       // cook it to get content + dependencies
-      await context.cook(jsModuleUrlInfo, { reference: jsModuleReference });
+      await jsModuleUrlInfo.cook();
       await jsModuleUrlInfo.cookReferences({
         // we ignore dynamic import to cook lazyly (as browser request the server)
         // these dynamic imports must inherit "?as_js_classic"

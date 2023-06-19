@@ -33,7 +33,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
         }
         return (async () => {
           const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-          await context.cook(urlInfo, { reference });
+          await urlInfo.cook();
           const contentAsBase64 = Buffer.from(urlInfo.content).toString(
             "base64",
           );

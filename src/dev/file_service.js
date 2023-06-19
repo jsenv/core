@@ -312,10 +312,7 @@ export const createFileService = ({
         urlInfo.subtype = null;
         urlInfo.timing = {};
       }
-      await urlInfo.cook({
-        request,
-        reference,
-      });
+      await urlInfo.cook({ request });
       let { response } = urlInfo;
       if (response) {
         return response;

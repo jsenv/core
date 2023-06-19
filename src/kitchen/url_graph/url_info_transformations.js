@@ -103,7 +103,6 @@ export const createUrlInfoTransformer = ({
       originalContentEtag, // in practice always undefined
       sourcemap,
     },
-    context,
   ) => {
     urlInfo.contentFinalized = false;
     urlInfo.originalContentAst = originalContentAst;
@@ -176,7 +175,7 @@ export const createUrlInfoTransformer = ({
     });
     if (sourcemapFound) {
       const { type, subtype, line, column, specifier } = sourcemapFound;
-      const [sourcemapReference, sourcemapUrlInfo] = urlInfo.references.found({
+      const [, sourcemapUrlInfo] = urlInfo.references.found({
         type,
         subtype,
         expectedType: "sourcemap",
@@ -185,7 +184,7 @@ export const createUrlInfoTransformer = ({
         specifierColumn: column,
       });
       try {
-        await context.cook(sourcemapUrlInfo, { reference: sourcemapReference });
+        await sourcemapUrlInfo.cook();
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
         urlInfo.sourcemap = sourcemap;

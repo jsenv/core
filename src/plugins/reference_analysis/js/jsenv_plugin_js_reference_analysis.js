@@ -17,7 +17,6 @@ export const jsenvPluginJsReferenceAnalysis = ({
       transformUrlContent: {
         js_classic: (urlInfo, context) =>
           parseAndTransformJsReferences(urlInfo, {
-            context,
             inlineContent,
             allowEscapeForVersioning,
             canUseTemplateLiterals:
@@ -25,7 +24,6 @@ export const jsenvPluginJsReferenceAnalysis = ({
           }),
         js_module: (urlInfo, context) =>
           parseAndTransformJsReferences(urlInfo, {
-            context,
             inlineContent,
             allowEscapeForVersioning,
             canUseTemplateLiterals:
@@ -38,7 +36,7 @@ export const jsenvPluginJsReferenceAnalysis = ({
 
 const parseAndTransformJsReferences = async (
   urlInfo,
-  { context, inlineContent, allowEscapeForVersioning, canUseTemplateLiterals },
+  { inlineContent, allowEscapeForVersioning, canUseTemplateLiterals },
 ) => {
   const magicSource = createMagicSource(urlInfo.content);
   const parallelActions = [];
@@ -75,7 +73,7 @@ const parseAndTransformJsReferences = async (
       JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
 
     sequentialActions.push(async () => {
-      await context.cook(inlineUrlInfo, { reference: inlineReference });
+      await inlineUrlInfo.cook();
       const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
         quote,
         allowEscapeForVersioning,

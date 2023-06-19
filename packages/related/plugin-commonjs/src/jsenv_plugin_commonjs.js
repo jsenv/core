@@ -58,7 +58,7 @@ export const jsenvPluginCommonJs = ({
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [commonJsReference, commonJsUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "cjs_as_js_module",
           // during this fetch we don't want to alter the original file
           // so we consider it as text
@@ -67,9 +67,7 @@ export const jsenvPluginCommonJs = ({
       if (!commonJsReference) {
         return null;
       }
-      await context.fetchUrlContent(commonJsUrlInfo, {
-        reference: commonJsReference,
-      });
+      await commonJsUrlInfo.fetchUrlContent();
       const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
         "node",
       );

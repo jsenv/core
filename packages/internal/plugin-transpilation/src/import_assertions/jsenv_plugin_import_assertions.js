@@ -106,16 +106,14 @@ const jsenvPluginAsModules = () => {
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [jsonReference, jsonUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "as_json_module",
           expectedType: "json",
         });
       if (!jsonReference) {
         return null;
       }
-      await context.fetchUrlContent(jsonUrlInfo, {
-        reference: jsonReference,
-      });
+      await jsonUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.references.found({
           type: "js_import",
@@ -146,16 +144,14 @@ const jsenvPluginAsModules = () => {
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [cssReference, cssUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "as_css_module",
           expectedType: "css",
         });
       if (!cssReference) {
         return null;
       }
-      await context.fetchUrlContent(cssUrlInfo, {
-        reference: cssReference,
-      });
+      await cssUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.references.found({
           type: "js_import",
@@ -193,16 +189,14 @@ export default stylesheet;`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [textReference, textUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "as_text_module",
           expectedType: "text",
         });
       if (!textReference) {
         return null;
       }
-      await context.fetchUrlContent(textUrlInfo, {
-        reference: textReference,
-      });
+      await textUrlInfo.fetchUrlContent(textUrlInfo);
       if (context.dev) {
         urlInfo.references.found({
           type: "js_import",

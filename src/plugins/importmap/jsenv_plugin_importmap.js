@@ -119,8 +119,8 @@ export const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
           });
-          const [inlineImportmapReference, inlineImportmapUrlInfo] =
-            htmlUrlInfo.references.foundInline({
+          const [, inlineImportmapUrlInfo] = htmlUrlInfo.references.foundInline(
+            {
               type: "script",
               isOriginalPosition: isOriginal,
               specifierLine: line - 1,
@@ -128,10 +128,9 @@ export const jsenvPluginImportmap = () => {
               specifier: inlineImportmapUrl,
               contentType: "application/importmap+json",
               content: htmlNodeText,
-            });
-          await context.cook(inlineImportmapUrlInfo, {
-            reference: inlineImportmapReference,
-          });
+            },
+          );
+          await inlineImportmapUrlInfo.cook();
           setHtmlNodeText(importmap, inlineImportmapUrlInfo.content, {
             indentation: "auto",
           });
@@ -155,9 +154,7 @@ export const jsenvPluginImportmap = () => {
           const importmapUrlInfo = htmlUrlInfo.graphs.getUrlInfo(
             importmapReference.url,
           );
-          await context.cook(importmapUrlInfo, {
-            reference: importmapReference,
-          });
+          await importmapUrlInfo.cook();
           onHtmlImportmapParsed(
             JSON.parse(importmapUrlInfo.content),
             htmlUrlInfo.url,

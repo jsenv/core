@@ -8,6 +8,7 @@ export const applyReferenceEffectsOnUrlInfo = (
   reference,
   referencedUrlInfo,
 ) => {
+  referencedUrlInfo.reference = reference;
   referencedUrlInfo.originalUrl =
     referencedUrlInfo.originalUrl || reference.url;
 
@@ -263,9 +264,7 @@ export const createReferences = (ownerUrlInfo) => {
       sideEffectFileUrlInfo,
     ) => {
       ownerUrlInfo.callbacksToConsiderContentReady.push(async () => {
-        await sideEffectFileUrlInfo.cook({
-          reference: sideEffectFileReference,
-        });
+        await sideEffectFileUrlInfo.cook();
         await prependContent(ownerUrlInfo, sideEffectFileUrlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
@@ -657,7 +656,7 @@ ${ownerUrlInfo.url}`,
   ownerUrlInfo.dependencies.add(reference.url);
   const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
   referencedUrlInfo.dependents.add(ownerUrlInfo.url);
-  referencedUrlInfo.references.inverted.add(reference);
+  referencedUrlInfo.dependentReferences.add(reference);
 };
 
 const removeReference = (reference) => {

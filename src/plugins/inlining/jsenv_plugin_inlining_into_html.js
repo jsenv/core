@@ -35,9 +35,7 @@ export const jsenvPluginInliningIntoHtml = () => {
           }
           const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url);
           actions.push(async () => {
-            await context.cook(linkUrlInfo, {
-              reference: linkReference,
-            });
+            await linkUrlInfo.cook();
             const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
               preferOriginal: true,
             });
@@ -82,9 +80,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             scriptReference.url,
           );
           actions.push(async () => {
-            await context.cook(scriptUrlInfo, {
-              reference: scriptReference,
-            });
+            await scriptUrlInfo.cook();
             const { line, column, isOriginal } = getHtmlNodePosition(
               scriptNode,
               {

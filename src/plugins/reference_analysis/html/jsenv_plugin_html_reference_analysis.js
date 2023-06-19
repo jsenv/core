@@ -191,7 +191,6 @@ const parseAndTransformHtmlReferences = async (
       await cookInlineContent({
         context,
         inlineContentUrlInfo: inlineUrlInfo,
-        inlineContentReference: inlineReference,
       });
       mutations.push(() => {
         if (hotAccept) {
@@ -363,15 +362,9 @@ const parseAndTransformHtmlReferences = async (
   return stringifyHtmlAst(htmlAst);
 };
 
-const cookInlineContent = async ({
-  context,
-  inlineContentUrlInfo,
-  inlineContentReference,
-}) => {
+const cookInlineContent = async ({ context, inlineContentUrlInfo }) => {
   try {
-    await context.cook(inlineContentUrlInfo, {
-      reference: inlineContentReference,
-    });
+    await inlineContentUrlInfo.cook();
   } catch (e) {
     if (e.code === "PARSE_ERROR") {
       // When something like <style> or <script> contains syntax error

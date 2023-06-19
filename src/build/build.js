@@ -327,11 +327,11 @@ build ${entryPointKeys.length} entry points`);
         ...plugins,
         {
           appliesDuring: "build",
-          fetchUrlContent: (urlInfo, context) => {
-            if (context.reference.original) {
+          fetchUrlContent: (urlInfo) => {
+            if (urlInfo.reference.original) {
               rawRedirections.set(
-                context.reference.original.url,
-                context.reference.url,
+                urlInfo.reference.original.url,
+                urlInfo.reference.url,
               );
             }
           },
@@ -1206,6 +1206,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 name: "jsenv:versioning",
                 appliesDuring: "build",
                 resolveReference: (reference) => {
+                  debugger;
                   const buildUrl = buildUrls.get(reference.specifier);
                   if (buildUrl) {
                     return buildUrl;
@@ -1322,7 +1323,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
 
           const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
-          debugger;
           await versioningRootUrlInfo.references.startCollecting(() => {
             finalEntryUrls.forEach((finalEntryUrl) => {
               versioningRootUrlInfo.references.found({
@@ -1333,6 +1333,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               });
             });
           });
+          global.versioning = true;
           await versioningRootUrlInfo.cookReferences({
             operation: buildOperation,
           });

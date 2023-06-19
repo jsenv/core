@@ -27,7 +27,7 @@ export const jsenvPluginAsJsModule = () => {
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsClassicReference, jsClassicUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "as_js_module",
           // override the expectedType to "js_classic"
           // because when there is ?as_js_module it means the underlying resource
@@ -37,9 +37,7 @@ export const jsenvPluginAsJsModule = () => {
       if (!jsClassicReference) {
         return null;
       }
-      await context.fetchUrlContent(jsClassicUrlInfo, {
-        reference: jsClassicReference,
-      });
+      await jsClassicUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.references.found({
           type: "js_import",

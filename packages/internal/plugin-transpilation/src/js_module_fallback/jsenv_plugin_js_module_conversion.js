@@ -70,7 +70,7 @@ export const jsenvPluginJsModuleConversion = ({
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
-        context.reference.getWithoutSearchParam({
+        urlInfo.reference.getWithoutSearchParam({
           searchParam: "js_module_fallback",
           // override the expectedType to "js_module"
           // because when there is ?js_module_fallback it means the underlying resource
@@ -80,9 +80,7 @@ export const jsenvPluginJsModuleConversion = ({
       if (!jsModuleReference) {
         return null;
       }
-      await context.fetchUrlContent(jsModuleUrlInfo, {
-        reference: jsModuleReference,
-      });
+      await jsModuleUrlInfo.fetchUrlContent(jsModuleUrlInfo);
       if (context.dev) {
         urlInfo.references.found({
           type: "js_import",
