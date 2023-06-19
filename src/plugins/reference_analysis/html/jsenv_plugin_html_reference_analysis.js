@@ -23,8 +23,9 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
     name: "jsenv:html_reference_analysis",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (urlInfo) =>
+      html: (urlInfo, context) =>
         parseAndTransformHtmlReferences(urlInfo, {
+          context,
           inlineContent,
           inlineConvertedScript,
         }),
@@ -34,7 +35,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
 const parseAndTransformHtmlReferences = async (
   urlInfo,
-  { inlineContent, inlineConvertedScript },
+  { context, inlineContent, inlineConvertedScript },
 ) => {
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content);

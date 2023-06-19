@@ -695,14 +695,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return rawUrlInfo;
               };
               const { reference } = context;
-              // reference injected during "postbuild":
-              // - happens for "js_module_fallback" injecting "s.js"
-              if (reference.injected) {
-                const [ref, rawUrlInfo] =
-                  reference.ownerUrlInfo.prepareReference(...reference);
-                await rawUrlInfo.cook({ reference: ref });
-                return rawUrlInfo;
-              }
               if (reference.isInline) {
                 if (reference.prev && !reference.prev.isInline) {
                   const urlBeforeRedirect =
