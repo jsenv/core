@@ -274,9 +274,9 @@ export const createUrlInfoTransformer = ({
     // just update the content
 
     let sourcemapReference = null;
-    for (const dependencyReference of urlInfo.dependencyReferenceSet) {
-      if (dependencyReference.type === "sourcemap_comment") {
-        sourcemapReference = dependencyReference;
+    for (const referenceToOther of urlInfo.referenceToOthersSet) {
+      if (referenceToOther.type === "sourcemap_comment") {
+        sourcemapReference = referenceToOther;
         break;
       }
     }

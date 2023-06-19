@@ -328,10 +328,10 @@ build ${entryPointKeys.length} entry points`);
         {
           appliesDuring: "build",
           fetchUrlContent: (urlInfo) => {
-            if (urlInfo.reference.original) {
+            if (urlInfo.firstReference.original) {
               rawRedirections.set(
-                urlInfo.reference.original.url,
-                urlInfo.reference.url,
+                urlInfo.firstReference.original.url,
+                urlInfo.firstReference.url,
               );
             }
           },
@@ -784,17 +784,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             addToBundlerIfAny(rawUrlInfo);
           }
           if (rawUrlInfo.type === "html") {
-            rawUrlInfo.dependencyUrlSet.forEach((dependencyUrl) => {
-              const dependencyUrlInfo =
-                rawKitchen.graph.getUrlInfo(dependencyUrl);
-              if (dependencyUrlInfo.isInline) {
-                if (dependencyUrlInfo.type === "js_module") {
+            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+              const referencedUrlInfo =
+                rawKitchen.graph.getUrlInfo(referenceToOther);
+              if (referencedUrlInfo.isInline) {
+                if (referencedUrlInfo.type === "js_module") {
                   // bundle inline script type module deps
-                  dependencyUrlInfo.dependencyReferenceSet.forEach(
-                    (dependencyReference) => {
-                      if (dependencyReference.type === "js_import") {
+                  referencedUrlInfo.referenceToOthersSet.forEach(
+                    (jsModuleReferenceToOther) => {
+                      if (jsModuleReferenceToOther.type === "js_import") {
                         const inlineUrlInfo = rawKitchen.graph.getUrlInfo(
-                          dependencyReference.url,
+                          jsModuleReferenceToOther.url,
                         );
                         addToBundlerIfAny(inlineUrlInfo);
                       }
@@ -804,20 +804,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 // inline content cannot be bundled
                 return;
               }
-              addToBundlerIfAny(dependencyUrlInfo);
+              addToBundlerIfAny(referencedUrlInfo);
             });
-            rawUrlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
+            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
               if (
-                dependencyReference.isResourceHint &&
-                dependencyReference.expectedType === "js_module"
+                referenceToOther.isResourceHint &&
+                referenceToOther.expectedType === "js_module"
               ) {
                 const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                  dependencyReference.url,
+                  referenceToOther.url,
                 );
                 if (
                   referencedUrlInfo &&
                   // something else than the resource hint is using this url
-                  referencedUrlInfo.dependentUrlSet.size > 0
+                  referencedUrlInfo.referenceFromOthersSet.size > 0
                 ) {
                   addToBundlerIfAny(referencedUrlInfo);
                 }
@@ -829,12 +829,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
-              if (dependencyReference.type !== "js_url") {
+            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+              if (referenceToOther.type !== "js_url") {
                 return;
               }
               const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                dependencyReference.url,
+                referenceToOther.url,
               );
               const bundler = bundlers[referencedUrlInfo.type];
               if (!bundler) {
@@ -842,15 +842,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
 
               let willAlreadyBeBundled = true;
-              for (const dependentUrl of referencedUrlInfo.dependentUrlSet) {
-                const dependentUrlInfo =
-                  rawKitchen.graph.getUrlInfo(dependentUrl);
-                for (const dependencyReference of dependentUrlInfo.dependencyReferenceSet) {
-                  if (dependencyReference.url === referencedUrlInfo.url) {
-                    willAlreadyBeBundled =
-                      dependencyReference.subtype === "import_dynamic" ||
-                      dependencyReference.type === "script";
-                  }
+              for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+                if (referenceFromOther.url === referencedUrlInfo.url) {
+                  willAlreadyBeBundled =
+                    referenceFromOther.subtype === "import_dynamic" ||
+                    referenceFromOther.type === "script";
                 }
               }
               if (!willAlreadyBeBundled) {
@@ -1094,7 +1090,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.url.startsWith("ignore:")) {
               return;
             }
-            if (urlInfo.dependentUrlSet.size === 0 && !urlInfo.isEntryPoint) {
+            if (
+              urlInfo.referenceFromOthersSet.size === 0 &&
+              !urlInfo.isEntryPoint
+            ) {
               return;
             }
             const urlContent =
@@ -1116,29 +1115,29 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const versionMutations = [];
             const seen = new Set();
             const visitDependencies = (urlInfo) => {
-              urlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
-                if (seen.has(dependencyReference)) return;
-                seen.add(dependencyReference);
+              urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (seen.has(referenceToOther)) return;
+                seen.add(referenceToOther);
                 const referencedUrlInfo = finalKitchen.graph.getUrlInfo(
-                  dependencyReference.url,
+                  referenceToOther.url,
                 );
                 versionMutations.push(() => {
-                  const dependencyContentVersion = contentVersionMap.get(
-                    dependencyReference.url,
+                  const referencedContentVersion = contentVersionMap.get(
+                    referenceToOther.url,
                   );
-                  if (!dependencyContentVersion) {
+                  if (!referencedContentVersion) {
                     // no content generated for this dependency
                     // (inline, data:, ignore:, sourcemap, ...)
                     return null;
                   }
-                  if (preferWithoutVersioning(dependencyReference)) {
+                  if (preferWithoutVersioning(referenceToOther)) {
                     // when versioning is dynamic no need to take into account
                     // happens for:
                     // - specifier mapped by window.__v__()
                     // - specifier mapped by importmap
                     return null;
                   }
-                  return dependencyContentVersion;
+                  return referencedContentVersion;
                 });
                 visitDependencies(referencedUrlInfo);
               });
@@ -1454,7 +1453,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   });
                   return;
                 }
-                if (buildUrlInfo.dependentUrlSet.size === 0) {
+                if (buildUrlInfo.referenceFromOthersSet.size === 0) {
                   logger.warn(
                     `remove resource hint because "${href}" not used anymore`,
                   );
@@ -1478,11 +1477,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                       : {}),
                   });
                 });
-                for (const dependencyUrl of buildUrlInfo.dependencyUrlSet) {
-                  const dependencyUrlInfo =
-                    finalKitchen.graph.urlInfoMap.get(dependencyUrl);
-                  if (dependencyUrlInfo.data.generatedToShareCode) {
-                    hintsToInject[dependencyUrl] = node;
+                for (const referenceToOther of buildUrlInfo.referenceToOthersSet) {
+                  const referencedUrlInfo = finalKitchen.graph.urlInfoMap.get(
+                    referenceToOther.url,
+                  );
+                  if (referencedUrlInfo.data.generatedToShareCode) {
+                    hintsToInject[referencedUrlInfo.url] = node;
                   }
                 }
               };

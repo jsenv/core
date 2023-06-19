@@ -81,8 +81,13 @@ export const createFileService = ({
         if (urlInfo === exactUrlInfo) return;
         const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
         if (urlWithoutSearch !== url) return;
-        if (exactUrlInfo && exactUrlInfo.dependentUrlSet.has(urlInfo.url))
-          return;
+        if (exactUrlInfo) {
+          for (const referenceFromOther of exactUrlInfo.referenceFromOthersSet) {
+            if (referenceFromOther.url === urlInfo.url) {
+              return;
+            }
+          }
+        }
         urlInfo.considerModified();
       });
     });

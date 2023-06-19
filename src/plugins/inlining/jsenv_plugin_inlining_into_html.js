@@ -22,13 +22,13 @@ export const jsenvPluginInliningIntoHtml = () => {
 
         const onStyleSheet = (linkNode, { href }) => {
           let linkReference = null;
-          for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
             if (
-              dependencyReference.generatedSpecifier === href &&
-              dependencyReference.type === "link_href" &&
-              dependencyReference.subtype === "stylesheet"
+              referenceToOther.generatedSpecifier === href &&
+              referenceToOther.type === "link_href" &&
+              referenceToOther.subtype === "stylesheet"
             ) {
-              linkReference = dependencyReference;
+              linkReference = referenceToOther;
               break;
             }
           }
@@ -73,7 +73,7 @@ export const jsenvPluginInliningIntoHtml = () => {
         };
         const onScriptWithSrc = (scriptNode, { src }) => {
           let scriptReference;
-          for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+          for (const dependencyReference of urlInfo.referenceToOthersSet) {
             if (
               dependencyReference.generatedSpecifier === src &&
               dependencyReference.type === "script"

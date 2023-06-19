@@ -181,7 +181,7 @@ const rollupPluginJsenv = ({
             : null,
           preserveSignature: strictExports
             ? "strict"
-            : jsModuleUrlInfo.dependentUrlSet.size < 2
+            : jsModuleUrlInfo.referenceFromOthersSet.size < 2
             ? "allow-extension"
             : "strict",
         });

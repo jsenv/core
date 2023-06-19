@@ -46,7 +46,7 @@ GRAPH_VISITOR.findDependent = (graph, urlInfo, visitor) => {
   const iterate = (currentUrlInfo) => {
     // When cookin html inline content, html dependencies are not yet updated
     // consequently htmlUrlInfo.dependencies is empty
-    // and inlineContentUrlInfo.dependentUrlSet is empty as well
+    // and inlineContentUrlInfo.referenceFromOthersSet is empty as well
     // in that case we resort to isInline + inlineUrlSite to establish the dependency
     if (currentUrlInfo.isInline) {
       const parentUrl = currentUrlInfo.inlineUrlSite.url;
@@ -56,13 +56,15 @@ GRAPH_VISITOR.findDependent = (graph, urlInfo, visitor) => {
         return;
       }
     }
-    for (const dependentUrl of currentUrlInfo.dependentUrlSet) {
-      const dependentUrlInfo = graph.getUrlInfo(dependentUrl);
-      if (visit(dependentUrlInfo)) {
+    for (const referenceFromOther of currentUrlInfo.referenceFromOthersSet) {
+      const urlInfoReferencingThisOne = graph.getUrlInfo(
+        referenceFromOther.url,
+      );
+      if (visit(urlInfoReferencingThisOne)) {
         if (found) {
           break;
         }
-        iterate(dependentUrlInfo);
+        iterate(urlInfoReferencingThisOne);
       }
     }
   };
@@ -84,13 +86,13 @@ GRAPH_VISITOR.findDependency = (graph, urlInfo, visitor) => {
     return true;
   };
   const iterate = (currentUrlInfo) => {
-    for (const dependencyUrl of currentUrlInfo.dependencyUrlSet) {
-      const dependencyUrlInfo = graph.getUrlInfo(dependencyUrl);
-      if (visit(dependencyUrlInfo)) {
+    for (const referenceToOther of currentUrlInfo.referenceToOthersSet) {
+      const referencedUrlInfo = graph.getUrlInfo(referenceToOther);
+      if (visit(referencedUrlInfo)) {
         if (found) {
           break;
         }
-        iterate(dependencyUrlInfo);
+        iterate(referencedUrlInfo);
       }
     }
   };

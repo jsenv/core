@@ -148,9 +148,9 @@ export const jsenvPluginImportmap = () => {
           // In this situation the ref to the importmap was already discovered
           // when parsing the HTML
           let importmapReference = null;
-          for (const dependencyReference of htmlUrlInfo.dependencyReferenceSet) {
-            if (dependencyReference.generatedSpecifier === src) {
-              importmapReference = dependencyReference;
+          for (const referenceToOther of htmlUrlInfo.referenceToOthersSet) {
+            if (referenceToOther.generatedSpecifier === src) {
+              importmapReference = referenceToOther;
               break;
             }
           }

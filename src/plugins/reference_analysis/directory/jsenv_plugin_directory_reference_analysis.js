@@ -30,12 +30,13 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
 
 const findOriginalDirectoryReference = (urlInfo, context) => {
   const findNonFileSystemAncestor = (urlInfo) => {
-    for (const dependentUrl of urlInfo.dependentUrlSet) {
-      const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl);
-      if (dependentUrlInfo.type !== "directory") {
-        return [dependentUrlInfo, urlInfo];
+    for (const urlFromOther of urlInfo.urlFromOthersSet) {
+      const urlInfoReferencingThisOne =
+        context.urlGraph.getUrlInfo(urlFromOther);
+      if (urlInfoReferencingThisOne.type !== "directory") {
+        return [urlInfoReferencingThisOne, urlInfo];
       }
-      const found = findNonFileSystemAncestor(dependentUrlInfo);
+      const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
       if (found) {
         return found;
       }
@@ -46,9 +47,9 @@ const findOriginalDirectoryReference = (urlInfo, context) => {
   if (!ancestor) {
     return null;
   }
-  for (const dependencyReference of ancestor.dependencyReferenceSet) {
-    if (dependencyReference.url === child.url) {
-      return dependencyReference;
+  for (const referenceToOther of ancestor.referenceToOthersSet) {
+    if (referenceToOther.url === child.url) {
+      return referenceToOther;
     }
   }
   return null;

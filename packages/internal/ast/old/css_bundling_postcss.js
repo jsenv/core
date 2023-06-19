@@ -109,12 +109,14 @@ const loadCssUrls = async ({ cssEntryUrlInfos, context }) => {
     const cssBundleInfo = {
       content: cssUrlInfo.content,
       cssUrls,
-      dependencyUrlSet: new Set(),
+      referenceToOthersSet: new Set(),
     };
     cssBundleInfos[cssUrlInfo.url] = cssBundleInfo;
     cssUrls.forEach((cssUrl) => {
       if (cssUrl.type === "@import") {
-        cssBundleInfo.dependencyUrlSet.add(cssUrl.url);
+        cssBundleInfo.referenceToOthersSet.add({
+          url: cssUrl.url,
+        });
         const importedCssUrlInfo = context.urlGraph.getUrlInfo(cssUrl.url);
         load(importedCssUrlInfo);
       }

@@ -419,12 +419,12 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
       return "css";
     }
     if (as === "script") {
-      for (const dependencyReference of htmlUrlInfo.dependencyReferenceSet) {
+      for (const referenceToOther of htmlUrlInfo.referenceToOthersSet) {
         if (
-          dependencyReference.url === linkReference.url &&
-          dependencyReference.type === "script"
+          referenceToOther.url === linkReference.url &&
+          referenceToOther.type === "script"
         ) {
-          return dependencyReference.expectedType;
+          return referenceToOther.expectedType;
         }
       }
       return undefined;

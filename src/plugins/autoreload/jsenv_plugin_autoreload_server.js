@@ -63,37 +63,39 @@ export const jsenvPluginAutoreloadServer = ({
                 ],
               };
             }
-            const { dependentUrlSet } = urlInfo;
             const instructions = [];
-            for (const dependentUrl of dependentUrlSet) {
-              const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
-              if (dependentUrlInfo.data.hotDecline) {
+            for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+              const urlInfoReferencingThisOne = urlGraph.getUrlInfo(
+                referenceFromOther.url,
+              );
+              if (urlInfoReferencingThisOne.data.hotDecline) {
                 return {
                   declined: true,
                   reason: `a dependent file declines hot reload`,
-                  declinedBy: dependentUrl,
+                  declinedBy: referenceFromOther.url,
                 };
               }
-              const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
+              const { hotAcceptDependencies = [] } =
+                urlInfoReferencingThisOne.data;
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 instructions.push({
-                  type: dependentUrlInfo.type,
-                  boundary: formatUrlForClient(dependentUrl),
+                  type: urlInfoReferencingThisOne.type,
+                  boundary: formatUrlForClient(referenceFromOther.url),
                   acceptedBy: formatUrlForClient(urlInfo.url),
                 });
                 continue;
               }
-              if (seen.includes(dependentUrl)) {
+              if (seen.includes(referenceFromOther.url)) {
                 return {
                   declined: true,
                   reason: "circular dependency",
-                  declinedBy: formatUrlForClient(dependentUrl),
+                  declinedBy: formatUrlForClient(referenceFromOther.url),
                 };
               }
-              const dependentPropagationResult = iterate(dependentUrlInfo, [
-                ...seen,
-                dependentUrl,
-              ]);
+              const dependentPropagationResult = iterate(
+                urlInfoReferencingThisOne,
+                [...seen, referenceFromOther.url],
+              );
               if (dependentPropagationResult.accepted) {
                 instructions.push(...dependentPropagationResult.instructions);
                 continue;
@@ -147,8 +149,13 @@ export const jsenvPluginAutoreloadServer = ({
             if (urlInfo === exactUrlInfo) return;
             const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
             if (urlWithoutSearch !== url) return;
-            if (exactUrlInfo && exactUrlInfo.dependentUrlSet.has(urlInfo.url))
-              return;
+            if (exactUrlInfo) {
+              for (const referenceFromOther of exactUrlInfo.referenceFromOthersSet) {
+                if (referenceFromOther.url === urlInfo.url) {
+                  return;
+                }
+              }
+            }
             onUrlInfo(urlInfo);
           });
         });

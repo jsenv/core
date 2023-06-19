@@ -21,21 +21,22 @@ export const jsenvPluginHmr = () => {
       if (reference.isImplicit) {
         return null;
       }
-      if (context.reference && !context.reference.data.hmr) {
+      const firstReference = reference.ownerUrlInfo.firstReference;
+      if (firstReference && !firstReference.data.hmr) {
         // parent do not use hmr search param
         return null;
       }
-      if (!context.reference && !reference.data.hmr) {
+      if (!firstReference && !firstReference.data.hmr) {
         // entry point do not use hmr search param
         return null;
       }
-      const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-      if (!urlInfo.modifiedTimestamp) {
+      const referencedUrlInfo = context.urlGraph.getUrlInfo(reference.url);
+      if (!referencedUrlInfo.modifiedTimestamp) {
         return null;
       }
       return {
         hmr: "",
-        v: urlInfo.modifiedTimestamp,
+        v: referencedUrlInfo.modifiedTimestamp,
       };
     },
   };

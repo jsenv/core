@@ -21,10 +21,9 @@ export const createUrlGraph = ({
     const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
       urlInfoMap.delete(url);
-      urlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
-        const referencedUrlInfo = getUrlInfo(dependencyReference.url);
-        referencedUrlInfo.dependentReferenceSet.delete(dependencyReference);
-        referencedUrlInfo.dependentUrlSet.delete(url);
+      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+        const referencedUrlInfo = getUrlInfo(referenceToOther.url);
+        referencedUrlInfo.referenceFromOthersSet.delete(referenceToOther);
       });
     }
   };
@@ -55,19 +54,19 @@ export const createUrlGraph = ({
     }
     const seen = [];
     const search = (urlInfo) => {
-      for (const dependencyReference of urlInfo.dependencyReferenceSet) {
-        if (urlSpecifierEncoding.decode(dependencyReference) === specifier) {
-          return dependencyReference;
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (urlSpecifierEncoding.decode(referenceToOther) === specifier) {
+          return referenceToOther;
         }
       }
-      for (const dependencyUrl of parentUrlInfo.dependencyUrlSet) {
-        if (seen.includes(dependencyUrl)) {
+      for (const referenceToOther of parentUrlInfo.referenceToOthersSet) {
+        if (seen.includes(referenceToOther.url)) {
           continue;
         }
-        seen.push(dependencyUrl);
-        const dependencyUrlInfo = getUrlInfo(dependencyUrl);
-        if (dependencyUrlInfo.isInline) {
-          const firstRef = search(dependencyUrlInfo);
+        seen.push(referenceToOther.url);
+        const referencedUrlInfo = getUrlInfo(referenceToOther.url);
+        if (referencedUrlInfo.isInline) {
+          const firstRef = search(referencedUrlInfo);
           if (firstRef) {
             return firstRef;
           }
@@ -116,11 +115,15 @@ export const createUrlGraph = ({
     toJSON: (rootDirectoryUrl) => {
       const data = {};
       urlInfoMap.forEach((urlInfo) => {
-        const dependencyUrls = Array.from(urlInfo.dependencyUrlSet);
-        if (dependencyUrls.length) {
+        if (urlInfo.referenceToOthersSet.size) {
           const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
-          data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
-            urlToRelativeUrl(dependencyUrl, rootDirectoryUrl),
+          const referencedUrlSet = new Set();
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            data[relativeUrl] = referencedUrlSet.add(referenceToOther.url);
+          }
+          data[relativeUrl] = Array.from(referencedUrlSet).map(
+            (referencedUrl) =>
+              urlToRelativeUrl(referencedUrl, rootDirectoryUrl),
           );
         }
       });
@@ -141,11 +144,9 @@ const createUrlInfo = (url) => {
     isWatched: false,
     isValid: () => false,
     data: {}, // plugins can put whatever they want here
-    dependencyReferenceSet: new Set(), // references to other urls are put in this set
-    dependencyUrlSet: new Set(), // same as above but contains only reference urls (faster access)
-    dependentReferenceSet: new Set(), // references from other urls to this one are put in this set
-    dependentUrlSet: new Set(), // same as above but contains only reference urls (faster access)
-    reference: null, // first reference from an other url to this one
+    referenceToOthersSet: new Set(),
+    referenceFromOthersSet: new Set(),
+    firstReference: null, // first reference from an other url to this one
     implicitUrlSet: new Set(),
 
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
@@ -188,12 +189,12 @@ const createUrlInfo = (url) => {
 
   urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.hasDependent = () => {
-    for (const dependentReference of urlInfo.dependentReferenceSet) {
-      if (dependentReference.url === urlInfo.url) {
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      if (referenceFromOther.url === urlInfo.url) {
         if (
-          !dependentReference.isInline &&
-          dependentReference.next &&
-          dependentReference.next.isInline
+          !referenceFromOther.isInline &&
+          referenceFromOther.next &&
+          referenceFromOther.next.isInline
         ) {
           // the url info was inlined, an other reference is required
           // to consider the non-inlined urlInfo as used
@@ -236,17 +237,21 @@ const createUrlInfo = (url) => {
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.originalContentEtag = undefined;
       urlInfo.contentEtag = undefined;
-      urlInfo.dependentUrlSet.forEach((dependentUrl) => {
-        const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
-        const { hotAcceptDependencies = [] } = dependentUrlInfo.data;
+      urlInfo.referenceFromOthersSet.forEach((referenceFromOther) => {
+        const urlInfoReferencingThisOne = urlInfo.graph.getUrlInfo(
+          referenceFromOther.url,
+        );
+        const { hotAcceptDependencies = [] } = urlInfoReferencingThisOne.data;
         if (!hotAcceptDependencies.includes(urlInfo.url)) {
-          iterate(dependentUrlInfo);
+          iterate(urlInfoReferencingThisOne);
         }
       });
-      urlInfo.dependencyUrlSet.forEach((dependencyUrl) => {
-        const dependencyUrlInfo = urlInfo.graph.getUrlInfo(dependencyUrl);
-        if (dependencyUrlInfo.isInline) {
-          iterate(dependencyUrlInfo);
+      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+        const referencedUrlInfo = urlInfo.graph.getUrlInfo(
+          referenceToOther.url,
+        );
+        if (referencedUrlInfo.isInline) {
+          iterate(referencedUrlInfo);
         }
       });
     };

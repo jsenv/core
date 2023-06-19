@@ -21,7 +21,7 @@ export const jsenvPluginAsJsClassic = () => {
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [jsModuleReference, jsModuleUrlInfo] =
-        urlInfo.reference.getWithoutSearchParam({
+        urlInfo.firstReference.getWithoutSearchParam({
           searchParam: "as_js_classic",
           // override the expectedType to "js_module"
           // because when there is ?as_js_classic it means the underlying resource
@@ -116,11 +116,13 @@ export const jsenvPluginAsJsClassic = () => {
 };
 
 const isImportedByJs = (jsModuleUrlInfo, urlGraph) => {
-  for (const dependentUrl of jsModuleUrlInfo.dependentUrlSet) {
-    const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+  for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
+    const urlInfoReferencingJsModule = urlGraph.getUrlInfo(
+      referenceFromOther.url,
+    );
     if (
-      dependentUrlInfo.type === "js_module" ||
-      dependentUrlInfo.type === "js_classic"
+      urlInfoReferencingJsModule.type === "js_module" ||
+      urlInfoReferencingJsModule.type === "js_classic"
     ) {
       return true;
     }

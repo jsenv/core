@@ -58,7 +58,7 @@ export const jsenvPluginCommonJs = ({
     },
     fetchUrlContent: async (urlInfo, context) => {
       const [commonJsReference, commonJsUrlInfo] =
-        urlInfo.reference.getWithoutSearchParam({
+        urlInfo.firstReference.getWithoutSearchParam({
           searchParam: "cjs_as_js_module",
           // during this fetch we don't want to alter the original file
           // so we consider it as text

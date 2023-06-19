@@ -105,10 +105,10 @@ const addRelationshipWithPackageJson = ({
   hasVersioningEffect = false,
 }) => {
   const { ownerUrlInfo } = reference;
-  for (const dependencyReference of ownerUrlInfo.dependencyReferenceSet) {
+  for (const referenceToOther of ownerUrlInfo.referenceToOthersSet) {
     if (
-      dependencyReference.type === "package_json" &&
-      dependencyReference.subtype === field
+      referenceToOther.type === "package_json" &&
+      referenceToOther.subtype === field
     ) {
       return;
     }

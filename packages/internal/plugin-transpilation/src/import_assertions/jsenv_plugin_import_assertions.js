@@ -106,7 +106,7 @@ const jsenvPluginAsModules = () => {
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [jsonReference, jsonUrlInfo] =
-        urlInfo.reference.getWithoutSearchParam({
+        urlInfo.firstReference.getWithoutSearchParam({
           searchParam: "as_json_module",
           expectedType: "json",
         });
@@ -144,7 +144,7 @@ const jsenvPluginAsModules = () => {
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [cssReference, cssUrlInfo] =
-        urlInfo.reference.getWithoutSearchParam({
+        urlInfo.firstReference.getWithoutSearchParam({
           searchParam: "as_css_module",
           expectedType: "css",
         });
@@ -189,7 +189,7 @@ export default stylesheet;`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
       const [textReference, textUrlInfo] =
-        urlInfo.reference.getWithoutSearchParam({
+        urlInfo.firstReference.getWithoutSearchParam({
           searchParam: "as_text_module",
           expectedType: "text",
         });

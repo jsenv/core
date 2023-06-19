@@ -17,31 +17,31 @@ export const jsenvPluginImportMetaResolve = () => {
     transformUrlContent: {
       js_module: async (urlInfo) => {
         const magicSource = createMagicSource(urlInfo.content);
-        urlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
-          if (dependencyReference.subtype === "import_meta_resolve") {
+        urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+          if (referenceToOther.subtype === "import_meta_resolve") {
             const originalSpecifierLength = Buffer.byteLength(
-              dependencyReference.specifier,
+              referenceToOther.specifier,
             );
             const specifierLength = Buffer.byteLength(
-              dependencyReference.generatedSpecifier.slice(1, -1), // remove `"` around
+              referenceToOther.generatedSpecifier.slice(1, -1), // remove `"` around
             );
             const specifierLengthDiff =
               specifierLength - originalSpecifierLength;
-            const end = dependencyReference.node.end + specifierLengthDiff;
+            const end = referenceToOther.node.end + specifierLengthDiff;
             magicSource.replace({
-              start: dependencyReference.node.start,
+              start: referenceToOther.node.start,
               end,
-              replacement: `new URL(${dependencyReference.generatedSpecifier}, import.meta.url).href`,
+              replacement: `new URL(${referenceToOther.generatedSpecifier}, import.meta.url).href`,
             });
             const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
             const newLengthBeforeSpecifier = "new URL(".length;
             const lengthDiff =
               currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
-            dependencyReference.specifierColumn -= lengthDiff;
-            dependencyReference.specifierStart -= lengthDiff;
-            dependencyReference.specifierEnd =
-              dependencyReference.specifierStart +
-              Buffer.byteLength(dependencyReference.generatedSpecifier);
+            referenceToOther.specifierColumn -= lengthDiff;
+            referenceToOther.specifierStart -= lengthDiff;
+            referenceToOther.specifierEnd =
+              referenceToOther.specifierStart +
+              Buffer.byteLength(referenceToOther.generatedSpecifier);
           }
         });
         return magicSource.toContentAndSourcemap();

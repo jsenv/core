@@ -162,11 +162,11 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         const urlObject = new URL(urlInfo.url);
-        if (urlInfo.reference.leadsToADirectory) {
+        if (urlInfo.firstReference.leadsToADirectory) {
           const directoryEntries = readdirSync(urlObject);
           let filename;
-          if (urlInfo.reference.type === "filesystem") {
-            filename = `${urlInfo.reference.ownerUrlInfo.filename}${urlInfo.reference.specifier}/`;
+          if (urlInfo.firstReference.type === "filesystem") {
+            filename = `${urlInfo.firstReference.ownerUrlInfo.filename}${urlInfo.firstReference.specifier}/`;
           } else {
             filename = `${urlToFilename(urlInfo.url)}/`;
           }

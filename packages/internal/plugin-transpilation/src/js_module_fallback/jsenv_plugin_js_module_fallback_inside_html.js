@@ -74,13 +74,13 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
               return;
             }
             let linkHintReference = null;
-            for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+            for (const referenceToOther of urlInfo.referenceToOthersSet) {
               if (
-                dependencyReference.generatedSpecifier === href &&
-                dependencyReference.type === "link_href" &&
-                dependencyReference.subtype === rel
+                referenceToOther.generatedSpecifier === href &&
+                referenceToOther.type === "link_href" &&
+                referenceToOther.subtype === rel
               ) {
-                linkHintReference = dependencyReference;
+                linkHintReference = referenceToOther;
                 break;
               }
             }
@@ -110,13 +110,13 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             const src = getHtmlNodeAttribute(node, "src");
             if (src) {
               let scriptTypeModuleReference = null;
-              for (const dependencyReference of urlInfo.dependencyReferenceSet) {
+              for (const referenceToOther of urlInfo.referenceToOthersSet) {
                 if (
-                  dependencyReference.generatedSpecifier === src &&
-                  dependencyReference.type === "script" &&
-                  dependencyReference.subtype === "js_module"
+                  referenceToOther.generatedSpecifier === src &&
+                  referenceToOther.type === "script" &&
+                  referenceToOther.subtype === "js_module"
                 ) {
-                  scriptTypeModuleReference = dependencyReference;
+                  scriptTypeModuleReference = referenceToOther;
                   break;
                 }
               }

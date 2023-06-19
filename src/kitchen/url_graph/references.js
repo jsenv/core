@@ -8,7 +8,7 @@ export const applyReferenceEffectsOnUrlInfo = (
   reference,
   referencedUrlInfo,
 ) => {
-  referencedUrlInfo.reference = reference;
+  referencedUrlInfo.firstReference = reference;
   referencedUrlInfo.originalUrl =
     referencedUrlInfo.originalUrl || reference.url;
 
@@ -54,8 +54,7 @@ export const applyReferenceEffectsOnUrlInfo = (
 };
 
 export const createDependencies = (ownerUrlInfo) => {
-  const { dependencyReferenceSet, dependencyUrlSet, implicitUrlSet } =
-    ownerUrlInfo;
+  const { referenceToOthersSet } = ownerUrlInfo;
 
   const dependencies = {};
 
@@ -64,72 +63,38 @@ export const createDependencies = (ownerUrlInfo) => {
     context = ownerUrlInfo.kitchen.context,
   ) => {
     dependencies.isCollecting = true;
-    let prevDependencyReferenceSet = new Set(dependencyReferenceSet);
-    dependencyReferenceSet.clear();
+    let prevReferenceToOthersSet = new Set(referenceToOthersSet);
+    referenceToOthersSet.clear();
     dependencies.context = context;
 
     const stopCollecting = () => {
-      dependencyReferenceSet.forEach((dependencyReference) => {
-        if (dependencyReference.isResourceHint) {
-          // resource hint are a special kind of reference.
-          // They are a sort of weak reference to an url.
-          // We ignore them so that url referenced only by resource hints
-          // have url.dependentUrlSet.size === 0 and can be considered as not used
-          // It means html won't consider url referenced solely
-          // by <link> as dependency and it's fine
-          return;
-        }
-
-        dependencyUrlSet.add(dependencyReference.url);
-        const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
-          dependencyReference.url,
-        );
-        referencedUrlInfo.dependentReferenceSet.add(dependencyReference);
-        referencedUrlInfo.dependentUrlSet.add(dependencyReference.url);
-
-        // an implicit reference do not appear in the file but the non explicited file
-        // have an impact on it
-        // -> package.json on import resolution for instance
-        // in that case:
-        // - file depends on the implicit file (it must autoreload if package.json is modified)
-        // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
-        if (dependencyReference.isImplicit) {
-          implicitUrlSet.add(dependencyReference.url);
-        }
-      });
-      implicitUrlSet.forEach((implicitUrl) => {
-        if (ownerUrlInfo.isInline) {
-          const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
-            ownerUrlInfo.inlineUrlSite.url,
-          );
-          parentUrlInfo.implicitUrlSet.add(implicitUrl);
-        }
-      });
-
       const prunedUrlInfos = [];
       const prune = (urlInfo, reference) => {
-        urlInfo.dependencyReferenceSet.delete(reference);
-        urlInfo.dependencyUrlSet.delete(reference.url);
+        urlInfo.referenceToOthersSet.delete(reference);
         const referencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
         if (!referencedUrlInfo) {
           return;
         }
-        referencedUrlInfo.dependentReferenceSet.delete(reference);
-        referencedUrlInfo.dependentUrlSet.delete(reference.url);
-        if (referencedUrlInfo.dependentUrlSet.size === 0) {
-          referencedUrlInfo.dependencyReferenceSet.forEach(
-            (dependencyReference) => {
-              prune(referencedUrlInfo, dependencyReference);
-            },
-          );
+        referencedUrlInfo.referenceFromOthersSet.delete(reference);
+        if (referencedUrlInfo.referenceFromOthersSet.size === 0) {
+          referencedUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+            prune(referencedUrlInfo, referenceToOther);
+          });
           prunedUrlInfos.push(referencedUrlInfo);
         }
       };
-      prevDependencyReferenceSet.forEach((prevDependencyReference) => {
-        if (!dependencyUrlSet.has(prevDependencyReference.url)) {
-          prune(ownerUrlInfo, prevDependencyReference);
+      for (const prevReferenceToOther of prevReferenceToOthersSet) {
+        let referenceFound = null;
+        for (const referenceToOther of referenceToOthersSet) {
+          if (referenceToOther.url === prevReferenceToOther.url) {
+            referenceFound = referenceToOther;
+            break;
+          }
         }
-      });
+        if (!referenceFound) {
+          prune(ownerUrlInfo, prevReferenceToOther);
+        }
+      }
       if (prunedUrlInfos.length) {
         prunedUrlInfos.forEach((prunedUrlInfo) => {
           prunedUrlInfo.modifiedTimestamp = Date.now();
@@ -143,32 +108,7 @@ export const createDependencies = (ownerUrlInfo) => {
           ownerUrlInfo,
         );
       }
-      implicitUrlSet.forEach((implicitUrl) => {
-        if (!dependencyUrlSet.has(implicitUrl)) {
-          let implicitUrlComesFromInlineContent = false;
-          for (const dependencyUrl of dependencyUrlSet) {
-            const dependencyUrlInfo =
-              ownerUrlInfo.graph.getUrlInfo(dependencyUrl);
-            if (
-              dependencyUrlInfo.isInline &&
-              dependencyUrlInfo.implicitUrlSet.has(implicitUrl)
-            ) {
-              implicitUrlComesFromInlineContent = true;
-              break;
-            }
-          }
-          if (!implicitUrlComesFromInlineContent) {
-            implicitUrlSet.delete(implicitUrl);
-          }
-          if (ownerUrlInfo.isInline) {
-            const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
-              ownerUrlInfo.inlineUrlSite.url,
-            );
-            parentUrlInfo.implicitUrlSet.delete(implicitUrl);
-          }
-        }
-      });
-      prevDependencyReferenceSet.clear();
+      prevReferenceToOthersSet.clear();
       dependencies.isCollecting = false;
     };
 
@@ -309,13 +249,17 @@ export const createDependencies = (ownerUrlInfo) => {
           sideEffectFileUrlInfo,
         );
       }
-      const isReferencingSideEffectFile = (urlInfo) =>
-        urlInfo.references.some(
-          (ref) => ref.url === sideEffectFileReference.url,
-        );
-      const selfOrAncestorIsReferencingSideEffectFile = (dependentUrl) => {
-        const dependentUrlInfo = ownerUrlInfo.graph.getUrlInfo(dependentUrl);
-        if (isReferencingSideEffectFile(dependentUrlInfo)) {
+      const isReferencingSideEffectFile = (urlInfo) => {
+        for (const referenceToOther of urlInfo.referenceToOthersSet) {
+          if (referenceToOther.url === sideEffectFileReference.url) {
+            return true;
+          }
+        }
+        return false;
+      };
+      const selfOrAncestorIsReferencingSideEffectFile = (candidateUrl) => {
+        const candidateUrlInfo = ownerUrlInfo.graph.getUrlInfo(candidateUrl);
+        if (isReferencingSideEffectFile(candidateUrlInfo)) {
           return true;
         }
         const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
@@ -324,8 +268,10 @@ export const createDependencies = (ownerUrlInfo) => {
         );
         return Boolean(dependentReferencingThatFile);
       };
-      for (const dependentUrl of ownerUrlInfo.dependentUrlSet) {
-        if (!selfOrAncestorIsReferencingSideEffectFile(dependentUrl)) {
+      for (const referenceFromOther of ownerUrlInfo.referenceFromOthersSet) {
+        if (
+          !selfOrAncestorIsReferencingSideEffectFile(referenceFromOther.url)
+        ) {
           return injectAsBannerCodeBeforeFinalize(
             sideEffectFileReference,
             sideEffectFileUrlInfo,
@@ -352,11 +298,11 @@ export const createDependencies = (ownerUrlInfo) => {
     for (const entryPointUrlInfo of entryPoints) {
       dependencies.context.addCallbackToConsiderGraphCooked(async () => {
         // do not inject if already there
-        const { dependencyUrlSet } = entryPointUrlInfo;
-        if (dependencyUrlSet.has(sideEffectFileUrlInfo.url)) {
-          return;
+        for (const referenceToOther of referenceToOthersSet) {
+          if (referenceToOther.url === sideEffectFileUrlInfo.url) {
+            return;
+          }
         }
-        dependencyUrlSet.add(sideEffectFileUrlInfo.url);
         await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
@@ -618,22 +564,28 @@ ${ownerUrlInfo.url}`,
     );
   }
 
-  const { dependencies } = ownerUrlInfo;
-  ownerUrlInfo.dependencyReferenceSet.add(reference);
-  if (dependencies.isCollecting) {
-    // if this function is called while collecting urlInfo references
-    // there is no need to update dependentUrlSet + dependencyUrlSet
-    // because it will be done at the end of reference collection
-    return;
-  }
+  ownerUrlInfo.referenceToOthersSet.add(reference);
   if (reference.isResourceHint) {
+    // resource hint are a special kind of reference.
+    // They are a sort of weak reference to an url.
+    // We ignore them so that url referenced only by resource hints
+    // have url.referenceFromOthers.size === 0 and can be considered as not used
+    // It means html won't consider url referenced solely
+    // by <link> as dependency and it's fine
     return;
   }
+
   if (
     reference.isImplicit &&
     !reference.isInline &&
     !ownerUrlInfo.implicitUrlSet.has(reference.url)
   ) {
+    // an implicit reference do not appear in the file but the non explicited file
+    // have an impact on it
+    // -> package.json on import resolution for instance
+    // in that case:
+    // - file depends on the implicit file (it must autoreload if package.json is modified)
+    // - cache validity for the file depends on the implicit file (it must be re-cooked if package.json is modified)
     ownerUrlInfo.implicitUrlSet.add(reference.url);
     if (ownerUrlInfo.isInline) {
       const parentUrlInfo = ownerUrlInfo.graph.getUrlInfo(
@@ -642,10 +594,9 @@ ${ownerUrlInfo.url}`,
       parentUrlInfo.implicitUrlSet.add(reference.url);
     }
   }
-  ownerUrlInfo.dependencyUrlSet.add(reference.url);
+
   const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
-  referencedUrlInfo.dependentReferenceSet.add(reference);
-  referencedUrlInfo.dependentUrlSet.add(ownerUrlInfo.url);
+  referencedUrlInfo.referenceFromOthersSet.add(reference);
 };
 
 const removeDependency = (reference) => {
@@ -660,26 +611,26 @@ ${ownerUrlInfo.url}`,
     );
   }
 
-  const { dependencyReferenceSet } = ownerUrlInfo;
-  if (!dependencyReferenceSet.has(reference)) {
+  const { referenceToOthersSet } = ownerUrlInfo;
+  if (!referenceToOthersSet.has(reference)) {
     throw new Error(`reference not found in ${ownerUrlInfo.url}`);
   }
 
   const { dependencies } = ownerUrlInfo;
   if (dependencies.isCollecting) {
     // if this function is called while collecting urlInfo references
-    // there is no need to update dependentUrlSet + dependencyUrlSet
+    // there is no need to update referenceToOthersSet + referenceFromOthersSet
     // because it will be done at the end of reference collection
-    dependencyReferenceSet.delete(reference);
+    referenceToOthersSet.delete(reference);
     return;
   }
 
   if (reference.isImplicit && !reference.isInline) {
     let hasAnOtherImplicitRef = false;
-    for (const dependencyReference of dependencyReferenceSet) {
+    for (const referenceToOther of referenceToOthersSet) {
       if (
-        dependencyReference.isImplicit &&
-        dependencyReference.url === reference.url
+        referenceToOther.isImplicit &&
+        referenceToOther.url === reference.url
       ) {
         hasAnOtherImplicitRef = true;
         break;
@@ -691,18 +642,16 @@ ${ownerUrlInfo.url}`,
   }
 
   let hasAnOtherRef = false;
-  for (const dependencyReference of dependencyReferenceSet) {
-    if (dependencyReference.url === reference.url) {
+  for (const referenceToOther of referenceToOthersSet) {
+    if (referenceToOther.url === reference.url) {
       hasAnOtherRef = true;
       break;
     }
   }
-  dependencyReferenceSet.delete(reference);
+  referenceToOthersSet.delete(reference);
   if (!hasAnOtherRef) {
-    ownerUrlInfo.dependencyUrlSet.delete(reference.url);
     const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
-    referencedUrlInfo.dependentReferenceSet.delete(reference);
-    referencedUrlInfo.dependentUrlSet.delete(reference.url);
+    referencedUrlInfo.referenceFromOthersSet.delete(reference);
     if (!referencedUrlInfo.isUsed()) {
       referencedUrlInfo.deleteFromGraph();
     }
@@ -713,17 +662,17 @@ const replaceDependency = (reference, newReference) => {
   const { ownerUrlInfo } = reference;
   const newOwnerUrlInfo = newReference.ownerUrlInfo;
   if (ownerUrlInfo === newOwnerUrlInfo) {
-    const { dependencyReferenceSet } = ownerUrlInfo;
-    if (!dependencyReferenceSet.has(reference)) {
+    const { referenceToOthersSet } = ownerUrlInfo;
+    if (!referenceToOthersSet.has(reference)) {
       throw new Error(`reference not found in ${ownerUrlInfo.url}`);
     }
     const { dependencies } = ownerUrlInfo;
     if (dependencies.isCollecting) {
       // if this function is called while collecting urlInfo references
-      // there is no need to update dependentUrlSet + dependencyUrlSet
+      // there is no need to update referenceToOthersSet + referenceFromOthersSet
       // because it will be done at the end of reference collection
-      dependencyReferenceSet.delete(reference);
-      dependencyReferenceSet.add(newReference);
+      referenceToOthersSet.delete(reference);
+      referenceToOthersSet.add(newReference);
       storeReferenceChain(reference, newReference);
       return;
     }

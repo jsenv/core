@@ -59,7 +59,7 @@ export const createFetchUrlContentError = ({
         reason,
         ...details,
         "url": urlInfo.url,
-        "url reference trace": urlInfo.reference.trace.message,
+        "url reference trace": urlInfo.firstReference.trace.message,
         ...detailsFromPluginController(pluginController),
       }),
     );
@@ -73,10 +73,10 @@ export const createFetchUrlContentError = ({
       fetchError.traceColumn = error.traceColumn;
       fetchError.traceMessage = error.traceMessage;
     } else {
-      fetchError.traceUrl = urlInfo.reference.trace.url;
-      fetchError.traceLine = urlInfo.reference.trace.line;
-      fetchError.traceColumn = urlInfo.reference.trace.column;
-      fetchError.traceMessage = urlInfo.reference.trace.message;
+      fetchError.traceUrl = urlInfo.firstReference.trace.url;
+      fetchError.traceLine = urlInfo.firstReference.trace.line;
+      fetchError.traceColumn = urlInfo.firstReference.trace.column;
+      fetchError.traceMessage = urlInfo.firstReference.trace.message;
     }
     fetchError.asResponse = error.asResponse;
     return fetchError;
@@ -140,7 +140,7 @@ export const createTransformUrlContentError = ({
           reason,
           ...details,
           "url": urlInfo.url,
-          "url reference trace": urlInfo.reference.trace.message,
+          "url reference trace": urlInfo.firstReference.trace.message,
           ...detailsFromPluginController(pluginController),
         },
       ),
@@ -150,18 +150,18 @@ export const createTransformUrlContentError = ({
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
-    transformError.traceUrl = urlInfo.reference.trace.url;
-    transformError.traceLine = urlInfo.reference.trace.line;
-    transformError.traceColumn = urlInfo.reference.trace.column;
-    transformError.traceMessage = urlInfo.reference.trace.message;
+    transformError.traceUrl = urlInfo.firstReference.trace.url;
+    transformError.traceLine = urlInfo.firstReference.trace.line;
+    transformError.traceColumn = urlInfo.firstReference.trace.column;
+    transformError.traceMessage = urlInfo.firstReference.trace.message;
     if (code === "PARSE_ERROR") {
       transformError.reason = `parse error on ${urlInfo.type}`;
       transformError.cause = error;
       if (urlInfo.isInline) {
         transformError.traceLine =
-          urlInfo.reference.trace.line + error.line - 1;
+          urlInfo.firstReference.trace.line + error.line - 1;
         transformError.traceColumn =
-          urlInfo.reference.trace.column + error.column;
+          urlInfo.firstReference.trace.column + error.column;
         transformError.traceMessage = stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
           line: transformError.traceLine,
@@ -198,7 +198,7 @@ export const createFinalizeUrlContentError = ({
     createDetailedMessage(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
       ...detailsFromValueThrown(error),
       "url": urlInfo.url,
-      "url reference trace": urlInfo.reference.trace.message,
+      "url reference trace": urlInfo.firstReference.trace.message,
       ...detailsFromPluginController(pluginController),
     }),
   );

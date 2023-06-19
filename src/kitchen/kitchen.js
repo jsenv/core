@@ -256,7 +256,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
             {
               "url": urlInfo.url,
-              "url reference trace": urlInfo.reference.trace.message,
+              "url reference trace": urlInfo.firstReference.trace.message,
             },
           ),
         );
@@ -290,10 +290,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
       urlInfo.type =
-        type || urlInfo.reference.expectedType || inferUrlInfoType(urlInfo);
+        type ||
+        urlInfo.firstReference.expectedType ||
+        inferUrlInfoType(urlInfo);
       urlInfo.subtype =
         subtype ||
-        urlInfo.reference.expectedSubtype ||
+        urlInfo.firstReference.expectedSubtype ||
         urlInfo.subtypeHint ||
         "";
       // during build urls info are reused and load returns originalUrl/originalContent
@@ -523,14 +525,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     };
 
     const startCookingDependencies = (urlInfo) => {
-      const { dependencyReferenceSet } = urlInfo;
-      dependencyReferenceSet.forEach((dependencyReference) => {
-        if (dependencyReference.type === "sourcemap_comment") {
+      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+        if (referenceToOther.type === "sourcemap_comment") {
           // we don't cook sourcemap reference by sourcemap comments
           // because this is already done in "initTransformations"
           return;
         }
-        if (ignoreRessourceHint && dependencyReference.isResourceHint) {
+        if (ignoreRessourceHint && referenceToOther.isResourceHint) {
           // we don't cook resource hints
           // because they might refer to resource that will be modified during build
           // It also means something else have to reference that url in order to cook it
@@ -539,14 +540,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         }
         if (
           ignoreDynamicImport &&
-          dependencyReference.subtype === "import_dynamic"
+          referenceToOther.subtype === "import_dynamic"
         ) {
           return;
         }
         // we use reference.generatedUrl to mimic what a browser would do:
         // do a fetch to the specifier as found in the file
         const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
-          dependencyReference,
+          referenceToOther,
           true,
         );
         cookOne(referencedUrlInfo);
