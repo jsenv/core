@@ -73,7 +73,7 @@ export const jsenvPluginPreact = ({
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [preactDevtoolsReference] = urlInfo.references.inject({
+        const [preactDevtoolsReference] = urlInfo.dependencies.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: context.dev ? "preact/debug" : "preact/devtools",
@@ -149,7 +149,7 @@ export const jsenvPluginPreact = ({
             let index = code.indexOf(importSpecifier);
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1);
-              const [injectedReference] = urlInfo.references.inject({
+              const [injectedJsImportReference] = urlInfo.dependencies.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier,
@@ -157,7 +157,7 @@ export const jsenvPluginPreact = ({
               magicSource.replace({
                 start: index,
                 end: index + importSpecifier.length,
-                replacement: injectedReference.generatedSpecifier,
+                replacement: injectedJsImportReference.generatedSpecifier,
               });
               index = code.indexOf(importSpecifier, index + 1);
             }
@@ -167,7 +167,7 @@ export const jsenvPluginPreact = ({
           const hasReg = /\$RefreshReg\$\(/.test(code);
           const hasSig = /\$RefreshSig\$\(/.test(code);
           if (hasReg || hasSig) {
-            const [preactRefreshClientReference] = urlInfo.references.inject({
+            const [preactRefreshClientReference] = urlInfo.dependencies.inject({
               type: "js_import",
               expectedType: "js_module",
               specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",

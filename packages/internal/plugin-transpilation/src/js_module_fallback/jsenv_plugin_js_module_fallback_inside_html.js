@@ -73,13 +73,13 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             if (!href) {
               return;
             }
-            const reference = urlInfo.references.find(
+            const dependencyReference = urlInfo.dependencySet.find(
               (ref) =>
                 ref.generatedSpecifier === href &&
                 ref.type === "link_href" &&
                 ref.subtype === rel,
             );
-            if (!wasOrWillBeConvertedToJsClassic(reference)) {
+            if (!wasOrWillBeConvertedToJsClassic(dependencyReference)) {
               return;
             }
             if (rel === "modulepreload") {
@@ -104,16 +104,16 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             }
             const src = getHtmlNodeAttribute(node, "src");
             if (src) {
-              const reference = urlInfo.references.find(
+              const dependencyReference = urlInfo.dependencySet.find(
                 (ref) =>
                   ref.generatedSpecifier === src &&
                   ref.type === "script" &&
                   ref.subtype === "js_module",
               );
-              if (!reference) {
+              if (!dependencyReference) {
                 return;
               }
-              if (reference.expectedType === "js_classic") {
+              if (dependencyReference.expectedType === "js_classic") {
                 mutations.push(() => {
                   setHtmlNodeAttributes(node, { type: undefined });
                 });

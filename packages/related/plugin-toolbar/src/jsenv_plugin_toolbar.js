@@ -26,18 +26,18 @@ export const jsenvPluginToolbar = ({
     name: "jsenv:toolbar",
     appliesDuring: "dev",
     transformUrlContent: {
-      html: (urlInfo, context) => {
+      html: (urlInfo) => {
         if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
           urlInfo.data.isJsenvToolbar = true;
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [toolbarInjectorReference] = urlInfo.references.inject({
+        const [toolbarInjectorReference] = urlInfo.dependencies.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl,
         });
-        const [toolbarClientFileReference] = urlInfo.references.inject({
+        const [toolbarClientFileReference] = urlInfo.dependencies.inject({
           type: "iframe_src",
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,

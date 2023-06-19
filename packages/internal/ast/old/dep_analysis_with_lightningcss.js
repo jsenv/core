@@ -36,12 +36,12 @@ export const parseAndTransformCssUrls = async (urlInfo) => {
   // create a reference for each css url
   await Promise.all(
     cssUrls.map(async (cssUrl) => {
-      const [reference] = urlInfo.references.found({
+      const [cssDependencyReference] = urlInfo.dependencies.found({
         type: cssUrl.type === "import" ? "css_@import" : "css_url",
         specifier: cssUrl.specifier,
       });
-      await reference.readGeneratedSpecifier();
-      const replacement = reference.generatedSpecifier;
+      await cssDependencyReference.readGeneratedSpecifier();
+      const replacement = cssDependencyReference.generatedSpecifier;
       cssUrl.replacement = replacement.slice(1, -1);
     }),
   );

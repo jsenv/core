@@ -12,12 +12,12 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module";
     const getImportSpecifier = (clientFileUrl) => {
-      const [reference] = urlInfo.references.inject({
+      const [jsImportReference] = urlInfo.dependencies.inject({
         type: "js_import",
         expectedType: "js_module",
         specifier: clientFileUrl,
       });
-      return JSON.parse(reference.generatedSpecifier);
+      return JSON.parse(jsImportReference.generatedSpecifier);
     };
     const isSupported = context.isSupportedOnCurrentClients;
     const babelPluginStructure = getBaseBabelPluginStructure({
@@ -36,7 +36,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
             { babelHelpersAsImport, getImportSpecifier },
           ];
         } else {
-          urlInfo.references.foundSideEffectFile({
+          urlInfo.dependencies.foundSideEffectFile({
             sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
             expectedType: "js_classic",
             specifierLine: regeneratorRuntimeUsage.line,
@@ -55,7 +55,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
             { babelHelpersAsImport, getImportSpecifier },
           ];
         } else {
-          urlInfo.references.foundSideEffectFile({
+          urlInfo.dependencies.foundSideEffectFile({
             sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
             expectedType: "js_classic",
             specifierLine: constructableStyleSheetUsage.line,

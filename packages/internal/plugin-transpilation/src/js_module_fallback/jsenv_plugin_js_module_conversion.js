@@ -82,7 +82,7 @@ export const jsenvPluginJsModuleConversion = ({
       }
       await jsModuleUrlInfo.fetchUrlContent(jsModuleUrlInfo);
       if (context.dev) {
-        urlInfo.references.found({
+        urlInfo.dependencies.found({
           type: "js_import",
           subtype: jsModuleReference.subtype,
           specifier: jsModuleReference.url,
@@ -103,7 +103,7 @@ export const jsenvPluginJsModuleConversion = ({
         // or to be able to import when it uses import
         outputFormat = "system";
         urlInfo.type = "js_classic";
-        urlInfo.references.foundSideEffectFile({
+        urlInfo.dependencies.foundSideEffectFile({
           sideEffectFileUrl: systemJsClientFileUrlDefault,
           expectedType: "js_classic",
           line: 0,

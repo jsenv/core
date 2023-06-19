@@ -115,7 +115,7 @@ const jsenvPluginAsModules = () => {
       }
       await jsonUrlInfo.fetchUrlContent();
       if (context.dev) {
-        urlInfo.references.found({
+        urlInfo.dependencies.found({
           type: "js_import",
           subtype: jsonReference.subtype,
           specifier: jsonReference.url,
@@ -153,7 +153,7 @@ const jsenvPluginAsModules = () => {
       }
       await cssUrlInfo.fetchUrlContent();
       if (context.dev) {
-        urlInfo.references.found({
+        urlInfo.dependencies.found({
           type: "js_import",
           subtype: cssReference.subtype,
           specifier: cssReference.url,
@@ -198,7 +198,7 @@ export default stylesheet;`,
       }
       await textUrlInfo.fetchUrlContent(textUrlInfo);
       if (context.dev) {
-        urlInfo.references.found({
+        urlInfo.dependencies.found({
           type: "js_import",
           subtype: textReference.subtype,
           specifier: textReference.url,

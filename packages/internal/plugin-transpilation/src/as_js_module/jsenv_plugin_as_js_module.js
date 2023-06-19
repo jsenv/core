@@ -39,7 +39,7 @@ export const jsenvPluginAsJsModule = () => {
       }
       await jsClassicUrlInfo.fetchUrlContent();
       if (context.dev) {
-        urlInfo.references.found({
+        urlInfo.dependencies.found({
           type: "js_import",
           subtype: jsClassicReference.subtype,
           specifier: jsClassicReference.url,

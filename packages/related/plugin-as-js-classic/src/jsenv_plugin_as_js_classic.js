@@ -33,7 +33,7 @@ export const jsenvPluginAsJsClassic = () => {
       }
       // cook it to get content + dependencies
       await jsModuleUrlInfo.cook();
-      await jsModuleUrlInfo.cookReferences({
+      await jsModuleUrlInfo.cookDependencies({
         // we ignore dynamic import to cook lazyly (as browser request the server)
         // these dynamic imports must inherit "?as_js_classic"
         // This is done inside rollup for convenience
@@ -65,7 +65,7 @@ export const jsenvPluginAsJsClassic = () => {
         // we have to use system when it uses import
         outputFormat = "system";
         urlInfo.type = "js_classic";
-        urlInfo.references.foundSideEffectFile({
+        urlInfo.dependencies.foundSideEffectFile({
           sideEffectFileUrl: systemJsClientFileUrlDefault,
           expectedType: "js_classic",
           line: 0,
@@ -79,7 +79,7 @@ export const jsenvPluginAsJsClassic = () => {
 
       if (context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          urlInfo.references.inject({
+          urlInfo.dependencies.inject({
             type: "js_url",
             specifier: sourceUrl,
             isImplicit: true,
@@ -116,7 +116,7 @@ export const jsenvPluginAsJsClassic = () => {
 };
 
 const isImportedByJs = (jsModuleUrlInfo, urlGraph) => {
-  for (const dependentUrl of jsModuleUrlInfo.dependents) {
+  for (const dependentUrl of jsModuleUrlInfo.dependentUrlSet) {
     const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
     if (
       dependentUrlInfo.type === "js_module" ||
