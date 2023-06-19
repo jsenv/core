@@ -3,7 +3,7 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import {
   applyReferenceEffectsOnUrlInfo,
-  createReferences,
+  createDependencies,
 } from "./references.js";
 
 export const createUrlGraph = ({
@@ -142,13 +142,13 @@ const createUrlInfo = (url) => {
     isWatched: false,
     isValid: () => false,
     data: {}, // plugins can put whatever they want here
-    dependencySet: new Set(), // references to other urls are put in this set
+    dependencyReferenceSet: new Set(), // references to other urls are put in this set
     dependencyUrlSet: new Set(), // same as above but contains only reference urls (faster access)
-    dependentSet: new Set(), // references from other urls to this one are put in this set
+    dependentReferenceSet: new Set(), // references from other urls to this one are put in this set
     dependentUrlSet: new Set(), // same as above but contains only reference urls (faster access)
     reference: null, // first reference from an other url to this one
+    implicitUrlSet: new Set(),
 
-    implicitUrls: new Set(),
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
     typeHint: undefined,
@@ -187,11 +187,15 @@ const createUrlInfo = (url) => {
     value: url,
   });
 
-  urlInfo.references = createReferences(urlInfo);
+  urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.hasDependent = () => {
-    for (const reference of urlInfo.references.inverted) {
-      if (reference.url === urlInfo.url) {
-        if (!reference.isInline && reference.next && reference.next.isInline) {
+    for (const dependentReference of urlInfo.dependentReferenceSet) {
+      if (dependentReference.url === urlInfo.url) {
+        if (
+          !dependentReference.isInline &&
+          dependentReference.next &&
+          dependentReference.next.isInline
+        ) {
           // the url info was inlined, an other reference is required
           // to consider the non-inlined urlInfo as used
           continue;

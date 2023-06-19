@@ -174,7 +174,7 @@ export const createFileService = ({
             return false;
           }
         }
-        for (const implicitUrl of urlInfo.implicitUrls) {
+        for (const implicitUrl of urlInfo.implicitUrlSet) {
           const implicitUrlInfo = context.urlGraph.getUrlInfo(implicitUrl);
           if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
             return false;

@@ -390,9 +390,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
         }
         const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
-        await rawRootUrlInfo.references.startCollecting(() => {
+        await rawRootUrlInfo.dependencies.startCollecting(() => {
           Object.keys(entryPoints).forEach((key) => {
-            const [, entryUrlInfo] = rawRootUrlInfo.references.found({
+            const [, entryUrlInfo] = rawRootUrlInfo.dependencies.found({
               trace: { message: `"${key}" in entryPoints parameter` },
               isEntryPoint: true,
               type: "entry_point",
@@ -402,7 +402,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             entryUrls.push(entryUrlInfo.url);
           });
         });
-        await rawRootUrlInfo.cookReferences({
+        await rawRootUrlInfo.cookDependencies({
           operation: buildOperation,
         });
       } catch (e) {
@@ -790,32 +790,34 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (dependencyUrlInfo.isInline) {
                 if (dependencyUrlInfo.type === "js_module") {
                   // bundle inline script type module deps
-                  dependencyUrlInfo.references.forEach((inlineScriptRef) => {
-                    if (inlineScriptRef.type === "js_import") {
-                      const inlineUrlInfo = rawKitchen.graph.getUrlInfo(
-                        inlineScriptRef.url,
-                      );
-                      addToBundlerIfAny(inlineUrlInfo);
-                    }
-                  });
+                  dependencyUrlInfo.dependencyReferenceSet.forEach(
+                    (dependencyReference) => {
+                      if (dependencyReference.type === "js_import") {
+                        const inlineUrlInfo = rawKitchen.graph.getUrlInfo(
+                          dependencyReference.url,
+                        );
+                        addToBundlerIfAny(inlineUrlInfo);
+                      }
+                    },
+                  );
                 }
                 // inline content cannot be bundled
                 return;
               }
               addToBundlerIfAny(dependencyUrlInfo);
             });
-            rawUrlInfo.references.forEach((reference) => {
+            rawUrlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
               if (
-                reference.isResourceHint &&
-                reference.expectedType === "js_module"
+                dependencyReference.isResourceHint &&
+                dependencyReference.expectedType === "js_module"
               ) {
                 const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                  reference.url,
+                  dependencyReference.url,
                 );
                 if (
                   referencedUrlInfo &&
                   // something else than the resource hint is using this url
-                  referencedUrlInfo.dependents.size > 0
+                  referencedUrlInfo.dependentUrlSet.size > 0
                 ) {
                   addToBundlerIfAny(referencedUrlInfo);
                 }
@@ -827,12 +829,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.references.forEach((reference) => {
-              if (reference.type !== "js_url") {
+            rawUrlInfo.dependencyReferenceSet.forEach((dependencyReference) => {
+              if (dependencyReference.type !== "js_url") {
                 return;
               }
               const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                reference.url,
+                dependencyReference.url,
               );
               const bundler = bundlers[referencedUrlInfo.type];
               if (!bundler) {
@@ -840,13 +842,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
 
               let willAlreadyBeBundled = true;
-              for (const dependent of referencedUrlInfo.dependents) {
-                const dependentUrlInfo = rawKitchen.graph.getUrlInfo(dependent);
-                for (const reference of dependentUrlInfo.references) {
-                  if (reference.url === referencedUrlInfo.url) {
+              for (const dependentUrl of referencedUrlInfo.dependentUrlSet) {
+                const dependentUrlInfo =
+                  rawKitchen.graph.getUrlInfo(dependentUrl);
+                for (const dependencyReference of dependentUrlInfo.dependencyReferenceSet) {
+                  if (dependencyReference.url === referencedUrlInfo.url) {
                     willAlreadyBeBundled =
-                      reference.subtype === "import_dynamic" ||
-                      reference.type === "script";
+                      dependencyReference.subtype === "import_dynamic" ||
+                      dependencyReference.type === "script";
                   }
                 }
               }
@@ -960,18 +963,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
           }
           const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
-          await finalRootUrlInfo.references.startCollecting(() => {
+          await finalRootUrlInfo.dependencies.startCollecting(() => {
             entryUrls.forEach((entryUrl) => {
-              const [, finalEntryUrlInfo] = finalRootUrlInfo.references.found({
-                trace: { message: `entryPoint` },
-                isEntryPoint: true,
-                type: "entry_point",
-                specifier: entryUrl,
-              });
+              const [, finalEntryUrlInfo] = finalRootUrlInfo.dependencies.found(
+                {
+                  trace: { message: `entryPoint` },
+                  isEntryPoint: true,
+                  type: "entry_point",
+                  specifier: entryUrl,
+                },
+              );
               finalEntryUrls.push(finalEntryUrlInfo.url);
             });
           });
-          await finalRootUrlInfo.cookReferences({
+          await finalRootUrlInfo.cookDependencies({
             operation: buildOperation,
           });
         } catch (e) {
@@ -1089,7 +1094,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.url.startsWith("ignore:")) {
               return;
             }
-            if (urlInfo.dependents.size === 0 && !urlInfo.isEntryPoint) {
+            if (urlInfo.dependentUrlSet.size === 0 && !urlInfo.isEntryPoint) {
               return;
             }
             const urlContent =
@@ -1206,7 +1211,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 name: "jsenv:versioning",
                 appliesDuring: "build",
                 resolveReference: (reference) => {
-                  debugger;
                   const buildUrl = buildUrls.get(reference.specifier);
                   if (buildUrl) {
                     return buildUrl;
@@ -1289,7 +1293,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return versionedSpecifier;
                 },
                 fetchUrlContent: (versionedUrlInfo) => {
-                  debugger;
                   if (versionedUrlInfo.isInline) {
                     const versionedUrl = versionedUrlInfo.url;
                     const rawUrl = buildDirectoryRedirections.get(versionedUrl);
@@ -1451,7 +1454,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   });
                   return;
                 }
-                if (buildUrlInfo.dependents.size === 0) {
+                if (buildUrlInfo.dependentUrlSet.size === 0) {
                   logger.warn(
                     `remove resource hint because "${href}" not used anymore`,
                   );

@@ -73,7 +73,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             if (!href) {
               return;
             }
-            const dependencyReference = urlInfo.dependencySet.find(
+            const dependencyReference = urlInfo.dependencyReferenceSet.find(
               (ref) =>
                 ref.generatedSpecifier === href &&
                 ref.type === "link_href" &&
@@ -104,7 +104,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
             }
             const src = getHtmlNodeAttribute(node, "src");
             if (src) {
-              const dependencyReference = urlInfo.dependencySet.find(
+              const dependencyReference = urlInfo.dependencyReferenceSet.find(
                 (ref) =>
                   ref.generatedSpecifier === src &&
                   ref.type === "script" &&
