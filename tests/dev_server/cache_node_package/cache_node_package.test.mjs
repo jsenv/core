@@ -67,7 +67,7 @@ try {
     });
   };
   const takeDevFilesSnapshot = (name) => {
-    const runtimeId = Array.from(devServer.contextCache.keys())[0];
+    const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
     takeDirectorySnapshot(
       new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
       new URL(`./snapshots/${name}/`, import.meta.url),

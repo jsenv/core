@@ -184,7 +184,7 @@ export const jsenvPluginSupervisor = ({
               openInEditor,
             },
             webServer: {
-              rootDirectoryUrl: htmlUrlInfo.kitchen.rootDirectoryUrl,
+              rootDirectoryUrl: htmlUrlInfo.kitchen.context.rootDirectoryUrl,
               isJsenvDevServer: true,
             },
             inlineAsRemote: true,

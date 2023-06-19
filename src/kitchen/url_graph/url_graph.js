@@ -269,6 +269,12 @@ const createUrlInfo = (url) => {
   urlInfo.fetchUrlContent = (context) => {
     return urlInfo.kitchen.context.fetchUrlContent(urlInfo, context);
   };
+  urlInfo.transform = (transformations) => {
+    return urlInfo.kitchen.context.urlInfoTransformer.applyTransformations(
+      urlInfo,
+      transformations,
+    );
+  };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo;

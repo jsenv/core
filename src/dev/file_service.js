@@ -17,7 +17,7 @@ export const createFileService = ({
   logLevel,
   serverStopCallbacks,
   serverEventsDispatcher,
-  contextCache,
+  kitchenCache,
 
   sourceDirectoryUrl,
   sourceMainFilePath,
@@ -58,14 +58,14 @@ export const createFileService = ({
   );
   serverStopCallbacks.push(stopWatchingSourceFiles);
 
-  const getOrCreateContext = (request) => {
+  const getOrCreateKitchen = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"] || "",
     );
     const runtimeId = `${runtimeName}@${runtimeVersion}`;
-    const existingContext = contextCache.get(runtimeId);
-    if (existingContext) {
-      return existingContext;
+    const existing = kitchenCache.get(runtimeId);
+    if (existing) {
+      return existing;
     }
     const watchAssociations = URL_META.resolveAssociations(
       { watch: stopWatchingSourceFiles.watchPatterns },
@@ -180,7 +180,7 @@ export const createFileService = ({
           }
         }
         for (const implicitUrl of urlInfo.implicitUrlSet) {
-          const implicitUrlInfo = context.urlGraph.getUrlInfo(implicitUrl);
+          const implicitUrlInfo = kitchen.graph.getUrlInfo(implicitUrl);
           if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
             return false;
           }
@@ -216,7 +216,7 @@ export const createFileService = ({
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
             rootDirectoryUrl: sourceDirectoryUrl,
-            urlGraph: kitchen.graph,
+            graph: kitchen.graph,
             dev: true,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
@@ -233,20 +233,12 @@ export const createFileService = ({
       }
     }
 
-    const context = {
-      rootDirectoryUrl: sourceDirectoryUrl,
-      dev: true,
-      runtimeName,
-      runtimeVersion,
-      urlGraph: kitchen.graph,
-      kitchen,
-    };
-    contextCache.set(runtimeId, context);
-    return context;
+    kitchenCache.set(runtimeId, kitchen);
+    return kitchen;
   };
 
   return async (request) => {
-    const { urlGraph, kitchen } = getOrCreateContext(request);
+    const kitchen = getOrCreateKitchen(request);
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
@@ -263,10 +255,10 @@ export const createFileService = ({
       sourceMainFilePath,
     );
     if (parentUrl) {
-      reference = urlGraph.inferReference(request.resource, parentUrl);
+      reference = kitchen.graph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
-      const entryPoint = kitchen.graph.rootUrlInfo.prepareReference({
+      const entryPoint = kitchen.graph.rootUrlInfo.dependencies.prepare({
         trace: { message: parentUrl || sourceDirectoryUrl },
         parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
@@ -274,9 +266,9 @@ export const createFileService = ({
       });
       reference = entryPoint[0];
     }
-    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference);
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
     const ifNoneMatch = request.headers["if-none-match"];
-    const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo);
+    const urlInfoTargetedByCache = urlInfo.getParentIfInline();
 
     try {
       if (ifNoneMatch) {

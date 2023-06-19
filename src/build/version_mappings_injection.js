@@ -75,7 +75,7 @@ export const injectVersionMappingsAsImportmap = async ({
     }),
     "jsenv:versioning",
   );
-  kitchen.urlInfoTransformer.applyTransformations(urlInfo, {
+  urlInfo.transform({
     content: stringifyHtmlAst(htmlAst),
   });
 };

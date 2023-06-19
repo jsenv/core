@@ -51,9 +51,7 @@ const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
     "jsenv:core",
   );
   const content = stringifyHtmlAst(htmlAst);
-  htmlUrlInfo.kitchen.urlInfoTransformer.applyTransformations(htmlUrlInfo, {
-    content,
-  });
+  htmlUrlInfo.transform({ content });
 };
 
 const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
@@ -64,7 +62,7 @@ const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
     jsUrlInfo.sourcemap,
     magicResult.sourcemap,
   );
-  jsUrlInfo.kitchen.urlInfoTransformer.applyTransformations(jsUrlInfo, {
+  jsUrlInfo.transform({
     content: magicResult.content,
     sourcemap,
   });
@@ -82,7 +80,7 @@ const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
     inputIsJsModule: true,
     inputUrl: jsUrlInfo.originalUrl,
   });
-  jsUrlInfo.kitchen.urlInfoTransformer.applyTransformations(jsUrlInfo, {
+  jsUrlInfo.transform({
     content: code,
     sourcemap: map,
   });

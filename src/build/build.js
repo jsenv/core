@@ -721,10 +721,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 urlInfo,
                 context,
                 (optimizeReturnValue) => {
-                  finalKitchen.urlInfoTransformer.applyTransformations(
-                    urlInfo,
-                    optimizeReturnValue,
-                  );
+                  urlInfo.transform(optimizeReturnValue);
                 },
               );
             },
@@ -1538,7 +1535,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (mutations.length > 0) {
             actions.push(() => {
               mutations.forEach((mutation) => mutation());
-              finalKitchen.urlInfoTransformer.applyTransformations(urlInfo, {
+              urlInfo.transform({
                 content: stringifyHtmlAst(htmlAst),
               });
             });
@@ -1624,13 +1621,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )};\n`,
             );
             const { content, sourcemap } = magicSource.toContentAndSourcemap();
-            finalKitchen.urlInfoTransformer.applyTransformations(
-              serviceWorkerEntryUrlInfo,
-              {
-                content,
-                sourcemap,
-              },
-            );
+            serviceWorkerEntryUrlInfo.transform({
+              content,
+              sourcemap,
+            });
           });
           urlsInjectionInSw.done();
         }

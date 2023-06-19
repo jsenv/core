@@ -105,7 +105,6 @@ export const createKitchen = ({
   const isIgnored = (url) => {
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
-
   const resolveReference = (reference) => {
     try {
       let url = pluginController.callHooksUntil(
@@ -241,6 +240,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     sourcemapsSourcesRelative,
     clientRuntimeCompat,
   });
+  kitchenContext.urlInfoTransformer = urlInfoTransformer;
 
   const fetchUrlContent = async (urlInfo, { contextDuringFetch }) => {
     try {
@@ -584,10 +584,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   Object.assign(kitchen, {
     graph,
     pluginController,
-    urlInfoTransformer,
-    rootDirectoryUrl,
     context: kitchenContext,
-    cook,
   });
   return kitchen;
 };

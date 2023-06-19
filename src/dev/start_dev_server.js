@@ -121,7 +121,7 @@ export const startDevServer = async ({
   serverStopCallbacks.push(() => {
     serverEventsDispatcher.destroy();
   });
-  const contextCache = new Map();
+  const kitchenCache = new Map();
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -183,7 +183,7 @@ export const startDevServer = async ({
           logLevel,
           serverStopCallbacks,
           serverEventsDispatcher,
-          contextCache,
+          kitchenCache,
 
           sourceDirectoryUrl,
           sourceMainFilePath,
@@ -278,6 +278,6 @@ export const startDevServer = async ({
     stop: () => {
       server.stop();
     },
-    contextCache,
+    kitchenCache,
   };
 };
