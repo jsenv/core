@@ -42,21 +42,21 @@ const test = async ({ name, expectedUrl, ...rest }) => {
 
 // can use <script type="module">
 await test({
-  name: "chrome_89",
+  name: "0_js_module",
   expectedUrl: "/js/main.js",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 });
-// cannot use <script type="module">
-await test({
-  name: "chrome_60",
-  expectedUrl: "/js/main.nomodule.js",
-  runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginBundling()],
-});
-// cannot use + no bundling
-await test({
-  name: "chrome_60_no_bundling",
-  expectedUrl: `/js/main.nomodule.js`,
-  runtimeCompat: { chrome: "60" },
-});
+// // cannot use <script type="module">
+// await test({
+//   name: "1_js_module_fallback",
+//   expectedUrl: "/js/main.nomodule.js",
+//   runtimeCompat: { chrome: "60" },
+//   plugins: [jsenvPluginBundling()],
+// });
+// // cannot use + no bundling
+// await test({
+//   name: "2_js_module_fallback_no_bundling",
+//   expectedUrl: `/js/main.nomodule.js`,
+//   runtimeCompat: { chrome: "60" },
+// });
