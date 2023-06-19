@@ -784,7 +784,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             addToBundlerIfAny(rawUrlInfo);
           }
           if (rawUrlInfo.type === "html") {
-            rawUrlInfo.dependencies.forEach((dependencyUrl) => {
+            rawUrlInfo.dependencyUrlSet.forEach((dependencyUrl) => {
               const dependencyUrlInfo =
                 rawKitchen.graph.getUrlInfo(dependencyUrl);
               if (dependencyUrlInfo.isInline) {
@@ -1475,7 +1475,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                       : {}),
                   });
                 });
-                for (const dependencyUrl of buildUrlInfo.dependencies) {
+                for (const dependencyUrl of buildUrlInfo.dependencyUrlSet) {
                   const dependencyUrlInfo =
                     finalKitchen.graph.urlInfoMap.get(dependencyUrl);
                   if (dependencyUrlInfo.data.generatedToShareCode) {

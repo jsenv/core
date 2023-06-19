@@ -94,7 +94,7 @@ export const createReferences = (ownerUrlInfo) => {
         }
       });
       setOfDependencyUrls.forEach((dependencyUrl) => {
-        ownerUrlInfo.dependencies.add(dependencyUrl);
+        ownerUrlInfo.dependencyUrlSet.add(dependencyUrl);
         const reference = dependencyReferenceMap.get(dependencyUrl);
         const referencedUrlInfo =
           ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
@@ -112,7 +112,7 @@ export const createReferences = (ownerUrlInfo) => {
       });
       const prunedUrlInfos = [];
       const prune = (urlInfo, reference) => {
-        urlInfo.dependencies.delete(reference.url);
+        urlInfo.dependencyUrlSet.delete(reference.url);
         const referencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
         if (!referencedUrlInfo) {
           return;
@@ -147,7 +147,7 @@ export const createReferences = (ownerUrlInfo) => {
       ownerUrlInfo.implicitUrls.forEach((implicitUrl) => {
         if (!setOfDependencyUrls.has(implicitUrl)) {
           let implicitUrlComesFromInlineContent = false;
-          for (const dependencyUrl of ownerUrlInfo.dependencies) {
+          for (const dependencyUrl of ownerUrlInfo.dependencyUrlSet) {
             const dependencyUrlInfo =
               ownerUrlInfo.graph.getUrlInfo(dependencyUrl);
             if (
@@ -353,11 +353,11 @@ export const createReferences = (ownerUrlInfo) => {
     for (const entryPointUrlInfo of entryPoints) {
       references.context.addCallbackToConsiderGraphCooked(async () => {
         // do not inject if already there
-        const { dependencies } = entryPointUrlInfo;
-        if (dependencies.has(sideEffectFileUrlInfo.url)) {
+        const { dependencyUrlSet } = entryPointUrlInfo;
+        if (dependencyUrlSet.has(sideEffectFileUrlInfo.url)) {
           return;
         }
-        dependencies.add(sideEffectFileUrlInfo.url);
+        dependencyUrlSet.add(sideEffectFileUrlInfo.url);
         await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
@@ -633,7 +633,7 @@ ${ownerUrlInfo.url}`,
   references.collection.add(reference);
   if (references.isCollecting) {
     // if this function is called while collecting urlInfo references
-    // there is no need to update dependents + dependencies
+    // there is no need to update dependentUrlSet + dependencyUrlSet
     // because it will be done at the end of reference collection
     return;
   }
@@ -653,7 +653,7 @@ ${ownerUrlInfo.url}`,
       parentUrlInfo.implicitUrls.add(reference.url);
     }
   }
-  ownerUrlInfo.dependencies.add(reference.url);
+  ownerUrlInfo.dependencyUrlSet.add(reference.url);
   const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
   referencedUrlInfo.dependents.add(ownerUrlInfo.url);
   referencedUrlInfo.dependentReferences.add(reference);
@@ -679,7 +679,7 @@ ${ownerUrlInfo.url}`,
   references.collection.delete(reference);
   if (references.isCollecting) {
     // if this function is called while collecting urlInfo references
-    // there is no need to update dependents + dependencies
+    // there is no need to update dependents + dependencyUrlSet
     // because it will be done at the end of reference collectio
     return;
   }
@@ -693,7 +693,7 @@ ${ownerUrlInfo.url}`,
   }
   const hasAnOtherRef = references.some((ref) => ref.url === reference.url);
   if (!hasAnOtherRef) {
-    ownerUrlInfo.dependencies.delete(reference.url);
+    ownerUrlInfo.dependencyUrlSet.delete(reference.url);
     const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
     referencedUrlInfo.dependents.delete(ownerUrlInfo.url);
     referencedUrlInfo.references.inverted.delete(reference);
@@ -713,7 +713,7 @@ const replaceReference = (reference, newReference) => {
     }
     if (references.isCollecting) {
       // if this function is called while collecting urlInfo references
-      // there is no need to update dependents + dependencies
+      // there is no need to update dependents + dependencyUrlSet
       // because it will be done at the end of reference collection
       references.collection.delete(reference);
       references.collection.add(newReference);

@@ -84,7 +84,7 @@ GRAPH_VISITOR.findDependency = (graph, urlInfo, visitor) => {
     return true;
   };
   const iterate = (currentUrlInfo) => {
-    for (const dependencyUrl of currentUrlInfo.dependencies) {
+    for (const dependencyUrl of currentUrlInfo.dependencyUrlSet) {
       const dependencyUrlInfo = graph.getUrlInfo(dependencyUrl);
       if (visit(dependencyUrlInfo)) {
         if (found) {

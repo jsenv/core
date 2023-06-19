@@ -61,7 +61,7 @@ export const createUrlGraph = ({
       if (firstReferenceFound) {
         return firstReferenceFound;
       }
-      for (const dependencyUrl of parentUrlInfo.dependencies) {
+      for (const dependencyUrl of parentUrlInfo.dependencyUrlSet) {
         if (seen.includes(dependencyUrl)) {
           continue;
         }
@@ -117,7 +117,7 @@ export const createUrlGraph = ({
     toJSON: (rootDirectoryUrl) => {
       const data = {};
       urlInfoMap.forEach((urlInfo) => {
-        const dependencyUrls = Array.from(urlInfo.dependencies);
+        const dependencyUrls = Array.from(urlInfo.dependencyUrlSet);
         if (dependencyUrls.length) {
           const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
           data[relativeUrl] = dependencyUrls.map((dependencyUrl) =>
@@ -142,9 +142,12 @@ const createUrlInfo = (url) => {
     isWatched: false,
     isValid: () => false,
     data: {}, // plugins can put whatever they want here
-    references: [],
-    dependencies: new Set(),
-    dependents: new Set(),
+    dependencySet: new Set(), // references to other urls are put in this set
+    dependencyUrlSet: new Set(), // same as above but contains only reference urls (faster access)
+    dependentSet: new Set(), // references from other urls to this one are put in this set
+    dependentUrlSet: new Set(), // same as above but contains only reference urls (faster access)
+    reference: null, // first reference from an other url to this one
+
     implicitUrls: new Set(),
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
@@ -237,7 +240,7 @@ const createUrlInfo = (url) => {
           iterate(dependentUrlInfo);
         }
       });
-      urlInfo.dependencies.forEach((dependencyUrl) => {
+      urlInfo.dependencyUrlSet.forEach((dependencyUrl) => {
         const dependencyUrlInfo = urlInfo.graph.getUrlInfo(dependencyUrl);
         if (dependencyUrlInfo.isInline) {
           iterate(dependencyUrlInfo);
@@ -254,6 +257,9 @@ const createUrlInfo = (url) => {
   };
   urlInfo.cookReferences = (context) => {
     return urlInfo.kitchen.context.cookReferences(urlInfo, context);
+  };
+  urlInfo.fetchUrlContent = (context) => {
+    return urlInfo.kitchen.context.fetchUrlContent(urlInfo, context);
   };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here

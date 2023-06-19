@@ -14,7 +14,7 @@ export const sortByDependencies = (nodes) => {
       }
     } else {
       visited.push(url);
-      nodes[url].dependencies.forEach((dependencyUrl) => {
+      nodes[url].dependencyUrlSet.forEach((dependencyUrl) => {
         visit(dependencyUrl, url);
       });
       sorted.push(url);
