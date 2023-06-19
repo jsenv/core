@@ -532,12 +532,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     const startCookingReferences = (urlInfo) => {
       const { references } = urlInfo;
-      references.current.forEach((reference) => {
-        // we don't cook resource hints
-        // because they might refer to resource that will be modified during build
-        // It also means something else have to reference that url in order to cook it
-        // so that the preload is deleted by "resync_resource_hints.js" otherwise
+      references.forEach((reference) => {
+        if (reference.type === "sourcemap_comment") {
+          // we don't cook sourcemap reference by sourcemap comments
+          // because this is already done in "initTransformations"
+          return;
+        }
         if (ignoreRessourceHint && reference.isResourceHint) {
+          // we don't cook resource hints
+          // because they might refer to resource that will be modified during build
+          // It also means something else have to reference that url in order to cook it
+          // so that the preload is deleted by "resync_resource_hints.js" otherwise
           return;
         }
         if (ignoreDynamicImport && reference.subtype === "import_dynamic") {

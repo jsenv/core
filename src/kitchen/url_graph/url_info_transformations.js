@@ -151,9 +151,6 @@ export const createUrlInfoTransformer = ({
     }
     // sourcemap is a special kind of reference:
     // It's a reference to a content generated dynamically the content itself.
-    // For this reason sourcemap are not added to urlInfo.references
-    // Instead they are stored into urlInfo.sourcemapReference
-    // create a placeholder reference for the sourcemap that will be generated
     // when jsenv is done cooking the file
     //   during build it's urlInfo.url to be inside the build
     //   but otherwise it's generatedUrl to be inside .jsenv/ directory
@@ -168,9 +165,6 @@ export const createUrlInfoTransformer = ({
     // - happens during build
     // - happens for url converted during fetch (js_module_fallback for instance)
     if (urlInfo.sourcemap) {
-      urlInfo.references.injectSourcemapPlaceholder({
-        specifier: urlInfo.sourcemapGeneratedUrl,
-      });
       urlInfo.sourcemap = normalizeSourcemap(urlInfo, urlInfo.sourcemap);
       return;
     }
@@ -181,19 +175,19 @@ export const createUrlInfoTransformer = ({
       content: urlInfo.content,
     });
     if (sourcemapFound) {
-      const { type, line, column, specifier } = sourcemapFound;
-      const [sourcemapReference, sourcemapUrlInfo] =
-        urlInfo.references.foundSourcemap({
-          type,
-          specifier,
-          specifierLine: line,
-          specifierColumn: column,
-        });
+      const { type, subtype, line, column, specifier } = sourcemapFound;
+      const [sourcemapReference, sourcemapUrlInfo] = urlInfo.references.found({
+        type,
+        subtype,
+        expectedType: "sourcemap",
+        specifier,
+        specifierLine: line,
+        specifierColumn: column,
+      });
       try {
         await context.cook(sourcemapUrlInfo, { reference: sourcemapReference });
         const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
-        urlInfo.sourcemapReference = sourcemapReference;
         urlInfo.sourcemap = sourcemap;
         return;
       } catch (e) {
@@ -202,10 +196,7 @@ export const createUrlInfoTransformer = ({
       }
     }
 
-    // case #3: prepare a sourcemap
-    urlInfo.references.injectSourcemapPlaceholder({
-      specifier: urlInfo.sourcemapGeneratedUrl,
-    });
+    // case #3: will be injected once cooked
   };
 
   const applyTransformations = (urlInfo, transformations) => {
@@ -262,58 +253,80 @@ export const createUrlInfoTransformer = ({
   };
 
   const applyTransformationsEffects = (urlInfo) => {
+    applySourcemapOnContent();
     urlInfo.contentFinalized = true;
-    if (urlInfo.sourcemapReference) {
-      if (
-        sourcemapsEnabled &&
-        urlInfo.sourcemap &&
-        !urlInfo.generatedUrl.startsWith("data:")
-      ) {
-        // during build this function can be called after the file is cooked
-        // - to update content and sourcemap after "optimize" hook
-        // - to inject versioning into the entry point content
-        // in this scenarion we don't want to call injectSourcemap
-        // just update the content and the
-        const sourcemapReference = urlInfo.sourcemapReference;
-        const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url);
-        sourcemapUrlInfo.contentType = "application/json";
-        const sourcemap = urlInfo.sourcemap;
-        if (sourcemapsSourcesRelative) {
-          sourcemap.sources = sourcemap.sources.map((source) => {
-            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-            return sourceRelative || ".";
-          });
+  };
+
+  const applySourcemapOnContent = (urlInfo) => {
+    if (!sourcemapsEnabled) {
+      return;
+    }
+    if (!urlInfo.sourcemap) {
+      return;
+    }
+    if (urlInfo.generatedUrl.startsWith("data:")) {
+      return;
+    }
+
+    // during build this function can be called after the file is cooked
+    // - to update content and sourcemap after "optimize" hook
+    // - to inject versioning into the entry point content
+    // in this scenarion we don't want to inject sourcemap reference
+    // just update the content
+
+    let sourcemapReference = urlInfo.references.find(
+      (ref) => ref.type === "sourcemap_comment",
+    );
+    if (!sourcemapReference) {
+      const result = urlInfo.references.inject({
+        trace: {
+          message: `sourcemap comment placeholder`,
+          url: urlInfo.url,
+        },
+        type: "sourcemap_comment",
+        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+        expectedType: "sourcemap",
+        specifier: urlInfo.sourcemapGeneratedUrl,
+        isInline: sourcemaps === "inline",
+      });
+      sourcemapReference = result[0];
+    }
+    const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url);
+
+    const sourcemap = urlInfo.sourcemap;
+    if (sourcemapsSourcesRelative) {
+      sourcemap.sources = sourcemap.sources.map((source) => {
+        const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+        return sourceRelative || ".";
+      });
+    }
+    if (sourcemapsSourcesProtocol !== "file:///") {
+      sourcemap.sources = sourcemap.sources.map((source) => {
+        if (source.startsWith("file:///")) {
+          return `${sourcemapsSourcesProtocol}${source.slice(
+            "file:///".length,
+          )}`;
         }
-        if (sourcemapsSourcesProtocol !== "file:///") {
-          sourcemap.sources = sourcemap.sources.map((source) => {
-            if (source.startsWith("file:///")) {
-              return `${sourcemapsSourcesProtocol}${source.slice(
-                "file:///".length,
-              )}`;
-            }
-            return source;
-          });
-        }
-        sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
-        if (!urlInfo.sourcemapIsWrong) {
-          if (sourcemaps === "inline") {
-            sourcemapReference.generatedSpecifier =
-              generateSourcemapDataUrl(sourcemap);
-          }
-          if (sourcemaps === "file" || sourcemaps === "inline") {
-            urlInfo.content = SOURCEMAP.writeComment({
-              contentType: urlInfo.contentType,
-              content: urlInfo.content,
-              specifier:
-                sourcemaps === "file" && sourcemapsSourcesRelative
-                  ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
-                  : sourcemapReference.generatedSpecifier,
-            });
-          }
-        }
-      } else {
-        // in the end we don't use the sourcemap placeholder
-        urlGraph.deleteUrlInfo(urlInfo.sourcemapReference.url);
+        return source;
+      });
+    }
+    sourcemapUrlInfo.contentType = "application/json";
+    sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
+
+    if (!urlInfo.sourcemapIsWrong) {
+      if (sourcemaps === "inline") {
+        sourcemapReference.generatedSpecifier =
+          generateSourcemapDataUrl(sourcemap);
+      }
+      if (sourcemaps === "file" || sourcemaps === "inline") {
+        urlInfo.content = SOURCEMAP.writeComment({
+          contentType: urlInfo.contentType,
+          content: urlInfo.content,
+          specifier:
+            sourcemaps === "file" && sourcemapsSourcesRelative
+              ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
+              : sourcemapReference.generatedSpecifier,
+        });
       }
     }
   };

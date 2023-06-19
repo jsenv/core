@@ -21,12 +21,11 @@ export const createUrlGraph = ({
     const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
       urlInfoMap.delete(url);
-      urlInfo.dependencies.forEach((dependencyUrl) => {
-        getUrlInfo(dependencyUrl).dependents.delete(url);
+      urlInfo.references.forEach((reference) => {
+        const referencedUrlInfo = getUrlInfo(reference.url);
+        referencedUrlInfo.dependents.delete(url);
+        referencedUrlInfo.references.inverted.delete(reference);
       });
-      if (urlInfo.sourcemapReference) {
-        deleteUrlInfo(urlInfo.sourcemapReference.url);
-      }
     }
   };
   const addUrlInfo = (urlInfo) => {
@@ -164,7 +163,6 @@ const createUrlInfo = (url) => {
     callbacksToConsiderContentReady: [],
 
     sourcemap: null,
-    sourcemapReference: null,
     sourcemapIsWrong: false,
 
     generatedUrl: null,
@@ -188,21 +186,14 @@ const createUrlInfo = (url) => {
 
   urlInfo.references = createReferences(urlInfo);
   urlInfo.hasDependent = () => {
-    for (const dependentUrl of urlInfo.dependents) {
-      const dependentUrlInfo = urlInfo.graph.getUrlInfo(dependentUrl);
-      for (const reference of dependentUrlInfo.references.current) {
-        if (reference.url === urlInfo.url) {
-          if (
-            !reference.isInline &&
-            reference.next &&
-            reference.next.isInline
-          ) {
-            // the url info was inlined, an other reference is required
-            // to consider the non-inlined urlInfo as used
-            continue;
-          }
-          return true;
+    for (const reference of urlInfo.references.inverted) {
+      if (reference.url === urlInfo.url) {
+        if (!reference.isInline && reference.next && reference.next.isInline) {
+          // the url info was inlined, an other reference is required
+          // to consider the non-inlined urlInfo as used
+          continue;
         }
+        return true;
       }
     }
     return false;

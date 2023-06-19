@@ -306,7 +306,6 @@ export const createFileService = ({
         urlInfo.error = null;
         urlInfo.sourcemap = null;
         urlInfo.sourcemapIsWrong = null;
-        urlInfo.sourcemapReference = null;
         urlInfo.content = null;
         urlInfo.originalContent = null;
         urlInfo.type = null;

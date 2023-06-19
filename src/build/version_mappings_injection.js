@@ -16,7 +16,7 @@ export const injectVersionMappingsAsGlobal = async ({
   versionMappings,
 }) => {
   if (urlInfo.type === "html") {
-    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
+    return prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
@@ -25,7 +25,7 @@ export const injectVersionMappingsAsGlobal = async ({
     });
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
+    return prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",

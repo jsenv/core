@@ -17,7 +17,7 @@ export const jsenvPluginImportMetaResolve = () => {
     transformUrlContent: {
       js_module: async (urlInfo) => {
         const magicSource = createMagicSource(urlInfo.content);
-        urlInfo.references.current.forEach((ref) => {
+        urlInfo.references.forEach((ref) => {
           if (ref.subtype === "import_meta_resolve") {
             const originalSpecifierLength = Buffer.byteLength(ref.specifier);
             const specifierLength = Buffer.byteLength(

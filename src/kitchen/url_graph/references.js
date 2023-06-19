@@ -53,21 +53,23 @@ export const applyReferenceEffectsOnUrlInfo = (
 };
 
 export const createReferences = (ownerUrlInfo) => {
-  const current = [];
+  const collection = new Set();
+  const inverted = new Set();
+
   const startCollecting = async (
     callback,
     context = ownerUrlInfo.kitchen.context,
   ) => {
     references.isCollecting = true;
-    // let prev = current.slice();
-    current.length = 0;
+    let prevCollection = new Set(collection);
+    collection.clear();
     references.context = context;
 
     const stopCollecting = () => {
       const setOfDependencyUrls = new Set();
       const dependencyReferenceMap = new Map();
       const setOfImplicitUrls = new Set();
-      current.forEach((reference) => {
+      collection.forEach((reference) => {
         if (reference.isResourceHint) {
           // resource hint are a special kind of reference.
           // They are a sort of weak reference to an url.
@@ -92,10 +94,11 @@ export const createReferences = (ownerUrlInfo) => {
       });
       setOfDependencyUrls.forEach((dependencyUrl) => {
         ownerUrlInfo.dependencies.add(dependencyUrl);
-        const dependencyUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
-          dependencyReferenceMap.get(dependencyUrl),
-        );
-        dependencyUrlInfo.dependents.add(ownerUrlInfo.url);
+        const reference = dependencyReferenceMap.get(dependencyUrl);
+        const referencedUrlInfo =
+          ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
+        referencedUrlInfo.dependents.add(ownerUrlInfo.url);
+        referencedUrlInfo.references.inverted.add(reference);
       });
       setOfImplicitUrls.forEach((implicitUrl) => {
         ownerUrlInfo.implicitUrls.add(implicitUrl);
@@ -107,23 +110,24 @@ export const createReferences = (ownerUrlInfo) => {
         }
       });
       const prunedUrlInfos = [];
-      const pruneDependency = (urlInfo, urlToClean) => {
-        urlInfo.dependencies.delete(urlToClean);
-        const dependencyUrlInfo = urlInfo.graph.getUrlInfo(urlToClean);
-        if (!dependencyUrlInfo) {
+      const prune = (urlInfo, reference) => {
+        urlInfo.dependencies.delete(reference.url);
+        const referencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
+        if (!referencedUrlInfo) {
           return;
         }
-        dependencyUrlInfo.dependents.delete(urlInfo.url);
-        if (dependencyUrlInfo.dependents.size === 0) {
-          dependencyUrlInfo.dependencies.forEach((dependencyUrl) => {
-            pruneDependency(dependencyUrlInfo, dependencyUrl);
+        referencedUrlInfo.dependents.delete(urlInfo.url);
+        referencedUrlInfo.references.inverted.delete(reference);
+        if (referencedUrlInfo.dependents.size === 0) {
+          referencedUrlInfo.references.forEach((reference) => {
+            prune(referencedUrlInfo, reference);
           });
-          prunedUrlInfos.push(dependencyUrlInfo);
+          prunedUrlInfos.push(referencedUrlInfo);
         }
       };
-      ownerUrlInfo.dependencies.forEach((dependencyUrl) => {
-        if (!setOfDependencyUrls.has(dependencyUrl)) {
-          pruneDependency(ownerUrlInfo, dependencyUrl);
+      prevCollection.forEach((prevReference) => {
+        if (!setOfDependencyUrls.has(prevReference.url)) {
+          prune(ownerUrlInfo, prevReference);
         }
       });
       if (prunedUrlInfos.length) {
@@ -164,6 +168,7 @@ export const createReferences = (ownerUrlInfo) => {
           }
         }
       });
+      prevCollection.clear();
       references.isCollecting = false;
     };
 
@@ -370,25 +375,6 @@ export const createReferences = (ownerUrlInfo) => {
     }
     return [sideEffectFileReference, sideEffectFileUrlInfo];
   };
-  const foundSourcemap = (props) => {
-    return found({
-      expectedType: "sourcemap",
-      ...props,
-    });
-  };
-  const injectSourcemapPlaceholder = ({ specifier }) => {
-    return found({
-      trace: {
-        message: `sourcemap comment placeholder`,
-        url: ownerUrlInfo.url,
-      },
-      type: "sourcemap_comment",
-      expectedType: "sourcemap",
-      subtype: ownerUrlInfo.contentType === "text/javascript" ? "js" : "css",
-      specifier,
-      isInline: ownerUrlInfo.kitchen.context.sourcemaps === "inline",
-    });
-  };
 
   const inject = ({ trace, ...rest }) => {
     if (trace === undefined) {
@@ -408,24 +394,24 @@ export const createReferences = (ownerUrlInfo) => {
     return [ref, referencedUrlInfo];
   };
 
-  const find = (predicate) => current.find(predicate);
-  const forEach = (callback) => current.forEach(callback);
+  const find = (predicate) => Array.from(collection).find(predicate);
+  const some = (predicate) => Array.from(collection).some(predicate);
+  const forEach = (callback) => collection.forEach(callback);
 
   const references = {
-    prev: [],
-    current,
+    collection,
+    inverted,
     isCollecting: false,
-    find,
+
     forEach,
+    find,
+    some,
     startCollecting,
     prepare,
     found,
     foundInline,
     foundSideEffectFile,
     inject,
-
-    foundSourcemap,
-    injectSourcemapPlaceholder,
   };
 
   return references;
@@ -645,7 +631,7 @@ ${ownerUrlInfo.url}`,
   }
 
   const { references } = ownerUrlInfo;
-  references.current.push(reference);
+  references.collection.add(reference);
   if (references.isCollecting) {
     // if this function is called while collecting urlInfo references
     // there is no need to update dependents + dependencies
@@ -671,6 +657,7 @@ ${ownerUrlInfo.url}`,
   ownerUrlInfo.dependencies.add(reference.url);
   const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
   referencedUrlInfo.dependents.add(ownerUrlInfo.url);
+  referencedUrlInfo.references.inverted.add(reference);
 };
 
 const removeReference = (reference) => {
@@ -685,12 +672,12 @@ ${ownerUrlInfo.url}`,
     );
   }
   const { references } = ownerUrlInfo;
-  const index = references.current.indexOf(reference);
-  if (index === -1) {
+
+  if (!references.collection.has(reference)) {
     throw new Error(`reference not found in ${ownerUrlInfo.url}`);
   }
 
-  references.current.splice(index, 1);
+  references.collection.delete(reference);
   if (references.isCollecting) {
     // if this function is called while collecting urlInfo references
     // there is no need to update dependents + dependencies
@@ -698,20 +685,19 @@ ${ownerUrlInfo.url}`,
     return;
   }
   if (reference.isImplicit && !reference.isInline) {
-    const hasAnOtherImplicitRef = references.current.some(
+    const hasAnOtherImplicitRef = references.some(
       (ref) => ref.isImplicit && ref.url === reference.url,
     );
     if (!hasAnOtherImplicitRef) {
       ownerUrlInfo.implicitUrls.delete(reference.url);
     }
   }
-  const hasAnOtherRef = references.current.some(
-    (ref) => ref.url === reference.url,
-  );
+  const hasAnOtherRef = references.some((ref) => ref.url === reference.url);
   if (!hasAnOtherRef) {
     ownerUrlInfo.dependencies.delete(reference.url);
     const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
     referencedUrlInfo.dependents.delete(ownerUrlInfo.url);
+    referencedUrlInfo.references.inverted.delete(reference);
     if (!referencedUrlInfo.isUsed()) {
       referencedUrlInfo.deleteFromGraph();
     }
@@ -723,20 +709,20 @@ const replaceReference = (reference, newReference) => {
   const newOwnerUrlInfo = newReference.ownerUrlInfo;
   if (ownerUrlInfo === newOwnerUrlInfo) {
     const { references } = ownerUrlInfo;
-    const index = references.current.indexOf(reference);
-    if (index === -1) {
+    if (!references.collection.has(reference)) {
       throw new Error(`reference not found in ${reference.ownerUrlInfo.url}`);
     }
     if (references.isCollecting) {
       // if this function is called while collecting urlInfo references
       // there is no need to update dependents + dependencies
       // because it will be done at the end of reference collection
-      references.current[index] = newReference;
+      references.collection.delete(reference);
+      references.collection.add(newReference);
       storeReferenceChain(reference, newReference);
       return;
     }
     removeReference(reference);
-    addReference(newReference, index);
+    addReference(newReference);
     return;
   }
   removeReference(reference);

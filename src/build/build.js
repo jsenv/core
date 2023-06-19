@@ -1191,7 +1191,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             rootDirectoryUrl: buildDirectoryUrl,
             ignore,
             ignoreProtocol: "remove",
-            urlGraph: finalKitchen.graph,
+            graph: finalKitchen.graph,
             build: true,
             runtimeCompat,
             ...contextSharedDuringBuild,
@@ -1288,6 +1288,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return versionedSpecifier;
                 },
                 fetchUrlContent: (versionedUrlInfo) => {
+                  debugger;
                   if (versionedUrlInfo.isInline) {
                     const versionedUrl = versionedUrlInfo.url;
                     const rawUrl = buildDirectoryRedirections.get(versionedUrl);
@@ -1305,7 +1306,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                         : undefined,
                     };
                   }
-                  return versionedUrlInfo;
+                  const finalUrlInfo = finalKitchen.graph.getUrlInfo(
+                    versionedUrlInfo.url,
+                  );
+                  return finalUrlInfo;
                 },
               },
             ],
@@ -1318,6 +1322,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
 
           const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
+          debugger;
           await versioningRootUrlInfo.references.startCollecting(() => {
             finalEntryUrls.forEach((finalEntryUrl) => {
               versioningRootUrlInfo.references.found({
