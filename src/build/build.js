@@ -635,9 +635,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (!reference.generatedUrl.startsWith("file:")) {
                 return null;
               }
-              if (reference.isResourceHint) {
-                return null;
-              }
               if (reference.isWeak) {
                 return null;
               }
@@ -1273,9 +1270,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     return null;
                   }
                   if (reference.url.startsWith("data:")) {
-                    return null;
-                  }
-                  if (reference.isResourceHint) {
                     return null;
                   }
                   if (reference.isWeak) {

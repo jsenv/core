@@ -524,16 +524,6 @@ ${ownerUrlInfo.url}`,
   }
 
   ownerUrlInfo.referenceToOthersSet.add(reference);
-  if (reference.isResourceHint) {
-    // resource hint are a special kind of reference.
-    // They are a sort of weak reference to an url.
-    // We ignore them so that url referenced only by resource hints
-    // have url.referenceFromOthers.size === 0 and can be considered as not used
-    // It means html won't consider url referenced solely
-    // by <link> as dependency and it's fine
-    return;
-  }
-
   if (
     reference.isImplicit &&
     !reference.isInline &&

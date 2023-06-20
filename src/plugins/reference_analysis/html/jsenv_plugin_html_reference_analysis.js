@@ -82,6 +82,7 @@ const parseAndTransformHtmlReferences = async (
       specifierLine: line,
       specifierColumn: column,
       isResourceHint,
+      isWeak: isResourceHint,
       crossorigin,
       integrity,
       debug,

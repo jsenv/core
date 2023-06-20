@@ -496,7 +496,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const cookDependencies = async (
     urlInfo,
-    { operation, ignoreRessourceHint, ignoreDynamicImport } = {},
+    { operation, ignoreDynamicImport } = {},
   ) => {
     const promises = [];
     const urlInfoSet = new Set();
@@ -516,15 +516,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           continue;
         }
 
-        if (ignoreRessourceHint && referenceToOther.isResourceHint) {
-          // we don't cook resource hints
+        if (referenceToOther.isWeak) {
+          // we don't cook weak references (resource hints mostly)
           // because they might refer to resource that will be modified during build
           // It also means something else have to reference that url in order to cook it
           // so that the preload is deleted by "resync_resource_hints.js" otherwise
-          continue;
-        }
-
-        if (referenceToOther.isWeak) {
           continue;
         }
 
