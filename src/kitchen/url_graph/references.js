@@ -294,7 +294,7 @@ export const createDependencies = (ownerUrlInfo) => {
     for (const entryPointUrlInfo of entryPoints) {
       entryPointUrlInfo.addContentTransformationCallback(async () => {
         // do not inject if already there
-        for (const referenceToOther of referenceToOthersSet) {
+        for (const referenceToOther of entryPointUrlInfo.referenceToOthersSet) {
           if (referenceToOther.url === sideEffectFileUrlInfo.url) {
             return;
           }
@@ -504,7 +504,7 @@ const createReference = ({
       line,
       column,
     });
-    const inlineCopy = ownerUrlInfo.dependencies.prepare({
+    const [inlineCopy, inlineUrlInfo] = ownerUrlInfo.dependencies.prepare({
       ...inlineProps,
       specifierLine: line,
       specifierColumn: column,
@@ -515,7 +515,7 @@ const createReference = ({
       ...props,
     });
     replaceDependency(reference, inlineCopy);
-    return inlineCopy;
+    return [inlineCopy, inlineUrlInfo];
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
