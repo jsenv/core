@@ -179,10 +179,11 @@ export const jsenvPluginProtocolFile = ({
         }
         const fileBuffer = readFileSync(urlObject);
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+        const content = CONTENT_TYPE.isTextual(contentType)
+          ? String(fileBuffer)
+          : fileBuffer;
         return {
-          content: CONTENT_TYPE.isTextual(contentType)
-            ? String(fileBuffer)
-            : fileBuffer,
+          content,
           contentType,
         };
       },

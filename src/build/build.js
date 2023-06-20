@@ -658,7 +658,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               buildUrls.set(specifier, reference.generatedUrl);
               return specifier;
             },
-            fetchUrlContent: (finalUrlInfo) => {
+            fetchUrlContent: async (finalUrlInfo) => {
               const fromBundleOrRawGraph = (url) => {
                 const bundleUrlInfo = bundleUrlInfos[url];
                 if (bundleUrlInfo) {
@@ -696,6 +696,30 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return rawUrlInfo;
               };
               const { firstReference } = finalUrlInfo;
+              // reference injected during "postbuild":
+              // - happens for "js_module_fallback" injecting "s.js"
+              if (firstReference.injected) {
+                const originalRef = firstReference.original || firstReference;
+                const [, rawUrlInfo] =
+                  rawKitchen.graph.rootUrlInfo.dependencies.inject({
+                    type: originalRef.type,
+                    expectedType: originalRef.expectedType,
+                    specifier: originalRef.specifier,
+                    specifierLine: originalRef.specifierLine,
+                    specifierColumn: originalRef.specifierColumn,
+                    specifierStart: originalRef.specifierStart,
+                    specifierEnd: originalRef.specifierEnd,
+                  });
+                await rawUrlInfo.cook();
+                return {
+                  type: rawUrlInfo.type,
+                  content: rawUrlInfo.content,
+                  contentType: rawUrlInfo.contentType,
+                  originalContent: rawUrlInfo.originalContent,
+                  originalUrl: rawUrlInfo.originalUrl,
+                  sourcemap: rawUrlInfo.sourcemap,
+                };
+              }
               if (firstReference.isInline) {
                 if (firstReference.prev && !firstReference.prev.isInline) {
                   const urlBeforeRedirect =

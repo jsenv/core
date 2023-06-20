@@ -299,6 +299,7 @@ export const createDependencies = (ownerUrlInfo) => {
             return;
           }
         }
+        await sideEffectFileUrlInfo.cook();
         await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
