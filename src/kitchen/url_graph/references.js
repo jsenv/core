@@ -521,10 +521,10 @@ const createReference = ({
     if (!reference.searchParams.has(searchParam)) {
       return [null, null];
     }
-    const newUrlObject = new URL(reference.url);
+    const originalRef = reference.original || reference;
+    const newUrlObject = new URL(originalRef.url);
     const newSearchParams = newUrlObject.searchParams;
     newSearchParams.delete(searchParam);
-    const originalRef = reference || reference.original || reference;
     const referenceWithoutSearchParam = {
       ...originalRef,
       original: originalRef,

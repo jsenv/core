@@ -447,7 +447,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     resolveCookPromise();
   };
-  const cook = memoizeCook(async (urlInfo, contextDuringCook) => {
+  const cookGuard = dev ? debounceCook : memoizeCook;
+  const cook = cookGuard(async (urlInfo, contextDuringCook) => {
     if (!outDirectoryUrl) {
       await _cook(urlInfo, contextDuringCook);
       return;
@@ -500,43 +501,49 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     { operation, ignoreRessourceHint, ignoreDynamicImport } = {},
   ) => {
     const promises = [];
-    const promiseMap = new Map();
+    const urlInfoSet = new Set();
 
     onCookStart = async (urlInfo, cookPromise) => {
+      urlInfoSet.add(urlInfo);
+      console.log(`cook start on ${urlInfo.url}`);
       promises.push(cookPromise);
-      promiseMap.set(urlInfo, cookPromise);
       await cookPromise;
       startCookingDependencies(urlInfo);
     };
 
     const startCookingDependencies = (urlInfo) => {
-      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
         if (referenceToOther.type === "sourcemap_comment") {
           // we don't cook sourcemap reference by sourcemap comments
           // because this is already done in "initTransformations"
-          return;
+          continue;
         }
+
         if (ignoreRessourceHint && referenceToOther.isResourceHint) {
           // we don't cook resource hints
           // because they might refer to resource that will be modified during build
           // It also means something else have to reference that url in order to cook it
           // so that the preload is deleted by "resync_resource_hints.js" otherwise
-          return;
+          continue;
         }
+
         if (
           ignoreDynamicImport &&
           referenceToOther.subtype === "import_dynamic"
         ) {
-          return;
+          continue;
         }
+
         // we use reference.generatedUrl to mimic what a browser would do:
         // do a fetch to the specifier as found in the file
         const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
           referenceToOther,
           true,
         );
-        referencedUrlInfo.cook();
-      });
+        if (!urlInfoSet.has(referencedUrlInfo)) {
+          referencedUrlInfo.cook();
+        }
+      }
     };
 
     const getAllDishesAreCookedPromise = async () => {
@@ -553,7 +560,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         await waitAll();
       };
       await waitAll();
-      promiseMap.clear();
+      urlInfoSet.clear();
     };
 
     startCookingDependencies(urlInfo);
@@ -577,7 +584,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   return kitchen;
 };
 
-const memoizeCook = (cook) => {
+const debounceCook = (cook) => {
   const pendingDishes = new Map();
   return async (urlInfo, context) => {
     const { url, modifiedTimestamp } = urlInfo;
@@ -604,6 +611,24 @@ const memoizeCook = (cook) => {
     } finally {
       pendingDishes.delete(url);
     }
+  };
+};
+
+const memoizeCook = (cook) => {
+  const urlInfoCache = new Map();
+  return async (urlInfo, context) => {
+    const fromCache = urlInfoCache.get(urlInfo);
+    if (fromCache) {
+      await fromCache;
+      return;
+    }
+    let resolveCookPromise;
+    const promise = new Promise((resolve) => {
+      resolveCookPromise = resolve;
+    });
+    urlInfoCache.set(urlInfo, promise);
+    await cook(urlInfo, context);
+    resolveCookPromise();
   };
 };
 
