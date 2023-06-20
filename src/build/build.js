@@ -722,7 +722,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 urlInfo,
                 context,
                 (optimizeReturnValue) => {
-                  urlInfo.transform(optimizeReturnValue);
+                  urlInfo.mutateContent(optimizeReturnValue);
                 },
               );
             },
@@ -1535,7 +1535,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (mutations.length > 0) {
             actions.push(() => {
               mutations.forEach((mutation) => mutation());
-              urlInfo.transform({
+              urlInfo.mutateContent({
                 content: stringifyHtmlAst(htmlAst),
               });
             });
@@ -1621,7 +1621,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               )};\n`,
             );
             const { content, sourcemap } = magicSource.toContentAndSourcemap();
-            serviceWorkerEntryUrlInfo.transform({
+            serviceWorkerEntryUrlInfo.mutateContent({
               content,
               sourcemap,
             });

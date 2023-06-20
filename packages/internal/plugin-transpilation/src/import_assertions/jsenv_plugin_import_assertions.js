@@ -196,7 +196,7 @@ export default stylesheet;`,
       if (!textReference) {
         return null;
       }
-      await textUrlInfo.fetchUrlContent(textUrlInfo);
+      await textUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({
           type: "js_import",

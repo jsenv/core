@@ -58,14 +58,10 @@ export const createDependencies = (ownerUrlInfo) => {
 
   const dependencies = {};
 
-  const startCollecting = async (
-    callback,
-    context = ownerUrlInfo.kitchen.context,
-  ) => {
+  const startCollecting = async (callback) => {
     dependencies.isCollecting = true;
     let prevReferenceToOthersSet = new Set(referenceToOthersSet);
     referenceToOthersSet.clear();
-    dependencies.context = context;
 
     const stopCollecting = () => {
       const prunedUrlInfos = [];
@@ -202,7 +198,7 @@ export const createDependencies = (ownerUrlInfo) => {
       sideEffectFileReference,
       sideEffectFileUrlInfo,
     ) => {
-      ownerUrlInfo.callbacksToConsiderContentReady.push(async () => {
+      ownerUrlInfo.addContentTransformationCallback(async () => {
         await sideEffectFileUrlInfo.cook();
         await prependContent(ownerUrlInfo, sideEffectFileUrlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
@@ -296,7 +292,7 @@ export const createDependencies = (ownerUrlInfo) => {
     const [sideEffectFileReference, sideEffectFileUrlInfo] =
       addSideEffectFileRef();
     for (const entryPointUrlInfo of entryPoints) {
-      dependencies.context.addCallbackToConsiderGraphCooked(async () => {
+      entryPointUrlInfo.addContentTransformationCallback(async () => {
         // do not inject if already there
         for (const referenceToOther of referenceToOthersSet) {
           if (referenceToOther.url === sideEffectFileUrlInfo.url) {
@@ -486,6 +482,7 @@ const createReference = ({
     const referenceRedirected = createReference({
       ...reference,
     });
+    referenceRedirected.specifier = url;
     referenceRedirected.url = url;
     storeReferenceChain(reference, referenceRedirected);
     return referenceRedirected;
@@ -521,23 +518,23 @@ const createReference = ({
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
-    const urlObject = new URL(ownerUrlInfo.url);
-    const { searchParams } = urlObject;
-    if (!searchParams.has(searchParam)) {
+    if (!reference.searchParams.has(searchParam)) {
       return [null, null];
     }
-    searchParams.delete(searchParam);
+    const newUrlObject = new URL(reference.url);
+    const newSearchParams = newUrlObject.searchParams;
+    newSearchParams.delete(searchParam);
     const originalRef = reference || reference.original || reference;
     const referenceWithoutSearchParam = {
       ...originalRef,
       original: originalRef,
-      searchParams,
+      searchParams: newSearchParams,
       data: { ...originalRef.data },
       expectedType,
       specifier: originalRef.specifier
         .replace(`?${searchParam}`, "")
         .replace(`&${searchParam}`, ""),
-      url: normalizeUrl(urlObject.href),
+      url: normalizeUrl(newUrlObject.href),
       generatedSpecifier: null,
       generatedUrl: null,
       filename: null,

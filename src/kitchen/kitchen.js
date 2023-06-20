@@ -243,7 +243,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.urlInfoTransformer = urlInfoTransformer;
 
-  const fetchUrlContent = async (urlInfo, { contextDuringFetch }) => {
+  const fetchUrlContent = async (urlInfo, contextDuringFetch) => {
     try {
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
@@ -357,72 +357,77 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.fetchUrlContent = fetchUrlContent;
 
-  const _cook = async (urlInfo, customContext = {}) => {
-    const dishContext = {
-      ...kitchenContext,
-      ...customContext,
-    };
+  const transformUrlContent = async (urlInfo, contextDuringTransform) => {
+    try {
+      await pluginController.callAsyncHooks(
+        "transformUrlContent",
+        urlInfo,
+        contextDuringTransform,
+        (transformReturnValue) => {
+          urlInfoTransformer.applyTransformations(
+            urlInfo,
+            transformReturnValue,
+          );
+        },
+      );
+    } catch (error) {
+      const transformError = createTransformUrlContentError({
+        pluginController,
+        urlInfo,
+        error,
+      });
+      urlInfo.error = transformError;
+      throw transformError;
+    }
+  };
+  kitchenContext.transformUrlContent = transformUrlContent;
+
+  const finalizeUrlContent = async (urlInfo, contextDuringFinalize) => {
+    try {
+      await urlInfo.applyContentTransformationCallbacks();
+      const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
+        "finalizeUrlContent",
+        urlInfo,
+        contextDuringFinalize,
+      );
+      urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
+      urlInfoTransformer.applyTransformationsEffects(urlInfo);
+    } catch (error) {
+      throw createFinalizeUrlContentError({
+        pluginController,
+        urlInfo,
+        error,
+      });
+    }
+  };
+  kitchenContext.finalizeUrlContent = finalizeUrlContent;
+
+  let onCookStart = () => {};
+  const _cook = async (urlInfo, contextDuringCook) => {
+    let resolveCookPromise;
+    const cookPromise = new Promise((resolve) => {
+      resolveCookPromise = resolve;
+    });
+    onCookStart(urlInfo, cookPromise);
 
     if (!urlInfo.url.startsWith("ignore:")) {
       await urlInfo.dependencies.startCollecting(async () => {
         // "fetchUrlContent" hook
-        await fetchUrlContent(urlInfo, {
-          contextDuringFetch: dishContext,
-        });
+        await urlInfo.fetchUrlContent();
 
         // "transform" hook
-        try {
-          await pluginController.callAsyncHooks(
-            "transformUrlContent",
-            urlInfo,
-            dishContext,
-            (transformReturnValue) => {
-              urlInfoTransformer.applyTransformations(
-                urlInfo,
-                transformReturnValue,
-              );
-            },
-          );
-        } catch (error) {
-          const transformError = createTransformUrlContentError({
-            pluginController,
-            urlInfo,
-            error,
-          });
-          urlInfo.error = transformError;
-          throw transformError;
-        }
+        await urlInfo.transformUrlContent();
 
         // "finalize" hook
-        try {
-          for (const callback of urlInfo.callbacksToConsiderContentReady) {
-            await callback();
-          }
-          urlInfo.callbacksToConsiderContentReady.length = 0;
-
-          const finalizeReturnValue =
-            await pluginController.callAsyncHooksUntil(
-              "finalizeUrlContent",
-              urlInfo,
-              dishContext,
-            );
-          urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
-          urlInfoTransformer.applyTransformationsEffects(urlInfo);
-        } catch (error) {
-          throw createFinalizeUrlContentError({
-            pluginController,
-            urlInfo,
-            error,
-          });
-        }
-      }, dishContext);
+        await urlInfo.finalizeUrlContent();
+      }, contextDuringCook);
     }
 
     // "cooked" hook
     pluginController.callHooks(
       "cooked",
       urlInfo,
-      dishContext,
+      contextDuringCook,
       (cookedReturnValue) => {
         if (typeof cookedReturnValue === "function") {
           const removePrunedCallback = graph.prunedCallbackList.add(
@@ -439,15 +444,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         }
       },
     );
+
+    resolveCookPromise();
   };
-  const cook = memoizeCook(async (urlInfo, context) => {
+  const cook = memoizeCook(async (urlInfo, contextDuringCook) => {
     if (!outDirectoryUrl) {
-      await _cook(urlInfo, context);
+      await _cook(urlInfo, contextDuringCook);
       return;
     }
     // writing result inside ".jsenv" directory (debug purposes)
     try {
-      await _cook(urlInfo, context);
+      await _cook(urlInfo, contextDuringCook);
     } finally {
       const { generatedUrl } = urlInfo;
       if (generatedUrl && generatedUrl.startsWith("file:")) {
@@ -482,6 +489,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   });
   kitchenContext.cook = cook;
 
+  const lastTransformationCallbacks = [];
+  const addLastTransformationCallback = (callback) => {
+    lastTransformationCallbacks.push(callback);
+  };
+  kitchenContext.addLastTransformationCallback = addLastTransformationCallback;
+
   const cookDependencies = async (
     urlInfo,
     { operation, ignoreRessourceHint, ignoreDynamicImport } = {},
@@ -489,26 +502,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     const promises = [];
     const promiseMap = new Map();
 
-    const callbacksToConsiderGraphCooked = [];
-    const baseContext = {
-      addCallbackToConsiderGraphCooked: (callback) => {
-        callbacksToConsiderGraphCooked.push(callback);
-      },
-    };
-
-    const cookOne = (urlInfo) => {
-      const promiseFromData = promiseMap.get(urlInfo);
-      if (promiseFromData) return promiseFromData;
-      const promise = (async () => {
-        await cook(urlInfo, {
-          ...baseContext,
-          cookDuringCook: cookOne,
-        });
-        startCookingDependencies(urlInfo);
-      })();
-      promises.push(promise);
-      promiseMap.set(urlInfo, promise);
-      return promise;
+    onCookStart = async (urlInfo, cookPromise) => {
+      promises.push(cookPromise);
+      promiseMap.set(urlInfo, cookPromise);
+      await cookPromise;
+      startCookingDependencies(urlInfo);
     };
 
     const startCookingDependencies = (urlInfo) => {
@@ -537,7 +535,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           referenceToOther,
           true,
         );
-        cookOne(referencedUrlInfo);
+        referencedUrlInfo.cook();
       });
     };
 
@@ -560,12 +558,14 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     startCookingDependencies(urlInfo);
     await getAllDishesAreCookedPromise();
+    // gather all callbackToConsiderContentReady added after the url is cooked
     await Promise.all(
-      callbacksToConsiderGraphCooked.map(async (callback) => {
+      lastTransformationCallbacks.map(async (callback) => {
         await callback();
       }),
     );
-    callbacksToConsiderGraphCooked.length = 0;
+    lastTransformationCallbacks.length = 0;
+    onCookStart = () => {};
   };
   kitchenContext.cookDependencies = cookDependencies;
 

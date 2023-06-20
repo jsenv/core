@@ -45,6 +45,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
           context.systemJsTranspilation &&
           reference.expectedType === "js_module"
         ) {
+          // reference.subtype = "js_classic";
           return turnIntoJsClassicProxy(reference);
         }
         return null;

@@ -3,15 +3,13 @@
  * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
 
-import { injectQueryParams } from "@jsenv/urls";
+import { urlToFilename, injectQueryParams } from "@jsenv/urls";
 import {
   convertJsModuleToJsClassic,
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 
-export const jsenvPluginJsModuleConversion = ({
-  generateJsClassicFilename,
-}) => {
+export const jsenvPluginJsModuleConversion = () => {
   const isReferencingJsModule = (reference) => {
     if (
       reference.type === "js_import" ||
@@ -28,9 +26,8 @@ export const jsenvPluginJsModuleConversion = ({
 
   const shouldPropagateJsModuleConversion = (reference, context) => {
     if (isReferencingJsModule(reference, context)) {
-      const insideJsClassic = new URL(
-        reference.ownerUrlInfo.url,
-      ).searchParams.has("js_module_fallback");
+      const insideJsClassic =
+        reference.ownerUrlInfo.searchParams.has("js_module_fallback");
       return insideJsClassic;
     }
     return false;
@@ -80,7 +77,7 @@ export const jsenvPluginJsModuleConversion = ({
       if (!jsModuleReference) {
         return null;
       }
-      await jsModuleUrlInfo.fetchUrlContent(jsModuleUrlInfo);
+      await jsModuleUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({
           type: "js_import",
@@ -130,4 +127,26 @@ export const jsenvPluginJsModuleConversion = ({
       };
     },
   };
+};
+
+const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename(url);
+  let [basename, extension] = splitFileExtension(filename);
+  const { searchParams } = new URL(url);
+  if (
+    searchParams.has("as_json_module") ||
+    searchParams.has("as_css_module") ||
+    searchParams.has("as_text_module")
+  ) {
+    extension = ".js";
+  }
+  return `${basename}.nomodule${extension}`;
+};
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };

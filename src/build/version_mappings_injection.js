@@ -75,7 +75,7 @@ export const injectVersionMappingsAsImportmap = async ({
     }),
     "jsenv:versioning",
   );
-  urlInfo.transform({
+  urlInfo.mutateContent({
     content: stringifyHtmlAst(htmlAst),
   });
 };

@@ -16,7 +16,15 @@ export const createUrlGraph = ({
   const prunedUrlInfosCallbackRef = { current: () => {} };
 
   const urlInfoMap = new Map();
-  const getUrlInfo = (url) => urlInfoMap.get(url);
+  const getUrlInfo = (key) => {
+    if (typeof key === "string") {
+      return urlInfoMap.get(key);
+    }
+    if (typeof key === "object" && key && key.url) {
+      return urlInfoMap.get(key.url);
+    }
+    return null;
+  };
   const deleteUrlInfo = (url) => {
     const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
@@ -164,7 +172,6 @@ const createUrlInfo = (url) => {
     content: undefined,
     contentAst: undefined,
     contentFinalized: false,
-    callbacksToConsiderContentReady: [],
 
     sourcemap: null,
     sourcemapIsWrong: false,
@@ -187,6 +194,7 @@ const createUrlInfo = (url) => {
     writable: false,
     value: url,
   });
+  urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.hasDependent = () => {
@@ -262,19 +270,62 @@ const createUrlInfo = (url) => {
     urlInfo.graph.deleteUrlInfo(urlInfo.url);
   };
   urlInfo.cook = (context) => {
+    context = context
+      ? { ...urlInfo.kitchen.context, ...context }
+      : urlInfo.kitchen.context;
     return urlInfo.kitchen.context.cook(urlInfo, context);
   };
   urlInfo.cookDependencies = (context) => {
+    context = context
+      ? { ...urlInfo.kitchen.context, ...context }
+      : urlInfo.kitchen.context;
     return urlInfo.kitchen.context.cookDependencies(urlInfo, context);
   };
   urlInfo.fetchUrlContent = (context) => {
+    context = context
+      ? { ...urlInfo.kitchen.context, ...context }
+      : urlInfo.kitchen.context;
     return urlInfo.kitchen.context.fetchUrlContent(urlInfo, context);
   };
-  urlInfo.transform = (transformations) => {
+  urlInfo.transformUrlContent = (context) => {
+    context = context
+      ? { ...urlInfo.kitchen.context, ...context }
+      : urlInfo.kitchen.context;
+    return urlInfo.kitchen.context.transformUrlContent(urlInfo, context);
+  };
+  urlInfo.finalizeUrlContent = (context) => {
+    context = context
+      ? { ...urlInfo.kitchen.context, ...context }
+      : urlInfo.kitchen.context;
+    return urlInfo.kitchen.context.finalizeUrlContent(urlInfo, context);
+  };
+  urlInfo.mutateContent = (transformations) => {
     return urlInfo.kitchen.context.urlInfoTransformer.applyTransformations(
       urlInfo,
       transformations,
     );
+  };
+
+  const contentTransformationCallbacks = [];
+  urlInfo.addContentTransformationCallback = (callback) => {
+    if (urlInfo.contentFinalized) {
+      if (urlInfo.kitchen.context.dev) {
+        throw new Error(
+          `cannot add a transform callback on content already sent to the browser.
+--- content url ---
+${urlInfo.url}`,
+        );
+      }
+      urlInfo.kitchen.context.addLastTransformationCallback(callback);
+    } else {
+      contentTransformationCallbacks.push(callback);
+    }
+  };
+  urlInfo.applyContentTransformationCallbacks = async () => {
+    for (const callback of contentTransformationCallbacks) {
+      await callback();
+    }
+    contentTransformationCallbacks.length = 0;
   };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
