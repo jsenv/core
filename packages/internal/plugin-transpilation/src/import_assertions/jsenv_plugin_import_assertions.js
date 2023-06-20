@@ -121,8 +121,8 @@ const jsenvPluginAsModules = () => {
           specifier: jsonReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !jsonUrlInfo.hasDependent()) {
-        jsonUrlInfo.deleteFromGraph();
+      } else if (context.build) {
+        jsonReference.remove();
       }
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
@@ -159,8 +159,8 @@ const jsenvPluginAsModules = () => {
           specifier: cssReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !cssUrlInfo.hasDependent()) {
-        cssUrlInfo.deleteFromGraph();
+      } else if (context.build) {
+        cssReference.remove();
       }
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
@@ -204,8 +204,8 @@ export default stylesheet;`,
           specifier: textReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !textUrlInfo.hasDependent()) {
-        textUrlInfo.deleteFromGraph();
+      } else if (context.build) {
+        textReference.remove();
       }
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals

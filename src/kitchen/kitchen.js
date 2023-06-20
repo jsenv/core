@@ -503,7 +503,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     onCookStart = async (urlInfo, cookPromise) => {
       urlInfoSet.add(urlInfo);
-      console.log(`cook start on ${urlInfo.url}`);
       promises.push(cookPromise);
       await cookPromise;
       startCookingDependencies(urlInfo);

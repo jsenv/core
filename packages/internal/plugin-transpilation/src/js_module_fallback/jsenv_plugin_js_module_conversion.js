@@ -85,8 +85,8 @@ export const jsenvPluginJsModuleConversion = () => {
           specifier: jsModuleReference.url,
           expectedType: "js_module",
         });
-      } else if (context.build && !jsModuleUrlInfo.hasDependent()) {
-        jsModuleUrlInfo.deleteFromGraph();
+      } else if (context.build) {
+        jsModuleReference.remove();
       }
 
       let outputFormat;

@@ -41,12 +41,12 @@ const test = async ({ name, expectedUrl, ...rest }) => {
 };
 
 // can use <script type="module">
-// await test({
-//   name: "0_js_module",
-//   expectedUrl: "/js/main.js",
-//   runtimeCompat: { chrome: "89" },
-//   plugins: [jsenvPluginBundling()],
-// });
+await test({
+  name: "0_js_module",
+  expectedUrl: "/js/main.js",
+  runtimeCompat: { chrome: "89" },
+  plugins: [jsenvPluginBundling()],
+});
 // cannot use <script type="module">
 await test({
   name: "1_js_module_fallback",

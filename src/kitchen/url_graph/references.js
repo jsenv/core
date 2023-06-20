@@ -428,9 +428,10 @@ const createReference = ({
     return reference.generatedSpecifier;
   };
 
-  reference.redirect = (url) => {
+  reference.redirect = (url, props = {}) => {
     const referenceRedirected = createReference({
       ...reference,
+      ...props,
     });
     referenceRedirected.specifier = url;
     referenceRedirected.url = url;
@@ -472,28 +473,34 @@ const createReference = ({
     if (!reference.searchParams.has(searchParam)) {
       return null;
     }
+
     const originalRef = reference.original || reference;
+    const newSpecifier = originalRef.specifier
+      .replace(`?${searchParam}`, "")
+      .replace(`&${searchParam}`, "");
     const newUrlObject = new URL(originalRef.url);
     const newSearchParams = newUrlObject.searchParams;
     newSearchParams.delete(searchParam);
+    const newUrl = normalizeUrl(newUrlObject.href);
     const referenceWithoutSearchParam = ownerUrlInfo.dependencies.prepare({
       ...originalRef,
       isImplicit: true,
       original: originalRef,
-      searchParams: newSearchParams,
       data: { ...originalRef.data },
       expectedType,
-      specifier: originalRef.specifier
-        .replace(`?${searchParam}`, "")
-        .replace(`&${searchParam}`, ""),
-      url: normalizeUrl(newUrlObject.href),
+      specifier: newSpecifier,
+      url: newUrl,
+      searchParams: newSearchParams,
       generatedSpecifier: null,
       generatedUrl: null,
       filename: null,
     });
+    storeReferenceChain(reference, referenceWithoutSearchParam);
     addDependency(referenceWithoutSearchParam);
     return referenceWithoutSearchParam;
   };
+
+  reference.remove = () => removeDependency(reference);
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
   return reference;
