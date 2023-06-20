@@ -73,7 +73,7 @@ const parseAndTransformHtmlReferences = async (
       "preload",
       "modulepreload",
     ].includes(subtype);
-    const [reference] = urlInfo.dependencies.found({
+    const reference = urlInfo.dependencies.found({
       node,
       type,
       subtype,
@@ -143,7 +143,7 @@ const parseAndTransformHtmlReferences = async (
       columnEnd,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const [inlineReference, inlineUrlInfo] = urlInfo.dependencies.foundInline({
+    const inlineReference = urlInfo.dependencies.foundInline({
       node,
       type,
       expectedType,
@@ -190,7 +190,7 @@ const parseAndTransformHtmlReferences = async (
     actions.push(async () => {
       await cookInlineContent({
         context,
-        inlineContentUrlInfo: inlineUrlInfo,
+        inlineContentUrlInfo: inlineReference.urlInfo,
       });
       mutations.push(() => {
         if (hotAccept) {
@@ -199,7 +199,7 @@ const parseAndTransformHtmlReferences = async (
             "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
           });
         } else {
-          setHtmlNodeText(node, inlineUrlInfo.content, {
+          setHtmlNodeText(node, inlineReference.urlInfo.content, {
             indentation: false, // indentation would decrease stack trace precision
           });
           setHtmlNodeAttributes(node, {

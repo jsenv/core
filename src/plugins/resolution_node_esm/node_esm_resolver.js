@@ -8,7 +8,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { bufferToEtag } from "@jsenv/filesystem";
 import {
   applyNodeEsmResolution,
   readCustomConditionsFromProcessArgs,
@@ -113,18 +112,16 @@ const addRelationshipWithPackageJson = ({
       return;
     }
   }
-  const [, packageJsonUrlInfo] = ownerUrlInfo.dependencies.inject({
+  const packageJsonReference = ownerUrlInfo.dependencies.inject({
     type: "package_json",
     subtype: field,
     specifier: packageJsonUrl,
     isImplicit: true,
     hasVersioningEffect,
   });
-  if (packageJsonUrlInfo.type === undefined) {
+  if (packageJsonReference.urlInfo.type === undefined) {
     const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl));
-    packageJsonUrlInfo.type = "json";
-    packageJsonUrlInfo.content = String(packageJsonContentAsBuffer);
-    packageJsonUrlInfo.originalContentEtag = packageJsonUrlInfo.contentEtag =
-      bufferToEtag(packageJsonContentAsBuffer);
+    packageJsonReference.urlInfo.type = "json";
+    packageJsonReference.urlInfo.content = String(packageJsonContentAsBuffer);
   }
 };

@@ -175,7 +175,7 @@ export const createUrlInfoTransformer = ({
     });
     if (sourcemapFound) {
       const { type, subtype, line, column, specifier } = sourcemapFound;
-      const [, sourcemapUrlInfo] = urlInfo.dependencies.found({
+      const sourcemapReference = urlInfo.dependencies.found({
         type,
         subtype,
         expectedType: "sourcemap",
@@ -184,8 +184,8 @@ export const createUrlInfoTransformer = ({
         specifierColumn: column,
       });
       try {
-        await sourcemapUrlInfo.cook();
-        const sourcemapRaw = JSON.parse(sourcemapUrlInfo.content);
+        await sourcemapReference.urlInfo.cook();
+        const sourcemapRaw = JSON.parse(sourcemapReference.urlInfo.content);
         const sourcemap = normalizeSourcemap(urlInfo, sourcemapRaw);
         urlInfo.sourcemap = sourcemap;
         return;
@@ -281,7 +281,7 @@ export const createUrlInfoTransformer = ({
       }
     }
     if (!sourcemapReference) {
-      const result = urlInfo.dependencies.inject({
+      sourcemapReference = urlInfo.dependencies.inject({
         trace: {
           message: `sourcemap comment placeholder`,
           url: urlInfo.url,
@@ -292,7 +292,6 @@ export const createUrlInfoTransformer = ({
         specifier: urlInfo.sourcemapGeneratedUrl,
         isInline: sourcemaps === "inline",
       });
-      sourcemapReference = result[0];
     }
     const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url);
 

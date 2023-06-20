@@ -38,7 +38,7 @@ export const jsenvPluginImportMetaHot = () => {
             if (existingReference) {
               return existingReference.url;
             }
-            const [reference] = htmlUrlInfo.dependencies.found({
+            const reference = htmlUrlInfo.dependencies.found({
               type,
               specifier,
             });
@@ -100,7 +100,7 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
 // which is likely not well supported by babel
 const injectImportMetaHot = (urlInfo, importMetaHotClientFileUrl) => {
-  const [importMetaHotClientFileReference] = urlInfo.dependencies.inject({
+  const importMetaHotClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
     expectedType: "js_module",

@@ -66,18 +66,18 @@ export const jsenvPluginJsModuleConversion = () => {
       return null;
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const [jsModuleReference, jsModuleUrlInfo] =
-        urlInfo.firstReference.getWithoutSearchParam({
-          searchParam: "js_module_fallback",
-          // override the expectedType to "js_module"
-          // because when there is ?js_module_fallback it means the underlying resource
-          // is a js_module
-          expectedType: "js_module",
-        });
+      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam({
+        searchParam: "js_module_fallback",
+        // override the expectedType to "js_module"
+        // because when there is ?js_module_fallback it means the underlying resource
+        // is a js_module
+        expectedType: "js_module",
+      });
       if (!jsModuleReference) {
         return null;
       }
-      await jsModuleUrlInfo.fetchUrlContent();
+      const jsModuleUrlInfo = jsModuleReference.urlInfo;
+      await jsModuleReference.urlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({
           type: "js_import",

@@ -53,13 +53,13 @@ export const jsenvPluginPreact = ({
     name: "jsenv:preact",
     appliesDuring: "*",
     resolveReference: {
-      js_import: (reference, context) => {
+      js_import: (reference) => {
         if (
           reference.specifier === "react" ||
           reference.specifier === "react-dom"
         ) {
           reference.specifier = "preact/compat";
-          return context.resolveReference(reference)[0].url;
+          // return context.resolveReference(reference).url;
         }
         return null;
       },
@@ -73,7 +73,7 @@ export const jsenvPluginPreact = ({
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [preactDevtoolsReference] = urlInfo.dependencies.inject({
+        const preactDevtoolsReference = urlInfo.dependencies.inject({
           type: "js_import",
           expectedType: "js_module",
           specifier: context.dev ? "preact/debug" : "preact/devtools",
@@ -149,7 +149,7 @@ export const jsenvPluginPreact = ({
             let index = code.indexOf(importSpecifier);
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1);
-              const [injectedJsImportReference] = urlInfo.dependencies.inject({
+              const injectedJsImportReference = urlInfo.dependencies.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier,
@@ -167,7 +167,7 @@ export const jsenvPluginPreact = ({
           const hasReg = /\$RefreshReg\$\(/.test(code);
           const hasSig = /\$RefreshSig\$\(/.test(code);
           if (hasReg || hasSig) {
-            const [preactRefreshClientReference] = urlInfo.dependencies.inject({
+            const preactRefreshClientReference = urlInfo.dependencies.inject({
               type: "js_import",
               expectedType: "js_module",
               specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",

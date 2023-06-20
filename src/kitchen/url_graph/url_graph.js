@@ -1,10 +1,7 @@
 import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
-import {
-  applyReferenceEffectsOnUrlInfo,
-  createDependencies,
-} from "./references.js";
+import { createDependencies } from "./references.js";
 
 export const createUrlGraph = ({
   rootDirectoryUrl,
@@ -48,9 +45,6 @@ export const createUrlGraph = ({
     if (existingUrlInfo) return existingUrlInfo;
     const referencedUrlInfo = createUrlInfo(referencedUrl);
     addUrlInfo(referencedUrlInfo);
-    if (referencedUrlInfo.originalUrl === undefined) {
-      applyReferenceEffectsOnUrlInfo(reference, referencedUrlInfo);
-    }
     createUrlInfoCallbackRef.current(referencedUrlInfo);
     return referencedUrlInfo;
   };

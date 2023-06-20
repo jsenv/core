@@ -258,15 +258,14 @@ export const createFileService = ({
       reference = kitchen.graph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
-      const entryPoint = kitchen.graph.rootUrlInfo.dependencies.prepare({
+      reference = kitchen.graph.rootUrlInfo.dependencies.prepare({
         trace: { message: parentUrl || sourceDirectoryUrl },
         parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
         specifier: request.resource,
       });
-      reference = entryPoint[0];
     }
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    const urlInfo = reference.urlInfo;
     const ifNoneMatch = request.headers["if-none-match"];
     const urlInfoTargetedByCache = urlInfo.getParentIfInline();
 

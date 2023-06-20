@@ -23,7 +23,7 @@ const parseAndTransformCssUrls = async (urlInfo) => {
   const actions = [];
   const magicSource = createMagicSource(urlInfo.content);
   for (const cssUrl of cssUrls) {
-    const [reference] = urlInfo.dependencies.found({
+    const reference = urlInfo.dependencies.found({
       type: cssUrl.type,
       specifier: cssUrl.specifier,
       specifierStart: cssUrl.start,

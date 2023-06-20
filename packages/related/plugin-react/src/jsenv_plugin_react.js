@@ -129,7 +129,7 @@ const jsenvPluginJsxAndRefresh = ({
             let index = code.indexOf(importSpecifier);
             while (index > -1) {
               const specifier = importSpecifier.slice(1, -1);
-              const [injectedJsImportReference] = urlInfo.dependencies.inject({
+              const injectedJsImportReference = urlInfo.dependencies.inject({
                 type: "js_import",
                 expectedType: "js_module",
                 specifier,
@@ -147,7 +147,7 @@ const jsenvPluginJsxAndRefresh = ({
           const hasReg = /\$RefreshReg\$\(/.test(code);
           const hasSig = /\$RefreshSig\$\(/.test(code);
           if (hasReg || hasSig) {
-            const [reactRefreshClientReference] = urlInfo.dependencies.inject({
+            const reactRefreshClientReference = urlInfo.dependencies.inject({
               type: "js_import",
               expectedType: "js_module",
               specifier: "@jsenv/plugin-react/src/client/react_refresh.js",

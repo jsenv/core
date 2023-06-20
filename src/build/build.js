@@ -392,14 +392,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
         await rawRootUrlInfo.dependencies.startCollecting(() => {
           Object.keys(entryPoints).forEach((key) => {
-            const [, entryUrlInfo] = rawRootUrlInfo.dependencies.found({
+            const entryReference = rawRootUrlInfo.dependencies.found({
               trace: { message: `"${key}" in entryPoints parameter` },
               isEntryPoint: true,
               type: "entry_point",
               specifier: key,
               filename: entryPoints[key],
             });
-            entryUrls.push(entryUrlInfo.url);
+            entryUrls.push(entryReference.url);
           });
         });
         await rawRootUrlInfo.cookDependencies({
@@ -700,7 +700,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // - happens for "js_module_fallback" injecting "s.js"
               if (firstReference.injected) {
                 const originalRef = firstReference.original || firstReference;
-                const [, rawUrlInfo] =
+                const rawReference =
                   rawKitchen.graph.rootUrlInfo.dependencies.inject({
                     type: originalRef.type,
                     expectedType: originalRef.expectedType,
@@ -710,14 +710,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     specifierStart: originalRef.specifierStart,
                     specifierEnd: originalRef.specifierEnd,
                   });
-                await rawUrlInfo.cook();
+                await rawReference.urlInfo.cook();
                 return {
-                  type: rawUrlInfo.type,
-                  content: rawUrlInfo.content,
-                  contentType: rawUrlInfo.contentType,
-                  originalContent: rawUrlInfo.originalContent,
-                  originalUrl: rawUrlInfo.originalUrl,
-                  sourcemap: rawUrlInfo.sourcemap,
+                  type: rawReference.urlInfo.type,
+                  content: rawReference.urlInfo.content,
+                  contentType: rawReference.urlInfo.contentType,
+                  originalContent: rawReference.urlInfo.originalContent,
+                  originalUrl: rawReference.urlInfo.originalUrl,
+                  sourcemap: rawReference.urlInfo.sourcemap,
                 };
               }
               if (firstReference.isInline) {
@@ -984,15 +984,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
           await finalRootUrlInfo.dependencies.startCollecting(() => {
             entryUrls.forEach((entryUrl) => {
-              const [, finalEntryUrlInfo] = finalRootUrlInfo.dependencies.found(
-                {
-                  trace: { message: `entryPoint` },
-                  isEntryPoint: true,
-                  type: "entry_point",
-                  specifier: entryUrl,
-                },
-              );
-              finalEntryUrls.push(finalEntryUrlInfo.url);
+              const entryReference = finalRootUrlInfo.dependencies.found({
+                trace: { message: `entryPoint` },
+                isEntryPoint: true,
+                type: "entry_point",
+                specifier: entryUrl,
+              });
+              finalEntryUrls.push(entryReference.url);
             });
           });
           await finalRootUrlInfo.cookDependencies({

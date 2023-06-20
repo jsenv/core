@@ -16,7 +16,7 @@ const parseAndTransformWebmanifestUrls = async (urlInfo) => {
   const actions = [];
   const { icons = [] } = manifest;
   icons.forEach((icon) => {
-    const [iconReference] = urlInfo.dependencies.found({
+    const iconReference = urlInfo.dependencies.found({
       type: "webmanifest_icon_src",
       specifier: icon.src,
     });

@@ -4,55 +4,6 @@ import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
-export const applyReferenceEffectsOnUrlInfo = (
-  reference,
-  referencedUrlInfo,
-) => {
-  referencedUrlInfo.firstReference = reference;
-  referencedUrlInfo.originalUrl =
-    referencedUrlInfo.originalUrl || reference.url;
-
-  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
-    referencedUrlInfo.isEntryPoint = true;
-  }
-  Object.assign(referencedUrlInfo.data, reference.data);
-  Object.assign(referencedUrlInfo.timing, reference.timing);
-  if (reference.injected) {
-    referencedUrlInfo.injected = true;
-  }
-  if (reference.filename && !referencedUrlInfo.filename) {
-    referencedUrlInfo.filename = reference.filename;
-  }
-  if (reference.isInline) {
-    referencedUrlInfo.isInline = true;
-    referencedUrlInfo.inlineUrlSite = {
-      url: reference.ownerUrlInfo.url,
-      content: reference.isOriginalPosition
-        ? reference.ownerUrlInfo.originalContent
-        : reference.ownerUrlInfo.content,
-      line: reference.specifierLine,
-      column: reference.specifierColumn,
-    };
-    referencedUrlInfo.contentType = reference.contentType;
-    referencedUrlInfo.originalContent = referencedUrlInfo.kitchen.context.build
-      ? referencedUrlInfo.originalContent === undefined
-        ? reference.content
-        : referencedUrlInfo.originalContent
-      : reference.content;
-    referencedUrlInfo.content = reference.content;
-  }
-
-  if (reference.debug) {
-    referencedUrlInfo.debug = true;
-  }
-  if (reference.expectedType) {
-    referencedUrlInfo.typeHint = reference.expectedType;
-  }
-  if (reference.expectedSubtype) {
-    referencedUrlInfo.subtypeHint = reference.expectedSubtype;
-  }
-};
-
 export const createDependencies = (ownerUrlInfo) => {
   const { referenceToOthersSet } = ownerUrlInfo;
 
@@ -120,9 +71,10 @@ export const createDependencies = (ownerUrlInfo) => {
       ownerUrlInfo,
       ...props,
     });
-    const [reference, referencedUrlInfo] =
-      ownerUrlInfo.kitchen.context.resolveReference(originalReference);
-    return [reference, referencedUrlInfo];
+    const reference = originalReference.resolve();
+    const urlInfo = ownerUrlInfo.kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
+    return reference;
   };
 
   const found = ({ trace, ...rest }) => {
@@ -135,12 +87,12 @@ export const createDependencies = (ownerUrlInfo) => {
         }),
       );
     }
-    const [ref, referencedUrlInfo] = prepare({
+    const reference = prepare({
       trace,
       ...rest,
     });
-    addDependency(ref);
-    return [ref, referencedUrlInfo];
+    addDependency(reference);
+    return reference;
   };
   const foundInline = ({
     isOriginalPosition,
@@ -154,7 +106,7 @@ export const createDependencies = (ownerUrlInfo) => {
     const parentContent = isOriginalPosition
       ? ownerUrlInfo.originalContent
       : ownerUrlInfo.content;
-    const [ref, referencedUrlInfo] = prepare({
+    const reference = prepare({
       trace: traceFromUrlSite({
         url: parentUrl,
         content: parentContent,
@@ -167,8 +119,8 @@ export const createDependencies = (ownerUrlInfo) => {
       isInline: true,
       ...rest,
     });
-    addDependency(ref);
-    return [ref, referencedUrlInfo];
+    addDependency(reference);
+    return reference;
   };
   // side effect file
   const foundSideEffectFile = async ({ sideEffectFileUrl, trace, ...rest }) => {
@@ -182,7 +134,7 @@ export const createDependencies = (ownerUrlInfo) => {
     }
 
     const addSideEffectFileRef = () => {
-      const [ref, referencedUrlInfo] = prepare({
+      const reference = prepare({
         trace,
         type: "side_effect_file",
         isImplicit: true,
@@ -190,27 +142,24 @@ export const createDependencies = (ownerUrlInfo) => {
         specifier: sideEffectFileUrl,
         ...rest,
       });
-      addDependency(ref);
-      return [ref, referencedUrlInfo];
+      addDependency(reference);
+      return reference;
     };
 
-    const injectAsBannerCodeBeforeFinalize = (
-      sideEffectFileReference,
-      sideEffectFileUrlInfo,
-    ) => {
+    const injectAsBannerCodeBeforeFinalize = (sideEffectFileReference) => {
       ownerUrlInfo.addContentTransformationCallback(async () => {
-        await sideEffectFileUrlInfo.cook();
-        await prependContent(ownerUrlInfo, sideEffectFileUrlInfo);
+        await sideEffectFileReference.urlInfo.cook();
+        await prependContent(ownerUrlInfo, sideEffectFileReference.urlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
           specifier: sideEffectFileReference.generatedSpecifier,
-          content: sideEffectFileUrlInfo.content,
-          contentType: sideEffectFileUrlInfo.contentType,
+          content: sideEffectFileReference.urlInfo.content,
+          contentType: sideEffectFileReference.urlInfo.contentType,
           line: 0,
           column: 0,
         });
       });
-      return [sideEffectFileReference, sideEffectFileUrlInfo];
+      return sideEffectFileReference;
     };
 
     // When possible we inject code inside the file in the HTML
@@ -218,12 +167,8 @@ export const createDependencies = (ownerUrlInfo) => {
 
     // Case #1: Not possible to inject in other files -> inject as banner code
     if (!["js_classic", "js_module", "css"].includes(ownerUrlInfo.type)) {
-      const [sideEffectFileReference, sideEffectFileUrlInfo] =
-        addSideEffectFileRef();
-      return injectAsBannerCodeBeforeFinalize(
-        sideEffectFileReference,
-        sideEffectFileUrlInfo,
-      );
+      const sideEffectFileReference = addSideEffectFileRef();
+      return injectAsBannerCodeBeforeFinalize(sideEffectFileReference);
     }
 
     // Case #2: During dev
@@ -237,13 +182,9 @@ export const createDependencies = (ownerUrlInfo) => {
       const urlsBeforeInjection = Array.from(
         ownerUrlInfo.graph.urlInfoMap.keys(),
       );
-      const [sideEffectFileReference, sideEffectFileUrlInfo] =
-        addSideEffectFileRef();
+      const sideEffectFileReference = addSideEffectFileRef();
       if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
-        return injectAsBannerCodeBeforeFinalize(
-          sideEffectFileReference,
-          sideEffectFileUrlInfo,
-        );
+        return injectAsBannerCodeBeforeFinalize(sideEffectFileReference);
       }
       const isReferencingSideEffectFile = (urlInfo) => {
         for (const referenceToOther of urlInfo.referenceToOthersSet) {
@@ -268,45 +209,40 @@ export const createDependencies = (ownerUrlInfo) => {
         if (
           !selfOrAncestorIsReferencingSideEffectFile(referenceFromOther.url)
         ) {
-          return injectAsBannerCodeBeforeFinalize(
-            sideEffectFileReference,
-            sideEffectFileUrlInfo,
-          );
+          return injectAsBannerCodeBeforeFinalize(sideEffectFileReference);
         }
       }
-      return [sideEffectFileReference, sideEffectFileUrlInfo];
+      return sideEffectFileReference;
     }
 
     // Case #3: During build
     // during build, files are not executed so it's
     // possible to inject reference when discovering a side effect file
     if (ownerUrlInfo.isEntryPoint) {
-      const [sideEffectFileReference, sideEffectFileUrlInfo] =
-        addSideEffectFileRef();
-      return injectAsBannerCodeBeforeFinalize(
-        sideEffectFileReference,
-        sideEffectFileUrlInfo,
-      );
+      const sideEffectFileReference = addSideEffectFileRef();
+      return injectAsBannerCodeBeforeFinalize(sideEffectFileReference);
     }
     const entryPoints = ownerUrlInfo.graph.getEntryPoints();
-    const [sideEffectFileReference, sideEffectFileUrlInfo] =
-      addSideEffectFileRef();
+    const sideEffectFileReference = addSideEffectFileRef();
     for (const entryPointUrlInfo of entryPoints) {
       entryPointUrlInfo.addContentTransformationCallback(async () => {
         // do not inject if already there
         for (const referenceToOther of entryPointUrlInfo.referenceToOthersSet) {
-          if (referenceToOther.url === sideEffectFileUrlInfo.url) {
+          if (referenceToOther.url === sideEffectFileReference.url) {
             return;
           }
         }
-        await sideEffectFileUrlInfo.cook();
-        await prependContent(entryPointUrlInfo, sideEffectFileUrlInfo);
+        await sideEffectFileReference.urlInfo.cook();
+        await prependContent(
+          entryPointUrlInfo,
+          sideEffectFileReference.urlInfo,
+        );
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
           specifier: sideEffectFileReference.generatedSpecifier,
           ownerUrlInfo: entryPointUrlInfo,
-          content: sideEffectFileUrlInfo.content,
-          contentType: sideEffectFileUrlInfo.contentType,
+          content: sideEffectFileReference.urlInfo.content,
+          contentType: sideEffectFileReference.urlInfo.contentType,
           // ideally get the correct line and column
           // (for js it's 0, but for html it's different)
           line: 0,
@@ -314,7 +250,7 @@ export const createDependencies = (ownerUrlInfo) => {
         });
       });
     }
-    return [sideEffectFileReference, sideEffectFileUrlInfo];
+    return sideEffectFileReference;
   };
 
   const inject = ({ trace, ...rest }) => {
@@ -326,13 +262,13 @@ export const createDependencies = (ownerUrlInfo) => {
         column,
       });
     }
-    const [ref, referencedUrlInfo] = prepare({
+    const reference = prepare({
       trace,
       injected: true,
       ...rest,
     });
-    addDependency(ref);
-    return [ref, referencedUrlInfo];
+    addDependency(reference);
+    return reference;
   };
 
   Object.assign(dependencies, {
@@ -407,6 +343,9 @@ const createReference = ({
   leadsToADirectory = false,
   debug = false,
   prev = null,
+  url = null,
+  urlInfo = null,
+  searchParams = null,
 }) => {
   if (typeof specifier !== "string") {
     if (specifier instanceof URL) {
@@ -423,8 +362,9 @@ const createReference = ({
     data,
     node,
     trace,
-    url: null,
-    searchParams: null,
+    url,
+    urlInfo,
+    searchParams,
     generatedUrl: null,
     generatedSpecifier: null,
     type,
@@ -461,6 +401,15 @@ const createReference = ({
     leadsToADirectory,
     mutation: null,
     debug,
+  };
+
+  reference.resolve = () => {
+    if (reference.url) {
+      return reference;
+    }
+    const resolvedReference =
+      reference.ownerUrlInfo.kitchen.context.resolveReference(reference);
+    return resolvedReference;
   };
 
   // "formatReferencedUrl" can be async BUT this is an exception
@@ -504,7 +453,7 @@ const createReference = ({
       line,
       column,
     });
-    const [inlineCopy, inlineUrlInfo] = ownerUrlInfo.dependencies.prepare({
+    const inlineCopy = ownerUrlInfo.dependencies.prepare({
       ...inlineProps,
       specifierLine: line,
       specifierColumn: column,
@@ -514,20 +463,22 @@ const createReference = ({
       prev: reference,
       ...props,
     });
+    // inlineUrlInfo.isInline = true;
     replaceDependency(reference, inlineCopy);
-    return [inlineCopy, inlineUrlInfo];
+    return inlineCopy;
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
     if (!reference.searchParams.has(searchParam)) {
-      return [null, null];
+      return null;
     }
     const originalRef = reference.original || reference;
     const newUrlObject = new URL(originalRef.url);
     const newSearchParams = newUrlObject.searchParams;
     newSearchParams.delete(searchParam);
-    const referenceWithoutSearchParam = {
+    const referenceWithoutSearchParam = ownerUrlInfo.dependencies.prepare({
       ...originalRef,
+      isImplicit: true,
       original: originalRef,
       searchParams: newSearchParams,
       data: { ...originalRef.data },
@@ -539,11 +490,9 @@ const createReference = ({
       generatedSpecifier: null,
       generatedUrl: null,
       filename: null,
-    };
-    const urlInfoWithoutSearchParam = ownerUrlInfo.graph.reuseOrCreateUrlInfo(
-      referenceWithoutSearchParam,
-    );
-    return [referenceWithoutSearchParam, urlInfoWithoutSearchParam];
+    });
+    addDependency(referenceWithoutSearchParam);
+    return referenceWithoutSearchParam;
   };
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
@@ -593,8 +542,9 @@ ${ownerUrlInfo.url}`,
     }
   }
 
-  const referencedUrlInfo = ownerUrlInfo.graph.reuseOrCreateUrlInfo(reference);
+  const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.add(reference);
+  applyReferenceEffectsOnUrlInfo(reference);
 };
 
 const removeDependency = (reference) => {
@@ -614,15 +564,6 @@ ${ownerUrlInfo.url}`,
     throw new Error(`reference not found in ${ownerUrlInfo.url}`);
   }
 
-  const { dependencies } = ownerUrlInfo;
-  if (dependencies.isCollecting) {
-    // if this function is called while collecting urlInfo references
-    // there is no need to update referenceToOthersSet + referenceFromOthersSet
-    // because it will be done at the end of reference collection
-    referenceToOthersSet.delete(reference);
-    return;
-  }
-
   if (reference.isImplicit && !reference.isInline) {
     let hasAnOtherImplicitRef = false;
     for (const referenceToOther of referenceToOthersSet) {
@@ -639,20 +580,34 @@ ${ownerUrlInfo.url}`,
     }
   }
 
-  let hasAnOtherRef = false;
+  referenceToOthersSet.delete(reference);
+
+  const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
+  referencedUrlInfo.referenceFromOthersSet.delete(reference);
+
+  let firstOtherRef;
   for (const referenceToOther of referenceToOthersSet) {
-    if (referenceToOther.url === reference.url) {
-      hasAnOtherRef = true;
+    if (
+      referenceToOther.url === reference.url &&
+      !referenceToOther.isResourceHint
+    ) {
+      firstOtherRef = referenceToOther;
       break;
     }
   }
-  referenceToOthersSet.delete(reference);
-  if (!hasAnOtherRef) {
-    const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
-    referencedUrlInfo.referenceFromOthersSet.delete(reference);
-    if (!referencedUrlInfo.isUsed()) {
-      referencedUrlInfo.deleteFromGraph();
+  if (firstOtherRef) {
+    // either applying new ref should override old ref
+    // or we should first remove effects before adding new ones
+    // for now we just set firstReference to null
+    if (reference === referencedUrlInfo.firstReference) {
+      referencedUrlInfo.firstReference = null;
+      applyReferenceEffectsOnUrlInfo(firstOtherRef);
     }
+  } else if (referencedUrlInfo.isUsed()) {
+    // ideally we should remove reference effects
+    referencedUrlInfo.firstReference = null;
+  } else {
+    referencedUrlInfo.deleteFromGraph();
   }
 };
 
@@ -664,20 +619,6 @@ const replaceDependency = (reference, newReference) => {
     if (!referenceToOthersSet.has(reference)) {
       throw new Error(`reference not found in ${ownerUrlInfo.url}`);
     }
-    const { dependencies } = ownerUrlInfo;
-    if (dependencies.isCollecting) {
-      // if this function is called while collecting urlInfo references
-      // there is no need to update referenceToOthersSet + referenceFromOthersSet
-      // because it will be done at the end of reference collection
-      referenceToOthersSet.delete(reference);
-      referenceToOthersSet.add(newReference);
-      storeReferenceChain(reference, newReference);
-      return;
-    }
-    removeDependency(reference);
-    addDependency(newReference);
-    storeReferenceChain(reference, newReference);
-    return;
   }
   removeDependency(reference);
   addDependency(newReference);
@@ -766,4 +707,54 @@ const getInlineReferenceProps = (
     column,
     ...rest,
   };
+};
+
+const applyReferenceEffectsOnUrlInfo = (reference) => {
+  const referencedUrlInfo = reference.urlInfo;
+  if (referencedUrlInfo.firstReference) {
+    return;
+  }
+  referencedUrlInfo.firstReference = reference;
+  referencedUrlInfo.originalUrl =
+    referencedUrlInfo.originalUrl || reference.url;
+
+  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
+    referencedUrlInfo.isEntryPoint = true;
+  }
+  Object.assign(referencedUrlInfo.data, reference.data);
+  Object.assign(referencedUrlInfo.timing, reference.timing);
+  if (reference.injected) {
+    referencedUrlInfo.injected = true;
+  }
+  if (reference.filename && !referencedUrlInfo.filename) {
+    referencedUrlInfo.filename = reference.filename;
+  }
+  if (reference.isInline) {
+    referencedUrlInfo.isInline = true;
+    referencedUrlInfo.inlineUrlSite = {
+      url: reference.ownerUrlInfo.url,
+      content: reference.isOriginalPosition
+        ? reference.ownerUrlInfo.originalContent
+        : reference.ownerUrlInfo.content,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
+    };
+    referencedUrlInfo.contentType = reference.contentType;
+    referencedUrlInfo.originalContent = referencedUrlInfo.kitchen.context.build
+      ? referencedUrlInfo.originalContent === undefined
+        ? reference.content
+        : referencedUrlInfo.originalContent
+      : reference.content;
+    referencedUrlInfo.content = reference.content;
+  }
+
+  if (reference.debug) {
+    referencedUrlInfo.debug = true;
+  }
+  if (reference.expectedType) {
+    referencedUrlInfo.typeHint = reference.expectedType;
+  }
+  if (reference.expectedSubtype) {
+    referencedUrlInfo.subtypeHint = reference.expectedSubtype;
+  }
 };

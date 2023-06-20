@@ -105,14 +105,14 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const [jsonReference, jsonUrlInfo] =
-        urlInfo.firstReference.getWithoutSearchParam({
-          searchParam: "as_json_module",
-          expectedType: "json",
-        });
+      const jsonReference = urlInfo.firstReference.getWithoutSearchParam({
+        searchParam: "as_json_module",
+        expectedType: "json",
+      });
       if (!jsonReference) {
         return null;
       }
+      const jsonUrlInfo = jsonReference.urlInfo;
       await jsonUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({
@@ -143,14 +143,14 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const [cssReference, cssUrlInfo] =
-        urlInfo.firstReference.getWithoutSearchParam({
-          searchParam: "as_css_module",
-          expectedType: "css",
-        });
+      const cssReference = urlInfo.firstReference.getWithoutSearchParam({
+        searchParam: "as_css_module",
+        expectedType: "css",
+      });
       if (!cssReference) {
         return null;
       }
+      const cssUrlInfo = cssReference.urlInfo;
       await cssUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({
@@ -188,14 +188,14 @@ export default stylesheet;`,
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo, context) => {
-      const [textReference, textUrlInfo] =
-        urlInfo.firstReference.getWithoutSearchParam({
-          searchParam: "as_text_module",
-          expectedType: "text",
-        });
+      const textReference = urlInfo.firstReference.getWithoutSearchParam({
+        searchParam: "as_text_module",
+        expectedType: "text",
+      });
       if (!textReference) {
         return null;
       }
+      const textUrlInfo = textReference.urlInfo;
       await textUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({

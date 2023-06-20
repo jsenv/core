@@ -17,7 +17,7 @@ export const jsenvPluginReactRefreshPreamble = () => {
     transformUrlContent: {
       html: (urlInfo) => {
         const htmlAst = parseHtmlString(urlInfo.content);
-        const [reactRefreshPreambleReference] = urlInfo.dependencies.inject({
+        const reactRefreshPreambleReference = urlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",

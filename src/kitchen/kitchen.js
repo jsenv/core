@@ -186,8 +186,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       );
       reference.generatedUrl = reference.url;
 
-      const urlInfo = graph.reuseOrCreateUrlInfo(reference);
-
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
@@ -221,7 +219,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedSpecifier = returnValue || reference.generatedUrl;
         reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       }
-      return [reference, urlInfo];
+      return reference;
     } catch (error) {
       throw createResolveUrlError({
         pluginController,
@@ -536,10 +534,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
         // we use reference.generatedUrl to mimic what a browser would do:
         // do a fetch to the specifier as found in the file
-        const referencedUrlInfo = urlInfo.graph.reuseOrCreateUrlInfo(
-          referenceToOther,
-          true,
-        );
+        const referencedUrlInfo = referenceToOther.urlInfo;
         if (!urlInfoSet.has(referencedUrlInfo)) {
           referencedUrlInfo.cook();
         }

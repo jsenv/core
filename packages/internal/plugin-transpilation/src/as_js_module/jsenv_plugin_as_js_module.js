@@ -26,17 +26,17 @@ export const jsenvPluginAsJsModule = () => {
       }
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const [jsClassicReference, jsClassicUrlInfo] =
-        urlInfo.firstReference.getWithoutSearchParam({
-          searchParam: "as_js_module",
-          // override the expectedType to "js_classic"
-          // because when there is ?as_js_module it means the underlying resource
-          // is js_classic
-          expectedType: "js_classic",
-        });
+      const jsClassicReference = urlInfo.firstReference.getWithoutSearchParam({
+        searchParam: "as_js_module",
+        // override the expectedType to "js_classic"
+        // because when there is ?as_js_module it means the underlying resource
+        // is js_classic
+        expectedType: "js_classic",
+      });
       if (!jsClassicReference) {
         return null;
       }
+      const jsClassicUrlInfo = jsClassicReference.urlInfo;
       await jsClassicUrlInfo.fetchUrlContent();
       if (context.dev) {
         urlInfo.dependencies.found({

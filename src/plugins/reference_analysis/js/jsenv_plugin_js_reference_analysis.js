@@ -92,7 +92,7 @@ const parseAndTransformJsReferences = async (
     ) {
       urlInfo.data.usesImport = true;
     }
-    const [reference] = urlInfo.dependencies.found({
+    const reference = urlInfo.dependencies.found({
       node: externalReferenceInfo.node,
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
