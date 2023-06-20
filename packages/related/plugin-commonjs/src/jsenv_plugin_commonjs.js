@@ -66,18 +66,8 @@ export const jsenvPluginCommonJs = ({
       if (!commonJsReference) {
         return null;
       }
-      if (context.dev) {
-        urlInfo.dependencies.found({
-          type: "js_import",
-          subtype: commonJsReference.subtype,
-          specifier: commonJsReference.url,
-          expectedType: "text",
-        });
-      } else if (context.build) {
-        commonJsReference.remove();
-      }
       const commonJsUrlInfo = commonJsReference.urlInfo;
-      await commonJsUrlInfo.fetchUrlContent();
+      await commonJsUrlInfo.fetchContent();
       const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
         "node",
       );

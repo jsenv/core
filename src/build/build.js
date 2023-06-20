@@ -638,6 +638,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (reference.isResourceHint) {
                 return null;
               }
+              if (reference.isWeak) {
+                return null;
+              }
               if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
                 throw new Error(
                   `urls should be inside build directory at this stage, found "${reference.url}"`,
@@ -1111,10 +1114,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             if (urlInfo.url.startsWith("ignore:")) {
               return;
             }
-            if (
-              urlInfo.referenceFromOthersSet.size === 0 &&
-              !urlInfo.isEntryPoint
-            ) {
+            if (!urlInfo.isUsed()) {
               return;
             }
             const urlContent =
@@ -1276,6 +1276,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     return null;
                   }
                   if (reference.isResourceHint) {
+                    return null;
+                  }
+                  if (reference.isWeak) {
                     return null;
                   }
                   // specifier comes from "normalize" hook done a bit earlier in this file

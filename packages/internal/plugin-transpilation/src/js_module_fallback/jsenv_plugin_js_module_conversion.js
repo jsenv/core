@@ -77,18 +77,7 @@ export const jsenvPluginJsModuleConversion = () => {
         return null;
       }
       const jsModuleUrlInfo = jsModuleReference.urlInfo;
-      await jsModuleReference.urlInfo.fetchUrlContent();
-      if (context.dev) {
-        urlInfo.dependencies.found({
-          type: "js_import",
-          subtype: jsModuleReference.subtype,
-          specifier: jsModuleReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build) {
-        jsModuleReference.remove();
-      }
-
+      await jsModuleUrlInfo.fetchContent();
       let outputFormat;
       if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
         // if it's an entry point without dependency (it does not use import)

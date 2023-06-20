@@ -191,7 +191,7 @@ const createUrlInfo = (url) => {
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
-  urlInfo.hasDependent = () => {
+  urlInfo.getFirstStrongReferenceFromOther = () => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
       if (referenceFromOther.url === urlInfo.url) {
         if (
@@ -203,10 +203,14 @@ const createUrlInfo = (url) => {
           // to consider the non-inlined urlInfo as used
           continue;
         }
-        return true;
+        if (referenceFromOther.isWeak) {
+          // weak reference don't count as using the url
+          continue;
+        }
+        return referenceFromOther;
       }
     }
-    return false;
+    return null;
   };
   urlInfo.isUsed = () => {
     // nothing uses this url anymore
@@ -219,8 +223,8 @@ const createUrlInfo = (url) => {
     // if (urlInfo.type === "sourcemap") {
     //   return true;
     // }
-    // check if there is a valid reference to this urlInfo
-    if (urlInfo.hasDependent()) {
+    // check if there is a strong reference to this urlInfo
+    if (urlInfo.getFirstStrongReferenceFromOther()) {
       return true;
     }
     return false;
@@ -275,19 +279,19 @@ const createUrlInfo = (url) => {
       : urlInfo.kitchen.context;
     return urlInfo.kitchen.context.cookDependencies(urlInfo, context);
   };
-  urlInfo.fetchUrlContent = (context) => {
+  urlInfo.fetchContent = (context) => {
     context = context
       ? { ...urlInfo.kitchen.context, ...context }
       : urlInfo.kitchen.context;
     return urlInfo.kitchen.context.fetchUrlContent(urlInfo, context);
   };
-  urlInfo.transformUrlContent = (context) => {
+  urlInfo.transformContent = (context) => {
     context = context
       ? { ...urlInfo.kitchen.context, ...context }
       : urlInfo.kitchen.context;
     return urlInfo.kitchen.context.transformUrlContent(urlInfo, context);
   };
-  urlInfo.finalizeUrlContent = (context) => {
+  urlInfo.finalizeContent = (context) => {
     context = context
       ? { ...urlInfo.kitchen.context, ...context }
       : urlInfo.kitchen.context;

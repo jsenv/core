@@ -332,6 +332,9 @@ const createReference = ({
   isEntryPoint = false,
   isResourceHint = false,
   isImplicit = false,
+  // urlInfo referenced solely by weak references
+  // should be ignored during build
+  isWeak = false,
   hasVersioningEffect = false,
   injected = false,
   isInline = false,
@@ -385,6 +388,7 @@ const createReference = ({
     isEntryPoint,
     isResourceHint,
     isImplicit,
+    isWeak,
     hasVersioningEffect,
     version: null,
     injected,
@@ -485,6 +489,7 @@ const createReference = ({
     const referenceWithoutSearchParam = ownerUrlInfo.dependencies.prepare({
       ...originalRef,
       isImplicit: true,
+      isWeak: true,
       original: originalRef,
       data: { ...originalRef.data },
       expectedType,
@@ -592,27 +597,16 @@ ${ownerUrlInfo.url}`,
   const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
-  let firstOtherRef;
-  for (const referenceToOther of referenceToOthersSet) {
-    if (
-      referenceToOther.url === reference.url &&
-      !referenceToOther.isResourceHint
-    ) {
-      firstOtherRef = referenceToOther;
-      break;
-    }
-  }
-  if (firstOtherRef) {
+  const firstStrongReferenceFromOther =
+    referencedUrlInfo.getFirstStrongReferenceFromOther();
+  if (firstStrongReferenceFromOther) {
     // either applying new ref should override old ref
     // or we should first remove effects before adding new ones
     // for now we just set firstReference to null
     if (reference === referencedUrlInfo.firstReference) {
       referencedUrlInfo.firstReference = null;
-      applyReferenceEffectsOnUrlInfo(firstOtherRef);
+      applyReferenceEffectsOnUrlInfo(firstStrongReferenceFromOther);
     }
-  } else if (referencedUrlInfo.isUsed()) {
-    // ideally we should remove reference effects
-    referencedUrlInfo.firstReference = null;
   } else {
     referencedUrlInfo.deleteFromGraph();
   }

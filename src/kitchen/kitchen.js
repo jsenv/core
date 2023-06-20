@@ -411,13 +411,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     if (!urlInfo.url.startsWith("ignore:")) {
       await urlInfo.dependencies.startCollecting(async () => {
         // "fetchUrlContent" hook
-        await urlInfo.fetchUrlContent();
+        await urlInfo.fetchContent();
 
         // "transform" hook
-        await urlInfo.transformUrlContent();
+        await urlInfo.transformContent();
 
         // "finalize" hook
-        await urlInfo.finalizeUrlContent();
+        await urlInfo.finalizeContent();
       }, contextDuringCook);
     }
 
@@ -521,6 +521,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // because they might refer to resource that will be modified during build
           // It also means something else have to reference that url in order to cook it
           // so that the preload is deleted by "resync_resource_hints.js" otherwise
+          continue;
+        }
+
+        if (referenceToOther.isWeak) {
           continue;
         }
 

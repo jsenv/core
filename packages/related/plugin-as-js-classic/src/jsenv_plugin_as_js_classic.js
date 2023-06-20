@@ -89,7 +89,10 @@ export const jsenvPluginAsJsClassic = () => {
         jsModuleReference.remove();
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
-          if (sourceUrlInfo && !sourceUrlInfo.hasDependent()) {
+          if (
+            sourceUrlInfo &&
+            !sourceUrlInfo.getFirstStrongReferenceFromOther()
+          ) {
             sourceUrlInfo.deleteFromGraph();
           }
         });

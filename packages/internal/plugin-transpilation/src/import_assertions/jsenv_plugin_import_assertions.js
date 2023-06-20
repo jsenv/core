@@ -104,7 +104,7 @@ const jsenvPluginAsModules = () => {
   const asJsonModule = {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const jsonReference = urlInfo.firstReference.getWithoutSearchParam({
         searchParam: "as_json_module",
         expectedType: "json",
@@ -113,17 +113,7 @@ const jsenvPluginAsModules = () => {
         return null;
       }
       const jsonUrlInfo = jsonReference.urlInfo;
-      await jsonUrlInfo.fetchUrlContent();
-      if (context.dev) {
-        urlInfo.dependencies.found({
-          type: "js_import",
-          subtype: jsonReference.subtype,
-          specifier: jsonReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build) {
-        jsonReference.remove();
-      }
+      await jsonUrlInfo.fetchContent();
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:
@@ -151,17 +141,7 @@ const jsenvPluginAsModules = () => {
         return null;
       }
       const cssUrlInfo = cssReference.urlInfo;
-      await cssUrlInfo.fetchUrlContent();
-      if (context.dev) {
-        urlInfo.dependencies.found({
-          type: "js_import",
-          subtype: cssReference.subtype,
-          specifier: cssReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build) {
-        cssReference.remove();
-      }
+      await cssUrlInfo.fetchContent();
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -196,17 +176,7 @@ export default stylesheet;`,
         return null;
       }
       const textUrlInfo = textReference.urlInfo;
-      await textUrlInfo.fetchUrlContent();
-      if (context.dev) {
-        urlInfo.dependencies.found({
-          type: "js_import",
-          subtype: textReference.subtype,
-          specifier: textReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build) {
-        textReference.remove();
-      }
+      await textUrlInfo.fetchContent();
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one

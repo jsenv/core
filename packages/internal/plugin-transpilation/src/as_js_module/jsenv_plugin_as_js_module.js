@@ -25,7 +25,7 @@ export const jsenvPluginAsJsModule = () => {
         reference.filename = `${basename}.mjs`;
       }
     },
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const jsClassicReference = urlInfo.firstReference.getWithoutSearchParam({
         searchParam: "as_js_module",
         // override the expectedType to "js_classic"
@@ -37,17 +37,7 @@ export const jsenvPluginAsJsModule = () => {
         return null;
       }
       const jsClassicUrlInfo = jsClassicReference.urlInfo;
-      await jsClassicUrlInfo.fetchUrlContent();
-      if (context.dev) {
-        urlInfo.dependencies.found({
-          type: "js_import",
-          subtype: jsClassicReference.subtype,
-          specifier: jsClassicReference.url,
-          expectedType: "js_classic",
-        });
-      } else if (context.build) {
-        jsClassicReference.remove();
-      }
+      await jsClassicUrlInfo.fetchContent();
       const { content, sourcemap } = await convertJsClassicToJsModule({
         input: jsClassicUrlInfo.content,
         inputSourcemap: jsClassicUrlInfo.sourcemap,
