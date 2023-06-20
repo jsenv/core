@@ -783,8 +783,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           if (rawUrlInfo.type === "html") {
             rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              const referencedUrlInfo =
-                rawKitchen.graph.getUrlInfo(referenceToOther);
+              const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
+                referenceToOther.url,
+              );
               if (referencedUrlInfo.isInline) {
                 if (referencedUrlInfo.type === "js_module") {
                   // bundle inline script type module deps
@@ -1332,7 +1333,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               });
             });
           });
-          global.versioning = true;
           await versioningRootUrlInfo.cookDependencies({
             operation: buildOperation,
           });

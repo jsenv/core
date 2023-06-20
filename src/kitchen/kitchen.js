@@ -42,6 +42,7 @@ export const createKitchen = ({
   systemJsTranspilation,
   plugins,
   minification,
+  supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
@@ -356,23 +357,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.fetchUrlContent = fetchUrlContent;
 
-  const _cook = async (urlInfo, customContext) => {
+  const _cook = async (urlInfo, customContext = {}) => {
     const dishContext = {
       ...kitchenContext,
       ...customContext,
-    };
-    const { cookDuringCook = cook } = customContext;
-    dishContext.cook = (urlInfo, nestedCustomContext) => {
-      return cookDuringCook(urlInfo, {
-        ...customContext,
-        ...nestedCustomContext,
-      });
-    };
-    dishContext.fetchUrlContent = (urlInfo, { reference }) => {
-      return fetchUrlContent(urlInfo, {
-        reference,
-        contextDuringFetch: dishContext,
-      });
     };
 
     if (!urlInfo.url.startsWith("ignore:")) {
@@ -473,7 +461,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           let contentIsInlined = urlInfo.isInline;
           if (
             contentIsInlined &&
-            context.supervisor &&
+            supervisor &&
             graph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
           ) {
             contentIsInlined = false;

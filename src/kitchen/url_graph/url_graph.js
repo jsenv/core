@@ -39,11 +39,11 @@ export const createUrlGraph = ({
     const existingUrlInfo = getUrlInfo(referencedUrl);
     if (existingUrlInfo) return existingUrlInfo;
     const referencedUrlInfo = createUrlInfo(referencedUrl);
+    addUrlInfo(referencedUrlInfo);
     if (referencedUrlInfo.originalUrl === undefined) {
       applyReferenceEffectsOnUrlInfo(reference, referencedUrlInfo);
     }
     createUrlInfoCallbackRef.current(referencedUrlInfo);
-    addUrlInfo(referencedUrlInfo);
     return referencedUrlInfo;
   };
 
@@ -137,6 +137,7 @@ const createUrlInfo = (url) => {
   const urlInfo = {
     isRoot: false,
     graph: null,
+    kitchen: null,
     error: null,
     modifiedTimestamp: 0,
     originalContentEtag: null,
