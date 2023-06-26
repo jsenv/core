@@ -196,7 +196,7 @@ export const jsenvPluginSupervisor = ({
               line,
               column,
             }) => {
-              const [inlineScriptReference] =
+              const inlineScriptReference =
                 htmlUrlInfo.dependencies.foundInline({
                   type: "script",
                   subtype: "inline",
