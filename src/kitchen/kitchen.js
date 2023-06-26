@@ -107,6 +107,11 @@ export const createKitchen = ({
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
   const resolveReference = (reference) => {
+    if (reference.url) {
+      reference.generatedUrl = reference.url; // happens for reference.becomesInline()
+      return reference;
+    }
+
     const setReferenceUrl = (referenceUrl) => {
       // ignored urls are prefixed with "ignore:" so that reference are associated
       // to a dedicated urlInfo that is ignored.
@@ -218,7 +223,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           Object.keys(returnValue).forEach((key) => {
             reference.searchParams.set(key, returnValue[key]);
           });
-          reference.generatedUrl = normalizeUrl(new URL(reference.url).href);
+          reference.generatedUrl = normalizeUrl(reference.url);
         },
       );
     }

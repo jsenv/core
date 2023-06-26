@@ -408,9 +408,6 @@ const createReference = ({
   };
 
   reference.resolve = () => {
-    if (reference.url) {
-      return reference;
-    }
     const resolvedReference =
       reference.ownerUrlInfo.kitchen.context.resolveReference(reference);
     return resolvedReference;
@@ -618,7 +615,7 @@ const traceFromUrlSite = (urlSite) => {
   };
 };
 
-const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
+const adjustUrlSite = (urlInfo, { url, line, column }) => {
   const isOriginal = url === urlInfo.url;
   const adjust = (urlSite, urlInfo) => {
     if (!urlSite.isOriginal) {
@@ -628,7 +625,7 @@ const adjustUrlSite = (urlInfo, { urlGraph, url, line, column }) => {
     if (!inlineUrlSite) {
       return urlSite;
     }
-    const parentUrlInfo = urlGraph.getUrlInfo(inlineUrlSite.url);
+    const parentUrlInfo = urlInfo.graph.getUrlInfo(inlineUrlSite.url);
     return adjust(
       {
         isOriginal: true,
