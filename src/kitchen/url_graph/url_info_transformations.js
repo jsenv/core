@@ -1,6 +1,4 @@
 import { pathToFileURL } from "node:url";
-import { parseJsWithAcorn } from "@jsenv/ast";
-import { bufferToEtag } from "@jsenv/filesystem";
 import { urlToRelativeUrl, isFileSystemPath } from "@jsenv/urls";
 import {
   composeTwoSourcemaps,
@@ -8,6 +6,10 @@ import {
   generateSourcemapFileUrl,
   generateSourcemapDataUrl,
 } from "@jsenv/sourcemap";
+import {
+  defineGettersOnPropertiesDerivedFromOriginalContent,
+  defineGettersOnPropertiesDerivedFromContent,
+} from "./url_content.js";
 
 export const createUrlInfoTransformer = ({
   logger,
@@ -63,74 +65,35 @@ export const createUrlInfoTransformer = ({
     return sourcemap;
   };
 
-  const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
-    const contentAstDescriptor = Object.getOwnPropertyDescriptor(
-      urlInfo,
-      "contentAst",
-    );
-    if (contentAstDescriptor.value === undefined) {
-      defineVolaliteGetter(urlInfo, "contentAst", () => {
-        if (urlInfo.content === urlInfo.originalContent) {
-          return urlInfo.originalContentAst;
-        }
-        const ast = getContentAst(urlInfo.content, urlInfo.type, urlInfo.url);
-        return ast;
-      });
-    }
-    const contentEtagDescriptor = Object.getOwnPropertyDescriptor(
-      urlInfo,
-      "contentEtag",
-    );
-    if (contentEtagDescriptor.value === undefined) {
-      defineVolaliteGetter(urlInfo, "contentEtag", () => {
-        if (urlInfo.content === urlInfo.originalContent) {
-          return urlInfo.originalContentEtag;
-        }
-        return getContentEtag(urlInfo.content);
-      });
-    }
+  const resetContent = (urlInfo) => {
+    urlInfo.contentFinalized = false;
+    urlInfo.originalContentAst = undefined;
+    urlInfo.originalContentEtag = undefined;
+    urlInfo.contentAst = undefined;
+    urlInfo.contentEtag = undefined;
+    urlInfo.content = undefined;
+    urlInfo.sourcemap = null;
+    urlInfo.sourcemapIsWrong = null;
   };
 
-  const initTransformations = async (
+  const setContent = async (
     urlInfo,
+    content,
     {
-      content,
       contentAst, // most of the time will be undefined
       contentEtag, // in practice it's always undefined
-      originalContent,
+      originalContent = content,
       originalContentAst, // most of the time will be undefined
       originalContentEtag, // in practice always undefined
       sourcemap,
-    },
+    } = {},
   ) => {
-    urlInfo.contentFinalized = false;
     urlInfo.originalContentAst = originalContentAst;
     urlInfo.originalContentEtag = originalContentEtag;
     if (originalContent !== urlInfo.originalContent) {
       urlInfo.originalContent = originalContent;
     }
-    const originalContentAstDescriptor = Object.getOwnPropertyDescriptor(
-      urlInfo,
-      "originalContentAst",
-    );
-    if (originalContentAstDescriptor.value === undefined) {
-      defineVolaliteGetter(urlInfo, "originalContentAst", () => {
-        return getContentAst(
-          urlInfo.originalContent,
-          urlInfo.type,
-          urlInfo.url,
-        );
-      });
-    }
-    const originalContentEtagDescriptor = Object.getOwnPropertyDescriptor(
-      urlInfo,
-      "originalContentEtag",
-    );
-    if (originalContentEtagDescriptor.value === undefined) {
-      defineVolaliteGetter(urlInfo, "originalContentEtag", () => {
-        return bufferToEtag(Buffer.from(urlInfo.originalContent));
-      });
-    }
+    defineGettersOnPropertiesDerivedFromOriginalContent(urlInfo);
 
     urlInfo.contentAst = contentAst;
     urlInfo.contentEtag = contentEtag;
@@ -217,9 +180,9 @@ export const createUrlInfoTransformer = ({
       urlInfo.contentType = contentType;
     }
     if (content && content !== urlInfo.content) {
-      urlInfo.content = content;
       urlInfo.contentAst = contentAst;
       urlInfo.contentEtag = contentEtag;
+      urlInfo.content = content;
       defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }
     if (sourcemapsEnabled && sourcemap) {
@@ -246,13 +209,8 @@ export const createUrlInfoTransformer = ({
     }
 
     if (urlInfo.contentFinalized) {
-      applyTransformationsEffects(urlInfo);
+      applySourcemapOnContent(urlInfo);
     }
-  };
-
-  const applyTransformationsEffects = (urlInfo) => {
-    applySourcemapOnContent(urlInfo);
-    urlInfo.contentFinalized = true;
   };
 
   const applySourcemapOnContent = (urlInfo) => {
@@ -332,52 +290,18 @@ export const createUrlInfoTransformer = ({
     }
   };
 
+  const endTransformations = (urlInfo, transformations) => {
+    if (transformations) {
+      applyTransformations(urlInfo, transformations);
+    }
+    applySourcemapOnContent(urlInfo);
+    urlInfo.contentFinalized = true;
+  };
+
   return {
-    initTransformations,
+    resetContent,
+    setContent,
     applyTransformations,
-    applyTransformationsEffects,
+    endTransformations,
   };
-};
-
-const defineVolaliteGetter = (object, property, getter) => {
-  const restore = (value) => {
-    Object.defineProperty(object, property, {
-      enumerable: true,
-      configurable: true,
-      writable: true,
-      value,
-    });
-  };
-
-  Object.defineProperty(object, property, {
-    enumerable: true,
-    configurable: true,
-    get: () => {
-      const value = getter();
-      restore(value);
-      return value;
-    },
-    set: restore,
-  });
-};
-
-const getContentAst = (content, type, url) => {
-  if (type === "js_module") {
-    return parseJsWithAcorn({
-      js: content,
-      url,
-      isJsModule: true,
-    });
-  }
-  if (type === "js_classic") {
-    return parseJsWithAcorn({
-      js: content,
-      url,
-    });
-  }
-  return null;
-};
-
-const getContentEtag = (content) => {
-  return bufferToEtag(Buffer.from(content));
 };

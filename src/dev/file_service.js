@@ -151,31 +151,26 @@ export const createFileService = ({
         if (!urlInfo.url.startsWith("file:")) {
           return false;
         }
-        if (watch && urlInfo.contentEtag === undefined) {
-          // we trust the watching mecanism
-          // doing urlInfo.contentEtag = undefined
-          // when file is modified
+        if (watch && urlInfo.content === undefined) {
+          // trust the watching mecanism doing urlInfo.content = undefined when file is modified
           return false;
         }
-        if (!watch && urlInfo.contentEtag) {
+        if (!watch && urlInfo.content !== undefined) {
           // file is not watched, check the filesystem
           let fileContentAsBuffer;
           try {
             fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
           } catch (e) {
             if (e.code === "ENOENT") {
-              // we should consider calling urlGraph.deleteUrlInfo(urlInfo)
-              urlInfo.originalContentEtag = undefined;
-              urlInfo.contentEtag = undefined;
+              urlInfo.considerModified();
+              urlInfo.deleteFromGraph();
               return false;
             }
             return false;
           }
           const fileContentEtag = bufferToEtag(fileContentAsBuffer);
           if (fileContentEtag !== urlInfo.originalContentEtag) {
-            // we should consider calling urlGraph.considerModified(urlInfo)
-            urlInfo.originalContentEtag = undefined;
-            urlInfo.contentEtag = undefined;
+            urlInfo.considerModified();
             return false;
           }
         }
@@ -301,13 +296,10 @@ export const createFileService = ({
         urlInfo.type !== "sourcemap"
       ) {
         urlInfo.error = null;
-        urlInfo.sourcemap = null;
-        urlInfo.sourcemapIsWrong = null;
-        urlInfo.content = null;
-        urlInfo.originalContent = null;
         urlInfo.type = null;
         urlInfo.subtype = null;
         urlInfo.timing = {};
+        urlInfo.kitchen.context.urlInfoTransformer.resetContent(urlInfo);
       }
       await urlInfo.cook({ request });
       let { response } = urlInfo;

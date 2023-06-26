@@ -262,6 +262,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const fetchUrlContent = async (urlInfo, contextDuringFetch) => {
     try {
+      urlInfoTransformer.resetContent(urlInfo);
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
           "fetchUrlContent",
@@ -349,8 +350,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         fetchUrlContentReturnValue,
         "originalContentAst",
       );
-      await urlInfoTransformer.initTransformations(urlInfo, {
-        content,
+      await urlInfoTransformer.setContent(urlInfo, content, {
         sourcemap,
         originalContent,
         contentAst: contentAstDescriptor
@@ -407,8 +407,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         contextDuringFinalize,
       );
-      urlInfoTransformer.applyTransformations(urlInfo, finalizeReturnValue);
-      urlInfoTransformer.applyTransformationsEffects(urlInfo);
+      urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
       throw createFinalizeUrlContentError({
         pluginController,

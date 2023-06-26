@@ -249,8 +249,7 @@ const createUrlInfo = (url) => {
       }
       seen.push(urlInfo.url);
       urlInfo.modifiedTimestamp = modifiedTimestamp;
-      urlInfo.originalContentEtag = undefined;
-      urlInfo.contentEtag = undefined;
+      urlInfo.kitchen.context.urlInfoTransformer.resetContent(urlInfo);
       urlInfo.referenceFromOthersSet.forEach((referenceFromOther) => {
         const urlInfoReferencingThisOne = urlInfo.graph.getUrlInfo(
           referenceFromOther.url,

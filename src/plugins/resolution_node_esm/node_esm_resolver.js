@@ -122,6 +122,9 @@ const addRelationshipWithPackageJson = ({
   if (packageJsonReference.urlInfo.type === undefined) {
     const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl));
     packageJsonReference.urlInfo.type = "json";
-    packageJsonReference.urlInfo.content = String(packageJsonContentAsBuffer);
+    packageJsonReference.urlInfo.kitchen.context.urlInfoTransformer.setContent(
+      packageJsonReference.urlInfo,
+      String(packageJsonContentAsBuffer),
+    );
   }
 };
