@@ -102,7 +102,7 @@ export const jsenvPluginJsModuleConversion = () => {
         inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleUrlInfo.sourcemap,
         inputUrl: jsModuleUrlInfo.url,
-        outputUrl: jsModuleUrlInfo.generatedUrl,
+        outputUrl: urlInfo.url,
         outputFormat,
       });
       return {

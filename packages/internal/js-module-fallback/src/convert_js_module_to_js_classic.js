@@ -29,7 +29,7 @@ export const convertJsModuleToJsClassic = async ({
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             require("@babel/plugin-proposal-dynamic-import"),
-            [babelPluginRelativeImports, { rootUrl: inputUrl }],
+            [babelPluginRelativeImports, { rootUrl: outputUrl }],
             require("@babel/plugin-transform-modules-systemjs"),
             [
               customAsyncToPromises,
@@ -49,7 +49,7 @@ export const convertJsModuleToJsClassic = async ({
             ],
             babelPluginTransformImportMetaUrl,
             babelPluginTransformImportMetaResolve,
-            [babelPluginRelativeImports, { rootUrl: inputUrl }],
+            [babelPluginRelativeImports, { rootUrl: outputUrl }],
             require("@babel/plugin-transform-modules-umd"),
           ]),
     ],

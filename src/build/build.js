@@ -573,7 +573,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return buildUrl;
               }
               // from "js_module_fallback":
-              //   - to inject "s.js"
+              // - to inject "s.js"
               if (reference.injected) {
                 const buildUrl = buildUrlsGenerator.generate(reference.url, {
                   urlInfo: {
@@ -809,18 +809,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           if (rawUrlInfo.type === "html") {
             rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                referenceToOther.url,
-              );
+              const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.isInline) {
                 if (referencedUrlInfo.type === "js_module") {
                   // bundle inline script type module deps
                   referencedUrlInfo.referenceToOthersSet.forEach(
                     (jsModuleReferenceToOther) => {
                       if (jsModuleReferenceToOther.type === "js_import") {
-                        const inlineUrlInfo = rawKitchen.graph.getUrlInfo(
-                          jsModuleReferenceToOther.url,
-                        );
+                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
                         addToBundlerIfAny(inlineUrlInfo);
                       }
                     },
@@ -836,9 +832,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 referenceToOther.isResourceHint &&
                 referenceToOther.expectedType === "js_module"
               ) {
-                const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                  referenceToOther.url,
-                );
+                const referencedUrlInfo = referenceToOther.urlInfo;
                 if (
                   referencedUrlInfo &&
                   // something else than the resource hint is using this url
@@ -858,9 +852,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (referenceToOther.type !== "js_url") {
                 return;
               }
-              const referencedUrlInfo = rawKitchen.graph.getUrlInfo(
-                referenceToOther.url,
-              );
+              const referencedUrlInfo = referenceToOther.urlInfo;
               const bundler = bundlers[referencedUrlInfo.type];
               if (!bundler) {
                 return;
