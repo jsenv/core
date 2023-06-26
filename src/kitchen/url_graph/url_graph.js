@@ -229,10 +229,17 @@ const createUrlInfo = (url) => {
     }
     return false;
   };
-  urlInfo.getParentIfInline = (urlInfo) => {
-    return urlInfo.isInline
-      ? urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url)
-      : urlInfo;
+  urlInfo.findParentIfInline = () => {
+    let currentUrlInfo = urlInfo;
+    const graph = urlInfo.graph;
+    while (currentUrlInfo.isInline) {
+      const parentUrlInfo = graph.getUrlInfo(currentUrlInfo.inlineUrlSite.url);
+      if (!parentUrlInfo.isInline) {
+        return parentUrlInfo;
+      }
+      currentUrlInfo = parentUrlInfo;
+    }
+    return null;
   };
   urlInfo.considerModified = (modifiedTimestamp = Date.now()) => {
     const seen = [];

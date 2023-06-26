@@ -267,7 +267,7 @@ export const createFileService = ({
     }
     const urlInfo = reference.urlInfo;
     const ifNoneMatch = request.headers["if-none-match"];
-    const urlInfoTargetedByCache = urlInfo.getParentIfInline();
+    const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
 
     try {
       if (ifNoneMatch) {

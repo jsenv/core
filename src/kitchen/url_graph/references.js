@@ -135,8 +135,10 @@ export const createDependencies = (ownerUrlInfo) => {
       });
     }
 
+    const parentUrlInfo = ownerUrlInfo.findParentIfInline() || ownerUrlInfo;
+
     const addSideEffectFileRef = () => {
-      const reference = prepare({
+      const reference = parentUrlInfo.dependencies.prepare({
         trace,
         type: "side_effect_file",
         isImplicit: true,
@@ -148,9 +150,9 @@ export const createDependencies = (ownerUrlInfo) => {
     };
 
     const injectAsBannerCodeBeforeFinalize = (sideEffectFileReference) => {
-      ownerUrlInfo.addContentTransformationCallback(async () => {
+      parentUrlInfo.addContentTransformationCallback(async () => {
         await sideEffectFileReference.urlInfo.cook();
-        await prependContent(ownerUrlInfo, sideEffectFileReference.urlInfo);
+        await prependContent(parentUrlInfo, sideEffectFileReference.urlInfo);
         await sideEffectFileReference.readGeneratedSpecifier();
         sideEffectFileReference.becomesInline({
           specifier: sideEffectFileReference.generatedSpecifier,
@@ -181,7 +183,7 @@ export const createDependencies = (ownerUrlInfo) => {
     // (in that case we find the side effect file as it was injected in parent)
     if (ownerUrlInfo.kitchen.context.dev) {
       const urlsBeforeInjection = Array.from(
-        ownerUrlInfo.graph.urlInfoMap.keys(),
+        parentUrlInfo.graph.urlInfoMap.keys(),
       );
       const sideEffectFileReference = addSideEffectFileRef();
       if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
@@ -196,17 +198,17 @@ export const createDependencies = (ownerUrlInfo) => {
         return false;
       };
       const selfOrAncestorIsReferencingSideEffectFile = (candidateUrl) => {
-        const candidateUrlInfo = ownerUrlInfo.graph.getUrlInfo(candidateUrl);
+        const candidateUrlInfo = parentUrlInfo.graph.getUrlInfo(candidateUrl);
         if (isReferencingSideEffectFile(candidateUrlInfo)) {
           return true;
         }
         const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
-          ownerUrlInfo,
+          parentUrlInfo,
           (ancestorUrlInfo) => isReferencingSideEffectFile(ancestorUrlInfo),
         );
         return Boolean(dependentReferencingThatFile);
       };
-      for (const referenceFromOther of ownerUrlInfo.referenceFromOthersSet) {
+      for (const referenceFromOther of parentUrlInfo.referenceFromOthersSet) {
         if (
           !selfOrAncestorIsReferencingSideEffectFile(referenceFromOther.url)
         ) {
@@ -219,11 +221,12 @@ export const createDependencies = (ownerUrlInfo) => {
     // Case #3: During build
     // during build, files are not executed so it's
     // possible to inject reference when discovering a side effect file
-    if (ownerUrlInfo.isEntryPoint) {
+    if (parentUrlInfo.isEntryPoint) {
       const sideEffectFileReference = addSideEffectFileRef();
       return injectAsBannerCodeBeforeFinalize(sideEffectFileReference);
     }
-    const entryPoints = ownerUrlInfo.graph.getEntryPoints();
+
+    const entryPoints = parentUrlInfo.graph.getEntryPoints();
     const sideEffectFileReference = addSideEffectFileRef();
     for (const entryPointUrlInfo of entryPoints) {
       entryPointUrlInfo.addContentTransformationCallback(async () => {

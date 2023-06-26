@@ -723,11 +723,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 };
               }
               if (firstReference.isInline) {
-                if (firstReference.prev && !firstReference.prev.isInline) {
-                  const urlBeforeRedirect =
-                    findKey(finalRedirections, firstReference.prev.url) ||
-                    firstReference.prev.url;
-                  return fromBundleOrRawGraph(urlBeforeRedirect);
+                const prevReference = firstReference.prev;
+                if (prevReference) {
+                  if (!prevReference.isInline) {
+                    // the reference was inlined
+                    const urlBeforeRedirect =
+                      findKey(finalRedirections, prevReference.url) ||
+                      prevReference.url;
+                    return fromBundleOrRawGraph(urlBeforeRedirect);
+                  }
+                  if (buildDirectoryRedirections.has(prevReference.url)) {
+                    // the prev reference is transformed to fetch underlying resource
+                    // (getWithoutSearchParam)
+                    return fromBundleOrRawGraph(prevReference.url);
+                  }
                 }
                 return fromBundleOrRawGraph(firstReference.url);
               }
