@@ -107,85 +107,103 @@ export const createKitchen = ({
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
   const resolveReference = (reference) => {
+    const setReferenceUrl = (referenceUrl) => {
+      // ignored urls are prefixed with "ignore:" so that reference are associated
+      // to a dedicated urlInfo that is ignored.
+      // this way it's only once a resource is referenced by reference that is not ignored
+      // that the resource is cooked
+      if (
+        reference.specifier[0] === "#" &&
+        // For Html, css and "#" refer to a resource in the page, reference must be preserved
+        // However for js import specifiers they have a different meaning and we want
+        // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
+        reference.type !== "js_import"
+      ) {
+        referenceUrl = `ignore:${referenceUrl}`;
+      } else if (isIgnored(referenceUrl)) {
+        referenceUrl = `ignore:${referenceUrl}`;
+      }
+
+      if (
+        referenceUrl.startsWith("ignore:") &&
+        !reference.specifier.startsWith("ignore:")
+      ) {
+        reference.specifier = `ignore:${reference.specifier}`;
+      }
+      Object.defineProperty(reference, "url", {
+        enumerable: true,
+        configurable: false,
+        writable: false,
+        value: referenceUrl,
+      });
+      reference.searchParams = new URL(referenceUrl).searchParams;
+    };
+
     try {
-      let url = pluginController.callHooksUntil(
-        "resolveReference",
-        reference,
-        kitchenContext,
-      );
-      if (!url) {
-        throw new Error(`NO_RESOLVE`);
-      }
-      if (url.includes("?debug")) {
-        reference.debug = true;
-      }
-      url = normalizeUrl(url);
-      const setReferenceUrl = (referenceUrl) => {
-        // ignored urls are prefixed with "ignore:" so that reference are associated
-        // to a dedicated urlInfo that is ignored.
-        // this way it's only once a resource is referenced by reference that is not ignored
-        // that the resource is cooked
-        if (
-          reference.specifier[0] === "#" &&
-          // For Html, css and "#" refer to a resource in the page, reference must be preserved
-          // However for js import specifiers they have a different meaning and we want
-          // to resolve them (https://nodejs.org/api/packages.html#imports for instance)
-          reference.type !== "js_import"
-        ) {
-          referenceUrl = `ignore:${referenceUrl}`;
-        } else if (isIgnored(referenceUrl)) {
-          referenceUrl = `ignore:${referenceUrl}`;
+      resolve: {
+        const resolvedUrl = pluginController.callHooksUntil(
+          "resolveReference",
+          reference,
+          kitchenContext,
+        );
+        if (!resolvedUrl) {
+          throw new Error(`NO_RESOLVE`);
         }
-
-        if (
-          referenceUrl.startsWith("ignore:") &&
-          !reference.specifier.startsWith("ignore:")
-        ) {
-          reference.specifier = `ignore:${reference.specifier}`;
+        if (resolvedUrl.includes("?debug")) {
+          reference.debug = true;
         }
-        Object.defineProperty(reference, "url", {
-          enumerable: true,
-          configurable: false,
-          writable: false,
-          value: referenceUrl,
-        });
-        reference.searchParams = new URL(referenceUrl).searchParams;
-      };
-      setReferenceUrl(url);
-
-      if (reference.debug) {
-        logger.debug(`url resolved by "${
-          pluginController.getLastPluginUsed().name
-        }"
+        const normalizedUrl = normalizeUrl(resolvedUrl);
+        setReferenceUrl(normalizedUrl);
+        if (reference.debug) {
+          logger.debug(`url resolved by "${
+            pluginController.getLastPluginUsed().name
+          }"
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
 `);
+        }
       }
-      pluginController.callHooks(
-        "redirectReference",
-        reference,
-        kitchenContext,
-        (returnValue, plugin, setReference) => {
-          const normalizedReturnValue = normalizeUrl(returnValue);
-          if (normalizedReturnValue === reference.url) {
-            return;
-          }
-          if (reference.debug) {
-            logger.debug(
-              `url redirected by "${plugin.name}"
+      redirect: {
+        pluginController.callHooks(
+          "redirectReference",
+          reference,
+          kitchenContext,
+          (returnValue, plugin, setReference) => {
+            const normalizedReturnValue = normalizeUrl(returnValue);
+            if (normalizedReturnValue === reference.url) {
+              return;
+            }
+            if (reference.debug) {
+              logger.debug(
+                `url redirected by "${plugin.name}"
 ${ANSI.color(reference.url, ANSI.GREY)} ->
 ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
+              );
+            }
+            const referenceRedirected = reference.redirect(
+              normalizedReturnValue,
             );
-          }
-          const referenceRedirected = reference.redirect(normalizedReturnValue);
-          reference = referenceRedirected;
-          setReferenceUrl(normalizedReturnValue);
-          setReference(referenceRedirected);
-        },
-      );
+            reference = referenceRedirected;
+            setReferenceUrl(normalizedReturnValue);
+            setReference(referenceRedirected);
+          },
+        );
+      }
       reference.generatedUrl = reference.url;
+      return reference;
+    } catch (error) {
+      throw createResolveUrlError({
+        pluginController,
+        reference,
+        error,
+      });
+    }
+  };
+  kitchenContext.resolveReference = resolveReference;
 
+  kitchenContext.finalizeReference = (reference) => {
+    transform_search_params: {
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
@@ -203,7 +221,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           reference.generatedUrl = normalizeUrl(new URL(reference.url).href);
         },
       );
-
+    }
+    format: {
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
         reference,
@@ -219,16 +238,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedSpecifier = returnValue || reference.generatedUrl;
         reference.generatedSpecifier = urlSpecifierEncoding.encode(reference);
       }
-      return reference;
-    } catch (error) {
-      throw createResolveUrlError({
-        pluginController,
-        reference,
-        error,
-      });
     }
   };
-  kitchenContext.resolveReference = resolveReference;
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,

@@ -72,8 +72,12 @@ export const createDependencies = (ownerUrlInfo) => {
       ...props,
     });
     const reference = originalReference.resolve();
-    const urlInfo = ownerUrlInfo.kitchen.graph.reuseOrCreateUrlInfo(reference);
+    const kitchen = ownerUrlInfo.kitchen;
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
     reference.urlInfo = urlInfo;
+    addDependency(reference);
+    kitchen.context.finalizeReference(reference);
+
     return reference;
   };
 
@@ -91,7 +95,6 @@ export const createDependencies = (ownerUrlInfo) => {
       trace,
       ...rest,
     });
-    addDependency(reference);
     return reference;
   };
   const foundInline = ({
@@ -119,7 +122,6 @@ export const createDependencies = (ownerUrlInfo) => {
       isInline: true,
       ...rest,
     });
-    addDependency(reference);
     return reference;
   };
   // side effect file
@@ -142,7 +144,6 @@ export const createDependencies = (ownerUrlInfo) => {
         specifier: sideEffectFileUrl,
         ...rest,
       });
-      addDependency(reference);
       return reference;
     };
 
@@ -267,7 +268,6 @@ export const createDependencies = (ownerUrlInfo) => {
       injected: true,
       ...rest,
     });
-    addDependency(reference);
     return reference;
   };
 
@@ -458,6 +458,8 @@ const createReference = ({
       line,
       column,
     });
+
+    removeDependency(reference);
     const inlineCopy = ownerUrlInfo.dependencies.prepare({
       ...inlineProps,
       specifierLine: line,
@@ -468,8 +470,8 @@ const createReference = ({
       prev: reference,
       ...props,
     });
+    storeReferenceChain(reference, inlineCopy);
     // inlineUrlInfo.isInline = true;
-    replaceDependency(reference, inlineCopy);
     return inlineCopy;
   };
 
@@ -501,7 +503,6 @@ const createReference = ({
       filename: null,
     });
     storeReferenceChain(reference, referenceWithoutSearchParam);
-    addDependency(referenceWithoutSearchParam);
     return referenceWithoutSearchParam;
   };
 
@@ -600,20 +601,6 @@ ${ownerUrlInfo.url}`,
   } else {
     referencedUrlInfo.deleteFromGraph();
   }
-};
-
-const replaceDependency = (reference, newReference) => {
-  const { ownerUrlInfo } = reference;
-  const newOwnerUrlInfo = newReference.ownerUrlInfo;
-  if (ownerUrlInfo === newOwnerUrlInfo) {
-    const { referenceToOthersSet } = ownerUrlInfo;
-    if (!referenceToOthersSet.has(reference)) {
-      throw new Error(`reference not found in ${ownerUrlInfo.url}`);
-    }
-  }
-  removeDependency(reference);
-  addDependency(newReference);
-  storeReferenceChain(reference, newReference);
 };
 
 const storeReferenceChain = (ref, nextRef) => {
