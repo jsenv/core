@@ -228,11 +228,24 @@ export const createDependencies = (ownerUrlInfo) => {
     for (const entryPointUrlInfo of entryPoints) {
       entryPointUrlInfo.addContentTransformationCallback(async () => {
         // do not inject if already there
+        if (entryPointUrlInfo.implicitUrlSet.has(sideEffectFileReference.url)) {
+          sideEffectFileReference.remove();
+          return;
+        }
+        // put it right away in implicit url set to allow
+        // content transformation callbacks to be called concurrently
+        // and still prevent side effect file content duplicate injection
+        entryPointUrlInfo.implicitUrlSet.add(sideEffectFileReference.url);
+
+        // never happens in reality but in case the side effect file is already explicitely
+        // referenced by the entry point
         for (const referenceToOther of entryPointUrlInfo.referenceToOthersSet) {
           if (referenceToOther.url === sideEffectFileReference.url) {
+            sideEffectFileReference.remove();
             return;
           }
         }
+
         await sideEffectFileReference.urlInfo.cook();
         await prependContent(
           entryPointUrlInfo,
@@ -455,7 +468,6 @@ const createReference = ({
       line,
       column,
     });
-
     removeDependency(reference);
     const inlineCopy = ownerUrlInfo.dependencies.prepare({
       ...inlineProps,
@@ -468,7 +480,6 @@ const createReference = ({
       ...props,
     });
     storeReferenceChain(reference, inlineCopy);
-    // inlineUrlInfo.isInline = true;
     return inlineCopy;
   };
 
@@ -522,13 +533,9 @@ ${ownerUrlInfo.url}`,
   }
 
   ownerUrlInfo.referenceToOthersSet.add(reference);
-  if (
-    reference.isImplicit &&
-    !reference.isInline &&
-    !ownerUrlInfo.implicitUrlSet.has(reference.url)
-  ) {
-    // an implicit reference do not appear in the file but the non explicited file
-    // have an impact on it
+  if (reference.isImplicit) {
+    // an implicit reference is a reference that does not explicitely appear in the file
+    // but has an impact on the file
     // -> package.json on import resolution for instance
     // in that case:
     // - file depends on the implicit file (it must autoreload if package.json is modified)
