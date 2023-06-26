@@ -352,6 +352,7 @@ const createReference = ({
   // should be ignored during build
   isWeak = false,
   hasVersioningEffect = false,
+  version = null,
   injected = false,
   isInline = false,
   content,
@@ -412,7 +413,7 @@ const createReference = ({
     isImplicit,
     isWeak,
     hasVersioningEffect,
-    version: null,
+    version,
     injected,
     timing: {},
     // for inline resources the reference contains the content

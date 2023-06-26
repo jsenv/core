@@ -224,7 +224,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           Object.keys(returnValue).forEach((key) => {
             reference.searchParams.set(key, returnValue[key]);
           });
-          reference.generatedUrl = normalizeUrl(reference.url);
+          const referencedUrlObject = new URL(reference.url);
+          const search = reference.searchParams.toString();
+          referencedUrlObject.search = search;
+          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
         },
       );
     }

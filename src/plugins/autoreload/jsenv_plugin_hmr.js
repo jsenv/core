@@ -17,7 +17,7 @@ export const jsenvPluginHmr = () => {
       urlObject.searchParams.delete("v");
       return urlObject.href;
     },
-    transformReferenceSearchParams: (reference, context) => {
+    transformReferenceSearchParams: (reference) => {
       if (reference.isImplicit) {
         return null;
       }
@@ -26,11 +26,11 @@ export const jsenvPluginHmr = () => {
         // parent do not use hmr search param
         return null;
       }
-      if (!firstReference || !firstReference.data.hmr) {
+      if (!firstReference && !reference.data.hmr) {
         // entry point do not use hmr search param
         return null;
       }
-      const referencedUrlInfo = context.urlGraph.getUrlInfo(reference.url);
+      const referencedUrlInfo = reference.urlInfo;
       if (!referencedUrlInfo.modifiedTimestamp) {
         return null;
       }
