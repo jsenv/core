@@ -26,7 +26,7 @@ export const jsenvPluginHmr = () => {
         // parent do not use hmr search param
         return null;
       }
-      if (!firstReference && !firstReference.data.hmr) {
+      if (!firstReference || !firstReference.data.hmr) {
         // entry point do not use hmr search param
         return null;
       }

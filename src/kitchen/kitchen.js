@@ -249,7 +249,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
-    graph,
     sourcemaps,
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,

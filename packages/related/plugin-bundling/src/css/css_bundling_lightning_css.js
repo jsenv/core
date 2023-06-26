@@ -16,7 +16,7 @@ export const bundleCss = async ({ cssUrlInfos, context }) => {
         read: (specifier) => {
           const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
           const fileUrl = String(fileUrlObject);
-          const urlInfo = context.urlGraph.getUrlInfo(fileUrl);
+          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
           return urlInfo.content;
         },
         resolve(specifier, from) {

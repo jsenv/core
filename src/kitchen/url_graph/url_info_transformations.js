@@ -15,7 +15,6 @@ export const createUrlInfoTransformer = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
-  urlGraph,
 }) => {
   if (sourcemapsSourcesProtocol === undefined) {
     sourcemapsSourcesProtocol = "file:///";
@@ -252,7 +251,7 @@ export const createUrlInfoTransformer = ({
   };
 
   const applyTransformationsEffects = (urlInfo) => {
-    applySourcemapOnContent();
+    applySourcemapOnContent(urlInfo);
     urlInfo.contentFinalized = true;
   };
 
@@ -293,7 +292,7 @@ export const createUrlInfoTransformer = ({
         isInline: sourcemaps === "inline",
       });
     }
-    const sourcemapUrlInfo = urlGraph.getUrlInfo(sourcemapReference.url);
+    const sourcemapUrlInfo = sourcemapReference.urlInfo;
 
     const sourcemap = urlInfo.sourcemap;
     if (sourcemapsSourcesRelative) {
