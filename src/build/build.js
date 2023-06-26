@@ -731,9 +731,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 }
                 return fromBundleOrRawGraph(firstReference.url);
               }
-              // reference updated during "postbuild":
-              // - happens for "js_module_fallback"
               if (firstReference.original) {
+                // reference updated during "postbuild":
+                // - happens for "js_module_fallback"
                 return fromBundleOrRawGraph(firstReference.original.url);
               }
               return fromBundleOrRawGraph(finalUrlInfo.url);

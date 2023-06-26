@@ -108,7 +108,6 @@ export const createKitchen = ({
   };
   const resolveReference = (reference) => {
     if (reference.url) {
-      reference.generatedUrl = reference.url; // happens for reference.becomesInline()
       return reference;
     }
 
@@ -169,31 +168,33 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
         }
       }
       redirect: {
-        pluginController.callHooks(
-          "redirectReference",
-          reference,
-          kitchenContext,
-          (returnValue, plugin, setReference) => {
-            const normalizedReturnValue = normalizeUrl(returnValue);
-            if (normalizedReturnValue === reference.url) {
-              return;
-            }
-            if (reference.debug) {
-              logger.debug(
-                `url redirected by "${plugin.name}"
+        if (reference.redirection) {
+          pluginController.callHooks(
+            "redirectReference",
+            reference,
+            kitchenContext,
+            (returnValue, plugin, setReference) => {
+              const normalizedReturnValue = normalizeUrl(returnValue);
+              if (normalizedReturnValue === reference.url) {
+                return;
+              }
+              if (reference.debug) {
+                logger.debug(
+                  `url redirected by "${plugin.name}"
 ${ANSI.color(reference.url, ANSI.GREY)} ->
 ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
+                );
+              }
+              const referenceRedirected = reference.redirect(
+                normalizedReturnValue,
               );
-            }
-            const referenceRedirected = reference.redirect(
-              normalizedReturnValue,
-            );
-            reference = referenceRedirected;
-            setReferenceUrl(normalizedReturnValue);
-            setReference(referenceRedirected);
-          },
-        );
+              reference = referenceRedirected;
+              setReferenceUrl(normalizedReturnValue);
+              setReference(referenceRedirected);
+            },
+          );
+        }
       }
       reference.generatedUrl = reference.url;
       return reference;

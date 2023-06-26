@@ -17,6 +17,14 @@ import {
 
 export const jsenvPluginJsModuleFallbackInsideHtml = () => {
   const turnIntoJsClassicProxy = (reference) => {
+    // not needed for now: redirections are disabled
+    // for getWithoutSearchParam
+    // if (
+    //   reference.prev &&
+    //   reference.prev.searchParams.has("js_module_fallback")
+    // ) {
+    //   return null;
+    // }
     return injectQueryParams(reference.url, { js_module_fallback: "" });
   };
 
@@ -45,7 +53,6 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
           context.systemJsTranspilation &&
           reference.expectedType === "js_module"
         ) {
-          // reference.subtype = "js_classic";
           return turnIntoJsClassicProxy(reference);
         }
         return null;

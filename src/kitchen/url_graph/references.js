@@ -1,4 +1,4 @@
-import { normalizeUrl, getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
+import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -358,10 +358,15 @@ const createReference = ({
   typePropertyNode,
   leadsToADirectory = false,
   debug = false,
+  original = null,
   prev = null,
+  next = null,
   url = null,
-  urlInfo = null,
   searchParams = null,
+  generatedUrl = null,
+  generatedSpecifier = null,
+  urlInfo = null,
+  redirection = true,
 }) => {
   if (typeof specifier !== "string") {
     if (specifier instanceof URL) {
@@ -372,17 +377,18 @@ const createReference = ({
   }
   const reference = {
     ownerUrlInfo,
-    original: null,
+    original,
     prev,
-    next: null,
+    next,
     data,
     node,
     trace,
     url,
     urlInfo,
     searchParams,
-    generatedUrl: null,
-    generatedSpecifier: null,
+    generatedUrl,
+    generatedSpecifier,
+    redirection,
     type,
     subtype,
     expectedContentType,
@@ -449,7 +455,9 @@ const createReference = ({
     });
     referenceRedirected.specifier = url;
     referenceRedirected.url = url;
-    storeReferenceChain(reference, referenceRedirected);
+    referenceRedirected.prev = reference;
+    referenceRedirected.original = reference.original || reference;
+    reference.next = referenceRedirected;
     return referenceRedirected;
   };
 
@@ -476,10 +484,11 @@ const createReference = ({
       specifier,
       content,
       contentType,
+      original: reference.original || reference,
       prev: reference,
       ...props,
     });
-    storeReferenceChain(reference, inlineCopy);
+    reference.next = inlineCopy;
     return inlineCopy;
   };
 
@@ -488,29 +497,24 @@ const createReference = ({
       return null;
     }
 
-    const originalRef = reference.original || reference;
-    const newSpecifier = originalRef.specifier
+    const newSpecifier = reference.specifier
       .replace(`?${searchParam}`, "")
       .replace(`&${searchParam}`, "");
-    const newUrlObject = new URL(originalRef.url);
-    const newSearchParams = newUrlObject.searchParams;
-    newSearchParams.delete(searchParam);
-    const newUrl = normalizeUrl(newUrlObject.href);
     const referenceWithoutSearchParam = ownerUrlInfo.dependencies.prepare({
-      ...originalRef,
+      ...reference,
+      url: null,
       isImplicit: true,
       isWeak: true,
-      original: originalRef,
-      data: { ...originalRef.data },
+      data: { ...reference.data },
       expectedType,
       specifier: newSpecifier,
-      url: newUrl,
-      searchParams: newSearchParams,
       generatedSpecifier: null,
-      generatedUrl: null,
       filename: null,
+      original: reference.original || reference,
+      prev: reference,
+      redirection: false,
     });
-    storeReferenceChain(reference, referenceWithoutSearchParam);
+    reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam;
   };
 
@@ -605,12 +609,18 @@ ${ownerUrlInfo.url}`,
   } else {
     referencedUrlInfo.deleteFromGraph();
   }
-};
 
-const storeReferenceChain = (ref, nextRef) => {
-  ref.next = nextRef;
-  nextRef.original = ref.original || ref;
-  nextRef.prev = ref;
+  const prevReference = reference.prev;
+  const nextReference = reference.next;
+  if (prevReference && nextReference) {
+    nextReference.prev = prevReference;
+    prevReference.next = nextReference;
+  } else if (prevReference) {
+    prevReference.next = null;
+  } else if (nextReference) {
+    nextReference.original = null;
+    nextReference.prev = null;
+  }
 };
 
 const traceFromUrlSite = (urlSite) => {

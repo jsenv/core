@@ -14,7 +14,6 @@ const test = async ({ name, expectedUrl, ...rest }) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    versioning: false,
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
   });
@@ -45,6 +44,7 @@ await test({
   name: "0_js_module",
   expectedUrl: "/js/main.js",
   runtimeCompat: { chrome: "89" },
+  versioning: false,
   plugins: [jsenvPluginBundling()],
 });
 // cannot use <script type="module">
@@ -52,11 +52,13 @@ await test({
   name: "1_js_module_fallback",
   expectedUrl: "/js/main.nomodule.js",
   runtimeCompat: { chrome: "60" },
+  versioning: false,
   plugins: [jsenvPluginBundling()],
 });
-// // cannot use + no bundling
-// await test({
-//   name: "2_js_module_fallback_no_bundling",
-//   expectedUrl: `/js/main.nomodule.js`,
-//   runtimeCompat: { chrome: "60" },
-// });
+// cannot use + no bundling
+await test({
+  name: "2_js_module_fallback_no_bundling",
+  expectedUrl: `/js/main.nomodule.js`,
+  runtimeCompat: { chrome: "60" },
+  versioning: false,
+});
