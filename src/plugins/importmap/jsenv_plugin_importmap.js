@@ -156,9 +156,7 @@ export const jsenvPluginImportmap = () => {
               break;
             }
           }
-          const importmapUrlInfo = htmlUrlInfo.graphs.getUrlInfo(
-            importmapReference.url,
-          );
+          const importmapUrlInfo = importmapReference.urlInfo;
           await importmapUrlInfo.cook();
           onHtmlImportmapParsed(
             JSON.parse(importmapUrlInfo.content),

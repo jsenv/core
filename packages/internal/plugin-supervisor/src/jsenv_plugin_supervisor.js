@@ -163,7 +163,7 @@ export const jsenvPluginSupervisor = ({
     },
     transformUrlContent: {
       html: (htmlUrlInfo) => {
-        const [supervisorFileyReference] = htmlUrlInfo.dependencies.inject({
+        const supervisorFileReference = htmlUrlInfo.dependencies.inject({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl,
@@ -175,7 +175,7 @@ export const jsenvPluginSupervisor = ({
             url: htmlUrlInfo.url,
           },
           {
-            supervisorScriptSrc: supervisorFileyReference.generatedSpecifier,
+            supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
             supervisorOptions: {
               errorBaseUrl,
               logs,

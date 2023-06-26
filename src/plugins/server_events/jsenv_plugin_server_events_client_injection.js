@@ -22,13 +22,14 @@ export const jsenvPluginServerEventsClientInjection = () => {
     transformUrlContent: {
       html: (htmlUrlInfo) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const [serverEventsClientFileReference] =
-          htmlUrlInfo.dependencies.inject({
+        const serverEventsClientFileReference = htmlUrlInfo.dependencies.inject(
+          {
             type: "script",
             subtype: "js_module",
             expectedType: "js_module",
             specifier: serverEventsClientFileUrl,
-          });
+          },
+        );
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({

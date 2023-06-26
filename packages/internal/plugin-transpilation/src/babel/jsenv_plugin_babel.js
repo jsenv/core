@@ -12,7 +12,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
   const transformWithBabel = async (urlInfo, context) => {
     const isJsModule = urlInfo.type === "js_module";
     const getImportSpecifier = (clientFileUrl) => {
-      const [jsImportReference] = urlInfo.dependencies.inject({
+      const jsImportReference = urlInfo.dependencies.inject({
         type: "js_import",
         expectedType: "js_module",
         specifier: clientFileUrl,
