@@ -119,7 +119,9 @@ const addRelationshipWithPackageJson = ({
     isImplicit: true,
     hasVersioningEffect,
   });
-  if (packageJsonReference.urlInfo.type === undefined) {
+  // we don't cook package.json files, we just maintain their content
+  // to be able to check if it has changed later on
+  if (packageJsonReference.urlInfo.content === undefined) {
     const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl));
     packageJsonReference.urlInfo.type = "json";
     packageJsonReference.urlInfo.kitchen.context.urlInfoTransformer.setContent(

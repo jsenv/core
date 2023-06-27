@@ -145,17 +145,20 @@ export const createFileService = ({
         associations: watchAssociations,
       });
       urlInfo.isWatched = watch;
-      // si une urlInfo dépends de pleins d'autres alors
-      // on voudrait check chacune de ces url infos (package.json dans mon cas)
+      // wehn an url depends on many others, we check all these (like package.json)
       urlInfo.isValid = () => {
         if (!urlInfo.url.startsWith("file:")) {
           return false;
         }
-        if (watch && urlInfo.content === undefined) {
-          // trust the watching mecanism doing urlInfo.content = undefined when file is modified
+        if (urlInfo.content === undefined) {
+          // urlInfo content is undefined when:
+          // - url info content never fetched
+          // - it is considered as modified because undelying file is watched and got saved
+          // - it is considered as modified because underlying file content
+          //   was compared using etag and it has changed
           return false;
         }
-        if (!watch && urlInfo.content !== undefined) {
+        if (!watch) {
           // file is not watched, check the filesystem
           let fileContentAsBuffer;
           try {
@@ -171,6 +174,14 @@ export const createFileService = ({
           const fileContentEtag = bufferToEtag(fileContentAsBuffer);
           if (fileContentEtag !== urlInfo.originalContentEtag) {
             urlInfo.considerModified();
+            // restore content to be able to compare it again later
+            urlInfo.kitchen.context.urlInfoTransformer.setContent(
+              urlInfo,
+              String(fileContentAsBuffer),
+              {
+                contentEtag: fileContentEtag,
+              },
+            );
             return false;
           }
         }
@@ -291,7 +302,7 @@ export const createFileService = ({
 
       // urlInfo objects are reused, they must be "reset" before cooking them again
       if (
-        (urlInfo.error || urlInfo.contentEtag) &&
+        (urlInfo.error || urlInfo.content !== undefined) &&
         !urlInfo.isInline &&
         urlInfo.type !== "sourcemap"
       ) {

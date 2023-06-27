@@ -735,13 +735,6 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
       line: reference.specifierLine,
       column: reference.specifierColumn,
     };
-    referencedUrlInfo.contentType = reference.contentType;
-    referencedUrlInfo.originalContent = referencedUrlInfo.kitchen.context.build
-      ? referencedUrlInfo.originalContent === undefined
-        ? reference.content
-        : referencedUrlInfo.originalContent
-      : reference.content;
-    referencedUrlInfo.content = reference.content;
   }
 
   if (reference.debug) {

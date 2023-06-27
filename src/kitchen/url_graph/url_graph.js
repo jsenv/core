@@ -241,7 +241,7 @@ const createUrlInfo = (url) => {
     }
     return null;
   };
-  urlInfo.considerModified = (modifiedTimestamp = Date.now()) => {
+  urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const seen = [];
     const iterate = (urlInfo) => {
       if (seen.includes(urlInfo.url)) {
@@ -251,18 +251,14 @@ const createUrlInfo = (url) => {
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.kitchen.context.urlInfoTransformer.resetContent(urlInfo);
       urlInfo.referenceFromOthersSet.forEach((referenceFromOther) => {
-        const urlInfoReferencingThisOne = urlInfo.graph.getUrlInfo(
-          referenceFromOther.url,
-        );
+        const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
         const { hotAcceptDependencies = [] } = urlInfoReferencingThisOne.data;
         if (!hotAcceptDependencies.includes(urlInfo.url)) {
           iterate(urlInfoReferencingThisOne);
         }
       });
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        const referencedUrlInfo = urlInfo.graph.getUrlInfo(
-          referenceToOther.url,
-        );
+        const referencedUrlInfo = referenceToOther.urlInfo;
         if (referencedUrlInfo.isInline) {
           iterate(referencedUrlInfo);
         }

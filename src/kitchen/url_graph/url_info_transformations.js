@@ -67,6 +67,7 @@ export const createUrlInfoTransformer = ({
 
   const resetContent = (urlInfo) => {
     urlInfo.contentFinalized = false;
+    urlInfo.originalContent = undefined;
     urlInfo.originalContentAst = undefined;
     urlInfo.originalContentEtag = undefined;
     urlInfo.contentAst = undefined;
