@@ -482,7 +482,6 @@ const createReference = ({
       line,
       column,
     });
-    removeDependency(reference);
     const inlineCopy = ownerUrlInfo.dependencies.prepare({
       ...inlineProps,
       specifierLine: line,
@@ -494,6 +493,7 @@ const createReference = ({
       prev: reference,
       ...props,
     });
+    removeDependency(reference);
     reference.next = inlineCopy;
     return inlineCopy;
   };

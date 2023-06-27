@@ -1317,14 +1317,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
                 fetchUrlContent: (versionedUrlInfo) => {
                   if (versionedUrlInfo.isInline) {
-                    const versionedUrl = versionedUrlInfo.url;
+                    const { firstReference } = versionedUrlInfo;
+                    let versionedUrl;
+                    if (firstReference.prev && !firstReference.prev.isInline) {
+                      versionedUrl = firstReference.prev.url;
+                    } else {
+                      versionedUrl = versionedUrlInfo.url;
+                    }
                     const rawUrl = buildDirectoryRedirections.get(versionedUrl);
                     const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
                     const finalUrlInfo =
                       finalKitchen.graph.getUrlInfo(versionedUrl);
                     return {
-                      content: versionedUrlInfo.content,
-                      contentType: versionedUrlInfo.contentType,
+                      content: finalUrlInfo.content,
+                      contentType: finalUrlInfo.contentType,
                       originalContent: rawUrlInfo
                         ? rawUrlInfo.originalContent
                         : undefined,
