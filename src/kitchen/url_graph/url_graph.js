@@ -27,7 +27,7 @@ export const createUrlGraph = ({
     if (urlInfo) {
       urlInfoMap.delete(url);
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        const referencedUrlInfo = getUrlInfo(referenceToOther.url);
+        const referencedUrlInfo = referenceToOther.urlInfo;
         referencedUrlInfo.referenceFromOthersSet.delete(referenceToOther);
       });
     }
@@ -255,12 +255,6 @@ const createUrlInfo = (url) => {
         const { hotAcceptDependencies = [] } = urlInfoReferencingThisOne.data;
         if (!hotAcceptDependencies.includes(urlInfo.url)) {
           iterate(urlInfoReferencingThisOne);
-        }
-      });
-      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        const referencedUrlInfo = referenceToOther.urlInfo;
-        if (referencedUrlInfo.isInline) {
-          iterate(referencedUrlInfo);
         }
       });
     };

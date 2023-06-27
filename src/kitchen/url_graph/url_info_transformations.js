@@ -75,6 +75,12 @@ export const createUrlInfoTransformer = ({
     urlInfo.content = undefined;
     urlInfo.sourcemap = null;
     urlInfo.sourcemapIsWrong = null;
+    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+      const referencedUrlInfo = referenceToOther.urlInfo;
+      if (referencedUrlInfo.isInline) {
+        referencedUrlInfo.deleteFromGraph();
+      }
+    });
   };
 
   const setContent = async (

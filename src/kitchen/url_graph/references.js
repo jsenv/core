@@ -530,7 +530,11 @@ const createReference = ({
 
 const addDependency = (reference) => {
   const { ownerUrlInfo } = reference;
-  if (ownerUrlInfo.contentFinalized && ownerUrlInfo.kitchen.context.dev) {
+  if (
+    ownerUrlInfo.contentFinalized &&
+    ownerUrlInfo.kitchen.context.dev &&
+    !ownerUrlInfo.isRoot
+  ) {
     throw new Error(
       `cannot add reference for content already sent to the browser
 --- reference url ---
@@ -564,7 +568,11 @@ ${ownerUrlInfo.url}`,
 
 const removeDependency = (reference) => {
   const { ownerUrlInfo } = reference;
-  if (ownerUrlInfo.contentFinalized && ownerUrlInfo.kitchen.context.dev) {
+  if (
+    ownerUrlInfo.contentFinalized &&
+    ownerUrlInfo.kitchen.context.dev &&
+    !ownerUrlInfo.isRoot
+  ) {
     throw new Error(
       `cannot remove reference for content already sent to the browser
 --- reference url ---
@@ -610,7 +618,7 @@ ${ownerUrlInfo.url}`,
       referencedUrlInfo.firstReference = null;
       applyReferenceEffectsOnUrlInfo(firstStrongReferenceFromOther);
     }
-  } else {
+  } else if (reference.type !== "http_request") {
     referencedUrlInfo.deleteFromGraph();
   }
 
