@@ -656,12 +656,16 @@ const memoizeCook = (cook) => {
 
 const memoizeIsSupported = (runtimeCompat) => {
   const cache = new Map();
-  return (feature) => {
+  return (feature, featureCompat) => {
     const fromCache = cache.get(feature);
     if (typeof fromCache === "boolean") {
       return fromCache;
     }
-    const supported = RUNTIME_COMPAT.isSupported(runtimeCompat, feature);
+    const supported = RUNTIME_COMPAT.isSupported(
+      runtimeCompat,
+      feature,
+      featureCompat,
+    );
     cache.set(feature, supported);
     return supported;
   };

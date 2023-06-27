@@ -12,7 +12,7 @@ export const getBaseBabelPluginStructure = ({
   // getImportSpecifier,
 }) => {
   const isBabelPluginNeeded = (babelPluginName) => {
-    return !isSupported(babelPluginCompatMap[babelPluginName]);
+    return !isSupported(babelPluginName, babelPluginCompatMap[babelPluginName]);
   };
 
   const babelPluginStructure = {};
