@@ -1219,6 +1219,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             ignoreProtocol: "remove",
             graph: finalKitchen.graph,
             build: true,
+            versioning: true,
             runtimeCompat,
             ...contextSharedDuringBuild,
             plugins: [

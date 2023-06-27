@@ -22,6 +22,11 @@ import {
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 
+const inlineContentClientFileUrl = new URL(
+  "./client/inline_content.js",
+  import.meta.url,
+).href;
+
 export const createKitchen = ({
   name,
   signal,
@@ -35,6 +40,7 @@ export const createKitchen = ({
   graph,
   dev = false,
   build = false,
+  versioning = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -64,9 +70,11 @@ export const createKitchen = ({
     graph,
     dev,
     build,
+    versioning,
     runtimeCompat,
     clientRuntimeCompat,
     systemJsTranspilation,
+    inlineContentClientFileUrl,
     isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
     isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
     minification,
@@ -262,7 +270,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const fetchUrlContent = async (urlInfo, contextDuringFetch) => {
     try {
-      urlInfoTransformer.resetContent(urlInfo);
+      if (!versioning) {
+        urlInfoTransformer.resetContent(urlInfo);
+      }
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
           "fetchUrlContent",
