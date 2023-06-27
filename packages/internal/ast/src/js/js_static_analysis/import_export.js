@@ -11,7 +11,9 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
+    expectedType: assertionInfo
+      ? assertionInfo.importAttributes.type
+      : "js_module",
     ...assertionInfo,
   });
 };
@@ -30,7 +32,9 @@ export const analyzeImportExpression = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
+    expectedType: assertionInfo
+      ? assertionInfo.importAttributes.type
+      : "js_module",
     ...assertionInfo,
   });
 };
@@ -88,10 +92,11 @@ const extractImportAssertionsInfo = (node) => {
       return null;
     }
     return {
-      assertNode: typeAssertionNode,
-      assert: {
+      importAttributes: {
         type: typeNode.value,
       },
+      importNode: node,
+      importTypeAttributeNode: typeAssertionNode,
     };
   }
   // dynamic import
@@ -127,9 +132,10 @@ const extractImportAssertionsInfo = (node) => {
     return null;
   }
   return {
-    assertNode: firstArgNode,
-    assert: {
+    importAttributes: {
       type: typePropertyValue.value,
     },
+    importNode: node,
+    importTypeAttributeNode: typePropertyNode,
   };
 };

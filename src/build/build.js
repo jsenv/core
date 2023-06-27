@@ -597,6 +597,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (rawUrlInfo) {
                 const referencedUrlObject = new URL(reference.url);
                 referencedUrlObject.searchParams.delete("as_js_classic");
+                referencedUrlObject.searchParams.delete("as_json_module");
                 const buildUrl = buildUrlsGenerator.generate(
                   referencedUrlObject.href,
                   {

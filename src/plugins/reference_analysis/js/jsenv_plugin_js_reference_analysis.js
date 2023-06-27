@@ -113,9 +113,9 @@ const parseAndTransformJsReferences = async (
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,
       }[externalReferenceInfo.baseUrlType],
-      assert: externalReferenceInfo.assert,
-      assertNode: externalReferenceInfo.assertNode,
-      typePropertyNode: externalReferenceInfo.typePropertyNode,
+      importAttributes: externalReferenceInfo.importAttributes,
+      importNode: externalReferenceInfo.importNode,
+      importTypeAttributeNode: externalReferenceInfo.importTypeAttributeNode,
     });
     parallelActions.push(async () => {
       await reference.readGeneratedSpecifier();
@@ -126,7 +126,7 @@ const parseAndTransformJsReferences = async (
         replacement,
       });
       if (reference.mutation) {
-        reference.mutation(magicSource);
+        reference.mutation(magicSource, urlInfo);
       }
     });
   };

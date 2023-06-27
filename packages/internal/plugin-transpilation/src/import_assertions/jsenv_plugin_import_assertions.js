@@ -35,23 +35,25 @@ export const jsenvPluginImportAssertions = ({
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
-      const { assertNode } = reference;
+      const { importTypeAttributeNode } = reference;
       if (reference.subtype === "import_dynamic") {
-        const assertPropertyNode = assertNode.properties.find(
-          (prop) => prop.key.name === "assert",
-        );
-        const assertPropertyValue = assertPropertyNode.value;
-        const typePropertyNode = assertPropertyValue.properties.find(
-          (prop) => prop.key.name === "type",
-        );
         magicSource.remove({
-          start: typePropertyNode.start,
-          end: typePropertyNode.end,
+          start: importTypeAttributeNode.start,
+          end: importTypeAttributeNode.end,
         });
       } else {
+        const content = reference.ownerUrlInfo.content;
+        const assertKeyboardStart = content.indexOf(
+          "assert",
+          importTypeAttributeNode.start - " assert { ".length,
+        );
+        const assertKeywordEnd = content.indexOf(
+          "}",
+          importTypeAttributeNode.end,
+        );
         magicSource.remove({
-          start: assertNode.start,
-          end: assertNode.end,
+          start: assertKeyboardStart,
+          end: assertKeywordEnd + 1,
         });
       }
     };
@@ -78,7 +80,7 @@ export const jsenvPluginImportAssertions = ({
       }
     },
     redirectReference: (reference, context) => {
-      if (!reference.assert) {
+      if (!reference.importAttributes) {
         return null;
       }
       const { searchParams } = reference;
@@ -90,7 +92,7 @@ export const jsenvPluginImportAssertions = ({
         markAsJsModuleProxy(reference);
         return null;
       }
-      const type = reference.assert.type;
+      const type = reference.importAttributes.type;
       if (shouldTranspileImportAssertion(context, type)) {
         return turnIntoJsModuleProxy(reference, type);
       }
@@ -113,7 +115,7 @@ const jsenvPluginAsModules = () => {
         return null;
       }
       const jsonUrlInfo = jsonReference.urlInfo;
-      await jsonUrlInfo.fetchContent();
+      await jsonUrlInfo.cook();
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:

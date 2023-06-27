@@ -357,9 +357,6 @@ const createReference = ({
   isInline = false,
   content,
   contentType,
-  assert,
-  assertNode,
-  typePropertyNode,
   leadsToADirectory = false,
   debug = false,
   original = null,
@@ -371,6 +368,11 @@ const createReference = ({
   generatedSpecifier = null,
   urlInfo = null,
   redirection = true,
+  // import assertions
+  importAttributes,
+  importNode,
+  importTypeAttributeNode,
+  mutation,
 }) => {
   if (typeof specifier !== "string") {
     if (specifier instanceof URL) {
@@ -416,17 +418,17 @@ const createReference = ({
     version,
     injected,
     timing: {},
+    leadsToADirectory,
     // for inline resources the reference contains the content
     isInline,
     content,
     contentType,
     escape: null,
     // import assertions (maybe move to data?)
-    assert,
-    assertNode,
-    typePropertyNode,
-    leadsToADirectory,
-    mutation: null,
+    importAttributes,
+    importNode,
+    importTypeAttributeNode,
+    mutation,
     debug,
   };
 
