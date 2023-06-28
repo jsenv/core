@@ -5,7 +5,7 @@ import {
   setUrlFilename,
 } from "@jsenv/urls";
 import { URL_META } from "@jsenv/url-meta";
-import { writeFileSync, ensureWindowsDriveLetter } from "@jsenv/filesystem";
+import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
 import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
@@ -264,15 +264,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
     sourcemapsSourcesRelative,
-    clientRuntimeCompat,
+    outDirectoryUrl,
+    supervisor,
   });
   kitchenContext.urlInfoTransformer = urlInfoTransformer;
 
   const fetchUrlContent = async (urlInfo, contextDuringFetch) => {
     try {
-      if (!versioning) {
-        urlInfoTransformer.resetContent(urlInfo);
-      }
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
           "fetchUrlContent",
@@ -429,7 +427,22 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.finalizeUrlContent = finalizeUrlContent;
 
   let onCookStart = () => {};
-  const _cook = async (urlInfo, contextDuringCook) => {
+  const cookGuard = dev ? debounceCook : memoizeCook;
+  const cook = cookGuard(async (urlInfo, contextDuringCook) => {
+    // urlInfo objects are reused, they must be "reset" before cooking them again
+    if (
+      !versioning &&
+      (urlInfo.error || urlInfo.content !== undefined) &&
+      !urlInfo.isInline &&
+      urlInfo.type !== "sourcemap"
+    ) {
+      urlInfo.error = null;
+      urlInfo.type = null;
+      urlInfo.subtype = null;
+      urlInfo.timing = {};
+      urlInfoTransformer.resetContent(urlInfo);
+    }
+
     let resolveCookPromise;
     const cookPromise = new Promise((resolve) => {
       resolveCookPromise = resolve;
@@ -472,47 +485,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     );
 
     resolveCookPromise();
-  };
-  const cookGuard = dev ? debounceCook : memoizeCook;
-  const cook = cookGuard(async (urlInfo, contextDuringCook) => {
-    if (!outDirectoryUrl) {
-      await _cook(urlInfo, contextDuringCook);
-      return;
-    }
-    // writing result inside ".jsenv" directory (debug purposes)
-    try {
-      await _cook(urlInfo, contextDuringCook);
-    } finally {
-      const { generatedUrl } = urlInfo;
-      if (generatedUrl && generatedUrl.startsWith("file:")) {
-        if (urlInfo.type === "directory") {
-          // no need to write the directory
-        } else if (urlInfo.content === null) {
-          // Some error might lead to urlInfo.content to be null
-          // (error hapenning before urlInfo.content can be set, or 404 for instance)
-          // in that case we can't write anything
-        } else {
-          let contentIsInlined = urlInfo.isInline;
-          if (
-            contentIsInlined &&
-            supervisor &&
-            graph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
-          ) {
-            contentIsInlined = false;
-          }
-          if (!contentIsInlined) {
-            writeFileSync(new URL(generatedUrl), urlInfo.content);
-          }
-          const { sourcemapGeneratedUrl, sourcemap } = urlInfo;
-          if (sourcemapGeneratedUrl && sourcemap) {
-            writeFileSync(
-              new URL(sourcemapGeneratedUrl),
-              JSON.stringify(sourcemap, null, "  "),
-            );
-          }
-        }
-      }
-    }
   });
   kitchenContext.cook = cook;
 

@@ -300,18 +300,6 @@ export const createFileService = ({
         }
       }
 
-      // urlInfo objects are reused, they must be "reset" before cooking them again
-      if (
-        (urlInfo.error || urlInfo.content !== undefined) &&
-        !urlInfo.isInline &&
-        urlInfo.type !== "sourcemap"
-      ) {
-        urlInfo.error = null;
-        urlInfo.type = null;
-        urlInfo.subtype = null;
-        urlInfo.timing = {};
-        urlInfo.kitchen.context.urlInfoTransformer.resetContent(urlInfo);
-      }
       await urlInfo.cook({ request });
       let { response } = urlInfo;
       if (response) {

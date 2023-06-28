@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { writeFileSync } from "@jsenv/filesystem";
 import { urlToRelativeUrl, isFileSystemPath } from "@jsenv/urls";
 import {
   composeTwoSourcemaps,
@@ -17,6 +18,8 @@ export const createUrlInfoTransformer = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
+  outDirectoryUrl,
+  supervisor,
 }) => {
   if (sourcemapsSourcesProtocol === undefined) {
     sourcemapsSourcesProtocol = "file:///";
@@ -186,7 +189,8 @@ export const createUrlInfoTransformer = ({
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    if (content && content !== urlInfo.content) {
+    const contentModified = content && content !== urlInfo.content;
+    if (contentModified) {
       urlInfo.contentAst = contentAst;
       urlInfo.contentEtag = contentEtag;
       urlInfo.content = content;
@@ -214,9 +218,58 @@ export const createUrlInfoTransformer = ({
       // "no sourcemap is better than wrong sourcemap"
       urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
     }
+    if (contentModified) {
+      applyContentEffects(urlInfo);
+    }
+  };
 
+  const applyContentEffects = (urlInfo) => {
     if (urlInfo.contentFinalized) {
       applySourcemapOnContent(urlInfo);
+      writeInsideOutDirectory(urlInfo);
+    }
+  };
+
+  const writeInsideOutDirectory = (urlInfo) => {
+    // writing result inside ".jsenv" directory (debug purposes)
+    if (!outDirectoryUrl) {
+      return;
+    }
+    const { generatedUrl } = urlInfo;
+    if (!generatedUrl) {
+      return;
+    }
+    if (!generatedUrl.startsWith("file:")) {
+      return;
+    }
+    if (urlInfo.type === "directory") {
+      // no need to write the directory
+      return;
+    }
+    // if (urlInfo.content === undefined) {
+    //   // Some error might lead to urlInfo.content to be null
+    //   // (error hapenning before urlInfo.content can be set, or 404 for instance)
+    //   // in that case we can't write anything
+    //   return;
+    // }
+
+    let contentIsInlined = urlInfo.isInline;
+    if (
+      contentIsInlined &&
+      supervisor &&
+      urlInfo.graph.getUrlInfo(urlInfo.inlineUrlSite.url).type === "html"
+    ) {
+      contentIsInlined = false;
+    }
+    if (!contentIsInlined) {
+      writeFileSync(new URL(generatedUrl), urlInfo.content);
+    }
+    const { sourcemapGeneratedUrl, sourcemap } = urlInfo;
+    if (sourcemapGeneratedUrl && sourcemap) {
+      writeFileSync(
+        new URL(sourcemapGeneratedUrl),
+        JSON.stringify(sourcemap, null, "  "),
+      );
     }
   };
 
@@ -301,8 +354,8 @@ export const createUrlInfoTransformer = ({
     if (transformations) {
       applyTransformations(urlInfo, transformations);
     }
-    applySourcemapOnContent(urlInfo);
     urlInfo.contentFinalized = true;
+    applyContentEffects(urlInfo);
   };
 
   return {
