@@ -17,9 +17,8 @@
  */
 
 import {
-  injectQueryParams,
+  injectQueryParamWithoutEncoding,
   setUrlFilename,
-  normalizeUrl,
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
@@ -75,6 +74,12 @@ import {
   injectVersionMappingsAsImportmap,
 } from "./version_mappings_injection.js";
 import { createVersionGenerator } from "./version_generator.js";
+import {
+  getVersionPlaceholderGenerator,
+  replaceVersionPlaceholdersWithDefaultAndPopulateContainedPlaceholders,
+  replaceVersionPlaceholders,
+  replaceSingleVersionPlaceholder,
+} from "./version_placeholder.js";
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -241,14 +246,13 @@ export const build = async ({
     }
   }
 
-  const asFormattedBuildUrl = (generatedUrl, reference) => {
+  const asFormattedBuildSpecifier = (reference, generatedUrl) => {
     if (base === "./") {
-      const urlRelativeToParent = urlToRelativeUrl(
-        generatedUrl,
+      const parentUrl =
         reference.ownerUrlInfo.url === sourceDirectoryUrl
           ? buildDirectoryUrl
-          : reference.ownerUrlInfo.url,
-      );
+          : reference.ownerUrlInfo.url;
+      const urlRelativeToParent = urlToRelativeUrl(generatedUrl, parentUrl);
       if (urlRelativeToParent[0] !== ".") {
         // ensure "./" on relative url (otherwise it could be a "bare specifier")
         return `./${urlRelativeToParent}`;
@@ -414,6 +418,83 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       generateSourceGraph.done();
     }
 
+    const workerReferenceSet = new Set();
+    const isReferencedByWorker = (reference) => {
+      if (workerReferenceSet.has(reference)) {
+        return true;
+      }
+      const referencedUrlInfo = reference.urlInfo;
+      const dependentWorker = GRAPH_VISITOR.findDependent(
+        finalKitchen.graph,
+        referencedUrlInfo,
+        (dependentUrlInfo) => {
+          return isWebWorkerUrlInfo(dependentUrlInfo);
+        },
+      );
+      if (dependentWorker) {
+        workerReferenceSet.add(reference);
+        return true;
+      }
+      return Boolean(dependentWorker);
+    };
+
+    let canUseImportmap =
+      versioningViaImportmap &&
+      finalEntryUrls.every((finalEntryUrl) => {
+        const finalEntryUrlInfo = finalKitchen.graph.getUrlInfo(finalEntryUrl);
+        return finalEntryUrlInfo.type === "html";
+      }) &&
+      rawKitchen.context.isSupportedOnCurrentClients("importmap");
+
+    const preferWithoutVersioning = (reference) => {
+      const ownerFinalUrlInfo = reference.ownerUrlInfo;
+      if (ownerFinalUrlInfo.jsQuote) {
+        return {
+          type: "global",
+          source: `${ownerFinalUrlInfo.jsQuote}+__v__(${JSON.stringify(
+            reference.specifier,
+          )})+${ownerFinalUrlInfo.jsQuote}`,
+        };
+      }
+      if (reference.type === "js_url") {
+        return {
+          type: "global",
+          source: `__v__(${JSON.stringify(reference.specifier)})`,
+        };
+      }
+      if (reference.type === "js_import") {
+        if (reference.subtype === "import_dynamic") {
+          return {
+            type: "global",
+            source: `__v__(${JSON.stringify(reference.specifier)})`,
+          };
+        }
+        if (reference.subtype === "import_meta_resolve") {
+          return {
+            type: "global",
+            source: `__v__(${JSON.stringify(reference.specifier)})`,
+          };
+        }
+        if (canUseImportmap && !isReferencedByWorker(reference)) {
+          return {
+            type: "importmap",
+            source: JSON.stringify(reference.specifier),
+          };
+        }
+      }
+      return null;
+    };
+
+    const versionPlaceholderMap = new Map();
+    const referenceWithoutVersioningSet = new Set();
+    const versionMappings = {}; // map of specifier without version to versioned specifier
+    const versionMappingsOnGlobalMap = new Set();
+    const versionMappingsOnImportmap = new Set();
+    const contentOnlyVersionMap = new Map();
+    const versionMap = new Map();
+
+    const versionPlaceholderGenerator = getVersionPlaceholderGenerator();
+
     shape: {
       finalKitchen = createKitchen({
         name: "shape",
@@ -426,7 +507,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         // consequently only a subset or urls are supported
         supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
         ignore,
-        ignoreProtocol: versioning ? "keep" : "remove",
+        ignoreProtocol: "remove",
         build: true,
         runtimeCompat,
         ...contextSharedDuringBuild,
@@ -434,6 +515,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           jsenvPluginReferenceAnalysis({
             ...referenceAnalysis,
             fetchInlineUrls: false,
+            allowEscapeForVersioning: versioning,
           }),
           ...(lineBreakNormalization
             ? [jsenvPluginLineBreakNormalization()]
@@ -656,10 +738,53 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               generatedUrlObject.searchParams.delete("as_css_module");
               generatedUrlObject.searchParams.delete("as_text_module");
               generatedUrlObject.hash = "";
-              const generatedUrl = generatedUrlObject.href;
-              const specifier = asFormattedBuildUrl(generatedUrl, reference);
-              buildUrls.set(specifier, reference.generatedUrl);
-              return specifier;
+              const buildUrl = generatedUrlObject.href;
+
+              if (!versioning || !shouldApplyVersioningOnReference(reference)) {
+                const buildSpecifier = asFormattedBuildSpecifier(
+                  reference,
+                  buildUrl,
+                );
+                buildUrls.set(buildSpecifier, reference.generatedUrl);
+                return buildSpecifier;
+              }
+
+              const referencedUrlInfo = reference.urlInfo;
+              let versionPlaceholder =
+                versionPlaceholderMap.get(referencedUrlInfo);
+              if (!versionPlaceholder) {
+                versionPlaceholder = versionPlaceholderGenerator();
+                versionPlaceholderMap.set(
+                  referencedUrlInfo,
+                  versionPlaceholder,
+                );
+              }
+              const buildUrlWithVersionPlaceholder =
+                injectVersionPlaceholderIntoBuildUrl({
+                  buildUrl,
+                  versionPlaceholder,
+                  versioningMethod,
+                });
+              const buildSpecifierWithVersionPlaceholder =
+                asFormattedBuildSpecifier(
+                  reference,
+                  buildUrlWithVersionPlaceholder,
+                );
+              buildUrls.set(
+                buildSpecifierWithVersionPlaceholder,
+                reference.generatedUrl,
+              );
+              const withoutVersioning = preferWithoutVersioning(reference);
+              if (withoutVersioning) {
+                if (withoutVersioning.type === "importmap") {
+                  versionMappingsOnImportmap.add(reference.specifier);
+                } else {
+                  versionMappingsOnGlobalMap.add(reference.specifier);
+                }
+                referenceWithoutVersioningSet.add(reference);
+                return () => withoutVersioning.source;
+              }
+              return buildSpecifierWithVersionPlaceholder;
             },
             fetchUrlContent: async (finalUrlInfo) => {
               const fromBundleOrRawGraph = (url) => {
@@ -766,7 +891,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         ],
         sourcemaps,
         sourcemapsSourcesContent,
-        sourcemapsSourcesRelative: !versioning,
+        sourcemapsSourcesRelative: true,
         outDirectoryUrl: outDirectoryUrl
           ? new URL("postbuild/", outDirectoryUrl)
           : undefined,
@@ -1008,117 +1133,19 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
     }
 
-    const versionMap = new Map();
-    const versionedUrlMap = new Map();
     refine: {
-      inject_version_in_urls: {
+      apply_versioning: {
         if (!versioning) {
-          break inject_version_in_urls;
+          break apply_versioning;
         }
-        const versioningTask = createBuildTask("inject version in urls");
+        // see also "New hashing algorithm that "fixes (nearly) everything"
+        // at https://github.com/rollup/rollup/pull/4543
+        const versioningTask = createBuildTask("apply versioning");
         try {
-          const canUseImportmap =
-            versioningViaImportmap &&
-            finalEntryUrls.every((finalEntryUrl) => {
-              const finalEntryUrlInfo =
-                finalKitchen.graph.getUrlInfo(finalEntryUrl);
-              return finalEntryUrlInfo.type === "html";
-            }) &&
-            finalKitchen.context.isSupportedOnCurrentClients("importmap");
-          const workerReferenceSet = new Set();
-          const isReferencedByWorker = (reference, graph) => {
-            if (workerReferenceSet.has(reference)) {
-              return true;
-            }
-            const urlInfo = graph.getUrlInfo(reference.url);
-            const dependentWorker = GRAPH_VISITOR.findDependent(
-              graph,
-              urlInfo,
-              (dependentUrlInfo) => {
-                return isWebWorkerUrlInfo(dependentUrlInfo);
-              },
-            );
-            if (dependentWorker) {
-              workerReferenceSet.add(reference);
-              return true;
-            }
-            return Boolean(dependentWorker);
-          };
-          const preferWithoutVersioning = (reference) => {
-            const ownerFinalUrlInfo = finalKitchen.graph.getUrlInfo(
-              reference.ownerUrlInfo.url,
-            );
-            if (ownerFinalUrlInfo.jsQuote) {
-              return {
-                type: "global",
-                source: `${ownerFinalUrlInfo.jsQuote}+__v__(${JSON.stringify(
-                  reference.specifier,
-                )})+${ownerFinalUrlInfo.jsQuote}`,
-              };
-            }
-            if (reference.type === "js_url") {
-              return {
-                type: "global",
-                source: `__v__(${JSON.stringify(reference.specifier)})`,
-              };
-            }
-            if (reference.type === "js_import") {
-              if (reference.subtype === "import_dynamic") {
-                return {
-                  type: "global",
-                  source: `__v__(${JSON.stringify(reference.specifier)})`,
-                };
-              }
-              if (reference.subtype === "import_meta_resolve") {
-                return {
-                  type: "global",
-                  source: `__v__(${JSON.stringify(reference.specifier)})`,
-                };
-              }
-              if (
-                canUseImportmap &&
-                !isReferencedByWorker(reference, finalKitchen.graph)
-              ) {
-                return {
-                  type: "importmap",
-                  source: JSON.stringify(reference.specifier),
-                };
-              }
-            }
-            return null;
-          };
+          workerReferenceSet.clear();
 
-          // see also https://github.com/rollup/rollup/pull/4543
-          const contentVersionMap = new Map();
-          const hashCallbacks = [];
-          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-            if (urlInfo.type === "sourcemap") {
-              return;
-            }
-            // ignore:
-            // - inline files and data files:
-            //   they are already taken into account in the file where they appear
-            // - ignored files:
-            //   we don't know their content
-            // - unused files without reference
-            //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
-            //   Are used at some point just to be discarded later because they need to be converted
-            //   There is no need to version them and we could not because the file have been ignored
-            //   so their content is unknown
-            if (urlInfo.isInline) {
-              return;
-            }
-            // urlInfo became inline and is not referenced by something else
-            if (urlInfo.url.startsWith("data:")) {
-              return;
-            }
-            if (urlInfo.url.startsWith("ignore:")) {
-              return;
-            }
-            if (!urlInfo.isUsed()) {
-              return;
-            }
-            const urlContent =
+          const generateContentVersion = (urlInfo) => {
+            const content =
               urlInfo.type === "html"
                 ? stringifyHtmlAst(
                     parseHtmlString(urlInfo.content, {
@@ -1130,243 +1157,123 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     },
                   )
                 : urlInfo.content;
+            const containedPlaceholders = new Set();
+            const contentWithPredictiblePlaceholders =
+              replaceVersionPlaceholdersWithDefaultAndPopulateContainedPlaceholders(
+                content,
+                containedPlaceholders,
+              );
             const contentVersionGenerator = createVersionGenerator();
-            contentVersionGenerator.augmentWithContent(urlContent);
+            contentVersionGenerator.augmentWithContent(
+              contentWithPredictiblePlaceholders,
+            );
             const contentVersion = contentVersionGenerator.generate();
-            contentVersionMap.set(urlInfo.url, contentVersion);
-            const versionMutations = [];
-            const seen = new Set();
+            contentOnlyVersionMap.set(urlInfo, contentVersion);
+          };
+
+          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+            // ignore:
+            // - inline files and data files:
+            //   they are already taken into account in the file where they appear
+            // - ignored files:
+            //   we don't know their content
+            // - unused files without reference
+            //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
+            //   Are used at some point just to be discarded later because they need to be converted
+            //   There is no need to version them and we could not because the file have been ignored
+            //   so their content is unknown
+            if (urlInfo.isRoot) {
+              return;
+            }
+            if (urlInfo.type === "sourcemap") {
+              return;
+            }
+            if (urlInfo.isInline) {
+              return;
+            }
+            if (urlInfo.url.startsWith("data:")) {
+              // urlInfo became inline and is not referenced by something else
+              return;
+            }
+            if (urlInfo.url.startsWith("ignore:")) {
+              return;
+            }
+            if (!urlInfo.isUsed()) {
+              return;
+            }
+            generateContentVersion(urlInfo);
+          });
+
+          const getSetOfUrlInfoInfluencingVersion = (urlInfo) => {
+            const setOfUrlInfluencingVersion = new Set();
             const visitDependencies = (urlInfo) => {
               urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-                if (seen.has(referenceToOther)) return;
-                seen.add(referenceToOther);
-                const referencedUrlInfo = finalKitchen.graph.getUrlInfo(
-                  referenceToOther.url,
-                );
-                versionMutations.push(() => {
-                  const referencedContentVersion = contentVersionMap.get(
-                    referenceToOther.url,
-                  );
-                  if (!referencedContentVersion) {
-                    // no content generated for this dependency
-                    // (inline, data:, ignore:, sourcemap, ...)
-                    return null;
-                  }
-                  if (preferWithoutVersioning(referenceToOther)) {
-                    // when versioning is dynamic no need to take into account
-                    // happens for:
-                    // - specifier mapped by window.__v__()
-                    // - specifier mapped by importmap
-                    return null;
-                  }
-                  return referencedContentVersion;
-                });
+                if (referenceToOther.isInline) {
+                  return;
+                }
+                if (referenceWithoutVersioningSet.has(referenceToOther)) {
+                  // when versioning is dynamic no need to take into account
+                  // happens for:
+                  // - specifier mapped by window.__v__()
+                  // - specifier mapped by importmap
+                  return;
+                }
+                const referencedUrlInfo = referenceToOther.urlInfo;
+                if (setOfUrlInfluencingVersion.has(referencedUrlInfo)) {
+                  return;
+                }
+                setOfUrlInfluencingVersion.add(referencedUrlInfo);
                 visitDependencies(referencedUrlInfo);
               });
             };
             visitDependencies(urlInfo);
+            return setOfUrlInfluencingVersion;
+          };
 
-            hashCallbacks.push(() => {
-              let version;
-              if (versionMutations.length === 0) {
-                version = contentVersion;
-              } else {
-                const versionGenerator = createVersionGenerator();
-                versionGenerator.augment(contentVersion);
-                versionMutations.forEach((versionMutation) => {
-                  const value = versionMutation();
-                  if (value) {
-                    versionGenerator.augment(value);
-                  }
-                });
-                version = versionGenerator.generate();
-              }
-              versionMap.set(urlInfo.url, version);
-              const buildUrlObject = new URL(urlInfo.url);
-              // remove ?js_module_fallback
-              // this information is already hold into ".nomodule"
-              buildUrlObject.searchParams.delete("js_module_fallback");
-              buildUrlObject.searchParams.delete("as_js_classic");
-              buildUrlObject.searchParams.delete("as_js_module");
-              buildUrlObject.searchParams.delete("as_json_module");
-              buildUrlObject.searchParams.delete("as_css_module");
-              buildUrlObject.searchParams.delete("as_text_module");
-              const buildUrl = buildUrlObject.href;
-              finalRedirections.set(urlInfo.url, buildUrl);
-              versionedUrlMap.set(
-                urlInfo.url,
-                normalizeUrl(
-                  injectVersionIntoBuildUrl({
-                    buildUrl,
-                    version,
-                    versioningMethod,
-                  }),
-                ),
-              );
-            });
-          });
-          hashCallbacks.forEach((callback) => {
-            callback();
-          });
-
-          const versionMappings = {};
-          const versionMappingsOnGlobalMap = new Set();
-          const versionMappingsOnImportmap = new Set();
-          const versioningKitchen = createKitchen({
-            name: "versioning",
-            logLevel: logger.level,
-            rootDirectoryUrl: buildDirectoryUrl,
-            ignore,
-            ignoreProtocol: "remove",
-            graph: finalKitchen.graph,
-            build: true,
-            versioning: true,
-            runtimeCompat,
-            ...contextSharedDuringBuild,
-            plugins: [
-              jsenvPluginReferenceAnalysis({
-                ...referenceAnalysis,
-                fetchInlineUrls: false,
-                inlineConvertedScript: true, // to be able to version their urls
-                allowEscapeForVersioning: true,
-              }),
-              {
-                name: "jsenv:versioning",
-                appliesDuring: "build",
-                resolveReference: (reference) => {
-                  const buildUrl = buildUrls.get(reference.specifier);
-                  if (buildUrl) {
-                    return buildUrl;
-                  }
-                  let urlObject;
-                  if (reference.specifier[0] === "/") {
-                    urlObject = new URL(
-                      reference.specifier.slice(1),
-                      buildDirectoryUrl,
-                    );
-                  } else {
-                    urlObject = new URL(
-                      reference.specifier,
-                      reference.baseUrl || reference.ownerUrlInfo.url,
-                    );
-                  }
-                  const url = urlObject.href;
-                  // during versioning we revisit the deps
-                  // but the code used to enforce trailing slash on directories
-                  // is not applied because "jsenv:file_url_resolution" is not used
-                  // so here we search if the url with a trailing slash exists
-                  if (
-                    reference.type === "filesystem" &&
-                    !urlObject.pathname.endsWith("/")
-                  ) {
-                    const urlWithTrailingSlash = `${url}/`;
-                    const specifier = findKey(buildUrls, urlWithTrailingSlash);
-                    if (specifier) {
-                      return urlWithTrailingSlash;
-                    }
-                  }
-                  return url;
-                },
-                formatReference: (reference) => {
-                  if (reference.url.startsWith("ignore:")) {
-                    return null;
-                  }
-                  if (reference.isInline) {
-                    return null;
-                  }
-                  if (reference.url.startsWith("data:")) {
-                    return null;
-                  }
-                  if (reference.isWeak) {
-                    return null;
-                  }
-                  // specifier comes from "normalize" hook done a bit earlier in this file
-                  // we want to get back their build url to access their infos
-                  const referencedUrlInfo = finalKitchen.graph.getUrlInfo(
-                    reference.url,
-                  );
-                  if (!canUseVersionedUrl(referencedUrlInfo)) {
-                    return reference.specifier;
-                  }
-                  const versionedUrl = versionedUrlMap.get(reference.url);
-                  if (!versionedUrl) {
-                    // happens for inline content and sourcemaps
-                    return urlToRelativeUrl(
-                      referencedUrlInfo.url,
-                      reference.ownerUrlInfo.url,
-                    );
-                  }
-                  const versionedSpecifier = asFormattedBuildUrl(
-                    versionedUrl,
-                    reference,
-                  );
-                  versionMappings[reference.specifier] = versionedSpecifier;
-                  versioningRedirections.set(reference.url, versionedUrl);
-                  buildUrls.set(versionedSpecifier, versionedUrl);
-
-                  const withoutVersioning = preferWithoutVersioning(reference);
-                  if (withoutVersioning) {
-                    if (withoutVersioning.type === "importmap") {
-                      versionMappingsOnImportmap.add(reference.specifier);
-                    } else {
-                      versionMappingsOnGlobalMap.add(reference.specifier);
-                    }
-                    return () => withoutVersioning.source;
-                  }
-                  return versionedSpecifier;
-                },
-                fetchUrlContent: (versionedUrlInfo) => {
-                  if (versionedUrlInfo.isInline) {
-                    const { firstReference } = versionedUrlInfo;
-                    let versionedUrl;
-                    if (firstReference.prev && !firstReference.prev.isInline) {
-                      versionedUrl = firstReference.prev.url;
-                    } else {
-                      versionedUrl = versionedUrlInfo.url;
-                    }
-                    const rawUrl = buildDirectoryRedirections.get(versionedUrl);
-                    const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
-                    const finalUrlInfo =
-                      finalKitchen.graph.getUrlInfo(versionedUrl);
-                    return {
-                      content: finalUrlInfo.content,
-                      contentType: finalUrlInfo.contentType,
-                      originalContent: rawUrlInfo
-                        ? rawUrlInfo.originalContent
-                        : undefined,
-                      sourcemap: finalUrlInfo
-                        ? finalUrlInfo.sourcemap
-                        : undefined,
-                    };
-                  }
-                  return versionedUrlInfo;
-                },
+          contentOnlyVersionMap.forEach((contentOnlyVersion, urlInfo) => {
+            // one this to keep in mind:
+            // there is no need to take into account dependencies
+            // when the reference can reference them without version
+            // (importmap or window.__v__)
+            // so ideally we should restore the list of dependencies
+            // according to references
+            const setOfUrlInfoInfluencingVersion =
+              getSetOfUrlInfoInfluencingVersion(urlInfo);
+            const versionGenerator = createVersionGenerator();
+            versionGenerator.augment(contentOnlyVersion);
+            setOfUrlInfoInfluencingVersion.forEach(
+              (urlInfoInfluencingVersion) => {
+                const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
+                  urlInfoInfluencingVersion,
+                );
+                versionGenerator.augment(otherUrlInfoContentVersion);
               },
-            ],
-            sourcemaps,
-            sourcemapsSourcesContent,
-            sourcemapsSourcesRelative: true,
-            outDirectoryUrl: outDirectoryUrl
-              ? new URL("postbuild/", outDirectoryUrl)
-              : undefined,
+            );
+            const version = versionGenerator.generate();
+            versionMap.set(urlInfo, version);
+            const versionPlaceholder = versionPlaceholderMap.get(urlInfo);
+            const versionedUrl = replaceSingleVersionPlaceholder(
+              urlInfo.url,
+              versionPlaceholder,
+              version,
+            );
+            versioningRedirections.set(urlInfo.url, versionedUrl);
           });
-          finalKitchen.context = versioningKitchen.context;
 
-          const versioningRootUrlInfo = versioningKitchen.graph.rootUrlInfo;
-          await versioningRootUrlInfo.dependencies.startCollecting(() => {
-            finalEntryUrls.forEach((finalEntryUrl) => {
-              versioningRootUrlInfo.dependencies.found({
-                trace: { message: `entryPoint` },
-                parentUrl: buildDirectoryUrl,
-                type: "entry_point",
-                specifier: finalEntryUrl,
-              });
-            });
+          versionMap.forEach((version, urlInfo) => {
+            // now replace all placeholders in that urlInfo with the real versions
+            urlInfo.content = replaceVersionPlaceholders(
+              urlInfo.content,
+              (placeholder) => {
+                const urlInfo = findKey(versionPlaceholderMap, placeholder);
+                return urlInfo ? versionMap.get(urlInfo) : placeholder;
+              },
+            );
           });
-          await versioningRootUrlInfo.cookDependencies({
-            operation: buildOperation,
-          });
-          workerReferenceSet.clear();
+
+          // at this point contentVersionMap is populated
+          // with key being build urls and values being the associated version
+          // we are going to iterate over all references to inject version
           const actions = [];
           const visitors = [];
           if (versionMappingsOnImportmap.size) {
@@ -1405,6 +1312,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
           if (visitors.length) {
             GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+              if (urlInfo.isRoot) return;
               visitors.forEach((visitor) => visitor(urlInfo));
             });
             if (actions.length) {
@@ -1617,12 +1525,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // detect there is a change
               const specifier = findKey(buildUrls, urlInfo.url);
               serviceWorkerResources[specifier] = {
-                version: versionMap.get(urlInfo.url),
+                version: versionMap.get(urlInfo),
               };
               return;
             }
             const specifier = findKey(buildUrls, urlInfo.url);
-            const versionedUrl = versionedUrlMap.get(urlInfo.url);
+            const versionedUrl = versioningRedirections.get(urlInfo.url);
             const versionedSpecifier = findKey(buildUrls, versionedUrl);
             serviceWorkerResources[specifier] = {
               version: versionMap.get(urlInfo.url),
@@ -1687,7 +1595,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         buildContents[buildRelativeUrl] = urlInfo.content;
         buildInlineRelativeUrls.push(buildRelativeUrl);
       } else {
-        const versionedUrl = versionedUrlMap.get(urlInfo.url);
+        const versionedUrl = versioningRedirections.get(urlInfo.url);
         if (versionedUrl && canUseVersionedUrl(urlInfo)) {
           const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
           const versionedBuildRelativeUrl = getBuildRelativeUrl(versionedUrl);
@@ -1824,17 +1732,49 @@ const findKey = (map, value) => {
   return undefined;
 };
 
-const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
+const injectVersionPlaceholderIntoBuildUrl = ({
+  buildUrl,
+  versionPlaceholder,
+  versioningMethod,
+}) => {
   if (versioningMethod === "search_param") {
-    return injectQueryParams(buildUrl, {
-      v: version,
-    });
+    return injectQueryParamWithoutEncoding(buildUrl, "v", versionPlaceholder);
   }
   const basename = urlToBasename(buildUrl);
   const extension = urlToExtension(buildUrl);
-  const versionedFilename = `${basename}-${version}${extension}`;
+  const versionedFilename = `${basename}-${versionPlaceholder}${extension}`;
   const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
   return versionedUrl;
+};
+
+// const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
+//   if (versioningMethod === "search_param") {
+//     const urlObject = new URL(buildUrl);
+//     urlObject.searchParams.set("v", version);
+//     const urlWithParams = urlObject.href;
+//     return urlWithParams;
+//   }
+//   const basename = urlToBasename(buildUrl);
+//   const extension = urlToExtension(buildUrl);
+//   const versionedFilename = `${basename}-${version}${extension}`;
+//   const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
+//   return versionedUrl;
+// };
+
+const shouldApplyVersioningOnReference = (reference) => {
+  if (reference.isInline) {
+    return false;
+  }
+  // specifier comes from "normalize" hook done a bit earlier in this file
+  // we want to get back their build url to access their infos
+  const referencedUrlInfo = reference.urlInfo;
+  if (!canUseVersionedUrl(referencedUrlInfo)) {
+    return false;
+  }
+  if (referencedUrlInfo.type === "sourcemap") {
+    return false;
+  }
+  return true;
 };
 
 const canUseVersionedUrl = (urlInfo) => {

@@ -73,6 +73,13 @@ const parseAndTransformHtmlReferences = async (
       "preload",
       "modulepreload",
     ].includes(subtype);
+    const attributeStart =
+      node.sourceCodeLocation.attrs[attributeName].startOffset;
+    const attributeValueStart = urlInfo.content.indexOf(
+      attributeValue,
+      attributeStart + `${attributeName}=`.length,
+    );
+    const attributeValueEnd = attributeValueStart + attributeValue.length;
     const reference = urlInfo.dependencies.found({
       node,
       type,
@@ -81,6 +88,8 @@ const parseAndTransformHtmlReferences = async (
       specifier: attributeValue,
       specifierLine: line,
       specifierColumn: column,
+      specifierStart: attributeValueStart,
+      specifierEnd: attributeValueEnd,
       isResourceHint,
       isWeak: isResourceHint,
       crossorigin,

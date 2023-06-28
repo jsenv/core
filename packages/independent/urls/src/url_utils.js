@@ -55,11 +55,28 @@ export const injectQueryParamsIntoSpecifier = (specifier, params) => {
 
 export const injectQueryParams = (url, params) => {
   const urlObject = new URL(url);
+  const { searchParams } = urlObject;
   Object.keys(params).forEach((key) => {
-    urlObject.searchParams.set(key, params[key]);
+    const value = params[key];
+    searchParams.set(key, value);
   });
   const urlWithParams = urlObject.href;
   return urlWithParams;
+};
+
+export const injectQueryParamWithoutEncoding = (url, key, value) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, search, hash } = urlObject;
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+  if (search === "") {
+    search = `?${key}=${value}`;
+  } else {
+    search += `${key}=${value}`;
+  }
+  return `${origin}${pathname}${search}${hash}`;
 };
 
 export const setUrlExtension = (url, extension) => {

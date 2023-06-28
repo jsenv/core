@@ -11,6 +11,7 @@ export {
   normalizeUrl,
   injectQueryParamsIntoSpecifier,
   injectQueryParams,
+  injectQueryParamWithoutEncoding,
   setUrlExtension,
   setUrlFilename,
   ensurePathnameTrailingSlash,
