@@ -745,7 +745,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   reference,
                   buildUrl,
                 );
-                buildUrls.set(buildSpecifier, reference.generatedUrl);
+                buildUrls.set(buildSpecifier, buildUrl);
                 return buildSpecifier;
               }
 
@@ -770,10 +770,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   reference,
                   buildUrlWithVersionPlaceholder,
                 );
-              buildUrls.set(
-                buildSpecifierWithVersionPlaceholder,
-                reference.generatedUrl,
-              );
+              buildUrls.set(buildSpecifierWithVersionPlaceholder, buildUrl);
               const withoutVersioning = preferWithoutVersioning(reference);
               if (withoutVersioning) {
                 if (withoutVersioning.type === "importmap") {
@@ -1208,9 +1205,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const setOfUrlInfluencingVersion = new Set();
             const visitDependencies = (urlInfo) => {
               urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-                if (referenceToOther.isInline) {
-                  return;
-                }
                 if (referenceWithoutVersioningSet.has(referenceToOther)) {
                   // when versioning is dynamic no need to take into account
                   // happens for:
@@ -1219,7 +1213,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return;
                 }
                 const referencedUrlInfo = referenceToOther.urlInfo;
+                const referencedContentVersion =
+                  contentOnlyVersionMap.get(referencedUrlInfo);
+                if (!referencedContentVersion) {
+                  // ignored while traversing graph (not used anymore, inline, ...)
+                  return;
+                }
                 if (setOfUrlInfluencingVersion.has(referencedUrlInfo)) {
+                  // handle circular deps
                   return;
                 }
                 setOfUrlInfluencingVersion.add(referencedUrlInfo);
@@ -1246,6 +1247,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
                   urlInfoInfluencingVersion,
                 );
+                if (!otherUrlInfoContentVersion) {
+                  throw new Error(
+                    `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${urlInfo.url})`,
+                  );
+                }
                 versionGenerator.augment(otherUrlInfoContentVersion);
               },
             );
