@@ -78,6 +78,53 @@ export const injectQueryParamWithoutEncoding = (url, key, value) => {
   }
   return `${origin}${pathname}${search}${hash}`;
 };
+export const injectQueryParamIntoSpecifierWithoutEncoding = (
+  specifier,
+  key,
+  value,
+) => {
+  if (isValidUrl(specifier)) {
+    return injectQueryParams(specifier, key, value);
+  }
+  const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
+  const searchParams = new URLSearchParams(afterQuestion);
+  let search = searchParams.toString();
+  if (search === "") {
+    search = `?${key}=${value}`;
+  } else {
+    search += `${key}=${value}`;
+  }
+  return `${beforeQuestion}${search}`;
+};
+
+export const renderUrlOrRelativeUrlFilename = (urlOrRelativeUrl, renderer) => {
+  const questionIndex = urlOrRelativeUrl.indexOf("?");
+  const beforeQuestion =
+    questionIndex === -1
+      ? urlOrRelativeUrl
+      : urlOrRelativeUrl.slice(0, questionIndex);
+  const afterQuestion =
+    questionIndex === -1 ? "" : urlOrRelativeUrl.slice(questionIndex);
+  const beforeLastSlash = beforeQuestion.endsWith("/")
+    ? beforeQuestion.slice(0, -1)
+    : beforeQuestion;
+  const slashLastIndex = beforeLastSlash.lastIndexOf("/");
+  const beforeFilename =
+    slashLastIndex === -1 ? "" : beforeQuestion.slice(0, slashLastIndex + 1);
+  const filename =
+    slashLastIndex === -1
+      ? beforeQuestion
+      : beforeQuestion.slice(slashLastIndex + 1);
+  const dotLastIndex = filename.lastIndexOf(".");
+  const basename =
+    dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
+  const extension = dotLastIndex === -1 ? "" : filename.slice(dotLastIndex);
+  const newFilename = renderer({
+    basename,
+    extension,
+  });
+  return `${beforeFilename}${newFilename}${afterQuestion}`;
+};
 
 export const setUrlExtension = (url, extension) => {
   const origin = urlToOrigin(url);

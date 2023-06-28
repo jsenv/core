@@ -12,6 +12,8 @@ export {
   injectQueryParamsIntoSpecifier,
   injectQueryParams,
   injectQueryParamWithoutEncoding,
+  injectQueryParamIntoSpecifierWithoutEncoding,
+  renderUrlOrRelativeUrlFilename,
   setUrlExtension,
   setUrlFilename,
   ensurePathnameTrailingSlash,

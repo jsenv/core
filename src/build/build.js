@@ -17,13 +17,11 @@
  */
 
 import {
-  injectQueryParamWithoutEncoding,
-  setUrlFilename,
+  injectQueryParamIntoSpecifierWithoutEncoding,
+  renderUrlOrRelativeUrlFilename,
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
-  urlToBasename,
-  urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import {
@@ -383,7 +381,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         buildDirectoryRedirections.set(buildUrl, rawUrl);
       }
     };
-    const buildUrls = new Map();
+    const buildSpecifierMap = new Map();
+    const buildSpecifierVersionedMap = new Map();
     const bundleUrlInfos = {};
     const bundlers = {};
     let finalKitchen;
@@ -446,39 +445,39 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }) &&
       rawKitchen.context.isSupportedOnCurrentClients("importmap");
 
-    const preferWithoutVersioning = (reference) => {
+    const preferWithoutVersioning = (reference, buildSpecifier) => {
       const ownerFinalUrlInfo = reference.ownerUrlInfo;
       if (ownerFinalUrlInfo.jsQuote) {
         return {
           type: "global",
           source: `${ownerFinalUrlInfo.jsQuote}+__v__(${JSON.stringify(
-            reference.specifier,
+            buildSpecifier,
           )})+${ownerFinalUrlInfo.jsQuote}`,
         };
       }
       if (reference.type === "js_url") {
         return {
           type: "global",
-          source: `__v__(${JSON.stringify(reference.specifier)})`,
+          source: `__v__(${JSON.stringify(buildSpecifier)})`,
         };
       }
       if (reference.type === "js_import") {
         if (reference.subtype === "import_dynamic") {
           return {
             type: "global",
-            source: `__v__(${JSON.stringify(reference.specifier)})`,
+            source: `__v__(${JSON.stringify(buildSpecifier)})`,
           };
         }
         if (reference.subtype === "import_meta_resolve") {
           return {
             type: "global",
-            source: `__v__(${JSON.stringify(reference.specifier)})`,
+            source: `__v__(${JSON.stringify(buildSpecifier)})`,
           };
         }
         if (canUseImportmap && !isReferencedByWorker(reference)) {
           return {
             type: "importmap",
-            source: JSON.stringify(reference.specifier),
+            source: JSON.stringify(buildSpecifier),
           };
         }
       }
@@ -739,13 +738,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               generatedUrlObject.searchParams.delete("as_text_module");
               generatedUrlObject.hash = "";
               const buildUrl = generatedUrlObject.href;
+              const buildSpecifier = asFormattedBuildSpecifier(
+                reference,
+                buildUrl,
+              );
+              buildSpecifierMap.set(buildSpecifier, reference.generatedUrl);
 
               if (!versioning || !shouldApplyVersioningOnReference(reference)) {
-                const buildSpecifier = asFormattedBuildSpecifier(
-                  reference,
-                  buildUrl,
-                );
-                buildUrls.set(buildSpecifier, buildUrl);
                 return buildSpecifier;
               }
 
@@ -759,24 +758,26 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   versionPlaceholder,
                 );
               }
-              const buildUrlWithVersionPlaceholder =
-                injectVersionPlaceholderIntoBuildUrl({
-                  buildUrl,
+
+              const buildSpecifierWithVersionPlaceholder =
+                injectVersionPlaceholderIntoBuildSpecifier({
+                  buildSpecifier,
                   versionPlaceholder,
                   versioningMethod,
                 });
-              const buildSpecifierWithVersionPlaceholder =
-                asFormattedBuildSpecifier(
-                  reference,
-                  buildUrlWithVersionPlaceholder,
-                );
-              buildUrls.set(buildSpecifierWithVersionPlaceholder, buildUrl);
-              const withoutVersioning = preferWithoutVersioning(reference);
+              buildSpecifierVersionedMap.set(
+                buildSpecifierWithVersionPlaceholder,
+                reference.generatedUrl,
+              );
+              const withoutVersioning = preferWithoutVersioning(
+                reference,
+                buildSpecifier,
+              );
               if (withoutVersioning) {
                 if (withoutVersioning.type === "importmap") {
-                  versionMappingsOnImportmap.add(reference.specifier);
+                  versionMappingsOnImportmap.add(buildSpecifier);
                 } else {
-                  versionMappingsOnGlobalMap.add(reference.specifier);
+                  versionMappingsOnGlobalMap.add(buildSpecifier);
                 }
                 referenceWithoutVersioningSet.add(reference);
                 return () => withoutVersioning.source;
@@ -1264,6 +1265,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               version,
             );
             versioningRedirections.set(urlInfo.url, versionedUrl);
+            const buildUrl = urlInfo.url;
+            const buildSpecifier = findKey(buildSpecifierMap, buildUrl);
+            const buildSpecifierWithVersionPlaceholder = findKey(
+              buildSpecifierVersionedMap,
+              buildUrl,
+            );
+            if (buildSpecifierWithVersionPlaceholder) {
+              const buildSpecifierVersioned = replaceSingleVersionPlaceholder(
+                buildSpecifierWithVersionPlaceholder,
+                versionPlaceholder,
+                version,
+              );
+              versionMappings[buildSpecifier] = buildSpecifierVersioned;
+            }
           });
 
           versionMap.forEach((version, urlInfo) => {
@@ -1407,7 +1422,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   versioningRedirections.get(buildUrlInfo.url) ||
                   buildUrlInfo.url;
                 const buildSpecifierBeforeRedirect = findKey(
-                  buildUrls,
+                  buildSpecifierMap,
                   buildUrlFormatted,
                 );
                 mutations.push(() => {
@@ -1454,7 +1469,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             const hintNode = hintsToInject[urlToHint];
             const urlFormatted =
               versioningRedirections.get(urlToHint) || urlToHint;
-            const specifierBeforeRedirect = findKey(buildUrls, urlFormatted);
+            const specifierBeforeRedirect = findKey(
+              buildSpecifierMap,
+              urlFormatted,
+            );
             const found = findHtmlNode(htmlAst, (htmlNode) => {
               return (
                 htmlNode.nodeName === "link" &&
@@ -1529,15 +1547,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               // when url is not versioned we compute a "version" for that url anyway
               // so that service worker source still changes and navigator
               // detect there is a change
-              const specifier = findKey(buildUrls, urlInfo.url);
+              const specifier = findKey(buildSpecifierMap, urlInfo.url);
               serviceWorkerResources[specifier] = {
                 version: versionMap.get(urlInfo),
               };
               return;
             }
-            const specifier = findKey(buildUrls, urlInfo.url);
+            const specifier = findKey(buildSpecifierMap, urlInfo.url);
             const versionedUrl = versioningRedirections.get(urlInfo.url);
-            const versionedSpecifier = findKey(buildUrls, versionedUrl);
+            const versionedSpecifier = findKey(buildSpecifierMap, versionedUrl);
             serviceWorkerResources[specifier] = {
               version: versionMap.get(urlInfo.url),
               versionedUrl: versionedSpecifier,
@@ -1551,7 +1569,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               ...serviceWorkerResources,
             };
             const serviceWorkerSpecifier = findKey(
-              buildUrls,
+              buildSpecifierMap,
               serviceWorkerEntryUrlInfo.url,
             );
             delete serviceWorkerResourcesWithoutSwScriptItSelf[
@@ -1738,34 +1756,25 @@ const findKey = (map, value) => {
   return undefined;
 };
 
-const injectVersionPlaceholderIntoBuildUrl = ({
-  buildUrl,
+const injectVersionPlaceholderIntoBuildSpecifier = ({
+  buildSpecifier,
   versionPlaceholder,
   versioningMethod,
 }) => {
   if (versioningMethod === "search_param") {
-    return injectQueryParamWithoutEncoding(buildUrl, "v", versionPlaceholder);
+    return injectQueryParamIntoSpecifierWithoutEncoding(
+      buildSpecifier,
+      "v",
+      versionPlaceholder,
+    );
   }
-  const basename = urlToBasename(buildUrl);
-  const extension = urlToExtension(buildUrl);
-  const versionedFilename = `${basename}-${versionPlaceholder}${extension}`;
-  const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
-  return versionedUrl;
+  return renderUrlOrRelativeUrlFilename(
+    buildSpecifier,
+    ({ basename, extension }) => {
+      return `${basename}-${versionPlaceholder}${extension}`;
+    },
+  );
 };
-
-// const injectVersionIntoBuildUrl = ({ buildUrl, version, versioningMethod }) => {
-//   if (versioningMethod === "search_param") {
-//     const urlObject = new URL(buildUrl);
-//     urlObject.searchParams.set("v", version);
-//     const urlWithParams = urlObject.href;
-//     return urlWithParams;
-//   }
-//   const basename = urlToBasename(buildUrl);
-//   const extension = urlToExtension(buildUrl);
-//   const versionedFilename = `${basename}-${version}${extension}`;
-//   const versionedUrl = setUrlFilename(buildUrl, versionedFilename);
-//   return versionedUrl;
-// };
 
 const shouldApplyVersioningOnReference = (reference) => {
   if (reference.isInline) {
