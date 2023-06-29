@@ -51,6 +51,7 @@ import {
 } from "@jsenv/ast";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
@@ -1143,28 +1144,29 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           workerReferenceSet.clear();
 
           const generateContentVersion = (urlInfo) => {
-            const content =
-              urlInfo.type === "html"
-                ? stringifyHtmlAst(
-                    parseHtmlString(urlInfo.content, {
-                      storeOriginalPositions: false,
-                    }),
-                    {
-                      cleanupJsenvAttributes: true,
-                      cleanupPositionAttributes: true,
-                    },
-                  )
-                : urlInfo.content;
-            const containedPlaceholders = new Set();
-            const contentWithPredictiblePlaceholders =
-              replaceVersionPlaceholdersWithDefaultAndPopulateContainedPlaceholders(
-                content,
-                containedPlaceholders,
+            let content = urlInfo.content;
+            if (urlInfo.type === "html") {
+              content = stringifyHtmlAst(
+                parseHtmlString(urlInfo.content, {
+                  storeOriginalPositions: false,
+                }),
+                {
+                  cleanupJsenvAttributes: true,
+                  cleanupPositionAttributes: true,
+                },
               );
+            }
+            if (CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+              const containedPlaceholders = new Set();
+              const contentWithPredictiblePlaceholders =
+                replaceVersionPlaceholdersWithDefaultAndPopulateContainedPlaceholders(
+                  content,
+                  containedPlaceholders,
+                );
+              content = contentWithPredictiblePlaceholders;
+            }
             const contentVersionGenerator = createVersionGenerator();
-            contentVersionGenerator.augmentWithContent(
-              contentWithPredictiblePlaceholders,
-            );
+            contentVersionGenerator.augmentWithContent(content);
             const contentVersion = contentVersionGenerator.generate();
             contentOnlyVersionMap.set(urlInfo, contentVersion);
           };
@@ -1282,14 +1284,19 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           });
 
           versionMap.forEach((version, urlInfo) => {
-            // now replace all placeholders in that urlInfo with the real versions
-            urlInfo.content = replaceVersionPlaceholders(
-              urlInfo.content,
-              (placeholder) => {
-                const urlInfo = findKey(versionPlaceholderMap, placeholder);
-                return urlInfo ? versionMap.get(urlInfo) : placeholder;
-              },
-            );
+            if (
+              CONTENT_TYPE.isTextual(urlInfo.contentType) &&
+              urlInfo.referenceToOthersSet.size > 0
+            ) {
+              // now replace all placeholders in that urlInfo with the real versions
+              urlInfo.content = replaceVersionPlaceholders(
+                urlInfo.content,
+                (placeholder) => {
+                  const urlInfo = findKey(versionPlaceholderMap, placeholder);
+                  return urlInfo ? versionMap.get(urlInfo) : placeholder;
+                },
+              );
+            }
           });
 
           // at this point contentVersionMap is populated
