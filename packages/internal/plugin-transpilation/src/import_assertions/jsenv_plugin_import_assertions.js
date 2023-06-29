@@ -115,7 +115,7 @@ const jsenvPluginAsModules = () => {
         return null;
       }
       const jsonUrlInfo = jsonReference.urlInfo;
-      await jsonUrlInfo.cook();
+      await jsonUrlInfo.fetchContent();
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:
