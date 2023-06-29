@@ -1228,6 +1228,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           );
           const serviceWorkerResources = {};
           GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+            if (urlInfo.isRoot) {
+              return;
+            }
             if (!urlInfo.url.startsWith("file:")) {
               return;
             }
@@ -1299,6 +1302,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildRelativeUrl;
     };
     GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+      if (urlInfo.isRoot) {
+        return;
+      }
       if (!urlInfo.url.startsWith("file:")) {
         return;
       }
@@ -1475,6 +1481,9 @@ const shouldApplyVersioningOnReference = (reference) => {
 };
 
 const canUseVersionedUrl = (urlInfo) => {
+  if (urlInfo.isRoot) {
+    return false;
+  }
   if (urlInfo.isEntryPoint) {
     return false;
   }

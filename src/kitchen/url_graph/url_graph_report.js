@@ -30,6 +30,9 @@ const createUrlGraphReport = (urlGraph) => {
     total: 0,
   };
   urlGraph.urlInfoMap.forEach((urlInfo) => {
+    if (urlInfo.isRoot) {
+      return;
+    }
     // ignore:
     // - ignored files: we don't know their content
     // - inline files and data files: they are already taken into account in the file where they appear

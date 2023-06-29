@@ -494,6 +494,15 @@ const createReference = ({
       prev: reference,
       ...props,
     });
+    // when a file gets inlined (like CSS in HTML)
+    // the previous reference (like <link rel="stylesheet">) is going to be removed
+    // we must tell to all the things referenced by CSS that they are sill referenced
+    // by the inline reference before removing the link reference:
+    // - ensure url info still aware they are referenced and thus kept in the graph
+    for (const referenceToOther of reference.urlInfo.referenceToOthersSet) {
+      const referencedUrlInfo = referenceToOther.urlInfo;
+      referencedUrlInfo.referenceFromOthersSet.add(inlineCopy);
+    }
     removeDependency(reference);
     reference.next = inlineCopy;
     return inlineCopy;
@@ -608,7 +617,7 @@ ${ownerUrlInfo.url}`,
 
   referenceToOthersSet.delete(reference);
 
-  const referencedUrlInfo = ownerUrlInfo.graph.getUrlInfo(reference.url);
+  const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
   const firstStrongReferenceFromOther =

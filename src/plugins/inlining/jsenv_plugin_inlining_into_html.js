@@ -15,7 +15,7 @@ export const jsenvPluginInliningIntoHtml = () => {
     name: "jsenv:inlining_into_html",
     appliesDuring: "*",
     transformUrlContent: {
-      html: async (urlInfo, context) => {
+      html: async (urlInfo) => {
         const htmlAst = parseHtmlString(urlInfo.content);
         const mutations = [];
         const actions = [];
@@ -38,7 +38,7 @@ export const jsenvPluginInliningIntoHtml = () => {
           ) {
             return;
           }
-          const linkUrlInfo = context.urlGraph.getUrlInfo(linkReference.url);
+          const linkUrlInfo = linkReference.urlInfo;
           actions.push(async () => {
             await linkUrlInfo.cook();
             const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
@@ -88,9 +88,7 @@ export const jsenvPluginInliningIntoHtml = () => {
           ) {
             return;
           }
-          const scriptUrlInfo = context.urlGraph.getUrlInfo(
-            scriptReference.url,
-          );
+          const scriptUrlInfo = scriptReference.urlInfo;
           actions.push(async () => {
             await scriptUrlInfo.cook();
             const { line, column, isOriginal } = getHtmlNodePosition(

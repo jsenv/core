@@ -9,13 +9,12 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     plugins: [],
-    versioning: false,
     ...params,
   });
   takeDirectorySnapshot(
@@ -37,4 +36,7 @@ const test = async (params) => {
 };
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "89" } });
+await test({
+  runtimeCompat: { chrome: "89" },
+  versioning: false,
+});

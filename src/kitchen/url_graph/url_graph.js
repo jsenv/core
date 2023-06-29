@@ -213,6 +213,9 @@ const createUrlInfo = (url) => {
     return null;
   };
   urlInfo.isUsed = () => {
+    if (urlInfo.isRoot) {
+      return true;
+    }
     // nothing uses this url anymore
     // - versioning update inline content
     // - file converted for import assertion or js_classic conversion

@@ -14,31 +14,29 @@ export const jsenvPluginInliningAsDataUrl = () => {
       // window.URL.createObjectURL(blob)
       // in any case the recommended way is to use an url
       // to benefit from shared worker and reuse worker between tabs
-      "*": (reference, context) => {
-        if (
-          !reference.original ||
-          !reference.original.searchParams.has("inline")
-        ) {
+      "*": (reference) => {
+        const originalReference = reference.original || reference;
+        if (!originalReference.searchParams.has("inline")) {
           return null;
         }
         // <link rel="stylesheet"> and <script> can be inlined in the html
         if (
-          reference.type === "link_href" &&
-          reference.subtype === "stylesheet"
+          originalReference.type === "link_href" &&
+          originalReference.subtype === "stylesheet"
         ) {
           return null;
         }
-        if (reference.type === "script") {
+        if (originalReference.type === "script") {
           return null;
         }
         return (async () => {
-          const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-          await urlInfo.cook();
-          const contentAsBase64 = Buffer.from(urlInfo.content).toString(
-            "base64",
-          );
+          const referencedUrlInfo = reference.urlInfo;
+          await referencedUrlInfo.cook();
+          const contentAsBase64 = Buffer.from(
+            referencedUrlInfo.content,
+          ).toString("base64");
           let specifier = DATA_URL.stringify({
-            mediaType: urlInfo.contentType,
+            mediaType: referencedUrlInfo.contentType,
             base64Flag: true,
             data: contentAsBase64,
           });
@@ -48,7 +46,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
             isOriginal: reference.isOriginal,
             specifier,
             content: contentAsBase64,
-            contentType: urlInfo.contentType,
+            contentType: referencedUrlInfo.contentType,
           });
           return specifier;
         })();
