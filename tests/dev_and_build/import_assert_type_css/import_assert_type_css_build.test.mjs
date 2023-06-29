@@ -7,7 +7,7 @@ import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async ({ snapshotsDirectoryName, ...rest }) => {
+const test = async (name, options) => {
   const { buildManifest } = await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -16,8 +16,12 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...rest,
+    ...options,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -27,10 +31,6 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   });
-  takeDirectorySnapshot(
-    new URL("./dist/", import.meta.url),
-    new URL(`./snapshots/${snapshotsDirectoryName}/`, import.meta.url),
-  );
   const actual = returnValue;
   const expected = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
@@ -40,21 +40,18 @@ const test = async ({ snapshotsDirectoryName, ...rest }) => {
 };
 
 // chrome 60 cannot use <script type="module"> nor constructable stylesheet
-await test({
-  snapshotsDirectoryName: "chrome_60",
+await test("chrome_60", {
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
 });
 // chrome 60 + no bundling
-await test({
-  snapshotsDirectoryName: "chrome_60_no_bundling",
+await test("chrome_60_no_bundling", {
   runtimeCompat: { chrome: "60" },
   plugins: [],
 });
 // chrome 88 has constructables stylesheet
 // but cannot use js modules due to versioning via importmap (as it does not have importmap)
-await test({
-  snapshotsDirectoryName: "chrome_88_css_minified",
+await test("chrome_88_css_minified", {
   runtimeCompat: { chrome: "88" },
   plugins: [
     jsenvPluginBundling(),
@@ -66,8 +63,7 @@ await test({
   ],
 });
 // chrome 89 can use js modules
-await test({
-  snapshotsDirectoryName: "chrome_89",
+await test("chrome_89", {
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 });

@@ -1310,18 +1310,29 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         buildContents[buildRelativeUrl] = urlInfo.content;
         buildInlineRelativeUrls.push(buildRelativeUrl);
       } else {
-        const versionedUrl = false;
-        if (versionedUrl && canUseVersionedUrl(urlInfo)) {
-          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
-          const versionedBuildRelativeUrl = getBuildRelativeUrl(versionedUrl);
+        const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
+        if (
+          buildVersionsManager.getVersion(urlInfo) &&
+          canUseVersionedUrl(urlInfo)
+        ) {
+          const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+          const buildSpecifierVersioned =
+            buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+          const buildUrlVersioned = asBuildUrlVersioned({
+            buildSpecifierVersioned,
+            buildDirectoryUrl,
+          });
+          const buildRelativeUrlVersioned = urlToRelativeUrl(
+            buildUrlVersioned,
+            buildDirectoryUrl,
+          );
           if (versioningMethod === "search_param") {
             buildContents[buildRelativeUrl] = urlInfo.content;
           } else {
-            buildContents[versionedBuildRelativeUrl] = urlInfo.content;
+            buildContents[buildRelativeUrlVersioned] = urlInfo.content;
           }
-          buildManifest[buildRelativeUrl] = versionedBuildRelativeUrl;
+          buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
         } else {
-          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
           buildContents[buildRelativeUrl] = urlInfo.content;
         }
       }
@@ -1468,4 +1479,21 @@ const canUseVersionedUrl = (urlInfo) => {
     return false;
   }
   return urlInfo.type !== "webmanifest";
+};
+
+const asBuildUrlVersioned = ({
+  buildSpecifierVersioned,
+  buildDirectoryUrl,
+}) => {
+  if (buildSpecifierVersioned[0] === "/") {
+    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
+  }
+  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
+  if (buildUrl.startsWith(buildDirectoryUrl)) {
+    return buildUrl;
+  }
+  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
+  // let's move url to build directory
+  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
+  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };

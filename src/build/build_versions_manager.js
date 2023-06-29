@@ -382,7 +382,13 @@ export const createBuildVersionsManager = ({
             const value = replacement.value;
             let start = replacement.start + diff;
             let end = start + placeholder.length;
-            if (replacement.valueType === "code") {
+            if (
+              replacement.valueType === "code" &&
+              // when specifier is wrapper by quotes
+              // we remove the quotes to transform the string
+              // into code that will be executed
+              isWrappedByQuote(content, start, end)
+            ) {
               start = start - 1;
               end = end + 1;
               diff = diff - 2;
@@ -390,7 +396,8 @@ export const createBuildVersionsManager = ({
             const before = content.slice(0, start);
             const after = content.slice(end);
             content = before + value + after;
-            diff += placeholder.length - value.length;
+            const charAdded = value.length - placeholder.length;
+            diff += charAdded;
           });
           urlInfo.content = content;
         });
@@ -450,6 +457,21 @@ export const createBuildVersionsManager = ({
     getVersion: (urlInfo) => versionMap.get(urlInfo),
     getBuildSpecifierVersioned,
   };
+};
+
+const isWrappedByQuote = (content, start, end) => {
+  const previousChar = content[start - 1];
+  const nextChar = content[end];
+  if (previousChar === `'` && nextChar === `'`) {
+    return true;
+  }
+  if (previousChar === `"` && nextChar === `"`) {
+    return true;
+  }
+  if (previousChar === "`" && nextChar === "`") {
+    return true;
+  }
+  return false;
 };
 
 const injectVersionPlaceholderIntoBuildSpecifier = ({
