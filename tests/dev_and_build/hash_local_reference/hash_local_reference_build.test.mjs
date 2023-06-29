@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
@@ -13,9 +14,12 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    versioning: false,
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./snapshots/", import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -33,4 +37,5 @@ const test = async (params) => {
 // can use <script type="module">
 await test({
   runtimeCompat: { chrome: "89" },
+  versioning: false,
 });
