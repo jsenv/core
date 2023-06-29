@@ -5,14 +5,14 @@ import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async ({ snapshotsDirectoryUrl, ...params }) => {
+const test = async (name, params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     ...params,
   });
 
@@ -27,7 +27,7 @@ const test = async ({ snapshotsDirectoryUrl, ...params }) => {
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
-    snapshotsDirectoryUrl,
+    new URL(`./snapshots/${name}/`, import.meta.url),
   );
   const actual = returnValue;
   const expected = { answer: 42 };
@@ -35,12 +35,10 @@ const test = async ({ snapshotsDirectoryUrl, ...params }) => {
 };
 
 // support
-await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/supported/", import.meta.url),
+await test("0_supported", {
   runtimeCompat: { chrome: "89" },
 });
 // no support for top level await
-await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/transpiled/", import.meta.url),
+await test("1_not_supported", {
   runtimeCompat: { chrome: "55" },
 });
