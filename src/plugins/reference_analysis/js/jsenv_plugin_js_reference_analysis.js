@@ -6,10 +6,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 
-export const jsenvPluginJsReferenceAnalysis = ({
-  inlineContent,
-  allowEscapeForVersioning,
-}) => {
+export const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
   return [
     {
       name: "jsenv:js_reference_analysis",
@@ -18,14 +15,12 @@ export const jsenvPluginJsReferenceAnalysis = ({
         js_classic: (urlInfo, context) =>
           parseAndTransformJsReferences(urlInfo, {
             inlineContent,
-            allowEscapeForVersioning,
             canUseTemplateLiterals:
               context.isSupportedOnCurrentClients("template_literals"),
           }),
         js_module: (urlInfo, context) =>
           parseAndTransformJsReferences(urlInfo, {
             inlineContent,
-            allowEscapeForVersioning,
             canUseTemplateLiterals:
               context.isSupportedOnCurrentClients("template_literals"),
           }),
@@ -36,7 +31,7 @@ export const jsenvPluginJsReferenceAnalysis = ({
 
 const parseAndTransformJsReferences = async (
   urlInfo,
-  { inlineContent, allowEscapeForVersioning, canUseTemplateLiterals },
+  { inlineContent, canUseTemplateLiterals },
 ) => {
   const magicSource = createMagicSource(urlInfo.content);
   const parallelActions = [];
@@ -70,14 +65,14 @@ const parseAndTransformJsReferences = async (
     });
     const inlineUrlInfo = inlineReference.urlInfo;
     inlineUrlInfo.jsQuote = quote;
-    inlineReference.escape = (value) =>
-      JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
+    inlineReference.escape = (value) => {
+      return JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
+    };
 
     sequentialActions.push(async () => {
       await inlineUrlInfo.cook();
       const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
         quote,
-        allowEscapeForVersioning,
       });
       magicSource.replace({
         start: inlineReferenceInfo.start,

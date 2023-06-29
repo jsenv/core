@@ -368,6 +368,7 @@ const createReference = ({
   generatedSpecifier = null,
   urlInfo = null,
   redirection = true,
+  escape = null,
   // import assertions
   importAttributes,
   importNode,
@@ -423,7 +424,7 @@ const createReference = ({
     isInline,
     content,
     contentType,
-    escape: null,
+    escape,
     // import assertions (maybe move to data?)
     importAttributes,
     importNode,

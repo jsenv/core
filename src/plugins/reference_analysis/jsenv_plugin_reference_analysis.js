@@ -10,7 +10,6 @@ export const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
-  allowEscapeForVersioning = false,
 }) => {
   return [
     jsenvPluginDirectoryReferenceAnalysis(),
@@ -22,7 +21,6 @@ export const jsenvPluginReferenceAnalysis = ({
     jsenvPluginCssReferenceAnalysis(),
     jsenvPluginJsReferenceAnalysis({
       inlineContent,
-      allowEscapeForVersioning,
     }),
     ...(inlineContent ? [jsenvPluginDataUrlsAnalysis()] : []),
     ...(inlineContent && fetchInlineUrls
