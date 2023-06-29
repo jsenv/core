@@ -72,13 +72,7 @@ import {
   injectVersionMappingsAsGlobal,
   injectVersionMappingsAsImportmap,
 } from "./version_mappings_injection.js";
-import { createVersionGenerator } from "./version_generator.js";
-import {
-  getVersionPlaceholderGenerator,
-  replaceVersionPlaceholdersWithDefaultAndPopulateContainedPlaceholders,
-  replaceVersionPlaceholders,
-  replaceSingleVersionPlaceholder,
-} from "./version_placeholder.js";
+import { createBuildVersionsManager } from "./build_versions_manager.js";
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -147,6 +141,7 @@ export const build = async ({
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
   versioningViaImportmap = true,
+  versionLength = 8,
   lineBreakNormalization = process.platform === "win32",
 
   sourceFilesConfig = {},
@@ -368,8 +363,10 @@ build ${entryPointKeys.length} entry points`);
       buildDirectoryUrl,
       assetsDirectory,
     });
+    const buildVersionsManager = createBuildVersionsManager({
+      versionLength,
+    });
     const buildDirectoryRedirections = new Map();
-
     const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
       if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
         throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`);
@@ -485,15 +482,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return null;
     };
 
-    const versionPlaceholderMap = new Map();
     const referenceWithoutVersioningSet = new Set();
     const versionMappings = {}; // map of specifier without version to versioned specifier
     const versionMappingsOnGlobalMap = new Set();
     const versionMappingsOnImportmap = new Set();
     const contentOnlyVersionMap = new Map();
     const versionMap = new Map();
-
-    const versionPlaceholderGenerator = getVersionPlaceholderGenerator();
 
     shape: {
       finalKitchen = createKitchen({
@@ -750,15 +744,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               }
 
               const referencedUrlInfo = reference.urlInfo;
-              let versionPlaceholder =
-                versionPlaceholderMap.get(referencedUrlInfo);
-              if (!versionPlaceholder) {
-                versionPlaceholder = versionPlaceholderGenerator();
-                versionPlaceholderMap.set(
-                  referencedUrlInfo,
-                  versionPlaceholder,
-                );
-              }
+              const versionPlaceholder =
+                buildVersionsManager.generatePlaceholder(referencedUrlInfo);
 
               const buildSpecifierWithVersionPlaceholder =
                 injectVersionPlaceholderIntoBuildSpecifier({
@@ -1156,18 +1143,21 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 },
               );
             }
-            if (CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+            if (
+              CONTENT_TYPE.isTextual(urlInfo.contentType) &&
+              urlInfo.referenceToOthersSet.size > 0
+            ) {
               const containedPlaceholders = new Set();
-              const contentWithPredictiblePlaceholders =
-                replaceVersionPlaceholdersWithDefaultAndPopulateContainedPlaceholders(
+              const contentWithPredictibleVersionPlaceholders =
+                buildVersionsManager.replaceWithDefaultAndPopulateContainedPlaceholders(
                   content,
                   containedPlaceholders,
                 );
-              content = contentWithPredictiblePlaceholders;
+              content = contentWithPredictibleVersionPlaceholders;
             }
-            const contentVersionGenerator = createVersionGenerator();
-            contentVersionGenerator.augmentWithContent(content);
-            const contentVersion = contentVersionGenerator.generate();
+            const contentVersion = buildVersionsManager.generateVersion([
+              content,
+            ]);
             contentOnlyVersionMap.set(urlInfo, contentVersion);
           };
 
@@ -1243,8 +1233,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             // according to references
             const setOfUrlInfoInfluencingVersion =
               getSetOfUrlInfoInfluencingVersion(urlInfo);
-            const versionGenerator = createVersionGenerator();
-            versionGenerator.augment(contentOnlyVersion);
+
+            const versionPartSet = new Set();
+            versionPartSet.add(contentOnlyVersion);
             setOfUrlInfoInfluencingVersion.forEach(
               (urlInfoInfluencingVersion) => {
                 const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
@@ -1255,15 +1246,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${urlInfo.url})`,
                   );
                 }
-                versionGenerator.augment(otherUrlInfoContentVersion);
+                versionPartSet.add(otherUrlInfoContentVersion);
               },
             );
-            const version = versionGenerator.generate();
+            const version =
+              buildVersionsManager.generateVersion(versionPartSet);
             versionMap.set(urlInfo, version);
-            const versionPlaceholder = versionPlaceholderMap.get(urlInfo);
-            const versionedUrl = replaceSingleVersionPlaceholder(
+            const versionedUrl = buildVersionsManager.replaceOnePlaceholder(
               urlInfo.url,
-              versionPlaceholder,
+              buildVersionsManager.getVersionPlaceholderFromUrlInfo(urlInfo),
               version,
             );
             versioningRedirections.set(urlInfo.url, versionedUrl);
@@ -1274,11 +1265,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               buildUrl,
             );
             if (buildSpecifierWithVersionPlaceholder) {
-              const buildSpecifierVersioned = replaceSingleVersionPlaceholder(
-                buildSpecifierWithVersionPlaceholder,
-                versionPlaceholder,
-                version,
-              );
+              const buildSpecifierVersioned =
+                buildVersionsManager.replaceOnePlaceholder(
+                  buildSpecifierWithVersionPlaceholder,
+                  buildVersionsManager.getVersionPlaceholderFromUrlInfo(
+                    urlInfo,
+                  ),
+                  version,
+                );
               versionMappings[buildSpecifier] = buildSpecifierVersioned;
             }
           });
@@ -1289,11 +1283,16 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               urlInfo.referenceToOthersSet.size > 0
             ) {
               // now replace all placeholders in that urlInfo with the real versions
-              urlInfo.content = replaceVersionPlaceholders(
+              urlInfo.content = buildVersionsManager.replacePlaceholders(
                 urlInfo.content,
-                (placeholder) => {
-                  const urlInfo = findKey(versionPlaceholderMap, placeholder);
-                  return urlInfo ? versionMap.get(urlInfo) : placeholder;
+                (versionPlaceholder) => {
+                  const associatedUrlInfo =
+                    buildVersionsManager.getUrlInfoFromVersionPlaceholder(
+                      versionPlaceholder,
+                    );
+                  return associatedUrlInfo
+                    ? versionMap.get(associatedUrlInfo)
+                    : versionPlaceholder;
                 },
               );
             }
