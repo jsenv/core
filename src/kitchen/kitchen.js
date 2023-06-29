@@ -426,7 +426,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.finalizeUrlContent = finalizeUrlContent;
 
-  let onCookStart = () => {};
   const cookGuard = dev ? debounceCook : memoizeCook;
   const cook = cookGuard(async (urlInfo, contextDuringCook) => {
     // urlInfo objects are reused, they must be "reset" before cooking them again
@@ -443,23 +442,22 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfoTransformer.resetContent(urlInfo);
     }
 
-    let resolveCookPromise;
-    const cookPromise = new Promise((resolve) => {
-      resolveCookPromise = resolve;
-    });
-    onCookStart(urlInfo, cookPromise);
-
     if (!urlInfo.url.startsWith("ignore:")) {
-      await urlInfo.dependencies.startCollecting(async () => {
-        // "fetchUrlContent" hook
-        await urlInfo.fetchContent();
+      try {
+        await urlInfo.dependencies.startCollecting(async () => {
+          // "fetchUrlContent" hook
+          await urlInfo.fetchContent();
 
-        // "transform" hook
-        await urlInfo.transformContent();
+          // "transform" hook
+          await urlInfo.transformContent();
 
-        // "finalize" hook
-        await urlInfo.finalizeContent();
-      }, contextDuringCook);
+          // "finalize" hook
+          await urlInfo.finalizeContent();
+        }, contextDuringCook);
+      } catch (e) {
+        urlInfo.error = e;
+        throw e;
+      }
     }
 
     // "cooked" hook
@@ -483,8 +481,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         }
       },
     );
-
-    resolveCookPromise();
   });
   kitchenContext.cook = cook;
 
@@ -498,24 +494,33 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     urlInfo,
     { operation, ignoreDynamicImport } = {},
   ) => {
-    const promises = [];
-    const urlInfoSet = new Set();
+    const urlInfoMap = new Map();
 
-    onCookStart = async (urlInfo, cookPromise) => {
-      urlInfoSet.add(urlInfo);
-      promises.push(cookPromise);
-      await cookPromise;
-      startCookingDependencies(urlInfo);
+    const cookSelfThenDependencies = async (urlInfo) => {
+      if (operation) {
+        operation.throwIfAborted();
+      }
+
+      const existingPromise = urlInfoMap.get(urlInfo);
+      if (existingPromise) {
+        return existingPromise;
+      }
+      const cookPromise = urlInfo.cook();
+      const cookSelfAndDependenciesPromise = cookPromise.then(() =>
+        startCookingDependencies(urlInfo),
+      );
+      urlInfoMap.set(urlInfo, cookSelfAndDependenciesPromise);
+      return cookSelfAndDependenciesPromise;
     };
 
     const startCookingDependencies = (urlInfo) => {
+      const promises = [];
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
         if (referenceToOther.type === "sourcemap_comment") {
           // we don't cook sourcemap reference by sourcemap comments
           // because this is already done in "initTransformations"
           continue;
         }
-
         if (referenceToOther.isWeak) {
           // we don't cook weak references (resource hints mostly)
           // because they might refer to resource that will be modified during build
@@ -523,42 +528,22 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // so that the preload is deleted by "resync_resource_hints.js" otherwise
           continue;
         }
-
         if (
           ignoreDynamicImport &&
           referenceToOther.subtype === "import_dynamic"
         ) {
           continue;
         }
-
         // we use reference.generatedUrl to mimic what a browser would do:
         // do a fetch to the specifier as found in the file
         const referencedUrlInfo = referenceToOther.urlInfo;
-        if (!urlInfoSet.has(referencedUrlInfo)) {
-          referencedUrlInfo.cook();
-        }
+        promises.push(cookSelfThenDependencies(referencedUrlInfo));
       }
+      return Promise.all(promises);
     };
 
-    const getAllDishesAreCookedPromise = async () => {
-      const waitAll = async () => {
-        if (operation) {
-          operation.throwIfAborted();
-        }
-        if (promises.length === 0) {
-          return;
-        }
-        const promisesToWait = promises.slice();
-        promises.length = 0;
-        await Promise.all(promisesToWait);
-        await waitAll();
-      };
-      await waitAll();
-      urlInfoSet.clear();
-    };
-
-    startCookingDependencies(urlInfo);
-    await getAllDishesAreCookedPromise();
+    await startCookingDependencies(urlInfo);
+    urlInfoMap.clear();
     // gather all callbackToConsiderContentReady added after the url is cooked
     await Promise.all(
       lastTransformationCallbacks.map(async (callback) => {
@@ -566,7 +551,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }),
     );
     lastTransformationCallbacks.length = 0;
-    onCookStart = () => {};
   };
   kitchenContext.cookDependencies = cookDependencies;
 

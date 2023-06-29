@@ -8,14 +8,13 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -36,9 +35,13 @@ const test = async (params) => {
 };
 
 // support for top level await and <script type="module">
-await test({ runtimeCompat: { chrome: "89" } });
+await test({
+  runtimeCompat: { chrome: "89" },
+});
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "55" } });
+await test({
+  runtimeCompat: { chrome: "55" },
+});
 
 // support for <script type="module"> but not TLA
 // Considering that TLA + export on old runtimes is not recommended:
@@ -47,7 +50,10 @@ await test({ runtimeCompat: { chrome: "55" } });
 // -> Jsenv throw an error when TLA + exports is used and systemjs is not
 // (ideally jsenv would throw a custom error explaining all this)
 try {
-  await test({ runtimeCompat: { chrome: "65" }, versioning: false });
+  await test({
+    runtimeCompat: { chrome: "65" },
+    versioning: false,
+  });
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message.includes(
