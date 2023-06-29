@@ -657,6 +657,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               const buildSpecifierWithVersionPlaceholder =
                 buildVersionsManager.generateBuildSpecifierPlaceholder(
                   reference,
+                  buildSpecifier,
                 );
               return buildSpecifierWithVersionPlaceholder;
             },
@@ -782,7 +783,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return finalEntryUrlInfo.type === "html";
           }) &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
-        getUrlInfoFromBuildSpecifier: (buildSpecifier) =>
+        getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
           buildSpecifierMap.get(buildSpecifier),
       });
 

@@ -56,6 +56,6 @@ await test({
 // cannot use + no bundling
 await test({
   name: "2_js_module_fallback_no_bundling",
-  expectedUrl: `/js/main.nomodule.js?v=3044010d`,
+  expectedUrl: `/js/main.nomodule.js?v=0c7b0863`,
   runtimeCompat: { chrome: "60" },
 });

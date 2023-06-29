@@ -24,7 +24,7 @@ export const createBuildVersionsManager = ({
   versioningMethod,
   versionLength = 8,
   canUseImportmap,
-  getUrlInfoFromBuildSpecifier,
+  getBuildUrlFromBuildSpecifier,
 }) => {
   const workerReferenceSet = new Set();
   const isReferencedByWorker = (reference) => {
@@ -109,54 +109,70 @@ export const createBuildVersionsManager = ({
     "g",
   );
 
-  const referenceToPlaceholderMap = new Map();
   const placeholderToReferenceMap = new Map();
-  const buildSpecifierPlaceholderMap = new Map();
-  const buildSpecifierVersionedMap = new Map();
+  const buildSpecifierToPlaceholderMap = new Map();
 
-  const onPlaceholderGenerated = (
-    reference,
-    buildSpecifier,
-    buildSpecifierPlaceholder,
-  ) => {
-    buildSpecifierPlaceholderMap.set(buildSpecifier, buildSpecifierPlaceholder);
-    referenceToPlaceholderMap.set(reference, buildSpecifierPlaceholder);
-    placeholderToReferenceMap.set(buildSpecifierPlaceholder, reference);
-  };
-
-  const referenceVersionedExternallyMap = new Map();
+  const referenceVersionedByCodeMap = new Map();
+  const referenceVersionedByImportmapMap = new Map();
   const specifierVersionedInlineSet = new Set();
   const specifierVersionedByCodeSet = new Set();
   const specifierVersionedByImportmapSet = new Set();
   const versionMap = new Map();
 
+  const buildSpecifierToBuildSpecifierVersionedMap = new Map();
+  // - will be used by global and importmap registry
+  // - will be used by build during "inject_urls_in_service_workers" and
+  //   "resync_resource_hints"
+  const getBuildSpecifierVersioned = (buildSpecifier) => {
+    const fromCache =
+      buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
+    if (fromCache) {
+      return fromCache;
+    }
+    const buildSpecifierPlaceholder =
+      buildSpecifierToPlaceholderMap.get(buildSpecifier);
+    const buildUrl = getBuildUrlFromBuildSpecifier(buildSpecifier);
+    const urlInfo = finalKitchen.graph.getUrlInfo(buildUrl);
+    const version = versionMap.get(urlInfo);
+    const buildSpecifierVersioned = replaceFirstPlaceholder(
+      buildSpecifierPlaceholder,
+      version,
+    );
+    buildSpecifierToBuildSpecifierVersionedMap.set(
+      buildSpecifier,
+      buildSpecifierVersioned,
+    );
+    return buildSpecifierVersioned;
+  };
+
   return {
     generateBuildSpecifierPlaceholder: (reference, buildSpecifier) => {
-      const existing = referenceToPlaceholderMap.get(reference);
-      if (existing) return existing;
+      const placeholder = generatePlaceholder();
+      const buildSpecifierWithVersionPlaceholder =
+        injectVersionPlaceholderIntoBuildSpecifier({
+          buildSpecifier,
+          versionPlaceholder: placeholder,
+          versioningMethod,
+        });
+      buildSpecifierToPlaceholderMap.set(
+        buildSpecifier,
+        buildSpecifierWithVersionPlaceholder,
+      );
+      placeholderToReferenceMap.set(placeholder, reference);
 
       const asPlaceholderForVersionedSpecifier = () => {
         specifierVersionedInlineSet.add(buildSpecifier);
-        const placeholder = generatePlaceholder();
-        const buildSpecifierWithVersionPlaceholder =
-          injectVersionPlaceholderIntoBuildSpecifier({
-            buildSpecifier,
-            versionPlaceholder: placeholder,
-            versioningMethod,
-          });
-        onPlaceholderGenerated(
-          reference,
-          buildSpecifier,
-          buildSpecifierWithVersionPlaceholder,
-        );
         return buildSpecifierWithVersionPlaceholder;
       };
 
       const asPlaceholderForCodeVersionedByGlobalRegistry = (codeToInject) => {
+        // here we use placeholder as specifier, so something like
+        // "/other/file.png" becomes "!~{0001}~" and finally "__v__("/other/file.png")"
+        // this is to support cases like CSS inlined in JS
+        // CSS minifier must see valid CSS specifiers like background-image: url("!~{0001}~");
+        // that is finally replaced by invalid css background-image: url("__v__("/other/file.png")")
         specifierVersionedByCodeSet.add(buildSpecifier);
-        referenceVersionedExternallyMap.add(reference, codeToInject);
-        const placeholder = generatePlaceholder();
-        onPlaceholderGenerated(reference, buildSpecifier, placeholder);
+        referenceVersionedByCodeMap.set(reference, codeToInject);
         return placeholder;
       };
 
@@ -164,9 +180,8 @@ export const createBuildVersionsManager = ({
         specifierToUse,
       ) => {
         specifierVersionedByImportmapSet.add(buildSpecifier);
-        referenceVersionedExternallyMap.add(reference, specifierToUse);
-        onPlaceholderGenerated(reference, buildSpecifier, specifierToUse);
-        return specifierToUse;
+        referenceVersionedByImportmapMap.set(reference, specifierToUse);
+        return buildSpecifier;
       };
 
       const ownerUrlInfo = reference.ownerUrlInfo;
@@ -273,7 +288,10 @@ export const createBuildVersionsManager = ({
           const setOfUrlInfluencingVersion = new Set();
           const visitDependencies = (urlInfo) => {
             urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (referenceVersionedExternallyMap.has(referenceToOther)) {
+              if (
+                referenceVersionedByCodeMap.has(referenceToOther) ||
+                referenceVersionedByImportmapMap.has(referenceToOther)
+              ) {
                 // when versioning is dynamic no need to take into account
                 // happens for:
                 // - specifier mapped by window.__v__()
@@ -327,39 +345,54 @@ export const createBuildVersionsManager = ({
         versionMap.forEach((version, urlInfo) => {
           if (!CONTENT_TYPE.isTextual(urlInfo.contentType)) return;
           if (urlInfo.referenceToOthersSet.size === 0) return;
-          urlInfo.content = urlInfo.content.replace(
-            REPLACER_REGEX,
-            (placeholder) => {
-              const reference = placeholderToReferenceMap.get(placeholder);
-              const replacementForExternalVersioning =
-                referenceVersionedExternallyMap.get(reference);
-              if (replacementForExternalVersioning) {
-                return replacementForExternalVersioning;
-              }
-              const version = versionMap.get(reference.urlInfo);
-              return version;
-            },
-          );
-        });
-      }
 
-      populate_build_versioned_map: {
-        // - will be used by global and importmap registry
-        // - will be used by build during "inject_urls_in_service_workers" and
-        //   "resync_resource_hints"
-        specifierVersionedInlineSet.forEach((buildSpecifier) => {
-          const buildSpecifierPlaceholder =
-            buildSpecifierPlaceholderMap.get(buildSpecifier);
-          const urlInfo = getUrlInfoFromBuildSpecifier(buildSpecifier);
-          const version = versionMap.get(urlInfo);
-          const buildSpecifierVersioned = replaceFirstPlaceholder(
-            buildSpecifierPlaceholder,
-            version,
-          );
-          buildSpecifierVersionedMap.set(
-            buildSpecifier,
-            buildSpecifierVersioned,
-          );
+          let replacements = [];
+          let content = urlInfo.content;
+          content.replace(REPLACER_REGEX, (placeholder, index) => {
+            const replacement = {
+              start: index,
+              placeholder,
+              value: null,
+              valueType: "",
+            };
+            replacements.push(replacement);
+            const reference = placeholderToReferenceMap.get(placeholder);
+
+            const codeToInject = referenceVersionedByCodeMap.get(reference);
+            if (codeToInject) {
+              replacement.value = codeToInject;
+              replacement.valueType = "code";
+              return;
+            }
+            const specifierToUse =
+              referenceVersionedByImportmapMap.get(reference);
+            if (specifierToUse) {
+              replacement.value = specifierToUse;
+              replacement.valueType = "specifier";
+              return;
+            }
+            const version = versionMap.get(reference.urlInfo);
+            replacement.value = version;
+            replacement.valueType = "specifier";
+          });
+
+          let diff = 0;
+          replacements.forEach((replacement) => {
+            const placeholder = replacement.placeholder;
+            const value = replacement.value;
+            let start = replacement.start + diff;
+            let end = start + placeholder.length;
+            if (replacement.valueType === "code") {
+              start = start - 1;
+              end = end + 1;
+              diff = diff - 2;
+            }
+            const before = content.slice(0, start);
+            const after = content.slice(end);
+            content = before + value + after;
+            diff += placeholder.length - value.length;
+          });
+          urlInfo.content = content;
         });
       }
 
@@ -370,7 +403,7 @@ export const createBuildVersionsManager = ({
           const versionMappingsNeeded = {};
           specifierVersionedByCodeSet.forEach((buildSpecifier) => {
             versionMappingsNeeded[buildSpecifier] =
-              buildSpecifierVersionedMap.get(buildSpecifier);
+              getBuildSpecifierVersioned(buildSpecifier);
           });
           visitors.push((urlInfo) => {
             if (urlInfo.isEntryPoint) {
@@ -388,7 +421,7 @@ export const createBuildVersionsManager = ({
           const versionMappingsNeeded = {};
           specifierVersionedByImportmapSet.forEach((buildSpecifier) => {
             versionMappingsNeeded[buildSpecifier] =
-              buildSpecifierVersionedMap.get(buildSpecifier);
+              getBuildSpecifierVersioned(buildSpecifier);
           });
           visitors.push((urlInfo) => {
             if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
@@ -415,8 +448,7 @@ export const createBuildVersionsManager = ({
       }
     },
     getVersion: (urlInfo) => versionMap.get(urlInfo),
-    getBuildSpecifierVersioned: (buildSpecifier) =>
-      buildSpecifierVersionedMap.get(buildSpecifier),
+    getBuildSpecifierVersioned,
   };
 };
 
