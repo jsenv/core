@@ -22,7 +22,8 @@ const test = async (name, params) => {
   const server = await startBuildServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    port: 0,
   });
   const { returnValue, consoleOutput } = await executeInBrowser({
     url: `${server.origin}/main.html`,
@@ -49,7 +50,7 @@ await test("0_js_module", {
   runtimeCompat: { chrome: "89" },
 });
 // no support for <script type="module">
-// await test("1_js_module_fallback", {
-//   runtimeCompat: { chrome: "60" },
-//   versioningMethod: "filename",
-// });
+await test("1_js_module_fallback", {
+  runtimeCompat: { chrome: "60" },
+  versioningMethod: "filename",
+});
