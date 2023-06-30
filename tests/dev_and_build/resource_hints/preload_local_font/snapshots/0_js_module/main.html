@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    
+    <link rel="preload" href="/other/roboto_v27_latin_regular.woff2?v=fda7bb73" as="font" type="font/woff2" id="font_preload_link" crossorigin="">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/style.css.js": "/js/style.css.js?v=dadfbfa6"
+        }
+      }
+    </script>
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/other/roboto_v27_latin_regular.woff2": "/other/roboto_v27_latin_regular.woff2?v=fda7bb73"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+  </head>
+
+  <body>
+    <h1>Hello world</h1>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      import style from "/js/style.css.js" ;
+
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];
+
+      // Let browser time to log an eventual warning about preload link not used
+      await new Promise((resolve) => {
+        setTimeout(resolve, 5000);
+      });
+      await document.fonts.ready;
+      window.resolveResultPromise(getComputedStyle(document.body).fontFamily);
+    </script>
+  </body>
+</html>
