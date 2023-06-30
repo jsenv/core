@@ -40,7 +40,7 @@ export const jsenvPluginSupervisor = ({
         const file = urlWithLineAndColumn.slice(0, match.index);
         let line = parseInt(match[1]);
         let column = parseInt(match[2]);
-        const urlInfo = context.graph.getUrlInfo(file);
+        const urlInfo = context.kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
@@ -93,7 +93,7 @@ export const jsenvPluginSupervisor = ({
           };
         }
         const getErrorCauseInfo = () => {
-          const urlInfo = context.graph.getUrlInfo(file);
+          const urlInfo = context.kitchen.graph.getUrlInfo(file);
           if (!urlInfo) {
             return null;
           }
@@ -182,7 +182,7 @@ export const jsenvPluginSupervisor = ({
               openInEditor,
             },
             webServer: {
-              rootDirectoryUrl: htmlUrlInfo.kitchen.context.rootDirectoryUrl,
+              rootDirectoryUrl: htmlUrlInfo.context.rootDirectoryUrl,
               isJsenvDevServer: true,
             },
             inlineAsRemote: true,

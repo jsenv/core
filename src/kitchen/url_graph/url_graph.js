@@ -35,6 +35,7 @@ export const createUrlGraph = ({
   const addUrlInfo = (urlInfo) => {
     urlInfo.graph = urlGraph;
     urlInfo.kitchen = kitchen;
+    urlInfo.context = kitchen.context;
     urlInfoMap.set(urlInfo.url, urlInfo);
   };
   const reuseOrCreateUrlInfo = (reference, useGeneratedUrl) => {
@@ -140,6 +141,7 @@ const createUrlInfo = (url) => {
     isRoot: false,
     graph: null,
     kitchen: null,
+    context: null,
     error: null,
     modifiedTimestamp: 0,
     originalContentEtag: null,
@@ -245,14 +247,14 @@ const createUrlInfo = (url) => {
     return null;
   };
   urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
-    const seen = [];
+    const visitedSet = new Set();
     const iterate = (urlInfo) => {
-      if (seen.includes(urlInfo.url)) {
+      if (visitedSet.has(urlInfo)) {
         return;
       }
-      seen.push(urlInfo.url);
+      visitedSet.add(urlInfo);
       urlInfo.modifiedTimestamp = modifiedTimestamp;
-      urlInfo.kitchen.context.urlInfoTransformer.resetContent(urlInfo);
+      urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
       urlInfo.referenceFromOthersSet.forEach((referenceFromOther) => {
         const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
         const { hotAcceptDependencies = [] } = urlInfoReferencingThisOne.data;
@@ -266,38 +268,23 @@ const createUrlInfo = (url) => {
   urlInfo.deleteFromGraph = () => {
     urlInfo.graph.deleteUrlInfo(urlInfo.url);
   };
-  urlInfo.cook = (context) => {
-    context = context
-      ? { ...urlInfo.kitchen.context, ...context }
-      : urlInfo.kitchen.context;
-    return urlInfo.kitchen.context.cook(urlInfo, context);
+  urlInfo.cook = (customContext) => {
+    return urlInfo.context.cook(urlInfo, customContext);
   };
-  urlInfo.cookDependencies = (context) => {
-    context = context
-      ? { ...urlInfo.kitchen.context, ...context }
-      : urlInfo.kitchen.context;
-    return urlInfo.kitchen.context.cookDependencies(urlInfo, context);
+  urlInfo.cookDependencies = (options) => {
+    return urlInfo.context.cookDependencies(urlInfo, options);
   };
-  urlInfo.fetchContent = (context) => {
-    context = context
-      ? { ...urlInfo.kitchen.context, ...context }
-      : urlInfo.kitchen.context;
-    return urlInfo.kitchen.context.fetchUrlContent(urlInfo, context);
+  urlInfo.fetchContent = (customContext) => {
+    return urlInfo.context.fetchUrlContent(urlInfo, customContext);
   };
-  urlInfo.transformContent = (context) => {
-    context = context
-      ? { ...urlInfo.kitchen.context, ...context }
-      : urlInfo.kitchen.context;
-    return urlInfo.kitchen.context.transformUrlContent(urlInfo, context);
+  urlInfo.transformContent = (customContext) => {
+    return urlInfo.context.transformUrlContent(urlInfo, customContext);
   };
-  urlInfo.finalizeContent = (context) => {
-    context = context
-      ? { ...urlInfo.kitchen.context, ...context }
-      : urlInfo.kitchen.context;
-    return urlInfo.kitchen.context.finalizeUrlContent(urlInfo, context);
+  urlInfo.finalizeContent = (customContext) => {
+    return urlInfo.context.finalizeUrlContent(urlInfo, customContext);
   };
   urlInfo.mutateContent = (transformations) => {
-    return urlInfo.kitchen.context.urlInfoTransformer.applyTransformations(
+    return urlInfo.kitchen.urlInfoTransformer.applyTransformations(
       urlInfo,
       transformations,
     );
@@ -306,14 +293,14 @@ const createUrlInfo = (url) => {
   const contentTransformationCallbacks = [];
   urlInfo.addContentTransformationCallback = (callback) => {
     if (urlInfo.contentFinalized) {
-      if (urlInfo.kitchen.context.dev) {
+      if (urlInfo.context.dev) {
         throw new Error(
           `cannot add a transform callback on content already sent to the browser.
 --- content url ---
 ${urlInfo.url}`,
         );
       }
-      urlInfo.kitchen.context.addLastTransformationCallback(callback);
+      urlInfo.context.addLastTransformationCallback(callback);
     } else {
       contentTransformationCallbacks.push(callback);
     }

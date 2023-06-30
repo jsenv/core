@@ -39,7 +39,7 @@ export const jsenvPluginAutoreloadServer = ({
           });
         };
         const propagateUpdate = (firstUrlInfo) => {
-          if (!context.graph.getUrlInfo(firstUrlInfo.url)) {
+          if (!context.kitchen.graph.getUrlInfo(firstUrlInfo.url)) {
             return {
               declined: true,
               reason: `url not in the url graph`,
@@ -143,13 +143,13 @@ export const jsenvPluginAutoreloadServer = ({
             return true;
           };
 
-          const exactUrlInfo = context.graph.getUrlInfo(url);
+          const exactUrlInfo = context.kitchen.graph.getUrlInfo(url);
           if (exactUrlInfo) {
             if (onUrlInfo(exactUrlInfo)) {
               return;
             }
           }
-          for (const [, urlInfo] of context.graph.urlInfoMap) {
+          for (const [, urlInfo] of context.kitchen.graph.urlInfoMap) {
             if (urlInfo === exactUrlInfo || urlInfo.isRoot) {
               continue;
             }
@@ -219,7 +219,7 @@ export const jsenvPluginAutoreloadServer = ({
     serve: (request, context) => {
       if (request.pathname === "/__graph__") {
         const graphJson = JSON.stringify(
-          context.graph.toJSON(context.rootDirectoryUrl),
+          context.kitchen.graph.toJSON(context.rootDirectoryUrl),
         );
         return {
           status: 200,

@@ -37,7 +37,6 @@ export const createKitchen = ({
   ignore,
   ignoreProtocol = "remove",
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  graph,
   dev = false,
   build = false,
   runtimeCompat,
@@ -54,35 +53,56 @@ export const createKitchen = ({
   sourcemapsSourcesRelative,
   outDirectoryUrl,
 }) => {
-  const kitchen = {};
-
-  if (graph === undefined) {
-    graph = createUrlGraph({ name, rootDirectoryUrl, kitchen });
-  }
-
   const logger = createLogger({ logLevel });
-  const kitchenContext = {
-    signal,
-    logger,
-    rootDirectoryUrl,
-    mainFilePath,
-    graph,
-    dev,
-    build,
-    runtimeCompat,
-    clientRuntimeCompat,
-    systemJsTranspilation,
-    inlineContentClientFileUrl,
-    isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
-    isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
-    minification,
-    sourcemaps,
-    outDirectoryUrl,
+  const kitchen = {
+    context: {
+      signal,
+      logger,
+      rootDirectoryUrl,
+      mainFilePath,
+      dev,
+      build,
+      runtimeCompat,
+      clientRuntimeCompat,
+      systemJsTranspilation,
+      inlineContentClientFileUrl,
+      isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
+      isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
+      minification,
+      sourcemaps,
+      outDirectoryUrl,
+    },
+    kitchen: null,
+    graph: null,
+    pluginController: null,
+    urlInfoTransformer: null,
   };
+  const kitchenContext = kitchen.context;
+  kitchenContext.kitchen = kitchen;
+
+  const graph = createUrlGraph({
+    name,
+    rootDirectoryUrl,
+    kitchen,
+  });
+  kitchen.graph = graph;
+
   const pluginController = createPluginController(kitchenContext);
+  kitchen.pluginController = pluginController;
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
+
+  const urlInfoTransformer = createUrlInfoTransformer({
+    logger,
+    sourcemaps,
+    sourcemapsSourcesProtocol,
+    sourcemapsSourcesContent,
+    sourcemapsSourcesRelative,
+    outDirectoryUrl,
+    supervisor,
+  });
+  kitchen.urlInfoTransformer = urlInfoTransformer;
 
   const isIgnoredByProtocol = (url) => {
     const { protocol } = new URL(url);
@@ -112,10 +132,13 @@ export const createKitchen = ({
   const isIgnored = (url) => {
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
-  const resolveReference = (reference) => {
+  const resolveReference = (reference, contextDuringResolve) => {
     if (reference.url) {
       return reference;
     }
+    contextDuringResolve = contextDuringResolve
+      ? { ...kitchenContext, ...contextDuringResolve }
+      : kitchenContext;
 
     const setReferenceUrl = (referenceUrl) => {
       // ignored urls are prefixed with "ignore:" so that reference are associated
@@ -154,7 +177,7 @@ export const createKitchen = ({
         const resolvedUrl = pluginController.callHooksUntil(
           "resolveReference",
           reference,
-          kitchenContext,
+          contextDuringResolve,
         );
         if (!resolvedUrl) {
           throw new Error(`NO_RESOLVE`);
@@ -178,7 +201,7 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
           pluginController.callHooks(
             "redirectReference",
             reference,
-            kitchenContext,
+            contextDuringResolve,
             (returnValue, plugin, setReference) => {
               const normalizedReturnValue = normalizeUrl(returnValue);
               if (normalizedReturnValue === reference.url) {
@@ -214,7 +237,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.resolveReference = resolveReference;
 
-  kitchenContext.finalizeReference = (reference) => {
+  const finalizeReference = (reference, contextDuringFinalize) => {
+    contextDuringFinalize = contextDuringFinalize
+      ? { ...kitchenContext, ...contextDuringFinalize }
+      : kitchenContext;
+
     transform_search_params: {
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -225,7 +252,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       pluginController.callHooks(
         "transformReferenceSearchParams",
         reference,
-        kitchenContext,
+        contextDuringFinalize,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
             reference.searchParams.set(key, returnValue[key]);
@@ -241,7 +268,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
         reference,
-        kitchenContext,
+        contextDuringFinalize,
       );
       if (reference.url.startsWith("ignore:")) {
         if (ignoreProtocol === "remove") {
@@ -255,19 +282,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
     }
   };
-
-  const urlInfoTransformer = createUrlInfoTransformer({
-    logger,
-    sourcemaps,
-    sourcemapsSourcesProtocol,
-    sourcemapsSourcesContent,
-    sourcemapsSourcesRelative,
-    outDirectoryUrl,
-    supervisor,
-  });
-  kitchenContext.urlInfoTransformer = urlInfoTransformer;
+  kitchenContext.finalizeReference = finalizeReference;
 
   const fetchUrlContent = async (urlInfo, contextDuringFetch) => {
+    contextDuringFetch = contextDuringFetch
+      ? { ...kitchenContext, ...contextDuringFetch }
+      : kitchenContext;
+
     try {
       const fetchUrlContentReturnValue =
         await pluginController.callAsyncHooksUntil(
@@ -381,6 +402,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.fetchUrlContent = fetchUrlContent;
 
   const transformUrlContent = async (urlInfo, contextDuringTransform) => {
+    contextDuringTransform = contextDuringTransform
+      ? { ...kitchenContext, ...contextDuringTransform }
+      : kitchenContext;
+
     try {
       await pluginController.callAsyncHooks(
         "transformUrlContent",
@@ -406,6 +431,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.transformUrlContent = transformUrlContent;
 
   const finalizeUrlContent = async (urlInfo, contextDuringFinalize) => {
+    contextDuringFinalize = contextDuringFinalize
+      ? { ...kitchenContext, ...contextDuringFinalize }
+      : kitchenContext;
+
     try {
       await urlInfo.applyContentTransformationCallbacks();
       const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
@@ -426,6 +455,13 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
   const cookGuard = dev ? debounceCook : memoizeCook;
   const cook = cookGuard(async (urlInfo, contextDuringCook) => {
+    if (contextDuringCook) {
+      urlInfo.context = {
+        ...kitchenContext,
+        ...contextDuringCook,
+      };
+    }
+
     // urlInfo objects are reused, they must be "reset" before cooking them again
     if (urlInfo.error || urlInfo.content !== undefined) {
       urlInfo.error = null;
@@ -547,11 +583,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.cookDependencies = cookDependencies;
 
-  Object.assign(kitchen, {
-    graph,
-    pluginController,
-    context: kitchenContext,
-  });
   return kitchen;
 };
 

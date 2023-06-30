@@ -7,29 +7,11 @@ import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 export const createDependencies = (ownerUrlInfo) => {
   const { referenceToOthersSet } = ownerUrlInfo;
 
-  const dependencies = {};
-
   const startCollecting = async (callback) => {
-    dependencies.isCollecting = true;
     let prevReferenceToOthersSet = new Set(referenceToOthersSet);
     referenceToOthersSet.clear();
 
     const stopCollecting = () => {
-      const prunedUrlInfos = [];
-      const prune = (urlInfo, reference) => {
-        urlInfo.referenceToOthersSet.delete(reference);
-        const referencedUrlInfo = urlInfo.graph.getUrlInfo(reference.url);
-        if (!referencedUrlInfo) {
-          return;
-        }
-        referencedUrlInfo.referenceFromOthersSet.delete(reference);
-        if (referencedUrlInfo.referenceFromOthersSet.size === 0) {
-          referencedUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-            prune(referencedUrlInfo, referenceToOther);
-          });
-          prunedUrlInfos.push(referencedUrlInfo);
-        }
-      };
       for (const prevReferenceToOther of prevReferenceToOthersSet) {
         let referenceFound = null;
         for (const referenceToOther of referenceToOthersSet) {
@@ -39,24 +21,10 @@ export const createDependencies = (ownerUrlInfo) => {
           }
         }
         if (!referenceFound) {
-          prune(ownerUrlInfo, prevReferenceToOther);
+          prevReferenceToOther.remove();
         }
       }
-      if (prunedUrlInfos.length) {
-        prunedUrlInfos.forEach((prunedUrlInfo) => {
-          prunedUrlInfo.modifiedTimestamp = Date.now();
-          if (prunedUrlInfo.isInline) {
-            // should we always delete?
-            prunedUrlInfo.deleteFromGraph();
-          }
-        });
-        ownerUrlInfo.graph.prunedUrlInfosCallbackRef.current(
-          prunedUrlInfos,
-          ownerUrlInfo,
-        );
-      }
       prevReferenceToOthersSet.clear();
-      dependencies.isCollecting = false;
     };
 
     try {
@@ -76,7 +44,7 @@ export const createDependencies = (ownerUrlInfo) => {
     const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
     reference.urlInfo = urlInfo;
     addDependency(reference);
-    kitchen.context.finalizeReference(reference);
+    ownerUrlInfo.context.finalizeReference(reference);
 
     return reference;
   };
@@ -181,7 +149,7 @@ export const createDependencies = (ownerUrlInfo) => {
     // and it's possible to find it in dependents when using
     // dynamic import for instance
     // (in that case we find the side effect file as it was injected in parent)
-    if (ownerUrlInfo.kitchen.context.dev) {
+    if (ownerUrlInfo.context.dev) {
       const urlsBeforeInjection = Array.from(
         parentUrlInfo.graph.urlInfoMap.keys(),
       );
@@ -287,17 +255,14 @@ export const createDependencies = (ownerUrlInfo) => {
     return reference;
   };
 
-  Object.assign(dependencies, {
-    isCollecting: false,
+  return {
     startCollecting,
     prepare,
     found,
     foundInline,
     foundSideEffectFile,
     inject,
-  });
-
-  return dependencies;
+  };
 };
 
 /*
@@ -435,7 +400,7 @@ const createReference = ({
 
   reference.resolve = () => {
     const resolvedReference =
-      reference.ownerUrlInfo.kitchen.context.resolveReference(reference);
+      reference.ownerUrlInfo.context.resolveReference(reference);
     return resolvedReference;
   };
 
@@ -548,8 +513,9 @@ const addDependency = (reference) => {
     !reference.isWeak &&
     !reference.isImplicit &&
     ownerUrlInfo.contentFinalized &&
-    ownerUrlInfo.kitchen.context.dev &&
-    !ownerUrlInfo.isRoot
+    ownerUrlInfo.context.dev &&
+    !ownerUrlInfo.isRoot &&
+    reference.type !== "http_request"
   ) {
     throw new Error(
       `cannot add reference for content already sent to the browser
@@ -590,8 +556,9 @@ const removeDependency = (reference) => {
     !reference.isWeak &&
     !reference.isImplicit &&
     ownerUrlInfo.contentFinalized &&
-    ownerUrlInfo.kitchen.context.dev &&
-    !ownerUrlInfo.isRoot
+    ownerUrlInfo.context.dev &&
+    !ownerUrlInfo.isRoot &&
+    reference.type !== "http_request"
   ) {
     throw new Error(
       `cannot remove reference for content already sent to the browser
@@ -624,6 +591,17 @@ ${ownerUrlInfo.url}`,
   }
 
   referenceToOthersSet.delete(reference);
+  const prevReference = reference.prev;
+  const nextReference = reference.next;
+  if (prevReference && nextReference) {
+    nextReference.prev = prevReference;
+    prevReference.next = nextReference;
+  } else if (prevReference) {
+    prevReference.next = null;
+  } else if (nextReference) {
+    nextReference.original = null;
+    nextReference.prev = null;
+  }
 
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
@@ -638,21 +616,13 @@ ${ownerUrlInfo.url}`,
       referencedUrlInfo.firstReference = null;
       applyReferenceEffectsOnUrlInfo(firstStrongReferenceFromOther);
     }
-  } else if (reference.type !== "http_request") {
-    referencedUrlInfo.deleteFromGraph();
+    return false;
   }
-
-  const prevReference = reference.prev;
-  const nextReference = reference.next;
-  if (prevReference && nextReference) {
-    nextReference.prev = prevReference;
-    prevReference.next = nextReference;
-  } else if (prevReference) {
-    prevReference.next = null;
-  } else if (nextReference) {
-    nextReference.original = null;
-    nextReference.prev = null;
+  if (reference.type !== "http_request") {
+    referencedUrlInfo.deleteFromGraph(reference);
+    return true;
   }
+  return false;
 };
 
 const traceFromUrlSite = (urlSite) => {
@@ -735,6 +705,11 @@ const getInlineReferenceProps = (
 
 const applyReferenceEffectsOnUrlInfo = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
+
+  if (reference.data.hmr) {
+    referencedUrlInfo.data.hmr = true;
+  }
+
   if (referencedUrlInfo.firstReference) {
     return;
   }

@@ -117,7 +117,7 @@ const loadCssUrls = async ({ cssEntryUrlInfos, context }) => {
         cssBundleInfo.referenceToOthersSet.add({
           url: cssUrl.url,
         });
-        const importedCssUrlInfo = context.graph.getUrlInfo(cssUrl.url);
+        const importedCssUrlInfo = context.kitchen.graph.getUrlInfo(cssUrl.url);
         load(importedCssUrlInfo);
       }
     });

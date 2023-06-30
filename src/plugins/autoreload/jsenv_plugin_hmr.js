@@ -1,4 +1,18 @@
 export const jsenvPluginHmr = () => {
+  const shouldInjectHmr = (reference) => {
+    if (reference.isImplicit) {
+      return false;
+    }
+    if (reference.data.hmr) {
+      return true;
+    }
+    if (reference.ownerUrlInfo.data.hmr) {
+      // parent uses hmr search param
+      return true;
+    }
+    return false;
+  };
+
   return {
     name: "jsenv:hmr",
     appliesDuring: "dev",
@@ -18,16 +32,7 @@ export const jsenvPluginHmr = () => {
       return urlObject.href;
     },
     transformReferenceSearchParams: (reference) => {
-      if (reference.isImplicit) {
-        return null;
-      }
-      const firstReference = reference.ownerUrlInfo.firstReference;
-      if (firstReference && !firstReference.data.hmr) {
-        // parent do not use hmr search param
-        return null;
-      }
-      if (!firstReference && !reference.data.hmr) {
-        // entry point do not use hmr search param
+      if (!shouldInjectHmr(reference)) {
         return null;
       }
       const referencedUrlInfo = reference.urlInfo;

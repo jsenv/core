@@ -175,7 +175,7 @@ export const createFileService = ({
           if (fileContentEtag !== urlInfo.originalContentEtag) {
             urlInfo.considerModified();
             // restore content to be able to compare it again later
-            urlInfo.kitchen.context.urlInfoTransformer.setContent(
+            urlInfo.kitchen.urlInfoTransformer.setContent(
               urlInfo,
               String(fileContentAsBuffer),
               {
@@ -195,11 +195,11 @@ export const createFileService = ({
       };
     };
     kitchen.graph.prunedUrlInfosCallbackRef.current = (
-      urlInfos,
-      firstUrlInfo,
+      prunedUrlInfo,
+      lastReferenceFromOther,
     ) => {
       clientFilesPruneCallbackList.forEach((callback) => {
-        callback(urlInfos, firstUrlInfo);
+        callback(prunedUrlInfo, lastReferenceFromOther);
       });
     };
     serverStopCallbacks.push(() => {
@@ -221,9 +221,7 @@ export const createFileService = ({
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach((serverEventName) => {
           allServerEvents[serverEventName]({
-            rootDirectoryUrl: sourceDirectoryUrl,
-            graph: kitchen.graph,
-            dev: true,
+            ...kitchen.context,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
@@ -264,9 +262,15 @@ export const createFileService = ({
       reference = kitchen.graph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
-      reference = kitchen.graph.rootUrlInfo.dependencies.prepare({
+      let parentUrlInfo;
+      if (parentUrl) {
+        parentUrlInfo = kitchen.graph.getUrlInfo(parentUrl);
+      }
+      if (!parentUrlInfo) {
+        parentUrlInfo = kitchen.graph.rootUrlInfo;
+      }
+      reference = parentUrlInfo.dependencies.prepare({
         trace: { message: parentUrl || sourceDirectoryUrl },
-        parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
         specifier: request.resource,
       });
@@ -300,7 +304,7 @@ export const createFileService = ({
         }
       }
 
-      await urlInfo.cook({ request });
+      await urlInfo.cook({ request, reference });
       let { response } = urlInfo;
       if (response) {
         return response;

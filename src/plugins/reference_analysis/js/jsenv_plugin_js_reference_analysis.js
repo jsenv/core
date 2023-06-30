@@ -103,7 +103,7 @@ const parseAndTransformJsReferences = async (
       baseUrl: {
         "StringLiteral": externalReferenceInfo.baseUrl,
         "window.location": urlInfo.url,
-        "window.origin": urlInfo.kitchen.context.rootDirectoryUrl,
+        "window.origin": urlInfo.context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,
