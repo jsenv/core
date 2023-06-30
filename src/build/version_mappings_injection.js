@@ -46,7 +46,9 @@ const generateClientCodeForVersionMappings = (
     )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
   }
   return `;(function() {
-  var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
+  var __versionMappings__ = {
+    ${stringifyParams(versionMappings, "    ")}
+  };
   ${globalName}.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
@@ -78,4 +80,17 @@ export const injectVersionMappingsAsImportmap = async ({
   urlInfo.mutateContent({
     content: stringifyHtmlAst(htmlAst),
   });
+};
+
+const stringifyParams = (params, prefix = "") => {
+  const source = JSON.stringify(params, null, prefix);
+  if (prefix.length) {
+    // remove leading "{\n"
+    // remove leading prefix
+    // remove trailing "\n}"
+    return source.slice(2 + prefix.length, -2);
+  }
+  // remove leading "{"
+  // remove trailing "}"
+  return source.slice(1, -1);
 };
