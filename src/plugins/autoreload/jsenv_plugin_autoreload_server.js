@@ -174,26 +174,26 @@ export const jsenvPluginAutoreloadServer = ({
           }
           // nothing to do: the url is not used
         });
-        clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
-          const mainHotUpdate = propagateUpdate(firstUrlInfo);
-          const cause = `following files are no longer referenced: ${prunedUrlInfos.map(
-            (prunedUrlInfo) => formatUrlForClient(prunedUrlInfo.url),
-          )}`;
-          // now check if we can hot update the main resource
-          // then if we can hot update all dependencies
-          if (mainHotUpdate.declined) {
-            notifyFullReload({
-              cause,
-              reason: mainHotUpdate.reason,
-              declinedBy: mainHotUpdate.declinedBy,
-            });
-            return;
-          }
-          // main can hot update
-          let i = 0;
-          const instructions = [];
-          while (i < prunedUrlInfos.length) {
-            const prunedUrlInfo = prunedUrlInfos[i++];
+        clientFilesPruneCallbackList.push(
+          (prunedUrlInfo, lastReferenceFromOther) => {
+            const parentHotUpdate = propagateUpdate(
+              lastReferenceFromOther.urlInfo,
+            );
+            const cause = `following file is no longer referenced: ${formatUrlForClient(
+              prunedUrlInfo.url,
+            )}`;
+            // now check if we can hot update the parent resource
+            // then if we can hot update all dependencies
+            if (parentHotUpdate.declined) {
+              notifyFullReload({
+                cause,
+                reason: parentHotUpdate.reason,
+                declinedBy: parentHotUpdate.declinedBy,
+              });
+              return;
+            }
+            // parent can hot update
+            const instructions = [];
             if (prunedUrlInfo.data.hotDecline) {
               notifyFullReload({
                 cause,
@@ -205,15 +205,15 @@ export const jsenvPluginAutoreloadServer = ({
             instructions.push({
               type: "prune",
               boundary: formatUrlForClient(prunedUrlInfo.url),
-              acceptedBy: formatUrlForClient(firstUrlInfo.url),
+              acceptedBy: formatUrlForClient(parentHotUpdate.url),
             });
-          }
-          notifyPartialReload({
-            cause,
-            reason: mainHotUpdate.reason,
-            instructions,
-          });
-        });
+            notifyPartialReload({
+              cause,
+              reason: parentHotUpdate.reason,
+              instructions,
+            });
+          },
+        );
       },
     },
     serve: (request, context) => {

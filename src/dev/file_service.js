@@ -410,11 +410,6 @@ export const createFileService = ({
         statusText: e.reason,
         statusMessage: e.stack,
       };
-    } finally {
-      if (reference.type === "http_request") {
-        // otherwise http_request ref keeps accumulating
-        reference.remove();
-      }
     }
   };
 };

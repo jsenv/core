@@ -21,7 +21,7 @@ export const createDependencies = (ownerUrlInfo) => {
           }
         }
         if (!referenceFound) {
-          prevReferenceToOther.remove();
+          applyDependencyRemovalEffects(prevReferenceToOther);
         }
       }
       prevReferenceToOthersSet.clear();
@@ -573,6 +573,13 @@ ${ownerUrlInfo.url}`,
   if (!referenceToOthersSet.has(reference)) {
     throw new Error(`reference not found in ${ownerUrlInfo.url}`);
   }
+  referenceToOthersSet.delete(reference);
+  return applyDependencyRemovalEffects(reference);
+};
+
+const applyDependencyRemovalEffects = (reference) => {
+  const { ownerUrlInfo } = reference;
+  const { referenceToOthersSet } = ownerUrlInfo;
 
   if (reference.isImplicit && !reference.isInline) {
     let hasAnOtherImplicitRef = false;
@@ -590,7 +597,6 @@ ${ownerUrlInfo.url}`,
     }
   }
 
-  referenceToOthersSet.delete(reference);
   const prevReference = reference.prev;
   const nextReference = reference.next;
   if (prevReference && nextReference) {
@@ -606,15 +612,15 @@ ${ownerUrlInfo.url}`,
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
-  const firstStrongReferenceFromOther =
-    referencedUrlInfo.getFirstStrongReferenceFromOther();
-  if (firstStrongReferenceFromOther) {
+  const firstReferenceFromOther =
+    referencedUrlInfo.getFirstReferenceFromOther();
+  if (firstReferenceFromOther) {
     // either applying new ref should override old ref
     // or we should first remove effects before adding new ones
     // for now we just set firstReference to null
     if (reference === referencedUrlInfo.firstReference) {
       referencedUrlInfo.firstReference = null;
-      applyReferenceEffectsOnUrlInfo(firstStrongReferenceFromOther);
+      applyReferenceEffectsOnUrlInfo(firstReferenceFromOther);
     }
     return false;
   }

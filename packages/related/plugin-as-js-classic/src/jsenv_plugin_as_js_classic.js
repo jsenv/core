@@ -88,7 +88,7 @@ export const jsenvPluginAsJsClassic = () => {
           const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
           if (
             sourceUrlInfo &&
-            !sourceUrlInfo.getFirstStrongReferenceFromOther()
+            !sourceUrlInfo.getFirstReferenceFromOther({ ignoreWeak: true })
           ) {
             sourceUrlInfo.deleteFromGraph();
           }

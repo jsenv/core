@@ -13,6 +13,15 @@ export const createUrlGraph = ({
   const prunedUrlInfosCallbackRef = { current: () => {} };
 
   const urlInfoMap = new Map();
+  const hasUrlInfo = (key) => {
+    if (typeof key === "string") {
+      return urlInfoMap.has(key);
+    }
+    if (typeof key === "object" && key && key.url) {
+      return urlInfoMap.has(key.url);
+    }
+    return null;
+  };
   const getUrlInfo = (key) => {
     if (typeof key === "string") {
       return urlInfoMap.get(key);
@@ -22,13 +31,16 @@ export const createUrlGraph = ({
     }
     return null;
   };
-  const deleteUrlInfo = (url) => {
+  const deleteUrlInfo = (url, lastReferenceFromOther) => {
     const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
       urlInfoMap.delete(url);
+      urlInfo.modifiedTimestamp = Date.now();
+      if (lastReferenceFromOther && !urlInfo.isInline) {
+        prunedUrlInfosCallbackRef.current(urlInfo, lastReferenceFromOther);
+      }
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        const referencedUrlInfo = referenceToOther.urlInfo;
-        referencedUrlInfo.referenceFromOthersSet.delete(referenceToOther);
+        referenceToOther.remove();
       });
     }
   };
@@ -102,6 +114,7 @@ export const createUrlGraph = ({
 
     urlInfoMap,
     reuseOrCreateUrlInfo,
+    hasUrlInfo,
     getUrlInfo,
     deleteUrlInfo,
     getEntryPoints,
@@ -193,7 +206,7 @@ const createUrlInfo = (url) => {
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
-  urlInfo.getFirstStrongReferenceFromOther = () => {
+  urlInfo.getFirstReferenceFromOther = ({ ignoreWeak } = {}) => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
       if (referenceFromOther.url === urlInfo.url) {
         if (
@@ -205,7 +218,7 @@ const createUrlInfo = (url) => {
           // to consider the non-inlined urlInfo as used
           continue;
         }
-        if (referenceFromOther.isWeak) {
+        if (ignoreWeak && referenceFromOther.isWeak) {
           // weak reference don't count as using the url
           continue;
         }
@@ -229,7 +242,7 @@ const createUrlInfo = (url) => {
     //   return true;
     // }
     // check if there is a strong reference to this urlInfo
-    if (urlInfo.getFirstStrongReferenceFromOther()) {
+    if (urlInfo.getFirstReferenceFromOther({ ignoreWeak: true })) {
       return true;
     }
     return false;
@@ -265,8 +278,8 @@ const createUrlInfo = (url) => {
     };
     iterate(urlInfo);
   };
-  urlInfo.deleteFromGraph = () => {
-    urlInfo.graph.deleteUrlInfo(urlInfo.url);
+  urlInfo.deleteFromGraph = (reference) => {
+    urlInfo.graph.deleteUrlInfo(urlInfo.url, reference);
   };
   urlInfo.cook = (customContext) => {
     return urlInfo.context.cook(urlInfo, customContext);
