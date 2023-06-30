@@ -1113,22 +1113,25 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return;
                 }
                 const buildUrlFormatted = buildUrlInfo.url;
-                const buildSpecifierBeforeRedirect = findKey(
+                const buildSpecifier = findKey(
                   buildSpecifierMap,
                   buildUrlFormatted,
                 );
+                const buildSpecifierVersioned =
+                  buildVersionsManager.getBuildSpecifierVersioned(
+                    buildSpecifier,
+                  );
+                let specifier = buildSpecifierVersioned || buildSpecifier;
                 mutations.push(() => {
                   setHtmlNodeAttributes(node, {
-                    href: buildSpecifierBeforeRedirect,
+                    href: specifier,
                     ...(buildUrlInfo.type === "js_classic"
                       ? { crossorigin: undefined }
                       : {}),
                   });
                 });
                 for (const referenceToOther of buildUrlInfo.referenceToOthersSet) {
-                  const referencedUrlInfo = finalKitchen.graph.urlInfoMap.get(
-                    referenceToOther.url,
-                  );
+                  const referencedUrlInfo = referenceToOther.urlInfo;
                   if (referencedUrlInfo.data.generatedToShareCode) {
                     hintsToInject[referencedUrlInfo.url] = node;
                   }
