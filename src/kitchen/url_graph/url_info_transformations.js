@@ -218,16 +218,14 @@ export const createUrlInfoTransformer = ({
       // "no sourcemap is better than wrong sourcemap"
       urlInfo.sourcemapIsWrong = urlInfo.sourcemapIsWrong || sourcemapIsWrong;
     }
-    if (contentModified) {
+    if (contentModified && urlInfo.contentFinalized) {
       applyContentEffects(urlInfo);
     }
   };
 
   const applyContentEffects = (urlInfo) => {
-    if (urlInfo.contentFinalized) {
-      applySourcemapOnContent(urlInfo);
-      writeInsideOutDirectory(urlInfo);
-    }
+    applySourcemapOnContent(urlInfo);
+    writeInsideOutDirectory(urlInfo);
   };
 
   const writeInsideOutDirectory = (urlInfo) => {
@@ -354,8 +352,8 @@ export const createUrlInfoTransformer = ({
     if (transformations) {
       applyTransformations(urlInfo, transformations);
     }
-    urlInfo.contentFinalized = true;
     applyContentEffects(urlInfo);
+    urlInfo.contentFinalized = true;
   };
 
   return {

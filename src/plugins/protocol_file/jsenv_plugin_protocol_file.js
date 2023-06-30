@@ -117,13 +117,12 @@ export const jsenvPluginProtocolFile = ({
       name: "jsenv:fs_resolution",
       appliesDuring: "*",
       resolveReference: {
-        filesystem: (reference, context) => {
-          const { parentUrl } = reference;
-          const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl);
+        filesystem: (reference) => {
+          const ownerUrlInfo = reference.ownerUrlInfo;
           const baseUrl =
-            parentUrlInfo && parentUrlInfo.type === "directory"
-              ? ensurePathnameTrailingSlash(parentUrl)
-              : parentUrl;
+            ownerUrlInfo && ownerUrlInfo.type === "directory"
+              ? ensurePathnameTrailingSlash(ownerUrlInfo.url)
+              : ownerUrlInfo.url;
           return new URL(reference.specifier, baseUrl).href;
         },
       },

@@ -58,10 +58,7 @@ export const jsenvPluginAsJsClassic = () => {
       let outputFormat;
       // if imported by js, we have to use systemjs
       // or if import things
-      if (
-        jsModuleBundledUrlInfo.data.usesImport ||
-        isImportedByJs(urlInfo, context.urlGraph)
-      ) {
+      if (jsModuleBundledUrlInfo.data.usesImport || isImportedByJs(urlInfo)) {
         // we have to use system when it uses import
         outputFormat = "system";
         urlInfo.type = "js_classic";
@@ -119,11 +116,9 @@ export const jsenvPluginAsJsClassic = () => {
   };
 };
 
-const isImportedByJs = (jsModuleUrlInfo, urlGraph) => {
+const isImportedByJs = (jsModuleUrlInfo) => {
   for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
-    const urlInfoReferencingJsModule = urlGraph.getUrlInfo(
-      referenceFromOther.url,
-    );
+    const urlInfoReferencingJsModule = referenceFromOther.urlInfo;
     if (
       urlInfoReferencingJsModule.type === "js_module" ||
       urlInfoReferencingJsModule.type === "js_classic"

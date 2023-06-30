@@ -5,10 +5,8 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
     name: "jsenv:directory_reference_analysis",
     transformUrlContent: {
       directory: (urlInfo, context) => {
-        const originalDirectoryReference = findOriginalDirectoryReference(
-          urlInfo,
-          context,
-        );
+        const originalDirectoryReference =
+          findOriginalDirectoryReference(urlInfo);
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
           context.rootDirectoryUrl,
@@ -28,13 +26,12 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
   };
 };
 
-const findOriginalDirectoryReference = (urlInfo, context) => {
+const findOriginalDirectoryReference = (urlInfo) => {
   const findNonFileSystemAncestor = (urlInfo) => {
-    for (const urlFromOther of urlInfo.urlFromOthersSet) {
-      const urlInfoReferencingThisOne =
-        context.urlGraph.getUrlInfo(urlFromOther);
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
       if (urlInfoReferencingThisOne.type !== "directory") {
-        return [urlInfoReferencingThisOne, urlInfo];
+        return urlInfoReferencingThisOne;
       }
       const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
       if (found) {

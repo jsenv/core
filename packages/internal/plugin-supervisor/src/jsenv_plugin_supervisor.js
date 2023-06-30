@@ -40,7 +40,7 @@ export const jsenvPluginSupervisor = ({
         const file = urlWithLineAndColumn.slice(0, match.index);
         let line = parseInt(match[1]);
         let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
+        const urlInfo = context.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
@@ -93,7 +93,7 @@ export const jsenvPluginSupervisor = ({
           };
         }
         const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
+          const urlInfo = context.graph.getUrlInfo(file);
           if (!urlInfo) {
             return null;
           }
@@ -102,12 +102,10 @@ export const jsenvPluginSupervisor = ({
             return error;
           }
           // search in direct dependencies (404 or 500)
-          const { dependencies } = urlInfo;
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo =
-              context.urlGraph.getUrlInfo(dependencyUrl);
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            const referencedUrlInfo = referenceToOther.urlInfo;
+            if (referencedUrlInfo.error) {
+              return referencedUrlInfo.error;
             }
           }
           return null;

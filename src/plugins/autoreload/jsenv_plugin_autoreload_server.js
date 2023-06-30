@@ -12,7 +12,7 @@ export const jsenvPluginAutoreloadServer = ({
     name: "jsenv:autoreload_server",
     appliesDuring: "dev",
     serverEvents: {
-      reload: ({ sendServerEvent, rootDirectoryUrl, urlGraph }) => {
+      reload: ({ sendServerEvent, rootDirectoryUrl, graph }) => {
         const formatUrlForClient = (url) => {
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
             return urlToRelativeUrl(url, rootDirectoryUrl);
@@ -40,7 +40,7 @@ export const jsenvPluginAutoreloadServer = ({
           });
         };
         const propagateUpdate = (firstUrlInfo) => {
-          if (!urlGraph.getUrlInfo(firstUrlInfo.url)) {
+          if (!graph.getUrlInfo(firstUrlInfo.url)) {
             return {
               declined: true,
               reason: `url not in the url graph`,
@@ -65,9 +65,7 @@ export const jsenvPluginAutoreloadServer = ({
             }
             const instructions = [];
             for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-              const urlInfoReferencingThisOne = urlGraph.getUrlInfo(
-                referenceFromOther.url,
-              );
+              const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
               if (urlInfoReferencingThisOne.data.hotDecline) {
                 return {
                   declined: true,
@@ -141,11 +139,11 @@ export const jsenvPluginAutoreloadServer = ({
               });
             }
           };
-          const exactUrlInfo = urlGraph.getUrlInfo(url);
+          const exactUrlInfo = graph.getUrlInfo(url);
           if (exactUrlInfo) {
             onUrlInfo(exactUrlInfo);
           }
-          urlGraph.urlInfoMap.forEach((urlInfo) => {
+          graph.urlInfoMap.forEach((urlInfo) => {
             if (urlInfo === exactUrlInfo) return;
             const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
             if (urlWithoutSearch !== url) return;

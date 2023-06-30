@@ -40,7 +40,6 @@ export const createKitchen = ({
   graph,
   dev = false,
   build = false,
-  versioning = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -70,7 +69,6 @@ export const createKitchen = ({
     graph,
     dev,
     build,
-    versioning,
     runtimeCompat,
     clientRuntimeCompat,
     systemJsTranspilation,
@@ -429,12 +427,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   const cookGuard = dev ? debounceCook : memoizeCook;
   const cook = cookGuard(async (urlInfo, contextDuringCook) => {
     // urlInfo objects are reused, they must be "reset" before cooking them again
-    if (
-      !versioning &&
-      (urlInfo.error || urlInfo.content !== undefined) &&
-      !urlInfo.isInline &&
-      urlInfo.type !== "sourcemap"
-    ) {
+    if (urlInfo.error || urlInfo.content !== undefined) {
       urlInfo.error = null;
       urlInfo.type = null;
       urlInfo.subtype = null;
