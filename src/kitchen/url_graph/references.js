@@ -543,6 +543,10 @@ const createReference = ({
 const addDependency = (reference) => {
   const { ownerUrlInfo } = reference;
   if (
+    // weak and implicit references have no restrictions
+    // because they are not actual references with an influence on content
+    !reference.isWeak &&
+    !reference.isImplicit &&
     ownerUrlInfo.contentFinalized &&
     ownerUrlInfo.kitchen.context.dev &&
     !ownerUrlInfo.isRoot
@@ -581,6 +585,10 @@ ${ownerUrlInfo.url}`,
 const removeDependency = (reference) => {
   const { ownerUrlInfo } = reference;
   if (
+    // weak and implicit references have no restrictions
+    // because they are not actual references with an influence on content
+    !reference.isWeak &&
+    !reference.isImplicit &&
     ownerUrlInfo.contentFinalized &&
     ownerUrlInfo.kitchen.context.dev &&
     !ownerUrlInfo.isRoot
