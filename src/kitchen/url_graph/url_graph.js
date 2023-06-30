@@ -66,7 +66,7 @@ export const createUrlGraph = ({
           continue;
         }
         seen.push(referenceToOther.url);
-        const referencedUrlInfo = getUrlInfo(referenceToOther.url);
+        const referencedUrlInfo = referenceToOther.urlInfo;
         if (referencedUrlInfo.isInline) {
           const firstRef = search(referencedUrlInfo);
           if (firstRef) {
