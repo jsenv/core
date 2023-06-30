@@ -1103,9 +1103,22 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   });
                   return;
                 }
-                if (buildUrlInfo.referenceFromOthersSet.size === 0) {
+                if (!buildUrlInfo.isUsed()) {
+                  const rawUrl = buildDirectoryRedirections.get(buildUrl);
+                  if (rawUrl) {
+                    const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+                    if (rawUrlInfo && rawUrlInfo.data.bundled) {
+                      logger.warn(
+                        `remove resource hint on "${rawUrl}" because it was bundled`,
+                      );
+                      mutations.push(() => {
+                        removeHtmlNode(node);
+                      });
+                      return;
+                    }
+                  }
                   logger.warn(
-                    `remove resource hint because "${href}" not used anymore`,
+                    `remove resource hint on "${href}" because it is not used anymore`,
                   );
                   mutations.push(() => {
                     removeHtmlNode(node);
@@ -1140,21 +1153,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (href.startsWith("file:")) {
                 let url = href;
                 url = rawRedirections.get(url) || url;
-                const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
-                if (rawUrlInfo && rawUrlInfo.data.bundled) {
-                  logger.warn(
-                    `remove resource hint on "${href}" because it was bundled`,
-                  );
-                  mutations.push(() => {
-                    removeHtmlNode(node);
-                  });
-                } else {
-                  url = bundleRedirections.get(url) || url;
-                  url = bundleInternalRedirections.get(url) || url;
-                  url = finalRedirections.get(url) || url;
-                  url = findKey(buildDirectoryRedirections, url) || url;
-                  onBuildUrl(url);
-                }
+                url = bundleRedirections.get(url) || url;
+                url = bundleInternalRedirections.get(url) || url;
+                url = finalRedirections.get(url) || url;
+                url = findKey(buildDirectoryRedirections, url) || url;
+                onBuildUrl(url);
               } else {
                 onBuildUrl(null);
               }
