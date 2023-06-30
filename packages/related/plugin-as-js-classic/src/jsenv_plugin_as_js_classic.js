@@ -118,7 +118,7 @@ export const jsenvPluginAsJsClassic = () => {
 
 const isImportedByJs = (jsModuleUrlInfo) => {
   for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
-    const urlInfoReferencingJsModule = referenceFromOther.urlInfo;
+    const urlInfoReferencingJsModule = referenceFromOther.ownerUrlInfo;
     if (
       urlInfoReferencingJsModule.type === "js_module" ||
       urlInfoReferencingJsModule.type === "js_classic"

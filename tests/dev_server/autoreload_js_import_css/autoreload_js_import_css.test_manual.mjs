@@ -1,7 +1,7 @@
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  logLevel: "debug",
+  serverLogLevel: "debug",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   sourceMainFilePath: "main.html",
   supervisor: false,
@@ -10,4 +10,6 @@ await startDevServer({
       css: true,
     },
   },
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  sourcemaps: "none",
 });

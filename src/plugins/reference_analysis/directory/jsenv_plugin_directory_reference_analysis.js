@@ -29,7 +29,7 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
 const findOriginalDirectoryReference = (urlInfo) => {
   const findNonFileSystemAncestor = (urlInfo) => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
+      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
       if (urlInfoReferencingThisOne.type !== "directory") {
         return urlInfoReferencingThisOne;
       }

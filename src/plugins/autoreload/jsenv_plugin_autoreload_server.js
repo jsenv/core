@@ -12,27 +12,26 @@ export const jsenvPluginAutoreloadServer = ({
     name: "jsenv:autoreload_server",
     appliesDuring: "dev",
     serverEvents: {
-      reload: ({ sendServerEvent, rootDirectoryUrl, graph }) => {
+      reload: (context) => {
         const formatUrlForClient = (url) => {
-          if (urlIsInsideOf(url, rootDirectoryUrl)) {
-            return urlToRelativeUrl(url, rootDirectoryUrl);
+          if (urlIsInsideOf(url, context.rootDirectoryUrl)) {
+            return urlToRelativeUrl(url, context.rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {
             return `/@fs/${url.slice("file:///".length)}`;
           }
           return url;
         };
-
-        const notifyDeclined = ({ cause, reason, declinedBy }) => {
-          sendServerEvent({
+        const notifyFullReload = ({ cause, reason, declinedBy }) => {
+          context.sendServerEvent({
             cause,
             type: "full",
             typeReason: reason,
             declinedBy,
           });
         };
-        const notifyAccepted = ({ cause, reason, instructions }) => {
-          sendServerEvent({
+        const notifyPartialReload = ({ cause, reason, instructions }) => {
+          context.sendServerEvent({
             cause,
             type: "hot",
             typeReason: reason,
@@ -40,7 +39,7 @@ export const jsenvPluginAutoreloadServer = ({
           });
         };
         const propagateUpdate = (firstUrlInfo) => {
-          if (!graph.getUrlInfo(firstUrlInfo.url)) {
+          if (!context.graph.getUrlInfo(firstUrlInfo.url)) {
             return {
               declined: true,
               reason: `url not in the url graph`,
@@ -65,12 +64,12 @@ export const jsenvPluginAutoreloadServer = ({
             }
             const instructions = [];
             for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-              const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
+              const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
               if (urlInfoReferencingThisOne.data.hotDecline) {
                 return {
                   declined: true,
                   reason: `a dependent file declines hot reload`,
-                  declinedBy: referenceFromOther.url,
+                  declinedBy: urlInfoReferencingThisOne.url,
                 };
               }
               const { hotAcceptDependencies = [] } =
@@ -78,21 +77,21 @@ export const jsenvPluginAutoreloadServer = ({
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 instructions.push({
                   type: urlInfoReferencingThisOne.type,
-                  boundary: formatUrlForClient(referenceFromOther.url),
+                  boundary: formatUrlForClient(urlInfoReferencingThisOne.url),
                   acceptedBy: formatUrlForClient(urlInfo.url),
                 });
                 continue;
               }
-              if (seen.includes(referenceFromOther.url)) {
+              if (seen.includes(urlInfoReferencingThisOne.url)) {
                 return {
                   declined: true,
                   reason: "circular dependency",
-                  declinedBy: formatUrlForClient(referenceFromOther.url),
+                  declinedBy: formatUrlForClient(urlInfoReferencingThisOne.url),
                 };
               }
               const dependentPropagationResult = iterate(
                 urlInfoReferencingThisOne,
-                [...seen, referenceFromOther.url],
+                [...seen, urlInfoReferencingThisOne.url],
               );
               if (dependentPropagationResult.accepted) {
                 instructions.push(...dependentPropagationResult.instructions);
@@ -123,39 +122,57 @@ export const jsenvPluginAutoreloadServer = ({
         };
         clientFileChangeCallbackList.push(({ url, event }) => {
           const onUrlInfo = (urlInfo) => {
+            if (!urlInfo.isUsed()) {
+              return false;
+            }
             const relativeUrl = formatUrlForClient(urlInfo.url);
             const hotUpdate = propagateUpdate(urlInfo);
             if (hotUpdate.declined) {
-              notifyDeclined({
+              notifyFullReload({
                 cause: `${relativeUrl} ${event}`,
                 reason: hotUpdate.reason,
                 declinedBy: hotUpdate.declinedBy,
               });
-            } else {
-              notifyAccepted({
-                cause: `${relativeUrl} ${event}`,
-                reason: hotUpdate.reason,
-                instructions: hotUpdate.instructions,
-              });
+              return true;
             }
+            notifyPartialReload({
+              cause: `${relativeUrl} ${event}`,
+              reason: hotUpdate.reason,
+              instructions: hotUpdate.instructions,
+            });
+            return true;
           };
-          const exactUrlInfo = graph.getUrlInfo(url);
+
+          const exactUrlInfo = context.graph.getUrlInfo(url);
           if (exactUrlInfo) {
-            onUrlInfo(exactUrlInfo);
+            if (onUrlInfo(exactUrlInfo)) {
+              return;
+            }
           }
-          graph.urlInfoMap.forEach((urlInfo) => {
-            if (urlInfo === exactUrlInfo) return;
+          for (const [, urlInfo] of context.graph.urlInfoMap) {
+            if (urlInfo === exactUrlInfo || urlInfo.isRoot) {
+              continue;
+            }
             const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-            if (urlWithoutSearch !== url) return;
+            if (urlWithoutSearch !== url) {
+              continue;
+            }
             if (exactUrlInfo) {
+              let referencedByUrl = false;
               for (const referenceFromOther of exactUrlInfo.referenceFromOthersSet) {
                 if (referenceFromOther.url === urlInfo.url) {
-                  return;
+                  referencedByUrl = true;
                 }
               }
+              if (referencedByUrl) {
+                continue;
+              }
             }
-            onUrlInfo(urlInfo);
-          });
+            if (onUrlInfo(urlInfo)) {
+              return;
+            }
+          }
+          // nothing to do: the url is not used
         });
         clientFilesPruneCallbackList.push((prunedUrlInfos, firstUrlInfo) => {
           const mainHotUpdate = propagateUpdate(firstUrlInfo);
@@ -165,7 +182,7 @@ export const jsenvPluginAutoreloadServer = ({
           // now check if we can hot update the main resource
           // then if we can hot update all dependencies
           if (mainHotUpdate.declined) {
-            notifyDeclined({
+            notifyFullReload({
               cause,
               reason: mainHotUpdate.reason,
               declinedBy: mainHotUpdate.declinedBy,
@@ -178,7 +195,7 @@ export const jsenvPluginAutoreloadServer = ({
           while (i < prunedUrlInfos.length) {
             const prunedUrlInfo = prunedUrlInfos[i++];
             if (prunedUrlInfo.data.hotDecline) {
-              notifyDeclined({
+              notifyFullReload({
                 cause,
                 reason: `a pruned file declines hot reload`,
                 declinedBy: formatUrlForClient(prunedUrlInfo.url),
@@ -191,7 +208,7 @@ export const jsenvPluginAutoreloadServer = ({
               acceptedBy: formatUrlForClient(firstUrlInfo.url),
             });
           }
-          notifyAccepted({
+          notifyPartialReload({
             cause,
             reason: mainHotUpdate.reason,
             instructions,
@@ -199,9 +216,11 @@ export const jsenvPluginAutoreloadServer = ({
         });
       },
     },
-    serve: (request, { rootDirectoryUrl, graph }) => {
+    serve: (request, context) => {
       if (request.pathname === "/__graph__") {
-        const graphJson = JSON.stringify(graph.toJSON(rootDirectoryUrl));
+        const graphJson = JSON.stringify(
+          context.graph.toJSON(context.rootDirectoryUrl),
+        );
         return {
           status: 200,
           headers: {

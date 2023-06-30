@@ -254,7 +254,7 @@ const createUrlInfo = (url) => {
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.kitchen.context.urlInfoTransformer.resetContent(urlInfo);
       urlInfo.referenceFromOthersSet.forEach((referenceFromOther) => {
-        const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
+        const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
         const { hotAcceptDependencies = [] } = urlInfoReferencingThisOne.data;
         if (!hotAcceptDependencies.includes(urlInfo.url)) {
           iterate(urlInfoReferencingThisOne);

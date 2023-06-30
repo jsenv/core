@@ -57,9 +57,7 @@ GRAPH_VISITOR.findDependent = (graph, urlInfo, visitor) => {
       }
     }
     for (const referenceFromOther of currentUrlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = graph.getUrlInfo(
-        referenceFromOther.url,
-      );
+      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
       if (visit(urlInfoReferencingThisOne)) {
         if (found) {
           break;
