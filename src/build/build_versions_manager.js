@@ -131,6 +131,9 @@ export const createBuildVersionsManager = ({
     }
     const buildSpecifierPlaceholder =
       buildSpecifierToPlaceholderMap.get(buildSpecifier);
+    if (!buildSpecifierPlaceholder) {
+      return null;
+    }
     const buildUrl = getBuildUrlFromBuildSpecifier(buildSpecifier);
     const urlInfo = finalKitchen.graph.getUrlInfo(buildUrl);
     const version = versionMap.get(urlInfo);
