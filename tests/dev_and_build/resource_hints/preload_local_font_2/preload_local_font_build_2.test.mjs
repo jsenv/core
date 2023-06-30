@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 
-import { build } from "@jsenv/core";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { build, startBuildServer } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
@@ -15,8 +15,15 @@ const test = async (params) => {
     versioning: false,
     ...params,
   });
-  const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/`, import.meta.url),
+  );
+  const server = await startBuildServer({
+    logLevel: "warn",
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
   const { returnValue, consoleOutput } = await executeInBrowser({
     url: `${server.origin}/main.html`,

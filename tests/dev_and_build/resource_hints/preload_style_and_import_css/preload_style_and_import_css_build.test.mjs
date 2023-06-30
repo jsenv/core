@@ -1,23 +1,29 @@
 import { assert } from "@jsenv/assert";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
-import { build } from "@jsenv/core";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { build, startBuildServer } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (params) => {
+const test = async (name, params) => {
   await build({
     logLevel: "error",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    versioning: false,
     ...params,
   });
-  const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
+  const server = await startBuildServer({
+    logLevel: "warn",
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
   const { returnValue, consoleOutput } = await executeInBrowser({
     url: `${server.origin}/main.html`,
@@ -38,9 +44,13 @@ const test = async (params) => {
 };
 
 // support for <script type="module">
-await test({
+await test("0_js_module", {
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
+  versioning: false,
 });
 // no support for <script type="module"> + no bundling
-await test({ runtimeCompat: { chrome: "62" } });
+await test("1_js_module_fallback", {
+  runtimeCompat: { chrome: "62" },
+  versioning: false,
+});
