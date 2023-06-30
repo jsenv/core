@@ -201,9 +201,9 @@ export const jsenvPluginAutoreloadServer = ({
         });
       },
     },
-    serve: (request, { rootDirectoryUrl, urlGraph }) => {
+    serve: (request, { rootDirectoryUrl, graph }) => {
       if (request.pathname === "/__graph__") {
-        const graphJson = JSON.stringify(urlGraph.toJSON(rootDirectoryUrl));
+        const graphJson = JSON.stringify(graph.toJSON(rootDirectoryUrl));
         return {
           status: 200,
           headers: {
