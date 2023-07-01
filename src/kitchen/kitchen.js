@@ -133,9 +133,6 @@ export const createKitchen = ({
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
   const resolveReference = (reference, contextDuringResolve) => {
-    if (reference.url) {
-      return reference;
-    }
     contextDuringResolve = contextDuringResolve
       ? { ...kitchenContext, ...contextDuringResolve }
       : kitchenContext;
@@ -174,6 +171,10 @@ export const createKitchen = ({
 
     try {
       resolve: {
+        if (reference.url) {
+          setReferenceUrl(reference.url);
+          break resolve;
+        }
         const resolvedUrl = pluginController.callHooksUntil(
           "resolveReference",
           reference,
@@ -197,33 +198,36 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
         }
       }
       redirect: {
-        if (reference.redirection) {
-          pluginController.callHooks(
-            "redirectReference",
-            reference,
-            contextDuringResolve,
-            (returnValue, plugin, setReference) => {
-              const normalizedReturnValue = normalizeUrl(returnValue);
-              if (normalizedReturnValue === reference.url) {
-                return;
-              }
-              if (reference.debug) {
-                logger.debug(
-                  `url redirected by "${plugin.name}"
+        if (reference.isImplicit && reference.type !== "side_effect_file") {
+          // not needed for implicit references that are not rendered anywhere
+          // except for side_effect_file references injected in entry points or at the top of files
+          break redirect;
+        }
+        pluginController.callHooks(
+          "redirectReference",
+          reference,
+          contextDuringResolve,
+          (returnValue, plugin, setReference) => {
+            const normalizedReturnValue = normalizeUrl(returnValue);
+            if (normalizedReturnValue === reference.url) {
+              return;
+            }
+            if (reference.debug) {
+              logger.debug(
+                `url redirected by "${plugin.name}"
 ${ANSI.color(reference.url, ANSI.GREY)} ->
 ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 `,
-                );
-              }
-              const referenceRedirected = reference.redirect(
-                normalizedReturnValue,
               );
-              reference = referenceRedirected;
-              setReferenceUrl(normalizedReturnValue);
-              setReference(referenceRedirected);
-            },
-          );
-        }
+            }
+            const referenceRedirected = reference.redirect(
+              normalizedReturnValue,
+            );
+            reference = referenceRedirected;
+            setReferenceUrl(normalizedReturnValue);
+            setReference(referenceRedirected);
+          },
+        );
       }
       reference.generatedUrl = reference.url;
       return reference;
@@ -238,6 +242,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.resolveReference = resolveReference;
 
   const finalizeReference = (reference, contextDuringFinalize) => {
+    if (reference.isImplicit && reference.type !== "side_effect_file") {
+      // not needed for implicit references that are not rendered anywhere
+      // except for side_effect_file references injected in entry points or at the top of files
+      return;
+    }
+
     contextDuringFinalize = contextDuringFinalize
       ? { ...kitchenContext, ...contextDuringFinalize }
       : kitchenContext;

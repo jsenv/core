@@ -45,7 +45,8 @@ export const createDependencies = (ownerUrlInfo) => {
     });
     const reference = originalReference.resolve();
     const kitchen = ownerUrlInfo.kitchen;
-
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
     if (reference.url.includes("?")) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params
@@ -65,11 +66,9 @@ export const createDependencies = (ownerUrlInfo) => {
       reference.addImplicit({
         specifier: urlWithoutSearch,
         url: urlWithoutSearch,
+        searchParams: new URLSearchParams(),
       });
     }
-
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
-    reference.urlInfo = urlInfo;
     addDependency(reference);
     ownerUrlInfo.context.finalizeReference(reference);
 
@@ -486,7 +485,7 @@ const createReference = ({
     return inlineCopy;
   };
 
-  reference.addImplicit = (props = {}) => {
+  reference.addImplicit = (props) => {
     const implicitReference = ownerUrlInfo.dependencies.inject({
       ...props,
       isImplicit: true,
@@ -748,10 +747,6 @@ const getInlineReferenceProps = (
 
 const applyReferenceEffectsOnUrlInfo = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
-
-  if (reference.data.hmr) {
-    referencedUrlInfo.data.hmr = true;
-  }
 
   if (referencedUrlInfo.firstReference) {
     return;

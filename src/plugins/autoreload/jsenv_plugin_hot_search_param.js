@@ -3,11 +3,7 @@ export const jsenvPluginHotSearchParam = () => {
     if (reference.isImplicit) {
       return false;
     }
-    if (reference.data.hotSearchParam) {
-      return true;
-    }
-    if (reference.ownerUrlInfo.data.hotSearchParam) {
-      // parent uses hot search param
+    if (reference.original && reference.original.searchParams.has("hot")) {
       return true;
     }
     return false;
@@ -18,10 +14,8 @@ export const jsenvPluginHotSearchParam = () => {
     appliesDuring: "dev",
     redirectReference: (reference) => {
       if (!reference.searchParams.has("hot")) {
-        reference.data.hotSearchParam = false;
         return null;
       }
-      reference.data.hotSearchParam = true;
       const urlObject = new URL(reference.url);
       // "hot" search param goal is to invalide url in browser cache:
       // this goal is achieved when we reach this part of the code
