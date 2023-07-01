@@ -1,8 +1,4 @@
-import {
-  urlIsInsideOf,
-  urlToRelativeUrl,
-  asUrlWithoutSearch,
-} from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
@@ -140,39 +136,23 @@ export const jsenvPluginAutoreloadServer = ({
               reason: hotUpdate.reason,
               instructions: hotUpdate.instructions,
             });
-            return true;
+            return false;
           };
 
-          const exactUrlInfo = context.kitchen.graph.getUrlInfo(url);
-          if (exactUrlInfo) {
-            if (onUrlInfo(exactUrlInfo)) {
-              return;
-            }
-          }
-          for (const [, urlInfo] of context.kitchen.graph.urlInfoMap) {
-            if (urlInfo === exactUrlInfo || urlInfo.isRoot) {
-              continue;
-            }
-            const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-            if (urlWithoutSearch !== url) {
-              continue;
-            }
-            if (exactUrlInfo) {
-              let referencedByUrl = false;
-              for (const referenceFromOther of exactUrlInfo.referenceFromOthersSet) {
-                if (referenceFromOther.url === urlInfo.url) {
-                  referencedByUrl = true;
-                }
-              }
-              if (referencedByUrl) {
-                continue;
-              }
-            }
+          const urlInfo = context.kitchen.graph.getUrlInfo(url);
+          if (urlInfo) {
             if (onUrlInfo(urlInfo)) {
               return;
             }
+            for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+              const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
+              if (urlInfoReferencingThisOne.isSearchParamVariantOf(urlInfo)) {
+                if (onUrlInfo(urlInfoReferencingThisOne)) {
+                  return;
+                }
+              }
+            }
           }
-          // nothing to do: the url is not used
         });
         clientFilesPruneCallbackList.push(
           (prunedUrlInfo, lastReferenceFromOther) => {

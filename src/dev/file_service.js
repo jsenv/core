@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { serveDirectory, composeTwoResponses } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/filesystem";
-import { asUrlWithoutSearch } from "@jsenv/urls";
 import { URL_META } from "@jsenv/url-meta";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
@@ -73,23 +72,10 @@ export const createFileService = ({
     );
     let kitchen;
     clientFileChangeCallbackList.push(({ url }) => {
-      const exactUrlInfo = kitchen.graph.getUrlInfo(url);
-      if (exactUrlInfo) {
-        exactUrlInfo.considerModified();
+      const urlinfo = kitchen.graph.getUrlInfo(url);
+      if (urlinfo) {
+        urlinfo.considerModified();
       }
-      kitchen.graph.urlInfoMap.forEach((urlInfo) => {
-        if (urlInfo === exactUrlInfo) return;
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-        if (urlWithoutSearch !== url) return;
-        if (exactUrlInfo) {
-          for (const referenceFromOther of exactUrlInfo.referenceFromOthersSet) {
-            if (referenceFromOther.url === urlInfo.url) {
-              return;
-            }
-          }
-        }
-        urlInfo.considerModified();
-      });
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
 

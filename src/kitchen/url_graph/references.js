@@ -1,4 +1,8 @@
-import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
+import {
+  getCallerPosition,
+  stringifyUrlSite,
+  asUrlWithoutSearch,
+} from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -8,7 +12,7 @@ export const createDependencies = (ownerUrlInfo) => {
   const { referenceToOthersSet } = ownerUrlInfo;
 
   const startCollecting = async (callback) => {
-    let prevReferenceToOthersSet = new Set(referenceToOthersSet);
+    const prevReferenceToOthersSet = new Set(referenceToOthersSet);
     referenceToOthersSet.clear();
 
     const stopCollecting = () => {
@@ -41,6 +45,29 @@ export const createDependencies = (ownerUrlInfo) => {
     });
     const reference = originalReference.resolve();
     const kitchen = ownerUrlInfo.kitchen;
+
+    if (reference.url.includes("?")) {
+      // A resource is represented by a url.
+      // Variations of a resource are represented by url search params
+      // Each representation of the resource is given a dedicated url info
+      // object (one url -> one url info)
+      // It's because search params often influence the final content returned for that url
+      // When a reference contains url search params it must create 2 url infos:
+      // 1. The url info corresponding to the url with search params
+      // 2. The url info corresponding to url without search params
+      // Because the underlying content without search params is used to generate
+      // the content modified according to search params
+      // This way when a file like "style.css" is considered as modified
+      // references like "style.css?as_css_module" are also affected
+      const urlWithoutSearch = asUrlWithoutSearch(reference.url);
+      // a reference with a search param creates an implicit reference
+      // to the file without search param
+      const referenceWithoutSearch = reference.addImplicit({
+        specifier: urlWithoutSearch,
+        url: urlWithoutSearch,
+      });
+    }
+
     const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
     reference.urlInfo = urlInfo;
     addDependency(reference);
@@ -421,22 +448,16 @@ const createReference = ({
   };
 
   reference.redirect = (url, props = {}) => {
+    const redirectedProps = getRedirectedReferenceProps(reference, url);
     const referenceRedirected = createReference({
-      ...reference,
+      ...redirectedProps,
       ...props,
     });
-    referenceRedirected.specifier = url;
-    referenceRedirected.url = url;
-    referenceRedirected.prev = reference;
-    referenceRedirected.original = reference.original || reference;
     reference.next = referenceRedirected;
     return referenceRedirected;
   };
 
   reference.becomesInline = ({
-    specifier,
-    content,
-    contentType,
     line,
     column,
     // when urlInfo is given it means reference is moved into an other file
@@ -450,13 +471,6 @@ const createReference = ({
     });
     const inlineCopy = ownerUrlInfo.dependencies.prepare({
       ...inlineProps,
-      specifierLine: line,
-      specifierColumn: column,
-      specifier,
-      content,
-      contentType,
-      original: reference.original || reference,
-      prev: reference,
       ...props,
     });
     // when a file gets inlined (like CSS in HTML)
@@ -471,6 +485,14 @@ const createReference = ({
     removeDependency(reference);
     reference.next = inlineCopy;
     return inlineCopy;
+  };
+
+  reference.addImplicit = (props = {}) => {
+    const implicitReferenceInjected = ownerUrlInfo.dependencies.inject({
+      ...props,
+      isImplicit: true,
+    });
+    return implicitReferenceInjected;
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
@@ -507,6 +529,9 @@ const createReference = ({
 
 const addDependency = (reference) => {
   const { ownerUrlInfo } = reference;
+  if (ownerUrlInfo.referenceToOthersSet.has(reference)) {
+    return;
+  }
   if (
     // weak and implicit references have no restrictions
     // because they are not actual references with an influence on content
@@ -525,7 +550,6 @@ ${reference.url}
 ${ownerUrlInfo.url}`,
     );
   }
-
   ownerUrlInfo.referenceToOthersSet.add(reference);
   if (reference.isImplicit) {
     // an implicit reference is a reference that does not explicitely appear in the file
@@ -542,14 +566,19 @@ ${ownerUrlInfo.url}`,
       parentUrlInfo.implicitUrlSet.add(reference.url);
     }
   }
-
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.add(reference);
   applyReferenceEffectsOnUrlInfo(reference);
+  for (const implicitRef of reference.implicitReferenceSet) {
+    addDependency(implicitRef);
+  }
 };
 
 const removeDependency = (reference) => {
   const { ownerUrlInfo } = reference;
+  if (!ownerUrlInfo.referenceToOthersSet.has(reference)) {
+    return false;
+  }
   if (
     // weak and implicit references have no restrictions
     // because they are not actual references with an influence on content
@@ -568,12 +597,10 @@ ${reference.url}
 ${ownerUrlInfo.url}`,
     );
   }
-
-  const { referenceToOthersSet } = ownerUrlInfo;
-  if (!referenceToOthersSet.has(reference)) {
-    throw new Error(`reference not found in ${ownerUrlInfo.url}`);
+  for (const implicitRef of reference.implicitReferenceSet) {
+    implicitRef.remove();
   }
-  referenceToOthersSet.delete(reference);
+  ownerUrlInfo.referenceToOthersSet.delete(reference);
   return applyDependencyRemovalEffects(reference);
 };
 
@@ -680,9 +707,20 @@ const adjustUrlSite = (urlInfo, { url, line, column }) => {
   );
 };
 
+const getRedirectedReferenceProps = (reference, url) => {
+  const redirectedProps = {
+    ...reference,
+    specifier: url,
+    url,
+    original: reference.original || reference,
+    prev: reference,
+  };
+  return redirectedProps;
+};
+
 const getInlineReferenceProps = (
   reference,
-  { ownerUrlInfo, isOriginalPosition, line, column, ...rest },
+  { ownerUrlInfo, isOriginalPosition, line, column },
 ) => {
   const trace = traceFromUrlSite({
     url:
@@ -703,9 +741,10 @@ const getInlineReferenceProps = (
   return {
     trace,
     isInline: true,
-    line,
-    column,
-    ...rest,
+    specifierLine: line,
+    specifierColumn: column,
+    original: reference.original || reference,
+    prev: reference,
   };
 };
 

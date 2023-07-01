@@ -2,6 +2,7 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createDependencies } from "./references.js";
+import { asUrlWithoutSearch } from "@jsenv/core/packages/independent/urls/src/url_utils.js";
 
 export const createUrlGraph = ({
   rootDirectoryUrl,
@@ -259,6 +260,19 @@ const createUrlInfo = (url) => {
     }
     return null;
   };
+  urlInfo.isSearchParamVariantOf = (otherUrlInfo) => {
+    if (!urlInfo.url.includes("?")) {
+      return false;
+    }
+    if (otherUrlInfo.url.includes("?")) {
+      return false;
+    }
+    const withoutSearch = asUrlWithoutSearch(urlInfo.url);
+    if (withoutSearch === otherUrlInfo.url) {
+      return true;
+    }
+    return false;
+  };
   urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
     const iterate = (urlInfo) => {
@@ -268,13 +282,10 @@ const createUrlInfo = (url) => {
       visitedSet.add(urlInfo);
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-      urlInfo.referenceFromOthersSet.forEach((referenceFromOther) => {
+      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
         const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-        const { hotAcceptDependencies = [] } = urlInfoReferencingThisOne.data;
-        if (!hotAcceptDependencies.includes(urlInfo.url)) {
-          iterate(urlInfoReferencingThisOne);
-        }
-      });
+        iterate(urlInfoReferencingThisOne);
+      }
     };
     iterate(urlInfo);
   };
