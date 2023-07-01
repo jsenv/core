@@ -112,11 +112,10 @@ const addRelationshipWithPackageJson = ({
       return;
     }
   }
-  const packageJsonReference = ownerUrlInfo.dependencies.inject({
+  const packageJsonReference = reference.addImplicit({
     type: "package_json",
     subtype: field,
     specifier: packageJsonUrl,
-    isImplicit: true,
     hasVersioningEffect,
   });
   // we don't cook package.json files, we just maintain their content

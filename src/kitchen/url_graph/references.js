@@ -62,7 +62,7 @@ export const createDependencies = (ownerUrlInfo) => {
       const urlWithoutSearch = asUrlWithoutSearch(reference.url);
       // a reference with a search param creates an implicit reference
       // to the file without search param
-      const referenceWithoutSearch = reference.addImplicit({
+      reference.addImplicit({
         specifier: urlWithoutSearch,
         url: urlWithoutSearch,
       });
@@ -133,11 +133,9 @@ export const createDependencies = (ownerUrlInfo) => {
     const parentUrlInfo = ownerUrlInfo.findParentIfInline() || ownerUrlInfo;
 
     const addSideEffectFileRef = () => {
-      const reference = parentUrlInfo.dependencies.prepare({
+      const reference = parentUrlInfo.firstReference.addImplicit({
         trace,
         type: "side_effect_file",
-        isImplicit: true,
-        injected: true,
         specifier: sideEffectFileUrl,
         ...rest,
       });
@@ -406,6 +404,7 @@ const createReference = ({
     isEntryPoint,
     isResourceHint,
     isImplicit,
+    implicitReferenceSet: new Set(),
     isWeak,
     hasVersioningEffect,
     version,
@@ -488,25 +487,24 @@ const createReference = ({
   };
 
   reference.addImplicit = (props = {}) => {
-    const implicitReferenceInjected = ownerUrlInfo.dependencies.inject({
+    const implicitReference = ownerUrlInfo.dependencies.inject({
       ...props,
       isImplicit: true,
     });
-    return implicitReferenceInjected;
+    reference.implicitReferenceSet.add(implicitReference);
+    return implicitReference;
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
     if (!reference.searchParams.has(searchParam)) {
       return null;
     }
-
     const newSpecifier = reference.specifier
       .replace(`?${searchParam}`, "")
       .replace(`&${searchParam}`, "");
-    const referenceWithoutSearchParam = ownerUrlInfo.dependencies.prepare({
+    const referenceWithoutSearchParam = reference.addImplicit({
       ...reference,
       url: null,
-      isImplicit: true,
       isWeak: true,
       data: { ...reference.data },
       expectedType,
