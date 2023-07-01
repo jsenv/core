@@ -246,7 +246,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
       // - bypass browser cache (?v)
-      // - convey information (?hmr)
+      // - convey information (?hot)
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
       pluginController.callHooks(
