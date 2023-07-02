@@ -76,13 +76,13 @@ const jsenvPluginJsxAndRefresh = ({
     name: "jsenv:jsx_and_refresh",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo, context) => {
+      js_module: async (urlInfo) => {
         const urlMeta = URL_META.applyAssociations({
           url: urlInfo.url,
           associations,
         });
         const jsxEnabled = urlMeta.jsxTranspilation;
-        const refreshEnabled = context.dev
+        const refreshEnabled = urlInfo.context.dev
           ? urlMeta.refreshInstrumentation &&
             !urlInfo.content.includes("import.meta.hot.decline()")
           : false;
@@ -90,7 +90,7 @@ const jsenvPluginJsxAndRefresh = ({
           ...(jsxEnabled
             ? [
                 [
-                  context.dev
+                  urlInfo.context.dev
                     ? "@babel/plugin-transform-react-jsx-development"
                     : "@babel/plugin-transform-react-jsx",
                   {

@@ -180,7 +180,7 @@ export const createFileService = ({
         return true;
       };
     };
-    kitchen.graph.prunedUrlInfosCallbackRef.current = (
+    kitchen.graph.pruneUrlInfoCallbackRef.current = (
       prunedUrlInfo,
       lastReferenceFromOther,
     ) => {
@@ -229,11 +229,14 @@ export const createFileService = ({
 
   return async (request) => {
     const kitchen = getOrCreateKitchen(request);
+    const serveHookInfo = {
+      ...kitchen.context,
+      request,
+    };
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
-        request,
-        kitchen.context,
+        serveHookInfo,
       );
     if (responseFromPlugin) {
       return responseFromPlugin;
@@ -396,6 +399,10 @@ export const createFileService = ({
         statusText: e.reason,
         statusMessage: e.stack,
       };
+    } finally {
+      if (reference.type === "http_request") {
+        reference.remove();
+      }
     }
   };
 };

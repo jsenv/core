@@ -11,7 +11,7 @@ import { createMagicSource } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
 
 export const jsenvPluginCommonJsGlobals = () => {
-  const transformCommonJsGlobals = async (urlInfo, context) => {
+  const transformCommonJsGlobals = async (urlInfo) => {
     if (
       !urlInfo.content.includes("process.env.NODE_ENV") &&
       !urlInfo.content.includes("__filename") &&
@@ -22,7 +22,7 @@ export const jsenvPluginCommonJsGlobals = () => {
     const isJsModule = urlInfo.type === "js_module";
     const replaceMap = {
       "process.env.NODE_ENV": `("${
-        context.dev ? "development" : "production"
+        urlInfo.context.dev ? "development" : "production"
       }")`,
       "global": "globalThis",
       "__filename": isJsModule

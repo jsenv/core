@@ -90,7 +90,7 @@ export const jsenvPluginImportmap = () => {
       },
     },
     transformUrlContent: {
-      html: async (htmlUrlInfo, context) => {
+      html: async (htmlUrlInfo) => {
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
         const importmap = findHtmlNode(htmlAst, (node) => {
           if (node.nodeName !== "script") {
@@ -207,7 +207,7 @@ export const jsenvPluginImportmap = () => {
         // by "formatReferencedUrl" making the importmap presence useless.
         // In dev/test we keep importmap into the HTML to see it even if useless
         // Duing build we get rid of it
-        if (context.build) {
+        if (htmlUrlInfo.context.build) {
           removeHtmlNode(importmap);
         }
         return {

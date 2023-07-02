@@ -24,7 +24,7 @@ export const jsenvPluginRibbon = ({
     name: "jsenv:ribbon",
     appliesDuring: "dev",
     transformUrlContent: {
-      html: (urlInfo, context) => {
+      html: (urlInfo) => {
         if (urlInfo.data.isJsenvToolbar || urlInfo.data.noribbon) {
           return null;
         }
@@ -43,7 +43,7 @@ export const jsenvPluginRibbon = ({
           specifier: ribbonClientFileUrl.href,
         });
         const paramsJson = JSON.stringify(
-          { text: context.dev ? "DEV" : "BUILD" },
+          { text: urlInfo.context.dev ? "DEV" : "BUILD" },
           null,
           "  ",
         );

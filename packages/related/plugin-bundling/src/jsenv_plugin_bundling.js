@@ -10,31 +10,21 @@ export const jsenvPluginBundling = ({
   const bundle = {};
 
   if (css) {
-    bundle.css = (cssUrlInfos, context) => {
-      return bundleCss({
-        cssUrlInfos,
-        context,
-      });
+    bundle.css = (cssUrlInfos) => {
+      return bundleCss(cssUrlInfos);
     };
   }
   if (js_classic) {
-    bundle.js_classic = (jsClassicUrlInfos, context) => {
-      return bundleJsClassic({
-        jsClassicUrlInfos,
-        context,
-      });
+    bundle.js_classic = (jsClassicUrlInfos) => {
+      return bundleJsClassic(jsClassicUrlInfos);
     };
   }
   if (js_module) {
     if (js_module === true) {
       js_module = {};
     }
-    bundle.js_module = (jsModuleUrlInfos, context) => {
-      return bundleJsModules({
-        jsModuleUrlInfos,
-        context,
-        ...js_module,
-      });
+    bundle.js_module = (jsModuleUrlInfos) => {
+      return bundleJsModules(jsModuleUrlInfos, js_module);
     };
   }
 

@@ -1,6 +1,6 @@
 // https://github.com/terser-js/terser#minify-options
 
-export const minifyJs = async ({ jsUrlInfo, options }) => {
+export const minifyJs = async (jsUrlInfo, options) => {
   const url = jsUrlInfo.url;
   const content = jsUrlInfo.content;
   const sourcemap = jsUrlInfo.sourcemap;

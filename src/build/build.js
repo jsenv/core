@@ -278,6 +278,8 @@ build ${entryPointKeys.length} entry points`);
     const finalRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
+      buildDirectoryUrl,
+      assetsDirectory,
       systemJsTranspilation: (() => {
         const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
         if (nodeRuntimeEnabled) return false;
@@ -309,7 +311,7 @@ build ${entryPointKeys.length} entry points`);
       ignoreProtocol: "keep",
       build: true,
       runtimeCompat,
-      ...contextSharedDuringBuild,
+      baseContext: contextSharedDuringBuild,
       plugins: [
         ...plugins,
         {
@@ -916,11 +918,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   value: bundler.bundleFunction,
                 },
                 urlInfosToBundle,
-                {
-                  ...rawKitchen.context,
-                  buildDirectoryUrl,
-                  assetsDirectory,
-                },
               );
             Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
               const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);

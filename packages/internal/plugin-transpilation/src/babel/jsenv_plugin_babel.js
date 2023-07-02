@@ -9,7 +9,7 @@ import { analyzeConstructableStyleSheetUsage } from "./new_stylesheet/constructa
 import { babelPluginNewStylesheetInjector } from "./new_stylesheet/babel_plugin_new_stylesheet_injector.js";
 
 export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
-  const transformWithBabel = async (urlInfo, context) => {
+  const transformWithBabel = async (urlInfo) => {
     const isJsModule = urlInfo.type === "js_module";
     const getImportSpecifier = (clientFileUrl) => {
       const jsImportReference = urlInfo.dependencies.inject({
@@ -19,7 +19,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
       });
       return JSON.parse(jsImportReference.generatedSpecifier);
     };
-    const isSupported = context.isSupportedOnCurrentClients;
+    const isSupported = urlInfo.context.isSupportedOnCurrentClients;
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.originalUrl,
       isSupported,
@@ -82,7 +82,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
       babelPlugins,
       options: {
         generatorOpts: {
-          retainLines: context.dev,
+          retainLines: urlInfo.context.dev,
         },
       },
       input: urlInfo.content,

@@ -19,7 +19,7 @@ export const jsenvPluginAsJsClassic = () => {
         markAsJsClassicProxy(reference);
       }
     },
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam({
         searchParam: "as_js_classic",
         // override the expectedType to "js_module"
@@ -39,12 +39,8 @@ export const jsenvPluginAsJsClassic = () => {
         // This is done inside rollup for convenience
         ignoreDynamicImport: true,
       });
-      const bundleUrlInfos = await bundleJsModules({
-        jsModuleUrlInfos: [jsModuleUrlInfo],
-        context: {
-          ...context,
-          buildDirectoryUrl: new URL("./", import.meta.url),
-        },
+      const bundleUrlInfos = await bundleJsModules([jsModuleUrlInfo], {
+        buildDirectoryUrl: new URL("./", import.meta.url),
         preserveDynamicImport: true,
         augmentDynamicImportUrlSearchParams: () => {
           return {
@@ -74,14 +70,14 @@ export const jsenvPluginAsJsClassic = () => {
         outputFormat = "umd";
       }
 
-      if (context.dev) {
+      if (urlInfo.context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           urlInfo.firstReference.addImplicit({
             type: "js_url",
             specifier: sourceUrl,
           });
         });
-      } else if (context.build) {
+      } else if (urlInfo.context.build) {
         jsModuleReference.remove();
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
@@ -95,7 +91,7 @@ export const jsenvPluginAsJsClassic = () => {
       }
 
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: context.rootDirectoryUrl,
+        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleBundledUrlInfo.content,
         inputSourcemap: jsModuleBundledUrlInfo.sourcemap,
         inputUrl: jsModuleBundledUrlInfo.url,

@@ -32,15 +32,15 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
     name: "jsenv:js_module_fallback_inside_html",
     appliesDuring: "*",
     redirectReference: {
-      link_href: (reference, context) => {
+      link_href: (reference) => {
         if (
-          context.systemJsTranspilation &&
+          reference.ownerUrlInfo.context.systemJsTranspilation &&
           reference.subtype === "modulepreload"
         ) {
           return turnIntoJsClassicProxy(reference);
         }
         if (
-          context.systemJsTranspilation &&
+          reference.ownerUrlInfo.context.systemJsTranspilation &&
           reference.subtype === "preload" &&
           reference.expectedType === "js_module"
         ) {
@@ -48,18 +48,18 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
         }
         return null;
       },
-      script: (reference, context) => {
+      script: (reference) => {
         if (
-          context.systemJsTranspilation &&
+          reference.ownerUrlInfo.context.systemJsTranspilation &&
           reference.expectedType === "js_module"
         ) {
           return turnIntoJsClassicProxy(reference);
         }
         return null;
       },
-      js_url: (reference, context) => {
+      js_url: (reference) => {
         if (
-          context.systemJsTranspilation &&
+          reference.ownerUrlInfo.context.systemJsTranspilation &&
           reference.expectedType === "js_module"
         ) {
           return turnIntoJsClassicProxy(reference);
@@ -68,7 +68,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
       },
     },
     finalizeUrlContent: {
-      html: async (urlInfo, context) => {
+      html: async (urlInfo) => {
         const htmlAst = parseHtmlString(urlInfo.content);
         const mutations = [];
         visitHtmlNodes(htmlAst, {
@@ -136,7 +136,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
                   setHtmlNodeAttributes(node, { type: undefined });
                 });
               }
-            } else if (context.systemJsTranspilation) {
+            } else if (urlInfo.context.systemJsTranspilation) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { type: undefined });
               });
@@ -145,7 +145,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
         });
         await Promise.all(mutations.map((mutation) => mutation()));
         return stringifyHtmlAst(htmlAst, {
-          cleanupPositionAttributes: context.dev,
+          cleanupPositionAttributes: urlInfo.context.dev,
         });
       },
     },

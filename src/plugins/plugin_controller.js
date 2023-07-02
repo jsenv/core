@@ -134,8 +134,8 @@ export const createPluginController = (kitchenContext) => {
   let lastPluginUsed = null;
   let currentPlugin = null;
   let currentHookName = null;
-  const callHook = (hook, info, context) => {
-    const hookFn = getHookFunction(hook, info);
+  const callHook = (hook, info) => {
+    const hookFn = getHookFunction(hook);
     if (!hookFn) {
       return null;
     }
@@ -146,7 +146,7 @@ export const createPluginController = (kitchenContext) => {
     lastPluginUsed = hook.plugin;
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
-    let valueReturned = hookFn(info, context);
+    let valueReturned = hookFn(info);
     currentPlugin = null;
     currentHookName = null;
     if (info.timing) {
@@ -160,7 +160,7 @@ export const createPluginController = (kitchenContext) => {
     );
     return valueReturned;
   };
-  const callAsyncHook = async (hook, info, context) => {
+  const callAsyncHook = async (hook, info) => {
     const hookFn = getHookFunction(hook, info);
     if (!hookFn) {
       return null;
@@ -173,7 +173,7 @@ export const createPluginController = (kitchenContext) => {
     lastPluginUsed = hook.plugin;
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
-    let valueReturned = await hookFn(info, context);
+    let valueReturned = await hookFn(info);
     currentPlugin = null;
     currentHookName = null;
     if (info.timing) {
@@ -188,27 +188,26 @@ export const createPluginController = (kitchenContext) => {
     return valueReturned;
   };
 
-  const callHooks = (hookName, info, context, callback) => {
+  const callHooks = (hookName, info, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
-      const setHookParams = (firstArg = info, secondArg = context) => {
+      const setHookParams = (firstArg = info) => {
         info = firstArg;
-        context = secondArg;
       };
       for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
+        const returnValue = callHook(hook, info);
         if (returnValue && callback) {
           callback(returnValue, hook.plugin, setHookParams);
         }
       }
     }
   };
-  const callAsyncHooks = async (hookName, info, context, callback) => {
+  const callAsyncHooks = async (hookName, info, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       await hooks.reduce(async (previous, hook) => {
         await previous;
-        const returnValue = await callAsyncHook(hook, info, context);
+        const returnValue = await callAsyncHook(hook, info);
         if (returnValue && callback) {
           await callback(returnValue, hook.plugin);
         }
@@ -216,11 +215,11 @@ export const createPluginController = (kitchenContext) => {
     }
   };
 
-  const callHooksUntil = (hookName, info, context) => {
+  const callHooksUntil = (hookName, info) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
+        const returnValue = callHook(hook, info);
         if (returnValue) {
           return returnValue;
         }
@@ -228,7 +227,7 @@ export const createPluginController = (kitchenContext) => {
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info, context) => {
+  const callAsyncHooksUntil = (hookName, info) => {
     const hooks = hookGroups[hookName];
     if (!hooks) {
       return null;
@@ -242,7 +241,7 @@ export const createPluginController = (kitchenContext) => {
           return resolve();
         }
         const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info, context);
+        const returnValue = callAsyncHook(hook, info);
         return Promise.resolve(returnValue).then((output) => {
           if (output) {
             return resolve(output);

@@ -19,13 +19,15 @@ export const jsenvPluginImportAssertions = ({
   text = "auto",
 }) => {
   const transpilations = { json, css, text };
-  const shouldTranspileImportAssertion = (context, type) => {
+  const shouldTranspileImportAssertion = (reference, type) => {
     const transpilation = transpilations[type];
     if (transpilation === true) {
       return true;
     }
     if (transpilation === "auto") {
-      return !context.isSupportedOnCurrentClients(`import_type_${type}`);
+      return !reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
+        `import_type_${type}`,
+      );
     }
     return false;
   };
@@ -79,7 +81,7 @@ export const jsenvPluginImportAssertions = ({
         transpilations.text = true;
       }
     },
-    redirectReference: (reference, context) => {
+    redirectReference: (reference) => {
       if (!reference.importAttributes) {
         return null;
       }
@@ -93,7 +95,7 @@ export const jsenvPluginImportAssertions = ({
         return null;
       }
       const type = reference.importAttributes.type;
-      if (shouldTranspileImportAssertion(context, type)) {
+      if (shouldTranspileImportAssertion(reference, type)) {
         return turnIntoJsModuleProxy(reference, type);
       }
       return null;
@@ -134,7 +136,7 @@ const jsenvPluginAsModules = () => {
   const asCssModule = {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const cssReference = urlInfo.firstReference.getWithoutSearchParam({
         searchParam: "as_css_module",
         expectedType: "css",
@@ -151,7 +153,9 @@ const jsenvPluginAsModules = () => {
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(context.inlineContentClientFileUrl)};
+        content: `import ${JSON.stringify(
+          urlInfo.context.inlineContentClientFileUrl,
+        )};
 
 const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" });
 const stylesheet = new CSSStyleSheet();
@@ -169,7 +173,7 @@ export default stylesheet;`,
   const asTextModule = {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const textReference = urlInfo.firstReference.getWithoutSearchParam({
         searchParam: "as_text_module",
         expectedType: "text",
@@ -186,7 +190,9 @@ export default stylesheet;`,
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(context.inlineContentClientFileUrl)};
+        content: `import ${JSON.stringify(
+          urlInfo.context.inlineContentClientFileUrl,
+        )};
 
 const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" });
 export default inlineContent.text;`,

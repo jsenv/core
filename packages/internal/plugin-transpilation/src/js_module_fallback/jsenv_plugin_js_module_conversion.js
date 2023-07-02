@@ -65,7 +65,7 @@ export const jsenvPluginJsModuleConversion = () => {
       }
       return null;
     },
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam({
         searchParam: "js_module_fallback",
         // override the expectedType to "js_module"
@@ -97,7 +97,7 @@ export const jsenvPluginJsModuleConversion = () => {
         });
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: context.rootDirectoryUrl,
+        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleUrlInfo.content,
         inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleUrlInfo.sourcemap,

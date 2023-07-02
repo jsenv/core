@@ -12,17 +12,17 @@ export const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
       name: "jsenv:js_reference_analysis",
       appliesDuring: "*",
       transformUrlContent: {
-        js_classic: (urlInfo, context) =>
+        js_classic: (urlInfo) =>
           parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
-              context.isSupportedOnCurrentClients("template_literals"),
+              urlInfo.context.isSupportedOnCurrentClients("template_literals"),
           }),
-        js_module: (urlInfo, context) =>
+        js_module: (urlInfo) =>
           parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
-              context.isSupportedOnCurrentClients("template_literals"),
+              urlInfo.context.isSupportedOnCurrentClients("template_literals"),
           }),
       },
     },

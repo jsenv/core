@@ -14,9 +14,9 @@ export const jsenvPluginImportMetaHot = () => {
     name: "jsenv:import_meta_hot",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (htmlUrlInfo, context) => {
+      html: (htmlUrlInfo) => {
         // during build we don't really care to parse html hot dependencies
-        if (context.build) {
+        if (htmlUrlInfo.context.build) {
           return;
         }
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
@@ -51,7 +51,7 @@ export const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptSelf = false;
         cssUrlInfo.data.hotAcceptDependencies = [];
       },
-      js_module: async (urlInfo, context) => {
+      js_module: async (urlInfo) => {
         if (!urlInfo.content.includes("import.meta.hot")) {
           return null;
         }
@@ -74,7 +74,7 @@ export const jsenvPluginImportMetaHot = () => {
         if (importMetaHotPaths.length === 0) {
           return null;
         }
-        if (context.build) {
+        if (urlInfo.context.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths);
         }
         return injectImportMetaHot(urlInfo, importMetaHotClientFileUrl);

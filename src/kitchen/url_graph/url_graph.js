@@ -11,7 +11,7 @@ export const createUrlGraph = ({
 }) => {
   const urlGraph = {};
   const createUrlInfoCallbackRef = { current: () => {} };
-  const prunedUrlInfosCallbackRef = { current: () => {} };
+  const pruneUrlInfoCallbackRef = { current: () => {} };
 
   const urlInfoMap = new Map();
   const hasUrlInfo = (key) => {
@@ -38,7 +38,7 @@ export const createUrlGraph = ({
       urlInfoMap.delete(url);
       urlInfo.modifiedTimestamp = Date.now();
       if (lastReferenceFromOther && !urlInfo.isInline) {
-        prunedUrlInfosCallbackRef.current(urlInfo, lastReferenceFromOther);
+        pruneUrlInfoCallbackRef.current(urlInfo, lastReferenceFromOther);
       }
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
         referenceToOther.remove();
@@ -111,7 +111,7 @@ export const createUrlGraph = ({
     name,
     rootUrlInfo,
     createUrlInfoCallbackRef,
-    prunedUrlInfosCallbackRef,
+    pruneUrlInfoCallbackRef,
 
     urlInfoMap,
     reuseOrCreateUrlInfo,
@@ -298,14 +298,14 @@ const createUrlInfo = (url) => {
   urlInfo.cookDependencies = (options) => {
     return urlInfo.context.cookDependencies(urlInfo, options);
   };
-  urlInfo.fetchContent = (customContext) => {
-    return urlInfo.context.fetchUrlContent(urlInfo, customContext);
+  urlInfo.fetchContent = () => {
+    return urlInfo.context.fetchUrlContent(urlInfo);
   };
-  urlInfo.transformContent = (customContext) => {
-    return urlInfo.context.transformUrlContent(urlInfo, customContext);
+  urlInfo.transformContent = () => {
+    return urlInfo.context.transformUrlContent(urlInfo);
   };
-  urlInfo.finalizeContent = (customContext) => {
-    return urlInfo.context.finalizeUrlContent(urlInfo, customContext);
+  urlInfo.finalizeContent = () => {
+    return urlInfo.context.finalizeUrlContent(urlInfo);
   };
   urlInfo.mutateContent = (transformations) => {
     return urlInfo.kitchen.urlInfoTransformer.applyTransformations(

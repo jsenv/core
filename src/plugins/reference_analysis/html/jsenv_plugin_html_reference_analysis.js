@@ -23,9 +23,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
     name: "jsenv:html_reference_analysis",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (urlInfo, context) =>
+      html: (urlInfo) =>
         parseAndTransformHtmlReferences(urlInfo, {
-          context,
           inlineContent,
           inlineConvertedScript,
         }),
@@ -35,7 +34,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
 const parseAndTransformHtmlReferences = async (
   urlInfo,
-  { context, inlineContent, inlineConvertedScript },
+  { inlineContent, inlineConvertedScript },
 ) => {
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content);
@@ -198,10 +197,7 @@ const parseAndTransformHtmlReferences = async (
     }
 
     actions.push(async () => {
-      await cookInlineContent({
-        context,
-        inlineContentUrlInfo: inlineReference.urlInfo,
-      });
+      await cookInlineContent(inlineReference);
       mutations.push(() => {
         if (hotAccept) {
           removeHtmlNodeText(node);
@@ -372,20 +368,21 @@ const parseAndTransformHtmlReferences = async (
   return stringifyHtmlAst(htmlAst);
 };
 
-const cookInlineContent = async ({ context, inlineContentUrlInfo }) => {
+const cookInlineContent = async (inlineReference) => {
+  const inlineUrlInfo = inlineReference.urlInfo;
   try {
-    await inlineContentUrlInfo.cook();
+    await inlineUrlInfo.cook();
   } catch (e) {
     if (e.code === "PARSE_ERROR") {
       // When something like <style> or <script> contains syntax error
       // the HTML in itself it still valid
       // keep the syntax error and continue with the HTML
       const messageStart =
-        inlineContentUrlInfo.type === "css"
+        inlineUrlInfo.type === "css"
           ? `Syntax error on css declared inside <style>`
           : `Syntax error on js declared inside <script>`;
 
-      context.logger.error(`${messageStart}: ${e.cause.reasonCode}
+      inlineUrlInfo.context.logger.error(`${messageStart}: ${e.cause.reasonCode}
 ${e.traceMessage}`);
     } else {
       throw e;

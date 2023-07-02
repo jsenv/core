@@ -43,19 +43,19 @@ export const createKitchen = ({
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
-  systemJsTranspilation,
   plugins,
-  minification,
   supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
   outDirectoryUrl,
+  baseContext = {},
 }) => {
   const logger = createLogger({ logLevel });
   const kitchen = {
     context: {
+      ...baseContext,
       signal,
       logger,
       rootDirectoryUrl,
@@ -64,11 +64,9 @@ export const createKitchen = ({
       build,
       runtimeCompat,
       clientRuntimeCompat,
-      systemJsTranspilation,
       inlineContentClientFileUrl,
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
-      minification,
       sourcemaps,
       outDirectoryUrl,
     },
@@ -132,11 +130,7 @@ export const createKitchen = ({
   const isIgnored = (url) => {
     return isIgnoredByProtocol(url) || isIgnoredByParam(url);
   };
-  const resolveReference = (reference, contextDuringResolve) => {
-    contextDuringResolve = contextDuringResolve
-      ? { ...kitchenContext, ...contextDuringResolve }
-      : kitchenContext;
-
+  const resolveReference = (reference) => {
     const setReferenceUrl = (referenceUrl) => {
       // ignored urls are prefixed with "ignore:" so that reference are associated
       // to a dedicated urlInfo that is ignored.
@@ -178,7 +172,6 @@ export const createKitchen = ({
         const resolvedUrl = pluginController.callHooksUntil(
           "resolveReference",
           reference,
-          contextDuringResolve,
         );
         if (!resolvedUrl) {
           throw new Error(`NO_RESOLVE`);
@@ -206,7 +199,6 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
         pluginController.callHooks(
           "redirectReference",
           reference,
-          contextDuringResolve,
           (returnValue, plugin, setReference) => {
             const normalizedReturnValue = normalizeUrl(returnValue);
             if (normalizedReturnValue === reference.url) {
@@ -241,16 +233,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.resolveReference = resolveReference;
 
-  const finalizeReference = (reference, contextDuringFinalize) => {
+  const finalizeReference = (reference) => {
     if (reference.isImplicit && reference.type !== "side_effect_file") {
       // not needed for implicit references that are not rendered anywhere
       // except for side_effect_file references injected in entry points or at the top of files
       return;
     }
-
-    contextDuringFinalize = contextDuringFinalize
-      ? { ...kitchenContext, ...contextDuringFinalize }
-      : kitchenContext;
 
     transform_search_params: {
       // This hook must touch reference.generatedUrl, NOT reference.url
@@ -262,7 +250,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       pluginController.callHooks(
         "transformReferenceSearchParams",
         reference,
-        contextDuringFinalize,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
             reference.searchParams.set(key, returnValue[key]);
@@ -278,7 +265,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
         reference,
-        contextDuringFinalize,
       );
       if (reference.url.startsWith("ignore:")) {
         if (ignoreProtocol === "remove") {
@@ -294,18 +280,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.finalizeReference = finalizeReference;
 
-  const fetchUrlContent = async (urlInfo, contextDuringFetch) => {
-    contextDuringFetch = contextDuringFetch
-      ? { ...kitchenContext, ...contextDuringFetch }
-      : kitchenContext;
-
+  const fetchUrlContent = async (urlInfo) => {
     try {
       const fetchUrlContentReturnValue =
-        await pluginController.callAsyncHooksUntil(
-          "fetchUrlContent",
-          urlInfo,
-          contextDuringFetch,
-        );
+        await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo);
       if (!fetchUrlContentReturnValue) {
         logger.warn(
           createDetailedMessage(
@@ -369,10 +347,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         content,
       });
-      urlInfo.generatedUrl = determineFileUrlForOutDirectory({
-        urlInfo,
-        context: contextDuringFetch,
-      });
+      urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
 
       // we wait here to read .contentAst and .originalContentAst
       // so that we don't trigger lazy getters
@@ -411,16 +386,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.fetchUrlContent = fetchUrlContent;
 
-  const transformUrlContent = async (urlInfo, contextDuringTransform) => {
-    contextDuringTransform = contextDuringTransform
-      ? { ...kitchenContext, ...contextDuringTransform }
-      : kitchenContext;
-
+  const transformUrlContent = async (urlInfo) => {
     try {
       await pluginController.callAsyncHooks(
         "transformUrlContent",
         urlInfo,
-        contextDuringTransform,
         (transformReturnValue) => {
           urlInfoTransformer.applyTransformations(
             urlInfo,
@@ -440,17 +410,12 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   };
   kitchenContext.transformUrlContent = transformUrlContent;
 
-  const finalizeUrlContent = async (urlInfo, contextDuringFinalize) => {
-    contextDuringFinalize = contextDuringFinalize
-      ? { ...kitchenContext, ...contextDuringFinalize }
-      : kitchenContext;
-
+  const finalizeUrlContent = async (urlInfo) => {
     try {
       await urlInfo.applyContentTransformationCallbacks();
       const finalizeReturnValue = await pluginController.callAsyncHooksUntil(
         "finalizeUrlContent",
         urlInfo,
-        contextDuringFinalize,
       );
       urlInfoTransformer.endTransformations(urlInfo, finalizeReturnValue);
     } catch (error) {
@@ -492,7 +457,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
           // "finalize" hook
           await urlInfo.finalizeContent();
-        }, contextDuringCook);
+        });
       } catch (e) {
         urlInfo.error = e;
         throw e;
@@ -500,26 +465,20 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     }
 
     // "cooked" hook
-    pluginController.callHooks(
-      "cooked",
-      urlInfo,
-      contextDuringCook,
-      (cookedReturnValue) => {
-        if (typeof cookedReturnValue === "function") {
-          const removePrunedCallback = graph.prunedCallbackList.add(
-            ({ prunedUrlInfos, firstUrlInfo }) => {
-              const pruned = prunedUrlInfos.find(
-                (prunedUrlInfo) => prunedUrlInfo.url === urlInfo.url,
-              );
-              if (pruned) {
-                removePrunedCallback();
-                cookedReturnValue(firstUrlInfo);
-              }
-            },
-          );
-        }
-      },
-    );
+    pluginController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
+      if (typeof cookedReturnValue === "function") {
+        const prevCallback = graph.pruneUrlInfoCallbackRef.current;
+        graph.pruneUrlInfoCallbackRef.current(
+          (prunedUrlInfo, lastReferenceFromOther) => {
+            prevCallback();
+            if (prunedUrlInfo === urlInfo.url) {
+              graph.pruneUrlInfoCallbackRef.current = prevCallback;
+              cookedReturnValue(lastReferenceFromOther.urlInfo);
+            }
+          },
+        );
+      }
+    });
   });
   kitchenContext.cook = cook;
 
@@ -695,24 +654,26 @@ const inferUrlInfoType = (urlInfo) => {
   return "other";
 };
 
-const determineFileUrlForOutDirectory = ({ urlInfo, context }) => {
-  if (!context.outDirectoryUrl) {
+const determineFileUrlForOutDirectory = (urlInfo) => {
+  if (!urlInfo.context.outDirectoryUrl) {
     return urlInfo.url;
   }
   if (!urlInfo.url.startsWith("file:")) {
     return urlInfo.url;
   }
   let url = urlInfo.url;
-  if (!urlIsInsideOf(urlInfo.url, context.rootDirectoryUrl)) {
+  if (!urlIsInsideOf(urlInfo.url, urlInfo.context.rootDirectoryUrl)) {
     const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url);
-    url = `${context.rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
+    url = `${urlInfo.context.rootDirectoryUrl}@fs/${url.slice(
+      fsRootUrl.length,
+    )}`;
   }
   if (urlInfo.filename) {
     url = setUrlFilename(url, urlInfo.filename);
   }
   return moveUrl({
     url,
-    from: context.rootDirectoryUrl,
-    to: context.outDirectoryUrl,
+    from: urlInfo.context.rootDirectoryUrl,
+    to: urlInfo.context.outDirectoryUrl,
   });
 };

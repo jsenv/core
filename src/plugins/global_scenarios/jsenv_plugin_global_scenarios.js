@@ -8,10 +8,10 @@
 import { replacePlaceholders } from "@jsenv/plugin-placeholders";
 
 export const jsenvPluginGlobalScenarios = () => {
-  const transformIfNeeded = (urlInfo, context) => {
+  const transformIfNeeded = (urlInfo) => {
     return replacePlaceholders(urlInfo, {
-      __DEV__: context.dev,
-      __BUILD__: context.build,
+      __DEV__: urlInfo.context.dev,
+      __BUILD__: urlInfo.context.build,
     });
   };
 

@@ -28,19 +28,22 @@ export const createNodeEsmResolver = ({
     "import",
   ];
 
-  return (reference, context) => {
+  return (reference) => {
     if (reference.type === "package_json") {
       return reference.specifier;
     }
+    const { ownerUrlInfo } = reference;
     if (reference.specifier === "/") {
-      const { mainFilePath, rootDirectoryUrl } = context;
+      const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
       return String(new URL(mainFilePath, rootDirectoryUrl));
     }
     if (reference.specifier[0] === "/") {
-      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
-        .href;
+      return new URL(
+        reference.specifier.slice(1),
+        ownerUrlInfo.context.rootDirectoryUrl,
+      ).href;
     }
-    const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
+    const parentUrl = reference.baseUrl || ownerUrlInfo.url;
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href;
     }
@@ -50,7 +53,7 @@ export const createNodeEsmResolver = ({
       specifier: reference.specifier,
       preservesSymlink,
     });
-    if (context.dev) {
+    if (ownerUrlInfo.context.dev) {
       const dependsOnPackageJson =
         type !== "relative_specifier" &&
         type !== "absolute_specifier" &&
@@ -68,7 +71,7 @@ export const createNodeEsmResolver = ({
         });
       }
     }
-    if (context.dev) {
+    if (ownerUrlInfo.context.dev) {
       // without this check a file inside a project without package.json
       // could be considered as a node module if there is a ancestor package.json
       // but we want to version only node modules
@@ -76,7 +79,7 @@ export const createNodeEsmResolver = ({
         const packageDirectoryUrl = defaultLookupPackageScope(url);
         if (
           packageDirectoryUrl &&
-          packageDirectoryUrl !== context.rootDirectoryUrl
+          packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
         ) {
           const packageVersion =
             defaultReadPackageJson(packageDirectoryUrl).version;

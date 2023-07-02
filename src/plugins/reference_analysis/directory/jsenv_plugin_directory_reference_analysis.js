@@ -4,12 +4,12 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
   return {
     name: "jsenv:directory_reference_analysis",
     transformUrlContent: {
-      directory: (urlInfo, context) => {
+      directory: (urlInfo) => {
         const originalDirectoryReference =
           findOriginalDirectoryReference(urlInfo);
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
-          context.rootDirectoryUrl,
+          urlInfo.context.rootDirectoryUrl,
         );
         JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
           urlInfo.dependencies.found({

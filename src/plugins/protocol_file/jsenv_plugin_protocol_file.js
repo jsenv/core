@@ -140,14 +140,15 @@ export const jsenvPluginProtocolFile = ({
         }
         return null;
       },
-      formatReference: (reference, context) => {
+      formatReference: (reference) => {
         if (!reference.generatedUrl.startsWith("file:")) {
           return null;
         }
-        if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
+        const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
+        if (urlIsInsideOf(reference.generatedUrl, rootDirectoryUrl)) {
           return `/${urlToRelativeUrl(
             reference.generatedUrl,
-            context.rootDirectoryUrl,
+            rootDirectoryUrl,
           )}`;
         }
         return `/@fs/${reference.generatedUrl.slice("file:///".length)}`;

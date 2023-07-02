@@ -5,29 +5,35 @@ import { sourcemapConverter } from "@jsenv/sourcemap";
 
 import { fileUrlConverter } from "../file_url_converter.js";
 
-export const bundleJsModules = async ({
+export const bundleJsModules = async (
   jsModuleUrlInfos,
-  context,
-  include,
-  chunks = {},
-  strictExports = false,
-  preserveDynamicImport = false,
-  augmentDynamicImportUrlSearchParams = () => {},
-  rollup,
-  rollupInput = {},
-  rollupOutput = {},
-  rollupPlugins = [],
-}) => {
+  {
+    buildDirectoryUrl,
+    include,
+    chunks = {},
+    strictExports = false,
+    preserveDynamicImport = false,
+    augmentDynamicImportUrlSearchParams = () => {},
+    rollup,
+    rollupInput = {},
+    rollupOutput = {},
+    rollupPlugins = [],
+  },
+) => {
   const {
     signal,
     logger,
     rootDirectoryUrl,
-    buildDirectoryUrl,
     assetsDirectory,
     graph,
     runtimeCompat,
     sourcemaps,
-  } = context;
+    minification,
+    isSupportedOnCurrentClients,
+  } = jsModuleUrlInfos[0].context;
+  if (buildDirectoryUrl === undefined) {
+    buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
+  }
 
   let manualChunks;
   if (Object.keys(chunks).length) {
@@ -91,17 +97,16 @@ export const bundleJsModules = async ({
         ...rollupInput,
       },
       rollupOutput: {
-        compact: context.minification,
-        minifyInternalExports: context.minification,
+        compact: minification,
+        minifyInternalExports: minification,
         generatedCode: {
-          arrowFunctions: context.isSupportedOnCurrentClients("arrow_function"),
-          constBindings: context.isSupportedOnCurrentClients("const_bindings"),
-          objectShorthand: context.isSupportedOnCurrentClients(
+          arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
+          constBindings: isSupportedOnCurrentClients("const_bindings"),
+          objectShorthand: isSupportedOnCurrentClients(
             "object_properties_shorthand",
           ),
-          reservedNamesAsProps:
-            context.isSupportedOnCurrentClients("reserved_words"),
-          symbols: context.isSupportedOnCurrentClients("symbols"),
+          reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
+          symbols: isSupportedOnCurrentClients("symbols"),
         },
         ...rollupOutput,
         manualChunks,
