@@ -6,6 +6,16 @@ export const jsenvPluginHotSearchParam = () => {
     if (reference.original && reference.original.searchParams.has("hot")) {
       return true;
     }
+    // parent is using ?hot -> propagate
+    const { ownerUrlInfo } = reference;
+    const lastReference = ownerUrlInfo.context.reference;
+    if (
+      lastReference &&
+      lastReference.original &&
+      lastReference.original.searchParams.has("hot")
+    ) {
+      return true;
+    }
     return false;
   };
 

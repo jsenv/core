@@ -136,7 +136,7 @@ export const jsenvPluginAutoreloadServer = ({
               reason: hotUpdate.reason,
               instructions: hotUpdate.instructions,
             });
-            return false;
+            return true;
           };
 
           const urlInfo = context.kitchen.graph.getUrlInfo(url);
@@ -144,12 +144,9 @@ export const jsenvPluginAutoreloadServer = ({
             if (onUrlInfo(urlInfo)) {
               return;
             }
-            for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-              const urlInfoReferencingThisOne = referenceFromOther.urlInfo;
-              if (urlInfoReferencingThisOne.isSearchParamVariantOf(urlInfo)) {
-                if (onUrlInfo(urlInfoReferencingThisOne)) {
-                  return;
-                }
+            for (const searchParamVariant of urlInfo.searchParamVariantSet) {
+              if (onUrlInfo(searchParamVariant)) {
+                return;
               }
             }
           }

@@ -43,6 +43,13 @@ export const createUrlGraph = ({
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
         referenceToOther.remove();
       });
+      if (urlInfo.url.includes("?")) {
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        const urlInfoWithoutSearch = getUrlInfo(urlWithoutSearch);
+        if (urlInfoWithoutSearch) {
+          urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+        }
+      }
     }
   };
   const addUrlInfo = (urlInfo) => {
@@ -167,6 +174,7 @@ const createUrlInfo = (url) => {
     referenceFromOthersSet: new Set(),
     firstReference: null, // first reference from an other url to this one
     implicitUrlSet: new Set(),
+    searchParamVariantSet: new Set(),
 
     type: undefined, // "html", "css", "js_classic", "js_module", "importmap", "sourcemap", "json", "webmanifest", ...
     subtype: undefined, // "worker", "service_worker", "shared_worker" for js, otherwise undefined
@@ -282,9 +290,14 @@ const createUrlInfo = (url) => {
       visitedSet.add(urlInfo);
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-        const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-        iterate(urlInfoReferencingThisOne);
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        const referencedUrlInfo = referenceToOther.urlInfo;
+        if (referencedUrlInfo.isInline) {
+          iterate(referencedUrlInfo);
+        }
+      }
+      for (const searchParamVariant of urlInfo.searchParamVariantSet) {
+        iterate(searchParamVariant);
       }
     };
     iterate(urlInfo);

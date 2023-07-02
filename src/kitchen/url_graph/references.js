@@ -63,11 +63,13 @@ export const createDependencies = (ownerUrlInfo) => {
       const urlWithoutSearch = asUrlWithoutSearch(reference.url);
       // a reference with a search param creates an implicit reference
       // to the file without search param
-      reference.addImplicit({
+      const referenceWithoutSearch = reference.addImplicit({
         specifier: urlWithoutSearch,
         url: urlWithoutSearch,
         searchParams: new URLSearchParams(),
       });
+      const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
+      urlInfoWithoutSearch.searchParamVariantSet.add(urlInfo);
     }
     addDependency(reference);
     ownerUrlInfo.context.finalizeReference(reference);
