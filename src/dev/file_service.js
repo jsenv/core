@@ -206,7 +206,7 @@ export const createFileService = ({
       const serverEventNames = Object.keys(allServerEvents);
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach((serverEventName) => {
-          allServerEvents[serverEventName]({
+          const serverEventInfo = {
             ...kitchen.context,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
@@ -214,7 +214,9 @@ export const createFileService = ({
                 data,
               });
             },
-          });
+          };
+          const serverEventInit = allServerEvents[serverEventName];
+          serverEventInit(serverEventInfo);
         });
         // "pushPlugin" so that event source client connection can be put as early as possible in html
         kitchen.pluginController.pushPlugin(
@@ -258,7 +260,7 @@ export const createFileService = ({
       if (!parentUrlInfo) {
         parentUrlInfo = kitchen.graph.rootUrlInfo;
       }
-      reference = parentUrlInfo.dependencies.prepare({
+      reference = parentUrlInfo.dependencies.createResolveAndFinalize({
         trace: { message: parentUrl || sourceDirectoryUrl },
         type: "http_request",
         specifier: request.resource,

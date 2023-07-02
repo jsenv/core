@@ -17,16 +17,7 @@ export const createDependencies = (ownerUrlInfo) => {
 
     const stopCollecting = () => {
       for (const prevReferenceToOther of prevReferenceToOthersSet) {
-        let referenceFound = null;
-        for (const referenceToOther of referenceToOthersSet) {
-          if (referenceToOther.url === prevReferenceToOther.url) {
-            referenceFound = referenceToOther;
-            break;
-          }
-        }
-        if (!referenceFound) {
-          applyDependencyRemovalEffects(prevReferenceToOther);
-        }
+        applyDependencyRemovalEffects(prevReferenceToOther);
       }
       prevReferenceToOthersSet.clear();
     };
@@ -38,42 +29,14 @@ export const createDependencies = (ownerUrlInfo) => {
       stopCollecting();
     }
   };
-  const prepare = (props) => {
+
+  const createResolveAndFinalize = (props) => {
     const originalReference = createReference({
       ownerUrlInfo,
       ...props,
     });
     const reference = originalReference.resolve();
-    const kitchen = ownerUrlInfo.kitchen;
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
-    reference.urlInfo = urlInfo;
-    if (reference.url.includes("?")) {
-      // A resource is represented by a url.
-      // Variations of a resource are represented by url search params
-      // Each representation of the resource is given a dedicated url info
-      // object (one url -> one url info)
-      // It's because search params often influence the final content returned for that url
-      // When a reference contains url search params it must create 2 url infos:
-      // 1. The url info corresponding to the url with search params
-      // 2. The url info corresponding to url without search params
-      // Because the underlying content without search params is used to generate
-      // the content modified according to search params
-      // This way when a file like "style.css" is considered as modified
-      // references like "style.css?as_css_module" are also affected
-      const urlWithoutSearch = asUrlWithoutSearch(reference.url);
-      // a reference with a search param creates an implicit reference
-      // to the file without search param
-      const referenceWithoutSearch = reference.addImplicit({
-        specifier: urlWithoutSearch,
-        url: urlWithoutSearch,
-        searchParams: new URLSearchParams(),
-      });
-      const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
-      urlInfoWithoutSearch.searchParamVariantSet.add(urlInfo);
-    }
-    addDependency(reference);
-    ownerUrlInfo.context.finalizeReference(reference);
-
+    reference.finalize();
     return reference;
   };
 
@@ -87,7 +50,7 @@ export const createDependencies = (ownerUrlInfo) => {
         }),
       );
     }
-    const reference = prepare({
+    const reference = createResolveAndFinalize({
       trace,
       ...rest,
     });
@@ -105,7 +68,7 @@ export const createDependencies = (ownerUrlInfo) => {
     const parentContent = isOriginalPosition
       ? ownerUrlInfo.originalContent
       : ownerUrlInfo.content;
-    const reference = prepare({
+    const reference = createResolveAndFinalize({
       trace: traceFromUrlSite({
         url: parentUrl,
         content: parentContent,
@@ -273,7 +236,7 @@ export const createDependencies = (ownerUrlInfo) => {
         column,
       });
     }
-    const reference = prepare({
+    const reference = createResolveAndFinalize({
       trace,
       injected: true,
       ...rest,
@@ -283,7 +246,7 @@ export const createDependencies = (ownerUrlInfo) => {
 
   return {
     startCollecting,
-    prepare,
+    createResolveAndFinalize,
     found,
     foundInline,
     foundSideEffectFile,
@@ -431,6 +394,51 @@ const createReference = ({
     return resolvedReference;
   };
 
+  reference.redirect = (url, props = {}) => {
+    const redirectedProps = getRedirectedReferenceProps(reference, url);
+    const referenceRedirected = createReference({
+      ...redirectedProps,
+      ...props,
+    });
+    reference.next = referenceRedirected;
+    return referenceRedirected;
+  };
+
+  reference.finalize = () => {
+    if (reference.urlInfo) {
+      return;
+    }
+    const kitchen = ownerUrlInfo.kitchen;
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
+    if (reference.url.includes("?")) {
+      // A resource is represented by a url.
+      // Variations of a resource are represented by url search params
+      // Each representation of the resource is given a dedicated url info
+      // object (one url -> one url info)
+      // It's because search params often influence the final content returned for that url
+      // When a reference contains url search params it must create 2 url infos:
+      // 1. The url info corresponding to the url with search params
+      // 2. The url info corresponding to url without search params
+      // Because the underlying content without search params is used to generate
+      // the content modified according to search params
+      // This way when a file like "style.css" is considered as modified
+      // references like "style.css?as_css_module" are also affected
+      const urlWithoutSearch = asUrlWithoutSearch(reference.url);
+      // a reference with a search param creates an implicit reference
+      // to the file without search param
+      const referenceWithoutSearch = reference.addImplicit({
+        specifier: urlWithoutSearch,
+        url: urlWithoutSearch,
+        searchParams: new URLSearchParams(),
+      });
+      const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
+      urlInfoWithoutSearch.searchParamVariantSet.add(urlInfo);
+    }
+    addDependency(reference);
+    ownerUrlInfo.context.finalizeReference(reference);
+  };
+
   // "formatReferencedUrl" can be async BUT this is an exception
   // for most cases it will be sync. We want to favor the sync signature to keep things simpler
   // The only case where it needs to be async is when
@@ -447,16 +455,6 @@ const createReference = ({
     return reference.generatedSpecifier;
   };
 
-  reference.redirect = (url, props = {}) => {
-    const redirectedProps = getRedirectedReferenceProps(reference, url);
-    const referenceRedirected = createReference({
-      ...redirectedProps,
-      ...props,
-    });
-    reference.next = referenceRedirected;
-    return referenceRedirected;
-  };
-
   reference.becomesInline = ({
     line,
     column,
@@ -469,7 +467,7 @@ const createReference = ({
       line,
       column,
     });
-    const inlineCopy = ownerUrlInfo.dependencies.prepare({
+    const inlineCopy = ownerUrlInfo.dependencies.createResolveAndFinalize({
       ...inlineProps,
       ...props,
     });
@@ -497,6 +495,11 @@ const createReference = ({
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
+    // The search param can be injected by a plugin during "redirectReference".
+    // It happens when url content must be modified for browser support:
+    // - import assertions
+    // - js module fallback to systemjs
+    // TODO: also explain usage when search param is already inside the file
     if (!reference.searchParams.has(searchParam)) {
       return null;
     }
@@ -531,16 +534,7 @@ const addDependency = (reference) => {
   if (ownerUrlInfo.referenceToOthersSet.has(reference)) {
     return;
   }
-  if (
-    // weak and implicit references have no restrictions
-    // because they are not actual references with an influence on content
-    !reference.isWeak &&
-    !reference.isImplicit &&
-    ownerUrlInfo.contentFinalized &&
-    ownerUrlInfo.context.dev &&
-    !ownerUrlInfo.isRoot &&
-    reference.type !== "http_request"
-  ) {
+  if (!canAddOrRemoveReference(reference)) {
     throw new Error(
       `cannot add reference for content already sent to the browser
 --- reference url ---
@@ -578,16 +572,7 @@ const removeDependency = (reference) => {
   if (!ownerUrlInfo.referenceToOthersSet.has(reference)) {
     return false;
   }
-  if (
-    // weak and implicit references have no restrictions
-    // because they are not actual references with an influence on content
-    !reference.isWeak &&
-    !reference.isImplicit &&
-    ownerUrlInfo.contentFinalized &&
-    ownerUrlInfo.context.dev &&
-    !ownerUrlInfo.isRoot &&
-    reference.type !== "http_request"
-  ) {
+  if (!canAddOrRemoveReference(reference)) {
     throw new Error(
       `cannot remove reference for content already sent to the browser
 --- reference url ---
@@ -601,6 +586,32 @@ ${ownerUrlInfo.url}`,
   }
   ownerUrlInfo.referenceToOthersSet.delete(reference);
   return applyDependencyRemovalEffects(reference);
+};
+
+const canAddOrRemoveReference = (reference) => {
+  if (reference.isWeak || reference.isImplicit) {
+    // weak and implicit references have no restrictions
+    // because they are not actual references with an influence on content
+    return true;
+  }
+  const { ownerUrlInfo } = reference;
+  if (ownerUrlInfo.context.build) {
+    // during build url content is not executed
+    // it's still possible to mutate references safely
+    return true;
+  }
+  if (!ownerUrlInfo.contentFinalized) {
+    return true;
+  }
+  if (ownerUrlInfo.isRoot) {
+    // the root urlInfo is abstract, there is no real file behind it
+    return true;
+  }
+  if (reference.type === "http_request") {
+    // reference created to http requests are abstract concepts
+    return true;
+  }
+  return false;
 };
 
 const applyDependencyRemovalEffects = (reference) => {

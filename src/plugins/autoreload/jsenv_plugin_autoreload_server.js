@@ -60,6 +60,9 @@ export const jsenvPluginAutoreloadServer = ({
             }
             const instructions = [];
             for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+              if (referenceFromOther.isImplicit && referenceFromOther.isWeak) {
+                continue;
+              }
               const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
               if (urlInfoReferencingThisOne.data.hotDecline) {
                 return {
@@ -193,8 +196,8 @@ export const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    serve: (request, context) => {
-      if (request.pathname === "/__graph__") {
+    serve: (context) => {
+      if (context.request.pathname === "/__graph__") {
         const graphJson = JSON.stringify(
           context.kitchen.graph.toJSON(context.rootDirectoryUrl),
         );
