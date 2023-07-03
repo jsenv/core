@@ -56,7 +56,6 @@ export const createUrlGraph = ({
   const addUrlInfo = (urlInfo) => {
     urlInfo.graph = urlGraph;
     urlInfo.kitchen = kitchen;
-    urlInfo.context = kitchen.context;
     urlInfoMap.set(urlInfo.url, urlInfo);
   };
   const reuseOrCreateUrlInfo = (reference, useGeneratedUrl) => {
@@ -65,7 +64,10 @@ export const createUrlGraph = ({
       : reference.url;
     const existingUrlInfo = getUrlInfo(referencedUrl);
     if (existingUrlInfo) return existingUrlInfo;
-    const referencedUrlInfo = createUrlInfo(referencedUrl);
+    const ownerUrlInfo = reference.ownerUrlInfo;
+    const ownerContext = ownerUrlInfo.context;
+    const context = Object.create(ownerContext);
+    const referencedUrlInfo = createUrlInfo(referencedUrl, context);
     addUrlInfo(referencedUrlInfo);
     createUrlInfoCallbackRef.current(referencedUrlInfo);
     if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
@@ -136,7 +138,7 @@ export const createUrlGraph = ({
     return entryPoints;
   };
 
-  const rootUrlInfo = createUrlInfo(rootDirectoryUrl);
+  const rootUrlInfo = createUrlInfo(rootDirectoryUrl, kitchen.context);
   rootUrlInfo.isRoot = true;
   addUrlInfo(rootUrlInfo);
 
@@ -183,12 +185,12 @@ export const createUrlGraph = ({
   return urlGraph;
 };
 
-const createUrlInfo = (url) => {
+const createUrlInfo = (url, context) => {
   const urlInfo = {
     isRoot: false,
     graph: null,
     kitchen: null,
-    context: null,
+    context,
     error: null,
     modifiedTimestamp: 0,
     originalContentEtag: null,
