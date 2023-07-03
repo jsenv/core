@@ -1,4 +1,10 @@
 import { performance } from "node:perf_hooks";
+import {
+  parseHtmlString,
+  stringifyHtmlAst,
+  injectHtmlNodeAsEarlyAsPossible,
+  createHtmlNode,
+} from "@jsenv/ast";
 
 const HOOK_NAMES = [
   "init",
@@ -153,11 +159,7 @@ export const createPluginController = (kitchenContext) => {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(
-      hook.name,
-      valueReturned,
-      info,
-    );
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
     return valueReturned;
   };
   const callAsyncHook = async (hook, info) => {
@@ -180,11 +182,7 @@ export const createPluginController = (kitchenContext) => {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(
-      hook.name,
-      valueReturned,
-      info,
-    );
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
     return valueReturned;
   };
 
@@ -288,16 +286,20 @@ const getHookFunction = (
   return hookValue;
 };
 
-const assertAndNormalizeReturnValue = (hookName, returnValue, info) => {
+const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
   // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
   if (returnValue === null || returnValue === undefined) {
     return returnValue;
   }
   for (const returnValueAssertion of returnValueAssertions) {
-    if (!returnValueAssertion.appliesTo.includes(hookName)) {
+    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info);
+    const assertionResult = returnValueAssertion.assertion(
+      returnValue,
+      info,
+      hook,
+    );
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -331,7 +333,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo) => {
+    assertion: (valueReturned, urlInfo, hook) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -339,6 +341,12 @@ const returnValueAssertions = [
         const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
+        }
+        if (urlInfo.type === "html") {
+          const { scriptInjections } = valueReturned;
+          if (scriptInjections) {
+            return applyScriptInjections(urlInfo, scriptInjections, hook);
+          }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
@@ -353,3 +361,57 @@ const returnValueAssertions = [
     },
   },
 ];
+
+const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
+  const htmlAst = parseHtmlString(htmlUrlInfo.content);
+
+  scriptInjections.reverse().forEach((scriptInjection) => {
+    const { setup } = scriptInjection;
+    if (setup) {
+      const setupGlobalName = setup.name;
+      const setupParamSource = stringifyParams(setup.param, "  ");
+      const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
+      injectHtmlNodeAsEarlyAsPossible(
+        htmlAst,
+        createHtmlNode({
+          tagName: "script",
+          textContent: inlineJs,
+        }),
+        hook.plugin.name,
+      );
+    }
+    const scriptReference = htmlUrlInfo.dependencies.inject({
+      type: "script",
+      subtype: scriptInjection.type === "module" ? "js_module" : "js_classic",
+      expectedType:
+        scriptInjection.type === "module" ? "js_module" : "js_classic",
+      specifier: scriptInjection.src,
+    });
+    injectHtmlNodeAsEarlyAsPossible(
+      htmlAst,
+      createHtmlNode({
+        tagName: "script",
+        ...(scriptInjection.type === "module" ? { type: "module" } : {}),
+        src: scriptReference.generatedSpecifier,
+      }),
+      hook.plugin.name,
+    );
+  });
+  const htmlModified = stringifyHtmlAst(htmlAst);
+  return {
+    content: htmlModified,
+  };
+};
+
+const stringifyParams = (params, prefix = "") => {
+  const source = JSON.stringify(params, null, prefix);
+  if (prefix.length) {
+    // remove leading "{\n"
+    // remove leading prefix
+    // remove trailing "\n}"
+    return source.slice(2 + prefix.length, -2);
+  }
+  // remove leading "{"
+  // remove trailing "}"
+  return source.slice(1, -1);
+};

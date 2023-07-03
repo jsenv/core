@@ -33,6 +33,7 @@ export const createFileService = ({
   transpilation,
   clientAutoreload,
   cooldownBetweenFileEvents,
+  clientServerEventsConfig,
   cacheControl,
   ribbon,
   sourcemaps,
@@ -220,7 +221,7 @@ export const createFileService = ({
         });
         // "pushPlugin" so that event source client connection can be put as early as possible in html
         kitchen.pluginController.pushPlugin(
-          jsenvPluginServerEventsClientInjection(),
+          jsenvPluginServerEventsClientInjection(clientServerEventsConfig),
         );
       }
     }

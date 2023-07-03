@@ -3,45 +3,29 @@
  * to provide "serverEvents" used by other plugins
  */
 
-import {
-  parseHtmlString,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/ast";
-
 const serverEventsClientFileUrl = new URL(
   "./client/server_events_client.js",
   import.meta.url,
 ).href;
 
-export const jsenvPluginServerEventsClientInjection = () => {
+export const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
   return {
     name: "jsenv:server_events_client_injection",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (htmlUrlInfo) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
-        const serverEventsClientFileReference = htmlUrlInfo.dependencies.inject(
-          {
-            type: "script",
-            subtype: "js_module",
-            expectedType: "js_module",
-            specifier: serverEventsClientFileUrl,
-          },
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            src: serverEventsClientFileReference.generatedSpecifier,
-          }),
-          "jsenv:server_events",
-        );
-        const htmlModified = stringifyHtmlAst(htmlAst);
+      html: () => {
         return {
-          content: htmlModified,
+          scriptInjections: [
+            {
+              src: serverEventsClientFileUrl,
+              setup: {
+                name: "window.__server_events__.setup",
+                param: {
+                  logs,
+                },
+              },
+            },
+          ],
         };
       },
     },
