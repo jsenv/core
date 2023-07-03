@@ -93,10 +93,11 @@ export const createDependencies = (ownerUrlInfo) => {
     const parentUrlInfo = ownerUrlInfo.findParentIfInline() || ownerUrlInfo;
 
     const addSideEffectFileRef = () => {
-      const reference = parentUrlInfo.firstReference.addImplicit({
+      const reference = parentUrlInfo.dependencies.inject({
         trace,
         type: "side_effect_file",
         specifier: sideEffectFileUrl,
+        isImplicit: true,
         ...rest,
       });
       return reference;

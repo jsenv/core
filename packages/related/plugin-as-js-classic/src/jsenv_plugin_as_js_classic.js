@@ -72,7 +72,8 @@ export const jsenvPluginAsJsClassic = () => {
 
       if (urlInfo.context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          urlInfo.firstReference.addImplicit({
+          urlInfo.dependencies.inject({
+            isImplicit: true,
             type: "js_url",
             specifier: sourceUrl,
           });

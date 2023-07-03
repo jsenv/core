@@ -88,6 +88,7 @@ export const createUrlGraph = ({
         specifier: urlWithoutSearch,
         url: urlWithoutSearch,
         searchParams: new URLSearchParams(),
+        isWeak: true,
       });
       const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
       urlInfoWithoutSearch.searchParamVariantSet.add(referencedUrlInfo);
