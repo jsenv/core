@@ -191,9 +191,10 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
         }
       }
       redirect: {
-        if (reference.isImplicit && reference.type !== "side_effect_file") {
+        if (reference.isImplicit && reference.isWeak) {
           // not needed for implicit references that are not rendered anywhere
-          // except for side_effect_file references injected in entry points or at the top of files
+          // this condition excludes:
+          // - side_effect_file references injected in entry points or at the top of files
           break redirect;
         }
         pluginController.callHooks(
@@ -234,9 +235,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.resolveReference = resolveReference;
 
   const finalizeReference = (reference) => {
-    if (reference.isImplicit && reference.type !== "side_effect_file") {
+    if (reference.isImplicit && reference.isWeak) {
       // not needed for implicit references that are not rendered anywhere
-      // except for side_effect_file references injected in entry points or at the top of files
+      // this condition excludes:
+      // - side_effect_file references injected in entry points or at the top of files
       return;
     }
 

@@ -120,6 +120,7 @@ const addRelationshipWithPackageJson = ({
     subtype: field,
     specifier: packageJsonUrl,
     hasVersioningEffect,
+    isWeak: true,
   });
   // we don't cook package.json files, we just maintain their content
   // to be able to check if it has changed later on

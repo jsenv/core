@@ -324,10 +324,14 @@ export const createFileService = ({
         body: urlInfo.content,
         timing: urlInfo.timing,
       };
+      const augmentResponseInfo = {
+        ...kitchen.context,
+        reference,
+        urlInfo,
+      };
       kitchen.pluginController.callHooks(
         "augmentResponse",
-        { reference, urlInfo },
-        kitchen.context,
+        augmentResponseInfo,
         (returnValue) => {
           response = composeTwoResponses(response, returnValue);
         },

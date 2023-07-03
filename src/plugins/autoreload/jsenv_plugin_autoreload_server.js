@@ -157,7 +157,7 @@ export const jsenvPluginAutoreloadServer = ({
         clientFilesPruneCallbackList.push(
           (prunedUrlInfo, lastReferenceFromOther) => {
             const parentHotUpdate = propagateUpdate(
-              lastReferenceFromOther.urlInfo,
+              lastReferenceFromOther.ownerUrlInfo,
             );
             const cause = `following file is no longer referenced: ${formatUrlForClient(
               prunedUrlInfo.url,

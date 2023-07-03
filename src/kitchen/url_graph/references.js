@@ -301,9 +301,15 @@ const createReference = ({
   isOriginalPosition,
   isEntryPoint = false,
   isResourceHint = false,
+  // implicit references are not real references
+  // they represent an abstract relationship
   isImplicit = false,
-  // urlInfo referenced solely by weak references
-  // should be ignored during build
+  // weak references cannot keep the corresponding url info alive
+  // there must be an other reference to keep the url info alive
+  // an url referenced solely by weak references is:
+  // - not written in build directory
+  // - can be removed from graph during dev/build
+  // - not cooked until referenced by a strong reference
   isWeak = false,
   hasVersioningEffect = false,
   version = null,
@@ -495,11 +501,13 @@ const createReference = ({
   };
 
   reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
-    // The search param can be injected by a plugin during "redirectReference".
-    // It happens when url content must be modified for browser support:
-    // - import assertions
-    // - js module fallback to systemjs
-    // TODO: also explain usage when search param is already inside the file
+    // The search param can be
+    // 1. injected by a plugin during "redirectReference"
+    //    - import assertions
+    //    - js module fallback to systemjs
+    // 2. already inside source files
+    //    - turn js module into js classic for convenience ?as_js_classic
+    //    - turn js classic to js module for to make it importable
     if (!reference.searchParams.has(searchParam)) {
       return null;
     }
@@ -507,17 +515,43 @@ const createReference = ({
       .replace(`?${searchParam}`, "")
       .replace(`&${searchParam}`, "");
     const referenceWithoutSearchParam = reference.addImplicit({
-      ...reference,
-      url: null,
-      isWeak: true,
-      data: { ...reference.data },
+      type,
+      subtype,
+      expectedContentType,
       expectedType,
+      expectedSubtype: reference.expectedSubtype,
+      integrity: reference.integrity,
+      crossorigin: reference.crossorigin,
+      specifierStart: reference.specifierStart,
+      specifierEnd: reference.specifierEnd,
+      specifierLine: reference.specifierLine,
+      specifierColumn: reference.specifierColumn,
+      baseUrl: reference.baseUrl,
+      isOriginalPosition: reference.isOriginalPosition,
+      isEntryPoint: reference.isEntryPoint,
+      isResourceHint: reference.isResourceHint,
+      hasVersioningEffect: reference.hasVersioningEffect,
+      version: reference.version,
+      content: reference.content,
+      contentType: reference.contentType,
+      leadsToADirectory: reference.leadsToADirectory,
+      debug: reference.debug,
+      importAttributes: reference.importAttributes,
+      importNode: reference.importNode,
+      importTypeAttributeNode: reference.importTypeAttributeNode,
+      mutation: reference.mutation,
+      data: { ...reference.data },
       specifier: newSpecifier,
-      generatedSpecifier: null,
-      filename: null,
+      isWeak: true,
+      isInline: false,
       original: reference.original || reference,
       prev: reference,
       redirection: false,
+      // urlInfo: null,
+      // url: null,
+      // generatedUrl: null,
+      // generatedSpecifier: null,
+      // filename: null,
     });
     reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam;
