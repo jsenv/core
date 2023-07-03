@@ -25,12 +25,12 @@ export const bundleJsModules = async (
     logger,
     rootDirectoryUrl,
     assetsDirectory,
-    graph,
     runtimeCompat,
     sourcemaps,
     minification,
     isSupportedOnCurrentClients,
   } = jsModuleUrlInfos[0].context;
+  const graph = jsModuleUrlInfos[0].graph;
   if (buildDirectoryUrl === undefined) {
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }

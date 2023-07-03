@@ -92,16 +92,6 @@ export const createBuildVersionsManager = ({
     return transformedCode;
   };
 
-  // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
-  // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
-  const generateVersion = (parts) => {
-    const hash = createHash("sha256");
-    parts.forEach((part) => {
-      hash.update(part);
-    });
-    return hash.digest("hex").slice(0, versionLength);
-  };
-
   const REPLACER_REGEX = new RegExp(
     `${escapeRegexpSpecialChars(placeholderLeft)}[0-9a-zA-Z_$]{1,${
       versionLength - placeholderOverhead
@@ -278,7 +268,7 @@ export const createBuildVersionsManager = ({
               );
             content = contentWithPredictibleVersionPlaceholders;
           }
-          const contentVersion = generateVersion([content]);
+          const contentVersion = generateVersion([content], versionLength);
           contentOnlyVersionMap.set(urlInfo, contentVersion);
         });
       }
@@ -338,7 +328,7 @@ export const createBuildVersionsManager = ({
               versionPartSet.add(otherUrlInfoContentVersion);
             },
           );
-          const version = generateVersion(versionPartSet);
+          const version = generateVersion(versionPartSet, versionLength);
           versionMap.set(urlInfo, version);
         });
       }
@@ -475,6 +465,16 @@ const isWrappedByQuote = (content, start, end) => {
     return true;
   }
   return false;
+};
+
+// https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
+// https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
+export const generateVersion = (parts, length) => {
+  const hash = createHash("sha256");
+  parts.forEach((part) => {
+    hash.update(part);
+  });
+  return hash.digest("hex").slice(0, length);
 };
 
 const injectVersionPlaceholderIntoBuildSpecifier = ({
