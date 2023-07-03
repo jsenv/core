@@ -5,6 +5,7 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 const test = async ({
+  debug = false,
   browserLauncher,
   pageLogsAfterUpdatingCssFile = [
     {
@@ -117,7 +118,7 @@ const test = async ({
     },
     ...rest,
   });
-  const browser = await browserLauncher.launch({ headless: true });
+  const browser = await browserLauncher.launch({ headless: !debug });
   try {
     const pageLogs = [];
     const expectedPageLogs = [];
@@ -216,22 +217,23 @@ if (import.meta.hot) {
       assert({ actual, expected });
     }
   } finally {
-    browser.close();
+    if (!debug) {
+      browser.close();
+    }
     jsFileContent.restore();
     cssFileContent.restore();
-    await devServer.stop();
+    if (!debug) {
+      await devServer.stop();
+    }
   }
 };
 
 // TODO: fix on windows
 if (process.platform !== "win32") {
-  // not transpiling import assertion (chrome)
   await test({
     browserLauncher: chromium,
   });
-
-  // transpiling import assertion (firefox)
-  // await test({
-  //   browserLauncher: firefox,
-  // });
+  await test({
+    browserLauncher: firefox,
+  });
 }
