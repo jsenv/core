@@ -10,17 +10,16 @@ import {
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 import { prependContent } from "../kitchen/prepend_content.js";
 
-export const injectVersionMappingsAsGlobal = async ({
-  kitchen,
+export const injectVersionMappingsAsGlobal = async (
   urlInfo,
   versionMappings,
-}) => {
+) => {
   if (urlInfo.type === "html") {
     return prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
-        minification: kitchen.context.minification,
+        minification: urlInfo.context.minification,
       }),
     });
   }
@@ -29,7 +28,7 @@ export const injectVersionMappingsAsGlobal = async ({
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: kitchen.context.minification,
+        minification: urlInfo.context.minification,
       }),
     });
   }
@@ -55,11 +54,10 @@ const generateClientCodeForVersionMappings = (
 })();`;
 };
 
-export const injectVersionMappingsAsImportmap = async ({
-  kitchen,
+export const injectVersionMappingsAsImportmap = async (
   urlInfo,
   versionMappings,
-}) => {
+) => {
   const htmlAst = parseHtmlString(urlInfo.content, {
     storeOriginalPositions: false,
   });
@@ -71,7 +69,7 @@ export const injectVersionMappingsAsImportmap = async ({
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: kitchen.context.minification
+      textContent: urlInfo.context.minification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),

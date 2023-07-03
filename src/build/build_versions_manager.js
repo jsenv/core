@@ -408,11 +408,10 @@ export const createBuildVersionsManager = ({
           visitors.push((urlInfo) => {
             if (urlInfo.isEntryPoint) {
               actions.push(async () => {
-                await injectVersionMappingsAsGlobal({
-                  kitchen: finalKitchen,
+                await injectVersionMappingsAsGlobal(
                   urlInfo,
-                  versionMappings: versionMappingsNeeded,
-                });
+                  versionMappingsNeeded,
+                );
               });
             }
           });
@@ -426,11 +425,10 @@ export const createBuildVersionsManager = ({
           visitors.push((urlInfo) => {
             if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
               actions.push(async () => {
-                await injectVersionMappingsAsImportmap({
-                  kitchen: finalKitchen,
+                await injectVersionMappingsAsImportmap(
                   urlInfo,
-                  versionMappings: versionMappingsNeeded,
-                });
+                  versionMappingsNeeded,
+                );
               });
             }
           });

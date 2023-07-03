@@ -1031,7 +1031,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         // at https://github.com/rollup/rollup/pull/4543
         const versioningTask = createBuildTask("apply versioning");
         try {
-          buildVersionsManager.applyVersioning(finalKitchen);
+          await buildVersionsManager.applyVersioning(finalKitchen);
         } catch (e) {
           versioningTask.fail();
           throw e;
