@@ -185,7 +185,9 @@ export const jsenvPluginAutoreloadServer = ({
             instructions.push({
               type: "prune",
               boundary: formatUrlForClient(prunedUrlInfo.url),
-              acceptedBy: formatUrlForClient(parentHotUpdate.url),
+              acceptedBy: formatUrlForClient(
+                lastReferenceFromOther.ownerUrlInfo.url,
+              ),
             });
             notifyPartialReload({
               cause,
