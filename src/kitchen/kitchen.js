@@ -39,6 +39,7 @@ export const createKitchen = ({
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
+  shape = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -63,6 +64,7 @@ export const createKitchen = ({
       mainFilePath,
       dev,
       build,
+      shape,
       runtimeCompat,
       clientRuntimeCompat,
       inlineContentClientFileUrl,
@@ -526,6 +528,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // because they might refer to resource that will be modified during build
           // It also means something else have to reference that url in order to cook it
           // so that the preload is deleted by "resync_resource_hints.js" otherwise
+          continue;
+        }
+        if (referenceToOther.isImplicit) {
+          // implicit reference are not auto cooked
+          // when needed code is explicitely cooking/fetching the underlying url
           continue;
         }
         if (

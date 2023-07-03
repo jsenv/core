@@ -418,6 +418,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         ignore,
         ignoreProtocol: "remove",
         build: true,
+        shape: true,
         runtimeCompat,
         baseContext: contextSharedDuringBuild,
         plugins: [
@@ -701,19 +702,21 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return rawUrlInfo;
               };
               const { firstReference } = finalUrlInfo;
+              // .original reference updated during "postbuild":
+              // happens for "js_module_fallback"
+              const reference = firstReference.original || firstReference;
               // reference injected during "postbuild":
               // - happens for "js_module_fallback" injecting "s.js"
-              if (firstReference.injected) {
-                const originalRef = firstReference.original || firstReference;
+              if (reference.injected) {
                 const rawReference =
                   rawKitchen.graph.rootUrlInfo.dependencies.inject({
-                    type: originalRef.type,
-                    expectedType: originalRef.expectedType,
-                    specifier: originalRef.specifier,
-                    specifierLine: originalRef.specifierLine,
-                    specifierColumn: originalRef.specifierColumn,
-                    specifierStart: originalRef.specifierStart,
-                    specifierEnd: originalRef.specifierEnd,
+                    type: reference.type,
+                    expectedType: reference.expectedType,
+                    specifier: reference.specifier,
+                    specifierLine: reference.specifierLine,
+                    specifierColumn: reference.specifierColumn,
+                    specifierStart: reference.specifierStart,
+                    specifierEnd: reference.specifierEnd,
                   });
                 await rawReference.urlInfo.cook();
                 return {
@@ -725,7 +728,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   sourcemap: rawReference.urlInfo.sourcemap,
                 };
               }
-              if (firstReference.isInline) {
+              if (reference.isInline) {
                 const prevReference = firstReference.prev;
                 if (prevReference) {
                   if (!prevReference.isInline) {
@@ -743,12 +746,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 }
                 return fromBundleOrRawGraph(firstReference.url);
               }
-              if (firstReference.original) {
-                // reference updated during "postbuild":
-                // - happens for "js_module_fallback"
-                return fromBundleOrRawGraph(firstReference.original.url);
-              }
-              return fromBundleOrRawGraph(finalUrlInfo.url);
+              return fromBundleOrRawGraph(reference.url);
             },
           },
           {

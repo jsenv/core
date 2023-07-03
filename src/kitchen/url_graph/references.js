@@ -1,8 +1,4 @@
-import {
-  getCallerPosition,
-  stringifyUrlSite,
-  asUrlWithoutSearch,
-} from "@jsenv/urls";
+import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -417,30 +413,6 @@ const createReference = ({
     const kitchen = ownerUrlInfo.kitchen;
     const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
     reference.urlInfo = urlInfo;
-    if (urlInfo.searchParams.size > 0) {
-      // A resource is represented by a url.
-      // Variations of a resource are represented by url search params
-      // Each representation of the resource is given a dedicated url info
-      // object (one url -> one url info)
-      // It's because search params often influence the final content returned for that url
-      // When a reference contains url search params it must create 2 url infos:
-      // 1. The url info corresponding to the url with search params
-      // 2. The url info corresponding to url without search params
-      // Because the underlying content without search params is used to generate
-      // the content modified according to search params
-      // This way when a file like "style.css" is considered as modified
-      // references like "style.css?as_css_module" are also affected
-      const urlWithoutSearch = asUrlWithoutSearch(reference.url);
-      // a reference with a search param creates an implicit reference
-      // to the file without search param
-      const referenceWithoutSearch = reference.addImplicit({
-        specifier: urlWithoutSearch,
-        url: urlWithoutSearch,
-        searchParams: new URLSearchParams(),
-      });
-      const urlInfoWithoutSearch = referenceWithoutSearch.urlInfo;
-      urlInfoWithoutSearch.searchParamVariantSet.add(urlInfo);
-    }
     addDependency(reference);
     ownerUrlInfo.context.finalizeReference(reference);
   };
