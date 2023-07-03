@@ -497,26 +497,26 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     { operation, ignoreDynamicImport } = {},
   ) => {
     const urlInfoMap = new Map();
+    const promises = [];
 
     const cookSelfThenDependencies = async (urlInfo) => {
       if (operation) {
         operation.throwIfAborted();
       }
-
-      const existingPromise = urlInfoMap.get(urlInfo);
-      if (existingPromise) {
-        return existingPromise;
+      const promiseFromCache = urlInfoMap.get(urlInfo);
+      if (promiseFromCache) {
+        return promiseFromCache;
       }
-      const cookPromise = urlInfo.cook();
-      const cookSelfAndDependenciesPromise = cookPromise.then(() =>
-        startCookingDependencies(urlInfo),
-      );
-      urlInfoMap.set(urlInfo, cookSelfAndDependenciesPromise);
-      return cookSelfAndDependenciesPromise;
+      const promise = (async () => {
+        await urlInfo.cook();
+        startCookingDependencies(urlInfo);
+      })();
+      promises.push(promise);
+      urlInfoMap.set(urlInfo, promise);
+      return promise;
     };
 
     const startCookingDependencies = (urlInfo) => {
-      const promises = [];
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
         if (referenceToOther.type === "sourcemap_comment") {
           // we don't cook sourcemap reference by sourcemap comments
@@ -544,13 +544,29 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         // we use reference.generatedUrl to mimic what a browser would do:
         // do a fetch to the specifier as found in the file
         const referencedUrlInfo = referenceToOther.urlInfo;
-        promises.push(cookSelfThenDependencies(referencedUrlInfo));
+        cookSelfThenDependencies(referencedUrlInfo);
       }
-      return Promise.all(promises);
     };
 
-    await startCookingDependencies(urlInfo);
-    urlInfoMap.clear();
+    const getAllDonePromise = async (operation) => {
+      const waitAll = async () => {
+        if (operation) {
+          operation.throwIfAborted();
+        }
+        if (promises.length === 0) {
+          return;
+        }
+        const promisesToWait = promises.slice();
+        promises.length = 0;
+        await Promise.all(promisesToWait);
+        await waitAll();
+      };
+      await waitAll();
+      urlInfoMap.clear();
+    };
+
+    startCookingDependencies(urlInfo);
+    await getAllDonePromise();
     // gather all callbackToConsiderContentReady added after the url is cooked
     await Promise.all(
       lastTransformationCallbacks.map(async (callback) => {
