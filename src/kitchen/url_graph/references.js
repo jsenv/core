@@ -417,7 +417,7 @@ const createReference = ({
     const kitchen = ownerUrlInfo.kitchen;
     const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
     reference.urlInfo = urlInfo;
-    if (reference.url.includes("?")) {
+    if (urlInfo.searchParams.size > 0) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params
       // Each representation of the resource is given a dedicated url info

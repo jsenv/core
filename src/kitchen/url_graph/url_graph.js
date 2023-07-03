@@ -44,7 +44,7 @@ export const createUrlGraph = ({
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
         referenceToOther.remove();
       });
-      if (urlInfo.url.includes("?")) {
+      if (urlInfo.searchParams.size > 0) {
         const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
         const urlInfoWithoutSearch = getUrlInfo(urlWithoutSearch);
         if (urlInfoWithoutSearch) {
@@ -270,10 +270,10 @@ const createUrlInfo = (url) => {
     return null;
   };
   urlInfo.isSearchParamVariantOf = (otherUrlInfo) => {
-    if (!urlInfo.url.includes("?")) {
+    if (urlInfo.searchParams.size === 0) {
       return false;
     }
-    if (otherUrlInfo.url.includes("?")) {
+    if (otherUrlInfo.searchParams.size > 0) {
       return false;
     }
     const withoutSearch = asUrlWithoutSearch(urlInfo.url);

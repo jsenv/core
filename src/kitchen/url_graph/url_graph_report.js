@@ -50,11 +50,10 @@ const createUrlGraphReport = (urlGraph) => {
     // their js module equivalent are ignored to avoid counting it twice
     // in the build graph the file targeted by import assertion will likely be gone
     // and only the js module remain (likely bundled)
-    const urlObject = new URL(urlInfo.url);
     if (
-      urlObject.searchParams.has("as_json_module") ||
-      urlObject.searchParams.has("as_css_module") ||
-      urlObject.searchParams.has("as_text_module")
+      urlInfo.searchParams.has("as_json_module") ||
+      urlInfo.searchParams.has("as_css_module") ||
+      urlInfo.searchParams.has("as_text_module")
     ) {
       return;
     }
