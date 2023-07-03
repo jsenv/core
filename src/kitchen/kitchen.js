@@ -56,6 +56,7 @@ export const createKitchen = ({
   const kitchen = {
     context: {
       ...baseContext,
+      kitchen: null,
       signal,
       logger,
       rootDirectoryUrl,
@@ -70,7 +71,6 @@ export const createKitchen = ({
       sourcemaps,
       outDirectoryUrl,
     },
-    kitchen: null,
     graph: null,
     pluginController: null,
     urlInfoTransformer: null,

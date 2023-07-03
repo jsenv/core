@@ -419,7 +419,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         ignoreProtocol: "remove",
         build: true,
         runtimeCompat,
-        ...contextSharedDuringBuild,
+        baseContext: contextSharedDuringBuild,
         plugins: [
           jsenvPluginReferenceAnalysis({
             ...referenceAnalysis,

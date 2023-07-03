@@ -141,7 +141,7 @@ export const createPluginController = (kitchenContext) => {
   let currentPlugin = null;
   let currentHookName = null;
   const callHook = (hook, info) => {
-    const hookFn = getHookFunction(hook);
+    const hookFn = getHookFunction(hook, info);
     if (!hookFn) {
       return null;
     }
