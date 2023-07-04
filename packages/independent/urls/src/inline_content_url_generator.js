@@ -8,7 +8,10 @@ export const generateInlineContentUrl = ({
   lineEnd,
   columnEnd,
 }) => {
-  const generatedName = `L${line}C${column}-L${lineEnd}C${columnEnd}`;
+  let generatedName = `L${line}C${column}`;
+  if (lineEnd !== undefined && columnEnd !== undefined) {
+    generatedName += `-L${lineEnd}C${columnEnd}`;
+  }
   const filenameRaw = urlToFilename(url);
   const filename = `${filenameRaw}@${generatedName}${extension}`;
   // ideally we should keep query params from url

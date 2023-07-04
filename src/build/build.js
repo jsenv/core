@@ -1099,7 +1099,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return;
                 }
                 if (!buildUrlInfo.isUsed()) {
-                  const rawUrl = buildDirectoryRedirections.get(buildUrl);
+                  let rawUrl = buildDirectoryRedirections.get(buildUrl);
+                  if (!rawUrl && rawKitchen.graph.getUrlInfo(buildUrl)) {
+                    rawUrl = buildUrl;
+                  }
                   if (rawUrl) {
                     const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
                     if (rawUrlInfo && rawUrlInfo.data.bundled) {
