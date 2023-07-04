@@ -9,6 +9,7 @@ import {
   setHtmlNodeText,
   getHtmlNodePosition,
 } from "@jsenv/ast";
+import { generateInlineContentUrl, urlToExtension } from "@jsenv/urls";
 
 export const jsenvPluginInliningIntoHtml = () => {
   return {
@@ -35,14 +36,25 @@ export const jsenvPluginInliningIntoHtml = () => {
           if (!linkReference.searchParams.has("inline")) {
             return;
           }
-          const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
-            preferOriginal: true,
+          const { line, column, lineEnd, columnEnd, isOriginal } =
+            getHtmlNodePosition(linkNode, {
+              preferOriginal: true,
+            });
+          const linkInlineUrl = generateInlineContentUrl({
+            url: linkReference.url,
+            extension: urlToExtension(linkReference.url),
+            line,
+            column,
+            lineEnd,
+            columnEnd,
           });
           const linkInlineReference = linkReference.becomesInline({
             line: line - 1,
             column,
             isOriginal,
-            specifier: linkReference.specifier,
+            specifier: linkInlineUrl,
+            type: "style",
+            expectedType: linkReference.expectedType,
           });
           const linkInlineUrlInfo = linkInlineReference.urlInfo;
 
@@ -81,14 +93,26 @@ export const jsenvPluginInliningIntoHtml = () => {
           if (!scriptReference.searchParams.has("inline")) {
             return;
           }
-          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
-            preferOriginal: true,
+          const { line, column, lineEnd, columnEnd, isOriginal } =
+            getHtmlNodePosition(scriptNode, {
+              preferOriginal: true,
+            });
+          const scriptInlineUrl = generateInlineContentUrl({
+            url: scriptReference.url,
+            extension: urlToExtension(scriptReference.url),
+            line,
+            column,
+            lineEnd,
+            columnEnd,
           });
           const scriptInlineReference = scriptReference.becomesInline({
             line: line - 1,
             column,
             isOriginal,
-            specifier: scriptReference.specifier,
+            specifier: scriptInlineUrl,
+            type: scriptReference.type,
+            subtype: scriptReference.subtype,
+            expectedType: scriptReference.expectedType,
           });
           const scriptInlineUrlInfo = scriptInlineReference.urlInfo;
           actions.push(async () => {

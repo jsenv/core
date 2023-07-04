@@ -17,10 +17,20 @@ export const jsenvPluginInliningAsDataUrl = () => {
       if (!reference.searchParams.has("inline")) {
         return null;
       }
+      if (reference.type === "sourcemap_comment") {
+        return null;
+      }
       // <link rel="stylesheet"> and <script> can be inlined in the html
       if (
         reference.type === "link_href" &&
         reference.subtype === "stylesheet"
+      ) {
+        return null;
+      }
+      if (
+        reference.original &&
+        reference.original.type === "link_href" &&
+        reference.original.subtype === "stylesheet"
       ) {
         return null;
       }

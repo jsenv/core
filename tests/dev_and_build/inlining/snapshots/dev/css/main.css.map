@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/dev_and_build/inlining/client/css/main.css?inline"
+  ],
+  "sourcesContent": [
+    "body {\n  background: red;\n  background-image: url(\"../img/jsenv.png\");\n}\n"
+  ],
+  "names": [],
+  "mappings": "AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACN,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAClB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,cAAkB,CAAC,CAAC;AAC5C,CAAC;"
+}
