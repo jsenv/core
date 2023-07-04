@@ -38,20 +38,19 @@ export const jsenvPluginInliningIntoHtml = () => {
           ) {
             return;
           }
-          const linkUrlInfo = linkReference.urlInfo;
+          const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
+            preferOriginal: true,
+          });
+          const linkInlineReference = linkReference.becomesInline({
+            line: line - 1,
+            column,
+            isOriginal,
+            specifier: linkReference.generatedSpecifier,
+          });
+          const linkInlineUrlInfo = linkInlineReference.urlInfo;
+
           actions.push(async () => {
-            await linkUrlInfo.cook();
-            const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
-              preferOriginal: true,
-            });
-            linkReference.becomesInline({
-              line: line - 1,
-              column,
-              isOriginal,
-              specifier: linkReference.generatedSpecifier,
-              content: linkUrlInfo.content,
-              contentType: linkUrlInfo.contentType,
-            });
+            await linkInlineUrlInfo.cook();
             mutations.push(() => {
               setHtmlNodeAttributes(linkNode, {
                 "inlined-from-href": href,
@@ -65,7 +64,7 @@ export const jsenvPluginInliningIntoHtml = () => {
               });
               linkNode.nodeName = "style";
               linkNode.tagName = "style";
-              setHtmlNodeText(linkNode, linkUrlInfo.content, {
+              setHtmlNodeText(linkNode, linkInlineUrlInfo.content, {
                 indentation: "auto",
               });
             });
@@ -88,23 +87,18 @@ export const jsenvPluginInliningIntoHtml = () => {
           ) {
             return;
           }
-          const scriptUrlInfo = scriptReference.urlInfo;
+          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+            preferOriginal: true,
+          });
+          const scriptInlineReference = scriptReference.becomesInline({
+            line: line - 1,
+            column,
+            isOriginal,
+            specifier: scriptReference.generatedSpecifier,
+          });
+          const scriptInlineUrlInfo = scriptInlineReference.urlInfo;
           actions.push(async () => {
-            await scriptUrlInfo.cook();
-            const { line, column, isOriginal } = getHtmlNodePosition(
-              scriptNode,
-              {
-                preferOriginal: true,
-              },
-            );
-            scriptReference.becomesInline({
-              line: line - 1,
-              column,
-              isOriginal,
-              specifier: scriptReference.generatedSpecifier,
-              content: scriptUrlInfo.content,
-              contentType: scriptUrlInfo.contentType,
-            });
+            await scriptInlineUrlInfo.cook();
             mutations.push(() => {
               setHtmlNodeAttributes(scriptNode, {
                 "inlined-from-src": src,
@@ -113,7 +107,7 @@ export const jsenvPluginInliningIntoHtml = () => {
                 "integrity": undefined,
                 "jsenv-inlined-by": "jsenv:inlining_into_html",
               });
-              setHtmlNodeText(scriptNode, scriptUrlInfo.content, {
+              setHtmlNodeText(scriptNode, scriptInlineUrlInfo.content, {
                 indentation: "auto",
               });
             });

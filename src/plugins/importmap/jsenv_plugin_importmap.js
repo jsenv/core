@@ -156,26 +156,11 @@ export const jsenvPluginImportmap = () => {
               break;
             }
           }
-          const importmapUrlInfo = importmapReference.urlInfo;
-          await importmapUrlInfo.cook();
-          onHtmlImportmapParsed(
-            JSON.parse(importmapUrlInfo.content),
-            htmlUrlInfo.url,
-          );
-          setHtmlNodeText(importmap, importmapUrlInfo.content, {
-            indentation: "auto",
-          });
-          setHtmlNodeAttributes(importmap, {
-            "src": undefined,
-            "jsenv-inlined-by": "jsenv:importmap",
-            "inlined-from-src": src,
-          });
-
           const { line, column, lineEnd, columnEnd, isOriginal } =
             getHtmlNodePosition(importmap, {
               preferOriginal: true,
             });
-          const inlineImportmapUrl = generateInlineContentUrl({
+          const importmapInlineUrl = generateInlineContentUrl({
             url: htmlUrlInfo.url,
             extension: ".importmap",
             line,
@@ -183,13 +168,26 @@ export const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
           });
-          importmapReference.becomesInline({
+          const importmapInlineReference = importmapReference.becomesInline({
             line: line - 1,
             column,
             isOriginal,
-            specifier: inlineImportmapUrl,
-            content: importmapUrlInfo.content,
+            specifier: importmapInlineUrl,
             contentType: "application/importmap+json",
+          });
+          const importmapInlineUrlInfo = importmapInlineReference.urlInfo;
+          await importmapInlineUrlInfo.cook();
+          onHtmlImportmapParsed(
+            JSON.parse(importmapInlineUrlInfo.content),
+            htmlUrlInfo.url,
+          );
+          setHtmlNodeText(importmap, importmapInlineUrlInfo.content, {
+            indentation: "auto",
+          });
+          setHtmlNodeAttributes(importmap, {
+            "src": undefined,
+            "jsenv-inlined-by": "jsenv:importmap",
+            "inlined-from-src": src,
           });
         };
 

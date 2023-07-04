@@ -1,4 +1,4 @@
-import { DATA_URL } from "@jsenv/urls";
+import { DATA_URL, injectQueryParamsIntoSpecifier } from "@jsenv/urls";
 
 export const jsenvPluginInliningAsDataUrl = () => {
   return {
@@ -29,28 +29,32 @@ export const jsenvPluginInliningAsDataUrl = () => {
         if (originalReference.type === "script") {
           return null;
         }
+        const specifierWithBase64Param = injectQueryParamsIntoSpecifier(
+          reference.specifier,
+          { as: "base64" },
+        );
+        const inlineReference = reference.becomesInline({
+          line: reference.line,
+          column: reference.column,
+          isOriginal: reference.isOriginal,
+          specifier: specifierWithBase64Param,
+        });
         return (async () => {
-          const referencedUrlInfo = reference.urlInfo;
-          await referencedUrlInfo.cook();
-          const contentAsBase64 = Buffer.from(
-            referencedUrlInfo.content,
-          ).toString("base64");
-          let specifier = DATA_URL.stringify({
-            mediaType: referencedUrlInfo.contentType,
+          await inlineReference.urlInfo.cook();
+          const base64Url = DATA_URL.stringify({
+            mediaType: inlineReference.urlInfo.contentType,
             base64Flag: true,
-            data: contentAsBase64,
+            data: inlineReference.content,
           });
-          reference.becomesInline({
-            line: reference.line,
-            column: reference.column,
-            isOriginal: reference.isOriginal,
-            specifier,
-            content: contentAsBase64,
-            contentType: referencedUrlInfo.contentType,
-          });
-          return specifier;
+          return base64Url;
         })();
       },
+    },
+    transformUrlContent: (urlInfo) => {
+      if (urlInfo.searchParams.has("as_base_64")) {
+        return Buffer.from(urlInfo.content).toString("base64");
+      }
+      return null;
     },
   };
 };

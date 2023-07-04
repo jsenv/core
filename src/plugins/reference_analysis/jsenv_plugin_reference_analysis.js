@@ -34,19 +34,24 @@ const jsenvPluginInlineContentFetcher = () => {
   return {
     name: "jsenv:inline_content_fetcher",
     appliesDuring: "*",
-    fetchUrlContent: (urlInfo) => {
+    fetchUrlContent: async (urlInfo) => {
       if (!urlInfo.isInline) {
         return null;
       }
       const { firstReference } = urlInfo;
+      const { prev } = firstReference;
+      if (prev && !prev.isInline) {
+        // got inlined, cook original url
+        if (firstReference.content === undefined) {
+          const originalUrlInfo = prev.urlInfo;
+          await originalUrlInfo.cook();
+          firstReference.content = originalUrlInfo.content;
+          firstReference.contentType = originalUrlInfo.contentType;
+        }
+      }
+
       return {
-        // we want to fetch the original content otherwise we might re-cook
-        // content already cooked
-        originalContent: urlInfo.context.build
-          ? urlInfo.originalContent === undefined
-            ? firstReference.content
-            : urlInfo.originalContent
-          : firstReference.content,
+        originalContent: urlInfo.originalContent,
         content: firstReference.content,
         contentType: firstReference.contentType,
       };
