@@ -116,7 +116,7 @@ export const createDependencies = (ownerUrlInfo) => {
 
     const injectAsBannerCodeBeforeFinalize = () => {
       const inlineReference = sideEffectFileReference.becomesInline({
-        specifier: sideEffectFileReference.generatedSpecifier,
+        specifier: sideEffectFileReference.specifier,
         line: 0,
         column: 0,
       });
@@ -464,7 +464,10 @@ const createReference = ({
     return implicitReference;
   };
 
-  reference.getWithoutSearchParam = ({ searchParam, expectedType }) => {
+  reference.getWithoutSearchParam = (
+    searchParam,
+    { expectedType = reference.expectedType } = {},
+  ) => {
     // The search param can be
     // 1. injected by a plugin during "redirectReference"
     //    - import assertions

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="./favicon.png?inline" />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script>
+      window.resolveResultPromise(
+        new URL(document.querySelector('link[rel="icon"]').href).protocol,
+      );
+    </script>
+  </body>
+</html>

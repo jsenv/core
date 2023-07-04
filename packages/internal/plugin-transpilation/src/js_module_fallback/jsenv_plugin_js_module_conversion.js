@@ -66,13 +66,15 @@ export const jsenvPluginJsModuleConversion = () => {
       return null;
     },
     fetchUrlContent: async (urlInfo) => {
-      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam({
-        searchParam: "js_module_fallback",
-        // override the expectedType to "js_module"
-        // because when there is ?js_module_fallback it means the underlying resource
-        // is a js_module
-        expectedType: "js_module",
-      });
+      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam(
+        "js_module_fallback",
+        {
+          // override the expectedType to "js_module"
+          // because when there is ?js_module_fallback it means the underlying resource
+          // is a js_module
+          expectedType: "js_module",
+        },
+      );
       if (!jsModuleReference) {
         return null;
       }

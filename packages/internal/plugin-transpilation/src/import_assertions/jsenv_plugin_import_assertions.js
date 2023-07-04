@@ -109,10 +109,12 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo) => {
-      const jsonReference = urlInfo.firstReference.getWithoutSearchParam({
-        searchParam: "as_json_module",
-        expectedType: "json",
-      });
+      const jsonReference = urlInfo.firstReference.getWithoutSearchParam(
+        "as_json_module",
+        {
+          expectedType: "json",
+        },
+      );
       if (!jsonReference) {
         return null;
       }
@@ -137,10 +139,12 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo) => {
-      const cssReference = urlInfo.firstReference.getWithoutSearchParam({
-        searchParam: "as_css_module",
-        expectedType: "css",
-      });
+      const cssReference = urlInfo.firstReference.getWithoutSearchParam(
+        "as_css_module",
+        {
+          expectedType: "css",
+        },
+      );
       if (!cssReference) {
         return null;
       }
@@ -174,10 +178,12 @@ export default stylesheet;`,
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo) => {
-      const textReference = urlInfo.firstReference.getWithoutSearchParam({
-        searchParam: "as_text_module",
-        expectedType: "text",
-      });
+      const textReference = urlInfo.firstReference.getWithoutSearchParam(
+        "as_text_module",
+        {
+          expectedType: "text",
+        },
+      );
       if (!textReference) {
         return null;
       }

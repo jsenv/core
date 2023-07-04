@@ -20,13 +20,15 @@ export const jsenvPluginAsJsClassic = () => {
       }
     },
     fetchUrlContent: async (urlInfo) => {
-      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam({
-        searchParam: "as_js_classic",
-        // override the expectedType to "js_module"
-        // because when there is ?as_js_classic it means the underlying resource
-        // is a js_module
-        expectedType: "js_module",
-      });
+      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam(
+        "as_js_classic",
+        {
+          // override the expectedType to "js_module"
+          // because when there is ?as_js_classic it means the underlying resource
+          // is a js_module
+          expectedType: "js_module",
+        },
+      );
       if (!jsModuleReference) {
         return null;
       }

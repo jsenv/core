@@ -32,10 +32,7 @@ export const jsenvPluginInliningIntoHtml = () => {
               break;
             }
           }
-          if (
-            !linkReference.original ||
-            !linkReference.original.searchParams.has("inline")
-          ) {
+          if (!linkReference.searchParams.has("inline")) {
             return;
           }
           const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
@@ -45,7 +42,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             line: line - 1,
             column,
             isOriginal,
-            specifier: linkReference.generatedSpecifier,
+            specifier: linkReference.specifier,
           });
           const linkInlineUrlInfo = linkInlineReference.urlInfo;
 
@@ -81,10 +78,7 @@ export const jsenvPluginInliningIntoHtml = () => {
               break;
             }
           }
-          if (
-            !scriptReference.original ||
-            !scriptReference.original.searchParams.has("inline")
-          ) {
+          if (!scriptReference.searchParams.has("inline")) {
             return;
           }
           const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
@@ -94,7 +88,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             line: line - 1,
             column,
             isOriginal,
-            specifier: scriptReference.generatedSpecifier,
+            specifier: scriptReference.specifier,
           });
           const scriptInlineUrlInfo = scriptInlineReference.urlInfo;
           actions.push(async () => {
