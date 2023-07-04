@@ -1,11 +1,10 @@
 import { assert } from "@jsenv/assert";
 
-import { build } from "@jsenv/core";
+import { build, startBuildServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async ({ name, ...params }) => {
+const test = async (name, params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -20,8 +19,11 @@ const test = async ({ name, ...params }) => {
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/${name}/`, import.meta.url),
   );
-  const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+  const server = await startBuildServer({
+    logLevel: "warn",
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
@@ -35,18 +37,15 @@ const test = async ({ name, ...params }) => {
 };
 
 // support for <script type="module">
-await test({
-  name: "0_supported",
+await test("0_supported", {
   runtimeCompat: { chrome: "89" },
 });
 // no support for <script type="module">
-await test({
-  name: "1_not_supported",
+await test("1_not_supported", {
   runtimeCompat: { chrome: "64" },
 });
 // no support <script type="module"> + sourcemap as file
-await test({
-  name: "2_not_supported_sourcemap_as_file",
+await test("2_not_supported_sourcemap_as_file", {
   runtimeCompat: { chrome: "60" },
   // At some point generating sourcemap in this scenario was throwing an error
   // because the sourcemap for js module files where not generated
