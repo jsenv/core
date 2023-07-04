@@ -28,10 +28,10 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     return await build({
       logLevel: "warn",
       sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./dist/", import.meta.url),
       entryPoints: {
         "./main.html": "main.html",
       },
-      buildDirectoryUrl: new URL("./dist/", import.meta.url),
       versioningMethod: "filename",
       plugins: [
         // we could just disable bundling to achieve the same result
