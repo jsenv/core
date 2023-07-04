@@ -1,8 +1,4 @@
-import {
-  getCallerPosition,
-  stringifyUrlSite,
-  injectQueryParamsIntoSpecifier,
-} from "@jsenv/urls";
+import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -464,66 +460,6 @@ const createReference = ({
     });
     reference.implicitReferenceSet.add(implicitReference);
     return implicitReference;
-  };
-
-  reference.getWithoutSearchParam = (
-    searchParam,
-    { expectedType = reference.expectedType } = {},
-  ) => {
-    // The search param can be
-    // 1. injected by a plugin during "redirectReference"
-    //    - import assertions
-    //    - js module fallback to systemjs
-    // 2. already inside source files
-    //    - turn js module into js classic for convenience ?as_js_classic
-    //    - turn js classic to js module for to make it importable
-    if (!reference.searchParams.has(searchParam)) {
-      return null;
-    }
-    const newSpecifier = injectQueryParamsIntoSpecifier(reference.specifier, {
-      [searchParam]: undefined,
-    });
-
-    const referenceWithoutSearchParam = reference.addImplicit({
-      type,
-      subtype,
-      expectedContentType,
-      expectedType,
-      expectedSubtype: reference.expectedSubtype,
-      integrity: reference.integrity,
-      crossorigin: reference.crossorigin,
-      specifierStart: reference.specifierStart,
-      specifierEnd: reference.specifierEnd,
-      specifierLine: reference.specifierLine,
-      specifierColumn: reference.specifierColumn,
-      baseUrl: reference.baseUrl,
-      isOriginalPosition: reference.isOriginalPosition,
-      isEntryPoint: reference.isEntryPoint,
-      isResourceHint: reference.isResourceHint,
-      hasVersioningEffect: reference.hasVersioningEffect,
-      version: reference.version,
-      content: reference.content,
-      contentType: reference.contentType,
-      leadsToADirectory: reference.leadsToADirectory,
-      debug: reference.debug,
-      importAttributes: reference.importAttributes,
-      importNode: reference.importNode,
-      importTypeAttributeNode: reference.importTypeAttributeNode,
-      mutation: reference.mutation,
-      data: { ...reference.data },
-      specifier: newSpecifier,
-      isWeak: true,
-      isInline: false,
-      original: reference.original || reference,
-      prev: reference,
-      // urlInfo: null,
-      // url: null,
-      // generatedUrl: null,
-      // generatedSpecifier: null,
-      // filename: null,
-    });
-    reference.next = referenceWithoutSearchParam;
-    return referenceWithoutSearchParam;
   };
 
   reference.remove = () => removeDependency(reference);

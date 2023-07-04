@@ -109,16 +109,12 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo) => {
-      const jsonReference = urlInfo.firstReference.getWithoutSearchParam(
-        "as_json_module",
-        {
-          expectedType: "json",
-        },
-      );
-      if (!jsonReference) {
+      const jsonUrlInfo = urlInfo.getWithoutSearchParam("as_json_module", {
+        expectedType: "json",
+      });
+      if (!jsonUrlInfo) {
         return null;
       }
-      const jsonUrlInfo = jsonReference.urlInfo;
       await jsonUrlInfo.fetchContent();
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
@@ -139,16 +135,12 @@ const jsenvPluginAsModules = () => {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo) => {
-      const cssReference = urlInfo.firstReference.getWithoutSearchParam(
-        "as_css_module",
-        {
-          expectedType: "css",
-        },
-      );
-      if (!cssReference) {
+      const cssUrlInfo = urlInfo.getWithoutSearchParam("as_css_module", {
+        expectedType: "css",
+      });
+      if (!cssUrlInfo) {
         return null;
       }
-      const cssUrlInfo = cssReference.urlInfo;
       await cssUrlInfo.fetchContent();
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
@@ -178,16 +170,12 @@ export default stylesheet;`,
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
     fetchUrlContent: async (urlInfo) => {
-      const textReference = urlInfo.firstReference.getWithoutSearchParam(
-        "as_text_module",
-        {
-          expectedType: "text",
-        },
-      );
-      if (!textReference) {
+      const textUrlInfo = urlInfo.getWithoutSearchParam("as_text_module", {
+        expectedType: "text",
+      });
+      if (!textUrlInfo) {
         return null;
       }
-      const textUrlInfo = textReference.urlInfo;
       await textUrlInfo.fetchContent();
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals

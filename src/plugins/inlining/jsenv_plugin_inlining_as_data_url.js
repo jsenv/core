@@ -59,12 +59,11 @@ export const jsenvPluginInliningAsDataUrl = () => {
       })();
     },
     fetchUrlContent: async (urlInfo) => {
-      const withoutBase64ParamReference =
-        urlInfo.firstReference.getWithoutSearchParam("as_base_64");
-      if (!withoutBase64ParamReference) {
+      const withoutBase64ParamUrlInfo =
+        urlInfo.getWithoutSearchParam("as_base_64");
+      if (!withoutBase64ParamUrlInfo) {
         return null;
       }
-      const withoutBase64ParamUrlInfo = withoutBase64ParamReference.urlInfo;
       await withoutBase64ParamUrlInfo.cook();
       const contentAsBase64 = Buffer.from(
         withoutBase64ParamUrlInfo.content,

@@ -66,7 +66,10 @@ export const jsenvPluginJsModuleConversion = () => {
       return null;
     },
     fetchUrlContent: async (urlInfo) => {
-      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam(
+      console.log(
+        `${urlInfo.url} first ref is ${urlInfo.firstReference.ownerUrlInfo.url}`,
+      );
+      const jsModuleUrlInfo = urlInfo.getWithoutSearchParam(
         "js_module_fallback",
         {
           // override the expectedType to "js_module"
@@ -75,10 +78,9 @@ export const jsenvPluginJsModuleConversion = () => {
           expectedType: "js_module",
         },
       );
-      if (!jsModuleReference) {
+      if (!jsModuleUrlInfo) {
         return null;
       }
-      const jsModuleUrlInfo = jsModuleReference.urlInfo;
       await jsModuleUrlInfo.fetchContent();
       let outputFormat;
       if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {

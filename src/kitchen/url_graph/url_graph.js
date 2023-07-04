@@ -1,8 +1,11 @@
-import { urlToRelativeUrl } from "@jsenv/urls";
+import {
+  urlToRelativeUrl,
+  asUrlWithoutSearch,
+  injectQueryParamsIntoSpecifier,
+} from "@jsenv/urls";
 
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createDependencies } from "./references.js";
-import { asUrlWithoutSearch } from "@jsenv/core/packages/independent/urls/src/url_utils.js";
 
 export const createUrlGraph = ({
   rootDirectoryUrl,
@@ -305,6 +308,62 @@ const createUrlInfo = (url, context) => {
       return true;
     }
     return false;
+  };
+  urlInfo.getWithoutSearchParam = (searchParam, { expectedType } = {}) => {
+    // The search param can be
+    // 1. injected by a plugin during "redirectReference"
+    //    - import assertions
+    //    - js module fallback to systemjs
+    // 2. already inside source files
+    //    - turn js module into js classic for convenience ?as_js_classic
+    //    - turn js classic to js module for to make it importable
+    if (!urlInfo.searchParams.has(searchParam)) {
+      return null;
+    }
+    const reference = urlInfo.firstReference;
+    const newSpecifier = injectQueryParamsIntoSpecifier(reference.specifier, {
+      [searchParam]: undefined,
+    });
+    const referenceWithoutSearchParam = reference.addImplicit({
+      type: reference.type,
+      subtype: reference.subtype,
+      expectedContentType: reference.expectedContentType,
+      expectedType: expectedType || reference.expectedType,
+      expectedSubtype: reference.expectedSubtype,
+      integrity: reference.integrity,
+      crossorigin: reference.crossorigin,
+      specifierStart: reference.specifierStart,
+      specifierEnd: reference.specifierEnd,
+      specifierLine: reference.specifierLine,
+      specifierColumn: reference.specifierColumn,
+      baseUrl: reference.baseUrl,
+      isOriginalPosition: reference.isOriginalPosition,
+      isEntryPoint: reference.isEntryPoint,
+      isResourceHint: reference.isResourceHint,
+      hasVersioningEffect: reference.hasVersioningEffect,
+      version: reference.version,
+      content: reference.content,
+      contentType: reference.contentType,
+      leadsToADirectory: reference.leadsToADirectory,
+      debug: reference.debug,
+      importAttributes: reference.importAttributes,
+      importNode: reference.importNode,
+      importTypeAttributeNode: reference.importTypeAttributeNode,
+      mutation: reference.mutation,
+      data: { ...reference.data },
+      specifier: newSpecifier,
+      isWeak: true,
+      isInline: false,
+      original: reference.original || reference,
+      prev: reference,
+      // urlInfo: null,
+      // url: null,
+      // generatedUrl: null,
+      // generatedSpecifier: null,
+      // filename: null,
+    });
+    reference.next = referenceWithoutSearchParam;
+    return referenceWithoutSearchParam.urlInfo;
   };
   urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();

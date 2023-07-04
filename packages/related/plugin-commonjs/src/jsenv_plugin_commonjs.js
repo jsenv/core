@@ -57,7 +57,7 @@ export const jsenvPluginCommonJs = ({
       return turnIntoJsModuleProxy(reference);
     },
     fetchUrlContent: async (urlInfo, context) => {
-      const commonJsReference = urlInfo.firstReference.getWithoutSearchParam(
+      const commonJsUrlInfo = urlInfo.getWithoutSearchParam(
         "cjs_as_js_module",
         {
           // during this fetch we don't want to alter the original file
@@ -65,10 +65,9 @@ export const jsenvPluginCommonJs = ({
           expectedType: "text",
         },
       );
-      if (!commonJsReference) {
+      if (!commonJsUrlInfo) {
         return null;
       }
-      const commonJsUrlInfo = commonJsReference.urlInfo;
       await commonJsUrlInfo.fetchContent();
       const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
         "node",

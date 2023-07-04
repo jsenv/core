@@ -20,19 +20,15 @@ export const jsenvPluginAsJsClassic = () => {
       }
     },
     fetchUrlContent: async (urlInfo) => {
-      const jsModuleReference = urlInfo.firstReference.getWithoutSearchParam(
-        "as_js_classic",
-        {
-          // override the expectedType to "js_module"
-          // because when there is ?as_js_classic it means the underlying resource
-          // is a js_module
-          expectedType: "js_module",
-        },
-      );
-      if (!jsModuleReference) {
+      const jsModuleUrlInfo = urlInfo.getWithoutSearchParam("as_js_classic", {
+        // override the expectedType to "js_module"
+        // because when there is ?as_js_classic it means the underlying resource
+        // is a js_module
+        expectedType: "js_module",
+      });
+      if (!jsModuleUrlInfo) {
         return null;
       }
-      const jsModuleUrlInfo = jsModuleReference.urlInfo;
       // cook it to get content + dependencies
       await jsModuleUrlInfo.cook();
       await jsModuleUrlInfo.cookDependencies({
@@ -81,7 +77,7 @@ export const jsenvPluginAsJsClassic = () => {
           });
         });
       } else if (urlInfo.context.build) {
-        jsModuleReference.remove();
+        jsModuleUrlInfo.firstReference.remove();
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
           const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
           if (
