@@ -66,9 +66,6 @@ export const jsenvPluginJsModuleConversion = () => {
       return null;
     },
     fetchUrlContent: async (urlInfo) => {
-      console.log(
-        `${urlInfo.url} first ref is ${urlInfo.firstReference.ownerUrlInfo.url}`,
-      );
       const jsModuleUrlInfo = urlInfo.getWithoutSearchParam(
         "js_module_fallback",
         {

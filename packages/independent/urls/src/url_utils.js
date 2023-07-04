@@ -56,7 +56,7 @@ export const injectQueryParamsIntoSpecifier = (specifier, params) => {
     paramsString = paramsString.replace(/[=](?=&|$)/g, "");
     return `${beforeQuestion}?${paramsString}`;
   }
-  return specifier;
+  return beforeQuestion;
 };
 
 export const injectQueryParams = (url, params) => {
