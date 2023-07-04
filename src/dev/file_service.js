@@ -73,9 +73,9 @@ export const createFileService = ({
     );
     let kitchen;
     clientFileChangeCallbackList.push(({ url }) => {
-      const urlinfo = kitchen.graph.getUrlInfo(url);
-      if (urlinfo) {
-        urlinfo.considerModified();
+      const urlInfo = kitchen.graph.getUrlInfo(url);
+      if (urlInfo) {
+        urlInfo.considerModified();
       }
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
@@ -407,7 +407,11 @@ export const createFileService = ({
         statusMessage: e.stack,
       };
     } finally {
-      if (reference.type === "http_request") {
+      // remove http_request when there is other references keeping url info alive
+      if (
+        reference.type === "http_request" &&
+        reference.urlInfo.referenceFromOthersSet.size > 1
+      ) {
         reference.remove();
       }
     }

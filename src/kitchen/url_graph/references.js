@@ -301,7 +301,6 @@ const createReference = ({
   generatedUrl = null,
   generatedSpecifier = null,
   urlInfo = null,
-  redirection = true,
   escape = null,
   // import assertions
   importAttributes,
@@ -329,7 +328,6 @@ const createReference = ({
     searchParams,
     generatedUrl,
     generatedSpecifier,
-    redirection,
     type,
     subtype,
     expectedContentType,
@@ -513,7 +511,6 @@ const createReference = ({
       isInline: false,
       original: reference.original || reference,
       prev: reference,
-      redirection: false,
       // urlInfo: null,
       // url: null,
       // generatedUrl: null,

@@ -68,8 +68,8 @@ try {
     responses.length = 0;
     htmlFileContent.update(
       String(htmlFileContent.beforeTest).replace(
-        "window.resolveResultPromise(42)",
-        "window.resolveResultPromise(43)",
+        "window.resolveResultPromise(42);",
+        "window.resolveResultPromise(43);",
       ),
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
