@@ -19,7 +19,7 @@ const test = async () => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = 42;
+  const expected = "data:";
   assert({ actual, expected });
 };
 
