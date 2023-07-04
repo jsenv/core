@@ -752,11 +752,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           {
             name: "jsenv:optimize",
             appliesDuring: "build",
-            transformUrlContent: async (urlInfo, context) => {
+            transformUrlContent: async (urlInfo) => {
               await rawKitchen.pluginController.callAsyncHooks(
                 "optimizeUrlContent",
                 urlInfo,
-                context,
                 (optimizeReturnValue) => {
                   urlInfo.mutateContent(optimizeReturnValue);
                 },
