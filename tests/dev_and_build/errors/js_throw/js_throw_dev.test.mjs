@@ -8,6 +8,9 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
+    clientServerEventsConfig: {
+      logs: false,
+    },
     ...params,
   });
   const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
