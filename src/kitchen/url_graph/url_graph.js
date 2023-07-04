@@ -268,13 +268,6 @@ const createUrlInfo = (url, context) => {
     if (urlInfo.isRoot) {
       return true;
     }
-    // nothing uses this url anymore
-    // - versioning update inline content
-    // - file converted for import assertion or js_classic conversion
-    // - urlInfo for a file that is now inlined
-    if (urlInfo.isEntryPoint) {
-      return true;
-    }
     // if (urlInfo.type === "sourcemap") {
     //   return true;
     // }
@@ -282,6 +275,10 @@ const createUrlInfo = (url, context) => {
     if (urlInfo.getFirstReferenceFromOther({ ignoreWeak: true })) {
       return true;
     }
+    // nothing uses this url anymore
+    // - versioning update inline content
+    // - file converted for import assertion or js_classic conversion
+    // - urlInfo for a file that is now inlined
     return false;
   };
   urlInfo.findParentIfInline = () => {

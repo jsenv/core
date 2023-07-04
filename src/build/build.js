@@ -270,7 +270,7 @@ build "${entryPointKeys[0]}"`);
 build ${entryPointKeys.length} entry points`);
     }
     const explicitJsModuleFallback = entryPointKeys.some((key) =>
-      entryPoints[key].includes("?js_module_fallback"),
+      key.includes("?js_module_fallback"),
     );
     const rawRedirections = new Map();
     const bundleRedirections = new Map();
