@@ -29,7 +29,8 @@ GRAPH_VISITOR.find = (graph, callback) => {
   }
   return found;
 };
-GRAPH_VISITOR.findDependent = (graph, urlInfo, visitor) => {
+GRAPH_VISITOR.findDependent = (urlInfo, visitor) => {
+  const graph = urlInfo.graph;
   const seen = new Set();
   seen.add(urlInfo.url);
   let found = null;
@@ -69,7 +70,8 @@ GRAPH_VISITOR.findDependent = (graph, urlInfo, visitor) => {
   iterate(urlInfo);
   return found;
 };
-GRAPH_VISITOR.findDependency = (graph, urlInfo, visitor) => {
+GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
+  const graph = urlInfo.graph;
   const seen = new Set();
   seen.add(urlInfo.url);
   let found = null;

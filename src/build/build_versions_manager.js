@@ -33,7 +33,6 @@ export const createBuildVersionsManager = ({
     }
     const referencedUrlInfo = reference.urlInfo;
     const dependentWorker = GRAPH_VISITOR.findDependent(
-      finalKitchen.graph,
       referencedUrlInfo,
       (dependentUrlInfo) => {
         return isWebWorkerUrlInfo(dependentUrlInfo);
