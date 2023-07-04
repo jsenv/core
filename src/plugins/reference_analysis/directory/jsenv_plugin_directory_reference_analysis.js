@@ -31,23 +31,14 @@ const findOriginalDirectoryReference = (urlInfo) => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
       const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
       if (urlInfoReferencingThisOne.type !== "directory") {
-        return urlInfoReferencingThisOne;
+        return referenceFromOther;
       }
       const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
       if (found) {
         return found;
       }
     }
-    return [];
-  };
-  const [ancestor, child] = findNonFileSystemAncestor(urlInfo);
-  if (!ancestor) {
     return null;
-  }
-  for (const referenceToOther of ancestor.referenceToOthersSet) {
-    if (referenceToOther.url === child.url) {
-      return referenceToOther;
-    }
-  }
-  return null;
+  };
+  return findNonFileSystemAncestor(urlInfo);
 };

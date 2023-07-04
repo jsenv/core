@@ -5,7 +5,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async ({ name, ...params }) => {
+const test = async (name, params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -31,22 +31,20 @@ const test = async ({ name, ...params }) => {
   });
   const actual = returnValue;
   const expected = {
-    textFileUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
+    textFileUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     absoluteUrl: `http://example.com/file.txt`,
-    windowLocationRelativeUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
-    windowOriginRelativeUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
+    windowLocationRelativeUrl: `${server.origin}/other/file.txt?v=268b0aca`,
+    windowOriginRelativeUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     absoluteBaseUrl: `http://jsenv.dev/file.txt`,
   };
   assert({ actual, expected });
 };
 
 // support for <script type="module">
-await test({
-  name: "js_module",
+await test("0_js_module", {
   runtimeCompat: { chrome: "89" },
 });
 // no support for <script type="module">
-await test({
-  name: "js_module_fallback",
+await test("1_js_module_fallback", {
   runtimeCompat: { chrome: "60" },
 });

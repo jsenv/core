@@ -48,13 +48,13 @@ const test = async (params) => {
     complexInsideSingleQuotes: `\n"😀"\n`,
     cssAndTemplate: `
 body {
-  background-image: url(/other/jsenv.png?v=25e95a00);
-  background-image: url(/other/jsenv.png?v=25e95a00);
-  background-image: url(/other/jsenv.png?v=25e95a00);
+  background-image: url(/other/jsenv.png?v=467b6542);
+  background-image: url(/other/jsenv.png?v=467b6542);
+  background-image: url(/other/jsenv.png?v=467b6542);
 }
 `,
-    cssTextWithUrl: `\nbody { background-image: url(/other/jsenv.png?v=25e95a00); }\n`,
-    cssTextWithUrl2: `\nbody { background-image: url(/other/jsenv.png?v=25e95a00); }\n`,
+    cssTextWithUrl: `\nbody { background-image: url(/other/jsenv.png?v=467b6542); }\n`,
+    cssTextWithUrl2: `\nbody { background-image: url(/other/jsenv.png?v=467b6542); }\n`,
     doubleQuote: `"`,
     doubleQuoteEscaped: `"`,
     fromTemplate: `"`,
@@ -67,7 +67,7 @@ body {
     lineEnding2: `\n`,
     singleQuote: `'`,
     singleQuoteEscaped: `'`,
-    bodyBackgroundImage: `url("${server.origin}/other/jsenv.png?v=25e95a00")`,
+    bodyBackgroundImage: `url("${server.origin}/other/jsenv.png?v=467b6542")`,
   };
   assert({ actual, expected });
 };
