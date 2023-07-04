@@ -1,4 +1,8 @@
-import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
+import {
+  getCallerPosition,
+  stringifyUrlSite,
+  injectQueryParamsIntoSpecifier,
+} from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -476,9 +480,10 @@ const createReference = ({
     if (!reference.searchParams.has(searchParam)) {
       return null;
     }
-    const newSpecifier = reference.specifier
-      .replace(`?${searchParam}`, "")
-      .replace(`&${searchParam}`, "");
+    const newSpecifier = injectQueryParamsIntoSpecifier(reference.specifier, {
+      [searchParam]: undefined,
+    });
+
     const referenceWithoutSearchParam = reference.addImplicit({
       type,
       subtype,

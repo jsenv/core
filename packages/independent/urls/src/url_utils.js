@@ -44,7 +44,12 @@ export const injectQueryParamsIntoSpecifier = (specifier, params) => {
   const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
   const searchParams = new URLSearchParams(afterQuestion);
   Object.keys(params).forEach((key) => {
-    searchParams.set(key, params[key]);
+    const value = params[key];
+    if (value === undefined) {
+      searchParams.delete(key);
+    } else {
+      searchParams.set(key, value);
+    }
   });
   let paramsString = searchParams.toString();
   if (paramsString) {
@@ -59,7 +64,11 @@ export const injectQueryParams = (url, params) => {
   const { searchParams } = urlObject;
   Object.keys(params).forEach((key) => {
     const value = params[key];
-    searchParams.set(key, value);
+    if (value === undefined) {
+      searchParams.delete(key);
+    } else {
+      searchParams.set(key, value);
+    }
   });
   const urlWithParams = urlObject.href;
   return normalizeUrl(urlWithParams);

@@ -37,12 +37,9 @@ export const jsenvPluginInliningAsDataUrl = () => {
       if (reference.type === "script") {
         return null;
       }
-      const specifierWithoutInline = reference.specifier
-        .replace(`?inline`, "")
-        .replace(`&inline`, "");
       const specifierWithBase64Param = injectQueryParamsIntoSpecifier(
-        specifierWithoutInline,
-        { as_base_64: "" },
+        reference.specifier,
+        { as_base_64: "", inline: undefined },
       );
       const inlineReference = reference.becomesInline({
         line: reference.line,
