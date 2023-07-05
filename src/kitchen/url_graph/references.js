@@ -1,4 +1,9 @@
-import { getCallerPosition, stringifyUrlSite } from "@jsenv/urls";
+import {
+  getCallerPosition,
+  stringifyUrlSite,
+  generateInlineContentUrl,
+  urlToBasename,
+} from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -104,9 +109,15 @@ export const createDependencies = (ownerUrlInfo) => {
 
     const wasReferencingSideEffectFile = (urlInfo) => {
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther === sideEffectFileReference) {
+          continue;
+        }
+        if (referenceToOther.url === sideEffectFileReference.url) {
+          return true;
+        }
         if (
-          referenceToOther !== sideEffectFileReference &&
-          referenceToOther.url === sideEffectFileReference.url
+          referenceToOther.original &&
+          referenceToOther.original.url === sideEffectFileReference.url
         ) {
           return true;
         }
@@ -115,12 +126,25 @@ export const createDependencies = (ownerUrlInfo) => {
     };
 
     const injectAsBannerCodeBeforeFinalize = () => {
+      // ideally get the correct line and column
+      // (for js it's 0, but for html it's different)
+      // and also if we inject several side effect file
+      // line should be incremented or something to prevent conflict
+      const line = 0;
+      const column = 0;
+      const inlineUrl = generateInlineContentUrl({
+        url: ownerUrlInfo.url,
+        basename: urlToBasename(sideEffectFileReference.url),
+      });
       const inlineReference = sideEffectFileReference.becomesInline({
-        specifier: sideEffectFileReference.specifier,
-        line: 0,
-        column: 0,
+        specifier: inlineUrl,
+        line,
+        column,
       });
       parentUrlInfo.addContentTransformationCallback(async () => {
+        // la ligne ci dessous fout la merde
+        // elle donne une boucle infinie...
+        // en dev avec le mode ?js_module_fallback
         await inlineReference.urlInfo.cook();
         await prependContent(parentUrlInfo, inlineReference.urlInfo);
       });
@@ -184,13 +208,21 @@ export const createDependencies = (ownerUrlInfo) => {
         });
       }
       if (!foundSideEffectFile) {
+        // ideally get the correct line and column
+        // (for js it's 0, but for html it's different)
+        // and also if we inject several side effect file
+        // line should be incremented or something to prevent conflict
+        const line = 0;
+        const column = 0;
+        const inlineUrl = generateInlineContentUrl({
+          url: ownerUrlInfo.url,
+          basename: urlToBasename(sideEffectFileReference.url),
+        });
         const inlineReference = sideEffectFileReference.becomesInline({
-          specifier: sideEffectFileReference.specifier,
+          specifier: inlineUrl,
           ownerUrlInfo: entryPointUrlInfo,
-          // ideally get the correct line and column
-          // (for js it's 0, but for html it's different)
-          line: 0,
-          column: 0,
+          line,
+          column,
         });
         entryPointUrlInfo.addContentTransformationCallback(async () => {
           await inlineReference.urlInfo.cook();
