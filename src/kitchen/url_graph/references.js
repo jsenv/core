@@ -95,33 +95,34 @@ export const createDependencies = (ownerUrlInfo) => {
         column,
       });
     }
-
+    const sideEffectFileReference = ownerUrlInfo.dependencies.inject({
+      trace,
+      type: "side_effect_file",
+      specifier: sideEffectFileUrl,
+      ...rest,
+    });
     const parentUrlInfo = ownerUrlInfo.findParentIfInline() || ownerUrlInfo;
-    let sideEffectFileUrlInfo =
-      ownerUrlInfo.graph.getUrlInfo(sideEffectFileUrl);
-    let sideEffectFileReference;
-    if (sideEffectFileUrlInfo) {
-      sideEffectFileReference = sideEffectFileUrlInfo.firstReference;
-    } else {
-      sideEffectFileReference =
-        ownerUrlInfo.graph.rootUrlInfo.dependencies.inject({
-          trace,
-          type: "side_effect_file",
-          specifier: sideEffectFileUrl,
-          ...rest,
-        });
-      sideEffectFileUrlInfo = sideEffectFileReference.urlInfo;
-    }
 
-    const isReferencingSideEffectFile = (urlInfo) => {
+    const associateIfReferencedBy = (urlInfo) => {
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther === sideEffectFileReference) {
+          continue;
+        }
         if (referenceToOther.url === sideEffectFileUrl) {
+          // consider this reference becomes the last reference
+          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
+          sideEffectFileReference.next =
+            referenceToOther.next || referenceToOther;
           return true;
         }
         if (
-          referenceToOther.prev &&
-          referenceToOther.prev.url === sideEffectFileUrl
+          referenceToOther.original &&
+          referenceToOther.original.url === sideEffectFileUrl
         ) {
+          // consider this reference becomes the last reference
+          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
+          sideEffectFileReference.next =
+            referenceToOther.next || referenceToOther;
           return true;
         }
       }
@@ -140,17 +141,7 @@ export const createDependencies = (ownerUrlInfo) => {
         trace,
         type: "side_effect_file",
         specifier: inlineUrl,
-        isImplicit: true,
-        isInline: true,
       });
-      // souci je suppose: lorsqu'on cook la version inline
-      // alors on fait startCollecting
-      // et donc a la fin on vire la ref qu'on vient d'injecter
-      // donc c'est bien suite au cook qu'il faut injecter la ref
-      // sauf qu'alors on ne saura pas que ce fichier possede
-      // une ref
-      // il faut garder ça quelque part en attendant je dirais
-
       urlInfoReceiver.addContentTransformationCallback(async () => {
         await sideEffectFileReferenceInlined.urlInfo.cook();
         await prependContent(
@@ -168,7 +159,7 @@ export const createDependencies = (ownerUrlInfo) => {
     // so HTML/JS is already executed by the browser
     // we can't late inject into entry point
     if (ownerUrlInfo.context.dev) {
-      if (isReferencingSideEffectFile(ownerUrlInfo)) {
+      if (associateIfReferencedBy(ownerUrlInfo)) {
         return;
       }
       const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
@@ -177,7 +168,7 @@ export const createDependencies = (ownerUrlInfo) => {
           if (ancestorUrlInfo.isRoot) {
             return false;
           }
-          return isReferencingSideEffectFile(ancestorUrlInfo);
+          return associateIfReferencedBy(ancestorUrlInfo);
         },
       );
       if (dependentReferencingThatFile) {
@@ -190,7 +181,7 @@ export const createDependencies = (ownerUrlInfo) => {
     // During build:
     // during build, files are not executed so it's
     // possible to inject reference when discovering a side effect file
-    if (isReferencingSideEffectFile(ownerUrlInfo)) {
+    if (associateIfReferencedBy(ownerUrlInfo)) {
       return;
     }
     // The thing to do here is to inject side effect file into entry point
@@ -198,26 +189,27 @@ export const createDependencies = (ownerUrlInfo) => {
     // - entry point does not already has it
     // - nothing between entry point and the file has it
     const entryPoints = parentUrlInfo.graph.getEntryPoints();
-
     for (const entryPointUrlInfo of entryPoints) {
-      let foundSideEffectFile;
-      if (isReferencingSideEffectFile(entryPointUrlInfo)) {
-        foundSideEffectFile = true;
-      } else if (parentUrlInfo.isEntryPoint) {
-        // not found
-      } else {
-        GRAPH_VISITOR.findDependency(entryPointUrlInfo, (dependencyUrlInfo) => {
-          if (isReferencingSideEffectFile(dependencyUrlInfo)) {
-            foundSideEffectFile = true;
+      if (associateIfReferencedBy(entryPointUrlInfo)) {
+        continue;
+      }
+      if (parentUrlInfo.isEntryPoint) {
+        injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
+        continue;
+      }
+      const dependencyReferencingThatFile = GRAPH_VISITOR.findDependency(
+        entryPointUrlInfo,
+        (dependencyUrlInfo) => {
+          if (associateIfReferencedBy(dependencyUrlInfo)) {
             return true;
           }
           if (dependencyUrlInfo === parentUrlInfo) {
             return true;
           }
           return false;
-        });
-      }
-      if (!foundSideEffectFile) {
+        },
+      );
+      if (!dependencyReferencingThatFile) {
         injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
       }
     }
@@ -462,15 +454,6 @@ const createReference = ({
       expectedType: reference.expectedType,
       ...props,
     });
-    // when a file gets inlined (like CSS in HTML)
-    // the previous reference (like <link rel="stylesheet">) is going to be removed
-    // we must tell to all the things referenced by CSS that they are sill referenced
-    // by the inline reference before removing the link reference:
-    // - ensure url info still aware they are referenced and thus kept in the graph
-    for (const referenceToOther of reference.urlInfo.referenceToOthersSet) {
-      const referencedUrlInfo = referenceToOther.urlInfo;
-      referencedUrlInfo.referenceFromOthersSet.add(inlineCopy);
-    }
     // the previous reference stays alive so that even after inlining
     // updating the file will invalidate the other file where it was inlined
     reference.next = inlineCopy;
