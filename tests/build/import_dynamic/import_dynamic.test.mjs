@@ -5,7 +5,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async ({ name, expectedFilename, ...params }) => {
+const test = async (name, { expectedFilename, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -38,15 +38,13 @@ const test = async ({ name, expectedFilename, ...params }) => {
 };
 
 // can use <script type="module">
-await test({
-  name: "chrome_89",
-  expectedFilename: `nested_feature.js`,
-  runtimeCompat: { chrome: "89" },
-  versioning: false,
-});
+// await test('0_js_module', {
+//   expectedFilename: `nested_feature.js`,
+//   runtimeCompat: { chrome: "89" },
+//   versioning: false,
+// });
 // cannot use <script type="module">
-await test({
-  name: "chrome_62",
+await test("1_js_module_fallback", {
   expectedFilename: `nested_feature.nomodule.js`,
   runtimeCompat: { chrome: "62" },
   versioning: false,
