@@ -168,14 +168,14 @@ export const jsenvPluginImportmap = () => {
             lineEnd,
             columnEnd,
           });
-          const importmapInlineReference = importmapReference.becomesInline({
+          const importmapReferenceInlined = importmapReference.inline({
             line: line - 1,
             column,
             isOriginal,
             specifier: importmapInlineUrl,
             contentType: "application/importmap+json",
           });
-          const importmapInlineUrlInfo = importmapInlineReference.urlInfo;
+          const importmapInlineUrlInfo = importmapReferenceInlined.urlInfo;
           await importmapInlineUrlInfo.cook();
           onHtmlImportmapParsed(
             JSON.parse(importmapInlineUrlInfo.content),

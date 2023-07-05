@@ -41,19 +41,19 @@ export const jsenvPluginInliningAsDataUrl = () => {
         reference.specifier,
         { as_base_64: "", inline: undefined },
       );
-      const inlineReference = reference.becomesInline({
+      const referenceInlined = reference.inline({
         line: reference.line,
         column: reference.column,
         isOriginal: reference.isOriginal,
         specifier: specifierWithBase64Param,
       });
-      const inlineUrlInfo = inlineReference.urlInfo;
+      const urlInfoInlined = referenceInlined.urlInfo;
       return (async () => {
-        await inlineUrlInfo.cook();
+        await urlInfoInlined.cook();
         const base64Url = DATA_URL.stringify({
-          mediaType: inlineUrlInfo.contentType,
+          mediaType: urlInfoInlined.contentType,
           base64Flag: true,
-          data: inlineUrlInfo.content,
+          data: urlInfoInlined.content,
         });
         return base64Url;
       })();

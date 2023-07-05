@@ -134,7 +134,7 @@ export const createUrlGraph = ({
   const getEntryPoints = () => {
     const entryPoints = [];
     urlInfoMap.forEach((urlInfo) => {
-      if (urlInfo.isEntryPoint) {
+      if (urlInfo.isEntryPoint && urlInfo.isUsed()) {
         entryPoints.push(urlInfo);
       }
     });
@@ -338,6 +338,8 @@ const createUrlInfo = (url, context) => {
       specifierColumn: reference.specifierColumn,
       baseUrl: reference.baseUrl,
       isOriginalPosition: reference.isOriginalPosition,
+      // ok mais cet ref est implicite + weak
+      // donc ne devrait pas etre retournée par getEntryPoints()
       isEntryPoint: reference.isEntryPoint,
       isResourceHint: reference.isResourceHint,
       hasVersioningEffect: reference.hasVersioningEffect,

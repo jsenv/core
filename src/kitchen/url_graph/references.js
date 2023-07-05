@@ -97,28 +97,30 @@ export const createDependencies = (ownerUrlInfo) => {
     }
 
     const parentUrlInfo = ownerUrlInfo.findParentIfInline() || ownerUrlInfo;
-    const urlsBeforeInjection = ownerUrlInfo.context.dev
-      ? Array.from(parentUrlInfo.graph.urlInfoMap.keys())
-      : null;
-    const sideEffectFileReference = parentUrlInfo.dependencies.inject({
-      trace,
-      type: "side_effect_file",
-      specifier: sideEffectFileUrl,
-      isImplicit: true,
-      ...rest,
-    });
+    let sideEffectFileUrlInfo =
+      ownerUrlInfo.graph.getUrlInfo(sideEffectFileUrl);
+    let sideEffectFileReference;
+    if (sideEffectFileUrlInfo) {
+      sideEffectFileReference = sideEffectFileUrlInfo.firstReference;
+    } else {
+      sideEffectFileReference =
+        ownerUrlInfo.graph.rootUrlInfo.dependencies.inject({
+          trace,
+          type: "side_effect_file",
+          specifier: sideEffectFileUrl,
+          ...rest,
+        });
+      sideEffectFileUrlInfo = sideEffectFileReference.urlInfo;
+    }
 
-    const wasReferencingSideEffectFile = (urlInfo) => {
+    const isReferencingSideEffectFile = (urlInfo) => {
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        if (referenceToOther === sideEffectFileReference) {
-          continue;
-        }
-        if (referenceToOther.url === sideEffectFileReference.url) {
+        if (referenceToOther.url === sideEffectFileUrl) {
           return true;
         }
         if (
           referenceToOther.prev &&
-          referenceToOther.prev.url === sideEffectFileReference.url
+          referenceToOther.prev.url === sideEffectFileUrl
         ) {
           return true;
         }
@@ -127,27 +129,34 @@ export const createDependencies = (ownerUrlInfo) => {
     };
 
     const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
-      // ideally get the correct line and column
-      // (for js it's 0, but for html it's different)
-      // and also if we inject several side effect file
-      // line should be incremented or something to prevent conflict
-      const line = 0;
-      const column = 0;
-      const basename = urlToBasename(sideEffectFileReference.url);
+      const basename = urlToBasename(sideEffectFileUrl);
       const inlineUrl = generateInlineContentUrl({
         url: urlInfoReceiver.url,
         basename,
-        extension: urlToExtension(sideEffectFileReference.url),
+        extension: urlToExtension(sideEffectFileUrl),
       });
-      const inlineReference = sideEffectFileReference.becomesInline({
-        specifier: inlineUrl,
+      const sideEffectFileReferenceInlined = sideEffectFileReference.inline({
         ownerUrlInfo: urlInfoReceiver,
-        line,
-        column,
+        trace,
+        type: "side_effect_file",
+        specifier: inlineUrl,
+        isImplicit: true,
+        isInline: true,
       });
+      // souci je suppose: lorsqu'on cook la version inline
+      // alors on fait startCollecting
+      // et donc a la fin on vire la ref qu'on vient d'injecter
+      // donc c'est bien suite au cook qu'il faut injecter la ref
+      // sauf qu'alors on ne saura pas que ce fichier possede
+      // une ref
+      // il faut garder ça quelque part en attendant je dirais
+
       urlInfoReceiver.addContentTransformationCallback(async () => {
-        await inlineReference.urlInfo.cook();
-        await prependContent(urlInfoReceiver, inlineReference.urlInfo);
+        await sideEffectFileReferenceInlined.urlInfo.cook();
+        await prependContent(
+          urlInfoReceiver,
+          sideEffectFileReferenceInlined.urlInfo,
+        );
       });
     };
 
@@ -159,48 +168,46 @@ export const createDependencies = (ownerUrlInfo) => {
     // so HTML/JS is already executed by the browser
     // we can't late inject into entry point
     if (ownerUrlInfo.context.dev) {
-      if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
-        injectAsBannerCodeBeforeFinalize(parentUrlInfo);
-        return sideEffectFileReference;
-      }
-      if (wasReferencingSideEffectFile(ownerUrlInfo)) {
-        sideEffectFileReference.remove();
-        return null;
+      if (isReferencingSideEffectFile(ownerUrlInfo)) {
+        return;
       }
       const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
         parentUrlInfo,
-        (ancestorUrlInfo) => wasReferencingSideEffectFile(ancestorUrlInfo),
+        (ancestorUrlInfo) => {
+          if (ancestorUrlInfo.isRoot) {
+            return false;
+          }
+          return isReferencingSideEffectFile(ancestorUrlInfo);
+        },
       );
       if (dependentReferencingThatFile) {
-        sideEffectFileReference.remove();
-        return null;
+        return;
       }
       injectAsBannerCodeBeforeFinalize(parentUrlInfo);
-      return sideEffectFileReference;
+      return;
     }
 
     // During build:
     // during build, files are not executed so it's
     // possible to inject reference when discovering a side effect file
-    if (wasReferencingSideEffectFile(ownerUrlInfo)) {
-      sideEffectFileReference.remove();
-      return null;
+    if (isReferencingSideEffectFile(ownerUrlInfo)) {
+      return;
     }
     // The thing to do here is to inject side effect file into entry point
     // only when:
     // - entry point does not already has it
     // - nothing between entry point and the file has it
     const entryPoints = parentUrlInfo.graph.getEntryPoints();
-    let someInjected = false;
+
     for (const entryPointUrlInfo of entryPoints) {
       let foundSideEffectFile;
-      if (wasReferencingSideEffectFile(entryPointUrlInfo)) {
+      if (isReferencingSideEffectFile(entryPointUrlInfo)) {
         foundSideEffectFile = true;
       } else if (parentUrlInfo.isEntryPoint) {
         // not found
       } else {
         GRAPH_VISITOR.findDependency(entryPointUrlInfo, (dependencyUrlInfo) => {
-          if (wasReferencingSideEffectFile(dependencyUrlInfo)) {
+          if (isReferencingSideEffectFile(dependencyUrlInfo)) {
             foundSideEffectFile = true;
             return true;
           }
@@ -210,17 +217,10 @@ export const createDependencies = (ownerUrlInfo) => {
           return false;
         });
       }
-      if (foundSideEffectFile) {
-      } else {
-        someInjected = true;
+      if (!foundSideEffectFile) {
         injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
       }
     }
-    if (someInjected) {
-      return sideEffectFileReference;
-    }
-    sideEffectFileReference.remove();
-    return null;
   };
 
   const inject = ({ trace, ...rest }) => {
@@ -431,7 +431,7 @@ const createReference = ({
     return reference.generatedSpecifier;
   };
 
-  reference.becomesInline = ({
+  reference.inline = ({
     line,
     column,
     // when urlInfo is given it means reference is moved into an other file
@@ -459,6 +459,7 @@ const createReference = ({
       original: reference.original || reference,
       prev: reference,
       trace,
+      expectedType: reference.expectedType,
       ...props,
     });
     // when a file gets inlined (like CSS in HTML)
@@ -470,7 +471,8 @@ const createReference = ({
       const referencedUrlInfo = referenceToOther.urlInfo;
       referencedUrlInfo.referenceFromOthersSet.add(inlineCopy);
     }
-    removeDependency(reference);
+    // the previous reference stays alive so that even after inlining
+    // updating the file will invalidate the other file where it was inlined
     reference.next = inlineCopy;
     return inlineCopy;
   };

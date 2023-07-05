@@ -181,9 +181,9 @@ const parseAndTransformHtmlReferences = async (
       );
       if (externalSpecifier) {
         // create an external ref
-        // the goal is only to have the url in the graph (and in dependencies/implitic urls for reload)
+        // the goal is only to have the url in the graph (and in dependencies/implicit urls for reload)
         // not to consider the url is actually used (at least during build)
-        // maybe we can just exlcude these urls in a special if during build, we'll see
+        // maybe we can just exclude these urls in a special if during build, we'll see
         const externalRef = createExternalReference(
           node,
           externalSpecifierAttributeName,
