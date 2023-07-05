@@ -411,7 +411,7 @@ const createUrlInfo = (url, context) => {
     );
   };
 
-  const contentTransformationCallbacks = [];
+  const contentTransformationCallbackSet = new Set();
   urlInfo.addContentTransformationCallback = (callback) => {
     if (urlInfo.contentFinalized) {
       if (urlInfo.context.dev) {
@@ -423,14 +423,14 @@ ${urlInfo.url}`,
       }
       urlInfo.context.addLastTransformationCallback(callback);
     } else {
-      contentTransformationCallbacks.push(callback);
+      contentTransformationCallbackSet.add(callback);
     }
   };
   urlInfo.applyContentTransformationCallbacks = async () => {
-    for (const callback of contentTransformationCallbacks) {
-      await callback();
+    for (const contentTransformationCallback of contentTransformationCallbackSet) {
+      await contentTransformationCallback();
     }
-    contentTransformationCallbacks.length = 0;
+    contentTransformationCallbackSet.clear();
   };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
