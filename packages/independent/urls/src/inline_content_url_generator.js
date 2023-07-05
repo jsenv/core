@@ -1,9 +1,8 @@
-import { urlToExtension } from "./url_to_extension.js";
 import { urlToFilename } from "./url_to_filename.js";
 
 export const generateInlineContentUrl = ({
   url,
-  extension = urlToExtension(url),
+  extension,
   basename,
   line,
   column,

@@ -3,6 +3,7 @@ import {
   stringifyUrlSite,
   generateInlineContentUrl,
   urlToBasename,
+  urlToExtension,
 } from "@jsenv/urls";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
@@ -116,8 +117,8 @@ export const createDependencies = (ownerUrlInfo) => {
           return true;
         }
         if (
-          referenceToOther.original &&
-          referenceToOther.original.url === sideEffectFileReference.url
+          referenceToOther.prev &&
+          referenceToOther.prev.url === sideEffectFileReference.url
         ) {
           return true;
         }
@@ -125,30 +126,29 @@ export const createDependencies = (ownerUrlInfo) => {
       return false;
     };
 
-    const injectAsBannerCodeBeforeFinalize = () => {
+    const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
       // ideally get the correct line and column
       // (for js it's 0, but for html it's different)
       // and also if we inject several side effect file
       // line should be incremented or something to prevent conflict
       const line = 0;
       const column = 0;
+      const basename = urlToBasename(sideEffectFileReference.url);
       const inlineUrl = generateInlineContentUrl({
-        url: ownerUrlInfo.url,
-        basename: urlToBasename(sideEffectFileReference.url),
+        url: urlInfoReceiver.url,
+        basename,
+        extension: urlToExtension(sideEffectFileReference.url),
       });
       const inlineReference = sideEffectFileReference.becomesInline({
         specifier: inlineUrl,
+        ownerUrlInfo: urlInfoReceiver,
         line,
         column,
       });
-      parentUrlInfo.addContentTransformationCallback(async () => {
-        // la ligne ci dessous fout la merde
-        // elle donne une boucle infinie...
-        // en dev avec le mode ?js_module_fallback
+      urlInfoReceiver.addContentTransformationCallback(async () => {
         await inlineReference.urlInfo.cook();
-        await prependContent(parentUrlInfo, inlineReference.urlInfo);
+        await prependContent(urlInfoReceiver, inlineReference.urlInfo);
       });
-      return sideEffectFileReference;
     };
 
     // When possible we inject code inside the file in a common ancestor
@@ -160,7 +160,8 @@ export const createDependencies = (ownerUrlInfo) => {
     // we can't late inject into entry point
     if (ownerUrlInfo.context.dev) {
       if (!urlsBeforeInjection.includes(sideEffectFileReference.url)) {
-        return injectAsBannerCodeBeforeFinalize();
+        injectAsBannerCodeBeforeFinalize(parentUrlInfo);
+        return sideEffectFileReference;
       }
       if (wasReferencingSideEffectFile(ownerUrlInfo)) {
         sideEffectFileReference.remove();
@@ -174,7 +175,8 @@ export const createDependencies = (ownerUrlInfo) => {
         sideEffectFileReference.remove();
         return null;
       }
-      return injectAsBannerCodeBeforeFinalize();
+      injectAsBannerCodeBeforeFinalize(parentUrlInfo);
+      return sideEffectFileReference;
     }
 
     // During build:
@@ -189,6 +191,7 @@ export const createDependencies = (ownerUrlInfo) => {
     // - entry point does not already has it
     // - nothing between entry point and the file has it
     const entryPoints = parentUrlInfo.graph.getEntryPoints();
+    let someInjected = false;
     for (const entryPointUrlInfo of entryPoints) {
       let foundSideEffectFile;
       if (wasReferencingSideEffectFile(entryPointUrlInfo)) {
@@ -207,30 +210,17 @@ export const createDependencies = (ownerUrlInfo) => {
           return false;
         });
       }
-      if (!foundSideEffectFile) {
-        // ideally get the correct line and column
-        // (for js it's 0, but for html it's different)
-        // and also if we inject several side effect file
-        // line should be incremented or something to prevent conflict
-        const line = 0;
-        const column = 0;
-        const inlineUrl = generateInlineContentUrl({
-          url: ownerUrlInfo.url,
-          basename: urlToBasename(sideEffectFileReference.url),
-        });
-        const inlineReference = sideEffectFileReference.becomesInline({
-          specifier: inlineUrl,
-          ownerUrlInfo: entryPointUrlInfo,
-          line,
-          column,
-        });
-        entryPointUrlInfo.addContentTransformationCallback(async () => {
-          await inlineReference.urlInfo.cook();
-          await prependContent(entryPointUrlInfo, inlineReference.urlInfo);
-        });
+      if (foundSideEffectFile) {
+      } else {
+        someInjected = true;
+        injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
       }
     }
-    return sideEffectFileReference;
+    if (someInjected) {
+      return sideEffectFileReference;
+    }
+    sideEffectFileReference.remove();
+    return null;
   };
 
   const inject = ({ trace, ...rest }) => {
