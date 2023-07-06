@@ -8,6 +8,8 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/css/style.css?v=2e9d11a2"
   }
 };
+
+
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
     define([], factory);
