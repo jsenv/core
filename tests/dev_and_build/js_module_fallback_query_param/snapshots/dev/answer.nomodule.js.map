@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "names": [
+    "answer"
+  ],
+  "sources": [
+    "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/dev_and_build/js_module_fallback_query_param/client/answer.js"
+  ],
+  "sourcesContent": [
+    "export const answer = 42;\n"
+  ],
+  "mappings": ";;;;;;;wBAAaA,MAAM,GAAG,EAAE;IAAA;EAAA;AAAA"
+}
