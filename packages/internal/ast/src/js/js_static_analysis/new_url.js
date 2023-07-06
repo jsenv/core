@@ -21,6 +21,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
         end: specifierNode.end,
         line: specifierNode.loc.start.line,
         column: specifierNode.loc.start.column,
+        astNodes: { node: specifierNode },
       });
     }
     return;
@@ -53,6 +54,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
           baseUrlType,
           baseUrl:
             baseUrlType === "StringLiteral" ? secondArgNode.value : undefined,
+          astNodes: { node: firstArgNode },
         });
       }
       if (baseUrlType === "StringLiteral") {
@@ -65,6 +67,7 @@ export const analyzeNewUrlCall = (node, { isJsModule, onUrl }) => {
           end: specifierNode.end,
           line: specifierNode.loc.start.line,
           column: specifierNode.loc.start.column,
+          astNodes: { node: specifierNode },
         });
       }
     }

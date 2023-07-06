@@ -37,7 +37,7 @@ export const jsenvPluginImportAssertions = ({
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
-      const { importTypeAttributeNode } = reference;
+      const { importTypeAttributeNode } = reference.astNodes;
       if (reference.subtype === "import_dynamic") {
         magicSource.remove({
           start: importTypeAttributeNode.start,

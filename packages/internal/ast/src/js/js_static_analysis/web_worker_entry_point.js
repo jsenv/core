@@ -122,38 +122,41 @@ const analyzeWorkerCallArguments = (
       subtype: referenceSubtype,
       expectedType,
       expectedSubtype,
-      typePropertyNode,
       specifier: specifierNode.value,
       start: specifierNode.start,
       end: specifierNode.end,
       line: specifierNode.loc.start.line,
       column: specifierNode.loc.start.column,
+      astNodes: {
+        node,
+        typePropertyNode,
+      },
     });
     return;
   }
   if (isNewUrlCall(firstArgNode)) {
     analyzeNewUrlCall(firstArgNode, {
       isJsModule,
-      onUrl: (mention) => {
-        Object.assign(mention, {
+      onUrl: (info) => {
+        info.astNodes.typePropertyNode = typePropertyNode;
+        Object.assign(info, {
           expectedType,
           expectedSubtype,
-          typePropertyNode,
         });
-        onUrl(mention);
+        onUrl(info);
       },
     });
     return;
   }
   if (isJsModule && isImportMetaResolveCall(firstArgNode)) {
     analyzeImportMetaResolveCall(firstArgNode, {
-      onUrl: (mention) => {
-        Object.assign(mention, {
+      onUrl: (info) => {
+        info.astNodes.typePropertyNode = typePropertyNode;
+        Object.assign(info, {
           expectedType,
           expectedSubtype,
-          typePropertyNode,
         });
-        onUrl(mention);
+        onUrl(info);
       },
     });
     return;

@@ -38,6 +38,7 @@ const analyzeSystemRegisterDeps = (node, { onUrl }) => {
         end: specifierNode.end,
         line: specifierNode.loc.start.line,
         column: specifierNode.loc.start.column,
+        astNodes: { node: specifierNode },
       });
     }
   });
@@ -69,6 +70,7 @@ export const analyzeSystemImportCall = (node, { onUrl }) => {
       end: specifierNode.end,
       line: specifierNode.loc.start.line,
       column: specifierNode.loc.start.column,
+      astNodes: { node: specifierNode },
     });
   }
 };
@@ -101,6 +103,7 @@ export const analyzeSystemResolveCall = (node, { onUrl }) => {
       end: specifierNode.end,
       line: specifierNode.loc.start.line,
       column: specifierNode.loc.start.column,
+      astNodes: { node: specifierNode },
     });
   }
 };

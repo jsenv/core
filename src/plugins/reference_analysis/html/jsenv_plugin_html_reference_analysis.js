@@ -80,7 +80,6 @@ const parseAndTransformHtmlReferences = async (
     );
     const attributeValueEnd = attributeValueStart + attributeValue.length;
     const reference = urlInfo.dependencies.found({
-      node,
       type,
       subtype,
       expectedType,
@@ -94,6 +93,7 @@ const parseAndTransformHtmlReferences = async (
       crossorigin,
       integrity,
       debug,
+      astNodes: { node },
     });
     actions.push(async () => {
       await reference.readGeneratedSpecifier();
@@ -153,7 +153,6 @@ const parseAndTransformHtmlReferences = async (
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
     const inlineReference = urlInfo.dependencies.foundInline({
-      node,
       type,
       expectedType,
       isOriginalPosition: isOriginal,
@@ -166,6 +165,9 @@ const parseAndTransformHtmlReferences = async (
       contentType,
       content: inlineContent,
       debug,
+      astNodes: {
+        node,
+      },
     });
 
     const externalSpecifierAttributeName =
@@ -406,7 +408,7 @@ const readFetchMetas = (node) => {
 };
 
 const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
-  const rel = getHtmlNodeAttribute(linkReference.node, "rel");
+  const rel = getHtmlNodeAttribute(linkReference.astNodes.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
   }
@@ -418,7 +420,7 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
   }
   if (rel === "preload") {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-    const as = getHtmlNodeAttribute(linkReference.node, "as");
+    const as = getHtmlNodeAttribute(linkReference.astNodes.node, "as");
     if (as === "document") {
       return "html";
     }

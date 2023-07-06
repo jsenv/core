@@ -269,7 +269,6 @@ export const createDependencies = (ownerUrlInfo) => {
 const createReference = ({
   ownerUrlInfo,
   data = {},
-  node,
   trace,
   type,
   subtype,
@@ -315,10 +314,8 @@ const createReference = ({
   generatedSpecifier = null,
   urlInfo = null,
   escape = null,
-  // import assertions
   importAttributes,
-  importNode,
-  importTypeAttributeNode,
+  astNodes = {},
   mutation,
 }) => {
   if (typeof specifier !== "string") {
@@ -334,7 +331,6 @@ const createReference = ({
     prev,
     next,
     data,
-    node,
     trace,
     url,
     urlInfo,
@@ -366,17 +362,16 @@ const createReference = ({
     injected,
     timing: {},
     leadsToADirectory,
+    debug,
     // for inline resources the reference contains the content
     isInline,
     content,
     contentType,
     escape,
-    // import assertions (maybe move to data?)
+    // used mostly by worker and import assertions
+    astNodes,
     importAttributes,
-    importNode,
-    importTypeAttributeNode,
     mutation,
-    debug,
   };
 
   reference.resolve = () => {

@@ -89,7 +89,6 @@ const parseAndTransformJsReferences = async (
       urlInfo.data.usesImport = true;
     }
     const reference = urlInfo.dependencies.found({
-      node: externalReferenceInfo.node,
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
       expectedType: externalReferenceInfo.expectedType,
@@ -109,8 +108,7 @@ const parseAndTransformJsReferences = async (
         "document.currentScript.src": urlInfo.url,
       }[externalReferenceInfo.baseUrlType],
       importAttributes: externalReferenceInfo.importAttributes,
-      importNode: externalReferenceInfo.importNode,
-      importTypeAttributeNode: externalReferenceInfo.importTypeAttributeNode,
+      astNodes: externalReferenceInfo.astNodes,
     });
     parallelActions.push(async () => {
       await reference.readGeneratedSpecifier();
