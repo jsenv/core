@@ -17,7 +17,7 @@ export const jsenvPluginImportMetaResolve = () => {
     transformUrlContent: {
       js_module: async (urlInfo) => {
         const magicSource = createMagicSource(urlInfo.content);
-        urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+        for (const referenceToOther of urlInfo.referenceToOthersSet) {
           if (referenceToOther.subtype === "import_meta_resolve") {
             const originalSpecifierLength = Buffer.byteLength(
               referenceToOther.specifier,
@@ -27,9 +27,10 @@ export const jsenvPluginImportMetaResolve = () => {
             );
             const specifierLengthDiff =
               specifierLength - originalSpecifierLength;
-            const end = referenceToOther.node.end + specifierLengthDiff;
+            const { node } = referenceToOther.astNodes;
+            const end = node.end + specifierLengthDiff;
             magicSource.replace({
-              start: referenceToOther.node.start,
+              start: node.start,
               end,
               replacement: `new URL(${referenceToOther.generatedSpecifier}, import.meta.url).href`,
             });
@@ -43,7 +44,7 @@ export const jsenvPluginImportMetaResolve = () => {
               referenceToOther.specifierStart +
               Buffer.byteLength(referenceToOther.generatedSpecifier);
           }
-        });
+        }
         return magicSource.toContentAndSourcemap();
       },
     },

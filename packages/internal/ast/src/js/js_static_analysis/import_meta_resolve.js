@@ -14,7 +14,6 @@ export const analyzeImportMetaResolveCall = (node, { onUrl }) => {
   const firstArg = node.arguments[0];
   if (firstArg && isStringLiteralNode(firstArg)) {
     onUrl({
-      node,
       type: "js_import",
       subtype: "import_meta_resolve",
       specifier: firstArg.value,
@@ -22,7 +21,7 @@ export const analyzeImportMetaResolveCall = (node, { onUrl }) => {
       end: firstArg.end,
       line: firstArg.loc.start.line,
       column: firstArg.loc.start.column,
-      astNodes: { node: firstArg },
+      astNodes: { node },
     });
   }
 };

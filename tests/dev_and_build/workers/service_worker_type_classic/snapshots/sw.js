@@ -16,6 +16,8 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/b.js?v=54f517a9"
   }
 };
+
+
 ;(function() {
   var __versionMappings__ = {
     "/js/a.js": "/js/a.js?v=76c9c177",
