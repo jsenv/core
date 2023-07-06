@@ -197,19 +197,18 @@ export const createDependencies = (ownerUrlInfo) => {
         injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
         continue;
       }
-      const dependencyReferencingThatFile = GRAPH_VISITOR.findDependency(
-        entryPointUrlInfo,
-        (dependencyUrlInfo) => {
-          if (associateIfReferencedBy(dependencyUrlInfo)) {
-            return true;
-          }
-          if (dependencyUrlInfo === parentUrlInfo) {
-            return true;
-          }
-          return false;
-        },
-      );
-      if (!dependencyReferencingThatFile) {
+      let found = false;
+      GRAPH_VISITOR.findDependency(entryPointUrlInfo, (dependencyUrlInfo) => {
+        if (associateIfReferencedBy(dependencyUrlInfo)) {
+          found = true;
+          return true;
+        }
+        if (dependencyUrlInfo === parentUrlInfo) {
+          return true;
+        }
+        return false;
+      });
+      if (!found) {
         injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
       }
     }
