@@ -10,11 +10,10 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    plugins: [jsenvPluginBundling()],
     ...params,
   });
   const server = await startFileServer({
@@ -40,19 +39,19 @@ const test = async (params) => {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     resourcesFromJsenvBuild: {
       "/main.html": {
-        version: "5496fe4a",
+        version: "20fa5524",
       },
       "/css/style.css": {
-        version: "0e312da1",
-        versionedUrl: "/css/style.css?v=0e312da1",
+        version: "2e9d11a2",
+        versionedUrl: "/css/style.css?v=2e9d11a2",
       },
       "/js/a.js": {
-        version: "766d14d0",
-        versionedUrl: "/js/a.js?v=766d14d0",
+        version: "76c9c177",
+        versionedUrl: "/js/a.js?v=76c9c177",
       },
       "/js/b.js": {
-        version: "2cc2d9e4",
-        versionedUrl: "/js/b.js?v=2cc2d9e4",
+        version: "54f517a9",
+        versionedUrl: "/js/b.js?v=54f517a9",
       },
     },
   };
@@ -60,5 +59,7 @@ const test = async (params) => {
 };
 
 if (process.platform === "darwin") {
-  await test();
+  await test({
+    plugins: [jsenvPluginBundling()],
+  });
 }
