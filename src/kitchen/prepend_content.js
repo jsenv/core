@@ -7,7 +7,10 @@ import {
   applyBabelPlugins,
 } from "@jsenv/ast";
 
-export const prependContent = (urlInfoReceivingCode, urlInfoToPrepend) => {
+export const prependContent = async (
+  urlInfoReceivingCode,
+  urlInfoToPrepend,
+) => {
   // we could also implement:
   // - prepend svg in html
   // - prepend css in html
@@ -18,19 +21,22 @@ export const prependContent = (urlInfoReceivingCode, urlInfoToPrepend) => {
     urlInfoReceivingCode.type === "html" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInHtml(urlInfoReceivingCode, urlInfoToPrepend);
+    prependJsClassicInHtml(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
   }
   if (
     urlInfoReceivingCode.type === "js_classic" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInJsClassic(urlInfoReceivingCode, urlInfoToPrepend);
+    prependJsClassicInJsClassic(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
   }
   if (
     urlInfoReceivingCode.type === "js_module" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInJsModule(urlInfoReceivingCode, urlInfoToPrepend);
+    await prependJsClassicInJsModule(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
   }
   throw new Error(
     `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,

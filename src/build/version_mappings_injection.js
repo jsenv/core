@@ -15,24 +15,25 @@ export const injectVersionMappingsAsGlobal = async (
   versionMappings,
 ) => {
   if (urlInfo.type === "html") {
-    return prependContent(urlInfo, {
+    await prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
         minification: urlInfo.context.minification,
       }),
     });
+    return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return prependContent(urlInfo, {
+    await prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
         minification: urlInfo.context.minification,
       }),
     });
+    return;
   }
-  return null;
 };
 
 const generateClientCodeForVersionMappings = (
@@ -54,10 +55,7 @@ const generateClientCodeForVersionMappings = (
 })();`;
 };
 
-export const injectVersionMappingsAsImportmap = async (
-  urlInfo,
-  versionMappings,
-) => {
+export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
   const htmlAst = parseHtmlString(urlInfo.content, {
     storeOriginalPositions: false,
   });

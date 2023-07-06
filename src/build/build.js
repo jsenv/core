@@ -35,7 +35,7 @@ import {
   ANSI,
   createDetailedMessage,
 } from "@jsenv/log";
-import { createMagicSource, generateSourcemapFileUrl } from "@jsenv/sourcemap";
+import { generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -56,6 +56,7 @@ import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
 import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js";
+import { prependContent } from "../kitchen/prepend_content.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
@@ -1259,10 +1260,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               versionedUrl: buildSpecifierVersioned,
             };
           });
-          serviceWorkerEntryUrlInfos.forEach((serviceWorkerEntryUrlInfo) => {
-            const magicSource = createMagicSource(
-              serviceWorkerEntryUrlInfo.content,
-            );
+          for (const serviceWorkerEntryUrlInfo of serviceWorkerEntryUrlInfos) {
             const serviceWorkerResourcesWithoutSwScriptItSelf = {
               ...serviceWorkerResources,
             };
@@ -1273,19 +1271,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             delete serviceWorkerResourcesWithoutSwScriptItSelf[
               serviceWorkerBuildSpecifier
             ];
-            magicSource.prepend(
-              `\nself.resourcesFromJsenvBuild = ${JSON.stringify(
+            await prependContent(serviceWorkerEntryUrlInfo, {
+              type: "js_classic",
+              content: `\nself.resourcesFromJsenvBuild = ${JSON.stringify(
                 serviceWorkerResourcesWithoutSwScriptItSelf,
                 null,
                 "  ",
               )};\n`,
-            );
-            const { content, sourcemap } = magicSource.toContentAndSourcemap();
-            serviceWorkerEntryUrlInfo.mutateContent({
-              content,
-              sourcemap,
             });
-          });
+          }
           urlsInjectionInSw.done();
         }
         buildOperation.throwIfAborted();
