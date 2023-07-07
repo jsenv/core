@@ -102,7 +102,7 @@ export const injectQueryParamIntoSpecifierWithoutEncoding = (
   if (search === "") {
     search = `?${key}=${value}`;
   } else {
-    search += `${key}=${value}`;
+    search = `?${search}&${key}=${value}`;
   }
   return `${beforeQuestion}${search}`;
 };
