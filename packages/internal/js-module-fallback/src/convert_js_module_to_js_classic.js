@@ -84,14 +84,15 @@ const babelPluginRelativeImports = (babel) => {
       searchParams.delete("dynamic_import");
       specifier = specifierUrlObject.href;
       const rootUrl = state.opts.rootUrl;
-      if (specifier.startsWith(rootUrl)) {
-        let specifierRelative = urlToRelativeUrl(specifier, rootUrl);
-        if (specifierRelative[0] !== ".") {
-          // so avoid applying node module resolution or importmap
-          specifierRelative = `./${specifierRelative}`;
-        }
-        path.replaceWith(t.stringLiteral(specifierRelative));
+      let specifierRelative = urlToRelativeUrl(specifier, rootUrl);
+      if (
+        !specifierRelative.startsWith("file://") &&
+        specifierRelative[0] !== "."
+      ) {
+        // so avoid applying node module resolution or importmap
+        specifierRelative = `./${specifierRelative}`;
       }
+      path.replaceWith(t.stringLiteral(specifierRelative));
     }
   };
 
