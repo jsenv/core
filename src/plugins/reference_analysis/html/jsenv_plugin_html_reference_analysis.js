@@ -72,8 +72,15 @@ const parseAndTransformHtmlReferences = async (
       "preload",
       "modulepreload",
     ].includes(subtype);
-    const attributeStart =
-      node.sourceCodeLocation.attrs[attributeName].startOffset;
+    let attributeLocation = node.sourceCodeLocation.attrs[attributeName];
+    if (
+      !attributeLocation &&
+      attributeName === "href" &&
+      (node.tagName === "use" || node.tagName === "image")
+    ) {
+      attributeLocation = node.sourceCodeLocation.attrs["xlink:href"];
+    }
+    const attributeStart = attributeLocation.startOffset;
     const attributeValueStart = urlInfo.content.indexOf(
       attributeValue,
       attributeStart + `${attributeName}=`.length,
