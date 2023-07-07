@@ -3128,7 +3128,7 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 	}
 
 	if ('CI' in env) {
-		if ('GITHUB_ACTIONS' in env) {
+		if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
 			return 3;
 		}
 
@@ -13465,6 +13465,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         });
       } catch (e) {
         urlInfo.error = e;
+        if (e.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+          throw e;
+        }
         if (urlInfo.isInline) {
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
