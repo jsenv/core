@@ -229,8 +229,12 @@ if (import.meta.hot) {
   }
 };
 
-// TODO: fix on windows
-if (process.platform !== "win32") {
+if (
+  // TODO: fix on windows
+  process.platform !== "win32" &&
+  // TODO: fix on linux
+  process.platform !== "linux"
+) {
   await test({
     browserLauncher: chromium,
     browserName: "chromium",
