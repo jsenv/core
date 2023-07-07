@@ -161,9 +161,6 @@ let createConnectionManager;
           },
           onOpen: () => {
             readyState.goTo(READY_STATES.OPEN);
-            if (logs) {
-              console.info(`[jsenv] connected to server`);
-            }
           },
         });
         _disconnect = () => {

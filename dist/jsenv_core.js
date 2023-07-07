@@ -455,7 +455,7 @@ const injectQueryParamIntoSpecifierWithoutEncoding = (
   if (search === "") {
     search = `?${key}=${value}`;
   } else {
-    search += `${key}=${value}`;
+    search = `?${search}&${key}=${value}`;
   }
   return `${beforeQuestion}${search}`;
 };
@@ -8366,11 +8366,13 @@ const jsenvPluginImportAssertions = ({
   };
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename$1(reference.url)}.js`;
+    if (!reference.filename) {
+      reference.filename = `${urlToFilename$1(reference.url)}.js`;
+    }
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
-      const { importTypeAttributeNode } = reference.astNodes;
+      const { importTypeAttributeNode } = reference.astInfo;
       if (reference.subtype === "import_dynamic") {
         magicSource.remove({
           start: importTypeAttributeNode.start,
@@ -9580,7 +9582,9 @@ const jsenvPluginJsModuleConversion = () => {
 
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic";
-    reference.filename = generateJsClassicFilename(reference.url);
+    if (!reference.filename) {
+      reference.filename = generateJsClassicFilename(reference.url);
+    }
   };
 
   const turnIntoJsClassicProxy = (reference) => {
@@ -9876,7 +9880,7 @@ const willBeConvertedToJsClassic = (reference) => {
 const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = (reference) => {
     reference.mutation = (magicSource) => {
-      const { typePropertyNode } = reference.astNodes;
+      const { typePropertyNode } = reference.astInfo;
       magicSource.replace({
         start: typePropertyNode.value.start,
         end: typePropertyNode.value.end,
@@ -9997,9 +10001,11 @@ const jsenvPluginAsJsModule = () => {
     redirectReference: (reference) => {
       if (reference.searchParams.has("as_js_module")) {
         reference.expectedType = "js_module";
-        const filename = urlToFilename$1(reference.url);
-        const [basename] = splitFileExtension$1(filename);
-        reference.filename = `${basename}.mjs`;
+        if (!reference.filename) {
+          const filename = urlToFilename$1(reference.url);
+          const [basename] = splitFileExtension$1(filename);
+          reference.filename = `${basename}.mjs`;
+        }
       }
     },
     fetchUrlContent: async (urlInfo) => {
@@ -10168,7 +10174,7 @@ const jsenvPluginImportMetaResolve = () => {
             );
             const specifierLengthDiff =
               specifierLength - originalSpecifierLength;
-            const { node } = referenceToOther.astNodes;
+            const { node } = referenceToOther.astInfo;
             const end = node.end + specifierLengthDiff;
             magicSource.replace({
               start: node.start,
@@ -10962,7 +10968,7 @@ const createReference = ({
   urlInfo = null,
   escape = null,
   importAttributes,
-  astNodes = {},
+  astInfo = {},
   mutation,
 }) => {
   if (typeof specifier !== "string") {
@@ -11016,7 +11022,7 @@ const createReference = ({
     contentType,
     escape,
     // used mostly by worker and import assertions
-    astNodes,
+    astInfo,
     importAttributes,
     mutation,
   };
@@ -11701,7 +11707,7 @@ const createUrlInfo = (url, context) => {
       leadsToADirectory: reference.leadsToADirectory,
       debug: reference.debug,
       importAttributes: reference.importAttributes,
-      astNodes: reference.astNodes,
+      astInfo: reference.astInfo,
       mutation: reference.mutation,
       data: { ...reference.data },
       specifier: newSpecifier,
@@ -13342,7 +13348,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       if (typeof isEntryPoint === "boolean") {
         urlInfo.isEntryPoint = isEntryPoint;
       }
-      if (filename) {
+      if (filename && !urlInfo.filename) {
         urlInfo.filename = filename;
       }
       assertFetchedContentCompliance({
@@ -14075,7 +14081,7 @@ const parseAndTransformHtmlReferences = async (
     node,
     attributeName,
     attributeValue,
-    { type, subtype, expectedType },
+    { type, subtype, expectedType, ...rest },
   ) => {
     let position;
     if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
@@ -14128,7 +14134,8 @@ const parseAndTransformHtmlReferences = async (
       crossorigin,
       integrity,
       debug,
-      astNodes: { node },
+      astInfo: { node, attributeName },
+      ...rest,
     });
     actions.push(async () => {
       await reference.readGeneratedSpecifier();
@@ -14200,9 +14207,7 @@ const parseAndTransformHtmlReferences = async (
       contentType,
       content: inlineContent,
       debug,
-      astNodes: {
-        node,
-      },
+      astInfo: { node },
     });
 
     const externalSpecifierAttributeName =
@@ -14225,11 +14230,10 @@ const parseAndTransformHtmlReferences = async (
           node,
           externalSpecifierAttributeName,
           externalSpecifier,
-          { type, subtype, expectedType },
+          { type, subtype, expectedType, next: inlineReference },
         );
         inlineReference.prev = externalRef;
         inlineReference.original = externalRef;
-        externalRef.next = inlineReference;
       }
     }
 
@@ -14443,7 +14447,7 @@ const readFetchMetas = (node) => {
 };
 
 const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
-  const rel = getHtmlNodeAttribute(linkReference.astNodes.node, "rel");
+  const rel = getHtmlNodeAttribute(linkReference.astInfo.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
   }
@@ -14455,7 +14459,7 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
   }
   if (rel === "preload") {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-    const as = getHtmlNodeAttribute(linkReference.astNodes.node, "as");
+    const as = getHtmlNodeAttribute(linkReference.astInfo.node, "as");
     if (as === "document") {
       return "html";
     }
@@ -14668,7 +14672,7 @@ const parseAndTransformJsReferences = async (
         "document.currentScript.src": urlInfo.url,
       }[externalReferenceInfo.baseUrlType],
       importAttributes: externalReferenceInfo.importAttributes,
-      astNodes: externalReferenceInfo.astNodes,
+      astInfo: externalReferenceInfo.astInfo,
     });
     parallelActions.push(async () => {
       await reference.readGeneratedSpecifier();
@@ -20066,6 +20070,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               generatedUrlObject.searchParams.delete("as_json_module");
               generatedUrlObject.searchParams.delete("as_css_module");
               generatedUrlObject.searchParams.delete("as_text_module");
+              generatedUrlObject.searchParams.delete("dynamic_import");
               generatedUrlObject.hash = "";
               const buildUrl = generatedUrlObject.href;
               const buildSpecifier = asFormattedBuildSpecifier(
@@ -20881,6 +20886,9 @@ const findKey = (map, value) => {
 
 const shouldApplyVersioningOnReference = (reference) => {
   if (reference.isInline) {
+    return false;
+  }
+  if (reference.next && reference.next.isInline) {
     return false;
   }
   // specifier comes from "normalize" hook done a bit earlier in this file
