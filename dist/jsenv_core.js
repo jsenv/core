@@ -20559,6 +20559,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   });
                 });
                 for (const referenceToOther of buildUrlInfo.referenceToOthersSet) {
+                  if (referenceToOther.isWeak) {
+                    continue;
+                  }
                   const referencedUrlInfo = referenceToOther.urlInfo;
                   if (referencedUrlInfo.data.generatedToShareCode) {
                     hintsToInject[referencedUrlInfo.url] = node;
