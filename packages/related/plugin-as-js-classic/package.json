@@ -24,7 +24,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/urls": "2.0.0",
+    "@jsenv/urls": "2.1.0",
     "@jsenv/js-module-fallback": "1.2.0",
     "@jsenv/plugin-bundling": "2.3.0"
   }

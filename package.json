@@ -62,7 +62,7 @@
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "5.0.0",
-    "@jsenv/filesystem": "4.2.3",
+    "@jsenv/filesystem": "4.2.4",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/log": "3.4.0",
@@ -74,7 +74,7 @@
     "@jsenv/plugin-transpilation": "1.2.0",
     "@jsenv/plugin-supervisor": "1.2.0",
     "@jsenv/url-meta": "8.1.0",
-    "@jsenv/urls": "2.0.0",
+    "@jsenv/urls": "2.1.0",
     "@jsenv/utils": "2.0.1"
   },
   "devDependencies": {

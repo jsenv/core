@@ -35,10 +35,10 @@
   "dependencies": {
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "5.0.0",
-    "@jsenv/filesystem": "4.2.3",
+    "@jsenv/filesystem": "4.2.4",
     "@jsenv/log": "3.4.0",
     "@jsenv/plugin-supervisor": "1.2.0",
-    "@jsenv/urls": "2.0.0",
+    "@jsenv/urls": "2.1.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/utils": "2.0.1",

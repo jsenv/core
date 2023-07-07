@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.2.3",
+    "@jsenv/filesystem": "4.2.4",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/node-esm-resolution": "1.0.1"
   },
