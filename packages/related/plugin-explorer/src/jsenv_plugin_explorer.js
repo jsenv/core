@@ -31,7 +31,7 @@ export const jsenvPluginExplorer = ({
       },
     },
     transformUrlContent: {
-      html: async (urlInfo, context) => {
+      html: async (urlInfo) => {
         if (urlInfo.url !== explorerHtmlFileUrl) {
           return null;
         }
@@ -46,7 +46,7 @@ export const jsenvPluginExplorer = ({
             };
           });
           const matchingFileResultArray = await collectFiles({
-            directoryUrl: context.rootDirectoryUrl,
+            directoryUrl: urlInfo.context.rootDirectoryUrl,
             associations: associationsForExplorable,
             predicate: (meta) =>
               Object.keys(meta).some((group) => Boolean(meta[group])),
@@ -62,7 +62,7 @@ export const jsenvPluginExplorer = ({
             "SERVER_PARAMS",
             JSON.stringify(
               {
-                rootDirectoryUrl: context.rootDirectoryUrl,
+                rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
                 groups,
                 files,
               },

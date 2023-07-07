@@ -44,18 +44,18 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         resolvers.js_module = nodeEsmResolverDefault;
       }
       if (resolvers.js_classic === undefined) {
-        resolvers.js_classic = (reference, context) => {
+        resolvers.js_classic = (reference) => {
           if (reference.subtype === "self_import_scripts_arg") {
-            return nodeEsmResolverDefault(reference, context);
+            return nodeEsmResolverDefault(reference);
           }
           return null;
         };
       }
     },
-    resolveReference: (reference, context) => {
+    resolveReference: (reference) => {
       const urlType = urlTypeFromReference(reference);
       const resolver = resolvers[urlType];
-      return resolver ? resolver(reference, context) : null;
+      return resolver ? resolver(reference) : null;
     },
     // when specifier is prefixed by "file:///@ignore/"
     // we return an empty js module

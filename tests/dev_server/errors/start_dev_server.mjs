@@ -14,10 +14,10 @@ export const devServer = await startDevServer({
     {
       name: "plugin_throwing",
       appliesDuring: "*",
-      resolveReference: ({ parentUrl, specifier }) => {
+      resolveReference: (reference) => {
         if (
-          parentUrl.includes("plugin_error_resolve/main.js") &&
-          specifier === "./file.js"
+          reference.ownerUrlInfo.url.includes("plugin_error_resolve/main.js") &&
+          reference.specifier === "./file.js"
         ) {
           throw new Error("error_during_resolve");
         }

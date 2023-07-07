@@ -15,7 +15,7 @@ export const jsenvPluginGlobals = (rawAssociations) => {
         context.rootDirectoryUrl,
       );
     },
-    transformUrlContent: async (urlInfo, context) => {
+    transformUrlContent: async (urlInfo) => {
       const { injector } = URL_META.applyAssociations({
         url: asUrlWithoutSearch(urlInfo.url),
         associations: resolvedAssociations,
@@ -26,7 +26,7 @@ export const jsenvPluginGlobals = (rawAssociations) => {
       if (typeof injector !== "function") {
         throw new TypeError("injector must be a function");
       }
-      const globals = await injector(urlInfo, context);
+      const globals = await injector(urlInfo);
       if (!globals || Object.keys(globals).length === 0) {
         return null;
       }

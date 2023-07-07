@@ -24,8 +24,8 @@ export const jsenvPluginJsModuleConversion = () => {
     return false;
   };
 
-  const shouldPropagateJsModuleConversion = (reference, context) => {
-    if (isReferencingJsModule(reference, context)) {
+  const shouldPropagateJsModuleConversion = (reference) => {
+    if (isReferencingJsModule(reference)) {
       const insideJsClassic =
         reference.ownerUrlInfo.searchParams.has("js_module_fallback");
       return insideJsClassic;
@@ -49,7 +49,7 @@ export const jsenvPluginJsModuleConversion = () => {
   return {
     name: "jsenv:js_module_conversion",
     appliesDuring: "*",
-    redirectReference: (reference, context) => {
+    redirectReference: (reference) => {
       if (reference.searchParams.has("js_module_fallback")) {
         markAsJsClassicProxy(reference);
         return null;
@@ -60,8 +60,8 @@ export const jsenvPluginJsModuleConversion = () => {
       //   (because it's the transpiled equivalent of static and dynamic imports)
       // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
-      if (shouldPropagateJsModuleConversion(reference, context)) {
-        return turnIntoJsClassicProxy(reference, context);
+      if (shouldPropagateJsModuleConversion(reference)) {
+        return turnIntoJsClassicProxy(reference);
       }
       return null;
     },

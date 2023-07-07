@@ -13,12 +13,9 @@ import { postCssPluginUrlVisitor } from "../src/css/postcss_plugin_url_visitor.j
 
 import { sortByDependencies } from "./sort_by_dependencies.js";
 
-export const bundleCss = async ({ cssUrlInfos, context }) => {
+export const bundleCss = async (cssUrlInfos) => {
   const bundledCssUrlInfos = {};
-  const cssBundleInfos = await performCssBundling({
-    cssEntryUrlInfos: cssUrlInfos,
-    context,
-  });
+  const cssBundleInfos = await performCssBundling(cssUrlInfos);
   cssUrlInfos.forEach((cssUrlInfo) => {
     bundledCssUrlInfos[cssUrlInfo.url] = {
       data: {
@@ -31,11 +28,8 @@ export const bundleCss = async ({ cssUrlInfos, context }) => {
   return bundledCssUrlInfos;
 };
 
-const performCssBundling = async ({ cssEntryUrlInfos, context }) => {
-  const cssBundleInfos = await loadCssUrls({
-    cssEntryUrlInfos,
-    context,
-  });
+const performCssBundling = async (cssEntryUrlInfos) => {
+  const cssBundleInfos = await loadCssUrls(cssEntryUrlInfos);
   const cssUrlsSorted = sortByDependencies(cssBundleInfos);
   cssUrlsSorted.forEach((cssUrl) => {
     const cssBundleInfo = cssBundleInfos[cssUrl];
@@ -87,7 +81,8 @@ const parseCssUrls = async ({ css, url }) => {
   return cssUrls;
 };
 
-const loadCssUrls = async ({ cssEntryUrlInfos, context }) => {
+const loadCssUrls = async (cssEntryUrlInfos) => {
+  const firstCssUrlInfo = cssEntryUrlInfos[0];
   const cssBundleInfos = {};
   const promises = [];
   const promiseMap = new Map();
@@ -117,7 +112,7 @@ const loadCssUrls = async ({ cssEntryUrlInfos, context }) => {
         cssBundleInfo.referenceToOthersSet.add({
           url: cssUrl.url,
         });
-        const importedCssUrlInfo = context.kitchen.graph.getUrlInfo(cssUrl.url);
+        const importedCssUrlInfo = firstCssUrlInfo.graph.getUrlInfo(cssUrl.url);
         load(importedCssUrlInfo);
       }
     });

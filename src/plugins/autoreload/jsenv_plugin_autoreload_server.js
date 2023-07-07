@@ -8,10 +8,10 @@ export const jsenvPluginAutoreloadServer = ({
     name: "jsenv:autoreload_server",
     appliesDuring: "dev",
     serverEvents: {
-      reload: (context) => {
+      reload: (serverEventInfo) => {
         const formatUrlForClient = (url) => {
-          if (urlIsInsideOf(url, context.rootDirectoryUrl)) {
-            return urlToRelativeUrl(url, context.rootDirectoryUrl);
+          if (urlIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
+            return urlToRelativeUrl(url, serverEventInfo.rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {
             return `/@fs/${url.slice("file:///".length)}`;
@@ -19,7 +19,7 @@ export const jsenvPluginAutoreloadServer = ({
           return url;
         };
         const notifyFullReload = ({ cause, reason, declinedBy }) => {
-          context.sendServerEvent({
+          serverEventInfo.sendServerEvent({
             cause,
             type: "full",
             typeReason: reason,
@@ -27,7 +27,7 @@ export const jsenvPluginAutoreloadServer = ({
           });
         };
         const notifyPartialReload = ({ cause, reason, instructions }) => {
-          context.sendServerEvent({
+          serverEventInfo.sendServerEvent({
             cause,
             type: "hot",
             typeReason: reason,
@@ -35,7 +35,7 @@ export const jsenvPluginAutoreloadServer = ({
           });
         };
         const propagateUpdate = (firstUrlInfo) => {
-          if (!context.kitchen.graph.getUrlInfo(firstUrlInfo.url)) {
+          if (!serverEventInfo.kitchen.graph.getUrlInfo(firstUrlInfo.url)) {
             return {
               declined: true,
               reason: `url not in the url graph`,
@@ -142,7 +142,7 @@ export const jsenvPluginAutoreloadServer = ({
             return true;
           };
 
-          const urlInfo = context.kitchen.graph.getUrlInfo(url);
+          const urlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
           if (urlInfo) {
             if (onUrlInfo(urlInfo)) {
               return;
@@ -198,10 +198,10 @@ export const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    serve: (context) => {
-      if (context.request.pathname === "/__graph__") {
+    serve: (serveInfo) => {
+      if (serveInfo.request.pathname === "/__graph__") {
         const graphJson = JSON.stringify(
-          context.kitchen.graph.toJSON(context.rootDirectoryUrl),
+          serveInfo.kitchen.graph.toJSON(serveInfo.rootDirectoryUrl),
         );
         return {
           status: 200,

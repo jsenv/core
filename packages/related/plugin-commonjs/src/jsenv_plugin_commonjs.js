@@ -56,7 +56,7 @@ export const jsenvPluginCommonJs = ({
       reference.data.commonjs = commonjs;
       return turnIntoJsModuleProxy(reference);
     },
-    fetchUrlContent: async (urlInfo, context) => {
+    fetchUrlContent: async (urlInfo) => {
       const commonJsUrlInfo = urlInfo.getWithoutSearchParam(
         "cjs_as_js_module",
         {
@@ -69,15 +69,15 @@ export const jsenvPluginCommonJs = ({
         return null;
       }
       await commonJsUrlInfo.fetchContent();
-      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
-        "node",
-      );
+      const nodeRuntimeEnabled = Object.keys(
+        urlInfo.context.runtimeCompat,
+      ).includes("node");
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         compileCacheDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
-        processEnvNodeEnv: context.dev ? "development" : "production",
+        processEnvNodeEnv: urlInfo.context.dev ? "development" : "production",
         ...urlInfo.data.commonjs,
       });
       if (isValid) {
