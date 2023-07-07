@@ -57,14 +57,14 @@ const getDOMNodesUsingUrl = (urlToReload) => {
           Array.from(node.attributes).forEach((attribute) => {
             copy.setAttribute(attribute.nodeName, attribute.nodeValue);
           });
-          copy.src = injectQuery(node.src, { hmr: Date.now() });
+          copy.src = injectQuery(node.src, { hot: Date.now() });
           if (node.parentNode) {
             node.parentNode.replaceChild(copy, node);
           } else {
             document.body.appendChild(copy);
           }
         } else {
-          node[attributeName] = injectQuery(attribute, { hmr: Date.now() });
+          node[attributeName] = injectQuery(attribute, { hot: Date.now() });
         }
       },
     });
@@ -112,7 +112,7 @@ const getDOMNodesUsingUrl = (urlToReload) => {
       srcCandidates.forEach((srcCandidate) => {
         const url = new URL(srcCandidate.specifier, `${window.location.href}`);
         if (shouldReloadUrl(url)) {
-          srcCandidate.specifier = injectQuery(url, { hmr: Date.now() });
+          srcCandidate.specifier = injectQuery(url, { hot: Date.now() });
         }
       });
       nodes.push({
@@ -138,8 +138,8 @@ const getDOMNodesUsingUrl = (urlToReload) => {
 };
 
 const reloadJsImport = async (url) => {
-  const urlWithHmr = injectQuery(url, { hmr: Date.now() });
-  const namespace = await import(urlWithHmr);
+  const urlWithHotSearchParam = injectQuery(url, { hot: Date.now() });
+  const namespace = await import(urlWithHotSearchParam);
   return namespace;
 };
 
@@ -171,6 +171,7 @@ const reloader = {
     value: [],
     onchange: () => {},
     add: (reloadMessage) => {
+      // console.debug("received reload message", reloadMessage);
       reloader.changes.value.push(reloadMessage);
       reloader.changes.onchange();
       if (reloader.autoreload.enabled) {

@@ -10,7 +10,7 @@ const ensurePathnameTrailingSlash = (url) => {
   const urlObject = new URL(url);
   const { pathname } = urlObject;
   if (pathname.endsWith("/")) {
-    return url
+    return url;
   }
   let { origin } = urlObject;
   // origin is "null" for "file://" urls with Node.js
@@ -18,36 +18,36 @@ const ensurePathnameTrailingSlash = (url) => {
     origin = "file://";
   }
   const { search, hash } = urlObject;
-  return `${origin}${pathname}/${search}${hash}`
+  return `${origin}${pathname}/${search}${hash}`;
 };
 
 const isFileSystemPath = (value) => {
   if (typeof value !== "string") {
     throw new TypeError(
       `isFileSystemPath first arg must be a string, got ${value}`,
-    )
+    );
   }
   if (value[0] === "/") {
-    return true
+    return true;
   }
-  return startsWithWindowsDriveLetter(value)
+  return startsWithWindowsDriveLetter(value);
 };
 
 const startsWithWindowsDriveLetter = (string) => {
   const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
 
   const secondChar = string[1];
-  if (secondChar !== ":") return false
+  if (secondChar !== ":") return false;
 
-  return true
+  return true;
 };
 
 const fileSystemPathToUrl = (value) => {
   if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`)
+    throw new Error(`value must be a filesystem path, got ${value}`);
   }
-  return String(node_url.pathToFileURL(value))
+  return String(node_url.pathToFileURL(value));
 };
 
 const urlToFileSystemPath = (url) => {
@@ -58,7 +58,7 @@ const urlToFileSystemPath = (url) => {
     urlString = urlString.slice(0, -1);
   }
   const fileSystemPath = node_url.fileURLToPath(urlString);
-  return fileSystemPath
+  return fileSystemPath;
 };
 
 const validateDirectoryUrl = (value) => {
@@ -77,7 +77,7 @@ const validateDirectoryUrl = (value) => {
           valid: false,
           value,
           message: `must be a valid url`,
-        }
+        };
       }
     }
   } else {
@@ -85,19 +85,19 @@ const validateDirectoryUrl = (value) => {
       valid: false,
       value,
       message: `must be a string or an url`,
-    }
+    };
   }
   if (!urlString.startsWith("file://")) {
     return {
       valid: false,
       value,
       message: 'must start with "file://"',
-    }
+    };
   }
   return {
     valid: true,
     value: ensurePathnameTrailingSlash(urlString),
-  }
+  };
 };
 
 const assertAndNormalizeDirectoryUrl = (
@@ -106,9 +106,9 @@ const assertAndNormalizeDirectoryUrl = (
 ) => {
   const { valid, message, value } = validateDirectoryUrl(directoryUrl);
   if (!valid) {
-    throw new TypeError(`${name} ${message}, got ${value}`)
+    throw new TypeError(`${name} ${message}, got ${value}`);
   }
-  return value
+  return value;
 };
 
 const validateFileUrl = (value, baseUrl) => {
@@ -127,7 +127,7 @@ const validateFileUrl = (value, baseUrl) => {
           valid: false,
           value,
           message: "must be a valid url",
-        }
+        };
       }
     }
   } else {
@@ -135,7 +135,7 @@ const validateFileUrl = (value, baseUrl) => {
       valid: false,
       value,
       message: "must be a string or an url",
-    }
+    };
   }
 
   if (!urlString.startsWith("file://")) {
@@ -143,13 +143,13 @@ const validateFileUrl = (value, baseUrl) => {
       valid: false,
       value,
       message: 'must start with "file://"',
-    }
+    };
   }
 
   return {
     valid: true,
     value: urlString,
-  }
+  };
 };
 
 const assertAndNormalizeFileUrl = (
@@ -159,15 +159,16 @@ const assertAndNormalizeFileUrl = (
 ) => {
   const { valid, message, value } = validateFileUrl(fileUrl, baseUrl);
   if (!valid) {
-    throw new TypeError(`${name} ${message}, got ${fileUrl}`)
+    throw new TypeError(`${name} ${message}, got ${fileUrl}`);
   }
-  return value
+  return value;
 };
 
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
+
 
 process.platform === "win32";
 
@@ -191,11 +192,11 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
     url = String(new URL(url));
   } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`)
+    throw new Error(`absolute url expected but got ${url}`);
   }
 
   if (!isWindows) {
-    return url
+    return url;
   }
 
   try {
@@ -203,16 +204,16 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   } catch (e) {
     throw new Error(
       `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    )
+    );
   }
 
   if (!url.startsWith("file://")) {
-    return url
+    return url;
   }
   const afterProtocol = url.slice("file://".length);
   // we still have the windows drive letter
   if (extractDriveLetter(afterProtocol)) {
-    return url
+    return url;
   }
 
   // drive letter was lost, restore it
@@ -225,17 +226,17 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
   if (!driveLetter) {
     throw new Error(
       `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    )
+    );
   }
-  return `file:///${driveLetter}:${afterProtocol}`
+  return `file:///${driveLetter}:${afterProtocol}`;
 };
 
 const extractDriveLetter = (resource) => {
   // we still have the windows drive letter
   if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
-    return resource[1]
+    return resource[1];
   }
-  return null
+  return null;
 };
 
 process.platform === "win32";
@@ -266,9 +267,9 @@ const getRealFileSystemUrlSync = (
       );
     } catch (e) {
       if (e && e.code === "ENOENT") {
-        return null
+        return null;
       }
-      throw e
+      throw e;
     }
     const foundOnFilesystem = namesOnFileSystem.includes(name);
     if (foundOnFilesystem) {
@@ -278,7 +279,7 @@ const getRealFileSystemUrlSync = (
         (nameCandidate) => nameCandidate.toLowerCase() === name.toLowerCase(),
       );
       if (!nameOnFileSystem) {
-        return null
+        return null;
       }
       reconstructedFileUrl += nameOnFileSystem;
     }
@@ -287,9 +288,9 @@ const getRealFileSystemUrlSync = (
         const realPath = node_fs.realpathSync.native(
           urlToFileSystemPath(reconstructedFileUrl),
         );
-        return fileSystemPathToUrl(realPath)
+        return fileSystemPathToUrl(realPath);
       }
-      return reconstructedFileUrl
+      return reconstructedFileUrl;
     }
     reconstructedFileUrl += "/";
   }
@@ -299,17 +300,17 @@ const readFileSync = (value, { as = "buffer" } = {}) => {
   const fileUrl = assertAndNormalizeFileUrl(value);
   const buffer = node_fs.readFileSync(new URL(fileUrl));
   if (as === "buffer") {
-    return buffer
+    return buffer;
   }
   if (as === "string") {
-    return buffer.toString()
+    return buffer.toString();
   }
   if (as === "json") {
-    return JSON.parse(buffer.toString())
+    return JSON.parse(buffer.toString());
   }
   throw new Error(
     `"as" must be one of "buffer","string","json" received "${as}"`,
-  )
+  );
 };
 
 process.platform === "win32";
@@ -320,7 +321,7 @@ const isSpecifierForNodeBuiltin = (specifier) => {
   return (
     specifier.startsWith("node:") ||
     NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
-  )
+  );
 };
 
 const NODE_BUILTIN_MODULE_SPECIFIERS = [
@@ -404,9 +405,9 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
 const asDirectoryUrl = (url) => {
   const { pathname } = new URL(url);
   if (pathname.endsWith("/")) {
-    return url
+    return url;
   }
-  return new URL("./", url).href
+  return new URL("./", url).href;
 };
 
 const getParentUrl = (url) => {
@@ -416,29 +417,32 @@ const getParentUrl = (url) => {
     const resource = url.slice("file://".length);
     const slashLastIndex = resource.lastIndexOf("/");
     if (slashLastIndex === -1) {
-      return url
+      return url;
     }
     const lastCharIndex = resource.length - 1;
     if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
       if (slashBeforeLastIndex === -1) {
-        return url
+        return url;
       }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
     }
 
-    return `file://${resource.slice(0, slashLastIndex + 1)}`
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
   }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
 const isValidUrl = (url) => {
   try {
     // eslint-disable-next-line no-new
     new URL(url);
-    return true
+    return true;
   } catch (e) {
-    return false
+    return false;
   }
 };
 
@@ -452,31 +456,31 @@ const urlToFilename = (url) => {
     slashLastIndex === -1
       ? pathnameBeforeLastSlash
       : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename
+  return filename;
 };
 
 const urlToExtension = (url) => {
   const filename = urlToFilename(url);
   const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""
+  if (dotLastIndex === -1) return "";
   // if (dotLastIndex === pathname.length - 1) return ""
   const extension = filename.slice(dotLastIndex);
-  return extension
+  return extension;
 };
 
 const defaultLookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url);
   while (scopeUrl !== "file:///") {
     if (scopeUrl.endsWith("node_modules/")) {
-      return null
+      return null;
     }
     const packageJsonUrlObject = new URL("package.json", scopeUrl);
     if (node_fs.existsSync(packageJsonUrlObject)) {
-      return scopeUrl
+      return scopeUrl;
     }
     scopeUrl = getParentUrl(scopeUrl);
   }
-  return null
+  return null;
 };
 
 const defaultReadPackageJson = (packageUrl) => {
@@ -484,9 +488,9 @@ const defaultReadPackageJson = (packageUrl) => {
   const buffer = node_fs.readFileSync(packageJsonUrl);
   const string = String(buffer);
   try {
-    return JSON.parse(string)
+    return JSON.parse(string);
   } catch (e) {
-    throw new Error(`Invalid package configuration`)
+    throw new Error(`Invalid package configuration`);
   }
 };
 
@@ -503,7 +507,7 @@ const createInvalidModuleSpecifierError = (
     )}`,
   );
   error.code = "INVALID_MODULE_SPECIFIER";
-  return error
+  return error;
 };
 
 const createInvalidPackageTargetError = (
@@ -525,7 +529,7 @@ const createInvalidPackageTargetError = (
   }
   const error = new Error(message);
   error.code = "INVALID_PACKAGE_TARGET";
-  return error
+  return error;
 };
 
 const createPackagePathNotExportedError = (
@@ -544,7 +548,7 @@ const createPackagePathNotExportedError = (
   }
   const error = new Error(message);
   error.code = "PACKAGE_PATH_NOT_EXPORTED";
-  return error
+  return error;
 };
 
 const createModuleNotFoundError = (specifier, { parentUrl }) => {
@@ -552,7 +556,7 @@ const createModuleNotFoundError = (specifier, { parentUrl }) => {
     `Cannot find "${specifier}" imported from ${node_url.fileURLToPath(parentUrl)}`,
   );
   error.code = "MODULE_NOT_FOUND";
-  return error
+  return error;
 };
 
 const createPackageImportNotDefinedError = (
@@ -565,7 +569,7 @@ const createPackageImportNotDefinedError = (
     )}package.json imported from ${node_url.fileURLToPath(parentUrl)}`,
   );
   error.code = "PACKAGE_IMPORT_NOT_DEFINED";
-  return error
+  return error;
 };
 
 // https://nodejs.org/api/packages.html#resolving-user-conditions
@@ -581,7 +585,7 @@ const readCustomConditionsFromProcessArgs = () => {
       packageConditions.push(packageCondition);
     }
   });
-  return packageConditions
+  return packageConditions;
 };
 
 /*
@@ -620,11 +624,11 @@ const applyNodeEsmResolution = ({
         {
           parentUrl,
         },
-      )
+      );
     }
-    return resolution
+    return resolution;
   }
-  return resolution
+  return resolution;
 };
 
 const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
@@ -641,16 +645,16 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
         resolutionContext,
       );
       if (browserFieldResolution) {
-        return browserFieldResolution
+        return browserFieldResolution;
       }
     }
     return {
       type: "relative_specifier",
       url: new URL(specifier, parentUrl).href,
-    }
+    };
   }
   if (specifier[0] === "#") {
-    return applyPackageImportsResolution(specifier, resolutionContext)
+    return applyPackageImportsResolution(specifier, resolutionContext);
   }
   try {
     const urlObject = new URL(specifier);
@@ -658,12 +662,12 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
       return {
         type: "node_builtin_specifier",
         url: specifier,
-      }
+      };
     }
     return {
       type: "absolute_specifier",
       url: urlObject.href,
-    }
+    };
   } catch (e) {
     // bare specifier
     const browserFieldResolution = applyBrowserFieldResolution(
@@ -671,14 +675,14 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
       resolutionContext,
     );
     if (browserFieldResolution) {
-      return browserFieldResolution
+      return browserFieldResolution;
     }
     const packageResolution = applyPackageResolve(specifier, resolutionContext);
     const search = new URL(specifier, "file://").search;
     if (search) {
       packageResolution.url = `${packageResolution.url}${search}`;
     }
-    return packageResolution
+    return packageResolution;
   }
 };
 
@@ -687,22 +691,22 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
     resolutionContext;
   const browserCondition = conditions.includes("browser");
   if (!browserCondition) {
-    return null
+    return null;
   }
   const packageDirectoryUrl = lookupPackageScope(parentUrl);
   if (!packageDirectoryUrl) {
-    return null
+    return null;
   }
   const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
-    return null
+    return null;
   }
   const { browser } = packageJson;
   if (!browser) {
-    return null
+    return null;
   }
   if (typeof browser !== "object") {
-    return null
+    return null;
   }
   let url;
   if (specifier.startsWith(".")) {
@@ -729,9 +733,9 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
       packageDirectoryUrl,
       packageJson,
       url,
-    }
+    };
   }
-  return null
+  return null;
 };
 
 const applyPackageImportsResolution = (
@@ -744,7 +748,7 @@ const applyPackageImportsResolution = (
       "not a valid internal imports specifier name",
       internalSpecifier,
       resolutionContext,
-    )
+    );
   }
   const packageDirectoryUrl = lookupPackageScope(parentUrl);
   if (packageDirectoryUrl !== null) {
@@ -758,21 +762,21 @@ const applyPackageImportsResolution = (
         isImport: true,
       });
       if (resolved) {
-        return resolved
+        return resolved;
       }
     }
   }
   throw createPackageImportNotDefinedError(internalSpecifier, {
     ...resolutionContext,
     packageDirectoryUrl,
-  })
+  });
 };
 
 const applyPackageResolve = (packageSpecifier, resolutionContext) => {
   const { parentUrl, conditions, readPackageJson, preservesSymlink } =
     resolutionContext;
   if (packageSpecifier === "") {
-    throw new Error("invalid module specifier")
+    throw new Error("invalid module specifier");
   }
   if (
     conditions.includes("node") &&
@@ -781,7 +785,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
     return {
       type: "node_builtin_specifier",
       url: `node:${packageSpecifier}`,
-    }
+    };
   }
   let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
   if (
@@ -793,10 +797,10 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       `is not a valid package name`,
       packageName,
       resolutionContext,
-    )
+    );
   }
   if (packageSubpath.endsWith("/")) {
-    throw new Error("invalid module specifier")
+    throw new Error("invalid module specifier");
   }
   const questionCharIndex = packageName.indexOf("?");
   if (questionCharIndex > -1) {
@@ -807,7 +811,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
     packageName,
   });
   if (selfResolution) {
-    return selfResolution
+    return selfResolution;
   }
   let currentUrl = parentUrl;
   while (currentUrl !== "file:///") {
@@ -817,7 +821,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
     ).href;
     if (!node_fs.existsSync(new URL(packageDirectoryFacadeUrl))) {
       currentUrl = getParentUrl(currentUrl);
-      continue
+      continue;
     }
     const packageDirectoryUrl = preservesSymlink
       ? packageDirectoryFacadeUrl
@@ -831,16 +835,16 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
           packageDirectoryUrl,
           packageJson,
           exports,
-        })
+        });
       }
     }
     return applyLegacySubpathResolution(packageSubpath, {
       ...resolutionContext,
       packageDirectoryUrl,
       packageJson,
-    })
+    });
   }
-  throw createModuleNotFoundError(packageName, resolutionContext)
+  throw createModuleNotFoundError(packageName, resolutionContext);
 };
 
 const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
@@ -848,14 +852,14 @@ const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
     resolutionContext;
   const packageDirectoryUrl = lookupPackageScope(parentUrl);
   if (!packageDirectoryUrl) {
-    return undefined
+    return undefined;
   }
   const packageJson = readPackageJson(packageDirectoryUrl);
   if (!packageJson) {
-    return undefined
+    return undefined;
   }
   if (packageJson.name !== packageName) {
-    return undefined
+    return undefined;
   }
   const { exports } = packageJson;
   if (!exports) {
@@ -865,15 +869,15 @@ const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
       packageJson,
     });
     if (subpathResolution && subpathResolution.type !== "subpath") {
-      return subpathResolution
+      return subpathResolution;
     }
-    return undefined
+    return undefined;
   }
   return applyPackageExportsResolution(packageSubpath, {
     ...resolutionContext,
     packageDirectoryUrl,
     packageJson,
-  })
+  });
 };
 
 // https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
@@ -881,16 +885,19 @@ const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
   if (packageSubpath === ".") {
     const mainExport = applyMainExportResolution(resolutionContext);
     if (!mainExport) {
-      throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
+      throw createPackagePathNotExportedError(
+        packageSubpath,
+        resolutionContext,
+      );
     }
     const resolved = applyPackageTargetResolution(mainExport, {
       ...resolutionContext,
       key: ".",
     });
     if (resolved) {
-      return resolved
+      return resolved;
     }
-    throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
   }
   const packageExportsInfo = readExports(resolutionContext);
   if (
@@ -902,10 +909,10 @@ const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
       isImport: false,
     });
     if (resolved) {
-      return resolved
+      return resolved;
     }
   }
-  throw createPackagePathNotExportedError(packageSubpath, resolutionContext)
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
 };
 
 const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
@@ -918,18 +925,18 @@ const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
       ...resolutionContext,
       key: matchKey,
       isImport,
-    })
+    });
   }
   const expansionKeys = Object.keys(matchObject)
     .filter((key) => key.split("*").length === 2)
     .sort(comparePatternKeys);
   for (const expansionKey of expansionKeys) {
     const [patternBase, patternTrailer] = expansionKey.split("*");
-    if (matchKey === patternBase) continue
-    if (!matchKey.startsWith(patternBase)) continue
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
     if (patternTrailer.length > 0) {
-      if (!matchKey.endsWith(patternTrailer)) continue
-      if (matchKey.length < expansionKey.length) continue
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
     }
     const target = matchObject[expansionKey];
     const subpath = matchKey.slice(
@@ -942,9 +949,9 @@ const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
       subpath,
       pattern: true,
       isImport,
-    })
+    });
   }
-  return null
+  return null;
 };
 
 const applyPackageTargetResolution = (target, resolutionContext) => {
@@ -960,7 +967,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
 
   if (typeof target === "string") {
     if (pattern === false && subpath !== "" && !target.endsWith("/")) {
-      throw new Error("invalid module specifier")
+      throw new Error("invalid module specifier");
     }
     if (target.startsWith("./")) {
       const targetUrl = new URL(target, packageDirectoryUrl).href;
@@ -969,7 +976,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
           `target must be inside package`,
           target,
           resolutionContext,
-        )
+        );
       }
       return {
         type: isImport ? "field:imports" : "field:exports",
@@ -978,14 +985,14 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
         url: pattern
           ? targetUrl.replaceAll("*", subpath)
           : new URL(subpath, targetUrl).href,
-      }
+      };
     }
     if (!isImport || target.startsWith("../") || isValidUrl(target)) {
       throw createInvalidPackageTargetError(
         `target must starst with "./"`,
         target,
         resolutionContext,
-      )
+      );
     }
     return applyPackageResolve(
       pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
@@ -993,11 +1000,11 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
         ...resolutionContext,
         parentUrl: packageDirectoryUrl,
       },
-    )
+    );
   }
   if (Array.isArray(target)) {
     if (target.length === 0) {
-      return null
+      return null;
     }
     let lastResult;
     let i = 0;
@@ -1013,29 +1020,29 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
           isImport,
         });
         if (resolved) {
-          return resolved
+          return resolved;
         }
         lastResult = resolved;
       } catch (e) {
         if (e.code === "INVALID_PACKAGE_TARGET") {
-          continue
+          continue;
         }
         lastResult = e;
       }
     }
     if (lastResult) {
-      throw lastResult
+      throw lastResult;
     }
-    return null
+    return null;
   }
   if (target === null) {
-    return null
+    return null;
   }
   if (typeof target === "object") {
     const keys = Object.keys(target);
     for (const key of keys) {
       if (Number.isInteger(key)) {
-        throw new Error("Invalid package configuration")
+        throw new Error("Invalid package configuration");
       }
       if (key === "default" || conditions.includes(key)) {
         const targetValue = target[key];
@@ -1047,17 +1054,17 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
           isImport,
         });
         if (resolved) {
-          return resolved
+          return resolved;
         }
       }
     }
-    return null
+    return null;
   }
   throw createInvalidPackageTargetError(
     `target must be a string, array, object or null`,
     target,
     resolutionContext,
-  )
+  );
 };
 
 const readExports = ({ packageDirectoryUrl, packageJson }) => {
@@ -1065,10 +1072,10 @@ const readExports = ({ packageDirectoryUrl, packageJson }) => {
   if (Array.isArray(packageExports)) {
     return {
       type: "array",
-    }
+    };
   }
   if (packageExports === null) {
-    return {}
+    return {};
   }
   if (typeof packageExports === "object") {
     const keys = Object.keys(packageExports);
@@ -1089,25 +1096,25 @@ const readExports = ({ packageDirectoryUrl, packageJson }) => {
 ${conditionalKeys.map((key) => `"${key}"`).join("\n")}
 --- package directory url ---
 ${packageDirectoryUrl}`,
-      )
+      );
     }
     return {
       type: "object",
       hasRelativeKey,
       allKeysAreRelative: relativeKeys.length === keys.length,
-    }
+    };
   }
   if (typeof packageExports === "string") {
-    return { type: "string" }
+    return { type: "string" };
   }
-  return {}
+  return {};
 };
 
 const parsePackageSpecifier = (packageSpecifier) => {
   if (packageSpecifier[0] === "@") {
     const firstSlashIndex = packageSpecifier.indexOf("/");
     if (firstSlashIndex === -1) {
-      throw new Error("invalid module specifier")
+      throw new Error("invalid module specifier");
     }
     const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
     if (secondSlashIndex === -1) {
@@ -1115,7 +1122,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
         packageName: packageSpecifier,
         packageSubpath: ".",
         isScoped: true,
-      }
+      };
     }
     const packageName = packageSpecifier.slice(0, secondSlashIndex);
     const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
@@ -1124,14 +1131,14 @@ const parsePackageSpecifier = (packageSpecifier) => {
       packageName,
       packageSubpath,
       isScoped: true,
-    }
+    };
   }
   const firstSlashIndex = packageSpecifier.indexOf("/");
   if (firstSlashIndex === -1) {
     return {
       packageName: packageSpecifier,
       packageSubpath: ".",
-    }
+    };
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
@@ -1139,7 +1146,7 @@ const parsePackageSpecifier = (packageSpecifier) => {
   return {
     packageName,
     packageSubpath,
-  }
+  };
 };
 
 const applyMainExportResolution = (resolutionContext) => {
@@ -1149,36 +1156,36 @@ const applyMainExportResolution = (resolutionContext) => {
     packageExportsInfo.type === "array" ||
     packageExportsInfo.type === "string"
   ) {
-    return packageJson.exports
+    return packageJson.exports;
   }
   if (packageExportsInfo.type === "object") {
     if (packageExportsInfo.hasRelativeKey) {
-      return packageJson.exports["."]
+      return packageJson.exports["."];
     }
-    return packageJson.exports
+    return packageJson.exports;
   }
-  return undefined
+  return undefined;
 };
 
 const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
   const { packageDirectoryUrl, packageJson } = resolutionContext;
 
   if (packageSubpath === ".") {
-    return applyLegacyMainResolution(packageSubpath, resolutionContext)
+    return applyLegacyMainResolution(packageSubpath, resolutionContext);
   }
   const browserFieldResolution = applyBrowserFieldResolution(
     packageSubpath,
     resolutionContext,
   );
   if (browserFieldResolution) {
-    return browserFieldResolution
+    return browserFieldResolution;
   }
   return {
     type: "subpath",
     packageDirectoryUrl,
     packageJson,
     url: new URL(packageSubpath, packageDirectoryUrl).href,
-  }
+  };
 };
 
 const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
@@ -1186,7 +1193,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
   for (const condition of conditions) {
     const conditionResolver = mainLegacyResolvers[condition];
     if (!conditionResolver) {
-      continue
+      continue;
     }
     const resolved = conditionResolver(resolutionContext);
     if (resolved) {
@@ -1195,7 +1202,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
         packageDirectoryUrl,
         packageJson,
         url: new URL(resolved.path, packageDirectoryUrl).href,
-      }
+      };
     }
   }
   return {
@@ -1203,33 +1210,33 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
     packageDirectoryUrl,
     packageJson,
     url: new URL("index.js", packageDirectoryUrl).href,
-  }
+  };
 };
 const mainLegacyResolvers = {
   import: ({ packageJson }) => {
     if (typeof packageJson.module === "string") {
-      return { type: "field:module", path: packageJson.module }
+      return { type: "field:module", path: packageJson.module };
     }
     if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", path: packageJson.jsnext }
+      return { type: "field:jsnext", path: packageJson.jsnext };
     }
     if (typeof packageJson.main === "string") {
-      return { type: "field:main", path: packageJson.main }
+      return { type: "field:main", path: packageJson.main };
     }
-    return null
+    return null;
   },
   browser: ({ packageDirectoryUrl, packageJson }) => {
     const browserMain = (() => {
       if (typeof packageJson.browser === "string") {
-        return packageJson.browser
+        return packageJson.browser;
       }
       if (
         typeof packageJson.browser === "object" &&
         packageJson.browser !== null
       ) {
-        return packageJson.browser["."]
+        return packageJson.browser["."];
       }
-      return ""
+      return "";
     })();
 
     if (!browserMain) {
@@ -1237,9 +1244,9 @@ const mainLegacyResolvers = {
         return {
           type: "field:module",
           path: packageJson.module,
-        }
+        };
       }
-      return null
+      return null;
     }
     if (
       typeof packageJson.module !== "string" ||
@@ -1248,7 +1255,7 @@ const mainLegacyResolvers = {
       return {
         type: "field:browser",
         path: browserMain,
-      }
+      };
     }
     const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
     const content = node_fs.readFileSync(browserMainUrlObject, "utf-8");
@@ -1260,60 +1267,60 @@ const mainLegacyResolvers = {
       return {
         type: "field:module",
         path: packageJson.module,
-      }
+      };
     }
     return {
       type: "field:browser",
       path: browserMain,
-    }
+    };
   },
   node: ({ packageJson }) => {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
         path: packageJson.main,
-      }
+      };
     }
-    return null
+    return null;
   },
 };
 
 const comparePatternKeys = (keyA, keyB) => {
   if (!keyA.endsWith("/") && !keyA.includes("*")) {
-    throw new Error("Invalid package configuration")
+    throw new Error("Invalid package configuration");
   }
   if (!keyB.endsWith("/") && !keyB.includes("*")) {
-    throw new Error("Invalid package configuration")
+    throw new Error("Invalid package configuration");
   }
   const aStarIndex = keyA.indexOf("*");
   const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
   const bStarIndex = keyB.indexOf("*");
   const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
   if (baseLengthA > baseLengthB) {
-    return -1
+    return -1;
   }
   if (baseLengthB > baseLengthA) {
-    return 1
+    return 1;
   }
   if (aStarIndex === -1) {
-    return 1
+    return 1;
   }
   if (bStarIndex === -1) {
-    return -1
+    return -1;
   }
   if (keyA.length > keyB.length) {
-    return -1
+    return -1;
   }
   if (keyB.length > keyA.length) {
-    return 1
+    return 1;
   }
-  return 0
+  return 0;
 };
 
 const resolvePackageSymlink = (packageDirectoryUrl) => {
   const packageDirectoryPath = node_fs.realpathSync(new URL(packageDirectoryUrl));
   const packageDirectoryResolvedUrl = node_url.pathToFileURL(packageDirectoryPath).href;
-  return `${packageDirectoryResolvedUrl}/`
+  return `${packageDirectoryResolvedUrl}/`;
 };
 
 // https://nodejs.org/dist/latest-v16.x/docs/api/packages.html#packages_determining_module_system)
@@ -1327,34 +1334,34 @@ const determineModuleSystem = (
   if (inputTypeArgv) {
     const value = inputTypeArgv.slice("--input-type=".length);
     if (value === "module") {
-      return "module"
+      return "module";
     }
     if (value === "commonjs") {
-      return "commonjs"
+      return "commonjs";
     }
   }
   const extension = extensionFromUrl(url);
   if (extension === ".mjs") {
-    return "module"
+    return "module";
   }
   if (extension === ".cjs") {
-    return "commonjs"
+    return "commonjs";
   }
   if (extension === ".json") {
-    return "url"
+    return "url";
   }
   if (ambiguousExtensions.includes(extension)) {
     const packageDirectoryUrl = defaultLookupPackageScope(url);
     if (!packageDirectoryUrl) {
-      return "commonjs"
+      return "commonjs";
     }
     const packageJson = defaultReadPackageJson(packageDirectoryUrl);
     if (packageJson.type === "module") {
-      return "module"
+      return "module";
     }
-    return "commonjs"
+    return "commonjs";
   }
-  return "url"
+  return "url";
   // throw new Error(`unsupported file extension (${extension})`)
 };
 
@@ -1364,10 +1371,10 @@ const extensionFromUrl = (url) => {
   const filename =
     slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
   const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""
+  if (dotLastIndex === -1) return "";
   // if (dotLastIndex === pathname.length - 1) return ""
   const extension = filename.slice(dotLastIndex);
-  return extension
+  return extension;
 };
 
 const applyFileSystemMagicResolution = (
@@ -1390,7 +1397,7 @@ const applyFileSystemMagicResolution = (
         result.lastENOENTError = e;
         fileStat = null;
       } else {
-        throw e
+        throw e;
       }
     }
   }
@@ -1398,7 +1405,7 @@ const applyFileSystemMagicResolution = (
   if (fileStat && fileStat.isFile()) {
     result.stat = fileStat;
     result.url = fileUrl;
-    return result
+    return result;
   }
   if (fileStat && fileStat.isDirectory()) {
     if (magicDirectoryIndex) {
@@ -1412,11 +1419,11 @@ const applyFileSystemMagicResolution = (
         ...result,
         ...subResult,
         magicDirectoryIndex: true,
-      }
+      };
     }
     result.stat = fileStat;
     result.url = fileUrl;
-    return result
+    return result;
   }
 
   if (magicExtensions && magicExtensions.length) {
@@ -1431,24 +1438,24 @@ const applyFileSystemMagicResolution = (
         if (e.code === "ENOENT") {
           stat = null;
         } else {
-          throw e
+          throw e;
         }
       }
       if (stat) {
         result.stat = stat;
         result.url = `${fileUrl}${extensionToTry}`;
         result.magicExtension = extensionToTry;
-        return result
+        return result;
       }
     }
   }
   // magic extension not found
-  return result
+  return result;
 };
 
 const getExtensionsToTry = (magicExtensions, importer) => {
   if (!magicExtensions) {
-    return []
+    return [];
   }
   const extensionsSet = new Set();
   magicExtensions.forEach((magicExtension) => {
@@ -1459,7 +1466,7 @@ const getExtensionsToTry = (magicExtensions, importer) => {
       extensionsSet.add(magicExtension);
     }
   });
-  return Array.from(extensionsSet.values())
+  return Array.from(extensionsSet.values());
 };
 
 const LOG_LEVEL_OFF = "off";
@@ -1477,7 +1484,7 @@ const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info,
       warn,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_INFO) {
     return {
@@ -1487,7 +1494,7 @@ const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info,
       warn,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_WARN) {
     return {
@@ -1497,7 +1504,7 @@ const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info: infoDisabled,
       warn,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
@@ -1507,7 +1514,7 @@ const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info: infoDisabled,
       warn: warnDisabled,
       error,
-    }
+    };
   }
   if (logLevel === LOG_LEVEL_OFF) {
     return {
@@ -1517,7 +1524,7 @@ const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
       info: infoDisabled,
       warn: warnDisabled,
       error: errorDisabled,
-    }
+    };
   }
   throw new Error(`unexpected logLevel.
 --- logLevel ---
@@ -1527,7 +1534,7 @@ ${LOG_LEVEL_OFF}
 ${LOG_LEVEL_ERROR}
 ${LOG_LEVEL_WARN}
 ${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`)
+${LOG_LEVEL_DEBUG}`);
 };
 
 const debug = (...args) => console.debug(...args);
@@ -1648,6 +1655,7 @@ const pathnameToParentPathname = (pathname) => {
 };
 
 // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+
 
 const resolveUrl = (specifier, baseUrl) => {
   if (baseUrl) {
@@ -2148,7 +2156,7 @@ const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
 
 const applyUrlResolution = (specifier, importer) => {
   const url = new URL(specifier, importer).href;
-  return ensureWindowsDriveLetter(url, importer)
+  return ensureWindowsDriveLetter(url, importer);
 };
 
 const readImportmap = ({
@@ -2157,12 +2165,12 @@ const readImportmap = ({
   importmapFileRelativeUrl,
 }) => {
   if (typeof importmapFileRelativeUrl === "undefined") {
-    return null
+    return null;
   }
   if (typeof importmapFileRelativeUrl !== "string") {
     throw new TypeError(
       `importmapFileRelativeUrl must be a string, got ${importmapFileRelativeUrl}`,
-    )
+    );
   }
   const importmapFileUrl = applyUrlResolution(
     importmapFileRelativeUrl,
@@ -2181,9 +2189,9 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
   } catch (e) {
     if (e && e.code === "ENOENT") {
       logger.error(`importmap file not found at ${importmapFileUrl}`);
-      return null
+      return null;
     }
-    throw e
+    throw e;
   }
   let importMap;
   try {
@@ -2196,11 +2204,11 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
 ${e.stack}
 --- importmap file ---
 ${importmapFileUrl}`);
-      return null
+      return null;
     }
-    throw e
+    throw e;
   }
-  return normalizeImportMap(importMap, importmapFileUrl)
+  return normalizeImportMap(importMap, importmapFileUrl);
 };
 
 const applyImportmapResolution = (
@@ -2229,17 +2237,20 @@ const applyImportmapResolution = (
       // even if there is no importmap file
       importMap: importmap || {},
       defaultExtension: importDefaultExtension,
-    })
+    });
   } catch (e) {
     if (e.message.includes("bare specifier")) {
       logger.debug("unmapped bare specifier");
-      return null
+      return null;
     }
-    throw e
+    throw e;
   }
 };
 
 // https://github.com/benmosher/eslint-plugin-import/blob/master/resolvers/node/index.js
+// https://github.com/benmosher/eslint-plugin-import/tree/master/resolvers
+// https://github.com/olalonde/eslint-import-resolver-babel-root-import
+
 
 const interfaceVersion = 2;
 
@@ -2304,7 +2315,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
     return {
       found: true,
       path: null,
-    }
+    };
   }
 
   const importer = String(node_url.pathToFileURL(file));
@@ -2334,7 +2345,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         magicDirectoryIndex,
         magicExtensions,
         triggerNotFoundWarning,
-      })
+      });
     }
     if (url.startsWith("node:") && !nodeInPackageConditions) {
       logger.warn(
@@ -2342,7 +2353,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       );
     }
     logger.debug(`-> consider found because of scheme ${url}`);
-    return handleRemainingUrl()
+    return handleRemainingUrl();
   };
 
   const specifier = source;
@@ -2354,14 +2365,14 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
     ) {
       return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href, {
         resolvedBy: "url",
-      })
+      });
     }
 
     // data:*, http://*, https://*, file://*
     if (isAbsoluteUrl(specifier)) {
       return onUrl(specifier, {
         resolvedBy: "url",
-      })
+      });
     }
     if (importmapFileRelativeUrl) {
       const urlFromImportmap = applyImportmapResolution(specifier, {
@@ -2373,7 +2384,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
       if (urlFromImportmap) {
         return onUrl(urlFromImportmap, {
           resolvedBy: "importmap",
-        })
+        });
       }
     }
     const moduleSystem = determineModuleSystem(importer, {
@@ -2391,13 +2402,13 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
             specifier,
             importer,
           });
-          return { found: false, path: specifier }
+          return { found: false, path: specifier };
         }
-        throw e
+        throw e;
       }
       return onUrl(url, {
         resolvedBy: "commonjs",
-      })
+      });
     }
     if (moduleSystem === "module") {
       let nodeResolution;
@@ -2414,22 +2425,22 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
             specifier,
             importer,
           });
-          return { found: false, path: specifier }
+          return { found: false, path: specifier };
         }
-        throw e
+        throw e;
       }
       if (nodeResolution) {
         return onUrl(nodeResolution.url, {
           resolvedBy: "node_esm",
-        })
+        });
       }
     }
     if (moduleSystem === "url") {
       return onUrl(applyUrlResolution(specifier, importer), {
         resolvedBy: "url",
-      })
+      });
     }
-    throw new Error("not found")
+    throw new Error("not found");
   } catch (e) {
     logger.error(`Error while resolving "${source}" imported from "${file}"
 --- error stack ---
@@ -2437,7 +2448,7 @@ ${e.stack}`);
     return {
       found: false,
       path: null,
-    }
+    };
   }
 };
 
@@ -2465,7 +2476,7 @@ const handleFileUrl = (
       importer,
       url: fileUrl,
     });
-    return { found: false, path: node_url.fileURLToPath(fileUrl) }
+    return { found: false, path: node_url.fileURLToPath(fileUrl) };
   }
   fileUrl = fileResolution.url;
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
@@ -2486,29 +2497,29 @@ If you do so keep in mind windows users would not find that file.`,
     return {
       found: false,
       path: realFilePath,
-    }
+    };
   }
   logger.debug(`-> found file at ${realFilePath}`);
   return {
     found: true,
     path: realFilePath,
-  }
+  };
 };
 
 const handleRemainingUrl = () => {
   return {
     found: true,
     path: null,
-  }
+  };
 };
 
 const isAbsoluteUrl = (url) => {
   try {
     // eslint-disable-next-line no-new
     new URL(url);
-    return true
+    return true;
   } catch (e) {
-    return false
+    return false;
   }
 };
 

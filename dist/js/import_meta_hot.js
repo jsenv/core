@@ -7,7 +7,7 @@ const urlHotMetas = {};
 
 const createImportMetaHot = (importMetaUrl) => {
   const data = {};
-  const url = asUrlWithoutHmrQuery(importMetaUrl);
+  const url = asUrlWithoutHotSearchParam(importMetaUrl);
 
   return {
     data,
@@ -71,10 +71,10 @@ const addUrlMeta = (url, meta) => {
   };
 };
 
-const asUrlWithoutHmrQuery = (url) => {
+const asUrlWithoutHotSearchParam = (url) => {
   const urlObject = new URL(url);
-  if (urlObject.searchParams.has("hmr")) {
-    urlObject.searchParams.delete("hmr");
+  if (urlObject.searchParams.has("hot")) {
+    urlObject.searchParams.delete("hot");
     urlObject.searchParams.delete("v");
     return urlObject.href;
   }
