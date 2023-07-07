@@ -33,7 +33,7 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = `${server.origin}/foo/other/file.txt?v=e3b0c442`;
+  const expected = `${server.origin}/foo/other/file.txt?v=ead31da8`;
   assert({ actual, expected });
 };
 
