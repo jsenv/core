@@ -162,7 +162,7 @@ connection_manager: {
           onOpen: () => {
             readyState.goTo(READY_STATES.OPEN);
             if (logs) {
-              console.info(`[jsenv] connected to server`);
+              // console.info(`[jsenv] connected to server`);
             }
           },
         });

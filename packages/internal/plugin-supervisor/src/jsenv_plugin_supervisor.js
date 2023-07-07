@@ -23,9 +23,9 @@ export const jsenvPluginSupervisor = ({
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
-    serve: async (context) => {
-      if (context.request.pathname.startsWith("/__get_code_frame__/")) {
-        const { pathname, searchParams } = new URL(context.request.url);
+    serve: async (serveInfo) => {
+      if (serveInfo.request.pathname.startsWith("/__get_code_frame__/")) {
+        const { pathname, searchParams } = new URL(serveInfo.request.url);
         let urlWithLineAndColumn = pathname.slice(
           "/__get_code_frame__/".length,
         );
@@ -40,7 +40,7 @@ export const jsenvPluginSupervisor = ({
         const file = urlWithLineAndColumn.slice(0, match.index);
         let line = parseInt(match[1]);
         let column = parseInt(match[2]);
-        const urlInfo = context.kitchen.graph.getUrlInfo(file);
+        const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
@@ -83,8 +83,8 @@ export const jsenvPluginSupervisor = ({
           body: codeFrame,
         };
       }
-      if (context.request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = context.request.pathname.slice(
+      if (serveInfo.request.pathname.startsWith("/__get_error_cause__/")) {
+        let file = serveInfo.request.pathname.slice(
           "/__get_error_cause__/".length,
         );
         file = decodeURIComponent(file);
@@ -95,7 +95,7 @@ export const jsenvPluginSupervisor = ({
           };
         }
         const getErrorCauseInfo = () => {
-          const urlInfo = context.kitchen.graph.getUrlInfo(file);
+          const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
           if (!urlInfo) {
             return null;
           }
@@ -138,8 +138,8 @@ export const jsenvPluginSupervisor = ({
           body,
         };
       }
-      if (context.request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = context.request.pathname.slice(
+      if (serveInfo.request.pathname.startsWith("/__open_in_editor__/")) {
+        let file = serveInfo.request.pathname.slice(
           "/__open_in_editor__/".length,
         );
         file = decodeURIComponent(file);
