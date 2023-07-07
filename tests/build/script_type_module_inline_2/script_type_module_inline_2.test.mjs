@@ -18,7 +18,7 @@ const test = async (name, params) => {
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/${name}/`, import.meta.url),
-    !params.sourcemap,
+    !params.sourcemaps,
   );
   const server = await startBuildServer({
     logLevel: "warn",

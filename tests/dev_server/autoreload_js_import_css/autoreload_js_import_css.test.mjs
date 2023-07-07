@@ -7,6 +7,7 @@ import { startDevServer } from "@jsenv/core";
 const test = async ({
   debug = false,
   browserLauncher,
+  browserName,
   pageLogsAfterUpdatingCssFile = [
     {
       type: "startGroupCollapsed",
@@ -193,7 +194,7 @@ if (import.meta.hot) {
         bodyBackgroundColor: "rgba(0, 0, 0, 0)",
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected });
+      assert({ actual, expected, context: browserName });
     }
     // restore deps on css file
     jsFileContent.update(`
@@ -214,7 +215,7 @@ if (import.meta.hot) {
         bodyBackgroundColor: "rgb(0, 128, 0)", // green
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected });
+      assert({ actual, expected, context: browserName });
     }
   } finally {
     if (!debug) {
@@ -232,8 +233,10 @@ if (import.meta.hot) {
 if (process.platform !== "win32") {
   await test({
     browserLauncher: chromium,
+    browserName: "chromium",
   });
   await test({
     browserLauncher: firefox,
+    browserName: "firefox",
   });
 }
