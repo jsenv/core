@@ -93,8 +93,8 @@ export const jsenvPluginAsJsClassic = () => {
         rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleBundledUrlInfo.content,
         inputSourcemap: jsModuleBundledUrlInfo.sourcemap,
-        inputUrl: jsModuleBundledUrlInfo.url,
-        outputUrl: jsModuleBundledUrlInfo.generatedUrl,
+        inputUrl: urlInfo.url,
+        outputUrl: jsModuleBundledUrlInfo.url,
         outputFormat,
       });
       return {

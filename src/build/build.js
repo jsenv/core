@@ -647,6 +647,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               generatedUrlObject.searchParams.delete("as_json_module");
               generatedUrlObject.searchParams.delete("as_css_module");
               generatedUrlObject.searchParams.delete("as_text_module");
+              generatedUrlObject.searchParams.delete("dynamic_import");
               generatedUrlObject.hash = "";
               const buildUrl = generatedUrlObject.href;
               const buildSpecifier = asFormattedBuildSpecifier(

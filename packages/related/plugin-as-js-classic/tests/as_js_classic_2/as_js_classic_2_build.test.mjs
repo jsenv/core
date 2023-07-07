@@ -9,13 +9,12 @@ import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 const test = async (params) => {
   await build({
-    logLevel: "warn",
+    logLevel: "debug",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.js?as_js_classic": "main.js",
     },
-    plugins: [jsenvPluginAsJsClassic()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
@@ -46,4 +45,7 @@ const test = async (params) => {
 };
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "89" } });
+await test({
+  runtimeCompat: { chrome: "89" },
+  plugins: [jsenvPluginAsJsClassic()],
+});
