@@ -33,7 +33,9 @@ export const jsenvPluginImportAssertions = ({
   };
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename(reference.url)}.js`;
+    if (!reference.filename) {
+      reference.filename = `${urlToFilename(reference.url)}.js`;
+    }
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {

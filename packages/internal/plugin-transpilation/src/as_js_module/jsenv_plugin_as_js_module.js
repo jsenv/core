@@ -20,9 +20,11 @@ export const jsenvPluginAsJsModule = () => {
     redirectReference: (reference) => {
       if (reference.searchParams.has("as_js_module")) {
         reference.expectedType = "js_module";
-        const filename = urlToFilename(reference.url);
-        const [basename] = splitFileExtension(filename);
-        reference.filename = `${basename}.mjs`;
+        if (!reference.filename) {
+          const filename = urlToFilename(reference.url);
+          const [basename] = splitFileExtension(filename);
+          reference.filename = `${basename}.mjs`;
+        }
       }
     },
     fetchUrlContent: async (urlInfo) => {

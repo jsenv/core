@@ -35,7 +35,9 @@ export const jsenvPluginJsModuleConversion = () => {
 
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic";
-    reference.filename = generateJsClassicFilename(reference.url);
+    if (!reference.filename) {
+      reference.filename = generateJsClassicFilename(reference.url);
+    }
   };
 
   const turnIntoJsClassicProxy = (reference) => {

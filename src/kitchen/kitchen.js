@@ -344,7 +344,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       if (typeof isEntryPoint === "boolean") {
         urlInfo.isEntryPoint = isEntryPoint;
       }
-      if (filename) {
+      if (filename && !urlInfo.filename) {
         urlInfo.filename = filename;
       }
       assertFetchedContentCompliance({
