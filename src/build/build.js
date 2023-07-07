@@ -1166,22 +1166,21 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           Object.keys(hintsToInject).forEach((urlToHint) => {
             const hintNode = hintsToInject[urlToHint];
             const urlFormatted = urlToHint;
-            const buildSpecifierBeforeRedirect = findKey(
-              buildSpecifierMap,
-              urlFormatted,
-            );
+            const buildSpecifier = findKey(buildSpecifierMap, urlFormatted);
             const found = findHtmlNode(htmlAst, (htmlNode) => {
               return (
                 htmlNode.nodeName === "link" &&
-                getHtmlNodeAttribute(htmlNode, "href") ===
-                  buildSpecifierBeforeRedirect
+                getHtmlNodeAttribute(htmlNode, "href") === buildSpecifier
               );
             });
             if (!found) {
+              const buildSpecifierVersioned =
+                buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+              const href = buildSpecifierVersioned || buildSpecifier;
               mutations.push(() => {
                 const nodeToInsert = createHtmlNode({
                   tagName: "link",
-                  href: buildSpecifierBeforeRedirect,
+                  href,
                   rel: getHtmlNodeAttribute(hintNode, "rel"),
                   as: getHtmlNodeAttribute(hintNode, "as"),
                   type: getHtmlNodeAttribute(hintNode, "type"),
