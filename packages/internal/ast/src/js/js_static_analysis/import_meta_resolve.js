@@ -21,7 +21,7 @@ export const analyzeImportMetaResolveCall = (node, { onUrl }) => {
       end: firstArg.end,
       line: firstArg.loc.start.line,
       column: firstArg.loc.start.column,
-      astNodes: { node },
+      astInfo: { node },
     });
   }
 };

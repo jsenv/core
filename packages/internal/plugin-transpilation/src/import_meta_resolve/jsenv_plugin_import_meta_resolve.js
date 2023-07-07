@@ -27,7 +27,7 @@ export const jsenvPluginImportMetaResolve = () => {
             );
             const specifierLengthDiff =
               specifierLength - originalSpecifierLength;
-            const { node } = referenceToOther.astNodes;
+            const { node } = referenceToOther.astInfo;
             const end = node.end + specifierLengthDiff;
             magicSource.replace({
               start: node.start,

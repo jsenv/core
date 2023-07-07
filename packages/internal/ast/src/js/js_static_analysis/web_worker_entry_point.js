@@ -127,7 +127,7 @@ const analyzeWorkerCallArguments = (
       end: specifierNode.end,
       line: specifierNode.loc.start.line,
       column: specifierNode.loc.start.column,
-      astNodes: {
+      astInfo: {
         node,
         typePropertyNode,
       },
@@ -138,7 +138,7 @@ const analyzeWorkerCallArguments = (
     analyzeNewUrlCall(firstArgNode, {
       isJsModule,
       onUrl: (info) => {
-        info.astNodes.typePropertyNode = typePropertyNode;
+        info.astInfo.typePropertyNode = typePropertyNode;
         Object.assign(info, {
           expectedType,
           expectedSubtype,
@@ -151,7 +151,7 @@ const analyzeWorkerCallArguments = (
   if (isJsModule && isImportMetaResolveCall(firstArgNode)) {
     analyzeImportMetaResolveCall(firstArgNode, {
       onUrl: (info) => {
-        info.astNodes.typePropertyNode = typePropertyNode;
+        info.astInfo.typePropertyNode = typePropertyNode;
         Object.assign(info, {
           expectedType,
           expectedSubtype,

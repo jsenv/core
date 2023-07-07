@@ -108,7 +108,7 @@ const parseAndTransformJsReferences = async (
         "document.currentScript.src": urlInfo.url,
       }[externalReferenceInfo.baseUrlType],
       importAttributes: externalReferenceInfo.importAttributes,
-      astNodes: externalReferenceInfo.astNodes,
+      astInfo: externalReferenceInfo.astInfo,
     });
     parallelActions.push(async () => {
       await reference.readGeneratedSpecifier();

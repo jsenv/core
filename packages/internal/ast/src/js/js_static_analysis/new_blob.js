@@ -49,7 +49,7 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
       nodeType: contentInfo.nodeType,
       quote: contentInfo.quote,
       content: contentInfo.content,
-      astNodes: { node: nodeHoldingContent },
+      astInfo: { node: nodeHoldingContent },
     });
   }
 };

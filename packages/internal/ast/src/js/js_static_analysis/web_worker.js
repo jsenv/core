@@ -26,7 +26,7 @@ export const analyzeImportScriptCalls = (node, { onUrl }) => {
         end: specifierNode.end,
         line: specifierNode.loc.start.line,
         column: specifierNode.loc.start.column,
-        astNodes: { node: specifierNode },
+        astInfo: { node: specifierNode },
       });
     }
   });

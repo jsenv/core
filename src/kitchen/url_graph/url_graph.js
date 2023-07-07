@@ -349,7 +349,7 @@ const createUrlInfo = (url, context) => {
       leadsToADirectory: reference.leadsToADirectory,
       debug: reference.debug,
       importAttributes: reference.importAttributes,
-      astNodes: reference.astNodes,
+      astInfo: reference.astInfo,
       mutation: reference.mutation,
       data: { ...reference.data },
       specifier: newSpecifier,

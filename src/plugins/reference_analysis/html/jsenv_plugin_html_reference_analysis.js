@@ -47,7 +47,7 @@ const parseAndTransformHtmlReferences = async (
     node,
     attributeName,
     attributeValue,
-    { type, subtype, expectedType },
+    { type, subtype, expectedType, ...rest },
   ) => {
     let position;
     if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
@@ -100,7 +100,8 @@ const parseAndTransformHtmlReferences = async (
       crossorigin,
       integrity,
       debug,
-      astNodes: { node },
+      astInfo: { node, attributeName },
+      ...rest,
     });
     actions.push(async () => {
       await reference.readGeneratedSpecifier();
@@ -172,9 +173,7 @@ const parseAndTransformHtmlReferences = async (
       contentType,
       content: inlineContent,
       debug,
-      astNodes: {
-        node,
-      },
+      astInfo: { node },
     });
 
     const externalSpecifierAttributeName =
@@ -197,11 +196,10 @@ const parseAndTransformHtmlReferences = async (
           node,
           externalSpecifierAttributeName,
           externalSpecifier,
-          { type, subtype, expectedType },
+          { type, subtype, expectedType, next: inlineReference },
         );
         inlineReference.prev = externalRef;
         inlineReference.original = externalRef;
-        externalRef.next = inlineReference;
       }
     }
 
@@ -415,7 +413,7 @@ const readFetchMetas = (node) => {
 };
 
 const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
-  const rel = getHtmlNodeAttribute(linkReference.astNodes.node, "rel");
+  const rel = getHtmlNodeAttribute(linkReference.astInfo.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
   }
@@ -427,7 +425,7 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
   }
   if (rel === "preload") {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-    const as = getHtmlNodeAttribute(linkReference.astNodes.node, "as");
+    const as = getHtmlNodeAttribute(linkReference.astInfo.node, "as");
     if (as === "document") {
       return "html";
     }

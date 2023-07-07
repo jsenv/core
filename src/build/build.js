@@ -1467,6 +1467,9 @@ const shouldApplyVersioningOnReference = (reference) => {
   if (reference.isInline) {
     return false;
   }
+  if (reference.next && reference.next.isInline) {
+    return false;
+  }
   // specifier comes from "normalize" hook done a bit earlier in this file
   // we want to get back their build url to access their infos
   const referencedUrlInfo = reference.urlInfo;

@@ -12,14 +12,14 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
     expectedType: "js_module",
-    astNodes: { node: specifierNode },
+    astInfo: { node: specifierNode },
   };
   if (assertionInfo) {
     const { importAttributes, importNode, importTypeAttributeNode } =
       assertionInfo;
     info.expectedType = importAttributes.type;
     info.importAttributes = importAttributes;
-    Object.assign(info.astNodes, { importNode, importTypeAttributeNode });
+    Object.assign(info.astInfo, { importNode, importTypeAttributeNode });
   }
   onUrl(info);
 };
@@ -38,14 +38,14 @@ export const analyzeImportExpression = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    astNodes: { node: specifierNode },
+    astInfo: { node: specifierNode },
   };
   if (assertionInfo) {
     const { importAttributes, importNode, importTypeAttributeNode } =
       assertionInfo;
     info.expectedType = importAttributes.type;
     info.importAttributes = importAttributes;
-    Object.assign(info.astNodes, { importNode, importTypeAttributeNode });
+    Object.assign(info.astInfo, { importNode, importTypeAttributeNode });
   }
   onUrl(info);
 };
@@ -67,7 +67,7 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    astNodes: { node: specifierNode },
+    astInfo: { node: specifierNode },
   });
 };
 export const analyzeExportAllDeclaration = (node, { onUrl }) => {
@@ -80,7 +80,7 @@ export const analyzeExportAllDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    astNodes: { node: specifierNode },
+    astInfo: { node: specifierNode },
   });
 };
 

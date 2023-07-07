@@ -16,7 +16,7 @@ import { injectQueryParams } from "@jsenv/urls";
 export const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = (reference) => {
     reference.mutation = (magicSource) => {
-      const { typePropertyNode } = reference.astNodes;
+      const { typePropertyNode } = reference.astInfo;
       magicSource.replace({
         start: typePropertyNode.value.start,
         end: typePropertyNode.value.end,

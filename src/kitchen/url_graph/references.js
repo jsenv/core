@@ -315,7 +315,7 @@ const createReference = ({
   urlInfo = null,
   escape = null,
   importAttributes,
-  astNodes = {},
+  astInfo = {},
   mutation,
 }) => {
   if (typeof specifier !== "string") {
@@ -369,7 +369,7 @@ const createReference = ({
     contentType,
     escape,
     // used mostly by worker and import assertions
-    astNodes,
+    astInfo,
     importAttributes,
     mutation,
   };
