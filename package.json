@@ -70,7 +70,7 @@
     "@jsenv/js-module-fallback": "1.2.0",
     "@jsenv/runtime-compat": "1.0.0",
     "@jsenv/server": "15.0.4",
-    "@jsenv/sourcemap": "1.0.10",
+    "@jsenv/sourcemap": "1.1.0",
     "@jsenv/plugin-transpilation": "1.2.0",
     "@jsenv/plugin-supervisor": "1.2.0",
     "@jsenv/url-meta": "8.1.0",

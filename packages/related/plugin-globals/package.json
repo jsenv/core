@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@jsenv/ast": "5.0.0",
-    "@jsenv/sourcemap": "1.0.10",
+    "@jsenv/sourcemap": "1.1.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.0.0"
   },

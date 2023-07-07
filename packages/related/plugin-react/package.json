@@ -27,8 +27,8 @@
     "@babel/plugin-transform-react-jsx": "7.22.5",
     "@babel/plugin-transform-react-jsx-development": "7.22.5",
     "@jsenv/ast": "5.0.0",
-    "@jsenv/plugin-commonjs": "2.1.1",
-    "@jsenv/sourcemap": "1.0.10",
+    "@jsenv/plugin-commonjs": "2.2.0",
+    "@jsenv/sourcemap": "1.1.0",
     "@jsenv/url-meta": "8.1.0",
     "react-refresh": "0.14.0"
   },
