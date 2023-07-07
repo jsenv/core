@@ -2,7 +2,9 @@
   font-family: "Roboto";
   font-style: normal;
   font-weight: 400;
-  src: local("Roboto"), url(./roboto_v27_latin_regular.woff2) format("woff2");
+  src:
+    local("Roboto"),
+    url(./roboto_v27_latin_regular.woff2) format("woff2");
   font-display: swap;
 }
 

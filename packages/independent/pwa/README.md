@@ -13,7 +13,7 @@ The navigator will then run your website with only your ui in fullscreen.
 The following html displays a button enabled when add to home screen is available. Clicking on the button prompt user to add the website to home screen.
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Title</title>
@@ -100,7 +100,7 @@ Service worker allows you to register a script in the navigator. That script is 
 The raw service worker api offered by navigators is complex to implement. Especially when it comes to updating a service worker. This section shows how to use `@jsenv/pwa` to register and update a service worker.
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Title</title>
