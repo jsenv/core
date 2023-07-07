@@ -3,15 +3,13 @@
  * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
 
-import { injectQueryParams } from "@jsenv/urls";
+import { urlToFilename, injectQueryParams } from "@jsenv/urls";
 import {
   convertJsModuleToJsClassic,
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 
-export const jsenvPluginJsModuleConversion = ({
-  generateJsClassicFilename,
-}) => {
+export const jsenvPluginJsModuleConversion = () => {
   const isReferencingJsModule = (reference) => {
     if (
       reference.type === "js_import" ||
@@ -26,23 +24,20 @@ export const jsenvPluginJsModuleConversion = ({
     return false;
   };
 
-  const shouldPropagateJsModuleConversion = (reference, context) => {
-    if (isReferencingJsModule(reference, context)) {
-      const parentUrlInfo = context.urlGraph.getUrlInfo(reference.parentUrl);
-      if (!parentUrlInfo) {
-        return false;
-      }
-      const parentGotAsJsClassic = new URL(parentUrlInfo.url).searchParams.has(
-        "js_module_fallback",
-      );
-      return parentGotAsJsClassic;
+  const shouldPropagateJsModuleConversion = (reference) => {
+    if (isReferencingJsModule(reference)) {
+      const insideJsClassic =
+        reference.ownerUrlInfo.searchParams.has("js_module_fallback");
+      return insideJsClassic;
     }
     return false;
   };
 
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic";
-    reference.filename = generateJsClassicFilename(reference.url);
+    if (!reference.filename) {
+      reference.filename = generateJsClassicFilename(reference.url);
+    }
   };
 
   const turnIntoJsClassicProxy = (reference) => {
@@ -56,7 +51,7 @@ export const jsenvPluginJsModuleConversion = ({
   return {
     name: "jsenv:js_module_conversion",
     appliesDuring: "*",
-    redirectReference: (reference, context) => {
+    redirectReference: (reference) => {
       if (reference.searchParams.has("js_module_fallback")) {
         markAsJsClassicProxy(reference);
         return null;
@@ -67,42 +62,25 @@ export const jsenvPluginJsModuleConversion = ({
       //   (because it's the transpiled equivalent of static and dynamic imports)
       // And not other references otherwise we could try to transform inline resources
       // or specifiers inside new URL()...
-      if (shouldPropagateJsModuleConversion(reference, context)) {
-        return turnIntoJsClassicProxy(reference, context);
+      if (shouldPropagateJsModuleConversion(reference)) {
+        return turnIntoJsClassicProxy(reference);
       }
       return null;
     },
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsModuleReference, jsModuleUrlInfo] =
-        context.getWithoutSearchParam({
-          urlInfo,
-          context,
-          searchParam: "js_module_fallback",
+    fetchUrlContent: async (urlInfo) => {
+      const jsModuleUrlInfo = urlInfo.getWithoutSearchParam(
+        "js_module_fallback",
+        {
           // override the expectedType to "js_module"
           // because when there is ?js_module_fallback it means the underlying resource
           // is a js_module
           expectedType: "js_module",
-        });
-      if (!jsModuleReference) {
+        },
+      );
+      if (!jsModuleUrlInfo) {
         return null;
       }
-      await context.fetchUrlContent(jsModuleUrlInfo, {
-        reference: jsModuleReference,
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: jsModuleReference.subtype,
-          specifier: jsModuleReference.url,
-          expectedType: "js_module",
-        });
-      } else if (
-        context.build &&
-        !context.urlGraph.hasDependent(jsModuleUrlInfo)
-      ) {
-        context.urlGraph.deleteUrlInfo(jsModuleUrlInfo.url);
-      }
-
+      await jsModuleUrlInfo.fetchContent();
       let outputFormat;
       if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
         // if it's an entry point without dependency (it does not use import)
@@ -114,7 +92,7 @@ export const jsenvPluginJsModuleConversion = ({
         // or to be able to import when it uses import
         outputFormat = "system";
         urlInfo.type = "js_classic";
-        context.referenceUtils.foundSideEffectFile({
+        urlInfo.dependencies.foundSideEffectFile({
           sideEffectFileUrl: systemJsClientFileUrlDefault,
           expectedType: "js_classic",
           line: 0,
@@ -122,12 +100,12 @@ export const jsenvPluginJsModuleConversion = ({
         });
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: context.rootDirectoryUrl,
+        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleUrlInfo.content,
         inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleUrlInfo.sourcemap,
         inputUrl: jsModuleUrlInfo.url,
-        outputUrl: jsModuleUrlInfo.generatedUrl,
+        outputUrl: urlInfo.url,
         outputFormat,
       });
       return {
@@ -141,4 +119,26 @@ export const jsenvPluginJsModuleConversion = ({
       };
     },
   };
+};
+
+const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename(url);
+  let [basename, extension] = splitFileExtension(filename);
+  const { searchParams } = new URL(url);
+  if (
+    searchParams.has("as_json_module") ||
+    searchParams.has("as_css_module") ||
+    searchParams.has("as_text_module")
+  ) {
+    extension = ".js";
+  }
+  return `${basename}.nomodule${extension}`;
+};
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };

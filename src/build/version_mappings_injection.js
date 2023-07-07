@@ -10,30 +10,30 @@ import {
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 import { prependContent } from "../kitchen/prepend_content.js";
 
-export const injectVersionMappingsAsGlobal = async ({
-  kitchen,
+export const injectVersionMappingsAsGlobal = async (
   urlInfo,
   versionMappings,
-}) => {
+) => {
   if (urlInfo.type === "html") {
-    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
+    await prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
-        minification: kitchen.kitchenContext.minification,
+        minification: urlInfo.context.minification,
       }),
     });
+    return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    return prependContent(kitchen.urlInfoTransformer, urlInfo, {
+    await prependContent(urlInfo, {
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: kitchen.kitchenContext.minification,
+        minification: urlInfo.context.minification,
       }),
     });
+    return;
   }
-  return null;
 };
 
 const generateClientCodeForVersionMappings = (
@@ -46,18 +46,16 @@ const generateClientCodeForVersionMappings = (
     )}; ${globalName}.__v__ = function (s) { return m[s] || s }; })();`;
   }
   return `;(function() {
-  var __versionMappings__ = ${JSON.stringify(versionMappings, null, "  ")};
+  var __versionMappings__ = {
+    ${stringifyParams(versionMappings, "    ")}
+  };
   ${globalName}.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };
 })();`;
 };
 
-export const injectVersionMappingsAsImportmap = async ({
-  kitchen,
-  urlInfo,
-  versionMappings,
-}) => {
+export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
   const htmlAst = parseHtmlString(urlInfo.content, {
     storeOriginalPositions: false,
   });
@@ -69,13 +67,26 @@ export const injectVersionMappingsAsImportmap = async ({
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: kitchen.kitchenContext.minification
+      textContent: urlInfo.context.minification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),
     "jsenv:versioning",
   );
-  kitchen.urlInfoTransformer.applyTransformations(urlInfo, {
+  urlInfo.mutateContent({
     content: stringifyHtmlAst(htmlAst),
   });
+};
+
+const stringifyParams = (params, prefix = "") => {
+  const source = JSON.stringify(params, null, prefix);
+  if (prefix.length) {
+    // remove leading "{\n"
+    // remove leading prefix
+    // remove trailing "\n}"
+    return source.slice(2 + prefix.length, -2);
+  }
+  // remove leading "{"
+  // remove trailing "}"
+  return source.slice(1, -1);
 };

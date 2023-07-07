@@ -4,18 +4,23 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 const composeTwoObjects = (first, second, composerMap) => {
   const composed = {};
+
   const firstKeys = Object.keys(first);
   const secondKeys = Object.keys(second);
-  Object.keys(first).forEach(key => {
-    composed[key] = secondKeys.includes(key) ? composeTwoValues(first[key], second[key], composerMap[key]) : first[key];
+  Object.keys(first).forEach((key) => {
+    composed[key] = secondKeys.includes(key)
+      ? composeTwoValues(first[key], second[key], composerMap[key])
+      : first[key];
   });
-  Object.keys(second).forEach(key => {
+  Object.keys(second).forEach((key) => {
     if (!firstKeys.includes(key)) {
       composed[key] = second[key];
     }
   });
+
   return composed;
 };
+
 const composeTwoValues = (firstValue, secondValue, composer) => {
   if (composer) {
     return composer(firstValue, secondValue);
@@ -29,6 +34,7 @@ const composeEslintConfig = (...eslintConfigs) => {
     return next;
   }, {});
 };
+
 const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
   return composeTwoObjects(firstEslintConfig, secondEslintConfig, {
     parserOptions: (firstParserOptions, secondParserOptions) => {
@@ -36,21 +42,21 @@ const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
         ecmaFeatures: (firstEcmaFeatures, secondEcmaFeatures) => {
           return {
             ...firstEcmaFeatures,
-            ...secondEcmaFeatures
+            ...secondEcmaFeatures,
           };
-        }
+        },
       });
     },
     env: (firstEnv, secondEnv) => {
       return {
         ...firstEnv,
-        ...secondEnv
+        ...secondEnv,
       };
     },
     globals: (firstGlobals, secondGlobals) => {
       return {
         ...firstGlobals,
-        ...secondGlobals
+        ...secondGlobals,
       };
     },
     plugins: (firstPlugins, secondPlugins) => {
@@ -60,18 +66,18 @@ const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
       return composeTwoObjects(firstSettings, secondSettings, {
         extensions: (firstExtensions, secondExtensions) => {
           return [...firstExtensions, ...secondExtensions];
-        }
+        },
       });
     },
     rules: (firstRules, secondRules) => {
       return {
         ...firstRules,
-        ...secondRules
+        ...secondRules,
       };
     },
     overrides: (firstOverrides, secondOverrides) => {
       return [...firstOverrides, ...secondOverrides];
-    }
+    },
   });
 };
 
@@ -81,14 +87,14 @@ const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
 
 const eslintConfigBase = {
   parserOptions: {
-    sourceType: "module"
+    sourceType: "module",
   },
   env: {
-    es2022: true
+    es2022: true,
   },
   settings: {
-    extensions: [".js", ".mjs"]
-  }
+    extensions: [".js", ".mjs"],
+  },
 };
 
 /**
@@ -115,8 +121,7 @@ const eslintConfigForPrettier = {
     "key-spacing": ["off"],
     "keyword-spacing": ["off"],
     "max-len": ["off"],
-    "no-confusing-arrow": ["off"],
-    // prettier makes it non confusing
+    "no-confusing-arrow": ["off"], // prettier makes it non confusing
     "no-extra-semi": ["off"],
     "no-floating-decimal": ["off"],
     "no-mixed-spaces-and-tabs": ["off"],
@@ -140,8 +145,8 @@ const eslintConfigForPrettier = {
     "space-infix-ops": ["off"],
     "template-curly-spacing": ["off"],
     "wrap-iife": ["off"],
-    "yield-star-spacing": ["off"]
-  }
+    "yield-star-spacing": ["off"],
+  },
 };
 
 /*
@@ -188,8 +193,8 @@ const eslintConfigToPreferExplicitGlobals = {
     stop: "off",
     top: "off",
     unescape: "off",
-    valueOf: "off"
-  }
+    valueOf: "off",
+  },
 };
 
 /*
@@ -214,26 +219,32 @@ const jsenvEslintRules = {
   "array-bracket-spacing": ["error", "never"],
   "array-callback-return": ["error"],
   "arrow-parens": ["error", "as-needed"],
-  "arrow-spacing": ["error", {
-    before: true,
-    after: true
-  }],
+  "arrow-spacing": ["error", { before: true, after: true }],
   "block-scoped-var": ["error"],
   "brace-style": ["error", "stroustrup"],
-  "camelcase": ["off", {
-    properties: "always"
-  }],
-  "comma-dangle": ["error", {
-    arrays: "only-multiline",
-    objects: "only-multiline",
-    imports: "only-multiline",
-    exports: "only-multiline",
-    functions: "only-multiline"
-  }],
-  "comma-spacing": ["error", {
-    before: false,
-    after: true
-  }],
+  "camelcase": [
+    "off",
+    {
+      properties: "always",
+    },
+  ],
+  "comma-dangle": [
+    "error",
+    {
+      arrays: "only-multiline",
+      objects: "only-multiline",
+      imports: "only-multiline",
+      exports: "only-multiline",
+      functions: "only-multiline",
+    },
+  ],
+  "comma-spacing": [
+    "error",
+    {
+      before: false,
+      after: true,
+    },
+  ],
   "comma-style": ["error", "last"],
   "computed-property-spacing": ["error", "never"],
   "consistent-return": ["error"],
@@ -261,28 +272,37 @@ const jsenvEslintRules = {
    *
    * In practice spaces cause less troubles.
    */
-  "indent": ["error", 2, {
-    SwitchCase: 1
-  }],
+  "indent": ["error", 2, { SwitchCase: 1 }],
   "jsx-quotes": ["error"],
-  "key-spacing": ["error", {
-    beforeColon: false,
-    afterColon: true
-  }],
+  "key-spacing": [
+    "error",
+    {
+      beforeColon: false,
+      afterColon: true,
+    },
+  ],
   "keyword-spacing": ["error"],
   // disabled otherwise fails when eslint is runned on windows
   // after a git clone
   "linebreak-style": ["off", "unix"],
-  "max-len": ["warn", 120, 4, {
-    ignoreComments: true,
-    ignoreUrls: true,
-    ignorePattern: "^\\s*var\\s.+=\\s.+\\/.*?\\/;$"
-  }],
+  "max-len": [
+    "warn",
+    120,
+    4,
+    {
+      ignoreComments: true,
+      ignoreUrls: true,
+      ignorePattern: "^\\s*var\\s.+=\\s.+\\/.*?\\/;$",
+    },
+  ],
   "max-nested-callbacks": ["warn", 4],
-  "new-cap": ["error", {
-    newIsCap: true,
-    capIsNew: false
-  }],
+  "new-cap": [
+    "error",
+    {
+      newIsCap: true,
+      capIsNew: false,
+    },
+  ],
   "new-parens": ["error"],
   "no-alert": ["error"],
   "no-array-constructor": ["error"],
@@ -330,23 +350,16 @@ const jsenvEslintRules = {
   "no-irregular-whitespace": ["error"],
   "no-iterator": ["error"],
   "no-label-var": ["error"],
-  "no-labels": ["off"],
-  // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
-  "no-lone-blocks": ["off"],
-  // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
+  "no-labels": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
+  "no-lone-blocks": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
   "no-lonely-if": ["error"],
   "no-loop-func": ["error"],
   "no-magic-numbers": ["off"],
-  "no-mixed-requires": ["error", {
-    grouping: true,
-    allowCall: true
-  }],
+  "no-mixed-requires": ["error", { grouping: true, allowCall: true }],
   "no-mixed-spaces-and-tabs": ["error"],
   "no-multi-spaces": ["error"],
   "no-multi-str": ["error"],
-  "no-multiple-empty-lines": ["off", {
-    max: 1
-  }],
+  "no-multiple-empty-lines": ["off", { max: 1 }],
   "no-native-reassign": ["error"],
   "no-negated-condition": ["error"],
   // disabled because deprecated in favor of no-unsafe-negation
@@ -371,8 +384,22 @@ const jsenvEslintRules = {
   "no-proto": ["error"],
   "no-redeclare": ["error"],
   "no-regex-spaces": ["error"],
-  "no-restricted-imports": ["error", "domain", "freelist", "smalloc", "sys", "colors"],
-  "no-restricted-modules": ["error", "domain", "freelist", "smalloc", "sys", "colors"],
+  "no-restricted-imports": [
+    "error",
+    "domain",
+    "freelist",
+    "smalloc",
+    "sys",
+    "colors",
+  ],
+  "no-restricted-modules": [
+    "error",
+    "domain",
+    "freelist",
+    "smalloc",
+    "sys",
+    "colors",
+  ],
   "no-restricted-syntax": ["error", "WithStatement"],
   "no-return-assign": ["error", "always"],
   "no-setter-return": ["error"],
@@ -386,9 +413,7 @@ const jsenvEslintRules = {
   "no-this-before-super": ["error"],
   "no-throw-literal": ["error"],
   "no-trailing-spaces": ["error"],
-  "no-undef": ["error", {
-    typeof: true
-  }],
+  "no-undef": ["error", { typeof: true }],
   "no-undef-init": ["error"],
   "no-undefined": ["off"],
   "no-unexpected-multiline": ["error"],
@@ -396,29 +421,30 @@ const jsenvEslintRules = {
   "no-unneeded-ternary": ["error"],
   "no-unreachable": ["error"],
   "no-unused-expressions": ["error"],
-  "no-unused-labels": ["off"],
-  // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
+  "no-unused-labels": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
   "no-unused-private-class-members": ["error"],
   "no-unused-vars": ["error"],
-  "no-use-before-define": ["error",
-  /*
-   * "no-use-before-define" is great to prevent a common mistake
-   * where code tries to use a variable before it's actually available.
-   * In practice this rule fails even on valid code.
-   * Enabling the default options of this rule would
-   * force variables,functions and classes to be declared in specific order
-   * which is very annoying because:
-   * - code is valid in the first place
-   * - it's SUPER NICE to put variables and functions that are
-   *   implementation details at the bottom of the file to make
-   *   important code more accesible
-   */
-  {
-    functions: false,
-    variables: false,
-    classes: false,
-    allowNamedExports: true
-  }],
+  "no-use-before-define": [
+    "error",
+    /*
+     * "no-use-before-define" is great to prevent a common mistake
+     * where code tries to use a variable before it's actually available.
+     * In practice this rule fails even on valid code.
+     * Enabling the default options of this rule would
+     * force variables,functions and classes to be declared in specific order
+     * which is very annoying because:
+     * - code is valid in the first place
+     * - it's SUPER NICE to put variables and functions that are
+     *   implementation details at the bottom of the file to make
+     *   important code more accesible
+     */
+    {
+      functions: false,
+      variables: false,
+      classes: false,
+      allowNamedExports: true,
+    },
+  ],
   "no-useless-call": ["error"],
   "no-useless-concat": ["error"],
   "no-useless-constructor": ["error"],
@@ -435,12 +461,13 @@ const jsenvEslintRules = {
   // and having ESLint to complain is annoying
   // I prefer when ESLint really has something to say
   "operator-assignment": ["off", "always"],
-  "operator-linebreak": ["error", "after", {
-    overrides: {
-      "?": "ignore",
-      ":": "ignore"
-    }
-  }],
+  "operator-linebreak": [
+    "error",
+    "after",
+    {
+      overrides: { "?": "ignore", ":": "ignore" },
+    },
+  ],
   "padded-blocks": ["error", "never"],
   // I prefer to use const to indicate immediatly to the reader
   // that this variable is never re-assigned. let becomes
@@ -450,54 +477,72 @@ const jsenvEslintRules = {
   // I prefer ESLint to stay quiet during these moments.
   // I already got the habit of using const and would not care
   // if some let where to stay by mistake.
-  "prefer-const": ["off", {
-    destructuring: "all",
-    ignoreReadBeforeAssign: true
-  }],
+  "prefer-const": [
+    "off",
+    {
+      destructuring: "all",
+      ignoreReadBeforeAssign: true,
+    },
+  ],
   // Math.pow is cool, why being so strict ?
   "prefer-exponentiation-operator": ["off"],
   "prefer-rest-params": ["warn"],
   "prefer-spread": ["warn"],
   "prefer-template": ["warn"],
   "quote": [
-  // disabled because it becomes painfull when switching
-  // between "" and `` (template literals)
-  "off",
-  // double because closer to .json, this it increase compatibility between .js and .json
-  // also because ' are often used in english and '' would lead to 'I\'m' VS "I'm"
-  "double"],
-  "quote-props": ["error", "as-needed", {
-    keywords: false,
-    numbers: true,
-    // unnecessary: false so that when you fall into edge cases
-    // you can use the quoting style you want
-    unnecessary: false
-  }],
+    // disabled because it becomes painfull when switching
+    // between "" and `` (template literals)
+    "off",
+    // double because closer to .json, this it increase compatibility between .js and .json
+    // also because ' are often used in english and '' would lead to 'I\'m' VS "I'm"
+    "double",
+  ],
+  "quote-props": [
+    "error",
+    "as-needed",
+    {
+      keywords: false,
+      numbers: true,
+      // unnecessary: false so that when you fall into edge cases
+      // you can use the quoting style you want
+      unnecessary: false,
+    },
+  ],
   "semi": ["error", "always"],
-  "semi-spacing": ["error", {
-    before: false,
-    after: true
-  }],
+  "semi-spacing": [
+    "error",
+    {
+      before: false,
+      after: true,
+    },
+  ],
   "space-before-blocks": ["error", "always"],
   "space-before-function-paren": ["error", "never"],
   "space-in-parens": ["error", "never"],
   "space-infix-ops": ["error"],
   "space-unary-ops": ["error"],
-  "spaced-comment": ["error", "always", {
-    markers: ["!"]
-  }],
+  "spaced-comment": [
+    "error",
+    "always",
+    {
+      markers: ["!"],
+    },
+  ],
   "template-curly-spacing": ["error"],
   "use-isnan": ["error"],
-  "valid-jsdoc": ["off", {
-    requireReturn: false,
-    prefer: {
-      returns: "return"
-    }
-  }],
+  "valid-jsdoc": [
+    "off",
+    {
+      requireReturn: false,
+      prefer: {
+        returns: "return",
+      },
+    },
+  ],
   "valid-typeof": ["error"],
   "wrap-iife": ["error", "inside"],
   "yield-star-spacing": ["error", "both"],
-  "yoda": ["error"]
+  "yoda": ["error"],
 };
 
 /*
@@ -508,15 +553,16 @@ const jsenvEslintRules = {
 
 const jsenvEslintRulesForImport = {
   "import/default": ["error"],
-  "import/no-unresolved": ["error", {
-    commonjs: true,
-    amd: false,
-    caseSensitive: false
-  }],
+  "import/no-unresolved": [
+    "error",
+    {
+      commonjs: true,
+      amd: false,
+      caseSensitive: false,
+    },
+  ],
   "import/named": ["error"],
-  "import/namespace": ["error", {
-    allowComputed: true
-  }],
+  "import/namespace": ["error", { allowComputed: true }],
   "import/no-absolute-path": ["off"],
   "import/no-dynamic-require": ["error"],
   "import/export": ["error"],
@@ -529,21 +575,22 @@ const jsenvEslintRulesForImport = {
   // to have a lot of dependencies or feel compelled to reduce the number of imports.
   // It's already visible that a file has many imports and that ideally they should be
   // less imports, no need for ESLint, let's keep ESLint for more valuable things.
-  "import/max-dependencies": ["off", {
-    max: 10
-  }],
-  "import/no-anonymous-default-export": ["off", {
-    allowArray: true,
-    allowArrowFunction: false,
-    allowAnonymousClass: false,
-    allowAnonymousFunction: false,
-    allowLiteral: true,
-    allowObject: true
-  }],
+  "import/max-dependencies": ["off", { max: 10 }],
+  "import/no-anonymous-default-export": [
+    "off",
+    {
+      allowArray: true,
+      allowArrowFunction: false,
+      allowAnonymousClass: false,
+      allowAnonymousFunction: false,
+      allowLiteral: true,
+      allowObject: true,
+    },
+  ],
   "import/no-self-import": ["error"],
   "import/no-cycle": ["error"],
   "import/no-useless-path-segments": ["error"],
-  "import/no-default-export": ["error"]
+  "import/no-default-export": ["error"],
 };
 
 /*
@@ -555,9 +602,7 @@ const jsenvEslintRulesForImport = {
 const jsenvEslintRulesForReact = {
   "react/display-name": ["error"],
   "react/jsx-key": ["error"],
-  "react/jsx-filename-extension": ["error", {
-    extensions: [".jsx"]
-  }],
+  "react/jsx-filename-extension": ["error", { extensions: [".jsx"] }],
   "react/jsx-no-comment-textnodes": ["error"],
   "react/jsx-no-duplicate-props": ["error"],
   "react/jsx-no-target-blank": ["off"],
@@ -577,7 +622,7 @@ const jsenvEslintRulesForReact = {
   "react/no-unsafe": ["off"],
   "react/prop-types": ["off"],
   "react/react-in-jsx-scope": ["error"],
-  "react/require-render-return": ["off"]
+  "react/require-render-return": ["off"],
 };
 
 exports.composeEslintConfig = composeEslintConfig;
@@ -587,3 +632,4 @@ exports.eslintConfigToPreferExplicitGlobals = eslintConfigToPreferExplicitGlobal
 exports.jsenvEslintRules = jsenvEslintRules;
 exports.jsenvEslintRulesForImport = jsenvEslintRulesForImport;
 exports.jsenvEslintRulesForReact = jsenvEslintRulesForReact;
+//# sourceMappingURL=js/jsenv_eslint_config.cjs.map

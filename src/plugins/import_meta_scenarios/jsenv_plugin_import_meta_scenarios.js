@@ -16,7 +16,7 @@ export const jsenvPluginImportMetaScenarios = () => {
     name: "jsenv:import_meta_scenario",
     appliesDuring: "*",
     transformUrlContent: {
-      js_module: async (urlInfo, context) => {
+      js_module: async (urlInfo) => {
         if (
           !urlInfo.content.includes("import.meta.dev") &&
           !urlInfo.content.includes("import.meta.test") &&
@@ -36,7 +36,7 @@ export const jsenvPluginImportMetaScenarios = () => {
         const replace = (path, value) => {
           replacements.push({ path, value });
         };
-        if (context.build) {
+        if (urlInfo.context.build) {
           // during build ensure replacement for tree-shaking
           dev.forEach((path) => {
             replace(path, "undefined");

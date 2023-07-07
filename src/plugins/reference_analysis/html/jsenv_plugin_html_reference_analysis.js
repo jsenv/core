@@ -23,8 +23,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
     name: "jsenv:html_reference_analysis",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (urlInfo, context) =>
-        parseAndTransformHtmlReferences(urlInfo, context, {
+      html: (urlInfo) =>
+        parseAndTransformHtmlReferences(urlInfo, {
           inlineContent,
           inlineConvertedScript,
         }),
@@ -34,7 +34,6 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
 const parseAndTransformHtmlReferences = async (
   urlInfo,
-  context,
   { inlineContent, inlineConvertedScript },
 ) => {
   const content = urlInfo.content;
@@ -48,7 +47,7 @@ const parseAndTransformHtmlReferences = async (
     node,
     attributeName,
     attributeValue,
-    { type, subtype, expectedType },
+    { type, subtype, expectedType, ...rest },
   ) => {
     let position;
     if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
@@ -73,21 +72,39 @@ const parseAndTransformHtmlReferences = async (
       "preload",
       "modulepreload",
     ].includes(subtype);
-    const [reference] = context.referenceUtils.found({
-      node,
+    let attributeLocation = node.sourceCodeLocation.attrs[attributeName];
+    if (
+      !attributeLocation &&
+      attributeName === "href" &&
+      (node.tagName === "use" || node.tagName === "image")
+    ) {
+      attributeLocation = node.sourceCodeLocation.attrs["xlink:href"];
+    }
+    const attributeStart = attributeLocation.startOffset;
+    const attributeValueStart = urlInfo.content.indexOf(
+      attributeValue,
+      attributeStart + `${attributeName}=`.length,
+    );
+    const attributeValueEnd = attributeValueStart + attributeValue.length;
+    const reference = urlInfo.dependencies.found({
       type,
       subtype,
       expectedType,
       specifier: attributeValue,
       specifierLine: line,
       specifierColumn: column,
+      specifierStart: attributeValueStart,
+      specifierEnd: attributeValueEnd,
       isResourceHint,
+      isWeak: isResourceHint,
       crossorigin,
       integrity,
       debug,
+      astInfo: { node, attributeName },
+      ...rest,
     });
     actions.push(async () => {
-      await context.referenceUtils.readGeneratedSpecifier(reference);
+      await reference.readGeneratedSpecifier();
       mutations.push(() => {
         setHtmlNodeAttributes(node, {
           [attributeName]: reference.generatedSpecifier,
@@ -143,23 +160,21 @@ const parseAndTransformHtmlReferences = async (
       columnEnd,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline(
-      {
-        node,
-        type,
-        expectedType,
-        isOriginalPosition: isOriginal,
-        // we remove 1 to the line because imagine the following html:
-        // <style>body { color: red; }</style>
-        // -> content starts same line as <style> (same for <script>)
-        specifierLine: line - 1,
-        specifierColumn: column,
-        specifier: inlineContentUrl,
-        contentType,
-        content: inlineContent,
-        debug,
-      },
-    );
+    const inlineReference = urlInfo.dependencies.foundInline({
+      type,
+      expectedType,
+      isOriginalPosition: isOriginal,
+      // we remove 1 to the line because imagine the following html:
+      // <style>body { color: red; }</style>
+      // -> content starts same line as <style> (same for <script>)
+      specifierLine: line - 1,
+      specifierColumn: column,
+      specifier: inlineContentUrl,
+      contentType,
+      content: inlineContent,
+      debug,
+      astInfo: { node },
+    });
 
     const externalSpecifierAttributeName =
       type === "script"
@@ -174,27 +189,22 @@ const parseAndTransformHtmlReferences = async (
       );
       if (externalSpecifier) {
         // create an external ref
-        // the goal is only to have the url in the graph (and in dependencies/implitic urls for reload)
+        // the goal is only to have the url in the graph (and in dependencies/implicit urls for reload)
         // not to consider the url is actually used (at least during build)
-        // maybe we can just exlcude these urls in a special if during build, we'll see
+        // maybe we can just exclude these urls in a special if during build, we'll see
         const externalRef = createExternalReference(
           node,
           externalSpecifierAttributeName,
           externalSpecifier,
-          { type, subtype, expectedType },
+          { type, subtype, expectedType, next: inlineReference },
         );
         inlineReference.prev = externalRef;
         inlineReference.original = externalRef;
-        externalRef.next = inlineReference;
       }
     }
 
     actions.push(async () => {
-      await cookInlineContent({
-        context,
-        inlineContentUrlInfo: inlineUrlInfo,
-        inlineContentReference: inlineReference,
-      });
+      await inlineReference.urlInfo.cook();
       mutations.push(() => {
         if (hotAccept) {
           removeHtmlNodeText(node);
@@ -202,7 +212,7 @@ const parseAndTransformHtmlReferences = async (
             "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
           });
         } else {
-          setHtmlNodeText(node, inlineUrlInfo.content, {
+          setHtmlNodeText(node, inlineReference.urlInfo.content, {
             indentation: false, // indentation would decrease stack trace precision
           });
           setHtmlNodeAttributes(node, {
@@ -242,7 +252,7 @@ const parseAndTransformHtmlReferences = async (
       });
       if (ref) {
         finalizeCallbacks.push(() => {
-          ref.expectedType = decideLinkExpectedType(ref, context);
+          ref.expectedType = decideLinkExpectedType(ref, urlInfo);
         });
       }
     },
@@ -365,33 +375,6 @@ const parseAndTransformHtmlReferences = async (
   return stringifyHtmlAst(htmlAst);
 };
 
-const cookInlineContent = async ({
-  context,
-  inlineContentUrlInfo,
-  inlineContentReference,
-}) => {
-  try {
-    await context.cook(inlineContentUrlInfo, {
-      reference: inlineContentReference,
-    });
-  } catch (e) {
-    if (e.code === "PARSE_ERROR") {
-      // When something like <style> or <script> contains syntax error
-      // the HTML in itself it still valid
-      // keep the syntax error and continue with the HTML
-      const messageStart =
-        inlineContentUrlInfo.type === "css"
-          ? `Syntax error on css declared inside <style>`
-          : `Syntax error on js declared inside <script>`;
-
-      context.logger.error(`${messageStart}: ${e.cause.reasonCode}
-${e.traceMessage}`);
-    } else {
-      throw e;
-    }
-  }
-};
-
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
 const integrityCompatibleTagNames = ["script", "link", "img", "source"];
 const readFetchMetas = (node) => {
@@ -407,8 +390,8 @@ const readFetchMetas = (node) => {
   return meta;
 };
 
-const decideLinkExpectedType = (linkReference, context) => {
-  const rel = getHtmlNodeAttribute(linkReference.node, "rel");
+const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
+  const rel = getHtmlNodeAttribute(linkReference.astInfo.node, "rel");
   if (rel === "webmanifest") {
     return "webmanifest";
   }
@@ -420,7 +403,7 @@ const decideLinkExpectedType = (linkReference, context) => {
   }
   if (rel === "preload") {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#what_types_of_content_can_be_preloaded
-    const as = getHtmlNodeAttribute(linkReference.node, "as");
+    const as = getHtmlNodeAttribute(linkReference.astInfo.node, "as");
     if (as === "document") {
       return "html";
     }
@@ -428,13 +411,13 @@ const decideLinkExpectedType = (linkReference, context) => {
       return "css";
     }
     if (as === "script") {
-      const firstScriptOnThisUrl = context.referenceUtils.find(
-        (refCandidate) =>
-          refCandidate.url === linkReference.url &&
-          refCandidate.type === "script",
-      );
-      if (firstScriptOnThisUrl) {
-        return firstScriptOnThisUrl.expectedType;
+      for (const referenceToOther of htmlUrlInfo.referenceToOthersSet) {
+        if (
+          referenceToOther.url === linkReference.url &&
+          referenceToOther.type === "script"
+        ) {
+          return referenceToOther.expectedType;
+        }
       }
       return undefined;
     }

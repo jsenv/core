@@ -1919,7 +1919,7 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 	}
 
 	if ('CI' in env) {
-		if ('GITHUB_ACTIONS' in env) {
+		if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
 			return 3;
 		}
 
@@ -4384,6 +4384,10 @@ const executeSteps = async (
             status: "executing",
           },
         };
+        if (typeof executionParams.allocatedMs === "function") {
+          executionParams.allocatedMs =
+            executionParams.allocatedMs(beforeExecutionInfo);
+        }
         let spinner;
         if (executionSpinner) {
           spinner = startSpinner({
@@ -4413,10 +4417,7 @@ const executeSteps = async (
           executionResult = await run({
             signal: multipleExecutionsOperation.signal,
             logger,
-            allocatedMs:
-              typeof executionParams.allocatedMs === "function"
-                ? executionParams.allocatedMs(beforeExecutionInfo)
-                : executionParams.allocatedMs,
+            allocatedMs: executionParams.allocatedMs,
             keepRunning,
             mirrorConsole: false, // file are executed in parallel, log would be a mess to read
             collectConsole: executionParams.collectConsole,

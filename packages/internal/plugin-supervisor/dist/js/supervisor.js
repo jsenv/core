@@ -150,7 +150,7 @@ window.__supervisor__ = (() => {
         start();
         currentScriptClone = prepareScriptToLoad(currentScript);
         if (isReload) {
-          urlObject.searchParams.set("hmr", Date.now());
+          urlObject.searchParams.set("hot", Date.now());
           nodeToReplace = currentScriptClone;
           currentScriptClone.src = urlObject.href;
         } else {
@@ -227,7 +227,7 @@ window.__supervisor__ = (() => {
       } = {}) => {
         start();
         if (isReload) {
-          urlObject.searchParams.set("hmr", Date.now());
+          urlObject.searchParams.set("hot", Date.now());
         }
         try {
           const namespace = await importFn(urlObject.href);
@@ -276,7 +276,7 @@ window.__supervisor__ = (() => {
         start();
         currentScriptClone = prepareScriptToLoad(currentScript);
         if (isReload) {
-          urlObject.searchParams.set("hmr", Date.now());
+          urlObject.searchParams.set("hot", Date.now());
           nodeToReplace = currentScriptClone;
           currentScriptClone.src = urlObject.href;
         } else {

@@ -39,7 +39,7 @@ try {
 }
 
 if (process.platform !== "win32") {
-  const runtimeId = Array.from(devServer.contextCache.keys())[0];
+  const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
   takeFileSnapshot(
     new URL(`./.jsenv/${runtimeId}/main.html`, import.meta.url),
     new URL("./snapshots/dev/main.html", import.meta.url),

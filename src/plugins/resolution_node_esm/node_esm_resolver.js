@@ -8,7 +8,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { bufferToEtag } from "@jsenv/filesystem";
 import {
   applyNodeEsmResolution,
   readCustomConditionsFromProcessArgs,
@@ -29,19 +28,22 @@ export const createNodeEsmResolver = ({
     "import",
   ];
 
-  return (reference, context) => {
+  return (reference) => {
     if (reference.type === "package_json") {
       return reference.specifier;
     }
+    const { ownerUrlInfo } = reference;
     if (reference.specifier === "/") {
-      const { mainFilePath, rootDirectoryUrl } = context;
+      const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
       return String(new URL(mainFilePath, rootDirectoryUrl));
     }
     if (reference.specifier[0] === "/") {
-      return new URL(reference.specifier.slice(1), context.rootDirectoryUrl)
-        .href;
+      return new URL(
+        reference.specifier.slice(1),
+        ownerUrlInfo.context.rootDirectoryUrl,
+      ).href;
     }
-    const parentUrl = reference.baseUrl || reference.parentUrl;
+    const parentUrl = reference.baseUrl || ownerUrlInfo.url;
     if (!parentUrl.startsWith("file:")) {
       return new URL(reference.specifier, parentUrl).href;
     }
@@ -51,7 +53,7 @@ export const createNodeEsmResolver = ({
       specifier: reference.specifier,
       preservesSymlink,
     });
-    if (context.dev) {
+    if (ownerUrlInfo.context.dev) {
       const dependsOnPackageJson =
         type !== "relative_specifier" &&
         type !== "absolute_specifier" &&
@@ -62,7 +64,6 @@ export const createNodeEsmResolver = ({
         // must be invalidated when corresponding package.json changes
         addRelationshipWithPackageJson({
           reference,
-          context,
           packageJsonUrl: `${packageDirectoryUrl}package.json`,
           field: type.startsWith("field:")
             ? `#${type.slice("field:".length)}`
@@ -70,7 +71,7 @@ export const createNodeEsmResolver = ({
         });
       }
     }
-    if (context.dev) {
+    if (ownerUrlInfo.context.dev) {
       // without this check a file inside a project without package.json
       // could be considered as a node module if there is a ancestor package.json
       // but we want to version only node modules
@@ -78,7 +79,7 @@ export const createNodeEsmResolver = ({
         const packageDirectoryUrl = defaultLookupPackageScope(url);
         if (
           packageDirectoryUrl &&
-          packageDirectoryUrl !== context.rootDirectoryUrl
+          packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
         ) {
           const packageVersion =
             defaultReadPackageJson(packageDirectoryUrl).version;
@@ -86,7 +87,6 @@ export const createNodeEsmResolver = ({
           if (packageVersion) {
             addRelationshipWithPackageJson({
               reference,
-              context,
               packageJsonUrl: `${packageDirectoryUrl}package.json`,
               field: "version",
               hasVersioningEffect: true,
@@ -101,29 +101,35 @@ export const createNodeEsmResolver = ({
 };
 
 const addRelationshipWithPackageJson = ({
-  context,
+  reference,
   packageJsonUrl,
   field,
   hasVersioningEffect = false,
 }) => {
-  const referenceFound = context.referenceUtils.find(
-    (ref) => ref.type === "package_json" && ref.subtype === field,
-  );
-  if (referenceFound) {
-    return;
+  const { ownerUrlInfo } = reference;
+  for (const referenceToOther of ownerUrlInfo.referenceToOthersSet) {
+    if (
+      referenceToOther.type === "package_json" &&
+      referenceToOther.subtype === field
+    ) {
+      return;
+    }
   }
-  const [, packageJsonUrlInfo] = context.referenceUtils.inject({
+  const packageJsonReference = reference.addImplicit({
     type: "package_json",
     subtype: field,
     specifier: packageJsonUrl,
-    isImplicit: true,
     hasVersioningEffect,
+    isWeak: true,
   });
-  if (packageJsonUrlInfo.type === undefined) {
+  // we don't cook package.json files, we just maintain their content
+  // to be able to check if it has changed later on
+  if (packageJsonReference.urlInfo.content === undefined) {
     const packageJsonContentAsBuffer = readFileSync(new URL(packageJsonUrl));
-    packageJsonUrlInfo.type = "json";
-    packageJsonUrlInfo.content = String(packageJsonContentAsBuffer);
-    packageJsonUrlInfo.originalContentEtag = packageJsonUrlInfo.contentEtag =
-      bufferToEtag(packageJsonContentAsBuffer);
+    packageJsonReference.urlInfo.type = "json";
+    packageJsonReference.urlInfo.kitchen.urlInfoTransformer.setContent(
+      packageJsonReference.urlInfo,
+      String(packageJsonContentAsBuffer),
+    );
   }
 };

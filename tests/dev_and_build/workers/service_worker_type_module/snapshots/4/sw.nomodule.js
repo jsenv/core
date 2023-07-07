@@ -1,26 +1,28 @@
 
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "dcca6781"
+    "version": "924507b2"
   },
   "/css/style.css": {
-    "version": "0e312da1",
-    "versionedUrl": "/css/style.css?v=0e312da1"
+    "version": "2e9d11a2",
+    "versionedUrl": "/css/style.css?v=2e9d11a2"
   },
   "/js/a.nomodule.js": {
-    "version": "8345fcfc",
-    "versionedUrl": "/js/a.nomodule.js?v=8345fcfc"
+    "version": "c6a75051",
+    "versionedUrl": "/js/a.nomodule.js?v=c6a75051"
   },
   "/js/b.nomodule.js": {
     "version": "4d5b0641",
     "versionedUrl": "/js/b.nomodule.js?v=4d5b0641"
   }
 };
+
+
 ;(function() {
   var __versionMappings__ = {
-  "/js/a.nomodule.js": "/js/a.nomodule.js?v=8345fcfc",
-  "/js/b.nomodule.js": "/js/b.nomodule.js?v=4d5b0641"
-};
+    "/js/a.nomodule.js": "/js/a.nomodule.js?v=c6a75051",
+    "/js/b.nomodule.js": "/js/b.nomodule.js?v=4d5b0641"
+  };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };

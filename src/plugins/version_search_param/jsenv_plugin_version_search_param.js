@@ -5,7 +5,7 @@ export const jsenvPluginVersionSearchParam = () => {
     redirectReference: (reference) => {
       // "v" search param goal is to enable long-term cache
       // for server response headers
-      // it is also used by hmr to bypass browser cache
+      // it is also used by hot to bypass browser cache
       // this goal is achieved when we reach this part of the code
       // We get rid of this params so that urlGraph and other parts of the code
       // recognize the url (it is not considered as a different url)

@@ -32,7 +32,6 @@ export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
   const contentInfo = extractContentInfo(nodeHoldingContent);
   if (contentInfo) {
     onInlineContent({
-      node: nodeHoldingContent,
       type: "new_inline_content_first_arg",
       contentType,
       start: nodeHoldingContent.start,
@@ -44,6 +43,7 @@ export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
       nodeType: contentInfo.nodeType,
       quote: contentInfo.quote,
       content: contentInfo.content,
+      astInfo: { node: nodeHoldingContent },
     });
   }
 };

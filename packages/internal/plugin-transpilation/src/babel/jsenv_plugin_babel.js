@@ -9,17 +9,17 @@ import { analyzeConstructableStyleSheetUsage } from "./new_stylesheet/constructa
 import { babelPluginNewStylesheetInjector } from "./new_stylesheet/babel_plugin_new_stylesheet_injector.js";
 
 export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
-  const transformWithBabel = async (urlInfo, context) => {
+  const transformWithBabel = async (urlInfo) => {
     const isJsModule = urlInfo.type === "js_module";
     const getImportSpecifier = (clientFileUrl) => {
-      const [reference] = context.referenceUtils.inject({
+      const jsImportReference = urlInfo.dependencies.inject({
         type: "js_import",
         expectedType: "js_module",
         specifier: clientFileUrl,
       });
-      return JSON.parse(reference.generatedSpecifier);
+      return JSON.parse(jsImportReference.generatedSpecifier);
     };
-    const isSupported = context.isSupportedOnCurrentClients;
+    const isSupported = urlInfo.context.isSupportedOnCurrentClients;
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.originalUrl,
       isSupported,
@@ -36,7 +36,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
             { babelHelpersAsImport, getImportSpecifier },
           ];
         } else {
-          context.referenceUtils.foundSideEffectFile({
+          urlInfo.dependencies.foundSideEffectFile({
             sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
             expectedType: "js_classic",
             specifierLine: regeneratorRuntimeUsage.line,
@@ -55,7 +55,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
             { babelHelpersAsImport, getImportSpecifier },
           ];
         } else {
-          context.referenceUtils.foundSideEffectFile({
+          urlInfo.dependencies.foundSideEffectFile({
             sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
             expectedType: "js_classic",
             specifierLine: constructableStyleSheetUsage.line,
@@ -82,7 +82,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
       babelPlugins,
       options: {
         generatorOpts: {
-          retainLines: context.dev,
+          retainLines: urlInfo.context.dev,
         },
       },
       input: urlInfo.content,

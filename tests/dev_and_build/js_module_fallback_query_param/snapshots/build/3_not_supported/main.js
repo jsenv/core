@@ -1,7 +1,7 @@
 ;(function() {
   var __versionMappings__ = {
-  "/js/answer.nomodule.js": "/js/answer.nomodule.js?v=67382087"
-};
+    "/js/answer.nomodule.js": "/js/answer.nomodule.js?v=67382087"
+  };
   window.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };

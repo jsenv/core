@@ -2,6 +2,22 @@ import { DATA_URL } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginDataUrlsAnalysis = () => {
+  const cookDataUrl = async (reference) => {
+    const urlInfo = reference.urlInfo;
+    await urlInfo.cook();
+    if (urlInfo.originalContent === urlInfo.content) {
+      return reference.generatedUrl;
+    }
+    const specifier = DATA_URL.stringify({
+      contentType: urlInfo.contentType,
+      base64Flag: urlInfo.data.base64Flag,
+      data: urlInfo.data.base64Flag
+        ? dataToBase64(urlInfo.content)
+        : String(urlInfo.content),
+    });
+    return specifier;
+  };
+
   return {
     name: "jsenv:data_urls_analysis",
     appliesDuring: "*",
@@ -11,28 +27,14 @@ export const jsenvPluginDataUrlsAnalysis = () => {
       }
       return reference.specifier;
     },
-    formatReference: (reference, context) => {
+    formatReference: (reference) => {
       if (!reference.generatedUrl.startsWith("data:")) {
         return null;
       }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
-      return (async () => {
-        const urlInfo = context.urlGraph.getUrlInfo(reference.url);
-        await context.cook(urlInfo, { reference });
-        if (urlInfo.originalContent === urlInfo.content) {
-          return reference.generatedUrl;
-        }
-        const specifier = DATA_URL.stringify({
-          contentType: urlInfo.contentType,
-          base64Flag: urlInfo.data.base64Flag,
-          data: urlInfo.data.base64Flag
-            ? dataToBase64(urlInfo.content)
-            : String(urlInfo.content),
-        });
-        return specifier;
-      })();
+      return cookDataUrl(reference);
     },
     fetchUrlContent: (urlInfo) => {
       if (!urlInfo.url.startsWith("data:")) {

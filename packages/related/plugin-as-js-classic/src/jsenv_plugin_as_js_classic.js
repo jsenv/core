@@ -5,12 +5,12 @@ import {
 } from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
 
-import { createUrlGraphLoader } from "./url_graph_loader.js";
-
 export const jsenvPluginAsJsClassic = () => {
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic";
-    reference.filename = generateJsClassicFilename(reference.url);
+    if (!reference.filename) {
+      reference.filename = generateJsClassicFilename(reference.url);
+    }
   };
 
   return {
@@ -21,36 +21,26 @@ export const jsenvPluginAsJsClassic = () => {
         markAsJsClassicProxy(reference);
       }
     },
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsModuleReference, jsModuleUrlInfo] =
-        context.getWithoutSearchParam({
-          urlInfo,
-          context,
-          searchParam: "as_js_classic",
-          // override the expectedType to "js_module"
-          // because when there is ?as_js_classic it means the underlying resource
-          // is a js_module
-          expectedType: "js_module",
-        });
-      if (!jsModuleReference) {
+    fetchUrlContent: async (urlInfo) => {
+      const jsModuleUrlInfo = urlInfo.getWithoutSearchParam("as_js_classic", {
+        // override the expectedType to "js_module"
+        // because when there is ?as_js_classic it means the underlying resource
+        // is a js_module
+        expectedType: "js_module",
+      });
+      if (!jsModuleUrlInfo) {
         return null;
       }
       // cook it to get content + dependencies
-      await context.cook(jsModuleUrlInfo, { reference: jsModuleReference });
-      const loader = createUrlGraphLoader(context);
-      loader.loadReferencedUrlInfos(jsModuleUrlInfo, {
+      await jsModuleUrlInfo.cook();
+      await jsModuleUrlInfo.cookDependencies({
         // we ignore dynamic import to cook lazyly (as browser request the server)
         // these dynamic imports must inherit "?as_js_classic"
         // This is done inside rollup for convenience
         ignoreDynamicImport: true,
       });
-      await loader.getAllLoadDonePromise();
-      const bundleUrlInfos = await bundleJsModules({
-        jsModuleUrlInfos: [jsModuleUrlInfo],
-        context: {
-          ...context,
-          buildDirectoryUrl: new URL("./", import.meta.url),
-        },
+      const bundleUrlInfos = await bundleJsModules([jsModuleUrlInfo], {
+        buildDirectoryUrl: new URL("./", import.meta.url),
         preserveDynamicImport: true,
         augmentDynamicImportUrlSearchParams: () => {
           return {
@@ -64,14 +54,11 @@ export const jsenvPluginAsJsClassic = () => {
       let outputFormat;
       // if imported by js, we have to use systemjs
       // or if import things
-      if (
-        jsModuleBundledUrlInfo.data.usesImport ||
-        isImportedByJs(urlInfo, context.urlGraph)
-      ) {
+      if (jsModuleBundledUrlInfo.data.usesImport || isImportedByJs(urlInfo)) {
         // we have to use system when it uses import
         outputFormat = "system";
         urlInfo.type = "js_classic";
-        context.referenceUtils.foundSideEffectFile({
+        urlInfo.dependencies.foundSideEffectFile({
           sideEffectFileUrl: systemJsClientFileUrlDefault,
           expectedType: "js_classic",
           line: 0,
@@ -83,29 +70,33 @@ export const jsenvPluginAsJsClassic = () => {
         outputFormat = "umd";
       }
 
-      if (context.dev) {
+      if (urlInfo.context.dev) {
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          context.referenceUtils.inject({
+          urlInfo.dependencies.inject({
+            isImplicit: true,
             type: "js_url",
             specifier: sourceUrl,
-            isImplicit: true,
           });
         });
-      } else if (context.build) {
+      } else if (urlInfo.context.build) {
+        jsModuleUrlInfo.firstReference.remove();
         jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          const sourceUrlInfo = context.urlGraph.getUrlInfo(sourceUrl);
-          if (sourceUrlInfo && !context.urlGraph.hasDependent(sourceUrlInfo)) {
-            context.urlGraph.deleteUrlInfo(sourceUrl);
+          const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
+          if (
+            sourceUrlInfo &&
+            !sourceUrlInfo.getFirstReferenceFromOther({ ignoreWeak: true })
+          ) {
+            sourceUrlInfo.deleteFromGraph();
           }
         });
       }
 
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: context.rootDirectoryUrl,
+        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleBundledUrlInfo.content,
         inputSourcemap: jsModuleBundledUrlInfo.sourcemap,
-        inputUrl: jsModuleBundledUrlInfo.url,
-        outputUrl: jsModuleBundledUrlInfo.generatedUrl,
+        inputUrl: urlInfo.url,
+        outputUrl: jsModuleBundledUrlInfo.url,
         outputFormat,
       });
       return {
@@ -121,12 +112,12 @@ export const jsenvPluginAsJsClassic = () => {
   };
 };
 
-const isImportedByJs = (jsModuleUrlInfo, urlGraph) => {
-  for (const dependentUrl of jsModuleUrlInfo.dependents) {
-    const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl);
+const isImportedByJs = (jsModuleUrlInfo) => {
+  for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
+    const urlInfoReferencingJsModule = referenceFromOther.ownerUrlInfo;
     if (
-      dependentUrlInfo.type === "js_module" ||
-      dependentUrlInfo.type === "js_classic"
+      urlInfoReferencingJsModule.type === "js_module" ||
+      urlInfoReferencingJsModule.type === "js_classic"
     ) {
       return true;
     }

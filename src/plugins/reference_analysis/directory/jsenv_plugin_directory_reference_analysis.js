@@ -4,17 +4,15 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
   return {
     name: "jsenv:directory_reference_analysis",
     transformUrlContent: {
-      directory: (urlInfo, context) => {
-        const originalDirectoryReference = findOriginalDirectoryReference(
-          urlInfo,
-          context,
-        );
+      directory: (urlInfo) => {
+        const originalDirectoryReference =
+          findOriginalDirectoryReference(urlInfo);
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
-          context.rootDirectoryUrl,
+          urlInfo.context.rootDirectoryUrl,
         );
         JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
-          context.referenceUtils.found({
+          urlInfo.dependencies.found({
             type: "filesystem",
             subtype: "directory_entry",
             specifier: directoryEntryName,
@@ -28,24 +26,19 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
   };
 };
 
-const findOriginalDirectoryReference = (urlInfo, context) => {
+const findOriginalDirectoryReference = (urlInfo) => {
   const findNonFileSystemAncestor = (urlInfo) => {
-    for (const dependentUrl of urlInfo.dependents) {
-      const dependentUrlInfo = context.urlGraph.getUrlInfo(dependentUrl);
-      if (dependentUrlInfo.type !== "directory") {
-        return [dependentUrlInfo, urlInfo];
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+      if (urlInfoReferencingThisOne.type !== "directory") {
+        return referenceFromOther;
       }
-      const found = findNonFileSystemAncestor(dependentUrlInfo);
+      const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
       if (found) {
         return found;
       }
     }
-    return [];
-  };
-  const [ancestor, child] = findNonFileSystemAncestor(urlInfo);
-  if (!ancestor) {
     return null;
-  }
-  const ref = ancestor.references.find((ref) => ref.url === child.url);
-  return ref;
+  };
+  return findNonFileSystemAncestor(urlInfo);
 };

@@ -8,6 +8,9 @@ const devServer = await startDevServer({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
+  clientServerEventsConfig: {
+    logs: false,
+  },
 });
 const { consoleOutput, pageErrors } = await executeInBrowser({
   url: `${devServer.origin}/main.html`,

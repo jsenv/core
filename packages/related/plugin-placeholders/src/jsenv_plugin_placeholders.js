@@ -15,7 +15,7 @@ export const jsenvPluginPlaceholders = (rawAssociations) => {
         context.rootDirectoryUrl,
       );
     },
-    transformUrlContent: async (urlInfo, context) => {
+    transformUrlContent: async (urlInfo) => {
       const { replacer } = URL_META.applyAssociations({
         url: asUrlWithoutSearch(urlInfo.url),
         associations: resolvedAssociations,
@@ -26,7 +26,7 @@ export const jsenvPluginPlaceholders = (rawAssociations) => {
       if (typeof replacer !== "function") {
         throw new TypeError("replacer must be a function");
       }
-      const replacements = await replacer(urlInfo, context);
+      const replacements = await replacer(urlInfo);
       if (!replacements || Object.keys(replacements).length === 0) {
         return null;
       }

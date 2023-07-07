@@ -12,52 +12,22 @@ export const jsenvPluginMinification = ({
   svg = {},
 } = {}) => {
   const htmlMinifier = html
-    ? (urlInfo, context) =>
-        minifyHtml({
-          htmlUrlInfo: urlInfo,
-          context,
-          options: html === true ? {} : html,
-        })
+    ? (urlInfo) => minifyHtml(urlInfo, html === true ? {} : html)
     : null;
   const svgMinifier = svg
-    ? (urlInfo, context) =>
-        minifyHtml({
-          htmlUrlInfo: urlInfo,
-          context,
-          options: svg === true ? {} : svg,
-        })
+    ? (urlInfo) => minifyHtml(urlInfo, svg === true ? {} : svg)
     : null;
   const cssMinifier = css
-    ? (urlInfo, context) =>
-        minifyCss({
-          cssUrlInfo: urlInfo,
-          context,
-          options: css === true ? {} : css,
-        })
+    ? (urlInfo) => minifyCss(urlInfo, css === true ? {} : css)
     : null;
   const jsClassicMinifier = js_classic
-    ? (urlInfo, context) =>
-        minifyJs({
-          jsUrlInfo: urlInfo,
-          context,
-          options: js_classic === true ? {} : js_classic,
-        })
+    ? (urlInfo) => minifyJs(urlInfo, js_classic === true ? {} : js_classic)
     : null;
   const jsModuleMinifier = js_module
-    ? (urlInfo, context) =>
-        minifyJs({
-          jsUrlInfo: urlInfo,
-          context,
-          options: js_module === true ? {} : js_module,
-        })
+    ? (urlInfo) => minifyJs(urlInfo, js_module === true ? {} : js_module)
     : null;
   const jsonMinifier = json
-    ? (urlInfo, context) =>
-        minifyJson({
-          jsonUrlInfo: urlInfo,
-          context,
-          options: json === true ? {} : html,
-        })
+    ? (urlInfo) => minifyJson(urlInfo, json === true ? {} : html)
     : null;
 
   return {

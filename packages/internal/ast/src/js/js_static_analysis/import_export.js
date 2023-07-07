@@ -3,7 +3,7 @@ import { isStringLiteralNode } from "./helpers.js";
 export const analyzeImportDeclaration = (node, { onUrl }) => {
   const specifierNode = node.source;
   const assertionInfo = extractImportAssertionsInfo(node);
-  onUrl({
+  const info = {
     type: "js_import",
     subtype: "import_static",
     specifier: specifierNode.value,
@@ -11,9 +11,17 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
-    ...assertionInfo,
-  });
+    expectedType: "js_module",
+    astInfo: { node: specifierNode },
+  };
+  if (assertionInfo) {
+    const { importAttributes, importNode, importTypeAttributeNode } =
+      assertionInfo;
+    info.expectedType = importAttributes.type;
+    info.importAttributes = importAttributes;
+    Object.assign(info.astInfo, { importNode, importTypeAttributeNode });
+  }
+  onUrl(info);
 };
 export const analyzeImportExpression = (node, { onUrl }) => {
   const specifierNode = node.source;
@@ -21,18 +29,25 @@ export const analyzeImportExpression = (node, { onUrl }) => {
     return;
   }
   const assertionInfo = extractImportAssertionsInfo(node);
-
-  onUrl({
+  const info = {
     type: "js_import",
     subtype: "import_dynamic",
+    expectedType: "js_module",
     specifier: specifierNode.value,
     start: specifierNode.start,
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
-    expectedType: assertionInfo ? assertionInfo.assert.type : "js_module",
-    ...assertionInfo,
-  });
+    astInfo: { node: specifierNode },
+  };
+  if (assertionInfo) {
+    const { importAttributes, importNode, importTypeAttributeNode } =
+      assertionInfo;
+    info.expectedType = importAttributes.type;
+    info.importAttributes = importAttributes;
+    Object.assign(info.astInfo, { importNode, importTypeAttributeNode });
+  }
+  onUrl(info);
 };
 export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
   const specifierNode = node.source;
@@ -52,6 +67,7 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
+    astInfo: { node: specifierNode },
   });
 };
 export const analyzeExportAllDeclaration = (node, { onUrl }) => {
@@ -64,6 +80,7 @@ export const analyzeExportAllDeclaration = (node, { onUrl }) => {
     end: specifierNode.end,
     line: specifierNode.loc.start.line,
     column: specifierNode.loc.start.column,
+    astInfo: { node: specifierNode },
   });
 };
 
@@ -88,10 +105,11 @@ const extractImportAssertionsInfo = (node) => {
       return null;
     }
     return {
-      assertNode: typeAssertionNode,
-      assert: {
+      importAttributes: {
         type: typeNode.value,
       },
+      importNode: node,
+      importTypeAttributeNode: typeAssertionNode,
     };
   }
   // dynamic import
@@ -127,9 +145,10 @@ const extractImportAssertionsInfo = (node) => {
     return null;
   }
   return {
-    assertNode: firstArgNode,
-    assert: {
+    importAttributes: {
       type: typePropertyValue.value,
     },
+    importNode: node,
+    importTypeAttributeNode: typePropertyNode,
   };
 };

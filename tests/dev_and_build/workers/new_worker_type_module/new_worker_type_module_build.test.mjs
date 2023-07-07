@@ -6,16 +6,13 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async ({ name, ...params }) => {
+const test = async (name, params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
-    },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    transpilation: {
-      // topLevelAwait: "ignore",
     },
     ...params,
   });
@@ -41,30 +38,25 @@ const test = async ({ name, ...params }) => {
 };
 
 // support for {type: "module"} in new Worker
-await test({
-  name: "0_worker_type_module",
+await test("0_worker_type_module", {
   runtimeCompat: { chrome: "81" },
   plugins: [jsenvPluginBundling()],
 });
 // no support for {type: "module"} in new Worker
-await test({
-  name: "1_worker_type_module_not_supported",
+await test("1_worker_type_module_not_supported", {
   runtimeCompat: { chrome: "79" },
   plugins: [jsenvPluginBundling()],
 });
 // no support for <script type="modue">
-await test({
-  name: "2_script_type_module_not_supported",
+await test("2_script_type_module_not_supported", {
   runtimeCompat: { chrome: "62" },
   plugins: [jsenvPluginBundling()],
 });
 // support + no bundling
-await test({
-  name: "3_worker_type_module_no_bundling",
+await test("3_worker_type_module_no_bundling", {
   runtimeCompat: { chrome: "81" },
 });
 // no support + no bundling
-await test({
-  name: "4_worker_type_module_not_supported_no_bundling",
+await test("4_worker_type_module_not_supported_no_bundling", {
   runtimeCompat: { chrome: "79" },
 });

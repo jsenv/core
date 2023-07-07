@@ -16,7 +16,7 @@ export const jsenvPluginCommonJs = ({
     const packageFileUrl = defaultLookupPackageScope(reference.url);
     if (packageFileUrl) {
       reference.filename = `${reference.specifier}${urlToExtension(
-        reference.parentUrl,
+        reference.ownerUrlInfo.url,
       )}`;
     }
   };
@@ -56,31 +56,28 @@ export const jsenvPluginCommonJs = ({
       reference.data.commonjs = commonjs;
       return turnIntoJsModuleProxy(reference);
     },
-    fetchUrlContent: async (urlInfo, context) => {
-      const [commonJsReference, commonJsUrlInfo] =
-        context.getWithoutSearchParam({
-          urlInfo,
-          context,
-          searchParam: "cjs_as_js_module",
+    fetchUrlContent: async (urlInfo) => {
+      const commonJsUrlInfo = urlInfo.getWithoutSearchParam(
+        "cjs_as_js_module",
+        {
           // during this fetch we don't want to alter the original file
           // so we consider it as text
           expectedType: "text",
-        });
-      if (!commonJsReference) {
+        },
+      );
+      if (!commonJsUrlInfo) {
         return null;
       }
-      await context.fetchUrlContent(commonJsUrlInfo, {
-        reference: commonJsReference,
-      });
-      const nodeRuntimeEnabled = Object.keys(context.runtimeCompat).includes(
-        "node",
-      );
+      await commonJsUrlInfo.fetchContent();
+      const nodeRuntimeEnabled = Object.keys(
+        urlInfo.context.runtimeCompat,
+      ).includes("node");
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         compileCacheDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
-        processEnvNodeEnv: context.dev ? "development" : "production",
+        processEnvNodeEnv: urlInfo.context.dev ? "development" : "production",
         ...urlInfo.data.commonjs,
       });
       if (isValid) {

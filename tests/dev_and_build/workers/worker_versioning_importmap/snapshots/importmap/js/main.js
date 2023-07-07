@@ -1,4 +1,4 @@
-import { ping } from "/js/ping.js?v=7b8a2158";
+import { ping } from "/js/ping.js";
 
 const testWorker = async (worker) => {
   return new Promise((resolve, reject) => {

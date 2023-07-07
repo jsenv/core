@@ -9,7 +9,7 @@ export const jsenvPluginCacheControl = ({
       if (
         versionedUrls &&
         reference.searchParams.has("v") &&
-        !reference.searchParams.has("hmr")
+        !reference.searchParams.has("hot")
       ) {
         return {
           headers: {

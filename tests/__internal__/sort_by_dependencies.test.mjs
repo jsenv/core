@@ -6,13 +6,13 @@ import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_de
 {
   const actual = sortByDependencies({
     "a.js": {
-      dependencies: ["b.js"],
+      referenceToOthersSet: new Set([{ url: "b.js" }]),
     },
     "b.js": {
-      dependencies: ["img.png"],
+      referenceToOthersSet: new Set([{ url: "img.png" }]),
     },
     "img.png": {
-      dependencies: [],
+      referenceToOthersSet: new Set(),
     },
   });
   const expected = ["img.png", "b.js", "a.js"];
@@ -23,13 +23,13 @@ import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_de
 {
   const actual = sortByDependencies({
     "b.js": {
-      dependencies: ["img.png"],
+      referenceToOthersSet: new Set([{ url: "img.png" }]),
     },
     "a.js": {
-      dependencies: ["b.js"],
+      referenceToOthersSet: new Set([{ url: "b.js" }]),
     },
     "img.png": {
-      dependencies: [],
+      referenceToOthersSet: new Set(),
     },
   });
   const expected = ["img.png", "b.js", "a.js"];

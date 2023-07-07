@@ -14,8 +14,8 @@ export const sortByDependencies = (nodes) => {
       }
     } else {
       visited.push(url);
-      nodes[url].dependencies.forEach((dependencyUrl) => {
-        visit(dependencyUrl, url);
+      nodes[url].referenceToOthersSet.forEach((referenceToOther) => {
+        visit(referenceToOther.url, url);
       });
       sorted.push(url);
     }

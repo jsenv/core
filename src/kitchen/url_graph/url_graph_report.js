@@ -30,6 +30,9 @@ const createUrlGraphReport = (urlGraph) => {
     total: 0,
   };
   urlGraph.urlInfoMap.forEach((urlInfo) => {
+    if (urlInfo.isRoot) {
+      return;
+    }
     // ignore:
     // - ignored files: we don't know their content
     // - inline files and data files: they are already taken into account in the file where they appear
@@ -47,11 +50,10 @@ const createUrlGraphReport = (urlGraph) => {
     // their js module equivalent are ignored to avoid counting it twice
     // in the build graph the file targeted by import assertion will likely be gone
     // and only the js module remain (likely bundled)
-    const urlObject = new URL(urlInfo.url);
     if (
-      urlObject.searchParams.has("as_json_module") ||
-      urlObject.searchParams.has("as_css_module") ||
-      urlObject.searchParams.has("as_text_module")
+      urlInfo.searchParams.has("as_json_module") ||
+      urlInfo.searchParams.has("as_css_module") ||
+      urlInfo.searchParams.has("as_text_module")
     ) {
       return;
     }

@@ -37,14 +37,14 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
           Array.from(node.attributes).forEach((attribute) => {
             copy.setAttribute(attribute.nodeName, attribute.nodeValue);
           });
-          copy.src = injectQuery(node.src, { hmr: Date.now() });
+          copy.src = injectQuery(node.src, { hot: Date.now() });
           if (node.parentNode) {
             node.parentNode.replaceChild(copy, node);
           } else {
             document.body.appendChild(copy);
           }
         } else {
-          node[attributeName] = injectQuery(attribute, { hmr: Date.now() });
+          node[attributeName] = injectQuery(attribute, { hot: Date.now() });
         }
       },
     });
@@ -92,7 +92,7 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
       srcCandidates.forEach((srcCandidate) => {
         const url = new URL(srcCandidate.specifier, `${window.location.href}`);
         if (shouldReloadUrl(url)) {
-          srcCandidate.specifier = injectQuery(url, { hmr: Date.now() });
+          srcCandidate.specifier = injectQuery(url, { hot: Date.now() });
         }
       });
       nodes.push({
@@ -118,8 +118,8 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
 };
 
 export const reloadJsImport = async (url) => {
-  const urlWithHmr = injectQuery(url, { hmr: Date.now() });
-  const namespace = await import(urlWithHmr);
+  const urlWithHotSearchParam = injectQuery(url, { hot: Date.now() });
+  const namespace = await import(urlWithHotSearchParam);
   return namespace;
 };
 
@@ -127,7 +127,7 @@ export const reloadAllCss = () => {
   const links = Array.from(document.getElementsByTagName("link"));
   links.forEach((link) => {
     if (link.rel === "stylesheet") {
-      link.href = injectQuery(link.href, { hmr: Date.now() });
+      link.href = injectQuery(link.href, { hot: Date.now() });
     }
   });
 };

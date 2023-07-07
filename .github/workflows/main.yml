@@ -13,9 +13,16 @@ on:
   push:
     branches:
       - main
+      # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#patterns-to-match-file-paths
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
   pull_request:
     branches:
       - "**"
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
 
 jobs:
   test:

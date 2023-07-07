@@ -45,6 +45,7 @@ export const startDevServer = async ({
   sourceFilesConfig,
   clientAutoreload = true,
   cooldownBetweenFileEvents,
+  clientServerEventsConfig = {},
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -121,7 +122,7 @@ export const startDevServer = async ({
   serverStopCallbacks.push(() => {
     serverEventsDispatcher.destroy();
   });
-  const contextCache = new Map();
+  const kitchenCache = new Map();
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -183,7 +184,7 @@ export const startDevServer = async ({
           logLevel,
           serverStopCallbacks,
           serverEventsDispatcher,
-          contextCache,
+          kitchenCache,
 
           sourceDirectoryUrl,
           sourceMainFilePath,
@@ -200,6 +201,7 @@ export const startDevServer = async ({
           transpilation,
           clientAutoreload,
           cooldownBetweenFileEvents,
+          clientServerEventsConfig,
           cacheControl,
           ribbon,
           sourcemaps,
@@ -278,6 +280,6 @@ export const startDevServer = async ({
     stop: () => {
       server.stop();
     },
-    contextCache,
+    kitchenCache,
   };
 };

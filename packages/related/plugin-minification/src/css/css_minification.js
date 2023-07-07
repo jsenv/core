@@ -1,9 +1,9 @@
 import { fileURLToPath } from "node:url";
 
-export const minifyCss = async ({ cssUrlInfo, context }) => {
+export const minifyCss = async (cssUrlInfo) => {
   const { transform } = await import("lightningcss");
 
-  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const targets = runtimeCompatToTargets(cssUrlInfo.context.runtimeCompat);
   const { code, map } = transform({
     filename: fileURLToPath(cssUrlInfo.originalUrl),
     code: Buffer.from(cssUrlInfo.content),

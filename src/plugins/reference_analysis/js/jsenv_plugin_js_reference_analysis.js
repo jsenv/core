@@ -6,24 +6,23 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 
-export const jsenvPluginJsReferenceAnalysis = ({
-  inlineContent,
-  allowEscapeForVersioning,
-}) => {
+export const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
   return [
     {
       name: "jsenv:js_reference_analysis",
       appliesDuring: "*",
       transformUrlContent: {
-        js_classic: (urlInfo, context) =>
-          parseAndTransformJsReferences(urlInfo, context, {
+        js_classic: (urlInfo) =>
+          parseAndTransformJsReferences(urlInfo, {
             inlineContent,
-            allowEscapeForVersioning,
+            canUseTemplateLiterals:
+              urlInfo.context.isSupportedOnCurrentClients("template_literals"),
           }),
-        js_module: (urlInfo, context) =>
-          parseAndTransformJsReferences(urlInfo, context, {
+        js_module: (urlInfo) =>
+          parseAndTransformJsReferences(urlInfo, {
             inlineContent,
-            allowEscapeForVersioning,
+            canUseTemplateLiterals:
+              urlInfo.context.isSupportedOnCurrentClients("template_literals"),
           }),
       },
     },
@@ -32,8 +31,7 @@ export const jsenvPluginJsReferenceAnalysis = ({
 
 const parseAndTransformJsReferences = async (
   urlInfo,
-  context,
-  { inlineContent, allowEscapeForVersioning },
+  { inlineContent, canUseTemplateLiterals },
 ) => {
   const magicSource = createMagicSource(urlInfo.content);
   const parallelActions = [];
@@ -49,36 +47,32 @@ const parseAndTransformJsReferences = async (
       columnEnd: inlineReferenceInfo.columnEnd,
     });
     let { quote } = inlineReferenceInfo;
-    if (
-      quote === "`" &&
-      !context.isSupportedOnCurrentClients("template_literals")
-    ) {
+    if (quote === "`" && !canUseTemplateLiterals) {
       // if quote is "`" and template literals are not supported
       // we'll use a regular string (single or double quote)
       // when rendering the string
       quote = JS_QUOTES.pickBest(inlineReferenceInfo.content);
     }
-    const [inlineReference, inlineUrlInfo] = context.referenceUtils.foundInline(
-      {
-        type: "js_inline_content",
-        subtype: inlineReferenceInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
-        isOriginalPosition: urlInfo.content === urlInfo.originalContent,
-        specifierLine: inlineReferenceInfo.line,
-        specifierColumn: inlineReferenceInfo.column,
-        specifier: inlineUrl,
-        contentType: inlineReferenceInfo.contentType,
-        content: inlineReferenceInfo.content,
-      },
-    );
+    const inlineReference = urlInfo.dependencies.foundInline({
+      type: "js_inline_content",
+      subtype: inlineReferenceInfo.type, // "new_blob_first_arg", "new_inline_content_first_arg", "json_parse_first_arg"
+      isOriginalPosition: urlInfo.content === urlInfo.originalContent,
+      specifierLine: inlineReferenceInfo.line,
+      specifierColumn: inlineReferenceInfo.column,
+      specifier: inlineUrl,
+      contentType: inlineReferenceInfo.contentType,
+      content: inlineReferenceInfo.content,
+    });
+    const inlineUrlInfo = inlineReference.urlInfo;
     inlineUrlInfo.jsQuote = quote;
-    inlineReference.escape = (value) =>
-      JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
+    inlineReference.escape = (value) => {
+      return JS_QUOTES.escapeSpecialChars(value.slice(1, -1), { quote });
+    };
 
     sequentialActions.push(async () => {
-      await context.cook(inlineUrlInfo, { reference: inlineReference });
+      await inlineUrlInfo.cook();
       const replacement = JS_QUOTES.escapeSpecialChars(inlineUrlInfo.content, {
         quote,
-        allowEscapeForVersioning,
       });
       magicSource.replace({
         start: inlineReferenceInfo.start,
@@ -94,8 +88,7 @@ const parseAndTransformJsReferences = async (
     ) {
       urlInfo.data.usesImport = true;
     }
-    const [reference] = context.referenceUtils.found({
-      node: externalReferenceInfo.node,
+    const reference = urlInfo.dependencies.found({
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
       expectedType: externalReferenceInfo.expectedType,
@@ -109,26 +102,24 @@ const parseAndTransformJsReferences = async (
       baseUrl: {
         "StringLiteral": externalReferenceInfo.baseUrl,
         "window.location": urlInfo.url,
-        "window.origin": context.rootDirectoryUrl,
+        "window.origin": urlInfo.context.rootDirectoryUrl,
         "import.meta.url": urlInfo.url,
         "context.meta.url": urlInfo.url,
         "document.currentScript.src": urlInfo.url,
       }[externalReferenceInfo.baseUrlType],
-      assert: externalReferenceInfo.assert,
-      assertNode: externalReferenceInfo.assertNode,
-      typePropertyNode: externalReferenceInfo.typePropertyNode,
+      importAttributes: externalReferenceInfo.importAttributes,
+      astInfo: externalReferenceInfo.astInfo,
     });
     parallelActions.push(async () => {
-      const replacement = await context.referenceUtils.readGeneratedSpecifier(
-        reference,
-      );
+      await reference.readGeneratedSpecifier();
+      const replacement = reference.generatedSpecifier;
       magicSource.replace({
         start: externalReferenceInfo.start,
         end: externalReferenceInfo.end,
         replacement,
       });
       if (reference.mutation) {
-        reference.mutation(magicSource);
+        reference.mutation(magicSource, urlInfo);
       }
     });
   };

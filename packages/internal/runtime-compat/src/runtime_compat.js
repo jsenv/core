@@ -23,8 +23,11 @@ export const RUNTIME_COMPAT = {
     return runtimeCompat;
   },
 
-  isSupported: (runtimeCompat, feature) => {
-    const featureCompat = getFeatureCompat(feature);
+  isSupported: (
+    runtimeCompat,
+    feature,
+    featureCompat = getFeatureCompat(feature),
+  ) => {
     const runtimeNames = Object.keys(runtimeCompat);
     const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
       const runtimeVersion = runtimeCompat[runtimeName];

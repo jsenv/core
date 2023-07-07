@@ -20,41 +20,24 @@ export const jsenvPluginAsJsModule = () => {
     redirectReference: (reference) => {
       if (reference.searchParams.has("as_js_module")) {
         reference.expectedType = "js_module";
-        const filename = urlToFilename(reference.url);
-        const [basename] = splitFileExtension(filename);
-        reference.filename = `${basename}.mjs`;
+        if (!reference.filename) {
+          const filename = urlToFilename(reference.url);
+          const [basename] = splitFileExtension(filename);
+          reference.filename = `${basename}.mjs`;
+        }
       }
     },
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsClassicReference, jsClassicUrlInfo] =
-        context.getWithoutSearchParam({
-          urlInfo,
-          context,
-          searchParam: "as_js_module",
-          // override the expectedType to "js_classic"
-          // because when there is ?as_js_module it means the underlying resource
-          // is js_classic
-          expectedType: "js_classic",
-        });
-      if (!jsClassicReference) {
+    fetchUrlContent: async (urlInfo) => {
+      const jsClassicUrlInfo = urlInfo.getWithoutSearchParam("as_js_module", {
+        // override the expectedType to "js_classic"
+        // because when there is ?as_js_module it means the underlying resource
+        // is js_classic
+        expectedType: "js_classic",
+      });
+      if (!jsClassicUrlInfo) {
         return null;
       }
-      await context.fetchUrlContent(jsClassicUrlInfo, {
-        reference: jsClassicReference,
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: jsClassicReference.subtype,
-          specifier: jsClassicReference.url,
-          expectedType: "js_classic",
-        });
-      } else if (
-        context.build &&
-        !context.urlGraph.hasDependent(jsClassicUrlInfo)
-      ) {
-        context.urlGraph.deleteUrlInfo(jsClassicUrlInfo.url);
-      }
+      await jsClassicUrlInfo.fetchContent();
       const { content, sourcemap } = await convertJsClassicToJsModule({
         input: jsClassicUrlInfo.content,
         inputSourcemap: jsClassicUrlInfo.sourcemap,

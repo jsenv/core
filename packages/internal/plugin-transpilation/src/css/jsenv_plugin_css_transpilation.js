@@ -5,11 +5,11 @@ export const jsenvPluginCssTranspilation = () => {
     name: "jsenv:css_transpilation",
     appliesDuring: "*",
     transformUrlContent: {
-      css: async (urlInfo, context) => {
+      css: (urlInfo) => {
         return applyCssTranspilation({
           input: urlInfo.content,
           inputUrl: urlInfo.originalUrl,
-          runtimeCompat: context.runtimeCompat,
+          runtimeCompat: urlInfo.context.runtimeCompat,
         });
       },
     },

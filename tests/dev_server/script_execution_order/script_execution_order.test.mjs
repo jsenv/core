@@ -74,7 +74,7 @@ const test = async ({ browserLauncher }) => {
 await test({ browserLauncher: chromium });
 // firefox super slow sometimes on windows
 if (process.platform !== "win32") {
-  //  await test({ browserLauncher: firefox })
+  // await test({ browserLauncher: firefox })
 }
 // in practice no one uses webkit + windows
 // moreover this test is flaky

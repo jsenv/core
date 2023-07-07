@@ -34,6 +34,7 @@ const reloader = {
     value: [],
     onchange: () => {},
     add: (reloadMessage) => {
+      // console.debug("received reload message", reloadMessage);
       reloader.changes.value.push(reloadMessage);
       reloader.changes.onchange();
       if (reloader.autoreload.enabled) {

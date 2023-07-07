@@ -3,17 +3,17 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
-const test = async ({ name, ...rest }) => {
+const test = async (name, params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     runtimeCompat: { chrome: "90" },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...rest,
+    ...params,
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
@@ -21,13 +21,11 @@ const test = async ({ name, ...rest }) => {
   );
 };
 
-await test({
-  name: "chunks_default",
+await test("0_chunks_default", {
   plugins: [jsenvPluginBundling()],
 });
 
-await test({
-  name: "chunks_vendors",
+await test("1_chunks_vendors", {
   plugins: [
     jsenvPluginBundling({
       js_module: {

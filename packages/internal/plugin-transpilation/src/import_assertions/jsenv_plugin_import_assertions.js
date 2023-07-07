@@ -19,39 +19,45 @@ export const jsenvPluginImportAssertions = ({
   text = "auto",
 }) => {
   const transpilations = { json, css, text };
-  const shouldTranspileImportAssertion = (context, type) => {
+  const shouldTranspileImportAssertion = (reference, type) => {
     const transpilation = transpilations[type];
     if (transpilation === true) {
       return true;
     }
     if (transpilation === "auto") {
-      return !context.isSupportedOnCurrentClients(`import_type_${type}`);
+      return !reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
+        `import_type_${type}`,
+      );
     }
     return false;
   };
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
-    reference.filename = `${urlToFilename(reference.url)}.js`;
+    if (!reference.filename) {
+      reference.filename = `${urlToFilename(reference.url)}.js`;
+    }
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
-      const { assertNode } = reference;
+      const { importTypeAttributeNode } = reference.astInfo;
       if (reference.subtype === "import_dynamic") {
-        const assertPropertyNode = assertNode.properties.find(
-          (prop) => prop.key.name === "assert",
-        );
-        const assertPropertyValue = assertPropertyNode.value;
-        const typePropertyNode = assertPropertyValue.properties.find(
-          (prop) => prop.key.name === "type",
-        );
         magicSource.remove({
-          start: typePropertyNode.start,
-          end: typePropertyNode.end,
+          start: importTypeAttributeNode.start,
+          end: importTypeAttributeNode.end,
         });
       } else {
+        const content = reference.ownerUrlInfo.content;
+        const assertKeyboardStart = content.indexOf(
+          "assert",
+          importTypeAttributeNode.start - " assert { ".length,
+        );
+        const assertKeywordEnd = content.indexOf(
+          "}",
+          importTypeAttributeNode.end,
+        );
         magicSource.remove({
-          start: assertNode.start,
-          end: assertNode.end,
+          start: assertKeyboardStart,
+          end: assertKeywordEnd + 1,
         });
       }
     };
@@ -77,8 +83,8 @@ export const jsenvPluginImportAssertions = ({
         transpilations.text = true;
       }
     },
-    redirectReference: (reference, context) => {
-      if (!reference.assert) {
+    redirectReference: (reference) => {
+      if (!reference.importAttributes) {
         return null;
       }
       const { searchParams } = reference;
@@ -90,8 +96,8 @@ export const jsenvPluginImportAssertions = ({
         markAsJsModuleProxy(reference);
         return null;
       }
-      const type = reference.assert.type;
-      if (shouldTranspileImportAssertion(context, type)) {
+      const type = reference.importAttributes.type;
+      if (shouldTranspileImportAssertion(reference, type)) {
         return turnIntoJsModuleProxy(reference, type);
       }
       return null;
@@ -104,29 +110,14 @@ const jsenvPluginAsModules = () => {
   const asJsonModule = {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const [jsonReference, jsonUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_json_module",
+    fetchUrlContent: async (urlInfo) => {
+      const jsonUrlInfo = urlInfo.getWithoutSearchParam("as_json_module", {
         expectedType: "json",
       });
-      if (!jsonReference) {
+      if (!jsonUrlInfo) {
         return null;
       }
-      await context.fetchUrlContent(jsonUrlInfo, {
-        reference: jsonReference,
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: jsonReference.subtype,
-          specifier: jsonReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build && !context.urlGraph.hasDependent(jsonUrlInfo)) {
-        context.urlGraph.deleteUrlInfo(jsonUrlInfo.url);
-      }
+      await jsonUrlInfo.fetchContent();
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:
@@ -145,29 +136,14 @@ const jsenvPluginAsModules = () => {
   const asCssModule = {
     name: `jsenv:as_css_module`,
     appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const [cssReference, cssUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_css_module",
+    fetchUrlContent: async (urlInfo) => {
+      const cssUrlInfo = urlInfo.getWithoutSearchParam("as_css_module", {
         expectedType: "css",
       });
-      if (!cssReference) {
+      if (!cssUrlInfo) {
         return null;
       }
-      await context.fetchUrlContent(cssUrlInfo, {
-        reference: cssReference,
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: cssReference.subtype,
-          specifier: cssReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build && !context.urlGraph.hasDependent(cssUrlInfo)) {
-        context.urlGraph.deleteUrlInfo(cssUrlInfo.url);
-      }
+      await cssUrlInfo.fetchContent();
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -176,7 +152,7 @@ const jsenvPluginAsModules = () => {
       });
       return {
         content: `import ${JSON.stringify(
-          context.referenceUtils.inlineContentClientFileUrl,
+          urlInfo.context.inlineContentClientFileUrl,
         )};
 
 const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" });
@@ -195,29 +171,14 @@ export default stylesheet;`,
   const asTextModule = {
     name: `jsenv:as_text_module`,
     appliesDuring: "*",
-    fetchUrlContent: async (urlInfo, context) => {
-      const [textReference, textUrlInfo] = context.getWithoutSearchParam({
-        urlInfo,
-        context,
-        searchParam: "as_text_module",
+    fetchUrlContent: async (urlInfo) => {
+      const textUrlInfo = urlInfo.getWithoutSearchParam("as_text_module", {
         expectedType: "text",
       });
-      if (!textReference) {
+      if (!textUrlInfo) {
         return null;
       }
-      await context.fetchUrlContent(textUrlInfo, {
-        reference: textReference,
-      });
-      if (context.dev) {
-        context.referenceUtils.found({
-          type: "js_import",
-          subtype: textReference.subtype,
-          specifier: textReference.url,
-          expectedType: "js_module",
-        });
-      } else if (context.build && !context.urlGraph.hasDependent(textUrlInfo)) {
-        context.urlGraph.deleteUrlInfo(textUrlInfo.url);
-      }
+      await textUrlInfo.fetchContent();
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -226,7 +187,7 @@ export default stylesheet;`,
       });
       return {
         content: `import ${JSON.stringify(
-          context.referenceUtils.inlineContentClientFileUrl,
+          urlInfo.context.inlineContentClientFileUrl,
         )};
 
 const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" });

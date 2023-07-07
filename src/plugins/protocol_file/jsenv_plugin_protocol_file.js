@@ -84,7 +84,7 @@ export const jsenvPluginProtocolFile = ({
             magicDirectoryIndex,
             magicExtensions: getExtensionsToTry(
               magicExtensions,
-              reference.parentUrl,
+              reference.ownerUrlInfo.url,
             ),
           });
           if (filesystemResolution.stat) {
@@ -117,13 +117,12 @@ export const jsenvPluginProtocolFile = ({
       name: "jsenv:fs_resolution",
       appliesDuring: "*",
       resolveReference: {
-        filesystem: (reference, context) => {
-          const { parentUrl } = reference;
-          const parentUrlInfo = context.urlGraph.getUrlInfo(parentUrl);
+        filesystem: (reference) => {
+          const ownerUrlInfo = reference.ownerUrlInfo;
           const baseUrl =
-            parentUrlInfo && parentUrlInfo.type === "directory"
-              ? ensurePathnameTrailingSlash(parentUrl)
-              : parentUrl;
+            ownerUrlInfo && ownerUrlInfo.type === "directory"
+              ? ensurePathnameTrailingSlash(ownerUrlInfo.url)
+              : ownerUrlInfo.url;
           return new URL(reference.specifier, baseUrl).href;
         },
       },
@@ -141,14 +140,15 @@ export const jsenvPluginProtocolFile = ({
         }
         return null;
       },
-      formatReference: (reference, context) => {
+      formatReference: (reference) => {
         if (!reference.generatedUrl.startsWith("file:")) {
           return null;
         }
-        if (urlIsInsideOf(reference.generatedUrl, context.rootDirectoryUrl)) {
+        const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
+        if (urlIsInsideOf(reference.generatedUrl, rootDirectoryUrl)) {
           return `/${urlToRelativeUrl(
             reference.generatedUrl,
-            context.rootDirectoryUrl,
+            rootDirectoryUrl,
           )}`;
         }
         return `/@fs/${reference.generatedUrl.slice("file:///".length)}`;
@@ -157,19 +157,16 @@ export const jsenvPluginProtocolFile = ({
     {
       name: "jsenv:file_url_fetching",
       appliesDuring: "*",
-      fetchUrlContent: (urlInfo, context) => {
+      fetchUrlContent: (urlInfo) => {
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
         const urlObject = new URL(urlInfo.url);
-        if (context.reference.leadsToADirectory) {
+        if (urlInfo.firstReference.leadsToADirectory) {
           const directoryEntries = readdirSync(urlObject);
           let filename;
-          if (context.reference.type === "filesystem") {
-            const parentUrlInfo = context.urlGraph.getUrlInfo(
-              context.reference.parentUrl,
-            );
-            filename = `${parentUrlInfo.filename}${context.reference.specifier}/`;
+          if (urlInfo.firstReference.type === "filesystem") {
+            filename = `${urlInfo.firstReference.ownerUrlInfo.filename}${urlInfo.firstReference.specifier}/`;
           } else {
             filename = `${urlToFilename(urlInfo.url)}/`;
           }
@@ -182,10 +179,11 @@ export const jsenvPluginProtocolFile = ({
         }
         const fileBuffer = readFileSync(urlObject);
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+        const content = CONTENT_TYPE.isTextual(contentType)
+          ? String(fileBuffer)
+          : fileBuffer;
         return {
-          content: CONTENT_TYPE.isTextual(contentType)
-            ? String(fileBuffer)
-            : fileBuffer,
+          content,
           contentType,
         };
       },

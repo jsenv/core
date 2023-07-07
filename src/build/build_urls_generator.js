@@ -17,12 +17,12 @@ export const createBuildUrlsGenerator = ({
     return urlToFilename(url);
   };
 
-  const generate = memoizeByFirstArgument((url, { urlInfo, parentUrlInfo }) => {
+  const generate = memoizeByFirstArgument((url, { urlInfo, ownerUrlInfo }) => {
     const directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
       assetsDirectory,
       urlInfo,
-      parentUrlInfo,
+      ownerUrlInfo,
     });
     let names = cache[directoryPath];
     if (!names) {
@@ -77,23 +77,23 @@ const determineDirectoryPath = ({
   buildDirectoryUrl,
   assetsDirectory,
   urlInfo,
-  parentUrlInfo,
+  ownerUrlInfo,
 }) => {
   if (urlInfo.type === "directory") {
     return "";
   }
-  if (parentUrlInfo && parentUrlInfo.type === "directory") {
-    const parentDirectoryPath = urlToRelativeUrl(
-      parentUrlInfo.url,
+  if (ownerUrlInfo && ownerUrlInfo.type === "directory") {
+    const ownerDirectoryPath = urlToRelativeUrl(
+      ownerUrlInfo.url,
       buildDirectoryUrl,
     );
-    return parentDirectoryPath;
+    return ownerDirectoryPath;
   }
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
       buildDirectoryUrl,
       assetsDirectory,
-      urlInfo: parentUrlInfo,
+      urlInfo: ownerUrlInfo,
     });
     return parentDirectoryPath;
   }

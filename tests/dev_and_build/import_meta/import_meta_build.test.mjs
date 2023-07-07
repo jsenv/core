@@ -1,20 +1,25 @@
 import { assert } from "@jsenv/assert";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async ({ expectedBuildPath, ...rest }) => {
+const test = async (name, { expectedBuildPath, ...rest }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    versioning: false,
     ...rest,
   });
+  takeDirectorySnapshot(
+    new URL(`./dist/`, import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -41,12 +46,16 @@ const test = async ({ expectedBuildPath, ...rest }) => {
 };
 
 // can use <script type="module">
-await test({
+await test("0_js_module", {
   expectedBuildPath: "/js/main.js",
   runtimeCompat: { chrome: "89" },
+  plugins: [jsenvPluginBundling()],
+  versioning: false,
 });
 // cannot use <script type="module">
-await test({
+await test("1_js_module_fallback", {
   expectedBuildPath: "/js/main.nomodule.js",
   runtimeCompat: { chrome: "60" },
+  plugins: [jsenvPluginBundling()],
+  versioning: false,
 });

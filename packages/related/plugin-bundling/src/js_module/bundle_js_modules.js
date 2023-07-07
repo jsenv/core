@@ -5,29 +5,35 @@ import { sourcemapConverter } from "@jsenv/sourcemap";
 
 import { fileUrlConverter } from "../file_url_converter.js";
 
-export const bundleJsModules = async ({
+export const bundleJsModules = async (
   jsModuleUrlInfos,
-  context,
-  include,
-  chunks = {},
-  strictExports = false,
-  preserveDynamicImport = false,
-  augmentDynamicImportUrlSearchParams = () => {},
-  rollup,
-  rollupInput = {},
-  rollupOutput = {},
-  rollupPlugins = [],
-}) => {
+  {
+    buildDirectoryUrl,
+    include,
+    chunks = {},
+    strictExports = false,
+    preserveDynamicImport = false,
+    augmentDynamicImportUrlSearchParams = () => {},
+    rollup,
+    rollupInput = {},
+    rollupOutput = {},
+    rollupPlugins = [],
+  },
+) => {
   const {
     signal,
     logger,
     rootDirectoryUrl,
-    buildDirectoryUrl,
     assetsDirectory,
-    urlGraph,
     runtimeCompat,
     sourcemaps,
-  } = context;
+    minification,
+    isSupportedOnCurrentClients,
+  } = jsModuleUrlInfos[0].context;
+  const graph = jsModuleUrlInfos[0].graph;
+  if (buildDirectoryUrl === undefined) {
+    buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
+  }
 
   let manualChunks;
   if (Object.keys(chunks).length) {
@@ -64,7 +70,7 @@ export const bundleJsModules = async ({
           rootDirectoryUrl,
           buildDirectoryUrl,
           assetsDirectory,
-          urlGraph,
+          graph,
           jsModuleUrlInfos,
 
           runtimeCompat,
@@ -91,17 +97,16 @@ export const bundleJsModules = async ({
         ...rollupInput,
       },
       rollupOutput: {
-        compact: context.minification,
-        minifyInternalExports: context.minification,
+        compact: minification,
+        minifyInternalExports: minification,
         generatedCode: {
-          arrowFunctions: context.isSupportedOnCurrentClients("arrow_function"),
-          constBindings: context.isSupportedOnCurrentClients("const_bindings"),
-          objectShorthand: context.isSupportedOnCurrentClients(
+          arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
+          constBindings: isSupportedOnCurrentClients("const_bindings"),
+          objectShorthand: isSupportedOnCurrentClients(
             "object_properties_shorthand",
           ),
-          reservedNamesAsProps:
-            context.isSupportedOnCurrentClients("reserved_words"),
-          symbols: context.isSupportedOnCurrentClients("symbols"),
+          reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
+          symbols: isSupportedOnCurrentClients("symbols"),
         },
         ...rollupOutput,
         manualChunks,
@@ -124,7 +129,7 @@ const rollupPluginJsenv = ({
   rootDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory,
-  urlGraph,
+  graph,
   jsModuleUrlInfos,
   sourcemaps,
 
@@ -181,7 +186,7 @@ const rollupPluginJsenv = ({
             : null,
           preserveSignature: strictExports
             ? "strict"
-            : jsModuleUrlInfo.dependents.size < 2
+            : jsModuleUrlInfo.referenceFromOthersSet.size < 2
             ? "allow-extension"
             : "strict",
         });
@@ -324,7 +329,7 @@ const rollupPluginJsenv = ({
       if (!importCanBeBundled(url)) {
         return { id: url, external: true };
       }
-      const urlInfo = urlGraph.getUrlInfo(url);
+      const urlInfo = graph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by referenceAnalysis.include
         return { id: url, external: true };
@@ -337,7 +342,7 @@ const rollupPluginJsenv = ({
     },
     async load(rollupId) {
       const fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      const urlInfo = urlGraph.getUrlInfo(fileUrl);
+      const urlInfo = graph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,
         map:

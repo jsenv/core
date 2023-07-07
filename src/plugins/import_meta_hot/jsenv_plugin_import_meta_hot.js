@@ -14,9 +14,9 @@ export const jsenvPluginImportMetaHot = () => {
     name: "jsenv:import_meta_hot",
     appliesDuring: "*",
     transformUrlContent: {
-      html: (htmlUrlInfo, context) => {
+      html: (htmlUrlInfo) => {
         // during build we don't really care to parse html hot dependencies
-        if (context.build) {
+        if (htmlUrlInfo.context.build) {
           return;
         }
         const htmlAst = parseHtmlString(htmlUrlInfo.content);
@@ -25,18 +25,20 @@ export const jsenvPluginImportMetaHot = () => {
         htmlUrlInfo.data.hotAcceptSelf = false;
         htmlUrlInfo.data.hotAcceptDependencies = hotReferences.map(
           ({ type, specifier }) => {
-            const existingReference = context.referenceUtils.find(
-              (existingReference) => {
-                return (
-                  existingReference.type === type &&
-                  existingReference.specifier === specifier
-                );
-              },
-            );
+            let existingReference = null;
+            for (const referenceToOther of htmlUrlInfo.referenceToOthersSet) {
+              if (
+                referenceToOther.type === type &&
+                referenceToOther.specifier === specifier
+              ) {
+                existingReference = referenceToOther;
+                break;
+              }
+            }
             if (existingReference) {
               return existingReference.url;
             }
-            const [reference] = context.referenceUtils.found({
+            const reference = htmlUrlInfo.dependencies.found({
               type,
               specifier,
             });
@@ -49,7 +51,7 @@ export const jsenvPluginImportMetaHot = () => {
         cssUrlInfo.data.hotAcceptSelf = false;
         cssUrlInfo.data.hotAcceptDependencies = [];
       },
-      js_module: async (urlInfo, context) => {
+      js_module: async (urlInfo) => {
         if (!urlInfo.content.includes("import.meta.hot")) {
           return null;
         }
@@ -72,14 +74,10 @@ export const jsenvPluginImportMetaHot = () => {
         if (importMetaHotPaths.length === 0) {
           return null;
         }
-        if (context.build) {
+        if (urlInfo.context.build) {
           return removeImportMetaHots(urlInfo, importMetaHotPaths);
         }
-        return injectImportMetaHot(
-          urlInfo,
-          context,
-          importMetaHotClientFileUrl,
-        );
+        return injectImportMetaHot(urlInfo, importMetaHotClientFileUrl);
       },
     },
   };
@@ -101,8 +99,8 @@ const removeImportMetaHots = (urlInfo, importMetaHotPaths) => {
 // better sourcemap than doing the equivalent with babel
 // I suspect it's because I was doing injectAstAfterImport(programPath, ast.program.body[0])
 // which is likely not well supported by babel
-const injectImportMetaHot = (urlInfo, context, importMetaHotClientFileUrl) => {
-  const [importMetaHotClientFileReference] = context.referenceUtils.inject({
+const injectImportMetaHot = (urlInfo, importMetaHotClientFileUrl) => {
+  const importMetaHotClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
     expectedType: "js_module",

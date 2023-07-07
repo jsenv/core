@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/react.js?cjs_as_js_module=": "/js/react.js?cjs_as_js_module=&v=2ed7becc",
+          "/js/react-dom/client.js?cjs_as_js_module=": "/js/react-dom/client.js?cjs_as_js_module=&v=86cd9e1b",
+          "/js/react/jsx-runtime.js?cjs_as_js_module=": "/js/react/jsx-runtime.js?cjs_as_js_module=&v=9aeccbd6"
+        }
+      }
+    </script><link rel="modulepreload" href="/js/app.js?v=0a08a163">
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/boot.js": "/js/boot.js?v=e95c1c51",
+          "/js/app.js": "/js/app.js?v=0a08a163",
+          "/js/root.js": "/js/root.js?v=992c2c1a"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <div id="app"></div>
+    <script type="module">
+      import(__v__("/js/boot.js"));
+    </script>
+  </body>
+</html>

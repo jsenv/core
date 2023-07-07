@@ -16,9 +16,10 @@ import { injectQueryParams } from "@jsenv/urls";
 export const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = (reference) => {
     reference.mutation = (magicSource) => {
+      const { typePropertyNode } = reference.astInfo;
       magicSource.replace({
-        start: reference.typePropertyNode.value.start,
-        end: reference.typePropertyNode.value.end,
+        start: typePropertyNode.value.start,
+        end: typePropertyNode.value.end,
         replacement: JSON.stringify("classic"),
       });
     };
@@ -29,19 +30,25 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
     name: "jsenv:js_module_fallback_on_workers",
     appliesDuring: "*",
     redirectReference: {
-      js_url: (reference, context) => {
+      js_url: (reference) => {
         if (reference.expectedType !== "js_module") {
           return null;
         }
         if (reference.expectedSubtype === "worker") {
-          if (context.isSupportedOnCurrentClients("worker_type_module")) {
+          if (
+            reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
+              "worker_type_module",
+            )
+          ) {
             return null;
           }
           return turnIntoJsClassicProxy(reference);
         }
         if (reference.expectedSubtype === "service_worker") {
           if (
-            context.isSupportedOnCurrentClients("service_worker_type_module")
+            reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
+              "service_worker_type_module",
+            )
           ) {
             return null;
           }
@@ -49,7 +56,9 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
         }
         if (reference.expectedSubtype === "shared_worker") {
           if (
-            context.isSupportedOnCurrentClients("shared_worker_type_module")
+            reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
+              "shared_worker_type_module",
+            )
           ) {
             return null;
           }

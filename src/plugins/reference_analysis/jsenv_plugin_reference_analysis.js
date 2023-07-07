@@ -10,7 +10,6 @@ export const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
-  allowEscapeForVersioning = false,
 }) => {
   return [
     jsenvPluginDirectoryReferenceAnalysis(),
@@ -22,7 +21,6 @@ export const jsenvPluginReferenceAnalysis = ({
     jsenvPluginCssReferenceAnalysis(),
     jsenvPluginJsReferenceAnalysis({
       inlineContent,
-      allowEscapeForVersioning,
     }),
     ...(inlineContent ? [jsenvPluginDataUrlsAnalysis()] : []),
     ...(inlineContent && fetchInlineUrls
@@ -36,15 +34,26 @@ const jsenvPluginInlineContentFetcher = () => {
   return {
     name: "jsenv:inline_content_fetcher",
     appliesDuring: "*",
-    fetchUrlContent: (urlInfo) => {
+    fetchUrlContent: async (urlInfo) => {
       if (!urlInfo.isInline) {
         return null;
       }
+      const { firstReference } = urlInfo;
+      const { prev } = firstReference;
+      if (prev && !prev.isInline) {
+        // got inlined, cook original url
+        if (firstReference.content === undefined) {
+          const originalUrlInfo = prev.urlInfo;
+          await originalUrlInfo.cook();
+          firstReference.content = originalUrlInfo.content;
+          firstReference.contentType = originalUrlInfo.contentType;
+        }
+      }
+
       return {
-        // we want to fetch the original content otherwise we might re-cook
-        // content already cooked
-        content: urlInfo.originalContent,
-        contentType: urlInfo.contentType,
+        originalContent: urlInfo.originalContent,
+        content: firstReference.content,
+        contentType: firstReference.contentType,
       };
     },
   };

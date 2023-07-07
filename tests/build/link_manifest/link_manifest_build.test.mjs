@@ -5,10 +5,11 @@ import { build } from "@jsenv/core";
 const { buildFileContents } = await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./src/main.html": "main.html",
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
 });
 const { start_url, icons } = JSON.parse(
@@ -22,7 +23,7 @@ const expected = {
   start_url: "/",
   icons: [
     {
-      src: "/other/pwa.icon.png?v=574c1c76",
+      src: "/other/pwa.icon.png?v=eece115e",
       sizes: "192x192",
       type: "image/png",
     },

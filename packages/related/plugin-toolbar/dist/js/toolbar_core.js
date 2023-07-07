@@ -621,7 +621,7 @@ c("unmount", (t, i) => {
   t(i);
 });
 c("__h", (t, i, e, n) => {
-  if (n < 3) i.__$f |= 2;
+  if (n < 3 || 9 === n) i.__$f |= 2;
   t(i, e, n);
 });
 function useSignal(t) {

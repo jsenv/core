@@ -5,7 +5,9 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 const test = async ({
+  debug = false,
   browserLauncher,
+  browserName,
   pageLogsAfterUpdatingCssFile = [
     {
       type: "startGroupCollapsed",
@@ -33,11 +35,65 @@ const test = async ({
     },
     {
       type: "endGroup",
-      text: browserLauncher === firefox ? "" : "console.groupEnd",
+      text: "",
     },
   ],
-  pageLogsAfterRemovingCssImport,
-  pageLogsAfterRestoringCssImport,
+  pageLogsAfterRemovingCssImport = [
+    {
+      type: "startGroupCollapsed",
+      text: "[jsenv] hot reloading main.js",
+    },
+    {
+      type: "log",
+      text: "importing js module",
+    },
+    {
+      type: "log",
+      text: "js module import done",
+    },
+    {
+      type: "endGroup",
+      text: "",
+    },
+    {
+      type: "startGroupCollapsed",
+      text: "[jsenv] cleanup file.js (previously used in main.js)",
+    },
+    {
+      type: "log",
+      text: "call dispose callback",
+    },
+    {
+      type: "log",
+      text: "remove stylesheet",
+    },
+    {
+      type: "endGroup",
+      text: "",
+    },
+  ],
+  pageLogsAfterRestoringCssImport = [
+    {
+      type: "startGroupCollapsed",
+      text: "[jsenv] hot reloading main.js",
+    },
+    {
+      type: "log",
+      text: "importing js module",
+    },
+    {
+      type: "log",
+      text: "adding stylesheet",
+    },
+    {
+      type: "log",
+      text: "js module import done",
+    },
+    {
+      type: "endGroup",
+      text: "",
+    },
+  ],
   ...rest
 }) => {
   const jsFileUrl = new URL("./client/main.js", import.meta.url);
@@ -58,15 +114,23 @@ const test = async ({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     cooldownBetweenFileEvents: 250,
+    clientServerEventsConfig: {
+      logs: false,
+    },
     ...rest,
   });
-  const browser = await browserLauncher.launch({ headless: true });
+  const browser = await browserLauncher.launch({ headless: !debug });
   try {
     const pageLogs = [];
     const expectedPageLogs = [];
     const page = await browser.newPage({ ignoreHTTPSErrors: true });
     page.on("console", (message) => {
-      pageLogs.push({ type: message.type(), text: message.text() });
+      const type = message.type();
+      const text = message.text();
+      pageLogs.push({
+        type,
+        text: type === "endGroup" ? "" : text,
+      });
     });
     await page.goto(`${devServer.origin}/main.html`);
     await page.evaluate(
@@ -113,7 +177,12 @@ const test = async ({
       assert({ actual, expected });
     }
     // remove usage of the css file
-    jsFileContent.update(`if (import.meta.hot) { import.meta.hot.accept() }`);
+    jsFileContent.update(`
+// import "./file.js";
+
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}`);
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
       const actual = {
@@ -125,13 +194,14 @@ const test = async ({
         bodyBackgroundColor: "rgba(0, 0, 0, 0)",
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected });
+      assert({ actual, expected, context: browserName });
     }
     // restore deps on css file
-    jsFileContent.update(`import "./file.js"
+    jsFileContent.update(`
+import "./file.js";
 
 if (import.meta.hot) {
-  import.meta.hot.accept()
+  import.meta.hot.accept();
 }`);
     // wait for partial reload effect to be done
     await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -145,137 +215,28 @@ if (import.meta.hot) {
         bodyBackgroundColor: "rgb(0, 128, 0)", // green
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected });
+      assert({ actual, expected, context: browserName });
     }
   } finally {
-    browser.close();
+    if (!debug) {
+      browser.close();
+    }
     jsFileContent.restore();
     cssFileContent.restore();
-    await devServer.stop();
+    if (!debug) {
+      await devServer.stop();
+    }
   }
 };
 
 // TODO: fix on windows
 if (process.platform !== "win32") {
-  // not transpiling import assertion (chrome)
   await test({
     browserLauncher: chromium,
-    pageLogsAfterRemovingCssImport: [
-      {
-        type: "startGroupCollapsed",
-        text: "[jsenv] hot reloading main.js",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-      {
-        type: "startGroupCollapsed",
-        text: "[jsenv] cleanup file.js (previously used in main.js)",
-      },
-      {
-        type: "log",
-        text: "call dispose callback",
-      },
-      {
-        type: "log",
-        text: "remove stylesheet",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-    ],
-    pageLogsAfterRestoringCssImport: [
-      {
-        type: "startGroupCollapsed",
-        text: "[jsenv] hot reloading main.js",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "adding stylesheet",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "console.groupEnd",
-      },
-    ],
+    browserName: "chromium",
   });
-
-  // transpiling import assertion (firefox)
   await test({
     browserLauncher: firefox,
-    pageLogsAfterRemovingCssImport: [
-      {
-        type: "startGroupCollapsed",
-        text: "[jsenv] hot reloading main.js",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "",
-      },
-      {
-        type: "startGroupCollapsed",
-        text: "[jsenv] cleanup file.js (previously used in main.js)",
-      },
-      {
-        type: "log",
-        text: "call dispose callback",
-      },
-      {
-        type: "log",
-        text: "remove stylesheet",
-      },
-      {
-        type: "endGroup",
-        text: "",
-      },
-    ],
-    pageLogsAfterRestoringCssImport: [
-      {
-        type: "startGroupCollapsed",
-        text: "[jsenv] hot reloading main.js",
-      },
-      {
-        type: "log",
-        text: "importing js module",
-      },
-      {
-        type: "log",
-        text: "adding stylesheet",
-      },
-      {
-        type: "log",
-        text: "js module import done",
-      },
-      {
-        type: "endGroup",
-        text: "",
-      },
-    ],
+    browserName: "firefox",
   });
 }

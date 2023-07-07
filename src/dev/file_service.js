@@ -1,13 +1,11 @@
 import { readFileSync } from "node:fs";
 import { serveDirectory, composeTwoResponses } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/filesystem";
-import { asUrlWithoutSearch } from "@jsenv/urls";
 import { URL_META } from "@jsenv/url-meta";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
-import { createUrlGraph } from "../kitchen/url_graph.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
@@ -18,7 +16,7 @@ export const createFileService = ({
   logLevel,
   serverStopCallbacks,
   serverEventsDispatcher,
-  contextCache,
+  kitchenCache,
 
   sourceDirectoryUrl,
   sourceMainFilePath,
@@ -35,6 +33,7 @@ export const createFileService = ({
   transpilation,
   clientAutoreload,
   cooldownBetweenFileEvents,
+  clientServerEventsConfig,
   cacheControl,
   ribbon,
   sourcemaps,
@@ -59,47 +58,35 @@ export const createFileService = ({
   );
   serverStopCallbacks.push(stopWatchingSourceFiles);
 
-  const getOrCreateContext = (request) => {
+  const getOrCreateKitchen = (request) => {
     const { runtimeName, runtimeVersion } = parseUserAgentHeader(
       request.headers["user-agent"] || "",
     );
     const runtimeId = `${runtimeName}@${runtimeVersion}`;
-    const existingContext = contextCache.get(runtimeId);
-    if (existingContext) {
-      return existingContext;
+    const existing = kitchenCache.get(runtimeId);
+    if (existing) {
+      return existing;
     }
     const watchAssociations = URL_META.resolveAssociations(
       { watch: stopWatchingSourceFiles.watchPatterns },
       sourceDirectoryUrl,
     );
-    const urlGraph = createUrlGraph({
-      name: runtimeId,
-    });
+    let kitchen;
     clientFileChangeCallbackList.push(({ url }) => {
-      const onUrlInfo = (urlInfo) => {
-        urlGraph.considerModified(urlInfo);
-      };
-      const exactUrlInfo = urlGraph.getUrlInfo(url);
-      if (exactUrlInfo) {
-        onUrlInfo(exactUrlInfo);
+      const urlInfo = kitchen.graph.getUrlInfo(url);
+      if (urlInfo) {
+        urlInfo.considerModified();
       }
-      urlGraph.urlInfoMap.forEach((urlInfo) => {
-        if (urlInfo === exactUrlInfo) return;
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-        if (urlWithoutSearch !== url) return;
-        if (exactUrlInfo && exactUrlInfo.dependents.has(urlInfo.url)) return;
-        onUrlInfo(urlInfo);
-      });
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
 
-    const kitchen = createKitchen({
+    kitchen = createKitchen({
+      name: runtimeId,
       signal,
       logLevel,
       rootDirectoryUrl: sourceDirectoryUrl,
       mainFilePath: sourceMainFilePath,
       ignore,
-      urlGraph,
       dev: true,
       runtimeCompat,
       clientRuntimeCompat,
@@ -139,48 +126,54 @@ export const createFileService = ({
         ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
         : undefined,
     });
-    urlGraph.createUrlInfoCallbackRef.current = (urlInfo) => {
+    kitchen.graph.createUrlInfoCallbackRef.current = (urlInfo) => {
       const { watch } = URL_META.applyAssociations({
         url: urlInfo.url,
         associations: watchAssociations,
       });
       urlInfo.isWatched = watch;
-      // si une urlInfo dépends de pleins d'autres alors
-      // on voudrait check chacune de ces url infos (package.json dans mon cas)
+      // wehn an url depends on many others, we check all these (like package.json)
       urlInfo.isValid = () => {
         if (!urlInfo.url.startsWith("file:")) {
           return false;
         }
-        if (watch && urlInfo.contentEtag === undefined) {
-          // we trust the watching mecanism
-          // doing urlInfo.contentEtag = undefined
-          // when file is modified
+        if (urlInfo.content === undefined) {
+          // urlInfo content is undefined when:
+          // - url info content never fetched
+          // - it is considered as modified because undelying file is watched and got saved
+          // - it is considered as modified because underlying file content
+          //   was compared using etag and it has changed
           return false;
         }
-        if (!watch && urlInfo.contentEtag) {
+        if (!watch) {
           // file is not watched, check the filesystem
           let fileContentAsBuffer;
           try {
             fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
           } catch (e) {
             if (e.code === "ENOENT") {
-              // we should consider calling urlGraph.deleteUrlInfo(urlInfo)
-              urlInfo.originalContentEtag = undefined;
-              urlInfo.contentEtag = undefined;
+              urlInfo.considerModified();
+              urlInfo.deleteFromGraph();
               return false;
             }
             return false;
           }
           const fileContentEtag = bufferToEtag(fileContentAsBuffer);
           if (fileContentEtag !== urlInfo.originalContentEtag) {
-            // we should consider calling urlGraph.considerModified(urlInfo)
-            urlInfo.originalContentEtag = undefined;
-            urlInfo.contentEtag = undefined;
+            urlInfo.considerModified();
+            // restore content to be able to compare it again later
+            urlInfo.kitchen.urlInfoTransformer.setContent(
+              urlInfo,
+              String(fileContentAsBuffer),
+              {
+                contentEtag: fileContentEtag,
+              },
+            );
             return false;
           }
         }
-        for (const implicitUrl of urlInfo.implicitUrls) {
-          const implicitUrlInfo = context.urlGraph.getUrlInfo(implicitUrl);
+        for (const implicitUrl of urlInfo.implicitUrlSet) {
+          const implicitUrlInfo = kitchen.graph.getUrlInfo(implicitUrl);
           if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
             return false;
           }
@@ -188,13 +181,16 @@ export const createFileService = ({
         return true;
       };
     };
-    urlGraph.prunedUrlInfosCallbackRef.current = (urlInfos, firstUrlInfo) => {
+    kitchen.graph.pruneUrlInfoCallbackRef.current = (
+      prunedUrlInfo,
+      lastReferenceFromOther,
+    ) => {
       clientFilesPruneCallbackList.forEach((callback) => {
-        callback(urlInfos, firstUrlInfo);
+        callback(prunedUrlInfo, lastReferenceFromOther);
       });
     };
     serverStopCallbacks.push(() => {
-      kitchen.pluginController.callHooks("destroy", kitchen.kitchenContext);
+      kitchen.pluginController.callHooks("destroy", kitchen.context);
     });
     server_events: {
       const allServerEvents = {};
@@ -211,44 +207,39 @@ export const createFileService = ({
       const serverEventNames = Object.keys(allServerEvents);
       if (serverEventNames.length > 0) {
         Object.keys(allServerEvents).forEach((serverEventName) => {
-          allServerEvents[serverEventName]({
-            rootDirectoryUrl: sourceDirectoryUrl,
-            urlGraph,
-            dev: true,
+          const serverEventInfo = {
+            ...kitchen.context,
             sendServerEvent: (data) => {
               serverEventsDispatcher.dispatch({
                 type: serverEventName,
                 data,
               });
             },
-          });
+          };
+          const serverEventInit = allServerEvents[serverEventName];
+          serverEventInit(serverEventInfo);
         });
         // "pushPlugin" so that event source client connection can be put as early as possible in html
         kitchen.pluginController.pushPlugin(
-          jsenvPluginServerEventsClientInjection(),
+          jsenvPluginServerEventsClientInjection(clientServerEventsConfig),
         );
       }
     }
 
-    const context = {
-      rootDirectoryUrl: sourceDirectoryUrl,
-      dev: true,
-      runtimeName,
-      runtimeVersion,
-      urlGraph,
-      kitchen,
-    };
-    contextCache.set(runtimeId, context);
-    return context;
+    kitchenCache.set(runtimeId, kitchen);
+    return kitchen;
   };
 
   return async (request) => {
-    const { urlGraph, kitchen } = getOrCreateContext(request);
+    const kitchen = getOrCreateKitchen(request);
+    const serveHookInfo = {
+      ...kitchen.context,
+      request,
+    };
     const responseFromPlugin =
       await kitchen.pluginController.callAsyncHooksUntil(
         "serve",
-        request,
-        kitchen.kitchenContext,
+        serveHookInfo,
       );
     if (responseFromPlugin) {
       return responseFromPlugin;
@@ -260,20 +251,25 @@ export const createFileService = ({
       sourceMainFilePath,
     );
     if (parentUrl) {
-      reference = urlGraph.inferReference(request.resource, parentUrl);
+      reference = kitchen.graph.inferReference(request.resource, parentUrl);
     }
     if (!reference) {
-      const entryPoint = kitchen.injectReference({
+      let parentUrlInfo;
+      if (parentUrl) {
+        parentUrlInfo = kitchen.graph.getUrlInfo(parentUrl);
+      }
+      if (!parentUrlInfo) {
+        parentUrlInfo = kitchen.graph.rootUrlInfo;
+      }
+      reference = parentUrlInfo.dependencies.createResolveAndFinalize({
         trace: { message: parentUrl || sourceDirectoryUrl },
-        parentUrl: parentUrl || sourceDirectoryUrl,
         type: "http_request",
         specifier: request.resource,
       });
-      reference = entryPoint[0];
     }
-    const urlInfo = urlGraph.reuseOrCreateUrlInfo(reference.url);
+    const urlInfo = reference.urlInfo;
     const ifNoneMatch = request.headers["if-none-match"];
-    const urlInfoTargetedByCache = urlGraph.getParentIfInline(urlInfo);
+    const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
 
     try {
       if (ifNoneMatch) {
@@ -300,26 +296,7 @@ export const createFileService = ({
         }
       }
 
-      // urlInfo objects are reused, they must be "reset" before cooking them again
-      if (
-        (urlInfo.error || urlInfo.contentEtag) &&
-        !urlInfo.isInline &&
-        urlInfo.type !== "sourcemap"
-      ) {
-        urlInfo.error = null;
-        urlInfo.sourcemap = null;
-        urlInfo.sourcemapIsWrong = null;
-        urlInfo.sourcemapReference = null;
-        urlInfo.content = null;
-        urlInfo.originalContent = null;
-        urlInfo.type = null;
-        urlInfo.subtype = null;
-        urlInfo.timing = {};
-      }
-      await kitchen.cook(urlInfo, {
-        request,
-        reference,
-      });
+      await urlInfo.cook({ request, reference });
       let { response } = urlInfo;
       if (response) {
         return response;
@@ -348,10 +325,14 @@ export const createFileService = ({
         body: urlInfo.content,
         timing: urlInfo.timing,
       };
+      const augmentResponseInfo = {
+        ...kitchen.context,
+        reference,
+        urlInfo,
+      };
       kitchen.pluginController.callHooks(
         "augmentResponse",
-        { reference, urlInfo },
-        kitchen.kitchenContext,
+        augmentResponseInfo,
         (returnValue) => {
           response = composeTwoResponses(response, returnValue);
         },
@@ -425,6 +406,14 @@ export const createFileService = ({
         statusText: e.reason,
         statusMessage: e.stack,
       };
+    } finally {
+      // remove http_request when there is other references keeping url info alive
+      if (
+        reference.type === "http_request" &&
+        reference.urlInfo.referenceFromOthersSet.size > 1
+      ) {
+        reference.remove();
+      }
     }
   };
 };

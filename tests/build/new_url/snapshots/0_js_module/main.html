@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/file.js": "/js/file.js?v=88da6af6"
+        }
+      }
+    </script><script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/other/file.txt": "/other/file.txt?v=268b0aca"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script><title>Title</title>
+    <meta charset="utf-8">
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=fc1df295"></script>
+  </body>
+</html>

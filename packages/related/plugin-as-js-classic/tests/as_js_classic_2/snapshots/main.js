@@ -1,7 +1,7 @@
 ;(function() {
   var __versionMappings__ = {
-  "/js/file.nomodule.js": "/js/file.nomodule.js?v=60e5d8ae"
-};
+    "/js/file.nomodule.js": "/js/file.nomodule.js?v=67382087"
+  };
   window.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
   };

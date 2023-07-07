@@ -2,10 +2,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { fileUrlConverter } from "../file_url_converter.js";
 
 // Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
-export const bundleCss = async ({ cssUrlInfos, context }) => {
+export const bundleCss = async (cssUrlInfos) => {
   const bundledCssUrlInfos = {};
   const { bundleAsync } = await import("lightningcss");
-  const targets = runtimeCompatToTargets(context.runtimeCompat);
+  const targets = runtimeCompatToTargets(cssUrlInfos[0].context.runtimeCompat);
   for (const cssUrlInfo of cssUrlInfos) {
     const filename = fileUrlConverter.asFilePath(cssUrlInfo.originalUrl);
     const { code, map } = await bundleAsync({
@@ -16,7 +16,7 @@ export const bundleCss = async ({ cssUrlInfos, context }) => {
         read: (specifier) => {
           const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
           const fileUrl = String(fileUrlObject);
-          const urlInfo = context.urlGraph.getUrlInfo(fileUrl);
+          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
           return urlInfo.content;
         },
         resolve(specifier, from) {

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-transpilation",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "TODO",
   "license": "MIT",
   "repository": {
@@ -32,7 +32,7 @@
     "@babel/plugin-transform-arrow-functions": "7.22.5",
     "@babel/plugin-transform-block-scoped-functions": "7.22.5",
     "@babel/plugin-transform-block-scoping": "7.22.5",
-    "@babel/plugin-transform-classes": "7.22.5",
+    "@babel/plugin-transform-classes": "7.22.6",
     "@babel/plugin-transform-computed-properties": "7.22.5",
     "@babel/plugin-transform-destructuring": "7.22.5",
     "@babel/plugin-transform-dotall-regex": "7.22.5",
@@ -53,8 +53,8 @@
     "@babel/plugin-transform-unicode-regex": "7.22.5",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
-    "@jsenv/ast": "4.1.0",
-    "@jsenv/runtime-compat": "1.0.0",
-    "lightningcss": "1.21.0"
+    "@jsenv/ast": "5.0.0",
+    "@jsenv/runtime-compat": "1.1.0",
+    "lightningcss": "1.21.5"
   }
 }

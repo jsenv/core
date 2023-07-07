@@ -11,9 +11,9 @@ const test = async (params) => {
     keepProcessAlive: false,
     plugins: [
       jsenvPluginPlaceholders({
-        "./main.js": (urlInfo, context) => {
+        "./main.js": (urlInfo) => {
           return {
-            __DEMO__: context.dev ? "dev" : "build",
+            __DEMO__: urlInfo.context.dev ? "dev" : "build",
           };
         },
       }),

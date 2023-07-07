@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (params) => {
+const test = async (name, params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -14,9 +14,12 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    plugins: [jsenvPluginMinification()],
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -28,16 +31,20 @@ const test = async (params) => {
   });
   const actual = returnValue;
   const expected = {
-    textFileUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
+    textFileUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     absoluteUrl: `http://example.com/file.txt`,
-    windowLocationRelativeUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
-    windowOriginRelativeUrl: `${server.origin}/other/file.txt?v=64ec88ca`,
+    windowLocationRelativeUrl: `${server.origin}/other/file.txt?v=268b0aca`,
+    windowOriginRelativeUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     absoluteBaseUrl: `http://jsenv.dev/file.txt`,
   };
   assert({ actual, expected });
 };
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } });
+await test("0_js_module", {
+  runtimeCompat: { chrome: "89" },
+});
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "60" } });
+await test("1_js_module_fallback", {
+  runtimeCompat: { chrome: "60" },
+});

@@ -50,7 +50,8 @@ export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
   });
   Object.keys(fileContents).forEach((relativeUrl) => {
     const contentUrl = new URL(relativeUrl, directoryUrl);
-    writeFileSync(contentUrl, fileContents[relativeUrl]);
+    const content = fileContents[relativeUrl];
+    writeFileSync(contentUrl, content);
   });
 };
 

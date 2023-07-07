@@ -1,3 +1,4 @@
+// TODO: make it pass
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
@@ -38,8 +39,8 @@ try {
   }
   htmlFileContent.update(
     String(htmlFileContent.beforeTest).replace(
-      "window.resolveResultPromise(42)",
-      "window.resolveResultPromise(43)",
+      "window.resolveResultPromise(42);",
+      "window.resolveResultPromise(43);",
     ),
   );
   await page.waitForNavigation(); // full reload

@@ -4,22 +4,27 @@ import { assert } from "@jsenv/assert";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async (options) => {
+const test = async (name, options) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.js": "main.js",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     ...options,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
 };
 
 // default (with bundling)
 {
-  await test({
+  await test("0_with_bundling", {
     plugins: [jsenvPluginBundling()],
   });
   // eslint-disable-next-line import/no-unresolved
@@ -33,7 +38,7 @@ const test = async (options) => {
 
 // without bundling
 {
-  await test();
+  await test("1_without_bundling");
   // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./dist/main.js");
   const actual = { ...namespace };

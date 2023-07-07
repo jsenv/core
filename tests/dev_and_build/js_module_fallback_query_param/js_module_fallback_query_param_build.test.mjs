@@ -12,7 +12,7 @@ const test = async ({ name, ...params }) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
-      "./main.js": "main.js?js_module_fallback",
+      "./main.js?js_module_fallback": "main.js",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,

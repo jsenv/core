@@ -1,13 +1,15 @@
 
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "dcca6781"
+    "version": "924507b2"
   },
   "/css/style.css": {
-    "version": "0e312da1",
-    "versionedUrl": "/css/style.css?v=0e312da1"
+    "version": "2e9d11a2",
+    "versionedUrl": "/css/style.css?v=2e9d11a2"
   }
 };
+
+
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
     define([], factory);

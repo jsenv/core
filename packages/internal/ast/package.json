@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "4.1.0",
+  "version": "5.0.0",
   "description": "Parse and transform HTML,CSS and JS",
   "license": "MIT",
   "repository": {
@@ -33,12 +33,12 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@babel/parser": "7.22.5",
-    "acorn": "8.8.2",
+    "@babel/parser": "7.22.7",
+    "acorn": "8.10.0",
     "acorn-import-assertions": "1.9.0",
     "acorn-walk": "8.2.0",
     "parse5": "7.1.2",
-    "postcss": "8.4.24",
+    "postcss": "8.4.25",
     "postcss-value-parser": "4.2.0"
   }
 }

@@ -9,6 +9,9 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
+    clientServerEventsConfig: {
+      logs: false,
+    },
   });
   const { status, namespace, consoleCalls } = await execute({
     // logLevel: "debug",

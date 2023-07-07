@@ -99,12 +99,22 @@ const urlToFilename = url => {
 const generateInlineContentUrl = ({
   url,
   extension,
+  basename,
   line,
   column,
   lineEnd,
   columnEnd
 }) => {
-  const generatedName = "L".concat(line, "C").concat(column, "-L").concat(lineEnd, "C").concat(columnEnd);
+  let generatedName = "";
+  if (basename !== undefined) {
+    generatedName += basename;
+  }
+  if (line !== undefined && column !== undefined) {
+    generatedName = "L".concat(line, "C").concat(column);
+    if (lineEnd !== undefined && columnEnd !== undefined) {
+      generatedName += "-L".concat(lineEnd, "C").concat(columnEnd);
+    }
+  }
   const filenameRaw = urlToFilename(url);
   const filename = "".concat(filenameRaw, "@").concat(generatedName).concat(extension);
   // ideally we should keep query params from url
@@ -912,7 +922,7 @@ const injectSupervisorIntoHTML = async ({
         }
         const src = getHtmlNodeAttribute(scriptNode, "src");
         if (src) {
-          const urlObject = new URL(src, "http://example.com");
+          const urlObject = new URL(src, "http://example.com/");
           if (urlObject.searchParams.has("inline")) {
             return;
           }
@@ -990,12 +1000,12 @@ const jsenvPluginSupervisor = ({
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
-    serve: async (request, context) => {
-      if (request.pathname.startsWith("/__get_code_frame__/")) {
+    serve: async serveInfo => {
+      if (serveInfo.request.pathname.startsWith("/__get_code_frame__/")) {
         const {
           pathname,
           searchParams
-        } = new URL(request.url);
+        } = new URL(serveInfo.request.url);
         let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
         urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
         const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
@@ -1008,7 +1018,7 @@ const jsenvPluginSupervisor = ({
         const file = urlWithLineAndColumn.slice(0, match.index);
         let line = parseInt(match[1]);
         let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
+        const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
@@ -1051,8 +1061,8 @@ const jsenvPluginSupervisor = ({
           body: codeFrame
         };
       }
-      if (request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = request.pathname.slice("/__get_error_cause__/".length);
+      if (serveInfo.request.pathname.startsWith("/__get_error_cause__/")) {
+        let file = serveInfo.request.pathname.slice("/__get_error_cause__/".length);
         file = decodeURIComponent(file);
         if (!file) {
           return {
@@ -1061,7 +1071,7 @@ const jsenvPluginSupervisor = ({
           };
         }
         const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
+          const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
           if (!urlInfo) {
             return null;
           }
@@ -1072,13 +1082,10 @@ const jsenvPluginSupervisor = ({
             return error;
           }
           // search in direct dependencies (404 or 500)
-          const {
-            dependencies
-          } = urlInfo;
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo = context.urlGraph.getUrlInfo(dependencyUrl);
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            const referencedUrlInfo = referenceToOther.urlInfo;
+            if (referencedUrlInfo.error) {
+              return referencedUrlInfo.error;
             }
           }
           return null;
@@ -1101,8 +1108,8 @@ const jsenvPluginSupervisor = ({
           body
         };
       }
-      if (request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = request.pathname.slice("/__open_in_editor__/".length);
+      if (serveInfo.request.pathname.startsWith("/__open_in_editor__/")) {
+        let file = serveInfo.request.pathname.slice("/__open_in_editor__/".length);
         file = decodeURIComponent(file);
         if (!file) {
           return {
@@ -1125,18 +1132,15 @@ const jsenvPluginSupervisor = ({
       return null;
     },
     transformUrlContent: {
-      html: ({
-        url,
-        content
-      }, context) => {
-        const [supervisorFileReference] = context.referenceUtils.inject({
+      html: htmlUrlInfo => {
+        const supervisorFileReference = htmlUrlInfo.dependencies.inject({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl
         });
         return injectSupervisorIntoHTML({
-          content,
-          url
+          content: htmlUrlInfo.content,
+          url: htmlUrlInfo.url
         }, {
           supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
           supervisorOptions: {
@@ -1147,7 +1151,7 @@ const jsenvPluginSupervisor = ({
             openInEditor
           },
           webServer: {
-            rootDirectoryUrl: context.rootDirectoryUrl,
+            rootDirectoryUrl: htmlUrlInfo.context.rootDirectoryUrl,
             isJsenvDevServer: true
           },
           inlineAsRemote: true,
@@ -1159,7 +1163,7 @@ const jsenvPluginSupervisor = ({
             line,
             column
           }) => {
-            const [inlineScriptReference] = context.referenceUtils.foundInline({
+            const inlineScriptReference = htmlUrlInfo.dependencies.foundInline({
               type: "script",
               subtype: "inline",
               expectedType: type,

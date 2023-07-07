@@ -12,6 +12,7 @@ const test = async (params) => {
       "./main.js": "main.js",
     },
     plugins: [jsenvPluginBundling()],
+    versioning: true,
     ...params,
   });
   takeDirectorySnapshot(

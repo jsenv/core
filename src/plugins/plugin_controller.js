@@ -1,4 +1,10 @@
 import { performance } from "node:perf_hooks";
+import {
+  parseHtmlString,
+  stringifyHtmlAst,
+  injectHtmlNodeAsEarlyAsPossible,
+  createHtmlNode,
+} from "@jsenv/ast";
 
 const HOOK_NAMES = [
   "init",
@@ -134,7 +140,7 @@ export const createPluginController = (kitchenContext) => {
   let lastPluginUsed = null;
   let currentPlugin = null;
   let currentHookName = null;
-  const callHook = (hook, info, context) => {
+  const callHook = (hook, info) => {
     const hookFn = getHookFunction(hook, info);
     if (!hookFn) {
       return null;
@@ -146,21 +152,17 @@ export const createPluginController = (kitchenContext) => {
     lastPluginUsed = hook.plugin;
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
-    let valueReturned = hookFn(info, context);
+    let valueReturned = hookFn(info);
     currentPlugin = null;
     currentHookName = null;
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(
-      hook.name,
-      valueReturned,
-      info,
-    );
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
     return valueReturned;
   };
-  const callAsyncHook = async (hook, info, context) => {
+  const callAsyncHook = async (hook, info) => {
     const hookFn = getHookFunction(hook, info);
     if (!hookFn) {
       return null;
@@ -173,38 +175,37 @@ export const createPluginController = (kitchenContext) => {
     lastPluginUsed = hook.plugin;
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
-    let valueReturned = await hookFn(info, context);
+    let valueReturned = await hookFn(info);
     currentPlugin = null;
     currentHookName = null;
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
-    valueReturned = assertAndNormalizeReturnValue(
-      hook.name,
-      valueReturned,
-      info,
-    );
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
     return valueReturned;
   };
 
-  const callHooks = (hookName, info, context, callback) => {
+  const callHooks = (hookName, info, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
+      const setHookParams = (firstArg = info) => {
+        info = firstArg;
+      };
       for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
+        const returnValue = callHook(hook, info);
         if (returnValue && callback) {
-          callback(returnValue, hook.plugin);
+          callback(returnValue, hook.plugin, setHookParams);
         }
       }
     }
   };
-  const callAsyncHooks = async (hookName, info, context, callback) => {
+  const callAsyncHooks = async (hookName, info, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       await hooks.reduce(async (previous, hook) => {
         await previous;
-        const returnValue = await callAsyncHook(hook, info, context);
+        const returnValue = await callAsyncHook(hook, info);
         if (returnValue && callback) {
           await callback(returnValue, hook.plugin);
         }
@@ -212,11 +213,11 @@ export const createPluginController = (kitchenContext) => {
     }
   };
 
-  const callHooksUntil = (hookName, info, context) => {
+  const callHooksUntil = (hookName, info) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
+        const returnValue = callHook(hook, info);
         if (returnValue) {
           return returnValue;
         }
@@ -224,7 +225,7 @@ export const createPluginController = (kitchenContext) => {
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info, context) => {
+  const callAsyncHooksUntil = (hookName, info) => {
     const hooks = hookGroups[hookName];
     if (!hooks) {
       return null;
@@ -238,7 +239,7 @@ export const createPluginController = (kitchenContext) => {
           return resolve();
         }
         const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info, context);
+        const returnValue = callAsyncHook(hook, info);
         return Promise.resolve(returnValue).then((output) => {
           if (output) {
             return resolve(output);
@@ -285,16 +286,20 @@ const getHookFunction = (
   return hookValue;
 };
 
-const assertAndNormalizeReturnValue = (hookName, returnValue, info) => {
+const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
   // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
   if (returnValue === null || returnValue === undefined) {
     return returnValue;
   }
   for (const returnValueAssertion of returnValueAssertions) {
-    if (!returnValueAssertion.appliesTo.includes(hookName)) {
+    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info);
+    const assertionResult = returnValueAssertion.assertion(
+      returnValue,
+      info,
+      hook,
+    );
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -328,7 +333,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo) => {
+    assertion: (valueReturned, urlInfo, hook) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -336,6 +341,12 @@ const returnValueAssertions = [
         const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
+        }
+        if (urlInfo.type === "html") {
+          const { scriptInjections } = valueReturned;
+          if (scriptInjections) {
+            return applyScriptInjections(urlInfo, scriptInjections, hook);
+          }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
@@ -350,3 +361,57 @@ const returnValueAssertions = [
     },
   },
 ];
+
+const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
+  const htmlAst = parseHtmlString(htmlUrlInfo.content);
+
+  scriptInjections.reverse().forEach((scriptInjection) => {
+    const { setup } = scriptInjection;
+    if (setup) {
+      const setupGlobalName = setup.name;
+      const setupParamSource = stringifyParams(setup.param, "  ");
+      const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
+      injectHtmlNodeAsEarlyAsPossible(
+        htmlAst,
+        createHtmlNode({
+          tagName: "script",
+          textContent: inlineJs,
+        }),
+        hook.plugin.name,
+      );
+    }
+    const scriptReference = htmlUrlInfo.dependencies.inject({
+      type: "script",
+      subtype: scriptInjection.type === "module" ? "js_module" : "js_classic",
+      expectedType:
+        scriptInjection.type === "module" ? "js_module" : "js_classic",
+      specifier: scriptInjection.src,
+    });
+    injectHtmlNodeAsEarlyAsPossible(
+      htmlAst,
+      createHtmlNode({
+        tagName: "script",
+        ...(scriptInjection.type === "module" ? { type: "module" } : {}),
+        src: scriptReference.generatedSpecifier,
+      }),
+      hook.plugin.name,
+    );
+  });
+  const htmlModified = stringifyHtmlAst(htmlAst);
+  return {
+    content: htmlModified,
+  };
+};
+
+const stringifyParams = (params, prefix = "") => {
+  const source = JSON.stringify(params, null, prefix);
+  if (prefix.length) {
+    // remove leading "{\n"
+    // remove leading prefix
+    // remove trailing "\n}"
+    return source.slice(2 + prefix.length, -2);
+  }
+  // remove leading "{"
+  // remove trailing "}"
+  return source.slice(1, -1);
+};

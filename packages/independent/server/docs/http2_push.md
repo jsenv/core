@@ -49,7 +49,7 @@ GET https://localhost:3679/main.html
 _main.html:_
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <title>Basic website</title>

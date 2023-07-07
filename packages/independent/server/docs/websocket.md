@@ -28,7 +28,7 @@ await startServer({
 _client.html_
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <title>Title</title>

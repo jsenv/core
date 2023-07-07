@@ -38,7 +38,6 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
   const contentInfo = extractContentInfo(nodeHoldingContent);
   if (contentInfo) {
     onInlineContent({
-      node: nodeHoldingContent,
       type: "new_blob_first_arg",
       contentType,
       start: nodeHoldingContent.start,
@@ -50,6 +49,7 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
       nodeType: contentInfo.nodeType,
       quote: contentInfo.quote,
       content: contentInfo.content,
+      astInfo: { node: nodeHoldingContent },
     });
   }
 };

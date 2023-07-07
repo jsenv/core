@@ -23,9 +23,9 @@ export const jsenvPluginSupervisor = ({
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
-    serve: async (request, context) => {
-      if (request.pathname.startsWith("/__get_code_frame__/")) {
-        const { pathname, searchParams } = new URL(request.url);
+    serve: async (serveInfo) => {
+      if (serveInfo.request.pathname.startsWith("/__get_code_frame__/")) {
+        const { pathname, searchParams } = new URL(serveInfo.request.url);
         let urlWithLineAndColumn = pathname.slice(
           "/__get_code_frame__/".length,
         );
@@ -40,7 +40,7 @@ export const jsenvPluginSupervisor = ({
         const file = urlWithLineAndColumn.slice(0, match.index);
         let line = parseInt(match[1]);
         let column = parseInt(match[2]);
-        const urlInfo = context.urlGraph.getUrlInfo(file);
+        const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
@@ -83,8 +83,10 @@ export const jsenvPluginSupervisor = ({
           body: codeFrame,
         };
       }
-      if (request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = request.pathname.slice("/__get_error_cause__/".length);
+      if (serveInfo.request.pathname.startsWith("/__get_error_cause__/")) {
+        let file = serveInfo.request.pathname.slice(
+          "/__get_error_cause__/".length,
+        );
         file = decodeURIComponent(file);
         if (!file) {
           return {
@@ -93,7 +95,7 @@ export const jsenvPluginSupervisor = ({
           };
         }
         const getErrorCauseInfo = () => {
-          const urlInfo = context.urlGraph.getUrlInfo(file);
+          const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
           if (!urlInfo) {
             return null;
           }
@@ -102,12 +104,10 @@ export const jsenvPluginSupervisor = ({
             return error;
           }
           // search in direct dependencies (404 or 500)
-          const { dependencies } = urlInfo;
-          for (const dependencyUrl of dependencies) {
-            const dependencyUrlInfo =
-              context.urlGraph.getUrlInfo(dependencyUrl);
-            if (dependencyUrlInfo.error) {
-              return dependencyUrlInfo.error;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            const referencedUrlInfo = referenceToOther.urlInfo;
+            if (referencedUrlInfo.error) {
+              return referencedUrlInfo.error;
             }
           }
           return null;
@@ -138,8 +138,10 @@ export const jsenvPluginSupervisor = ({
           body,
         };
       }
-      if (request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = request.pathname.slice("/__open_in_editor__/".length);
+      if (serveInfo.request.pathname.startsWith("/__open_in_editor__/")) {
+        let file = serveInfo.request.pathname.slice(
+          "/__open_in_editor__/".length,
+        );
         file = decodeURIComponent(file);
         if (!file) {
           return {
@@ -162,8 +164,8 @@ export const jsenvPluginSupervisor = ({
       return null;
     },
     transformUrlContent: {
-      html: ({ url, content }, context) => {
-        const [supervisorFileReference] = context.referenceUtils.inject({
+      html: (htmlUrlInfo) => {
+        const supervisorFileReference = htmlUrlInfo.dependencies.inject({
           type: "script",
           expectedType: "js_classic",
           specifier: supervisorFileUrl,
@@ -171,8 +173,8 @@ export const jsenvPluginSupervisor = ({
 
         return injectSupervisorIntoHTML(
           {
-            content,
-            url,
+            content: htmlUrlInfo.content,
+            url: htmlUrlInfo.url,
           },
           {
             supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
@@ -184,7 +186,7 @@ export const jsenvPluginSupervisor = ({
               openInEditor,
             },
             webServer: {
-              rootDirectoryUrl: context.rootDirectoryUrl,
+              rootDirectoryUrl: htmlUrlInfo.context.rootDirectoryUrl,
               isJsenvDevServer: true,
             },
             inlineAsRemote: true,
@@ -196,8 +198,8 @@ export const jsenvPluginSupervisor = ({
               line,
               column,
             }) => {
-              const [inlineScriptReference] =
-                context.referenceUtils.foundInline({
+              const inlineScriptReference =
+                htmlUrlInfo.dependencies.foundInline({
                   type: "script",
                   subtype: "inline",
                   expectedType: type,

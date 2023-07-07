@@ -15,7 +15,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.js?as_js_classic": "main.js",
     },
-    plugins: [jsenvPluginAsJsClassic()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
@@ -46,4 +45,7 @@ const test = async (params) => {
 };
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "89" } });
+await test({
+  runtimeCompat: { chrome: "89" },
+  plugins: [jsenvPluginAsJsClassic()],
+});

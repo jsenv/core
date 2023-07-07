@@ -7,8 +7,7 @@ import {
   applyBabelPlugins,
 } from "@jsenv/ast";
 
-export const prependContent = (
-  urlInfoTransformer,
+export const prependContent = async (
   urlInfoReceivingCode,
   urlInfoToPrepend,
 ) => {
@@ -22,42 +21,29 @@ export const prependContent = (
     urlInfoReceivingCode.type === "html" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInHtml(
-      urlInfoTransformer,
-      urlInfoReceivingCode,
-      urlInfoToPrepend,
-    );
+    prependJsClassicInHtml(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
   }
   if (
     urlInfoReceivingCode.type === "js_classic" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInJsClassic(
-      urlInfoTransformer,
-      urlInfoReceivingCode,
-      urlInfoToPrepend,
-    );
+    prependJsClassicInJsClassic(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
   }
   if (
     urlInfoReceivingCode.type === "js_module" &&
     urlInfoToPrepend.type === "js_classic"
   ) {
-    return prependJsClassicInJsModule(
-      urlInfoTransformer,
-      urlInfoReceivingCode,
-      urlInfoToPrepend,
-    );
+    await prependJsClassicInJsModule(urlInfoReceivingCode, urlInfoToPrepend);
+    return;
   }
   throw new Error(
     `cannot prepend content from "${urlInfoToPrepend.type}" into "${urlInfoReceivingCode.type}"`,
   );
 };
 
-const prependJsClassicInHtml = (
-  urlInfoTransformer,
-  htmlUrlInfo,
-  urlInfoToPrepend,
-) => {
+const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
   const htmlAst = parseHtmlString(htmlUrlInfo.content);
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
@@ -71,14 +57,10 @@ const prependJsClassicInHtml = (
     "jsenv:core",
   );
   const content = stringifyHtmlAst(htmlAst);
-  urlInfoTransformer.applyTransformations(htmlUrlInfo, { content });
+  htmlUrlInfo.mutateContent({ content });
 };
 
-const prependJsClassicInJsClassic = (
-  urlInfoTransformer,
-  jsUrlInfo,
-  urlInfoToPrepend,
-) => {
+const prependJsClassicInJsClassic = (jsUrlInfo, urlInfoToPrepend) => {
   const magicSource = createMagicSource(jsUrlInfo.content);
   magicSource.prepend(`${urlInfoToPrepend.content}\n\n`);
   const magicResult = magicSource.toContentAndSourcemap();
@@ -86,17 +68,13 @@ const prependJsClassicInJsClassic = (
     jsUrlInfo.sourcemap,
     magicResult.sourcemap,
   );
-  urlInfoTransformer.applyTransformations(jsUrlInfo, {
+  jsUrlInfo.mutateContent({
     content: magicResult.content,
     sourcemap,
   });
 };
 
-const prependJsClassicInJsModule = async (
-  urlInfoTransformer,
-  jsUrlInfo,
-  urlInfoToPrepend,
-) => {
+const prependJsClassicInJsModule = async (jsUrlInfo, urlInfoToPrepend) => {
   const { code, map } = await applyBabelPlugins({
     babelPlugins: [
       [
@@ -108,7 +86,7 @@ const prependJsClassicInJsModule = async (
     inputIsJsModule: true,
     inputUrl: jsUrlInfo.originalUrl,
   });
-  urlInfoTransformer.applyTransformations(jsUrlInfo, {
+  jsUrlInfo.mutateContent({
     content: code,
     sourcemap: map,
   });

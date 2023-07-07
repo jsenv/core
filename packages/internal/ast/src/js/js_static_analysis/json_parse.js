@@ -16,7 +16,6 @@ export const analyzeJSONParseCall = (node, { onInlineContent }) => {
   const contentInfo = extractContentInfo(nodeHoldingContent);
   if (contentInfo) {
     onInlineContent({
-      node: nodeHoldingContent,
       type: "json_parse_first_arg",
       contentType: "application/json",
       start: nodeHoldingContent.start,
@@ -28,6 +27,7 @@ export const analyzeJSONParseCall = (node, { onInlineContent }) => {
       nodeType: contentInfo.nodeType,
       quote: contentInfo.quote,
       content: contentInfo.content,
+      astInfo: { node: nodeHoldingContent },
     });
   }
 };

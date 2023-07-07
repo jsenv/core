@@ -258,6 +258,9 @@ const compareIdentity = (comparison, options) => {
     actual,
     expected,
     comparer: () => {
+      if (isBuffer(actual) && isBuffer(expected)) {
+        return actual.equals(expected);
+      }
       if (isNegativeZero(expected)) {
         return isNegativeZero(actual);
       }
@@ -269,7 +272,6 @@ const compareIdentity = (comparison, options) => {
     options,
   });
 };
-
 // under some rare and odd circumstances firefox Object.is(-0, -0)
 // returns false making test fail.
 // it is 100% reproductible with big.test.js.
@@ -279,6 +281,9 @@ const compareIdentity = (comparison, options) => {
 // All this to say avoid relying on Object.is to test if the value is -0
 const isNegativeZero = (value) => {
   return typeof value === "number" && 1 / value === -Infinity;
+};
+const isBuffer = (value) => {
+  return typeof Buffer === "function" && Buffer.isBuffer(value);
 };
 
 const comparePrototype = (comparison, options) => {
