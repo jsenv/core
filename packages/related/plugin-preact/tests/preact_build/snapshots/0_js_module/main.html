@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/preact.module.js": "/js/preact.module.js?v=cf8a8be8",
+          "/js/jsxRuntime.module.js": "/js/jsxRuntime.module.js?v=0cf86692"
+        }
+      }
+    </script>
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/main.js": "/js/main.js?v=ca99b67e",
+          "/js/app.js": "/js/app.js?v=c4e2957f"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <div id="app"></div>
+    <script type="module">
+      import(__v__("/js/main.js"));
+    </script>
+  </body>
+</html>
