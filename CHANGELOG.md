@@ -1,3 +1,35 @@
+# 37.0.0
+
+- Update plugins API
+  - context argument is dead (all hooks now called with a single argument)
+  - context can be accessed either with `urlInfo.context` or `reference.ownerUrlInfo.context`
+  - `reference.parentUrl` becomes `reference.ownerUrlInfo.url`
+  - Add `reference.urlInfo`
+  - All `context.referenceUtils` moved to `urlInfo.dependencies`
+  - Add methods on urlInfo `.cook`, `.cookDependencies`, `.getWithoutSearchParam`, `.isUsed`
+  - Add methods on reference `.remove`, `.inline`
+  - Add `reference.astInfo`
+  - Add `urlInfo.referenceToOthersSet`
+  - Add `urlInfo.referenceFromOthersSet`
+  - Add `urlInfo.firstReference`
+  - Add `urlInfo.contentFinalized`
+  - Add `urlInfo.graph`
+  - Add `graph.rootUrlInfo`
+  - Add lazy getters on `urlInfo.contentAst` and `urlInfo.contentEtag`
+  - `urlInfo.url` now readonly and frozen
+  - `reference.url` now readonly and frozen
+  - `reference.prev` and `reference.next` always set early to be accessible inside resolveReference and redirectReference hooks
+  - inlining always create a dedicated urlInfo
+- Update versioning during build
+  - now done using placeholders (no need to recook to inject versions)
+- Ensure side effect file are properly injected into relevant entry points and only once
+- Rename param used to hot reload `?hot` (was `?hmr`)
+- Ensure `assert` keyword is entirely removed when import assertions are not supported
+- Fix sourcemaps generation during build
+- Properly update file written in outDirectoryUrl when url info content is modified after being cooked
+- Improve code injection for side effect file, versioning and service worker
+- Code injected into HTML files respects indentation to be readable
+
 # 36.3.1
 
 - Introduce side effect files
