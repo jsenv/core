@@ -204,7 +204,7 @@ const parseAndTransformHtmlReferences = async (
     }
 
     actions.push(async () => {
-      await cookInlineContent(inlineReference);
+      await inlineReference.urlInfo.cook();
       mutations.push(() => {
         if (hotAccept) {
           removeHtmlNodeText(node);
@@ -373,28 +373,6 @@ const parseAndTransformHtmlReferences = async (
   }
   mutations.forEach((mutation) => mutation());
   return stringifyHtmlAst(htmlAst);
-};
-
-const cookInlineContent = async (inlineReference) => {
-  const inlineUrlInfo = inlineReference.urlInfo;
-  try {
-    await inlineUrlInfo.cook();
-  } catch (e) {
-    if (e.code === "PARSE_ERROR") {
-      // When something like <style> or <script> contains syntax error
-      // the HTML in itself it still valid
-      // keep the syntax error and continue with the HTML
-      const messageStart =
-        inlineUrlInfo.type === "css"
-          ? `Syntax error on css declared inside <style>`
-          : `Syntax error on js declared inside <script>`;
-
-      inlineUrlInfo.context.logger.error(`${messageStart}: ${e.cause.reasonCode}
-${e.traceMessage}`);
-    } else {
-      throw e;
-    }
-  }
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
