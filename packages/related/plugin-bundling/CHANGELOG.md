@@ -1,3 +1,7 @@
+# 2.4.0
+
+- Prevent facade chunk when referenced both by resourcehint and import
+
 # 2.1.8
 
 - Fix error when bundling css when reference uses search param(s)

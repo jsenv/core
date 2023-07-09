@@ -179,16 +179,35 @@ const rollupPluginJsenv = ({
           });
           return;
         }
+        let preserveSignature;
+        if (strictExports) {
+          preserveSignature = "strict";
+        } else {
+          // When referenced only once we can enable allow-extension
+          // otherwise stick to strict exports to ensure all importers
+          // receive the correct exports
+          let firstStrongRef = null;
+          let hasMoreThanOneStrongRefFromOther = false;
+          for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
+            if (referenceFromOther.isWeak) {
+              continue;
+            }
+            if (firstStrongRef) {
+              hasMoreThanOneStrongRefFromOther = true;
+              break;
+            }
+            firstStrongRef = referenceFromOther;
+          }
+          preserveSignature = hasMoreThanOneStrongRefFromOther
+            ? "strict"
+            : "allow-extension";
+        }
         emitChunk({
           id,
           implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
             ? [previousNonEntryPointModuleId]
             : null,
-          preserveSignature: strictExports
-            ? "strict"
-            : jsModuleUrlInfo.referenceFromOthersSet.size < 2
-            ? "allow-extension"
-            : "strict",
+          preserveSignature,
         });
         previousNonEntryPointModuleId = id;
       });
