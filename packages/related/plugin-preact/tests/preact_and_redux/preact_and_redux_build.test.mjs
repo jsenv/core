@@ -21,7 +21,6 @@ const plugins = [
         external: ["react-is"],
       },
     },
-    dev: true,
     compileCacheDirectoryUrl: new URL("./.jsenv/cjs_to_esm/", import.meta.url),
   }),
 ];
@@ -64,7 +63,19 @@ if (process.platform !== "win32") {
   // support for <script type="module">
   await test("0_js_module", {
     runtimeCompat: { chrome: "89" },
-    plugins: [...plugins, jsenvPluginBundling()],
+    plugins: [
+      ...plugins,
+      jsenvPluginBundling({
+        js_module: {
+          chunks: {
+            // IT's ABSOLUTELY MANDATORY
+            // WITHOUT THIS ROLLUP CREATES CIRCULAR DEP IN THE CODE
+            // THAT IS NEVER RESOLVING
+            vendors: { "file:///**/node_modules/": true },
+          },
+        },
+      }),
+    ],
   });
   // no support for <script type="module">
   await test("1_js_module_fallback", {

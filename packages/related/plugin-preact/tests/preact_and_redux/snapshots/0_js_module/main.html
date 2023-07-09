@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/vendors.js": "/js/vendors.js?v=9007c9db"
+        }
+      }
+    </script>
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/main.js": "/js/main.js?v=5703a220",
+          "/js/app.js": "/js/app.js?v=dfcc42c1"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <div id="app"></div>
+    <script type="module">
+      import(__v__("/js/main.js"));
+    </script>
+  </body>
+</html>
