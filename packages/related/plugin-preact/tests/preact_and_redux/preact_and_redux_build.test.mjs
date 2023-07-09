@@ -40,6 +40,7 @@ const test = async (name, params) => {
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/${name}/`, import.meta.url),
+    false,
   );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
