@@ -2,7 +2,24 @@ import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { plugins } from "./jsenv_config.mjs";
+
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+
+const plugins = [
+  jsenvPluginPreact(),
+  jsenvPluginCommonJs({
+    include: {
+      "/**/node_modules/react-is/": true,
+      "/**/node_modules/use-sync-external-store/": {
+        external: ["react"],
+      },
+      "/**/node_modules/hoist-non-react-statics/": {
+        external: ["react-is"],
+      },
+    },
+  }),
+];
 
 const devServer = await startDevServer({
   logLevel: "warn",

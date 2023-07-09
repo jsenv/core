@@ -2,26 +2,46 @@ import { assert } from "@jsenv/assert";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-import { plugins } from "./jsenv_config.mjs";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-const test = async (params) => {
-  await ensureEmptyDirectory(
-    new URL("./client/.jsenv/cjs_to_esm", import.meta.url),
-  );
+const plugins = [
+  jsenvPluginPreact(),
+  jsenvPluginCommonJs({
+    include: {
+      "/**/node_modules/react-is/": true,
+      "/**/node_modules/use-sync-external-store/": {
+        external: ["react"],
+      },
+      "/**/node_modules/hoist-non-react-statics/": {
+        external: ["react-is"],
+      },
+    },
+    dev: true,
+    compileCacheDirectoryUrl: new URL("./.jsenv/cjs_to_esm/", import.meta.url),
+  }),
+];
+
+const test = async (name, params) => {
+  await ensureEmptyDirectory(new URL("./.jsenv/cjs_to_esm/", import.meta.url));
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    plugins: [...plugins, jsenvPluginBundling()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -42,7 +62,13 @@ const test = async (params) => {
 // sometimes timeout on windows
 if (process.platform !== "win32") {
   // support for <script type="module">
-  await test({ runtimeCompat: { chrome: "64" } });
+  await test("0_js_module", {
+    runtimeCompat: { chrome: "89" },
+    plugins: [...plugins, jsenvPluginBundling()],
+  });
   // no support for <script type="module">
-  await test({ runtimeCompat: { chrome: "62" } });
+  await test("1_js_module_fallback", {
+    runtimeCompat: { chrome: "62" },
+    plugins: [...plugins, jsenvPluginBundling()],
+  });
 }
