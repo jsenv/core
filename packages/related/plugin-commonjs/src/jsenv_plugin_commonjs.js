@@ -4,12 +4,14 @@ import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
 
 import { commonJsToJsModule } from "./cjs_to_esm.js";
 
-const compileCacheDirectoryUrl = new URL("../.cache/", import.meta.url);
+const compileCacheDirectoryUrlDefault = new URL("../.cache/", import.meta.url);
 
 export const jsenvPluginCommonJs = ({
   name = "jsenv:commonjs",
   logLevel,
   include,
+  compileCacheDirectoryUrl = compileCacheDirectoryUrlDefault,
+  dev,
 }) => {
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
@@ -77,7 +79,8 @@ export const jsenvPluginCommonJs = ({
         compileCacheDirectoryUrl,
         sourceFileUrl: commonJsUrlInfo.url,
         browsers: !nodeRuntimeEnabled,
-        processEnvNodeEnv: urlInfo.context.dev ? "development" : "production",
+        processEnvNodeEnv:
+          dev || urlInfo.context.dev ? "development" : "production",
         ...urlInfo.data.commonjs,
       });
       if (isValid) {
