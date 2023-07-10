@@ -28,11 +28,6 @@ export const createUrlInfoTransformer = ({
     sourcemapsSourcesContent = true;
   }
 
-  const sourcemapsEnabled =
-    sourcemaps === "inline" ||
-    sourcemaps === "file" ||
-    sourcemaps === "programmatic";
-
   const normalizeSourcemap = (urlInfo, sourcemap) => {
     let { sources } = sourcemap;
     if (sources) {
@@ -111,13 +106,7 @@ export const createUrlInfoTransformer = ({
     defineGettersOnPropertiesDerivedFromContent(urlInfo);
 
     urlInfo.sourcemap = sourcemap;
-    if (!sourcemapsEnabled) {
-      return;
-    }
-    if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
-      return;
-    }
-    if (urlInfo.generatedUrl.startsWith("data:")) {
+    if (!shouldHandleSourcemap(urlInfo)) {
       return;
     }
     // sourcemap is a special kind of reference:
@@ -196,7 +185,7 @@ export const createUrlInfoTransformer = ({
       urlInfo.content = content;
       defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }
-    if (sourcemapsEnabled && sourcemap) {
+    if (sourcemap && shouldHandleSourcemap(urlInfo)) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       const finalSourcemap = composeTwoSourcemaps(
         urlInfo.sourcemap,
@@ -272,13 +261,7 @@ export const createUrlInfoTransformer = ({
   };
 
   const applySourcemapOnContent = (urlInfo) => {
-    if (!sourcemapsEnabled) {
-      return;
-    }
-    if (!urlInfo.sourcemap) {
-      return;
-    }
-    if (urlInfo.generatedUrl.startsWith("data:")) {
+    if (!urlInfo.sourcemap || !shouldHandleSourcemap(urlInfo)) {
       return;
     }
 
@@ -362,4 +345,22 @@ export const createUrlInfoTransformer = ({
     applyTransformations,
     endTransformations,
   };
+};
+
+const shouldHandleSourcemap = (urlInfo) => {
+  const { sourcemaps } = urlInfo.context;
+  if (
+    sourcemaps !== "inline" &&
+    sourcemaps !== "file" &&
+    sourcemaps !== "programmatic"
+  ) {
+    return false;
+  }
+  if (urlInfo.url.startsWith("data:")) {
+    return false;
+  }
+  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
 };

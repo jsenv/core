@@ -13,7 +13,7 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { composeTwoSourcemaps, createMagicSource, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { composeTwoSourcemaps, createMagicSource, generateSourcemapFileUrl, SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, parseJsWithAcorn, parseSrcSet, getHtmlNodeText, getHtmlNodePosition, getHtmlNodeAttributePosition, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, findHtmlNode, removeHtmlNode, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { createRequire } from "node:module";
@@ -12317,11 +12317,6 @@ const createUrlInfoTransformer = ({
     sourcemapsSourcesContent = true;
   }
 
-  const sourcemapsEnabled =
-    sourcemaps === "inline" ||
-    sourcemaps === "file" ||
-    sourcemaps === "programmatic";
-
   const normalizeSourcemap = (urlInfo, sourcemap) => {
     let { sources } = sourcemap;
     if (sources) {
@@ -12400,13 +12395,7 @@ const createUrlInfoTransformer = ({
     defineGettersOnPropertiesDerivedFromContent(urlInfo);
 
     urlInfo.sourcemap = sourcemap;
-    if (!sourcemapsEnabled) {
-      return;
-    }
-    if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
-      return;
-    }
-    if (urlInfo.generatedUrl.startsWith("data:")) {
+    if (!shouldHandleSourcemap(urlInfo)) {
       return;
     }
     // sourcemap is a special kind of reference:
@@ -12485,7 +12474,7 @@ const createUrlInfoTransformer = ({
       urlInfo.content = content;
       defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }
-    if (sourcemapsEnabled && sourcemap) {
+    if (sourcemap && shouldHandleSourcemap(urlInfo)) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       const finalSourcemap = composeTwoSourcemaps(
         urlInfo.sourcemap,
@@ -12561,13 +12550,7 @@ const createUrlInfoTransformer = ({
   };
 
   const applySourcemapOnContent = (urlInfo) => {
-    if (!sourcemapsEnabled) {
-      return;
-    }
-    if (!urlInfo.sourcemap) {
-      return;
-    }
-    if (urlInfo.generatedUrl.startsWith("data:")) {
+    if (!urlInfo.sourcemap || !shouldHandleSourcemap(urlInfo)) {
       return;
     }
 
@@ -12651,6 +12634,24 @@ const createUrlInfoTransformer = ({
     applyTransformations,
     endTransformations,
   };
+};
+
+const shouldHandleSourcemap = (urlInfo) => {
+  const { sourcemaps } = urlInfo.context;
+  if (
+    sourcemaps !== "inline" &&
+    sourcemaps !== "file" &&
+    sourcemaps !== "programmatic"
+  ) {
+    return false;
+  }
+  if (urlInfo.url.startsWith("data:")) {
+    return false;
+  }
+  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
 };
 
 const createResolveUrlError = ({
