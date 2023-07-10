@@ -14,7 +14,7 @@
     "prettier": "prettier --write ."
   },
   "dependencies": {
-    "preact": "10.15.1"
+    "preact": "10.16.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.22.7",
