@@ -18,14 +18,24 @@ const plugins = [
         external: ["react"],
       },
       "/**/node_modules/hoist-non-react-statics/": {
-        external: ["react-is"],
+        // "react-redux" depends on
+        // - react-is@18+
+        // - hoist-non-react-statics@3.3.2+
+        // but "hoist-non-react-statics@3.3.2" depends on
+        // - react-is@16+
+        // In the end there is 2 versions of react-is trying to cohabit
+        // to prevent them to clash we let rollup inline "react-is" into "react-statics"
+        // thanks to the comment below
+        // external: ["react-is"],
       },
     },
   }),
 ];
 
 const test = async (name, params) => {
-  await ensureEmptyDirectory(new URL("./.jsenv/cjs_to_esm/", import.meta.url));
+  await ensureEmptyDirectory(
+    new URL("./.jsenv/build/cjs_to_esm/", import.meta.url),
+  );
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
