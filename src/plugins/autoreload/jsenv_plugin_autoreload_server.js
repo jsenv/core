@@ -148,6 +148,7 @@ export const jsenvPluginAutoreloadServer = ({
                   cause: `${relativeUrl} ${event}`,
                   type: "hot",
                   typeReason: hotUpdate.reason,
+                  hot: changedUrlInfo.modifiedTimestamp,
                   hotInstructions: instructions,
                 };
               }
@@ -206,6 +207,7 @@ export const jsenvPluginAutoreloadServer = ({
                   cause,
                   type: "hot",
                   typeReason: ownerHotUpdate.reason,
+                  hot: prunedUrlInfo.prunedTimestamp,
                   hotInstructions: [pruneInstruction],
                 };
               }

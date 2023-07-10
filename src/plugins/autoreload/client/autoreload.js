@@ -127,7 +127,7 @@ const dequeue = async () => {
   }
 };
 
-const applyHotReload = async ({ hotInstructions }) => {
+const applyHotReload = async ({ hot, hotInstructions }) => {
   await hotInstructions.reduce(
     async (previous, { type, boundary, acceptedBy }) => {
       await previous;
@@ -174,7 +174,7 @@ const applyHotReload = async ({ hotInstructions }) => {
           type: "dynamic_import",
           url: urlToFetch,
         };
-        const namespace = await reloadJsImport(urlToFetch);
+        const namespace = await reloadJsImport(urlToFetch, hot);
         if (urlHotMeta.acceptCallback) {
           await urlHotMeta.acceptCallback(namespace);
         }
@@ -205,7 +205,7 @@ const applyHotReload = async ({ hotInstructions }) => {
         } else {
           console.log(`reloading ${domNodesCount} nodes using ${acceptedBy}`);
           domNodesUsingUrl.forEach((domNodesUsingUrl) => {
-            domNodesUsingUrl.reload();
+            domNodesUsingUrl.reload(hot);
           });
         }
         console.groupEnd();

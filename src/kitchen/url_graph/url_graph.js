@@ -38,12 +38,12 @@ export const createUrlGraph = ({
   const deleteUrlInfo = (url, lastReferenceFromOther) => {
     const urlInfo = urlInfoMap.get(url);
     if (urlInfo) {
+      urlInfo.prunedTimestamp = Date.now();
       if (lastReferenceFromOther && !urlInfo.isInline) {
         pruneUrlInfoCallbackRef.current(urlInfo, lastReferenceFromOther);
       }
       urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
       urlInfoMap.delete(url);
-      urlInfo.modifiedTimestamp = Date.now();
       urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
         referenceToOther.remove();
       });
@@ -197,6 +197,7 @@ const createUrlInfo = (url, context) => {
     context,
     error: null,
     modifiedTimestamp: 0,
+    prunedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isWatched: false,

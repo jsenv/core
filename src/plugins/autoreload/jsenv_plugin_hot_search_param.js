@@ -1,24 +1,4 @@
 export const jsenvPluginHotSearchParam = () => {
-  const shouldInjectHotSearchParam = (reference) => {
-    if (reference.isImplicit) {
-      return false;
-    }
-    if (reference.original && reference.original.searchParams.has("hot")) {
-      return true;
-    }
-    // parent is using ?hot -> propagate
-    const { ownerUrlInfo } = reference;
-    const lastReference = ownerUrlInfo.context.reference;
-    if (
-      lastReference &&
-      lastReference.original &&
-      lastReference.original.searchParams.has("hot")
-    ) {
-      return true;
-    }
-    return false;
-  };
-
   return {
     name: "jsenv:hot_search_param",
     appliesDuring: "dev",
@@ -36,17 +16,39 @@ export const jsenvPluginHotSearchParam = () => {
       return urlObject.href;
     },
     transformReferenceSearchParams: (reference) => {
-      if (!shouldInjectHotSearchParam(reference)) {
+      // on veut injecter le param que si modifié
+      // sauf si du point de vue du browser il est modifié aussi
+      // parce que on a prune son effet
+      // donc on veut le re-exec
+      if (reference.isImplicit) {
         return null;
       }
+      if (reference.original && reference.original.searchParams.has("hot")) {
+        return {
+          hot: reference.original.searchParams.get("hot"),
+        };
+      }
+      const request = reference.ownerUrlInfo.context.request;
+      const parentHotParam = request ? request.searchParams.get("hot") : null;
+      if (!parentHotParam) {
+        return null;
+      }
+      // parent is using ?hot -> propagate
+      const parentHotTimestamp = Number(parentHotParam);
       const referencedUrlInfo = reference.urlInfo;
-      if (!referencedUrlInfo.modifiedTimestamp) {
-        return null;
+      // either it must be modified (and modified since the parent Date.now())
+      // or it must have been pruned (in that case we propagate the timestamp)
+      if (referencedUrlInfo.modifiedTimestamp >= parentHotTimestamp) {
+        return {
+          hot: parentHotParam,
+        };
       }
-      return {
-        hot: "",
-        v: referencedUrlInfo.modifiedTimestamp,
-      };
+      if (referencedUrlInfo.prunedTimestamp >= parentHotTimestamp) {
+        return {
+          hot: parentHotParam,
+        };
+      }
+      return null;
     },
   };
 };
