@@ -18438,6 +18438,12 @@ const jsenvPluginAutoreloadServer = ({
         });
         clientFilesPruneCallbackList.push(
           (prunedUrlInfo, lastReferenceFromOther) => {
+            if (lastReferenceFromOther.type === "sourcemap_comment") {
+              // Can happen when starting dev server with sourcemaps: "file"
+              // In that case, as sourcemaps are injected, the reference
+              // are lost and sourcemap is considered as pruned
+              return;
+            }
             const parentHotUpdate = propagateUpdate(
               lastReferenceFromOther.ownerUrlInfo,
             );
