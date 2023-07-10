@@ -557,7 +557,6 @@ const canAddOrRemoveReference = (reference) => {
 const applyDependencyRemovalEffects = (reference) => {
   const { ownerUrlInfo } = reference;
   const { referenceToOthersSet } = ownerUrlInfo;
-
   if (reference.isImplicit && !reference.isInline) {
     let hasAnOtherImplicitRef = false;
     for (const referenceToOther of referenceToOthersSet) {

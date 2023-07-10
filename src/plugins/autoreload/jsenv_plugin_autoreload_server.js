@@ -18,29 +18,7 @@ export const jsenvPluginAutoreloadServer = ({
           }
           return url;
         };
-        const notifyFullReload = ({ cause, reason, declinedBy }) => {
-          serverEventInfo.sendServerEvent({
-            cause,
-            type: "full",
-            typeReason: reason,
-            declinedBy,
-          });
-        };
-        const notifyPartialReload = ({ cause, reason, instructions }) => {
-          serverEventInfo.sendServerEvent({
-            cause,
-            type: "hot",
-            typeReason: reason,
-            hotInstructions: instructions,
-          });
-        };
         const propagateUpdate = (firstUrlInfo) => {
-          if (!serverEventInfo.kitchen.graph.getUrlInfo(firstUrlInfo.url)) {
-            return {
-              declined: true,
-              reason: `url not in the url graph`,
-            };
-          }
           const iterate = (urlInfo, seen) => {
             if (urlInfo.data.hotAcceptSelf) {
               return {
@@ -119,86 +97,148 @@ export const jsenvPluginAutoreloadServer = ({
           const seen = [];
           return iterate(firstUrlInfo, seen);
         };
-        clientFileChangeCallbackList.push(({ url, event }) => {
-          const onUrlInfo = (urlInfo) => {
-            if (!urlInfo.isUsed()) {
-              return false;
-            }
-            const relativeUrl = formatUrlForClient(urlInfo.url);
-            const hotUpdate = propagateUpdate(urlInfo);
-            if (hotUpdate.declined) {
-              notifyFullReload({
-                cause: `${relativeUrl} ${event}`,
-                reason: hotUpdate.reason,
-                declinedBy: hotUpdate.declinedBy,
-              });
-              return true;
-            }
-            notifyPartialReload({
-              cause: `${relativeUrl} ${event}`,
-              reason: hotUpdate.reason,
-              instructions: hotUpdate.instructions,
-            });
-            return true;
-          };
 
-          const urlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
-          if (urlInfo) {
-            if (onUrlInfo(urlInfo)) {
-              return;
-            }
-            for (const searchParamVariant of urlInfo.searchParamVariantSet) {
-              if (onUrlInfo(searchParamVariant)) {
-                return;
+        // We are delaying the moment we tell client how to reload because:
+        //
+        // 1. clientFilePruneCallbackList can be called multiple times in a row
+        // It happens when previous references are removed by stopCollecting (in "references.js")
+        // In that case we could regroup the calls but we prefer to rely on debouncing to also cover
+        // code that would remove many url in a row by other means (like reference.remove())
+        //
+        // 2. clientFileChangeCallbackList can be called a lot of times in a short period (git checkout for instance)
+        // In that case it's better to cooldown thanks to debouncing
+        //
+        // And we want to gather all the actions to take in response to these events because
+        // we want to favor full-reload when needed and resort to partial reload afterwards
+        // it's also important to ensure the client will fetch the server in the same order
+        const delayedActionSet = new Set();
+        let timeout;
+        const delayAction = (action) => {
+          delayedActionSet.add(action);
+          clearTimeout(timeout);
+          timeout = setTimeout(handleDelayedActions);
+        };
+
+        const handleDelayedActions = () => {
+          const actionSet = new Set(delayedActionSet);
+          delayedActionSet.clear();
+          let reloadMessage = null;
+          for (const action of actionSet) {
+            if (action.type === "change") {
+              const { changedUrlInfo, event } = action;
+              if (!changedUrlInfo.isUsed()) {
+                continue;
               }
+              const hotUpdate = propagateUpdate(changedUrlInfo);
+              const relativeUrl = formatUrlForClient(changedUrlInfo.url);
+              if (hotUpdate.declined) {
+                reloadMessage = {
+                  cause: `${relativeUrl} ${event}`,
+                  type: "full",
+                  typeReason: hotUpdate.reason,
+                  declinedBy: hotUpdate.declinedBy,
+                };
+                break;
+              }
+              const instructions = hotUpdate.instructions;
+              if (reloadMessage) {
+                reloadMessage.hotInstructions.push(...instructions);
+              } else {
+                reloadMessage = {
+                  cause: `${relativeUrl} ${event}`,
+                  type: "hot",
+                  typeReason: hotUpdate.reason,
+                  hotInstructions: instructions,
+                };
+              }
+              continue;
+            }
+
+            if (action.type === "prune") {
+              const { prunedUrlInfo, lastReferenceFromOther } = action;
+              if (lastReferenceFromOther.type === "sourcemap_comment") {
+                // Can happen when starting dev server with sourcemaps: "file"
+                // In that case, as sourcemaps are injected, the reference
+                // are lost and sourcemap is considered as pruned
+                continue;
+              }
+              const { ownerUrlInfo } = lastReferenceFromOther;
+              if (!ownerUrlInfo.isUsed()) {
+                continue;
+              }
+              const ownerHotUpdate = propagateUpdate(ownerUrlInfo);
+              const cause = `following file is no longer referenced: ${formatUrlForClient(
+                prunedUrlInfo.url,
+              )}`;
+              // now check if we can hot update the parent resource
+              // then if we can hot update all dependencies
+              if (ownerHotUpdate.declined) {
+                reloadMessage = {
+                  cause,
+                  type: "full",
+                  typeReason: ownerHotUpdate.reason,
+                  declinedBy: ownerHotUpdate.declinedBy,
+                };
+                break;
+              }
+              // parent can hot update
+              // but pruned url info declines
+              if (prunedUrlInfo.data.hotDecline) {
+                reloadMessage = {
+                  cause,
+                  type: "full",
+                  typeReason: `a pruned file declines hot reload`,
+                  declinedBy: formatUrlForClient(prunedUrlInfo.url),
+                };
+                break;
+              }
+              const pruneInstruction = {
+                type: "prune",
+                boundary: formatUrlForClient(prunedUrlInfo.url),
+                acceptedBy: formatUrlForClient(
+                  lastReferenceFromOther.ownerUrlInfo.url,
+                ),
+              };
+              if (reloadMessage) {
+                reloadMessage.hotInstructions.push(pruneInstruction);
+              } else {
+                reloadMessage = {
+                  cause,
+                  type: "hot",
+                  typeReason: ownerHotUpdate.reason,
+                  hotInstructions: [pruneInstruction],
+                };
+              }
+            }
+          }
+          if (reloadMessage) {
+            serverEventInfo.sendServerEvent(reloadMessage);
+          }
+        };
+
+        clientFileChangeCallbackList.push(({ url, event }) => {
+          const changedUrlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
+          if (changedUrlInfo) {
+            delayAction({
+              type: "change",
+              changedUrlInfo,
+              event,
+            });
+            for (const searchParamVariant of changedUrlInfo.searchParamVariantSet) {
+              delayAction({
+                type: "change",
+                changedUrlInfo: searchParamVariant,
+                event,
+              });
             }
           }
         });
         clientFilePruneCallbackList.push(
           (prunedUrlInfo, lastReferenceFromOther) => {
-            if (lastReferenceFromOther.type === "sourcemap_comment") {
-              // Can happen when starting dev server with sourcemaps: "file"
-              // In that case, as sourcemaps are injected, the reference
-              // are lost and sourcemap is considered as pruned
-              return;
-            }
-            const parentHotUpdate = propagateUpdate(
-              lastReferenceFromOther.ownerUrlInfo,
-            );
-            const cause = `following file is no longer referenced: ${formatUrlForClient(
-              prunedUrlInfo.url,
-            )}`;
-            // now check if we can hot update the parent resource
-            // then if we can hot update all dependencies
-            if (parentHotUpdate.declined) {
-              notifyFullReload({
-                cause,
-                reason: parentHotUpdate.reason,
-                declinedBy: parentHotUpdate.declinedBy,
-              });
-              return;
-            }
-            // parent can hot update
-            const instructions = [];
-            if (prunedUrlInfo.data.hotDecline) {
-              notifyFullReload({
-                cause,
-                reason: `a pruned file declines hot reload`,
-                declinedBy: formatUrlForClient(prunedUrlInfo.url),
-              });
-              return;
-            }
-            instructions.push({
+            delayAction({
               type: "prune",
-              boundary: formatUrlForClient(prunedUrlInfo.url),
-              acceptedBy: formatUrlForClient(
-                lastReferenceFromOther.ownerUrlInfo.url,
-              ),
-            });
-            notifyPartialReload({
-              cause,
-              reason: parentHotUpdate.reason,
-              instructions,
+              prunedUrlInfo,
+              lastReferenceFromOther,
             });
           },
         );
