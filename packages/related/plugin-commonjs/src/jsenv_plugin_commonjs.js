@@ -1,5 +1,5 @@
 import { URL_META } from "@jsenv/url-meta";
-import { injectQueryParams, urlToExtension, urlToFilename } from "@jsenv/urls";
+import { injectQueryParams, urlToExtension, urlToBasename } from "@jsenv/urls";
 import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
 
 import { commonJsToJsModule } from "./cjs_to_esm.js";
@@ -20,9 +20,10 @@ export const jsenvPluginCommonJs = ({
     if (referenceUrlExtension !== onwerUrlExtension) {
       const packageFileUrl = defaultLookupPackageScope(reference.url);
       if (packageFileUrl) {
-        const basename = urlToFilename(reference.url);
-        const filename = `${basename}${onwerUrlExtension}`;
-        reference.filename = filename;
+        const basename = isBareSpecifier(reference.specifier)
+          ? reference.specifier
+          : urlToBasename(reference.url);
+        reference.filename = `${basename}${onwerUrlExtension}`;
       }
     }
   };
@@ -111,4 +112,21 @@ export const jsenvPluginCommonJs = ({
       };
     },
   };
+};
+
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch (e) {
+    return true;
+  }
 };
