@@ -66,6 +66,7 @@ const getPropertiesFromResource = ({ resource, baseUrl }) => {
 
   return {
     url: String(urlObject),
+    searchParams: urlObject.searchParams,
     pathname,
     resource,
   };

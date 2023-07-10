@@ -1,3 +1,7 @@
+# 15.1.0
+
+- Add `request.searchParams`
+
 # 15.0.0
 
 - Change how to enable https
