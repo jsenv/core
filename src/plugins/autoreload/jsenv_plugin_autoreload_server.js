@@ -2,7 +2,7 @@ import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
+  clientFilePruneCallbackList,
 }) => {
   return {
     name: "jsenv:autoreload_server",
@@ -154,7 +154,7 @@ export const jsenvPluginAutoreloadServer = ({
             }
           }
         });
-        clientFilesPruneCallbackList.push(
+        clientFilePruneCallbackList.push(
           (prunedUrlInfo, lastReferenceFromOther) => {
             if (lastReferenceFromOther.type === "sourcemap_comment") {
               // Can happen when starting dev server with sourcemaps: "file"

@@ -16,7 +16,9 @@ const test = async () => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
-    cooldownBetweenFileEvents: 150,
+    clientAutoreload: {
+      cooldownBetweenFileEvents: 150,
+    },
   });
   const browser = await chromium.launch({
     headless: true,

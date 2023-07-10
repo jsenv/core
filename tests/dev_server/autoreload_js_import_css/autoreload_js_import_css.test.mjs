@@ -113,9 +113,11 @@ const test = async ({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    cooldownBetweenFileEvents: 250,
-    clientServerEventsConfig: {
-      logs: false,
+    clientAutoreload: {
+      cooldownBetweenFileEvents: 250,
+      clientServerEventsConfig: {
+        logs: false,
+      },
     },
     ...rest,
   });

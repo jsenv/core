@@ -4,14 +4,14 @@ import { jsenvPluginAutoreloadServer } from "./jsenv_plugin_autoreload_server.js
 
 export const jsenvPluginAutoreload = ({
   clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
+  clientFilePruneCallbackList,
 }) => {
   return [
     jsenvPluginHotSearchParam(),
     jsenvPluginAutoreloadClient(),
     jsenvPluginAutoreloadServer({
       clientFileChangeCallbackList,
-      clientFilesPruneCallbackList,
+      clientFilePruneCallbackList,
     }),
   ];
 };
