@@ -1,5 +1,5 @@
 import { URL_META } from "@jsenv/url-meta";
-import { injectQueryParams, urlToExtension } from "@jsenv/urls";
+import { injectQueryParams, urlToExtension, urlToFilename } from "@jsenv/urls";
 import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
 
 import { commonJsToJsModule } from "./cjs_to_esm.js";
@@ -15,11 +15,15 @@ export const jsenvPluginCommonJs = ({
 }) => {
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
-    const packageFileUrl = defaultLookupPackageScope(reference.url);
-    if (packageFileUrl) {
-      reference.filename = `${reference.specifier}${urlToExtension(
-        reference.ownerUrlInfo.url,
-      )}`;
+    const onwerUrlExtension = urlToExtension(reference.ownerUrlInfo.url);
+    const referenceUrlExtension = urlToExtension(reference.url);
+    if (referenceUrlExtension !== onwerUrlExtension) {
+      const packageFileUrl = defaultLookupPackageScope(reference.url);
+      if (packageFileUrl) {
+        const basename = urlToFilename(reference.url);
+        const filename = `${basename}${onwerUrlExtension}`;
+        reference.filename = filename;
+      }
     }
   };
   const turnIntoJsModuleProxy = (reference) => {
