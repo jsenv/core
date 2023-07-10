@@ -1,4 +1,3 @@
-// TODO: make it pass
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
