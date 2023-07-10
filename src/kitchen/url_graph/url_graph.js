@@ -65,14 +65,15 @@ export const createUrlGraph = ({
     const referencedUrl = useGeneratedUrl
       ? reference.generatedUrl
       : reference.url;
-    const existingUrlInfo = getUrlInfo(referencedUrl);
-    if (existingUrlInfo) return existingUrlInfo;
-    const ownerUrlInfo = reference.ownerUrlInfo;
-    const ownerContext = ownerUrlInfo.context;
-    const context = Object.create(ownerContext);
-    const referencedUrlInfo = createUrlInfo(referencedUrl, context);
-    addUrlInfo(referencedUrlInfo);
-    createUrlInfoCallbackRef.current(referencedUrlInfo);
+    let referencedUrlInfo = getUrlInfo(referencedUrl);
+    if (!referencedUrlInfo) {
+      const ownerUrlInfo = reference.ownerUrlInfo;
+      const ownerContext = ownerUrlInfo.context;
+      const context = Object.create(ownerContext);
+      referencedUrlInfo = createUrlInfo(referencedUrl, context);
+      addUrlInfo(referencedUrlInfo);
+      createUrlInfoCallbackRef.current(referencedUrlInfo);
+    }
     if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params

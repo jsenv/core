@@ -11423,14 +11423,15 @@ const createUrlGraph = ({
     const referencedUrl = useGeneratedUrl
       ? reference.generatedUrl
       : reference.url;
-    const existingUrlInfo = getUrlInfo(referencedUrl);
-    if (existingUrlInfo) return existingUrlInfo;
-    const ownerUrlInfo = reference.ownerUrlInfo;
-    const ownerContext = ownerUrlInfo.context;
-    const context = Object.create(ownerContext);
-    const referencedUrlInfo = createUrlInfo(referencedUrl, context);
-    addUrlInfo(referencedUrlInfo);
-    createUrlInfoCallbackRef.current(referencedUrlInfo);
+    let referencedUrlInfo = getUrlInfo(referencedUrl);
+    if (!referencedUrlInfo) {
+      const ownerUrlInfo = reference.ownerUrlInfo;
+      const ownerContext = ownerUrlInfo.context;
+      const context = Object.create(ownerContext);
+      referencedUrlInfo = createUrlInfo(referencedUrl, context);
+      addUrlInfo(referencedUrlInfo);
+      createUrlInfoCallbackRef.current(referencedUrlInfo);
+    }
     if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params
@@ -21247,11 +21248,7 @@ const createFileService = ({
       return responseFromPlugin;
     }
     let reference;
-    const parentUrl = inferParentFromRequest(
-      request,
-      sourceDirectoryUrl,
-      sourceMainFilePath,
-    );
+    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl);
     if (parentUrl) {
       reference = kitchen.graph.inferReference(request.resource, parentUrl);
     }
@@ -21420,20 +21417,12 @@ const createFileService = ({
   };
 };
 
-const inferParentFromRequest = (
-  request,
-  sourceDirectoryUrl,
-  sourceMainFilePath,
-) => {
+const inferParentFromRequest = (request, sourceDirectoryUrl) => {
   const { referer } = request.headers;
   if (!referer) {
     return null;
   }
-  const refererUrlObject = new URL(referer);
-  const refererUrl =
-    refererUrlObject.pathname === `/`
-      ? new URL(sourceMainFilePath, request.origin).href
-      : referer;
+  const refererUrl = referer;
   return WEB_URL_CONVERTER.asFileUrl(refererUrl, {
     origin: request.origin,
     rootDirectoryUrl: sourceDirectoryUrl,
