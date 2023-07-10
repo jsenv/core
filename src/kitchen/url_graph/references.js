@@ -601,11 +601,8 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
-  if (reference.type !== "http_request") {
-    referencedUrlInfo.deleteFromGraph(reference);
-    return true;
-  }
-  return false;
+  referencedUrlInfo.deleteFromGraph(reference);
+  return true;
 };
 
 const traceFromUrlSite = (urlSite) => {

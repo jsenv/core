@@ -49,6 +49,7 @@ export const createFileService = ({
     enabled: true,
     clientFileChangeCallbackList: [],
     clientFilePruneCallbackList: [],
+    clientServerEventsConfig: {},
     ...clientAutoreload,
   };
 
