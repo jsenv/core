@@ -35,27 +35,7 @@ export const createUrlGraph = ({
     }
     return null;
   };
-  const deleteUrlInfo = (url, lastReferenceFromOther) => {
-    const urlInfo = urlInfoMap.get(url);
-    if (urlInfo) {
-      urlInfo.prunedTimestamp = Date.now();
-      if (lastReferenceFromOther && !urlInfo.isInline) {
-        pruneUrlInfoCallbackRef.current(urlInfo, lastReferenceFromOther);
-      }
-      urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-      urlInfoMap.delete(url);
-      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        referenceToOther.remove();
-      });
-      if (urlInfo.searchParams.size > 0) {
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-        const urlInfoWithoutSearch = getUrlInfo(urlWithoutSearch);
-        if (urlInfoWithoutSearch) {
-          urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
-        }
-      }
-    }
-  };
+
   const addUrlInfo = (urlInfo) => {
     urlInfo.graph = urlGraph;
     urlInfo.kitchen = kitchen;
@@ -156,7 +136,6 @@ export const createUrlGraph = ({
     reuseOrCreateUrlInfo,
     hasUrlInfo,
     getUrlInfo,
-    deleteUrlInfo,
     getEntryPoints,
 
     inferReference,
@@ -368,7 +347,7 @@ const createUrlInfo = (url, context) => {
     reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam.urlInfo;
   };
-  urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
+  urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
     const iterate = (urlInfo) => {
       if (visitedSet.has(urlInfo)) {
@@ -389,8 +368,40 @@ const createUrlInfo = (url, context) => {
     };
     iterate(urlInfo);
   };
-  urlInfo.deleteFromGraph = (reference) => {
-    urlInfo.graph.deleteUrlInfo(urlInfo.url, reference);
+  urlInfo.onPruned = (lastReferenceFromOther) => {
+    urlInfo.prunedTimestamp = Date.now();
+    if (!urlInfo.isInline) {
+      urlInfo.graph.pruneUrlInfoCallbackRef.current(
+        urlInfo,
+        lastReferenceFromOther,
+      );
+    }
+  };
+
+  urlInfo.deleteFromGraph = () => {
+    // pas sur qu'on devrait faire ça
+    // en vérité, tant que le fichier existe, il est inexacte de supprimer l'url info
+    // du graph
+    // c'est uniquement si le fichier est supprimé qu'on peut la supprimé non?
+    // (et encore)
+    // parce que en dev on perds l'info prunedTimestamp
+    // de plus meme si le fichier n'est plus référencé, il reste utile
+    // au cas ou on le référence a nouveau
+    // (il serait alors dommage de perde ce qu'on a cook)
+    // supprimer les ref pas fou non plus
+    // lorsque le fichier est supprimé
+    urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+    urlInfo.graph.urlInfoMap.delete(url);
+    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+      referenceToOther.remove();
+    });
+    if (urlInfo.searchParams.size > 0) {
+      const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+      const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
+      if (urlInfoWithoutSearch) {
+        urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+      }
+    }
   };
   urlInfo.cook = (customContext) => {
     return urlInfo.context.cook(urlInfo, customContext);

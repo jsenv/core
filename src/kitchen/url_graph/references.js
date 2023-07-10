@@ -600,7 +600,7 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
-  referencedUrlInfo.deleteFromGraph(reference);
+  referencedUrlInfo.onPruned(reference);
   return true;
 };
 

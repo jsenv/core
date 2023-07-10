@@ -85,7 +85,7 @@ export const createFileService = ({
     clientAutoreload.clientFileChangeCallbackList.push(({ url }) => {
       const urlInfo = kitchen.graph.getUrlInfo(url);
       if (urlInfo) {
-        urlInfo.considerModified();
+        urlInfo.onModified();
       }
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
@@ -160,15 +160,14 @@ export const createFileService = ({
             fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
           } catch (e) {
             if (e.code === "ENOENT") {
-              urlInfo.considerModified();
-              urlInfo.deleteFromGraph();
+              urlInfo.onModified();
               return false;
             }
             return false;
           }
           const fileContentEtag = bufferToEtag(fileContentAsBuffer);
           if (fileContentEtag !== urlInfo.originalContentEtag) {
-            urlInfo.considerModified();
+            urlInfo.onModified();
             // restore content to be able to compare it again later
             urlInfo.kitchen.urlInfoTransformer.setContent(
               urlInfo,

@@ -38,12 +38,18 @@ export const jsenvPluginHotSearchParam = () => {
       const referencedUrlInfo = reference.urlInfo;
       // either it must be modified (and modified since the parent Date.now())
       // or it must have been pruned (in that case we propagate the timestamp)
-      if (referencedUrlInfo.modifiedTimestamp >= parentHotTimestamp) {
+      if (
+        referencedUrlInfo.modifiedTimestamp &&
+        parentHotTimestamp >= referencedUrlInfo.modifiedTimestamp
+      ) {
         return {
           hot: parentHotParam,
         };
       }
-      if (referencedUrlInfo.prunedTimestamp >= parentHotTimestamp) {
+      if (
+        referencedUrlInfo.prunedTimestamp &&
+        parentHotTimestamp >= referencedUrlInfo.prunedTimestamp
+      ) {
         return {
           hot: parentHotParam,
         };
