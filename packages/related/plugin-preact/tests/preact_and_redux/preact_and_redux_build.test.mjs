@@ -21,7 +21,6 @@ const plugins = [
         external: ["react-is"],
       },
     },
-    compileCacheDirectoryUrl: new URL("./.jsenv/cjs_to_esm/", import.meta.url),
   }),
 ];
 

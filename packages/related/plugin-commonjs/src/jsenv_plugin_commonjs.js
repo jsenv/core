@@ -10,7 +10,7 @@ export const jsenvPluginCommonJs = ({
   name = "jsenv:commonjs",
   logLevel,
   include,
-  compileCacheDirectoryUrl = compileCacheDirectoryUrlDefault,
+  compileCacheDirectoryUrl,
   dev,
 }) => {
   const markAsJsModuleProxy = (reference) => {
@@ -74,6 +74,16 @@ export const jsenvPluginCommonJs = ({
       const nodeRuntimeEnabled = Object.keys(
         urlInfo.context.runtimeCompat,
       ).includes("node");
+      if (compileCacheDirectoryUrl === undefined) {
+        if (urlInfo.context.outDirectoryUrl) {
+          compileCacheDirectoryUrl = new URL(
+            "./cjs_to_esm/",
+            urlInfo.context.outDirectoryUrl,
+          ).href;
+        } else {
+          compileCacheDirectoryUrl = compileCacheDirectoryUrlDefault;
+        }
+      }
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         compileCacheDirectoryUrl,
