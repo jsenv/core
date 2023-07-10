@@ -267,7 +267,6 @@ export const createFileService = ({
         kitchen.graph.rootUrlInfo.dependencies.createResolveAndFinalize({
           trace: { message: parentUrl },
           type: "http_request",
-          isWeak: true,
           specifier: request.resource,
         });
     }

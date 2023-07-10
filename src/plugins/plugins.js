@@ -80,7 +80,7 @@ export const getCorePlugins = ({
     jsenvPluginNodeRuntime({ runtimeCompat }),
 
     jsenvPluginImportMetaHot(),
-    ...(clientAutoreload.enabled
+    ...(clientAutoreload && clientAutoreload.enabled
       ? [jsenvPluginAutoreload(clientAutoreload)]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
