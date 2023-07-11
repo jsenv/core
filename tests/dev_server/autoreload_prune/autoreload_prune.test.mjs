@@ -12,11 +12,11 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   clientAutoreload: {
     cooldownBetweenFileEvents: 250,
-    clientFilePruneCallbackList: [
-      (call) => {
-        pruneCalls.push(call);
-      },
-    ],
+  },
+  onKitchenCreated: (kitchen) => {
+    kitchen.graph.urlInfoDereferencedEventEmitter.on((call) => {
+      pruneCalls.push(call);
+    });
   },
   sourcemaps: "off",
 });

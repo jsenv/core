@@ -1209,17 +1209,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           resyncTask.done();
         }
       }
-      delete_unused_urls: {
-        const actions = [];
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (!urlInfo.isUsed()) {
-            actions.push(() => {
-              urlInfo.deleteFromGraph();
-            });
-          }
-        });
-        actions.forEach((action) => action());
-      }
       inject_urls_in_service_workers: {
         const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
           finalKitchen.graph,

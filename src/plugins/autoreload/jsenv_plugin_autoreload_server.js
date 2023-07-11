@@ -1,8 +1,8 @@
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginAutoreloadServer = ({
-  clientFileChangeCallbackList,
-  clientFilePruneCallbackList,
+  clientFileChangeEventEmitter,
+  clientFileDereferencedEventEmitter,
 }) => {
   return {
     name: "jsenv:autoreload_server",
@@ -100,12 +100,12 @@ export const jsenvPluginAutoreloadServer = ({
 
         // We are delaying the moment we tell client how to reload because:
         //
-        // 1. clientFilePruneCallbackList can be called multiple times in a row
+        // 1. clientFileDereferencedEventEmitter can emit multiple times in a row
         // It happens when previous references are removed by stopCollecting (in "references.js")
         // In that case we could regroup the calls but we prefer to rely on debouncing to also cover
         // code that would remove many url in a row by other means (like reference.remove())
         //
-        // 2. clientFileChangeCallbackList can be called a lot of times in a short period (git checkout for instance)
+        // 2. clientFileChangeEventEmitter can emit a lot of times in a short period (git checkout for instance)
         // In that case it's better to cooldown thanks to debouncing
         //
         // And we want to gather all the actions to take in response to these events because
@@ -218,7 +218,7 @@ export const jsenvPluginAutoreloadServer = ({
           }
         };
 
-        clientFileChangeCallbackList.push(({ url, event }) => {
+        clientFileChangeEventEmitter.on(({ url, event }) => {
           const changedUrlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
           if (changedUrlInfo) {
             delayAction({
@@ -235,7 +235,7 @@ export const jsenvPluginAutoreloadServer = ({
             }
           }
         });
-        clientFilePruneCallbackList.push(
+        clientFileDereferencedEventEmitter.on(
           (prunedUrlInfo, lastReferenceFromOther) => {
             delayAction({
               type: "prune",

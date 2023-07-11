@@ -78,17 +78,6 @@ export const jsenvPluginAsJsClassic = () => {
             specifier: sourceUrl,
           });
         });
-      } else if (urlInfo.context.build) {
-        jsModuleUrlInfo.firstReference.remove();
-        jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
-          const sourceUrlInfo = urlInfo.graph.getUrlInfo(sourceUrl);
-          if (
-            sourceUrlInfo &&
-            !sourceUrlInfo.getFirstReferenceFromOther({ ignoreWeak: true })
-          ) {
-            sourceUrlInfo.deleteFromGraph();
-          }
-        });
       }
 
       const { content, sourcemap } = await convertJsModuleToJsClassic({

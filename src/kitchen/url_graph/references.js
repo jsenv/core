@@ -463,6 +463,10 @@ const createReference = ({
     return implicitReference;
   };
 
+  reference.gotInlined = () => {
+    return !reference.isInline && reference.next && reference.next.isInline;
+  };
+
   reference.remove = () => removeDependency(reference);
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
@@ -588,8 +592,19 @@ const applyDependencyRemovalEffects = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
-  const firstReferenceFromOther =
-    referencedUrlInfo.getFirstReferenceFromOther();
+  let firstReferenceFromOther;
+  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+    if (referenceFromOther.urlInfo !== referencedUrlInfo) {
+      continue;
+    }
+    if (referenceFromOther.gotInlined()) {
+      // the url info was inlined, an other reference is required
+      // to consider the non-inlined urlInfo as used
+      continue;
+    }
+    firstReferenceFromOther = referenceFromOther;
+    break;
+  }
   if (firstReferenceFromOther) {
     // either applying new ref should override old ref
     // or we should first remove effects before adding new ones
@@ -600,7 +615,7 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
-  referencedUrlInfo.onPruned(reference);
+  referencedUrlInfo.onDereferenced(reference);
   return true;
 };
 

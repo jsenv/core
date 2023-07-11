@@ -4,6 +4,7 @@ import {
   injectQueryParamsIntoSpecifier,
 } from "@jsenv/urls";
 
+import { createEventEmitter } from "../../helpers/event_emitter.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createDependencies } from "./references.js";
 
@@ -13,8 +14,8 @@ export const createUrlGraph = ({
   name = "anonymous",
 }) => {
   const urlGraph = {};
-  const createUrlInfoCallbackRef = { current: () => {} };
-  const pruneUrlInfoCallbackRef = { current: () => {} };
+  const urlInfoCreatedEventEmitter = createEventEmitter();
+  const urlInfoDereferencedEventEmitter = createEventEmitter();
 
   const urlInfoMap = new Map();
   const hasUrlInfo = (key) => {
@@ -52,7 +53,7 @@ export const createUrlGraph = ({
       const context = Object.create(ownerContext);
       referencedUrlInfo = createUrlInfo(referencedUrl, context);
       addUrlInfo(referencedUrlInfo);
-      createUrlInfoCallbackRef.current(referencedUrlInfo);
+      urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
     }
     if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
       // A resource is represented by a url.
@@ -129,8 +130,6 @@ export const createUrlGraph = ({
   Object.assign(urlGraph, {
     name,
     rootUrlInfo,
-    createUrlInfoCallbackRef,
-    pruneUrlInfoCallbackRef,
 
     urlInfoMap,
     reuseOrCreateUrlInfo,
@@ -139,6 +138,8 @@ export const createUrlGraph = ({
     getEntryPoints,
 
     inferReference,
+    urlInfoCreatedEventEmitter,
+    urlInfoDereferencedEventEmitter,
 
     toObject: () => {
       const data = {};
@@ -176,7 +177,7 @@ const createUrlInfo = (url, context) => {
     context,
     error: null,
     modifiedTimestamp: 0,
-    prunedTimestamp: 0,
+    referencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isWatched: false,
@@ -227,37 +228,24 @@ const createUrlInfo = (url, context) => {
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
-  urlInfo.getFirstReferenceFromOther = ({ ignoreWeak } = {}) => {
-    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      if (referenceFromOther.url === urlInfo.url) {
-        if (
-          !referenceFromOther.isInline &&
-          referenceFromOther.next &&
-          referenceFromOther.next.isInline
-        ) {
-          // the url info was inlined, an other reference is required
-          // to consider the non-inlined urlInfo as used
-          continue;
-        }
-        if (ignoreWeak && referenceFromOther.isWeak) {
-          // weak reference don't count as using the url
-          continue;
-        }
-        return referenceFromOther;
-      }
-    }
-    return null;
-  };
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {
       return true;
     }
-    // if (urlInfo.type === "sourcemap") {
-    //   return true;
-    // }
-    // check if there is a strong reference to this urlInfo
-    if (urlInfo.getFirstReferenceFromOther({ ignoreWeak: true })) {
-      return true;
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      if (referenceFromOther.urlInfo !== urlInfo) {
+        continue;
+      }
+      if (referenceFromOther.isWeak) {
+        // weak reference don't count as using the url
+        continue;
+      }
+      if (referenceFromOther.gotInlined()) {
+        // the url info was inlined, an other reference is required
+        // to consider the non-inlined urlInfo as used
+        continue;
+      }
+      return referenceFromOther.ownerUrlInfo.isUsed();
     }
     // nothing uses this url anymore
     // - versioning update inline content
@@ -368,14 +356,11 @@ const createUrlInfo = (url, context) => {
     };
     iterate(urlInfo);
   };
-  urlInfo.onPruned = (lastReferenceFromOther) => {
-    urlInfo.prunedTimestamp = Date.now();
-    if (!urlInfo.isInline) {
-      urlInfo.graph.pruneUrlInfoCallbackRef.current(
-        urlInfo,
-        lastReferenceFromOther,
-      );
-    }
+  urlInfo.onDereferenced = (lastReferenceFromOther) => {
+    urlInfo.graph.urlInfoDereferencedEventEmitter.emit(
+      urlInfo,
+      lastReferenceFromOther,
+    );
   };
 
   urlInfo.deleteFromGraph = () => {

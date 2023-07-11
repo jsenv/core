@@ -59,6 +59,7 @@ export const startDevServer = async ({
   cacheControl = true,
   ribbon = true,
   // toolbar = false,
+  onKitchenCreated = () => {},
 
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
@@ -183,6 +184,7 @@ export const startDevServer = async ({
           serverStopCallbacks,
           serverEventsDispatcher,
           kitchenCache,
+          onKitchenCreated,
 
           sourceDirectoryUrl,
           sourceMainFilePath,
