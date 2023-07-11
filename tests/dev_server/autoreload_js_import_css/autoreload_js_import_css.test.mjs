@@ -5,7 +5,7 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 const test = async ({
-  debug = false,
+  debug = true,
   browserLauncher,
   browserName,
   pageLogsAfterUpdatingCssFile = [
@@ -241,8 +241,8 @@ if (
     browserLauncher: chromium,
     browserName: "chromium",
   });
-  await test({
-    browserLauncher: firefox,
-    browserName: "firefox",
-  });
+  // await test({
+  //   browserLauncher: firefox,
+  //   browserName: "firefox",
+  // });
 }

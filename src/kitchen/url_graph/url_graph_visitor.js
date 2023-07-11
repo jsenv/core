@@ -99,3 +99,25 @@ GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
   iterate(urlInfo);
   return found;
 };
+
+// This function will be used in "build.js"
+// by passing rootUrlInfo as first arg
+// -> this ensure we visit only urls with strong references
+// because we start from root and ignore weak ref
+// The alternative would be to iterate on urlInfoMap
+// and call urlInfo.isUsed() but that would be more expensive
+GRAPH_VISITOR.forEachDescendantStronglyReferenced = (urlInfo, callback) => {
+  const seen = new Set();
+  for (const referenceToOther of urlInfo.referenceToOthersSet) {
+    if (referenceToOther.isWeak) {
+      continue;
+    }
+    const referencedUrlInfo = referenceToOther.urlInfo;
+    if (seen.has(referencedUrlInfo)) {
+      continue;
+    }
+    seen.add(referencedUrlInfo);
+    callback(urlInfo);
+  }
+  seen.clear();
+};

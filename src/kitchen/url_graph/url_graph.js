@@ -177,7 +177,7 @@ const createUrlInfo = (url, context) => {
     context,
     error: null,
     modifiedTimestamp: 0,
-    referencedTimestamp: 0,
+    dereferencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isWatched: false,
@@ -357,6 +357,7 @@ const createUrlInfo = (url, context) => {
     iterate(urlInfo);
   };
   urlInfo.onDereferenced = (lastReferenceFromOther) => {
+    urlInfo.dereferencedTimestamp = Date.now();
     urlInfo.graph.urlInfoDereferencedEventEmitter.emit(
       urlInfo,
       lastReferenceFromOther,

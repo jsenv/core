@@ -47,8 +47,8 @@ export const jsenvPluginHotSearchParam = () => {
         };
       }
       if (
-        referencedUrlInfo.prunedTimestamp &&
-        parentHotTimestamp >= referencedUrlInfo.prunedTimestamp
+        referencedUrlInfo.dereferencedTimestamp &&
+        parentHotTimestamp <= referencedUrlInfo.dereferencedTimestamp
       ) {
         return {
           hot: parentHotParam,
