@@ -110,9 +110,9 @@ export const createRuntimeUsingPlaywright = ({
             browser.on("disconnected", disconnectedCallback);
           })
         : Promise.resolve();
-      // for some reason without this 150ms timeout
+      // for some reason without this timeout
       // browser.close() never resolves (playwright does not like something)
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       try {
         await browser.close();
       } catch (e) {

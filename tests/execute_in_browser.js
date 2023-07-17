@@ -56,18 +56,56 @@ export const executeInBrowser = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
     await page.addScriptTag({ url: headScriptUrl });
   }
+
+  let result = {
+    returnValue: undefined,
+    pageErrors,
+    consoleOutput,
+  };
+
   try {
     const returnValue = pageFunction
       ? await page.evaluate(pageFunction, ...pageArguments)
       : undefined;
-    return {
-      returnValue,
-      pageErrors,
-      consoleOutput,
-    };
+    result.returnValue = returnValue;
   } finally {
     if (autoStop) {
-      browser.close();
+      await closeBrowser(browser);
     }
   }
+  return result;
+};
+
+const closeBrowser = async (browser) => {
+  const disconnected = browser.isConnected()
+    ? new Promise((resolve) => {
+        const disconnectedCallback = () => {
+          browser.removeListener("disconnected", disconnectedCallback);
+          resolve();
+        };
+        browser.on("disconnected", disconnectedCallback);
+      })
+    : Promise.resolve();
+  // for some reason without this timeout
+  // browser.close() never resolves (playwright does not like something)
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  try {
+    await browser.close();
+  } catch (e) {
+    if (isTargetClosedError(e)) {
+      return;
+    }
+    throw e;
+  }
+  await disconnected;
+};
+
+const isTargetClosedError = (error) => {
+  if (error.message.match(/Protocol error \(.*?\): Target closed/)) {
+    return true;
+  }
+  if (error.message.match(/Protocol error \(.*?\): Browser.*?closed/)) {
+    return true;
+  }
+  return error.message.includes("browserContext.close: Browser closed");
 };
