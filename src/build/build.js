@@ -347,7 +347,7 @@ build ${entryPointKeys.length} entry points`);
       sourcemaps,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
-        ? new URL("build/", outDirectoryUrl)
+        ? new URL("prebuild/", outDirectoryUrl)
         : undefined,
     });
 
@@ -602,13 +602,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   rawUrlInfo.url,
                   "raw file",
                 );
-                if (buildUrl.includes("?")) {
-                  associateBuildUrlAndRawUrl(
-                    asUrlWithoutSearch(buildUrl),
-                    rawUrlInfo.url,
-                    "raw file",
-                  );
-                }
                 return buildUrl;
               }
               if (reference.type === "sourcemap_comment") {
@@ -1291,48 +1284,48 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
       return buildRelativeUrl;
     };
-    GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-      if (urlInfo.isRoot) {
-        return;
-      }
-      if (!urlInfo.url.startsWith("file:")) {
-        return;
-      }
-      if (urlInfo.type === "directory") {
-        return;
-      }
-      if (urlInfo.isInline) {
-        const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
-        buildContents[buildRelativeUrl] = urlInfo.content;
-        buildInlineRelativeUrls.push(buildRelativeUrl);
-      } else {
-        const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
-        if (
-          buildVersionsManager.getVersion(urlInfo) &&
-          canUseVersionedUrl(urlInfo)
-        ) {
-          const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
-          const buildSpecifierVersioned =
-            buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
-          const buildUrlVersioned = asBuildUrlVersioned({
-            buildSpecifierVersioned,
-            buildDirectoryUrl,
-          });
-          const buildRelativeUrlVersioned = urlToRelativeUrl(
-            buildUrlVersioned,
-            buildDirectoryUrl,
-          );
-          if (versioningMethod === "search_param") {
-            buildContents[buildRelativeUrl] = urlInfo.content;
-          } else {
-            buildContents[buildRelativeUrlVersioned] = urlInfo.content;
-          }
-          buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
-        } else {
-          buildContents[buildRelativeUrl] = urlInfo.content;
+    GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+      finalKitchen.graph.rootUrlInfo,
+      (urlInfo) => {
+        if (!urlInfo.url.startsWith("file:")) {
+          return;
         }
-      }
-    });
+        if (urlInfo.type === "directory") {
+          return;
+        }
+        if (urlInfo.isInline) {
+          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
+          buildContents[buildRelativeUrl] = urlInfo.content;
+          buildInlineRelativeUrls.push(buildRelativeUrl);
+        } else {
+          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
+          if (
+            buildVersionsManager.getVersion(urlInfo) &&
+            canUseVersionedUrl(urlInfo)
+          ) {
+            const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+            const buildSpecifierVersioned =
+              buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+            const buildUrlVersioned = asBuildUrlVersioned({
+              buildSpecifierVersioned,
+              buildDirectoryUrl,
+            });
+            const buildRelativeUrlVersioned = urlToRelativeUrl(
+              buildUrlVersioned,
+              buildDirectoryUrl,
+            );
+            if (versioningMethod === "search_param") {
+              buildContents[buildRelativeUrl] = urlInfo.content;
+            } else {
+              buildContents[buildRelativeUrlVersioned] = urlInfo.content;
+            }
+            buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
+          } else {
+            buildContents[buildRelativeUrl] = urlInfo.content;
+          }
+        }
+      },
+    );
     const buildFileContents = {};
     const buildInlineContents = {};
     Object.keys(buildContents)

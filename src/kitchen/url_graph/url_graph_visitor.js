@@ -106,11 +106,15 @@ GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
 // because we start from root and ignore weak ref
 // The alternative would be to iterate on urlInfoMap
 // and call urlInfo.isUsed() but that would be more expensive
-GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (urlInfo, callback) => {
+GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (initialUrlInfo, callback) => {
   const seen = new Set();
-  const iterateOnReferences = () => {
+  seen.add(initialUrlInfo);
+  const iterateOnReferences = (urlInfo) => {
     for (const referenceToOther of urlInfo.referenceToOthersSet) {
       if (referenceToOther.isWeak) {
+        continue;
+      }
+      if (referenceToOther.gotInlined()) {
         continue;
       }
       const referencedUrlInfo = referenceToOther.urlInfo;
@@ -118,10 +122,10 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (urlInfo, callback) => {
         continue;
       }
       seen.add(referencedUrlInfo);
-      callback(urlInfo);
-      iterateOnReferences(urlInfo);
+      callback(referencedUrlInfo);
+      iterateOnReferences(referencedUrlInfo);
     }
   };
-  iterateOnReferences(urlInfo);
+  iterateOnReferences(initialUrlInfo);
   seen.clear();
 };
