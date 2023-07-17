@@ -75,7 +75,6 @@ const asUrlWithoutHotSearchParam = (url) => {
   const urlObject = new URL(url);
   if (urlObject.searchParams.has("hot")) {
     urlObject.searchParams.delete("hot");
-    urlObject.searchParams.delete("v");
     return urlObject.href;
   }
   return url;
