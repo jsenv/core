@@ -815,84 +815,86 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
           }
         };
-        GRAPH_VISITOR.forEach(rawKitchen.graph, (rawUrlInfo) => {
-          // ignore unused urls (avoid bundling things that are not actually used)
-          // happens for:
-          // - js import assertions
-          // - conversion to js classic using ?as_js_classic or ?js_module_fallback
-          if (!rawUrlInfo.isUsed()) {
-            return;
-          }
-          if (rawUrlInfo.isEntryPoint) {
-            addToBundlerIfAny(rawUrlInfo);
-          }
-          if (rawUrlInfo.type === "html") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (referenceToOther.isWeak) {
-                return;
-              }
-              const referencedUrlInfo = referenceToOther.urlInfo;
-              if (referencedUrlInfo.isInline) {
-                if (referencedUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  referencedUrlInfo.referenceToOthersSet.forEach(
-                    (jsModuleReferenceToOther) => {
-                      if (jsModuleReferenceToOther.type === "js_import") {
-                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
-                        addToBundlerIfAny(inlineUrlInfo);
-                      }
-                    },
-                  );
+        // ignore unused urls thanks to "forEachUrlInfoStronglyReferenced"
+        // it avoid bundling things that are not actually used
+        // happens for:
+        // - js import assertions
+        // - conversion to js classic using ?as_js_classic or ?js_module_fallback
+        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+          rawKitchen.graph.rootUrlInfo,
+          (rawUrlInfo) => {
+            if (rawUrlInfo.isEntryPoint) {
+              addToBundlerIfAny(rawUrlInfo);
+            }
+            if (rawUrlInfo.type === "html") {
+              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (referenceToOther.isWeak) {
+                  return;
                 }
-                // inline content cannot be bundled
-                return;
-              }
-              addToBundlerIfAny(referencedUrlInfo);
-            });
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (
-                referenceToOther.isResourceHint &&
-                referenceToOther.expectedType === "js_module"
-              ) {
                 const referencedUrlInfo = referenceToOther.urlInfo;
-                if (
-                  referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.referenceFromOthersSet.size > 0
-                ) {
-                  addToBundlerIfAny(referencedUrlInfo);
-                }
-              }
-            });
-            return;
-          }
-          // File referenced with new URL('./file.js', import.meta.url)
-          // are entry points that should be bundled
-          // For instance we will bundle service worker/workers detected like this
-          if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (referenceToOther.type === "js_url") {
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
-                  if (referenceFromOther.url === referencedUrlInfo.url) {
-                    if (
-                      referenceFromOther.subtype === "import_dynamic" ||
-                      referenceFromOther.type === "script"
-                    ) {
-                      // will already be bundled
-                      return;
-                    }
+                if (referencedUrlInfo.isInline) {
+                  if (referencedUrlInfo.type === "js_module") {
+                    // bundle inline script type module deps
+                    referencedUrlInfo.referenceToOthersSet.forEach(
+                      (jsModuleReferenceToOther) => {
+                        if (jsModuleReferenceToOther.type === "js_import") {
+                          const inlineUrlInfo =
+                            jsModuleReferenceToOther.urlInfo;
+                          addToBundlerIfAny(inlineUrlInfo);
+                        }
+                      },
+                    );
                   }
+                  // inline content cannot be bundled
+                  return;
                 }
                 addToBundlerIfAny(referencedUrlInfo);
-                return;
-              }
-              if (referenceToOther.type === "js_inline_content") {
-                // we should bundle it too right?
-              }
-            });
-          }
-        });
+              });
+              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (
+                  referenceToOther.isResourceHint &&
+                  referenceToOther.expectedType === "js_module"
+                ) {
+                  const referencedUrlInfo = referenceToOther.urlInfo;
+                  if (
+                    referencedUrlInfo &&
+                    // something else than the resource hint is using this url
+                    referencedUrlInfo.referenceFromOthersSet.size > 0
+                  ) {
+                    addToBundlerIfAny(referencedUrlInfo);
+                  }
+                }
+              });
+              return;
+            }
+            // File referenced with new URL('./file.js', import.meta.url)
+            // are entry points that should be bundled
+            // For instance we will bundle service worker/workers detected like this
+            if (rawUrlInfo.type === "js_module") {
+              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (referenceToOther.type === "js_url") {
+                  const referencedUrlInfo = referenceToOther.urlInfo;
+                  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+                    if (referenceFromOther.url === referencedUrlInfo.url) {
+                      if (
+                        referenceFromOther.subtype === "import_dynamic" ||
+                        referenceFromOther.type === "script"
+                      ) {
+                        // will already be bundled
+                        return;
+                      }
+                    }
+                  }
+                  addToBundlerIfAny(referencedUrlInfo);
+                  return;
+                }
+                if (referenceToOther.type === "js_inline_content") {
+                  // we should bundle it too right?
+                }
+              });
+            }
+          },
+        );
         await Object.keys(bundlers).reduce(async (previous, type) => {
           await previous;
           const bundler = bundlers[type];
