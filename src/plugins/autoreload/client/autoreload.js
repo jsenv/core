@@ -127,7 +127,7 @@ const dequeue = async () => {
   }
 };
 
-const applyHotReload = async ({ hot, hotInstructions }) => {
+const applyHotReload = async ({ cause, hot, hotInstructions }) => {
   await hotInstructions.reduce(
     async (previous, { type, boundary, acceptedBy }) => {
       await previous;
@@ -143,7 +143,7 @@ const applyHotReload = async ({ hot, hotInstructions }) => {
           delete urlHotMetas[urlToFetch];
           if (urlHotMeta.disposeCallback) {
             console.groupCollapsed(
-              `[jsenv] cleanup ${boundary} (previously used in ${acceptedBy})`,
+              `[jsenv] cleanup ${boundary} (no longer referenced by ${acceptedBy})`,
             );
             console.log(`call dispose callback`);
             await urlHotMeta.disposeCallback();
@@ -154,10 +154,10 @@ const applyHotReload = async ({ hot, hotInstructions }) => {
       }
 
       if (acceptedBy === boundary) {
-        console.groupCollapsed(`[jsenv] hot reloading ${boundary}`);
+        console.groupCollapsed(`[jsenv] hot reloading ${boundary} (${cause})`);
       } else {
         console.groupCollapsed(
-          `[jsenv] hot reloading ${acceptedBy} usage in ${boundary}`,
+          `[jsenv] hot reloading ${acceptedBy} usage in ${boundary} (${cause})`,
         );
       }
       if (type === "js_module") {

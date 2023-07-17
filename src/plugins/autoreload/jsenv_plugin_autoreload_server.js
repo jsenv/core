@@ -168,9 +168,9 @@ export const jsenvPluginAutoreloadServer = ({
                 continue;
               }
               const ownerHotUpdate = propagateUpdate(ownerUrlInfo);
-              const cause = `following file is no longer referenced: ${formatUrlForClient(
+              const cause = `${formatUrlForClient(
                 prunedUrlInfo.url,
-              )}`;
+              )} is no longer referenced`;
               // now check if we can hot update the parent resource
               // then if we can hot update all dependencies
               if (ownerHotUpdate.declined) {

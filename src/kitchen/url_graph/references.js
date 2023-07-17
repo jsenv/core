@@ -597,6 +597,16 @@ const applyDependencyRemovalEffects = (reference) => {
     if (referenceFromOther.urlInfo !== referencedUrlInfo) {
       continue;
     }
+    // Here we want to know if the file is referenced by an other file.
+    // So we want to ignore reference that are created by other means:
+    // - "http_request"
+    //   This type of reference is created when client request a file
+    //   that we don't know yet
+    //   1. reference(s) to this file are not yet discovered
+    //   2. there is no reference to this file
+    if (referenceFromOther.type === "http_request") {
+      continue;
+    }
     if (referenceFromOther.gotInlined()) {
       // the url info was inlined, an other reference is required
       // to consider the non-inlined urlInfo as used

@@ -5,13 +5,16 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 const test = async ({
-  debug = true,
+  debug = false,
   browserLauncher,
   browserName,
   pageLogsAfterUpdatingCssFile = [
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading file.js",
+      text:
+        browserName === "chrome"
+          ? "[jsenv] hot reloading file.js (style.css modified)"
+          : "[jsenv] hot reloading file.js (style.css?as_css_module modified)",
     },
     {
       type: "log",
@@ -41,7 +44,7 @@ const test = async ({
   pageLogsAfterRemovingCssImport = [
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
+      text: "[jsenv] hot reloading main.js (main.js modified)",
     },
     {
       type: "log",
@@ -57,7 +60,7 @@ const test = async ({
     },
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] cleanup file.js (previously used in main.js)",
+      text: "[jsenv] cleanup file.js (no longer referenced by main.js)",
     },
     {
       type: "log",
@@ -75,7 +78,7 @@ const test = async ({
   pageLogsAfterRestoringCssImport = [
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
+      text: "[jsenv] hot reloading main.js (main.js modified)",
     },
     {
       type: "log",
@@ -241,8 +244,8 @@ if (
     browserLauncher: chromium,
     browserName: "chromium",
   });
-  // await test({
-  //   browserLauncher: firefox,
-  //   browserName: "firefox",
-  // });
+  await test({
+    browserLauncher: firefox,
+    browserName: "firefox",
+  });
 }
