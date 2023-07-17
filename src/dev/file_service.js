@@ -279,7 +279,7 @@ export const createFileService = ({
     const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
 
     try {
-      if (ifNoneMatch) {
+      if (!urlInfo.error && ifNoneMatch) {
         const [clientOriginalContentEtag, clientContentEtag] =
           ifNoneMatch.split("_");
         if (

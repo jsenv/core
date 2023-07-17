@@ -201,7 +201,7 @@ const applyHotReload = async ({ cause, hot, hotInstructions }) => {
           console.log(`no dom node using ${acceptedBy}`);
         } else if (domNodesCount === 1) {
           console.log(`reloading`, domNodesUsingUrl[0].node);
-          domNodesUsingUrl[0].reload();
+          domNodesUsingUrl[0].reload(hot);
         } else {
           console.log(`reloading ${domNodesCount} nodes using ${acceptedBy}`);
           domNodesUsingUrl.forEach((domNodesUsingUrl) => {

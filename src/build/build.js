@@ -1210,7 +1210,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           (finalUrlInfo) => {
             return (
               finalUrlInfo.subtype === "service_worker" &&
-              finalUrlInfo.isEntryPoint
+              finalUrlInfo.isEntryPoint &&
+              finalUrlInfo.isUsed()
             );
           },
         );
@@ -1219,34 +1220,34 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             "inject urls in service worker",
           );
           const serviceWorkerResources = {};
-          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-            if (urlInfo.isRoot) {
-              return;
-            }
-            if (!urlInfo.url.startsWith("file:")) {
-              return;
-            }
-            if (urlInfo.isInline) {
-              return;
-            }
-            if (!canUseVersionedUrl(urlInfo)) {
-              // when url is not versioned we compute a "version" for that url anyway
-              // so that service worker source still changes and navigator
-              // detect there is a change
+          GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+            finalKitchen.graph.rootUrlInfo,
+            (urlInfo) => {
+              if (!urlInfo.url.startsWith("file:")) {
+                return;
+              }
+              if (urlInfo.isInline) {
+                return;
+              }
+              if (!canUseVersionedUrl(urlInfo)) {
+                // when url is not versioned we compute a "version" for that url anyway
+                // so that service worker source still changes and navigator
+                // detect there is a change
+                const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+                serviceWorkerResources[buildSpecifier] = {
+                  version: buildVersionsManager.getVersion(urlInfo),
+                };
+                return;
+              }
               const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+              const buildSpecifierVersioned =
+                buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
               serviceWorkerResources[buildSpecifier] = {
                 version: buildVersionsManager.getVersion(urlInfo),
+                versionedUrl: buildSpecifierVersioned,
               };
-              return;
-            }
-            const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
-            const buildSpecifierVersioned =
-              buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
-            serviceWorkerResources[buildSpecifier] = {
-              version: buildVersionsManager.getVersion(urlInfo),
-              versionedUrl: buildSpecifierVersioned,
-            };
-          });
+            },
+          );
           for (const serviceWorkerEntryUrlInfo of serviceWorkerEntryUrlInfos) {
             const serviceWorkerResourcesWithoutSwScriptItSelf = {
               ...serviceWorkerResources,

@@ -12,7 +12,7 @@ const test = async ({
     {
       type: "startGroupCollapsed",
       text:
-        browserName === "chrome"
+        browserName === "chromium"
           ? "[jsenv] hot reloading file.js (style.css modified)"
           : "[jsenv] hot reloading file.js (style.css?as_css_module modified)",
     },
