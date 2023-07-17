@@ -1360,7 +1360,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       writingFiles.done();
     }
     logger.info(
-      createUrlGraphSummary(finalKitchen.graph, { title: "build files" }),
+      createUrlGraphSummary(finalKitchen.graph, {
+        title: "build files",
+      }),
     );
     return {
       buildFileContents,

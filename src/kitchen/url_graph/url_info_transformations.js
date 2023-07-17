@@ -70,6 +70,7 @@ export const createUrlInfoTransformer = ({
     urlInfo.originalContentEtag = undefined;
     urlInfo.contentAst = undefined;
     urlInfo.contentEtag = undefined;
+    urlInfo.contentLength = undefined;
     urlInfo.content = undefined;
     urlInfo.sourcemap = null;
     urlInfo.sourcemapIsWrong = null;
@@ -81,6 +82,7 @@ export const createUrlInfoTransformer = ({
     {
       contentAst, // most of the time will be undefined
       contentEtag, // in practice it's always undefined
+      contentLength,
       originalContent = content,
       originalContentAst, // most of the time will be undefined
       originalContentEtag, // in practice always undefined
@@ -96,6 +98,7 @@ export const createUrlInfoTransformer = ({
 
     urlInfo.contentAst = contentAst;
     urlInfo.contentEtag = contentEtag;
+    urlInfo.contentLength = contentLength;
     urlInfo.content = content;
     defineGettersOnPropertiesDerivedFromContent(urlInfo);
 
@@ -163,6 +166,7 @@ export const createUrlInfoTransformer = ({
       content,
       contentAst, // undefined most of the time
       contentEtag, // in practice always undefined
+      contentLength,
       sourcemap,
       sourcemapIsWrong,
     } = transformations;
@@ -176,6 +180,7 @@ export const createUrlInfoTransformer = ({
     if (contentModified) {
       urlInfo.contentAst = contentAst;
       urlInfo.contentEtag = contentEtag;
+      urlInfo.contentLength = contentLength;
       urlInfo.content = content;
       defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }

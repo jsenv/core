@@ -327,7 +327,7 @@ export const createFileService = ({
               }),
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
-          "content-length": Buffer.byteLength(urlInfo.content),
+          "content-length": urlInfo.contentLength,
         },
         body: urlInfo.content,
         timing: urlInfo.timing,
@@ -366,7 +366,7 @@ export const createFileService = ({
             statusMessage: originalError.message,
             headers: {
               "content-type": urlInfo.contentType,
-              "content-length": Buffer.byteLength(urlInfo.content),
+              "content-length": urlInfo.contentLength,
               "cache-control": "no-store",
             },
             body: urlInfo.content,

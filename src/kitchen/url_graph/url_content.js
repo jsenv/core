@@ -25,6 +25,15 @@ export const defineGettersOnPropertiesDerivedFromOriginalContent = (
 };
 
 export const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
+  const contentLengthDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "contentLength",
+  );
+  if (contentLengthDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "contentLength", () => {
+      return Buffer.byteLength(urlInfo.content);
+    });
+  }
   const contentAstDescriptor = Object.getOwnPropertyDescriptor(
     urlInfo,
     "contentAst",
