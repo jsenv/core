@@ -15,13 +15,21 @@ self.resourcesFromJsenvBuild = {
     "version": "e6bfdcaf",
     "versionedUrl": "/js/objectSpread2.nomodule.js?v=e6bfdcaf"
   },
-  "/js/slicedToArray.nomodule.js": {
-    "version": "16a83463",
-    "versionedUrl": "/js/slicedToArray.nomodule.js?v=16a83463"
-  },
   "/js/defineProperty.nomodule.js": {
     "version": "6ac84279",
     "versionedUrl": "/js/defineProperty.nomodule.js?v=6ac84279"
+  },
+  "/js/toPropertyKey.nomodule.js": {
+    "version": "76f6c29c",
+    "versionedUrl": "/js/toPropertyKey.nomodule.js?v=76f6c29c"
+  },
+  "/js/toPrimitive.nomodule.js": {
+    "version": "75cc9dbd",
+    "versionedUrl": "/js/toPrimitive.nomodule.js?v=75cc9dbd"
+  },
+  "/js/slicedToArray.nomodule.js": {
+    "version": "16a83463",
+    "versionedUrl": "/js/slicedToArray.nomodule.js?v=16a83463"
   },
   "/js/arrayWithHoles.nomodule.js": {
     "version": "9e36c30f",
@@ -35,21 +43,13 @@ self.resourcesFromJsenvBuild = {
     "version": "a01b694b",
     "versionedUrl": "/js/unsupportedIterableToArray.nomodule.js?v=a01b694b"
   },
-  "/js/nonIterableRest.nomodule.js": {
-    "version": "af5b5914",
-    "versionedUrl": "/js/nonIterableRest.nomodule.js?v=af5b5914"
-  },
-  "/js/toPropertyKey.nomodule.js": {
-    "version": "76f6c29c",
-    "versionedUrl": "/js/toPropertyKey.nomodule.js?v=76f6c29c"
-  },
   "/js/arrayLikeToArray.nomodule.js": {
     "version": "7ec08ad1",
     "versionedUrl": "/js/arrayLikeToArray.nomodule.js?v=7ec08ad1"
   },
-  "/js/toPrimitive.nomodule.js": {
-    "version": "75cc9dbd",
-    "versionedUrl": "/js/toPrimitive.nomodule.js?v=75cc9dbd"
+  "/js/nonIterableRest.nomodule.js": {
+    "version": "af5b5914",
+    "versionedUrl": "/js/nonIterableRest.nomodule.js?v=af5b5914"
   }
 };
 
