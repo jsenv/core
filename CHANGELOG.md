@@ -1,3 +1,8 @@
+# 37.1.0
+
+- Fix autoreload during dev
+- Add `urlInfo.contentLength`
+
 # 37.0.0
 
 - Update plugins API
