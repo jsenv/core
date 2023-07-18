@@ -55,7 +55,6 @@ import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.j
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
-import { createBuildVersionsManager } from "./build_versions_manager.js";
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -377,7 +376,10 @@ build ${entryPointKeys.length} entry points`);
           appliesDuring: "build",
           resolveReference: (reference) => {
             const getUrl = () => {
-              const buildUrl = buildVersionsManager.getBuildUrl(reference);
+              const buildUrl =
+                buildSpecifierManager.buildVersionsManager.getBuildUrl(
+                  reference,
+                );
               if (buildUrl) {
                 return buildUrl;
               }
@@ -520,8 +522,16 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("postbuild/", outDirectoryUrl)
         : undefined,
     });
-    const buildVersionsManager = createBuildVersionsManager({
+
+    const buildSpecifierManager = createBuildSpecifierManager({
+      rawKitchen,
       finalKitchen,
+      logger,
+      sourceDirectoryUrl,
+      buildDirectoryUrl,
+      base,
+      assetsDirectory,
+
       versioning,
       versioningMethod,
       versionLength,
@@ -532,18 +542,6 @@ build ${entryPointKeys.length} entry points`);
           return entryUrlInfo.type === "html";
         }) &&
         rawKitchen.context.isSupportedOnCurrentClients("importmap"),
-      getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
-        buildSpecifierManager.getBuildUrlFromBuildSpecifier(buildSpecifier),
-    });
-    const buildSpecifierManager = createBuildSpecifierManager({
-      rawKitchen,
-      finalKitchen,
-      logger,
-      sourceDirectoryUrl,
-      buildDirectoryUrl,
-      base,
-      assetsDirectory,
-      buildVersionsManager,
     });
 
     const bundleUrlInfos = {};
@@ -760,7 +758,9 @@ build ${entryPointKeys.length} entry points`);
         // at https://github.com/rollup/rollup/pull/4543
         const versioningTask = createBuildTask("apply versioning");
         try {
-          await buildVersionsManager.applyVersioning(finalKitchen);
+          await buildSpecifierManager.buildVersionsManager.applyVersioning(
+            finalKitchen,
+          );
         } catch (e) {
           versioningTask.fail();
           throw e;
@@ -861,7 +861,7 @@ build ${entryPointKeys.length} entry points`);
                     buildUrlFormatted,
                   );
                 const buildSpecifierVersioned =
-                  buildVersionsManager.getBuildSpecifierVersioned(
+                  buildSpecifierManager.buildVersionsManager.getBuildSpecifierVersioned(
                     buildSpecifier,
                   );
                 let specifier = buildSpecifierVersioned || buildSpecifier;
@@ -907,7 +907,9 @@ build ${entryPointKeys.length} entry points`);
             });
             if (!found) {
               const buildSpecifierVersioned =
-                buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+                buildSpecifierManager.buildVersionsManager.getBuildSpecifierVersioned(
+                  buildSpecifier,
+                );
               const href = buildSpecifierVersioned || buildSpecifier;
               mutations.push(() => {
                 const nodeToInsert = createHtmlNode({
@@ -963,7 +965,11 @@ build ${entryPointKeys.length} entry points`);
               if (urlInfo.isInline) {
                 return;
               }
-              if (!buildVersionsManager.canUseVersionedUrl(urlInfo)) {
+              if (
+                !buildSpecifierManager.buildVersionsManager.canUseVersionedUrl(
+                  urlInfo,
+                )
+              ) {
                 // when url is not versioned we compute a "version" for that url anyway
                 // so that service worker source still changes and navigator
                 // detect there is a change
@@ -972,7 +978,10 @@ build ${entryPointKeys.length} entry points`);
                     urlInfo.url,
                   );
                 serviceWorkerResources[buildSpecifier] = {
-                  version: buildVersionsManager.getVersion(urlInfo),
+                  version:
+                    buildSpecifierManager.buildVersionsManager.getVersion(
+                      urlInfo,
+                    ),
                 };
                 return;
               }
@@ -981,9 +990,14 @@ build ${entryPointKeys.length} entry points`);
                   urlInfo.url,
                 );
               const buildSpecifierVersioned =
-                buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+                buildSpecifierManager.buildVersionsManager.getBuildSpecifierVersioned(
+                  buildSpecifier,
+                );
               serviceWorkerResources[buildSpecifier] = {
-                version: buildVersionsManager.getVersion(urlInfo),
+                version:
+                  buildSpecifierManager.buildVersionsManager.getVersion(
+                    urlInfo,
+                  ),
                 versionedUrl: buildSpecifierVersioned,
               };
             },
@@ -1043,13 +1057,17 @@ build ${entryPointKeys.length} entry points`);
         } else {
           const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
           if (
-            buildVersionsManager.getVersion(urlInfo) &&
-            buildVersionsManager.canUseVersionedUrl(urlInfo)
+            buildSpecifierManager.buildVersionsManager.getVersion(urlInfo) &&
+            buildSpecifierManager.buildVersionsManager.canUseVersionedUrl(
+              urlInfo,
+            )
           ) {
             const buildSpecifier =
               buildSpecifierManager.getBuildUrlFromBuildSpecifier(urlInfo.url);
             const buildSpecifierVersioned =
-              buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+              buildSpecifierManager.buildVersionsManager.getBuildSpecifierVersioned(
+                buildSpecifier,
+              );
             const buildUrlVersioned = asBuildUrlVersioned({
               buildSpecifierVersioned,
               buildDirectoryUrl,

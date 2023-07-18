@@ -5,6 +5,7 @@ import { generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
+import { createBuildVersionsManager } from "./build_versions_manager.js";
 
 export const createBuildSpecifierManager = ({
   rawKitchen,
@@ -14,18 +15,16 @@ export const createBuildSpecifierManager = ({
   buildDirectoryUrl,
   base,
   assetsDirectory,
-  buildVersionsManager,
+
+  versioning,
+  versioningMethod,
+  versionLength,
+  canUseImportmap,
 }) => {
   const buildSpecifierToBuildUrlMap = new Map();
   const bundleRedirections = new Map();
   const bundleInternalRedirections = new Map();
   const finalRedirections = new Map();
-
-  const buildUrlsGenerator = createBuildUrlsGenerator({
-    buildDirectoryUrl,
-    assetsDirectory,
-  });
-
   const buildDirectoryRedirections = new Map();
   const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
     if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
@@ -39,7 +38,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       buildDirectoryRedirections.set(buildUrl, rawUrl);
     }
   };
-
+  const getBuildUrlFromBuildSpecifier = (buildSpecifier) => {
+    return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
+  };
   const asFormattedBuildSpecifier = (reference, generatedUrl) => {
     if (base === "./") {
       const parentUrl =
@@ -60,11 +61,23 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     return `${base}${urlRelativeToBuildDirectory}`;
   };
 
+  const buildUrlsGenerator = createBuildUrlsGenerator({
+    buildDirectoryUrl,
+    assetsDirectory,
+  });
+  const buildVersionsManager = createBuildVersionsManager({
+    finalKitchen,
+    versioning,
+    versioningMethod,
+    versionLength,
+    canUseImportmap,
+    getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
+      getBuildUrlFromBuildSpecifier(buildSpecifier),
+  });
+
   return {
-    buildUrlsGenerator,
+    buildVersionsManager,
     buildDirectoryRedirections,
-    associateBuildUrlAndRawUrl,
-    bundleRedirections,
 
     generateBuildUrlForBundle: (urlInfoBundled, urlInfo) => {
       const buildUrl = buildUrlsGenerator.generate(urlInfo.url, {
@@ -274,9 +287,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           buildSpecifier,
         );
       return buildSpecifierWithVersionPlaceholder;
-    },
-    getBuildUrlFromBuildSpecifier: (buildSpecifier) => {
-      return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
     },
     getRawUrl: (url) => {
       return buildDirectoryRedirections.get(url);
