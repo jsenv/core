@@ -72,6 +72,9 @@ export const jsenvPluginPreact = ({
         if (urlInfo.context.build && preactDevtools !== "dev_and_build") {
           return null;
         }
+        if (urlInfo.data.isJsenvToolbar) {
+          return null;
+        }
         const htmlAst = parseHtmlString(urlInfo.content);
         const preactDevtoolsReference = urlInfo.dependencies.inject({
           type: "js_import",

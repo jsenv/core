@@ -16,6 +16,9 @@ export const jsenvPluginReactRefreshPreamble = () => {
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
+        if (urlInfo.data.isJsenvToolbar) {
+          return null;
+        }
         const htmlAst = parseHtmlString(urlInfo.content);
         const reactRefreshPreambleReference = urlInfo.dependencies.inject({
           type: "script",
