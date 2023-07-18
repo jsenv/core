@@ -65,7 +65,7 @@ const test = async () => {
       countLabelClientFileUrl,
       readFileSync(new URL("./fixtures/count_label_1.jsx", import.meta.url)),
     );
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
       const actual = {
         countLabelText: await getCountLabelText(),
