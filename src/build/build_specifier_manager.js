@@ -1,5 +1,5 @@
 import { ANSI } from "@jsenv/log";
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap";
 
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -10,10 +10,15 @@ export const createBuildSpecifierManager = ({
   rawKitchen,
   finalKitchen,
   logger,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
+  base,
   assetsDirectory,
   finalRedirections,
+  buildVersionsManager,
 }) => {
+  const buildSpecifierToBuildUrlMap = new Map();
+
   const buildUrlsGenerator = createBuildUrlsGenerator({
     buildDirectoryUrl,
     assetsDirectory,
@@ -31,6 +36,26 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 `);
       buildDirectoryRedirections.set(buildUrl, rawUrl);
     }
+  };
+
+  const asFormattedBuildSpecifier = (reference, generatedUrl) => {
+    if (base === "./") {
+      const parentUrl =
+        reference.ownerUrlInfo.url === sourceDirectoryUrl
+          ? buildDirectoryUrl
+          : reference.ownerUrlInfo.url;
+      const urlRelativeToParent = urlToRelativeUrl(generatedUrl, parentUrl);
+      if (urlRelativeToParent[0] !== ".") {
+        // ensure "./" on relative url (otherwise it could be a "bare specifier")
+        return `./${urlRelativeToParent}`;
+      }
+      return urlRelativeToParent;
+    }
+    const urlRelativeToBuildDirectory = urlToRelativeUrl(
+      generatedUrl,
+      buildDirectoryUrl,
+    );
+    return `${base}${urlRelativeToBuildDirectory}`;
   };
 
   return {
@@ -179,5 +204,50 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       });
       return buildUrl;
     },
+    format: (reference) => {
+      if (!reference.generatedUrl.startsWith("file:")) {
+        return null;
+      }
+      if (reference.isWeak) {
+        return null;
+      }
+      if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
+        throw new Error(
+          `urls should be inside build directory at this stage, found "${reference.url}"`,
+        );
+      }
+      const generatedUrlObject = new URL(reference.generatedUrl);
+      generatedUrlObject.searchParams.delete("js_classic");
+      generatedUrlObject.searchParams.delete("js_module");
+      generatedUrlObject.searchParams.delete("js_module_fallback");
+      generatedUrlObject.searchParams.delete("as_js_classic");
+      generatedUrlObject.searchParams.delete("as_js_module");
+      generatedUrlObject.searchParams.delete("as_json_module");
+      generatedUrlObject.searchParams.delete("as_css_module");
+      generatedUrlObject.searchParams.delete("as_text_module");
+      generatedUrlObject.searchParams.delete("dynamic_import");
+      generatedUrlObject.hash = "";
+      const buildUrl = generatedUrlObject.href;
+      const buildSpecifier = asFormattedBuildSpecifier(reference, buildUrl);
+      buildSpecifierToBuildUrlMap.set(buildSpecifier, reference.generatedUrl);
+      const buildSpecifierWithVersionPlaceholder =
+        buildVersionsManager.generateBuildSpecifierPlaceholder(
+          reference,
+          buildSpecifier,
+        );
+      return buildSpecifierWithVersionPlaceholder;
+    },
+    getBuildUrlFromBuildSpecifier: (buildSpecifier) => {
+      return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
+    },
   };
+};
+
+const findKey = (map, value) => {
+  for (const [keyCandidate, valueCandidate] of map) {
+    if (valueCandidate === value) {
+      return keyCandidate;
+    }
+  }
+  return undefined;
 };

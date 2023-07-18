@@ -224,26 +224,6 @@ export const build = async ({
     }
   }
 
-  const asFormattedBuildSpecifier = (reference, generatedUrl) => {
-    if (base === "./") {
-      const parentUrl =
-        reference.ownerUrlInfo.url === sourceDirectoryUrl
-          ? buildDirectoryUrl
-          : reference.ownerUrlInfo.url;
-      const urlRelativeToParent = urlToRelativeUrl(generatedUrl, parentUrl);
-      if (urlRelativeToParent[0] !== ".") {
-        // ensure "./" on relative url (otherwise it could be a "bare specifier")
-        return `./${urlRelativeToParent}`;
-      }
-      return urlRelativeToParent;
-    }
-    const urlRelativeToBuildDirectory = urlToRelativeUrl(
-      generatedUrl,
-      buildDirectoryUrl,
-    );
-    return `${base}${urlRelativeToBuildDirectory}`;
-  };
-
   const runBuild = async ({ signal, logLevel }) => {
     const logger = createLogger({ logLevel });
     const createBuildTask = (label) => {
@@ -404,40 +384,7 @@ build ${entryPointKeys.length} entry points`);
             return buildSpecifierManager.redirectToBuildDirectory(reference);
           },
           formatReference: (reference) => {
-            if (!reference.generatedUrl.startsWith("file:")) {
-              return null;
-            }
-            if (reference.isWeak) {
-              return null;
-            }
-            if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
-              throw new Error(
-                `urls should be inside build directory at this stage, found "${reference.url}"`,
-              );
-            }
-            const generatedUrlObject = new URL(reference.generatedUrl);
-            generatedUrlObject.searchParams.delete("js_classic");
-            generatedUrlObject.searchParams.delete("js_module");
-            generatedUrlObject.searchParams.delete("js_module_fallback");
-            generatedUrlObject.searchParams.delete("as_js_classic");
-            generatedUrlObject.searchParams.delete("as_js_module");
-            generatedUrlObject.searchParams.delete("as_json_module");
-            generatedUrlObject.searchParams.delete("as_css_module");
-            generatedUrlObject.searchParams.delete("as_text_module");
-            generatedUrlObject.searchParams.delete("dynamic_import");
-            generatedUrlObject.hash = "";
-            const buildUrl = generatedUrlObject.href;
-            const buildSpecifier = asFormattedBuildSpecifier(
-              reference,
-              buildUrl,
-            );
-            buildSpecifierMap.set(buildSpecifier, reference.generatedUrl);
-            const buildSpecifierWithVersionPlaceholder =
-              buildVersionsManager.generateBuildSpecifierPlaceholder(
-                reference,
-                buildSpecifier,
-              );
-            return buildSpecifierWithVersionPlaceholder;
+            return buildSpecifierManager.format(reference);
           },
           fetchUrlContent: async (finalUrlInfo) => {
             const fromBundleOrRawGraph = (url) => {
@@ -551,15 +498,35 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("postbuild/", outDirectoryUrl)
         : undefined,
     });
+    const buildVersionsManager = createBuildVersionsManager({
+      finalKitchen,
+      versioning,
+      versioningMethod,
+      versionLength,
+      // TODO: memoize this
+      canUseImportmap: () =>
+        versioningViaImportmap &&
+        finalEntryUrls.every((finalEntryUrl) => {
+          const finalEntryUrlInfo =
+            finalKitchen.graph.getUrlInfo(finalEntryUrl);
+          return finalEntryUrlInfo.type === "html";
+        }) &&
+        rawKitchen.context.isSupportedOnCurrentClients("importmap"),
+      getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
+        buildSpecifierManager.getBuildUrlFromBuildSpecifier(buildSpecifier),
+    });
     const buildSpecifierManager = createBuildSpecifierManager({
       rawKitchen,
       finalKitchen,
       logger,
+      sourceDirectoryUrl,
       buildDirectoryUrl,
+      base,
       assetsDirectory,
       finalRedirections,
+      buildVersionsManager,
     });
-    const buildSpecifierMap = new Map();
+
     const bundleUrlInfos = {};
     const bundlers = {};
 
@@ -594,26 +561,7 @@ build ${entryPointKeys.length} entry points`);
       generateSourceGraph.done();
     }
 
-    let buildVersionsManager;
-
     shape: {
-      buildVersionsManager = createBuildVersionsManager({
-        finalKitchen,
-        versioning,
-        versioningMethod,
-        versionLength,
-        canUseImportmap:
-          versioningViaImportmap &&
-          finalEntryUrls.every((finalEntryUrl) => {
-            const finalEntryUrlInfo =
-              finalKitchen.graph.getUrlInfo(finalEntryUrl);
-            return finalEntryUrlInfo.type === "html";
-          }) &&
-          rawKitchen.context.isSupportedOnCurrentClients("importmap"),
-        getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
-          buildSpecifierMap.get(buildSpecifier),
-      });
-
       bundle: {
         rawKitchen.pluginController.plugins.forEach((plugin) => {
           const bundle = plugin.bundle;
@@ -962,10 +910,10 @@ build ${entryPointKeys.length} entry points`);
                   return;
                 }
                 const buildUrlFormatted = buildUrlInfo.url;
-                const buildSpecifier = findKey(
-                  buildSpecifierMap,
-                  buildUrlFormatted,
-                );
+                const buildSpecifier =
+                  buildSpecifierManager.getBuildUrlFromBuildSpecifier(
+                    buildUrlFormatted,
+                  );
                 const buildSpecifierVersioned =
                   buildVersionsManager.getBuildSpecifierVersioned(
                     buildSpecifier,
@@ -1009,7 +957,8 @@ build ${entryPointKeys.length} entry points`);
           Object.keys(hintsToInject).forEach((urlToHint) => {
             const hintNode = hintsToInject[urlToHint];
             const urlFormatted = urlToHint;
-            const buildSpecifier = findKey(buildSpecifierMap, urlFormatted);
+            const buildSpecifier =
+              buildSpecifierManager.getBuildUrlFromBuildSpecifier(urlFormatted);
             const found = findHtmlNode(htmlAst, (htmlNode) => {
               return (
                 htmlNode.nodeName === "link" &&
@@ -1078,13 +1027,19 @@ build ${entryPointKeys.length} entry points`);
                 // when url is not versioned we compute a "version" for that url anyway
                 // so that service worker source still changes and navigator
                 // detect there is a change
-                const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+                const buildSpecifier =
+                  buildSpecifierManager.getBuildUrlFromBuildSpecifier(
+                    urlInfo.url,
+                  );
                 serviceWorkerResources[buildSpecifier] = {
                   version: buildVersionsManager.getVersion(urlInfo),
                 };
                 return;
               }
-              const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+              const buildSpecifier =
+                buildSpecifierManager.getBuildUrlFromBuildSpecifier(
+                  urlInfo.url,
+                );
               const buildSpecifierVersioned =
                 buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
               serviceWorkerResources[buildSpecifier] = {
@@ -1097,10 +1052,10 @@ build ${entryPointKeys.length} entry points`);
             const serviceWorkerResourcesWithoutSwScriptItSelf = {
               ...serviceWorkerResources,
             };
-            const serviceWorkerBuildSpecifier = findKey(
-              buildSpecifierMap,
-              serviceWorkerEntryUrlInfo.url,
-            );
+            const serviceWorkerBuildSpecifier =
+              buildSpecifierManager.getBuildUrlFromBuildSpecifier(
+                serviceWorkerEntryUrlInfo.url,
+              );
             delete serviceWorkerResourcesWithoutSwScriptItSelf[
               serviceWorkerBuildSpecifier
             ];
@@ -1151,7 +1106,8 @@ build ${entryPointKeys.length} entry points`);
             buildVersionsManager.getVersion(urlInfo) &&
             buildVersionsManager.canUseVersionedUrl(urlInfo)
           ) {
-            const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+            const buildSpecifier =
+              buildSpecifierManager.getBuildUrlFromBuildSpecifier(urlInfo.url);
             const buildSpecifierVersioned =
               buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
             const buildUrlVersioned = asBuildUrlVersioned({
