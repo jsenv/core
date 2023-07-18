@@ -740,19 +740,16 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("postbuild/", outDirectoryUrl)
         : undefined,
     });
-    let finalEntryUrls = [];
     const buildVersionsManager = createBuildVersionsManager({
       finalKitchen,
       versioning,
       versioningMethod,
       versionLength,
-
       canUseImportmap:
         versioningViaImportmap &&
-        finalEntryUrls.every((finalEntryUrl) => {
-          const finalEntryUrlInfo =
-            finalKitchen.graph.getUrlInfo(finalEntryUrl);
-          return finalEntryUrlInfo.type === "html";
+        entryUrls.every((finalEntryUrl) => {
+          const entryUrlInfo = rawKitchen.graph.getUrlInfo(finalEntryUrl);
+          return entryUrlInfo.type === "html";
         }) &&
         rawKitchen.context.isSupportedOnCurrentClients("importmap"),
       getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
@@ -778,13 +775,12 @@ build ${entryPointKeys.length} entry points`);
         const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
         await finalRootUrlInfo.dependencies.startCollecting(() => {
           entryUrls.forEach((entryUrl) => {
-            const entryReference = finalRootUrlInfo.dependencies.found({
+            finalRootUrlInfo.dependencies.found({
               trace: { message: `entryPoint` },
               isEntryPoint: true,
               type: "entry_point",
               specifier: entryUrl,
             });
-            finalEntryUrls.push(entryReference.url);
           });
         });
         await finalRootUrlInfo.cookDependencies({
