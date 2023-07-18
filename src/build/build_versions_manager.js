@@ -21,6 +21,7 @@ const placeholderOverhead = placeholderLeft.length + placeholderRight.length;
 
 export const createBuildVersionsManager = ({
   finalKitchen,
+  versioning,
   versioningMethod,
   versionLength = 8,
   canUseImportmap,
@@ -70,11 +71,16 @@ export const createBuildVersionsManager = ({
 
   const replaceFirstPlaceholder = (code, value) => {
     let replaced = false;
-    return code.replace(REPLACER_REGEX, (match) => {
+    return code.replace(PLACEHOLDER_REGEX, (match) => {
       if (replaced) return match;
       replaced = true;
       return value;
     });
+  };
+
+  const extractFirstPlaceholder = (string) => {
+    const match = string.match(PLACEHOLDER_REGEX);
+    return match ? match[0] : null;
   };
 
   const defaultPlaceholder = `${placeholderLeft}${"0".repeat(
@@ -84,14 +90,14 @@ export const createBuildVersionsManager = ({
     code,
     containedPlaceholders,
   ) => {
-    const transformedCode = code.replace(REPLACER_REGEX, (placeholder) => {
+    const transformedCode = code.replace(PLACEHOLDER_REGEX, (placeholder) => {
       containedPlaceholders.add(placeholder);
       return defaultPlaceholder;
     });
     return transformedCode;
   };
 
-  const REPLACER_REGEX = new RegExp(
+  const PLACEHOLDER_REGEX = new RegExp(
     `${escapeRegexpSpecialChars(placeholderLeft)}[0-9a-zA-Z_$]{1,${
       versionLength - placeholderOverhead
     }}${escapeRegexpSpecialChars(placeholderRight)}`,
@@ -137,8 +143,41 @@ export const createBuildVersionsManager = ({
     return buildSpecifierVersioned;
   };
 
+  const canUseVersionedUrl = (urlInfo) => {
+    if (urlInfo.isRoot) {
+      return false;
+    }
+    if (urlInfo.isEntryPoint) {
+      return false;
+    }
+    return urlInfo.type !== "webmanifest";
+  };
+
+  const shouldApplyVersioningOnReference = (reference) => {
+    if (reference.isInline) {
+      return false;
+    }
+    if (reference.next && reference.next.isInline) {
+      return false;
+    }
+    // specifier comes from "normalize" hook done a bit earlier in this file
+    // we want to get back their build url to access their infos
+    const referencedUrlInfo = reference.urlInfo;
+    if (!canUseVersionedUrl(referencedUrlInfo)) {
+      return false;
+    }
+    if (referencedUrlInfo.type === "sourcemap") {
+      return false;
+    }
+    return true;
+  };
+
   return {
     generateBuildSpecifierPlaceholder: (reference, buildSpecifier) => {
+      if (!versioning || !shouldApplyVersioningOnReference(reference)) {
+        return buildSpecifier;
+      }
+
       const placeholder = generatePlaceholder();
       const buildSpecifierWithVersionPlaceholder =
         injectVersionPlaceholderIntoBuildSpecifier({
@@ -337,7 +376,7 @@ export const createBuildVersionsManager = ({
 
           let replacements = [];
           let content = urlInfo.content;
-          content.replace(REPLACER_REGEX, (placeholder, index) => {
+          content.replace(PLACEHOLDER_REGEX, (placeholder, index) => {
             const replacement = {
               start: index,
               placeholder,
@@ -441,6 +480,23 @@ export const createBuildVersionsManager = ({
         }
       }
     },
+    getBuildUrl: (reference) => {
+      const { specifier } = reference;
+      let referenceWithoutPlaceholder =
+        placeholderToReferenceMap.get(specifier);
+      if (!referenceWithoutPlaceholder) {
+        const placeholder = extractFirstPlaceholder(specifier);
+        if (placeholder) {
+          referenceWithoutPlaceholder =
+            placeholderToReferenceMap.get(placeholder);
+        }
+      }
+      if (referenceWithoutPlaceholder) {
+        return referenceWithoutPlaceholder.url;
+      }
+      return null;
+    },
+    canUseVersionedUrl,
     getVersion: (urlInfo) => versionMap.get(urlInfo),
     getBuildSpecifierVersioned,
   };
@@ -463,7 +519,7 @@ const isWrappedByQuote = (content, start, end) => {
 
 // https://github.com/rollup/rollup/blob/19e50af3099c2f627451a45a84e2fa90d20246d5/src/utils/FileEmitter.ts#L47
 // https://github.com/rollup/rollup/blob/5a5391971d695c808eed0c5d7d2c6ccb594fc689/src/Chunk.ts#L870
-export const generateVersion = (parts, length) => {
+const generateVersion = (parts, length) => {
   const hash = createHash("sha256");
   parts.forEach((part) => {
     hash.update(part);
@@ -490,3 +546,6 @@ const injectVersionPlaceholderIntoBuildSpecifier = ({
     },
   );
 };
+
+// unit test exports
+export { generateVersion };

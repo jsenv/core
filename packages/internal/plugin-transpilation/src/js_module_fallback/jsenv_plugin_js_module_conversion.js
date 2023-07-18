@@ -80,7 +80,7 @@ export const jsenvPluginJsModuleConversion = () => {
       if (!jsModuleUrlInfo) {
         return null;
       }
-      await jsModuleUrlInfo.fetchContent();
+      await jsModuleUrlInfo.cook();
       let outputFormat;
       if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
         // if it's an entry point without dependency (it does not use import)

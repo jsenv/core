@@ -375,7 +375,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const generateSourceGraph = createBuildTask("generate source graph");
       try {
         if (outDirectoryUrl) {
-          await ensureEmptyDirectory(new URL(`build/`, outDirectoryUrl));
+          await ensureEmptyDirectory(new URL(`prebuild/`, outDirectoryUrl));
         }
         const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
         await rawRootUrlInfo.dependencies.startCollecting(() => {
@@ -435,6 +435,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             appliesDuring: "build",
             resolveReference: (reference) => {
               const getUrl = () => {
+                const buildUrl = buildVersionsManager.getBuildUrl(reference);
+                if (buildUrl) {
+                  return buildUrl;
+                }
                 if (reference.type === "filesystem") {
                   const ownerRawUrl = buildDirectoryRedirections.get(
                     reference.ownerUrlInfo.url,
@@ -646,10 +650,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 buildUrl,
               );
               buildSpecifierMap.set(buildSpecifier, reference.generatedUrl);
-
-              if (!versioning || !shouldApplyVersioningOnReference(reference)) {
-                return buildSpecifier;
-              }
               const buildSpecifierWithVersionPlaceholder =
                 buildVersionsManager.generateBuildSpecifierPlaceholder(
                   reference,
@@ -765,6 +765,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       });
       buildVersionsManager = createBuildVersionsManager({
         finalKitchen,
+        versioning,
         versioningMethod,
         versionLength,
         canUseImportmap:
@@ -1227,7 +1228,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               if (urlInfo.isInline) {
                 return;
               }
-              if (!canUseVersionedUrl(urlInfo)) {
+              if (!buildVersionsManager.canUseVersionedUrl(urlInfo)) {
                 // when url is not versioned we compute a "version" for that url anyway
                 // so that service worker source still changes and navigator
                 // detect there is a change
@@ -1277,7 +1278,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const buildInlineRelativeUrls = [];
     const getBuildRelativeUrl = (url) => {
       const urlObject = new URL(url);
-      urlObject.searchParams.delete("js_module_fallback");
+      // urlObject.searchParams.delete("js_module_fallback");
       urlObject.searchParams.delete("as_css_module");
       urlObject.searchParams.delete("as_json_module");
       urlObject.searchParams.delete("as_text_module");
@@ -1302,7 +1303,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
           if (
             buildVersionsManager.getVersion(urlInfo) &&
-            canUseVersionedUrl(urlInfo)
+            buildVersionsManager.canUseVersionedUrl(urlInfo)
           ) {
             const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
             const buildSpecifierVersioned =
@@ -1448,35 +1449,6 @@ const findKey = (map, value) => {
     }
   }
   return undefined;
-};
-
-const shouldApplyVersioningOnReference = (reference) => {
-  if (reference.isInline) {
-    return false;
-  }
-  if (reference.next && reference.next.isInline) {
-    return false;
-  }
-  // specifier comes from "normalize" hook done a bit earlier in this file
-  // we want to get back their build url to access their infos
-  const referencedUrlInfo = reference.urlInfo;
-  if (!canUseVersionedUrl(referencedUrlInfo)) {
-    return false;
-  }
-  if (referencedUrlInfo.type === "sourcemap") {
-    return false;
-  }
-  return true;
-};
-
-const canUseVersionedUrl = (urlInfo) => {
-  if (urlInfo.isRoot) {
-    return false;
-  }
-  if (urlInfo.isEntryPoint) {
-    return false;
-  }
-  return urlInfo.type !== "webmanifest";
 };
 
 const asBuildUrlVersioned = ({
