@@ -927,7 +927,7 @@ const executeUsingDynamicImport = async ({
   const result = {};
   const afterImportCallbacks = [];
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
-    const { filterV8Coverage } = await import("./v8_coverage.js").then(n => n.v8_coverage);
+    const { filterV8Coverage } = await import("./v8_coverage.js").then(n => n.v);
     const { stopJsCoverage } = await startJsCoverage();
     afterImportCallbacks.push(async () => {
       const coverage = await stopJsCoverage();
@@ -964,4 +964,4 @@ const executeUsingDynamicImport = async ({
   return result;
 };
 
-export { executeUsingDynamicImport, uneval };
+export { executeUsingDynamicImport as e, uneval as u };

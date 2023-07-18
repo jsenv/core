@@ -1,5 +1,5 @@
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, readdirSync, existsSync } from "node:fs";
-import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
+import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import "node:crypto";
 import { dirname } from "node:path";
@@ -5275,9 +5275,9 @@ const createRuntimeUsingPlaywright = ({
             browser.on("disconnected", disconnectedCallback);
           })
         : Promise.resolve();
-      // for some reason without this 150ms timeout
+      // for some reason without this timeout
       // browser.close() never resolves (playwright does not like something)
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       try {
         await browser.close();
       } catch (e) {
