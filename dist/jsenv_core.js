@@ -11914,7 +11914,8 @@ const createPluginController = (kitchenContext) => {
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents"
+        key === "serverEvents" ||
+        key === "meta"
       ) {
         return;
       }
@@ -18732,9 +18733,13 @@ const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
+        const jsenvToolbarHtmlClientFileUrl = urlInfo.context.getPluginMeta(
+          "jsenvToolbarHtmlClientFileUrl",
+        );
         if (
-          urlInfo.url ===
-          urlInfo.context.getPluginMeta("jsenvToolbarHtmlClientFileUrl")
+          jsenvToolbarHtmlClientFileUrl &&
+          // startsWith to ignore search params
+          urlInfo.url.startsWith(jsenvToolbarHtmlClientFileUrl)
         ) {
           return null;
         }

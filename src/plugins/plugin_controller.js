@@ -57,7 +57,8 @@ export const createPluginController = (kitchenContext) => {
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents"
+        key === "serverEvents" ||
+        key === "meta"
       ) {
         return;
       }
