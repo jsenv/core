@@ -10,8 +10,10 @@ await startDevServer({
       css: true,
     },
   },
-  clientServerEventsConfig: {
-    logs: false,
+  clientAutoreload: {
+    clientServerEventsConfig: {
+      logs: true,
+    },
   },
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   sourcemaps: "none",

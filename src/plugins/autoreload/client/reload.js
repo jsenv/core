@@ -31,20 +31,20 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
     }
     nodes.push({
       node,
-      reload: () => {
+      reload: (hot) => {
         if (node.nodeName === "SCRIPT") {
           const copy = document.createElement("script");
           Array.from(node.attributes).forEach((attribute) => {
             copy.setAttribute(attribute.nodeName, attribute.nodeValue);
           });
-          copy.src = injectQuery(node.src, { hot: Date.now() });
+          copy.src = injectQuery(node.src, { hot });
           if (node.parentNode) {
             node.parentNode.replaceChild(copy, node);
           } else {
             document.body.appendChild(copy);
           }
         } else {
-          node[attributeName] = injectQuery(attribute, { hot: Date.now() });
+          node[attributeName] = injectQuery(attribute, { hot });
         }
       },
     });
@@ -88,16 +88,19 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
     visitNodeAttributeAsUrl(img, "src");
     const srcset = img.srcset;
     if (srcset) {
-      const srcCandidates = parseSrcSet(srcset);
-      srcCandidates.forEach((srcCandidate) => {
-        const url = new URL(srcCandidate.specifier, `${window.location.href}`);
-        if (shouldReloadUrl(url)) {
-          srcCandidate.specifier = injectQuery(url, { hot: Date.now() });
-        }
-      });
       nodes.push({
         node: img,
-        reload: () => {
+        reload: (hot) => {
+          const srcCandidates = parseSrcSet(srcset);
+          srcCandidates.forEach((srcCandidate) => {
+            const url = new URL(
+              srcCandidate.specifier,
+              `${window.location.href}`,
+            );
+            if (shouldReloadUrl(url)) {
+              srcCandidate.specifier = injectQuery(url, { hot });
+            }
+          });
           img.srcset = stringifySrcSet(srcCandidates);
         },
       });
@@ -117,8 +120,8 @@ export const getDOMNodesUsingUrl = (urlToReload) => {
   return nodes;
 };
 
-export const reloadJsImport = async (url) => {
-  const urlWithHotSearchParam = injectQuery(url, { hot: Date.now() });
+export const reloadJsImport = async (url, hot) => {
+  const urlWithHotSearchParam = injectQuery(url, { hot });
   const namespace = await import(urlWithHotSearchParam);
   return namespace;
 };

@@ -5026,6 +5026,7 @@ const getPropertiesFromResource = ({ resource, baseUrl }) => {
 
   return {
     url: String(urlObject),
+    searchParams: urlObject.searchParams,
     pathname,
     resource,
   };
@@ -10455,6 +10456,55 @@ GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
   return found;
 };
 
+// This function will be used in "build.js"
+// by passing rootUrlInfo as first arg
+// -> this ensure we visit only urls with strong references
+// because we start from root and ignore weak ref
+// The alternative would be to iterate on urlInfoMap
+// and call urlInfo.isUsed() but that would be more expensive
+GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (initialUrlInfo, callback) => {
+  const seen = new Set();
+  seen.add(initialUrlInfo);
+  const iterateOnReferences = (urlInfo) => {
+    for (const referenceToOther of urlInfo.referenceToOthersSet) {
+      if (referenceToOther.isWeak) {
+        continue;
+      }
+      if (referenceToOther.gotInlined()) {
+        continue;
+      }
+      const referencedUrlInfo = referenceToOther.urlInfo;
+      if (seen.has(referencedUrlInfo)) {
+        continue;
+      }
+      seen.add(referencedUrlInfo);
+      callback(referencedUrlInfo);
+      iterateOnReferences(referencedUrlInfo);
+    }
+  };
+  iterateOnReferences(initialUrlInfo);
+  seen.clear();
+};
+
+const createEventEmitter = () => {
+  const callbackSet = new Set();
+  const on = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+  const off = (callback) => {
+    callbackSet.delete(callback);
+  };
+  const emit = (...args) => {
+    callbackSet.forEach((callback) => {
+      callback(...args);
+    });
+  };
+  return { on, off, emit };
+};
+
 const urlSpecifierEncoding = {
   encode: (reference) => {
     const { generatedSpecifier } = reference;
@@ -11116,6 +11166,10 @@ const createReference = ({
     return implicitReference;
   };
 
+  reference.gotInlined = () => {
+    return !reference.isInline && reference.next && reference.next.isInline;
+  };
+
   reference.remove = () => removeDependency(reference);
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
@@ -11210,7 +11264,6 @@ const canAddOrRemoveReference = (reference) => {
 const applyDependencyRemovalEffects = (reference) => {
   const { ownerUrlInfo } = reference;
   const { referenceToOthersSet } = ownerUrlInfo;
-
   if (reference.isImplicit && !reference.isInline) {
     let hasAnOtherImplicitRef = false;
     for (const referenceToOther of referenceToOthersSet) {
@@ -11242,8 +11295,29 @@ const applyDependencyRemovalEffects = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
-  const firstReferenceFromOther =
-    referencedUrlInfo.getFirstReferenceFromOther();
+  let firstReferenceFromOther;
+  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+    if (referenceFromOther.urlInfo !== referencedUrlInfo) {
+      continue;
+    }
+    // Here we want to know if the file is referenced by an other file.
+    // So we want to ignore reference that are created by other means:
+    // - "http_request"
+    //   This type of reference is created when client request a file
+    //   that we don't know yet
+    //   1. reference(s) to this file are not yet discovered
+    //   2. there is no reference to this file
+    if (referenceFromOther.type === "http_request") {
+      continue;
+    }
+    if (referenceFromOther.gotInlined()) {
+      // the url info was inlined, an other reference is required
+      // to consider the non-inlined urlInfo as used
+      continue;
+    }
+    firstReferenceFromOther = referenceFromOther;
+    break;
+  }
   if (firstReferenceFromOther) {
     // either applying new ref should override old ref
     // or we should first remove effects before adding new ones
@@ -11254,11 +11328,8 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
-  if (reference.type !== "http_request") {
-    referencedUrlInfo.deleteFromGraph(reference);
-    return true;
-  }
-  return false;
+  referencedUrlInfo.onDereferenced(reference);
+  return true;
 };
 
 const traceFromUrlSite = (urlSite) => {
@@ -11371,8 +11442,8 @@ const createUrlGraph = ({
   name = "anonymous",
 }) => {
   const urlGraph = {};
-  const createUrlInfoCallbackRef = { current: () => {} };
-  const pruneUrlInfoCallbackRef = { current: () => {} };
+  const urlInfoCreatedEventEmitter = createEventEmitter();
+  const urlInfoDereferencedEventEmitter = createEventEmitter();
 
   const urlInfoMap = new Map();
   const hasUrlInfo = (key) => {
@@ -11393,27 +11464,7 @@ const createUrlGraph = ({
     }
     return null;
   };
-  const deleteUrlInfo = (url, lastReferenceFromOther) => {
-    const urlInfo = urlInfoMap.get(url);
-    if (urlInfo) {
-      urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-      urlInfoMap.delete(url);
-      urlInfo.modifiedTimestamp = Date.now();
-      if (lastReferenceFromOther && !urlInfo.isInline) {
-        pruneUrlInfoCallbackRef.current(urlInfo, lastReferenceFromOther);
-      }
-      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        referenceToOther.remove();
-      });
-      if (urlInfo.searchParams.size > 0) {
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-        const urlInfoWithoutSearch = getUrlInfo(urlWithoutSearch);
-        if (urlInfoWithoutSearch) {
-          urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
-        }
-      }
-    }
-  };
+
   const addUrlInfo = (urlInfo) => {
     urlInfo.graph = urlGraph;
     urlInfo.kitchen = kitchen;
@@ -11430,7 +11481,7 @@ const createUrlGraph = ({
       const context = Object.create(ownerContext);
       referencedUrlInfo = createUrlInfo(referencedUrl, context);
       addUrlInfo(referencedUrlInfo);
-      createUrlInfoCallbackRef.current(referencedUrlInfo);
+      urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
     }
     if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
       // A resource is represented by a url.
@@ -11507,17 +11558,16 @@ const createUrlGraph = ({
   Object.assign(urlGraph, {
     name,
     rootUrlInfo,
-    createUrlInfoCallbackRef,
-    pruneUrlInfoCallbackRef,
 
     urlInfoMap,
     reuseOrCreateUrlInfo,
     hasUrlInfo,
     getUrlInfo,
-    deleteUrlInfo,
     getEntryPoints,
 
     inferReference,
+    urlInfoCreatedEventEmitter,
+    urlInfoDereferencedEventEmitter,
 
     toObject: () => {
       const data = {};
@@ -11555,6 +11605,7 @@ const createUrlInfo = (url, context) => {
     context,
     error: null,
     modifiedTimestamp: 0,
+    dereferencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isWatched: false,
@@ -11579,6 +11630,7 @@ const createUrlInfo = (url, context) => {
     originalContentAst: undefined,
     content: undefined,
     contentAst: undefined,
+    contentLength: undefined,
     contentFinalized: false,
 
     sourcemap: null,
@@ -11605,37 +11657,24 @@ const createUrlInfo = (url, context) => {
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
-  urlInfo.getFirstReferenceFromOther = ({ ignoreWeak } = {}) => {
-    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      if (referenceFromOther.url === urlInfo.url) {
-        if (
-          !referenceFromOther.isInline &&
-          referenceFromOther.next &&
-          referenceFromOther.next.isInline
-        ) {
-          // the url info was inlined, an other reference is required
-          // to consider the non-inlined urlInfo as used
-          continue;
-        }
-        if (ignoreWeak && referenceFromOther.isWeak) {
-          // weak reference don't count as using the url
-          continue;
-        }
-        return referenceFromOther;
-      }
-    }
-    return null;
-  };
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {
       return true;
     }
-    // if (urlInfo.type === "sourcemap") {
-    //   return true;
-    // }
-    // check if there is a strong reference to this urlInfo
-    if (urlInfo.getFirstReferenceFromOther({ ignoreWeak: true })) {
-      return true;
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      if (referenceFromOther.urlInfo !== urlInfo) {
+        continue;
+      }
+      if (referenceFromOther.isWeak) {
+        // weak reference don't count as using the url
+        continue;
+      }
+      if (referenceFromOther.gotInlined()) {
+        // the url info was inlined, an other reference is required
+        // to consider the non-inlined urlInfo as used
+        continue;
+      }
+      return referenceFromOther.ownerUrlInfo.isUsed();
     }
     // nothing uses this url anymore
     // - versioning update inline content
@@ -11725,7 +11764,7 @@ const createUrlInfo = (url, context) => {
     reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam.urlInfo;
   };
-  urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
+  urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
     const iterate = (urlInfo) => {
       if (visitedSet.has(urlInfo)) {
@@ -11746,9 +11785,29 @@ const createUrlInfo = (url, context) => {
     };
     iterate(urlInfo);
   };
-  urlInfo.deleteFromGraph = (reference) => {
-    urlInfo.graph.deleteUrlInfo(urlInfo.url, reference);
+  urlInfo.onDereferenced = (lastReferenceFromOther) => {
+    urlInfo.dereferencedTimestamp = Date.now();
+    urlInfo.graph.urlInfoDereferencedEventEmitter.emit(
+      urlInfo,
+      lastReferenceFromOther,
+    );
   };
+
+  // not used for now
+  // urlInfo.deleteFromGraph = () => {
+  //   urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+  //   urlInfo.graph.urlInfoMap.delete(url);
+  //   urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+  //     referenceToOther.remove();
+  //   });
+  //   if (urlInfo.searchParams.size > 0) {
+  //     const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+  //     const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
+  //     if (urlInfoWithoutSearch) {
+  //       urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+  //     }
+  //   }
+  // };
   urlInfo.cook = (customContext) => {
     return urlInfo.context.cook(urlInfo, customContext);
   };
@@ -12231,6 +12290,15 @@ const defineGettersOnPropertiesDerivedFromOriginalContent = (
 };
 
 const defineGettersOnPropertiesDerivedFromContent = (urlInfo) => {
+  const contentLengthDescriptor = Object.getOwnPropertyDescriptor(
+    urlInfo,
+    "contentLength",
+  );
+  if (contentLengthDescriptor.value === undefined) {
+    defineVolatileGetter(urlInfo, "contentLength", () => {
+      return Buffer.byteLength(urlInfo.content);
+    });
+  }
   const contentAstDescriptor = Object.getOwnPropertyDescriptor(
     urlInfo,
     "contentAst",
@@ -12359,15 +12427,10 @@ const createUrlInfoTransformer = ({
     urlInfo.originalContentEtag = undefined;
     urlInfo.contentAst = undefined;
     urlInfo.contentEtag = undefined;
+    urlInfo.contentLength = undefined;
     urlInfo.content = undefined;
     urlInfo.sourcemap = null;
     urlInfo.sourcemapIsWrong = null;
-    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-      const referencedUrlInfo = referenceToOther.urlInfo;
-      if (referencedUrlInfo.isInline) {
-        referencedUrlInfo.deleteFromGraph();
-      }
-    });
   };
 
   const setContent = async (
@@ -12376,6 +12439,7 @@ const createUrlInfoTransformer = ({
     {
       contentAst, // most of the time will be undefined
       contentEtag, // in practice it's always undefined
+      contentLength,
       originalContent = content,
       originalContentAst, // most of the time will be undefined
       originalContentEtag, // in practice always undefined
@@ -12391,6 +12455,7 @@ const createUrlInfoTransformer = ({
 
     urlInfo.contentAst = contentAst;
     urlInfo.contentEtag = contentEtag;
+    urlInfo.contentLength = contentLength;
     urlInfo.content = content;
     defineGettersOnPropertiesDerivedFromContent(urlInfo);
 
@@ -12458,6 +12523,7 @@ const createUrlInfoTransformer = ({
       content,
       contentAst, // undefined most of the time
       contentEtag, // in practice always undefined
+      contentLength,
       sourcemap,
       sourcemapIsWrong,
     } = transformations;
@@ -12471,6 +12537,7 @@ const createUrlInfoTransformer = ({
     if (contentModified) {
       urlInfo.contentAst = contentAst;
       urlInfo.contentEtag = contentEtag;
+      urlInfo.contentLength = contentLength;
       urlInfo.content = content;
       defineGettersOnPropertiesDerivedFromContent(urlInfo);
     }
@@ -13490,12 +13557,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     // "cooked" hook
     pluginController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
       if (typeof cookedReturnValue === "function") {
-        const prevCallback = graph.pruneUrlInfoCallbackRef.current;
-        graph.pruneUrlInfoCallbackRef.current(
-          (prunedUrlInfo, lastReferenceFromOther) => {
-            prevCallback();
-            if (prunedUrlInfo === urlInfo.url) {
-              graph.pruneUrlInfoCallbackRef.current = prevCallback;
+        const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
+          (urlInfoDereferenced, lastReferenceFromOther) => {
+            if (urlInfoDereferenced === urlInfo) {
+              removeCallback();
               cookedReturnValue(lastReferenceFromOther.urlInfo);
             }
           },
@@ -13727,67 +13792,69 @@ const createUrlGraphReport = (urlGraph) => {
     other: 0,
     total: 0,
   };
-  urlGraph.urlInfoMap.forEach((urlInfo) => {
-    if (urlInfo.isRoot) {
-      return;
-    }
-    // ignore:
-    // - ignored files: we don't know their content
-    // - inline files and data files: they are already taken into account in the file where they appear
-    if (urlInfo.url.startsWith("ignore:")) {
-      return;
-    }
-    if (urlInfo.isInline) {
-      return;
-    }
-    if (urlInfo.url.startsWith("data:")) {
-      return;
-    }
 
-    // file loaded via import assertion are already inside the graph
-    // their js module equivalent are ignored to avoid counting it twice
-    // in the build graph the file targeted by import assertion will likely be gone
-    // and only the js module remain (likely bundled)
-    if (
-      urlInfo.searchParams.has("as_json_module") ||
-      urlInfo.searchParams.has("as_css_module") ||
-      urlInfo.searchParams.has("as_text_module")
-    ) {
+  GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+    urlGraph.rootUrlInfo,
+    (urlInfo) => {
+      // ignore:
+      // - ignored files: we don't know their content
+      // - inline files and data files: they are already taken into account in the file where they appear
+      if (urlInfo.url.startsWith("ignore:")) {
+        return;
+      }
+      if (urlInfo.isInline) {
+        return;
+      }
+      if (urlInfo.url.startsWith("data:")) {
+        return;
+      }
+
+      // file loaded via import assertion are already inside the graph
+      // their js module equivalent are ignored to avoid counting it twice
+      // in the build graph the file targeted by import assertion will likely be gone
+      // and only the js module remain (likely bundled)
+      if (
+        urlInfo.searchParams.has("as_json_module") ||
+        urlInfo.searchParams.has("as_css_module") ||
+        urlInfo.searchParams.has("as_text_module")
+      ) {
+        return;
+      }
+
+      const urlContentSize = Buffer.byteLength(urlInfo.content);
+      const category = determineCategory(urlInfo);
+      if (category === "sourcemap") {
+        countGroups.sourcemaps++;
+        sizeGroups.sourcemaps += urlContentSize;
+        return;
+      }
+      countGroups.total++;
+      sizeGroups.total += urlContentSize;
+      if (category === "html") {
+        countGroups.html++;
+        sizeGroups.html += urlContentSize;
+        return;
+      }
+      if (category === "css") {
+        countGroups.css++;
+        sizeGroups.css += urlContentSize;
+        return;
+      }
+      if (category === "js") {
+        countGroups.js++;
+        sizeGroups.js += urlContentSize;
+        return;
+      }
+      if (category === "json") {
+        countGroups.json++;
+        sizeGroups.json += urlContentSize;
+        return;
+      }
+      countGroups.other++;
+      sizeGroups.other += urlContentSize;
       return;
-    }
-    const urlContentSize = Buffer.byteLength(urlInfo.content);
-    const category = determineCategory(urlInfo);
-    if (category === "sourcemap") {
-      countGroups.sourcemaps++;
-      sizeGroups.sourcemaps += urlContentSize;
-      return;
-    }
-    countGroups.total++;
-    sizeGroups.total += urlContentSize;
-    if (category === "html") {
-      countGroups.html++;
-      sizeGroups.html += urlContentSize;
-      return;
-    }
-    if (category === "css") {
-      countGroups.css++;
-      sizeGroups.css += urlContentSize;
-      return;
-    }
-    if (category === "js") {
-      countGroups.js++;
-      sizeGroups.js += urlContentSize;
-      return;
-    }
-    if (category === "json") {
-      countGroups.json++;
-      sizeGroups.json += urlContentSize;
-      return;
-    }
-    countGroups.other++;
-    sizeGroups.other += urlContentSize;
-    return;
-  });
+    },
+  );
 
   const sizesToDistribute = {};
   Object.keys(sizeGroups).forEach((groupName) => {
@@ -18195,27 +18262,20 @@ import.meta.hot = createImportMetaHot(import.meta.url);
   return magicSource.toContentAndSourcemap();
 };
 
-const jsenvPluginHotSearchParam = () => {
-  const shouldInjectHotSearchParam = (reference) => {
-    if (reference.isImplicit) {
-      return false;
-    }
-    if (reference.original && reference.original.searchParams.has("hot")) {
-      return true;
-    }
-    // parent is using ?hot -> propagate
-    const { ownerUrlInfo } = reference;
-    const lastReference = ownerUrlInfo.context.reference;
-    if (
-      lastReference &&
-      lastReference.original &&
-      lastReference.original.searchParams.has("hot")
-    ) {
-      return true;
-    }
-    return false;
-  };
+/*
+ * When client wants to hot reload, it wants to be sure it can reach the server
+ * and bypass any cache. This is done thanks to "hot" search param
+ * being injected by the client: file.js?hot=Date.now()
+ * When it happens server must:
+ * 1. Consider it's a regular request to "file.js" and not a variation
+ * of it (not like file.js?as_js_classic that creates a separate urlInfo)
+ * -> This is done by redirectReference deleting the search param.
+ *
+ * 2. Inject ?hot= into all urls referenced by this one
+ * -> This is done by transformReferenceSearchParams
+ */
 
+const jsenvPluginHotSearchParam = () => {
   return {
     name: "jsenv:hot_search_param",
     appliesDuring: "dev",
@@ -18229,20 +18289,45 @@ const jsenvPluginHotSearchParam = () => {
       // We get rid of this params so that urlGraph and other parts of the code
       // recognize the url (it is not considered as a different url)
       urlObject.searchParams.delete("hot");
-      urlObject.searchParams.delete("v");
       return urlObject.href;
     },
     transformReferenceSearchParams: (reference) => {
-      if (!shouldInjectHotSearchParam(reference)) {
+      if (reference.isImplicit) {
         return null;
       }
+      if (reference.original && reference.original.searchParams.has("hot")) {
+        return {
+          hot: reference.original.searchParams.get("hot"),
+        };
+      }
+      const request = reference.ownerUrlInfo.context.request;
+      const parentHotParam = request ? request.searchParams.get("hot") : null;
+      if (!parentHotParam) {
+        return null;
+      }
+      // At this stage the parent is using ?hot and we are going to decide if
+      // we propagate the search param to child.
       const referencedUrlInfo = reference.urlInfo;
-      if (!referencedUrlInfo.modifiedTimestamp) {
+      const { modifiedTimestamp, dereferencedTimestamp } = referencedUrlInfo;
+      if (!modifiedTimestamp && !dereferencedTimestamp) {
         return null;
       }
+      // The goal is to send an url that will bypass client (the browser) cache
+      // more precisely the runtime cache of js modules, but also any http cache
+      // that could prevent re-execution of js code
+      // In order to achieve this, this plugin inject ?hot=timestamp
+      // - The browser will likely not have it in cache
+      //   and refetch lastest version from server + re-execute it
+      // - If the browser have it in cache, he will not get it from server
+      // We use the latest timestamp to ensure it's fresh
+      // The dereferencedTimestamp is needed because when a js module is re-referenced
+      // browser must re-execute it, even if the code is not modified
+      const latestTimestamp =
+        dereferencedTimestamp && modifiedTimestamp
+          ? Math.max(dereferencedTimestamp, modifiedTimestamp)
+          : dereferencedTimestamp || modifiedTimestamp;
       return {
-        hot: "",
-        v: referencedUrlInfo.modifiedTimestamp,
+        hot: latestTimestamp,
       };
     },
   };
@@ -18285,8 +18370,8 @@ const jsenvPluginAutoreloadClient = () => {
 };
 
 const jsenvPluginAutoreloadServer = ({
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
+  clientFileChangeEventEmitter,
+  clientFileDereferencedEventEmitter,
 }) => {
   return {
     name: "jsenv:autoreload_server",
@@ -18302,29 +18387,7 @@ const jsenvPluginAutoreloadServer = ({
           }
           return url;
         };
-        const notifyFullReload = ({ cause, reason, declinedBy }) => {
-          serverEventInfo.sendServerEvent({
-            cause,
-            type: "full",
-            typeReason: reason,
-            declinedBy,
-          });
-        };
-        const notifyPartialReload = ({ cause, reason, instructions }) => {
-          serverEventInfo.sendServerEvent({
-            cause,
-            type: "hot",
-            typeReason: reason,
-            hotInstructions: instructions,
-          });
-        };
         const propagateUpdate = (firstUrlInfo) => {
-          if (!serverEventInfo.kitchen.graph.getUrlInfo(firstUrlInfo.url)) {
-            return {
-              declined: true,
-              reason: `url not in the url graph`,
-            };
-          }
           const iterate = (urlInfo, seen) => {
             if (urlInfo.data.hotAcceptSelf) {
               return {
@@ -18403,86 +18466,150 @@ const jsenvPluginAutoreloadServer = ({
           const seen = [];
           return iterate(firstUrlInfo, seen);
         };
-        clientFileChangeCallbackList.push(({ url, event }) => {
-          const onUrlInfo = (urlInfo) => {
-            if (!urlInfo.isUsed()) {
-              return false;
-            }
-            const relativeUrl = formatUrlForClient(urlInfo.url);
-            const hotUpdate = propagateUpdate(urlInfo);
-            if (hotUpdate.declined) {
-              notifyFullReload({
-                cause: `${relativeUrl} ${event}`,
-                reason: hotUpdate.reason,
-                declinedBy: hotUpdate.declinedBy,
-              });
-              return true;
-            }
-            notifyPartialReload({
-              cause: `${relativeUrl} ${event}`,
-              reason: hotUpdate.reason,
-              instructions: hotUpdate.instructions,
-            });
-            return true;
-          };
 
-          const urlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
-          if (urlInfo) {
-            if (onUrlInfo(urlInfo)) {
-              return;
+        // We are delaying the moment we tell client how to reload because:
+        //
+        // 1. clientFileDereferencedEventEmitter can emit multiple times in a row
+        // It happens when previous references are removed by stopCollecting (in "references.js")
+        // In that case we could regroup the calls but we prefer to rely on debouncing to also cover
+        // code that would remove many url in a row by other means (like reference.remove())
+        //
+        // 2. clientFileChangeEventEmitter can emit a lot of times in a short period (git checkout for instance)
+        // In that case it's better to cooldown thanks to debouncing
+        //
+        // And we want to gather all the actions to take in response to these events because
+        // we want to favor full-reload when needed and resort to partial reload afterwards
+        // it's also important to ensure the client will fetch the server in the same order
+        const delayedActionSet = new Set();
+        let timeout;
+        const delayAction = (action) => {
+          delayedActionSet.add(action);
+          clearTimeout(timeout);
+          timeout = setTimeout(handleDelayedActions);
+        };
+
+        const handleDelayedActions = () => {
+          const actionSet = new Set(delayedActionSet);
+          delayedActionSet.clear();
+          let reloadMessage = null;
+          for (const action of actionSet) {
+            if (action.type === "change") {
+              const { changedUrlInfo, event } = action;
+              if (!changedUrlInfo.isUsed()) {
+                continue;
+              }
+              const hotUpdate = propagateUpdate(changedUrlInfo);
+              const relativeUrl = formatUrlForClient(changedUrlInfo.url);
+              if (hotUpdate.declined) {
+                reloadMessage = {
+                  cause: `${relativeUrl} ${event}`,
+                  type: "full",
+                  typeReason: hotUpdate.reason,
+                  declinedBy: hotUpdate.declinedBy,
+                };
+                break;
+              }
+              const instructions = hotUpdate.instructions;
+              if (reloadMessage) {
+                reloadMessage.hotInstructions.push(...instructions);
+              } else {
+                reloadMessage = {
+                  cause: `${relativeUrl} ${event}`,
+                  type: "hot",
+                  typeReason: hotUpdate.reason,
+                  hot: changedUrlInfo.modifiedTimestamp,
+                  hotInstructions: instructions,
+                };
+              }
+              continue;
             }
-            for (const searchParamVariant of urlInfo.searchParamVariantSet) {
-              if (onUrlInfo(searchParamVariant)) {
-                return;
+
+            if (action.type === "prune") {
+              const { prunedUrlInfo, lastReferenceFromOther } = action;
+              if (lastReferenceFromOther.type === "sourcemap_comment") {
+                // Can happen when starting dev server with sourcemaps: "file"
+                // In that case, as sourcemaps are injected, the reference
+                // are lost and sourcemap is considered as pruned
+                continue;
+              }
+              const { ownerUrlInfo } = lastReferenceFromOther;
+              if (!ownerUrlInfo.isUsed()) {
+                continue;
+              }
+              const ownerHotUpdate = propagateUpdate(ownerUrlInfo);
+              const cause = `${formatUrlForClient(
+                prunedUrlInfo.url,
+              )} is no longer referenced`;
+              // now check if we can hot update the parent resource
+              // then if we can hot update all dependencies
+              if (ownerHotUpdate.declined) {
+                reloadMessage = {
+                  cause,
+                  type: "full",
+                  typeReason: ownerHotUpdate.reason,
+                  declinedBy: ownerHotUpdate.declinedBy,
+                };
+                break;
+              }
+              // parent can hot update
+              // but pruned url info declines
+              if (prunedUrlInfo.data.hotDecline) {
+                reloadMessage = {
+                  cause,
+                  type: "full",
+                  typeReason: `a pruned file declines hot reload`,
+                  declinedBy: formatUrlForClient(prunedUrlInfo.url),
+                };
+                break;
+              }
+              const pruneInstruction = {
+                type: "prune",
+                boundary: formatUrlForClient(prunedUrlInfo.url),
+                acceptedBy: formatUrlForClient(
+                  lastReferenceFromOther.ownerUrlInfo.url,
+                ),
+              };
+              if (reloadMessage) {
+                reloadMessage.hotInstructions.push(pruneInstruction);
+              } else {
+                reloadMessage = {
+                  cause,
+                  type: "hot",
+                  typeReason: ownerHotUpdate.reason,
+                  hot: prunedUrlInfo.prunedTimestamp,
+                  hotInstructions: [pruneInstruction],
+                };
               }
             }
           }
-        });
-        clientFilesPruneCallbackList.push(
-          (prunedUrlInfo, lastReferenceFromOther) => {
-            if (lastReferenceFromOther.type === "sourcemap_comment") {
-              // Can happen when starting dev server with sourcemaps: "file"
-              // In that case, as sourcemaps are injected, the reference
-              // are lost and sourcemap is considered as pruned
-              return;
-            }
-            const parentHotUpdate = propagateUpdate(
-              lastReferenceFromOther.ownerUrlInfo,
-            );
-            const cause = `following file is no longer referenced: ${formatUrlForClient(
-              prunedUrlInfo.url,
-            )}`;
-            // now check if we can hot update the parent resource
-            // then if we can hot update all dependencies
-            if (parentHotUpdate.declined) {
-              notifyFullReload({
-                cause,
-                reason: parentHotUpdate.reason,
-                declinedBy: parentHotUpdate.declinedBy,
-              });
-              return;
-            }
-            // parent can hot update
-            const instructions = [];
-            if (prunedUrlInfo.data.hotDecline) {
-              notifyFullReload({
-                cause,
-                reason: `a pruned file declines hot reload`,
-                declinedBy: formatUrlForClient(prunedUrlInfo.url),
-              });
-              return;
-            }
-            instructions.push({
-              type: "prune",
-              boundary: formatUrlForClient(prunedUrlInfo.url),
-              acceptedBy: formatUrlForClient(
-                lastReferenceFromOther.ownerUrlInfo.url,
-              ),
+          if (reloadMessage) {
+            serverEventInfo.sendServerEvent(reloadMessage);
+          }
+        };
+
+        clientFileChangeEventEmitter.on(({ url, event }) => {
+          const changedUrlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
+          if (changedUrlInfo) {
+            delayAction({
+              type: "change",
+              changedUrlInfo,
+              event,
             });
-            notifyPartialReload({
-              cause,
-              reason: parentHotUpdate.reason,
-              instructions,
+            for (const searchParamVariant of changedUrlInfo.searchParamVariantSet) {
+              delayAction({
+                type: "change",
+                changedUrlInfo: searchParamVariant,
+                event,
+              });
+            }
+          }
+        });
+        clientFileDereferencedEventEmitter.on(
+          (prunedUrlInfo, lastReferenceFromOther) => {
+            delayAction({
+              type: "prune",
+              prunedUrlInfo,
+              lastReferenceFromOther,
             });
           },
         );
@@ -18508,15 +18635,15 @@ const jsenvPluginAutoreloadServer = ({
 };
 
 const jsenvPluginAutoreload = ({
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
+  clientFileChangeEventEmitter,
+  clientFileDereferencedEventEmitter,
 }) => {
   return [
     jsenvPluginHotSearchParam(),
     jsenvPluginAutoreloadClient(),
     jsenvPluginAutoreloadServer({
-      clientFileChangeCallbackList,
-      clientFilesPruneCallbackList,
+      clientFileChangeEventEmitter,
+      clientFileDereferencedEventEmitter,
     }),
   ];
 };
@@ -18617,9 +18744,7 @@ const getCorePlugins = ({
   transpilation = true,
   inlining = true,
 
-  clientAutoreload = false,
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
+  clientAutoreload,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -18629,9 +18754,6 @@ const getCorePlugins = ({
   }
   if (supervisor === true) {
     supervisor = {};
-  }
-  if (clientAutoreload === true) {
-    clientAutoreload = {};
   }
   if (ribbon === true) {
     ribbon = {};
@@ -18669,14 +18791,8 @@ const getCorePlugins = ({
     jsenvPluginNodeRuntime({ runtimeCompat }),
 
     jsenvPluginImportMetaHot(),
-    ...(clientAutoreload
-      ? [
-          jsenvPluginAutoreload({
-            ...clientAutoreload,
-            clientFileChangeCallbackList,
-            clientFilesPruneCallbackList,
-          }),
-        ]
+    ...(clientAutoreload && clientAutoreload.enabled
+      ? [jsenvPluginAutoreload(clientAutoreload)]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
@@ -19190,63 +19306,60 @@ const createBuildVersionsManager = ({
 
       const contentOnlyVersionMap = new Map();
       {
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          // ignore:
-          // - inline files and data files:
-          //   they are already taken into account in the file where they appear
-          // - ignored files:
-          //   we don't know their content
-          // - unused files without reference
-          //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
-          //   Are used at some point just to be discarded later because they need to be converted
-          //   There is no need to version them and we could not because the file have been ignored
-          //   so their content is unknown
-          if (urlInfo.isRoot) {
-            return;
-          }
-          if (urlInfo.type === "sourcemap") {
-            return;
-          }
-          if (urlInfo.isInline) {
-            return;
-          }
-          if (urlInfo.url.startsWith("data:")) {
-            // urlInfo became inline and is not referenced by something else
-            return;
-          }
-          if (urlInfo.url.startsWith("ignore:")) {
-            return;
-          }
-          if (!urlInfo.isUsed()) {
-            return;
-          }
-          let content = urlInfo.content;
-          if (urlInfo.type === "html") {
-            content = stringifyHtmlAst(
-              parseHtmlString(urlInfo.content, {
-                storeOriginalPositions: false,
-              }),
-              {
-                cleanupJsenvAttributes: true,
-                cleanupPositionAttributes: true,
-              },
-            );
-          }
-          if (
-            CONTENT_TYPE.isTextual(urlInfo.contentType) &&
-            urlInfo.referenceToOthersSet.size > 0
-          ) {
-            const containedPlaceholders = new Set();
-            const contentWithPredictibleVersionPlaceholders =
-              replaceWithDefaultAndPopulateContainedPlaceholders(
-                content,
-                containedPlaceholders,
+        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+          finalKitchen.graph.rootUrlInfo,
+          (urlInfo) => {
+            // ignore:
+            // - inline files and data files:
+            //   they are already taken into account in the file where they appear
+            // - ignored files:
+            //   we don't know their content
+            // - unused files without reference
+            //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
+            //   Are used at some point just to be discarded later because they need to be converted
+            //   There is no need to version them and we could not because the file have been ignored
+            //   so their content is unknown
+            if (urlInfo.type === "sourcemap") {
+              return;
+            }
+            if (urlInfo.isInline) {
+              return;
+            }
+            if (urlInfo.url.startsWith("data:")) {
+              // urlInfo became inline and is not referenced by something else
+              return;
+            }
+            if (urlInfo.url.startsWith("ignore:")) {
+              return;
+            }
+            let content = urlInfo.content;
+            if (urlInfo.type === "html") {
+              content = stringifyHtmlAst(
+                parseHtmlString(urlInfo.content, {
+                  storeOriginalPositions: false,
+                }),
+                {
+                  cleanupJsenvAttributes: true,
+                  cleanupPositionAttributes: true,
+                },
               );
-            content = contentWithPredictibleVersionPlaceholders;
-          }
-          const contentVersion = generateVersion([content], versionLength);
-          contentOnlyVersionMap.set(urlInfo, contentVersion);
-        });
+            }
+            if (
+              CONTENT_TYPE.isTextual(urlInfo.contentType) &&
+              urlInfo.referenceToOthersSet.size > 0
+            ) {
+              const containedPlaceholders = new Set();
+              const contentWithPredictibleVersionPlaceholders =
+                replaceWithDefaultAndPopulateContainedPlaceholders(
+                  content,
+                  containedPlaceholders,
+                );
+              content = contentWithPredictibleVersionPlaceholders;
+            }
+            const contentVersion = generateVersion([content], versionLength);
+            contentOnlyVersionMap.set(urlInfo, contentVersion);
+          },
+        );
       }
 
       {
@@ -19772,7 +19885,7 @@ build ${entryPointKeys.length} entry points`);
       sourcemaps,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
-        ? new URL("build/", outDirectoryUrl)
+        ? new URL("prebuild/", outDirectoryUrl)
         : undefined,
     });
 
@@ -20027,13 +20140,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   rawUrlInfo.url,
                   "raw file",
                 );
-                if (buildUrl.includes("?")) {
-                  associateBuildUrlAndRawUrl(
-                    asUrlWithoutSearch(buildUrl),
-                    rawUrlInfo.url,
-                    "raw file",
-                  );
-                }
                 return buildUrl;
               }
               if (reference.type === "sourcemap_comment") {
@@ -20247,82 +20353,84 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
           }
         };
-        GRAPH_VISITOR.forEach(rawKitchen.graph, (rawUrlInfo) => {
-          // ignore unused urls (avoid bundling things that are not actually used)
-          // happens for:
-          // - js import assertions
-          // - conversion to js classic using ?as_js_classic or ?js_module_fallback
-          if (!rawUrlInfo.isUsed()) {
-            return;
-          }
-          if (rawUrlInfo.isEntryPoint) {
-            addToBundlerIfAny(rawUrlInfo);
-          }
-          if (rawUrlInfo.type === "html") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (referenceToOther.isWeak) {
-                return;
-              }
-              const referencedUrlInfo = referenceToOther.urlInfo;
-              if (referencedUrlInfo.isInline) {
-                if (referencedUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  referencedUrlInfo.referenceToOthersSet.forEach(
-                    (jsModuleReferenceToOther) => {
-                      if (jsModuleReferenceToOther.type === "js_import") {
-                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
-                        addToBundlerIfAny(inlineUrlInfo);
-                      }
-                    },
-                  );
+        // ignore unused urls thanks to "forEachUrlInfoStronglyReferenced"
+        // it avoid bundling things that are not actually used
+        // happens for:
+        // - js import assertions
+        // - conversion to js classic using ?as_js_classic or ?js_module_fallback
+        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+          rawKitchen.graph.rootUrlInfo,
+          (rawUrlInfo) => {
+            if (rawUrlInfo.isEntryPoint) {
+              addToBundlerIfAny(rawUrlInfo);
+            }
+            if (rawUrlInfo.type === "html") {
+              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (referenceToOther.isWeak) {
+                  return;
                 }
-                // inline content cannot be bundled
-                return;
-              }
-              addToBundlerIfAny(referencedUrlInfo);
-            });
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (
-                referenceToOther.isResourceHint &&
-                referenceToOther.expectedType === "js_module"
-              ) {
                 const referencedUrlInfo = referenceToOther.urlInfo;
-                if (
-                  referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.referenceFromOthersSet.size > 0
-                ) {
-                  addToBundlerIfAny(referencedUrlInfo);
-                }
-              }
-            });
-            return;
-          }
-          // File referenced with new URL('./file.js', import.meta.url)
-          // are entry points that should be bundled
-          // For instance we will bundle service worker/workers detected like this
-          if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (referenceToOther.type === "js_url") {
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
-                  if (referenceFromOther.url === referencedUrlInfo.url) {
-                    if (
-                      referenceFromOther.subtype === "import_dynamic" ||
-                      referenceFromOther.type === "script"
-                    ) {
-                      // will already be bundled
-                      return;
-                    }
+                if (referencedUrlInfo.isInline) {
+                  if (referencedUrlInfo.type === "js_module") {
+                    // bundle inline script type module deps
+                    referencedUrlInfo.referenceToOthersSet.forEach(
+                      (jsModuleReferenceToOther) => {
+                        if (jsModuleReferenceToOther.type === "js_import") {
+                          const inlineUrlInfo =
+                            jsModuleReferenceToOther.urlInfo;
+                          addToBundlerIfAny(inlineUrlInfo);
+                        }
+                      },
+                    );
                   }
+                  // inline content cannot be bundled
+                  return;
                 }
                 addToBundlerIfAny(referencedUrlInfo);
-                return;
-              }
-              if (referenceToOther.type === "js_inline_content") ;
-            });
-          }
-        });
+              });
+              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (
+                  referenceToOther.isResourceHint &&
+                  referenceToOther.expectedType === "js_module"
+                ) {
+                  const referencedUrlInfo = referenceToOther.urlInfo;
+                  if (
+                    referencedUrlInfo &&
+                    // something else than the resource hint is using this url
+                    referencedUrlInfo.referenceFromOthersSet.size > 0
+                  ) {
+                    addToBundlerIfAny(referencedUrlInfo);
+                  }
+                }
+              });
+              return;
+            }
+            // File referenced with new URL('./file.js', import.meta.url)
+            // are entry points that should be bundled
+            // For instance we will bundle service worker/workers detected like this
+            if (rawUrlInfo.type === "js_module") {
+              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+                if (referenceToOther.type === "js_url") {
+                  const referencedUrlInfo = referenceToOther.urlInfo;
+                  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+                    if (referenceFromOther.url === referencedUrlInfo.url) {
+                      if (
+                        referenceFromOther.subtype === "import_dynamic" ||
+                        referenceFromOther.type === "script"
+                      ) {
+                        // will already be bundled
+                        return;
+                      }
+                    }
+                  }
+                  addToBundlerIfAny(referencedUrlInfo);
+                  return;
+                }
+                if (referenceToOther.type === "js_inline_content") ;
+              });
+            }
+          },
+        );
         await Object.keys(bundlers).reduce(async (previous, type) => {
           await previous;
           const bundler = bundlers[type];
@@ -20633,23 +20741,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         }
       }
       {
-        const actions = [];
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (!urlInfo.isUsed()) {
-            actions.push(() => {
-              urlInfo.deleteFromGraph();
-            });
-          }
-        });
-        actions.forEach((action) => action());
-      }
-      {
         const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
           finalKitchen.graph,
           (finalUrlInfo) => {
             return (
               finalUrlInfo.subtype === "service_worker" &&
-              finalUrlInfo.isEntryPoint
+              finalUrlInfo.isEntryPoint &&
+              finalUrlInfo.isUsed()
             );
           },
         );
@@ -20658,34 +20756,34 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             "inject urls in service worker",
           );
           const serviceWorkerResources = {};
-          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-            if (urlInfo.isRoot) {
-              return;
-            }
-            if (!urlInfo.url.startsWith("file:")) {
-              return;
-            }
-            if (urlInfo.isInline) {
-              return;
-            }
-            if (!canUseVersionedUrl(urlInfo)) {
-              // when url is not versioned we compute a "version" for that url anyway
-              // so that service worker source still changes and navigator
-              // detect there is a change
+          GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+            finalKitchen.graph.rootUrlInfo,
+            (urlInfo) => {
+              if (!urlInfo.url.startsWith("file:")) {
+                return;
+              }
+              if (urlInfo.isInline) {
+                return;
+              }
+              if (!canUseVersionedUrl(urlInfo)) {
+                // when url is not versioned we compute a "version" for that url anyway
+                // so that service worker source still changes and navigator
+                // detect there is a change
+                const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+                serviceWorkerResources[buildSpecifier] = {
+                  version: buildVersionsManager.getVersion(urlInfo),
+                };
+                return;
+              }
               const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+              const buildSpecifierVersioned =
+                buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
               serviceWorkerResources[buildSpecifier] = {
                 version: buildVersionsManager.getVersion(urlInfo),
+                versionedUrl: buildSpecifierVersioned,
               };
-              return;
-            }
-            const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
-            const buildSpecifierVersioned =
-              buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
-            serviceWorkerResources[buildSpecifier] = {
-              version: buildVersionsManager.getVersion(urlInfo),
-              versionedUrl: buildSpecifierVersioned,
-            };
-          });
+            },
+          );
           for (const serviceWorkerEntryUrlInfo of serviceWorkerEntryUrlInfos) {
             const serviceWorkerResourcesWithoutSwScriptItSelf = {
               ...serviceWorkerResources,
@@ -20725,48 +20823,48 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
       return buildRelativeUrl;
     };
-    GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-      if (urlInfo.isRoot) {
-        return;
-      }
-      if (!urlInfo.url.startsWith("file:")) {
-        return;
-      }
-      if (urlInfo.type === "directory") {
-        return;
-      }
-      if (urlInfo.isInline) {
-        const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
-        buildContents[buildRelativeUrl] = urlInfo.content;
-        buildInlineRelativeUrls.push(buildRelativeUrl);
-      } else {
-        const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
-        if (
-          buildVersionsManager.getVersion(urlInfo) &&
-          canUseVersionedUrl(urlInfo)
-        ) {
-          const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
-          const buildSpecifierVersioned =
-            buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
-          const buildUrlVersioned = asBuildUrlVersioned({
-            buildSpecifierVersioned,
-            buildDirectoryUrl,
-          });
-          const buildRelativeUrlVersioned = urlToRelativeUrl(
-            buildUrlVersioned,
-            buildDirectoryUrl,
-          );
-          if (versioningMethod === "search_param") {
-            buildContents[buildRelativeUrl] = urlInfo.content;
-          } else {
-            buildContents[buildRelativeUrlVersioned] = urlInfo.content;
-          }
-          buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
-        } else {
-          buildContents[buildRelativeUrl] = urlInfo.content;
+    GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+      finalKitchen.graph.rootUrlInfo,
+      (urlInfo) => {
+        if (!urlInfo.url.startsWith("file:")) {
+          return;
         }
-      }
-    });
+        if (urlInfo.type === "directory") {
+          return;
+        }
+        if (urlInfo.isInline) {
+          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
+          buildContents[buildRelativeUrl] = urlInfo.content;
+          buildInlineRelativeUrls.push(buildRelativeUrl);
+        } else {
+          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
+          if (
+            buildVersionsManager.getVersion(urlInfo) &&
+            canUseVersionedUrl(urlInfo)
+          ) {
+            const buildSpecifier = findKey(buildSpecifierMap, urlInfo.url);
+            const buildSpecifierVersioned =
+              buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+            const buildUrlVersioned = asBuildUrlVersioned({
+              buildSpecifierVersioned,
+              buildDirectoryUrl,
+            });
+            const buildRelativeUrlVersioned = urlToRelativeUrl(
+              buildUrlVersioned,
+              buildDirectoryUrl,
+            );
+            if (versioningMethod === "search_param") {
+              buildContents[buildRelativeUrl] = urlInfo.content;
+            } else {
+              buildContents[buildRelativeUrlVersioned] = urlInfo.content;
+            }
+            buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
+          } else {
+            buildContents[buildRelativeUrl] = urlInfo.content;
+          }
+        }
+      },
+    );
     const buildFileContents = {};
     const buildInlineContents = {};
     Object.keys(buildContents)
@@ -20801,7 +20899,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       writingFiles.done();
     }
     logger.info(
-      createUrlGraphSummary(finalKitchen.graph, { title: "build files" }),
+      createUrlGraphSummary(finalKitchen.graph, {
+        title: "build files",
+      }),
     );
     return {
       buildFileContents,
@@ -21021,6 +21121,7 @@ const createFileService = ({
   serverStopCallbacks,
   serverEventsDispatcher,
   kitchenCache,
+  onKitchenCreated = () => {},
 
   sourceDirectoryUrl,
   sourceMainFilePath,
@@ -21036,8 +21137,6 @@ const createFileService = ({
   supervisor,
   transpilation,
   clientAutoreload,
-  cooldownBetweenFileEvents,
-  clientServerEventsConfig,
   cacheControl,
   ribbon,
   sourcemaps,
@@ -21045,19 +21144,32 @@ const createFileService = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
 }) => {
-  const clientFileChangeCallbackList = [];
-  const clientFilesPruneCallbackList = [];
+  if (clientAutoreload === true) {
+    clientAutoreload = {};
+  }
+  if (clientAutoreload === false) {
+    clientAutoreload = { enabled: false };
+  }
+  const clientFileChangeEventEmitter = createEventEmitter();
+  const clientFileDereferencedEventEmitter = createEventEmitter();
+
+  clientAutoreload = {
+    enabled: true,
+    clientServerEventsConfig: {},
+    clientFileChangeEventEmitter,
+    clientFileDereferencedEventEmitter,
+    ...clientAutoreload,
+  };
+
   const stopWatchingSourceFiles = watchSourceFiles(
     sourceDirectoryUrl,
     (fileInfo) => {
-      clientFileChangeCallbackList.forEach((callback) => {
-        callback(fileInfo);
-      });
+      clientFileChangeEventEmitter.emit(fileInfo);
     },
     {
       sourceFilesConfig,
       keepProcessAlive: false,
-      cooldownBetweenFileEvents,
+      cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
     },
   );
   serverStopCallbacks.push(stopWatchingSourceFiles);
@@ -21076,10 +21188,10 @@ const createFileService = ({
       sourceDirectoryUrl,
     );
     let kitchen;
-    clientFileChangeCallbackList.push(({ url }) => {
+    clientFileChangeEventEmitter.on(({ url }) => {
       const urlInfo = kitchen.graph.getUrlInfo(url);
       if (urlInfo) {
-        urlInfo.considerModified();
+        urlInfo.onModified();
       }
     });
     const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
@@ -21115,8 +21227,6 @@ const createFileService = ({
           transpilation,
 
           clientAutoreload,
-          clientFileChangeCallbackList,
-          clientFilesPruneCallbackList,
           cacheControl,
           ribbon,
         }),
@@ -21130,18 +21240,18 @@ const createFileService = ({
         ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
         : undefined,
     });
-    kitchen.graph.createUrlInfoCallbackRef.current = (urlInfo) => {
+    kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
       const { watch } = URL_META.applyAssociations({
-        url: urlInfo.url,
+        url: urlInfoCreated.url,
         associations: watchAssociations,
       });
-      urlInfo.isWatched = watch;
+      urlInfoCreated.isWatched = watch;
       // wehn an url depends on many others, we check all these (like package.json)
-      urlInfo.isValid = () => {
-        if (!urlInfo.url.startsWith("file:")) {
+      urlInfoCreated.isValid = () => {
+        if (!urlInfoCreated.url.startsWith("file:")) {
           return false;
         }
-        if (urlInfo.content === undefined) {
+        if (urlInfoCreated.content === undefined) {
           // urlInfo content is undefined when:
           // - url info content never fetched
           // - it is considered as modified because undelying file is watched and got saved
@@ -21153,21 +21263,20 @@ const createFileService = ({
           // file is not watched, check the filesystem
           let fileContentAsBuffer;
           try {
-            fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
+            fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
           } catch (e) {
             if (e.code === "ENOENT") {
-              urlInfo.considerModified();
-              urlInfo.deleteFromGraph();
+              urlInfoCreated.onModified();
               return false;
             }
             return false;
           }
           const fileContentEtag = bufferToEtag$1(fileContentAsBuffer);
-          if (fileContentEtag !== urlInfo.originalContentEtag) {
-            urlInfo.considerModified();
+          if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
+            urlInfoCreated.onModified();
             // restore content to be able to compare it again later
-            urlInfo.kitchen.urlInfoTransformer.setContent(
-              urlInfo,
+            urlInfoCreated.kitchen.urlInfoTransformer.setContent(
+              urlInfoCreated,
               String(fileContentAsBuffer),
               {
                 contentEtag: fileContentEtag,
@@ -21176,23 +21285,24 @@ const createFileService = ({
             return false;
           }
         }
-        for (const implicitUrl of urlInfo.implicitUrlSet) {
-          const implicitUrlInfo = kitchen.graph.getUrlInfo(implicitUrl);
+        for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
+          const implicitUrlInfo = urlInfoCreated.graph.getUrlInfo(implicitUrl);
           if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
             return false;
           }
         }
         return true;
       };
-    };
-    kitchen.graph.pruneUrlInfoCallbackRef.current = (
-      prunedUrlInfo,
-      lastReferenceFromOther,
-    ) => {
-      clientFilesPruneCallbackList.forEach((callback) => {
-        callback(prunedUrlInfo, lastReferenceFromOther);
-      });
-    };
+    });
+    kitchen.graph.urlInfoDereferencedEventEmitter.on(
+      (urlInfoDereferenced, lastReferenceFromOther) => {
+        clientFileDereferencedEventEmitter.emit(
+          urlInfoDereferenced,
+          lastReferenceFromOther,
+        );
+      },
+    );
+
     serverStopCallbacks.push(() => {
       kitchen.pluginController.callHooks("destroy", kitchen.context);
     });
@@ -21225,12 +21335,15 @@ const createFileService = ({
         });
         // "pushPlugin" so that event source client connection can be put as early as possible in html
         kitchen.pluginController.pushPlugin(
-          jsenvPluginServerEventsClientInjection(clientServerEventsConfig),
+          jsenvPluginServerEventsClientInjection(
+            clientAutoreload.clientServerEventsConfig,
+          ),
         );
       }
     }
 
     kitchenCache.set(runtimeId, kitchen);
+    onKitchenCreated(kitchen);
     return kitchen;
   };
 
@@ -21248,31 +21361,28 @@ const createFileService = ({
     if (responseFromPlugin) {
       return responseFromPlugin;
     }
-    let reference;
-    const parentUrl = inferParentFromRequest(request, sourceDirectoryUrl);
-    if (parentUrl) {
-      reference = kitchen.graph.inferReference(request.resource, parentUrl);
-    }
+    const { referer } = request.headers;
+    const parentUrl = referer
+      ? WEB_URL_CONVERTER.asFileUrl(referer, {
+          origin: request.origin,
+          rootDirectoryUrl: sourceDirectoryUrl,
+        })
+      : sourceDirectoryUrl;
+    let reference = kitchen.graph.inferReference(request.resource, parentUrl);
     if (!reference) {
-      let parentUrlInfo;
-      if (parentUrl) {
-        parentUrlInfo = kitchen.graph.getUrlInfo(parentUrl);
-      }
-      if (!parentUrlInfo) {
-        parentUrlInfo = kitchen.graph.rootUrlInfo;
-      }
-      reference = parentUrlInfo.dependencies.createResolveAndFinalize({
-        trace: { message: parentUrl || sourceDirectoryUrl },
-        type: "http_request",
-        specifier: request.resource,
-      });
+      reference =
+        kitchen.graph.rootUrlInfo.dependencies.createResolveAndFinalize({
+          trace: { message: parentUrl },
+          type: "http_request",
+          specifier: request.resource,
+        });
     }
     const urlInfo = reference.urlInfo;
     const ifNoneMatch = request.headers["if-none-match"];
     const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
 
     try {
-      if (ifNoneMatch) {
+      if (!urlInfo.error && ifNoneMatch) {
         const [clientOriginalContentEtag, clientContentEtag] =
           ifNoneMatch.split("_");
         if (
@@ -21320,7 +21430,7 @@ const createFileService = ({
               }),
           ...urlInfo.headers,
           "content-type": urlInfo.contentType,
-          "content-length": Buffer.byteLength(urlInfo.content),
+          "content-length": urlInfo.contentLength,
         },
         body: urlInfo.content,
         timing: urlInfo.timing,
@@ -21359,7 +21469,7 @@ const createFileService = ({
             statusMessage: originalError.message,
             headers: {
               "content-type": urlInfo.contentType,
-              "content-length": Buffer.byteLength(urlInfo.content),
+              "content-length": urlInfo.contentLength,
               "cache-control": "no-store",
             },
             body: urlInfo.content,
@@ -21406,28 +21516,8 @@ const createFileService = ({
         statusText: e.reason,
         statusMessage: e.stack,
       };
-    } finally {
-      // remove http_request when there is other references keeping url info alive
-      if (
-        reference.type === "http_request" &&
-        reference.urlInfo.referenceFromOthersSet.size > 1
-      ) {
-        reference.remove();
-      }
     }
   };
-};
-
-const inferParentFromRequest = (request, sourceDirectoryUrl) => {
-  const { referer } = request.headers;
-  if (!referer) {
-    return null;
-  }
-  const refererUrl = referer;
-  return WEB_URL_CONVERTER.asFileUrl(refererUrl, {
-    origin: request.origin,
-    rootDirectoryUrl: sourceDirectoryUrl,
-  });
 };
 
 /**
@@ -21460,8 +21550,6 @@ const startDevServer = async ({
 
   sourceFilesConfig,
   clientAutoreload = true,
-  cooldownBetweenFileEvents,
-  clientServerEventsConfig = {},
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -21477,6 +21565,7 @@ const startDevServer = async ({
   cacheControl = true,
   ribbon = true,
   // toolbar = false,
+  onKitchenCreated = () => {},
 
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
@@ -21601,6 +21690,7 @@ const startDevServer = async ({
           serverStopCallbacks,
           serverEventsDispatcher,
           kitchenCache,
+          onKitchenCreated,
 
           sourceDirectoryUrl,
           sourceMainFilePath,
@@ -21616,8 +21706,6 @@ const startDevServer = async ({
           supervisor,
           transpilation,
           clientAutoreload,
-          cooldownBetweenFileEvents,
-          clientServerEventsConfig,
           cacheControl,
           ribbon,
           sourcemaps,

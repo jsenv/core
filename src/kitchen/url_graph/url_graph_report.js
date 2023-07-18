@@ -1,4 +1,5 @@
 import { ANSI, byteAsFileSize, distributePercentages } from "@jsenv/log";
+import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
 export const createUrlGraphSummary = (
   urlGraph,
@@ -29,67 +30,69 @@ const createUrlGraphReport = (urlGraph) => {
     other: 0,
     total: 0,
   };
-  urlGraph.urlInfoMap.forEach((urlInfo) => {
-    if (urlInfo.isRoot) {
-      return;
-    }
-    // ignore:
-    // - ignored files: we don't know their content
-    // - inline files and data files: they are already taken into account in the file where they appear
-    if (urlInfo.url.startsWith("ignore:")) {
-      return;
-    }
-    if (urlInfo.isInline) {
-      return;
-    }
-    if (urlInfo.url.startsWith("data:")) {
-      return;
-    }
 
-    // file loaded via import assertion are already inside the graph
-    // their js module equivalent are ignored to avoid counting it twice
-    // in the build graph the file targeted by import assertion will likely be gone
-    // and only the js module remain (likely bundled)
-    if (
-      urlInfo.searchParams.has("as_json_module") ||
-      urlInfo.searchParams.has("as_css_module") ||
-      urlInfo.searchParams.has("as_text_module")
-    ) {
+  GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+    urlGraph.rootUrlInfo,
+    (urlInfo) => {
+      // ignore:
+      // - ignored files: we don't know their content
+      // - inline files and data files: they are already taken into account in the file where they appear
+      if (urlInfo.url.startsWith("ignore:")) {
+        return;
+      }
+      if (urlInfo.isInline) {
+        return;
+      }
+      if (urlInfo.url.startsWith("data:")) {
+        return;
+      }
+
+      // file loaded via import assertion are already inside the graph
+      // their js module equivalent are ignored to avoid counting it twice
+      // in the build graph the file targeted by import assertion will likely be gone
+      // and only the js module remain (likely bundled)
+      if (
+        urlInfo.searchParams.has("as_json_module") ||
+        urlInfo.searchParams.has("as_css_module") ||
+        urlInfo.searchParams.has("as_text_module")
+      ) {
+        return;
+      }
+
+      const urlContentSize = Buffer.byteLength(urlInfo.content);
+      const category = determineCategory(urlInfo);
+      if (category === "sourcemap") {
+        countGroups.sourcemaps++;
+        sizeGroups.sourcemaps += urlContentSize;
+        return;
+      }
+      countGroups.total++;
+      sizeGroups.total += urlContentSize;
+      if (category === "html") {
+        countGroups.html++;
+        sizeGroups.html += urlContentSize;
+        return;
+      }
+      if (category === "css") {
+        countGroups.css++;
+        sizeGroups.css += urlContentSize;
+        return;
+      }
+      if (category === "js") {
+        countGroups.js++;
+        sizeGroups.js += urlContentSize;
+        return;
+      }
+      if (category === "json") {
+        countGroups.json++;
+        sizeGroups.json += urlContentSize;
+        return;
+      }
+      countGroups.other++;
+      sizeGroups.other += urlContentSize;
       return;
-    }
-    const urlContentSize = Buffer.byteLength(urlInfo.content);
-    const category = determineCategory(urlInfo);
-    if (category === "sourcemap") {
-      countGroups.sourcemaps++;
-      sizeGroups.sourcemaps += urlContentSize;
-      return;
-    }
-    countGroups.total++;
-    sizeGroups.total += urlContentSize;
-    if (category === "html") {
-      countGroups.html++;
-      sizeGroups.html += urlContentSize;
-      return;
-    }
-    if (category === "css") {
-      countGroups.css++;
-      sizeGroups.css += urlContentSize;
-      return;
-    }
-    if (category === "js") {
-      countGroups.js++;
-      sizeGroups.js += urlContentSize;
-      return;
-    }
-    if (category === "json") {
-      countGroups.json++;
-      sizeGroups.json += urlContentSize;
-      return;
-    }
-    countGroups.other++;
-    sizeGroups.other += urlContentSize;
-    return;
-  });
+    },
+  );
 
   const sizesToDistribute = {};
   Object.keys(sizeGroups).forEach((groupName) => {

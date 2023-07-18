@@ -8,8 +8,10 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    clientServerEventsConfig: {
-      logs: false,
+    clientAutoreload: {
+      clientServerEventsConfig: {
+        logs: false,
+      },
     },
     ...params,
   });

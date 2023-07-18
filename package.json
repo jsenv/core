@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "37.0.6",
+  "version": "37.1.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -69,7 +69,7 @@
     "@jsenv/node-esm-resolution": "1.0.1",
     "@jsenv/js-module-fallback": "1.2.0",
     "@jsenv/runtime-compat": "1.1.0",
-    "@jsenv/server": "15.0.4",
+    "@jsenv/server": "15.1.0",
     "@jsenv/sourcemap": "1.1.0",
     "@jsenv/plugin-transpilation": "1.2.1",
     "@jsenv/plugin-supervisor": "1.2.0",

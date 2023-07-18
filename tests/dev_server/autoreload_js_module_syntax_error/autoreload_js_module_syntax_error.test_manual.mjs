@@ -6,9 +6,6 @@
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  clientFiles: {
-    "**/*": true,
-  },
-  clientMainFileUrl: new URL("./client/main.html", import.meta.url),
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceMainFilePath: "main.html",
 });

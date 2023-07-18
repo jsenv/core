@@ -127,7 +127,7 @@ const dequeue = async () => {
   }
 };
 
-const applyHotReload = async ({ hotInstructions }) => {
+const applyHotReload = async ({ cause, hot, hotInstructions }) => {
   await hotInstructions.reduce(
     async (previous, { type, boundary, acceptedBy }) => {
       await previous;
@@ -143,7 +143,7 @@ const applyHotReload = async ({ hotInstructions }) => {
           delete urlHotMetas[urlToFetch];
           if (urlHotMeta.disposeCallback) {
             console.groupCollapsed(
-              `[jsenv] cleanup ${boundary} (previously used in ${acceptedBy})`,
+              `[jsenv] cleanup ${boundary} (no longer referenced by ${acceptedBy})`,
             );
             console.log(`call dispose callback`);
             await urlHotMeta.disposeCallback();
@@ -154,10 +154,10 @@ const applyHotReload = async ({ hotInstructions }) => {
       }
 
       if (acceptedBy === boundary) {
-        console.groupCollapsed(`[jsenv] hot reloading ${boundary}`);
+        console.groupCollapsed(`[jsenv] hot reloading ${boundary} (${cause})`);
       } else {
         console.groupCollapsed(
-          `[jsenv] hot reloading ${acceptedBy} usage in ${boundary}`,
+          `[jsenv] hot reloading ${acceptedBy} usage in ${boundary} (${cause})`,
         );
       }
       if (type === "js_module") {
@@ -174,7 +174,7 @@ const applyHotReload = async ({ hotInstructions }) => {
           type: "dynamic_import",
           url: urlToFetch,
         };
-        const namespace = await reloadJsImport(urlToFetch);
+        const namespace = await reloadJsImport(urlToFetch, hot);
         if (urlHotMeta.acceptCallback) {
           await urlHotMeta.acceptCallback(namespace);
         }
@@ -201,11 +201,11 @@ const applyHotReload = async ({ hotInstructions }) => {
           console.log(`no dom node using ${acceptedBy}`);
         } else if (domNodesCount === 1) {
           console.log(`reloading`, domNodesUsingUrl[0].node);
-          domNodesUsingUrl[0].reload();
+          domNodesUsingUrl[0].reload(hot);
         } else {
           console.log(`reloading ${domNodesCount} nodes using ${acceptedBy}`);
           domNodesUsingUrl.forEach((domNodesUsingUrl) => {
-            domNodesUsingUrl.reload();
+            domNodesUsingUrl.reload(hot);
           });
         }
         console.groupEnd();

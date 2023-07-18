@@ -17,7 +17,9 @@ const devServer = await startDevServer({
       refreshInstrumentation: true,
     }),
   ],
-  cooldownBetweenFileEvents: 250,
+  clientAutoreload: {
+    cooldownBetweenFileEvents: 250,
+  },
 });
 const browser = await chromium.launch({
   headless: true,

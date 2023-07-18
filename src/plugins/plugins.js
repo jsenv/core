@@ -33,9 +33,7 @@ export const getCorePlugins = ({
   transpilation = true,
   inlining = true,
 
-  clientAutoreload = false,
-  clientFileChangeCallbackList,
-  clientFilesPruneCallbackList,
+  clientAutoreload,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -45,9 +43,6 @@ export const getCorePlugins = ({
   }
   if (supervisor === true) {
     supervisor = {};
-  }
-  if (clientAutoreload === true) {
-    clientAutoreload = {};
   }
   if (ribbon === true) {
     ribbon = {};
@@ -85,14 +80,8 @@ export const getCorePlugins = ({
     jsenvPluginNodeRuntime({ runtimeCompat }),
 
     jsenvPluginImportMetaHot(),
-    ...(clientAutoreload
-      ? [
-          jsenvPluginAutoreload({
-            ...clientAutoreload,
-            clientFileChangeCallbackList,
-            clientFilesPruneCallbackList,
-          }),
-        ]
+    ...(clientAutoreload && clientAutoreload.enabled
+      ? [jsenvPluginAutoreload(clientAutoreload)]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),

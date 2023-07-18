@@ -1,8 +1,8 @@
 /*
  * Test the following:
- * - a script[hot-accept] can hot reload when supervised
- * - Introducing a syntax error displays the error overlay
- * - Fixing the syntax error removes the error overlay
+ * - <style> can hot reload
+ * - Introducing a syntax error removes background color
+ * - Fixing syntax error restore background color
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -21,6 +21,7 @@ const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
 });
 
@@ -43,6 +44,7 @@ try {
     assert({ actual, expected });
   }
 
+  const pageReloadPromise = page.waitForNavigation();
   htmlFileContent.update(`<!DOCTYPE html>
   <html>
     <head>
@@ -60,9 +62,7 @@ try {
       </style>
     </body>
   </html>`);
-  await new Promise((resolve) => {
-    setTimeout(resolve, 500);
-  });
+  await pageReloadPromise;
   {
     const actual = await getDocumentBodyBackgroundColor();
     const expected = `rgba(0, 0, 0, 0)`;

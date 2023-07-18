@@ -484,12 +484,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     // "cooked" hook
     pluginController.callHooks("cooked", urlInfo, (cookedReturnValue) => {
       if (typeof cookedReturnValue === "function") {
-        const prevCallback = graph.pruneUrlInfoCallbackRef.current;
-        graph.pruneUrlInfoCallbackRef.current(
-          (prunedUrlInfo, lastReferenceFromOther) => {
-            prevCallback();
-            if (prunedUrlInfo === urlInfo.url) {
-              graph.pruneUrlInfoCallbackRef.current = prevCallback;
+        const removeCallback = urlInfo.graph.urlInfoDereferencedEventEmitter.on(
+          (urlInfoDereferenced, lastReferenceFromOther) => {
+            if (urlInfoDereferenced === urlInfo) {
+              removeCallback();
               cookedReturnValue(lastReferenceFromOther.urlInfo);
             }
           },

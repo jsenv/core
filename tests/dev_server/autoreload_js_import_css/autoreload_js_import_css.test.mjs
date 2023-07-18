@@ -11,7 +11,10 @@ const test = async ({
   pageLogsAfterUpdatingCssFile = [
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading file.js",
+      text:
+        browserName === "chromium"
+          ? "[jsenv] hot reloading file.js (style.css modified)"
+          : "[jsenv] hot reloading file.js (style.css?as_css_module modified)",
     },
     {
       type: "log",
@@ -41,7 +44,7 @@ const test = async ({
   pageLogsAfterRemovingCssImport = [
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
+      text: "[jsenv] hot reloading main.js (main.js modified)",
     },
     {
       type: "log",
@@ -57,7 +60,7 @@ const test = async ({
     },
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] cleanup file.js (previously used in main.js)",
+      text: "[jsenv] cleanup file.js (no longer referenced by main.js)",
     },
     {
       type: "log",
@@ -75,7 +78,7 @@ const test = async ({
   pageLogsAfterRestoringCssImport = [
     {
       type: "startGroupCollapsed",
-      text: "[jsenv] hot reloading main.js",
+      text: "[jsenv] hot reloading main.js (main.js modified)",
     },
     {
       type: "log",
@@ -113,9 +116,11 @@ const test = async ({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    cooldownBetweenFileEvents: 250,
-    clientServerEventsConfig: {
-      logs: false,
+    clientAutoreload: {
+      cooldownBetweenFileEvents: 250,
+      clientServerEventsConfig: {
+        logs: false,
+      },
     },
     ...rest,
   });

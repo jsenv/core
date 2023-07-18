@@ -44,8 +44,6 @@ export const startDevServer = async ({
 
   sourceFilesConfig,
   clientAutoreload = true,
-  cooldownBetweenFileEvents,
-  clientServerEventsConfig = {},
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -61,6 +59,7 @@ export const startDevServer = async ({
   cacheControl = true,
   ribbon = true,
   // toolbar = false,
+  onKitchenCreated = () => {},
 
   sourcemaps = "inline",
   sourcemapsSourcesProtocol,
@@ -185,6 +184,7 @@ export const startDevServer = async ({
           serverStopCallbacks,
           serverEventsDispatcher,
           kitchenCache,
+          onKitchenCreated,
 
           sourceDirectoryUrl,
           sourceMainFilePath,
@@ -200,8 +200,6 @@ export const startDevServer = async ({
           supervisor,
           transpilation,
           clientAutoreload,
-          cooldownBetweenFileEvents,
-          clientServerEventsConfig,
           cacheControl,
           ribbon,
           sourcemaps,

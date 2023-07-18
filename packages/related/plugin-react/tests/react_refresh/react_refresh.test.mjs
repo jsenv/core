@@ -16,7 +16,9 @@ const test = async () => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     plugins: [jsenvPluginReact({ refreshInstrumentation: true })],
-    cooldownBetweenFileEvents: 150,
+    clientAutoreload: {
+      cooldownBetweenFileEvents: 150,
+    },
   });
   const browser = await chromium.launch({
     headless: true,
@@ -63,7 +65,7 @@ const test = async () => {
       countLabelClientFileUrl,
       readFileSync(new URL("./fixtures/count_label_1.jsx", import.meta.url)),
     );
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
       const actual = {
         countLabelText: await getCountLabelText(),

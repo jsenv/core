@@ -4,6 +4,7 @@ import {
   injectQueryParamsIntoSpecifier,
 } from "@jsenv/urls";
 
+import { createEventEmitter } from "../../helpers/event_emitter.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createDependencies } from "./references.js";
 
@@ -13,8 +14,8 @@ export const createUrlGraph = ({
   name = "anonymous",
 }) => {
   const urlGraph = {};
-  const createUrlInfoCallbackRef = { current: () => {} };
-  const pruneUrlInfoCallbackRef = { current: () => {} };
+  const urlInfoCreatedEventEmitter = createEventEmitter();
+  const urlInfoDereferencedEventEmitter = createEventEmitter();
 
   const urlInfoMap = new Map();
   const hasUrlInfo = (key) => {
@@ -35,27 +36,7 @@ export const createUrlGraph = ({
     }
     return null;
   };
-  const deleteUrlInfo = (url, lastReferenceFromOther) => {
-    const urlInfo = urlInfoMap.get(url);
-    if (urlInfo) {
-      urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-      urlInfoMap.delete(url);
-      urlInfo.modifiedTimestamp = Date.now();
-      if (lastReferenceFromOther && !urlInfo.isInline) {
-        pruneUrlInfoCallbackRef.current(urlInfo, lastReferenceFromOther);
-      }
-      urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-        referenceToOther.remove();
-      });
-      if (urlInfo.searchParams.size > 0) {
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-        const urlInfoWithoutSearch = getUrlInfo(urlWithoutSearch);
-        if (urlInfoWithoutSearch) {
-          urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
-        }
-      }
-    }
-  };
+
   const addUrlInfo = (urlInfo) => {
     urlInfo.graph = urlGraph;
     urlInfo.kitchen = kitchen;
@@ -72,7 +53,7 @@ export const createUrlGraph = ({
       const context = Object.create(ownerContext);
       referencedUrlInfo = createUrlInfo(referencedUrl, context);
       addUrlInfo(referencedUrlInfo);
-      createUrlInfoCallbackRef.current(referencedUrlInfo);
+      urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
     }
     if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
       // A resource is represented by a url.
@@ -149,17 +130,16 @@ export const createUrlGraph = ({
   Object.assign(urlGraph, {
     name,
     rootUrlInfo,
-    createUrlInfoCallbackRef,
-    pruneUrlInfoCallbackRef,
 
     urlInfoMap,
     reuseOrCreateUrlInfo,
     hasUrlInfo,
     getUrlInfo,
-    deleteUrlInfo,
     getEntryPoints,
 
     inferReference,
+    urlInfoCreatedEventEmitter,
+    urlInfoDereferencedEventEmitter,
 
     toObject: () => {
       const data = {};
@@ -197,6 +177,7 @@ const createUrlInfo = (url, context) => {
     context,
     error: null,
     modifiedTimestamp: 0,
+    dereferencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,
     isWatched: false,
@@ -221,6 +202,7 @@ const createUrlInfo = (url, context) => {
     originalContentAst: undefined,
     content: undefined,
     contentAst: undefined,
+    contentLength: undefined,
     contentFinalized: false,
 
     sourcemap: null,
@@ -247,37 +229,24 @@ const createUrlInfo = (url, context) => {
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
-  urlInfo.getFirstReferenceFromOther = ({ ignoreWeak } = {}) => {
-    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      if (referenceFromOther.url === urlInfo.url) {
-        if (
-          !referenceFromOther.isInline &&
-          referenceFromOther.next &&
-          referenceFromOther.next.isInline
-        ) {
-          // the url info was inlined, an other reference is required
-          // to consider the non-inlined urlInfo as used
-          continue;
-        }
-        if (ignoreWeak && referenceFromOther.isWeak) {
-          // weak reference don't count as using the url
-          continue;
-        }
-        return referenceFromOther;
-      }
-    }
-    return null;
-  };
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {
       return true;
     }
-    // if (urlInfo.type === "sourcemap") {
-    //   return true;
-    // }
-    // check if there is a strong reference to this urlInfo
-    if (urlInfo.getFirstReferenceFromOther({ ignoreWeak: true })) {
-      return true;
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      if (referenceFromOther.urlInfo !== urlInfo) {
+        continue;
+      }
+      if (referenceFromOther.isWeak) {
+        // weak reference don't count as using the url
+        continue;
+      }
+      if (referenceFromOther.gotInlined()) {
+        // the url info was inlined, an other reference is required
+        // to consider the non-inlined urlInfo as used
+        continue;
+      }
+      return referenceFromOther.ownerUrlInfo.isUsed();
     }
     // nothing uses this url anymore
     // - versioning update inline content
@@ -367,7 +336,7 @@ const createUrlInfo = (url, context) => {
     reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam.urlInfo;
   };
-  urlInfo.considerModified = ({ modifiedTimestamp = Date.now() } = {}) => {
+  urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
     const iterate = (urlInfo) => {
       if (visitedSet.has(urlInfo)) {
@@ -388,9 +357,29 @@ const createUrlInfo = (url, context) => {
     };
     iterate(urlInfo);
   };
-  urlInfo.deleteFromGraph = (reference) => {
-    urlInfo.graph.deleteUrlInfo(urlInfo.url, reference);
+  urlInfo.onDereferenced = (lastReferenceFromOther) => {
+    urlInfo.dereferencedTimestamp = Date.now();
+    urlInfo.graph.urlInfoDereferencedEventEmitter.emit(
+      urlInfo,
+      lastReferenceFromOther,
+    );
   };
+
+  // not used for now
+  // urlInfo.deleteFromGraph = () => {
+  //   urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+  //   urlInfo.graph.urlInfoMap.delete(url);
+  //   urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+  //     referenceToOther.remove();
+  //   });
+  //   if (urlInfo.searchParams.size > 0) {
+  //     const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+  //     const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
+  //     if (urlInfoWithoutSearch) {
+  //       urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+  //     }
+  //   }
+  // };
   urlInfo.cook = (customContext) => {
     return urlInfo.context.cook(urlInfo, customContext);
   };

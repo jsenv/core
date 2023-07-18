@@ -213,63 +213,60 @@ export const createBuildVersionsManager = ({
 
       const contentOnlyVersionMap = new Map();
       generate_content_only_versions: {
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          // ignore:
-          // - inline files and data files:
-          //   they are already taken into account in the file where they appear
-          // - ignored files:
-          //   we don't know their content
-          // - unused files without reference
-          //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
-          //   Are used at some point just to be discarded later because they need to be converted
-          //   There is no need to version them and we could not because the file have been ignored
-          //   so their content is unknown
-          if (urlInfo.isRoot) {
-            return;
-          }
-          if (urlInfo.type === "sourcemap") {
-            return;
-          }
-          if (urlInfo.isInline) {
-            return;
-          }
-          if (urlInfo.url.startsWith("data:")) {
-            // urlInfo became inline and is not referenced by something else
-            return;
-          }
-          if (urlInfo.url.startsWith("ignore:")) {
-            return;
-          }
-          if (!urlInfo.isUsed()) {
-            return;
-          }
-          let content = urlInfo.content;
-          if (urlInfo.type === "html") {
-            content = stringifyHtmlAst(
-              parseHtmlString(urlInfo.content, {
-                storeOriginalPositions: false,
-              }),
-              {
-                cleanupJsenvAttributes: true,
-                cleanupPositionAttributes: true,
-              },
-            );
-          }
-          if (
-            CONTENT_TYPE.isTextual(urlInfo.contentType) &&
-            urlInfo.referenceToOthersSet.size > 0
-          ) {
-            const containedPlaceholders = new Set();
-            const contentWithPredictibleVersionPlaceholders =
-              replaceWithDefaultAndPopulateContainedPlaceholders(
-                content,
-                containedPlaceholders,
+        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+          finalKitchen.graph.rootUrlInfo,
+          (urlInfo) => {
+            // ignore:
+            // - inline files and data files:
+            //   they are already taken into account in the file where they appear
+            // - ignored files:
+            //   we don't know their content
+            // - unused files without reference
+            //   File updated such as style.css -> style.css.js or file.js->file.nomodule.js
+            //   Are used at some point just to be discarded later because they need to be converted
+            //   There is no need to version them and we could not because the file have been ignored
+            //   so their content is unknown
+            if (urlInfo.type === "sourcemap") {
+              return;
+            }
+            if (urlInfo.isInline) {
+              return;
+            }
+            if (urlInfo.url.startsWith("data:")) {
+              // urlInfo became inline and is not referenced by something else
+              return;
+            }
+            if (urlInfo.url.startsWith("ignore:")) {
+              return;
+            }
+            let content = urlInfo.content;
+            if (urlInfo.type === "html") {
+              content = stringifyHtmlAst(
+                parseHtmlString(urlInfo.content, {
+                  storeOriginalPositions: false,
+                }),
+                {
+                  cleanupJsenvAttributes: true,
+                  cleanupPositionAttributes: true,
+                },
               );
-            content = contentWithPredictibleVersionPlaceholders;
-          }
-          const contentVersion = generateVersion([content], versionLength);
-          contentOnlyVersionMap.set(urlInfo, contentVersion);
-        });
+            }
+            if (
+              CONTENT_TYPE.isTextual(urlInfo.contentType) &&
+              urlInfo.referenceToOthersSet.size > 0
+            ) {
+              const containedPlaceholders = new Set();
+              const contentWithPredictibleVersionPlaceholders =
+                replaceWithDefaultAndPopulateContainedPlaceholders(
+                  content,
+                  containedPlaceholders,
+                );
+              content = contentWithPredictibleVersionPlaceholders;
+            }
+            const contentVersion = generateVersion([content], versionLength);
+            contentOnlyVersionMap.set(urlInfo, contentVersion);
+          },
+        );
       }
 
       generate_versions: {

@@ -463,6 +463,10 @@ const createReference = ({
     return implicitReference;
   };
 
+  reference.gotInlined = () => {
+    return !reference.isInline && reference.next && reference.next.isInline;
+  };
+
   reference.remove = () => removeDependency(reference);
 
   // Object.preventExtensions(reference) // useful to ensure all properties are declared here
@@ -557,7 +561,6 @@ const canAddOrRemoveReference = (reference) => {
 const applyDependencyRemovalEffects = (reference) => {
   const { ownerUrlInfo } = reference;
   const { referenceToOthersSet } = ownerUrlInfo;
-
   if (reference.isImplicit && !reference.isInline) {
     let hasAnOtherImplicitRef = false;
     for (const referenceToOther of referenceToOthersSet) {
@@ -589,8 +592,29 @@ const applyDependencyRemovalEffects = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
-  const firstReferenceFromOther =
-    referencedUrlInfo.getFirstReferenceFromOther();
+  let firstReferenceFromOther;
+  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+    if (referenceFromOther.urlInfo !== referencedUrlInfo) {
+      continue;
+    }
+    // Here we want to know if the file is referenced by an other file.
+    // So we want to ignore reference that are created by other means:
+    // - "http_request"
+    //   This type of reference is created when client request a file
+    //   that we don't know yet
+    //   1. reference(s) to this file are not yet discovered
+    //   2. there is no reference to this file
+    if (referenceFromOther.type === "http_request") {
+      continue;
+    }
+    if (referenceFromOther.gotInlined()) {
+      // the url info was inlined, an other reference is required
+      // to consider the non-inlined urlInfo as used
+      continue;
+    }
+    firstReferenceFromOther = referenceFromOther;
+    break;
+  }
   if (firstReferenceFromOther) {
     // either applying new ref should override old ref
     // or we should first remove effects before adding new ones
@@ -601,11 +625,8 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
-  if (reference.type !== "http_request") {
-    referencedUrlInfo.deleteFromGraph(reference);
-    return true;
-  }
-  return false;
+  referencedUrlInfo.onDereferenced(reference);
+  return true;
 };
 
 const traceFromUrlSite = (urlSite) => {
