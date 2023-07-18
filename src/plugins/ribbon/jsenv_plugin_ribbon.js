@@ -25,9 +25,13 @@ export const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
+        const jsenvToolbarHtmlClientFileUrl = urlInfo.context.getPluginMeta(
+          "jsenvToolbarHtmlClientFileUrl",
+        );
         if (
-          urlInfo.url ===
-          urlInfo.context.getPluginMeta("jsenvToolbarHtmlClientFileUrl")
+          jsenvToolbarHtmlClientFileUrl &&
+          // startsWith to ignore search params
+          urlInfo.url.startsWith(jsenvToolbarHtmlClientFileUrl)
         ) {
           return null;
         }

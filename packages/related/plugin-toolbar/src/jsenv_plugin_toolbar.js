@@ -30,6 +30,9 @@ export const jsenvPluginToolbar = ({
     },
     transformUrlContent: {
       html: (urlInfo) => {
+        if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
+          return null;
+        }
         const htmlAst = parseHtmlString(urlInfo.content);
         const toolbarInjectorReference = urlInfo.dependencies.inject({
           type: "js_import",
