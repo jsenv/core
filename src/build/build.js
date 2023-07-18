@@ -309,7 +309,7 @@ build ${entryPointKeys.length} entry points`);
       ignoreProtocol: "keep",
       build: true,
       runtimeCompat,
-      baseContext: contextSharedDuringBuild,
+      initialContext: contextSharedDuringBuild,
       plugins: [
         ...plugins,
         {
@@ -418,7 +418,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         build: true,
         shape: true,
         runtimeCompat,
-        baseContext: contextSharedDuringBuild,
+        initialContext: contextSharedDuringBuild,
+        initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
         plugins: [
           jsenvPluginReferenceAnalysis({
             ...referenceAnalysis,

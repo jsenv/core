@@ -23,7 +23,12 @@ const HOOK_NAMES = [
   "destroy",
 ];
 
-export const createPluginController = (kitchenContext) => {
+export const createPluginController = (
+  kitchenContext,
+  initialPuginsMeta = {},
+) => {
+  const pluginsMeta = initialPuginsMeta;
+
   const plugins = [];
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
@@ -52,19 +57,33 @@ export const createPluginController = (kitchenContext) => {
       plugin.name = "anonymous";
     }
     plugins.push(plugin);
-    Object.keys(plugin).forEach((key) => {
+    for (const key of Object.keys(plugin)) {
+      if (key === "meta") {
+        const value = plugin[key];
+        if (typeof value !== "object" || value === null) {
+          console.warn(`plugin.meta must be an object, got ${value}`);
+          continue;
+        }
+        Object.assign(pluginsMeta, value);
+        // any extension/modification on plugin.meta
+        // won't be taken into account so we freeze object
+        // to throw in case it happen
+        Object.freeze(value);
+        continue;
+      }
+
       if (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents" ||
-        key === "meta"
+        key === "serverEvents"
       ) {
-        return;
+        continue;
       }
       const isHook = HOOK_NAMES.includes(key);
       if (!isHook) {
         console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
+        continue;
       }
       const hookName = key;
       const hookValue = plugin[hookName];
@@ -81,7 +100,7 @@ export const createPluginController = (kitchenContext) => {
           group.push(hook);
         }
       }
-    });
+    }
   };
   const testAppliesDuring = (plugin) => {
     const { appliesDuring } = plugin;
@@ -253,16 +272,12 @@ export const createPluginController = (kitchenContext) => {
   };
 
   const getPluginMeta = (id) => {
-    for (const plugin of plugins) {
-      const { meta } = plugin;
-      if (meta && meta[id] !== undefined) {
-        return meta[id];
-      }
-    }
-    return undefined;
+    const value = pluginsMeta[id];
+    return value;
   };
 
   return {
+    pluginsMeta,
     plugins,
     pushPlugin,
     unshiftPlugin,

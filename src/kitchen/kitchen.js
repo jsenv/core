@@ -51,12 +51,13 @@ export const createKitchen = ({
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
   outDirectoryUrl,
-  baseContext = {},
+  initialContext = {},
+  initialPluginsMeta = {},
 }) => {
   const logger = createLogger({ logLevel });
   const kitchen = {
     context: {
-      ...baseContext,
+      ...initialContext,
       kitchen: null,
       signal,
       logger,
@@ -88,11 +89,12 @@ export const createKitchen = ({
   });
   kitchen.graph = graph;
 
-  const pluginController = createPluginController(kitchenContext);
-  kitchen.pluginController = pluginController;
-  kitchenContext.getPluginMeta = memoizeGetPluginMeta(
-    pluginController.getPluginMeta,
+  const pluginController = createPluginController(
+    kitchenContext,
+    initialPluginsMeta,
   );
+  kitchen.pluginController = pluginController;
+  kitchenContext.getPluginMeta = pluginController.getPluginMeta;
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
@@ -616,19 +618,6 @@ const memoizeCook = (cook) => {
     urlInfoCache.set(urlInfo, promise);
     await cook(urlInfo, context);
     resolveCookPromise();
-  };
-};
-
-const memoizeGetPluginMeta = (getPluginMeta) => {
-  const cache = new Map();
-  return (id) => {
-    const fromCache = cache.get(id);
-    if (fromCache) {
-      return fromCache;
-    }
-    const value = getPluginMeta(id);
-    cache.set(id, value);
-    return value;
   };
 };
 

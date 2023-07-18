@@ -11880,7 +11880,12 @@ const HOOK_NAMES = [
   "destroy",
 ];
 
-const createPluginController = (kitchenContext) => {
+const createPluginController = (
+  kitchenContext,
+  initialPuginsMeta = {},
+) => {
+  const pluginsMeta = initialPuginsMeta;
+
   const plugins = [];
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
@@ -11909,19 +11914,33 @@ const createPluginController = (kitchenContext) => {
       plugin.name = "anonymous";
     }
     plugins.push(plugin);
-    Object.keys(plugin).forEach((key) => {
+    for (const key of Object.keys(plugin)) {
+      if (key === "meta") {
+        const value = plugin[key];
+        if (typeof value !== "object" || value === null) {
+          console.warn(`plugin.meta must be an object, got ${value}`);
+          continue;
+        }
+        Object.assign(pluginsMeta, value);
+        // any extension/modification on plugin.meta
+        // won't be taken into account so we freeze object
+        // to throw in case it happen
+        Object.freeze(value);
+        continue;
+      }
+
       if (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents" ||
-        key === "meta"
+        key === "serverEvents"
       ) {
-        return;
+        continue;
       }
       const isHook = HOOK_NAMES.includes(key);
       if (!isHook) {
         console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
+        continue;
       }
       const hookName = key;
       const hookValue = plugin[hookName];
@@ -11938,7 +11957,7 @@ const createPluginController = (kitchenContext) => {
           group.push(hook);
         }
       }
-    });
+    }
   };
   const testAppliesDuring = (plugin) => {
     const { appliesDuring } = plugin;
@@ -12110,16 +12129,12 @@ const createPluginController = (kitchenContext) => {
   };
 
   const getPluginMeta = (id) => {
-    for (const plugin of plugins) {
-      const { meta } = plugin;
-      if (meta && meta[id] !== undefined) {
-        return meta[id];
-      }
-    }
-    return undefined;
+    const value = pluginsMeta[id];
+    return value;
   };
 
   return {
+    pluginsMeta,
     plugins,
     pushPlugin,
     unshiftPlugin,
@@ -13144,12 +13159,13 @@ const createKitchen = ({
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
   outDirectoryUrl,
-  baseContext = {},
+  initialContext = {},
+  initialPluginsMeta = {},
 }) => {
   const logger = createLogger({ logLevel });
   const kitchen = {
     context: {
-      ...baseContext,
+      ...initialContext,
       kitchen: null,
       signal,
       logger,
@@ -13181,11 +13197,12 @@ const createKitchen = ({
   });
   kitchen.graph = graph;
 
-  const pluginController = createPluginController(kitchenContext);
-  kitchen.pluginController = pluginController;
-  kitchenContext.getPluginMeta = memoizeGetPluginMeta(
-    pluginController.getPluginMeta,
+  const pluginController = createPluginController(
+    kitchenContext,
+    initialPluginsMeta,
   );
+  kitchen.pluginController = pluginController;
+  kitchenContext.getPluginMeta = pluginController.getPluginMeta;
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
@@ -13709,19 +13726,6 @@ const memoizeCook = (cook) => {
     urlInfoCache.set(urlInfo, promise);
     await cook(urlInfo, context);
     resolveCookPromise();
-  };
-};
-
-const memoizeGetPluginMeta = (getPluginMeta) => {
-  const cache = new Map();
-  return (id) => {
-    const fromCache = cache.get(id);
-    if (fromCache) {
-      return fromCache;
-    }
-    const value = getPluginMeta(id);
-    cache.set(id, value);
-    return value;
   };
 };
 
@@ -19077,27 +19081,25 @@ const injectVersionMappingsAsGlobal = async (
   versionMappings,
 ) => {
   if (urlInfo.type === "html") {
-    await prependContent(urlInfo, {
-      type: "js_classic",
-      content: generateClientCodeForVersionMappings(versionMappings, {
-        globalName: "window",
-        minification: Boolean(
-          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-        ),
-      }),
+    const minification = Boolean(
+      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    );
+    const content = generateClientCodeForVersionMappings(versionMappings, {
+      globalName: "window",
+      minification,
     });
+    await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    await prependContent(urlInfo, {
-      type: "js_classic",
-      content: generateClientCodeForVersionMappings(versionMappings, {
-        globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: Boolean(
-          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-        ),
-      }),
+    const minification = Boolean(
+      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    );
+    const content = generateClientCodeForVersionMappings(versionMappings, {
+      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+      minification,
     });
+    await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
 };
@@ -19902,7 +19904,7 @@ build ${entryPointKeys.length} entry points`);
       ignoreProtocol: "keep",
       build: true,
       runtimeCompat,
-      baseContext: contextSharedDuringBuild,
+      initialContext: contextSharedDuringBuild,
       plugins: [
         ...plugins,
         {
@@ -20011,7 +20013,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         build: true,
         shape: true,
         runtimeCompat,
-        baseContext: contextSharedDuringBuild,
+        initialContext: contextSharedDuringBuild,
+        initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
         plugins: [
           jsenvPluginReferenceAnalysis({
             ...referenceAnalysis,
