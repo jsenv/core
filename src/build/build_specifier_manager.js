@@ -1,7 +1,18 @@
 import { ANSI } from "@jsenv/log";
 import { urlIsInsideOf } from "@jsenv/urls";
 
-export const createBuildSpecifierManager = ({ logger, buildDirectoryUrl }) => {
+import { createBuildUrlsGenerator } from "./build_urls_generator.js";
+
+export const createBuildSpecifierManager = ({
+  logger,
+  buildDirectoryUrl,
+  assetsDirectory,
+}) => {
+  const buildUrlsGenerator = createBuildUrlsGenerator({
+    buildDirectoryUrl,
+    assetsDirectory,
+  });
+
   const buildDirectoryRedirections = new Map();
   const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
     if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
@@ -17,6 +28,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   };
 
   return {
+    buildUrlsGenerator,
     buildDirectoryRedirections,
     associateBuildUrlAndRawUrl,
     redirectToBuildDirectory: () => {},

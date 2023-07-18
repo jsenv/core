@@ -58,7 +58,6 @@ import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.j
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
-import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { createBuildVersionsManager } from "./build_versions_manager.js";
 
 // default runtimeCompat corresponds to
@@ -344,13 +343,10 @@ build ${entryPointKeys.length} entry points`);
         : undefined,
     });
 
-    const buildUrlsGenerator = createBuildUrlsGenerator({
-      buildDirectoryUrl,
-      assetsDirectory,
-    });
     const buildSpecifierManager = createBuildSpecifierManager({
       logger,
       buildDirectoryUrl,
+      assetsDirectory,
     });
 
     const buildSpecifierMap = new Map();
@@ -504,10 +500,14 @@ build ${entryPointKeys.length} entry points`);
                   // throw new Error(`cannot find raw url for "${reference.url}"`)
                   return reference.url;
                 }
-                const buildUrl = buildUrlsGenerator.generate(reference.url, {
-                  urlInfo: rawUrlInfo,
-                  ownerUrlInfo: ownerFinalUrlInfo,
-                });
+                const buildUrl =
+                  buildSpecifierManager.buildSpecifierManager.buildUrlsGenerator.generate(
+                    reference.url,
+                    {
+                      urlInfo: rawUrlInfo,
+                      ownerUrlInfo: ownerFinalUrlInfo,
+                    },
+                  );
                 buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   rawUrlInfo.url,
@@ -537,19 +537,21 @@ build ${entryPointKeys.length} entry points`);
                 if (urlIsInsideOf(urlBeforeRedirect, buildDirectoryUrl)) {
                   // the redirection happened on a build url, happens due to:
                   // 1. bundling
-                  const buildUrl = buildUrlsGenerator.generate(
-                    urlAfterRedirect,
-                    {
-                      urlInfo,
-                    },
-                  );
+                  const buildUrl =
+                    buildSpecifierManager.buildUrlsGenerator.generate(
+                      urlAfterRedirect,
+                      {
+                        urlInfo,
+                      },
+                    );
                   finalRedirections.set(urlBeforeRedirect, buildUrl);
                   return buildUrl;
                 }
                 const rawUrl = urlAfterRedirect;
-                const buildUrl = buildUrlsGenerator.generate(rawUrl, {
-                  urlInfo,
-                });
+                const buildUrl =
+                  buildSpecifierManager.buildUrlsGenerator.generate(rawUrl, {
+                    urlInfo,
+                  });
                 finalRedirections.set(urlBeforeRedirect, buildUrl);
                 buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
@@ -561,12 +563,16 @@ build ${entryPointKeys.length} entry points`);
               // from "js_module_fallback":
               // - to inject "s.js"
               if (reference.injected) {
-                const buildUrl = buildUrlsGenerator.generate(reference.url, {
-                  urlInfo: {
-                    data: {},
-                    type: "js_classic",
-                  },
-                });
+                const buildUrl =
+                  buildSpecifierManager.buildUrlsGenerator.generate(
+                    reference.url,
+                    {
+                      urlInfo: {
+                        data: {},
+                        type: "js_classic",
+                      },
+                    },
+                  );
                 buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   reference.url,
@@ -584,13 +590,14 @@ build ${entryPointKeys.length} entry points`);
                 const referencedUrlObject = new URL(reference.url);
                 referencedUrlObject.searchParams.delete("as_js_classic");
                 referencedUrlObject.searchParams.delete("as_json_module");
-                const buildUrl = buildUrlsGenerator.generate(
-                  referencedUrlObject.href,
-                  {
-                    urlInfo: rawUrlInfo,
-                    ownerUrlInfo: ownerFinalUrlInfo,
-                  },
-                );
+                const buildUrl =
+                  buildSpecifierManager.buildUrlsGenerator.generate(
+                    referencedUrlObject.href,
+                    {
+                      urlInfo: rawUrlInfo,
+                      ownerUrlInfo: ownerFinalUrlInfo,
+                    },
+                  );
                 buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   rawUrlInfo.url,
@@ -605,12 +612,16 @@ build ${entryPointKeys.length} entry points`);
               // files generated during the final graph:
               // - sourcemaps
               // const finalUrlInfo = finalGraph.getUrlInfo(url)
-              const buildUrl = buildUrlsGenerator.generate(reference.url, {
-                urlInfo: {
-                  data: {},
-                  type: "asset",
-                },
-              });
+              const buildUrl =
+                buildSpecifierManager.buildUrlsGenerator.generate(
+                  reference.url,
+                  {
+                    urlInfo: {
+                      data: {},
+                      type: "asset",
+                    },
+                  },
+                );
               return buildUrl;
             },
             formatReference: (reference) => {
@@ -938,9 +949,10 @@ build ${entryPointKeys.length} entry points`);
                   }
                 });
               }
-              const buildUrl = buildUrlsGenerator.generate(url, {
-                urlInfo: bundleUrlInfo,
-              });
+              const buildUrl =
+                buildSpecifierManager.buildUrlsGenerator.generate(url, {
+                  urlInfo: bundleUrlInfo,
+                });
               bundleRedirections.set(url, buildUrl);
               if (urlIsInsideOf(url, buildDirectoryUrl)) {
                 if (bundlerGeneratedUrlInfo.data.isDynamicEntry) {
