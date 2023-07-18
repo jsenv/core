@@ -29,12 +29,7 @@ import {
   comparePathnames,
 } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import {
-  createLogger,
-  createTaskLog,
-  ANSI,
-  createDetailedMessage,
-} from "@jsenv/log";
+import { createLogger, createTaskLog, createDetailedMessage } from "@jsenv/log";
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import {
   parseHtmlString,
@@ -62,6 +57,7 @@ import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsen
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 
+import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { createBuildVersionsManager } from "./build_versions_manager.js";
 
@@ -352,19 +348,11 @@ build ${entryPointKeys.length} entry points`);
       buildDirectoryUrl,
       assetsDirectory,
     });
-    const buildDirectoryRedirections = new Map();
-    const associateBuildUrlAndRawUrl = (buildUrl, rawUrl, reason) => {
-      if (urlIsInsideOf(rawUrl, buildDirectoryUrl)) {
-        throw new Error(`raw url must be inside rawGraph, got ${rawUrl}`);
-      }
-      if (buildDirectoryRedirections.get(buildUrl) !== rawUrl) {
-        logger.debug(`build url generated (${reason})
-${ANSI.color(rawUrl, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-`);
-        buildDirectoryRedirections.set(buildUrl, rawUrl);
-      }
-    };
+    const buildSpecifierManager = createBuildSpecifierManager({
+      logger,
+      buildDirectoryUrl,
+    });
+
     const buildSpecifierMap = new Map();
     const bundleUrlInfos = {};
     const bundlers = {};
@@ -440,9 +428,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return buildUrl;
                 }
                 if (reference.type === "filesystem") {
-                  const ownerRawUrl = buildDirectoryRedirections.get(
-                    reference.ownerUrlInfo.url,
-                  );
+                  const ownerRawUrl =
+                    buildSpecifierManager.buildSpecifierManager.buildDirectoryRedirections.get(
+                      reference.ownerUrlInfo.url,
+                    );
                   const ownerUrl = ensurePathnameTrailingSlash(ownerRawUrl);
                   return new URL(reference.specifier, ownerUrl).href;
                 }
@@ -474,7 +463,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 return reference.original ? reference.original.url : null;
               }
               // already a build url
-              const rawUrl = buildDirectoryRedirections.get(reference.url);
+              const rawUrl =
+                buildSpecifierManager.buildSpecifierManager.buildDirectoryRedirections.get(
+                  reference.url,
+                );
               if (rawUrl) {
                 return reference.url;
               }
@@ -516,7 +508,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   urlInfo: rawUrlInfo,
                   ownerUrlInfo: ownerFinalUrlInfo,
                 });
-                associateBuildUrlAndRawUrl(
+                buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   rawUrlInfo.url,
                   "inline content",
@@ -559,7 +551,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   urlInfo,
                 });
                 finalRedirections.set(urlBeforeRedirect, buildUrl);
-                associateBuildUrlAndRawUrl(
+                buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   rawUrl,
                   "redirected during postbuild",
@@ -575,7 +567,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     type: "js_classic",
                   },
                 });
-                associateBuildUrlAndRawUrl(
+                buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   reference.url,
                   "injected during postbuild",
@@ -599,7 +591,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     ownerUrlInfo: ownerFinalUrlInfo,
                   },
                 );
-                associateBuildUrlAndRawUrl(
+                buildSpecifierManager.associateBuildUrlAndRawUrl(
                   buildUrl,
                   rawUrlInfo.url,
                   "raw file",
@@ -663,17 +655,19 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 if (bundleUrlInfo) {
                   return bundleUrlInfo;
                 }
-                const rawUrl = buildDirectoryRedirections.get(url) || url;
+                const rawUrl =
+                  buildSpecifierManager.buildDirectoryRedirections.get(url) ||
+                  url;
                 const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
                 if (!rawUrlInfo) {
                   throw new Error(
                     createDetailedMessage(`Cannot find url`, {
                       url,
                       "raw urls": Array.from(
-                        buildDirectoryRedirections.values(),
+                        buildSpecifierManager.buildDirectoryRedirections.values(),
                       ),
                       "build urls": Array.from(
-                        buildDirectoryRedirections.keys(),
+                        buildSpecifierManager.buildDirectoryRedirections.keys(),
                       ),
                     }),
                   );
@@ -731,7 +725,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                       prevReference.url;
                     return fromBundleOrRawGraph(urlBeforeRedirect);
                   }
-                  if (buildDirectoryRedirections.has(prevReference.url)) {
+                  if (
+                    buildSpecifierManager.buildDirectoryRedirections.has(
+                      prevReference.url,
+                    )
+                  ) {
                     // the prev reference is transformed to fetch underlying resource
                     // (getWithoutSearchParam)
                     return fromBundleOrRawGraph(prevReference.url);
@@ -954,7 +952,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                     bundlerGeneratedUrlInfo.originalUrl,
                     buildUrl,
                   );
-                  associateBuildUrlAndRawUrl(
+                  buildSpecifierManager.associateBuildUrlAndRawUrl(
                     buildUrl,
                     bundlerGeneratedUrlInfo.originalUrl,
                     "bundle",
@@ -963,7 +961,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   bundleUrlInfo.data.generatedToShareCode = true;
                 }
               } else {
-                associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
+                buildSpecifierManager.associateBuildUrlAndRawUrl(
+                  buildUrl,
+                  url,
+                  "bundle",
+                );
               }
               bundleUrlInfos[buildUrl] = bundleUrlInfo;
               if (buildUrl.includes("?")) {
@@ -1095,7 +1097,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                   return;
                 }
                 if (!buildUrlInfo.isUsed()) {
-                  let rawUrl = buildDirectoryRedirections.get(buildUrl);
+                  let rawUrl =
+                    buildSpecifierManager.buildDirectoryRedirections.get(
+                      buildUrl,
+                    );
                   if (!rawUrl && rawKitchen.graph.getUrlInfo(buildUrl)) {
                     rawUrl = buildUrl;
                   }
@@ -1153,7 +1158,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
                 url = bundleRedirections.get(url) || url;
                 url = bundleInternalRedirections.get(url) || url;
                 url = finalRedirections.get(url) || url;
-                url = findKey(buildDirectoryRedirections, url) || url;
+                url =
+                  findKey(
+                    buildSpecifierManager.buildDirectoryRedirections,
+                    url,
+                  ) || url;
                 onBuildUrl(url);
               } else {
                 onBuildUrl(null);
@@ -1278,7 +1287,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const buildInlineRelativeUrls = [];
     const getBuildRelativeUrl = (url) => {
       const urlObject = new URL(url);
-      // urlObject.searchParams.delete("js_module_fallback");
+      urlObject.searchParams.delete("js_module_fallback");
       urlObject.searchParams.delete("as_css_module");
       urlObject.searchParams.delete("as_json_module");
       urlObject.searchParams.delete("as_text_module");
