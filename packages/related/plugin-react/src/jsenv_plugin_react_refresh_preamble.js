@@ -16,7 +16,10 @@ export const jsenvPluginReactRefreshPreamble = () => {
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
-        if (urlInfo.data.isJsenvToolbar) {
+        if (
+          urlInfo.url ===
+          urlInfo.context.getPluginMeta("jsenvToolbarHtmlClientFileUrl")
+        ) {
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);

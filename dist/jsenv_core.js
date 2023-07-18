@@ -12108,6 +12108,16 @@ const createPluginController = (kitchenContext) => {
     });
   };
 
+  const getPluginMeta = (id) => {
+    for (const plugin of plugins) {
+      const { meta } = plugin;
+      if (meta && meta[id] !== undefined) {
+        return meta[id];
+      }
+    }
+    return undefined;
+  };
+
   return {
     plugins,
     pushPlugin,
@@ -12120,6 +12130,8 @@ const createPluginController = (kitchenContext) => {
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
+
+    getPluginMeta,
 
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
@@ -13150,6 +13162,7 @@ const createKitchen = ({
       inlineContentClientFileUrl,
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
+      getPluginMeta: null,
       sourcemaps,
       outDirectoryUrl,
     },
@@ -13169,6 +13182,9 @@ const createKitchen = ({
 
   const pluginController = createPluginController(kitchenContext);
   kitchen.pluginController = pluginController;
+  kitchenContext.getPluginMeta = memoizeGetPluginMeta(
+    pluginController.getPluginMeta,
+  );
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
@@ -13692,6 +13708,19 @@ const memoizeCook = (cook) => {
     urlInfoCache.set(urlInfo, promise);
     await cook(urlInfo, context);
     resolveCookPromise();
+  };
+};
+
+const memoizeGetPluginMeta = (getPluginMeta) => {
+  const cache = new Map();
+  return (id) => {
+    const fromCache = cache.get(id);
+    if (fromCache) {
+      return fromCache;
+    }
+    const value = getPluginMeta(id);
+    cache.set(id, value);
+    return value;
   };
 };
 
@@ -18703,7 +18732,10 @@ const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
-        if (urlInfo.data.isJsenvToolbar || urlInfo.data.noribbon) {
+        if (
+          urlInfo.url ===
+          urlInfo.context.getPluginMeta("jsenvToolbarHtmlClientFileUrl")
+        ) {
           return null;
         }
         const { ribbon } = URL_META.applyAssociations({
@@ -19044,7 +19076,9 @@ const injectVersionMappingsAsGlobal = async (
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
-        minification: urlInfo.context.minification,
+        minification: Boolean(
+          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+        ),
       }),
     });
     return;
@@ -19054,7 +19088,9 @@ const injectVersionMappingsAsGlobal = async (
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: urlInfo.context.minification,
+        minification: Boolean(
+          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+        ),
       }),
     });
     return;
@@ -19087,12 +19123,15 @@ const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
   // jsenv_plugin_importmap.js is removing importmap during build
   // it means at this point we know HTML has no importmap in it
   // we can safely inject one
+  const importmapMinification = Boolean(
+    urlInfo.context.getPluginMeta("willMinifyJson"),
+  );
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: urlInfo.context.minification
+      textContent: importmapMinification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),
@@ -19847,9 +19886,6 @@ build ${entryPointKeys.length} entry points`);
           return true;
         return false;
       })(),
-      minification: plugins.some(
-        (plugin) => plugin.name === "jsenv:minification",
-      ),
     };
     const rawKitchen = createKitchen({
       signal,

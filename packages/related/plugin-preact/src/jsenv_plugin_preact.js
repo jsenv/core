@@ -72,7 +72,10 @@ export const jsenvPluginPreact = ({
         if (urlInfo.context.build && preactDevtools !== "dev_and_build") {
           return null;
         }
-        if (urlInfo.data.isJsenvToolbar) {
+        if (
+          urlInfo.url ===
+          urlInfo.context.getPluginMeta("jsenvToolbarHtmlClientFileUrl")
+        ) {
           return null;
         }
         const htmlAst = parseHtmlString(urlInfo.content);

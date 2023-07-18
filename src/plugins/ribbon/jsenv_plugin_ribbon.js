@@ -25,7 +25,10 @@ export const jsenvPluginRibbon = ({
     appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
-        if (urlInfo.data.isJsenvToolbar || urlInfo.data.noribbon) {
+        if (
+          urlInfo.url ===
+          urlInfo.context.getPluginMeta("jsenvToolbarHtmlClientFileUrl")
+        ) {
           return null;
         }
         const { ribbon } = URL_META.applyAssociations({

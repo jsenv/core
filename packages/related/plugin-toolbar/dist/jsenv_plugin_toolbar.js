@@ -13,12 +13,11 @@ const jsenvPluginToolbar = ({
   return {
     name: "jsenv:toolbar",
     appliesDuring: "dev",
+    meta: {
+      jsenvToolbarHtmlClientFileUrl: toolbarHtmlClientFileUrl
+    },
     transformUrlContent: {
       html: urlInfo => {
-        if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
-          urlInfo.data.isJsenvToolbar = true;
-          return null;
-        }
         const htmlAst = parseHtmlString(urlInfo.content);
         const toolbarInjectorReference = urlInfo.dependencies.inject({
           type: "js_import",
