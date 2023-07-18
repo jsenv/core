@@ -5,7 +5,7 @@ import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 let debug = false;
-let pruneCalls = [];
+let dereferencedCalls = [];
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -15,7 +15,7 @@ const devServer = await startDevServer({
   },
   onKitchenCreated: (kitchen) => {
     kitchen.graph.urlInfoDereferencedEventEmitter.on((call) => {
-      pruneCalls.push(call);
+      dereferencedCalls.push(call);
     });
   },
   sourcemaps: "off",
@@ -36,11 +36,11 @@ try {
   {
     const actual = {
       result: await getResult(),
-      pruneCalls,
+      dereferencedCalls,
     };
     const expected = {
       result: 42,
-      pruneCalls: [],
+      dereferencedCalls: [],
     };
     assert({ actual, expected });
   }
@@ -48,11 +48,11 @@ try {
   {
     const actual = {
       result: await getResult(),
-      pruneCalls,
+      dereferencedCalls,
     };
     const expected = {
       result: 42,
-      pruneCalls: [],
+      dereferencedCalls: [],
     };
     assert({ actual, expected });
   }
