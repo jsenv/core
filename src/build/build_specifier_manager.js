@@ -14,10 +14,12 @@ export const createBuildSpecifierManager = ({
   buildDirectoryUrl,
   base,
   assetsDirectory,
-  finalRedirections,
   buildVersionsManager,
 }) => {
   const buildSpecifierToBuildUrlMap = new Map();
+  const bundleRedirections = new Map();
+  const bundleInternalRedirections = new Map();
+  const finalRedirections = new Map();
 
   const buildUrlsGenerator = createBuildUrlsGenerator({
     buildDirectoryUrl,
@@ -62,6 +64,42 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     buildUrlsGenerator,
     buildDirectoryRedirections,
     associateBuildUrlAndRawUrl,
+    bundleRedirections,
+
+    generateBuildUrlForBundle: (urlInfoBundled, urlInfo) => {
+      const buildUrl = buildUrlsGenerator.generate(urlInfo.url, {
+        urlInfo: urlInfoBundled,
+      });
+      bundleRedirections.set(urlInfo.url, buildUrl);
+      if (urlIsInsideOf(urlInfo.url, buildDirectoryUrl)) {
+        if (urlInfoBundled.data.isDynamicEntry) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(
+            urlInfoBundled.originalUrl,
+          );
+          rawUrlInfo.data.bundled = false;
+          bundleRedirections.set(urlInfoBundled.originalUrl, buildUrl);
+          associateBuildUrlAndRawUrl(
+            buildUrl,
+            urlInfoBundled.originalUrl,
+            "bundle",
+          );
+        } else {
+          urlInfo.data.generatedToShareCode = true;
+        }
+      } else {
+        associateBuildUrlAndRawUrl(buildUrl, urlInfo.url, "bundle");
+      }
+      if (urlInfoBundled.data.bundleRelativeUrl) {
+        const urlForBundler = new URL(
+          urlInfoBundled.data.bundleRelativeUrl,
+          buildDirectoryUrl,
+        ).href;
+        if (urlForBundler !== buildUrl) {
+          bundleInternalRedirections.set(urlForBundler, buildUrl);
+        }
+      }
+    },
+
     redirectToBuildDirectory: (reference) => {
       if (!reference.url.startsWith("file:")) {
         return null;
@@ -239,6 +277,22 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     },
     getBuildUrlFromBuildSpecifier: (buildSpecifier) => {
       return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
+    },
+    getRawUrl: (url) => {
+      return buildDirectoryRedirections.get(url);
+    },
+    getBuildUrl: (url) => {
+      return findKey(buildDirectoryRedirections, url);
+    },
+    getFinalBuildUrl: (buildUrl) => {
+      const urlAfterBundling = bundleRedirections.get(buildUrl);
+      buildUrl = urlAfterBundling || buildUrl;
+      buildUrl = bundleInternalRedirections.get(buildUrl) || buildUrl;
+      buildUrl = finalRedirections.get(buildUrl) || buildUrl;
+      return buildUrl;
+    },
+    getBuildUrlBeforeFinalRedirect: (buildUrl) => {
+      return findKey(finalRedirections, buildUrl);
     },
   };
 };

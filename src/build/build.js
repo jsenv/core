@@ -19,7 +19,6 @@
 import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
-  urlIsInsideOf,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import {
@@ -247,9 +246,6 @@ build ${entryPointKeys.length} entry points`);
       key.includes("?js_module_fallback"),
     );
     const rawRedirections = new Map();
-    const bundleRedirections = new Map();
-    const bundleInternalRedirections = new Map();
-    const finalRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
       buildDirectoryUrl,
@@ -348,6 +344,207 @@ build ${entryPointKeys.length} entry points`);
       }
       generateSourceGraph.done();
     }
+
+    const finalKitchen = createKitchen({
+      name: "shape",
+      logLevel,
+      rootDirectoryUrl: buildDirectoryUrl,
+      // here most plugins are not there
+      // - no external plugin
+      // - no plugin putting reference.mustIgnore on https urls
+      // At this stage it's only about redirecting urls to the build directory
+      // consequently only a subset or urls are supported
+      supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
+      ignore,
+      ignoreProtocol: "remove",
+      build: true,
+      shape: true,
+      runtimeCompat,
+      initialContext: contextSharedDuringBuild,
+      initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
+      plugins: [
+        jsenvPluginReferenceAnalysis({
+          ...referenceAnalysis,
+          fetchInlineUrls: false,
+        }),
+        ...(lineBreakNormalization
+          ? [jsenvPluginLineBreakNormalization()]
+          : []),
+        jsenvPluginJsModuleFallback(),
+        jsenvPluginInlining(),
+        {
+          name: "jsenv:build_shape",
+          appliesDuring: "build",
+          resolveReference: (reference) => {
+            const getUrl = () => {
+              const buildUrl = buildVersionsManager.getBuildUrl(reference);
+              if (buildUrl) {
+                return buildUrl;
+              }
+              if (reference.type === "filesystem") {
+                const ownerRawUrl = buildSpecifierManager.getRawUrl(
+                  reference.ownerUrlInfo.url,
+                );
+                const ownerUrl = ensurePathnameTrailingSlash(ownerRawUrl);
+                return new URL(reference.specifier, ownerUrl).href;
+              }
+              if (reference.specifier[0] === "/") {
+                return new URL(reference.specifier.slice(1), buildDirectoryUrl)
+                  .href;
+              }
+              return new URL(
+                reference.specifier,
+                reference.baseUrl || reference.ownerUrlInfo.url,
+              ).href;
+            };
+            let url = getUrl();
+            //  url = rawRedirections.get(url) || url
+            url = buildSpecifierManager.getFinalBuildUrl(url);
+            return url;
+          },
+          redirectReference: (reference) => {
+            return buildSpecifierManager.redirectToBuildDirectory(reference);
+          },
+          formatReference: (reference) => {
+            return buildSpecifierManager.format(reference);
+          },
+          fetchUrlContent: async (finalUrlInfo) => {
+            const fromBundleOrRawGraph = (url) => {
+              const bundleUrlInfo = bundleUrlInfos[url];
+              if (bundleUrlInfo) {
+                return bundleUrlInfo;
+              }
+              const rawUrl = buildSpecifierManager.getRawUrl(url);
+              const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+              if (!rawUrlInfo) {
+                throw new Error(
+                  createDetailedMessage(`Cannot find url`, {
+                    url,
+                    "raw urls": Array.from(
+                      buildSpecifierManager.buildDirectoryRedirections.values(),
+                    ),
+                    "build urls": Array.from(
+                      buildSpecifierManager.buildDirectoryRedirections.keys(),
+                    ),
+                  }),
+                );
+              }
+              // logger.debug(`fetching from raw graph ${url}`)
+              if (rawUrlInfo.isInline) {
+                // Inline content, such as <script> inside html, is transformed during the previous phase.
+                // If we read the inline content it would be considered as the original content.
+                // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+                //   as the original content.
+                //   - But it would not work when sourcemap are not generated
+                //   - would be a bit slower
+                // - So instead of reading the inline content directly, we search into raw graph
+                //   to get "originalContent" and "sourcemap"
+                finalUrlInfo.type = rawUrlInfo.type;
+                finalUrlInfo.subtype = rawUrlInfo.subtype;
+                return rawUrlInfo;
+              }
+              return rawUrlInfo;
+            };
+            const { firstReference } = finalUrlInfo;
+            // .original reference updated during "postbuild":
+            // happens for "js_module_fallback"
+            const reference = firstReference.original || firstReference;
+            // reference injected during "postbuild":
+            // - happens for "js_module_fallback" injecting "s.js"
+            if (reference.injected) {
+              const rawReference =
+                rawKitchen.graph.rootUrlInfo.dependencies.inject({
+                  type: reference.type,
+                  expectedType: reference.expectedType,
+                  specifier: reference.specifier,
+                  specifierLine: reference.specifierLine,
+                  specifierColumn: reference.specifierColumn,
+                  specifierStart: reference.specifierStart,
+                  specifierEnd: reference.specifierEnd,
+                });
+              await rawReference.urlInfo.cook();
+              return {
+                type: rawReference.urlInfo.type,
+                content: rawReference.urlInfo.content,
+                contentType: rawReference.urlInfo.contentType,
+                originalContent: rawReference.urlInfo.originalContent,
+                originalUrl: rawReference.urlInfo.originalUrl,
+                sourcemap: rawReference.urlInfo.sourcemap,
+              };
+            }
+            if (reference.isInline) {
+              const prevReference = firstReference.prev;
+              if (prevReference) {
+                if (!prevReference.isInline) {
+                  // the reference was inlined
+                  const urlBeforeRedirect =
+                    buildSpecifierManager.getBuildUrlBeforeFinalRedirect(
+                      prevReference.url,
+                    ) || prevReference.url;
+
+                  return fromBundleOrRawGraph(urlBeforeRedirect);
+                }
+                if (
+                  buildSpecifierManager.buildDirectoryRedirections.has(
+                    prevReference.url,
+                  )
+                ) {
+                  // the prev reference is transformed to fetch underlying resource
+                  // (getWithoutSearchParam)
+                  return fromBundleOrRawGraph(prevReference.url);
+                }
+              }
+              return fromBundleOrRawGraph(firstReference.url);
+            }
+            return fromBundleOrRawGraph(reference.url);
+          },
+        },
+        {
+          name: "jsenv:optimize",
+          appliesDuring: "build",
+          transformUrlContent: async (urlInfo) => {
+            await rawKitchen.pluginController.callAsyncHooks(
+              "optimizeUrlContent",
+              urlInfo,
+              (optimizeReturnValue) => {
+                urlInfo.mutateContent(optimizeReturnValue);
+              },
+            );
+          },
+        },
+      ],
+      sourcemaps,
+      sourcemapsSourcesContent,
+      sourcemapsSourcesRelative: true,
+      outDirectoryUrl: outDirectoryUrl
+        ? new URL("postbuild/", outDirectoryUrl)
+        : undefined,
+    });
+    const buildVersionsManager = createBuildVersionsManager({
+      finalKitchen,
+      versioning,
+      versioningMethod,
+      versionLength,
+      canUseImportmap:
+        versioningViaImportmap &&
+        entryUrls.every((finalEntryUrl) => {
+          const entryUrlInfo = rawKitchen.graph.getUrlInfo(finalEntryUrl);
+          return entryUrlInfo.type === "html";
+        }) &&
+        rawKitchen.context.isSupportedOnCurrentClients("importmap"),
+      getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
+        buildSpecifierManager.getBuildUrlFromBuildSpecifier(buildSpecifier),
+    });
+    const buildSpecifierManager = createBuildSpecifierManager({
+      rawKitchen,
+      finalKitchen,
+      logger,
+      sourceDirectoryUrl,
+      buildDirectoryUrl,
+      base,
+      assetsDirectory,
+      buildVersionsManager,
+    });
 
     const bundleUrlInfos = {};
     const bundlers = {};
@@ -486,6 +683,7 @@ build ${entryPointKeys.length} entry points`);
             const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
             const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
             const bundleUrlInfo = {
+              url,
               type,
               subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
               isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
@@ -509,50 +707,13 @@ build ${entryPointKeys.length} entry points`);
                 }
               });
             }
-            const buildUrl = buildSpecifierManager.buildUrlsGenerator.generate(
-              url,
-              {
-                urlInfo: bundleUrlInfo,
-              },
+            const buildUrl = buildSpecifierManager.generateBuildUrlForBundle(
+              bundlerGeneratedUrlInfo,
+              bundleUrlInfo,
             );
-            bundleRedirections.set(url, buildUrl);
-            if (urlIsInsideOf(url, buildDirectoryUrl)) {
-              if (bundlerGeneratedUrlInfo.data.isDynamicEntry) {
-                const rawUrlInfo = rawKitchen.graph.getUrlInfo(
-                  bundlerGeneratedUrlInfo.originalUrl,
-                );
-                rawUrlInfo.data.bundled = false;
-                bundleRedirections.set(
-                  bundlerGeneratedUrlInfo.originalUrl,
-                  buildUrl,
-                );
-                buildSpecifierManager.associateBuildUrlAndRawUrl(
-                  buildUrl,
-                  bundlerGeneratedUrlInfo.originalUrl,
-                  "bundle",
-                );
-              } else {
-                bundleUrlInfo.data.generatedToShareCode = true;
-              }
-            } else {
-              buildSpecifierManager.associateBuildUrlAndRawUrl(
-                buildUrl,
-                url,
-                "bundle",
-              );
-            }
             bundleUrlInfos[buildUrl] = bundleUrlInfo;
             if (buildUrl.includes("?")) {
               bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
-            }
-            if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-              const urlForBundler = new URL(
-                bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
-                buildDirectoryUrl,
-              ).href;
-              if (urlForBundler !== buildUrl) {
-                bundleInternalRedirections.set(urlForBundler, buildUrl);
-              }
             }
           });
         } catch (e) {
@@ -563,209 +724,6 @@ build ${entryPointKeys.length} entry points`);
       }, Promise.resolve());
     }
 
-    const finalKitchen = createKitchen({
-      name: "shape",
-      logLevel,
-      rootDirectoryUrl: buildDirectoryUrl,
-      // here most plugins are not there
-      // - no external plugin
-      // - no plugin putting reference.mustIgnore on https urls
-      // At this stage it's only about redirecting urls to the build directory
-      // consequently only a subset or urls are supported
-      supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
-      ignore,
-      ignoreProtocol: "remove",
-      build: true,
-      shape: true,
-      runtimeCompat,
-      initialContext: contextSharedDuringBuild,
-      initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
-      plugins: [
-        jsenvPluginReferenceAnalysis({
-          ...referenceAnalysis,
-          fetchInlineUrls: false,
-        }),
-        ...(lineBreakNormalization
-          ? [jsenvPluginLineBreakNormalization()]
-          : []),
-        jsenvPluginJsModuleFallback(),
-        jsenvPluginInlining(),
-        {
-          name: "jsenv:build_shape",
-          appliesDuring: "build",
-          resolveReference: (reference) => {
-            const getUrl = () => {
-              const buildUrl = buildVersionsManager.getBuildUrl(reference);
-              if (buildUrl) {
-                return buildUrl;
-              }
-              if (reference.type === "filesystem") {
-                const ownerRawUrl =
-                  buildSpecifierManager.buildSpecifierManager.buildDirectoryRedirections.get(
-                    reference.ownerUrlInfo.url,
-                  );
-                const ownerUrl = ensurePathnameTrailingSlash(ownerRawUrl);
-                return new URL(reference.specifier, ownerUrl).href;
-              }
-              if (reference.specifier[0] === "/") {
-                return new URL(reference.specifier.slice(1), buildDirectoryUrl)
-                  .href;
-              }
-              return new URL(
-                reference.specifier,
-                reference.baseUrl || reference.ownerUrlInfo.url,
-              ).href;
-            };
-            let url = getUrl();
-            //  url = rawRedirections.get(url) || url
-            url = bundleRedirections.get(url) || url;
-            url = bundleInternalRedirections.get(url) || url;
-            return url;
-          },
-          redirectReference: (reference) => {
-            return buildSpecifierManager.redirectToBuildDirectory(reference);
-          },
-          formatReference: (reference) => {
-            return buildSpecifierManager.format(reference);
-          },
-          fetchUrlContent: async (finalUrlInfo) => {
-            const fromBundleOrRawGraph = (url) => {
-              const bundleUrlInfo = bundleUrlInfos[url];
-              if (bundleUrlInfo) {
-                return bundleUrlInfo;
-              }
-              const rawUrl =
-                buildSpecifierManager.buildDirectoryRedirections.get(url) ||
-                url;
-              const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
-              if (!rawUrlInfo) {
-                throw new Error(
-                  createDetailedMessage(`Cannot find url`, {
-                    url,
-                    "raw urls": Array.from(
-                      buildSpecifierManager.buildDirectoryRedirections.values(),
-                    ),
-                    "build urls": Array.from(
-                      buildSpecifierManager.buildDirectoryRedirections.keys(),
-                    ),
-                  }),
-                );
-              }
-              // logger.debug(`fetching from raw graph ${url}`)
-              if (rawUrlInfo.isInline) {
-                // Inline content, such as <script> inside html, is transformed during the previous phase.
-                // If we read the inline content it would be considered as the original content.
-                // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-                //   as the original content.
-                //   - But it would not work when sourcemap are not generated
-                //   - would be a bit slower
-                // - So instead of reading the inline content directly, we search into raw graph
-                //   to get "originalContent" and "sourcemap"
-                finalUrlInfo.type = rawUrlInfo.type;
-                finalUrlInfo.subtype = rawUrlInfo.subtype;
-                return rawUrlInfo;
-              }
-              return rawUrlInfo;
-            };
-            const { firstReference } = finalUrlInfo;
-            // .original reference updated during "postbuild":
-            // happens for "js_module_fallback"
-            const reference = firstReference.original || firstReference;
-            // reference injected during "postbuild":
-            // - happens for "js_module_fallback" injecting "s.js"
-            if (reference.injected) {
-              const rawReference =
-                rawKitchen.graph.rootUrlInfo.dependencies.inject({
-                  type: reference.type,
-                  expectedType: reference.expectedType,
-                  specifier: reference.specifier,
-                  specifierLine: reference.specifierLine,
-                  specifierColumn: reference.specifierColumn,
-                  specifierStart: reference.specifierStart,
-                  specifierEnd: reference.specifierEnd,
-                });
-              await rawReference.urlInfo.cook();
-              return {
-                type: rawReference.urlInfo.type,
-                content: rawReference.urlInfo.content,
-                contentType: rawReference.urlInfo.contentType,
-                originalContent: rawReference.urlInfo.originalContent,
-                originalUrl: rawReference.urlInfo.originalUrl,
-                sourcemap: rawReference.urlInfo.sourcemap,
-              };
-            }
-            if (reference.isInline) {
-              const prevReference = firstReference.prev;
-              if (prevReference) {
-                if (!prevReference.isInline) {
-                  // the reference was inlined
-                  const urlBeforeRedirect =
-                    findKey(finalRedirections, prevReference.url) ||
-                    prevReference.url;
-                  return fromBundleOrRawGraph(urlBeforeRedirect);
-                }
-                if (
-                  buildSpecifierManager.buildDirectoryRedirections.has(
-                    prevReference.url,
-                  )
-                ) {
-                  // the prev reference is transformed to fetch underlying resource
-                  // (getWithoutSearchParam)
-                  return fromBundleOrRawGraph(prevReference.url);
-                }
-              }
-              return fromBundleOrRawGraph(firstReference.url);
-            }
-            return fromBundleOrRawGraph(reference.url);
-          },
-        },
-        {
-          name: "jsenv:optimize",
-          appliesDuring: "build",
-          transformUrlContent: async (urlInfo) => {
-            await rawKitchen.pluginController.callAsyncHooks(
-              "optimizeUrlContent",
-              urlInfo,
-              (optimizeReturnValue) => {
-                urlInfo.mutateContent(optimizeReturnValue);
-              },
-            );
-          },
-        },
-      ],
-      sourcemaps,
-      sourcemapsSourcesContent,
-      sourcemapsSourcesRelative: true,
-      outDirectoryUrl: outDirectoryUrl
-        ? new URL("postbuild/", outDirectoryUrl)
-        : undefined,
-    });
-    const buildVersionsManager = createBuildVersionsManager({
-      finalKitchen,
-      versioning,
-      versioningMethod,
-      versionLength,
-      canUseImportmap:
-        versioningViaImportmap &&
-        entryUrls.every((finalEntryUrl) => {
-          const entryUrlInfo = rawKitchen.graph.getUrlInfo(finalEntryUrl);
-          return entryUrlInfo.type === "html";
-        }) &&
-        rawKitchen.context.isSupportedOnCurrentClients("importmap"),
-      getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
-        buildSpecifierManager.getBuildUrlFromBuildSpecifier(buildSpecifier),
-    });
-    const buildSpecifierManager = createBuildSpecifierManager({
-      rawKitchen,
-      finalKitchen,
-      logger,
-      sourceDirectoryUrl,
-      buildDirectoryUrl,
-      base,
-      assetsDirectory,
-      finalRedirections,
-      buildVersionsManager,
-    });
     shape: {
       const generateBuildGraph = createBuildTask("generate build graph");
       try {
@@ -873,10 +831,7 @@ build ${entryPointKeys.length} entry points`);
                   return;
                 }
                 if (!buildUrlInfo.isUsed()) {
-                  let rawUrl =
-                    buildSpecifierManager.buildDirectoryRedirections.get(
-                      buildUrl,
-                    );
+                  let rawUrl = buildSpecifierManager.getRawUrl(buildUrl);
                   if (!rawUrl && rawKitchen.graph.getUrlInfo(buildUrl)) {
                     rawUrl = buildUrl;
                   }
@@ -931,14 +886,8 @@ build ${entryPointKeys.length} entry points`);
               if (href.startsWith("file:")) {
                 let url = href;
                 url = rawRedirections.get(url) || url;
-                url = bundleRedirections.get(url) || url;
-                url = bundleInternalRedirections.get(url) || url;
-                url = finalRedirections.get(url) || url;
-                url =
-                  findKey(
-                    buildSpecifierManager.buildDirectoryRedirections,
-                    url,
-                  ) || url;
+                url = buildSpecifierManager.getFinalBuildUrl(url) || url;
+                url = buildSpecifierManager.getRawUrl(url) || url;
                 onBuildUrl(url);
               } else {
                 onBuildUrl(null);
@@ -1233,15 +1182,6 @@ build ${entryPointKeys.length} entry points`);
   });
   await firstBuildPromise;
   return stopWatchingSourceFiles;
-};
-
-const findKey = (map, value) => {
-  for (const [keyCandidate, valueCandidate] of map) {
-    if (valueCandidate === value) {
-      return keyCandidate;
-    }
-  }
-  return undefined;
 };
 
 const asBuildUrlVersioned = ({
