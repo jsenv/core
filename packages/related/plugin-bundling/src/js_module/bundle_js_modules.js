@@ -27,8 +27,8 @@ export const bundleJsModules = async (
     assetsDirectory,
     runtimeCompat,
     sourcemaps,
-    minification,
     isSupportedOnCurrentClients,
+    getPluginMeta,
   } = jsModuleUrlInfos[0].context;
   const graph = jsModuleUrlInfos[0].graph;
   if (buildDirectoryUrl === undefined) {
@@ -59,6 +59,7 @@ export const bundleJsModules = async (
   }
 
   const resultRef = { current: null };
+  const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
   try {
     await applyRollupPlugins({
       rollup,
@@ -97,8 +98,8 @@ export const bundleJsModules = async (
         ...rollupInput,
       },
       rollupOutput: {
-        compact: minification,
-        minifyInternalExports: minification,
+        compact: willMinifyJsModule,
+        minifyInternalExports: willMinifyJsModule,
         generatedCode: {
           arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
           constBindings: isSupportedOnCurrentClients("const_bindings"),

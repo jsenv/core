@@ -23,7 +23,7 @@
     "@jsenv/assert": "2.9.0",
     "@jsenv/core": "37.1.5",
     "@jsenv/plugin-preact": "1.4.4",
-    "@jsenv/plugin-bundling": "2.4.1",
+    "@jsenv/plugin-bundling": "2.4.2",
     "@jsenv/plugin-minification": "1.4.1",
     "@jsenv/eslint-config": "16.4.0",
     "@jsenv/eslint-import-resolver": "8.0.0",
