@@ -7,6 +7,7 @@ import {
 import { createEventEmitter } from "../../helpers/event_emitter.js";
 import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createDependencies } from "./references.js";
+import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
 export const createUrlGraph = ({
   rootDirectoryUrl,
@@ -265,6 +266,9 @@ const createUrlInfo = (url, context) => {
       currentUrlInfo = parentUrlInfo;
     }
     return null;
+  };
+  urlInfo.findDependent = (callback) => {
+    return GRAPH_VISITOR.findDependent(urlInfo, callback);
   };
   urlInfo.isSearchParamVariantOf = (otherUrlInfo) => {
     if (urlInfo.searchParams.size === 0) {

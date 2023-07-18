@@ -9996,17 +9996,21 @@ const babelPluginReplaceTopLevelThis = () => {
 
 
 const jsenvPluginAsJsModule = () => {
+  const markAsJsModuleProxy = (reference) => {
+    reference.expectedType = "js_module";
+    if (!reference.filename) {
+      const filename = urlToFilename$1(reference.url);
+      const [basename] = splitFileExtension$1(filename);
+      reference.filename = `${basename}.mjs`;
+    }
+  };
+
   return {
     name: "jsenv:as_js_module",
     appliesDuring: "*",
     redirectReference: (reference) => {
       if (reference.searchParams.has("as_js_module")) {
-        reference.expectedType = "js_module";
-        if (!reference.filename) {
-          const filename = urlToFilename$1(reference.url);
-          const [basename] = splitFileExtension$1(filename);
-          reference.filename = `${basename}.mjs`;
-        }
+        markAsJsModuleProxy(reference);
       }
     },
     fetchUrlContent: async (urlInfo) => {
@@ -11693,6 +11697,9 @@ const createUrlInfo = (url, context) => {
       currentUrlInfo = parentUrlInfo;
     }
     return null;
+  };
+  urlInfo.findDependent = (callback) => {
+    return GRAPH_VISITOR.findDependent(urlInfo, callback);
   };
   urlInfo.isSearchParamVariantOf = (otherUrlInfo) => {
     if (urlInfo.searchParams.size === 0) {
@@ -17019,6 +17026,10 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
       if (resolvers.js_classic === undefined) {
         resolvers.js_classic = (reference) => {
           if (reference.subtype === "self_import_scripts_arg") {
+            return nodeEsmResolverDefault(reference);
+          }
+          if (reference.type === "js_import") {
+            // happens for ?as_js_module
             return nodeEsmResolverDefault(reference);
           }
           return null;

@@ -1,8 +1,8 @@
 var l$2;
 l$2 = {
-  __e: function (n, l, u, i) {
-    for (var t, o, r; l = l.__;) if ((t = l.__c) && !t.__) try {
-      if ((o = t.constructor) && null != o.getDerivedStateFromError && (t.setState(o.getDerivedStateFromError(n)), r = t.__d), null != t.componentDidCatch && (t.componentDidCatch(n, i || {}), r = t.__d), r) return t.__E = t;
+  __e: function (n, l, u, t) {
+    for (var i, o, r; l = l.__;) if ((i = l.__c) && !i.__) try {
+      if ((o = i.constructor) && null != o.getDerivedStateFromError && (i.setState(o.getDerivedStateFromError(n)), r = i.__d), null != i.componentDidCatch && (i.componentDidCatch(n, t || {}), r = i.__d), r) return i.__E = i;
     } catch (l) {
       n = l;
     }
@@ -1394,11 +1394,7 @@ const autoreloadEnabledSignal = u(false);
 const reloaderStatusSignal = u("idle");
 const changesSignal = u(0);
 if (parentWindowReloader) {
-  if (!parentWindowReloader.autoreload.enabled && paramsFromParentWindow.autoreload) {
-    autoreloadEnabledSignal.value = true;
-  } else {
-    autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
-  }
+  autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   parentWindowReloader.autoreload.onchange = () => {
     autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   };

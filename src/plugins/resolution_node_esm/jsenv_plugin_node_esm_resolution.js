@@ -48,6 +48,10 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
           if (reference.subtype === "self_import_scripts_arg") {
             return nodeEsmResolverDefault(reference);
           }
+          if (reference.type === "js_import") {
+            // happens for ?as_js_module
+            return nodeEsmResolverDefault(reference);
+          }
           return null;
         };
       }
