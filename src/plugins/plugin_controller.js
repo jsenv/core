@@ -251,6 +251,16 @@ export const createPluginController = (kitchenContext) => {
     });
   };
 
+  const getPluginMeta = (id) => {
+    for (const plugin of plugins) {
+      const { meta } = plugin;
+      if (meta && meta[id] !== undefined) {
+        return meta[id];
+      }
+    }
+    return undefined;
+  };
+
   return {
     plugins,
     pushPlugin,
@@ -263,6 +273,8 @@ export const createPluginController = (kitchenContext) => {
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
+
+    getPluginMeta,
 
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,

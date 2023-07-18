@@ -298,9 +298,6 @@ build ${entryPointKeys.length} entry points`);
           return true;
         return false;
       })(),
-      minification: plugins.some(
-        (plugin) => plugin.name === "jsenv:minification",
-      ),
     };
     const rawKitchen = createKitchen({
       signal,

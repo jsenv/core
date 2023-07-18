@@ -19,7 +19,9 @@ export const injectVersionMappingsAsGlobal = async (
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: "window",
-        minification: urlInfo.context.minification,
+        minification: Boolean(
+          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+        ),
       }),
     });
     return;
@@ -29,7 +31,9 @@ export const injectVersionMappingsAsGlobal = async (
       type: "js_classic",
       content: generateClientCodeForVersionMappings(versionMappings, {
         globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: urlInfo.context.minification,
+        minification: Boolean(
+          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+        ),
       }),
     });
     return;
@@ -62,12 +66,15 @@ export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
   // jsenv_plugin_importmap.js is removing importmap during build
   // it means at this point we know HTML has no importmap in it
   // we can safely inject one
+  const importmapMinification = Boolean(
+    urlInfo.context.getPluginMeta("willMinifyJson"),
+  );
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: urlInfo.context.minification
+      textContent: importmapMinification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),

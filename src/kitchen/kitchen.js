@@ -70,6 +70,7 @@ export const createKitchen = ({
       inlineContentClientFileUrl,
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
+      getPluginMeta: null,
       sourcemaps,
       outDirectoryUrl,
     },
@@ -89,6 +90,9 @@ export const createKitchen = ({
 
   const pluginController = createPluginController(kitchenContext);
   kitchen.pluginController = pluginController;
+  kitchenContext.getPluginMeta = memoizeGetPluginMeta(
+    pluginController.getPluginMeta,
+  );
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
@@ -612,6 +616,19 @@ const memoizeCook = (cook) => {
     urlInfoCache.set(urlInfo, promise);
     await cook(urlInfo, context);
     resolveCookPromise();
+  };
+};
+
+const memoizeGetPluginMeta = (getPluginMeta) => {
+  const cache = new Map();
+  return (id) => {
+    const fromCache = cache.get(id);
+    if (fromCache) {
+      return fromCache;
+    }
+    const value = getPluginMeta(id);
+    cache.set(id, value);
+    return value;
   };
 };
 

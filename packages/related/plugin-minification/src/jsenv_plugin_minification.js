@@ -33,6 +33,14 @@ export const jsenvPluginMinification = ({
   return {
     name: "jsenv:minification",
     appliesDuring: "build",
+    meta: {
+      willMinifyHtml: Boolean(html),
+      willMinifySvg: Boolean(svg),
+      willMinifyCss: Boolean(css),
+      willMinifyJsClassic: Boolean(js_classic),
+      willMinifyJsModule: Boolean(js_module),
+      willMinifyJson: Boolean(json),
+    },
     optimizeUrlContent: {
       html: htmlMinifier,
       svg: svgMinifier,
