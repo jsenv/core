@@ -320,6 +320,248 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("prebuild/", outDirectoryUrl)
         : undefined,
     });
+    craft: {
+      const generateSourceGraph = createBuildTask("generate source graph");
+      try {
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`prebuild/`, outDirectoryUrl));
+        }
+        const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
+        await rawRootUrlInfo.dependencies.startCollecting(() => {
+          Object.keys(entryPoints).forEach((key) => {
+            const entryReference = rawRootUrlInfo.dependencies.found({
+              trace: { message: `"${key}" in entryPoints parameter` },
+              isEntryPoint: true,
+              type: "entry_point",
+              specifier: key,
+              filename: entryPoints[key],
+            });
+            entryUrls.push(entryReference.url);
+          });
+        });
+        await rawRootUrlInfo.cookDependencies({
+          operation: buildOperation,
+        });
+      } catch (e) {
+        generateSourceGraph.fail();
+        throw e;
+      }
+      generateSourceGraph.done();
+    }
+
+    const bundleUrlInfos = {};
+    const bundlers = {};
+    bundle: {
+      rawKitchen.pluginController.plugins.forEach((plugin) => {
+        const bundle = plugin.bundle;
+        if (!bundle) {
+          return;
+        }
+        if (typeof bundle !== "object") {
+          throw new Error(
+            `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
+          );
+        }
+        Object.keys(bundle).forEach((type) => {
+          const bundleFunction = bundle[type];
+          if (!bundleFunction) {
+            return;
+          }
+          const bundlerForThatType = bundlers[type];
+          if (bundlerForThatType) {
+            // first plugin to define a bundle hook wins
+            return;
+          }
+          bundlers[type] = {
+            plugin,
+            bundleFunction: bundle[type],
+            urlInfoMap: new Map(),
+          };
+        });
+      });
+      const addToBundlerIfAny = (rawUrlInfo) => {
+        const bundler = bundlers[rawUrlInfo.type];
+        if (bundler) {
+          bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
+        }
+      };
+      // ignore unused urls thanks to "forEachUrlInfoStronglyReferenced"
+      // it avoid bundling things that are not actually used
+      // happens for:
+      // - js import assertions
+      // - conversion to js classic using ?as_js_classic or ?js_module_fallback
+      GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+        rawKitchen.graph.rootUrlInfo,
+        (rawUrlInfo) => {
+          if (rawUrlInfo.isEntryPoint) {
+            addToBundlerIfAny(rawUrlInfo);
+          }
+          if (rawUrlInfo.type === "html") {
+            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+              if (referenceToOther.isWeak) {
+                return;
+              }
+              const referencedUrlInfo = referenceToOther.urlInfo;
+              if (referencedUrlInfo.isInline) {
+                if (referencedUrlInfo.type === "js_module") {
+                  // bundle inline script type module deps
+                  referencedUrlInfo.referenceToOthersSet.forEach(
+                    (jsModuleReferenceToOther) => {
+                      if (jsModuleReferenceToOther.type === "js_import") {
+                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
+                        addToBundlerIfAny(inlineUrlInfo);
+                      }
+                    },
+                  );
+                }
+                // inline content cannot be bundled
+                return;
+              }
+              addToBundlerIfAny(referencedUrlInfo);
+            });
+            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+              if (
+                referenceToOther.isResourceHint &&
+                referenceToOther.expectedType === "js_module"
+              ) {
+                const referencedUrlInfo = referenceToOther.urlInfo;
+                if (
+                  referencedUrlInfo &&
+                  // something else than the resource hint is using this url
+                  referencedUrlInfo.referenceFromOthersSet.size > 0
+                ) {
+                  addToBundlerIfAny(referencedUrlInfo);
+                }
+              }
+            });
+            return;
+          }
+          // File referenced with new URL('./file.js', import.meta.url)
+          // are entry points that should be bundled
+          // For instance we will bundle service worker/workers detected like this
+          if (rawUrlInfo.type === "js_module") {
+            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+              if (referenceToOther.type === "js_url") {
+                const referencedUrlInfo = referenceToOther.urlInfo;
+                for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+                  if (referenceFromOther.url === referencedUrlInfo.url) {
+                    if (
+                      referenceFromOther.subtype === "import_dynamic" ||
+                      referenceFromOther.type === "script"
+                    ) {
+                      // will already be bundled
+                      return;
+                    }
+                  }
+                }
+                addToBundlerIfAny(referencedUrlInfo);
+                return;
+              }
+              if (referenceToOther.type === "js_inline_content") {
+                // we should bundle it too right?
+              }
+            });
+          }
+        },
+      );
+      await Object.keys(bundlers).reduce(async (previous, type) => {
+        await previous;
+        const bundler = bundlers[type];
+        const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
+        if (urlInfosToBundle.length === 0) {
+          return;
+        }
+        const bundleTask = createBuildTask(`bundle "${type}"`);
+        try {
+          const bundlerGeneratedUrlInfos =
+            await rawKitchen.pluginController.callAsyncHook(
+              {
+                plugin: bundler.plugin,
+                hookName: "bundle",
+                value: bundler.bundleFunction,
+              },
+              urlInfosToBundle,
+            );
+          Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
+            const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
+            const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
+            const bundleUrlInfo = {
+              type,
+              subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
+              isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
+              filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
+              originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
+              originalContent: rawUrlInfo
+                ? rawUrlInfo.originalContent
+                : undefined,
+              ...bundlerGeneratedUrlInfo,
+              data: {
+                ...(rawUrlInfo ? rawUrlInfo.data : {}),
+                ...bundlerGeneratedUrlInfo.data,
+                fromBundle: true,
+              },
+            };
+            if (bundlerGeneratedUrlInfo.sourceUrls) {
+              bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
+                const sourceRawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
+                if (sourceRawUrlInfo) {
+                  sourceRawUrlInfo.data.bundled = true;
+                }
+              });
+            }
+            const buildUrl = buildSpecifierManager.buildUrlsGenerator.generate(
+              url,
+              {
+                urlInfo: bundleUrlInfo,
+              },
+            );
+            bundleRedirections.set(url, buildUrl);
+            if (urlIsInsideOf(url, buildDirectoryUrl)) {
+              if (bundlerGeneratedUrlInfo.data.isDynamicEntry) {
+                const rawUrlInfo = rawKitchen.graph.getUrlInfo(
+                  bundlerGeneratedUrlInfo.originalUrl,
+                );
+                rawUrlInfo.data.bundled = false;
+                bundleRedirections.set(
+                  bundlerGeneratedUrlInfo.originalUrl,
+                  buildUrl,
+                );
+                buildSpecifierManager.associateBuildUrlAndRawUrl(
+                  buildUrl,
+                  bundlerGeneratedUrlInfo.originalUrl,
+                  "bundle",
+                );
+              } else {
+                bundleUrlInfo.data.generatedToShareCode = true;
+              }
+            } else {
+              buildSpecifierManager.associateBuildUrlAndRawUrl(
+                buildUrl,
+                url,
+                "bundle",
+              );
+            }
+            bundleUrlInfos[buildUrl] = bundleUrlInfo;
+            if (buildUrl.includes("?")) {
+              bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
+            }
+            if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
+              const urlForBundler = new URL(
+                bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
+                buildDirectoryUrl,
+              ).href;
+              if (urlForBundler !== buildUrl) {
+                bundleInternalRedirections.set(urlForBundler, buildUrl);
+              }
+            }
+          });
+        } catch (e) {
+          bundleTask.fail();
+          throw e;
+        }
+        bundleTask.done();
+      }, Promise.resolve());
+    }
 
     const finalKitchen = createKitchen({
       name: "shape",
@@ -498,13 +740,14 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("postbuild/", outDirectoryUrl)
         : undefined,
     });
+    let finalEntryUrls = [];
     const buildVersionsManager = createBuildVersionsManager({
       finalKitchen,
       versioning,
       versioningMethod,
       versionLength,
-      // TODO: memoize this
-      canUseImportmap: () =>
+
+      canUseImportmap:
         versioningViaImportmap &&
         finalEntryUrls.every((finalEntryUrl) => {
           const finalEntryUrlInfo =
@@ -526,280 +769,32 @@ build ${entryPointKeys.length} entry points`);
       finalRedirections,
       buildVersionsManager,
     });
-
-    const bundleUrlInfos = {};
-    const bundlers = {};
-
-    let finalEntryUrls = [];
-
-    craft: {
-      const generateSourceGraph = createBuildTask("generate source graph");
+    shape: {
+      const generateBuildGraph = createBuildTask("generate build graph");
       try {
         if (outDirectoryUrl) {
-          await ensureEmptyDirectory(new URL(`prebuild/`, outDirectoryUrl));
+          await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
         }
-        const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
-        await rawRootUrlInfo.dependencies.startCollecting(() => {
-          Object.keys(entryPoints).forEach((key) => {
-            const entryReference = rawRootUrlInfo.dependencies.found({
-              trace: { message: `"${key}" in entryPoints parameter` },
+        const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
+        await finalRootUrlInfo.dependencies.startCollecting(() => {
+          entryUrls.forEach((entryUrl) => {
+            const entryReference = finalRootUrlInfo.dependencies.found({
+              trace: { message: `entryPoint` },
               isEntryPoint: true,
               type: "entry_point",
-              specifier: key,
-              filename: entryPoints[key],
+              specifier: entryUrl,
             });
-            entryUrls.push(entryReference.url);
+            finalEntryUrls.push(entryReference.url);
           });
         });
-        await rawRootUrlInfo.cookDependencies({
+        await finalRootUrlInfo.cookDependencies({
           operation: buildOperation,
         });
       } catch (e) {
-        generateSourceGraph.fail();
+        generateBuildGraph.fail();
         throw e;
       }
-      generateSourceGraph.done();
-    }
-
-    shape: {
-      bundle: {
-        rawKitchen.pluginController.plugins.forEach((plugin) => {
-          const bundle = plugin.bundle;
-          if (!bundle) {
-            return;
-          }
-          if (typeof bundle !== "object") {
-            throw new Error(
-              `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
-            );
-          }
-          Object.keys(bundle).forEach((type) => {
-            const bundleFunction = bundle[type];
-            if (!bundleFunction) {
-              return;
-            }
-            const bundlerForThatType = bundlers[type];
-            if (bundlerForThatType) {
-              // first plugin to define a bundle hook wins
-              return;
-            }
-            bundlers[type] = {
-              plugin,
-              bundleFunction: bundle[type],
-              urlInfoMap: new Map(),
-            };
-          });
-        });
-        const addToBundlerIfAny = (rawUrlInfo) => {
-          const bundler = bundlers[rawUrlInfo.type];
-          if (bundler) {
-            bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
-          }
-        };
-        // ignore unused urls thanks to "forEachUrlInfoStronglyReferenced"
-        // it avoid bundling things that are not actually used
-        // happens for:
-        // - js import assertions
-        // - conversion to js classic using ?as_js_classic or ?js_module_fallback
-        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
-          rawKitchen.graph.rootUrlInfo,
-          (rawUrlInfo) => {
-            if (rawUrlInfo.isEntryPoint) {
-              addToBundlerIfAny(rawUrlInfo);
-            }
-            if (rawUrlInfo.type === "html") {
-              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-                if (referenceToOther.isWeak) {
-                  return;
-                }
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                if (referencedUrlInfo.isInline) {
-                  if (referencedUrlInfo.type === "js_module") {
-                    // bundle inline script type module deps
-                    referencedUrlInfo.referenceToOthersSet.forEach(
-                      (jsModuleReferenceToOther) => {
-                        if (jsModuleReferenceToOther.type === "js_import") {
-                          const inlineUrlInfo =
-                            jsModuleReferenceToOther.urlInfo;
-                          addToBundlerIfAny(inlineUrlInfo);
-                        }
-                      },
-                    );
-                  }
-                  // inline content cannot be bundled
-                  return;
-                }
-                addToBundlerIfAny(referencedUrlInfo);
-              });
-              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-                if (
-                  referenceToOther.isResourceHint &&
-                  referenceToOther.expectedType === "js_module"
-                ) {
-                  const referencedUrlInfo = referenceToOther.urlInfo;
-                  if (
-                    referencedUrlInfo &&
-                    // something else than the resource hint is using this url
-                    referencedUrlInfo.referenceFromOthersSet.size > 0
-                  ) {
-                    addToBundlerIfAny(referencedUrlInfo);
-                  }
-                }
-              });
-              return;
-            }
-            // File referenced with new URL('./file.js', import.meta.url)
-            // are entry points that should be bundled
-            // For instance we will bundle service worker/workers detected like this
-            if (rawUrlInfo.type === "js_module") {
-              rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-                if (referenceToOther.type === "js_url") {
-                  const referencedUrlInfo = referenceToOther.urlInfo;
-                  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
-                    if (referenceFromOther.url === referencedUrlInfo.url) {
-                      if (
-                        referenceFromOther.subtype === "import_dynamic" ||
-                        referenceFromOther.type === "script"
-                      ) {
-                        // will already be bundled
-                        return;
-                      }
-                    }
-                  }
-                  addToBundlerIfAny(referencedUrlInfo);
-                  return;
-                }
-                if (referenceToOther.type === "js_inline_content") {
-                  // we should bundle it too right?
-                }
-              });
-            }
-          },
-        );
-        await Object.keys(bundlers).reduce(async (previous, type) => {
-          await previous;
-          const bundler = bundlers[type];
-          const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
-          if (urlInfosToBundle.length === 0) {
-            return;
-          }
-          const bundleTask = createBuildTask(`bundle "${type}"`);
-          try {
-            const bundlerGeneratedUrlInfos =
-              await rawKitchen.pluginController.callAsyncHook(
-                {
-                  plugin: bundler.plugin,
-                  hookName: "bundle",
-                  value: bundler.bundleFunction,
-                },
-                urlInfosToBundle,
-              );
-            Object.keys(bundlerGeneratedUrlInfos).forEach((url) => {
-              const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
-              const bundlerGeneratedUrlInfo = bundlerGeneratedUrlInfos[url];
-              const bundleUrlInfo = {
-                type,
-                subtype: rawUrlInfo ? rawUrlInfo.subtype : undefined,
-                isEntryPoint: rawUrlInfo ? rawUrlInfo.isEntryPoint : undefined,
-                filename: rawUrlInfo ? rawUrlInfo.filename : undefined,
-                originalUrl: rawUrlInfo ? rawUrlInfo.originalUrl : undefined,
-                originalContent: rawUrlInfo
-                  ? rawUrlInfo.originalContent
-                  : undefined,
-                ...bundlerGeneratedUrlInfo,
-                data: {
-                  ...(rawUrlInfo ? rawUrlInfo.data : {}),
-                  ...bundlerGeneratedUrlInfo.data,
-                  fromBundle: true,
-                },
-              };
-              if (bundlerGeneratedUrlInfo.sourceUrls) {
-                bundlerGeneratedUrlInfo.sourceUrls.forEach((sourceUrl) => {
-                  const sourceRawUrlInfo =
-                    rawKitchen.graph.getUrlInfo(sourceUrl);
-                  if (sourceRawUrlInfo) {
-                    sourceRawUrlInfo.data.bundled = true;
-                  }
-                });
-              }
-              const buildUrl =
-                buildSpecifierManager.buildUrlsGenerator.generate(url, {
-                  urlInfo: bundleUrlInfo,
-                });
-              bundleRedirections.set(url, buildUrl);
-              if (urlIsInsideOf(url, buildDirectoryUrl)) {
-                if (bundlerGeneratedUrlInfo.data.isDynamicEntry) {
-                  const rawUrlInfo = rawKitchen.graph.getUrlInfo(
-                    bundlerGeneratedUrlInfo.originalUrl,
-                  );
-                  rawUrlInfo.data.bundled = false;
-                  bundleRedirections.set(
-                    bundlerGeneratedUrlInfo.originalUrl,
-                    buildUrl,
-                  );
-                  buildSpecifierManager.associateBuildUrlAndRawUrl(
-                    buildUrl,
-                    bundlerGeneratedUrlInfo.originalUrl,
-                    "bundle",
-                  );
-                } else {
-                  bundleUrlInfo.data.generatedToShareCode = true;
-                }
-              } else {
-                buildSpecifierManager.associateBuildUrlAndRawUrl(
-                  buildUrl,
-                  url,
-                  "bundle",
-                );
-              }
-              bundleUrlInfos[buildUrl] = bundleUrlInfo;
-              if (buildUrl.includes("?")) {
-                bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
-              }
-              if (bundlerGeneratedUrlInfo.data.bundleRelativeUrl) {
-                const urlForBundler = new URL(
-                  bundlerGeneratedUrlInfo.data.bundleRelativeUrl,
-                  buildDirectoryUrl,
-                ).href;
-                if (urlForBundler !== buildUrl) {
-                  bundleInternalRedirections.set(urlForBundler, buildUrl);
-                }
-              }
-            });
-          } catch (e) {
-            bundleTask.fail();
-            throw e;
-          }
-          bundleTask.done();
-        }, Promise.resolve());
-      }
-      reload_in_build_directory: {
-        const generateBuildGraph = createBuildTask("generate build graph");
-        try {
-          if (outDirectoryUrl) {
-            await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
-          }
-          const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
-          await finalRootUrlInfo.dependencies.startCollecting(() => {
-            entryUrls.forEach((entryUrl) => {
-              const entryReference = finalRootUrlInfo.dependencies.found({
-                trace: { message: `entryPoint` },
-                isEntryPoint: true,
-                type: "entry_point",
-                specifier: entryUrl,
-              });
-              finalEntryUrls.push(entryReference.url);
-            });
-          });
-          await finalRootUrlInfo.cookDependencies({
-            operation: buildOperation,
-          });
-        } catch (e) {
-          generateBuildGraph.fail();
-          throw e;
-        }
-        generateBuildGraph.done();
-      }
+      generateBuildGraph.done();
     }
 
     refine: {

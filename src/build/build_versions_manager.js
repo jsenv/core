@@ -239,7 +239,7 @@ export const createBuildVersionsManager = ({
             `__v__(${JSON.stringify(buildSpecifier)})`,
           );
         }
-        if (canUseImportmap() && !isReferencedByWorker(reference)) {
+        if (canUseImportmap && !isReferencedByWorker(reference)) {
           return asPlaceholderForSpecifierVersionedByImportmap(
             JSON.stringify(buildSpecifier),
           );
