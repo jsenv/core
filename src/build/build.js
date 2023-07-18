@@ -16,11 +16,7 @@
  *  - injecting urls into service workers
  */
 
-import {
-  asUrlWithoutSearch,
-  ensurePathnameTrailingSlash,
-  urlToRelativeUrl,
-} from "@jsenv/urls";
+import { asUrlWithoutSearch, ensurePathnameTrailingSlash } from "@jsenv/urls";
 import {
   assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
@@ -1031,16 +1027,7 @@ build ${entryPointKeys.length} entry points`);
     const buildManifest = {};
     const buildContents = {};
     const buildInlineRelativeUrls = [];
-    const getBuildRelativeUrl = (url) => {
-      const urlObject = new URL(url);
-      urlObject.searchParams.delete("js_module_fallback");
-      urlObject.searchParams.delete("as_css_module");
-      urlObject.searchParams.delete("as_json_module");
-      urlObject.searchParams.delete("as_text_module");
-      url = urlObject.href;
-      const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
-      return buildRelativeUrl;
-    };
+
     GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
       finalKitchen.graph.rootUrlInfo,
       (urlInfo) => {
@@ -1050,41 +1037,13 @@ build ${entryPointKeys.length} entry points`);
         if (urlInfo.type === "directory") {
           return;
         }
+        const buildRelativeUrl =
+          buildSpecifierManager.getBuildRelativeUrl(urlInfo);
         if (urlInfo.isInline) {
-          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
           buildContents[buildRelativeUrl] = urlInfo.content;
           buildInlineRelativeUrls.push(buildRelativeUrl);
         } else {
-          const buildRelativeUrl = getBuildRelativeUrl(urlInfo.url);
-          if (
-            buildSpecifierManager.buildVersionsManager.getVersion(urlInfo) &&
-            buildSpecifierManager.buildVersionsManager.canUseVersionedUrl(
-              urlInfo,
-            )
-          ) {
-            const buildSpecifier =
-              buildSpecifierManager.getBuildUrlFromBuildSpecifier(urlInfo.url);
-            const buildSpecifierVersioned =
-              buildSpecifierManager.buildVersionsManager.getBuildSpecifierVersioned(
-                buildSpecifier,
-              );
-            const buildUrlVersioned = asBuildUrlVersioned({
-              buildSpecifierVersioned,
-              buildDirectoryUrl,
-            });
-            const buildRelativeUrlVersioned = urlToRelativeUrl(
-              buildUrlVersioned,
-              buildDirectoryUrl,
-            );
-            if (versioningMethod === "search_param") {
-              buildContents[buildRelativeUrl] = urlInfo.content;
-            } else {
-              buildContents[buildRelativeUrlVersioned] = urlInfo.content;
-            }
-            buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
-          } else {
-            buildContents[buildRelativeUrl] = urlInfo.content;
-          }
+          buildContents[buildRelativeUrl] = urlInfo.content;
         }
       },
     );
@@ -1200,21 +1159,4 @@ build ${entryPointKeys.length} entry points`);
   });
   await firstBuildPromise;
   return stopWatchingSourceFiles;
-};
-
-const asBuildUrlVersioned = ({
-  buildSpecifierVersioned,
-  buildDirectoryUrl,
-}) => {
-  if (buildSpecifierVersioned[0] === "/") {
-    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
-  }
-  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
-  if (buildUrl.startsWith(buildDirectoryUrl)) {
-    return buildUrl;
-  }
-  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
-  // let's move url to build directory
-  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
-  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };

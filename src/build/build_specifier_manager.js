@@ -75,6 +75,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       getBuildUrlFromBuildSpecifier(buildSpecifier),
   });
 
+  const getBuildRelativeUrl = (url) => {
+    const urlObject = new URL(url);
+    urlObject.searchParams.delete("js_module_fallback");
+    urlObject.searchParams.delete("as_css_module");
+    urlObject.searchParams.delete("as_json_module");
+    urlObject.searchParams.delete("as_text_module");
+    url = urlObject.href;
+    const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
+    return buildRelativeUrl;
+  };
+
   return {
     buildVersionsManager,
     buildDirectoryRedirections,
@@ -304,6 +315,24 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     getBuildUrlBeforeFinalRedirect: (buildUrl) => {
       return findKey(finalRedirections, buildUrl);
     },
+
+    getBuildRelativeUrl: (urlInfo) => {
+      if (versioning && versioningMethod === "filename") {
+        const buildSpecifier = getBuildUrlFromBuildSpecifier(urlInfo.url);
+        const buildSpecifierVersioned =
+          buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
+        const buildUrlVersioned = asBuildUrlVersioned({
+          buildSpecifierVersioned,
+          buildDirectoryUrl,
+        });
+        const buildRelativeUrlVersioned = urlToRelativeUrl(
+          buildUrlVersioned,
+          buildDirectoryUrl,
+        );
+        return buildRelativeUrlVersioned;
+      }
+      return getBuildRelativeUrl(urlInfo.url);
+    },
   };
 };
 
@@ -314,4 +343,21 @@ const findKey = (map, value) => {
     }
   }
   return undefined;
+};
+
+const asBuildUrlVersioned = ({
+  buildSpecifierVersioned,
+  buildDirectoryUrl,
+}) => {
+  if (buildSpecifierVersioned[0] === "/") {
+    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
+  }
+  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
+  if (buildUrl.startsWith(buildDirectoryUrl)) {
+    return buildUrl;
+  }
+  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
+  // let's move url to build directory
+  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
+  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };
