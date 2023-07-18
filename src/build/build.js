@@ -16,7 +16,6 @@
  *  - injecting urls into service workers
  */
 
-import { asUrlWithoutSearch, ensurePathnameTrailingSlash } from "@jsenv/urls";
 import {
   assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
@@ -24,7 +23,7 @@ import {
   comparePathnames,
 } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import { createLogger, createTaskLog, createDetailedMessage } from "@jsenv/log";
+import { createLogger, createTaskLog } from "@jsenv/log";
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -368,136 +367,6 @@ build ${entryPointKeys.length} entry points`);
         jsenvPluginJsModuleFallback(),
         jsenvPluginInlining(),
         {
-          name: "jsenv:build_shape",
-          appliesDuring: "build",
-          resolveReference: (reference) => {
-            const getUrl = () => {
-              const buildUrl =
-                buildSpecifierManager.buildVersionsManager.getBuildUrl(
-                  reference,
-                );
-              if (buildUrl) {
-                return buildUrl;
-              }
-              if (reference.type === "filesystem") {
-                const ownerRawUrl = buildSpecifierManager.getRawUrl(
-                  reference.ownerUrlInfo.url,
-                );
-                const ownerUrl = ensurePathnameTrailingSlash(ownerRawUrl);
-                return new URL(reference.specifier, ownerUrl).href;
-              }
-              if (reference.specifier[0] === "/") {
-                return new URL(reference.specifier.slice(1), buildDirectoryUrl)
-                  .href;
-              }
-              return new URL(
-                reference.specifier,
-                reference.baseUrl || reference.ownerUrlInfo.url,
-              ).href;
-            };
-            let url = getUrl();
-            //  url = rawRedirections.get(url) || url
-            url = buildSpecifierManager.getFinalBuildUrl(url);
-            return url;
-          },
-          redirectReference: (reference) => {
-            return buildSpecifierManager.redirectToBuildDirectory(reference);
-          },
-          formatReference: (reference) => {
-            return buildSpecifierManager.format(reference);
-          },
-          fetchUrlContent: async (finalUrlInfo) => {
-            const fromBundleOrRawGraph = (url) => {
-              const bundleUrlInfo = bundleUrlInfos[url];
-              if (bundleUrlInfo) {
-                return bundleUrlInfo;
-              }
-              const rawUrl = buildSpecifierManager.getRawUrl(url);
-              const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
-              if (!rawUrlInfo) {
-                throw new Error(
-                  createDetailedMessage(`Cannot find url`, {
-                    url,
-                    "raw urls": Array.from(
-                      buildSpecifierManager.buildDirectoryRedirections.values(),
-                    ),
-                    "build urls": Array.from(
-                      buildSpecifierManager.buildDirectoryRedirections.keys(),
-                    ),
-                  }),
-                );
-              }
-              // logger.debug(`fetching from raw graph ${url}`)
-              if (rawUrlInfo.isInline) {
-                // Inline content, such as <script> inside html, is transformed during the previous phase.
-                // If we read the inline content it would be considered as the original content.
-                // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-                //   as the original content.
-                //   - But it would not work when sourcemap are not generated
-                //   - would be a bit slower
-                // - So instead of reading the inline content directly, we search into raw graph
-                //   to get "originalContent" and "sourcemap"
-                finalUrlInfo.type = rawUrlInfo.type;
-                finalUrlInfo.subtype = rawUrlInfo.subtype;
-                return rawUrlInfo;
-              }
-              return rawUrlInfo;
-            };
-            const { firstReference } = finalUrlInfo;
-            // .original reference updated during "postbuild":
-            // happens for "js_module_fallback"
-            const reference = firstReference.original || firstReference;
-            // reference injected during "postbuild":
-            // - happens for "js_module_fallback" injecting "s.js"
-            if (reference.injected) {
-              const rawReference =
-                rawKitchen.graph.rootUrlInfo.dependencies.inject({
-                  type: reference.type,
-                  expectedType: reference.expectedType,
-                  specifier: reference.specifier,
-                  specifierLine: reference.specifierLine,
-                  specifierColumn: reference.specifierColumn,
-                  specifierStart: reference.specifierStart,
-                  specifierEnd: reference.specifierEnd,
-                });
-              await rawReference.urlInfo.cook();
-              return {
-                type: rawReference.urlInfo.type,
-                content: rawReference.urlInfo.content,
-                contentType: rawReference.urlInfo.contentType,
-                originalContent: rawReference.urlInfo.originalContent,
-                originalUrl: rawReference.urlInfo.originalUrl,
-                sourcemap: rawReference.urlInfo.sourcemap,
-              };
-            }
-            if (reference.isInline) {
-              const prevReference = firstReference.prev;
-              if (prevReference) {
-                if (!prevReference.isInline) {
-                  // the reference was inlined
-                  const urlBeforeRedirect =
-                    buildSpecifierManager.getBuildUrlBeforeFinalRedirect(
-                      prevReference.url,
-                    ) || prevReference.url;
-
-                  return fromBundleOrRawGraph(urlBeforeRedirect);
-                }
-                if (
-                  buildSpecifierManager.buildDirectoryRedirections.has(
-                    prevReference.url,
-                  )
-                ) {
-                  // the prev reference is transformed to fetch underlying resource
-                  // (getWithoutSearchParam)
-                  return fromBundleOrRawGraph(prevReference.url);
-                }
-              }
-              return fromBundleOrRawGraph(firstReference.url);
-            }
-            return fromBundleOrRawGraph(reference.url);
-          },
-        },
-        {
           name: "jsenv:optimize",
           appliesDuring: "build",
           transformUrlContent: async (urlInfo) => {
@@ -539,8 +408,8 @@ build ${entryPointKeys.length} entry points`);
         }) &&
         rawKitchen.context.isSupportedOnCurrentClients("importmap"),
     });
+    finalKitchen.pluginController.pushPlugin(buildSpecifierManager.jsenvPlugin);
 
-    const bundleUrlInfos = {};
     const bundlers = {};
     bundle: {
       rawKitchen.pluginController.plugins.forEach((plugin) => {
@@ -701,14 +570,10 @@ build ${entryPointKeys.length} entry points`);
                 }
               });
             }
-            const buildUrl = buildSpecifierManager.generateBuildUrlForBundle(
+            buildSpecifierManager.generateBuildUrlForBundle(
               bundlerGeneratedUrlInfo,
               bundleUrlInfo,
             );
-            bundleUrlInfos[buildUrl] = bundleUrlInfo;
-            if (buildUrl.includes("?")) {
-              bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = bundleUrlInfo;
-            }
           });
         } catch (e) {
           bundleTask.fail();

@@ -1,5 +1,10 @@
-import { ANSI } from "@jsenv/log";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { ANSI, createDetailedMessage } from "@jsenv/log";
+import {
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  ensurePathnameTrailingSlash,
+  asUrlWithoutSearch,
+} from "@jsenv/urls";
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap";
 
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -86,45 +91,51 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     return buildRelativeUrl;
   };
 
-  return {
-    buildVersionsManager,
-    buildDirectoryRedirections,
+  const getRawUrl = (url) => {
+    return buildDirectoryRedirections.get(url);
+  };
 
-    generateBuildUrlForBundle: (urlInfoBundled, urlInfo) => {
-      const buildUrl = buildUrlsGenerator.generate(urlInfo.url, {
-        urlInfo: urlInfoBundled,
-      });
-      bundleRedirections.set(urlInfo.url, buildUrl);
-      if (urlIsInsideOf(urlInfo.url, buildDirectoryUrl)) {
-        if (urlInfoBundled.data.isDynamicEntry) {
-          const rawUrlInfo = rawKitchen.graph.getUrlInfo(
-            urlInfoBundled.originalUrl,
-          );
-          rawUrlInfo.data.bundled = false;
-          bundleRedirections.set(urlInfoBundled.originalUrl, buildUrl);
-          associateBuildUrlAndRawUrl(
-            buildUrl,
-            urlInfoBundled.originalUrl,
-            "bundle",
-          );
-        } else {
-          urlInfo.data.generatedToShareCode = true;
+  const getFinalBuildUrl = (buildUrl) => {
+    const urlAfterBundling = bundleRedirections.get(buildUrl);
+    buildUrl = urlAfterBundling || buildUrl;
+    buildUrl = bundleInternalRedirections.get(buildUrl) || buildUrl;
+    buildUrl = finalRedirections.get(buildUrl) || buildUrl;
+    return buildUrl;
+  };
+
+  const getBuildUrlBeforeFinalRedirect = (buildUrl) => {
+    return findKey(finalRedirections, buildUrl);
+  };
+
+  const bundleUrlInfos = {};
+  const jsenvPlugin = {
+    name: "build_directory",
+    appliesDuring: "build",
+    resolveReference: (reference) => {
+      const getUrl = () => {
+        const buildUrl = buildVersionsManager.getBuildUrl(reference);
+        if (buildUrl) {
+          return buildUrl;
         }
-      } else {
-        associateBuildUrlAndRawUrl(buildUrl, urlInfo.url, "bundle");
-      }
-      if (urlInfoBundled.data.bundleRelativeUrl) {
-        const urlForBundler = new URL(
-          urlInfoBundled.data.bundleRelativeUrl,
-          buildDirectoryUrl,
+        if (reference.type === "filesystem") {
+          const ownerRawUrl = getRawUrl(reference.ownerUrlInfo.url);
+          const ownerUrl = ensurePathnameTrailingSlash(ownerRawUrl);
+          return new URL(reference.specifier, ownerUrl).href;
+        }
+        if (reference.specifier[0] === "/") {
+          return new URL(reference.specifier.slice(1), buildDirectoryUrl).href;
+        }
+        return new URL(
+          reference.specifier,
+          reference.baseUrl || reference.ownerUrlInfo.url,
         ).href;
-        if (urlForBundler !== buildUrl) {
-          bundleInternalRedirections.set(urlForBundler, buildUrl);
-        }
-      }
+      };
+      let url = getUrl();
+      //  url = rawRedirections.get(url) || url
+      url = getFinalBuildUrl(url);
+      return url;
     },
-
-    redirectToBuildDirectory: (reference) => {
+    redirectReference: (reference) => {
       if (!reference.url.startsWith("file:")) {
         return null;
       }
@@ -266,7 +277,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       });
       return buildUrl;
     },
-    format: (reference) => {
+    formatReference: (reference) => {
       if (!reference.generatedUrl.startsWith("file:")) {
         return null;
       }
@@ -299,23 +310,137 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         );
       return buildSpecifierWithVersionPlaceholder;
     },
-    getRawUrl: (url) => {
-      return buildDirectoryRedirections.get(url);
+    fetchUrlContent: async (finalUrlInfo) => {
+      const fromBundleOrRawGraph = (url) => {
+        const bundleUrlInfo = bundleUrlInfos[url];
+        if (bundleUrlInfo) {
+          return bundleUrlInfo;
+        }
+        const rawUrl = getRawUrl(url);
+        const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+        if (!rawUrlInfo) {
+          throw new Error(
+            createDetailedMessage(`Cannot find url`, {
+              url,
+              "raw urls": Array.from(buildDirectoryRedirections.values()),
+              "build urls": Array.from(buildDirectoryRedirections.keys()),
+            }),
+          );
+        }
+        // logger.debug(`fetching from raw graph ${url}`)
+        if (rawUrlInfo.isInline) {
+          // Inline content, such as <script> inside html, is transformed during the previous phase.
+          // If we read the inline content it would be considered as the original content.
+          // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
+          //   as the original content.
+          //   - But it would not work when sourcemap are not generated
+          //   - would be a bit slower
+          // - So instead of reading the inline content directly, we search into raw graph
+          //   to get "originalContent" and "sourcemap"
+          finalUrlInfo.type = rawUrlInfo.type;
+          finalUrlInfo.subtype = rawUrlInfo.subtype;
+          return rawUrlInfo;
+        }
+        return rawUrlInfo;
+      };
+      const { firstReference } = finalUrlInfo;
+      // .original reference updated during "postbuild":
+      // happens for "js_module_fallback"
+      const reference = firstReference.original || firstReference;
+      // reference injected during "postbuild":
+      // - happens for "js_module_fallback" injecting "s.js"
+      if (reference.injected) {
+        const rawReference = rawKitchen.graph.rootUrlInfo.dependencies.inject({
+          type: reference.type,
+          expectedType: reference.expectedType,
+          specifier: reference.specifier,
+          specifierLine: reference.specifierLine,
+          specifierColumn: reference.specifierColumn,
+          specifierStart: reference.specifierStart,
+          specifierEnd: reference.specifierEnd,
+        });
+        await rawReference.urlInfo.cook();
+        return {
+          type: rawReference.urlInfo.type,
+          content: rawReference.urlInfo.content,
+          contentType: rawReference.urlInfo.contentType,
+          originalContent: rawReference.urlInfo.originalContent,
+          originalUrl: rawReference.urlInfo.originalUrl,
+          sourcemap: rawReference.urlInfo.sourcemap,
+        };
+      }
+      if (reference.isInline) {
+        const prevReference = firstReference.prev;
+        if (prevReference) {
+          if (!prevReference.isInline) {
+            // the reference was inlined
+            const urlBeforeRedirect =
+              getBuildUrlBeforeFinalRedirect(prevReference.url) ||
+              prevReference.url;
+
+            return fromBundleOrRawGraph(urlBeforeRedirect);
+          }
+          if (buildDirectoryRedirections.has(prevReference.url)) {
+            // the prev reference is transformed to fetch underlying resource
+            // (getWithoutSearchParam)
+            return fromBundleOrRawGraph(prevReference.url);
+          }
+        }
+        return fromBundleOrRawGraph(firstReference.url);
+      }
+      return fromBundleOrRawGraph(reference.url);
     },
+  };
+
+  return {
+    buildVersionsManager,
+    jsenvPlugin,
+
+    generateBuildUrlForBundle: (urlInfoBundled, urlInfo) => {
+      const buildUrl = buildUrlsGenerator.generate(urlInfo.url, {
+        urlInfo: urlInfoBundled,
+      });
+      bundleRedirections.set(urlInfo.url, buildUrl);
+      if (urlIsInsideOf(urlInfo.url, buildDirectoryUrl)) {
+        if (urlInfoBundled.data.isDynamicEntry) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(
+            urlInfoBundled.originalUrl,
+          );
+          rawUrlInfo.data.bundled = false;
+          bundleRedirections.set(urlInfoBundled.originalUrl, buildUrl);
+          associateBuildUrlAndRawUrl(
+            buildUrl,
+            urlInfoBundled.originalUrl,
+            "bundle",
+          );
+        } else {
+          urlInfo.data.generatedToShareCode = true;
+        }
+      } else {
+        associateBuildUrlAndRawUrl(buildUrl, urlInfo.url, "bundle");
+      }
+      if (urlInfoBundled.data.bundleRelativeUrl) {
+        const urlForBundler = new URL(
+          urlInfoBundled.data.bundleRelativeUrl,
+          buildDirectoryUrl,
+        ).href;
+        if (urlForBundler !== buildUrl) {
+          bundleInternalRedirections.set(urlForBundler, buildUrl);
+        }
+      }
+
+      bundleUrlInfos[buildUrl] = urlInfoBundled;
+      if (buildUrl.includes("?")) {
+        bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = urlInfoBundled;
+      }
+    },
+
+    getRawUrl,
     getBuildUrl: (url) => {
       return findKey(buildDirectoryRedirections, url);
     },
-    getFinalBuildUrl: (buildUrl) => {
-      const urlAfterBundling = bundleRedirections.get(buildUrl);
-      buildUrl = urlAfterBundling || buildUrl;
-      buildUrl = bundleInternalRedirections.get(buildUrl) || buildUrl;
-      buildUrl = finalRedirections.get(buildUrl) || buildUrl;
-      return buildUrl;
-    },
-    getBuildUrlBeforeFinalRedirect: (buildUrl) => {
-      return findKey(finalRedirections, buildUrl);
-    },
-
+    getFinalBuildUrl,
+    getBuildUrlBeforeFinalRedirect,
     getBuildRelativeUrl: (urlInfo) => {
       if (versioning && versioningMethod === "filename") {
         const buildSpecifier = getBuildUrlFromBuildSpecifier(urlInfo.url);
