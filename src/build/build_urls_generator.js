@@ -1,5 +1,4 @@
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
-import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js";
 
 export const createBuildUrlsGenerator = ({
   buildDirectoryUrl,
@@ -17,7 +16,7 @@ export const createBuildUrlsGenerator = ({
     return urlToFilename(url);
   };
 
-  const generate = memoizeByFirstArgument((url, { urlInfo, ownerUrlInfo }) => {
+  const generate = (url, { urlInfo, ownerUrlInfo }) => {
     const directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
       assetsDirectory,
@@ -45,8 +44,9 @@ export const createBuildUrlsGenerator = ({
       integer++;
       nameCandidate = `${basename}${integer}${extension}`;
     }
+    hash = "";
     return `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
-  });
+  };
 
   return {
     generate,
