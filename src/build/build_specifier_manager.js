@@ -396,12 +396,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     buildVersionsManager,
     jsenvPlugin,
 
-    generateBuildUrlForBundle: (urlInfoBundled, urlInfo) => {
-      const buildUrl = buildUrlsGenerator.generate(urlInfo.url, {
+    generateBuildUrlForBundle: (urlInfoBundled, url) => {
+      const buildUrl = buildUrlsGenerator.generate(url, {
         urlInfo: urlInfoBundled,
       });
-      bundleRedirections.set(urlInfo.url, buildUrl);
-      if (urlIsInsideOf(urlInfo.url, buildDirectoryUrl)) {
+      bundleRedirections.set(url, buildUrl);
+      if (urlIsInsideOf(url, buildDirectoryUrl)) {
         if (urlInfoBundled.data.isDynamicEntry) {
           const rawUrlInfo = rawKitchen.graph.getUrlInfo(
             urlInfoBundled.originalUrl,
@@ -414,10 +414,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             "bundle",
           );
         } else {
-          urlInfo.data.generatedToShareCode = true;
+          urlInfoBundled.data.generatedToShareCode = true;
         }
       } else {
-        associateBuildUrlAndRawUrl(buildUrl, urlInfo.url, "bundle");
+        associateBuildUrlAndRawUrl(buildUrl, url, "bundle");
       }
       if (urlInfoBundled.data.bundleRelativeUrl) {
         const urlForBundler = new URL(
