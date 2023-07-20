@@ -31,7 +31,7 @@ export const createBuildSpecifierManager = ({
   });
   const sourceRedirections = new Map();
   const generateBuildUrlForSourceFile = ({ reference, rawUrlInfo }) => {
-    const url = reference.url;
+    const url = reference.generatedUrl;
     const buildUrlFromCache = sourceRedirections.get(url);
     if (buildUrlFromCache) {
       return buildUrlFromCache;
@@ -112,28 +112,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   const getBuildUrlFromBuildSpecifier = (buildSpecifier) => {
     return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
   };
-  const asFormattedBuildSpecifier = (reference) => {
-    if (base === "./") {
-      const parentUrl =
-        reference.ownerUrlInfo.url === sourceDirectoryUrl
-          ? buildDirectoryUrl
-          : reference.ownerUrlInfo.url;
-      const urlRelativeToParent = urlToRelativeUrl(
-        reference.generatedUrl,
-        parentUrl,
-      );
-      if (urlRelativeToParent[0] !== ".") {
-        // ensure "./" on relative url (otherwise it could be a "bare specifier")
-        return `./${urlRelativeToParent}`;
-      }
-      return urlRelativeToParent;
-    }
-    const urlRelativeToBuildDirectory = urlToRelativeUrl(
-      reference.generatedUrl,
-      buildDirectoryUrl,
-    );
-    return `${base}${urlRelativeToBuildDirectory}`;
-  };
 
   const buildVersionsManager = createBuildVersionsManager({
     finalKitchen,
@@ -144,17 +122,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     getBuildUrlFromBuildSpecifier: (buildSpecifier) =>
       getBuildUrlFromBuildSpecifier(buildSpecifier),
   });
-
-  const getBuildRelativeUrl = (url) => {
-    const urlObject = new URL(url);
-    urlObject.searchParams.delete("js_module_fallback");
-    urlObject.searchParams.delete("as_css_module");
-    urlObject.searchParams.delete("as_json_module");
-    urlObject.searchParams.delete("as_text_module");
-    url = urlObject.href;
-    const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
-    return buildRelativeUrl;
-  };
 
   const getFinalBuildUrl = (buildUrl) => {
     const urlAfterBundling = bundleRedirections.get(buildUrl);
@@ -224,10 +191,18 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
       return url;
     },
-    redirectReference: (reference) => {
-      const url = reference.url;
+    formatReference: (reference) => {
+      const generatedUrl = reference.generatedUrl;
+      if (!generatedUrl.startsWith("file:")) {
+        return null;
+      }
+      if (reference.isWeak) {
+        return null;
+      }
+
       // source file -> redirect to build directory
-      if (urlIsInsideOf(url, sourceDirectoryUrl)) {
+      let buildUrl;
+      if (urlIsInsideOf(generatedUrl, sourceDirectoryUrl)) {
         if (reference.original) {
           // jsenv_plugin_js_module_fallback injects "?js_module_fallback"
           // during "shape" step
@@ -242,44 +217,50 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             subtype: reference.expectedSubtype,
             filename: reference.filename,
           };
-          const buildUrl = generateBuildUrlForSourceFile({
+          buildUrl = generateBuildUrlForSourceFile({
             reference,
             rawUrlInfo,
           });
-          return buildUrl;
+        } else {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
+          if (!rawUrlInfo) {
+            throw new Error(`There is no source file for "${reference.url}"`);
+          }
+          buildUrl = generateBuildUrlForSourceFile({
+            reference,
+            rawUrlInfo,
+          });
         }
-        const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
-        if (!rawUrlInfo) {
-          throw new Error(`There is no source file for "${url}"`);
+      } else {
+        // generated during "shape"
+        // - sourcemaps
+        // - "js_module_fallback" injecting "s.js"
+        // - ??
+        buildUrl = generateBuildUrlForBuildFile({ reference });
+      }
+
+      let buildSpecifier;
+      if (base === "./") {
+        const parentUrl =
+          reference.ownerUrlInfo.url === sourceDirectoryUrl
+            ? buildDirectoryUrl
+            : reference.ownerUrlInfo.url;
+        const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentUrl);
+        if (urlRelativeToParent[0] === ".") {
+          buildSpecifier = urlRelativeToParent;
+        } else {
+          // ensure "./" on relative url (otherwise it could be a "bare specifier")
+          buildSpecifier = `./${urlRelativeToParent}`;
         }
-        const buildUrl = generateBuildUrlForSourceFile({
-          reference,
-          rawUrlInfo,
-        });
-        return buildUrl;
-      }
-      // generated during "shape"
-      // - sourcemaps
-      // - "js_module_fallback" injecting "s.js"
-      // - ??
-      const buildUrl = generateBuildUrlForBuildFile({ reference });
-      return buildUrl;
-    },
-    formatReference: (reference) => {
-      const generatedUrl = reference.generatedUrl;
-      if (!generatedUrl.startsWith("file:")) {
-        return null;
-      }
-      if (reference.isWeak) {
-        return null;
-      }
-      if (!urlIsInsideOf(generatedUrl, buildDirectoryUrl)) {
-        throw new Error(
-          `urls should be inside build directory at this stage, found "${generatedUrl}"`,
+      } else {
+        const urlRelativeToBuildDirectory = urlToRelativeUrl(
+          buildUrl,
+          buildDirectoryUrl,
         );
+        buildSpecifier = `${base}${urlRelativeToBuildDirectory}`;
       }
-      const buildSpecifier = asFormattedBuildSpecifier(reference);
-      buildSpecifierToBuildUrlMap.set(buildSpecifier, generatedUrl);
+
+      buildSpecifierToBuildUrlMap.set(buildSpecifier, buildUrl);
       const buildSpecifierWithVersionPlaceholder =
         buildVersionsManager.generateBuildSpecifierPlaceholder(
           reference,
@@ -315,10 +296,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         };
       }
 
-      const rawUrl = firstReference.original.url;
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(
-        firstReference.original.url,
-      );
+      const rawUrl = firstReference.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
       if (!rawUrlInfo) {
         throw new Error(createDetailedMessage(`Cannot find ${rawUrl}`));
       }
@@ -361,7 +340,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         );
         return buildRelativeUrlVersioned;
       }
-      return getBuildRelativeUrl(urlInfo.url);
+      const sourceUrl = urlInfo.url;
+      const buildUrl = sourceRedirections.get(sourceUrl);
+      const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
+      return buildRelativeUrl;
     },
   };
 };
