@@ -19,9 +19,16 @@ const test = async ({ name, ...rest }) => {
   );
 };
 
-// cannot use <script type="module">
+// can use <script type="module">
 await test({
-  name: "1_js_module_fallback",
-  runtimeCompat: { chrome: "60" },
+  name: "0_js_module",
+  runtimeCompat: { chrome: "89" },
   versioning: false,
 });
+
+// cannot use <script type="module">
+// await test({
+//   name: "1_js_module_fallback",
+//   runtimeCompat: { chrome: "60" },
+//   versioning: false,
+// });
