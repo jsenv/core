@@ -51,7 +51,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   //   return findKey(sourceRedirections, buildUrl);
   // };
   const buildRedirections = new Map();
-  const generateBuildUrlForBuildFile = ({ url, reference }) => {
+  const generateBuildUrlForBuildFile = ({ reference }) => {
+    const url = reference.url;
     const buildUrlFromCache = buildRedirections.get(url);
     if (buildUrlFromCache) {
       return buildUrlFromCache;
@@ -242,7 +243,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             filename: reference.filename,
           };
           const buildUrl = generateBuildUrlForSourceFile({
-            url,
             reference,
             rawUrlInfo,
           });
@@ -253,7 +253,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           throw new Error(`There is no source file for "${url}"`);
         }
         const buildUrl = generateBuildUrlForSourceFile({
-          url,
           reference,
           rawUrlInfo,
         });
@@ -263,7 +262,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       // - sourcemaps
       // - "js_module_fallback" injecting "s.js"
       // - ??
-      const buildUrl = generateBuildUrlForBuildFile({ url, reference });
+      const buildUrl = generateBuildUrlForBuildFile({ reference });
       return buildUrl;
     },
     formatReference: (reference) => {
