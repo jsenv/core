@@ -107,6 +107,8 @@ export const jsenvPluginJsModuleConversion = () => {
         inputUrl: jsModuleUrlInfo.url,
         outputUrl: urlInfo.url,
         outputFormat,
+        // during build we preserve absolute urls leading to build directory
+        preferAbsoluteSpecifiers: urlInfo.context.build,
       });
       return {
         content,

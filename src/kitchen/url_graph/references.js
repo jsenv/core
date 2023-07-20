@@ -10,6 +10,8 @@ import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
+let referenceId = 0;
+
 export const createDependencies = (ownerUrlInfo) => {
   const { referenceToOthersSet } = ownerUrlInfo;
 
@@ -326,6 +328,7 @@ const createReference = ({
     }
   }
   const reference = {
+    id: ++referenceId,
     ownerUrlInfo,
     original,
     prev,
@@ -445,6 +448,7 @@ const createReference = ({
       original: reference.original || reference,
       prev: reference,
       trace,
+      injected: reference.injected,
       expectedType: reference.expectedType,
       ...props,
     });

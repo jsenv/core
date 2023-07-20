@@ -552,10 +552,10 @@ build ${entryPointKeys.length} entry points`);
                 }
               });
             }
-            buildSpecifierManager.generateBuildUrlForBundle(
-              urlInfoBundled,
+            buildSpecifierManager.generateBuildUrlForBundle({
               url,
-            );
+              urlInfoBundled,
+            });
           });
         } catch (e) {
           bundleTask.fail();

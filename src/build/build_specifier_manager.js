@@ -30,12 +30,7 @@ export const createBuildSpecifierManager = ({
   });
   const sourceRedirections = new Map();
   const generateBuildUrlForSourceFile = ({ url, rawUrlInfo, reference }) => {
-    const urlObject = new URL(url);
-    urlObject.searchParams.delete("as_js_classic");
-    urlObject.searchParams.delete("as_json_module");
-    const sourceUrl = urlObject.href;
-
-    const buildUrlFromCache = sourceRedirections.get(sourceUrl);
+    const buildUrlFromCache = sourceRedirections.get(url);
     if (buildUrlFromCache) {
       return buildUrlFromCache;
     }
@@ -43,7 +38,7 @@ export const createBuildSpecifierManager = ({
       urlInfo: rawUrlInfo,
       ownerUrlInfo: reference.ownerUrlInfo,
     });
-    sourceRedirections.set(sourceUrl, buildUrl);
+    sourceRedirections.set(url, buildUrl);
     logger.debug(`generate build url for source file
 ${ANSI.color(url, ANSI.GREY)} ->
 ${ANSI.color(buildUrl, ANSI.MAGENTA)}
@@ -83,11 +78,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     bundleRedirections.set(url, buildUrl);
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
       if (urlInfoBundled.data.isDynamicEntry) {
-        const rawUrlInfo = rawKitchen.graph.getUrlInfo(
-          urlInfoBundled.originalUrl,
-        );
+        const rawUrl = urlInfoBundled.originalUrl;
+        const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
         rawUrlInfo.data.bundled = false;
-        bundleRedirections.set(urlInfoBundled.originalUrl, buildUrl);
+        bundleRedirections.set(rawUrl, buildUrl);
       } else {
         urlInfoBundled.data.generatedToShareCode = true;
       }
@@ -168,10 +162,18 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     return findKey(finalRedirections, buildUrl);
   };
 
+  const referenceToIgnoreSet = new Set();
   const jsenvPlugin = {
     name: "build_directory",
     appliesDuring: "build",
+    // reference resolution is split in 2
+    // the redirection to build directory is done in a second phase (redirectReference)
+    // to let opportunity to others plugins (js_module_fallback)
+    // to mutate reference (inject ?js_module_fallback)
+    // before it gets redirected to build directory
     resolveReference: (reference) => {
+      console.log("resolve reference #", reference.id);
+
       let url;
       if (reference.type === "filesystem") {
         let ownerRawUrl = buildRedirections.get(reference.ownerUrlInfo.url);
@@ -179,6 +181,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         url = new URL(reference.specifier, ownerRawUrl).href;
       } else if (reference.specifier[0] === "/") {
         url = new URL(reference.specifier.slice(1), sourceDirectoryUrl).href;
+      } else if (reference.injected) {
+        // js_module_fallback
+        url = new URL(
+          reference.specifier,
+          reference.baseUrl || reference.ownerUrlInfo.url,
+        ).href;
       } else if (reference.isInline) {
         const rawInlineUrlInfo = GRAPH_VISITOR.find(
           rawKitchen.graph,
@@ -202,6 +210,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return false;
           },
         );
+        if (!rawInlineUrlInfo) {
+          debugger;
+        }
         url = rawInlineUrlInfo.url;
       } else {
         const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
@@ -211,29 +222,36 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       if (!url.startsWith("file:")) {
         return url;
       }
+      return url;
+    },
+    redirectReference: (reference) => {
+      if (reference.original) {
+        // was redirected by something else:
+        // - js_module_fallback
+        referenceToIgnoreSet.add(reference);
+        return null;
+      }
+      const url = reference.url;
+      console.log("redirecting #", reference.id, url, "to build directory");
       // source file -> redirect to build directory
       if (urlIsInsideOf(url, sourceDirectoryUrl)) {
         const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
-        if (rawUrlInfo) {
-          const buildUrl = generateBuildUrlForSourceFile({
-            url,
-            reference,
-            rawUrlInfo,
-          });
-          return buildUrl;
+        if (!rawUrlInfo) {
+          throw new Error(`There is no source file for "${url}"`);
         }
-        throw new Error(`There is no source file for "${url}"`);
-      }
-      // build file -> ...
-      if (urlIsInsideOf(url, buildDirectoryUrl)) {
-        // generated during "shape"
-        // - sourcemaps
-        // - "js_module_fallback" injecting "s.js"
-        // - ??
-        const buildUrl = generateBuildUrlForBuildFile({ url, reference });
+        const buildUrl = generateBuildUrlForSourceFile({
+          url,
+          reference,
+          rawUrlInfo,
+        });
         return buildUrl;
       }
-      throw new Error("wtf");
+      // generated during "shape"
+      // - sourcemaps
+      // - "js_module_fallback" injecting "s.js"
+      // - ??
+      const buildUrl = generateBuildUrlForBuildFile({ url, reference });
+      return buildUrl;
     },
     formatReference: (reference) => {
       if (!reference.generatedUrl.startsWith("file:")) {
@@ -242,7 +260,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       if (reference.isWeak) {
         return null;
       }
-      if (!urlIsInsideOf(reference.generatedUrl, buildDirectoryUrl)) {
+      if (referenceToIgnoreSet.has(reference)) {
+        // handled by other plugins (js_module_fallback)
+        return null;
+      }
+      if (!urlIsInsideOf(reference.url, buildDirectoryUrl)) {
         throw new Error(
           `urls should be inside build directory at this stage, found "${reference.url}"`,
         );
@@ -254,16 +276,21 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           reference,
           buildSpecifier,
         );
+      console.log(
+        "format reference #",
+        reference.id,
+        buildSpecifierWithVersionPlaceholder,
+      );
       return buildSpecifierWithVersionPlaceholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
       const { firstReference } = finalUrlInfo;
-      // .original reference updated during "shape":
-      // happens for "js_module_fallback"
-      const reference = firstReference.original || firstReference;
+
       // reference injected during "shape":
-      // - happens for "js_module_fallback" injecting "s.js"
-      if (reference.injected) {
+      // - "js_module_fallback" injecting a reference to url without "?js_module_fallback"
+      // - "js_module_fallback" injecting "s.js"
+      if (firstReference.injected) {
+        const reference = firstReference.original || firstReference;
         const rawReference = rawKitchen.graph.rootUrlInfo.dependencies.inject({
           type: reference.type,
           expectedType: reference.expectedType,
@@ -283,11 +310,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           sourcemap: rawReference.urlInfo.sourcemap,
         };
       }
-      const url = reference.url;
-      const rawUrl = getSourceUrl(url);
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+
+      const rawUrl = firstReference.original.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(
+        firstReference.original.url,
+      );
       if (!rawUrlInfo) {
-        throw new Error(createDetailedMessage(`Cannot find ${url}`));
+        throw new Error(createDetailedMessage(`Cannot find ${rawUrl}`));
       }
       if (rawUrlInfo.isInline) {
         // Inline content, such as <script> inside html, is transformed during the previous phase.
