@@ -225,7 +225,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     },
     redirectReference: (reference) => {
       const url = reference.url;
-      console.log("redirecting #", reference.id, url, "to build directory");
       // source file -> redirect to build directory
       if (urlIsInsideOf(url, sourceDirectoryUrl)) {
         if (reference.original) {
@@ -287,11 +286,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           reference,
           buildSpecifier,
         );
-      console.log(
-        "format reference #",
-        reference.id,
-        buildSpecifierWithVersionPlaceholder,
-      );
       return buildSpecifierWithVersionPlaceholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
