@@ -41,11 +41,10 @@ export const jsenvPluginJsModuleConversion = () => {
   };
 
   const turnIntoJsClassicProxy = (reference) => {
-    const urlTransformed = injectQueryParams(reference.url, {
+    // markAsJsClassicProxy(reference);
+    return injectQueryParams(reference.url, {
       js_module_fallback: "",
     });
-    markAsJsClassicProxy(reference);
-    return urlTransformed;
   };
 
   return {
@@ -64,6 +63,14 @@ export const jsenvPluginJsModuleConversion = () => {
       // or specifiers inside new URL()...
       if (shouldPropagateJsModuleConversion(reference)) {
         return turnIntoJsClassicProxy(reference);
+      }
+      return null;
+    },
+    transformReferenceSearchParams: (reference) => {
+      if (reference.searchParams.has("js_module_fallback")) {
+        return {
+          js_module_fallback: undefined,
+        };
       }
       return null;
     },

@@ -8,6 +8,7 @@ import {
 
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
+import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js";
 import { createBuildVersionsManager } from "./build_versions_manager.js";
 
 export const createBuildSpecifierManager = ({
@@ -29,7 +30,8 @@ export const createBuildSpecifierManager = ({
     assetsDirectory,
   });
   const sourceRedirections = new Map();
-  const generateBuildUrlForSourceFile = ({ url, rawUrlInfo, reference }) => {
+  const generateBuildUrlForSourceFile = ({ reference, rawUrlInfo }) => {
+    const url = reference.url;
     const buildUrlFromCache = sourceRedirections.get(url);
     if (buildUrlFromCache) {
       return buildUrlFromCache;
@@ -45,9 +47,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 `);
     return buildUrl;
   };
-  const getSourceUrl = (buildUrl) => {
-    return findKey(sourceRedirections, buildUrl);
-  };
+  // const getSourceUrl = (buildUrl) => {
+  //   return findKey(sourceRedirections, buildUrl);
+  // };
   const buildRedirections = new Map();
   const generateBuildUrlForBuildFile = ({ url, reference }) => {
     const buildUrlFromCache = buildRedirections.get(url);
@@ -115,7 +117,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         reference.ownerUrlInfo.url === sourceDirectoryUrl
           ? buildDirectoryUrl
           : reference.ownerUrlInfo.url;
-      const urlRelativeToParent = urlToRelativeUrl(reference.url, parentUrl);
+      const urlRelativeToParent = urlToRelativeUrl(
+        reference.generatedUrl,
+        parentUrl,
+      );
       if (urlRelativeToParent[0] !== ".") {
         // ensure "./" on relative url (otherwise it could be a "bare specifier")
         return `./${urlRelativeToParent}`;
@@ -123,7 +128,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return urlRelativeToParent;
     }
     const urlRelativeToBuildDirectory = urlToRelativeUrl(
-      reference.url,
+      reference.generatedUrl,
       buildDirectoryUrl,
     );
     return `${base}${urlRelativeToBuildDirectory}`;
@@ -162,7 +167,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     return findKey(finalRedirections, buildUrl);
   };
 
-  const referenceToIgnoreSet = new Set();
   const jsenvPlugin = {
     name: "build_directory",
     appliesDuring: "build",
@@ -172,8 +176,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     // to mutate reference (inject ?js_module_fallback)
     // before it gets redirected to build directory
     resolveReference: (reference) => {
-      console.log("resolve reference #", reference.id);
-
       let url;
       if (reference.type === "filesystem") {
         let ownerRawUrl = buildRedirections.get(reference.ownerUrlInfo.url);
@@ -222,16 +224,31 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return url;
     },
     redirectReference: (reference) => {
-      if (reference.original) {
-        // was redirected by something else:
-        // - js_module_fallback
-        referenceToIgnoreSet.add(reference);
-        return null;
-      }
       const url = reference.url;
       console.log("redirecting #", reference.id, url, "to build directory");
       // source file -> redirect to build directory
       if (urlIsInsideOf(url, sourceDirectoryUrl)) {
+        if (reference.original) {
+          // jsenv_plugin_js_module_fallback injects "?js_module_fallback"
+          // during "shape" step
+          // Consequently there is no urlInfo into source graph generated during "craft"
+          // We are create a fake one to produce a valid build url
+          const rawUrlInfo = {
+            data: reference.data,
+            isEntryPoint:
+              reference.isEntryPoint ||
+              isWebWorkerEntryPointReference(reference),
+            type: reference.expectedType,
+            subtype: reference.expectedSubtype,
+            filename: reference.filename,
+          };
+          const buildUrl = generateBuildUrlForSourceFile({
+            url,
+            reference,
+            rawUrlInfo,
+          });
+          return buildUrl;
+        }
         const rawUrlInfo = rawKitchen.graph.getUrlInfo(url);
         if (!rawUrlInfo) {
           throw new Error(`There is no source file for "${url}"`);
@@ -251,23 +268,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildUrl;
     },
     formatReference: (reference) => {
-      if (!reference.generatedUrl.startsWith("file:")) {
+      const generatedUrl = reference.generatedUrl;
+      if (!generatedUrl.startsWith("file:")) {
         return null;
       }
       if (reference.isWeak) {
         return null;
       }
-      // if (referenceToIgnoreSet.has(reference)) {
-      //   // handled by other plugins (js_module_fallback)
-      //   return null;
-      // }
-      // if (!urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-      //   throw new Error(
-      //     `urls should be inside build directory at this stage, found "${reference.url}"`,
-      //   );
-      // }
+      if (!urlIsInsideOf(generatedUrl, buildDirectoryUrl)) {
+        throw new Error(
+          `urls should be inside build directory at this stage, found "${generatedUrl}"`,
+        );
+      }
       const buildSpecifier = asFormattedBuildSpecifier(reference);
-      buildSpecifierToBuildUrlMap.set(buildSpecifier, reference.url);
+      buildSpecifierToBuildUrlMap.set(buildSpecifier, generatedUrl);
       const buildSpecifierWithVersionPlaceholder =
         buildVersionsManager.generateBuildSpecifierPlaceholder(
           reference,

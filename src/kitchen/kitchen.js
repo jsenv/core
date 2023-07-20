@@ -257,19 +257,32 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // - convey information (?hot)
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
+      const searchParamTransformationMap = new Map();
       pluginController.callHooks(
         "transformReferenceSearchParams",
         reference,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
-            reference.searchParams.set(key, returnValue[key]);
+            searchParamTransformationMap.set(key, returnValue[key]);
           });
-          const referencedUrlObject = new URL(reference.url);
-          const search = reference.searchParams.toString();
-          referencedUrlObject.search = search;
-          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
         },
       );
+      if (searchParamTransformationMap.size) {
+        const generatedSearchParams = new URLSearchParams(
+          reference.searchParams,
+        );
+        searchParamTransformationMap.forEach((value, key) => {
+          if (value === undefined) {
+            generatedSearchParams.delete(key);
+          } else {
+            generatedSearchParams.set(key, value);
+          }
+        });
+        const generatedUrlObject = new URL(reference.url);
+        const generatedSearch = generatedSearchParams.toString();
+        generatedUrlObject.search = generatedSearch;
+        reference.generatedUrl = normalizeUrl(generatedUrlObject.href);
+      }
     }
     format: {
       const returnValue = pluginController.callHooksUntil(
