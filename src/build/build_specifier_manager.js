@@ -1,14 +1,9 @@
 import { ANSI, createDetailedMessage } from "@jsenv/log";
-import {
-  urlIsInsideOf,
-  urlToRelativeUrl,
-  ensurePathnameTrailingSlash,
-  asUrlWithoutSearch,
-} from "@jsenv/urls";
+import { ensurePathnameTrailingSlash, urlToRelativeUrl } from "@jsenv/urls";
 
+import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
-import { isWebWorkerEntryPointReference } from "../kitchen/web_workers.js";
 import { createBuildVersionsManager } from "./build_versions_manager.js";
 
 export const createBuildSpecifierManager = ({
@@ -19,6 +14,7 @@ export const createBuildSpecifierManager = ({
   buildDirectoryUrl,
   base,
   assetsDirectory,
+  length = 8,
 
   versioning,
   versioningMethod,
@@ -29,87 +25,68 @@ export const createBuildSpecifierManager = ({
     buildDirectoryUrl,
     assetsDirectory,
   });
-  const internalRedirections = new Map();
+  const placeholderAPI = createPlaceholderAPI({
+    length,
+  });
 
-  const sourceRedirections = new Map();
-  const generateBuildUrlForSourceFile = ({ reference, rawUrlInfo }) => {
-    const url = reference.generatedUrl;
-    const buildUrlFromCache = sourceRedirections.get(url);
-    if (buildUrlFromCache) {
-      return buildUrlFromCache;
-    }
-    const buildUrl = buildUrlsGenerator.generate(url, {
-      urlInfo: rawUrlInfo,
-      ownerUrlInfo: reference.ownerUrlInfo,
-    });
-    sourceRedirections.set(url, buildUrl);
-    logger.debug(`generate build url for source file
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-`);
-    return buildUrl;
-  };
-  // const getSourceUrl = (buildUrl) => {
-  //   return findKey(sourceRedirections, buildUrl);
-  // };
-  const buildRedirections = new Map();
-  const generateBuildUrlForBuildFile = ({ reference }) => {
-    const url = reference.url;
-    const buildUrlFromCache = buildRedirections.get(url);
-    if (buildUrlFromCache) {
-      return buildUrlFromCache;
-    }
-    const buildUrl = buildUrlsGenerator.generate(url, {
-      urlInfo: {
-        data: {},
-        type: reference.expectedType || "asset",
-      },
-      ownerUrlInfo: reference.ownerUrlInfo,
-    });
-    buildRedirections.set(url, buildUrl);
-    logger.debug(`generate build url for build file
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-`);
-    return buildUrl;
-  };
-  const bundleRedirections = new Map();
-  const bundleInternalRedirections = new Map();
-  const bundleUrlInfos = {};
-  const generateBuildUrlForBundle = ({ url, urlInfoBundled }) => {
-    const buildUrl = buildUrlsGenerator.generate(url, {
-      urlInfo: urlInfoBundled,
-    });
-    bundleRedirections.set(url, buildUrl);
-    if (urlIsInsideOf(url, buildDirectoryUrl)) {
-      if (urlInfoBundled.data.isDynamicEntry) {
-        const rawUrl = urlInfoBundled.originalUrl;
-        const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
-        rawUrlInfo.data.bundled = false;
-        bundleRedirections.set(rawUrl, buildUrl);
-      } else {
-        urlInfoBundled.data.generatedToShareCode = true;
-      }
-    }
-    if (urlInfoBundled.data.bundleRelativeUrl) {
-      const urlForBundler = new URL(
-        urlInfoBundled.data.bundleRelativeUrl,
-        buildDirectoryUrl,
-      ).href;
-      if (urlForBundler !== buildUrl) {
-        bundleInternalRedirections.set(urlForBundler, buildUrl);
-      }
-    }
-
-    bundleUrlInfos[buildUrl] = urlInfoBundled;
-    if (buildUrl.includes("?")) {
-      bundleUrlInfos[asUrlWithoutSearch(buildUrl)] = urlInfoBundled;
-    }
-  };
+  const placeholderToReferenceMap = new Map();
+  const urlInfoToBuildUrlMap = new Map();
 
   const buildSpecifierToBuildUrlMap = new Map();
+  const generateReplacement = (reference) => {
+    const generatedUrl = reference.generatedUrl;
 
-  const finalRedirections = new Map();
+    let urlInfo;
+    const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
+    if (rawUrlInfo) {
+      urlInfo = rawUrlInfo;
+    } else {
+      const buildUrlInfo = reference.urlInfo;
+      buildUrlInfo.type = reference.expectedType || "asset";
+      buildUrlInfo.subtype = reference.expectedSubtype;
+      urlInfo = buildUrlInfo;
+    }
+    const buildUrl = buildUrlsGenerator.generate(generatedUrl, {
+      urlInfo,
+      ownerUrlInfo: reference.ownerUrlInfo,
+    });
+    logger.debug(`associate a build url
+${ANSI.color(generatedUrl, ANSI.GREY)} ->
+${ANSI.color(buildUrl, ANSI.MAGENTA)}
+    `);
+
+    let buildSpecifier;
+    if (base === "./") {
+      const parentUrl =
+        reference.ownerUrlInfo.url === sourceDirectoryUrl
+          ? buildDirectoryUrl
+          : reference.ownerUrlInfo.url;
+      const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentUrl);
+      if (urlRelativeToParent[0] === ".") {
+        buildSpecifier = urlRelativeToParent;
+      } else {
+        // ensure "./" on relative url (otherwise it could be a "bare specifier")
+        buildSpecifier = `./${urlRelativeToParent}`;
+      }
+    } else {
+      const urlRelativeToBuildDirectory = urlToRelativeUrl(
+        buildUrl,
+        buildDirectoryUrl,
+      );
+      buildSpecifier = `${base}${urlRelativeToBuildDirectory}`;
+    }
+
+    console.log(`format ref #${reference.id} to ${buildSpecifier}`);
+
+    buildSpecifierToBuildUrlMap.set(buildSpecifier, buildUrl);
+    urlInfoToBuildUrlMap.set(reference.urlInfo, buildUrl);
+    return {
+      valueType: "specifier",
+      value: buildSpecifier,
+    };
+  };
+
+  const buildRedirections = new Map();
 
   const getBuildUrlFromBuildSpecifier = (buildSpecifier) => {
     return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
@@ -125,17 +102,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       getBuildUrlFromBuildSpecifier(buildSpecifier),
   });
 
-  const getFinalBuildUrl = (buildUrl) => {
-    const urlAfterBundling = bundleRedirections.get(buildUrl);
-    buildUrl = urlAfterBundling || buildUrl;
-    buildUrl = bundleInternalRedirections.get(buildUrl) || buildUrl;
-    buildUrl = finalRedirections.get(buildUrl) || buildUrl;
-    return buildUrl;
-  };
-
-  const getBuildUrlBeforeFinalRedirect = (buildUrl) => {
-    return findKey(finalRedirections, buildUrl);
-  };
+  const internalRedirections = new Map();
 
   const jsenvPlugin = {
     name: "build_directory",
@@ -188,6 +155,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         const parentUrlRaw = buildRedirections.get(parentUrl);
         url = new URL(reference.specifier, parentUrlRaw).href;
       }
+      // console.log(`resolve ref #${reference.id} to ${url}`);
       if (!url.startsWith("file:")) {
         return url;
       }
@@ -204,74 +172,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       if (generatedUrl !== reference.url) {
         internalRedirections.set(reference.url, generatedUrl);
       }
-
-      // source file -> redirect to build directory
-      let buildUrl;
-      if (urlIsInsideOf(generatedUrl, sourceDirectoryUrl)) {
-        if (reference.original) {
-          // jsenv_plugin_js_module_fallback injects "?js_module_fallback"
-          // during "shape" step
-          // Consequently there is no urlInfo into source graph generated during "craft"
-          // We are create a fake one to produce a valid build url
-          const rawUrlInfo = {
-            data: reference.data,
-            isEntryPoint:
-              reference.isEntryPoint ||
-              isWebWorkerEntryPointReference(reference),
-            type: reference.expectedType,
-            subtype: reference.expectedSubtype,
-            filename: reference.filename,
-          };
-          buildUrl = generateBuildUrlForSourceFile({
-            reference,
-            rawUrlInfo,
-          });
-        } else {
-          const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
-          if (!rawUrlInfo) {
-            throw new Error(`There is no source file for "${reference.url}"`);
-          }
-          buildUrl = generateBuildUrlForSourceFile({
-            reference,
-            rawUrlInfo,
-          });
-        }
-      } else {
-        // generated during "shape"
-        // - sourcemaps
-        // - "js_module_fallback" injecting "s.js"
-        // - ??
-        buildUrl = generateBuildUrlForBuildFile({ reference });
-      }
-
-      let buildSpecifier;
-      if (base === "./") {
-        const parentUrl =
-          reference.ownerUrlInfo.url === sourceDirectoryUrl
-            ? buildDirectoryUrl
-            : reference.ownerUrlInfo.url;
-        const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentUrl);
-        if (urlRelativeToParent[0] === ".") {
-          buildSpecifier = urlRelativeToParent;
-        } else {
-          // ensure "./" on relative url (otherwise it could be a "bare specifier")
-          buildSpecifier = `./${urlRelativeToParent}`;
-        }
-      } else {
-        const urlRelativeToBuildDirectory = urlToRelativeUrl(
-          buildUrl,
-          buildDirectoryUrl,
-        );
-        buildSpecifier = `${base}${urlRelativeToBuildDirectory}`;
-      }
-
-      buildSpecifierToBuildUrlMap.set(buildSpecifier, buildUrl);
-      const buildSpecifierWithVersionPlaceholder =
-        buildVersionsManager.generateBuildSpecifierPlaceholder(
-          reference,
-          buildSpecifier,
-        );
-      return buildSpecifierWithVersionPlaceholder;
+      const placeholder = placeholderAPI.generate();
+      placeholderToReferenceMap.set(placeholder, reference);
+      return placeholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
       const { firstReference } = finalUrlInfo;
@@ -326,38 +229,151 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     buildVersionsManager,
     jsenvPlugin,
 
-    generateBuildUrlForBundle,
-
-    getFinalBuildUrl,
-    getBuildUrlBeforeFinalRedirect,
+    replacePlaceholders: () => {
+      GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+        finalKitchen.graph.rootUrlInfo,
+        (urlInfo) => {
+          if (urlInfo.isEntryPoint) {
+            generateReplacement(urlInfo.firstReference);
+          }
+          const contentBeforeReplace = urlInfo.content;
+          const contentAfterReplace = placeholderAPI.replaceAll(
+            contentBeforeReplace,
+            (placeholder) => {
+              const reference = placeholderToReferenceMap.get(placeholder);
+              return generateReplacement(reference);
+            },
+          );
+          urlInfo.content = contentAfterReplace;
+        },
+      );
+    },
     getBuildRelativeUrl: (urlInfo) => {
-      if (versioning && versioningMethod === "filename") {
-        const buildSpecifier = getBuildUrlFromBuildSpecifier(urlInfo.url);
-        const buildSpecifierVersioned =
-          buildVersionsManager.getBuildSpecifierVersioned(buildSpecifier);
-        const buildUrlVersioned = asBuildUrlVersioned({
-          buildSpecifierVersioned,
-          buildDirectoryUrl,
-        });
-        const buildRelativeUrlVersioned = urlToRelativeUrl(
-          buildUrlVersioned,
-          buildDirectoryUrl,
-        );
-        return buildRelativeUrlVersioned;
-      }
-      const url = urlInfo.url;
-      const urlAfterInternalRedirect = internalRedirections.get(url) || url;
-      const buildUrl = sourceRedirections.get(urlAfterInternalRedirect);
-      // let buildUrl;
-      // if (urlIsInsideOf(urlAfterInternalRedirect, sourceDirectoryUrl)) {
-      //   buildUrl = sourceRedirections.get(urlAfterInternalRedirect);
-      // } else {
-      //   buildUrl = buildRedirections.get(urlAfterInternalRedirect);
-      // }
+      const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
       const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
       return buildRelativeUrl;
     },
   };
+};
+
+const placeholderLeft = "!~{";
+const placeholderRight = "}~";
+const placeholderOverhead = placeholderLeft.length + placeholderRight.length;
+
+const createPlaceholderAPI = ({ length }) => {
+  const chars =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
+  const toBase64 = (value) => {
+    let outString = "";
+    do {
+      const currentDigit = value % 64;
+      value = (value / 64) | 0;
+      outString = chars[currentDigit] + outString;
+    } while (value !== 0);
+    return outString;
+  };
+
+  let nextIndex = 0;
+  const generate = () => {
+    nextIndex++;
+    const id = toBase64(nextIndex);
+    let placeholder = placeholderLeft;
+    placeholder += id.padStart(length - placeholderOverhead, "0");
+    placeholder += placeholderRight;
+    return placeholder;
+  };
+
+  const replaceFirst = (code, value) => {
+    let replaced = false;
+    return code.replace(PLACEHOLDER_REGEX, (match) => {
+      if (replaced) return match;
+      replaced = true;
+      return value;
+    });
+  };
+
+  const extractFirst = (string) => {
+    const match = string.match(PLACEHOLDER_REGEX);
+    return match ? match[0] : null;
+  };
+
+  const defaultPlaceholder = `${placeholderLeft}${"0".repeat(
+    length - placeholderOverhead,
+  )}${placeholderRight}`;
+  const replaceWithDefaultAndPopulateContainedPlaceholders = (
+    code,
+    containedPlaceholders,
+  ) => {
+    const transformedCode = code.replace(PLACEHOLDER_REGEX, (placeholder) => {
+      containedPlaceholders.add(placeholder);
+      return defaultPlaceholder;
+    });
+    return transformedCode;
+  };
+
+  const PLACEHOLDER_REGEX = new RegExp(
+    `${escapeRegexpSpecialChars(placeholderLeft)}[0-9a-zA-Z_$]{1,${
+      length - placeholderOverhead
+    }}${escapeRegexpSpecialChars(placeholderRight)}`,
+    "g",
+  );
+
+  const replaceAll = (string, replacer) => {
+    let diff = 0;
+    let output = string;
+    string.replace(PLACEHOLDER_REGEX, (placeholder, index) => {
+      let replacement = replacer(placeholder, index);
+      if (!replacement) {
+        return;
+      }
+      if (typeof replacement === "string") {
+        replacement = { valueType: "string", value: replacement };
+      }
+      const value = replacement.value;
+      let start = index + diff;
+      let end = start + placeholder.length;
+      if (
+        replacement.valueType === "code" &&
+        // when specifier is wrapper by quotes
+        // we remove the quotes to transform the string
+        // into code that will be executed
+        isWrappedByQuote(output, start, end)
+      ) {
+        start = start - 1;
+        end = end + 1;
+        diff = diff - 2;
+      }
+      const before = output.slice(0, start);
+      const after = output.slice(end);
+      output = before + value + after;
+      const charAdded = value.length - placeholder.length;
+      diff += charAdded;
+    });
+    return output;
+  };
+
+  return {
+    generate,
+    replaceFirst,
+    replaceAll,
+    extractFirst,
+    replaceWithDefaultAndPopulateContainedPlaceholders,
+  };
+};
+
+const isWrappedByQuote = (content, start, end) => {
+  const previousChar = content[start - 1];
+  const nextChar = content[end];
+  if (previousChar === `'` && nextChar === `'`) {
+    return true;
+  }
+  if (previousChar === `"` && nextChar === `"`) {
+    return true;
+  }
+  if (previousChar === "`" && nextChar === "`") {
+    return true;
+  }
+  return false;
 };
 
 const findKey = (map, value) => {
@@ -369,19 +385,19 @@ const findKey = (map, value) => {
   return undefined;
 };
 
-const asBuildUrlVersioned = ({
-  buildSpecifierVersioned,
-  buildDirectoryUrl,
-}) => {
-  if (buildSpecifierVersioned[0] === "/") {
-    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
-  }
-  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
-  if (buildUrl.startsWith(buildDirectoryUrl)) {
-    return buildUrl;
-  }
-  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
-  // let's move url to build directory
-  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
-  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
-};
+// const asBuildUrlVersioned = ({
+//   buildSpecifierVersioned,
+//   buildDirectoryUrl,
+// }) => {
+//   if (buildSpecifierVersioned[0] === "/") {
+//     return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
+//   }
+//   const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
+//   if (buildUrl.startsWith(buildDirectoryUrl)) {
+//     return buildUrl;
+//   }
+//   // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
+//   // let's move url to build directory
+//   const { pathname, search, hash } = new URL(buildSpecifierVersioned);
+//   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
+// };

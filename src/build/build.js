@@ -592,6 +592,8 @@ build ${entryPointKeys.length} entry points`);
       generateBuildGraph.done();
     }
 
+    buildSpecifierManager.replacePlaceholders();
+
     refine: {
       apply_versioning: {
         if (!versioning) {
