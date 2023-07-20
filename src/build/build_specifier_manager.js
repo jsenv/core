@@ -29,6 +29,8 @@ export const createBuildSpecifierManager = ({
     buildDirectoryUrl,
     assetsDirectory,
   });
+  const internalRedirections = new Map();
+
   const sourceRedirections = new Map();
   const generateBuildUrlForSourceFile = ({ reference, rawUrlInfo }) => {
     const url = reference.generatedUrl;
@@ -199,6 +201,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       if (reference.isWeak) {
         return null;
       }
+      if (generatedUrl !== reference.url) {
+        internalRedirections.set(reference.url, generatedUrl);
+      }
 
       // source file -> redirect to build directory
       let buildUrl;
@@ -340,8 +345,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         );
         return buildRelativeUrlVersioned;
       }
-      const sourceUrl = urlInfo.url;
-      const buildUrl = sourceRedirections.get(sourceUrl);
+      const url = urlInfo.url;
+      const urlAfterInternalRedirect = internalRedirections.get(url) || url;
+      const buildUrl = sourceRedirections.get(urlAfterInternalRedirect);
+      // let buildUrl;
+      // if (urlIsInsideOf(urlAfterInternalRedirect, sourceDirectoryUrl)) {
+      //   buildUrl = sourceRedirections.get(urlAfterInternalRedirect);
+      // } else {
+      //   buildUrl = buildRedirections.get(urlAfterInternalRedirect);
+      // }
       const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
       return buildRelativeUrl;
     },
