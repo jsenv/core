@@ -210,9 +210,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return false;
           },
         );
-        if (!rawInlineUrlInfo) {
-          debugger;
-        }
         url = rawInlineUrlInfo.url;
       } else {
         const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
@@ -260,15 +257,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       if (reference.isWeak) {
         return null;
       }
-      if (referenceToIgnoreSet.has(reference)) {
-        // handled by other plugins (js_module_fallback)
-        return null;
-      }
-      if (!urlIsInsideOf(reference.url, buildDirectoryUrl)) {
-        throw new Error(
-          `urls should be inside build directory at this stage, found "${reference.url}"`,
-        );
-      }
+      // if (referenceToIgnoreSet.has(reference)) {
+      //   // handled by other plugins (js_module_fallback)
+      //   return null;
+      // }
+      // if (!urlIsInsideOf(reference.url, buildDirectoryUrl)) {
+      //   throw new Error(
+      //     `urls should be inside build directory at this stage, found "${reference.url}"`,
+      //   );
+      // }
       const buildSpecifier = asFormattedBuildSpecifier(reference);
       buildSpecifierToBuildUrlMap.set(buildSpecifier, reference.url);
       const buildSpecifierWithVersionPlaceholder =
