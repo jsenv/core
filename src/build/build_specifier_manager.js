@@ -45,7 +45,12 @@ export const createBuildSpecifierManager = ({
   const urlInfoToBuildUrlMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
   const generateReplacement = (reference) => {
-    const generatedUrl = reference.generatedUrl;
+    const urlObject = new URL(reference.generatedUrl);
+    for (const volatileSearchParam of reference.volatileSearchParamSet) {
+      urlObject.searchParams.delete(volatileSearchParam);
+    }
+    const url = urlObject.href;
+
     let urlInfo;
     const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
     if (rawUrlInfo) {
@@ -56,12 +61,12 @@ export const createBuildSpecifierManager = ({
       buildUrlInfo.subtype = reference.expectedSubtype;
       urlInfo = buildUrlInfo;
     }
-    const buildUrl = buildUrlsGenerator.generate(generatedUrl, {
+    const buildUrl = buildUrlsGenerator.generate(url, {
       urlInfo,
       ownerUrlInfo: reference.ownerUrlInfo,
     });
     logger.debug(`associate a build url
-${ANSI.color(generatedUrl, ANSI.GREY)} ->
+${ANSI.color(url, ANSI.GREY)} ->
 ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     `);
 
@@ -396,10 +401,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             );
           }
           const containedPlaceholderSet = new Set();
-          if (
-            CONTENT_TYPE.isTextual(urlInfo.contentType) &&
-            urlInfo.referenceToOthersSet.size > 0
-          ) {
+          if (mayUsePlaceholder(urlInfo)) {
             const contentWithPredictibleVersionPlaceholders =
               placeholderAPI.replaceWithDefaultAndPopulateContainedPlaceholderSet(
                 content,
@@ -574,15 +576,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (urlInfo.isInline) {
             generateReplacement(urlInfo.firstReference);
           }
-          const contentBeforeReplace = urlInfo.content;
-          const { content, sourcemap } = placeholderAPI.replaceAll(
-            contentBeforeReplace,
-            (placeholder) => {
-              const reference = placeholderToReferenceMap.get(placeholder);
-              return generateReplacement(reference);
-            },
-          );
-          urlInfo.mutateContent({ content, sourcemap });
+          if (mayUsePlaceholder(urlInfo)) {
+            const contentBeforeReplace = urlInfo.content;
+            const { content, sourcemap } = placeholderAPI.replaceAll(
+              contentBeforeReplace,
+              (placeholder) => {
+                const reference = placeholderToReferenceMap.get(placeholder);
+                return generateReplacement(reference);
+              },
+            );
+            urlInfo.mutateContent({ content, sourcemap });
+          }
         },
       );
 
@@ -716,6 +720,16 @@ const createPlaceholderAPI = ({ length }) => {
     markAsCode,
     replaceWithDefaultAndPopulateContainedPlaceholderSet,
   };
+};
+
+const mayUsePlaceholder = (urlInfo) => {
+  if (urlInfo.referenceToOthersSet.size === 0) {
+    return false;
+  }
+  if (!CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
 };
 
 const isWrappedByQuote = (content, start, end) => {

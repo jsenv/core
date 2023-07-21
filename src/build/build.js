@@ -307,14 +307,14 @@ build ${entryPointKeys.length} entry points`);
       sourcemaps,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
-        ? new URL("prebuild/", outDirectoryUrl)
+        ? new URL("craft/", outDirectoryUrl)
         : undefined,
     });
     craft: {
       const generateSourceGraph = createBuildTask("generate source graph");
       try {
         if (outDirectoryUrl) {
-          await ensureEmptyDirectory(new URL(`prebuild/`, outDirectoryUrl));
+          await ensureEmptyDirectory(new URL(`craft/`, outDirectoryUrl));
         }
         const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
         await rawRootUrlInfo.dependencies.startCollecting(() => {
@@ -384,7 +384,7 @@ build ${entryPointKeys.length} entry points`);
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: true,
       outDirectoryUrl: outDirectoryUrl
-        ? new URL("postbuild/", outDirectoryUrl)
+        ? new URL("shape/", outDirectoryUrl)
         : undefined,
     });
 
@@ -569,7 +569,7 @@ build ${entryPointKeys.length} entry points`);
       const generateBuildGraph = createBuildTask("generate build graph");
       try {
         if (outDirectoryUrl) {
-          await ensureEmptyDirectory(new URL(`postbuild/`, outDirectoryUrl));
+          await ensureEmptyDirectory(new URL(`shape/`, outDirectoryUrl));
         }
         const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
         await finalRootUrlInfo.dependencies.startCollecting(() => {

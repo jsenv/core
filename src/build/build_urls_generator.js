@@ -5,7 +5,6 @@ export const createBuildUrlsGenerator = ({
   assetsDirectory,
 }) => {
   const cache = {};
-
   const getUrlName = (url, urlInfo) => {
     if (!urlInfo) {
       return urlToFilename(url);
@@ -16,7 +15,12 @@ export const createBuildUrlsGenerator = ({
     return urlToFilename(url);
   };
 
+  const buildUrlCache = new Map();
   const generate = (url, { urlInfo, ownerUrlInfo }) => {
+    const buildUrlFromCache = buildUrlCache.get(url);
+    if (buildUrlFromCache) {
+      return buildUrlFromCache;
+    }
     const directoryPath = determineDirectoryPath({
       buildDirectoryUrl,
       assetsDirectory,
@@ -45,7 +49,9 @@ export const createBuildUrlsGenerator = ({
       nameCandidate = `${basename}${integer}${extension}`;
     }
     hash = "";
-    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
+    const buildUrl = `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
+    buildUrlCache.set(url, buildUrl);
+    return buildUrl;
   };
 
   return {

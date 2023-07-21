@@ -327,6 +327,7 @@ const createUrlInfo = (url, context) => {
       mutation: reference.mutation,
       data: { ...reference.data },
       specifier: newSpecifier,
+      volatileSearchParamSet: reference.volatileSearchParamSet,
       isWeak: true,
       isInline: false,
       original: reference.original || reference,

@@ -34,6 +34,7 @@ export const jsenvPluginJsModuleConversion = () => {
   };
 
   const markAsJsClassicProxy = (reference) => {
+    reference.volatileSearchParamSet.add("js_module_fallback");
     reference.expectedType = "js_classic";
     if (!reference.filename) {
       reference.filename = generateJsClassicFilename(reference.url);
@@ -63,17 +64,6 @@ export const jsenvPluginJsModuleConversion = () => {
       // or specifiers inside new URL()...
       if (shouldPropagateJsModuleConversion(reference)) {
         return turnIntoJsClassicProxy(reference);
-      }
-      return null;
-    },
-    transformReferenceSearchParams: (reference) => {
-      if (
-        reference.ownerUrlInfo.context.build &&
-        reference.searchParams.has("js_module_fallback")
-      ) {
-        return {
-          js_module_fallback: undefined,
-        };
       }
       return null;
     },
