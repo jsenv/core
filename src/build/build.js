@@ -592,25 +592,9 @@ build ${entryPointKeys.length} entry points`);
       generateBuildGraph.done();
     }
 
-    buildSpecifierManager.replacePlaceholders();
-
     refine: {
-      apply_versioning: {
-        if (!versioning) {
-          break apply_versioning;
-        }
-        // see also "New hashing algorithm that "fixes (nearly) everything"
-        // at https://github.com/rollup/rollup/pull/4543
-        const versioningTask = createBuildTask("apply versioning");
-        try {
-          await buildSpecifierManager.buildVersionsManager.applyVersioning(
-            finalKitchen,
-          );
-        } catch (e) {
-          versioningTask.fail();
-          throw e;
-        }
-        versioningTask.done();
+      replace_placeholders: {
+        await buildSpecifierManager.replacePlaceholders();
       }
       cleanup_jsenv_attributes_from_html: {
         GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
@@ -634,6 +618,7 @@ build ${entryPointKeys.length} entry points`);
        *   - because of bundlings
        *   - because of import assertions transpilation (file is inlined into JS)
        */
+      // TODO: retest what is needed, removing injecting yes, updating not sure
       resync_resource_hints: {
         const actions = [];
         GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
@@ -774,6 +759,7 @@ build ${entryPointKeys.length} entry points`);
           resyncTask.done();
         }
       }
+      // TODO: move this to specifier_manager
       inject_urls_in_service_workers: {
         const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
           finalKitchen.graph,
@@ -847,10 +833,10 @@ build ${entryPointKeys.length} entry points`);
       }
     }
 
+    // TODO: move this to specifier manager
     const buildManifest = {};
     const buildContents = {};
     const buildInlineRelativeUrls = [];
-
     GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
       finalKitchen.graph.rootUrlInfo,
       (urlInfo) => {
