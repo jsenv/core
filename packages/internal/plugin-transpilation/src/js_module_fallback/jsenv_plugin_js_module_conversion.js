@@ -34,7 +34,6 @@ export const jsenvPluginJsModuleConversion = () => {
   };
 
   const markAsJsClassicProxy = (reference) => {
-    reference.volatileSearchParamSet.add("js_module_fallback");
     reference.expectedType = "js_classic";
     if (!reference.filename) {
       reference.filename = generateJsClassicFilename(reference.url);

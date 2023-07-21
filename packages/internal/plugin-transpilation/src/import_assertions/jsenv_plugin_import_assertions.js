@@ -64,7 +64,7 @@ export const jsenvPluginImportAssertions = ({
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: "",
     });
-    markAsJsModuleProxy(reference);
+    markAsJsModuleProxy(reference, type);
     return newUrl;
   };
 
@@ -88,12 +88,16 @@ export const jsenvPluginImportAssertions = ({
         return null;
       }
       const { searchParams } = reference;
-      if (
-        searchParams.has("as_json_module") ||
-        searchParams.has("as_css_module") ||
-        searchParams.has("as_text_module")
-      ) {
-        markAsJsModuleProxy(reference);
+      if (searchParams.has("as_json_module")) {
+        markAsJsModuleProxy(reference, "json");
+        return null;
+      }
+      if (searchParams.has("as_css_module")) {
+        markAsJsModuleProxy(reference, "css");
+        return null;
+      }
+      if (searchParams.has("as_text_module")) {
+        markAsJsModuleProxy(reference, "text");
         return null;
       }
       const type = reference.importAttributes.type;
@@ -103,10 +107,7 @@ export const jsenvPluginImportAssertions = ({
       return null;
     },
   };
-  return [importAssertions, ...jsenvPluginAsModules()];
-};
 
-const jsenvPluginAsModules = () => {
   const asJsonModule = {
     name: `jsenv:as_json_module`,
     appliesDuring: "*",
@@ -201,5 +202,5 @@ export default inlineContent.text;`,
     },
   };
 
-  return [asJsonModule, asCssModule, asTextModule];
+  return [importAssertions, asJsonModule, asCssModule, asTextModule];
 };

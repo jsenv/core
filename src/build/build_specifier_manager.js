@@ -45,12 +45,7 @@ export const createBuildSpecifierManager = ({
   const urlInfoToBuildUrlMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
   const generateReplacement = (reference) => {
-    const urlObject = new URL(reference.generatedUrl);
-    for (const volatileSearchParam of reference.volatileSearchParamSet) {
-      urlObject.searchParams.delete(volatileSearchParam);
-    }
-    const url = urlObject.href;
-
+    const url = reference.generatedUrl;
     let urlInfo;
     const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
     if (rawUrlInfo) {
@@ -164,6 +159,17 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
       const url = new URL(reference.specifier, parentUrl).href;
       return url;
+    },
+    transformReferenceSearchParams: () => {
+      // those search params are reflected into the build file name
+      // moreover it create cleaner output
+      // otherwise output is full of ?js_module_fallback search param
+      return {
+        js_module_fallback: undefined,
+        as_json_module: undefined,
+        as_css_module: undefined,
+        as_text_module: undefined,
+      };
     },
     formatReference: (reference) => {
       const generatedUrl = reference.generatedUrl;
@@ -603,6 +609,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   };
 };
 
+// see https://github.com/rollup/rollup/blob/ce453507ab8457dd1ea3909d8dd7b117b2d14fab/src/utils/hashPlaceholders.ts#L1
 // see also "New hashing algorithm that "fixes (nearly) everything"
 // at https://github.com/rollup/rollup/pull/4543
 const placeholderLeft = "!~{";
