@@ -241,9 +241,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return {
         type: "global",
         render: (buildSpecifier) => {
-          return `${ownerUrlInfo.jsQuote}+__v__(${JSON.stringify(
-            buildSpecifier,
-          )})+${ownerUrlInfo.jsQuote}`;
+          return placeholderAPI.markAsCode(
+            `${ownerUrlInfo.jsQuote}+__v__(${JSON.stringify(buildSpecifier)})+${
+              ownerUrlInfo.jsQuote
+            }`,
+          );
         },
       };
     }
@@ -251,7 +253,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return {
         type: "global",
         render: (buildSpecifier) => {
-          return `__v__(${JSON.stringify(buildSpecifier)})`;
+          return placeholderAPI.markAsCode(
+            `__v__(${JSON.stringify(buildSpecifier)})`,
+          );
         },
       };
     }
@@ -260,7 +264,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         return {
           type: "global",
           render: (buildSpecifier) => {
-            return `__v__(${JSON.stringify(buildSpecifier)})`;
+            return placeholderAPI.markAsCode(
+              `__v__(${JSON.stringify(buildSpecifier)})`,
+            );
           },
         };
       }
@@ -268,7 +274,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         return {
           type: "global",
           render: (buildSpecifier) => {
-            return `__v__(${JSON.stringify(buildSpecifier)})`;
+            return placeholderAPI.markAsCode(
+              `__v__(${JSON.stringify(buildSpecifier)})`,
+            );
           },
         };
       }
@@ -654,22 +662,34 @@ const createPlaceholderAPI = ({ length }) => {
     "g",
   );
 
+  const markAsCode = (string) => {
+    return {
+      __isCode__: true,
+      value: string,
+    };
+  };
+
   const replaceAll = (string, replacer) => {
     let diff = 0;
     let output = string;
     string.replace(PLACEHOLDER_REGEX, (placeholder, index) => {
-      let replacement = replacer(placeholder, index);
+      const replacement = replacer(placeholder, index);
       if (!replacement) {
         return;
       }
-      if (typeof replacement === "string") {
-        replacement = { valueType: "string", value: replacement };
+      let value;
+      let isCode = false;
+      if (replacement && replacement.__isCode__) {
+        value = replacement.value;
+        isCode = true;
+      } else {
+        value = replacement;
       }
-      const value = replacement.value;
+
       let start = index + diff;
       let end = start + placeholder.length;
       if (
-        replacement.valueType === "code" &&
+        isCode &&
         // when specifier is wrapper by quotes
         // we remove the quotes to transform the string
         // into code that will be executed
@@ -693,6 +713,7 @@ const createPlaceholderAPI = ({ length }) => {
     replaceFirst,
     replaceAll,
     extractFirst,
+    markAsCode,
     replaceWithDefaultAndPopulateContainedPlaceholderSet,
   };
 };

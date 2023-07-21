@@ -2,6 +2,15 @@
 <html>
   <head>
     <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/file.nomodule.js": "/js/file.nomodule.js?v=67382087"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script><script>
       /*
        * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
        * with the following changes:
@@ -415,6 +424,6 @@
   </head>
 
   <body>
-    <script src="/js/main.nomodule.js"></script>
+    <script src="/js/main.nomodule.js?v=f994058d"></script>
   </body>
 </html>

@@ -30,5 +30,5 @@ await test({
 await test({
   name: "1_js_module_fallback",
   runtimeCompat: { chrome: "60" },
-  versioning: false,
+  versioning: true,
 });
