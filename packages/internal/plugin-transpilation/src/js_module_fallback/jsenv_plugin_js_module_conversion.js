@@ -67,7 +67,10 @@ export const jsenvPluginJsModuleConversion = () => {
       return null;
     },
     transformReferenceSearchParams: (reference) => {
-      if (reference.searchParams.has("js_module_fallback")) {
+      if (
+        reference.ownerUrlInfo.context.build &&
+        reference.searchParams.has("js_module_fallback")
+      ) {
         return {
           js_module_fallback: undefined,
         };
