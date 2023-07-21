@@ -41,7 +41,7 @@ export const jsenvPluginJsModuleConversion = () => {
   };
 
   const turnIntoJsClassicProxy = (reference) => {
-    // markAsJsClassicProxy(reference);
+    markAsJsClassicProxy(reference);
     return injectQueryParams(reference.url, {
       js_module_fallback: "",
     });

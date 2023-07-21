@@ -4,7 +4,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const test = async ({ name, ...rest }) => {
   await build({
-    logLevel: "debug",
+    logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
@@ -27,8 +27,8 @@ await test({
 });
 
 // cannot use <script type="module">
-// await test({
-//   name: "1_js_module_fallback",
-//   runtimeCompat: { chrome: "60" },
-//   versioning: false,
-// });
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: { chrome: "60" },
+  versioning: false,
+});
