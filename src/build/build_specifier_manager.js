@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { ANSI, createDetailedMessage } from "@jsenv/log";
+import { createMagicSource } from "@jsenv/sourcemap";
 import {
   ensurePathnameTrailingSlash,
   urlToRelativeUrl,
@@ -574,14 +575,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             generateReplacement(urlInfo.firstReference);
           }
           const contentBeforeReplace = urlInfo.content;
-          const contentAfterReplace = placeholderAPI.replaceAll(
+          const { content, sourcemap } = placeholderAPI.replaceAll(
             contentBeforeReplace,
             (placeholder) => {
               const reference = placeholderToReferenceMap.get(placeholder);
               return generateReplacement(reference);
             },
           );
-          urlInfo.content = contentAfterReplace;
+          urlInfo.mutateContent({ content, sourcemap });
         },
       );
 
@@ -670,8 +671,8 @@ const createPlaceholderAPI = ({ length }) => {
   };
 
   const replaceAll = (string, replacer) => {
-    let diff = 0;
-    let output = string;
+    const magicSource = createMagicSource(string);
+
     string.replace(PLACEHOLDER_REGEX, (placeholder, index) => {
       const replacement = replacer(placeholder, index);
       if (!replacement) {
@@ -686,26 +687,25 @@ const createPlaceholderAPI = ({ length }) => {
         value = replacement;
       }
 
-      let start = index + diff;
+      let start = index;
       let end = start + placeholder.length;
       if (
         isCode &&
         // when specifier is wrapper by quotes
         // we remove the quotes to transform the string
         // into code that will be executed
-        isWrappedByQuote(output, start, end)
+        isWrappedByQuote(string, start, end)
       ) {
         start = start - 1;
         end = end + 1;
-        diff = diff - 2;
       }
-      const before = output.slice(0, start);
-      const after = output.slice(end);
-      output = before + value + after;
-      const charAdded = value.length - placeholder.length;
-      diff += charAdded;
+      magicSource.replace({
+        start,
+        end,
+        replacement: value,
+      });
     });
-    return output;
+    return magicSource.toContentAndSourcemap();
   };
 
   return {
