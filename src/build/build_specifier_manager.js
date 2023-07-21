@@ -86,8 +86,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     };
   };
 
-  const buildRedirections = new Map();
-
   const getBuildUrlFromBuildSpecifier = (buildSpecifier) => {
     return findKey(buildSpecifierToBuildUrlMap, buildSpecifier);
   };
@@ -115,8 +113,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     resolveReference: (reference) => {
       let url;
       if (reference.type === "filesystem") {
-        let ownerRawUrl = buildRedirections.get(reference.ownerUrlInfo.url);
-        ownerRawUrl = ensurePathnameTrailingSlash(ownerRawUrl);
+        const ownerRawUrl = ensurePathnameTrailingSlash(
+          reference.ownerUrlInfo.url,
+        );
         url = new URL(reference.specifier, ownerRawUrl).href;
       } else if (reference.specifier[0] === "/") {
         url = new URL(reference.specifier.slice(1), sourceDirectoryUrl).href;
@@ -152,8 +151,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         url = rawInlineUrlInfo.url;
       } else {
         const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
-        const parentUrlRaw = buildRedirections.get(parentUrl);
-        url = new URL(reference.specifier, parentUrlRaw).href;
+        url = new URL(reference.specifier, parentUrl).href;
       }
       // console.log(`resolve ref #${reference.id} to ${url}`);
       if (!url.startsWith("file:")) {
@@ -236,6 +234,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (urlInfo.isEntryPoint) {
             generateReplacement(urlInfo.firstReference);
           }
+          if (urlInfo.isInline) {
+            generateReplacement(urlInfo.firstReference);
+          }
           const contentBeforeReplace = urlInfo.content;
           const contentAfterReplace = placeholderAPI.replaceAll(
             contentBeforeReplace,
@@ -250,6 +251,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     },
     getBuildRelativeUrl: (urlInfo) => {
       const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+      if (!buildUrl) {
+        debugger;
+      }
       const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
       return buildRelativeUrl;
     },
