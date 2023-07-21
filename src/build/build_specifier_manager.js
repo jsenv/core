@@ -225,11 +225,80 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   };
 
   const buildUrlToBuildSpecifierVersionedMap = new Map();
-  const referenceVersionedInlineSet = new Set();
-  const referenceVersionedByCodeSet = new Map();
-  const referenceVersionedByImportmapSet = new Map();
+
   const versionMap = new Map();
+
   const workerReferenceSet = new Set();
+  const referenceVersioningInfoMap = new Map();
+  const _getReferenceVersioningInfo = (reference) => {
+    const ownerUrlInfo = reference.ownerUrlInfo;
+    if (ownerUrlInfo.jsQuote) {
+      // here we use placeholder as specifier, so something like
+      // "/other/file.png" becomes "!~{0001}~" and finally "__v__("/other/file.png")"
+      // this is to support cases like CSS inlined in JS
+      // CSS minifier must see valid CSS specifiers like background-image: url("!~{0001}~");
+      // that is finally replaced by invalid css background-image: url("__v__("/other/file.png")")
+      return {
+        type: "global",
+        render: (buildSpecifier) => {
+          return `${ownerUrlInfo.jsQuote}+__v__(${JSON.stringify(
+            buildSpecifier,
+          )})+${ownerUrlInfo.jsQuote}`;
+        },
+      };
+    }
+    if (reference.type === "js_url") {
+      return {
+        type: "global",
+        render: (buildSpecifier) => {
+          return `__v__(${JSON.stringify(buildSpecifier)})`;
+        },
+      };
+    }
+    if (reference.type === "js_import") {
+      if (reference.subtype === "import_dynamic") {
+        return {
+          type: "global",
+          render: (buildSpecifier) => {
+            return `__v__(${JSON.stringify(buildSpecifier)})`;
+          },
+        };
+      }
+      if (reference.subtype === "import_meta_resolve") {
+        return {
+          type: "global",
+          render: (buildSpecifier) => {
+            return `__v__(${JSON.stringify(buildSpecifier)})`;
+          },
+        };
+      }
+      if (canUseImportmap && !isReferencedByWorker(reference)) {
+        return {
+          type: "importmap",
+          render: (buildSpecifier) => {
+            return buildSpecifier;
+          },
+        };
+      }
+    }
+    return {
+      type: "inline",
+      render: (buildSpecifier) => {
+        const buildSpecifierVersioned =
+          buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
+        return buildSpecifierVersioned;
+      },
+    };
+  };
+  const getReferenceVersioningInfo = (reference) => {
+    const infoFromCache = referenceVersioningInfoMap.get(reference);
+    if (infoFromCache) {
+      return infoFromCache;
+    }
+    const info = _getReferenceVersioningInfo(reference);
+    referenceVersioningInfoMap.set(reference, info);
+    return info;
+  };
   const isReferencedByWorker = (reference) => {
     if (workerReferenceSet.has(reference)) {
       return true;
@@ -274,72 +343,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     }
     return true;
   };
-  const applyVersioningOnBuildSpecifier = (buildSpecifier, reference) => {
-    if (!versioning || !shouldApplyVersioningOnReference(reference)) {
-      return buildSpecifier;
-    }
-    const version = versionMap.get(reference.urlInfo);
-    const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
-      buildSpecifier,
-      versioningMethod,
-      version,
-    });
-    buildUrlToBuildSpecifierVersionedMap.set(
-      buildSpecifier,
-      buildSpecifierVersioned,
-    );
 
-    const asVersioned = () => {
-      referenceVersionedInlineSet.add(reference);
-      return buildSpecifierVersioned;
-    };
-    const asVersionedByGlobalRegistry = (codeToInject) => {
-      // here we use placeholder as specifier, so something like
-      // "/other/file.png" becomes "!~{0001}~" and finally "__v__("/other/file.png")"
-      // this is to support cases like CSS inlined in JS
-      // CSS minifier must see valid CSS specifiers like background-image: url("!~{0001}~");
-      // that is finally replaced by invalid css background-image: url("__v__("/other/file.png")")
-      referenceVersionedByCodeSet.add(reference);
-      return {
-        valueType: "code",
-        value: codeToInject,
-      };
-    };
-    const asVersionedByImportmap = () => {
-      referenceVersionedByImportmapSet.add(reference);
-      const buildSpecifierFormatted = JSON.stringify(buildSpecifier);
-      return buildSpecifierFormatted;
-    };
-    const ownerUrlInfo = reference.ownerUrlInfo;
-    if (ownerUrlInfo.jsQuote) {
-      return asVersionedByGlobalRegistry(
-        `${ownerUrlInfo.jsQuote}+__v__(${JSON.stringify(buildSpecifier)})+${
-          ownerUrlInfo.jsQuote
-        }`,
-      );
-    }
-    if (reference.type === "js_url") {
-      return asVersionedByGlobalRegistry(
-        `__v__(${JSON.stringify(buildSpecifier)})`,
-      );
-    }
-    if (reference.type === "js_import") {
-      if (reference.subtype === "import_dynamic") {
-        return asVersionedByGlobalRegistry(
-          `__v__(${JSON.stringify(buildSpecifier)})`,
-        );
-      }
-      if (reference.subtype === "import_meta_resolve") {
-        return asVersionedByGlobalRegistry(
-          `__v__(${JSON.stringify(buildSpecifier)})`,
-        );
-      }
-      if (canUseImportmap && !isReferencedByWorker(reference)) {
-        return asVersionedByImportmap();
-      }
-    }
-    return asVersioned();
-  };
   const prepareVersioning = () => {
     const contentOnlyVersionMap = new Map();
     const urlInfoToContainedPlaceholderSetMap = new Map();
@@ -382,22 +386,22 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               },
             );
           }
+          const containedPlaceholderSet = new Set();
           if (
             CONTENT_TYPE.isTextual(urlInfo.contentType) &&
             urlInfo.referenceToOthersSet.size > 0
           ) {
-            const containedPlaceholders = new Set();
             const contentWithPredictibleVersionPlaceholders =
-              placeholderAPI.replaceWithDefaultAndPopulateContainedPlaceholders(
+              placeholderAPI.replaceWithDefaultAndPopulateContainedPlaceholderSet(
                 content,
-                containedPlaceholders,
+                containedPlaceholderSet,
               );
             content = contentWithPredictibleVersionPlaceholders;
-            urlInfoToContainedPlaceholderSetMap.set(
-              urlInfo,
-              containedPlaceholders,
-            );
           }
+          urlInfoToContainedPlaceholderSetMap.set(
+            urlInfo,
+            containedPlaceholderSet,
+          );
           const contentVersion = generateVersion([content], versionLength);
           contentOnlyVersionMap.set(urlInfo, contentVersion);
         },
@@ -406,10 +410,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
     generate_versions: {
       const getSetOfUrlInfoInfluencingVersion = (urlInfo) => {
-        // there is no need to take into account dependencies
-        // when the reference can reference them without version
-        // (importmap or window.__v__)
-
         const placeholderInfluencingVersionSet = new Set();
         const visitContainedPlaceholders = (urlInfo) => {
           const referencedContentVersion = contentOnlyVersionMap.get(urlInfo);
@@ -417,7 +417,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             // ignored while traversing graph (not used anymore, inline, ...)
             return;
           }
-
           const containedPlaceholderSet =
             urlInfoToContainedPlaceholderSetMap.get(urlInfo);
           for (const containedPlaceholder of containedPlaceholderSet) {
@@ -426,14 +425,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             }
             const reference =
               placeholderToReferenceMap.get(containedPlaceholder);
+            const referenceVersioningInfo =
+              getReferenceVersioningInfo(reference);
             if (
-              referenceVersionedByCodeSet.has(reference) ||
-              referenceVersionedByImportmapSet.has(reference)
+              referenceVersioningInfo.type === "global" ||
+              referenceVersioningInfo.type === "importmap"
             ) {
               // when versioning is dynamic no need to take into account
-              // happens for:
-              // - specifier mapped by window.__v__()
-              // - specifier mapped by importmap
               continue;
             }
             placeholderInfluencingVersionSet.add(containedPlaceholder);
@@ -448,8 +446,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const reference = placeholderToReferenceMap.get(
             placeholderInfluencingVersion,
           );
-          const url = reference.urlInfo.url;
-          setOfUrlInfluencingVersion.add(url);
+          const referencedUrlInfo = reference.urlInfo;
+          setOfUrlInfluencingVersion.add(referencedUrlInfo);
         }
         return setOfUrlInfluencingVersion;
       };
@@ -475,53 +473,69 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       });
     }
   };
+
+  const applyVersioningOnBuildSpecifier = (buildSpecifier, reference) => {
+    if (!versioning || !shouldApplyVersioningOnReference(reference)) {
+      return buildSpecifier;
+    }
+    const version = versionMap.get(reference.urlInfo);
+    const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
+      buildSpecifier,
+      versioningMethod,
+      version,
+    });
+    buildUrlToBuildSpecifierVersionedMap.set(
+      buildSpecifier,
+      buildSpecifierVersioned,
+    );
+    const referenceVersioningInfo = getReferenceVersioningInfo(reference);
+    return referenceVersioningInfo.render(buildSpecifier);
+  };
   const finishVersioning = async () => {
     inject_global_registry_and_importmap: {
       const actions = [];
       const visitors = [];
-      if (referenceVersionedByCodeSet.size) {
-        const versionMappingsNeeded = {};
-        referenceVersionedByCodeSet.forEach((reference) => {
+      const globalMappings = {};
+      const importmapMappings = {};
+      referenceVersioningInfoMap.forEach((versioningInfo, reference) => {
+        if (versioningInfo.type === "global") {
           const urlInfo = reference.urlInfo;
           const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned =
             buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
-          versionMappingsNeeded[buildSpecifier] = buildSpecifierVersioned;
-        });
+          globalMappings[buildSpecifier] = buildSpecifierVersioned;
+        }
+        if (versioningInfo.type === "importmap") {
+          const urlInfo = reference.urlInfo;
+          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+          const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
+          const buildSpecifierVersioned =
+            buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
+          importmapMappings[buildSpecifier] = buildSpecifierVersioned;
+        }
+      });
+      if (Object.keys(globalMappings).length > 0) {
         visitors.push((urlInfo) => {
           if (urlInfo.isEntryPoint) {
             actions.push(async () => {
-              await injectVersionMappingsAsGlobal(
-                urlInfo,
-                versionMappingsNeeded,
-              );
+              await injectVersionMappingsAsGlobal(urlInfo, globalMappings);
             });
           }
         });
       }
-      if (referenceVersionedByImportmapSet.size) {
-        const versionMappingsNeeded = {};
-        referenceVersionedByImportmapSet.forEach((reference) => {
-          const urlInfo = reference.urlInfo;
-          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
-          const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
-          const buildSpecifierVersioned =
-            buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
-          versionMappingsNeeded[buildSpecifier] = buildSpecifierVersioned;
-        });
+      if (Object.keys(importmapMappings).length > 0) {
         visitors.push((urlInfo) => {
           if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
             actions.push(async () => {
               await injectVersionMappingsAsImportmap(
                 urlInfo,
-                versionMappingsNeeded,
+                importmapMappings,
               );
             });
           }
         });
       }
-
       if (visitors.length) {
         GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
           if (urlInfo.isRoot) return;
@@ -622,12 +636,12 @@ const createPlaceholderAPI = ({ length }) => {
   const defaultPlaceholder = `${placeholderLeft}${"0".repeat(
     length - placeholderOverhead,
   )}${placeholderRight}`;
-  const replaceWithDefaultAndPopulateContainedPlaceholders = (
+  const replaceWithDefaultAndPopulateContainedPlaceholderSet = (
     code,
-    containedPlaceholders,
+    containedPlaceholderSet,
   ) => {
     const transformedCode = code.replace(PLACEHOLDER_REGEX, (placeholder) => {
-      containedPlaceholders.add(placeholder);
+      containedPlaceholderSet.add(placeholder);
       return defaultPlaceholder;
     });
     return transformedCode;
@@ -679,7 +693,7 @@ const createPlaceholderAPI = ({ length }) => {
     replaceFirst,
     replaceAll,
     extractFirst,
-    replaceWithDefaultAndPopulateContainedPlaceholders,
+    replaceWithDefaultAndPopulateContainedPlaceholderSet,
   };
 };
 

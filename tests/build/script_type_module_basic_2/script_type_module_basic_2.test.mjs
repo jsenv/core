@@ -23,7 +23,7 @@ const test = async ({ name, ...rest }) => {
 await test({
   name: "0_js_module",
   runtimeCompat: { chrome: "89" },
-  versioning: false,
+  versioning: true,
 });
 
 // cannot use <script type="module">
