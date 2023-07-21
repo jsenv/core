@@ -20,7 +20,6 @@ import {
   assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
   writeFileSync,
-  comparePathnames,
 } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/log";
@@ -408,7 +407,9 @@ build ${entryPointKeys.length} entry points`);
         }) &&
         rawKitchen.context.isSupportedOnCurrentClients("importmap"),
     });
-    finalKitchen.pluginController.pushPlugin(buildSpecifierManager.jsenvPlugin);
+    finalKitchen.pluginController.pushPlugin(
+      buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
+    );
 
     const bundlers = {};
     bundle: {
@@ -832,43 +833,8 @@ build ${entryPointKeys.length} entry points`);
         buildOperation.throwIfAborted();
       }
     }
-
-    // TODO: move this to specifier manager
-    const buildManifest = {};
-    const buildContents = {};
-    const buildInlineRelativeUrls = [];
-    GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
-      finalKitchen.graph.rootUrlInfo,
-      (urlInfo) => {
-        if (!urlInfo.url.startsWith("file:")) {
-          return;
-        }
-        if (urlInfo.type === "directory") {
-          return;
-        }
-        const buildRelativeUrl =
-          buildSpecifierManager.getBuildRelativeUrl(urlInfo);
-        if (urlInfo.isInline) {
-          buildContents[buildRelativeUrl] = urlInfo.content;
-          buildInlineRelativeUrls.push(buildRelativeUrl);
-        } else {
-          buildContents[buildRelativeUrl] = urlInfo.content;
-        }
-      },
-    );
-    const buildFileContents = {};
-    const buildInlineContents = {};
-    Object.keys(buildContents)
-      .sort((a, b) => comparePathnames(a, b))
-      .forEach((buildRelativeUrl) => {
-        if (buildInlineRelativeUrls.includes(buildRelativeUrl)) {
-          buildInlineContents[buildRelativeUrl] =
-            buildContents[buildRelativeUrl];
-        } else {
-          buildFileContents[buildRelativeUrl] = buildContents[buildRelativeUrl];
-        }
-      });
-
+    const { buildFileContents, buildInlineContents, buildManifest } =
+      buildSpecifierManager.getBuildInfo();
     if (writeOnFileSystem) {
       const writingFiles = createBuildTask("write files in build directory");
       if (directoryToClean) {

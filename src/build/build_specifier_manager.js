@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { ANSI, createDetailedMessage } from "@jsenv/log";
+import { comparePathnames } from "@jsenv/filesystem";
 import { createMagicSource } from "@jsenv/sourcemap";
 import {
   ensurePathnameTrailingSlash,
@@ -95,8 +96,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     return buildSpecifierFormatted;
   };
   const internalRedirections = new Map();
-  const jsenvPlugin = {
-    name: "build_directory",
+  const jsenvPluginMoveToBuildDirectory = {
+    name: "jsenv:move_to_build_directory",
     appliesDuring: "build",
     // reference resolution is split in 2
     // the redirection to build directory is done in a second phase (redirectReference)
@@ -236,7 +237,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     },
   };
 
-  const buildUrlToBuildSpecifierVersionedMap = new Map();
+  const buildSpecifierToBuildSpecifierVersionedMap = new Map();
 
   const versionMap = new Map();
 
@@ -305,7 +306,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       type: "inline",
       render: (buildSpecifier) => {
         const buildSpecifierVersioned =
-          buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
+          buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
         return buildSpecifierVersioned;
       },
     };
@@ -492,7 +493,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   };
 
   const applyVersioningOnBuildSpecifier = (buildSpecifier, reference) => {
-    if (!versioning || !shouldApplyVersioningOnReference(reference)) {
+    if (!versioning) {
+      return buildSpecifier;
+    }
+    if (!shouldApplyVersioningOnReference(reference)) {
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
@@ -501,7 +505,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       versioningMethod,
       version,
     });
-    buildUrlToBuildSpecifierVersionedMap.set(
+    buildSpecifierToBuildSpecifierVersionedMap.set(
       buildSpecifier,
       buildSpecifierVersioned,
     );
@@ -520,7 +524,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned =
-            buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
+            buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
           globalMappings[buildSpecifier] = buildSpecifierVersioned;
         }
         if (versioningInfo.type === "importmap") {
@@ -528,7 +532,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned =
-            buildUrlToBuildSpecifierVersionedMap.get(buildSpecifier);
+            buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
           importmapMappings[buildSpecifier] = buildSpecifierVersioned;
         }
       });
@@ -566,7 +570,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
   };
 
   return {
-    jsenvPlugin,
+    jsenvPluginMoveToBuildDirectory,
 
     replacePlaceholders: async () => {
       if (versioning) {
@@ -596,15 +600,71 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         },
       );
 
+      workerReferenceSet.clear();
       if (versioning) {
         await finishVersioning();
       }
     },
 
-    getBuildRelativeUrl: (urlInfo) => {
-      const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
-      const buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
-      return buildRelativeUrl;
+    getBuildInfo: () => {
+      const buildManifest = {};
+      const buildContents = {};
+      const buildInlineRelativeUrlSet = new Set();
+      GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+        finalKitchen.graph.rootUrlInfo,
+        (urlInfo) => {
+          if (!urlInfo.url.startsWith("file:")) {
+            return;
+          }
+          if (urlInfo.type === "directory") {
+            return;
+          }
+
+          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+          const buildRelativeUrl = urlToRelativeUrl(
+            buildUrl,
+            buildDirectoryUrl,
+          );
+          if (urlInfo.isInline) {
+            buildContents[buildRelativeUrl] = urlInfo.content;
+            buildInlineRelativeUrlSet.add(buildRelativeUrl);
+          } else {
+            buildContents[buildRelativeUrl] = urlInfo.content;
+          }
+          if (versioning) {
+            const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
+            const buildSpecifierVersioned =
+              buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
+            // if to guard for html where versioned build specifier is not generated
+            if (buildSpecifierVersioned) {
+              const buildUrlVersioned = asBuildUrlVersioned({
+                buildSpecifierVersioned,
+                buildDirectoryUrl,
+              });
+              const buildRelativeUrlVersioned = urlToRelativeUrl(
+                buildUrlVersioned,
+                buildDirectoryUrl,
+              );
+              buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
+            }
+          }
+        },
+      );
+      const buildFileContents = {};
+      const buildInlineContents = {};
+      Object.keys(buildContents)
+        .sort((a, b) => comparePathnames(a, b))
+        .forEach((buildRelativeUrl) => {
+          if (buildInlineRelativeUrlSet.has(buildRelativeUrl)) {
+            buildInlineContents[buildRelativeUrl] =
+              buildContents[buildRelativeUrl];
+          } else {
+            buildFileContents[buildRelativeUrl] =
+              buildContents[buildRelativeUrl];
+          }
+        });
+
+      return { buildFileContents, buildInlineContents, buildManifest };
     },
   };
 };
@@ -784,19 +844,19 @@ const injectVersionIntoBuildSpecifier = ({
   );
 };
 
-// const asBuildUrlVersioned = ({
-//   buildSpecifierVersioned,
-//   buildDirectoryUrl,
-// }) => {
-//   if (buildSpecifierVersioned[0] === "/") {
-//     return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
-//   }
-//   const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
-//   if (buildUrl.startsWith(buildDirectoryUrl)) {
-//     return buildUrl;
-//   }
-//   // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
-//   // let's move url to build directory
-//   const { pathname, search, hash } = new URL(buildSpecifierVersioned);
-//   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
-// };
+const asBuildUrlVersioned = ({
+  buildSpecifierVersioned,
+  buildDirectoryUrl,
+}) => {
+  if (buildSpecifierVersioned[0] === "/") {
+    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
+  }
+  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
+  if (buildUrl.startsWith(buildDirectoryUrl)) {
+    return buildUrl;
+  }
+  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
+  // let's move url to build directory
+  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
+  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
+};
