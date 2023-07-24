@@ -696,7 +696,10 @@ const getRedirectedReferenceProps = (reference, url) => {
 const applyReferenceEffectsOnUrlInfo = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
 
-  if (referencedUrlInfo.firstReference) {
+  if (
+    referencedUrlInfo.firstReference &&
+    !referencedUrlInfo.firstReference.isWeak
+  ) {
     return;
   }
   referencedUrlInfo.firstReference = reference;

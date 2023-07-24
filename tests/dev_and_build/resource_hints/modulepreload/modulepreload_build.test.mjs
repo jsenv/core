@@ -49,7 +49,9 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_js_module",
   runtimeCompat: { chrome: "89" },
+  // versioningMethod: "filename",
 });
+
 // no support for <script type="module">
 await test({
   name: "1_js_module_fallback",

@@ -602,6 +602,15 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     }
   };
 
+  const getBuildGeneratedSpecifier = (urlInfo) => {
+    const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+    const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
+    const buildGeneratedSpecifier =
+      buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier) ||
+      buildSpecifier;
+    return buildGeneratedSpecifier;
+  };
+
   return {
     jsenvPluginMoveToBuildDirectory,
     generateSpecifierForBundle,
@@ -699,11 +708,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               });
               return;
             }
-            const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
-            const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
-            const buildGeneratedSpecifier =
-              buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier) ||
-              buildSpecifier;
+            const buildGeneratedSpecifier = getBuildGeneratedSpecifier(urlInfo);
             mutations.push(() => {
               setHtmlNodeAttributes(node, {
                 href: buildGeneratedSpecifier,
@@ -724,18 +729,18 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           },
         });
         hintsToInject.forEach(({ urlInfo, node }) => {
-          const buildSpecifier = getBuildUrlFromBuildSpecifier(urlInfo);
+          const buildGeneratedSpecifier = getBuildGeneratedSpecifier(urlInfo);
           const found = findHtmlNode(htmlAst, (htmlNode) => {
             return (
               htmlNode.nodeName === "link" &&
-              getHtmlNodeAttribute(htmlNode, "href") === buildSpecifier
+              getHtmlNodeAttribute(htmlNode, "href") === buildGeneratedSpecifier
             );
           });
           if (!found) {
             mutations.push(() => {
               const nodeToInsert = createHtmlNode({
                 tagName: "link",
-                href: buildSpecifier,
+                href: buildGeneratedSpecifier,
                 rel: getHtmlNodeAttribute(node, "rel"),
                 as: getHtmlNodeAttribute(node, "as"),
                 type: getHtmlNodeAttribute(node, "type"),
