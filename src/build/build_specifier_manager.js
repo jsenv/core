@@ -198,7 +198,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       const { firstReference } = finalUrlInfo;
 
       // reference injected during "shape":
-      // - "js_module_fallback" injecting a reference to url without "?js_module_fallback"
+      // - "js_module_fallback" using getWithoutSearchParam to obtain source
+      //   url info that will be converted to systemjs/UMD
       // - "js_module_fallback" injecting "s.js"
       if (firstReference.injected) {
         const reference = firstReference.original || firstReference;

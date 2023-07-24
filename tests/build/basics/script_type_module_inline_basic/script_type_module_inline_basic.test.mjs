@@ -19,8 +19,9 @@ const test = async ({ name, ...params }) => {
   );
 };
 
-// can use <script type="module">
+// cannot use <script type="module">
 await test({
-  runtimeCompat: { chrome: "89" },
+  name: "0_js_module_fallback",
+  runtimeCompat: { chrome: "60" },
   versioning: false,
 });
