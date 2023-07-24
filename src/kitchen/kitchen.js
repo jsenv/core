@@ -492,7 +492,8 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
               ? `${e.cause.reasonCode}\n${e.traceMessage}`
               : `${e.traceMessage}`;
           logger.error(
-            `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}: ${errorInfo}`,
+            `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
+${errorInfo}`,
           );
         } else {
           throw e;

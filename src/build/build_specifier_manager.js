@@ -131,32 +131,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         ).href;
         return url;
       }
-      if (reference.isInline) {
-        const rawInlineUrlInfo = GRAPH_VISITOR.find(
-          rawKitchen.graph,
-          (rawUrlInfoCandidate) => {
-            const { inlineUrlSite } = rawUrlInfoCandidate;
-            // not inline
-            if (!inlineUrlSite) return false;
-            if (
-              inlineUrlSite.url === reference.ownerUrlInfo.originalUrl &&
-              inlineUrlSite.line === reference.specifierLine &&
-              inlineUrlSite.column === reference.specifierColumn
-            ) {
-              return true;
-            }
-            if (rawUrlInfoCandidate.content === reference.content) {
-              return true;
-            }
-            if (rawUrlInfoCandidate.originalContent === reference.content) {
-              return true;
-            }
-            return false;
-          },
-        );
-        const url = rawInlineUrlInfo.url;
-        return url;
-      }
       const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
       const url = new URL(reference.specifier, parentUrl).href;
       return url;
