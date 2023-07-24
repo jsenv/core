@@ -96,6 +96,37 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     return buildSpecifierFormatted;
   };
   const internalRedirections = new Map();
+  const bundleInfoMap = new Map();
+  const placeholderToBundleMap = new Map();
+  const generateSpecifierForBundle = (originalUrl) => {
+    const placeholder = placeholderAPI.generate();
+    placeholderToBundleMap.set(placeholder, originalUrl);
+    return placeholder;
+  };
+
+  const applyBundling = async ({ bundler, urlInfosToBundle }) => {
+    const urlInfosBundled = await rawKitchen.pluginController.callAsyncHook(
+      {
+        plugin: bundler.plugin,
+        hookName: "bundle",
+        value: bundler.bundleFunction,
+      },
+      urlInfosToBundle,
+    );
+    Object.keys(urlInfosBundled).forEach((url) => {
+      const urlInfoBundled = urlInfosBundled[url];
+      if (urlInfoBundled.sourceUrls) {
+        urlInfoBundled.sourceUrls.forEach((sourceUrl) => {
+          const sourceRawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
+          if (sourceRawUrlInfo) {
+            sourceRawUrlInfo.data.bundled = true;
+          }
+        });
+      }
+      bundleInfoMap.set(url, urlInfoBundled);
+    });
+  };
+
   const jsenvPluginMoveToBuildDirectory = {
     name: "jsenv:move_to_build_directory",
     appliesDuring: "build",
@@ -105,6 +136,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     // to mutate reference (inject ?js_module_fallback)
     // before it gets redirected to build directory
     resolveReference: (reference) => {
+      const { ownerUrlInfo } = reference;
+      if (ownerUrlInfo.remapReference) {
+        reference.specifier = ownerUrlInfo.remapReference(reference);
+      }
+
       const referenceFromPlaceholder = placeholderToReferenceMap.get(
         reference.specifier,
       );
@@ -112,9 +148,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         return referenceFromPlaceholder.url;
       }
       if (reference.type === "filesystem") {
-        const ownerRawUrl = ensurePathnameTrailingSlash(
-          reference.ownerUrlInfo.url,
-        );
+        const ownerRawUrl = ensurePathnameTrailingSlash(ownerUrlInfo.url);
         const url = new URL(reference.specifier, ownerRawUrl).href;
         return url;
       }
@@ -127,11 +161,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         // js_module_fallback
         const url = new URL(
           reference.specifier,
-          reference.baseUrl || reference.ownerUrlInfo.url,
+          reference.baseUrl || ownerUrlInfo.url,
         ).href;
         return url;
       }
-      const parentUrl = reference.baseUrl || reference.ownerUrlInfo.url;
+      const parentUrl = reference.baseUrl || ownerUrlInfo.url;
       const url = new URL(reference.specifier, parentUrl).href;
       return url;
     },
@@ -191,6 +225,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
 
       const rawUrl = firstReference.url;
+      const bundleInfo = bundleInfoMap.get(rawUrl);
+      if (bundleInfo) {
+        finalUrlInfo.remapReference = bundleInfo.remapReference;
+        return {
+          // url: bundleInfo.url,
+          originalUrl: bundleInfo.originalUrl,
+          type: bundleInfo.type,
+          content: bundleInfo.content,
+          contentType: bundleInfo.contentType,
+          sourcemap: bundleInfo.sourcemap,
+          data: bundleInfo.data,
+        };
+      }
+
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
       if (!rawUrlInfo) {
         throw new Error(createDetailedMessage(`Cannot find ${rawUrl}`));
@@ -545,6 +593,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
   return {
     jsenvPluginMoveToBuildDirectory,
+    generateSpecifierForBundle,
+    applyBundling,
 
     replacePlaceholders: async () => {
       if (versioning) {

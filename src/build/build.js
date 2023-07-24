@@ -525,45 +525,24 @@ build ${entryPointKeys.length} entry points`);
           }
         },
       );
-      await Object.keys(bundlers).reduce(async (previous, type) => {
-        await previous;
+      for (const type of Object.keys(bundlers)) {
         const bundler = bundlers[type];
         const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
         if (urlInfosToBundle.length === 0) {
-          return;
+          continue;
         }
         const bundleTask = createBuildTask(`bundle "${type}"`);
         try {
-          const urlInfosBundled =
-            await rawKitchen.pluginController.callAsyncHook(
-              {
-                plugin: bundler.plugin,
-                hookName: "bundle",
-                value: bundler.bundleFunction,
-              },
-              urlInfosToBundle,
-            );
-          Object.keys(urlInfosBundled).forEach((url) => {
-            const urlInfoBundled = urlInfosBundled[url];
-            if (urlInfoBundled.sourceUrls) {
-              urlInfoBundled.sourceUrls.forEach((sourceUrl) => {
-                const sourceRawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
-                if (sourceRawUrlInfo) {
-                  sourceRawUrlInfo.data.bundled = true;
-                }
-              });
-            }
-            buildSpecifierManager.generateBuildUrlForBundle({
-              url,
-              urlInfoBundled,
-            });
+          await buildSpecifierManager.applyBundling({
+            bundler,
+            urlInfosToBundle,
           });
         } catch (e) {
           bundleTask.fail();
           throw e;
         }
         bundleTask.done();
-      }, Promise.resolve());
+      }
     }
 
     shape: {

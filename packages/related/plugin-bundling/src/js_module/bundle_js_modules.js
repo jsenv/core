@@ -24,7 +24,6 @@ export const bundleJsModules = async (
     signal,
     logger,
     rootDirectoryUrl,
-    assetsDirectory,
     runtimeCompat,
     sourcemaps,
     isSupportedOnCurrentClients,
@@ -70,7 +69,6 @@ export const bundleJsModules = async (
           logger,
           rootDirectoryUrl,
           buildDirectoryUrl,
-          assetsDirectory,
           graph,
           jsModuleUrlInfos,
 
@@ -129,7 +127,6 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  assetsDirectory,
   graph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -165,7 +162,16 @@ const rollupPluginJsenv = ({
       return URL_META.applyAssociations({ url, associations }).bundle;
     };
   }
-  const urlImporters = {};
+
+  const getOriginalUrl = (rollupFileInfo) => {
+    const { facadeModuleId } = rollupFileInfo;
+    if (facadeModuleId) {
+      return fileUrlConverter.asFileUrl(facadeModuleId);
+    }
+    const { moduleIds } = rollupFileInfo;
+    const lastModuleId = moduleIds[moduleIds.length - 1];
+    return fileUrlConverter.asFileUrl(lastModuleId);
+  };
 
   return {
     name: "jsenv",
@@ -216,49 +222,63 @@ const rollupPluginJsenv = ({
     async generateBundle(outputOptions, rollupResult) {
       _rollupEmitFile = (...args) => this.emitFile(...args);
 
+      const createBundledFileInfo = (rollupFileInfo) => {
+        const originalUrl = getOriginalUrl(rollupFileInfo);
+        const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
+          fileUrlConverter.asFileUrl(id),
+        );
+
+        // rollup is generating things like "./file.js"
+        // that must be converted back to urls for jsenv
+        const remapReference = (reference) => {
+          return specifierToUrlMap.get(reference.specifier);
+        };
+        const specifierToUrlMap = new Map();
+        const { imports, dynamicImports } = rollupFileInfo;
+        for (const importFileName of imports) {
+          const importRollupFileInfo = rollupResult[importFileName];
+          const importUrl = getOriginalUrl(importRollupFileInfo);
+          const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+          specifierToUrlMap.set(rollupSpecifier, importUrl);
+        }
+        for (const dynamicImportFileName of dynamicImports) {
+          const dynamicImportRollupFileInfo =
+            rollupResult[dynamicImportFileName];
+          const dynamicImportUrl = getOriginalUrl(dynamicImportRollupFileInfo);
+          const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
+          specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
+        }
+
+        return {
+          originalUrl,
+          type: format === "esm" ? "js_module" : "common_js",
+          data: {
+            bundlerName: "rollup",
+            bundleRelativeUrl: rollupFileInfo.fileName,
+            usesImport:
+              rollupFileInfo.imports.length > 0 ||
+              rollupFileInfo.dynamicImports.length > 0,
+            isDynamicEntry: rollupFileInfo.isDynamicEntry,
+          },
+          sourceUrls,
+          contentType: "text/javascript",
+          content: rollupFileInfo.code,
+          sourcemap: rollupFileInfo.map,
+          remapReference,
+        };
+      };
+
       const jsModuleBundleUrlInfos = {};
-      Object.keys(rollupResult).forEach((fileName) => {
+      const fileNames = Object.keys(rollupResult);
+      for (const fileName of fileNames) {
         const rollupFileInfo = rollupResult[fileName];
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
-          const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
-            fileUrlConverter.asFileUrl(id),
-          );
-
-          let url;
-          let originalUrl;
-          if (rollupFileInfo.facadeModuleId) {
-            url = fileUrlConverter.asFileUrl(rollupFileInfo.facadeModuleId);
-            originalUrl = url;
-          } else {
-            url = new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
-            if (rollupFileInfo.isDynamicEntry) {
-              originalUrl = sourceUrls[sourceUrls.length - 1];
-            } else {
-              originalUrl = url;
-            }
-          }
-
-          const jsModuleBundleUrlInfo = {
-            url,
-            originalUrl,
-            type: format === "esm" ? "js_module" : "common_js",
-            data: {
-              bundlerName: "rollup",
-              bundleRelativeUrl: rollupFileInfo.fileName,
-              usesImport:
-                rollupFileInfo.imports.length > 0 ||
-                rollupFileInfo.dynamicImports.length > 0,
-              isDynamicEntry: rollupFileInfo.isDynamicEntry,
-            },
-            sourceUrls,
-            contentType: "text/javascript",
-            content: rollupFileInfo.code,
-            sourcemap: rollupFileInfo.map,
-          };
-          jsModuleBundleUrlInfos[url] = jsModuleBundleUrlInfo;
+          const jsModuleInfo = createBundledFileInfo(rollupFileInfo);
+          jsModuleBundleUrlInfos[jsModuleInfo.originalUrl] = jsModuleInfo;
         }
-      });
+      }
+
       resultRef.current = {
         jsModuleBundleUrlInfos,
       };
@@ -267,7 +287,7 @@ const rollupPluginJsenv = ({
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
         format,
-        dir: fileUrlConverter.asFilePath(buildDirectoryUrl),
+        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
         sourcemapPathTransform: (relativePath) => {
@@ -277,28 +297,8 @@ const rollupPluginJsenv = ({
           return `[name].js`;
         },
         chunkFileNames: (chunkInfo) => {
-          const insideJs = willBeInsideJsDirectory({
-            chunkInfo,
-            fileUrlConverter,
-            jsModuleUrlInfos,
-          });
-          let nameFromUrlInfo;
-          if (chunkInfo.facadeModuleId) {
-            const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
-            const urlInfo = jsModuleUrlInfos.find(
-              (jsModuleUrlInfo) => jsModuleUrlInfo.url === url,
-            );
-            if (urlInfo) {
-              nameFromUrlInfo = urlInfo.filename;
-            }
-          }
-          const name = nameFromUrlInfo || `${chunkInfo.name}.js`;
-          return insideJs ? `${assetsDirectory}js/${name}` : `${name}`;
+          return `${chunkInfo.name}.js`;
         },
-        // https://rollupjs.org/guide/en/#outputpaths
-        // paths: (id) => {
-        //   return id
-        // },
       });
     },
     // https://rollupjs.org/guide/en/#resolvedynamicimport
@@ -338,10 +338,6 @@ const rollupPluginJsenv = ({
         url = new URL(specifier.slice(1), rootDirectoryUrl).href;
       } else {
         url = new URL(specifier, importer).href;
-      }
-      const existingImporter = urlImporters[url];
-      if (!existingImporter) {
-        urlImporters[url] = importer;
       }
       if (!url.startsWith("file:")) {
         return { id: url, external: true };
@@ -396,32 +392,4 @@ const applyRollupPlugins = async ({
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
   return rollupOutputArray;
-};
-
-const willBeInsideJsDirectory = ({
-  chunkInfo,
-  fileUrlConverter,
-  jsModuleUrlInfos,
-}) => {
-  // if the chunk is generated dynamically by rollup
-  // for an entry point jsenv will put that file inside js/ directory
-  // if it's generated dynamically for a file already in js/ directory
-  // both will be inside the js/ directory
-  if (!chunkInfo.facadeModuleId) {
-    // generated by rollup
-    return true;
-  }
-  const url = fileUrlConverter.asFileUrl(chunkInfo.facadeModuleId);
-  const jsModuleUrlInfo = jsModuleUrlInfos.find(
-    (jsModuleUrlInfo) => jsModuleUrlInfo.url === url,
-  );
-  if (!jsModuleUrlInfo) {
-    // generated by rollup
-    return true;
-  }
-  if (!jsModuleUrlInfo.isEntryPoint) {
-    // not an entry point, jsenv will put it inside js/ directory
-    return true;
-  }
-  return false;
 };
