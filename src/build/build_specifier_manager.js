@@ -253,6 +253,16 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
 
       let rawUrlInfo;
       if (firstReference.isInline) {
+        if (
+          firstReference.ownerUrlInfo.url !==
+          firstReference.ownerUrlInfo.originalUrl
+        ) {
+          return {
+            originalContent: finalUrlInfo.originalContent,
+            content: firstReference.content,
+            contentType: firstReference.contentType,
+          };
+        }
         rawUrlInfo = GRAPH_VISITOR.find(
           rawKitchen.graph,
           (rawUrlInfoCandidate) => {

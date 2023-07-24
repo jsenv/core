@@ -168,9 +168,12 @@ const rollupPluginJsenv = ({
     if (facadeModuleId) {
       return fileUrlConverter.asFileUrl(facadeModuleId);
     }
-    const { moduleIds } = rollupFileInfo;
-    const lastModuleId = moduleIds[moduleIds.length - 1];
-    return fileUrlConverter.asFileUrl(lastModuleId);
+    if (rollupFileInfo.isDynamicEntry) {
+      const { moduleIds } = rollupFileInfo;
+      const lastModuleId = moduleIds[moduleIds.length - 1];
+      return fileUrlConverter.asFileUrl(lastModuleId);
+    }
+    return new URL(rollupFileInfo.fileName, rootDirectoryUrl).href;
   };
 
   return {

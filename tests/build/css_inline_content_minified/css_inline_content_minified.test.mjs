@@ -20,16 +20,16 @@ await build({
     safari: "11.3",
   },
   plugins: [
-    // jsenvPluginBundling({
-    //   js_module: {
-    //     chunks: {
-    //       vendors: {
-    //         "**/node_modules/": true,
-    //         [jsenvSrcDirectoryUrl]: true,
-    //       },
-    //     },
-    //   },
-    // }),
+    jsenvPluginBundling({
+      js_module: {
+        chunks: {
+          vendors: {
+            "**/node_modules/": true,
+            [jsenvSrcDirectoryUrl]: true,
+          },
+        },
+      },
+    }),
     // jsenvPluginMinification(),
   ],
 });

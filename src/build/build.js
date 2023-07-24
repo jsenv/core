@@ -349,6 +349,7 @@ build ${entryPointKeys.length} entry points`);
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
+          // inlineContent: false,
         }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
