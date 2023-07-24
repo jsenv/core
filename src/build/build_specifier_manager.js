@@ -149,8 +149,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     // before it gets redirected to build directory
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
-      if (ownerUrlInfo.remapReference && reference.isInline) {
-        reference.specifier = ownerUrlInfo.remapReference(reference);
+      if (ownerUrlInfo.remapReference && !reference.isInline) {
+        const newSpecifier = ownerUrlInfo.remapReference(reference);
+        reference.specifier = newSpecifier;
       }
       const referenceFromPlaceholder = placeholderToReferenceMap.get(
         reference.specifier,
@@ -208,6 +209,20 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     },
     fetchUrlContent: async (finalUrlInfo) => {
       const { firstReference } = finalUrlInfo;
+      const rawUrl = firstReference.url;
+      const bundleInfo = bundleInfoMap.get(rawUrl);
+      if (bundleInfo) {
+        finalUrlInfo.remapReference = bundleInfo.remapReference;
+        return {
+          // url: bundleInfo.url,
+          originalUrl: bundleInfo.originalUrl,
+          type: bundleInfo.type,
+          content: bundleInfo.content,
+          contentType: bundleInfo.contentType,
+          sourcemap: bundleInfo.sourcemap,
+          data: bundleInfo.data,
+        };
+      }
 
       // reference injected during "shape":
       // - "js_module_fallback" using getWithoutSearchParam to obtain source
@@ -233,21 +248,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           originalContent: rawUrlInfo.originalContent,
           originalUrl: rawUrlInfo.originalUrl,
           sourcemap: rawUrlInfo.sourcemap,
-        };
-      }
-
-      const rawUrl = firstReference.url;
-      const bundleInfo = bundleInfoMap.get(rawUrl);
-      if (bundleInfo) {
-        finalUrlInfo.remapReference = bundleInfo.remapReference;
-        return {
-          // url: bundleInfo.url,
-          originalUrl: bundleInfo.originalUrl,
-          type: bundleInfo.type,
-          content: bundleInfo.content,
-          contentType: bundleInfo.contentType,
-          sourcemap: bundleInfo.sourcemap,
-          data: bundleInfo.data,
         };
       }
 

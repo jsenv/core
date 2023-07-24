@@ -6,7 +6,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 
 const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
 await build({
-  logLevel: "debug",
+  logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
@@ -30,7 +30,7 @@ await build({
         },
       },
     }),
-    // jsenvPluginMinification(),
+    jsenvPluginMinification(),
   ],
 });
 takeDirectorySnapshot(
