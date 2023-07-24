@@ -782,32 +782,31 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           }
 
           const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+          const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
+          const buildSpecifierVersioned = versioning
+            ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
+            : null;
           const buildRelativeUrl = urlToRelativeUrl(
             buildUrl,
             buildDirectoryUrl,
           );
-          if (urlInfo.isInline) {
-            buildContents[buildRelativeUrl] = urlInfo.content;
-            buildInlineRelativeUrlSet.add(buildRelativeUrl);
+          // if to guard for html where versioned build specifier is not generated
+          if (buildSpecifierVersioned) {
+            const buildUrlVersioned = asBuildUrlVersioned({
+              buildSpecifierVersioned,
+              buildDirectoryUrl,
+            });
+            const buildRelativeUrlVersioned = urlToRelativeUrl(
+              buildUrlVersioned,
+              buildDirectoryUrl,
+            );
+            buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
+            buildContents[buildRelativeUrlVersioned] = urlInfo.content;
           } else {
             buildContents[buildRelativeUrl] = urlInfo.content;
           }
-          if (versioning) {
-            const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
-            const buildSpecifierVersioned =
-              buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
-            // if to guard for html where versioned build specifier is not generated
-            if (buildSpecifierVersioned) {
-              const buildUrlVersioned = asBuildUrlVersioned({
-                buildSpecifierVersioned,
-                buildDirectoryUrl,
-              });
-              const buildRelativeUrlVersioned = urlToRelativeUrl(
-                buildUrlVersioned,
-                buildDirectoryUrl,
-              );
-              buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
-            }
+          if (urlInfo.isInline) {
+            buildInlineRelativeUrlSet.add(buildRelativeUrl);
           }
         },
       );
