@@ -490,7 +490,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           const errorInfo =
             e.code === "PARSE_ERROR"
               ? `${e.cause.reasonCode}\n${e.traceMessage}`
-              : `${e.traceMessage}`;
+              : e.stack;
           logger.error(
             `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
 ${errorInfo}`,

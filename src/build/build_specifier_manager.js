@@ -251,7 +251,37 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
         };
       }
 
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
+      let rawUrlInfo;
+      if (firstReference.isInline) {
+        rawUrlInfo = GRAPH_VISITOR.find(
+          rawKitchen.graph,
+          (rawUrlInfoCandidate) => {
+            const { inlineUrlSite } = rawUrlInfoCandidate;
+            if (!inlineUrlSite) {
+              return false;
+            }
+            if (
+              inlineUrlSite.url === firstReference.ownerUrlInfo.url &&
+              inlineUrlSite.line === firstReference.specifierLine &&
+              inlineUrlSite.column === firstReference.specifierColumn
+            ) {
+              return true;
+            }
+            if (rawUrlInfoCandidate.content === firstReference.content) {
+              return true;
+            }
+            if (
+              rawUrlInfoCandidate.originalContent === firstReference.content
+            ) {
+              return true;
+            }
+            return false;
+          },
+        );
+      } else {
+        rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
+      }
+
       if (!rawUrlInfo) {
         throw new Error(createDetailedMessage(`Cannot find ${rawUrl}`));
       }

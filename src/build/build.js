@@ -331,7 +331,7 @@ build ${entryPointKeys.length} entry points`);
     const finalKitchen = createKitchen({
       name: "shape",
       logLevel,
-      rootDirectoryUrl: buildDirectoryUrl,
+      rootDirectoryUrl: sourceDirectoryUrl,
       // here most plugins are not there
       // - no external plugin
       // - no plugin putting reference.mustIgnore on https urls
