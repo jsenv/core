@@ -15,7 +15,6 @@ const test = async ({ name, expectedUrl, ...rest }) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    versioning: false,
     ...rest,
   });
   takeDirectorySnapshot(
@@ -48,20 +47,15 @@ await test({
   expectedUrl: "/main.html",
 });
 // cannot use <script type="module">
-// await test({
-//   name: "1_js_module_fallback",
-//   runtimeCompat: { chrome: "60" },
-//   plugins: [jsenvPluginBundling()],
-//   expectedUrl: "/main.html__inline_script__1",
-// });
-// // cannot use <script type="module"> + no bundling
-// await test({
-//   runtimeCompat: { chrome: "60" },
-//   expectedUrl: "/main.html__inline_script__1",
-// });
-// // cannot use <script type="module"> + no bundling + versioning
-// await test({
-//   runtimeCompat: { chrome: "60" },
-//   versioning: true,
-//   expectedUrl: "/main.html__inline_script__1",
-// });
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: { chrome: "60" },
+  plugins: [jsenvPluginBundling()],
+  expectedUrl: "/main.html__inline_script__1",
+});
+// cannot use <script type="module"> + no bundling
+await test({
+  name: "2_js_module_fallback_no_bundling",
+  runtimeCompat: { chrome: "60" },
+  expectedUrl: "/main.html__inline_script__1",
+});
