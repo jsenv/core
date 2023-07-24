@@ -23,17 +23,7 @@ import {
 } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/log";
-import {
-  parseHtmlString,
-  stringifyHtmlAst,
-  visitHtmlNodes,
-  getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
-  removeHtmlNode,
-  createHtmlNode,
-  insertHtmlNodeAfter,
-  findHtmlNode,
-} from "@jsenv/ast";
+import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 
@@ -598,143 +588,11 @@ build ${entryPointKeys.length} entry points`);
        *   - because of bundlings
        *   - because of import assertions transpilation (file is inlined into JS)
        */
-      // TODO: retest what is needed, removing injecting yes, updating not sure
       resync_resource_hints: {
-        const actions = [];
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (urlInfo.type !== "html") {
-            return;
-          }
-          const htmlAst = parseHtmlString(urlInfo.content, {
-            storeOriginalPositions: false,
-          });
-          const mutations = [];
-          const hintsToInject = {};
-          visitHtmlNodes(htmlAst, {
-            link: (node) => {
-              const href = getHtmlNodeAttribute(node, "href");
-              if (href === undefined || href.startsWith("data:")) {
-                return;
-              }
-              const rel = getHtmlNodeAttribute(node, "rel");
-              const isResourceHint = [
-                "preconnect",
-                "dns-prefetch",
-                "prefetch",
-                "preload",
-                "modulepreload",
-              ].includes(rel);
-              if (!isResourceHint) {
-                return;
-              }
-              let url;
-              if (href.startsWith("file:")) {
-                url = href;
-                url = rawRedirections.get(url) || url;
-                url = buildSpecifierManager.getFinalBuildUrl(url) || url;
-                url = buildSpecifierManager.getRawUrl(url) || url;
-              } else {
-                url = null;
-              }
-
-              const buildUrlInfo = url
-                ? finalKitchen.graph.getUrlInfo(url)
-                : null;
-              if (!buildUrlInfo) {
-                logger.warn(
-                  `remove resource hint because cannot find "${href}" in the graph`,
-                );
-                mutations.push(() => {
-                  removeHtmlNode(node);
-                });
-                return;
-              }
-              if (!buildUrlInfo.isUsed()) {
-                let rawUrl = buildSpecifierManager.getRawUrl(url);
-                if (!rawUrl && rawKitchen.graph.getUrlInfo(url)) {
-                  rawUrl = url;
-                }
-                if (rawUrl) {
-                  const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
-                  if (rawUrlInfo && rawUrlInfo.data.bundled) {
-                    logger.warn(
-                      `remove resource hint on "${rawUrl}" because it was bundled`,
-                    );
-                    mutations.push(() => {
-                      removeHtmlNode(node);
-                    });
-                    return;
-                  }
-                }
-                logger.warn(
-                  `remove resource hint on "${href}" because it is not used anymore`,
-                );
-                mutations.push(() => {
-                  removeHtmlNode(node);
-                });
-                return;
-              }
-              const buildUrlFormatted = buildUrlInfo.url;
-              const buildSpecifier =
-                buildSpecifierManager.getBuildUrlFromBuildSpecifier(
-                  buildUrlFormatted,
-                );
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  href: buildSpecifier,
-                  ...(buildUrlInfo.type === "js_classic"
-                    ? { crossorigin: undefined }
-                    : {}),
-                });
-              });
-              for (const referenceToOther of buildUrlInfo.referenceToOthersSet) {
-                if (referenceToOther.isWeak) {
-                  continue;
-                }
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                if (referencedUrlInfo.data.generatedToShareCode) {
-                  hintsToInject[referencedUrlInfo.url] = node;
-                }
-              }
-            },
-          });
-          Object.keys(hintsToInject).forEach((urlToHint) => {
-            const hintNode = hintsToInject[urlToHint];
-            const urlFormatted = urlToHint;
-            const buildSpecifier =
-              buildSpecifierManager.getBuildUrlFromBuildSpecifier(urlFormatted);
-            const found = findHtmlNode(htmlAst, (htmlNode) => {
-              return (
-                htmlNode.nodeName === "link" &&
-                getHtmlNodeAttribute(htmlNode, "href") === buildSpecifier
-              );
-            });
-            if (!found) {
-              mutations.push(() => {
-                const nodeToInsert = createHtmlNode({
-                  tagName: "link",
-                  href: buildSpecifier,
-                  rel: getHtmlNodeAttribute(hintNode, "rel"),
-                  as: getHtmlNodeAttribute(hintNode, "as"),
-                  type: getHtmlNodeAttribute(hintNode, "type"),
-                  crossorigin: getHtmlNodeAttribute(hintNode, "crossorigin"),
-                });
-                insertHtmlNodeAfter(nodeToInsert, hintNode);
-              });
-            }
-          });
-          if (mutations.length > 0) {
-            actions.push(() => {
-              mutations.forEach((mutation) => mutation());
-              urlInfo.mutateContent({
-                content: stringifyHtmlAst(htmlAst),
-              });
-            });
-          }
-        });
-        if (actions.length > 0) {
+        const resync = buildSpecifierManager.prepareResyncResourceHints();
+        if (resync) {
           const resyncTask = createBuildTask("resync resource hints");
-          actions.map((resourceHintAction) => resourceHintAction());
+          resync();
           buildOperation.throwIfAborted();
           resyncTask.done();
         }

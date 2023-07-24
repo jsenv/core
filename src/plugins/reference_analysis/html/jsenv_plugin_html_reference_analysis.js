@@ -412,12 +412,13 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
     }
     if (as === "script") {
       for (const referenceToOther of htmlUrlInfo.referenceToOthersSet) {
-        if (
-          referenceToOther.url === linkReference.url &&
-          referenceToOther.type === "script"
-        ) {
-          return referenceToOther.expectedType;
+        if (referenceToOther.url !== linkReference.url) {
+          continue;
         }
+        if (referenceToOther.type !== "script") {
+          continue;
+        }
+        return referenceToOther.expectedType;
       }
       return undefined;
     }

@@ -8,7 +8,17 @@ import {
   injectQueryParamIntoSpecifierWithoutEncoding,
   renderUrlOrRelativeUrlFilename,
 } from "@jsenv/urls";
-import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast";
+import {
+  parseHtmlString,
+  stringifyHtmlAst,
+  visitHtmlNodes,
+  getHtmlNodeAttribute,
+  setHtmlNodeAttributes,
+  removeHtmlNode,
+  createHtmlNode,
+  insertHtmlNodeAfter,
+  findHtmlNode,
+} from "@jsenv/ast";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
@@ -44,6 +54,7 @@ export const createBuildSpecifierManager = ({
   });
   const placeholderToReferenceMap = new Map();
   const urlInfoToBuildUrlMap = new Map();
+  const buildUrlToUrlInfoMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
   const generateReplacement = (reference) => {
     const url = reference.generatedUrl;
@@ -88,12 +99,13 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     }
 
     urlInfoToBuildUrlMap.set(reference.urlInfo, buildUrl);
+    buildUrlToUrlInfoMap.set(buildUrl, reference.urlInfo);
     buildUrlToBuildSpecifierMap.set(buildUrl, buildSpecifier);
-    const buildSpecifierFormatted = applyVersioningOnBuildSpecifier(
+    const buildGeneratedSpecifier = applyVersioningOnBuildSpecifier(
       buildSpecifier,
       reference,
     );
-    return buildSpecifierFormatted;
+    return buildGeneratedSpecifier;
   };
   const internalRedirections = new Map();
   const bundleInfoMap = new Map();
@@ -187,10 +199,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       if (reference.isWeak) {
         return null;
       }
-      if (generatedUrl !== reference.url) {
-        internalRedirections.set(reference.url, generatedUrl);
-      }
       const placeholder = placeholderAPI.generate();
+      if (generatedUrl !== reference.url) {
+        internalRedirections.set(generatedUrl, reference.url);
+      }
       placeholderToReferenceMap.set(placeholder, reference);
       return placeholder;
     },
@@ -432,10 +444,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           const containedPlaceholderSet = new Set();
           if (mayUsePlaceholder(urlInfo)) {
             const contentWithPredictibleVersionPlaceholders =
-              placeholderAPI.replaceWithDefaultAndPopulateContainedPlaceholderSet(
-                content,
-                containedPlaceholderSet,
-              );
+              placeholderAPI.replaceWithDefault(content, (placeholder) => {
+                containedPlaceholderSet.add(placeholder);
+              });
             content = contentWithPredictibleVersionPlaceholders;
           }
           urlInfoToContainedPlaceholderSetMap.set(
@@ -497,7 +508,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           getSetOfUrlInfoInfluencingVersion(urlInfo);
         const versionPartSet = new Set();
         versionPartSet.add(contentOnlyVersion);
-        setOfUrlInfoInfluencingVersion.forEach((urlInfoInfluencingVersion) => {
+        for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
           const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
             urlInfoInfluencingVersion,
           );
@@ -507,7 +518,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             );
           }
           versionPartSet.add(otherUrlInfoContentVersion);
-        });
+        }
         const version = generateVersion(versionPartSet, versionLength);
         versionMap.set(urlInfo, version);
       });
@@ -630,6 +641,127 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       }
     },
 
+    prepareResyncResourceHints: () => {
+      const actions = [];
+      GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+        if (urlInfo.type !== "html") {
+          return;
+        }
+        const htmlAst = parseHtmlString(urlInfo.content, {
+          storeOriginalPositions: false,
+        });
+        const mutations = [];
+        const hintsToInject = [];
+        visitHtmlNodes(htmlAst, {
+          link: (node) => {
+            const href = getHtmlNodeAttribute(node, "href");
+            if (href === undefined || href.startsWith("data:")) {
+              return;
+            }
+            const rel = getHtmlNodeAttribute(node, "rel");
+            const isResourceHint = [
+              "preconnect",
+              "dns-prefetch",
+              "prefetch",
+              "preload",
+              "modulepreload",
+            ].includes(rel);
+            if (!isResourceHint) {
+              return;
+            }
+            const rawUrl = href;
+            const finalUrl = internalRedirections.get(rawUrl) || rawUrl;
+            const urlInfo = finalKitchen.graph.getUrlInfo(finalUrl);
+            if (!urlInfo) {
+              logger.warn(
+                `remove resource hint because cannot find "${href}" in the graph`,
+              );
+              mutations.push(() => {
+                removeHtmlNode(node);
+              });
+              return;
+            }
+            if (!urlInfo.isUsed()) {
+              if (urlInfo.data.bundled) {
+                logger.warn(
+                  `remove resource hint on "${href}" because it was bundled`,
+                );
+                mutations.push(() => {
+                  removeHtmlNode(node);
+                });
+                return;
+              }
+              logger.warn(
+                `remove resource hint on "${href}" because it is not used anymore`,
+              );
+              mutations.push(() => {
+                removeHtmlNode(node);
+              });
+              return;
+            }
+            const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+            const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
+            const buildGeneratedSpecifier =
+              buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier) ||
+              buildSpecifier;
+            mutations.push(() => {
+              setHtmlNodeAttributes(node, {
+                href: buildGeneratedSpecifier,
+                ...(urlInfo.type === "js_classic"
+                  ? { crossorigin: undefined }
+                  : {}),
+              });
+            });
+            for (const referenceToOther of urlInfo.referenceToOthersSet) {
+              if (referenceToOther.isWeak) {
+                continue;
+              }
+              const referencedUrlInfo = referenceToOther.urlInfo;
+              if (referencedUrlInfo.data.generatedToShareCode) {
+                hintsToInject.push({ urlInfo, node });
+              }
+            }
+          },
+        });
+        hintsToInject.forEach(({ urlInfo, node }) => {
+          const buildSpecifier = getBuildUrlFromBuildSpecifier(urlInfo);
+          const found = findHtmlNode(htmlAst, (htmlNode) => {
+            return (
+              htmlNode.nodeName === "link" &&
+              getHtmlNodeAttribute(htmlNode, "href") === buildSpecifier
+            );
+          });
+          if (!found) {
+            mutations.push(() => {
+              const nodeToInsert = createHtmlNode({
+                tagName: "link",
+                href: buildSpecifier,
+                rel: getHtmlNodeAttribute(node, "rel"),
+                as: getHtmlNodeAttribute(node, "as"),
+                type: getHtmlNodeAttribute(node, "type"),
+                crossorigin: getHtmlNodeAttribute(node, "crossorigin"),
+              });
+              insertHtmlNodeAfter(nodeToInsert, node);
+            });
+          }
+        });
+        if (mutations.length > 0) {
+          actions.push(() => {
+            mutations.forEach((mutation) => mutation());
+            urlInfo.mutateContent({
+              content: stringifyHtmlAst(htmlAst),
+            });
+          });
+        }
+      });
+      if (actions.length === 0) {
+        return null;
+      }
+      return () => {
+        actions.map((resourceHintAction) => resourceHintAction());
+      };
+    },
+
     getBuildInfo: () => {
       const buildManifest = {};
       const buildContents = {};
@@ -740,12 +872,9 @@ const createPlaceholderAPI = ({ length }) => {
   const defaultPlaceholder = `${placeholderLeft}${"0".repeat(
     length - placeholderOverhead,
   )}${placeholderRight}`;
-  const replaceWithDefaultAndPopulateContainedPlaceholderSet = (
-    code,
-    containedPlaceholderSet,
-  ) => {
+  const replaceWithDefault = (code, onPlaceholder) => {
     const transformedCode = code.replace(PLACEHOLDER_REGEX, (placeholder) => {
-      containedPlaceholderSet.add(placeholder);
+      onPlaceholder(placeholder);
       return defaultPlaceholder;
     });
     return transformedCode;
@@ -761,6 +890,7 @@ const createPlaceholderAPI = ({ length }) => {
   const markAsCode = (string) => {
     return {
       __isCode__: true,
+      toString: () => string,
       value: string,
     };
   };
@@ -809,7 +939,7 @@ const createPlaceholderAPI = ({ length }) => {
     replaceAll,
     extractFirst,
     markAsCode,
-    replaceWithDefaultAndPopulateContainedPlaceholderSet,
+    replaceWithDefault,
   };
 };
 
