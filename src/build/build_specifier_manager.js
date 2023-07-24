@@ -137,10 +137,9 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     // before it gets redirected to build directory
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
-      if (ownerUrlInfo.remapReference) {
+      if (ownerUrlInfo.remapReference && reference.isInline) {
         reference.specifier = ownerUrlInfo.remapReference(reference);
       }
-
       const referenceFromPlaceholder = placeholderToReferenceMap.get(
         reference.specifier,
       );
