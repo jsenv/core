@@ -691,7 +691,8 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               return;
             }
             if (!urlInfo.isUsed()) {
-              if (urlInfo.data.bundled) {
+              const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+              if (rawUrlInfo && rawUrlInfo.data.bundled) {
                 logger.warn(
                   `remove resource hint on "${href}" because it was bundled`,
                 );
