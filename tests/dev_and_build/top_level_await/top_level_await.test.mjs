@@ -36,10 +36,10 @@ const test = async ({ name, ...params }) => {
 };
 
 // support
-// await test({
-//   name: "0_supported",
-//   runtimeCompat: { chrome: "89" },
-// });
+await test({
+  name: "0_supported",
+  runtimeCompat: { chrome: "89" },
+});
 // no support for top level await
 await test({
   name: "1_not_supported",

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/a.js": "/js/a.js?v=c2cd066d",
+          "/js/b.js": "/js/b.js?v=3ae1089f"
+        }
+      }
+    </script><title>Title</title>
+    <meta charset="utf-8">
+  </head>
+
+  <body>
+    <script>
+      window.executionOrder = [];
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=cf6be3fa"></script>
+  </body>
+</html>

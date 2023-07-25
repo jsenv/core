@@ -6,6 +6,10 @@ export const jsenvPluginImportMetaResolve = () => {
     appliesDuring: "*",
     init: (context) => {
       if (!context.isSupportedOnCurrentClients("import_meta_resolve")) {
+        // keep it untouched, systemjs will handle it
+        if (context.getPluginMeta("js_module_fallback")) {
+          return false;
+        }
         return true;
       }
       return false;
