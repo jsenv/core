@@ -7,8 +7,8 @@ System.register([__v__("/js/toPrimitive.nomodule.js")], function (_export, _cont
     return typeof key === "symbol" ? key : String(key);
   });
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersToPrimitiveToPrimitiveJs) {
-      toPrimitive = _packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersToPrimitiveToPrimitiveJs.default;
+    setters: [function (_J) {
+      toPrimitive = _J.default;
     }],
     execute: function () {}
   };

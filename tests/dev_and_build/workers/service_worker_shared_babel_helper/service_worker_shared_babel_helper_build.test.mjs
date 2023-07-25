@@ -42,5 +42,5 @@ await test({
     firefox: "52",
     safari: "11",
   },
-  versioning: false,
+  versioning: true,
 });

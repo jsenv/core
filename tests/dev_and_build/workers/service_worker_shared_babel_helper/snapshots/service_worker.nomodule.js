@@ -1,35 +1,37 @@
-
 self.resourcesFromJsenvBuild = {
   "/main.html": {
     "version": "e8375832"
   },
   "/js/app_loader.nomodule.js": {
-    "version": "96bb4e80",
-    "versionedUrl": "/js/app_loader.nomodule.js?v=96bb4e80"
+    "version": "9a6c7f6a",
+    "versionedUrl": "/js/app_loader.nomodule.js?v=9a6c7f6a"
   },
   "/js/app.nomodule.js": {
-    "version": "a09fe138",
-    "versionedUrl": "/js/app.nomodule.js?v=a09fe138"
+    "version": "8f8d04e9",
+    "versionedUrl": "/js/app.nomodule.js?v=8f8d04e9"
+  },
+  "/service_worker.nomodule.js": {
+    "version": "15575909"
   },
   "/js/objectSpread2.nomodule.js": {
-    "version": "e6bfdcaf",
-    "versionedUrl": "/js/objectSpread2.nomodule.js?v=e6bfdcaf"
+    "version": "ac3c3a15",
+    "versionedUrl": "/js/objectSpread2.nomodule.js?v=ac3c3a15"
   },
   "/js/defineProperty.nomodule.js": {
-    "version": "6ac84279",
-    "versionedUrl": "/js/defineProperty.nomodule.js?v=6ac84279"
+    "version": "43f70674",
+    "versionedUrl": "/js/defineProperty.nomodule.js?v=43f70674"
   },
   "/js/toPropertyKey.nomodule.js": {
-    "version": "76f6c29c",
-    "versionedUrl": "/js/toPropertyKey.nomodule.js?v=76f6c29c"
+    "version": "caa9d4b7",
+    "versionedUrl": "/js/toPropertyKey.nomodule.js?v=caa9d4b7"
   },
   "/js/toPrimitive.nomodule.js": {
     "version": "75cc9dbd",
     "versionedUrl": "/js/toPrimitive.nomodule.js?v=75cc9dbd"
   },
   "/js/slicedToArray.nomodule.js": {
-    "version": "16a83463",
-    "versionedUrl": "/js/slicedToArray.nomodule.js?v=16a83463"
+    "version": "a1bee595",
+    "versionedUrl": "/js/slicedToArray.nomodule.js?v=a1bee595"
   },
   "/js/arrayWithHoles.nomodule.js": {
     "version": "9e36c30f",
@@ -40,8 +42,8 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/iterableToArrayLimit.nomodule.js?v=3ba9cead"
   },
   "/js/unsupportedIterableToArray.nomodule.js": {
-    "version": "a01b694b",
-    "versionedUrl": "/js/unsupportedIterableToArray.nomodule.js?v=a01b694b"
+    "version": "1462fbad",
+    "versionedUrl": "/js/unsupportedIterableToArray.nomodule.js?v=1462fbad"
   },
   "/js/arrayLikeToArray.nomodule.js": {
     "version": "7ec08ad1",
@@ -56,18 +58,18 @@ self.resourcesFromJsenvBuild = {
 
 ;(function() {
   var __versionMappings__ = {
-    "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=96bb4e80",
-    "/js/app.nomodule.js": "/js/app.nomodule.js?v=a09fe138",
-    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=e6bfdcaf",
-    "/js/slicedToArray.nomodule.js": "/js/slicedToArray.nomodule.js?v=16a83463",
-    "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=6ac84279",
+    "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=9a6c7f6a",
+    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=ac3c3a15",
+    "/js/slicedToArray.nomodule.js": "/js/slicedToArray.nomodule.js?v=a1bee595",
+    "/js/app.nomodule.js": "/js/app.nomodule.js?v=8f8d04e9",
+    "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=43f70674",
+    "/js/toPropertyKey.nomodule.js": "/js/toPropertyKey.nomodule.js?v=caa9d4b7",
+    "/js/toPrimitive.nomodule.js": "/js/toPrimitive.nomodule.js?v=75cc9dbd",
     "/js/arrayWithHoles.nomodule.js": "/js/arrayWithHoles.nomodule.js?v=9e36c30f",
     "/js/iterableToArrayLimit.nomodule.js": "/js/iterableToArrayLimit.nomodule.js?v=3ba9cead",
-    "/js/unsupportedIterableToArray.nomodule.js": "/js/unsupportedIterableToArray.nomodule.js?v=a01b694b",
+    "/js/unsupportedIterableToArray.nomodule.js": "/js/unsupportedIterableToArray.nomodule.js?v=1462fbad",
     "/js/nonIterableRest.nomodule.js": "/js/nonIterableRest.nomodule.js?v=af5b5914",
-    "/js/toPropertyKey.nomodule.js": "/js/toPropertyKey.nomodule.js?v=76f6c29c",
-    "/js/arrayLikeToArray.nomodule.js": "/js/arrayLikeToArray.nomodule.js?v=7ec08ad1",
-    "/js/toPrimitive.nomodule.js": "/js/toPrimitive.nomodule.js?v=75cc9dbd"
+    "/js/arrayLikeToArray.nomodule.js": "/js/arrayLikeToArray.nomodule.js?v=7ec08ad1"
   };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
@@ -559,31 +561,26 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
   } : () => Object.create(null);
 })();
 
-(function (global, factory) {
-  if (typeof define === "function" && define.amd) {
-    define(["../../../../../packages/internal/plugin-transpilation/src/babel/babel_helper_directory/babel_helpers/objectSpread2/objectSpread2.js", "../../../../../packages/internal/plugin-transpilation/src/babel/babel_helper_directory/babel_helpers/slicedToArray/slicedToArray.js"], factory);
-  } else if (typeof exports !== "undefined") {
-    factory(require("../../../../../packages/internal/plugin-transpilation/src/babel/babel_helper_directory/babel_helpers/objectSpread2/objectSpread2.js"), require("../../../../../packages/internal/plugin-transpilation/src/babel/babel_helper_directory/babel_helpers/slicedToArray/slicedToArray.js"));
-  } else {
-    var mod = {
-      exports: {}
-    };
-    factory(global.objectSpread2, global.slicedToArray);
-    global.service_workerNomodule = mod.exports;
-  }
-})(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function (_objectSpread2, _slicedToArray2) {
+System.register([__v__("/js/objectSpread2.nomodule.js"), __v__("/js/slicedToArray.nomodule.js")], function (_export, _context) {
   "use strict";
 
-  _objectSpread2 = _interopRequireDefault(_objectSpread2);
-  _slicedToArray2 = _interopRequireDefault(_slicedToArray2);
-  function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-  const getResponse = () => {
-    return [42];
+  var _objectSpread, _slicedToArray, getResponse, _getResponse, _getResponse2, answer;
+  return {
+    setters: [function (_u) {
+      _objectSpread = _u.default;
+    }, function (_v) {
+      _slicedToArray = _v.default;
+    }],
+    execute: function () {
+      getResponse = () => {
+        return [42];
+      };
+      _getResponse = getResponse();
+      _getResponse2 = _slicedToArray(_getResponse, 1);
+      answer = _getResponse2[0];
+      console.log(_objectSpread({}, {
+        answer
+      }));
+    }
   };
-  const _getResponse = getResponse(),
-    _getResponse2 = (0, _slicedToArray2.default)(_getResponse, 1),
-    answer = _getResponse2[0];
-  console.log((0, _objectSpread2.default)({}, {
-    answer
-  }));
 });

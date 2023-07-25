@@ -3,10 +3,10 @@ System.register([__v__("/js/objectSpread2.nomodule.js"), __v__("/js/slicedToArra
 
   var _objectSpread, _slicedToArray, getResponse, _getResponse, _getResponse2, answer;
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersObjectSpread2ObjectSpread2Js) {
-      _objectSpread = _packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersObjectSpread2ObjectSpread2Js.default;
-    }, function (_packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersSlicedToArraySlicedToArrayJs) {
-      _slicedToArray = _packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersSlicedToArraySlicedToArrayJs.default;
+    setters: [function (_) {
+      _objectSpread = _.default;
+    }, function (_2) {
+      _slicedToArray = _2.default;
     }],
     execute: function () {
       _context.import(__v__("/js/app.nomodule.js"));

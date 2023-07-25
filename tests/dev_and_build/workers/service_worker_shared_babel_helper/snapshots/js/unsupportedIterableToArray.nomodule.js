@@ -12,8 +12,8 @@ System.register([__v__("/js/arrayLikeToArray.nomodule.js")], function (_export, 
   }
   _export("default", unsupportedIterableToArray);
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersArrayLikeToArrayArrayLikeToArrayJs) {
-      arrayLikeToArray = _packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersArrayLikeToArrayArrayLikeToArrayJs.default;
+    setters: [function (_x) {
+      arrayLikeToArray = _x.default;
     }],
     execute: function () {}
   };
