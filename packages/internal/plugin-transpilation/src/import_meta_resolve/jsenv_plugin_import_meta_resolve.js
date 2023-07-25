@@ -5,14 +5,10 @@ export const jsenvPluginImportMetaResolve = () => {
     name: "jsenv:import_meta_resolve",
     appliesDuring: "*",
     init: (context) => {
-      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
-        return false;
+      if (!context.isSupportedOnCurrentClients("import_meta_resolve")) {
+        return true;
       }
-      // keep it untouched, systemjs will handle it
-      if (context.systemJsTranspilation) {
-        return false;
-      }
-      return true;
+      return false;
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {

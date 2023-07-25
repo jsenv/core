@@ -29,6 +29,11 @@ export const createPluginController = (
 ) => {
   const pluginsMeta = initialPuginsMeta;
 
+  kitchenContext.getPluginMeta = (id) => {
+    const value = pluginsMeta[id];
+    return value;
+  };
+
   const plugins = [];
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
@@ -47,14 +52,14 @@ export const createPluginController = (
     if (plugin === null || typeof plugin !== "object") {
       throw new TypeError(`plugin must be objects, got ${plugin}`);
     }
+    if (!plugin.name) {
+      plugin.name = "anonymous";
+    }
     if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
       if (plugin.destroy) {
         plugin.destroy();
       }
       return;
-    }
-    if (!plugin.name) {
-      plugin.name = "anonymous";
     }
     plugins.push(plugin);
     for (const key of Object.keys(plugin)) {
@@ -271,11 +276,6 @@ export const createPluginController = (
     });
   };
 
-  const getPluginMeta = (id) => {
-    const value = pluginsMeta[id];
-    return value;
-  };
-
   return {
     pluginsMeta,
     plugins,
@@ -289,8 +289,6 @@ export const createPluginController = (
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
-
-    getPluginMeta,
 
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,

@@ -2,10 +2,10 @@ import { jsenvPluginJsModuleConversion } from "./jsenv_plugin_js_module_conversi
 import { jsenvPluginJsModuleFallbackInsideHtml } from "./jsenv_plugin_js_module_fallback_inside_html.js";
 import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_fallback_on_workers.js";
 
-export const jsenvPluginJsModuleFallback = () => {
+export const jsenvPluginJsModuleFallback = ({ dormant } = {}) => {
   return [
-    jsenvPluginJsModuleFallbackInsideHtml(),
-    jsenvPluginJsModuleFallbackOnWorkers(),
+    jsenvPluginJsModuleFallbackInsideHtml({ dormant }),
+    jsenvPluginJsModuleFallbackOnWorkers({ dormant }),
     jsenvPluginJsModuleConversion(),
   ];
 };

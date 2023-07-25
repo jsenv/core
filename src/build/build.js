@@ -24,7 +24,6 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/log";
 import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast";
-import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
@@ -32,7 +31,6 @@ import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
-import { prependContent } from "../kitchen/prepend_content.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
@@ -233,23 +231,8 @@ build ${entryPointKeys.length} entry points`);
     const contextSharedDuringBuild = {
       buildDirectoryUrl,
       assetsDirectory,
-      systemJsTranspilation: (() => {
-        const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-        if (nodeRuntimeEnabled) return false;
-        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "script_type_module"))
-          return true;
-        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_dynamic"))
-          return true;
-        if (!RUNTIME_COMPAT.isSupported(runtimeCompat, "import_meta"))
-          return true;
-        if (
-          versioning &&
-          versioningViaImportmap &&
-          !RUNTIME_COMPAT.isSupported(runtimeCompat, "importmap")
-        )
-          return true;
-        return false;
-      })(),
+      versioning,
+      versioningViaImportmap,
     };
     const rawKitchen = createKitchen({
       signal,
@@ -286,9 +269,10 @@ build ${entryPointKeys.length} entry points`);
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleFallback,
             ...transpilation,
-            jsModuleFallbackOnJsClassic: false,
+            jsModuleFallback: {
+              dormant: true,
+            },
           },
-
           inlining: false,
           scenarioPlaceholders,
         }),
@@ -599,77 +583,16 @@ build ${entryPointKeys.length} entry points`);
           resyncTask.done();
         }
       }
-      // TODO: move this to specifier_manager
       inject_urls_in_service_workers: {
-        const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
-          finalKitchen.graph,
-          (finalUrlInfo) => {
-            return (
-              finalUrlInfo.subtype === "service_worker" &&
-              finalUrlInfo.isEntryPoint &&
-              finalUrlInfo.isUsed()
-            );
-          },
-        );
-        if (serviceWorkerEntryUrlInfos.length > 0) {
+        const inject = buildSpecifierManager.prepareServiceWorkerUrlInjection();
+        if (inject) {
           const urlsInjectionInSw = createBuildTask(
             "inject urls in service worker",
           );
-          const serviceWorkerResources = {};
-          GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
-            finalKitchen.graph.rootUrlInfo,
-            (urlInfo) => {
-              if (!urlInfo.url.startsWith("file:")) {
-                return;
-              }
-              if (urlInfo.isInline) {
-                return;
-              }
-              const {
-                buildSpecifier,
-                buildSpecifierVersioned,
-                version,
-                canUseVersionedSpecifier,
-              } = buildSpecifierManager.getBuildMeta(urlInfo);
-
-              if (canUseVersionedSpecifier) {
-                serviceWorkerResources[buildSpecifier] = {
-                  version,
-                  versionedUrl: buildSpecifierVersioned,
-                };
-              } else {
-                // when url is not versioned we compute a "version" for that url anyway
-                // so that service worker source still changes and navigator
-                // detect there is a change
-                serviceWorkerResources[buildSpecifier] = {
-                  version,
-                };
-              }
-            },
-          );
-          for (const serviceWorkerEntryUrlInfo of serviceWorkerEntryUrlInfos) {
-            const serviceWorkerResourcesWithoutSwScriptItSelf = {
-              ...serviceWorkerResources,
-            };
-            const serviceWorkerBuildSpecifier =
-              buildSpecifierManager.getBuildUrlFromBuildSpecifier(
-                serviceWorkerEntryUrlInfo.url,
-              );
-            delete serviceWorkerResourcesWithoutSwScriptItSelf[
-              serviceWorkerBuildSpecifier
-            ];
-            await prependContent(serviceWorkerEntryUrlInfo, {
-              type: "js_classic",
-              content: `\nself.resourcesFromJsenvBuild = ${JSON.stringify(
-                serviceWorkerResourcesWithoutSwScriptItSelf,
-                null,
-                "  ",
-              )};\n`,
-            });
-          }
+          await inject();
           urlsInjectionInSw.done();
+          buildOperation.throwIfAborted();
         }
-        buildOperation.throwIfAborted();
       }
     }
     const { buildFileContents, buildInlineContents, buildManifest } =

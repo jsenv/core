@@ -15,7 +15,7 @@ import {
   analyzeScriptNode,
 } from "@jsenv/ast";
 
-export const jsenvPluginJsModuleFallbackInsideHtml = () => {
+export const jsenvPluginJsModuleFallbackInsideHtml = ({ dormant }) => {
   const turnIntoJsClassicProxy = (reference) => {
     // not needed for now: redirections are disabled
     // for getWithoutSearchParam
@@ -31,124 +31,137 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
   return {
     name: "jsenv:js_module_fallback_inside_html",
     appliesDuring: "*",
-    redirectReference: {
-      link_href: (reference) => {
-        if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.subtype === "modulepreload"
-        ) {
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.subtype === "preload" &&
-          reference.expectedType === "js_module"
-        ) {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      script: (reference) => {
-        if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.expectedType === "js_module"
-        ) {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      js_url: (reference) => {
-        if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.expectedType === "js_module"
-        ) {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
+    meta: {
+      js_module_fallback: true,
     },
-    finalizeUrlContent: {
-      html: async (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
-        const mutations = [];
-        visitHtmlNodes(htmlAst, {
-          link: (node) => {
-            const rel = getHtmlNodeAttribute(node, "rel");
-            if (rel !== "modulepreload" && rel !== "preload") {
-              return;
+    init: (context) => {
+      if (
+        context.versioning &&
+        context.versioningViaImportmap &&
+        !context.isSupportedOnCurrentClients("importmap")
+      ) {
+        return true;
+      }
+      if (
+        !context.isSupportedOnCurrentClients("script_type_module") ||
+        !context.isSupportedOnCurrentClients("import_dynamic") ||
+        !context.isSupportedOnCurrentClients("import_meta")
+      ) {
+        return true;
+      }
+      return false;
+    },
+    redirectReference: dormant
+      ? null
+      : {
+          link_href: (reference) => {
+            if (reference.subtype === "modulepreload") {
+              return turnIntoJsClassicProxy(reference);
             }
-            const href = getHtmlNodeAttribute(node, "href");
-            if (!href) {
-              return;
+            if (
+              reference.subtype === "preload" &&
+              reference.expectedType === "js_module"
+            ) {
+              return turnIntoJsClassicProxy(reference);
             }
-            let linkHintReference = null;
-            for (const referenceToOther of urlInfo.referenceToOthersSet) {
-              if (
-                referenceToOther.generatedSpecifier === href &&
-                referenceToOther.type === "link_href" &&
-                referenceToOther.subtype === rel
-              ) {
-                linkHintReference = referenceToOther;
-                break;
-              }
-            }
-            if (!wasOrWillBeConvertedToJsClassic(linkHintReference)) {
-              return;
-            }
-            if (rel === "modulepreload") {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  rel: "preload",
-                  as: "script",
-                  crossorigin: undefined,
-                });
-              });
-            }
-            if (rel === "preload") {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, { crossorigin: undefined });
-              });
-            }
+            return null;
           },
-          script: (node) => {
-            const { type } = analyzeScriptNode(node);
-            if (type !== "js_module") {
-              return;
+          script: (reference) => {
+            if (reference.expectedType === "js_module") {
+              return turnIntoJsClassicProxy(reference);
             }
-            const src = getHtmlNodeAttribute(node, "src");
-            if (src) {
-              let scriptTypeModuleReference = null;
-              for (const referenceToOther of urlInfo.referenceToOthersSet) {
-                if (
-                  referenceToOther.generatedSpecifier === src &&
-                  referenceToOther.type === "script" &&
-                  referenceToOther.subtype === "js_module"
-                ) {
-                  scriptTypeModuleReference = referenceToOther;
-                  break;
+            return null;
+          },
+          js_url: (reference) => {
+            if (reference.expectedType === "js_module") {
+              return turnIntoJsClassicProxy(reference);
+            }
+            return null;
+          },
+        },
+    finalizeUrlContent: dormant
+      ? null
+      : {
+          html: async (urlInfo) => {
+            const htmlAst = parseHtmlString(urlInfo.content);
+            const mutations = [];
+            visitHtmlNodes(htmlAst, {
+              link: (node) => {
+                const rel = getHtmlNodeAttribute(node, "rel");
+                if (rel !== "modulepreload" && rel !== "preload") {
+                  return;
                 }
-              }
-              if (!scriptTypeModuleReference) {
-                return;
-              }
-              if (scriptTypeModuleReference.expectedType === "js_classic") {
+                const href = getHtmlNodeAttribute(node, "href");
+                if (!href) {
+                  return;
+                }
+                let linkHintReference = null;
+                for (const referenceToOther of urlInfo.referenceToOthersSet) {
+                  if (
+                    referenceToOther.generatedSpecifier === href &&
+                    referenceToOther.type === "link_href" &&
+                    referenceToOther.subtype === rel
+                  ) {
+                    linkHintReference = referenceToOther;
+                    break;
+                  }
+                }
+                if (!wasOrWillBeConvertedToJsClassic(linkHintReference)) {
+                  return;
+                }
+                if (rel === "modulepreload") {
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, {
+                      rel: "preload",
+                      as: "script",
+                      crossorigin: undefined,
+                    });
+                  });
+                }
+                if (rel === "preload") {
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, { crossorigin: undefined });
+                  });
+                }
+              },
+              script: (node) => {
+                const { type } = analyzeScriptNode(node);
+                if (type !== "js_module") {
+                  return;
+                }
+                const src = getHtmlNodeAttribute(node, "src");
+                if (src) {
+                  let scriptTypeModuleReference = null;
+                  for (const referenceToOther of urlInfo.referenceToOthersSet) {
+                    if (
+                      referenceToOther.generatedSpecifier === src &&
+                      referenceToOther.type === "script" &&
+                      referenceToOther.subtype === "js_module"
+                    ) {
+                      scriptTypeModuleReference = referenceToOther;
+                      break;
+                    }
+                  }
+                  if (!scriptTypeModuleReference) {
+                    return;
+                  }
+                  if (scriptTypeModuleReference.expectedType === "js_classic") {
+                    mutations.push(() => {
+                      setHtmlNodeAttributes(node, { type: undefined });
+                    });
+                  }
+                }
                 mutations.push(() => {
                   setHtmlNodeAttributes(node, { type: undefined });
                 });
-              }
-            } else if (urlInfo.context.systemJsTranspilation) {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, { type: undefined });
-              });
-            }
+              },
+            });
+            await Promise.all(mutations.map((mutation) => mutation()));
+            return stringifyHtmlAst(htmlAst, {
+              cleanupPositionAttributes: urlInfo.context.dev,
+            });
           },
-        });
-        await Promise.all(mutations.map((mutation) => mutation()));
-        return stringifyHtmlAst(htmlAst, {
-          cleanupPositionAttributes: urlInfo.context.dev,
-        });
-      },
-    },
+        },
   };
 };
 

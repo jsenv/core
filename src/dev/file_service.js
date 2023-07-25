@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { serveDirectory, composeTwoResponses } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
-import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
@@ -103,13 +102,6 @@ export const createFileService = ({
       dev: true,
       runtimeCompat,
       clientRuntimeCompat,
-      systemJsTranspilation:
-        !RUNTIME_COMPAT.isSupported(
-          clientRuntimeCompat,
-          "script_type_module",
-        ) ||
-        !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_dynamic") ||
-        !RUNTIME_COMPAT.isSupported(clientRuntimeCompat, "import_meta"),
       plugins: [
         ...plugins,
         ...getCorePlugins({

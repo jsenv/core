@@ -8,14 +8,14 @@ export const jsenvPluginTopLevelAwait = () => {
     name: "jsenv:top_level_await",
     appliesDuring: "*",
     init: (context) => {
-      if (context.isSupportedOnCurrentClients("top_level_await")) {
-        return false;
+      if (!context.isSupportedOnCurrentClients("top_level_await")) {
+        // keep it untouched, systemjs will handle it
+        if (context.getPluginMeta("js_module_fallback")) {
+          return false;
+        }
+        return true;
       }
-      // keep it untouched, systemjs will handle it
-      if (context.systemJsTranspilation) {
-        return false;
-      }
-      return true;
+      return false;
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {

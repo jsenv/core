@@ -18,10 +18,10 @@ import { jsenvPluginCssTranspilation } from "./css/jsenv_plugin_css_transpilatio
 export const jsenvPluginTranspilation = ({
   importAssertions = true,
   css = true, // TODO
-  // build sets jsModuleFallbackOnJsClassic: false during first step of the build
+  // build sets jsModuleFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
-  jsModuleFallbackOnJsClassic = true,
+  jsModuleFallback = false,
   topLevelAwait = true,
   importMetaResolve = true,
   babelHelpersAsImport = true,
@@ -29,23 +29,23 @@ export const jsenvPluginTranspilation = ({
   if (importAssertions === true) {
     importAssertions = {};
   }
-  if (jsModuleFallbackOnJsClassic === true) {
-    jsModuleFallbackOnJsClassic = {};
+  if (jsModuleFallback === true) {
+    jsModuleFallback = {};
   }
   return [
-    ...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []),
-    ...(importAssertions
-      ? [jsenvPluginImportAssertions(importAssertions)]
-      : []),
     // babel also so that rollup can bundle babel helpers for instance
     jsenvPluginBabel({
       topLevelAwait,
       babelHelpersAsImport,
     }),
-    ...(jsModuleFallbackOnJsClassic
-      ? [jsenvPluginJsModuleFallback(jsModuleFallbackOnJsClassic)]
+    ...(jsModuleFallback
+      ? [jsenvPluginJsModuleFallback(jsModuleFallback)]
       : []),
     jsenvPluginAsJsModule(),
+    ...(importMetaResolve ? [jsenvPluginImportMetaResolve()] : []),
+    ...(importAssertions
+      ? [jsenvPluginImportAssertions(importAssertions)]
+      : []),
     // topLevelAwait must come after jsModuleFallback because it's related to the module format
     // so we want to wait to know the module format before transforming things related to top level await
     ...(topLevelAwait ? [jsenvPluginTopLevelAwait(topLevelAwait)] : []),

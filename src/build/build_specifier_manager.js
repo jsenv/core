@@ -24,6 +24,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
+import { prependContent } from "../kitchen/prepend_content.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import {
   injectVersionMappingsAsGlobal,
@@ -536,8 +537,7 @@ export const createBuildSpecifierManager = ({
         }
         return setOfUrlInfluencingVersion;
       };
-
-      contentOnlyVersionMap.forEach((contentOnlyVersion, urlInfo) => {
+      for (const [urlInfo, contentOnlyVersion] of contentOnlyVersionMap) {
         const setOfUrlInfoInfluencingVersion =
           getSetOfUrlInfoInfluencingVersion(urlInfo);
         const versionPartSet = new Set();
@@ -555,7 +555,7 @@ export const createBuildSpecifierManager = ({
         }
         const version = generateVersion(versionPartSet, versionLength);
         versionMap.set(urlInfo, version);
-      });
+      }
     }
   };
 
@@ -667,6 +667,10 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.type === "sourcemap") {
             generateReplacement(urlInfo.firstReference);
           }
+          if (urlInfo.firstReference.type === "side_effect_file") {
+            generateReplacement(urlInfo.firstReference);
+          }
+          // side effect stuff must be generated too
           if (mayUsePlaceholder(urlInfo)) {
             const contentBeforeReplace = urlInfo.content;
             const { content, sourcemap } = placeholderAPI.replaceAll(
@@ -802,6 +806,72 @@ export const createBuildSpecifierManager = ({
       }
       return () => {
         actions.map((resourceHintAction) => resourceHintAction());
+      };
+    },
+
+    prepareServiceWorkerUrlInjection: () => {
+      const serviceWorkerEntryUrlInfos = GRAPH_VISITOR.filter(
+        finalKitchen.graph,
+        (finalUrlInfo) => {
+          return (
+            finalUrlInfo.subtype === "service_worker" &&
+            finalUrlInfo.isEntryPoint &&
+            finalUrlInfo.isUsed()
+          );
+        },
+      );
+      if (serviceWorkerEntryUrlInfos.length === 0) {
+        return null;
+      }
+      return async () => {
+        const allResourcesFromJsenvBuild = {};
+        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+          finalKitchen.graph.rootUrlInfo,
+          (urlInfo) => {
+            if (!urlInfo.url.startsWith("file:")) {
+              return;
+            }
+            if (urlInfo.isInline) {
+              return;
+            }
+
+            const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+            const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
+            if (canUseVersionedUrl(urlInfo)) {
+              const buildSpecifierVersioned = versioning
+                ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
+                : null;
+              allResourcesFromJsenvBuild[buildSpecifier] = {
+                version: versionMap.get(urlInfo),
+                versionedUrl: buildSpecifierVersioned,
+              };
+            } else {
+              // when url is not versioned we compute a "version" for that url anyway
+              // so that service worker source still changes and navigator
+              // detect there is a change
+              allResourcesFromJsenvBuild[buildSpecifier] = {
+                version: versionMap.get(urlInfo),
+              };
+            }
+          },
+        );
+        for (const serviceWorkerEntryUrlInfo of serviceWorkerEntryUrlInfos) {
+          const resourcesFromJsenvBuild = {
+            ...allResourcesFromJsenvBuild,
+          };
+          const serviceWorkerBuildSpecifier = buildUrlToBuildSpecifierMap.get(
+            serviceWorkerEntryUrlInfo,
+          );
+          delete resourcesFromJsenvBuild[serviceWorkerBuildSpecifier];
+          await prependContent(serviceWorkerEntryUrlInfo, {
+            type: "js_classic",
+            content: `self.resourcesFromJsenvBuild = ${JSON.stringify(
+              resourcesFromJsenvBuild,
+              null,
+              "  ",
+            )};\n`,
+          });
+        }
       };
     },
 

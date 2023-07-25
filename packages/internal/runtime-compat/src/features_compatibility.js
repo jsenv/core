@@ -115,6 +115,7 @@ export const featuresCompatMap = {
     opera: "67",
     android: "80",
   },
+  service_worker_importmap: {},
   shared_worker: {
     chrome: "4",
     edge: "79",
@@ -126,6 +127,7 @@ export const featuresCompatMap = {
     edge: "80",
     opera: "67",
   },
+  shared_worker_importmap: {},
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
   global_this: {
     edge: "79",

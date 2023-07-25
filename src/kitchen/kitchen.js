@@ -95,7 +95,6 @@ export const createKitchen = ({
     initialPluginsMeta,
   );
   kitchen.pluginController = pluginController;
-  kitchenContext.getPluginMeta = pluginController.getPluginMeta;
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
