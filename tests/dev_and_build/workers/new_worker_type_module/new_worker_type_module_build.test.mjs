@@ -38,32 +38,35 @@ const test = async ({ name, ...params }) => {
   assert({ actual, expected });
 };
 
+// in the upcoming tests versioning is disabled to ensure it does not
+// force js classic due to importmap
+
 // support for {type: "module"} in new Worker
 await test({
   name: "0_worker_type_module",
-  runtimeCompat: { chrome: "81" },
+  runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
-  versioning: false, // disable versioning to prevent fallback on js classic
 });
 // no support for {type: "module"} in new Worker
 await test({
   name: "1_worker_type_module_not_supported",
   runtimeCompat: { chrome: "79" },
   plugins: [jsenvPluginBundling()],
-  versioning: false,
 });
 // no support for <script type="modue">
 await test({
   name: "2_script_type_module_not_supported",
   runtimeCompat: { chrome: "62" },
   plugins: [jsenvPluginBundling()],
+});
+// support + no bundling
+await test({
+  name: "3_worker_type_module_no_bundling",
+  runtimeCompat: { chrome: "89" },
   versioning: false,
 });
-// // support + no bundling
-// await test("3_worker_type_module_no_bundling", {
-//   runtimeCompat: { chrome: "81" },
-// });
-// // no support + no bundling
-// await test("4_worker_type_module_not_supported_no_bundling", {
-//   runtimeCompat: { chrome: "79" },
-// });
+// no support + no bundling
+await test({
+  name: "4_worker_type_module_not_supported_no_bundling",
+  runtimeCompat: { chrome: "79" },
+});
