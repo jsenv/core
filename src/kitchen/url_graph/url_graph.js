@@ -238,16 +238,17 @@ const createUrlInfo = (url, context) => {
       if (referenceFromOther.urlInfo !== urlInfo) {
         continue;
       }
-      if (referenceFromOther.isWeak) {
+      const ref = referenceFromOther.original || referenceFromOther;
+      if (ref.isWeak) {
         // weak reference don't count as using the url
         continue;
       }
-      if (referenceFromOther.gotInlined()) {
+      if (ref.gotInlined()) {
         // the url info was inlined, an other reference is required
         // to consider the non-inlined urlInfo as used
         continue;
       }
-      return referenceFromOther.ownerUrlInfo.isUsed();
+      return ref.ownerUrlInfo.isUsed();
     }
     // nothing uses this url anymore
     // - versioning update inline content
