@@ -50,6 +50,7 @@ export const createKitchen = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
+  sourcemapsCommentRelative,
   outDirectoryUrl,
   initialContext = {},
   initialPluginsMeta = {},
@@ -105,6 +106,7 @@ export const createKitchen = ({
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
     sourcemapsSourcesRelative,
+    sourcemapsCommentRelative,
     outDirectoryUrl,
     supervisor,
   });

@@ -18,6 +18,7 @@ export const createUrlInfoTransformer = ({
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   sourcemapsSourcesRelative,
+  sourcemapsCommentRelative,
   outDirectoryUrl,
   supervisor,
 }) => {
@@ -309,6 +310,7 @@ export const createUrlInfoTransformer = ({
         return source;
       });
     }
+    sourcemapUrlInfo.type = "sourcemap";
     sourcemapUrlInfo.contentType = "application/json";
     sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
 
@@ -318,13 +320,19 @@ export const createUrlInfoTransformer = ({
           generateSourcemapDataUrl(sourcemap);
       }
       if (sourcemaps === "file" || sourcemaps === "inline") {
+        let specifier;
+        if (sourcemaps === "file" && sourcemapsCommentRelative) {
+          specifier = urlToRelativeUrl(
+            sourcemapReference.generatedUrl,
+            urlInfo.generatedUrl,
+          );
+        } else {
+          specifier = sourcemapReference.generatedSpecifier;
+        }
         urlInfo.content = SOURCEMAP.writeComment({
           contentType: urlInfo.contentType,
           content: urlInfo.content,
-          specifier:
-            sourcemaps === "file" && sourcemapsSourcesRelative
-              ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
-              : sourcemapReference.generatedSpecifier,
+          specifier,
         });
       }
     }

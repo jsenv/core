@@ -116,7 +116,7 @@ const determineDirectoryPath = ({
     const parentDirectoryPath = determineDirectoryPath({
       sourceDirectoryUrl,
       assetsDirectory,
-      urlInfo: ownerUrlInfo,
+      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
     });
     return parentDirectoryPath;
   }

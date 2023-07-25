@@ -25,10 +25,16 @@ await test({
   runtimeCompat: { chrome: "89" },
   versioning: true,
 });
-
 // cannot use <script type="module">
 await test({
   name: "1_js_module_fallback",
   runtimeCompat: { chrome: "60" },
   versioning: true,
+});
+// can use <script type="module"> + sourcemap
+await test({
+  name: "2_js_module_sourcemaps_file",
+  runtimeCompat: { chrome: "89" },
+  versioning: true,
+  sourcemaps: "file",
 });

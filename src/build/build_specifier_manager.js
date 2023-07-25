@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createDetailedMessage } from "@jsenv/log";
 import { comparePathnames } from "@jsenv/filesystem";
-import { createMagicSource } from "@jsenv/sourcemap";
+import { createMagicSource, generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import {
   ensurePathnameTrailingSlash,
   urlToRelativeUrl,
@@ -59,21 +59,28 @@ export const createBuildSpecifierManager = ({
   const buildUrlToUrlInfoMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
   const generateReplacement = (reference) => {
-    const url = reference.generatedUrl;
-    let urlInfo;
-    const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
-    if (rawUrlInfo) {
-      urlInfo = rawUrlInfo;
+    let buildUrl;
+    if (reference.type === "sourcemap_comment") {
+      const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
+      buildUrl = generateSourcemapFileUrl(parentBuildUrl);
+      reference.generatedSpecifier = buildUrl;
     } else {
-      const buildUrlInfo = reference.urlInfo;
-      buildUrlInfo.type = reference.expectedType || "asset";
-      buildUrlInfo.subtype = reference.expectedSubtype;
-      urlInfo = buildUrlInfo;
+      const url = reference.generatedUrl;
+      let urlInfo;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
+      if (rawUrlInfo) {
+        urlInfo = rawUrlInfo;
+      } else {
+        const buildUrlInfo = reference.urlInfo;
+        buildUrlInfo.type = reference.expectedType || "asset";
+        buildUrlInfo.subtype = reference.expectedSubtype;
+        urlInfo = buildUrlInfo;
+      }
+      buildUrl = buildUrlsGenerator.generate(url, {
+        urlInfo,
+        ownerUrlInfo: reference.ownerUrlInfo,
+      });
     }
-    const buildUrl = buildUrlsGenerator.generate(url, {
-      urlInfo,
-      ownerUrlInfo: reference.ownerUrlInfo,
-    });
 
     let buildSpecifier;
     if (base === "./") {
@@ -196,6 +203,9 @@ export const createBuildSpecifierManager = ({
         return null;
       }
       if (reference.isWeak) {
+        return null;
+      }
+      if (reference.type === "sourcemap_comment") {
         return null;
       }
       const placeholder = placeholderAPI.generate();
@@ -652,6 +662,9 @@ export const createBuildSpecifierManager = ({
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.isInline) {
+            generateReplacement(urlInfo.firstReference);
+          }
+          if (urlInfo.type === "sourcemap") {
             generateReplacement(urlInfo.firstReference);
           }
           if (mayUsePlaceholder(urlInfo)) {

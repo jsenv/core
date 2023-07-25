@@ -373,6 +373,7 @@ build ${entryPointKeys.length} entry points`);
       sourcemaps,
       sourcemapsSourcesContent,
       sourcemapsSourcesRelative: true,
+      sourcemapsCommentRelative: true,
       outDirectoryUrl: outDirectoryUrl
         ? new URL("shape/", outDirectoryUrl)
         : undefined,

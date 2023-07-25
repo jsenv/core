@@ -3,8 +3,8 @@ System.register([__v__("/js/util.nomodule.js")], function (_export, _context) {
 
   var util, answer;
   return {
-    setters: [function (_clientSrcUtilJs) {
-      util = _clientSrcUtilJs.util;
+    setters: [function (_a) {
+      util = _a.util;
     }],
     execute: function () {
       util();
