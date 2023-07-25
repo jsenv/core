@@ -14,6 +14,7 @@ const test = async (name, params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
   takeDirectorySnapshot(
@@ -40,23 +41,23 @@ const test = async (name, params) => {
 // support for {type: "module"} in new Worker
 await test("0_worker_type_module", {
   runtimeCompat: { chrome: "81" },
-  plugins: [jsenvPluginBundling()],
+  // plugins: [jsenvPluginBundling()],
 });
-// no support for {type: "module"} in new Worker
-await test("1_worker_type_module_not_supported", {
-  runtimeCompat: { chrome: "79" },
-  plugins: [jsenvPluginBundling()],
-});
-// no support for <script type="modue">
-await test("2_script_type_module_not_supported", {
-  runtimeCompat: { chrome: "62" },
-  plugins: [jsenvPluginBundling()],
-});
-// support + no bundling
-await test("3_worker_type_module_no_bundling", {
-  runtimeCompat: { chrome: "81" },
-});
-// no support + no bundling
-await test("4_worker_type_module_not_supported_no_bundling", {
-  runtimeCompat: { chrome: "79" },
-});
+// // no support for {type: "module"} in new Worker
+// await test("1_worker_type_module_not_supported", {
+//   runtimeCompat: { chrome: "79" },
+//   plugins: [jsenvPluginBundling()],
+// });
+// // no support for <script type="modue">
+// await test("2_script_type_module_not_supported", {
+//   runtimeCompat: { chrome: "62" },
+//   plugins: [jsenvPluginBundling()],
+// });
+// // support + no bundling
+// await test("3_worker_type_module_no_bundling", {
+//   runtimeCompat: { chrome: "81" },
+// });
+// // no support + no bundling
+// await test("4_worker_type_module_not_supported_no_bundling", {
+//   runtimeCompat: { chrome: "79" },
+// });

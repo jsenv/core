@@ -5,7 +5,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -38,17 +38,20 @@ const test = async (name, params) => {
 };
 
 // import.meta.resolve supported
-await test("0_supported", {
+await test({
+  name: "0_supported",
   runtimeCompat: { chrome: "107" },
   versioning: false,
 });
 // module supported but import.meta.resolve is not
-await test("1_not_supported", {
+await test({
+  name: "1_not_supported",
   runtimeCompat: { chrome: "80" },
   versioning: false,
 });
 // script module not supported
-await test("2_js_module_not_supported", {
+await test({
+  name: "2_js_module_not_supported",
   runtimeCompat: { chrome: "60" },
   versioning: false,
 });
