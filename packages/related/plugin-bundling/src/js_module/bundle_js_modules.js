@@ -231,25 +231,26 @@ const rollupPluginJsenv = ({
           fileUrlConverter.asFileUrl(id),
         );
 
-        // rollup is generating things like "./file.js"
-        // that must be converted back to urls for jsenv
-        const remapReference = (reference) => {
-          return specifierToUrlMap.get(reference.specifier);
-        };
         const specifierToUrlMap = new Map();
         const { imports, dynamicImports } = rollupFileInfo;
         for (const importFileName of imports) {
-          const importRollupFileInfo = rollupResult[importFileName];
-          const importUrl = getOriginalUrl(importRollupFileInfo);
-          const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
-          specifierToUrlMap.set(rollupSpecifier, importUrl);
+          if (!importFileName.startsWith("file:")) {
+            const importRollupFileInfo = rollupResult[importFileName];
+            const importUrl = getOriginalUrl(importRollupFileInfo);
+            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+            specifierToUrlMap.set(rollupSpecifier, importUrl);
+          }
         }
         for (const dynamicImportFileName of dynamicImports) {
-          const dynamicImportRollupFileInfo =
-            rollupResult[dynamicImportFileName];
-          const dynamicImportUrl = getOriginalUrl(dynamicImportRollupFileInfo);
-          const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
-          specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
+          if (!dynamicImportFileName.startsWith("file:")) {
+            const dynamicImportRollupFileInfo =
+              rollupResult[dynamicImportFileName];
+            const dynamicImportUrl = getOriginalUrl(
+              dynamicImportRollupFileInfo,
+            );
+            const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
+            specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
+          }
         }
 
         return {
@@ -267,7 +268,14 @@ const rollupPluginJsenv = ({
           contentType: "text/javascript",
           content: rollupFileInfo.code,
           sourcemap: rollupFileInfo.map,
-          remapReference,
+          // rollup is generating things like "./file.js"
+          // that must be converted back to urls for jsenv
+          remapReference:
+            specifierToUrlMap.size > 0
+              ? (reference) => {
+                  return specifierToUrlMap.get(reference.specifier);
+                }
+              : undefined,
         };
       };
 
