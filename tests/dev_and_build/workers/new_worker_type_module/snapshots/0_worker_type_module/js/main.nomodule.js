@@ -38,12 +38,12 @@ System.register([], function (_export, _context) {
         });
       };
       worker = new Worker("/worker.nomodule.js", {
-        type: "module"
+        type: "classic"
       });
       return _await(testWorker(worker), function (_testWorker) {
         workerResponse = _testWorker;
         worker2 = new Worker(new URL("/worker.nomodule.js", _context.meta.url), {
-          type: "module"
+          type: "classic"
         });
         return _await(testWorker(worker2), function (_testWorker2) {
           worker2Response = _testWorker2;

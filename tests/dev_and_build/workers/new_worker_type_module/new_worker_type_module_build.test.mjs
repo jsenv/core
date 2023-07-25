@@ -6,7 +6,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -39,9 +39,10 @@ const test = async (name, params) => {
 };
 
 // support for {type: "module"} in new Worker
-await test("0_worker_type_module", {
+await test({
+  name: "0_worker_type_module",
   runtimeCompat: { chrome: "81" },
-  // plugins: [jsenvPluginBundling()],
+  plugins: [jsenvPluginBundling()],
 });
 // // no support for {type: "module"} in new Worker
 // await test("1_worker_type_module_not_supported", {

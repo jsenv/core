@@ -314,6 +314,11 @@ export const createBuildSpecifierManager = ({
   const workerReferenceSet = new Set();
   const referenceVersioningInfoMap = new Map();
   const _getReferenceVersioningInfo = (reference) => {
+    if (!shouldApplyVersioningOnReference(reference)) {
+      return {
+        type: "not_versioned",
+      };
+    }
     const ownerUrlInfo = reference.ownerUrlInfo;
     if (ownerUrlInfo.jsQuote) {
       // here we use placeholder as specifier, so something like
@@ -412,6 +417,9 @@ export const createBuildSpecifierManager = ({
       return false;
     }
     if (urlInfo.isEntryPoint) {
+      // if (urlInfo.subtype === "worker") {
+      //   return true;
+      // }
       return false;
     }
     return urlInfo.type !== "webmanifest";
@@ -564,7 +572,8 @@ export const createBuildSpecifierManager = ({
     if (!versioning) {
       return buildSpecifier;
     }
-    if (!shouldApplyVersioningOnReference(reference)) {
+    const referenceVersioningInfo = getReferenceVersioningInfo(reference);
+    if (referenceVersioningInfo.type === "not_versioned") {
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
@@ -577,7 +586,6 @@ export const createBuildSpecifierManager = ({
       buildSpecifier,
       buildSpecifierVersioned,
     );
-    const referenceVersioningInfo = getReferenceVersioningInfo(reference);
     return referenceVersioningInfo.render(buildSpecifier);
   };
   const finishVersioning = async () => {
@@ -586,7 +594,7 @@ export const createBuildSpecifierManager = ({
       const visitors = [];
       const globalMappings = {};
       const importmapMappings = {};
-      referenceVersioningInfoMap.forEach((versioningInfo, reference) => {
+      for (const [reference, versioningInfo] of referenceVersioningInfoMap) {
         if (versioningInfo.type === "global") {
           const urlInfo = reference.urlInfo;
           const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
@@ -603,7 +611,7 @@ export const createBuildSpecifierManager = ({
             buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
           importmapMappings[buildSpecifier] = buildSpecifierVersioned;
         }
-      });
+      }
       if (Object.keys(globalMappings).length > 0) {
         visitors.push((urlInfo) => {
           if (urlInfo.isEntryPoint) {
