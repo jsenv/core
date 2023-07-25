@@ -43,12 +43,15 @@ await test({
   name: "0_worker_type_module",
   runtimeCompat: { chrome: "81" },
   plugins: [jsenvPluginBundling()],
+  versioning: false, // disable versioning to prevent fallback on js classic
 });
-// // no support for {type: "module"} in new Worker
-// await test("1_worker_type_module_not_supported", {
-//   runtimeCompat: { chrome: "79" },
-//   plugins: [jsenvPluginBundling()],
-// });
+// no support for {type: "module"} in new Worker
+await test({
+  name: "1_worker_type_module_not_supported",
+  runtimeCompat: { chrome: "79" },
+  plugins: [jsenvPluginBundling()],
+  versioning: false,
+});
 // // no support for <script type="modue">
 // await test("2_script_type_module_not_supported", {
 //   runtimeCompat: { chrome: "62" },
