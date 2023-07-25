@@ -24,8 +24,8 @@ System.register([__v__("/js/ping.nomodule.js")], function (_export, _context) {
 
   var ping, testWorker, worker, workerResponse;
   return {
-    setters: [function (_clientPingJs) {
-      ping = _clientPingJs.ping;
+    setters: [function (_) {
+      ping = _.ping;
     }],
     execute: async function () {
       testWorker = async worker => {

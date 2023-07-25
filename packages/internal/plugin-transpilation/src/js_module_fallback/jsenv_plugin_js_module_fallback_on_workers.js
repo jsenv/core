@@ -31,13 +31,6 @@ export const jsenvPluginJsModuleFallbackOnWorkers = ({ dormant }) => {
       name: `jsenv:js_module_fallback_on_${subtype}`,
       appliesDuring: "*",
       init: (context) => {
-        if (
-          context.versioning &&
-          context.versioningViaImportmap &&
-          !context.isSupportedOnCurrentClients(`${subtype}_importmap`)
-        ) {
-          return true;
-        }
         if (!context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
           return true;
         }

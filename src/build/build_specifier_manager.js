@@ -368,7 +368,7 @@ export const createBuildSpecifierManager = ({
           },
         };
       }
-      if (canUseImportmap && !isReferencedByWorker(reference)) {
+      if (canUseImportmap && !isInsideWorker(reference)) {
         return {
           type: "importmap",
           render: (buildSpecifier) => {
@@ -395,22 +395,31 @@ export const createBuildSpecifierManager = ({
     referenceVersioningInfoMap.set(reference, info);
     return info;
   };
-  const isReferencedByWorker = (reference) => {
+  const isInsideWorker = (reference) => {
     if (workerReferenceSet.has(reference)) {
       return true;
     }
-    const referencedUrlInfo = reference.urlInfo;
-    const dependentWorker = GRAPH_VISITOR.findDependent(
-      referencedUrlInfo,
-      (dependentUrlInfo) => {
-        return isWebWorkerUrlInfo(dependentUrlInfo);
-      },
-    );
-    if (dependentWorker) {
+    const referenceOwnerUrllInfo = reference.ownerUrlInfo;
+    let is = false;
+    if (isWebWorkerUrlInfo(referenceOwnerUrllInfo)) {
+      is = true;
+    } else {
+      GRAPH_VISITOR.findDependent(
+        referenceOwnerUrllInfo,
+        (dependentUrlInfo) => {
+          if (isWebWorkerUrlInfo(dependentUrlInfo)) {
+            is = true;
+            return true;
+          }
+          return false;
+        },
+      );
+    }
+    if (is) {
       workerReferenceSet.add(reference);
       return true;
     }
-    return Boolean(dependentWorker);
+    return false;
   };
   const canUseVersionedUrl = (urlInfo) => {
     if (urlInfo.isRoot) {
