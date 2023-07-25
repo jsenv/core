@@ -223,7 +223,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           data: bundleInfo.data,
         };
       }
-
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
+      if (rawUrlInfo) {
+        return rawUrlInfo;
+      }
       // reference injected during "shape":
       // - "js_module_fallback" using getWithoutSearchParam to obtain source
       //   url info that will be converted to systemjs/UMD
@@ -250,8 +253,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           sourcemap: rawUrlInfo.sourcemap,
         };
       }
-
-      let rawUrlInfo;
       if (firstReference.isInline) {
         if (
           firstReference.ownerUrlInfo.url !==
@@ -263,7 +264,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             contentType: firstReference.contentType,
           };
         }
-        rawUrlInfo = GRAPH_VISITOR.find(
+        const rawUrlInfo = GRAPH_VISITOR.find(
           rawKitchen.graph,
           (rawUrlInfoCandidate) => {
             const { inlineUrlSite } = rawUrlInfoCandidate;
@@ -288,26 +289,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             return false;
           },
         );
-      } else {
-        rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
+        if (rawUrlInfo) {
+          return rawUrlInfo;
+        }
       }
-
-      if (!rawUrlInfo) {
-        throw new Error(createDetailedMessage(`Cannot find ${rawUrl}`));
-      }
-      if (rawUrlInfo.isInline) {
-        // Inline content, such as <script> inside html, is transformed during the previous phase.
-        // If we read the inline content it would be considered as the original content.
-        // - It could be "fixed" by taking into account sourcemap and consider sourcemap sources
-        //   as the original content.
-        //   - But it would not work when sourcemap are not generated
-        //   - would be a bit slower
-        // - So instead of reading the inline content directly, we search into raw graph
-        //   to get "originalContent" and "sourcemap"
-        finalUrlInfo.type = rawUrlInfo.type;
-        finalUrlInfo.subtype = rawUrlInfo.subtype;
-      }
-      return rawUrlInfo;
+      throw new Error(createDetailedMessage(`Cannot fetch ${rawUrl}`));
     },
   };
 
