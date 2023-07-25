@@ -52,11 +52,13 @@ await test({
   plugins: [jsenvPluginBundling()],
   versioning: false,
 });
-// // no support for <script type="modue">
-// await test("2_script_type_module_not_supported", {
-//   runtimeCompat: { chrome: "62" },
-//   plugins: [jsenvPluginBundling()],
-// });
+// no support for <script type="modue">
+await test({
+  name: "2_script_type_module_not_supported",
+  runtimeCompat: { chrome: "62" },
+  plugins: [jsenvPluginBundling()],
+  versioning: false,
+});
 // // support + no bundling
 // await test("3_worker_type_module_no_bundling", {
 //   runtimeCompat: { chrome: "81" },
