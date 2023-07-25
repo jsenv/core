@@ -1,6 +1,9 @@
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import { ANSI } from "@jsenv/log";
 
 export const createBuildUrlsGenerator = ({
+  logger,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory,
 }) => {
@@ -16,13 +19,30 @@ export const createBuildUrlsGenerator = ({
   };
 
   const buildUrlCache = new Map();
+
+  const associateBuildUrl = (url, buildUrl) => {
+    buildUrlCache.set(url, buildUrl);
+    logger.debug(`associate a build url
+${ANSI.color(url, ANSI.GREY)} ->
+${ANSI.color(buildUrl, ANSI.MAGENTA)}
+      `);
+  };
+
   const generate = (url, { urlInfo, ownerUrlInfo }) => {
     const buildUrlFromCache = buildUrlCache.get(url);
     if (buildUrlFromCache) {
       return buildUrlFromCache;
     }
+    if (urlInfo.type === "directory") {
+      const directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      const { search } = new URL(url);
+      const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
+      associateBuildUrl(url, buildUrl);
+      return buildUrl;
+    }
+
     const directoryPath = determineDirectoryPath({
-      buildDirectoryUrl,
+      sourceDirectoryUrl,
       assetsDirectory,
       urlInfo,
       ownerUrlInfo,
@@ -50,7 +70,7 @@ export const createBuildUrlsGenerator = ({
     }
     hash = "";
     const buildUrl = `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
-    buildUrlCache.set(url, buildUrl);
+    associateBuildUrl(url, buildUrl);
     return buildUrl;
   };
 
@@ -80,24 +100,21 @@ const splitFileExtension = (filename) => {
 };
 
 const determineDirectoryPath = ({
-  buildDirectoryUrl,
+  sourceDirectoryUrl,
   assetsDirectory,
   urlInfo,
   ownerUrlInfo,
 }) => {
-  if (urlInfo.type === "directory") {
-    return "";
-  }
   if (ownerUrlInfo && ownerUrlInfo.type === "directory") {
     const ownerDirectoryPath = urlToRelativeUrl(
       ownerUrlInfo.url,
-      buildDirectoryUrl,
+      sourceDirectoryUrl,
     );
     return ownerDirectoryPath;
   }
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
-      buildDirectoryUrl,
+      sourceDirectoryUrl,
       assetsDirectory,
       urlInfo: ownerUrlInfo,
     });

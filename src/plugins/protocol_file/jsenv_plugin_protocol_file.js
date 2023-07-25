@@ -92,7 +92,11 @@ export const jsenvPluginProtocolFile = ({
             url = filesystemResolution.url;
           }
         }
-        if (stat && stat.isDirectory()) {
+        if (!stat) {
+          return null;
+        }
+        reference.leadsToADirectory = stat && stat.isDirectory();
+        if (reference.leadsToADirectory) {
           const directoryAllowed =
             reference.type === "filesystem" ||
             (typeof directoryReferenceAllowed === "function" &&
@@ -104,13 +108,9 @@ export const jsenvPluginProtocolFile = ({
             throw error;
           }
         }
-        reference.leadsToADirectory = stat && stat.isDirectory();
-        if (stat) {
-          const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
-          const resolvedUrl = `${urlRaw}${search}${hash}`;
-          return resolvedUrl;
-        }
-        return null;
+        const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
+        const resolvedUrl = `${urlRaw}${search}${hash}`;
+        return resolvedUrl;
       },
     },
     {
@@ -120,7 +120,7 @@ export const jsenvPluginProtocolFile = ({
         filesystem: (reference) => {
           const ownerUrlInfo = reference.ownerUrlInfo;
           const baseUrl =
-            ownerUrlInfo && ownerUrlInfo.type === "directory"
+            ownerUrlInfo.type === "directory"
               ? ensurePathnameTrailingSlash(ownerUrlInfo.url)
               : ownerUrlInfo.url;
           return new URL(reference.specifier, baseUrl).href;
@@ -192,5 +192,11 @@ export const jsenvPluginProtocolFile = ({
 };
 
 const resolveSymlink = (fileUrl) => {
-  return pathToFileURL(realpathSync(new URL(fileUrl))).href;
+  const urlObject = new URL(fileUrl);
+  const realpath = realpathSync(urlObject);
+  const realUrlObject = pathToFileURL(realpath);
+  if (urlObject.pathname.endsWith("/")) {
+    realUrlObject.pathname += `/`;
+  }
+  return realUrlObject.href;
 };

@@ -4,23 +4,29 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
   return {
     name: "jsenv:directory_reference_analysis",
     transformUrlContent: {
-      directory: (urlInfo) => {
+      directory: async (urlInfo) => {
         const originalDirectoryReference =
           findOriginalDirectoryReference(urlInfo);
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
           urlInfo.context.rootDirectoryUrl,
         );
-        JSON.parse(urlInfo.content).forEach((directoryEntryName) => {
-          urlInfo.dependencies.found({
+        const entryNames = JSON.parse(urlInfo.content);
+        const newEntryNames = [];
+        for (const entryName of entryNames) {
+          const entryReference = urlInfo.dependencies.found({
             type: "filesystem",
             subtype: "directory_entry",
-            specifier: directoryEntryName,
+            specifier: entryName,
             trace: {
-              message: `"${directoryRelativeUrl}${directoryEntryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
+              message: `"${directoryRelativeUrl}${entryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
             },
           });
-        });
+          await entryReference.readGeneratedSpecifier();
+          const replacement = entryReference.generatedSpecifier;
+          newEntryNames.push(replacement);
+        }
+        return JSON.stringify(newEntryNames);
       },
     },
   };

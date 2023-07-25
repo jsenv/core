@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { ANSI, createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage } from "@jsenv/log";
 import { comparePathnames } from "@jsenv/filesystem";
 import { createMagicSource } from "@jsenv/sourcemap";
 import {
@@ -46,6 +46,8 @@ export const createBuildSpecifierManager = ({
   canUseImportmap,
 }) => {
   const buildUrlsGenerator = createBuildUrlsGenerator({
+    logger,
+    sourceDirectoryUrl,
     buildDirectoryUrl,
     assetsDirectory,
   });
@@ -72,10 +74,6 @@ export const createBuildSpecifierManager = ({
       urlInfo,
       ownerUrlInfo: reference.ownerUrlInfo,
     });
-    logger.debug(`associate a build url
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-    `);
 
     let buildSpecifier;
     if (base === "./") {
@@ -804,10 +802,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
           if (!urlInfo.url.startsWith("file:")) {
             return;
           }
-          if (urlInfo.type === "directory") {
-            return;
-          }
-
           const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
@@ -817,6 +811,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
             buildUrl,
             buildDirectoryUrl,
           );
+          let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
             const buildUrlVersioned = asBuildUrlVersioned({
@@ -828,9 +823,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
               buildDirectoryUrl,
             );
             buildManifest[buildRelativeUrl] = buildRelativeUrlVersioned;
-            buildContents[buildRelativeUrlVersioned] = urlInfo.content;
+            contentKey = buildRelativeUrlVersioned;
           } else {
-            buildContents[buildRelativeUrl] = urlInfo.content;
+            contentKey = buildRelativeUrl;
+          }
+          if (urlInfo.type !== "directory") {
+            buildContents[contentKey] = urlInfo.content;
           }
           if (urlInfo.isInline) {
             buildInlineRelativeUrlSet.add(buildRelativeUrl);
