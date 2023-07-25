@@ -868,8 +868,11 @@ export const createBuildSpecifierManager = ({
           const resourcesFromJsenvBuild = {
             ...allResourcesFromJsenvBuild,
           };
-          const serviceWorkerBuildSpecifier = buildUrlToBuildSpecifierMap.get(
+          const serviceWorkerBuildUrl = urlInfoToBuildUrlMap.get(
             serviceWorkerEntryUrlInfo,
+          );
+          const serviceWorkerBuildSpecifier = buildUrlToBuildSpecifierMap.get(
+            serviceWorkerBuildUrl,
           );
           delete resourcesFromJsenvBuild[serviceWorkerBuildSpecifier];
           await prependContent(serviceWorkerEntryUrlInfo, {
