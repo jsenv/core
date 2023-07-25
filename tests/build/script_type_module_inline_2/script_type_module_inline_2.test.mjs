@@ -43,11 +43,13 @@ await test({
   runtimeCompat: { chrome: "89" },
 });
 // no support for <script type="module">
-await test("1_js_module_fallback", {
+await test({
+  name: "1_js_module_fallback",
   runtimeCompat: { chrome: "64" },
 });
 // no support <script type="module"> + sourcemap as file
-await test("2_js_module_fallback_and_sourcemap_as_file", {
+await test({
+  name: "2_js_module_fallback_and_sourcemap_as_file",
   runtimeCompat: { chrome: "60" },
   // At some point generating sourcemap in this scenario was throwing an error
   // because the sourcemap for js module files where not generated
