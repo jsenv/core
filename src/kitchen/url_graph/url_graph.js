@@ -328,7 +328,7 @@ const createUrlInfo = (url, context) => {
       mutation: reference.mutation,
       data: { ...reference.data },
       specifier: newSpecifier,
-      isWeak: true,
+      isWeak: reference.isWeak,
       isInline: false,
       original: reference.original || reference,
       prev: reference,

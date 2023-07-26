@@ -6,6 +6,7 @@ import {
   getDOMNodesUsingUrl,
 } from "./reload.js";
 
+let debug = true;
 const reloader = {
   urlHotMetas,
   status: {
@@ -34,7 +35,9 @@ const reloader = {
     value: [],
     onchange: () => {},
     add: (reloadMessage) => {
-      // console.debug("received reload message", reloadMessage);
+      if (debug) {
+        console.debug("received reload message", reloadMessage);
+      }
       reloader.changes.value.push(reloadMessage);
       reloader.changes.onchange();
       if (reloader.autoreload.enabled) {

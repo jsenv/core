@@ -55,6 +55,15 @@ export const jsenvPluginJsModuleConversion = () => {
         markAsJsClassicProxy(reference);
         return null;
       }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
+      if (
+        reference.prev &&
+        reference.prev.searchParams.has(`js_module_fallback`)
+      ) {
+        return null;
+      }
       // We want to propagate transformation of js module to js classic to:
       // - import specifier (static/dynamic import + re-export)
       // - url specifier when inside System.register/_context.import()

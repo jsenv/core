@@ -17,8 +17,10 @@ export const jsenvPluginInliningAsDataUrl = () => {
       if (!reference.searchParams.has("inline")) {
         return null;
       }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
       if (reference.prev && reference.prev.searchParams.has("inline")) {
-        // it's ?inline&as_base_64, already handled
         return null;
       }
       if (reference.type === "sourcemap_comment") {
