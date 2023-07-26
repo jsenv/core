@@ -1,4 +1,4 @@
-System.register([__v__("/js/data.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/data.json.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var data;

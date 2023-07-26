@@ -1,1 +1,1 @@
-export default JSON.parse("{\n  \"answer\": 42\n}")
+export default JSON.parse("{\n  \"answer\": 42\n}");
