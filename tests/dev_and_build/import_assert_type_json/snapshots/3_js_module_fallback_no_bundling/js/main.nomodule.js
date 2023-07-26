@@ -3,8 +3,8 @@ System.register([__v__("/js/data.nomodule.js")], function (_export, _context) {
 
   var data;
   return {
-    setters: [function (_clientDataJsonAs_json_module) {
-      data = _clientDataJsonAs_json_module.default;
+    setters: [function (_) {
+      data = _.default;
     }],
     execute: function () {
       window.resolveResultPromise({
