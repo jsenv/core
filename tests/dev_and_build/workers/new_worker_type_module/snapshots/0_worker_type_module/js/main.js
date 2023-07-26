@@ -10,11 +10,11 @@ const testWorker = async (worker) => {
   });
 };
 
-const worker = new Worker("/worker.nomodule.js", { type: "classic" });
+const worker = new Worker("/worker.js", { type: "module" });
 const workerResponse = await testWorker(worker);
 
-const worker2 = new Worker(new URL("/worker.nomodule.js", import.meta.url), {
-  type: "classic",
+const worker2 = new Worker(new URL("/worker.js", import.meta.url), {
+  type: "module",
 });
 const worker2Response = await testWorker(worker2);
 
