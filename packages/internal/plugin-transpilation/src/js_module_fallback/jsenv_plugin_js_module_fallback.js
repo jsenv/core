@@ -9,18 +9,18 @@ export const jsenvPluginJsModuleFallback = () => {
     if (
       context.versioning &&
       context.versioningViaImportmap &&
-      context.isSupportedOnCurrentClients("importmap")
+      !context.isSupportedOnCurrentClients("importmap")
     ) {
-      return false;
+      return true;
     }
     if (
-      context.isSupportedOnCurrentClients("script_type_module") &&
-      context.isSupportedOnCurrentClients("import_dynamic") &&
-      context.isSupportedOnCurrentClients("import_meta")
+      !context.isSupportedOnCurrentClients("script_type_module") ||
+      !context.isSupportedOnCurrentClients("import_dynamic") ||
+      !context.isSupportedOnCurrentClients("import_meta")
     ) {
-      return false;
+      return true;
     }
-    return true;
+    return false;
   };
 
   return [
