@@ -1,4 +1,4 @@
-import { getTypePropertyNode, isStringLiteralNode } from "./helpers.js";
+import { findPropertyNodeByName, isStringLiteralNode } from "./helpers.js";
 import { isNewUrlCall, analyzeNewUrlCall } from "./new_url.js";
 import {
   isImportMetaResolveCall,
@@ -102,7 +102,7 @@ const analyzeWorkerCallArguments = (
   let typePropertyNode;
   const secondArgNode = node.arguments[1];
   if (secondArgNode) {
-    typePropertyNode = getTypePropertyNode(secondArgNode);
+    typePropertyNode = findPropertyNodeByName(secondArgNode, "type");
     if (typePropertyNode) {
       const typePropertyValueNode = typePropertyNode.value;
       if (isStringLiteralNode(typePropertyValueNode)) {

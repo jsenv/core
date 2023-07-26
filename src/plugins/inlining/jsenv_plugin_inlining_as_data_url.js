@@ -17,6 +17,15 @@ export const jsenvPluginInliningAsDataUrl = () => {
       if (!reference.searchParams.has("inline")) {
         return null;
       }
+      if (reference.isInline) {
+        // happens when inlining file content into js
+        // (for instance import "style.css" with { type: "css" } )
+        // In that case the code generated look as follow
+        // new InlineContent(/* content of style.css */, { type: "text/css", inlinedFromUrl: "style.css" }).
+        // and during code analysis an inline reference is generated
+        // with the url "style.css?inline"
+        return null;
+      }
       // when search param is injected, it will be removed later
       // by "getWithoutSearchParam". We don't want to redirect again
       // (would create infinite recursion)

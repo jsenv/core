@@ -122,7 +122,10 @@ export const jsenvPluginImportAssertions = ({
         // here we could `export default ${jsonText}`:
         // but js engine are optimized to recognize JSON.parse
         // and use a faster parsing strategy
-        content: `export default JSON.parse(${jsonText})`,
+        content: `export default JSON.parse(
+  ${jsonText},
+  //# inlinedFromUrl=${jsonUrlInfo.url}
+)`,
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: jsonUrlInfo.originalUrl,
@@ -142,13 +145,17 @@ export const jsenvPluginImportAssertions = ({
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(
-          cssUrlInfo.context.inlineContentClientFileUrl,
-        )};
+        content: `
+import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
 
-const inlineContent = new __InlineContent__(${cssText}, { type: "text/css" });
+const inlineContent = new __InlineContent__(
+  ${cssText},
+  { type: "text/css" },
+  //# inlinedFromUrl=${cssUrlInfo.url}
+);
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(inlineContent.text);
+
 export default stylesheet;`,
         contentType: "text/javascript",
         type: "js_module",
@@ -169,11 +176,15 @@ export default stylesheet;`,
         canUseTemplateString: true,
       });
       return {
-        content: `import ${JSON.stringify(
-          textUrlInfo.context.inlineContentClientFileUrl,
-        )};
+        content: `
+import ${JSON.stringify(textUrlInfo.context.inlineContentClientFileUrl)};
 
-const inlineContent = new InlineContent(${textPlain}, { type: "text/plain" });
+const inlineContent = new __InlineContent__(
+  ${textPlain},
+  { type: "text/plain"},
+  //# inlinedFromUrl=${textUrlInfo.url}
+);
+
 export default inlineContent.text;`,
         contentType: "text/javascript",
         type: "js_module",
