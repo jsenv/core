@@ -29,6 +29,12 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
     init: needJsModuleFallback,
     redirectReference: {
       link_href: (reference) => {
+        if (
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
+        ) {
+          return null;
+        }
         if (reference.subtype === "modulepreload") {
           return turnIntoJsClassicProxy(reference);
         }
@@ -41,12 +47,24 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
         return null;
       },
       script: (reference) => {
+        if (
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
+        ) {
+          return null;
+        }
         if (reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
         return null;
       },
       js_url: (reference) => {
+        if (
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
+        ) {
+          return null;
+        }
         if (reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }

@@ -39,7 +39,12 @@ export const jsenvPluginAutoreloadServer = ({
             const instructions = [];
             for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
               if (referenceFromOther.isImplicit && referenceFromOther.isWeak) {
-                continue;
+                if (!referenceFromOther.original) {
+                  continue;
+                }
+                if (referenceFromOther.original.isWeak) {
+                  continue;
+                }
               }
               const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
               if (urlInfoReferencingThisOne.data.hotDecline) {

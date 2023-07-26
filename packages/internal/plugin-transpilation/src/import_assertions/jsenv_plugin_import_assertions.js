@@ -27,13 +27,14 @@ export const jsenvPluginImportAssertions = ({
   };
   const turnIntoJsModuleProxy = (reference, type) => {
     reference.mutation = (magicSource) => {
-      const { importTypeAttributeNode } = reference.astInfo;
       if (reference.subtype === "import_dynamic") {
+        const { importTypeAttributeNode } = reference.astInfo;
         magicSource.remove({
           start: importTypeAttributeNode.start,
           end: importTypeAttributeNode.end,
         });
       } else {
+        const { importTypeAttributeNode } = reference.astInfo;
         const content = reference.ownerUrlInfo.content;
         const assertKeyboardStart = content.indexOf(
           "assert",
