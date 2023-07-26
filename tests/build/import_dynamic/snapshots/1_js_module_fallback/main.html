@@ -422,10 +422,21 @@
 });</script>
     <script>const url = new URL("/js/nested_feature.nomodule.js", window.location);
 window.nestedFeatureUrl = url.href;</script>
-    <script>import { loadFeature } from "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/build/import_dynamic/client/main.js";
-document.querySelector("button").onclick = () => {
-  loadFeature();
-};
-document.querySelector("button").click();</script>
+    <script>System.register(["/js/main.nomodule.js"], function (_export, _context) {
+  "use strict";
+
+  var loadFeature;
+  return {
+    setters: [function (_) {
+      loadFeature = _.loadFeature;
+    }],
+    execute: function () {
+      document.querySelector("button").onclick = () => {
+        loadFeature();
+      };
+      document.querySelector("button").click();
+    }
+  };
+});</script>
   </body>
 </html>
