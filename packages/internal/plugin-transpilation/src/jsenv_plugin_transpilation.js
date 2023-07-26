@@ -19,7 +19,7 @@ export const jsenvPluginTranspilation = ({
   // build sets jsModuleFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
   // so that bundling is applied on js modules THEN it is converted to js classic if needed
-  jsModuleFallback = false,
+  jsModuleFallback = true,
   babelHelpersAsImport = true,
 }) => {
   if (importAssertions === true) {
