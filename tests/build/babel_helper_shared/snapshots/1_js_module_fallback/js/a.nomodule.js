@@ -3,10 +3,10 @@ System.register([__v__("/js/objectSpread2.nomodule.js"), __v__("/js/main.nomodul
 
   var _objectSpread2, _slicedToArray, getResponse, _getResponse, _getResponse2, answer, a;
   return {
-    setters: [function (_objectSpread2Js) {
-      _objectSpread2 = _objectSpread2Js._objectSpread2;
-    }, function (_mainJs) {
-      _slicedToArray = _mainJs._slicedToArray;
+    setters: [function (_a) {
+      _objectSpread2 = _a._objectSpread2;
+    }, function (_b) {
+      _slicedToArray = _b._slicedToArray;
     }],
     execute: function () {
       getResponse = () => {

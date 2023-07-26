@@ -276,10 +276,7 @@ const rollupPluginJsenv = ({
                   // rollup generate specifiers only for static and dynamic imports
                   // other references (like new URL()) are ignored
                   // there is no need to remap them back
-                  if (
-                    reference.type === "import_static" ||
-                    reference.type === "import_dynamic"
-                  ) {
+                  if (reference.type === "js_import") {
                     return specifierToUrlMap.get(reference.specifier);
                   }
                   return reference.specifier;

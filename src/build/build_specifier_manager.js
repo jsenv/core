@@ -233,7 +233,7 @@ export const createBuildSpecifierManager = ({
           data: bundleInfo.data,
         };
       }
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(firstReference.url);
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
         return rawUrlInfo;
       }
@@ -1147,3 +1147,6 @@ const asBuildUrlVersioned = ({
   const { pathname, search, hash } = new URL(buildSpecifierVersioned);
   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };
+
+// export for unit tests
+export { generateVersion };
