@@ -252,7 +252,11 @@ const parseAndTransformHtmlReferences = async (
       });
       if (ref) {
         finalizeCallbacks.push(() => {
-          ref.expectedType = decideLinkExpectedType(ref, urlInfo);
+          if (ref.expectedType) {
+            // might be set by other plugins, in that case respect it
+          } else {
+            ref.expectedType = decideLinkExpectedType(ref, urlInfo);
+          }
         });
       }
     },
