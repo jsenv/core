@@ -53,7 +53,7 @@ export const jsenvPluginHotSearchParam = () => {
       // that could prevent re-execution of js code
       // In order to achieve this, this plugin inject ?hot=timestamp
       // - The browser will likely not have it in cache
-      //   and refetch lastest version from server + re-execute it
+      //   and refetch latest version from server + re-execute it
       // - If the browser have it in cache, he will not get it from server
       // We use the latest timestamp to ensure it's fresh
       // The dereferencedTimestamp is needed because when a js module is re-referenced
@@ -63,7 +63,7 @@ export const jsenvPluginHotSearchParam = () => {
           ? Math.max(dereferencedTimestamp, modifiedTimestamp)
           : dereferencedTimestamp || modifiedTimestamp;
       return {
-        hot: latestTimestamp,
+        hot: Math.max(latestTimestamp, Number(parentHotParam)),
       };
     },
   };
