@@ -232,6 +232,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         );
       }
       reference.generatedUrl = reference.url;
+      reference.generatedSearchParams = reference.searchParams;
       return reference;
     } catch (error) {
       throw createResolveUrlError({
@@ -283,6 +284,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         const generatedSearch = generatedSearchParams.toString();
         generatedUrlObject.search = generatedSearch;
         reference.generatedUrl = normalizeUrl(generatedUrlObject.href);
+        reference.generatedSearchParams = generatedSearchParams;
       }
     }
     format: {
