@@ -3,7 +3,7 @@ System.register(["/js/new_stylesheet.nomodule.js", "/js/inline_content.nomodule.
 
   var inlineContent, stylesheet;
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_srcKitchenClientInline_contentJs) {}],
+    setters: [function (_a) {}, function (_b) {}],
     execute: function () {
       inlineContent = new __InlineContent__("body {\n  font-size: 20px;\n}\n", {
         type: "text/css"
