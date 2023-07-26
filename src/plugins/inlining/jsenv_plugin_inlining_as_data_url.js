@@ -17,6 +17,10 @@ export const jsenvPluginInliningAsDataUrl = () => {
       if (!reference.searchParams.has("inline")) {
         return null;
       }
+      if (reference.prev && reference.prev.searchParams.has("inline")) {
+        // it's ?inline&as_base_64, already handled
+        return null;
+      }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
@@ -39,7 +43,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
       }
       const specifierWithBase64Param = injectQueryParamsIntoSpecifier(
         reference.specifier,
-        { as_base_64: "", inline: undefined },
+        { as_base_64: "" },
       );
       const referenceInlined = reference.inline({
         line: reference.line,

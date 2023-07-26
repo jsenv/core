@@ -38,9 +38,6 @@ const test = async ({ name, ...params }) => {
   assert({ actual, expected });
 };
 
-// in the upcoming tests versioning is disabled to ensure it does not
-// force js classic due to importmap
-
 // support for {type: "module"} in new Worker
 await test({
   name: "0_worker_type_module",

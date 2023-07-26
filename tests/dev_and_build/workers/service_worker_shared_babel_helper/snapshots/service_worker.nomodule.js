@@ -10,9 +10,6 @@ self.resourcesFromJsenvBuild = {
     "version": "8f8d04e9",
     "versionedUrl": "/js/app.nomodule.js?v=8f8d04e9"
   },
-  "/service_worker.nomodule.js": {
-    "version": "15575909"
-  },
   "/js/objectSpread2.nomodule.js": {
     "version": "ac3c3a15",
     "versionedUrl": "/js/objectSpread2.nomodule.js?v=ac3c3a15"
