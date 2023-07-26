@@ -75,7 +75,7 @@ export const jsenvPluginCommonJs = ({
       if (!commonJsUrlInfo) {
         return null;
       }
-      await commonJsUrlInfo.fetchContent();
+      await commonJsUrlInfo.cook();
       const nodeRuntimeEnabled = Object.keys(
         urlInfo.context.runtimeCompat,
       ).includes("node");

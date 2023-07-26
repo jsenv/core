@@ -118,7 +118,7 @@ export const jsenvPluginImportAssertions = ({
       if (!jsonUrlInfo) {
         return null;
       }
-      await jsonUrlInfo.fetchContent();
+      await jsonUrlInfo.cook();
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
       return {
         // here we could `export default ${jsonText}`:
@@ -144,7 +144,7 @@ export const jsenvPluginImportAssertions = ({
       if (!cssUrlInfo) {
         return null;
       }
-      await cssUrlInfo.fetchContent();
+      await cssUrlInfo.cook();
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one
@@ -179,7 +179,7 @@ export default stylesheet;`,
       if (!textUrlInfo) {
         return null;
       }
-      await textUrlInfo.fetchContent();
+      await textUrlInfo.cook();
       const textPlain = JS_QUOTES.escapeSpecialChars(urlInfo.content, {
         // If template string is choosen and runtime do not support template literals
         // it's ok because "jsenv:new_inline_content" plugin executes after this one

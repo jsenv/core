@@ -41,7 +41,7 @@ export const jsenvPluginAsJsModule = () => {
       if (!jsClassicUrlInfo) {
         return null;
       }
-      await jsClassicUrlInfo.fetchContent();
+      await jsClassicUrlInfo.cook();
       const { content, sourcemap } = await convertJsClassicToJsModule({
         input: jsClassicUrlInfo.content,
         inputSourcemap: jsClassicUrlInfo.sourcemap,
