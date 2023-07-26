@@ -2,7 +2,7 @@ System.register([__v__("/js/style.css.nomodule.js")], function (_export, _contex
   "use strict";
 
   return {
-    setters: [function (_styleCssJs) {}],
+    setters: [function (_a) {}],
     execute: function () {}
   };
 });

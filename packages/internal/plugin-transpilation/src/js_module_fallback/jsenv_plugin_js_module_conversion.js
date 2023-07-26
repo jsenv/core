@@ -131,6 +131,7 @@ const generateJsClassicFilename = (url) => {
     searchParams.has("as_css_module") ||
     searchParams.has("as_text_module")
   ) {
+    basename += extension;
     extension = ".js";
   }
   return `${basename}.nomodule${extension}`;
