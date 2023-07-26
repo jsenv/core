@@ -19,16 +19,36 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/main.nomodule2.js")], function (_export, _context) {
+System.register([], function (_export, _context) {
   "use strict";
 
-  var sheet, bodyBackgroundColor, bodyBackgroundImage;
+  var globalObject, inlineContent, stylesheet, bodyBackgroundColor, bodyBackgroundImage;
   return {
-    setters: [function (_) {
-      sheet = _.default;
-    }],
+    setters: [],
     execute: async function () {
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      /* eslint-env browser,node */
+      /*
+       * This file does not use export const InlineContent = function() {} on purpose:
+       * - An export would be renamed by rollup,
+       *   making it harder to statically detect new InlineContent() calls
+       * - An export would be renamed by terser
+       *   here again it becomes hard to detect new InlineContent() calls
+       * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
+       * to preserve the __InlineContent__ global variable name
+       */
+      globalObject = typeof self === "object" ? self : process;
+      globalObject.__InlineContent__ = function (content, {
+        type = "text/plain"
+      }) {
+        this.text = content;
+        this.type = type;
+      };
+      inlineContent = new __InlineContent__('body{background-color:red;background-image:url('+__v__("/other/jsenv.png")+')}', {
+        type: "text/css"
+      });
+      stylesheet = new CSSStyleSheet();
+      stylesheet.replaceSync(inlineContent.text);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
 
       // on firefox + webkit we have to wait a bit,
       // it seems the styles are applied on next js event loop

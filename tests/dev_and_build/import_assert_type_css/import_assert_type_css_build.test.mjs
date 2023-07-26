@@ -7,7 +7,7 @@ import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async (name, options) => {
+const test = async ({ name, ...params }) => {
   const { buildManifest } = await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -16,7 +16,7 @@ const test = async (name, options) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...options,
+    ...params,
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
@@ -40,29 +40,33 @@ const test = async (name, options) => {
 };
 
 // chrome 60 cannot use <script type="module"> nor constructable stylesheet
-await test("0_js_module_fallback", {
+await test({
+  name: "0_js_module_fallback",
   runtimeCompat: { chrome: "60" },
-  // plugins: [jsenvPluginBundling()],
+  plugins: [jsenvPluginBundling()],
 });
 // chrome 60 + no bundling
-await test("1_js_module_fallback_no_bundling", {
+await test({
+  name: "1_js_module_fallback_no_bundling",
   runtimeCompat: { chrome: "60" },
 });
 // chrome 88 has constructables stylesheet
 // but cannot use js modules due to versioning via importmap (as it does not have importmap)
-await test("2_js_module_fallback_css_minified", {
+await test({
+  name: "2_js_module_fallback_css_minified",
   runtimeCompat: { chrome: "88" },
-  // plugins: [
-  //   jsenvPluginBundling(),
-  //   jsenvPluginMinification({
-  //     js_module: false,
-  //     js_classic: false,
-  //     css: true,
-  //   }),
-  // ],
+  plugins: [
+    jsenvPluginBundling(),
+    jsenvPluginMinification({
+      js_module: false,
+      js_classic: false,
+      css: true,
+    }),
+  ],
 });
 // chrome 89 can use js modules
-await test("3_js_module", {
+await test({
+  name: "3_js_module",
   runtimeCompat: { chrome: "89" },
-  // plugins: [jsenvPluginBundling()],
+  plugins: [jsenvPluginBundling()],
 });
