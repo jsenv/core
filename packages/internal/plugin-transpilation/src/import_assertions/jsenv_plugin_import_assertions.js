@@ -119,14 +119,20 @@ export const jsenvPluginImportAssertions = ({
     type: "json",
     createUrlContent: (jsonUrlInfo) => {
       const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
-      return {
-        // here we could `export default ${jsonText}`:
-        // but js engine are optimized to recognize JSON.parse
-        // and use a faster parsing strategy
-        content: `export default JSON.parse(
+      let inlineContentCall;
+      // here we could `export default ${jsonText}`:
+      // but js engine are optimized to recognize JSON.parse
+      // and use a faster parsing strategy
+      if (jsonUrlInfo.context.dev) {
+        inlineContentCall = `JSON.parse(
   ${jsonText},
   //# inlinedFromUrl=${jsonUrlInfo.url}
-)`,
+)`;
+      } else {
+        inlineContentCall = `JSON.parse(${jsonText})`;
+      }
+      return {
+        content: `export default ${inlineContentCall};`,
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: jsonUrlInfo.originalUrl,
@@ -145,15 +151,21 @@ export const jsenvPluginImportAssertions = ({
         // and convert template strings into raw strings
         canUseTemplateString: true,
       });
+      let inlineContentCall;
+      if (cssUrlInfo.context.dev) {
+        inlineContentCall = `new __InlineContent__(
+  ${cssText},
+  { type: "text/css" },
+  //# inlinedFromUrl=${cssUrlInfo.url}
+)`;
+      } else {
+        inlineContentCall = `new __InlineContent__(${cssText}, { type: "text/css" })`;
+      }
       return {
         content: `
 import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
 
-const inlineContent = new __InlineContent__(
-  ${cssText},
-  { type: "text/css" },
-  //# inlinedFromUrl=${cssUrlInfo.url}
-);
+const inlineContent = ${inlineContentCall};
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(inlineContent.text);
 
@@ -176,15 +188,21 @@ export default stylesheet;`,
         // and convert template strings into raw strings
         canUseTemplateString: true,
       });
+      let inlineContentCall;
+      if (textUrlInfo.context.dev) {
+        inlineContentCall = `new __InlineContent__(
+  ${textPlain},
+  { type: "text/plain"},
+  //# inlinedFromUrl=${textUrlInfo.url}
+)`;
+      } else {
+        inlineContentCall = `new __InlineContent__(${textPlain}, { type: "text/plain"})`;
+      }
       return {
         content: `
 import ${JSON.stringify(textUrlInfo.context.inlineContentClientFileUrl)};
 
-const inlineContent = new __InlineContent__(
-  ${textPlain},
-  { type: "text/plain"},
-  //# inlinedFromUrl=${textUrlInfo.url}
-);
+const inlineContent = ${inlineContentCall};
 
 export default inlineContent.text;`,
         contentType: "text/javascript",
