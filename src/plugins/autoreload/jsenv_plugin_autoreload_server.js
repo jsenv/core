@@ -218,20 +218,21 @@ export const jsenvPluginAutoreloadServer = ({
 
         clientFileChangeEventEmitter.on(({ url, event }) => {
           const changedUrlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
-          if (changedUrlInfo) {
-            delayAction({
-              type: "change",
-              changedUrlInfo,
-              event,
-            });
-            for (const searchParamVariant of changedUrlInfo.searchParamVariantSet) {
-              delayAction({
-                type: "change",
-                changedUrlInfo: searchParamVariant,
-                event,
-              });
-            }
+          if (!changedUrlInfo) {
+            return;
           }
+          delayAction({
+            type: "change",
+            changedUrlInfo,
+            event,
+          });
+          // for (const searchParamVariant of changedUrlInfo.searchParamVariantSet) {
+          //   delayAction({
+          //     type: "change",
+          //     changedUrlInfo: searchParamVariant,
+          //     event,
+          //   });
+          // }
         });
         clientFileDereferencedEventEmitter.on(
           (prunedUrlInfo, lastReferenceFromOther) => {

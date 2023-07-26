@@ -491,6 +491,7 @@ ${ownerUrlInfo.url}`,
   }
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.add(reference);
+  referencedUrlInfo.lastReference = reference;
   applyReferenceEffectsOnUrlInfo(reference);
   for (const implicitRef of reference.implicitReferenceSet) {
     addDependency(implicitRef);

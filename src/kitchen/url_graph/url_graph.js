@@ -187,6 +187,8 @@ const createUrlInfo = (url, context) => {
     referenceToOthersSet: new Set(),
     referenceFromOthersSet: new Set(),
     firstReference: null, // first reference from an other url to this one
+    lastReference: null,
+    remapReference: null, // used solely during build for rollup
     implicitUrlSet: new Set(),
     searchParamVariantSet: new Set(),
 

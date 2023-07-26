@@ -14,7 +14,7 @@ const test = async ({
       text:
         browserName === "chromium"
           ? "[jsenv] hot reloading file.js (style.css modified)"
-          : "[jsenv] hot reloading file.js (style.css?as_css_module modified)",
+          : "[jsenv] hot reloading file.js (style.css modified)",
     },
     {
       type: "log",

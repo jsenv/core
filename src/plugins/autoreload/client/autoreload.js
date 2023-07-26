@@ -6,7 +6,7 @@ import {
   getDOMNodesUsingUrl,
 } from "./reload.js";
 
-let debug = true;
+let debug = false;
 const reloader = {
   urlHotMetas,
   status: {
