@@ -228,13 +228,12 @@ export const createPluginController = (
   const callAsyncHooks = async (hookName, info, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
-      await hooks.reduce(async (previous, hook) => {
-        await previous;
+      for (const hook of hooks) {
         const returnValue = await callAsyncHook(hook, info);
         if (returnValue && callback) {
           await callback(returnValue, hook.plugin);
         }
-      }, Promise.resolve());
+      }
     }
   };
 
