@@ -1,18 +1,18 @@
 import { createMagicSource } from "@jsenv/sourcemap";
 
-export const jsenvPluginImportMetaResolve = () => {
+export const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
   return {
     name: "jsenv:import_meta_resolve",
     appliesDuring: "*",
     init: (context) => {
-      if (!context.isSupportedOnCurrentClients("import_meta_resolve")) {
-        // keep it untouched, systemjs will handle it
-        if (context.getPluginMeta("js_module_fallback")) {
-          return false;
-        }
-        return true;
+      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
+        return false;
       }
-      return false;
+      if (needJsModuleFallback(context)) {
+        // will be handled by systemjs, keep it untouched
+        return false;
+      }
+      return true;
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {

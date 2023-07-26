@@ -3,19 +3,19 @@ import { applyBabelPlugins } from "@jsenv/ast";
 
 const require = createRequire(import.meta.url);
 
-export const jsenvPluginTopLevelAwait = () => {
+export const jsenvPluginTopLevelAwait = ({ needJsModuleFallback }) => {
   return {
     name: "jsenv:top_level_await",
     appliesDuring: "*",
     init: (context) => {
-      if (!context.isSupportedOnCurrentClients("top_level_await")) {
-        // keep it untouched, systemjs will handle it
-        if (context.getPluginMeta("js_module_fallback")) {
-          return false;
-        }
-        return true;
+      if (context.isSupportedOnCurrentClients("top_level_await")) {
+        return false;
       }
-      return false;
+      if (needJsModuleFallback(context)) {
+        // will be handled by systemjs, keep it untouched
+        return false;
+      }
+      return true;
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {

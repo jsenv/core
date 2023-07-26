@@ -13,7 +13,7 @@
 
 import { injectQueryParams } from "@jsenv/urls";
 
-export const jsenvPluginJsModuleFallbackOnWorkers = ({ dormant }) => {
+export const jsenvPluginJsModuleFallbackOnWorkers = () => {
   const turnIntoJsClassicProxy = (reference) => {
     reference.mutation = (magicSource) => {
       const { typePropertyNode } = reference.astInfo;
@@ -31,23 +31,21 @@ export const jsenvPluginJsModuleFallbackOnWorkers = ({ dormant }) => {
       name: `jsenv:js_module_fallback_on_${subtype}`,
       appliesDuring: "*",
       init: (context) => {
-        if (!context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
-          return true;
+        if (context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
+          return false;
         }
-        return false;
+        return true;
       },
       redirectReference: {
-        js_url: dormant
-          ? null
-          : (reference) => {
-              if (reference.expectedType !== "js_module") {
-                return null;
-              }
-              if (reference.expectedSubtype !== subtype) {
-                return null;
-              }
-              return turnIntoJsClassicProxy(reference);
-            },
+        js_url: (reference) => {
+          if (reference.expectedType !== "js_module") {
+            return null;
+          }
+          if (reference.expectedSubtype !== subtype) {
+            return null;
+          }
+          return turnIntoJsClassicProxy(reference);
+        },
       },
     };
   };

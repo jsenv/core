@@ -145,7 +145,7 @@ export const createPluginController = (
   };
   const initPlugin = (plugin) => {
     if (plugin.init) {
-      const initReturnValue = plugin.init(kitchenContext);
+      const initReturnValue = plugin.init(kitchenContext, plugin);
       if (initReturnValue === false) {
         return false;
       }

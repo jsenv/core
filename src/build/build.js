@@ -269,9 +269,7 @@ build ${entryPointKeys.length} entry points`);
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleFallback,
             ...transpilation,
-            jsModuleFallback: {
-              dormant: true,
-            },
+            jsModuleFallback: false,
           },
           inlining: false,
           scenarioPlaceholders,
