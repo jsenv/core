@@ -23,7 +23,7 @@ export const jsenvPluginCommonJs = ({
         const basename = isBareSpecifier(reference.specifier)
           ? reference.specifier
           : urlToBasename(reference.url);
-        reference.filename = `${basename}${onwerUrlExtension}`;
+        reference.filenameHint = `${basename}${onwerUrlExtension}`;
       }
     }
   };

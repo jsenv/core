@@ -199,7 +199,6 @@ const createUrlInfo = (url, context) => {
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
     url: null,
     originalUrl: undefined,
-    filename: "",
     isEntryPoint: false,
     originalContent: undefined,
     originalContentAst: undefined,
@@ -213,6 +212,8 @@ const createUrlInfo = (url, context) => {
 
     generatedUrl: null,
     sourcemapGeneratedUrl: null,
+    filenameHint: "",
+    dirnameHint: "",
     injected: false,
 
     isInline: false,

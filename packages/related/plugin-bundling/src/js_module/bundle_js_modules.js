@@ -142,7 +142,7 @@ const rollupPluginJsenv = ({
     throw new Error("not implemented");
   };
   const format = jsModuleUrlInfos.some((jsModuleUrlInfo) =>
-    jsModuleUrlInfo.filename.endsWith(".cjs"),
+    jsModuleUrlInfo.filenameHint.endsWith(".cjs"),
   )
     ? "cjs"
     : "esm";

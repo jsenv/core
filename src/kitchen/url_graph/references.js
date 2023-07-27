@@ -259,7 +259,7 @@ const createReference = ({
   expectedContentType,
   expectedType,
   expectedSubtype,
-  filename,
+  filenameHint,
   integrity,
   crossorigin,
   specifier,
@@ -327,7 +327,7 @@ const createReference = ({
     expectedContentType,
     expectedType,
     expectedSubtype,
-    filename,
+    filenameHint,
     integrity,
     crossorigin,
     specifier,
@@ -710,8 +710,8 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   if (reference.injected) {
     referencedUrlInfo.injected = true;
   }
-  if (reference.filename && !referencedUrlInfo.filename) {
-    referencedUrlInfo.filename = reference.filename;
+  if (reference.filenameHint && !referencedUrlInfo.filenameHint) {
+    referencedUrlInfo.filenameHint = reference.filenameHint;
   }
   if (reference.debug) {
     referencedUrlInfo.debug = true;

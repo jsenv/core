@@ -17,7 +17,7 @@ const buildStory = async (name) => {
       {
         resolveReference: (reference) => {
           if (reference.specifier.includes("animal.svg")) {
-            reference.filename = "animal.svg";
+            reference.filenameHint = "animal.svg";
             return new URL(`./project/src/${name}.svg`, import.meta.url);
           }
           return null;

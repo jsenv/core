@@ -331,7 +331,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         subtype,
         originalUrl,
         sourcemap,
-        filename,
 
         status = 200,
         headers = {},
@@ -365,9 +364,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       if (typeof isEntryPoint === "boolean") {
         urlInfo.isEntryPoint = isEntryPoint;
-      }
-      if (filename && !urlInfo.filename) {
-        urlInfo.filename = filename;
       }
       assertFetchedContentCompliance({
         urlInfo,
@@ -720,8 +716,8 @@ const determineFileUrlForOutDirectory = (urlInfo) => {
       fsRootUrl.length,
     )}`;
   }
-  if (urlInfo.filename) {
-    url = setUrlFilename(url, urlInfo.filename);
+  if (urlInfo.filenameHint) {
+    url = setUrlFilename(url, urlInfo.filenameHint);
   }
   return moveUrl({
     url,

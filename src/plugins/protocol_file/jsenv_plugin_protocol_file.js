@@ -164,20 +164,27 @@ export const jsenvPluginProtocolFile = ({
         const urlObject = new URL(urlInfo.url);
         if (urlInfo.firstReference.leadsToADirectory) {
           const directoryEntries = readdirSync(urlObject);
-          let filename;
-          if (urlInfo.firstReference.type === "filesystem") {
-            filename = `${
-              urlInfo.firstReference.ownerUrlInfo.filename
-            }${urlToFilename(urlInfo.url)}/`;
-          } else {
-            filename = `${urlToFilename(urlInfo.url)}/`;
+          if (!urlInfo.filenameHint) {
+            if (urlInfo.firstReference.type === "filesystem") {
+              urlInfo.filenameHint = `${
+                urlInfo.firstReference.ownerUrlInfo.filenameHint
+              }${urlToFilename(urlInfo.url)}/`;
+            } else {
+              urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
+            }
           }
           return {
             type: "directory",
             contentType: "application/json",
             content: JSON.stringify(directoryEntries, null, "  "),
-            filename,
           };
+        }
+        if (
+          !urlInfo.dirnameHint &&
+          urlInfo.firstReference.ownerUrlInfo.type === "directory"
+        ) {
+          urlInfo.dirnameHint =
+            urlInfo.firstReference.ownerUrlInfo.filenameHint;
         }
         const fileBuffer = readFileSync(urlObject);
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);

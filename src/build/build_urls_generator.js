@@ -12,8 +12,8 @@ export const createBuildUrlsGenerator = ({
     if (!urlInfo) {
       return urlToFilename(url);
     }
-    if (urlInfo.filename) {
-      return urlInfo.filename;
+    if (urlInfo.filenameHint) {
+      return urlInfo.filenameHint;
     }
     return urlToFilename(url);
   };
@@ -105,12 +105,11 @@ const determineDirectoryPath = ({
   urlInfo,
   ownerUrlInfo,
 }) => {
-  if (ownerUrlInfo && ownerUrlInfo.type === "directory") {
-    const ownerDirectoryPath = urlToRelativeUrl(
-      ownerUrlInfo.url,
-      sourceDirectoryUrl,
-    );
-    return ownerDirectoryPath;
+  if (urlInfo.dirnameHint) {
+    return urlInfo.dirnameHint;
+  }
+  if (urlInfo.type === "directory") {
+    return "";
   }
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({

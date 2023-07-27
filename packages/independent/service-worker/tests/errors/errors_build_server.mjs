@@ -17,7 +17,7 @@ const buildStory = async (story) => {
       {
         resolveReference: (reference) => {
           if (reference.specifier.includes("sw.js")) {
-            reference.filename = "sw.js";
+            reference.filenameHint = "sw.js";
             return new URL(`./project/src/sw_${story}.js`, import.meta.url);
           }
           return null;

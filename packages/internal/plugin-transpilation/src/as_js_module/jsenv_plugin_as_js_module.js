@@ -16,10 +16,10 @@ import { convertJsClassicToJsModule } from "./convert_js_classic_to_js_module.js
 export const jsenvPluginAsJsModule = () => {
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
-    if (!reference.filename) {
+    if (!reference.filenameHint) {
       const filename = urlToFilename(reference.url);
       const [basename] = splitFileExtension(filename);
-      reference.filename = `${basename}.mjs`;
+      reference.filenameHint = `${basename}.mjs`;
     }
   };
 

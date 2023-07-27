@@ -21,8 +21,8 @@ export const jsenvPluginImportAssertions = ({
   const transpilations = { json, css, text };
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
-    if (!reference.filename) {
-      reference.filename = `${urlToFilename(reference.url)}.js`;
+    if (!reference.filenameHint) {
+      reference.filenameHint = `${urlToFilename(reference.url)}.js`;
     }
   };
   const turnIntoJsModuleProxy = (reference, type) => {

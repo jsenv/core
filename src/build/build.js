@@ -295,7 +295,7 @@ build ${entryPointKeys.length} entry points`);
               isEntryPoint: true,
               type: "entry_point",
               specifier: key,
-              filename: entryPoints[key],
+              filenameHint: entryPoints[key],
             });
             entryUrls.push(entryReference.url);
           });
