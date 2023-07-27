@@ -21,7 +21,7 @@ export const jsenvPluginInliningIntoHtml = () => {
         const mutations = [];
         const actions = [];
 
-        const onStyleSheet = (linkNode, { href }) => {
+        const onLinkRelStyleSheet = (linkNode, { href }) => {
           let linkReference = null;
           for (const referenceToOther of urlInfo.referenceToOthersSet) {
             if (
@@ -40,6 +40,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             preferOriginal: true,
           });
           const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
+            htmlUrl: urlInfo.url,
             url: linkReference.url,
           });
           const linkReferenceInlined = linkReference.inline({
@@ -56,7 +57,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             await linkUrlInfoInlined.cook();
             mutations.push(() => {
               setHtmlNodeAttributes(linkNode, {
-                "inlined-from-href": href,
+                "inlined-from-href": linkReference.url,
                 "href": undefined,
                 "rel": undefined,
                 "type": undefined,
@@ -91,6 +92,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             preferOriginal: true,
           });
           const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
+            htmlUrl: urlInfo.url,
             url: scriptReference.url,
           });
           const scriptReferenceInlined = scriptReference.inline({
@@ -130,7 +132,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             if (!href) {
               return;
             }
-            onStyleSheet(linkNode, { href });
+            onLinkRelStyleSheet(linkNode, { href });
           },
           script: (scriptNode) => {
             const { type } = analyzeScriptNode(scriptNode);

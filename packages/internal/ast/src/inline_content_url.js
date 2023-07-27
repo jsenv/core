@@ -18,7 +18,7 @@ export const generateUrlForInlineContent = ({
     generatedName += basename;
   }
   if (line !== undefined && column !== undefined) {
-    generatedName = `L${line}C${column}`;
+    generatedName += `L${line}C${column}`;
     if (lineEnd !== undefined && columnEnd !== undefined) {
       generatedName += `-L${lineEnd}C${columnEnd}`;
     }

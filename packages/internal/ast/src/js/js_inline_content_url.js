@@ -6,7 +6,7 @@ import { generateUrlForInlineContent } from "../inline_content_url.js";
 export const getUrlForContentInsideJs = (inlineReferenceInfo, { url }) => {
   const { inlinedFromUrl } = inlineReferenceInfo;
   if (inlinedFromUrl) {
-    return injectQueryParams(inlinedFromUrl, { inline: "" });
+    return injectQueryParams(inlinedFromUrl, { inlined: "" });
   }
   return generateUrlForInlineContent({
     url,

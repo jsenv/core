@@ -152,7 +152,7 @@ const parseAndTransformHtmlReferences = async (
       preferOriginal: true,
     });
     const inlineContentUrl = getUrlForContentInsideHtml(node, {
-      url: urlInfo.url,
+      htmlUrl: urlInfo.url,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
     const inlineReference = urlInfo.dependencies.foundInline({

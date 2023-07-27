@@ -111,7 +111,7 @@ export const jsenvPluginImportmap = () => {
             preferOriginal: true,
           });
           const inlineImportmapUrl = getUrlForContentInsideHtml(importmap, {
-            url: htmlUrlInfo.url,
+            htmlUrl: htmlUrlInfo.url,
           });
           const inlineImportmapReference = htmlUrlInfo.dependencies.foundInline(
             {
@@ -154,7 +154,7 @@ export const jsenvPluginImportmap = () => {
             preferOriginal: true,
           });
           const importmapInlineUrl = getUrlForContentInsideHtml(importmap, {
-            url: htmlUrlInfo.url,
+            htmlUrl: htmlUrlInfo.url,
           });
           const importmapReferenceInlined = importmapReference.inline({
             line: line - 1,
