@@ -486,7 +486,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         if (e.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
           throw e;
         }
-        if (urlInfo.isInline) {
+        if (urlInfo.isInline && errorOnInlineContentCanSkipThrow(urlInfo)) {
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
@@ -588,6 +588,23 @@ ${errorInfo}`,
   kitchenContext.cookDependencies = cookDependencies;
 
   return kitchen;
+};
+
+// if we are cooking the inline content internally it's better not to throw
+// because the main url info (html) is still valid
+// but if we are explicitely requesting inline content during dev
+// then we should throw
+const errorOnInlineContentCanSkipThrow = (urlInfo) => {
+  if (urlInfo.context.build) {
+    return true;
+  }
+  if (
+    urlInfo.context.reference &&
+    urlInfo.context.reference.url === urlInfo.url
+  ) {
+    return false;
+  }
+  return true;
 };
 
 const debounceCook = (cook) => {
