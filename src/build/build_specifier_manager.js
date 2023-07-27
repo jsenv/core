@@ -442,13 +442,13 @@ export const createBuildSpecifierManager = ({
     if (reference.next && reference.next.isInline) {
       return false;
     }
+    if (reference.type === "sourcemap_comment") {
+      return false;
+    }
     // specifier comes from "normalize" hook done a bit earlier in this file
     // we want to get back their build url to access their infos
     const referencedUrlInfo = reference.urlInfo;
     if (!canUseVersionedUrl(referencedUrlInfo)) {
-      return false;
-    }
-    if (referencedUrlInfo.type === "sourcemap") {
       return false;
     }
     return true;
