@@ -126,7 +126,6 @@ export const bundleJsModules = async (
 const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
-  buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -321,7 +320,7 @@ const rollupPluginJsenv = ({
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
         sourcemapPathTransform: (relativePath) => {
-          return new URL(relativePath, buildDirectoryUrl).href;
+          return new URL(relativePath, rootDirectoryUrl).href;
         },
         entryFileNames: () => {
           return `[name].js`;

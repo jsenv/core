@@ -59,7 +59,8 @@ export const createBuildSpecifierManager = ({
   const urlInfoToBuildUrlMap = new Map();
   const buildUrlToUrlInfoMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
-  const generateReplacement = (reference) => {
+
+  const prepareBuildUrl = (reference) => {
     let buildUrl;
     if (reference.type === "sourcemap_comment") {
       const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
@@ -106,6 +107,16 @@ export const createBuildSpecifierManager = ({
     urlInfoToBuildUrlMap.set(reference.urlInfo, buildUrl);
     buildUrlToUrlInfoMap.set(buildUrl, reference.urlInfo);
     buildUrlToBuildSpecifierMap.set(buildUrl, buildSpecifier);
+    return buildSpecifier;
+  };
+
+  const generateReplacement = (reference) => {
+    let buildUrl = urlInfoToBuildUrlMap.get(reference.urlInfo);
+    if (!buildUrl) {
+      prepareBuildUrl(reference);
+      buildUrl = urlInfoToBuildUrlMap.get(reference.urlInfo);
+    }
+    const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
     const buildGeneratedSpecifier = applyVersioningOnBuildSpecifier(
       buildSpecifier,
       reference,
@@ -209,6 +220,7 @@ export const createBuildSpecifierManager = ({
         internalRedirections.set(generatedUrl, reference.url);
       }
       placeholderToReferenceMap.set(placeholder, reference);
+      prepareBuildUrl(reference);
       return placeholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
@@ -221,8 +233,12 @@ export const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
+        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
+        }
         finalUrlInfo.remapReference = bundleInfo.remapReference;
         return {
           // url: bundleInfo.url,
@@ -234,7 +250,6 @@ export const createBuildSpecifierManager = ({
           data: bundleInfo.data,
         };
       }
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
         return rawUrlInfo;
       }
@@ -667,6 +682,14 @@ export const createBuildSpecifierManager = ({
   return {
     jsenvPluginMoveToBuildDirectory,
     applyBundling,
+
+    remapSourcemapSource: (source, ownerUrlInfo) => {
+      const ownerBuildUrl = urlInfoToBuildUrlMap.get(ownerUrlInfo);
+      if (ownerBuildUrl) {
+        return urlToRelativeUrl(source, ownerBuildUrl);
+      }
+      return source;
+    },
 
     remapPlaceholder: (specifier) => {
       const reference = placeholderToReferenceMap.get(specifier);

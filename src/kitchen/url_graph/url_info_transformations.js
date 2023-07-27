@@ -302,6 +302,9 @@ export const createUrlInfoTransformer = ({
       ...urlInfo.sourcemap,
       sources: sourcemapsSourcesRelative
         ? urlInfo.sourcemap.sources.map((source) => {
+            if (typeof sourcemapsSourcesRelative === "function") {
+              return sourcemapsSourcesRelative(source, urlInfo);
+            }
             const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
             return sourceRelative || ".";
           })
