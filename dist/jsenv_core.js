@@ -18396,7 +18396,7 @@ const jsenvPluginHotSearchParam = () => {
           ? Math.max(dereferencedTimestamp, modifiedTimestamp)
           : dereferencedTimestamp || modifiedTimestamp;
       return {
-        hot: Math.max(latestTimestamp, Number(parentHotParam)),
+        hot: latestTimestamp,
       };
     },
   };
