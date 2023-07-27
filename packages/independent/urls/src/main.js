@@ -1,5 +1,4 @@
 export { DATA_URL } from "./data_url.js";
-export { generateInlineContentUrl } from "./inline_content_url_generator.js";
 export {
   stringifyUrlTrace,
   stringifyUrlSite,

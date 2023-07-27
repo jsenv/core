@@ -44,3 +44,6 @@ export { injectJsImport } from "./js/babel_utils.js";
 export { parseJsWithAcorn } from "./js/parse_js_with_acorn.js";
 export { parseJsUrls } from "./js/parse_js_urls.js";
 export { visitJsAstUntil } from "./js/visit_js_ast_until.js";
+export { getUrlForContentInsideJs } from "./js/js_inline_content_url.js";
+
+export { generateUrlForInlineContent } from "./inline_content_url.js";

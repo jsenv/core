@@ -1,6 +1,6 @@
-import { urlToFilename } from "./url_to_filename.js";
+import { urlToFilename, urlToExtension } from "@jsenv/urls";
 
-export const generateInlineContentUrl = ({
+export const generateUrlForInlineContent = ({
   url,
   extension,
   basename,
@@ -9,6 +9,10 @@ export const generateInlineContentUrl = ({
   lineEnd,
   columnEnd,
 }) => {
+  if (extension === undefined) {
+    extension = urlToExtension(url);
+  }
+
   let generatedName = "";
   if (basename !== undefined) {
     generatedName += basename;

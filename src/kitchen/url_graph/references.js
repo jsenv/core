@@ -1,10 +1,10 @@
 import {
   getCallerPosition,
   stringifyUrlSite,
-  generateInlineContentUrl,
   urlToBasename,
   urlToExtension,
 } from "@jsenv/urls";
+import { generateUrlForInlineContent } from "@jsenv/ast";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -105,7 +105,7 @@ export const createDependencies = (ownerUrlInfo) => {
 
     const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
       const basename = urlToBasename(sideEffectFileUrl);
-      const inlineUrl = generateInlineContentUrl({
+      const inlineUrl = generateUrlForInlineContent({
         url: urlInfoReceiver.url,
         basename,
         extension: urlToExtension(sideEffectFileUrl),

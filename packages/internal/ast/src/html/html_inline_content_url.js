@@ -1,9 +1,6 @@
-import {
-  generateInlineContentUrl,
-  injectQueryParams,
-  urlToExtension,
-} from "@jsenv/urls";
+import { injectQueryParams } from "@jsenv/urls";
 
+import { generateUrlForInlineContent } from "../inline_content_url.js";
 import { getHtmlNodeAttribute } from "./html_node_attributes.js";
 import { getHtmlNodePosition } from "./html_node_position.js";
 import { analyzeScriptNode } from "./html_analysis.js";
@@ -19,7 +16,6 @@ export const getUrlForContentInsideHtml = (node, { url }) => {
     externalSpecifierAttributeName = "inlined-from-href";
     extension = ".css";
   } else if (node.nodeName === "link") {
-    extension = urlToExtension(url);
   }
 
   if (externalSpecifierAttributeName) {
@@ -37,7 +33,7 @@ export const getUrlForContentInsideHtml = (node, { url }) => {
   const { line, column, lineEnd, columnEnd } = getHtmlNodePosition(node, {
     preferOriginal: true,
   });
-  const inlineContentUrl = generateInlineContentUrl({
+  const inlineContentUrl = generateUrlForInlineContent({
     url,
     extension,
     line,
