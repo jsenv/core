@@ -1,5 +1,5 @@
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, readdirSync, existsSync } from "node:fs";
-import { U as URL_META, f as filterV8Coverage } from "./js/v8_coverage.js";
+import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import "node:crypto";
 import { dirname } from "node:path";
@@ -6145,17 +6145,17 @@ const EXIT_CODES = {
 };
 
 const IMPORTMAP_NODE_LOADER_FILE_URL = new URL(
-  "./importmap_node_loader.mjs?entry_point=",
+  "./importmap_node_loader.mjs?entry_point",
   import.meta.url,
 ).href;
 
 const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL(
-  "./no_experimental_warnings.cjs?entry_point=",
+  "./no_experimental_warnings.cjs?entry_point",
   import.meta.url,
 ).href;
 
 const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
-  "./controllable_child_process.mjs?entry_point=",
+  "./controllable_child_process.mjs?entry_point",
   import.meta.url,
 ).href;
 
@@ -6517,7 +6517,7 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 
 const CONTROLLABLE_WORKER_THREAD_URL = new URL(
-  "./controllable_worker_thread.mjs?entry_point=",
+  "./controllable_worker_thread.mjs?entry_point",
   import.meta.url,
 ).href;
 
