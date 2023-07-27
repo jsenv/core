@@ -187,8 +187,9 @@ export const createUrlInfoTransformer = ({
     }
     if (sourcemap && shouldHandleSourcemap(urlInfo)) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
+      let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(
-        urlInfo.sourcemap,
+        currentSourcemap,
         sourcemapNormalized,
       );
       const finalSourcemapNormalized = normalizeSourcemap(
@@ -292,32 +293,35 @@ export const createUrlInfoTransformer = ({
       });
     }
     const sourcemapUrlInfo = sourcemapReference.urlInfo;
-
-    const sourcemap = urlInfo.sourcemap;
-    if (sourcemapsSourcesRelative) {
-      sourcemap.sources = sourcemap.sources.map((source) => {
-        const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-        return sourceRelative || ".";
-      });
-    }
-    if (sourcemapsSourcesProtocol !== "file:///") {
-      sourcemap.sources = sourcemap.sources.map((source) => {
-        if (source.startsWith("file:///")) {
-          return `${sourcemapsSourcesProtocol}${source.slice(
-            "file:///".length,
-          )}`;
-        }
-        return source;
-      });
-    }
+    // It's possible urlInfo content to be modified after being finalized
+    // In that case we'll recompose sourcemaps (and re-append it to file content)
+    // Recomposition is done on urlInfo.sourcemap and must be done with absolute urls inside .sources
+    // (so we can detect if sources are identical)
+    // For this reason we must not mutate urlInfo.sourcemap.sources
+    const sourcemapGenerated = {
+      ...urlInfo.sourcemap,
+      sources: sourcemapsSourcesRelative
+        ? urlInfo.sourcemap.sources.map((source) => {
+            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+            return sourceRelative || ".";
+          })
+        : urlInfo.sourcemap.sources.map((source) => {
+            if (source.startsWith("file:///")) {
+              return `${sourcemapsSourcesProtocol}${source.slice(
+                "file:///".length,
+              )}`;
+            }
+            return source;
+          }),
+    };
     sourcemapUrlInfo.type = "sourcemap";
     sourcemapUrlInfo.contentType = "application/json";
-    sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
+    sourcemapUrlInfo.content = JSON.stringify(sourcemapGenerated, null, "  ");
 
     if (!urlInfo.sourcemapIsWrong) {
       if (sourcemaps === "inline") {
         sourcemapReference.generatedSpecifier =
-          generateSourcemapDataUrl(sourcemap);
+          generateSourcemapDataUrl(sourcemapGenerated);
       }
       if (sourcemaps === "file" || sourcemaps === "inline") {
         let specifier;
