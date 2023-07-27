@@ -219,7 +219,14 @@ export const createBuildSpecifierManager = ({
       return placeholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
-      const { firstReference } = finalUrlInfo;
+      let { firstReference } = finalUrlInfo;
+      if (
+        firstReference.isInline &&
+        firstReference.prev &&
+        !firstReference.prev.isInline
+      ) {
+        firstReference = firstReference.prev;
+      }
       const rawUrl = firstReference.url;
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
