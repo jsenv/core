@@ -6,6 +6,9 @@ import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js";
 
 export const jsenvPluginJsModuleFallback = ({ remapImportSpecifier } = {}) => {
   const needJsModuleFallback = (context) => {
+    if (Object.keys(context.clientRuntimeCompat).includes("node")) {
+      return false;
+    }
     if (
       context.versioning &&
       context.versioningViaImportmap &&

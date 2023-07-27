@@ -236,6 +236,11 @@ const rollupPluginJsenv = ({
         for (const importFileName of imports) {
           if (!importFileName.startsWith("file:")) {
             const importRollupFileInfo = rollupResult[importFileName];
+            if (!importRollupFileInfo) {
+              // happens for external import, like "ignore:" or anything marked as external
+              specifierToUrlMap.set(importFileName, importFileName);
+              continue;
+            }
             const importUrl = getOriginalUrl(importRollupFileInfo);
             const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
             specifierToUrlMap.set(rollupSpecifier, importUrl);
@@ -245,6 +250,14 @@ const rollupPluginJsenv = ({
           if (!dynamicImportFileName.startsWith("file:")) {
             const dynamicImportRollupFileInfo =
               rollupResult[dynamicImportFileName];
+            if (!dynamicImportRollupFileInfo) {
+              // happens for external import, like "ignore:" or anything marked as external
+              specifierToUrlMap.set(
+                dynamicImportFileName,
+                dynamicImportFileName,
+              );
+              continue;
+            }
             const dynamicImportUrl = getOriginalUrl(
               dynamicImportRollupFileInfo,
             );

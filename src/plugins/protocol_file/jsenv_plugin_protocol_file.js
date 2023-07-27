@@ -166,7 +166,9 @@ export const jsenvPluginProtocolFile = ({
           const directoryEntries = readdirSync(urlObject);
           let filename;
           if (urlInfo.firstReference.type === "filesystem") {
-            filename = `${urlInfo.firstReference.ownerUrlInfo.filename}${urlInfo.firstReference.specifier}/`;
+            filename = `${
+              urlInfo.firstReference.ownerUrlInfo.filename
+            }${urlToFilename(urlInfo.url)}/`;
           } else {
             filename = `${urlToFilename(urlInfo.url)}/`;
           }
