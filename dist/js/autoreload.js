@@ -174,7 +174,6 @@ const reloader = {
     value: [],
     onchange: () => {},
     add: (reloadMessage) => {
-      // console.debug("received reload message", reloadMessage);
       reloader.changes.value.push(reloadMessage);
       reloader.changes.onchange();
       if (reloader.autoreload.enabled) {
@@ -267,11 +266,12 @@ const dequeue = async () => {
   }
 };
 
-const applyHotReload = async ({ cause, hot, hotInstructions }) => {
+const applyHotReload = async ({ cause, hotInstructions }) => {
   await hotInstructions.reduce(
     async (previous, { type, boundary, acceptedBy }) => {
       await previous;
 
+      const hot = Date.now();
       const urlToFetch = new URL(boundary, `${window.location.origin}/`).href;
       const urlHotMeta = urlHotMetas[urlToFetch];
       // there is no url hot meta when:
