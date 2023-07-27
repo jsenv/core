@@ -3,7 +3,7 @@ System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
 
   var textFileUrl, absoluteUrl, windowLocationRelativeUrl, windowOriginRelativeUrl, absoluteBaseUrl;
   return {
-    setters: [function (_) {}],
+    setters: [function (_fileJs) {}],
     execute: function () {
       textFileUrl = new URL(__v__("/other/file.txt"), _context.meta.url).href;
       console.log(textFileUrl);

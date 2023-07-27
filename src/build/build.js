@@ -336,7 +336,11 @@ build ${entryPointKeys.length} entry points`);
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
-        jsenvPluginJsModuleFallback(),
+        jsenvPluginJsModuleFallback({
+          remapImportSpecifier: (specifier) => {
+            return buildSpecifierManager.remapPlaceholder(specifier);
+          },
+        }),
         jsenvPluginInlining(),
         {
           name: "jsenv:optimize",

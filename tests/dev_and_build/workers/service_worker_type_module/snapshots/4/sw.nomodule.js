@@ -1,14 +1,14 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "6500f7d6"
+    "version": "a738cab3"
   },
   "/css/style.css": {
     "version": "2e9d11a2",
     "versionedUrl": "/css/style.css?v=2e9d11a2"
   },
   "/js/a.nomodule.js": {
-    "version": "4a655ff7",
-    "versionedUrl": "/js/a.nomodule.js?v=4a655ff7"
+    "version": "8dd53fd5",
+    "versionedUrl": "/js/a.nomodule.js?v=8dd53fd5"
   },
   "/js/b.nomodule.js": {
     "version": "4d5b0641",
@@ -19,7 +19,7 @@ self.resourcesFromJsenvBuild = {
 
 ;(function() {
   var __versionMappings__ = {
-    "/js/a.nomodule.js": "/js/a.nomodule.js?v=4a655ff7",
+    "/js/a.nomodule.js": "/js/a.nomodule.js?v=8dd53fd5",
     "/js/b.nomodule.js": "/js/b.nomodule.js?v=4d5b0641"
   };
   self.__v__ = function (specifier) {
@@ -483,7 +483,7 @@ System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
 
   var fn;
   return {
-    setters: [function (_) {}],
+    setters: [function (_aJs) {}],
     execute: function () {
       self.order = [];
       self.addEventListener("message", async messageEvent => {

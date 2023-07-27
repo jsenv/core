@@ -3,8 +3,8 @@ System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
 
   var answer;
   return {
-    setters: [function (_a) {
-      answer = _a.answer;
+    setters: [function (_aJs) {
+      answer = _aJs.answer;
     }],
     execute: function () {
       window.executionOrder.push("before_import_a");

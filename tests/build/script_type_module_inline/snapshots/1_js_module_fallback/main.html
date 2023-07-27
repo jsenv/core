@@ -432,8 +432,8 @@
 
   var answer;
   return {
-    setters: [function (_) {
-      answer = _.answer;
+    setters: [function (_fileJs) {
+      answer = _fileJs.answer;
     }],
     execute: function () {
       setTimeout(() => {

@@ -115,12 +115,6 @@ export const createBuildSpecifierManager = ({
   };
   const internalRedirections = new Map();
   const bundleInfoMap = new Map();
-  const placeholderToBundleMap = new Map();
-  const generateSpecifierForBundle = (originalUrl) => {
-    const placeholder = placeholderAPI.generate();
-    placeholderToBundleMap.set(placeholder, originalUrl);
-    return placeholder;
-  };
 
   const applyBundling = async ({ bundler, urlInfosToBundle }) => {
     const urlInfosBundled = await rawKitchen.pluginController.callAsyncHook(
@@ -673,8 +667,15 @@ export const createBuildSpecifierManager = ({
 
   return {
     jsenvPluginMoveToBuildDirectory,
-    generateSpecifierForBundle,
     applyBundling,
+
+    remapPlaceholder: (specifier) => {
+      const reference = placeholderToReferenceMap.get(specifier);
+      if (reference) {
+        return reference.specifier;
+      }
+      return specifier;
+    },
 
     replacePlaceholders: async () => {
       if (versioning) {

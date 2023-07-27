@@ -24,8 +24,8 @@ System.register(["/js/new_stylesheet.nomodule.js", "/js/style.css.nomodule.js"],
 
   var style;
   return {
-    setters: [function (_) {}, function (_2) {
-      style = _2.default;
+    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_styleCssAs_css_module) {
+      style = _styleCssAs_css_module.default;
     }],
     execute: async function () {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];

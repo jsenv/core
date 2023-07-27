@@ -3,8 +3,8 @@ System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
 
   var answer;
   return {
-    setters: [function (_) {
-      answer = _.answer;
+    setters: [function (_fileJs) {
+      answer = _fileJs.answer;
     }],
     execute: function () {
       setTimeout(() => {

@@ -4,7 +4,7 @@ import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_f
 import { jsenvPluginImportMetaResolve } from "./jsenv_plugin_import_meta_resolve.js";
 import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js";
 
-export const jsenvPluginJsModuleFallback = () => {
+export const jsenvPluginJsModuleFallback = ({ remapImportSpecifier } = {}) => {
   const needJsModuleFallback = (context) => {
     if (
       context.versioning &&
@@ -26,7 +26,7 @@ export const jsenvPluginJsModuleFallback = () => {
   return [
     jsenvPluginJsModuleFallbackInsideHtml({ needJsModuleFallback }),
     jsenvPluginJsModuleFallbackOnWorkers(),
-    jsenvPluginJsModuleConversion(),
+    jsenvPluginJsModuleConversion({ remapImportSpecifier }),
     // must come after jsModuleFallback because it's related to the module format
     // so we want to want to know the module format before transforming things
     // - top level await

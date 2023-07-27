@@ -421,8 +421,8 @@ System.register([__v__("/js/objectSpread2.nomodule.js")], function (_export, _co
 
   var _objectSpread2;
   return {
-    setters: [function (_a) {
-      _objectSpread2 = _a._objectSpread2;
+    setters: [function (_objectSpread2Js) {
+      _objectSpread2 = _objectSpread2Js._objectSpread2;
     }],
     execute: function () {
       console.log(_objectSpread2({}, {

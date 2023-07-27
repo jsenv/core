@@ -3,12 +3,12 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
-    <link rel="preload" href="/js/main.nomodule.js?v=334b758a" as="script">
+    <link rel="preload" href="/js/main.nomodule.js?v=42c18da6" as="script">
     <script>
       ;(function() {
         var __versionMappings__ = {
           "/js/util.nomodule.js": "/js/util.nomodule.js?v=bee33ce8",
-          "/js/main.nomodule.js": "/js/main.nomodule.js?v=334b758a"
+          "/js/main.nomodule.js": "/js/main.nomodule.js?v=42c18da6"
         };
         window.__v__ = function (specifier) {
           return __versionMappings__[specifier] || specifier
@@ -456,8 +456,8 @@ System.register([__v__("/js/util.nomodule.js")], function (_export, _context) {
 
   var util, dynamicImportNamespace;
   return {
-    setters: [function (_) {
-      util = _.util;
+    setters: [function (_srcUtilJs) {
+      util = _srcUtilJs.util;
     }],
     execute: async function () {
       util();

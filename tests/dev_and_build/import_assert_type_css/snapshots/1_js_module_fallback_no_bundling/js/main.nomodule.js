@@ -24,8 +24,8 @@ System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/main.css.no
 
   var sheet, bodyBackgroundColor, bodyBackgroundImage;
   return {
-    setters: [function (_) {}, function (_2) {
-      sheet = _2.default;
+    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_srcMainCssAs_css_module) {
+      sheet = _srcMainCssAs_css_module.default;
     }],
     execute: async function () {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];

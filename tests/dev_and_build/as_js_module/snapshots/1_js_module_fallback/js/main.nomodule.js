@@ -2,7 +2,7 @@ System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
   "use strict";
 
   return {
-    setters: [function (_) {}],
+    setters: [function (_fileJsAs_js_module) {}],
     execute: function () {
       window.resolveResultPromise(window.__answer__);
     }

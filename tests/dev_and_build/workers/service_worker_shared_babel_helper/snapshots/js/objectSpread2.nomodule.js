@@ -37,8 +37,8 @@ System.register([__v__("/js/defineProperty.nomodule.js")], function (_export, _c
   }
   _export("default", _objectSpread2);
   return {
-    setters: [function (_g) {
-      defineProperty = _g.default;
+    setters: [function (_definePropertyDefinePropertyJs) {
+      defineProperty = _definePropertyDefinePropertyJs.default;
     }],
     execute: function () {}
   };

@@ -3,8 +3,8 @@ System.register([__v__("/js/toPropertyKey.nomodule.js")], function (_export, _co
 
   var toPropertyKey;
   return {
-    setters: [function (_w) {
-      toPropertyKey = _w.default;
+    setters: [function (_toPropertyKeyToPropertyKeyJs) {
+      toPropertyKey = _toPropertyKeyToPropertyKeyJs.default;
     }],
     execute: function () {
       _export("default", (obj, key, value) => {

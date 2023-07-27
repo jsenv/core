@@ -9,7 +9,7 @@ import {
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 
-export const jsenvPluginJsModuleConversion = () => {
+export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {
     if (
       reference.type === "js_import" ||
@@ -115,8 +115,7 @@ export const jsenvPluginJsModuleConversion = () => {
         inputUrl: jsModuleUrlInfo.url,
         outputUrl: urlInfo.url,
         outputFormat,
-        // during build we preserve absolute urls leading to build directory
-        preferAbsoluteSpecifiers: urlInfo.context.build,
+        remapImportSpecifier,
       });
       return {
         content,

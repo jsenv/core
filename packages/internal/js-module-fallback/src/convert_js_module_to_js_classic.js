@@ -22,6 +22,7 @@ export const convertJsModuleToJsClassic = async ({
   outputUrl,
   outputFormat = "system", // "systemjs" or "umd"
   preferAbsoluteSpecifiers,
+  remapImportSpecifier = (specifier) => specifier,
 }) => {
   /*
    * When systemjs or umd format is used by babel, it will generated UID based on
@@ -32,6 +33,7 @@ export const convertJsModuleToJsClassic = async ({
    * But to fix this issue once and for all there is babelPluginRelativeImports below
    */
   const transformImportSpecifier = (specifier) => {
+    specifier = remapImportSpecifier(specifier);
     if (!specifier.startsWith("file://")) {
       return null;
     }
