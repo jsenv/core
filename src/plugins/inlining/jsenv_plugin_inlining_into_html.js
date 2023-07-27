@@ -8,8 +8,8 @@ import {
   setHtmlNodeAttributes,
   setHtmlNodeText,
   getHtmlNodePosition,
+  getUrlForContentInsideHtml,
 } from "@jsenv/ast";
-import { generateInlineContentUrl, urlToExtension } from "@jsenv/urls";
 
 export const jsenvPluginInliningIntoHtml = () => {
   return {
@@ -36,17 +36,11 @@ export const jsenvPluginInliningIntoHtml = () => {
           if (!linkReference.searchParams.has("inline")) {
             return;
           }
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(linkNode, {
-              preferOriginal: true,
-            });
-          const linkInlineUrl = generateInlineContentUrl({
+          const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
+            preferOriginal: true,
+          });
+          const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
             url: linkReference.url,
-            extension: urlToExtension(linkReference.url),
-            line,
-            column,
-            lineEnd,
-            columnEnd,
           });
           const linkReferenceInlined = linkReference.inline({
             line: line - 1,
@@ -93,17 +87,11 @@ export const jsenvPluginInliningIntoHtml = () => {
           if (!scriptReference.searchParams.has("inline")) {
             return;
           }
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(scriptNode, {
-              preferOriginal: true,
-            });
-          const scriptInlineUrl = generateInlineContentUrl({
+          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+            preferOriginal: true,
+          });
+          const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
             url: scriptReference.url,
-            extension: urlToExtension(scriptReference.url),
-            line,
-            column,
-            lineEnd,
-            columnEnd,
           });
           const scriptReferenceInlined = scriptReference.inline({
             line: line - 1,

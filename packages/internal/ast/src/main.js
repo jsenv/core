@@ -33,6 +33,7 @@ export {
   getHtmlNodePosition,
   getHtmlNodeAttributePosition,
 } from "./html/html_node_position.js";
+export { getUrlForContentInsideHtml } from "./html/html_inline_content_url.js";
 
 // css
 export { parseCssUrls } from "./css/parse_css_urls.js";

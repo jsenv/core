@@ -57,8 +57,9 @@ import {
   getHtmlNodePosition,
   getHtmlNodeText,
   setHtmlNodeText,
+  getUrlForContentInsideHtml,
 } from "@jsenv/ast";
-import { generateInlineContentUrl, urlToRelativeUrl } from "@jsenv/urls";
+import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { injectSupervisorIntoJs } from "./js_supervisor.js";
 
@@ -86,20 +87,11 @@ export const injectSupervisorIntoHTML = async (
   const scriptInfos = [];
   // 1. Find inline and remote scripts
   {
-    const handleInlineScript = (
-      scriptNode,
-      { type, extension, textContent },
-    ) => {
-      const { line, column, lineEnd, columnEnd, isOriginal } =
-        getHtmlNodePosition(scriptNode, { preferOriginal: true });
-      const inlineScriptUrl = generateInlineContentUrl({
-        url,
-        extension: extension || ".js",
-        line,
-        column,
-        lineEnd,
-        columnEnd,
+    const handleInlineScript = (scriptNode, { type, textContent }) => {
+      const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+        preferOriginal: true,
       });
+      const inlineScriptUrl = getUrlForContentInsideHtml(scriptNode, { url });
       const inlineScriptSrc = generateInlineScriptSrc({
         type,
         textContent,
@@ -187,7 +179,7 @@ export const injectSupervisorIntoHTML = async (
     };
     visitHtmlNodes(htmlAst, {
       script: (scriptNode) => {
-        const { type, extension } = analyzeScriptNode(scriptNode);
+        const { type } = analyzeScriptNode(scriptNode);
         if (type !== "js_classic" && type !== "js_module") {
           return;
         }
@@ -203,7 +195,6 @@ export const injectSupervisorIntoHTML = async (
         if (scriptNodeText) {
           handleInlineScript(scriptNode, {
             type,
-            extension,
             textContent: scriptNodeText,
           });
           return;

@@ -11,9 +11,8 @@ import {
   analyzeScriptNode,
   parseSrcSet,
   stringifyHtmlAst,
+  getUrlForContentInsideHtml,
 } from "@jsenv/ast";
-import { generateInlineContentUrl } from "@jsenv/urls";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
@@ -146,18 +145,14 @@ const parseAndTransformHtmlReferences = async (
   const createInlineReference = (
     node,
     inlineContent,
-    { extension, type, subtype, expectedType, contentType },
+    { type, expectedType, contentType },
   ) => {
     const hotAccept = getHtmlNodeAttribute(node, "hot-accept") !== undefined;
-    const { line, column, lineEnd, columnEnd, isOriginal } =
-      getHtmlNodePosition(node, { preferOriginal: true });
-    const inlineContentUrl = generateInlineContentUrl({
+    const { line, column, isOriginal } = getHtmlNodePosition(node, {
+      preferOriginal: true,
+    });
+    const inlineContentUrl = getUrlForContentInsideHtml(node, {
       url: urlInfo.url,
-      extension,
-      line,
-      column,
-      lineEnd,
-      columnEnd,
     });
     const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
     const inlineReference = urlInfo.dependencies.foundInline({
@@ -175,32 +170,6 @@ const parseAndTransformHtmlReferences = async (
       debug,
       astInfo: { node },
     });
-
-    const externalSpecifierAttributeName =
-      type === "script"
-        ? "inlined-from-src"
-        : type === "style"
-        ? "inlined-from-href"
-        : null;
-    if (externalSpecifierAttributeName) {
-      const externalSpecifier = getHtmlNodeAttribute(
-        node,
-        externalSpecifierAttributeName,
-      );
-      if (externalSpecifier) {
-        // create an external ref
-        // the goal is only to have the url in the graph (and in dependencies/implicit urls for reload)
-        // not to consider the url is actually used (at least during build)
-        const externalRef = createExternalReference(
-          node,
-          externalSpecifierAttributeName,
-          externalSpecifier,
-          { type, subtype, expectedType, next: inlineReference },
-        );
-        inlineReference.prev = externalRef;
-        inlineReference.original = externalRef;
-      }
-    }
 
     actions.push(async () => {
       await inlineReference.urlInfo.cook();
@@ -224,14 +193,13 @@ const parseAndTransformHtmlReferences = async (
   };
   const visitTextContent = (
     node,
-    { extension, type, subtype, expectedType, contentType },
+    { type, subtype, expectedType, contentType },
   ) => {
     const inlineContent = getHtmlNodeText(node);
     if (!inlineContent) {
       return null;
     }
     return createInlineReference(node, inlineContent, {
-      extension,
       type,
       subtype,
       expectedType,
@@ -262,7 +230,6 @@ const parseAndTransformHtmlReferences = async (
     style: inlineContent
       ? (styleNode) => {
           visitTextContent(styleNode, {
-            extension: ".css",
             type: "style",
             expectedType: "css",
             contentType: "text/css",
@@ -310,20 +277,28 @@ const parseAndTransformHtmlReferences = async (
       }
 
       const inlineRef = visitTextContent(scriptNode, {
-        extension: extension || CONTENT_TYPE.asFileExtension(contentType),
         type: "script",
         subtype,
         expectedType: type,
         contentType,
       });
-      if (inlineRef && extension) {
+      if (inlineRef) {
         // 1. <script type="jsx"> becomes <script>
-        // 2. <script type="module/jsx"> becomes <script type="module">
-        mutations.push(() => {
-          setHtmlNodeAttributes(scriptNode, {
-            type: type === "js_module" ? "module" : undefined,
+        if (type === "js_classic" && extension !== ".js") {
+          mutations.push(() => {
+            setHtmlNodeAttributes(scriptNode, {
+              type: undefined,
+            });
           });
-        });
+        }
+        // 2. <script type="module/jsx"> becomes <script type="module">
+        if (type === "js_module" && extension !== ".js") {
+          mutations.push(() => {
+            setHtmlNodeAttributes(scriptNode, {
+              type: "module",
+            });
+          });
+        }
       }
     },
     a: (aNode) => {
