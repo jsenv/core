@@ -491,7 +491,6 @@ ${ownerUrlInfo.url}`,
   }
   const referencedUrlInfo = reference.urlInfo;
   referencedUrlInfo.referenceFromOthersSet.add(reference);
-  referencedUrlInfo.lastReference = reference;
   applyReferenceEffectsOnUrlInfo(reference);
   for (const implicitRef of reference.implicitReferenceSet) {
     addDependency(implicitRef);
@@ -612,6 +611,8 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
+  // referencedUrlInfo.firstReference = null;
+  // referencedUrlInfo.lastReference = null;
   referencedUrlInfo.onDereferenced(reference);
   return true;
 };
@@ -678,6 +679,18 @@ const getRedirectedReferenceProps = (reference, url) => {
 
 const applyReferenceEffectsOnUrlInfo = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
+  referencedUrlInfo.lastReference = reference;
+  if (reference.isInline) {
+    referencedUrlInfo.isInline = true;
+    referencedUrlInfo.inlineUrlSite = {
+      url: reference.ownerUrlInfo.url,
+      content: reference.isOriginalPosition
+        ? reference.ownerUrlInfo.originalContent
+        : reference.ownerUrlInfo.content,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
+    };
+  }
 
   if (
     referencedUrlInfo.firstReference &&
@@ -700,18 +713,6 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   if (reference.filename && !referencedUrlInfo.filename) {
     referencedUrlInfo.filename = reference.filename;
   }
-  if (reference.isInline) {
-    referencedUrlInfo.isInline = true;
-    referencedUrlInfo.inlineUrlSite = {
-      url: reference.ownerUrlInfo.url,
-      content: reference.isOriginalPosition
-        ? reference.ownerUrlInfo.originalContent
-        : reference.ownerUrlInfo.content,
-      line: reference.specifierLine,
-      column: reference.specifierColumn,
-    };
-  }
-
   if (reference.debug) {
     referencedUrlInfo.debug = true;
   }

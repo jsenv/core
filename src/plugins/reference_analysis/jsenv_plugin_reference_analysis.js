@@ -38,23 +38,29 @@ const jsenvPluginInlineContentFetcher = () => {
       if (!urlInfo.isInline) {
         return null;
       }
-      // we must use last reference because
-      // when updating the file, first reference is the previous version
-      const { lastReference } = urlInfo;
-      const { prev } = lastReference;
+      // - we must use last reference because
+      //   when updating the file, first reference is the previous version
+      // - we cannot use urlInfo.lastReference because it can be the reference created by "http_request"
+      let lastInlineReference;
+      for (const reference of urlInfo.referenceFromOthersSet) {
+        if (reference.isInline) {
+          lastInlineReference = reference;
+        }
+      }
+      const { prev } = lastInlineReference;
       if (prev && !prev.isInline) {
         // got inlined, cook original url
-        if (lastReference.content === undefined) {
+        if (lastInlineReference.content === undefined) {
           const originalUrlInfo = prev.urlInfo;
           await originalUrlInfo.cook();
-          lastReference.content = originalUrlInfo.content;
-          lastReference.contentType = originalUrlInfo.contentType;
+          lastInlineReference.content = originalUrlInfo.content;
+          lastInlineReference.contentType = originalUrlInfo.contentType;
         }
       }
       return {
         originalContent: urlInfo.originalContent,
-        content: lastReference.content,
-        contentType: lastReference.contentType,
+        content: lastInlineReference.content,
+        contentType: lastInlineReference.contentType,
       };
     },
   };

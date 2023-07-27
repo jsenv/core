@@ -240,6 +240,9 @@ const createUrlInfo = (url, context) => {
       if (referenceFromOther.urlInfo !== urlInfo) {
         continue;
       }
+      if (referenceFromOther.ownerUrlInfo.isRoot) {
+        return true;
+      }
       const ref = referenceFromOther.original || referenceFromOther;
       if (ref.isWeak) {
         // weak reference don't count as using the url
