@@ -39,7 +39,7 @@
     "acorn-import-assertions": "1.9.0",
     "acorn-walk": "8.2.0",
     "parse5": "7.1.2",
-    "postcss": "8.4.26",
+    "postcss": "8.4.27",
     "postcss-value-parser": "4.2.0"
   }
 }

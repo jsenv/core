@@ -30,7 +30,7 @@
     "@jsenv/sourcemap": "1.1.0",
     "acorn-import-assertions": "1.9.0",
     "lightningcss": "1.21.5",
-    "rollup": "3.26.3"
+    "rollup": "3.27.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"

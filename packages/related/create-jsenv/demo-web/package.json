@@ -25,9 +25,9 @@
     "@jsenv/test": "1.4.1",
     "eslint": "8.45.0",
     "eslint-plugin-html": "7.1.0",
-    "eslint-plugin-import": "2.27.5",
+    "eslint-plugin-import": "2.28.0",
     "open": "9.1.0",
-    "playwright": "1.36.1",
+    "playwright": "1.36.2",
     "prettier": "3.0.0"
   }
 }

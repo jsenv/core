@@ -1,3 +1,11 @@
+# 38.0.0
+
+- bundling and minification enabled by default during build
+- Improve and fix autoreload on inline content (like css in js)
+- Fix several cases where js module fallback was missing or superflous
+- Correct output for code shared between main document and worker(s)
+- Prevent double injection of side effect files into worker entry points
+
 # 37.1.0
 
 - Fix autoreload during dev
