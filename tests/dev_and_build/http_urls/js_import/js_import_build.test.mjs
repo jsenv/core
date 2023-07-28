@@ -33,7 +33,10 @@ const test = async (params) => {
 };
 
 // http url preserved
-await test();
+await test({
+  bundling: false,
+  minification: false,
+});
 
 // TODO: ability to fetch http url and transform it
 // will be tested when modle are not supported (systemjs)

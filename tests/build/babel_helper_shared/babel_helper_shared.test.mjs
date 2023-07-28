@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -41,7 +40,7 @@ await test({
   runtimeCompat: {
     chrome: "89",
   },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // cannot use <script type="module">
 await test({
@@ -52,5 +51,5 @@ await test({
     firefox: "52",
     safari: "11",
   },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });

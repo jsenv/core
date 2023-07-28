@@ -41,11 +41,15 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_js_module",
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
 });
 // no support for <script type="module">
 await test({
   name: "1_js_module_fallback",
   runtimeCompat: { chrome: "64" },
+  bundling: false,
+  minification: false,
 });
 // no support <script type="module"> + sourcemap as file
 await test({
@@ -58,4 +62,6 @@ await test({
   // should not appear in the url graph.
   // We generate sourcemap here to ensure there won't be a regression on that
   sourcemaps: "file",
+  bundling: false,
+  minification: false,
 });

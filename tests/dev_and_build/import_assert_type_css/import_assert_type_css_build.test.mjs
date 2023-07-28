@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
@@ -43,30 +41,29 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_js_module_fallback",
   runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // chrome 60 + no bundling
 await test({
   name: "1_js_module_fallback_no_bundling",
   runtimeCompat: { chrome: "60" },
+  bundling: false,
+  minification: false,
 });
 // chrome 88 has constructables stylesheet
 // but cannot use js modules due to versioning via importmap (as it does not have importmap)
 await test({
   name: "2_js_module_fallback_css_minified",
   runtimeCompat: { chrome: "88" },
-  plugins: [
-    jsenvPluginBundling(),
-    jsenvPluginMinification({
-      js_module: false,
-      js_classic: false,
-      css: true,
-    }),
-  ],
+  minification: {
+    js_module: false,
+    js_classic: false,
+    css: true,
+  },
 });
 // chrome 89 can use js modules
 await test({
   name: "3_js_module",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });

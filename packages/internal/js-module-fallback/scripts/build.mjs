@@ -1,5 +1,4 @@
 import { build } from "@jsenv/core";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 await build({
@@ -11,13 +10,10 @@ await build({
   ignore: {
     "file://**/node_modules/": true,
   },
-  versioning: false,
-  assetManifest: false,
   runtimeCompat: {
     node: "16.14",
   },
   scenarioPlaceholders: false,
-  plugins: [jsenvPluginBundling()],
 });
 
 // "s.js" is used in the build files, it must be compatible as much as possible
@@ -37,6 +33,7 @@ await build({
   },
   sourcemaps: "file",
   sourcemapsSourcesContent: true,
+  bundling: false,
+  minification: false,
   versioning: false,
-  assetManifest: false,
 });

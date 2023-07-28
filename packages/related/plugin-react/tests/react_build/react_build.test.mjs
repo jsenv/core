@@ -46,6 +46,8 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_js_module",
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
 });
 // no support for <script type="module">
 await test({
@@ -56,6 +58,8 @@ await test({
     firefox: "52",
     safari: "11",
   },
+  bundling: false,
+  minification: false,
 });
 await test({
   name: "2_js_module_fallback_minified",
@@ -65,5 +69,6 @@ await test({
     firefox: "52",
     safari: "11",
   },
-  plugins: [jsenvPluginMinification()],
+  bundling: false,
+  minification: true,
 });

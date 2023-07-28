@@ -8,10 +8,10 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     versioning: false,
     ...params,
   });
@@ -35,4 +35,6 @@ const test = async (params) => {
 // can use <script type="module">
 await test({
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
 });

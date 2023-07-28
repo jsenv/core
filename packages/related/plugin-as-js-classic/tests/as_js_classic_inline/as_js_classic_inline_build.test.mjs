@@ -1,6 +1,5 @@
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
@@ -12,8 +11,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [jsenvPluginBundling(), jsenvPluginAsJsClassic()],
-    versioning: false,
+    plugins: [jsenvPluginAsJsClassic()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
@@ -26,4 +24,6 @@ const test = async (params) => {
 // support for <script type="module">
 await test({
   runtimeCompat: { chrome: "89" },
+  minification: false,
+  versioning: false,
 });

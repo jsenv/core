@@ -1,8 +1,6 @@
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-
 const test = async (name, params) => {
   await build({
     logLevel: "warn",
@@ -21,21 +19,20 @@ const test = async (name, params) => {
   );
 };
 
-await test("0_chunks_default", {
-  plugins: [jsenvPluginBundling()],
+await test({
+  name: "0_chunks_default",
 });
 
-await test("1_chunks_vendors", {
-  plugins: [
-    jsenvPluginBundling({
-      js_module: {
-        chunks: {
-          vendors: {
-            "file://**/node_modules/": true,
-            "./a.js": true,
-          },
+await test({
+  name: "1_chunks_vendors",
+  bundling: {
+    js_module: {
+      chunks: {
+        vendors: {
+          "file://**/node_modules/": true,
+          "./a.js": true,
         },
       },
-    }),
-  ],
+    },
+  },
 });

@@ -6,8 +6,6 @@ const measures = startMeasures({
   filesystem: true,
 });
 const { build } = await import("@jsenv/core");
-const { jsenvPluginMinification } = await import("@jsenv/plugin-minification");
-const { jsenvPluginBundling } = await import("@jsenv/plugin-bundling");
 await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./", import.meta.url),
@@ -15,7 +13,6 @@ await build({
     "./main.html": "main.min.html",
   },
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  plugins: [jsenvPluginMinification(), jsenvPluginBundling()],
 });
 const { duration, memoryHeapTotal, memoryHeapUsed, fsRead, fsWrite } =
   measures.stop();

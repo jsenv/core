@@ -19,19 +19,16 @@ await build({
     firefox: "67",
     safari: "11.3",
   },
-  plugins: [
-    jsenvPluginBundling({
-      js_module: {
-        chunks: {
-          vendors: {
-            "**/node_modules/": true,
-            [jsenvSrcDirectoryUrl]: true,
-          },
+  bundling: {
+    js_module: {
+      chunks: {
+        vendors: {
+          "**/node_modules/": true,
+          [jsenvSrcDirectoryUrl]: true,
         },
       },
-    }),
-    jsenvPluginMinification(),
-  ],
+    },
+  },
 });
 takeDirectorySnapshot(
   new URL("./dist/", import.meta.url),

@@ -1,5 +1,3 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
@@ -10,7 +8,7 @@ await build({
   entryPoints: {
     "./main.css": "main.css",
   },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 takeDirectorySnapshot(
   new URL("./dist/", import.meta.url),

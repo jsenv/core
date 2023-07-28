@@ -7,10 +7,12 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./src/main.html": "index.html",
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  bundling: false,
+  minification: false,
 });
 const server = await startFileServer({
   rootDirectoryUrl: new URL("./dist/", import.meta.url),

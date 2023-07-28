@@ -23,5 +23,7 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_js_module_fallback",
   runtimeCompat: { chrome: "60" },
+  bundling: false,
+  minification: false,
   versioning: false,
 });

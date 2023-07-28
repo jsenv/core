@@ -43,11 +43,15 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_supported",
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
 });
 // no support for <script type="module">
 await test({
   name: "1_not_supported",
   runtimeCompat: { chrome: "55" },
+  bundling: false,
+  minification: false,
 });
 
 // support for <script type="module"> but not TLA
@@ -59,6 +63,8 @@ await test({
 try {
   await test({
     runtimeCompat: { chrome: "65" },
+    bundling: false,
+    minification: false,
     versioning: false,
   });
   throw new Error("should throw");

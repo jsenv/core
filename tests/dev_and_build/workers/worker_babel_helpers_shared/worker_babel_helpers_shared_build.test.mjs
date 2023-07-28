@@ -6,7 +6,6 @@
  */
 
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -17,11 +16,10 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    plugins: [jsenvPluginBundling()],
     transpilation: {
       // topLevelAwait: "ignore",
     },
@@ -45,4 +43,7 @@ const test = async (params) => {
   assert({ actual, expected });
 };
 
-await test({ runtimeCompat: { edge: "17" } });
+await test({
+  runtimeCompat: { edge: "17" },
+  minification: false,
+});

@@ -1,5 +1,4 @@
 import { build } from "@jsenv/core";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -23,11 +22,8 @@ await build({
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
   },
-  versioning: false,
-  assetManifest: false,
   runtimeCompat: {
     node: "16.14",
   },
   scenarioPlaceholders: false,
-  plugins: [jsenvPluginBundling()],
 });

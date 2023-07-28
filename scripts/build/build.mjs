@@ -1,4 +1,3 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 import { build } from "@jsenv/core";
@@ -34,8 +33,6 @@ await build({
   directoryReferenceAllowed: (reference) => {
     return reference.url.includes("/babel_helpers/");
   },
-  versioning: false,
-  assetManifest: false,
   runtimeCompat: {
     node: "16.14",
   },
@@ -46,7 +43,6 @@ await build({
         "file:///**/node_modules/ws/": true,
       },
     }),
-    jsenvPluginBundling(),
   ],
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),

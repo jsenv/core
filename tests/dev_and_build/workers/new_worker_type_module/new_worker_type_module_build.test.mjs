@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -42,28 +41,32 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_worker_type_module",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // no support for {type: "module"} in new Worker
 await test({
   name: "1_worker_type_module_not_supported",
   runtimeCompat: { chrome: "79" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // no support for <script type="modue">
 await test({
   name: "2_script_type_module_not_supported",
   runtimeCompat: { chrome: "62" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // support + no bundling
 await test({
   name: "3_worker_type_module_no_bundling",
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
   versioning: false,
 });
 // no support + no bundling
 await test({
   name: "4_worker_type_module_not_supported_no_bundling",
   runtimeCompat: { chrome: "79" },
+  bundling: false,
+  minification: false,
 });

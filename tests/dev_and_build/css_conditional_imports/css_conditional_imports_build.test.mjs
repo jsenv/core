@@ -18,4 +18,7 @@ const test = async (params) => {
   );
 };
 
-await test();
+await test({
+  bundling: false,
+  minification: false,
+});

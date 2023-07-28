@@ -41,17 +41,23 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_supported",
   runtimeCompat: { chrome: "107" },
+  bundling: false,
+  minification: false,
   versioning: false,
 });
 // module supported but import.meta.resolve is not
 await test({
   name: "1_not_supported",
   runtimeCompat: { chrome: "80" },
+  bundling: false,
+  minification: false,
   versioning: false,
 });
 // script module not supported
 await test({
   name: "2_js_module_not_supported",
   runtimeCompat: { chrome: "60" },
+  bundling: false,
+  minification: false,
   versioning: false,
 });
