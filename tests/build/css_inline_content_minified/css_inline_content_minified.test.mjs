@@ -1,6 +1,3 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-import { jsenvPluginMinification } from "@jsenv/plugin-minification";
-
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
