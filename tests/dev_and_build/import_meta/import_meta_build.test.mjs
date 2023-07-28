@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -49,13 +48,13 @@ const test = async (name, { expectedBuildPath, ...rest }) => {
 await test("0_js_module", {
   expectedBuildPath: "/js/main.js",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
   versioning: false,
 });
 // cannot use <script type="module">
 await test("1_js_module_fallback", {
   expectedBuildPath: "/js/main.nomodule.js",
   runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
   versioning: false,
 });

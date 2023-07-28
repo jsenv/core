@@ -1,6 +1,3 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-import { jsenvPluginMinification } from "@jsenv/plugin-minification";
-
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
@@ -19,19 +16,16 @@ await build({
     firefox: "67",
     safari: "11.3",
   },
-  plugins: [
-    jsenvPluginBundling({
-      js_module: {
-        chunks: {
-          vendors: {
-            "**/node_modules/": true,
-            [jsenvSrcDirectoryUrl]: true,
-          },
+  bundling: {
+    js_module: {
+      chunks: {
+        vendors: {
+          "**/node_modules/": true,
+          [jsenvSrcDirectoryUrl]: true,
         },
       },
-    }),
-    jsenvPluginMinification(),
-  ],
+    },
+  },
 });
 takeDirectorySnapshot(
   new URL("./dist/", import.meta.url),

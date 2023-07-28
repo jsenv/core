@@ -1,6 +1,5 @@
 import { build, startBuildServer } from "@jsenv/core";
 import { requestCertificate } from "@jsenv/https-local";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginGlobals } from "@jsenv/plugin-globals";
 
 const buildStory = async (name) => {
@@ -8,12 +7,12 @@ const buildStory = async (name) => {
     handleSIGINT: false,
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./project/src/", import.meta.url),
+    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+    minification: false,
     plugins: [
-      jsenvPluginBundling(),
       {
         resolveReference: (reference) => {
           if (reference.specifier.includes("animal.svg")) {

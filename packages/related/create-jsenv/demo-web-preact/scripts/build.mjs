@@ -6,8 +6,6 @@
 
 import { build } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -15,15 +13,12 @@ await build({
   entryPoints: {
     "./main.html": "index.html",
   },
-  plugins: [
-    jsenvPluginPreact(),
-    jsenvPluginBundling({
-      js_module: {
-        chunks: {
-          vendors: { "file:///**/node_modules/": true },
-        },
+  bundling: {
+    js_module: {
+      chunks: {
+        vendors: { "file:///**/node_modules/": true },
       },
-    }),
-    jsenvPluginMinification(),
-  ],
+    },
+  },
+  plugins: [jsenvPluginPreact()],
 });

@@ -1,5 +1,3 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
@@ -24,24 +22,28 @@ if (process.platform === "darwin") {
   await test({
     name: "1",
     runtimeCompat: { chrome: "80" },
-    plugins: [jsenvPluginBundling()],
+    minification: false,
     versioning: false, // to prevent importmap forcing fallback on js classic
   });
   // support + no bundling
   await test({
     name: "2",
     runtimeCompat: { chrome: "80" },
+    bundling: false,
+    minification: false,
     versioning: false, // to prevent importmap forcing fallback on js classic
   });
   // no support for { type: "module" } on service worker
   await test({
     name: "3",
     runtimeCompat: { chrome: "79" },
-    plugins: [jsenvPluginBundling()],
+    minification: false,
   });
   // no support for { type: "module" } on service worker + no bundling
   await test({
     name: "4",
     runtimeCompat: { chrome: "79" },
+    bundling: false,
+    minification: false,
   });
 }

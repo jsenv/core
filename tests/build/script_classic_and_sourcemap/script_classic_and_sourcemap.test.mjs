@@ -34,4 +34,7 @@ const test = async (params) => {
   assert({ actual, expected });
 };
 
-await test();
+await test({
+  bundling: false,
+  minification: false,
+});

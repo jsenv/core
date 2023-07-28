@@ -14,8 +14,10 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     runtimeCompat: { chrome: "98" },
+    bundling: false,
+    minification: false,
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
   takeDirectorySnapshot(

@@ -48,4 +48,6 @@ const test = async (params) => {
 await test({
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginAsJsClassic()],
+  bundling: false,
+  minification: false,
 });

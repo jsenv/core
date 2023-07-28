@@ -37,5 +37,7 @@ const test = async (params) => {
 // can use <script type="module">
 await test({
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
   versioning: false,
 });

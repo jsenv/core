@@ -24,6 +24,8 @@ import {
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/log";
 import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
@@ -90,10 +92,10 @@ export const build = async ({
   buildDirectoryUrl,
   entryPoints = {},
   assetsDirectory = "",
-  ignore,
-
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
+  ignore,
+
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
@@ -102,6 +104,8 @@ export const build = async ({
   directoryReferenceAllowed,
   scenarioPlaceholders,
   transpilation = {},
+  bundling = true,
+  minification = !runtimeCompat.node,
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
   versioningViaImportmap = true,
@@ -178,6 +182,12 @@ export const build = async ({
         `versioningMethod must be "filename" or "search_param", got ${versioning}`,
       );
     }
+    if (bundling === true) {
+      bundling = {};
+    }
+    if (minification === true) {
+      minification = {};
+    }
   }
 
   const operation = Abort.startOperation();
@@ -248,6 +258,8 @@ build ${entryPointKeys.length} entry points`);
       initialContext: contextSharedDuringBuild,
       plugins: [
         ...plugins,
+        ...(bundling ? [jsenvPluginBundling(bundling)] : []),
+        ...(minification ? [jsenvPluginMinification(minification)] : []),
         {
           appliesDuring: "build",
           fetchUrlContent: (urlInfo) => {

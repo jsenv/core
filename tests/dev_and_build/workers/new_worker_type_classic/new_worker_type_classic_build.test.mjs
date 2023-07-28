@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
@@ -9,10 +8,10 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     transpilation: {
       // topLevelAwait: "ignore",
     },
@@ -36,8 +35,11 @@ const test = async (params) => {
 };
 
 await test({
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 
 // no bundling
-await test();
+await test({
+  bundling: false,
+  minification: false,
+});

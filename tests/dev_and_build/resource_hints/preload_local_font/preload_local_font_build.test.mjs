@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build, startBuildServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -50,11 +49,11 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_js_module",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // no support for <script type="module">
 await test({
   name: "1_js_module_fallback",
   runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });

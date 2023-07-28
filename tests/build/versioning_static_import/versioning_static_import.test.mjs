@@ -16,7 +16,6 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -33,18 +32,17 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
         "./main.html": "main.html",
       },
       versioningMethod: "filename",
-      plugins: [
-        // we could just disable bundling to achieve the same result
-        // but this allows to test versioning with bundling and include param
-        jsenvPluginBundling({
-          js_module: {
-            include: {
-              "**/*": true,
-              "./file.js": false,
-            },
+      // we could just disable bundling to achieve the same result
+      // but this allows to test versioning with bundling and include param
+      bundling: {
+        js_module: {
+          include: {
+            "**/*": true,
+            "./file.js": false,
           },
-        }),
-      ],
+        },
+      },
+      minification: false,
       outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
       ...rest,
     });

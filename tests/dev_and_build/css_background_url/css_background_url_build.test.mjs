@@ -9,7 +9,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.css": "main.css",
     },
-
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
@@ -19,4 +18,7 @@ const test = async (params) => {
   );
 };
 
-await test();
+await test({
+  bundling: false,
+  minification: false,
+});

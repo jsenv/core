@@ -1,7 +1,6 @@
 // https://github.com/rollup/rollup/tree/dba6f13132a1d7dac507d5056399d8af0eed6375/test/function/samples/preserve-modules-circular-order
 
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -26,7 +25,7 @@ const test = async ({ name, ...params }) => {
 {
   await test({
     name: "0_with_bundling",
-    plugins: [jsenvPluginBundling()],
+    minification: false,
   });
   // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./dist/main.js");
@@ -41,6 +40,8 @@ const test = async ({ name, ...params }) => {
 {
   await test({
     name: "1_without_bundling",
+    bundling: false,
+    minification: false,
   });
   // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./dist/main.js");

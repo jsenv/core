@@ -1,5 +1,4 @@
 import { build } from "@jsenv/core";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
@@ -17,6 +16,6 @@ await build({
     firefox: "67",
     safari: "11.3",
   },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
   versioning: false,
 });

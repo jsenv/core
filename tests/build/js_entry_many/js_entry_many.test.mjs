@@ -8,11 +8,13 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  buildDirectoryUrl: new URL("./dist/", import.meta.url),
   entryPoints: {
     "./a.js": "a.js",
     "./b.js": "b.js",
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  bundling: false,
+  minification: false,
 });
 copyFileSync(
   new URL("./client/a.html", import.meta.url),

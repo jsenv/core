@@ -9,10 +9,10 @@ const test = async (params) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
     },
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
     plugins: [
       jsenvPluginGlobals({
         "./main.js": () => {
@@ -39,6 +39,14 @@ const test = async (params) => {
 };
 
 // support for <script type="module">
-await test({ runtimeCompat: { chrome: "64" } });
+await test({
+  runtimeCompat: { chrome: "64" },
+  bundling: false,
+  minification: false,
+});
 // no support for <script type="module">
-await test({ runtimeCompat: { chrome: "62" } });
+await test({
+  runtimeCompat: { chrome: "62" },
+  bundling: false,
+  minification: false,
+});

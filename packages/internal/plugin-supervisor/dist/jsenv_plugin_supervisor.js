@@ -318,6 +318,16 @@ const SOURCEMAP = {
     }[contentType];
     return read ? read(content) : null;
   },
+  removeComment: ({
+    contentType,
+    content
+  }) => {
+    return SOURCEMAP.writeComment({
+      contentType,
+      content,
+      specifier: ""
+    });
+  },
   writeComment: ({
     contentType,
     content,
@@ -392,8 +402,12 @@ const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s
 const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g;
 
 // ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
-const writeJavaScriptSourceMappingURL = value => "//#".concat(" sourceMappingURL=", value);
-const writeCssSourceMappingUrl = value => "/*# sourceMappingURL=".concat(value, " */");
+const writeJavaScriptSourceMappingURL = value => {
+  return "//#".concat(" sourceMappingURL=", value);
+};
+const writeCssSourceMappingUrl = value => {
+  return "/*# sourceMappingURL=".concat(value, " */");
+};
 const replaceSourceMappingUrl = (source, regexp, callback) => {
   let lastSourceMappingUrl;
   let matchSourceMappingUrl;

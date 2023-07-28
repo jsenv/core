@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
@@ -44,18 +43,20 @@ await test({
   name: "0_js_module",
   expectedUrl: "/js/main.js?v=1db7e21d",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // cannot use <script type="module">
 await test({
   name: "1_js_module_fallback",
   expectedUrl: "/js/main.nomodule.js?v=57e5ed5d",
   runtimeCompat: { chrome: "60" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
 // cannot use + no bundling
 await test({
   name: "2_js_module_fallback_no_bundling",
   expectedUrl: `/js/main.nomodule.js?v=d8165ca1`,
   runtimeCompat: { chrome: "60" },
+  bundling: false,
+  minification: false,
 });

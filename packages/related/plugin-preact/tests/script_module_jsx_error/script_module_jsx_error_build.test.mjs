@@ -23,6 +23,8 @@ const test = async (params) => {
 try {
   await test({
     runtimeCompat: { chrome: "89" },
+    bundling: false,
+    minification: false,
   });
   const htmlFileUrl = new URL("./client/main.noeslint.html", import.meta.url)
     .href;

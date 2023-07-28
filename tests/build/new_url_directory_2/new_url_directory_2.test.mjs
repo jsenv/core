@@ -29,4 +29,6 @@ const test = async (params) => {
 await test({
   directoryReferenceAllowed: true,
   runtimeCompat: { node: "19" },
+  bundling: false,
+  minification: false,
 });

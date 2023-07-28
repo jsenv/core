@@ -1,5 +1,3 @@
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
-
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
@@ -11,8 +9,6 @@ const test = async (params) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    plugins: [jsenvPluginBundling()],
-    versioning: true,
     ...params,
   });
   takeDirectorySnapshot(
@@ -21,4 +17,6 @@ const test = async (params) => {
   );
 };
 
-await test();
+await test({
+  minification: false,
+});

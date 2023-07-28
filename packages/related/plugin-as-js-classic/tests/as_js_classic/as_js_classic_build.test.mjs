@@ -37,4 +37,8 @@ const test = async (params) => {
 };
 
 // no support for spread operator
-await test({ runtimeCompat: { chrome: "55" } });
+await test({
+  runtimeCompat: { chrome: "55" },
+  bundling: false,
+  minification: false,
+});

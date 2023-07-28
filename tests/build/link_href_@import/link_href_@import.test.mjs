@@ -1,12 +1,11 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -35,12 +34,14 @@ const test = async (name, params) => {
   assert({ actual, expected });
 };
 
-await test("default", {
+await test({
+  name: "default",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
 });
-await test("no_versioning", {
-  versioning: false,
+await test({
+  name: "no_versioning",
   runtimeCompat: { chrome: "89" },
-  plugins: [jsenvPluginBundling()],
+  minification: false,
+  versioning: false,
 });

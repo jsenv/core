@@ -14,6 +14,8 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     transpilation: { css: false },
+    bundling: false,
+    minification: false,
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });

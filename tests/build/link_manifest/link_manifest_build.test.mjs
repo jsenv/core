@@ -9,7 +9,8 @@ const { buildFileContents } = await build({
   entryPoints: {
     "./src/main.html": "main.html",
   },
-
+  bundling: false,
+  minification: false,
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
 });
 const { start_url, icons } = JSON.parse(

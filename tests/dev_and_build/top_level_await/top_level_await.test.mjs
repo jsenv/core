@@ -39,9 +39,13 @@ const test = async ({ name, ...params }) => {
 await test({
   name: "0_supported",
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
 });
 // no support for top level await
 await test({
   name: "1_not_supported",
   runtimeCompat: { chrome: "55" },
+  bundling: false,
+  minification: false,
 });

@@ -51,10 +51,14 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
 await test({
   snapshotsDirectoryUrl: new URL("./snapshots/importmap/", import.meta.url),
   runtimeCompat: { chrome: "89" },
+  bundling: false,
+  minification: false,
 });
 
 // does not support importmap
 await test({
   snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
   runtimeCompat: { chrome: "88" },
+  bundling: false,
+  minification: false,
 });

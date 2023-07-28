@@ -1,11 +1,11 @@
 {
-  "name": "@jsenv/plugin-minification",
-  "version": "1.4.1",
+  "name": "@jsenv/plugin-bundling",
+  "version": "2.5.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/related/plugin-minification"
+    "directory": "packages/related/plugin-bundling"
   },
   "publishConfig": {
     "access": "public"
@@ -24,9 +24,13 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "html-minifier": "4.0.0",
+    "@jsenv/log": "3.4.0",
+    "@jsenv/url-meta": "8.1.0",
+    "@jsenv/urls": "2.2.0",
+    "@jsenv/sourcemap": "1.2.0",
+    "acorn-import-assertions": "1.9.0",
     "lightningcss": "1.21.5",
-    "terser": "5.19.1"
+    "rollup": "3.27.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
