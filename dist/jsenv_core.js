@@ -14,9 +14,9 @@ import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
 import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, getUrlForContentInsideJs, findHtmlNode, removeHtmlNode, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
-import { createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
@@ -8178,6 +8178,700 @@ const createServerEventsDispatcher = () => {
       clients.forEach((client) => {
         client.destroy();
       });
+    },
+  };
+};
+
+const fileUrlConverter = {
+  asFilePath: (fileUrl) => {
+    const filePath = urlToFileSystemPath(fileUrl);
+    const urlObject = new URL(fileUrl);
+    const { searchParams } = urlObject;
+    return `${filePath}${stringifyQuery(searchParams)}`;
+  },
+  asFileUrl: (filePath) => {
+    return decodeURIComponent(fileSystemPathToUrl$1(filePath)).replace(
+      /[=](?=&|$)/g,
+      "",
+    );
+  },
+};
+
+const stringifyQuery = (searchParams) => {
+  const search = searchParams.toString();
+  return search ? `?${search}` : "";
+};
+
+// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
+const bundleCss = async (cssUrlInfos) => {
+  const bundledCssUrlInfos = {};
+  const { bundleAsync } = await import("lightningcss");
+  const targets = runtimeCompatToTargets$2(cssUrlInfos[0].context.runtimeCompat);
+  for (const cssUrlInfo of cssUrlInfos) {
+    const filename = fileUrlConverter.asFilePath(cssUrlInfo.originalUrl);
+    const { code, map } = await bundleAsync({
+      filename,
+      targets,
+      minify: false,
+      resolver: {
+        read: (specifier) => {
+          const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
+          const fileUrl = String(fileUrlObject);
+          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
+          return urlInfo.content;
+        },
+        resolve(specifier, from) {
+          const fileUrlObject = new URL(specifier, pathToFileURL(from));
+          const filePath = fileURLToPath(fileUrlObject);
+          return filePath;
+        },
+      },
+    });
+    bundledCssUrlInfos[cssUrlInfo.url] = {
+      data: {
+        bundlerName: "lightningcss",
+      },
+      contentType: "text/css",
+      content: String(code),
+      sourcemap: map,
+    };
+  }
+  return bundledCssUrlInfos;
+};
+
+const runtimeCompatToTargets$2 = (runtimeCompat) => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits$2(version);
+    }
+  });
+  return targets;
+};
+
+const versionToBits$2 = (version) => {
+  const [major, minor = 0, patch = 0] = version
+    .split("-")[0]
+    .split(".")
+    .map((v) => parseInt(v, 10));
+  return (major << 16) | (minor << 8) | patch;
+};
+
+/*
+ * TODO:
+ * js classic might contain importScripts or self.importScripts calls
+ * (when it's inside worker, service worker, etc...)
+ * ideally we should bundle it when urlInfo.subtype === "worker"
+ */
+
+// import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
+
+const bundleJsClassic = () => {
+  return {};
+};
+
+const bundleJsModules = async (
+  jsModuleUrlInfos,
+  {
+    buildDirectoryUrl,
+    include,
+    chunks = {},
+    strictExports = false,
+    preserveDynamicImport = false,
+    augmentDynamicImportUrlSearchParams = () => {},
+    rollup,
+    rollupInput = {},
+    rollupOutput = {},
+    rollupPlugins = [],
+  },
+) => {
+  const {
+    signal,
+    logger,
+    rootDirectoryUrl,
+    runtimeCompat,
+    sourcemaps,
+    isSupportedOnCurrentClients,
+    getPluginMeta,
+  } = jsModuleUrlInfos[0].context;
+  const graph = jsModuleUrlInfos[0].graph;
+  if (buildDirectoryUrl === undefined) {
+    buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
+  }
+
+  let manualChunks;
+  if (Object.keys(chunks).length) {
+    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
+    manualChunks = (id) => {
+      if (rollupOutput.manualChunks) {
+        const manualChunkName = rollupOutput.manualChunks(id);
+        if (manualChunkName) {
+          return manualChunkName;
+        }
+      }
+      const url = fileUrlConverter.asFileUrl(id);
+      const urlObject = new URL(url);
+      urlObject.search = "";
+      const urlWithoutSearch = urlObject.href;
+      const meta = URL_META.applyAssociations({
+        url: urlWithoutSearch,
+        associations,
+      });
+      const chunkName = Object.keys(meta).find((key) => meta[key]);
+      return chunkName || null;
+    };
+  }
+
+  const resultRef = { current: null };
+  const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
+  try {
+    await applyRollupPlugins({
+      rollup,
+      rollupPlugins: [
+        ...rollupPlugins,
+        rollupPluginJsenv({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          graph,
+          jsModuleUrlInfos,
+
+          runtimeCompat,
+          sourcemaps,
+          include,
+          preserveDynamicImport,
+          augmentDynamicImportUrlSearchParams,
+          strictExports,
+          resultRef,
+        }),
+      ],
+      rollupInput: {
+        input: [],
+        onwarn: (warning) => {
+          if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return;
+          }
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
+            return;
+          }
+          logger.warn(String(warning));
+        },
+        ...rollupInput,
+      },
+      rollupOutput: {
+        compact: willMinifyJsModule,
+        minifyInternalExports: willMinifyJsModule,
+        generatedCode: {
+          arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
+          constBindings: isSupportedOnCurrentClients("const_bindings"),
+          objectShorthand: isSupportedOnCurrentClients(
+            "object_properties_shorthand",
+          ),
+          reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
+          symbols: isSupportedOnCurrentClients("symbols"),
+        },
+        ...rollupOutput,
+        manualChunks,
+      },
+    });
+    return resultRef.current.jsModuleBundleUrlInfos;
+  } catch (e) {
+    if (e.code === "MISSING_EXPORT") {
+      const detailedMessage = createDetailedMessage$1(e.message, {
+        frame: e.frame,
+      });
+      throw new Error(detailedMessage, { cause: e });
+    }
+    throw e;
+  }
+};
+
+const rollupPluginJsenv = ({
+  // logger,
+  rootDirectoryUrl,
+  graph,
+  jsModuleUrlInfos,
+  sourcemaps,
+
+  include,
+  preserveDynamicImport,
+  augmentDynamicImportUrlSearchParams,
+  strictExports,
+
+  resultRef,
+}) => {
+  let _rollupEmitFile = () => {
+    throw new Error("not implemented");
+  };
+  const format = jsModuleUrlInfos.some((jsModuleUrlInfo) =>
+    jsModuleUrlInfo.filenameHint.endsWith(".cjs"),
+  )
+    ? "cjs"
+    : "esm";
+  const emitChunk = (chunk) => {
+    return _rollupEmitFile({
+      type: "chunk",
+      ...chunk,
+    });
+  };
+  let importCanBeBundled = () => true;
+  if (include) {
+    const associations = URL_META.resolveAssociations(
+      { bundle: include },
+      rootDirectoryUrl,
+    );
+    importCanBeBundled = (url) => {
+      return URL_META.applyAssociations({ url, associations }).bundle;
+    };
+  }
+
+  const getOriginalUrl = (rollupFileInfo) => {
+    const { facadeModuleId } = rollupFileInfo;
+    if (facadeModuleId) {
+      return fileUrlConverter.asFileUrl(facadeModuleId);
+    }
+    if (rollupFileInfo.isDynamicEntry) {
+      const { moduleIds } = rollupFileInfo;
+      const lastModuleId = moduleIds[moduleIds.length - 1];
+      return fileUrlConverter.asFileUrl(lastModuleId);
+    }
+    return new URL(rollupFileInfo.fileName, rootDirectoryUrl).href;
+  };
+
+  return {
+    name: "jsenv",
+    async buildStart() {
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+      let previousNonEntryPointModuleId;
+      jsModuleUrlInfos.forEach((jsModuleUrlInfo) => {
+        const id = jsModuleUrlInfo.url;
+        if (jsModuleUrlInfo.isEntryPoint) {
+          emitChunk({
+            id,
+          });
+          return;
+        }
+        let preserveSignature;
+        if (strictExports) {
+          preserveSignature = "strict";
+        } else {
+          // When referenced only once we can enable allow-extension
+          // otherwise stick to strict exports to ensure all importers
+          // receive the correct exports
+          let firstStrongRef = null;
+          let hasMoreThanOneStrongRefFromOther = false;
+          for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
+            if (referenceFromOther.isWeak) {
+              continue;
+            }
+            if (firstStrongRef) {
+              hasMoreThanOneStrongRefFromOther = true;
+              break;
+            }
+            firstStrongRef = referenceFromOther;
+          }
+          preserveSignature = hasMoreThanOneStrongRefFromOther
+            ? "strict"
+            : "allow-extension";
+        }
+        emitChunk({
+          id,
+          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
+            ? [previousNonEntryPointModuleId]
+            : null,
+          preserveSignature,
+        });
+        previousNonEntryPointModuleId = id;
+      });
+    },
+    async generateBundle(outputOptions, rollupResult) {
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+
+      const createBundledFileInfo = (rollupFileInfo) => {
+        const originalUrl = getOriginalUrl(rollupFileInfo);
+        const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
+          fileUrlConverter.asFileUrl(id),
+        );
+
+        const specifierToUrlMap = new Map();
+        const { imports, dynamicImports } = rollupFileInfo;
+        for (const importFileName of imports) {
+          if (!importFileName.startsWith("file:")) {
+            const importRollupFileInfo = rollupResult[importFileName];
+            if (!importRollupFileInfo) {
+              // happens for external import, like "ignore:" or anything marked as external
+              specifierToUrlMap.set(importFileName, importFileName);
+              continue;
+            }
+            const importUrl = getOriginalUrl(importRollupFileInfo);
+            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+            specifierToUrlMap.set(rollupSpecifier, importUrl);
+          }
+        }
+        for (const dynamicImportFileName of dynamicImports) {
+          if (!dynamicImportFileName.startsWith("file:")) {
+            const dynamicImportRollupFileInfo =
+              rollupResult[dynamicImportFileName];
+            if (!dynamicImportRollupFileInfo) {
+              // happens for external import, like "ignore:" or anything marked as external
+              specifierToUrlMap.set(
+                dynamicImportFileName,
+                dynamicImportFileName,
+              );
+              continue;
+            }
+            const dynamicImportUrl = getOriginalUrl(
+              dynamicImportRollupFileInfo,
+            );
+            const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
+            specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
+          }
+        }
+
+        return {
+          originalUrl,
+          type: format === "esm" ? "js_module" : "common_js",
+          data: {
+            bundlerName: "rollup",
+            bundleRelativeUrl: rollupFileInfo.fileName,
+            usesImport:
+              rollupFileInfo.imports.length > 0 ||
+              rollupFileInfo.dynamicImports.length > 0,
+            isDynamicEntry: rollupFileInfo.isDynamicEntry,
+          },
+          sourceUrls,
+          contentType: "text/javascript",
+          content: rollupFileInfo.code,
+          sourcemap: rollupFileInfo.map,
+          // rollup is generating things like "./file.js"
+          // that must be converted back to urls for jsenv
+          remapReference:
+            specifierToUrlMap.size > 0
+              ? (reference) => {
+                  // rollup generate specifiers only for static and dynamic imports
+                  // other references (like new URL()) are ignored
+                  // there is no need to remap them back
+                  if (reference.type === "js_import") {
+                    return specifierToUrlMap.get(reference.specifier);
+                  }
+                  return reference.specifier;
+                }
+              : undefined,
+        };
+      };
+
+      const jsModuleBundleUrlInfos = {};
+      const fileNames = Object.keys(rollupResult);
+      for (const fileName of fileNames) {
+        const rollupFileInfo = rollupResult[fileName];
+        // there is 3 types of file: "placeholder", "asset", "chunk"
+        if (rollupFileInfo.type === "chunk") {
+          const jsModuleInfo = createBundledFileInfo(rollupFileInfo);
+          jsModuleBundleUrlInfos[jsModuleInfo.originalUrl] = jsModuleInfo;
+        }
+      }
+
+      resultRef.current = {
+        jsModuleBundleUrlInfos,
+      };
+    },
+    outputOptions: (outputOptions) => {
+      // const sourcemapFile = buildDirectoryUrl
+      Object.assign(outputOptions, {
+        format,
+        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
+        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
+        // sourcemapFile,
+        sourcemapPathTransform: (relativePath) => {
+          return new URL(relativePath, rootDirectoryUrl).href;
+        },
+        entryFileNames: () => {
+          return `[name].js`;
+        },
+        chunkFileNames: (chunkInfo) => {
+          return `${chunkInfo.name}.js`;
+        },
+      });
+    },
+    // https://rollupjs.org/guide/en/#resolvedynamicimport
+    resolveDynamicImport: (specifier, importer) => {
+      if (preserveDynamicImport) {
+        let urlObject;
+        if (specifier[0] === "/") {
+          urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
+        } else {
+          if (isFileSystemPath$1(importer)) {
+            importer = fileUrlConverter.asFileUrl(importer);
+          }
+          urlObject = new URL(specifier, importer);
+        }
+        const searchParamsToAdd =
+          augmentDynamicImportUrlSearchParams(urlObject);
+        if (searchParamsToAdd) {
+          Object.keys(searchParamsToAdd).forEach((key) => {
+            const value = searchParamsToAdd[key];
+            if (value === undefined) {
+              urlObject.searchParams.delete(key);
+            } else {
+              urlObject.searchParams.set(key, value);
+            }
+          });
+        }
+        return { external: true, id: urlObject.href };
+      }
+      return null;
+    },
+    resolveId: (specifier, importer = rootDirectoryUrl) => {
+      if (isFileSystemPath$1(importer)) {
+        importer = fileUrlConverter.asFileUrl(importer);
+      }
+      let url;
+      if (specifier[0] === "/") {
+        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
+      } else {
+        url = new URL(specifier, importer).href;
+      }
+      if (!url.startsWith("file:")) {
+        return { id: url, external: true };
+      }
+      if (!importCanBeBundled(url)) {
+        return { id: url, external: true };
+      }
+      const urlInfo = graph.getUrlInfo(url);
+      if (!urlInfo) {
+        // happen when excluded by referenceAnalysis.include
+        return { id: url, external: true };
+      }
+      if (urlInfo.url.startsWith("ignore:")) {
+        return { id: url, external: true };
+      }
+      const filePath = fileUrlConverter.asFilePath(url);
+      return filePath;
+    },
+    async load(rollupId) {
+      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
+      const urlInfo = graph.getUrlInfo(fileUrl);
+      return {
+        code: urlInfo.content,
+        map:
+          (sourcemaps === "file" || sourcemaps === "inline") &&
+          urlInfo.sourcemap
+            ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
+            : null,
+      };
+    },
+  };
+};
+
+const applyRollupPlugins = async ({
+  rollup,
+  rollupPlugins,
+  rollupInput,
+  rollupOutput,
+}) => {
+  if (!rollup) {
+    const rollupModule = await import("rollup");
+    rollup = rollupModule.rollup;
+  }
+  const { importAssertions } = await import("acorn-import-assertions");
+  const rollupReturnValue = await rollup({
+    ...rollupInput,
+    plugins: rollupPlugins,
+    acornInjectPlugins: [
+      importAssertions,
+      ...(rollupInput.acornInjectPlugins || []),
+    ],
+  });
+  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
+  return rollupOutputArray;
+};
+
+const jsenvPluginBundling = ({
+  css = {},
+  js_classic = {},
+  js_module = {},
+} = {}) => {
+  const bundle = {};
+
+  if (css) {
+    bundle.css = (cssUrlInfos) => {
+      return bundleCss(cssUrlInfos);
+    };
+  }
+  if (js_classic) {
+    bundle.js_classic = (jsClassicUrlInfos) => {
+      return bundleJsClassic();
+    };
+  }
+  if (js_module) {
+    if (js_module === true) {
+      js_module = {};
+    }
+    bundle.js_module = (jsModuleUrlInfos) => {
+      return bundleJsModules(jsModuleUrlInfos, js_module);
+    };
+  }
+
+  return {
+    name: "jsenv:bundling",
+    appliesDuring: "build",
+    bundle,
+  };
+};
+
+// https://github.com/kangax/html-minifier#options-quick-reference
+const minifyHtml = (htmlUrlInfo, options = {}) => {
+  const require = createRequire(import.meta.url);
+  const { minify } = require("html-minifier");
+
+  const {
+    // usually HTML will contain a few markup, it's better to keep white spaces
+    // and line breaks to favor readability. A few white spaces means very few
+    // octets that won't impact performances. Removing whitespaces however will certainly
+    // decrease HTML readability
+    collapseWhitespace = false,
+    // saving a fewline breaks won't hurt performances
+    // but will help a lot readability
+    preserveLineBreaks = true,
+    removeComments = true,
+    conservativeCollapse = false,
+  } = options;
+
+  const htmlMinified = minify(htmlUrlInfo.content, {
+    collapseWhitespace,
+    conservativeCollapse,
+    removeComments,
+    preserveLineBreaks,
+  });
+  return htmlMinified;
+};
+
+const minifyCss = async (cssUrlInfo) => {
+  const { transform } = await import("lightningcss");
+
+  const targets = runtimeCompatToTargets$1(cssUrlInfo.context.runtimeCompat);
+  const { code, map } = transform({
+    filename: fileURLToPath(cssUrlInfo.originalUrl),
+    code: Buffer.from(cssUrlInfo.content),
+    targets,
+    minify: true,
+  });
+  return {
+    content: String(code),
+    sourcemap: map,
+  };
+};
+
+const runtimeCompatToTargets$1 = (runtimeCompat) => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits$1(version);
+    }
+  });
+  return targets;
+};
+
+const versionToBits$1 = (version) => {
+  const [major, minor = 0, patch = 0] = version
+    .split("-")[0]
+    .split(".")
+    .map((v) => parseInt(v, 10));
+  return (major << 16) | (minor << 8) | patch;
+};
+
+// https://github.com/terser-js/terser#minify-options
+
+const minifyJs = async (jsUrlInfo, options) => {
+  const url = jsUrlInfo.url;
+  const content = jsUrlInfo.content;
+  const sourcemap = jsUrlInfo.sourcemap;
+  const isJsModule = jsUrlInfo.type === "js_module";
+
+  const { minify } = await import("terser");
+  const terserResult = await minify(
+    {
+      [url]: content,
+    },
+    {
+      sourceMap: {
+        ...(sourcemap ? { content: JSON.stringify(sourcemap) } : {}),
+        asObject: true,
+        includeSources: true,
+      },
+      module: isJsModule,
+      // We need to preserve "new __InlineContent__()" calls to be able to recognize them
+      // after minification in order to version urls inside inline content text
+      keep_fnames: /__InlineContent__/,
+      ...options,
+    },
+  );
+  return {
+    content: terserResult.code,
+    sourcemap: terserResult.map,
+  };
+};
+
+const minifyJson = (jsonUrlInfo) => {
+  const { content } = jsonUrlInfo;
+  if (content.startsWith("{\n")) {
+    const jsonWithoutWhitespaces = JSON.stringify(JSON.parse(content));
+    return jsonWithoutWhitespaces;
+  }
+  return null;
+};
+
+const jsenvPluginMinification = ({
+  html = {},
+  css = {},
+  js_classic = {},
+  js_module = {},
+  json = {},
+  svg = {},
+} = {}) => {
+  const htmlMinifier = html
+    ? (urlInfo) => minifyHtml(urlInfo, html === true ? {} : html)
+    : null;
+  const svgMinifier = svg
+    ? (urlInfo) => minifyHtml(urlInfo, svg === true ? {} : svg)
+    : null;
+  const cssMinifier = css
+    ? (urlInfo) => minifyCss(urlInfo)
+    : null;
+  const jsClassicMinifier = js_classic
+    ? (urlInfo) => minifyJs(urlInfo, js_classic === true ? {} : js_classic)
+    : null;
+  const jsModuleMinifier = js_module
+    ? (urlInfo) => minifyJs(urlInfo, js_module === true ? {} : js_module)
+    : null;
+  const jsonMinifier = json
+    ? (urlInfo) => minifyJson(urlInfo)
+    : null;
+
+  return {
+    name: "jsenv:minification",
+    appliesDuring: "build",
+    meta: {
+      willMinifyHtml: Boolean(html),
+      willMinifySvg: Boolean(svg),
+      willMinifyCss: Boolean(css),
+      willMinifyJsClassic: Boolean(js_classic),
+      willMinifyJsModule: Boolean(js_module),
+      willMinifyJson: Boolean(json),
+    },
+    optimizeUrlContent: {
+      html: htmlMinifier,
+      svg: svgMinifier,
+      css: cssMinifier,
+      js_classic: jsClassicMinifier,
+      js_module: jsModuleMinifier,
+      json: jsonMinifier,
+      importmap: jsonMinifier,
+      webmanifest: jsonMinifier,
     },
   };
 };
@@ -20502,10 +21196,10 @@ const build = async ({
   buildDirectoryUrl,
   entryPoints = {},
   assetsDirectory = "",
-  ignore,
-
   runtimeCompat = defaultRuntimeCompat,
   base = runtimeCompat.node ? "./" : "/",
+  ignore,
+
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
@@ -20514,6 +21208,8 @@ const build = async ({
   directoryReferenceAllowed,
   scenarioPlaceholders,
   transpilation = {},
+  bundling = true,
+  minification = !runtimeCompat.node,
   versioning = !runtimeCompat.node,
   versioningMethod = "search_param", // "filename", "search_param"
   versioningViaImportmap = true,
@@ -20590,6 +21286,12 @@ const build = async ({
         `versioningMethod must be "filename" or "search_param", got ${versioning}`,
       );
     }
+    if (bundling === true) {
+      bundling = {};
+    }
+    if (minification === true) {
+      minification = {};
+    }
   }
 
   const operation = Abort.startOperation();
@@ -20660,6 +21362,8 @@ build ${entryPointKeys.length} entry points`);
       initialContext: contextSharedDuringBuild,
       plugins: [
         ...plugins,
+        ...(bundling ? [jsenvPluginBundling(bundling)] : []),
+        ...(minification ? [jsenvPluginMinification(minification)] : []),
         {
           appliesDuring: "build",
           fetchUrlContent: (urlInfo) => {

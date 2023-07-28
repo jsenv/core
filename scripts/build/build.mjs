@@ -19,6 +19,8 @@ await build({
     "file://**/node_modules/@jsenv/log/": false,
     "file://**/node_modules/@jsenv/node-esm-resolution/": false,
     "file://**/node_modules/@jsenv/server/": false,
+    "file://**/node_modules/@jsenv/plugin-bundling/": false,
+    "file://**/node_modules/@jsenv/plugin-minification/": false,
     "file://**/node_modules/@jsenv/plugin-placeholders/": false,
     "file://**/node_modules/@jsenv/plugin-transpilation/": false,
     "file://**/node_modules/@jsenv/sourcemap/": true, // cannot inline "source-map"
