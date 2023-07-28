@@ -62,7 +62,6 @@ export const startDevServer = async ({
   onKitchenCreated = () => {},
 
   sourcemaps = "inline",
-  sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   outDirectoryUrl,
   ...rest
@@ -203,7 +202,6 @@ export const startDevServer = async ({
           cacheControl,
           ribbon,
           sourcemaps,
-          sourcemapsSourcesProtocol,
           sourcemapsSourcesContent,
           outDirectoryUrl,
         }),

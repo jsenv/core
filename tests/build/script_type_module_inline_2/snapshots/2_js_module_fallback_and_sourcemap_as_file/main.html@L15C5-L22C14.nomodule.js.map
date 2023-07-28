@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "."
+    "../client/main.html@L15C5-L22C14.js"
   ],
   "names": [
     "util",

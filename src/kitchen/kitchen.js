@@ -47,10 +47,10 @@ export const createKitchen = ({
   plugins,
   supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
+  sourcemapsComment,
+  sourcemapsSources,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsSourcesRelative,
-  sourcemapsCommentRelative,
   outDirectoryUrl,
   initialContext = {},
   initialPluginsMeta = {},
@@ -102,10 +102,10 @@ export const createKitchen = ({
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     sourcemaps,
+    sourcemapsComment,
+    sourcemapsSources,
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
-    sourcemapsSourcesRelative,
-    sourcemapsCommentRelative,
     outDirectoryUrl,
     supervisor,
   });

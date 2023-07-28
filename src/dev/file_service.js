@@ -36,7 +36,6 @@ export const createFileService = ({
   cacheControl,
   ribbon,
   sourcemaps,
-  sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   outDirectoryUrl,
 }) => {
@@ -123,7 +122,6 @@ export const createFileService = ({
       supervisor,
       minification: false,
       sourcemaps,
-      sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
         ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)

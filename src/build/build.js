@@ -357,14 +357,8 @@ build ${entryPointKeys.length} entry points`);
         },
       ],
       sourcemaps,
+      sourcemapsComment: "relative",
       sourcemapsSourcesContent,
-      sourcemapsSourcesRelative: (sourcemapSource, ownerUrlInfo) => {
-        return buildSpecifierManager.remapSourcemapSource(
-          sourcemapSource,
-          ownerUrlInfo,
-        );
-      },
-      sourcemapsCommentRelative: true,
       outDirectoryUrl: outDirectoryUrl
         ? new URL("shape/", outDirectoryUrl)
         : undefined,

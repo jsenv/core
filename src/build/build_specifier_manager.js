@@ -60,7 +60,7 @@ export const createBuildSpecifierManager = ({
   const buildUrlToUrlInfoMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
 
-  const prepareBuildUrl = (reference) => {
+  const generateReplacement = (reference) => {
     let buildUrl;
     if (reference.type === "sourcemap_comment") {
       const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
@@ -107,16 +107,6 @@ export const createBuildSpecifierManager = ({
     urlInfoToBuildUrlMap.set(reference.urlInfo, buildUrl);
     buildUrlToUrlInfoMap.set(buildUrl, reference.urlInfo);
     buildUrlToBuildSpecifierMap.set(buildUrl, buildSpecifier);
-    return buildSpecifier;
-  };
-
-  const generateReplacement = (reference) => {
-    let buildUrl = urlInfoToBuildUrlMap.get(reference.urlInfo);
-    if (!buildUrl) {
-      prepareBuildUrl(reference);
-      buildUrl = urlInfoToBuildUrlMap.get(reference.urlInfo);
-    }
-    const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
     const buildGeneratedSpecifier = applyVersioningOnBuildSpecifier(
       buildSpecifier,
       reference,
@@ -202,6 +192,7 @@ export const createBuildSpecifierManager = ({
         as_text_module: undefined,
         as_js_module: undefined,
         js_classic: undefined, // TODO: add comment to explain who is using this
+        entry_point: undefined,
       };
     },
     formatReference: (reference) => {
@@ -220,7 +211,6 @@ export const createBuildSpecifierManager = ({
         internalRedirections.set(generatedUrl, reference.url);
       }
       placeholderToReferenceMap.set(placeholder, reference);
-      prepareBuildUrl(reference);
       return placeholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
@@ -683,14 +673,6 @@ export const createBuildSpecifierManager = ({
     jsenvPluginMoveToBuildDirectory,
     applyBundling,
 
-    remapSourcemapSource: (source, ownerUrlInfo) => {
-      const ownerBuildUrl = urlInfoToBuildUrlMap.get(ownerUrlInfo);
-      if (ownerBuildUrl) {
-        return urlToRelativeUrl(source, ownerBuildUrl);
-      }
-      return source;
-    },
-
     remapPlaceholder: (specifier) => {
       const reference = placeholderToReferenceMap.get(specifier);
       if (reference) {
@@ -704,9 +686,11 @@ export const createBuildSpecifierManager = ({
         prepareVersioning();
       }
 
+      const urlInfoSet = new Set();
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
+          urlInfoSet.add(urlInfo);
           if (urlInfo.isEntryPoint) {
             generateReplacement(urlInfo.firstReference);
           }
@@ -738,6 +722,20 @@ export const createBuildSpecifierManager = ({
       if (versioning) {
         await finishVersioning();
       }
+
+      for (const urlInfo of urlInfoSet) {
+        urlInfo.kitchen.urlInfoTransformer.applySourcemapOnContent(
+          urlInfo,
+          (source) => {
+            const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+            if (buildUrl) {
+              return urlToRelativeUrl(source, buildUrl);
+            }
+            return source;
+          },
+        );
+      }
+      urlInfoSet.clear();
     },
 
     prepareResyncResourceHints: () => {
