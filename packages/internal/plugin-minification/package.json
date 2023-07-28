@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-minification",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "license": "MIT",
   "repository": {
     "type": "git",

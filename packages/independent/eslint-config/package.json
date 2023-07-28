@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config",
-  "version": "16.4.0",
+  "version": "16.4.1",
   "description": "Create ESLint configuration for any project",
   "license": "MIT",
   "author": {
@@ -39,7 +39,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/eslint-import-resolver": "8.0.0"
+    "@jsenv/eslint-import-resolver": "8.0.1"
   },
   "devDependencies": {
     "@babel/core": "7.22.9",
