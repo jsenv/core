@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -9,30 +8,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-const plugins = [
-  jsenvPluginPreact(),
-  jsenvPluginCommonJs({
-    include: {
-      "/**/node_modules/react-is/": true,
-      "/**/node_modules/use-sync-external-store/": {
-        external: ["react"],
-      },
-      "/**/node_modules/hoist-non-react-statics/": {
-        // "react-redux" depends on
-        // - react-is@18+
-        // - hoist-non-react-statics@3.3.2+
-        // but "hoist-non-react-statics@3.3.2" depends on
-        // - react-is@16+
-        // In the end there is 2 versions of react-is trying to cohabit
-        // to prevent them to clash we let rollup inline "react-is" into "react-statics"
-        // thanks to the comment below
-        // external: ["react-is"],
-      },
-    },
-  }),
-];
-
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await ensureEmptyDirectory(
     new URL("./.jsenv/build/cjs_to_esm/", import.meta.url),
   );
@@ -44,6 +20,28 @@ const test = async (name, params) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    plugins: [
+      jsenvPluginPreact(),
+      jsenvPluginCommonJs({
+        include: {
+          "/**/node_modules/react-is/": true,
+          "/**/node_modules/use-sync-external-store/": {
+            external: ["react"],
+          },
+          "/**/node_modules/hoist-non-react-statics/": {
+            // "react-redux" depends on
+            // - react-is@18+
+            // - hoist-non-react-statics@3.3.2+
+            // but "hoist-non-react-statics@3.3.2" depends on
+            // - react-is@16+
+            // In the end there is 2 versions of react-is trying to cohabit
+            // to prevent them to clash we let rollup inline "react-is" into "react-statics"
+            // thanks to the comment below
+            // external: ["react-is"],
+          },
+        },
+      }),
+    ],
     ...params,
   });
   takeDirectorySnapshot(
