@@ -121,15 +121,22 @@ export const createUrlInfoTransformer = ({
     }
     defineGettersOnPropertiesDerivedFromOriginalContent(urlInfo);
 
+    let may = mayHaveSourcemap(urlInfo);
+    let shouldHandle = shouldHandleSourcemap(urlInfo);
+    if (may && !shouldHandle) {
+      content = SOURCEMAP.removeComment({
+        contentType: urlInfo.contentType,
+        content,
+      });
+    }
     setContentProperties(urlInfo, {
       content,
       contentAst,
       contentEtag,
       contentLength,
     });
-
     urlInfo.sourcemap = sourcemap;
-    if (!shouldHandleSourcemap(urlInfo)) {
+    if (!may || !shouldHandle) {
       return;
     }
     // sourcemap is a special kind of reference:
@@ -209,7 +216,11 @@ export const createUrlInfoTransformer = ({
       contentLength,
     });
 
-    if (sourcemap && shouldHandleSourcemap(urlInfo)) {
+    if (
+      sourcemap &&
+      mayHaveSourcemap(urlInfo) &&
+      shouldHandleSourcemap(urlInfo)
+    ) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(
@@ -390,6 +401,16 @@ export const createUrlInfoTransformer = ({
   };
 };
 
+const mayHaveSourcemap = (urlInfo) => {
+  if (urlInfo.url.startsWith("data:")) {
+    return false;
+  }
+  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
+};
+
 const shouldHandleSourcemap = (urlInfo) => {
   const { sourcemaps } = urlInfo.context;
   if (
@@ -397,12 +418,6 @@ const shouldHandleSourcemap = (urlInfo) => {
     sourcemaps !== "file" &&
     sourcemaps !== "programmatic"
   ) {
-    return false;
-  }
-  if (urlInfo.url.startsWith("data:")) {
-    return false;
-  }
-  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
     return false;
   }
   return true;

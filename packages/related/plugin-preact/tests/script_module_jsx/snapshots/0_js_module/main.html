@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/preact.module.js": "/js/preact.module.js?v=8a4b4962",
+          "/js/hooks.module.js": "/js/hooks.module.js?v=c6e23a5e",
+          "/js/jsxRuntime.module.js": "/js/jsxRuntime.module.js?v=29aa4cb1"
+        }
+      }
+    </script><title>Title</title>
+    <meta charset="utf-8">
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">import { render } from "/js/preact.module.js";
+import { useEffect } from "/js/hooks.module.js";
+import { jsx as _jsx } from "/js/jsxRuntime.module.js";
+const App = ({
+  onFirstRender
+}) => {
+  useEffect(() => {
+    onFirstRender();
+  }, []);
+  return _jsx("span", {
+    children: "Hello world"
+  });
+};
+render(_jsx(App, {
+  onFirstRender: () => {
+    window.resolveResultPromise(document.querySelector("span").innerHTML);
+  }
+}), document.querySelector("#app"));</script>
+  </body>
+</html>

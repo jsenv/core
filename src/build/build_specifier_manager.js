@@ -261,6 +261,8 @@ export const createBuildSpecifierManager = ({
           specifierEnd: reference.specifierEnd,
           isInline: reference.isInline,
           filenameHint: reference.filenameHint,
+          content: reference.content,
+          contentType: reference.contentType,
         });
         const rawUrlInfo = rawReference.urlInfo;
         await rawUrlInfo.cook();

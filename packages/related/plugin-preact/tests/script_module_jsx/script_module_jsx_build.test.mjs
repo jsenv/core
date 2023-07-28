@@ -6,7 +6,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-const test = async (params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -20,7 +20,7 @@ const test = async (params) => {
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
-    new URL("./snapshots/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
   );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -38,5 +38,12 @@ const test = async (params) => {
 
 // support for <script type="module">
 await test({
-  runtimeCompat: { chrome: "64" },
+  name: "0_js_module",
+  runtimeCompat: { chrome: "89" },
+});
+
+// no support for <script type="module">
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: { chrome: "88" },
 });
