@@ -363,7 +363,7 @@ export const createUrlInfoTransformer = ({
         sourcemapReference.generatedSpecifier =
           generateSourcemapDataUrl(sourcemapGenerated);
       }
-      if (sourcemaps === "file" || sourcemaps === "inline") {
+      if (shouldUpdateSourcemapComment(urlInfo, sourcemaps)) {
         let specifier;
         if (sourcemaps === "file" && sourcemapsComment === "relative") {
           specifier = urlToRelativeUrl(
@@ -399,6 +399,16 @@ export const createUrlInfoTransformer = ({
     applySourcemapOnContent,
     endTransformations,
   };
+};
+
+const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
+  if (urlInfo.context.buildStep === "shape") {
+    return false;
+  }
+  if (sourcemaps === "file" || sourcemaps === "inline") {
+    return true;
+  }
+  return false;
 };
 
 const mayHaveSourcemap = (urlInfo) => {

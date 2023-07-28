@@ -39,7 +39,6 @@ export const createKitchen = ({
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
-  shape = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -66,7 +65,6 @@ export const createKitchen = ({
       mainFilePath,
       dev,
       build,
-      shape,
       runtimeCompat,
       clientRuntimeCompat,
       inlineContentClientFileUrl,

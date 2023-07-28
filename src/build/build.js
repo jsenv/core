@@ -229,6 +229,7 @@ build ${entryPointKeys.length} entry points`);
     const rawRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
+      buildStep: "craft",
       buildDirectoryUrl,
       assetsDirectory,
       versioning,
@@ -323,7 +324,6 @@ build ${entryPointKeys.length} entry points`);
       ignore,
       ignoreProtocol: "remove",
       build: true,
-      shape: true,
       runtimeCompat,
       initialContext: contextSharedDuringBuild,
       initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
@@ -523,6 +523,7 @@ build ${entryPointKeys.length} entry points`);
     }
 
     shape: {
+      finalKitchen.context.buildStep = "shape";
       const generateBuildGraph = createBuildTask("generate build graph");
       try {
         if (outDirectoryUrl) {
@@ -550,6 +551,7 @@ build ${entryPointKeys.length} entry points`);
     }
 
     refine: {
+      finalKitchen.context.buildStep = "refine";
       replace_placeholders: {
         await buildSpecifierManager.replacePlaceholders();
       }

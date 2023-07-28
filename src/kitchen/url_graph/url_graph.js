@@ -56,7 +56,10 @@ export const createUrlGraph = ({
       addUrlInfo(referencedUrlInfo);
       urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
     }
-    if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
+    if (
+      referencedUrlInfo.searchParams.size > 0 &&
+      kitchen.context.buildStep !== "shape"
+    ) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params
       // Each representation of the resource is given a dedicated url info
