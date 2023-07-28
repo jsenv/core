@@ -1,4 +1,4 @@
-import require$$0 from "/js/react.js?cjs_as_js_module=";
+import require$$0 from "/js/react.js";
 
 var client = {};
 
@@ -396,4 +396,4 @@ var m = reactDomExports;
 }
 
 export { createRoot, client as default, hydrateRoot };
-//# sourceMappingURL=client.js.map
+

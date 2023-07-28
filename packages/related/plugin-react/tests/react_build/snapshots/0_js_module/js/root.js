@@ -1,5 +1,5 @@
-import { useEffect } from "/js/react.js?cjs_as_js_module=";
-import { jsx as _jsx } from "/js/react/jsx-runtime.js?cjs_as_js_module=";
+import { useEffect } from "/js/react.js";
+import { jsx as _jsx } from "/js/react/jsx-runtime.js";
 export const Root = ({
   onRender
 }) => {

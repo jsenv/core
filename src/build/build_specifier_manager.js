@@ -192,6 +192,7 @@ export const createBuildSpecifierManager = ({
         as_text_module: undefined,
         as_js_module: undefined,
         as_js_classic: undefined,
+        cjs_as_js_module: undefined,
         js_classic: undefined, // TODO: add comment to explain who is using this
         entry_point: undefined,
         dynamic_import: undefined,
@@ -243,6 +244,9 @@ export const createBuildSpecifierManager = ({
         };
       }
       if (rawUrlInfo) {
+        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
+        }
         return rawUrlInfo;
       }
       // reference injected during "shape":

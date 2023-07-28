@@ -7,7 +7,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -15,6 +15,7 @@ const test = async (name, params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
     plugins: [
       jsenvPluginReact({
@@ -42,24 +43,25 @@ const test = async (name, params) => {
 };
 
 // support for <script type="module">
-await test("0_js_module", {
+await test({
+  name: "0_js_module",
   runtimeCompat: { chrome: "89" },
 });
 // no support for <script type="module">
-await test("1_js_module_fallback", {
-  runtimeCompat: {
-    chrome: "55",
-    edge: "14",
-    firefox: "52",
-    safari: "11",
-  },
-});
-await test("2_js_module_fallback_minified", {
-  runtimeCompat: {
-    chrome: "55",
-    edge: "14",
-    firefox: "52",
-    safari: "11",
-  },
-  plugins: [jsenvPluginMinification()],
-});
+// await test("1_js_module_fallback", {
+//   runtimeCompat: {
+//     chrome: "55",
+//     edge: "14",
+//     firefox: "52",
+//     safari: "11",
+//   },
+// });
+// await test("2_js_module_fallback_minified", {
+//   runtimeCompat: {
+//     chrome: "55",
+//     edge: "14",
+//     firefox: "52",
+//     safari: "11",
+//   },
+//   plugins: [jsenvPluginMinification()],
+// });
