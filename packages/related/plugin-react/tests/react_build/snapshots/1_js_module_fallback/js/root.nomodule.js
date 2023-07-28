@@ -1,4 +1,4 @@
-System.register([__v__("/js/index.nomodule.js?cjs_as_js_module="), __v__("/js/jsx-runtime.nomodule.js?cjs_as_js_module=")], function (_export, _context) {
+System.register([__v__("/js/index.nomodule.js"), __v__("/js/jsx-runtime.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var useEffect, _jsx, Root;

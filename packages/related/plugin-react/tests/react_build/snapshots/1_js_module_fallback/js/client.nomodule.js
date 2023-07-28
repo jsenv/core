@@ -1,4 +1,4 @@
-System.register([__v__("/js/index.nomodule.js?cjs_as_js_module=")], function (_export, _context) {
+System.register([__v__("/js/index.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var require$$0, client, reactDom, reactDom_production_min, scheduler, scheduler_production_min, schedulerExports, aa, ca, da, ea, ia, ja, ka, la, ma, z, ra, ua, va, wa, ya, za, Aa, Ba, Ca, Da, Ea, Fa, Ga, Ha, Ia, Ja, A, La, Na, eb, mb, nb, pb, qb, tb, wb, yb, zb, Ab, Ib, Lb, Mb, Ob, Pb, Qb, Rb, Sb, ac, bc, cc, dc, B, ec, fc, gc, hc, ic, jc, kc, lc, oc, pc, qc, rc, sc, C, Ec, Fc, Gc, Hc, Ic, Jc, Kc, Lc, Mc, Nc, Oc, Pc, Qc, Rc, cd, dd, id, kd, ld, md, sd, td, ud, vd, wd, xd, yd, Ad, Bd, Cd, Dd, Ed, Fd, Gd, Hd, Id, Jd, Kd, Ld, Md, Nd, Od, Qd, Rd, Sd, Td, Ud, Vd, Wd, Xd, Yd, Zd, $d, ae, be, ce, de, ee, fe, ie, le, pe, qe, we, xe, ye, ze, He, Pe, Qe, Re, Se, Te, We, Xe, Ye, $e, af, bf, cf, df, ef, gf, hf, jf, kf, lf, mf, rf, xf, yf, Cf, Df, Ff, Gf, Hf, Jf, Nf, Of, Pf, uf, of, Qf, Rf, Sf, Tf, Vf, H, Wf, Xf, eg, fg, gg, kg, lg, mg, ng, og, pg, qg, rg, sg, xg, yg, I, zg, Kg, Mg, Ng, Og, Pg, Wg, $g, jh, nh, Bh, Ch, Dh, Eh, Fh, Gh, M, Nh, Ph, Qh, Rh, N, O, P, Sh, Th, Uh, Vh, ai, Yh, Zh, $h, Ni, Xi, Ug, nj, Aj, Bj, Cj, Dj, Kj, U, Lj, V, Oj, X, Yj, mk, nk, ok, pk, K, R, Y, Z, gj, fj, T, qk, hh, rk, sk, tk, uk, gk, Hj, vk, Pi, Qi, Si, wk, xk, yk, zk, Ak, Bk, Ck, Wk, ll, tl, ul, vl, wl, reactDomExports, hydrateRoot, createRoot, m;
@@ -5817,8 +5817,8 @@ System.register([__v__("/js/index.nomodule.js?cjs_as_js_module=")], function (_e
     createRoot: void 0
   });
   return {
-    setters: [function (_node_modulesReactIndexJsCjs_as_js_module) {
-      require$$0 = _node_modulesReactIndexJsCjs_as_js_module.default;
+    setters: [function (_reactIndexJsCjs_as_js_module) {
+      require$$0 = _reactIndexJsCjs_as_js_module.default;
     }],
     execute: function () {
       _export("default", client = {});

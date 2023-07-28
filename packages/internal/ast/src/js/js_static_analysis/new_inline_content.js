@@ -1,6 +1,6 @@
 import {
   isStringLiteralNode,
-  getTypePropertyNode,
+  findPropertyNodeByName,
   extractContentInfo,
 } from "./helpers.js";
 
@@ -11,7 +11,10 @@ export const isNewInlineContentCall = (node) => {
     node.callee.name === "__InlineContent__"
   );
 };
-export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
+export const analyzeNewInlineContentCall = (
+  node,
+  { onInlineContent, readInlinedFromUrl },
+) => {
   const [firstArg, secondArg] = node.arguments;
   if (!firstArg) {
     return;
@@ -19,7 +22,7 @@ export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
   if (!secondArg) {
     return;
   }
-  const typePropertyNode = getTypePropertyNode(secondArg);
+  const typePropertyNode = findPropertyNodeByName(secondArg, "type");
   if (!typePropertyNode) {
     return;
   }
@@ -27,6 +30,7 @@ export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
   if (!isStringLiteralNode(typePropertyValueNode)) {
     return;
   }
+
   const nodeHoldingContent = firstArg;
   const contentType = typePropertyValueNode.value;
   const contentInfo = extractContentInfo(nodeHoldingContent);
@@ -34,6 +38,7 @@ export const analyzeNewInlineContentCall = (node, { onInlineContent }) => {
     onInlineContent({
       type: "new_inline_content_first_arg",
       contentType,
+      inlinedFromUrl: readInlinedFromUrl(node),
       start: nodeHoldingContent.start,
       end: nodeHoldingContent.end,
       line: nodeHoldingContent.loc.start.line,

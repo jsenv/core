@@ -3,7 +3,7 @@
  * - https://astexplorer.net/
  * - https://bvaughn.github.io/babel-repl
  */
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { createJsParseError } from "./js_parse_error.js";
 
@@ -63,10 +63,10 @@ export const applyBabelPlugins = async ({
   try {
     if (ast) {
       const result = await transformFromAstAsync(ast, input, options);
-      return result;
+      return normalizeResult(result);
     }
     const result = await transformAsync(input, options);
-    return result;
+    return normalizeResult(result);
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createJsParseError({
@@ -80,6 +80,16 @@ export const applyBabelPlugins = async ({
     }
     throw error;
   }
+};
+
+const normalizeResult = (result) => {
+  const { map } = result;
+  if (map) {
+    map.sources.forEach((source, index) => {
+      map.sources[index] = pathToFileURL(source).href;
+    });
+  }
+  return result;
 };
 
 const useTypeScriptExtension = (url) => {

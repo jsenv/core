@@ -23,7 +23,17 @@ const HOOK_NAMES = [
   "destroy",
 ];
 
-export const createPluginController = (kitchenContext) => {
+export const createPluginController = (
+  kitchenContext,
+  initialPuginsMeta = {},
+) => {
+  const pluginsMeta = initialPuginsMeta;
+
+  kitchenContext.getPluginMeta = (id) => {
+    const value = pluginsMeta[id];
+    return value;
+  };
+
   const plugins = [];
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
@@ -42,29 +52,43 @@ export const createPluginController = (kitchenContext) => {
     if (plugin === null || typeof plugin !== "object") {
       throw new TypeError(`plugin must be objects, got ${plugin}`);
     }
+    if (!plugin.name) {
+      plugin.name = "anonymous";
+    }
     if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
       if (plugin.destroy) {
         plugin.destroy();
       }
       return;
     }
-    if (!plugin.name) {
-      plugin.name = "anonymous";
-    }
     plugins.push(plugin);
-    Object.keys(plugin).forEach((key) => {
+    for (const key of Object.keys(plugin)) {
+      if (key === "meta") {
+        const value = plugin[key];
+        if (typeof value !== "object" || value === null) {
+          console.warn(`plugin.meta must be an object, got ${value}`);
+          continue;
+        }
+        Object.assign(pluginsMeta, value);
+        // any extension/modification on plugin.meta
+        // won't be taken into account so we freeze object
+        // to throw in case it happen
+        Object.freeze(value);
+        continue;
+      }
+
       if (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents" ||
-        key === "meta"
+        key === "serverEvents"
       ) {
-        return;
+        continue;
       }
       const isHook = HOOK_NAMES.includes(key);
       if (!isHook) {
         console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
+        continue;
       }
       const hookName = key;
       const hookValue = plugin[hookName];
@@ -81,7 +105,7 @@ export const createPluginController = (kitchenContext) => {
           group.push(hook);
         }
       }
-    });
+    }
   };
   const testAppliesDuring = (plugin) => {
     const { appliesDuring } = plugin;
@@ -121,7 +145,7 @@ export const createPluginController = (kitchenContext) => {
   };
   const initPlugin = (plugin) => {
     if (plugin.init) {
-      const initReturnValue = plugin.init(kitchenContext);
+      const initReturnValue = plugin.init(kitchenContext, plugin);
       if (initReturnValue === false) {
         return false;
       }
@@ -204,13 +228,12 @@ export const createPluginController = (kitchenContext) => {
   const callAsyncHooks = async (hookName, info, callback) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
-      await hooks.reduce(async (previous, hook) => {
-        await previous;
+      for (const hook of hooks) {
         const returnValue = await callAsyncHook(hook, info);
         if (returnValue && callback) {
           await callback(returnValue, hook.plugin);
         }
-      }, Promise.resolve());
+      }
     }
   };
 
@@ -252,17 +275,8 @@ export const createPluginController = (kitchenContext) => {
     });
   };
 
-  const getPluginMeta = (id) => {
-    for (const plugin of plugins) {
-      const { meta } = plugin;
-      if (meta && meta[id] !== undefined) {
-        return meta[id];
-      }
-    }
-    return undefined;
-  };
-
   return {
+    pluginsMeta,
     plugins,
     pushPlugin,
     unshiftPlugin,
@@ -274,8 +288,6 @@ export const createPluginController = (kitchenContext) => {
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
-
-    getPluginMeta,
 
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,

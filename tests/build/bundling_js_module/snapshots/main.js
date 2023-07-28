@@ -1,8 +1,8 @@
 ;
 (function () {
   var __versionMappings__ = {
-    "/js/fire.js": "/js/fire.js?v=e1a844b5",
-    "/js/water.js": "/js/water.js?v=4610ad74"
+    "/js/fire.js": "/js/fire.js?v=64cd62b7",
+    "/js/water.js": "/js/water.js?v=90240d37"
   };
   window.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier;

@@ -1,8 +1,6 @@
 import { createMagicSource } from "@jsenv/sourcemap";
-import { parseJsUrls } from "@jsenv/ast";
-import { generateInlineContentUrl } from "@jsenv/urls";
+import { parseJsUrls, getUrlForContentInsideJs } from "@jsenv/ast";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 
@@ -38,13 +36,8 @@ const parseAndTransformJsReferences = async (
   const sequentialActions = [];
 
   const onInlineReference = (inlineReferenceInfo) => {
-    const inlineUrl = generateInlineContentUrl({
+    const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, {
       url: urlInfo.url,
-      extension: CONTENT_TYPE.asFileExtension(inlineReferenceInfo.contentType),
-      line: inlineReferenceInfo.line,
-      column: inlineReferenceInfo.column,
-      lineEnd: inlineReferenceInfo.lineEnd,
-      columnEnd: inlineReferenceInfo.columnEnd,
     });
     let { quote } = inlineReferenceInfo;
     if (quote === "`" && !canUseTemplateLiterals) {

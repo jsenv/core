@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { applyBabelPlugins, parseHtmlString, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
+import { applyBabelPlugins, parseHtmlString, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const intToChar = new Uint8Array(64); // 64 possible chars.
@@ -42,85 +42,6 @@ const getOriginalPosition = ({
     bias
   });
   return originalPosition;
-};
-
-const urlToScheme = url => {
-  const urlString = String(url);
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) {
-    return "";
-  }
-  const scheme = urlString.slice(0, colonIndex);
-  return scheme;
-};
-
-const urlToResource = url => {
-  const scheme = urlToScheme(url);
-  if (scheme === "file") {
-    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
-    return urlAsStringWithoutFileProtocol;
-  }
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = String(url).slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
-    return urlAsStringWithoutOrigin;
-  }
-  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
-  return urlAsStringWithoutProtocol;
-};
-
-const urlToPathname = url => {
-  const resource = urlToResource(url);
-  const pathname = resourceToPathname(resource);
-  return pathname;
-};
-const resourceToPathname = resource => {
-  const searchSeparatorIndex = resource.indexOf("?");
-  if (searchSeparatorIndex > -1) {
-    return resource.slice(0, searchSeparatorIndex);
-  }
-  const hashIndex = resource.indexOf("#");
-  if (hashIndex > -1) {
-    return resource.slice(0, hashIndex);
-  }
-  return resource;
-};
-
-const urlToFilename = url => {
-  const pathname = urlToPathname(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename = slashLastIndex === -1 ? pathnameBeforeLastSlash : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const generateInlineContentUrl = ({
-  url,
-  extension,
-  basename,
-  line,
-  column,
-  lineEnd,
-  columnEnd
-}) => {
-  let generatedName = "";
-  if (basename !== undefined) {
-    generatedName += basename;
-  }
-  if (line !== undefined && column !== undefined) {
-    generatedName = "L".concat(line, "C").concat(column);
-    if (lineEnd !== undefined && columnEnd !== undefined) {
-      generatedName += "-L".concat(lineEnd, "C").concat(columnEnd);
-    }
-  }
-  const filenameRaw = urlToFilename(url);
-  const filename = "".concat(filenameRaw, "@").concat(generatedName).concat(extension);
-  // ideally we should keep query params from url
-  // maybe we could use a custom scheme like "inline:"
-  const inlineContentUrl = new URL(filename, url).href;
-  return inlineContentUrl;
 };
 
 // consider switching to https://babeljs.io/docs/en/babel-code-frame
@@ -777,25 +698,17 @@ const injectSupervisorIntoHTML = async ({
   {
     const handleInlineScript = (scriptNode, {
       type,
-      extension,
       textContent
     }) => {
       const {
         line,
         column,
-        lineEnd,
-        columnEnd,
         isOriginal
       } = getHtmlNodePosition(scriptNode, {
         preferOriginal: true
       });
-      const inlineScriptUrl = generateInlineContentUrl({
-        url,
-        extension: extension || ".js",
-        line,
-        column,
-        lineEnd,
-        columnEnd
+      const inlineScriptUrl = getUrlForContentInsideHtml(scriptNode, {
+        htmlUrl: url
       });
       const inlineScriptSrc = generateInlineScriptSrc({
         type,
@@ -898,8 +811,7 @@ const injectSupervisorIntoHTML = async ({
     visitHtmlNodes(htmlAst, {
       script: scriptNode => {
         const {
-          type,
-          extension
+          type
         } = analyzeScriptNode(scriptNode);
         if (type !== "js_classic" && type !== "js_module") {
           return;
@@ -915,7 +827,6 @@ const injectSupervisorIntoHTML = async ({
         if (scriptNodeText) {
           handleInlineScript(scriptNode, {
             type,
-            extension,
             textContent: scriptNodeText
           });
           return;

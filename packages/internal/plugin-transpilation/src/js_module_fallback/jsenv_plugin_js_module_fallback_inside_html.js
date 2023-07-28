@@ -13,34 +13,32 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
   analyzeScriptNode,
+  getHtmlNodeText,
 } from "@jsenv/ast";
 
-export const jsenvPluginJsModuleFallbackInsideHtml = () => {
+export const jsenvPluginJsModuleFallbackInsideHtml = ({
+  needJsModuleFallback,
+}) => {
   const turnIntoJsClassicProxy = (reference) => {
-    // not needed for now: redirections are disabled
-    // for getWithoutSearchParam
-    // if (
-    //   reference.prev &&
-    //   reference.prev.searchParams.has("js_module_fallback")
-    // ) {
-    //   return null;
-    // }
     return injectQueryParams(reference.url, { js_module_fallback: "" });
   };
 
   return {
     name: "jsenv:js_module_fallback_inside_html",
     appliesDuring: "*",
+    init: needJsModuleFallback,
     redirectReference: {
       link_href: (reference) => {
         if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.subtype === "modulepreload"
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
         ) {
+          return null;
+        }
+        if (reference.subtype === "modulepreload") {
           return turnIntoJsClassicProxy(reference);
         }
         if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
           reference.subtype === "preload" &&
           reference.expectedType === "js_module"
         ) {
@@ -50,18 +48,24 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
       },
       script: (reference) => {
         if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.expectedType === "js_module"
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
         ) {
+          return null;
+        }
+        if (reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
         return null;
       },
       js_url: (reference) => {
         if (
-          reference.ownerUrlInfo.context.systemJsTranspilation &&
-          reference.expectedType === "js_module"
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
         ) {
+          return null;
+        }
+        if (reference.expectedType === "js_module") {
           return turnIntoJsClassicProxy(reference);
         }
         return null;
@@ -92,19 +96,21 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
                 break;
               }
             }
-            if (!wasOrWillBeConvertedToJsClassic(linkHintReference)) {
-              return;
-            }
             if (rel === "modulepreload") {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, {
-                  rel: "preload",
-                  as: "script",
-                  crossorigin: undefined,
+              if (linkHintReference.expectedType === "js_classic") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(node, {
+                    rel: "preload",
+                    as: "script",
+                    crossorigin: undefined,
+                  });
                 });
-              });
+              }
             }
-            if (rel === "preload") {
+            if (
+              rel === "preload" &&
+              wasConvertedFromJsModule(linkHintReference)
+            ) {
               mutations.push(() => {
                 setHtmlNodeAttributes(node, { crossorigin: undefined });
               });
@@ -116,31 +122,33 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
               return;
             }
             const src = getHtmlNodeAttribute(node, "src");
-            if (src) {
-              let scriptTypeModuleReference = null;
-              for (const referenceToOther of urlInfo.referenceToOthersSet) {
-                if (
-                  referenceToOther.generatedSpecifier === src &&
-                  referenceToOther.type === "script" &&
-                  referenceToOther.subtype === "js_module"
-                ) {
-                  scriptTypeModuleReference = referenceToOther;
+            const text = getHtmlNodeText(node);
+            let scriptReference = null;
+            for (const referenceToOther of urlInfo.referenceToOthersSet) {
+              if (referenceToOther.type !== "script") {
+                continue;
+              }
+              if (src && referenceToOther.generatedSpecifier === src) {
+                scriptReference = referenceToOther;
+                break;
+              }
+              if (text) {
+                if (referenceToOther.content === text) {
+                  scriptReference = referenceToOther;
+                  break;
+                }
+                if (referenceToOther.urlInfo.content === text) {
+                  scriptReference = referenceToOther;
                   break;
                 }
               }
-              if (!scriptTypeModuleReference) {
-                return;
-              }
-              if (scriptTypeModuleReference.expectedType === "js_classic") {
-                mutations.push(() => {
-                  setHtmlNodeAttributes(node, { type: undefined });
-                });
-              }
-            } else if (urlInfo.context.systemJsTranspilation) {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, { type: undefined });
-              });
             }
+            if (!wasConvertedFromJsModule(scriptReference)) {
+              return;
+            }
+            mutations.push(() => {
+              setHtmlNodeAttributes(node, { type: undefined });
+            });
           },
         });
         await Promise.all(mutations.map((mutation) => mutation()));
@@ -152,30 +160,14 @@ export const jsenvPluginJsModuleFallbackInsideHtml = () => {
   };
 };
 
-const wasOrWillBeConvertedToJsClassic = (reference) => {
-  if (reference.expectedType !== "js_module") {
-    return false;
-  }
-  if (willBeConvertedToJsClassic(reference)) {
-    return true;
-  }
-  let prev = reference.prev;
-  while (prev) {
-    if (prev.expectedType === "js_classic") {
-      return true;
+const wasConvertedFromJsModule = (reference) => {
+  if (reference.expectedType === "js_classic") {
+    // check if a prev version was using js module
+    if (reference.original) {
+      if (reference.original.expectedType === "js_module") {
+        return true;
+      }
     }
-    if (willBeConvertedToJsClassic(prev)) {
-      return true;
-    }
-    prev = prev.prev;
   }
-
   return false;
-};
-
-const willBeConvertedToJsClassic = (reference) => {
-  return (
-    reference.searchParams.has("js_module_fallback") ||
-    reference.searchParams.has("as_js_classic")
-  );
 };

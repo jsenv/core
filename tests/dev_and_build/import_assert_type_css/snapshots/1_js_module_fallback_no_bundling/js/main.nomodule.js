@@ -19,13 +19,13 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/main.nomodule2.js")], function (_export, _context) {
+System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/main.css.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var sheet, bodyBackgroundColor, bodyBackgroundImage;
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_clientSrcMainCssAs_css_module) {
-      sheet = _clientSrcMainCssAs_css_module.default;
+    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_srcMainCssAs_css_module) {
+      sheet = _srcMainCssAs_css_module.default;
     }],
     execute: async function () {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];

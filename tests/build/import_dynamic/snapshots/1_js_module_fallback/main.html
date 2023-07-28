@@ -427,8 +427,8 @@ window.nestedFeatureUrl = url.href;</script>
 
   var loadFeature;
   return {
-    setters: [function (_clientMainJs) {
-      loadFeature = _clientMainJs.loadFeature;
+    setters: [function (_mainJs) {
+      loadFeature = _mainJs.loadFeature;
     }],
     execute: function () {
       document.querySelector("button").onclick = () => {

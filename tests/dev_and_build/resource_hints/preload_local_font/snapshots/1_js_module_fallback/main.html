@@ -4,15 +4,13 @@
     <title>Title</title>
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
-    
+    <link rel="preload" href="/js/style.css.nomodule.js?v=be6a0735" as="script">
     <link rel="preload" href="/other/roboto_v27_latin_regular.woff2?v=fda7bb73" as="font" type="font/woff2" id="font_preload_link" crossorigin="">
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/js/new_stylesheet.nomodule.js": "/js/new_stylesheet.nomodule.js?v=5033b6e0",
-          "/js/style.nomodule.js": "/js/style.nomodule.js?v=8ed4dbef",
+          "/js/new_stylesheet.nomodule.js": "/js/new_stylesheet.nomodule.js?v=afa4b01a",
           "/js/style.css.nomodule.js": "/js/style.css.nomodule.js?v=be6a0735",
-          "/js/inline_content.nomodule.js": "/js/inline_content.nomodule.js?v=03bc3645",
           "/other/roboto_v27_latin_regular.woff2": "/other/roboto_v27_latin_regular.woff2?v=fda7bb73"
         };
         window.__v__ = function (specifier) {
@@ -457,13 +455,13 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/style.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/new_stylesheet.nomodule.js"), __v__("/js/style.css.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var style;
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_clientStyleCssAs_css_module) {
-      style = _clientStyleCssAs_css_module.default;
+    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_styleCssAs_css_module) {
+      style = _styleCssAs_css_module.default;
     }],
     execute: async function () {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];

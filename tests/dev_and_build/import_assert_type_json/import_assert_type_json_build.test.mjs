@@ -6,7 +6,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (name, options) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -15,7 +15,7 @@ const test = async (name, options) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...options,
+    ...params,
   });
   takeDirectorySnapshot(
     new URL(`./dist/`, import.meta.url),
@@ -38,20 +38,24 @@ const test = async (name, options) => {
 };
 
 // support for <script type="module">
-await test("0_js_module", {
+await test({
+  name: "0_js_module",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 });
 // support for <script type="module"> + no bundling
-await test("1_js_module_no_bundling", {
+await test({
+  name: "1_js_module_no_bundling",
   runtimeCompat: { chrome: "89" },
 });
 // no support <script type="module">
-await test("2_js_module_fallback", {
+await test({
+  name: "2_js_module_fallback",
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
 });
 // no support <script type="module"> and no bundling
-await test("3_js_module_fallback_no_bundling", {
+await test({
+  name: "3_js_module_fallback_no_bundling",
   runtimeCompat: { chrome: "60" },
 });

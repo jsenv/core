@@ -463,8 +463,8 @@ System.register([__v__("/js/ping.nomodule.js")], function (_export, _context) {
 
   var ping;
   return {
-    setters: [function (_clientPingJs) {
-      ping = _clientPingJs.ping;
+    setters: [function (_pingJs) {
+      ping = _pingJs.ping;
     }],
     execute: function () {
       self.addEventListener("message", function (e) {

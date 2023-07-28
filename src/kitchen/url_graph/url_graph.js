@@ -56,7 +56,10 @@ export const createUrlGraph = ({
       addUrlInfo(referencedUrlInfo);
       urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
     }
-    if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
+    if (
+      referencedUrlInfo.searchParams.size > 0 &&
+      kitchen.context.buildStep !== "shape"
+    ) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params
       // Each representation of the resource is given a dedicated url info
@@ -187,6 +190,8 @@ const createUrlInfo = (url, context) => {
     referenceToOthersSet: new Set(),
     referenceFromOthersSet: new Set(),
     firstReference: null, // first reference from an other url to this one
+    lastReference: null,
+    remapReference: null, // used solely during build for rollup
     implicitUrlSet: new Set(),
     searchParamVariantSet: new Set(),
 
@@ -197,7 +202,6 @@ const createUrlInfo = (url, context) => {
     contentType: "", // "text/html", "text/css", "text/javascript", "application/json", ...
     url: null,
     originalUrl: undefined,
-    filename: "",
     isEntryPoint: false,
     originalContent: undefined,
     originalContentAst: undefined,
@@ -211,6 +215,8 @@ const createUrlInfo = (url, context) => {
 
     generatedUrl: null,
     sourcemapGeneratedUrl: null,
+    filenameHint: "",
+    dirnameHint: "",
     injected: false,
 
     isInline: false,
@@ -238,16 +244,20 @@ const createUrlInfo = (url, context) => {
       if (referenceFromOther.urlInfo !== urlInfo) {
         continue;
       }
-      if (referenceFromOther.isWeak) {
+      if (referenceFromOther.ownerUrlInfo.isRoot) {
+        return true;
+      }
+      const ref = referenceFromOther.original || referenceFromOther;
+      if (ref.isWeak) {
         // weak reference don't count as using the url
         continue;
       }
-      if (referenceFromOther.gotInlined()) {
+      if (ref.gotInlined()) {
         // the url info was inlined, an other reference is required
         // to consider the non-inlined urlInfo as used
         continue;
       }
-      return referenceFromOther.ownerUrlInfo.isUsed();
+      return ref.ownerUrlInfo.isUsed();
     }
     // nothing uses this url anymore
     // - versioning update inline content
@@ -328,7 +338,7 @@ const createUrlInfo = (url, context) => {
       data: { ...reference.data },
       specifier: newSpecifier,
       isWeak: true,
-      isInline: false,
+      isInline: reference.isInline,
       original: reference.original || reference,
       prev: reference,
       // urlInfo: null,

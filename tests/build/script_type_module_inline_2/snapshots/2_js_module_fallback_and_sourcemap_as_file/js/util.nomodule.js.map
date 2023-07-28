@@ -1,0 +1,15 @@
+{
+  "version": 3,
+  "sources": [
+    "../../client/src/util.js"
+  ],
+  "names": [
+    "util",
+    "console",
+    "log"
+  ],
+  "mappings": "AAAA,OAAO,MAAMA,IAAI,GAAGA,CAAA,KAAM;EACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;AACrB,CAAC;;;;;sBAFYF,IAAI,GAAGA,CAAA,KAAM;QACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;MACrB,CAAC;IAAA;EAAA;AAAA",
+  "sourcesContent": [
+    "export const util = () => {\n  console.log(\"util\");\n};\n"
+  ]
+}

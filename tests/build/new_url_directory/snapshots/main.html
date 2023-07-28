@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/src/": "/src/?v=8b42b03f"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script><title>Title</title>
+    <meta charset="utf-8">
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      const directoryUrl = new URL(__v__("/src/"), import.meta.url).href;
+
+      window.resolveResultPromise({
+        directoryUrl,
+      });
+    </script>
+  </body>
+</html>

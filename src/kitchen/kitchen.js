@@ -39,7 +39,6 @@ export const createKitchen = ({
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
-  shape = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -47,16 +46,18 @@ export const createKitchen = ({
   plugins,
   supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
+  sourcemapsComment,
+  sourcemapsSources,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsSourcesRelative,
   outDirectoryUrl,
-  baseContext = {},
+  initialContext = {},
+  initialPluginsMeta = {},
 }) => {
   const logger = createLogger({ logLevel });
   const kitchen = {
     context: {
-      ...baseContext,
+      ...initialContext,
       kitchen: null,
       signal,
       logger,
@@ -64,7 +65,6 @@ export const createKitchen = ({
       mainFilePath,
       dev,
       build,
-      shape,
       runtimeCompat,
       clientRuntimeCompat,
       inlineContentClientFileUrl,
@@ -88,11 +88,11 @@ export const createKitchen = ({
   });
   kitchen.graph = graph;
 
-  const pluginController = createPluginController(kitchenContext);
-  kitchen.pluginController = pluginController;
-  kitchenContext.getPluginMeta = memoizeGetPluginMeta(
-    pluginController.getPluginMeta,
+  const pluginController = createPluginController(
+    kitchenContext,
+    initialPluginsMeta,
   );
+  kitchen.pluginController = pluginController;
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
@@ -100,9 +100,10 @@ export const createKitchen = ({
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     sourcemaps,
+    sourcemapsComment,
+    sourcemapsSources,
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
-    sourcemapsSourcesRelative,
     outDirectoryUrl,
     supervisor,
   });
@@ -229,6 +230,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         );
       }
       reference.generatedUrl = reference.url;
+      reference.generatedSearchParams = reference.searchParams;
       return reference;
     } catch (error) {
       throw createResolveUrlError({
@@ -255,19 +257,33 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // - convey information (?hot)
       // But do not represent an other resource, it is considered as
       // the same resource under the hood
+      const searchParamTransformationMap = new Map();
       pluginController.callHooks(
         "transformReferenceSearchParams",
         reference,
         (returnValue) => {
           Object.keys(returnValue).forEach((key) => {
-            reference.searchParams.set(key, returnValue[key]);
+            searchParamTransformationMap.set(key, returnValue[key]);
           });
-          const referencedUrlObject = new URL(reference.url);
-          const search = reference.searchParams.toString();
-          referencedUrlObject.search = search;
-          reference.generatedUrl = normalizeUrl(referencedUrlObject.href);
         },
       );
+      if (searchParamTransformationMap.size) {
+        const generatedSearchParams = new URLSearchParams(
+          reference.searchParams,
+        );
+        searchParamTransformationMap.forEach((value, key) => {
+          if (value === undefined) {
+            generatedSearchParams.delete(key);
+          } else {
+            generatedSearchParams.set(key, value);
+          }
+        });
+        const generatedUrlObject = new URL(reference.url);
+        const generatedSearch = generatedSearchParams.toString();
+        generatedUrlObject.search = generatedSearch;
+        reference.generatedUrl = normalizeUrl(generatedUrlObject.href);
+        reference.generatedSearchParams = generatedSearchParams;
+      }
     }
     format: {
       const returnValue = pluginController.callHooksUntil(
@@ -313,7 +329,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         subtype,
         originalUrl,
         sourcemap,
-        filename,
 
         status = 200,
         headers = {},
@@ -347,9 +362,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       if (typeof isEntryPoint === "boolean") {
         urlInfo.isEntryPoint = isEntryPoint;
-      }
-      if (filename && !urlInfo.filename) {
-        urlInfo.filename = filename;
       }
       assertFetchedContentCompliance({
         urlInfo,
@@ -468,16 +480,17 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         if (e.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
           throw e;
         }
-        if (urlInfo.isInline) {
+        if (urlInfo.isInline && errorOnInlineContentCanSkipThrow(urlInfo)) {
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
           const errorInfo =
             e.code === "PARSE_ERROR"
               ? `${e.cause.reasonCode}\n${e.traceMessage}`
-              : `${e.traceMessage}`;
+              : e.stack;
           logger.error(
-            `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}: ${errorInfo}`,
+            `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
+${errorInfo}`,
           );
         } else {
           throw e;
@@ -571,6 +584,23 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   return kitchen;
 };
 
+// if we are cooking the inline content internally it's better not to throw
+// because the main url info (html) is still valid
+// but if we are explicitely requesting inline content during dev
+// then we should throw
+const errorOnInlineContentCanSkipThrow = (urlInfo) => {
+  if (urlInfo.context.build) {
+    return true;
+  }
+  if (
+    urlInfo.context.reference &&
+    urlInfo.context.reference.url === urlInfo.url
+  ) {
+    return false;
+  }
+  return true;
+};
+
 const debounceCook = (cook) => {
   const pendingDishes = new Map();
   return async (urlInfo, context) => {
@@ -616,19 +646,6 @@ const memoizeCook = (cook) => {
     urlInfoCache.set(urlInfo, promise);
     await cook(urlInfo, context);
     resolveCookPromise();
-  };
-};
-
-const memoizeGetPluginMeta = (getPluginMeta) => {
-  const cache = new Map();
-  return (id) => {
-    const fromCache = cache.get(id);
-    if (fromCache) {
-      return fromCache;
-    }
-    const value = getPluginMeta(id);
-    cache.set(id, value);
-    return value;
   };
 };
 
@@ -697,8 +714,8 @@ const determineFileUrlForOutDirectory = (urlInfo) => {
       fsRootUrl.length,
     )}`;
   }
-  if (urlInfo.filename) {
-    url = setUrlFilename(url, urlInfo.filename);
+  if (urlInfo.filenameHint) {
+    url = setUrlFilename(url, urlInfo.filenameHint);
   }
   return moveUrl({
     url,

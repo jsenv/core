@@ -26,46 +26,33 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
     return injectQueryParams(reference.url, { js_module_fallback: "" });
   };
 
-  return {
-    name: "jsenv:js_module_fallback_on_workers",
-    appliesDuring: "*",
-    redirectReference: {
-      js_url: (reference) => {
-        if (reference.expectedType !== "js_module") {
-          return null;
+  const createWorkerPlugin = (subtype) => {
+    return {
+      name: `jsenv:js_module_fallback_on_${subtype}`,
+      appliesDuring: "*",
+      init: (context) => {
+        if (context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
+          return false;
         }
-        if (reference.expectedSubtype === "worker") {
-          if (
-            reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
-              "worker_type_module",
-            )
-          ) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (reference.expectedSubtype === "service_worker") {
-          if (
-            reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
-              "service_worker_type_module",
-            )
-          ) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (reference.expectedSubtype === "shared_worker") {
-          if (
-            reference.ownerUrlInfo.context.isSupportedOnCurrentClients(
-              "shared_worker_type_module",
-            )
-          ) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
+        return true;
       },
-    },
+      redirectReference: {
+        js_url: (reference) => {
+          if (reference.expectedType !== "js_module") {
+            return null;
+          }
+          if (reference.expectedSubtype !== subtype) {
+            return null;
+          }
+          return turnIntoJsClassicProxy(reference);
+        },
+      },
+    };
   };
+
+  return [
+    createWorkerPlugin("worker"),
+    createWorkerPlugin("service_worker"),
+    createWorkerPlugin("shared_worker"),
+  ];
 };

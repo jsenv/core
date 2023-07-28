@@ -21,7 +21,41 @@ export const convertJsModuleToJsClassic = async ({
   inputUrl,
   outputUrl,
   outputFormat = "system", // "systemjs" or "umd"
+  preferAbsoluteSpecifiers,
+  remapImportSpecifier = (specifier) => specifier,
 }) => {
+  /*
+   * When systemjs or umd format is used by babel, it will generated UID based on
+   * the import specifier:
+   * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
+   * But at this stage import specifier are absolute file urls
+   * This can be mitigated by minification that will rename them.
+   * But to fix this issue once and for all there is babelPluginRelativeImports below
+   */
+  const transformImportSpecifier = (specifier) => {
+    specifier = remapImportSpecifier(specifier);
+    if (!specifier.startsWith("file://")) {
+      return null;
+    }
+    const specifierUrlObject = new URL(specifier);
+    const { searchParams } = specifierUrlObject;
+    searchParams.delete("dynamic_import");
+    const specifierWithoutDynamicImportParam = specifierUrlObject.href;
+    if (preferAbsoluteSpecifiers) {
+      return specifierWithoutDynamicImportParam;
+    }
+    const specifierRelative = urlToRelativeUrl(specifier, outputUrl);
+    if (specifierRelative.startsWith("file://")) {
+      return specifierRelative;
+    }
+    if (specifierRelative[0] === ".") {
+      return specifierRelative;
+    }
+    // ensure relative specifier starts with "." so they are not detected as bare specifier
+    // that would trigger node module resolution or importmap
+    return `./${specifierRelative}`;
+  };
+
   const { code, map } = await applyBabelPlugins({
     babelPlugins: [
       ...(outputFormat === "system"
@@ -29,7 +63,10 @@ export const convertJsModuleToJsClassic = async ({
             // proposal-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
             require("@babel/plugin-proposal-dynamic-import"),
-            [babelPluginRelativeImports, { rootUrl: outputUrl }],
+            [
+              babelPluginTransformImportSpecifiers,
+              { transformImportSpecifier },
+            ],
             require("@babel/plugin-transform-modules-systemjs"),
             [
               customAsyncToPromises,
@@ -49,7 +86,10 @@ export const convertJsModuleToJsClassic = async ({
             ],
             babelPluginTransformImportMetaUrl,
             babelPluginTransformImportMetaResolve,
-            [babelPluginRelativeImports, { rootUrl: outputUrl }],
+            [
+              babelPluginTransformImportSpecifiers,
+              { transformImportSpecifier },
+            ],
             require("@babel/plugin-transform-modules-umd"),
           ]),
     ],
@@ -65,39 +105,19 @@ export const convertJsModuleToJsClassic = async ({
   };
 };
 
-/*
- * When systemjs or umd format is used by babel, it will generated UID based on
- * the import specifier:
- * https://github.com/babel/babel/blob/97d1967826077f15e766778c0d64711399e9a72a/packages/babel-plugin-transform-modules-systemjs/src/index.ts#L498
- * But at this stage import specifier are absolute file urls
- * This can be mitigated by minification that will rename them.
- * But to fix this issue once and for all there is babelPluginRelativeImports below
- */
-const babelPluginRelativeImports = (babel) => {
+const babelPluginTransformImportSpecifiers = (babel) => {
   const t = babel.types;
 
   const replaceSpecifierAtPath = (path, state) => {
-    let specifier = path.node.value;
-    if (specifier.startsWith("file://")) {
-      const specifierUrlObject = new URL(specifier);
-      const { searchParams } = specifierUrlObject;
-      searchParams.delete("dynamic_import");
-      specifier = specifierUrlObject.href;
-      const rootUrl = state.opts.rootUrl;
-      let specifierRelative = urlToRelativeUrl(specifier, rootUrl);
-      if (
-        !specifierRelative.startsWith("file://") &&
-        specifierRelative[0] !== "."
-      ) {
-        // so avoid applying node module resolution or importmap
-        specifierRelative = `./${specifierRelative}`;
-      }
-      path.replaceWith(t.stringLiteral(specifierRelative));
+    const specifier = path.node.value;
+    const specifierTransformed = state.opts.transformImportSpecifier(specifier);
+    if (specifierTransformed && specifierTransformed !== specifier) {
+      path.replaceWith(t.stringLiteral(specifierTransformed));
     }
   };
 
   return {
-    name: "relative-imports",
+    name: "transform-import-specifiers",
     visitor: {
       CallExpression: (path, state) => {
         if (path.node.callee.type !== "Import") {

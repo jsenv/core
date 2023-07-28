@@ -6,7 +6,7 @@ import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { build } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async (name, options) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -14,7 +14,7 @@ const test = async (name, options) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    ...options,
+    ...params,
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
@@ -24,7 +24,8 @@ const test = async (name, options) => {
 
 // default (with bundling)
 {
-  await test("0_with_bundling", {
+  await test({
+    name: "0_with_bundling",
     plugins: [jsenvPluginBundling()],
   });
   // eslint-disable-next-line import/no-unresolved
@@ -38,7 +39,9 @@ const test = async (name, options) => {
 
 // without bundling
 {
-  await test("1_without_bundling");
+  await test({
+    name: "1_without_bundling",
+  });
   // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./dist/main.js");
   const actual = { ...namespace };

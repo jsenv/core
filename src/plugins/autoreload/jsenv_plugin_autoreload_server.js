@@ -39,7 +39,12 @@ export const jsenvPluginAutoreloadServer = ({
             const instructions = [];
             for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
               if (referenceFromOther.isImplicit && referenceFromOther.isWeak) {
-                continue;
+                if (!referenceFromOther.original) {
+                  continue;
+                }
+                if (referenceFromOther.original.isWeak) {
+                  continue;
+                }
               }
               const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
               if (urlInfoReferencingThisOne.data.hotDecline) {
@@ -148,7 +153,6 @@ export const jsenvPluginAutoreloadServer = ({
                   cause: `${relativeUrl} ${event}`,
                   type: "hot",
                   typeReason: hotUpdate.reason,
-                  hot: changedUrlInfo.modifiedTimestamp,
                   hotInstructions: instructions,
                 };
               }
@@ -207,7 +211,6 @@ export const jsenvPluginAutoreloadServer = ({
                   cause,
                   type: "hot",
                   typeReason: ownerHotUpdate.reason,
-                  hot: prunedUrlInfo.prunedTimestamp,
                   hotInstructions: [pruneInstruction],
                 };
               }
@@ -220,20 +223,21 @@ export const jsenvPluginAutoreloadServer = ({
 
         clientFileChangeEventEmitter.on(({ url, event }) => {
           const changedUrlInfo = serverEventInfo.kitchen.graph.getUrlInfo(url);
-          if (changedUrlInfo) {
-            delayAction({
-              type: "change",
-              changedUrlInfo,
-              event,
-            });
-            for (const searchParamVariant of changedUrlInfo.searchParamVariantSet) {
-              delayAction({
-                type: "change",
-                changedUrlInfo: searchParamVariant,
-                event,
-              });
-            }
+          if (!changedUrlInfo) {
+            return;
           }
+          delayAction({
+            type: "change",
+            changedUrlInfo,
+            event,
+          });
+          // for (const searchParamVariant of changedUrlInfo.searchParamVariantSet) {
+          //   delayAction({
+          //     type: "change",
+          //     changedUrlInfo: searchParamVariant,
+          //     event,
+          //   });
+          // }
         });
         clientFileDereferencedEventEmitter.on(
           (prunedUrlInfo, lastReferenceFromOther) => {

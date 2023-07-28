@@ -19,6 +19,7 @@ import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js";
 // other
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
+import { jsenvPluginCleanHTML } from "./clean_html/jsenv_plugin_clean_html.js";
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
@@ -85,5 +86,6 @@ export const getCorePlugins = ({
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
+    jsenvPluginCleanHTML(),
   ];
 };

@@ -37,8 +37,8 @@ System.register([__v__("/js/defineProperty.nomodule.js")], function (_export, _c
   }
   _export("default", _objectSpread2);
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersDefinePropertyDefinePropertyJs) {
-      defineProperty = _packagesInternalPluginTranspilationSrcBabelBabel_helper_directoryBabel_helpersDefinePropertyDefinePropertyJs.default;
+    setters: [function (_definePropertyDefinePropertyJs) {
+      defineProperty = _definePropertyDefinePropertyJs.default;
     }],
     execute: function () {}
   };

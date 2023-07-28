@@ -22,7 +22,6 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap";
-import { generateInlineContentUrl } from "@jsenv/urls";
 import {
   parseHtmlString,
   stringifyHtmlAst,
@@ -33,6 +32,7 @@ import {
   getHtmlNodeText,
   setHtmlNodeText,
   removeHtmlNode,
+  getUrlForContentInsideHtml,
 } from "@jsenv/ast";
 
 export const jsenvPluginImportmap = () => {
@@ -107,17 +107,11 @@ export const jsenvPluginImportmap = () => {
           return null;
         }
         const handleInlineImportmap = async (importmap, htmlNodeText) => {
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(importmap, {
-              preferOriginal: true,
-            });
-          const inlineImportmapUrl = generateInlineContentUrl({
-            url: htmlUrlInfo.url,
-            extension: ".importmap",
-            line,
-            column,
-            lineEnd,
-            columnEnd,
+          const { line, column, isOriginal } = getHtmlNodePosition(importmap, {
+            preferOriginal: true,
+          });
+          const inlineImportmapUrl = getUrlForContentInsideHtml(importmap, {
+            htmlUrl: htmlUrlInfo.url,
           });
           const inlineImportmapReference = htmlUrlInfo.dependencies.foundInline(
             {
@@ -156,17 +150,11 @@ export const jsenvPluginImportmap = () => {
               break;
             }
           }
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(importmap, {
-              preferOriginal: true,
-            });
-          const importmapInlineUrl = generateInlineContentUrl({
-            url: htmlUrlInfo.url,
-            extension: ".importmap",
-            line,
-            column,
-            lineEnd,
-            columnEnd,
+          const { line, column, isOriginal } = getHtmlNodePosition(importmap, {
+            preferOriginal: true,
+          });
+          const importmapInlineUrl = getUrlForContentInsideHtml(importmap, {
+            htmlUrl: htmlUrlInfo.url,
           });
           const importmapReferenceInlined = importmapReference.inline({
             line: line - 1,

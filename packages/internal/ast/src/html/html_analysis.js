@@ -6,18 +6,21 @@ export const analyzeScriptNode = (scriptNode) => {
     return {
       type: "js_classic",
       contentType: "text/javascript",
+      extension: ".js",
     };
   }
   if (typeAttribute === "module") {
     return {
       type: "js_module",
       contentType: "text/javascript",
+      extension: ".js",
     };
   }
   if (typeAttribute === "importmap") {
     return {
       type: "importmap",
       contentType: "application/importmap+json",
+      extension: ".importmap",
     };
   }
   // jsx
@@ -74,6 +77,7 @@ export const analyzeScriptNode = (scriptNode) => {
   return {
     type: "text",
     contentType: "text/plain",
+    extension: ".txt",
   };
 };
 

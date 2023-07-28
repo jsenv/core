@@ -2,11 +2,12 @@ import { readFileSync } from "node:fs";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
-  await build({
+  const { buildManifest } = await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -17,6 +18,10 @@ const test = async (params) => {
     runtimeCompat: { chrome: "98" },
     ...params,
   });
+  takeDirectorySnapshot(
+    new URL("./dist/", import.meta.url),
+    new URL("./snapshots/", import.meta.url),
+  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -34,7 +39,7 @@ const test = async (params) => {
   };
   const expected = {
     returnValue: {
-      directoryUrl: `${server.origin}/src/?v=774fbd8c`,
+      directoryUrl: `${server.origin}/${buildManifest["src/"]}`,
     },
     jsFileContent: `console.log("Hello");\n`,
   };

@@ -8,8 +8,8 @@ export const jsenvPluginCacheControl = ({
     augmentResponse: ({ reference }) => {
       if (
         versionedUrls &&
-        reference.searchParams.has("v") &&
-        !reference.searchParams.has("hot")
+        reference.generatedSearchParams.has("v") &&
+        !reference.generatedSearchParams.has("hot")
       ) {
         return {
           headers: {

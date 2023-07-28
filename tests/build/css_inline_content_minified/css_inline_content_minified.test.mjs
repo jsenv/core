@@ -12,6 +12,7 @@ await build({
   entryPoints: {
     "./main.html": "main.html",
   },
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   runtimeCompat: {
     chrome: "64",
     edge: "79",

@@ -1,4 +1,4 @@
-export const getTypePropertyNode = (node) => {
+export const findPropertyNodeByName = (node, name) => {
   if (node.type !== "ObjectExpression") {
     return null;
   }
@@ -7,7 +7,7 @@ export const getTypePropertyNode = (node) => {
     return (
       property.type === "Property" &&
       property.key.type === "Identifier" &&
-      property.key.name === "type"
+      property.key.name === name
     );
   });
 };

@@ -1,8 +1,10 @@
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  clientFiles: {
+  serverLogLevel: "debug",
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceMainFilePath: "./main.html",
+  sourceFilesConfig: {
     "./**": true,
     "./**/.*/": false,
   },

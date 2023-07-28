@@ -78,13 +78,13 @@ System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
    * }
    */
   return {
-    setters: [function (_mainJs) {
-      ReactReduxContext = _mainJs.ReactReduxContext;
-      useReduxContext = _mainJs.useReduxContext;
-      createReduxContextHook = _mainJs.createReduxContextHook;
-      useSelector = _mainJs.useSelector;
-      p = _mainJs.p;
-      o = _mainJs.o;
+    setters: [function (_mainJsx) {
+      ReactReduxContext = _mainJsx.ReactReduxContext;
+      useReduxContext = _mainJsx.useReduxContext;
+      createReduxContextHook = _mainJsx.createReduxContextHook;
+      useSelector = _mainJsx.useSelector;
+      p = _mainJsx.p;
+      o = _mainJsx.o;
     }],
     execute: function () {
       useStore = /*#__PURE__*/createStoreHook();

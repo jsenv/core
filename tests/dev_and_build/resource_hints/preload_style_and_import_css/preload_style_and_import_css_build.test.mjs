@@ -5,7 +5,7 @@ import { build, startBuildServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "error",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -44,13 +44,15 @@ const test = async (name, params) => {
 };
 
 // support for <script type="module">
-await test("0_js_module", {
+await test({
+  name: "0_js_module",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
   versioning: false,
 });
 // no support for <script type="module"> + no bundling
-await test("1_js_module_fallback", {
+await test({
+  name: "1_js_module_fallback",
   runtimeCompat: { chrome: "62" },
   versioning: false,
 });

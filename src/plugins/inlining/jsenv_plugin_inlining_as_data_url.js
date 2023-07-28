@@ -17,6 +17,21 @@ export const jsenvPluginInliningAsDataUrl = () => {
       if (!reference.searchParams.has("inline")) {
         return null;
       }
+      if (reference.isInline) {
+        // happens when inlining file content into js
+        // (for instance import "style.css" with { type: "css" } )
+        // In that case the code generated look as follow
+        // new InlineContent(/* content of style.css */, { type: "text/css", inlinedFromUrl: "style.css" }).
+        // and during code analysis an inline reference is generated
+        // with the url "style.css?inline"
+        return null;
+      }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
+      if (reference.prev && reference.prev.searchParams.has("inline")) {
+        return null;
+      }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
@@ -39,7 +54,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
       }
       const specifierWithBase64Param = injectQueryParamsIntoSpecifier(
         reference.specifier,
-        { as_base_64: "", inline: undefined },
+        { as_base_64: "" },
       );
       const referenceInlined = reference.inline({
         line: reference.line,

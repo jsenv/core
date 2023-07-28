@@ -5,7 +5,7 @@ import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js"
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -18,7 +18,7 @@ const test = async (params) => {
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
-    new URL("./snapshots/", import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
   );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -34,4 +34,12 @@ const test = async (params) => {
   assert({ actual, expected });
 };
 
-await test();
+await test({
+  name: "0_js_module",
+  runtimeCompat: { chrome: "89" },
+});
+
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: { chrome: "80" },
+});

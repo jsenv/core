@@ -1,25 +1,48 @@
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
-import { memoizeByFirstArgument } from "@jsenv/utils/src/memoize/memoize_by_first_argument.js";
+import { ANSI } from "@jsenv/log";
 
 export const createBuildUrlsGenerator = ({
+  logger,
+  sourceDirectoryUrl,
   buildDirectoryUrl,
   assetsDirectory,
 }) => {
   const cache = {};
-
   const getUrlName = (url, urlInfo) => {
     if (!urlInfo) {
       return urlToFilename(url);
     }
-    if (urlInfo.filename) {
-      return urlInfo.filename;
+    if (urlInfo.filenameHint) {
+      return urlInfo.filenameHint;
     }
     return urlToFilename(url);
   };
 
-  const generate = memoizeByFirstArgument((url, { urlInfo, ownerUrlInfo }) => {
+  const buildUrlCache = new Map();
+
+  const associateBuildUrl = (url, buildUrl) => {
+    buildUrlCache.set(url, buildUrl);
+    logger.debug(`associate a build url
+${ANSI.color(url, ANSI.GREY)} ->
+${ANSI.color(buildUrl, ANSI.MAGENTA)}
+      `);
+  };
+
+  const generate = (url, { urlInfo, ownerUrlInfo }) => {
+    const buildUrlFromCache = buildUrlCache.get(url);
+    if (buildUrlFromCache) {
+      return buildUrlFromCache;
+    }
+    if (urlInfo.type === "directory") {
+      const directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      const { search } = new URL(url);
+      const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
+      associateBuildUrl(url, buildUrl);
+      return buildUrl;
+    }
+
     const directoryPath = determineDirectoryPath({
-      buildDirectoryUrl,
+      sourceDirectoryUrl,
       assetsDirectory,
       urlInfo,
       ownerUrlInfo,
@@ -45,8 +68,11 @@ export const createBuildUrlsGenerator = ({
       integer++;
       nameCandidate = `${basename}${integer}${extension}`;
     }
-    return `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
-  });
+    hash = "";
+    const buildUrl = `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
+    associateBuildUrl(url, buildUrl);
+    return buildUrl;
+  };
 
   return {
     generate,
@@ -74,26 +100,22 @@ const splitFileExtension = (filename) => {
 };
 
 const determineDirectoryPath = ({
-  buildDirectoryUrl,
+  sourceDirectoryUrl,
   assetsDirectory,
   urlInfo,
   ownerUrlInfo,
 }) => {
+  if (urlInfo.dirnameHint) {
+    return urlInfo.dirnameHint;
+  }
   if (urlInfo.type === "directory") {
     return "";
   }
-  if (ownerUrlInfo && ownerUrlInfo.type === "directory") {
-    const ownerDirectoryPath = urlToRelativeUrl(
-      ownerUrlInfo.url,
-      buildDirectoryUrl,
-    );
-    return ownerDirectoryPath;
-  }
   if (urlInfo.isInline) {
     const parentDirectoryPath = determineDirectoryPath({
-      buildDirectoryUrl,
+      sourceDirectoryUrl,
       assetsDirectory,
-      urlInfo: ownerUrlInfo,
+      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
     });
     return parentDirectoryPath;
   }

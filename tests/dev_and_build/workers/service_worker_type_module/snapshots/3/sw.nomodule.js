@@ -1,7 +1,6 @@
-
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "924507b2"
+    "version": "4bfab674"
   },
   "/css/style.css": {
     "version": "2e9d11a2",
@@ -20,7 +19,7 @@ self.resourcesFromJsenvBuild = {
       exports: {}
     };
     factory();
-    global.swNomodule = mod.exports;
+    global.sw = mod.exports;
   }
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";

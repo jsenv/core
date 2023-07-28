@@ -73,6 +73,49 @@ export const parseJsUrls = ({
       ...inlineContentInfo,
     });
   };
+
+  const getCommentBeforeClosingParenthesis = (
+    // either new InlineContent() or JSON.parse() for instance
+    callNode,
+  ) => {
+    const args = callNode.arguments;
+    let commentMustStartAfter;
+    let commentMustEndBefore;
+    if (args.length === 0) {
+      commentMustStartAfter = callNode.start;
+      commentMustEndBefore = callNode.end - 1;
+    } else {
+      const lastArg = args[args.length - 1];
+      commentMustStartAfter = lastArg.start;
+      commentMustEndBefore = callNode.end - 1;
+    }
+    for (const comment of ast.comments) {
+      if (
+        comment.start > commentMustStartAfter &&
+        comment.end < commentMustEndBefore
+      ) {
+        return comment;
+      }
+    }
+    return null;
+  };
+
+  const readInlinedFromUrl = (node) => {
+    let inlinedFromUrl;
+    const commentBeforeClosingParenthesis =
+      getCommentBeforeClosingParenthesis(node);
+    if (commentBeforeClosingParenthesis) {
+      const text = commentBeforeClosingParenthesis.text;
+      const inlinedFromUrlIndex = text.indexOf("inlinedFromUrl=");
+      if (inlinedFromUrlIndex > -1) {
+        inlinedFromUrl = text.slice(
+          inlinedFromUrlIndex + "inlinedFromUrl=".length,
+        );
+      }
+    }
+    return inlinedFromUrl;
+  };
+
   ancestor(ast, {
     ImportDeclaration: (node) => {
       analyzeImportDeclaration(node, { onUrl });
@@ -125,6 +168,7 @@ export const parseJsUrls = ({
       if (inlineContent && isJSONParseCall(node)) {
         analyzeJSONParseCall(node, {
           onInlineContent,
+          readInlinedFromUrl,
         });
         return;
       }
@@ -163,12 +207,14 @@ export const parseJsUrls = ({
       if (inlineContent && isNewInlineContentCall(node)) {
         analyzeNewInlineContentCall(node, {
           onInlineContent,
+          readInlinedFromUrl,
         });
         return;
       }
       if (inlineContent && isNewBlobCall(node)) {
         analyzeNewBlobCall(node, {
           onInlineContent,
+          readInlinedFromUrl,
         });
         return;
       }

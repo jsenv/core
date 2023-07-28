@@ -1,6 +1,6 @@
-import React from "/js/react.js?cjs_as_js_module=";
-import ReactDOM from "/js/react-dom/client.js?cjs_as_js_module=";
-import { jsx as _jsx } from "/js/react/jsx-runtime.js?cjs_as_js_module=";
+import React from "/js/react.js";
+import ReactDOM from "/js/react-dom/client.js";
+import { jsx as _jsx } from "/js/react/jsx-runtime.js";
 const {
   Root
 } = await import(__v__("/js/root.js"));

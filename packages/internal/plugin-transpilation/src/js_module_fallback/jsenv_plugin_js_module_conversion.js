@@ -9,7 +9,7 @@ import {
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 
-export const jsenvPluginJsModuleConversion = () => {
+export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {
     if (
       reference.type === "js_import" ||
@@ -35,17 +35,16 @@ export const jsenvPluginJsModuleConversion = () => {
 
   const markAsJsClassicProxy = (reference) => {
     reference.expectedType = "js_classic";
-    if (!reference.filename) {
-      reference.filename = generateJsClassicFilename(reference.url);
+    if (!reference.filenameHint) {
+      reference.filenameHint = generateJsClassicFilename(reference.url);
     }
   };
 
   const turnIntoJsClassicProxy = (reference) => {
-    const urlTransformed = injectQueryParams(reference.url, {
+    markAsJsClassicProxy(reference);
+    return injectQueryParams(reference.url, {
       js_module_fallback: "",
     });
-    markAsJsClassicProxy(reference);
-    return urlTransformed;
   };
 
   return {
@@ -54,6 +53,15 @@ export const jsenvPluginJsModuleConversion = () => {
     redirectReference: (reference) => {
       if (reference.searchParams.has("js_module_fallback")) {
         markAsJsClassicProxy(reference);
+        return null;
+      }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
+      if (
+        reference.prev &&
+        reference.prev.searchParams.has(`js_module_fallback`)
+      ) {
         return null;
       }
       // We want to propagate transformation of js module to js classic to:
@@ -80,7 +88,7 @@ export const jsenvPluginJsModuleConversion = () => {
       if (!jsModuleUrlInfo) {
         return null;
       }
-      await jsModuleUrlInfo.fetchContent();
+      await jsModuleUrlInfo.cook();
       let outputFormat;
       if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
         // if it's an entry point without dependency (it does not use import)
@@ -107,6 +115,7 @@ export const jsenvPluginJsModuleConversion = () => {
         inputUrl: jsModuleUrlInfo.url,
         outputUrl: urlInfo.url,
         outputFormat,
+        remapImportSpecifier,
       });
       return {
         content,
@@ -130,6 +139,7 @@ const generateJsClassicFilename = (url) => {
     searchParams.has("as_css_module") ||
     searchParams.has("as_text_module")
   ) {
+    basename += extension;
     extension = ".js";
   }
   return `${basename}.nomodule${extension}`;

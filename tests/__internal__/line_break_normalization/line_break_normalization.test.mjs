@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert";
 import { readFile } from "@jsenv/filesystem";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-import { generateVersion } from "@jsenv/core/src/build/build_versions_manager.js";
+import { generateVersion } from "@jsenv/core/src/build/build_specifier_manager.js";
 import { ensureUnixLineBreaks } from "@jsenv/core/src/build/line_break_unix.js";
 
 const test = ({ content, contentType, lineBreakNormalization }) => {

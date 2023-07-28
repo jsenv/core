@@ -5,6 +5,7 @@ import { createJsParseError } from "./js_parse_error.js";
 
 export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
   const AcornParser = Parser.extend(importAssertions);
+  const comments = [];
 
   try {
     // https://github.com/acornjs/acorn/tree/master/acorn#interface
@@ -13,7 +14,16 @@ export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
       allowAwaitOutsideFunction: true,
       sourceType: isJsModule ? "module" : "script",
       ecmaVersion: 2022,
+      onComment: (block, text, start, end) => {
+        comments.push({
+          block,
+          text,
+          start,
+          end,
+        });
+      },
     });
+    jsAst.comments = comments;
     return jsAst;
   } catch (e) {
     if (e && e.name === "SyntaxError") {

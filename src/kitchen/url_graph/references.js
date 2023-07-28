@@ -1,14 +1,15 @@
 import {
   getCallerPosition,
   stringifyUrlSite,
-  generateInlineContentUrl,
   urlToBasename,
   urlToExtension,
 } from "@jsenv/urls";
+import { generateUrlForInlineContent } from "@jsenv/ast";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
-import { GRAPH_VISITOR } from "./url_graph_visitor.js";
+
+let referenceId = 0;
 
 export const createDependencies = (ownerUrlInfo) => {
   const { referenceToOthersSet } = ownerUrlInfo;
@@ -101,37 +102,10 @@ export const createDependencies = (ownerUrlInfo) => {
       specifier: sideEffectFileUrl,
       ...rest,
     });
-    const parentUrlInfo = ownerUrlInfo.findParentIfInline() || ownerUrlInfo;
-
-    const associateIfReferencedBy = (urlInfo) => {
-      for (const referenceToOther of urlInfo.referenceToOthersSet) {
-        if (referenceToOther === sideEffectFileReference) {
-          continue;
-        }
-        if (referenceToOther.url === sideEffectFileUrl) {
-          // consider this reference becomes the last reference
-          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
-          sideEffectFileReference.next =
-            referenceToOther.next || referenceToOther;
-          return true;
-        }
-        if (
-          referenceToOther.original &&
-          referenceToOther.original.url === sideEffectFileUrl
-        ) {
-          // consider this reference becomes the last reference
-          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
-          sideEffectFileReference.next =
-            referenceToOther.next || referenceToOther;
-          return true;
-        }
-      }
-      return false;
-    };
 
     const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
       const basename = urlToBasename(sideEffectFileUrl);
-      const inlineUrl = generateInlineContentUrl({
+      const inlineUrl = generateUrlForInlineContent({
         url: urlInfoReceiver.url,
         basename,
         extension: urlToExtension(sideEffectFileUrl),
@@ -158,59 +132,69 @@ export const createDependencies = (ownerUrlInfo) => {
     // during dev cooking files is incremental
     // so HTML/JS is already executed by the browser
     // we can't late inject into entry point
-    if (ownerUrlInfo.context.dev) {
-      if (associateIfReferencedBy(ownerUrlInfo)) {
-        return;
-      }
-      const dependentReferencingThatFile = GRAPH_VISITOR.findDependent(
-        parentUrlInfo,
-        (ancestorUrlInfo) => {
-          if (ancestorUrlInfo.isRoot) {
-            return false;
-          }
-          return associateIfReferencedBy(ancestorUrlInfo);
-        },
-      );
-      if (dependentReferencingThatFile) {
-        return;
-      }
-      injectAsBannerCodeBeforeFinalize(parentUrlInfo);
-      return;
-    }
-
     // During build:
-    // during build, files are not executed so it's
-    // possible to inject reference when discovering a side effect file
-    if (associateIfReferencedBy(ownerUrlInfo)) {
-      return;
-    }
-    // The thing to do here is to inject side effect file into entry point
-    // only when:
-    // - entry point does not already has it
-    // - nothing between entry point and the file has it
-    const entryPoints = parentUrlInfo.graph.getEntryPoints();
-    for (const entryPointUrlInfo of entryPoints) {
-      if (associateIfReferencedBy(entryPointUrlInfo)) {
-        continue;
+    // files are not executed so it's possible to inject reference
+    // when discovering a side effect file
+    const visitedMap = new Map();
+    let foundOrInjectedOnce = false;
+    const visit = (urlInfo) => {
+      urlInfo = urlInfo.findParentIfInline() || urlInfo;
+      const value = visitedMap.get(urlInfo);
+      if (value !== undefined) {
+        return value;
       }
-      if (parentUrlInfo.isEntryPoint) {
-        injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
-        continue;
-      }
-      let found = false;
-      GRAPH_VISITOR.findDependency(entryPointUrlInfo, (dependencyUrlInfo) => {
-        if (associateIfReferencedBy(dependencyUrlInfo)) {
-          found = true;
+
+      // search if already referenced
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther === sideEffectFileReference) {
+          continue;
+        }
+        if (referenceToOther.url === sideEffectFileUrl) {
+          // consider this reference becomes the last reference
+          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
+          sideEffectFileReference.next =
+            referenceToOther.next || referenceToOther;
+          foundOrInjectedOnce = true;
+          visitedMap.set(urlInfo, true);
           return true;
         }
-        if (dependencyUrlInfo === parentUrlInfo) {
+        if (
+          referenceToOther.original &&
+          referenceToOther.original.url === sideEffectFileUrl
+        ) {
+          // consider this reference becomes the last reference
+          // this ensure this ref is properly detected as inlined by urlInfo.isUsed()
+          sideEffectFileReference.next =
+            referenceToOther.next || referenceToOther;
+          foundOrInjectedOnce = true;
+          visitedMap.set(urlInfo, true);
           return true;
         }
-        return false;
-      });
-      if (!found) {
-        injectAsBannerCodeBeforeFinalize(entryPointUrlInfo);
       }
+      // not referenced and we reach an entry point, stop there
+      if (urlInfo.isEntryPoint) {
+        foundOrInjectedOnce = true;
+        visitedMap.set(urlInfo, true);
+        injectAsBannerCodeBeforeFinalize(urlInfo);
+        return true;
+      }
+      visitedMap.set(urlInfo, false);
+      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+        const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+        visit(urlInfoReferencingThisOne);
+        // during dev the first urlInfo where we inject the side effect file is enough
+        // during build we want to inject into every possible entry point
+        if (foundOrInjectedOnce && urlInfo.context.dev) {
+          break;
+        }
+      }
+      return false;
+    };
+    visit(ownerUrlInfo);
+    if (ownerUrlInfo.context.dev && !foundOrInjectedOnce) {
+      injectAsBannerCodeBeforeFinalize(
+        ownerUrlInfo.findParentIfInline() || ownerUrlInfo,
+      );
     }
   };
 
@@ -275,7 +259,7 @@ const createReference = ({
   expectedContentType,
   expectedType,
   expectedSubtype,
-  filename,
+  filenameHint,
   integrity,
   crossorigin,
   specifier,
@@ -326,6 +310,7 @@ const createReference = ({
     }
   }
   const reference = {
+    id: ++referenceId,
     ownerUrlInfo,
     original,
     prev,
@@ -342,7 +327,7 @@ const createReference = ({
     expectedContentType,
     expectedType,
     expectedSubtype,
-    filename,
+    filenameHint,
     integrity,
     crossorigin,
     specifier,
@@ -445,6 +430,7 @@ const createReference = ({
       original: reference.original || reference,
       prev: reference,
       trace,
+      injected: reference.injected,
       expectedType: reference.expectedType,
       ...props,
     });
@@ -625,6 +611,8 @@ const applyDependencyRemovalEffects = (reference) => {
     }
     return false;
   }
+  // referencedUrlInfo.firstReference = null;
+  // referencedUrlInfo.lastReference = null;
   referencedUrlInfo.onDereferenced(reference);
   return true;
 };
@@ -691,8 +679,23 @@ const getRedirectedReferenceProps = (reference, url) => {
 
 const applyReferenceEffectsOnUrlInfo = (reference) => {
   const referencedUrlInfo = reference.urlInfo;
+  referencedUrlInfo.lastReference = reference;
+  if (reference.isInline) {
+    referencedUrlInfo.isInline = true;
+    referencedUrlInfo.inlineUrlSite = {
+      url: reference.ownerUrlInfo.url,
+      content: reference.isOriginalPosition
+        ? reference.ownerUrlInfo.originalContent
+        : reference.ownerUrlInfo.content,
+      line: reference.specifierLine,
+      column: reference.specifierColumn,
+    };
+  }
 
-  if (referencedUrlInfo.firstReference) {
+  if (
+    referencedUrlInfo.firstReference &&
+    !referencedUrlInfo.firstReference.isWeak
+  ) {
     return;
   }
   referencedUrlInfo.firstReference = reference;
@@ -707,21 +710,9 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   if (reference.injected) {
     referencedUrlInfo.injected = true;
   }
-  if (reference.filename && !referencedUrlInfo.filename) {
-    referencedUrlInfo.filename = reference.filename;
+  if (reference.filenameHint && !referencedUrlInfo.filenameHint) {
+    referencedUrlInfo.filenameHint = reference.filenameHint;
   }
-  if (reference.isInline) {
-    referencedUrlInfo.isInline = true;
-    referencedUrlInfo.inlineUrlSite = {
-      url: reference.ownerUrlInfo.url,
-      content: reference.isOriginalPosition
-        ? reference.ownerUrlInfo.originalContent
-        : reference.ownerUrlInfo.content,
-      line: reference.specifierLine,
-      column: reference.specifierColumn,
-    };
-  }
-
   if (reference.debug) {
     referencedUrlInfo.debug = true;
   }

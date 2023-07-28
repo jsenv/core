@@ -15,18 +15,28 @@ import {
 export const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
+  sourcemapsComment,
+  sourcemapsSources,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsSourcesRelative,
   outDirectoryUrl,
   supervisor,
 }) => {
-  if (sourcemapsSourcesProtocol === undefined) {
-    sourcemapsSourcesProtocol = "file:///";
-  }
   if (sourcemapsSourcesContent === undefined) {
     sourcemapsSourcesContent = true;
   }
+
+  const formatSourcemapSource =
+    typeof sourcemapsSources === "function"
+      ? (source, urlInfo) => {
+          return sourcemapsSources(source, urlInfo);
+        }
+      : sourcemapsSources === "relative"
+      ? (source, urlInfo) => {
+          const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+          return sourceRelative || ".";
+        }
+      : null;
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
     let { sources } = sourcemap;
@@ -76,6 +86,21 @@ export const createUrlInfoTransformer = ({
     urlInfo.sourcemapIsWrong = null;
   };
 
+  const setContentProperties = (
+    urlInfo,
+    { content, contentAst, contentEtag, contentLength },
+  ) => {
+    if (content === urlInfo.content) {
+      return false;
+    }
+    urlInfo.contentAst = contentAst;
+    urlInfo.contentEtag = contentEtag;
+    urlInfo.contentLength = contentLength;
+    urlInfo.content = content;
+    defineGettersOnPropertiesDerivedFromContent(urlInfo);
+    return true;
+  };
+
   const setContent = async (
     urlInfo,
     content,
@@ -96,14 +121,22 @@ export const createUrlInfoTransformer = ({
     }
     defineGettersOnPropertiesDerivedFromOriginalContent(urlInfo);
 
-    urlInfo.contentAst = contentAst;
-    urlInfo.contentEtag = contentEtag;
-    urlInfo.contentLength = contentLength;
-    urlInfo.content = content;
-    defineGettersOnPropertiesDerivedFromContent(urlInfo);
-
+    let may = mayHaveSourcemap(urlInfo);
+    let shouldHandle = shouldHandleSourcemap(urlInfo);
+    if (may && !shouldHandle) {
+      content = SOURCEMAP.removeComment({
+        contentType: urlInfo.contentType,
+        content,
+      });
+    }
+    setContentProperties(urlInfo, {
+      content,
+      contentAst,
+      contentEtag,
+      contentLength,
+    });
     urlInfo.sourcemap = sourcemap;
-    if (!shouldHandleSourcemap(urlInfo)) {
+    if (!may || !shouldHandle) {
       return;
     }
     // sourcemap is a special kind of reference:
@@ -176,18 +209,22 @@ export const createUrlInfoTransformer = ({
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    const contentModified = content && content !== urlInfo.content;
-    if (contentModified) {
-      urlInfo.contentAst = contentAst;
-      urlInfo.contentEtag = contentEtag;
-      urlInfo.contentLength = contentLength;
-      urlInfo.content = content;
-      defineGettersOnPropertiesDerivedFromContent(urlInfo);
-    }
-    if (sourcemap && shouldHandleSourcemap(urlInfo)) {
+    const contentModified = setContentProperties(urlInfo, {
+      content,
+      contentAst,
+      contentEtag,
+      contentLength,
+    });
+
+    if (
+      sourcemap &&
+      mayHaveSourcemap(urlInfo) &&
+      shouldHandleSourcemap(urlInfo)
+    ) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
+      let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(
-        urlInfo.sourcemap,
+        currentSourcemap,
         sourcemapNormalized,
       );
       const finalSourcemapNormalized = normalizeSourcemap(
@@ -259,7 +296,10 @@ export const createUrlInfoTransformer = ({
     }
   };
 
-  const applySourcemapOnContent = (urlInfo) => {
+  const applySourcemapOnContent = (
+    urlInfo,
+    formatSource = formatSourcemapSource,
+  ) => {
     if (!urlInfo.sourcemap || !shouldHandleSourcemap(urlInfo)) {
       return;
     }
@@ -291,40 +331,54 @@ export const createUrlInfoTransformer = ({
       });
     }
     const sourcemapUrlInfo = sourcemapReference.urlInfo;
-
-    const sourcemap = urlInfo.sourcemap;
-    if (sourcemapsSourcesRelative) {
-      sourcemap.sources = sourcemap.sources.map((source) => {
-        const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-        return sourceRelative || ".";
-      });
-    }
-    if (sourcemapsSourcesProtocol !== "file:///") {
-      sourcemap.sources = sourcemap.sources.map((source) => {
-        if (source.startsWith("file:///")) {
-          return `${sourcemapsSourcesProtocol}${source.slice(
-            "file:///".length,
-          )}`;
+    // It's possible urlInfo content to be modified after being finalized
+    // In that case we'll recompose sourcemaps (and re-append it to file content)
+    // Recomposition is done on urlInfo.sourcemap and must be done with absolute urls inside .sources
+    // (so we can detect if sources are identical)
+    // For this reason we must not mutate urlInfo.sourcemap.sources
+    const sourcemapGenerated = {
+      ...urlInfo.sourcemap,
+      sources: urlInfo.sourcemap.sources.map((source) => {
+        const sourceFormatted = formatSource
+          ? formatSource(source, urlInfo)
+          : source;
+        if (sourcemapsSourcesProtocol) {
+          if (sourceFormatted.startsWith("file:///")) {
+            return `${sourcemapsSourcesProtocol}${sourceFormatted.slice(
+              "file:///".length,
+            )}`;
+          }
         }
-        return source;
-      });
-    }
+        return sourceFormatted;
+      }),
+    };
+    sourcemapUrlInfo.type = "sourcemap";
     sourcemapUrlInfo.contentType = "application/json";
-    sourcemapUrlInfo.content = JSON.stringify(sourcemap, null, "  ");
+    setContentProperties(sourcemapUrlInfo, {
+      content: JSON.stringify(sourcemapGenerated, null, "  "),
+    });
 
     if (!urlInfo.sourcemapIsWrong) {
       if (sourcemaps === "inline") {
         sourcemapReference.generatedSpecifier =
-          generateSourcemapDataUrl(sourcemap);
+          generateSourcemapDataUrl(sourcemapGenerated);
       }
-      if (sourcemaps === "file" || sourcemaps === "inline") {
-        urlInfo.content = SOURCEMAP.writeComment({
-          contentType: urlInfo.contentType,
-          content: urlInfo.content,
-          specifier:
-            sourcemaps === "file" && sourcemapsSourcesRelative
-              ? urlToRelativeUrl(sourcemapReference.url, urlInfo.url)
-              : sourcemapReference.generatedSpecifier,
+      if (shouldUpdateSourcemapComment(urlInfo, sourcemaps)) {
+        let specifier;
+        if (sourcemaps === "file" && sourcemapsComment === "relative") {
+          specifier = urlToRelativeUrl(
+            sourcemapReference.generatedUrl,
+            urlInfo.generatedUrl,
+          );
+        } else {
+          specifier = sourcemapReference.generatedSpecifier;
+        }
+        setContentProperties(urlInfo, {
+          content: SOURCEMAP.writeComment({
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            specifier,
+          }),
         });
       }
     }
@@ -342,8 +396,29 @@ export const createUrlInfoTransformer = ({
     resetContent,
     setContent,
     applyTransformations,
+    applySourcemapOnContent,
     endTransformations,
   };
+};
+
+const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
+  if (urlInfo.context.buildStep === "shape") {
+    return false;
+  }
+  if (sourcemaps === "file" || sourcemaps === "inline") {
+    return true;
+  }
+  return false;
+};
+
+const mayHaveSourcemap = (urlInfo) => {
+  if (urlInfo.url.startsWith("data:")) {
+    return false;
+  }
+  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
 };
 
 const shouldHandleSourcemap = (urlInfo) => {
@@ -353,12 +428,6 @@ const shouldHandleSourcemap = (urlInfo) => {
     sourcemaps !== "file" &&
     sourcemaps !== "programmatic"
   ) {
-    return false;
-  }
-  if (urlInfo.url.startsWith("data:")) {
-    return false;
-  }
-  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
     return false;
   }
   return true;

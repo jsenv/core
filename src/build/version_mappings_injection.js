@@ -15,27 +15,25 @@ export const injectVersionMappingsAsGlobal = async (
   versionMappings,
 ) => {
   if (urlInfo.type === "html") {
-    await prependContent(urlInfo, {
-      type: "js_classic",
-      content: generateClientCodeForVersionMappings(versionMappings, {
-        globalName: "window",
-        minification: Boolean(
-          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-        ),
-      }),
+    const minification = Boolean(
+      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    );
+    const content = generateClientCodeForVersionMappings(versionMappings, {
+      globalName: "window",
+      minification,
     });
+    await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
-    await prependContent(urlInfo, {
-      type: "js_classic",
-      content: generateClientCodeForVersionMappings(versionMappings, {
-        globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
-        minification: Boolean(
-          urlInfo.context.getPluginMeta("willMinifyJsClassic"),
-        ),
-      }),
+    const minification = Boolean(
+      urlInfo.context.getPluginMeta("willMinifyJsClassic"),
+    );
+    const content = generateClientCodeForVersionMappings(versionMappings, {
+      globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
+      minification,
     });
+    await prependContent(urlInfo, { type: "js_classic", content });
     return;
   }
 };

@@ -8,8 +8,8 @@ import {
   setHtmlNodeAttributes,
   setHtmlNodeText,
   getHtmlNodePosition,
+  getUrlForContentInsideHtml,
 } from "@jsenv/ast";
-import { generateInlineContentUrl, urlToExtension } from "@jsenv/urls";
 
 export const jsenvPluginInliningIntoHtml = () => {
   return {
@@ -21,7 +21,7 @@ export const jsenvPluginInliningIntoHtml = () => {
         const mutations = [];
         const actions = [];
 
-        const onStyleSheet = (linkNode, { href }) => {
+        const onLinkRelStyleSheet = (linkNode, { href }) => {
           let linkReference = null;
           for (const referenceToOther of urlInfo.referenceToOthersSet) {
             if (
@@ -36,17 +36,12 @@ export const jsenvPluginInliningIntoHtml = () => {
           if (!linkReference.searchParams.has("inline")) {
             return;
           }
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(linkNode, {
-              preferOriginal: true,
-            });
-          const linkInlineUrl = generateInlineContentUrl({
+          const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
+            preferOriginal: true,
+          });
+          const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
+            htmlUrl: urlInfo.url,
             url: linkReference.url,
-            extension: urlToExtension(linkReference.url),
-            line,
-            column,
-            lineEnd,
-            columnEnd,
           });
           const linkReferenceInlined = linkReference.inline({
             line: line - 1,
@@ -62,7 +57,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             await linkUrlInfoInlined.cook();
             mutations.push(() => {
               setHtmlNodeAttributes(linkNode, {
-                "inlined-from-href": href,
+                "inlined-from-href": linkReference.url,
                 "href": undefined,
                 "rel": undefined,
                 "type": undefined,
@@ -93,17 +88,12 @@ export const jsenvPluginInliningIntoHtml = () => {
           if (!scriptReference.searchParams.has("inline")) {
             return;
           }
-          const { line, column, lineEnd, columnEnd, isOriginal } =
-            getHtmlNodePosition(scriptNode, {
-              preferOriginal: true,
-            });
-          const scriptInlineUrl = generateInlineContentUrl({
+          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+            preferOriginal: true,
+          });
+          const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
+            htmlUrl: urlInfo.url,
             url: scriptReference.url,
-            extension: urlToExtension(scriptReference.url),
-            line,
-            column,
-            lineEnd,
-            columnEnd,
           });
           const scriptReferenceInlined = scriptReference.inline({
             line: line - 1,
@@ -142,7 +132,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             if (!href) {
               return;
             }
-            onStyleSheet(linkNode, { href });
+            onLinkRelStyleSheet(linkNode, { href });
           },
           script: (scriptNode) => {
             const { type } = analyzeScriptNode(scriptNode);

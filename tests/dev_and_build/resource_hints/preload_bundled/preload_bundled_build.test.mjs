@@ -10,7 +10,7 @@ console.warn = (...args) => {
   warnCalls.push(args.join(""));
 };
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   warnCalls.length = 0;
   await build({
     logLevel: "warn",
@@ -59,12 +59,14 @@ const test = async (name, params) => {
 };
 
 // support for <script type="module">
-await test("0_js_module", {
+await test({
+  name: "0_js_module",
   runtimeCompat: { chrome: "89" },
   plugins: [jsenvPluginBundling()],
 });
 // no support for <script type="module">
-await test("1_js_module_fallback", {
+await test({
+  name: "1_js_module_fallback",
   runtimeCompat: { chrome: "60" },
   plugins: [jsenvPluginBundling()],
 });

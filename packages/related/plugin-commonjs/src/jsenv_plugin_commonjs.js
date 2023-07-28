@@ -23,7 +23,7 @@ export const jsenvPluginCommonJs = ({
         const basename = isBareSpecifier(reference.specifier)
           ? reference.specifier
           : urlToBasename(reference.url);
-        reference.filename = `${basename}${onwerUrlExtension}`;
+        reference.filenameHint = `${basename}${onwerUrlExtension}`;
       }
     }
   };
@@ -53,6 +53,15 @@ export const jsenvPluginCommonJs = ({
         markAsJsModuleProxy(reference);
         return null;
       }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
+      if (
+        reference.prev &&
+        reference.prev.searchParams.has(`cjs_as_js_module`)
+      ) {
+        return null;
+      }
       const { commonjs } = URL_META.applyAssociations({
         url: reference.url,
         associations,
@@ -75,7 +84,7 @@ export const jsenvPluginCommonJs = ({
       if (!commonJsUrlInfo) {
         return null;
       }
-      await commonJsUrlInfo.fetchContent();
+      await commonJsUrlInfo.cook();
       const nodeRuntimeEnabled = Object.keys(
         urlInfo.context.runtimeCompat,
       ).includes("node");

@@ -1,6 +1,6 @@
 import {
   isStringLiteralNode,
-  getTypePropertyNode,
+  findPropertyNodeByName,
   extractContentInfo,
 } from "./helpers.js";
 
@@ -11,7 +11,10 @@ export const isNewBlobCall = (node) => {
     node.callee.name === "Blob"
   );
 };
-export const analyzeNewBlobCall = (node, { onInlineContent }) => {
+export const analyzeNewBlobCall = (
+  node,
+  { onInlineContent, readInlinedFromUrl },
+) => {
   const [firstArg, secondArg] = node.arguments;
   if (!firstArg) {
     return;
@@ -25,7 +28,7 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
   if (firstArg.elements.length !== 1) {
     return;
   }
-  const typePropertyNode = getTypePropertyNode(secondArg);
+  const typePropertyNode = findPropertyNodeByName(secondArg, "type");
   if (!typePropertyNode) {
     return;
   }
@@ -40,6 +43,7 @@ export const analyzeNewBlobCall = (node, { onInlineContent }) => {
     onInlineContent({
       type: "new_blob_first_arg",
       contentType,
+      inlinedFromUrl: readInlinedFromUrl(node),
       start: nodeHoldingContent.start,
       end: nodeHoldingContent.end,
       line: nodeHoldingContent.loc.start.line,

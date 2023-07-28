@@ -19,13 +19,13 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register(["/js/new_stylesheet.nomodule.js", "/js/style.nomodule.js"], function (_export, _context) {
+System.register(["/js/new_stylesheet.nomodule.js", "/js/style.css.nomodule.js"], function (_export, _context) {
   "use strict";
 
   var style;
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_clientStyleCssAs_css_module) {
-      style = _clientStyleCssAs_css_module.default;
+    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}, function (_styleCssAs_css_module) {
+      style = _styleCssAs_css_module.default;
     }],
     execute: async function () {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];

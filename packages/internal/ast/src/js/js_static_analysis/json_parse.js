@@ -11,13 +11,17 @@ export const isJSONParseCall = (node) => {
   );
 };
 
-export const analyzeJSONParseCall = (node, { onInlineContent }) => {
+export const analyzeJSONParseCall = (
+  node,
+  { onInlineContent, readInlinedFromUrl },
+) => {
   const nodeHoldingContent = node.arguments[0];
   const contentInfo = extractContentInfo(nodeHoldingContent);
   if (contentInfo) {
     onInlineContent({
       type: "json_parse_first_arg",
       contentType: "application/json",
+      inlinedFromUrl: readInlinedFromUrl(node),
       start: nodeHoldingContent.start,
       end: nodeHoldingContent.end,
       line: nodeHoldingContent.loc.start.line,
