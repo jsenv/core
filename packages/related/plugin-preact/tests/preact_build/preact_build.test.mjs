@@ -6,7 +6,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-const test = async (name, params) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -36,12 +36,14 @@ const test = async (name, params) => {
 };
 
 // support for <script type="module">
-await test("0_js_module", {
+await test({
+  name: "0_js_module",
   runtimeCompat: { chrome: "89" },
 });
 
 // no support for <script type="module">
-await test("1_js_module_fallback", {
+await test({
+  name: "1_js_module_fallback",
   runtimeCompat: {
     chrome: "55",
     edge: "14",

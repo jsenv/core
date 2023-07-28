@@ -11471,7 +11471,10 @@ const createUrlGraph = ({
       addUrlInfo(referencedUrlInfo);
       urlInfoCreatedEventEmitter.emit(referencedUrlInfo);
     }
-    if (referencedUrlInfo.searchParams.size > 0 && !kitchen.context.shape) {
+    if (
+      referencedUrlInfo.searchParams.size > 0 &&
+      kitchen.context.buildStep !== "shape"
+    ) {
       // A resource is represented by a url.
       // Variations of a resource are represented by url search params
       // Each representation of the resource is given a dedicated url info
@@ -12743,7 +12746,7 @@ const createUrlInfoTransformer = ({
         sourcemapReference.generatedSpecifier =
           generateSourcemapDataUrl(sourcemapGenerated);
       }
-      if (sourcemaps === "file" || sourcemaps === "inline") {
+      if (shouldUpdateSourcemapComment(urlInfo, sourcemaps)) {
         let specifier;
         if (sourcemaps === "file" && sourcemapsComment === "relative") {
           specifier = urlToRelativeUrl(
@@ -12779,6 +12782,16 @@ const createUrlInfoTransformer = ({
     applySourcemapOnContent,
     endTransformations,
   };
+};
+
+const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
+  if (urlInfo.context.buildStep === "shape") {
+    return false;
+  }
+  if (sourcemaps === "file" || sourcemaps === "inline") {
+    return true;
+  }
+  return false;
 };
 
 const mayHaveSourcemap = (urlInfo) => {
@@ -13194,7 +13207,6 @@ const createKitchen = ({
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
-  shape = false,
   runtimeCompat,
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -13221,7 +13233,6 @@ const createKitchen = ({
       mainFilePath,
       dev,
       build,
-      shape,
       runtimeCompat,
       clientRuntimeCompat,
       inlineContentClientFileUrl,
@@ -20630,6 +20641,7 @@ build ${entryPointKeys.length} entry points`);
     const rawRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
+      buildStep: "craft",
       buildDirectoryUrl,
       assetsDirectory,
       versioning,
@@ -20724,7 +20736,6 @@ build ${entryPointKeys.length} entry points`);
       ignore,
       ignoreProtocol: "remove",
       build: true,
-      shape: true,
       runtimeCompat,
       initialContext: contextSharedDuringBuild,
       initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
@@ -20922,6 +20933,7 @@ build ${entryPointKeys.length} entry points`);
     }
 
     {
+      finalKitchen.context.buildStep = "shape";
       const generateBuildGraph = createBuildTask("generate build graph");
       try {
         if (outDirectoryUrl) {
@@ -20949,6 +20961,7 @@ build ${entryPointKeys.length} entry points`);
     }
 
     {
+      finalKitchen.context.buildStep = "refine";
       {
         await buildSpecifierManager.replacePlaceholders();
       }

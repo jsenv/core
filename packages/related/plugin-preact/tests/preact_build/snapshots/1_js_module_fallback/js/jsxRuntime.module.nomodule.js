@@ -33,9 +33,9 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     jsxs: o
   });
   return {
-    setters: [function (_node_modulesPreactDistPreactModuleJs) {
-      r = _node_modulesPreactDistPreactModuleJs.options;
-      _export("Fragment", _node_modulesPreactDistPreactModuleJs.Fragment);
+    setters: [function (_distPreactModuleJs) {
+      r = _distPreactModuleJs.options;
+      _export("Fragment", _distPreactModuleJs.Fragment);
     }],
     execute: function () {
       _ = 0;
