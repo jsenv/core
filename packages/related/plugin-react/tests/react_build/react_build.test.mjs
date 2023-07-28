@@ -48,20 +48,22 @@ await test({
   runtimeCompat: { chrome: "89" },
 });
 // no support for <script type="module">
-// await test("1_js_module_fallback", {
-//   runtimeCompat: {
-//     chrome: "55",
-//     edge: "14",
-//     firefox: "52",
-//     safari: "11",
-//   },
-// });
-// await test("2_js_module_fallback_minified", {
-//   runtimeCompat: {
-//     chrome: "55",
-//     edge: "14",
-//     firefox: "52",
-//     safari: "11",
-//   },
-//   plugins: [jsenvPluginMinification()],
-// });
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: {
+    chrome: "55",
+    edge: "14",
+    firefox: "52",
+    safari: "11",
+  },
+});
+await test({
+  name: "2_js_module_fallback_minified",
+  runtimeCompat: {
+    chrome: "55",
+    edge: "14",
+    firefox: "52",
+    safari: "11",
+  },
+  plugins: [jsenvPluginMinification()],
+});

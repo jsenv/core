@@ -268,6 +268,9 @@ export const createBuildSpecifierManager = ({
           content: reference.content,
           contentType: reference.contentType,
         });
+        if (!finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = reference.filenameHint;
+        }
         const rawUrlInfo = rawReference.urlInfo;
         await rawUrlInfo.cook();
         return {
@@ -310,8 +313,14 @@ export const createBuildSpecifierManager = ({
             },
           );
           if (rawUrlInfo) {
+            if (!finalUrlInfo.filenameHint) {
+              finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
+            }
             return rawUrlInfo;
           }
+        }
+        if (!finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = firstReference.filenameHint;
         }
         return {
           originalContent: finalUrlInfo.originalContent,
