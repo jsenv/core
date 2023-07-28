@@ -16,7 +16,7 @@ import { lookup } from "node:dns";
 import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, parseSrcSet, getHtmlNodePosition, getHtmlNodeAttributePosition, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, parseCssUrls, parseJsUrls, getUrlForContentInsideJs, findHtmlNode, removeHtmlNode, analyzeLinkNode, injectHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
-import { createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
@@ -6739,7 +6739,7 @@ const startServer = async ({
     });
     if (websocketHandlers.length > 0) {
       const websocketClients = new Set();
-      const { WebSocketServer } = await import("./js/ws.js?cjs_as_js_module");
+      const { WebSocketServer } = await import("./js/ws.js");
       let websocketServer = new WebSocketServer({ noServer: true });
       const websocketOrigin = https
         ? `wss://${hostname}:${port}`
@@ -11750,7 +11750,7 @@ const createUrlInfo = (url, context) => {
       data: { ...reference.data },
       specifier: newSpecifier,
       isWeak: true,
-      isInline: false,
+      isInline: reference.isInline,
       original: reference.original || reference,
       prev: reference,
       // urlInfo: null,
@@ -12395,19 +12395,28 @@ const getContentEtag = (content) => {
 const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
+  sourcemapsComment,
+  sourcemapsSources,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsSourcesRelative,
-  sourcemapsCommentRelative,
   outDirectoryUrl,
   supervisor,
 }) => {
-  if (sourcemapsSourcesProtocol === undefined) {
-    sourcemapsSourcesProtocol = "file:///";
-  }
   if (sourcemapsSourcesContent === undefined) {
     sourcemapsSourcesContent = true;
   }
+
+  const formatSourcemapSource =
+    typeof sourcemapsSources === "function"
+      ? (source, urlInfo) => {
+          return sourcemapsSources(source, urlInfo);
+        }
+      : sourcemapsSources === "relative"
+      ? (source, urlInfo) => {
+          const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+          return sourceRelative || ".";
+        }
+      : null;
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
     let { sources } = sourcemap;
@@ -12457,6 +12466,21 @@ const createUrlInfoTransformer = ({
     urlInfo.sourcemapIsWrong = null;
   };
 
+  const setContentProperties = (
+    urlInfo,
+    { content, contentAst, contentEtag, contentLength },
+  ) => {
+    if (content === urlInfo.content) {
+      return false;
+    }
+    urlInfo.contentAst = contentAst;
+    urlInfo.contentEtag = contentEtag;
+    urlInfo.contentLength = contentLength;
+    urlInfo.content = content;
+    defineGettersOnPropertiesDerivedFromContent(urlInfo);
+    return true;
+  };
+
   const setContent = async (
     urlInfo,
     content,
@@ -12477,14 +12501,22 @@ const createUrlInfoTransformer = ({
     }
     defineGettersOnPropertiesDerivedFromOriginalContent(urlInfo);
 
-    urlInfo.contentAst = contentAst;
-    urlInfo.contentEtag = contentEtag;
-    urlInfo.contentLength = contentLength;
-    urlInfo.content = content;
-    defineGettersOnPropertiesDerivedFromContent(urlInfo);
-
+    let may = mayHaveSourcemap(urlInfo);
+    let shouldHandle = shouldHandleSourcemap(urlInfo);
+    if (may && !shouldHandle) {
+      content = SOURCEMAP.removeComment({
+        contentType: urlInfo.contentType,
+        content,
+      });
+    }
+    setContentProperties(urlInfo, {
+      content,
+      contentAst,
+      contentEtag,
+      contentLength,
+    });
     urlInfo.sourcemap = sourcemap;
-    if (!shouldHandleSourcemap(urlInfo)) {
+    if (!may || !shouldHandle) {
       return;
     }
     // sourcemap is a special kind of reference:
@@ -12557,15 +12589,18 @@ const createUrlInfoTransformer = ({
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    const contentModified = content && content !== urlInfo.content;
-    if (contentModified) {
-      urlInfo.contentAst = contentAst;
-      urlInfo.contentEtag = contentEtag;
-      urlInfo.contentLength = contentLength;
-      urlInfo.content = content;
-      defineGettersOnPropertiesDerivedFromContent(urlInfo);
-    }
-    if (sourcemap && shouldHandleSourcemap(urlInfo)) {
+    const contentModified = setContentProperties(urlInfo, {
+      content,
+      contentAst,
+      contentEtag,
+      contentLength,
+    });
+
+    if (
+      sourcemap &&
+      mayHaveSourcemap(urlInfo) &&
+      shouldHandleSourcemap(urlInfo)
+    ) {
       const sourcemapNormalized = normalizeSourcemap(urlInfo, sourcemap);
       let currentSourcemap = urlInfo.sourcemap;
       const finalSourcemap = composeTwoSourcemaps(
@@ -12641,7 +12676,10 @@ const createUrlInfoTransformer = ({
     }
   };
 
-  const applySourcemapOnContent = (urlInfo) => {
+  const applySourcemapOnContent = (
+    urlInfo,
+    formatSource = formatSourcemapSource,
+  ) => {
     if (!urlInfo.sourcemap || !shouldHandleSourcemap(urlInfo)) {
       return;
     }
@@ -12680,23 +12718,25 @@ const createUrlInfoTransformer = ({
     // For this reason we must not mutate urlInfo.sourcemap.sources
     const sourcemapGenerated = {
       ...urlInfo.sourcemap,
-      sources: sourcemapsSourcesRelative
-        ? urlInfo.sourcemap.sources.map((source) => {
-            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-            return sourceRelative || ".";
-          })
-        : urlInfo.sourcemap.sources.map((source) => {
-            if (source.startsWith("file:///")) {
-              return `${sourcemapsSourcesProtocol}${source.slice(
-                "file:///".length,
-              )}`;
-            }
-            return source;
-          }),
+      sources: urlInfo.sourcemap.sources.map((source) => {
+        const sourceFormatted = formatSource
+          ? formatSource(source, urlInfo)
+          : source;
+        if (sourcemapsSourcesProtocol) {
+          if (sourceFormatted.startsWith("file:///")) {
+            return `${sourcemapsSourcesProtocol}${sourceFormatted.slice(
+              "file:///".length,
+            )}`;
+          }
+        }
+        return sourceFormatted;
+      }),
     };
     sourcemapUrlInfo.type = "sourcemap";
     sourcemapUrlInfo.contentType = "application/json";
-    sourcemapUrlInfo.content = JSON.stringify(sourcemapGenerated, null, "  ");
+    setContentProperties(sourcemapUrlInfo, {
+      content: JSON.stringify(sourcemapGenerated, null, "  "),
+    });
 
     if (!urlInfo.sourcemapIsWrong) {
       if (sourcemaps === "inline") {
@@ -12705,7 +12745,7 @@ const createUrlInfoTransformer = ({
       }
       if (sourcemaps === "file" || sourcemaps === "inline") {
         let specifier;
-        if (sourcemaps === "file" && sourcemapsCommentRelative) {
+        if (sourcemaps === "file" && sourcemapsComment === "relative") {
           specifier = urlToRelativeUrl(
             sourcemapReference.generatedUrl,
             urlInfo.generatedUrl,
@@ -12713,10 +12753,12 @@ const createUrlInfoTransformer = ({
         } else {
           specifier = sourcemapReference.generatedSpecifier;
         }
-        urlInfo.content = SOURCEMAP.writeComment({
-          contentType: urlInfo.contentType,
-          content: urlInfo.content,
-          specifier,
+        setContentProperties(urlInfo, {
+          content: SOURCEMAP.writeComment({
+            contentType: urlInfo.contentType,
+            content: urlInfo.content,
+            specifier,
+          }),
         });
       }
     }
@@ -12734,8 +12776,19 @@ const createUrlInfoTransformer = ({
     resetContent,
     setContent,
     applyTransformations,
+    applySourcemapOnContent,
     endTransformations,
   };
+};
+
+const mayHaveSourcemap = (urlInfo) => {
+  if (urlInfo.url.startsWith("data:")) {
+    return false;
+  }
+  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
+    return false;
+  }
+  return true;
 };
 
 const shouldHandleSourcemap = (urlInfo) => {
@@ -12745,12 +12798,6 @@ const shouldHandleSourcemap = (urlInfo) => {
     sourcemaps !== "file" &&
     sourcemaps !== "programmatic"
   ) {
-    return false;
-  }
-  if (urlInfo.url.startsWith("data:")) {
-    return false;
-  }
-  if (!SOURCEMAP.enabledOnContentType(urlInfo.contentType)) {
     return false;
   }
   return true;
@@ -13155,10 +13202,10 @@ const createKitchen = ({
   plugins,
   supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
+  sourcemapsComment,
+  sourcemapsSources,
   sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
-  sourcemapsSourcesRelative,
-  sourcemapsCommentRelative,
   outDirectoryUrl,
   initialContext = {},
   initialPluginsMeta = {},
@@ -13210,10 +13257,10 @@ const createKitchen = ({
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
     sourcemaps,
+    sourcemapsComment,
+    sourcemapsSources,
     sourcemapsSourcesProtocol,
     sourcemapsSourcesContent,
-    sourcemapsSourcesRelative,
-    sourcemapsCommentRelative,
     outDirectoryUrl,
     supervisor,
   });
@@ -19236,6 +19283,7 @@ const createBuildSpecifierManager = ({
   const urlInfoToBuildUrlMap = new Map();
   const buildUrlToUrlInfoMap = new Map();
   const buildUrlToBuildSpecifierMap = new Map();
+
   const generateReplacement = (reference) => {
     let buildUrl;
     if (reference.type === "sourcemap_comment") {
@@ -19367,7 +19415,11 @@ const createBuildSpecifierManager = ({
         as_css_module: undefined,
         as_text_module: undefined,
         as_js_module: undefined,
+        as_js_classic: undefined,
+        cjs_as_js_module: undefined,
         js_classic: undefined, // TODO: add comment to explain who is using this
+        entry_point: undefined,
+        dynamic_import: undefined,
       };
     },
     formatReference: (reference) => {
@@ -19398,8 +19450,12 @@ const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
+        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
+        }
         finalUrlInfo.remapReference = bundleInfo.remapReference;
         return {
           // url: bundleInfo.url,
@@ -19411,8 +19467,10 @@ const createBuildSpecifierManager = ({
           data: bundleInfo.data,
         };
       }
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
+        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
+        }
         return rawUrlInfo;
       }
       // reference injected during "shape":
@@ -19429,7 +19487,14 @@ const createBuildSpecifierManager = ({
           specifierColumn: reference.specifierColumn,
           specifierStart: reference.specifierStart,
           specifierEnd: reference.specifierEnd,
+          isInline: reference.isInline,
+          filenameHint: reference.filenameHint,
+          content: reference.content,
+          contentType: reference.contentType,
         });
+        if (!finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = reference.filenameHint;
+        }
         const rawUrlInfo = rawReference.urlInfo;
         await rawUrlInfo.cook();
         return {
@@ -19443,43 +19508,49 @@ const createBuildSpecifierManager = ({
       }
       if (firstReference.isInline) {
         if (
-          firstReference.ownerUrlInfo.url !==
+          firstReference.ownerUrlInfo.url ===
           firstReference.ownerUrlInfo.originalUrl
         ) {
-          return {
-            originalContent: finalUrlInfo.originalContent,
-            content: firstReference.content,
-            contentType: firstReference.contentType,
-          };
-        }
-        const rawUrlInfo = GRAPH_VISITOR.find(
-          rawKitchen.graph,
-          (rawUrlInfoCandidate) => {
-            const { inlineUrlSite } = rawUrlInfoCandidate;
-            if (!inlineUrlSite) {
+          const rawUrlInfo = GRAPH_VISITOR.find(
+            rawKitchen.graph,
+            (rawUrlInfoCandidate) => {
+              const { inlineUrlSite } = rawUrlInfoCandidate;
+              if (!inlineUrlSite) {
+                return false;
+              }
+              if (
+                inlineUrlSite.url === firstReference.ownerUrlInfo.url &&
+                inlineUrlSite.line === firstReference.specifierLine &&
+                inlineUrlSite.column === firstReference.specifierColumn
+              ) {
+                return true;
+              }
+              if (rawUrlInfoCandidate.content === firstReference.content) {
+                return true;
+              }
+              if (
+                rawUrlInfoCandidate.originalContent === firstReference.content
+              ) {
+                return true;
+              }
               return false;
+            },
+          );
+          if (rawUrlInfo) {
+            if (!finalUrlInfo.filenameHint) {
+              finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
             }
-            if (
-              inlineUrlSite.url === firstReference.ownerUrlInfo.url &&
-              inlineUrlSite.line === firstReference.specifierLine &&
-              inlineUrlSite.column === firstReference.specifierColumn
-            ) {
-              return true;
-            }
-            if (rawUrlInfoCandidate.content === firstReference.content) {
-              return true;
-            }
-            if (
-              rawUrlInfoCandidate.originalContent === firstReference.content
-            ) {
-              return true;
-            }
-            return false;
-          },
-        );
-        if (rawUrlInfo) {
-          return rawUrlInfo;
+            return rawUrlInfo;
+          }
         }
+        if (!finalUrlInfo.filenameHint) {
+          finalUrlInfo.filenameHint = firstReference.filenameHint;
+        }
+        return {
+          originalContent: finalUrlInfo.originalContent,
+          content: firstReference.content,
+          contentType: firstReference.contentType,
+        };
       }
       throw new Error(createDetailedMessage$1(`Cannot fetch ${rawUrl}`));
     },
@@ -19858,9 +19929,11 @@ const createBuildSpecifierManager = ({
         prepareVersioning();
       }
 
+      const urlInfoSet = new Set();
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
+          urlInfoSet.add(urlInfo);
           if (urlInfo.isEntryPoint) {
             generateReplacement(urlInfo.firstReference);
           }
@@ -19892,6 +19965,20 @@ const createBuildSpecifierManager = ({
       if (versioning) {
         await finishVersioning();
       }
+
+      for (const urlInfo of urlInfoSet) {
+        urlInfo.kitchen.urlInfoTransformer.applySourcemapOnContent(
+          urlInfo,
+          (source) => {
+            const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+            if (buildUrl) {
+              return urlToRelativeUrl(source, buildUrl);
+            }
+            return source;
+          },
+        );
+      }
+      urlInfoSet.clear();
     },
 
     prepareResyncResourceHints: () => {
@@ -20671,9 +20758,8 @@ build ${entryPointKeys.length} entry points`);
         },
       ],
       sourcemaps,
+      sourcemapsComment: "relative",
       sourcemapsSourcesContent,
-      sourcemapsSourcesRelative: true,
-      sourcemapsCommentRelative: true,
       outDirectoryUrl: outDirectoryUrl
         ? new URL("shape/", outDirectoryUrl)
         : undefined,
@@ -21138,7 +21224,6 @@ const createFileService = ({
   cacheControl,
   ribbon,
   sourcemaps,
-  sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   outDirectoryUrl,
 }) => {
@@ -21225,7 +21310,6 @@ const createFileService = ({
       supervisor,
       minification: false,
       sourcemaps,
-      sourcemapsSourcesProtocol,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
         ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
@@ -21559,7 +21643,6 @@ const startDevServer = async ({
   onKitchenCreated = () => {},
 
   sourcemaps = "inline",
-  sourcemapsSourcesProtocol,
   sourcemapsSourcesContent,
   outDirectoryUrl,
   ...rest
@@ -21700,7 +21783,6 @@ const startDevServer = async ({
           cacheControl,
           ribbon,
           sourcemaps,
-          sourcemapsSourcesProtocol,
           sourcemapsSourcesContent,
           outDirectoryUrl,
         }),
