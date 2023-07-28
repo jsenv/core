@@ -2,7 +2,7 @@ import { build } from "@jsenv/core";
 
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
-const test = async ({ name, ...rest }) => {
+const test = async ({ name, ...params }) => {
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -11,11 +11,12 @@ const test = async ({ name, ...rest }) => {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...rest,
+    ...params,
   });
   takeDirectorySnapshot(
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/${name}/`, import.meta.url),
+    !params.sourcemaps,
   );
 };
 
