@@ -335,7 +335,7 @@ const createUrlInfo = (url, context) => {
       data: { ...reference.data },
       specifier: newSpecifier,
       isWeak: true,
-      isInline: false,
+      isInline: reference.isInline,
       original: reference.original || reference,
       prev: reference,
       // urlInfo: null,
