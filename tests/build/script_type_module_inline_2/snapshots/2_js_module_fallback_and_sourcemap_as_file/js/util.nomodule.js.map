@@ -1,7 +1,6 @@
 {
   "version": 3,
   "sources": [
-    "../../client/src/util.js",
     "../../client/src/util.js"
   ],
   "names": [
@@ -9,9 +8,8 @@
     "console",
     "log"
   ],
-  "mappings": "AAAA,OAAO,MAAMA,IAAI,GAAGA,CAAA,KAAM;EACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;AACrB,CAAC;;;;;sBCFYF,IAAI,GAAGA,CAAA,KAAM;QACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;MACrB,CAAC;IAAA;EAAA;AAAA",
+  "mappings": "AAAA,OAAO,MAAMA,IAAI,GAAGA,CAAA,KAAM;EACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;AACrB,CAAC;;;;;sBAFYF,IAAI,GAAGA,CAAA,KAAM;QACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;MACrB,CAAC;IAAA;EAAA;AAAA",
   "sourcesContent": [
-    "export const util = () => {\n  console.log(\"util\");\n};\n",
-    "export const util = () => {\n  console.log(\"util\");\n};\n//# sourceMappingURL=util.js.map\n"
+    "export const util = () => {\n  console.log(\"util\");\n};\n"
   ]
 }

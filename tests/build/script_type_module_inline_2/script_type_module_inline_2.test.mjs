@@ -38,15 +38,15 @@ const test = async ({ name, ...params }) => {
 };
 
 // support for <script type="module">
-// await test({
-//   name: "0_js_module",
-//   runtimeCompat: { chrome: "89" },
-// });
-// // no support for <script type="module">
-// await test({
-//   name: "1_js_module_fallback",
-//   runtimeCompat: { chrome: "64" },
-// });
+await test({
+  name: "0_js_module",
+  runtimeCompat: { chrome: "89" },
+});
+// no support for <script type="module">
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: { chrome: "64" },
+});
 // no support <script type="module"> + sourcemap as file
 await test({
   name: "2_js_module_fallback_and_sourcemap_as_file",
