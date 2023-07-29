@@ -831,7 +831,7 @@ export const createBuildSpecifierManager = ({
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.data.generatedToShareCode) {
-                hintsToInject.push({ urlInfo, node });
+                hintsToInject.push({ urlInfo: referencedUrlInfo, node });
               }
             }
           },
@@ -848,8 +848,8 @@ export const createBuildSpecifierManager = ({
             mutations.push(() => {
               const nodeToInsert = createHtmlNode({
                 tagName: "link",
-                href: buildGeneratedSpecifier,
                 rel: getHtmlNodeAttribute(node, "rel"),
+                href: buildGeneratedSpecifier,
                 as: getHtmlNodeAttribute(node, "as"),
                 type: getHtmlNodeAttribute(node, "type"),
                 crossorigin: getHtmlNodeAttribute(node, "crossorigin"),

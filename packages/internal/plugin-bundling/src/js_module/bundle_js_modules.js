@@ -265,6 +265,11 @@ const rollupPluginJsenv = ({
           }
         }
 
+        const generatedToShareCode =
+          !rollupFileInfo.isEntry &&
+          !rollupFileInfo.isDynamicEntry &&
+          !rollupFileInfo.isImplicitEntry;
+
         return {
           originalUrl,
           type: format === "esm" ? "js_module" : "common_js",
@@ -275,6 +280,7 @@ const rollupPluginJsenv = ({
               rollupFileInfo.imports.length > 0 ||
               rollupFileInfo.dynamicImports.length > 0,
             isDynamicEntry: rollupFileInfo.isDynamicEntry,
+            generatedToShareCode,
           },
           sourceUrls,
           contentType: "text/javascript",
