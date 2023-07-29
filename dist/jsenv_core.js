@@ -8531,6 +8531,11 @@ const rollupPluginJsenv = ({
           }
         }
 
+        const generatedToShareCode =
+          !rollupFileInfo.isEntry &&
+          !rollupFileInfo.isDynamicEntry &&
+          !rollupFileInfo.isImplicitEntry;
+
         return {
           originalUrl,
           type: format === "esm" ? "js_module" : "common_js",
@@ -8541,6 +8546,7 @@ const rollupPluginJsenv = ({
               rollupFileInfo.imports.length > 0 ||
               rollupFileInfo.dynamicImports.length > 0,
             isDynamicEntry: rollupFileInfo.isDynamicEntry,
+            generatedToShareCode,
           },
           sourceUrls,
           contentType: "text/javascript",
@@ -20760,7 +20766,7 @@ const createBuildSpecifierManager = ({
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.data.generatedToShareCode) {
-                hintsToInject.push({ urlInfo, node });
+                hintsToInject.push({ urlInfo: referencedUrlInfo, node });
               }
             }
           },
@@ -20777,8 +20783,8 @@ const createBuildSpecifierManager = ({
             mutations.push(() => {
               const nodeToInsert = createHtmlNode({
                 tagName: "link",
-                href: buildGeneratedSpecifier,
                 rel: getHtmlNodeAttribute(node, "rel"),
+                href: buildGeneratedSpecifier,
                 as: getHtmlNodeAttribute(node, "as"),
                 type: getHtmlNodeAttribute(node, "type"),
                 crossorigin: getHtmlNodeAttribute(node, "crossorigin"),
@@ -21174,6 +21180,10 @@ const defaultRuntimeCompat = {
  *        Directory where asset files will be written
  * @param {string|url} [buildParameters.base=""]
  *        Urls in build file contents will be prefixed with this string
+ * @param {boolean|object} [buildParameters.bundling=true]
+ *        Reduce number of files written in the build directory
+ *  @param {boolean|object} [buildParameters.minification=true]
+ *        Minify the content of files generated into the build directory
  * @param {boolean} [buildParameters.versioning=true]
  *        Controls if url in build file contents are versioned
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]

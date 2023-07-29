@@ -70,10 +70,14 @@ export const defaultRuntimeCompat = {
  *        Directory where asset files will be written
  * @param {string|url} [buildParameters.base=""]
  *        Urls in build file contents will be prefixed with this string
+ * @param {boolean|object} [buildParameters.bundling=true]
+ *        Reduce number of files written in the build directory
+ *  @param {boolean|object} [buildParameters.minification=true]
+ *        Minify the content of files written into the build directory
  * @param {boolean} [buildParameters.versioning=true]
- *        Controls if url in build file contents are versioned
+ *        Use versioning on files written in the build directory
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
- *        Controls how url are versioned
+ *        Controls how url are versioned in the build directory
  * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
  * @return {Object} buildReturnValue
