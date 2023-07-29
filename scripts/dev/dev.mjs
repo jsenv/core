@@ -6,12 +6,8 @@ import { startDevServer } from "@jsenv/core";
 const { certificate, privateKey } = requestCertificate();
 await startDevServer({
   sourceDirectoryUrl: new URL("../../", import.meta.url),
-  // babelPluginMap: {},
   https: { certificate, privateKey },
   http2: false,
-  // importMapInWebWorkers: true,
-  // livereloadLogLevel: "debug",
-  // jsenvToolbar: false,
   port: 3456,
   supervisor: {
     logs: true,
