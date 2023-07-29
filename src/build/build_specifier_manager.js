@@ -767,7 +767,7 @@ export const createBuildSpecifierManager = ({
           storeOriginalPositions: false,
         });
         const mutations = [];
-        const hintsToInject = [];
+        const hintToInjectMap = new Map();
         visitHtmlNodes(htmlAst, {
           link: (node) => {
             const href = getHtmlNodeAttribute(node, "href");
@@ -831,12 +831,12 @@ export const createBuildSpecifierManager = ({
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.data.generatedToShareCode) {
-                hintsToInject.push({ urlInfo: referencedUrlInfo, node });
+                hintToInjectMap.set(referencedUrlInfo, { node });
               }
             }
           },
         });
-        hintsToInject.forEach(({ urlInfo, node }) => {
+        hintToInjectMap.forEach(({ node }, urlInfo) => {
           const buildGeneratedSpecifier = getBuildGeneratedSpecifier(urlInfo);
           const found = findHtmlNode(htmlAst, (htmlNode) => {
             return (

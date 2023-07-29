@@ -20702,7 +20702,7 @@ const createBuildSpecifierManager = ({
           storeOriginalPositions: false,
         });
         const mutations = [];
-        const hintsToInject = [];
+        const hintToInjectMap = new Map();
         visitHtmlNodes(htmlAst, {
           link: (node) => {
             const href = getHtmlNodeAttribute(node, "href");
@@ -20766,12 +20766,12 @@ const createBuildSpecifierManager = ({
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.data.generatedToShareCode) {
-                hintsToInject.push({ urlInfo: referencedUrlInfo, node });
+                hintToInjectMap.set(referencedUrlInfo, { node });
               }
             }
           },
         });
-        hintsToInject.forEach(({ urlInfo, node }) => {
+        hintToInjectMap.forEach(({ node }, urlInfo) => {
           const buildGeneratedSpecifier = getBuildGeneratedSpecifier(urlInfo);
           const found = findHtmlNode(htmlAst, (htmlNode) => {
             return (
@@ -21183,11 +21183,11 @@ const defaultRuntimeCompat = {
  * @param {boolean|object} [buildParameters.bundling=true]
  *        Reduce number of files written in the build directory
  *  @param {boolean|object} [buildParameters.minification=true]
- *        Minify the content of files generated into the build directory
+ *        Minify the content of files written into the build directory
  * @param {boolean} [buildParameters.versioning=true]
- *        Controls if url in build file contents are versioned
+ *        Use versioning on files written in the build directory
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
- *        Controls how url are versioned
+ *        Controls how url are versioned in the build directory
  * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
  * @return {Object} buildReturnValue
