@@ -237,9 +237,17 @@ build "${entryPointKeys[0]}"`);
       logger.info(`
 build ${entryPointKeys.length} entry points`);
     }
-    const explicitJsModuleFallback = entryPointKeys.some((key) =>
-      key.includes("?js_module_fallback"),
-    );
+    let explicitJsModuleConversion = false;
+    for (const entryPointKey of entryPointKeys) {
+      if (entryPointKey.includes("?js_module_fallback")) {
+        explicitJsModuleConversion = true;
+        break;
+      }
+      if (entryPointKey.includes("?as_js_classic")) {
+        explicitJsModuleConversion = true;
+        break;
+      }
+    }
     const rawRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
@@ -284,7 +292,7 @@ build ${entryPointKeys.length} entry points`);
           magicDirectoryIndex,
           directoryReferenceAllowed,
           transpilation: {
-            babelHelpersAsImport: !explicitJsModuleFallback,
+            babelHelpersAsImport: !explicitJsModuleConversion,
             ...transpilation,
             jsModuleFallback: false,
           },

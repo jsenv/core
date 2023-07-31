@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/filesystem",
-  "version": "4.2.5",
+  "version": "4.2.6",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -29,7 +29,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/urls": "2.2.0",
+    "@jsenv/urls": "2.2.1",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/abort": "4.2.4"
   }

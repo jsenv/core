@@ -94,7 +94,7 @@ export const injectQueryParamIntoSpecifierWithoutEncoding = (
   value,
 ) => {
   if (isValidUrl(specifier)) {
-    return injectQueryParams(specifier, key, value);
+    return injectQueryParamWithoutEncoding(specifier, key, value);
   }
   const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
   const searchParams = new URLSearchParams(afterQuestion);

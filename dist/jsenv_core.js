@@ -400,13 +400,28 @@ const injectQueryParams = (url, params) => {
   const urlWithParams = urlObject.href;
   return normalizeUrl(urlWithParams);
 };
+
+const injectQueryParamWithoutEncoding = (url, key, value) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, search, hash } = urlObject;
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+  if (search === "") {
+    search = `?${key}=${value}`;
+  } else {
+    search += `${key}=${value}`;
+  }
+  return `${origin}${pathname}${search}${hash}`;
+};
 const injectQueryParamIntoSpecifierWithoutEncoding = (
   specifier,
   key,
   value,
 ) => {
   if (isValidUrl$1(specifier)) {
-    return injectQueryParams(specifier, key);
+    return injectQueryParamWithoutEncoding(specifier, key, value);
   }
   const [beforeQuestion, afterQuestion = ""] = specifier.split("?");
   const searchParams = new URLSearchParams(afterQuestion);
@@ -21343,9 +21358,17 @@ build "${entryPointKeys[0]}"`);
       logger.info(`
 build ${entryPointKeys.length} entry points`);
     }
-    const explicitJsModuleFallback = entryPointKeys.some((key) =>
-      key.includes("?js_module_fallback"),
-    );
+    let explicitJsModuleConversion = false;
+    for (const entryPointKey of entryPointKeys) {
+      if (entryPointKey.includes("?js_module_fallback")) {
+        explicitJsModuleConversion = true;
+        break;
+      }
+      if (entryPointKey.includes("?as_js_classic")) {
+        explicitJsModuleConversion = true;
+        break;
+      }
+    }
     const rawRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
@@ -21390,7 +21413,7 @@ build ${entryPointKeys.length} entry points`);
           magicDirectoryIndex,
           directoryReferenceAllowed,
           transpilation: {
-            babelHelpersAsImport: !explicitJsModuleFallback,
+            babelHelpersAsImport: !explicitJsModuleConversion,
             ...transpilation,
             jsModuleFallback: false,
           },

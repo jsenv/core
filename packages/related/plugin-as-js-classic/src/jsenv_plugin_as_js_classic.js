@@ -31,6 +31,9 @@ export const jsenvPluginAsJsClassic = () => {
       if (!jsModuleUrlInfo) {
         return null;
       }
+      if (urlInfo.originalUrl === urlInfo.url) {
+        urlInfo.originalUrl = jsModuleUrlInfo.url;
+      }
       // cook it to get content + dependencies
       await jsModuleUrlInfo.cook();
       await jsModuleUrlInfo.cookDependencies({
