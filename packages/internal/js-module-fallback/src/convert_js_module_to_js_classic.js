@@ -33,7 +33,7 @@ export const convertJsModuleToJsClassic = async ({
    * But to fix this issue once and for all there is babelPluginRelativeImports below
    */
   const transformImportSpecifier = (specifier) => {
-    specifier = remapImportSpecifier(specifier);
+    specifier = remapImportSpecifier(specifier, inputUrl);
     if (!specifier.startsWith("file://")) {
       return null;
     }
