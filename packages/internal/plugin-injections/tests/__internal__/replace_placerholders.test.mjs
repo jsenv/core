@@ -3,15 +3,15 @@ import { assert } from "@jsenv/assert";
 import { replacePlaceholders } from "@jsenv/plugin-injections";
 
 const result = replacePlaceholders(
-  {
-    type: "js_module",
-    content: `const foo = __FOO__
+  `const foo = __FOO__
 const t = __FOO__
 const bar = __BAR__`,
-  },
   {
     __FOO__: "hello",
     __BAR__: "world",
+  },
+  {
+    type: "js_module",
   },
 );
 const actual = result.content;
