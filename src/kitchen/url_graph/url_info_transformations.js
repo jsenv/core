@@ -293,7 +293,7 @@ export const createUrlInfoTransformer = ({
     if (sourcemapGeneratedUrl && sourcemapReference) {
       writeFileSync(
         new URL(sourcemapGeneratedUrl),
-        sourcemapReference.urlInfo.url,
+        sourcemapReference.urlInfo.content,
       );
     }
   };
