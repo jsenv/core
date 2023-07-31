@@ -10,7 +10,9 @@ const test = async (params) => {
     logLevel: "warn",
     clientAutoreload: false,
     ribbon: false,
-    supervisor: false,
+    // ensure supervisor is tested here because it cooks inline content
+    // which might lead to sourcemap referencing source using the same sourcemap
+    supervisor: true,
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
