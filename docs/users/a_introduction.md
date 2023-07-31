@@ -51,12 +51,13 @@ project/
   scripts/
     build.mjs
     dev.mjs
+    test.mjs
   src/
     index.html
   package.json
 ```
 
-"build.mjs" and "dev.mjs" scripts can be executed directly with node.
+`scripts/*` can be executed directly with node.
 
 ```console
 node ./scripts/dev.mjs
@@ -67,7 +68,8 @@ In general it's recommended to run these commands via NPM. To achieve this, comm
 ```json
 "scripts": {
   "dev": "node ./scripts/dev.mjs",
-  "build": "node ./scripts/build.mjs"
+  "build": "node ./scripts/build.mjs",
+  "test": "node ./scripts/test.mjs"
 }
 ```
 
@@ -76,6 +78,7 @@ Then runned using NPM:
 ```console
 npm run dev
 npm run build
+npm run test
 ```
 
 ☝️ Others parts of the documentation will use NPM to run commands.
