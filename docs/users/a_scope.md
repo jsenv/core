@@ -4,7 +4,7 @@ This documentation is adressed to people considering to use jsenv for the first 
 
 # A) Scope
 
-The scope of jsenv is the set of situation where jsenv will be used to perform a task. Jsenv scope includes the following
+The scope of jsenv is the set of situation where jsenv will be used to perform a task:
 
 - executing source file(s)
 - executing a single test
@@ -14,7 +14,9 @@ The scope of jsenv is the set of situation where jsenv will be used to perform a
 
 Jsenv scope is large, meaning you have less tools to use and to maintain. It leads to a consistent dev experience where switching from a type of task to an other is quick and easy.
 
-Finally jsenv promotes standards and does not impose any constraints on your files or the code written inside. This helps your code to be portable to other environment(s).
+## 1. Standard
+
+Jsenv promotes standards and does not impose any constraints on your files or the code written inside. This helps your code to be portable to other environment(s).
 
 One of the main strengh of jsenv, relying on standard, is the ablity to have multiple HTML file in your source code. This flexibility allows to:
 
