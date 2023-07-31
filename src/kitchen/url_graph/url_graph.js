@@ -212,6 +212,7 @@ const createUrlInfo = (url, context) => {
 
     sourcemap: null,
     sourcemapIsWrong: false,
+    sourcemapReference: null,
 
     generatedUrl: null,
     sourcemapGeneratedUrl: null,

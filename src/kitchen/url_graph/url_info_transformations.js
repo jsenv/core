@@ -18,14 +18,10 @@ export const createUrlInfoTransformer = ({
   sourcemapsComment,
   sourcemapsSources,
   sourcemapsSourcesProtocol,
-  sourcemapsSourcesContent,
+  sourcemapsSourcesContent = true,
   outDirectoryUrl,
   supervisor,
 }) => {
-  if (sourcemapsSourcesContent === undefined) {
-    sourcemapsSourcesContent = true;
-  }
-
   const formatSourcemapSource =
     typeof sourcemapsSources === "function"
       ? (source, urlInfo) => {
@@ -84,6 +80,7 @@ export const createUrlInfoTransformer = ({
     urlInfo.content = undefined;
     urlInfo.sourcemap = null;
     urlInfo.sourcemapIsWrong = null;
+    urlInfo.sourcemapReference = null;
   };
 
   const setContentProperties = (
@@ -148,6 +145,10 @@ export const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("js_module_fallback");
     generatedUrlObject.searchParams.delete("as_js_module");
     generatedUrlObject.searchParams.delete("as_js_classic");
+    generatedUrlObject.searchParams.delete("as_css_module");
+    generatedUrlObject.searchParams.delete("as_json_module");
+    generatedUrlObject.searchParams.delete("as_text_module");
+    generatedUrlObject.searchParams.delete("dynamic_import");
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
 
@@ -174,6 +175,7 @@ export const createUrlInfoTransformer = ({
         specifierLine: line,
         specifierColumn: column,
       });
+      urlInfo.sourcemapReference = sourcemapReference;
       try {
         await sourcemapReference.urlInfo.cook();
         const sourcemapRaw = JSON.parse(sourcemapReference.urlInfo.content);
@@ -287,11 +289,11 @@ export const createUrlInfoTransformer = ({
     if (!contentIsInlined) {
       writeFileSync(new URL(generatedUrl), urlInfo.content);
     }
-    const { sourcemapGeneratedUrl, sourcemap } = urlInfo;
-    if (sourcemapGeneratedUrl && sourcemap) {
+    const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
+    if (sourcemapGeneratedUrl && sourcemapReference) {
       writeFileSync(
         new URL(sourcemapGeneratedUrl),
-        JSON.stringify(sourcemap, null, "  "),
+        sourcemapReference.urlInfo.url,
       );
     }
   };
@@ -310,25 +312,28 @@ export const createUrlInfoTransformer = ({
     // in this scenarion we don't want to inject sourcemap reference
     // just update the content
 
-    let sourcemapReference = null;
-    for (const referenceToOther of urlInfo.referenceToOthersSet) {
-      if (referenceToOther.type === "sourcemap_comment") {
-        sourcemapReference = referenceToOther;
-        break;
-      }
-    }
+    let sourcemapReference = urlInfo.sourcemapReference;
     if (!sourcemapReference) {
-      sourcemapReference = urlInfo.dependencies.inject({
-        trace: {
-          message: `sourcemap comment placeholder`,
-          url: urlInfo.url,
-        },
-        type: "sourcemap_comment",
-        subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
-        expectedType: "sourcemap",
-        specifier: urlInfo.sourcemapGeneratedUrl,
-        isInline: sourcemaps === "inline",
-      });
+      for (const referenceToOther of urlInfo.referenceToOthersSet) {
+        if (referenceToOther.type === "sourcemap_comment") {
+          sourcemapReference = referenceToOther;
+          break;
+        }
+      }
+      if (!sourcemapReference) {
+        sourcemapReference = urlInfo.dependencies.inject({
+          trace: {
+            message: `sourcemap comment placeholder`,
+            url: urlInfo.url,
+          },
+          type: "sourcemap_comment",
+          subtype: urlInfo.contentType === "text/javascript" ? "js" : "css",
+          expectedType: "sourcemap",
+          specifier: urlInfo.sourcemapGeneratedUrl,
+          isInline: sourcemaps === "inline",
+        });
+      }
+      urlInfo.sourcemapReference = sourcemapReference;
     }
     const sourcemapUrlInfo = sourcemapReference.urlInfo;
     // It's possible urlInfo content to be modified after being finalized
