@@ -1,5 +1,5 @@
 import { bundleCss } from "./css/css_bundling_lightning_css.js";
-import { bundleJsClassic } from "./js_classic/bundle_js_classic.js";
+// import { bundleJsClassic } from "./js_classic/bundle_js_classic.js";
 import { bundleJsModules } from "./js_module/bundle_js_modules.js";
 
 export const jsenvPluginBundling = ({
@@ -15,9 +15,9 @@ export const jsenvPluginBundling = ({
     };
   }
   if (js_classic) {
-    bundle.js_classic = (jsClassicUrlInfos) => {
-      return bundleJsClassic(jsClassicUrlInfos);
-    };
+    // bundle.js_classic = (jsClassicUrlInfos) => {
+    //   return bundleJsClassic(jsClassicUrlInfos, js_classic);
+    // };
   }
   if (js_module) {
     if (js_module === true) {
