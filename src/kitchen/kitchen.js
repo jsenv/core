@@ -456,6 +456,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     // urlInfo objects are reused, they must be "reset" before cooking them again
     if (urlInfo.error || urlInfo.content !== undefined) {
+      if (urlInfo.isInline) {
+        return;
+      }
       urlInfo.error = null;
       urlInfo.type = null;
       urlInfo.subtype = null;
