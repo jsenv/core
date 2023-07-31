@@ -19,14 +19,30 @@ const test = async ({ name, ...params }) => {
 };
 
 await test({
-  name: "0_chunks_default",
+  name: "0_default",
   runtimeCompat: { chrome: "90" },
   minification: false,
 });
 
 await test({
-  name: "1_chunks_vendors",
+  name: "1_vendors",
   runtimeCompat: { chrome: "90" },
+  bundling: {
+    js_module: {
+      chunks: {
+        vendors: {
+          "file://**/node_modules/": true,
+          "./a.js": true,
+        },
+      },
+    },
+  },
+  minification: false,
+});
+
+await test({
+  name: "2_vendors_and_js_module_fallback",
+  runtimeCompat: { chrome: "88" },
   bundling: {
     js_module: {
       chunks: {
