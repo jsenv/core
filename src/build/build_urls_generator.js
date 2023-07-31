@@ -34,7 +34,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildUrlFromCache;
     }
     if (urlInfo.type === "directory") {
-      const directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      let directoryPath;
+      if (urlInfo.filenameHint) {
+        directoryPath = urlInfo.filenameHint;
+      } else {
+        directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      }
       const { search } = new URL(url);
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
       associateBuildUrl(url, buildUrl);
