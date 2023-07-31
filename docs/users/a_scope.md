@@ -1,6 +1,6 @@
 Welcome in jsenv documentation for users!
 
-This documentation is adressed to people considering to use jsenv for the 1st time or are already using it.
+This documentation is adressed to people considering to use jsenv for the first time or are already using it.
 
 # Scope
 
@@ -16,7 +16,7 @@ Jsenv scope is large, meaning you have less tools to use and to maintain. It lea
 
 Finally jsenv promotes standards and does not impose any constraints on your files or the code written inside. This helps your code to be portable to other environment(s).
 
-One example of being standard: You can have multiple HTML file in your source code. This flexibility allows code to:
+One of the main strengh of jsenv, relying on standard, is the ablity to have multiple HTML file in your source code. This flexibility allows to:
 
 - Have more than one entry point
 - Experiment things in independent files
