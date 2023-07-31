@@ -5,7 +5,10 @@
 import { sigi } from "@jsenv/sigi";
 
 import { pwaLogger } from "./pwa_logger.js";
-import { serviceWorkerAPI } from "./internal/service_worker_api.js";
+import {
+  serviceWorkerAPI,
+  canUseServiceWorkers,
+} from "./internal/service_worker_api.js";
 import {
   inspectServiceWorker,
   requestSkipWaitingOnServiceWorker,
@@ -172,22 +175,24 @@ export const createServiceWorkerFacade = ({
   };
 
   const init = async () => {
+    serviceWorkerAPI.addEventListener("controllerchange", async () => {
+      const controller = serviceWorkerAPI.controller;
+      // happens when an other tab register the service worker and
+      // make it control the navigator (when autoclaimOnFirstActivation is true)
+      if (controller && state.readyState === "") {
+        const registration = await serviceWorkerAPI.getRegistration();
+        watchRegistration(registration);
+      }
+    });
+
     const registration = await serviceWorkerAPI.getRegistration(scope);
     if (registration) {
       watchRegistration(registration);
     }
   };
-  init();
-
-  serviceWorkerAPI.addEventListener("controllerchange", async () => {
-    const controller = serviceWorkerAPI.controller;
-    // happens when an other tab register the service worker and
-    // make it control the navigator (when autoclaimOnFirstActivation is true)
-    if (controller && state.readyState === "") {
-      const registration = await serviceWorkerAPI.getRegistration();
-      watchRegistration(registration);
-    }
-  });
+  if (canUseServiceWorkers) {
+    init();
+  }
 
   return {
     state,
@@ -202,6 +207,10 @@ export const createServiceWorkerFacade = ({
       }
     },
     unregister: async () => {
+      if (!canUseServiceWorkers) {
+        pwaLogger.debug("service worker API not available");
+        return false;
+      }
       const registration = await serviceWorkerAPI.getRegistration(scope);
       if (!registration) {
         pwaLogger.debug("nothing to unregister");
@@ -216,6 +225,10 @@ export const createServiceWorkerFacade = ({
       return false;
     },
     checkForUpdates: async () => {
+      if (!canUseServiceWorkers) {
+        pwaLogger.debug("service worker API not available");
+        return false;
+      }
       const registration = await serviceWorkerAPI.getRegistration(scope);
       if (!registration) {
         pwaLogger.info("nothing to update");
@@ -256,6 +269,10 @@ export const createServiceWorkerFacade = ({
       return false;
     },
     activateUpdate: async () => {
+      if (!canUseServiceWorkers) {
+        pwaLogger.debug("service worker API not available");
+        return;
+      }
       const registration = await serviceWorkerAPI.getRegistration(scope);
       if (!registration) {
         pwaLogger.warn("nothing to activate");
@@ -298,6 +315,10 @@ export const createServiceWorkerFacade = ({
       pwaLogger.info("update is controlling navigator");
     },
     sendMessage: async (message) => {
+      if (!canUseServiceWorkers) {
+        pwaLogger.debug("service worker API not available");
+        return undefined;
+      }
       const registration = await serviceWorkerAPI.getRegistration(scope);
       if (!registration) {
         pwaLogger.warn(`no service worker script to communicate with`);
@@ -344,21 +365,22 @@ const ensureIsControllingNavigator = (serviceWorker) => {
   return becomesControllerPromise;
 };
 
-// https://github.com/GoogleChrome/workbox/issues/1120
-serviceWorkerAPI.addEventListener("message", (event) => {
-  if (event.data === "reload_after_update") {
-    pwaLogger.info(
-      '"reload_after_update" received from service worker -> reload page',
-    );
-    reloadPage();
-  }
-});
-
-let reloading = false;
-const reloadPage = () => {
-  if (reloading) {
-    return;
-  }
-  reloading = true;
-  window.location.reload();
-};
+if (canUseServiceWorkers) {
+  // https://github.com/GoogleChrome/workbox/issues/1120
+  let reloading = false;
+  const reloadPage = () => {
+    if (reloading) {
+      return;
+    }
+    reloading = true;
+    window.location.reload();
+  };
+  serviceWorkerAPI.addEventListener("message", (event) => {
+    if (event.data === "reload_after_update") {
+      pwaLogger.info(
+        '"reload_after_update" received from service worker -> reload page',
+      );
+      reloadPage();
+    }
+  });
+}
