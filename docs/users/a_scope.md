@@ -2,7 +2,7 @@ Welcome in jsenv documentation for users!
 
 This documentation is adressed to people considering to use jsenv for the first time or are already using it.
 
-# Scope
+# A) Scope
 
 The scope of jsenv is the set of situation where jsenv will be used to perform a task. Jsenv scope includes the following
 
