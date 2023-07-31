@@ -1,6 +1,5 @@
 import { build, startBuildServer } from "@jsenv/core";
 import { requestCertificate } from "@jsenv/https-local";
-import { jsenvPluginGlobals } from "@jsenv/plugin-globals";
 
 const buildStory = async (story) => {
   await build({
@@ -11,7 +10,6 @@ const buildStory = async (story) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    minification: false,
     plugins: [
       {
         resolveReference: (reference) => {
@@ -22,12 +20,13 @@ const buildStory = async (story) => {
           return null;
         },
       },
-      jsenvPluginGlobals({
-        "**/sw_*.js": () => ({
-          NAME: story,
-        }),
-      }),
     ],
+    injections: {
+      "**/sw_*.js": () => ({
+        "window.NAME": story,
+      }),
+    },
+    minification: false,
   });
 };
 

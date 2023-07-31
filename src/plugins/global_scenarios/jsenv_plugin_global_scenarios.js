@@ -5,14 +5,18 @@
  * A global will be injected with true/false when needed
  */
 
-import { replacePlaceholders } from "@jsenv/plugin-placeholders";
+import { replacePlaceholders, PLACEHOLDER } from "@jsenv/plugin-injections";
 
 export const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo) => {
-    return replacePlaceholders(urlInfo, {
-      __DEV__: urlInfo.context.dev,
-      __BUILD__: urlInfo.context.build,
-    });
+    return replacePlaceholders(
+      urlInfo.content,
+      {
+        __DEV__: PLACEHOLDER.optional(urlInfo.context.dev),
+        __BUILD__: PLACEHOLDER.optional(urlInfo.context.build),
+      },
+      urlInfo,
+    );
   };
 
   return {

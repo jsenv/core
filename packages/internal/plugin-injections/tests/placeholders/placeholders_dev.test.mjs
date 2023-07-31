@@ -2,22 +2,18 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders";
-
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    plugins: [
-      jsenvPluginPlaceholders({
-        "./main.js": (urlInfo) => {
-          return {
-            __DEMO__: urlInfo.context.dev ? "dev" : "build",
-          };
-        },
-      }),
-    ],
+    injections: {
+      "./main.js": (urlInfo) => {
+        return {
+          __DEMO__: urlInfo.context.dev ? "dev" : "build",
+        };
+      },
+    },
     ...params,
   });
   const { returnValue } = await executeInBrowser({

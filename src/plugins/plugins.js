@@ -1,4 +1,5 @@
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
+import { jsenvPluginInjections } from "@jsenv/plugin-injections";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 
 import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
@@ -31,6 +32,7 @@ export const getCorePlugins = ({
   magicDirectoryIndex,
   directoryReferenceAllowed,
   supervisor,
+  injections,
   transpilation = true,
   inlining = true,
 
@@ -51,6 +53,7 @@ export const getCorePlugins = ({
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
+    ...(injections ? [jsenvPluginInjections(injections)] : []),
     jsenvPluginTranspilation(transpilation),
     jsenvPluginImportmap(),
     ...(inlining ? [jsenvPluginInlining()] : []),

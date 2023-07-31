@@ -1,11 +1,11 @@
 {
-  "name": "@jsenv/plugin-globals",
-  "version": "1.3.4",
+  "name": "@jsenv/plugin-injections",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/related/plugin-globals"
+    "directory": "packages/internal/plugin-injections"
   },
   "publishConfig": {
     "access": "public"

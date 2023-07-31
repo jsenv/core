@@ -31,6 +31,7 @@ export const createFileService = ({
   magicExtensions,
   magicDirectoryIndex,
   supervisor,
+  injections,
   transpilation,
   clientAutoreload,
   cacheControl,
@@ -112,6 +113,7 @@ export const createFileService = ({
           magicExtensions,
           magicDirectoryIndex,
           supervisor,
+          injections,
           transpilation,
 
           clientAutoreload,

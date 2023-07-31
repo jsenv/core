@@ -2,22 +2,18 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-import { jsenvPluginGlobals } from "@jsenv/plugin-globals";
-
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
-    plugins: [
-      jsenvPluginGlobals({
-        "./main.js": () => {
-          return {
-            __answer__: 42,
-          };
-        },
-      }),
-    ],
+    injections: {
+      "./main.js": () => {
+        return {
+          "window.__answer__": 42,
+        };
+      },
+    },
     ...params,
   });
   const { returnValue } = await executeInBrowser({

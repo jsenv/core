@@ -107,6 +107,7 @@ export const build = async ({
   magicDirectoryIndex,
   directoryReferenceAllowed,
   scenarioPlaceholders,
+  injections,
   transpilation = {},
   bundling = true,
   minification = !runtimeCompat.node,
@@ -291,6 +292,7 @@ build ${entryPointKeys.length} entry points`);
           magicExtensions,
           magicDirectoryIndex,
           directoryReferenceAllowed,
+          injections,
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleConversion,
             ...transpilation,

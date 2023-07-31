@@ -14797,6 +14797,214 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
 - `)}`;
 };
 
+const placeholderSymbol = Symbol.for("jsenv_placeholder");
+const PLACEHOLDER = {
+  optional: (value) => {
+    return { [placeholderSymbol]: "optional", value };
+  },
+};
+
+const replacePlaceholders = (content, replacements, urlInfo) => {
+  const magicSource = createMagicSource(content);
+  for (const key of Object.keys(replacements)) {
+    let index = content.indexOf(key);
+    const replacement = replacements[key];
+    let isOptional;
+    let value;
+    if (replacement && replacement[placeholderSymbol]) {
+      const valueBehindSymbol = replacement[placeholderSymbol];
+      isOptional = valueBehindSymbol === "optional";
+      value = replacement.value;
+    } else {
+      value = replacement;
+    }
+    if (index === -1) {
+      if (!isOptional) {
+        urlInfo.context.logger.warn(
+          `placeholder "${key}" not found in ${urlInfo.url}.
+--- suggestion a ---
+Add "${key}" in that file.
+--- suggestion b ---
+Fix eventual typo in "${key}"?
+--- suggestion c ---
+Mark injection as optional using PLACEHOLDER.optional()
+
+import { PLACEHOLDER } from "@jsenv/core"
+
+return {
+  "${key}": PLACEHOLDER.optional(${JSON.stringify(value)})
+}`,
+        );
+      }
+      continue;
+    }
+
+    while (index !== -1) {
+      const start = index;
+      const end = index + key.length;
+      magicSource.replace({
+        start,
+        end,
+        replacement:
+          urlInfo.type === "js_classic" ||
+          urlInfo.type === "js_module" ||
+          urlInfo.type === "html"
+            ? JSON.stringify(value, null, "  ")
+            : value,
+      });
+      index = content.indexOf(key, end);
+    }
+  }
+  return magicSource.toContentAndSourcemap();
+};
+
+const injectGlobals = (content, globals, urlInfo) => {
+  if (urlInfo.type === "html") {
+    return globalInjectorOnHtml(content, globals);
+  }
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return globalsInjectorOnJs(content, globals, urlInfo);
+  }
+  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+};
+
+const globalInjectorOnHtml = (content, globals) => {
+  // ideally we would inject an importmap but browser support is too low
+  // (even worse for worker/service worker)
+  // so for now we inject code into entry points
+  const htmlAst = parseHtmlString(content, {
+    storeOriginalPositions: false,
+  });
+  const clientCode = generateClientCodeForGlobals(globals, {
+    isWebWorker: false,
+  });
+  injectHtmlNodeAsEarlyAsPossible(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      textContent: clientCode,
+    }),
+    "jsenv:inject_globals",
+  );
+  return stringifyHtmlAst(htmlAst);
+};
+
+const globalsInjectorOnJs = (content, globals, urlInfo) => {
+  const clientCode = generateClientCodeForGlobals(globals, {
+    isWebWorker:
+      urlInfo.subtype === "worker" ||
+      urlInfo.subtype === "service_worker" ||
+      urlInfo.subtype === "shared_worker",
+  });
+  const magicSource = createMagicSource(content);
+  magicSource.prepend(clientCode);
+  return magicSource.toContentAndSourcemap();
+};
+
+const generateClientCodeForGlobals = (globals, { isWebWorker = false }) => {
+  const globalName = isWebWorker ? "self" : "window";
+  return `Object.assign(${globalName}, ${JSON.stringify(
+    globals,
+    null,
+    "  ",
+  )});`;
+};
+
+const jsenvPluginInjections = (rawAssociations) => {
+  let resolvedAssociations;
+
+  return {
+    name: "jsenv:injections",
+    appliesDuring: "*",
+    init: (context) => {
+      resolvedAssociations = URL_META.resolveAssociations(
+        { injectionsGetter: rawAssociations },
+        context.rootDirectoryUrl,
+      );
+    },
+    transformUrlContent: async (urlInfo) => {
+      const { injectionsGetter } = URL_META.applyAssociations({
+        url: asUrlWithoutSearch(urlInfo.url),
+        associations: resolvedAssociations,
+      });
+      if (!injectionsGetter) {
+        return null;
+      }
+      if (typeof injectionsGetter !== "function") {
+        throw new TypeError("injectionsGetter must be a function");
+      }
+      const injections = await injectionsGetter(urlInfo);
+      if (!injections) {
+        return null;
+      }
+      const keys = Object.keys(injections);
+      if (keys.length === 0) {
+        return null;
+      }
+      let someGlobal = false;
+      let someReplacement = false;
+      const globals = {};
+      const replacements = {};
+      for (const key of keys) {
+        const { type, name, value } = createInjection(injections[key], key);
+        if (type === "global") {
+          globals[name] = value;
+          someGlobal = true;
+        } else {
+          replacements[name] = value;
+          someReplacement = true;
+        }
+      }
+
+      if (!someGlobal && !someReplacement) {
+        return null;
+      }
+
+      let content = urlInfo.content;
+      let sourcemap;
+      if (someGlobal) {
+        const globalInjectionResult = injectGlobals(content, globals, urlInfo);
+        content = globalInjectionResult.content;
+        sourcemap = globalInjectionResult.sourcemap;
+      }
+      if (someReplacement) {
+        const replacementResult = replacePlaceholders(
+          content,
+          replacements,
+          urlInfo,
+        );
+        content = replacementResult.content;
+        sourcemap = sourcemap
+          ? composeTwoSourcemaps(sourcemap, replacementResult.sourcemap)
+          : replacementResult.sourcemap;
+      }
+      return {
+        content,
+        sourcemap,
+      };
+    },
+  };
+};
+
+const wellKnowGlobalNames = ["window", "global", "globalThis", "self"];
+const createInjection = (value, key) => {
+  for (const wellKnowGlobalName of wellKnowGlobalNames) {
+    const prefix = `${wellKnowGlobalName}.`;
+    if (key.startsWith(prefix)) {
+      return {
+        type: "global",
+        name: key.slice(prefix.length),
+        value,
+      };
+    }
+  }
+  return {
+    type: "replacement",
+    name: key,
+    value,
+  };
+};
+
 const jsenvPluginReferenceExpectedTypes = () => {
   const redirectJsReference = (reference) => {
     const urlObject = new URL(reference.url);
@@ -18675,30 +18883,6 @@ const babelPluginMetadataImportMetaScenarios = () => {
   };
 };
 
-const replacePlaceholders = (urlInfo, replacements) => {
-  const content = urlInfo.content;
-  const magicSource = createMagicSource(content);
-  Object.keys(replacements).forEach((key) => {
-    let index = content.indexOf(key);
-    while (index !== -1) {
-      const start = index;
-      const end = index + key.length;
-      magicSource.replace({
-        start,
-        end,
-        replacement:
-          urlInfo.type === "js_classic" ||
-          urlInfo.type === "js_module" ||
-          urlInfo.type === "html"
-            ? JSON.stringify(replacements[key], null, "  ")
-            : replacements[key],
-      });
-      index = content.indexOf(key, end);
-    }
-  });
-  return magicSource.toContentAndSourcemap();
-};
-
 /*
  * Source code can contain the following
  * - __dev__
@@ -18709,10 +18893,14 @@ const replacePlaceholders = (urlInfo, replacements) => {
 
 const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo) => {
-    return replacePlaceholders(urlInfo, {
-      __DEV__: urlInfo.context.dev,
-      __BUILD__: urlInfo.context.build,
-    });
+    return replacePlaceholders(
+      urlInfo.content,
+      {
+        __DEV__: PLACEHOLDER.optional(urlInfo.context.dev),
+        __BUILD__: PLACEHOLDER.optional(urlInfo.context.build),
+      },
+      urlInfo,
+    );
   };
 
   return {
@@ -19600,6 +19788,7 @@ const getCorePlugins = ({
   magicDirectoryIndex,
   directoryReferenceAllowed,
   supervisor,
+  injections,
   transpilation = true,
   inlining = true,
 
@@ -19620,6 +19809,7 @@ const getCorePlugins = ({
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
+    ...(injections ? [jsenvPluginInjections(injections)] : []),
     jsenvPluginTranspilation(transpilation),
     jsenvPluginImportmap(),
     ...(inlining ? [jsenvPluginInlining()] : []),
@@ -21228,6 +21418,7 @@ const build = async ({
   magicDirectoryIndex,
   directoryReferenceAllowed,
   scenarioPlaceholders,
+  injections,
   transpilation = {},
   bundling = true,
   minification = !runtimeCompat.node,
@@ -21412,6 +21603,7 @@ build ${entryPointKeys.length} entry points`);
           magicExtensions,
           magicDirectoryIndex,
           directoryReferenceAllowed,
+          injections,
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleConversion,
             ...transpilation,
@@ -21965,6 +22157,7 @@ const createFileService = ({
   magicExtensions,
   magicDirectoryIndex,
   supervisor,
+  injections,
   transpilation,
   clientAutoreload,
   cacheControl,
@@ -22046,6 +22239,7 @@ const createFileService = ({
           magicExtensions,
           magicDirectoryIndex,
           supervisor,
+          injections,
           transpilation,
 
           clientAutoreload,
@@ -22382,6 +22576,7 @@ const startDevServer = async ({
   supervisor = true,
   magicExtensions,
   magicDirectoryIndex,
+  injections,
   transpilation,
   cacheControl = true,
   ribbon = true,
@@ -22524,6 +22719,7 @@ const startDevServer = async ({
           magicExtensions,
           magicDirectoryIndex,
           supervisor,
+          injections,
           transpilation,
           clientAutoreload,
           cacheControl,

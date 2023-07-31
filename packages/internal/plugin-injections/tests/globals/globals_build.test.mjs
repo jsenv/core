@@ -1,10 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-
-import { jsenvPluginPlaceholders } from "@jsenv/plugin-placeholders";
 
 const test = async (params) => {
   await build({
@@ -14,21 +11,15 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    plugins: [
-      jsenvPluginPlaceholders({
-        "./main.js": (urlInfo) => {
-          return {
-            __DEMO__: urlInfo.context.dev ? "dev" : "build",
-          };
-        },
-      }),
-    ],
+    injections: {
+      "./main.js": () => {
+        return {
+          "window.__answer__": 42,
+        };
+      },
+    },
     ...params,
   });
-  takeDirectorySnapshot(
-    new URL("./dist/", import.meta.url),
-    new URL("./snapshots/", import.meta.url),
-  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
@@ -39,11 +30,19 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = "build";
+  const expected = { answer: 42 };
   assert({ actual, expected });
 };
 
+// support for <script type="module">
 await test({
+  runtimeCompat: { chrome: "64" },
+  bundling: false,
+  minification: false,
+});
+// no support for <script type="module">
+await test({
+  runtimeCompat: { chrome: "62" },
   bundling: false,
   minification: false,
 });
