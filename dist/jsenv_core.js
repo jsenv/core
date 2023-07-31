@@ -8258,19 +8258,6 @@ const versionToBits$2 = (version) => {
   return (major << 16) | (minor << 8) | patch;
 };
 
-/*
- * TODO:
- * js classic might contain importScripts or self.importScripts calls
- * (when it's inside worker, service worker, etc...)
- * ideally we should bundle it when urlInfo.subtype === "worker"
- */
-
-// import { createMagicSource } from "@jsenv/utils/sourcemap/magic_source.js"
-
-const bundleJsClassic = () => {
-  return {};
-};
-
 const bundleJsModules = async (
   jsModuleUrlInfos,
   {
@@ -8705,11 +8692,6 @@ const jsenvPluginBundling = ({
   if (css) {
     bundle.css = (cssUrlInfos) => {
       return bundleCss(cssUrlInfos);
-    };
-  }
-  if (js_classic) {
-    bundle.js_classic = (jsClassicUrlInfos) => {
-      return bundleJsClassic();
     };
   }
   if (js_module) {
@@ -9231,7 +9213,7 @@ export default inlineContent.text;`,
  *
  */
 const babelHelperClientDirectoryUrl = new URL(
-  "../packages/internal/plugin-transpilation/src/babel/babel_helper_directory/babel_helpers/",
+  "./babel_helpers/",
   import.meta.url,
 ).href;
 
@@ -19780,7 +19762,12 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildUrlFromCache;
     }
     if (urlInfo.type === "directory") {
-      const directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      let directoryPath;
+      if (urlInfo.filenameHint) {
+        directoryPath = urlInfo.filenameHint;
+      } else {
+        directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      }
       const { search } = new URL(url);
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
       associateBuildUrl(url, buildUrl);
@@ -21472,8 +21459,8 @@ build ${entryPointKeys.length} entry points`);
           ? [jsenvPluginLineBreakNormalization()]
           : []),
         jsenvPluginJsModuleFallback({
-          remapImportSpecifier: (specifier) => {
-            return buildSpecifierManager.remapPlaceholder(specifier);
+          remapImportSpecifier: (specifier, parentUrl) => {
+            return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
           },
         }),
         jsenvPluginInlining(),
