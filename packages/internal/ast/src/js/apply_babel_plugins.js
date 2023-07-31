@@ -53,12 +53,12 @@ export const applyBabelPlugins = async ({
         ...(options.parserPlugins || []),
       ].filter(Boolean),
     },
+    plugins: babelPlugins,
+    ...options,
     generatorOpts: {
       compact: false,
       ...(options.generatorOpts || {}),
     },
-    plugins: babelPlugins,
-    ...options,
   };
   try {
     if (ast) {
