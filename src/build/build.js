@@ -353,8 +353,8 @@ build ${entryPointKeys.length} entry points`);
           ? [jsenvPluginLineBreakNormalization()]
           : []),
         jsenvPluginJsModuleFallback({
-          remapImportSpecifier: (specifier) => {
-            return buildSpecifierManager.remapPlaceholder(specifier);
+          remapImportSpecifier: (specifier, parentUrl) => {
+            return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
           },
         }),
         jsenvPluginInlining(),
