@@ -1,13 +1,34 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
-Jsenv was created to provide a tool that can be used both for the web and Node.js.
-It has naturally evolved to cover the core needs of a JavaScript project: developement, testing and building for production.
+Jsenv is a tool to develop test and build projects using JavaScript. This tool makes a special effort to let you free to code as you wish and to adapt to your needs. Jsenv is simple, easy to understand and well documented.
 
-- :ok_hand: Seamless integration with standard HTML, CSS and JS.
-- :sparkles: Same developer experience on source files and test files.
-- :exploding_head: Can execute tests on Chrome, Firefox, Safari and Node.js.
+# Documentation for users
 
-[Documentation](<https://github.com/jsenv/core/wiki/A)-Getting-started>) · [Changelog](./CHANGELOG.md)
+This documentation is for people who wants to use jsenv for the first time. Or for people already using it.
+
+- [A) Introduction](<./wiki/A)-Introduction>)
+- [B) Dev](<./wiki/B)-Dev>)
+- [C) Build](<./wiki/C)-Build>)
+- [D) Test](<./wiki/D)-Test>)
+- [E) Referencing files](<./wiki/E)-Referencing-files>)
+- [F) Features](<./wiki/F)-Features>)
+- [G) Jsenv plugins](<./wiki/G)-Jsenv-plugins>)
+- [H) Demo](<./wiki/H)-Demo>)
+- [I) Going further](<./wiki/I)-Going-further>)
+- [J) Test in Node.js](<./wiki/J)-Test-in-Node.js>)
+- [K) Build for Node.js](<./wiki/K)-Build-for-Node.js>)
+
+# Documentation for contributors
+
+This documentation is for people who wants to improve jsenv. The requested changes usually takes the form of a pull request on this repository.
+
+- [A) Introduction](./contributors/README.md)
+
+# Documentation for maintainers
+
+This documentation is for people maintaining jsenv codebase.
+
+- [A) Introduction](./maintainers/README.md)
 
 # Installation
 
@@ -17,16 +38,3 @@ npm install --save-dev @jsenv/core
 
 _@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 18.
 Other operating systems and Node.js versions are not tested.
-
-# Name
-
-The name "jsenv" stands for JavaScript environments.<br />
-"jsenv" without capital letter because "JSEnv" would be too painful to type.
-
-# Logo
-
-The logo is composed by the name at the center and two circles orbiting around it.
-One of the circle is web browsers, the other is Node.js.
-It represents the two JavaScript runtimes supported by jsenv.
-
-![jsenv logo with legend](./docs/jsenv_logo_legend.png)
