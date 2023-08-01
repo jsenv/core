@@ -141,11 +141,13 @@ await startDevServer({
 
 ## 2.3 ribbon
 
-When a project has a server for build files it becomes hard to tell if a browser is displaying source files or build files. To differentiate them, one have:
+When a project has a server for build files it becomes hard to tell if a browser is displaying source files or build files.
 
-1. to look at the url
+To differentiate them, one have to:
+
+1. look at the url
 2. check the port
-3. know that server for source files is started on port `3456`
+3. know which port belongs to which server
 
 | dev server                                                                                 | build server                                                                               |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
