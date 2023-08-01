@@ -120,10 +120,10 @@ project/
   </tr>
   <tr>
     <td>
-      <img alt="title" src="./dev_root_url.png" />
+      <img alt="title" src="./assets/dev_root_url.png" />
     </td>
     <td>
-      <img alt="title" src="./dev_root_url_2.png" />
+      <img alt="title" src="./assets/dev_root_url_2.png" />
     </td>
   </tr>
 </table>
@@ -194,7 +194,7 @@ The following HTML was used to produce the error (it tries to load _main.js_ but
 </html>
 ```
 
-Check [tests/dev_server/errors/screenshots/](https://github.com/jsenv/core/tree/0bc86149826da9b69ac6c90c3911de033087f68f/tests/dev_server/errors/sceenshots) for more examples.
+Check [tests/dev_server/errors/screenshots/](https://github.com/jsenv/core/tree/942eea0c9bb6d531e85f22256f8b787ad5036a7a/tests/dev_server/errors/sceenshots) for more examples.
 
 Error overlay can be disabled as follow:
 
