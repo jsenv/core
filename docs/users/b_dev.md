@@ -8,7 +8,7 @@ Best parts of jsenv dev server:
 - Support any directory structure, allowing to put **all** source files into their own directory
 - Can serve any number of html files, you are not limited to a single _index.html_.
 - The code served is compatible with main browsers of the market, even old versions
-- Instruct browser to autoreload when a file is saved
+- Instruct browser to autoreload when a file is saved, with support for hot reloading
 
 # 1. How to start dev server
 
@@ -141,9 +141,13 @@ await startDevServer({
 
 ## 2.3 ribbon
 
-When a project has a server for build files it becomes hard to tell if a browser is displaying source files or build files. To differentiate them, one have to look at the url and know that server for source files is started on port `3456` and server for build files on `9779`:
+When a project has a server for build files it becomes hard to tell if a browser is displaying source files or build files. To differentiate them, one have:
 
-| build server                                                                               | dev server                                                                                 |
+1. to look at the url
+2. check the port
+3. know that server for source files is started on port `3456`
+
+| dev server                                                                                 | build server                                                                               |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | ![title](https://github.com/jsenv/core/assets/443639/2b9c81f8-38be-424c-9fd9-6b64b9c061fe) | ![title](https://github.com/jsenv/core/assets/443639/a53b76db-9124-421f-a942-2d01a00d1d27) |
 
