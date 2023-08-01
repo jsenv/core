@@ -1,10 +1,8 @@
-# A) Introduction
-
 Welcome in jsenv documentation for users!
 
 This documentation is adressed to people using jsenv for the first time or already using it.
 
-## 1. Scope
+# 1. Scope
 
 The scope of jsenv is the set of situation where jsenv will be used to perform a task:
 
@@ -16,7 +14,7 @@ The scope of jsenv is the set of situation where jsenv will be used to perform a
 
 Jsenv scope is large, meaning you have less tools to use and to maintain. It leads to a consistent dev experience where switching from a type of task to an other is quick and easy.
 
-## 2. Standard
+# 2. Standard
 
 Jsenv promotes standards and does not impose any constraints on your files or the code written inside. This helps your code to be portable to other environment(s).
 
@@ -28,7 +26,7 @@ One of the main strengh of jsenv, relying on standard, is the ablity to have mul
 - Write tests directly inside HTML files
 - Many more things
 
-## 3. Directory structure
+# 3. Directory structure
 
 Let's examine the directory structure of a project using jsenv.
 
@@ -85,6 +83,9 @@ npm run test
 
 <table>
  <tr>
+  <td width="2000px" align="left" nowrap>
+   <a href="../../readme.md">< Home</a>
+  </td>
   <td width="2000px" align="right" nowrap>
    <a href="./b_dev.md">> B) Dev</a>
   </td>
