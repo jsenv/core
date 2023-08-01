@@ -1,6 +1,6 @@
 Welcome in jsenv documentation for users!
 
-This documentation is adressed to people using jsenv for the first time or already using it.
+This documentation is for people who wants to use jsenv for the first time. Or for people already using it.
 
 # 1. Scope
 
