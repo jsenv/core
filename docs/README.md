@@ -7,6 +7,12 @@ This documentation is for people who wants to use jsenv for the first time. Or f
 - [A) Introduction](./users/a_introduction_for_users.md)
 - [B) Dev](./users/b_dev.md)
 - [C) Build](./users/c_build.md)
+- [D) Test](./users/d_test.md)
+- [E) Referencing files](./users/e_referencing_files.md)
+- [F) Features](./users/f_features.md)
+- [G) Jsenv plugins](./users/g_jsenv_plugins.md)
+- [H) Test in Node.js](./users/h_test_nodejs.md)
+- [I) Build for Node.js](./users/i_build_nodejs.md)
 
 # Documentation for contributors
 

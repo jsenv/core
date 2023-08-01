@@ -339,7 +339,7 @@ await startDevServer({
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
-   <a href="./a_introduction.md">< A) Introduction</a>
+   <a href="./a_introduction_for_users.md">< A) Introduction</a>
   </td>
   <td width="2000px" align="right" nowrap>
    <a href="./c_build.md">> C) Build</a>
