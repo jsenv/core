@@ -2,8 +2,14 @@
 
 
 This page documents how jsenv can be used to start a server for source files.  
-This server is meant to be used locally, on your machine.  
-It reloads the page when a file is saved and provides many other features to help during development.
+This server is meant to be used locally, on your machine.
+
+Best parts of jsenv dev server:
+
+- Can serve any number of html files, you are not limited to a single _index.html_.
+- The code served is compatible with main browsers of the market, even old versions
+- Instruct browser to autoreload when a file is saved
+- Support any directory structure, allowing to put **all** source files into their own directory
 
 # 1. How to start dev server
 
@@ -78,13 +84,46 @@ It will display the following output in the terminal:
 
 # 2. Features
 
-## 2.1 Root url equivalence
+## 2.1 Directory structure agnostic
+
+The dev server is compatible with _any_ directory structure, it does not assume anything.
+However it's recommended to have a directory dedicated to source files.
+
+**Not ideal**: source files are mixed with other files
+
+```
+project/
+  index.html
+  package.json
+```
+
+**Better**: source files have their own directory
+
+```
+project/
+  src/
+    index.html
+  package.json
+```
+
+## 2.2 Root url equivalence
 
 `/` is equivalent to `/index.html` as shown by the following screenshots:
 
-| `http://localhost:3456`                                                                                        | `http://localhost:3456/index.html`                                                                             |
-| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| ![Title 2023-05-22 15-49-52](https://github.com/jsenv/core/assets/443639/c3753332-347c-45a4-af0a-78ad3d426973) | ![Title 2023-05-22 15-50-42](https://github.com/jsenv/core/assets/443639/351d7a19-5aee-48cd-b915-69880c6328b4) |
+<table>
+  <tr>
+    <th width="50%" align="left">http://localhost:3456</th>
+    <th align="left">http://localhost:3456/index.html</th>
+  </tr>
+  <tr>
+    <td align="left">
+      <img alt="title" src="./dev_root_url.png" />
+    </td>
+    <td align="left">
+      <img alt="title" src="./dev_root_url_2.png" />
+    </td>
+  </tr>
+</table>
 
 The file served at `/` can be configured with `sourceMainFilePath`:
 
@@ -165,7 +204,7 @@ In that case opening the same HTML file does not display error overlay. So devto
 
 ![image](https://github.com/jsenv/core/assets/443639/f2d9463c-b576-417b-8389-e0650df953f7)
 
-## 2.4 autoreload
+## 2.4 Autoreload
 
 When a file is saved jsenv apply changes in all browser connected to the dev server.  
 Some changes can be applied without reloading the page, others will reload the page.
