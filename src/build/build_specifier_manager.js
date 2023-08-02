@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage, UNICODE } from "@jsenv/log";
 import { comparePathnames } from "@jsenv/filesystem";
 import { createMagicSource, generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import {
@@ -790,7 +790,7 @@ export const createBuildSpecifierManager = ({
             const urlInfo = finalKitchen.graph.getUrlInfo(finalUrl);
             if (!urlInfo) {
               logger.warn(
-                `remove resource hint because cannot find "${href}" in the graph`,
+                `${UNICODE.WARNING} remove resource hint because cannot find "${href}" in the graph`,
               );
               mutations.push(() => {
                 removeHtmlNode(node);
@@ -801,7 +801,7 @@ export const createBuildSpecifierManager = ({
               const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
               if (rawUrlInfo && rawUrlInfo.data.bundled) {
                 logger.warn(
-                  `remove resource hint on "${href}" because it was bundled`,
+                  `${UNICODE.WARNING} remove resource hint on "${href}" because it was bundled`,
                 );
                 mutations.push(() => {
                   removeHtmlNode(node);
@@ -809,7 +809,7 @@ export const createBuildSpecifierManager = ({
                 return;
               }
               logger.warn(
-                `remove resource hint on "${href}" because it is not used anymore`,
+                `${UNICODE.WARNING} remove resource hint on "${href}" because it is not used anymore`,
               );
               mutations.push(() => {
                 removeHtmlNode(node);

@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert";
+import stripAnsi from "strip-ansi";
 
 import { build, startBuildServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
@@ -6,7 +7,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const warnCalls = [];
 console.warn = (...args) => {
-  warnCalls.push(args.join(""));
+  warnCalls.push(stripAnsi(args.join("")));
 };
 
 const test = async ({ name, ...params }) => {
@@ -46,7 +47,7 @@ const test = async ({ name, ...params }) => {
   };
   const expected = {
     warnCalls: [
-      `remove resource hint on "${
+      `⚠ remove resource hint on "${
         new URL("./client/file.js", import.meta.url).href
       }" because it was bundled`,
     ],
