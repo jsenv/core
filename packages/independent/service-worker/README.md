@@ -48,7 +48,7 @@ At this point your website will use jsenv service worker. By default jsenv servi
 
 # Configuration
 
-Jsenv service worker must be configured during "initJsenvServiceWorker" call.
+Jsenv service worker must be configured during `__sw__.init` call.
 
 Check directly [src/jsenv_service_worker.js](./src/jsenv_service_worker.js) to see the available configuration and what it does.
 
@@ -101,9 +101,9 @@ body {
 new URL("./src/img.png", import.meta.url);
 ```
 
-Urls detected during build will be in `self.generatedUrlsConfig`.
+Urls detected during build will be in `self.resourcesFromJsenvBuild`.
 
-The urls with an origin different from your website origin will not. You must add them manually in "urlsConfig".
+For now the urls with an origin different from your website origin will not. You must add them manually in "resources".
 
 ```html
 <link
