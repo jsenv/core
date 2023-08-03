@@ -8,7 +8,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 const debug = false; // true to have browser UI + keep it open after test
-await ensureEmptyDirectory(new URL("../../.cache/", import.meta.url));
+await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const cjsFileUrl = new URL("./client/dep.cjs", import.meta.url);
 const cjsFileContent = {
   beforeTest: readFileSync(cjsFileUrl),

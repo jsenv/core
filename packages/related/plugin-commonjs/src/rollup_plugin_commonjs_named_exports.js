@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
-import { VM as VM2 } from "vm2";
+import ivm from "isolated-vm";
 import resolve from "resolve";
 import isValidIdentifier from "is-valid-identifier";
 import { init, parse } from "cjs-module-lexer";
@@ -132,9 +132,12 @@ const detectStaticExports = ({ logger, filePath, visited = new Set() }) => {
 const detectExportsUsingSandboxedRuntime = ({ logger, filePath }) => {
   try {
     const fileContents = readFileSync(filePath, "utf8");
-    const vm = new VM2({ wasm: false, fixAsync: false });
     const codeToRun = wrapCodeToRunInVm(fileContents);
-    const vmResult = vm.run(codeToRun);
+
+    const isolate = new ivm.Isolate();
+    const context = isolate.createContextSync();
+    const script = isolate.compileScriptSync(codeToRun);
+    const vmResult = script.runSync(context, { release: true });
     const exportsResult = Object.keys(vmResult);
     logger.debug(
       `detectExportsUsingSandboxedRuntime success ${filePath}: ${exportsResult}`,

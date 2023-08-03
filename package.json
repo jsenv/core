@@ -98,6 +98,6 @@
     "eslint-plugin-react": "7.33.1",
     "open": "9.1.0",
     "playwright": "1.36.2",
-    "prettier": "3.0.0"
+    "prettier": "3.0.1"
   }
 }

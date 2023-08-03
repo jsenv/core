@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -38,6 +38,6 @@
     "rollup": "3.27.0",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.12.0",
-    "vm2": "3.9.19"
+    "isolated-vm": "4.6.0"
   }
 }
