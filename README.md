@@ -2,7 +2,7 @@
 
 Jsenv is a tool to develop test and build projects using JavaScript. This tool makes a special effort to let you free to code as you want. Jsenv is simple, easy to understand and well documented.
 
-[Documentation for users](<https://github.com/jsenv/core/wiki/A)-Introduction>) · [Changelog](./CHANGELOG.md)
+[Documentation](<https://github.com/jsenv/core/wiki/A)-Introduction>) · [Changelog](./CHANGELOG.md)
 
 See also
 
