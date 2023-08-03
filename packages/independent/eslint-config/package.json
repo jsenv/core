@@ -48,6 +48,6 @@
     "@babel/plugin-syntax-decorators": "7.22.5",
     "@babel/plugin-syntax-jsx": "7.22.5",
     "eslint-plugin-html": "7.1.0",
-    "eslint-plugin-react": "7.33.0"
+    "eslint-plugin-react": "7.33.1"
   }
 }

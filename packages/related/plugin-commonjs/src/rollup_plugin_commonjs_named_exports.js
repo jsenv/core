@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
-import ivm from "isolated-vm";
+import { Worker } from "node:worker_threads";
 import resolve from "resolve";
 import isValidIdentifier from "is-valid-identifier";
 import { init, parse } from "cjs-module-lexer";
@@ -27,23 +27,29 @@ export const rollupPluginCommonJsNamedExports = ({ logger }) => {
     name: "scan_cjs_named_exports",
     async buildStart({ input }) {
       await init();
-      Object.keys(input).forEach((key) => {
-        const inputFilePath = input[key];
-        const namedCjs =
-          detectStaticExports({ logger, filePath: inputFilePath }) ||
-          detectExportsUsingSandboxedRuntime({
+      await Promise.all(
+        Object.keys(input).map(async (key) => {
+          const inputFilePath = input[key];
+          let namedCjs = detectStaticExports({
             logger,
             filePath: inputFilePath,
           });
-        scanResults[inputFilePath] = {
-          all: true,
-          default: true,
-          namespace: true,
-          named: [],
-          namedCjs,
-        };
-        input[key] = importWrapper.wrap(inputFilePath);
-      });
+          if (!namedCjs) {
+            namedCjs = await detectExportsUsingSandboxedRuntime({
+              logger,
+              filePath: inputFilePath,
+            });
+          }
+          scanResults[inputFilePath] = {
+            all: true,
+            default: true,
+            namespace: true,
+            named: [],
+            namedCjs,
+          };
+          input[key] = importWrapper.wrap(inputFilePath);
+        }),
+      );
     },
     resolveId(specifier) {
       if (importWrapper.isWrapped(specifier)) {
@@ -126,23 +132,36 @@ const detectStaticExports = ({ logger, filePath, visited = new Set() }) => {
 /*
  * Attempt #2b - Sandboxed runtime analysis: More powerful, but slower.
  * This will only work on UMD and very simple CJS files (require not supported).
- * Uses VM2 to run safely sandbox untrusted code (no access no Node.js primitives, just JS).
+ * run safely sandbox untrusted code (no access no Node.js primitives, just JS).
  * If nothing was detected, return undefined.
  */
-const detectExportsUsingSandboxedRuntime = ({ logger, filePath }) => {
+export const detectExportsUsingSandboxedRuntime = async ({
+  logger,
+  filePath,
+}) => {
   try {
-    const fileContents = readFileSync(filePath, "utf8");
-    const codeToRun = wrapCodeToRunInVm(fileContents);
-
-    const isolate = new ivm.Isolate();
-    const context = isolate.createContextSync();
-    const script = isolate.compileScriptSync(codeToRun);
-    const vmResult = script.runSync(context, { release: true });
-    const exportsResult = Object.keys(vmResult);
-    logger.debug(
-      `detectExportsUsingSandboxedRuntime success ${filePath}: ${exportsResult}`,
+    const workerThread = new Worker(
+      new URL("./worker_runtime.mjs", import.meta.url),
     );
-    return exportsResult.filter((identifier) => isValidIdentifier(identifier));
+    workerThread.postMessage({
+      filePath,
+    });
+    const promise = new Promise((resolve, reject) => {
+      workerThread.on("error", reject);
+      workerThread.on("message", (message) => {
+        resolve(message);
+        workerThread.terminate();
+      });
+    });
+    const result = await promise;
+    if (result.errorMessage) {
+      throw new Error(result.errorMessage);
+    }
+    const exportNames = result.exportNames;
+    logger.debug(
+      `detectExportsUsingSandboxedRuntime success ${filePath}: ${exportNames}`,
+    );
+    return exportNames.filter((identifier) => isValidIdentifier(identifier));
   } catch (err) {
     logger.debug(
       `detectExportsUsingSandboxedRuntime error ${filePath}: ${err.message}`,
@@ -153,13 +172,6 @@ const detectExportsUsingSandboxedRuntime = ({ logger, filePath }) => {
 
 const isValidNamedExport = (name) =>
   name !== "default" && name !== "__esModule" && isValidIdentifier(name);
-
-const wrapCodeToRunInVm = (code) => {
-  return `const exports = {};
-const module = { exports };
-${code};;
-module.exports;`;
-};
 
 const generateCodeForExports = ({
   uniqueNamedExports,

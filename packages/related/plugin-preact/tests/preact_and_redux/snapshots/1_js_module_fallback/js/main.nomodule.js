@@ -22,7 +22,7 @@ function _await(value, then, direct) {
 System.register([], function (_export, _context) {
   "use strict";
 
-  var n$4, l$5, u$5, i$1, o$2, r$5, f$3, e$5, c$3, s$1, a$1, h$5, t$4, r$4, u$4, i, o$1, f$2, c$2, e$4, a, v$3, l$4, m$4, g$3, R, N, A$1, O, T, I, W, B, H, Z, Y, $, q$4, K, tn, en, rn, un, on, ln, cn, dn, pn, mn, Sn, Cn, shim$1, useSyncExternalStoreShim_production_min$1, e$3, k$3, l$3, m$3, n$3, p$3, u$3, shimExports$1, withSelector, withSelector_production_min, shim, useSyncExternalStoreShim_production_min, e$2, k$2, l$2, m$2, n$1$1, p$1$1, u$1, shimExports, h$2, n$2, q$2, r$2, t$2, u$2, v$2, w$1, withSelectorExports, useSyncExternalStoreWithSelector$1, batch, setBatch, getBatch, ContextKey, gT, ReactReduxContext, useReduxContext, notInitialized, useSyncExternalStoreWithSelector, initializeUseSelector, refEquality, useSelector, reactIs$1, reactIs_production_min$1, b$1, c$1, d$1, e$1, f$1, g$1, h$1, k$1, l$1, m$1, n$1, p$1, q$1, r, t$1, v$1, w, x, y, reactIsExports$1, reactIs$2, FORWARD_REF_STATICS, MEMO_STATICS, TYPE_STATICS, reactIs, reactIs_production_min, b, c, d, e, f, g, h, k, l, m, n, p, q, t, u, reactIsExports, nullListeners, canUseDOM, useIsomorphicLayoutEffect, $$observable, randomString, ActionTypes, counterReducer, composeEnhancers, initialState, store, _, App, resolveRenderPromise, renderPromise, spanContentAfterIncrement, spanContentAfterDecrement;
+  var n$4, l$5, u$5, i$1, o$2, r$5, f$3, e$5, c$3, s$1, a$1, h$5, t$4, r$4, u$4, i, o$1, f$2, c$2, e$4, a, v$3, l$4, m$4, g$3, R, N, A$1, O, T, I, W, B, H, Z, Y, $, q$4, K, tn, en, rn, un, on, ln, dn, pn, mn, Sn, Cn, shim$1, useSyncExternalStoreShim_production_min$1, e$3, k$3, l$3, m$3, n$3, p$3, u$3, shimExports$1, withSelector, withSelector_production_min, shim, useSyncExternalStoreShim_production_min, e$2, k$2, l$2, m$2, n$1$1, p$1$1, u$1, shimExports, h$2, n$2, q$2, r$2, t$2, u$2, v$2, w$1, withSelectorExports, useSyncExternalStoreWithSelector$1, batch, setBatch, getBatch, ContextKey, gT, ReactReduxContext, useReduxContext, notInitialized, useSyncExternalStoreWithSelector, initializeUseSelector, refEquality, useSelector, reactIs$1, reactIs_production_min$1, b$1, c$1, d$1, e$1, f$1, g$1, h$1, k$1, l$1, m$1, n$1, p$1, q$1, r, t$1, v$1, w, x, y, reactIsExports$1, reactIs$2, FORWARD_REF_STATICS, MEMO_STATICS, TYPE_STATICS, reactIs, reactIs_production_min, b, c, d, e, f, g, h, k, l, m, n, p, q, t, u, reactIsExports, nullListeners, canUseDOM, useIsomorphicLayoutEffect, $$observable, randomString, ActionTypes, counterReducer, composeEnhancers, initialState, store, _, App, resolveRenderPromise, renderPromise, spanContentAfterIncrement, spanContentAfterDecrement;
   function v$4(n, l) {
     for (var u in l) n[u] = l[u];
     return n;
@@ -716,10 +716,13 @@ System.register([], function (_export, _context) {
     callback();
   }
   function getContext() {
-    let realContext = gT[ContextKey];
+    var _gT$ContextKey;
+    if (!G$1) return {};
+    const contextMap = (_gT$ContextKey = gT[ContextKey]) != null ? _gT$ContextKey : gT[ContextKey] = new Map();
+    let realContext = contextMap.get(G$1);
     if (!realContext) {
       realContext = G$1(null);
-      gT[ContextKey] = realContext;
+      contextMap.set(G$1, realContext);
     }
     return realContext;
   }
@@ -1023,7 +1026,7 @@ System.register([], function (_export, _context) {
     }, [contextValue, previousState]);
     const Context = context || ReactReduxContext; // @ts-ignore 'AnyAction' is assignable to the constraint of type 'A', but 'A' could be instantiated with a different subtype
 
-    return /*#__PURE__*/Cn.createElement(Context.Provider, {
+    return /*#__PURE__*/y$2(Context.Provider, {
       value: contextValue
     }, children);
   }
@@ -1684,7 +1687,6 @@ System.register([], function (_export, _context) {
           }
         }
       };
-      cn = "17.0.2";
       dn = function (n, t) {
         return n(t);
       };
@@ -1862,15 +1864,10 @@ System.register([], function (_export, _context) {
       batch = defaultNoopBatch; // Allow injecting another batching function later
       setBatch = newBatch => batch = newBatch; // Supply a getter just to skip dealing with ESM bindings
       getBatch = () => batch;
-      ContextKey = Symbol.for(`react-redux-context-${cn}`);
-      gT = globalThis;
-      _export("ReactReduxContext", ReactReduxContext = /*#__PURE__*/new Proxy({}, /*#__PURE__*/new Proxy({}, {
-        get(_, handler) {
-          const target = getContext(); // @ts-ignore
-
-          return (_target, ...args) => Reflect[handler](target, ...args);
-        }
-      })));
+      ContextKey = Symbol.for(`react-redux-context`);
+      gT = typeof globalThis !== "undefined" ? globalThis : /* fall back to a per-module scope (pre-8.1 behaviour) if `globalThis` is not available */
+      {};
+      _export("ReactReduxContext", ReactReduxContext = /*#__PURE__*/getContext());
       _export("useReduxContext", useReduxContext = /*#__PURE__*/createReduxContextHook());
       notInitialized = () => {
         throw new Error('uSES not initialized!');
