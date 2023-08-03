@@ -36,12 +36,12 @@ Add "__DEMO__" in that file.
 --- suggestion b ---
 Fix eventual typo in "__DEMO__"?
 --- suggestion c ---
-Mark injection as optional using PLACEHOLDER.optional()
+Mark injection as optional using INJECTIONS.optional()
 
-import { PLACEHOLDER } from "@jsenv/core"
+import { INJECTIONS } from "@jsenv/core";
 
 return {
-  "__DEMO__": PLACEHOLDER.optional("foo")
+  "__DEMO__": INJECTIONS.optional("foo"),
 }`,
   ];
   assert({ actual, expected });

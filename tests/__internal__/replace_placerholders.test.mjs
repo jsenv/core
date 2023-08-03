@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { replacePlaceholders } from "@jsenv/plugin-injections";
+import { replacePlaceholders } from "@jsenv/core/src/plugins/injections/jsenv_plugin_injections.js";
 
 const result = replacePlaceholders(
   `const foo = __FOO__

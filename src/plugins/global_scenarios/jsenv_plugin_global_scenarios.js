@@ -1,19 +1,22 @@
 /*
  * Source code can contain the following
- * - __dev__
- * - __build__
- * A global will be injected with true/false when needed
+ * - __DEV__
+ * - __BUILD__
+ * That will be replaced with true/false
  */
 
-import { replacePlaceholders, PLACEHOLDER } from "@jsenv/plugin-injections";
+import {
+  replacePlaceholders,
+  INJECTIONS,
+} from "../injections/jsenv_plugin_injections.js";
 
 export const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo) => {
     return replacePlaceholders(
       urlInfo.content,
       {
-        __DEV__: PLACEHOLDER.optional(urlInfo.context.dev),
-        __BUILD__: PLACEHOLDER.optional(urlInfo.context.build),
+        __DEV__: INJECTIONS.optional(urlInfo.context.dev),
+        __BUILD__: INJECTIONS.optional(urlInfo.context.build),
       },
       urlInfo,
     );
