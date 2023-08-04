@@ -23,7 +23,15 @@ export const startServerUsingCommand = async (
       });
     });
   }
-  spawnedProcess.on("error", () => {});
+
+  let errorReceived = false;
+  const errorPromise = new Promise((resolve, reject) => {
+    spawnedProcess.on("error", (e) => {
+      errorReceived = true;
+      reject(e);
+    });
+  });
+
   // const stdout = readline.createInterface({ input: spawnedProcess.stdout });
   // stdout.on("line", () => {
   //   logger.debug(`[pid=${spawnedProcess.pid}][out] ${data}`);
@@ -84,10 +92,13 @@ export const startServerUsingCommand = async (
   startOperation.addAbortCallback(killProcess);
   teardown.addCallback(killProcess);
 
-  try {
+  const startedPromise = (async () => {
     const logScale = [100, 250, 500];
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      if (errorReceived) {
+        break;
+      }
       const connected = await pingServer(webServer.origin);
       if (connected) {
         break;
@@ -97,6 +108,10 @@ export const startServerUsingCommand = async (
       logger.debug(`Waiting ${delay}ms`);
       await new Promise((x) => setTimeout(x, delay));
     }
+  })();
+
+  try {
+    await Promise.race([errorPromise, startedPromise]);
   } catch (e) {
     if (Abort.isAbortError(e)) {
       if (timeoutAbortSource.signal.aborted) {

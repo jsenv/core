@@ -79,6 +79,8 @@ export const ensureWebServerIsStarted = async (
     await startServerUsingModuleUrl(webServer, {
       signal,
       allocatedMs,
+      teardown,
+      logger,
     });
     return;
   }
