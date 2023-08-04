@@ -86,6 +86,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
   });
   const serverUp = await pingServer(webServer.origin);
   await teardown.trigger();
+  await new Promise((resolve) => setTimeout(resolve, 1_000));
   const serverUpAfterTeardown = await pingServer(webServer.origin);
   const actual = {
     serverUp,
