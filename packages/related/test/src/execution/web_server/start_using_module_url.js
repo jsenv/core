@@ -13,22 +13,13 @@ export const startServerUsingModuleUrl = async (
       `webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`,
     );
   }
-  const worker = new Worker(
-    new URL(
-      "./worker_importing_module_starting_web_server.mjs",
-      import.meta.url,
-    ),
-    {
-      workerData: {
-        url: String(webServer.moduleUrl),
-      },
-      env: {
-        IMPORTED_BY_TEST_PLAN: "1",
-      },
-      stdin: true,
-      stdout: true,
+  const worker = new Worker(webServer.moduleUrl, {
+    env: {
+      // IMPORTED_BY_TEST_PLAN: "1",
     },
-  );
+    stdin: true,
+    stdout: true,
+  });
   let errorReceived = false;
   const errorPromise = new Promise((resolve, reject) => {
     worker.on("error", (e) => {
