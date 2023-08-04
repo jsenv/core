@@ -1,53 +1,43 @@
-import { fileURLToPath } from "node:url";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 
+import { startServerUsingModuleUrl } from "./web_server/start_using_module_url.js";
+import { startServerUsingCommand } from "./web_server/start_using_command.js";
 import { pingServer } from "../helpers/ping_server.js";
 import { basicFetch } from "../helpers/basic_fetch.js";
 
-export const assertAndNormalizeWebServer = async (webServer) => {
+export const assertAndNormalizeWebServer = async (
+  webServer,
+  { signal, logger, teardown },
+) => {
   if (!webServer) {
     throw new TypeError(
       `webServer is required when running tests on browser(s)`,
     );
   }
   const unexpectedParamNames = Object.keys(webServer).filter((key) => {
-    return !["origin", "moduleUrl", "rootDirectoryUrl"].includes(key);
+    return ![
+      "origin",
+      "moduleUrl",
+      "command",
+      "cwd",
+      "rootDirectoryUrl",
+    ].includes(key);
   });
   if (unexpectedParamNames.length > 0) {
     throw new TypeError(
       `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
     );
   }
-
-  let aServerIsListening = await pingServer(webServer.origin);
-  if (!aServerIsListening) {
-    if (!webServer.moduleUrl) {
-      throw new TypeError(
-        `webServer.moduleUrl is required as there is no server listening "${webServer.origin}"`,
-      );
-    }
-    try {
-      process.env.IMPORTED_BY_TEST_PLAN = "1";
-      await import(webServer.moduleUrl);
-      delete process.env.IMPORTED_BY_TEST_PLAN;
-    } catch (e) {
-      if (
-        e.code === "ERR_MODULE_NOT_FOUND" &&
-        e.message.includes(fileURLToPath(webServer.moduleUrl))
-      ) {
-        throw new Error(
-          `webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`,
-        );
-      }
-      throw e;
-    }
-    aServerIsListening = await pingServer(webServer.origin);
-    if (!aServerIsListening) {
-      throw new Error(
-        `webServer.moduleUrl did not start a server listening at "${webServer.origin}", check file at "${webServer.moduleUrl}"`,
-      );
-    }
+  if (typeof webServer.origin !== "string") {
+    throw new TypeError(
+      `webServer.origin must be a string, got ${webServer.origin}`,
+    );
   }
+  await ensureWebServerIsStarted(webServer, {
+    signal,
+    teardown,
+    logger,
+  });
   const { headers } = await basicFetch(webServer.origin, {
     method: "GET",
     rejectUnauthorized: false,
@@ -75,4 +65,35 @@ export const assertAndNormalizeWebServer = async (webServer) => {
       "webServer.rootDirectoryUrl",
     );
   }
+};
+
+export const ensureWebServerIsStarted = async (
+  webServer,
+  { signal, teardown, logger, allocatedMs = 5_000 },
+) => {
+  const aServerIsListening = await pingServer(webServer.origin);
+  if (aServerIsListening) {
+    return;
+  }
+  if (webServer.moduleUrl) {
+    await startServerUsingModuleUrl(webServer, {
+      signal,
+      allocatedMs,
+      teardown,
+      logger,
+    });
+    return;
+  }
+  if (webServer.command) {
+    await startServerUsingCommand(webServer, {
+      signal,
+      allocatedMs,
+      teardown,
+      logger,
+    });
+    return;
+  }
+  throw new TypeError(
+    `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
+  );
 };

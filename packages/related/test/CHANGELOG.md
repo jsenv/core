@@ -1,3 +1,7 @@
+# 1.6.0
+
+- Add webServer.command
+
 # 1.2.0
 
 - Replace dependency to "@jsenv/core" with "@jsenv/plugin-supervisor"

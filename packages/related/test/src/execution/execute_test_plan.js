@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { URL_META } from "@jsenv/url-meta";
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@jsenv/filesystem";
 import { createLogger, createDetailedMessage } from "@jsenv/log";
 
+import { createTeardown } from "../helpers/teardown.js";
 import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_file.js";
 import { generateCoverageHtmlDirectory } from "../coverage/coverage_reporter_html_directory.js";
 import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.js";
@@ -103,6 +105,25 @@ export const executeTestPlan = async ({
   coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
+  const teardown = createTeardown();
+
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        () => {
+          logger.debug(`SIGINT abort`);
+          abort();
+        },
+      );
+    });
+  }
+
+  let logger;
   let someNeedsServer = false;
   let someHasCoverageV8 = false;
   let someNodeRuntime = false;
@@ -126,6 +147,8 @@ export const executeTestPlan = async ({
       throw new Error(`testPlan must be an object, got ${testPlan}`);
     }
 
+    logger = createLogger({ logLevel });
+
     Object.keys(testPlan).forEach((filePattern) => {
       const filePlan = testPlan[filePattern];
       if (!filePlan) return;
@@ -148,7 +171,11 @@ export const executeTestPlan = async ({
     });
 
     if (someNeedsServer) {
-      await assertAndNormalizeWebServer(webServer);
+      await assertAndNormalizeWebServer(webServer, {
+        signal: operation.signal,
+        teardown,
+        logger,
+      });
     }
 
     if (coverageEnabled) {
@@ -233,7 +260,6 @@ export const executeTestPlan = async ({
     }
   }
 
-  const logger = createLogger({ logLevel });
   logger.debug(
     createDetailedMessage(`Prepare executing plan`, {
       runtimes: JSON.stringify(runtimes, null, "  "),
@@ -288,7 +314,7 @@ export const executeTestPlan = async ({
 
   const result = await executeSteps(executionSteps, {
     signal,
-    handleSIGINT,
+    teardown,
     logger,
     logRefresh,
     logSummary,

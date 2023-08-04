@@ -55,6 +55,7 @@ export const parseJsUrls = ({
   isJsModule = false,
   isWebWorker = false,
   inlineContent = true,
+  isNodeJs = false,
 } = {}) => {
   const jsUrls = [];
   if (ast === undefined) {
@@ -134,7 +135,7 @@ export const parseJsUrls = ({
         analyzeImportMetaResolveCall(node, { onUrl });
         return;
       }
-      if (isServiceWorkerRegisterCall(node)) {
+      if (!isNodeJs && isServiceWorkerRegisterCall(node)) {
         analyzeServiceWorkerRegisterCall(node, {
           isJsModule,
           onUrl,
@@ -177,11 +178,12 @@ export const parseJsUrls = ({
       if (isNewWorkerCall(node)) {
         analyzeNewWorkerCall(node, {
           isJsModule,
+          isNodeJs,
           onUrl,
         });
         return;
       }
-      if (isNewSharedWorkerCall(node)) {
+      if (!isNodeJs && isNewSharedWorkerCall(node)) {
         analyzeNewSharedWorkerCall(node, {
           isJsModule,
           onUrl,
