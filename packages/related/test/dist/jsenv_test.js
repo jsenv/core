@@ -8,9 +8,8 @@ import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { createRequire } from "node:module";
-import { Worker } from "node:worker_threads";
-import { createServer } from "node:net";
 import { spawn, spawnSync, fork } from "node:child_process";
+import { createServer } from "node:net";
 import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { applyBabelPlugins } from "@jsenv/ast";
@@ -20,6 +19,7 @@ import wrapAnsi from "wrap-ansi";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
+import { Worker } from "node:worker_threads";
 
 /*
  * See callback_race.md
@@ -2828,80 +2828,6 @@ const pingServer = async (url) => {
   return false;
 };
 
-const startServerUsingModuleUrl = async (
-  webServer,
-  { signal, teardown, logger, allocatedMs },
-) => {
-  if (!existsSync(new URL(webServer.moduleUrl))) {
-    throw new Error(
-      `webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`,
-    );
-  }
-  const worker = new Worker(webServer.moduleUrl, {
-    env: {
-      // IMPORTED_BY_TEST_PLAN: "1",
-    },
-    stdin: true,
-    stdout: true,
-  });
-  let errorReceived = false;
-  const errorPromise = new Promise((resolve, reject) => {
-    worker.on("error", (e) => {
-      errorReceived = true;
-      reject(e);
-    });
-  });
-
-  const killWorker = async () => {
-    await worker.terminate();
-  };
-
-  const startOperation = Abort.startOperation();
-  startOperation.addAbortSignal(signal);
-  const timeoutAbortSource = startOperation.timeout(allocatedMs);
-  startOperation.addAbortCallback(killWorker);
-  teardown.addCallback(killWorker);
-
-  const startedPromise = (async () => {
-    const logScale = [100, 250, 500];
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      if (errorReceived) {
-        break;
-      }
-      const connected = await pingServer(webServer.origin);
-      if (connected) {
-        break;
-      }
-
-      startOperation.throwIfAborted();
-      const delay = logScale.shift() || 1000;
-      logger.debug(`Waiting ${delay}ms`);
-      await new Promise((x) => setTimeout(x, delay));
-    }
-  })();
-
-  try {
-    await Promise.race([errorPromise, startedPromise]);
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      if (timeoutAbortSource.signal.aborted) {
-        // aborted by timeout
-        throw new Error(
-          `"${webServer.moduleUrl}" did not start a server in less than ${allocatedMs}ms (webServer.moduleUrl)`,
-        );
-      }
-      if (signal.aborted) {
-        // aborted from outside
-        return;
-      }
-    }
-    throw e;
-  } finally {
-    await startOperation.end();
-  }
-};
-
 const startServerUsingCommand = async (
   webServer,
   { signal, allocatedMs, logger, teardown },
@@ -2942,7 +2868,7 @@ const startServerUsingCommand = async (
   let processClosed = false;
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {
-      logger.info(
+      logger.debug(
         `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
       );
       processClosed = true;
@@ -2950,14 +2876,14 @@ const startServerUsingCommand = async (
     });
   });
   const killProcess = async () => {
-    logger.info(`[pid=${spawnedProcess.pid}] <kill>`);
+    logger.debug(`[pid=${spawnedProcess.pid}] <kill>`);
     if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
-      logger.info(
+      logger.debug(
         `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
       );
       return;
     }
-    logger.info(`[pid=${spawnedProcess.pid}] <will force kill>`);
+    logger.debug(`[pid=${spawnedProcess.pid}] <will force kill>`);
     // Force kill the browser.
     try {
       if (process.platform === "win32") {
@@ -2970,7 +2896,9 @@ const startServerUsingCommand = async (
           taskkillProcess.stderr.toString(),
         ];
         if (stdout)
-          logger.info(`[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`);
+          logger.debug(
+            `[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`,
+          );
         if (stderr)
           logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
       } else {
@@ -3016,7 +2944,7 @@ const startServerUsingCommand = async (
       if (timeoutAbortSource.signal.aborted) {
         // aborted by timeout
         throw new Error(
-          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms (webServer.command)`,
+          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
         );
       }
       if (signal.aborted) {
@@ -3028,6 +2956,19 @@ const startServerUsingCommand = async (
   } finally {
     await startOperation.end();
   }
+};
+
+const startServerUsingModuleUrl = async (webServer, params) => {
+  if (!existsSync(new URL(webServer.moduleUrl))) {
+    throw new Error(`"${webServer.moduleUrl}" does not lead to a file`);
+  }
+  return startServerUsingCommand(
+    {
+      ...webServer,
+      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
+    },
+    params,
+  );
 };
 
 const basicFetch = async (

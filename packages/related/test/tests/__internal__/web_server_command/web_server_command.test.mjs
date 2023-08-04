@@ -7,7 +7,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 // the command does not exists
 {
   const webServer = {
-    origin: "http://localhost:5811",
+    origin: "http://localhost:3459",
     command: `abryiryiu`,
   };
   try {
@@ -22,7 +22,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
   } catch (e) {
     const actual = e;
     const expected = new Error(
-      `"${webServer.command}" command did not start a server in less than 500ms (webServer.command)`,
+      `"${webServer.command}" command did not start a server in less than 500ms`,
     );
     assert({ actual, expected });
   }
@@ -31,7 +31,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 // the command fails
 {
   const webServer = {
-    origin: "http://localhost:5811",
+    origin: "http://localhost:3459",
     command: `node ${fileURLToPath(new URL("./error.mjs", import.meta.url))}`,
   };
   try {
@@ -46,7 +46,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
   } catch (e) {
     const actual = e;
     const expected = new Error(
-      `"${webServer.command}" command did not start a server in less than 500ms (webServer.command)`,
+      `"${webServer.command}" command did not start a server in less than 500ms`,
     );
     assert({ actual, expected });
   }
@@ -55,7 +55,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 // the command does not start a server (or not fast enough)
 {
   const webServer = {
-    origin: "http://localhost:5811",
+    origin: "http://localhost:3459",
     command: `node ${fileURLToPath(
       new URL("./do_nothing.mjs", import.meta.url),
     )}`,
@@ -72,7 +72,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
   } catch (e) {
     const actual = e;
     const expected = new Error(
-      `"${webServer.command}" command did not start a server in less than 500ms (webServer.command)`,
+      `"${webServer.command}" command did not start a server in less than 500ms`,
     );
     assert({ actual, expected });
   }
@@ -82,7 +82,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 {
   const teardown = createTeardown();
   const webServer = {
-    origin: "http://localhost:5810",
+    origin: "http://localhost:3459",
     command: `node ${fileURLToPath(
       new URL("./start_server.mjs", import.meta.url),
     )}`,

@@ -43,7 +43,7 @@ export const startServerUsingCommand = async (
   let processClosed = false;
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {
-      logger.info(
+      logger.debug(
         `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
       );
       processClosed = true;
@@ -51,14 +51,14 @@ export const startServerUsingCommand = async (
     });
   });
   const killProcess = async () => {
-    logger.info(`[pid=${spawnedProcess.pid}] <kill>`);
+    logger.debug(`[pid=${spawnedProcess.pid}] <kill>`);
     if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
-      logger.info(
+      logger.debug(
         `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
       );
       return;
     }
-    logger.info(`[pid=${spawnedProcess.pid}] <will force kill>`);
+    logger.debug(`[pid=${spawnedProcess.pid}] <will force kill>`);
     // Force kill the browser.
     try {
       if (process.platform === "win32") {
@@ -71,7 +71,9 @@ export const startServerUsingCommand = async (
           taskkillProcess.stderr.toString(),
         ];
         if (stdout)
-          logger.info(`[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`);
+          logger.debug(
+            `[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`,
+          );
         if (stderr)
           logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
       } else {
@@ -117,7 +119,7 @@ export const startServerUsingCommand = async (
       if (timeoutAbortSource.signal.aborted) {
         // aborted by timeout
         throw new Error(
-          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms (webServer.command)`,
+          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
         );
       }
       if (signal.aborted) {
