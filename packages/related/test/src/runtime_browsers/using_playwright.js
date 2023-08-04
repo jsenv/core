@@ -52,7 +52,8 @@ export const createRuntimeUsingPlaywright = ({
     coverageMethodForBrowsers,
     coverageFileUrl,
 
-    stopAfterAllSignal,
+    teardown,
+    isTestPlan,
     stopSignal,
     keepRunning,
     onConsole,
@@ -71,7 +72,7 @@ export const createRuntimeUsingPlaywright = ({
       await cleanupCallbackList.notify({ reason });
     });
 
-    const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal;
+    const isBrowserDedicatedToExecution = isolatedTab || !isTestPlan;
     let browserAndContextPromise = isBrowserDedicatedToExecution
       ? null
       : browserPromiseCache.get(label);
@@ -320,15 +321,11 @@ export const createRuntimeUsingPlaywright = ({
               cleanupCallbackList.add(() => {
                 browser.removeListener("disconnected", disconnectedCallback);
               });
-              const notifyPrevious = stopAfterAllSignal.notify;
-              stopAfterAllSignal.notify = async () => {
-                await notifyPrevious();
+              teardown.addCallback(async () => {
                 browser.removeListener("disconnected", disconnectedCallback);
-                logger.debug(
-                  `stopAfterAllSignal notified -> closing ${browserName}`,
-                );
+                logger.debug(`testPlan teardown -> closing ${browserName}`);
                 await closeBrowser();
-              };
+              });
             }
           },
           response: async (cb) => {

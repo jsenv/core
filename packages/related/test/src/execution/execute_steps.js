@@ -4,7 +4,7 @@ import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { urlToFileSystemPath } from "@jsenv/urls";
 import { createLog, startSpinner } from "@jsenv/log";
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { Abort } from "@jsenv/abort";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 
 import { reportToCoverage } from "../coverage/report_to_coverage.js";
@@ -16,7 +16,7 @@ export const executeSteps = async (
   executionSteps,
   {
     signal,
-    handleSIGINT,
+    teardown,
     logger,
     logRefresh,
     logRuntime,
@@ -56,23 +56,9 @@ export const executeSteps = async (
   const executePlanReturnValue = {};
   const report = {};
   const callbacks = [];
-  const stopAfterAllSignal = { notify: () => {} };
 
   const multipleExecutionsOperation = Abort.startOperation();
   multipleExecutionsOperation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    multipleExecutionsOperation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGINT: true,
-        },
-        () => {
-          logger.debug(`SIGINT abort`);
-          abort();
-        },
-      );
-    });
-  }
   const failFastAbortController = new AbortController();
   if (failFast) {
     multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
@@ -125,7 +111,8 @@ export const executeSteps = async (
       coverageConfig,
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
-      stopAfterAllSignal,
+      isTestPlan: true,
+      teardown,
     };
 
     if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
@@ -323,8 +310,8 @@ export const executeSteps = async (
       },
     });
     if (!keepRunning) {
-      logger.debug("stopAfterAllSignal.notify()");
-      await stopAfterAllSignal.notify();
+      logger.debug("trigger test plan teardown");
+      await teardown.trigger();
     }
 
     counters.cancelled = counters.total - counters.done;
@@ -346,10 +333,9 @@ export const executeSteps = async (
     executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted;
     executePlanReturnValue.planSummary = summary;
     executePlanReturnValue.planReport = report;
-    await callbacks.reduce(async (previous, callback) => {
-      await previous;
+    for (const callback of callbacks) {
       await callback();
-    }, Promise.resolve());
+    }
     return executePlanReturnValue;
   } finally {
     await multipleExecutionsOperation.end();
