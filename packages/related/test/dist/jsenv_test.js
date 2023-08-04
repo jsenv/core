@@ -8,6 +8,7 @@ import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { createRequire } from "node:module";
+import { spawn, spawnSync, fork } from "node:child_process";
 import { createServer } from "node:net";
 import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -17,9 +18,497 @@ import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { fork } from "node:child_process";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
+
+/*
+ * See callback_race.md
+ */
+
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach((clean) => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach((candidateName) => {
+    const register = raceDescription[candidateName];
+    const returnValue = register((data) => {
+      if (status !== "racing") {
+        return;
+      }
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data,
+      });
+    });
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+
+  return cancel;
+};
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+
+  const callbackListOnce = {};
+
+  const add = (callback) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "add", status });
+      return removeNoop;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    }
+
+    // don't register twice
+    const existingCallback = callbacks.find((callbackCandidate) => {
+      return callbackCandidate === callback;
+    });
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        }
+
+        // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = (param) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "call", status });
+      return [];
+    }
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified";
+    // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+    callbacks = null;
+    currentCallbackIndex = -1;
+
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({ action, status }) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(
+      `"${action}" should not happen when callback list is ${status}`,
+      {
+        CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+        detail: `Code is potentially executed when it should not`,
+      },
+    );
+  } else {
+    console.warn(
+      `"${action}" should not happen when callback list is ${status}`,
+    );
+  }
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`,
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+
+
+const Abort = {
+  isAbortError: (error) => {
+    return error && error.name === "AbortError";
+  },
+
+  startOperation: () => {
+    return createOperation();
+  },
+
+  throwIfAborted: (signal) => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  },
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController();
+  // const abortOperation = (value) => abortController.abort(value)
+  const operationSignal = operationAbortController.signal;
+
+  // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expected
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  };
+
+  // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+  const addAbortCallback = (callback) => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = (callback) => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({ abortAfterEnd = false } = {}) => {
+    await Promise.all(endCallbackList.notify());
+
+    // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (
+    signal,
+    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
+  ) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks(
+      {
+        operation_abort: (cb) => {
+          return addAbortCallback(cb);
+        },
+        operation_end: (cb) => {
+          return addEndCallback(cb);
+        },
+        child_abort: (cb) => {
+          return addEventListener(signal, "abort", cb);
+        },
+      },
+      (winner) => {
+        const raceEffects = {
+          // Both "operation_abort" and "operation_end"
+          // means we don't care anymore if the child aborts.
+          // So we can:
+          // - remove "abort" event listener on child (done by raceCallback)
+          // - remove abort callback on operation (done by raceCallback)
+          // - remove end callback on operation (done by raceCallback)
+          // - call any custom cancel function
+          operation_abort: () => {
+            applyAbortEffects();
+            applyRemoveEffects();
+          },
+          operation_end: () => {
+            // Exists to
+            // - remove abort callback on operation
+            // - remove "abort" event listener on child
+            // - call any custom cancel function
+            applyRemoveEffects();
+          },
+          child_abort: () => {
+            applyAbortEffects();
+            operationAbortController.abort();
+          },
+        };
+        raceEffects[winner.name](winner.value);
+      },
+    );
+
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = (abortSourceCallback) => {
+    const abortSource = {
+      cleaned: false,
+      signal: null,
+      remove: callbackNoop,
+    };
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+    abortSource.signal = abortSourceSignal;
+    if (operationSignal.aborted) {
+      return abortSource;
+    }
+    const returnValue = abortSourceCallback((value) => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        if (typeof returnValue === "function") {
+          returnValue();
+        }
+        abortSource.cleaned = true;
+      },
+    });
+    abortSource.remove = removeAbortSignal;
+    return abortSource;
+  };
+
+  const timeout = (ms) => {
+    return addAbortSource((abort) => {
+      const timeoutId = setTimeout(abort, ms);
+      // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const withSignal = async (asyncCallback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = (callback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    timeout,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end,
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks(
+    {
+      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+      ...(processTeardownEvents.exit ? EXIT_CALLBACK : {}),
+    },
+    callback,
+  );
+};
+
+const SIGHUP_CALLBACK = {
+  SIGHUP: (cb) => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  },
+};
+
+const SIGTERM_CALLBACK = {
+  SIGTERM: (cb) => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  },
+};
+
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: (cb) => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  },
+};
+
+const EXIT_CALLBACK = {
+  exit: (cb) => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  },
+};
+
+const SIGINT_CALLBACK = {
+  SIGINT: (cb) => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  },
+};
 
 const urlToScheme = (url) => {
   const urlString = String(url);
@@ -590,495 +1079,6 @@ const readStat = (
       }
     });
   });
-};
-
-/*
- * See callback_race.md
- */
-
-const raceCallbacks = (raceDescription, winnerCallback) => {
-  let cleanCallbacks = [];
-  let status = "racing";
-
-  const clean = () => {
-    cleanCallbacks.forEach((clean) => {
-      clean();
-    });
-    cleanCallbacks = null;
-  };
-
-  const cancel = () => {
-    if (status !== "racing") {
-      return;
-    }
-    status = "cancelled";
-    clean();
-  };
-
-  Object.keys(raceDescription).forEach((candidateName) => {
-    const register = raceDescription[candidateName];
-    const returnValue = register((data) => {
-      if (status !== "racing") {
-        return;
-      }
-      status = "done";
-      clean();
-      winnerCallback({
-        name: candidateName,
-        data,
-      });
-    });
-    if (typeof returnValue === "function") {
-      cleanCallbacks.push(returnValue);
-    }
-  });
-
-  return cancel;
-};
-
-const createCallbackListNotifiedOnce = () => {
-  let callbacks = [];
-  let status = "waiting";
-  let currentCallbackIndex = -1;
-
-  const callbackListOnce = {};
-
-  const add = (callback) => {
-    if (status !== "waiting") {
-      emitUnexpectedActionWarning({ action: "add", status });
-      return removeNoop;
-    }
-
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    // don't register twice
-    const existingCallback = callbacks.find((callbackCandidate) => {
-      return callbackCandidate === callback;
-    });
-    if (existingCallback) {
-      emitCallbackDuplicationWarning();
-      return removeNoop;
-    }
-
-    callbacks.push(callback);
-    return () => {
-      if (status === "notified") {
-        // once called removing does nothing
-        // as the callbacks array is frozen to null
-        return;
-      }
-
-      const index = callbacks.indexOf(callback);
-      if (index === -1) {
-        return;
-      }
-
-      if (status === "looping") {
-        if (index <= currentCallbackIndex) {
-          // The callback was already called (or is the current callback)
-          // We don't want to mutate the callbacks array
-          // or it would alter the looping done in "call" and the next callback
-          // would be skipped
-          return;
-        }
-
-        // Callback is part of the next callback to call,
-        // we mutate the callbacks array to prevent this callback to be called
-      }
-
-      callbacks.splice(index, 1);
-    };
-  };
-
-  const notify = (param) => {
-    if (status !== "waiting") {
-      emitUnexpectedActionWarning({ action: "call", status });
-      return [];
-    }
-    status = "looping";
-    const values = callbacks.map((callback, index) => {
-      currentCallbackIndex = index;
-      return callback(param);
-    });
-    callbackListOnce.notified = true;
-    status = "notified";
-    // we reset callbacks to null after looping
-    // so that it's possible to remove during the loop
-    callbacks = null;
-    currentCallbackIndex = -1;
-
-    return values;
-  };
-
-  callbackListOnce.notified = false;
-  callbackListOnce.add = add;
-  callbackListOnce.notify = notify;
-
-  return callbackListOnce;
-};
-
-const emitUnexpectedActionWarning = ({ action, status }) => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(
-      `"${action}" should not happen when callback list is ${status}`,
-      {
-        CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
-        detail: `Code is potentially executed when it should not`,
-      },
-    );
-  } else {
-    console.warn(
-      `"${action}" should not happen when callback list is ${status}`,
-    );
-  }
-};
-
-const emitCallbackDuplicationWarning = () => {
-  if (typeof process.emitWarning === "function") {
-    process.emitWarning(`Trying to add a callback already in the list`, {
-      CODE: "CALLBACK_DUPLICATION",
-      detail: `Code is potentially executed more than it should`,
-    });
-  } else {
-    console.warn(`Trying to add same callback twice`);
-  }
-};
-
-const removeNoop = () => {};
-
-/*
- * https://github.com/whatwg/dom/issues/920
- */
-
-
-const Abort = {
-  isAbortError: (error) => {
-    return error && error.name === "AbortError";
-  },
-
-  startOperation: () => {
-    return createOperation();
-  },
-
-  throwIfAborted: (signal) => {
-    if (signal.aborted) {
-      const error = new Error(`The operation was aborted`);
-      error.name = "AbortError";
-      error.type = "aborted";
-      throw error;
-    }
-  },
-};
-
-const createOperation = () => {
-  const operationAbortController = new AbortController();
-  // const abortOperation = (value) => abortController.abort(value)
-  const operationSignal = operationAbortController.signal;
-
-  // abortCallbackList is used to ignore the max listeners warning from Node.js
-  // this warning is useful but becomes problematic when it's expected
-  // (a function doing 20 http call in parallel)
-  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
-  // uses abortCallbackList to know when something is aborted
-  const abortCallbackList = createCallbackListNotifiedOnce();
-  const endCallbackList = createCallbackListNotifiedOnce();
-
-  let isAbortAfterEnd = false;
-
-  operationSignal.onabort = () => {
-    operationSignal.onabort = null;
-
-    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
-    if (!isAbortAfterEnd) {
-      addEndCallback(async () => {
-        await allAbortCallbacksPromise;
-      });
-    }
-  };
-
-  const throwIfAborted = () => {
-    Abort.throwIfAborted(operationSignal);
-  };
-
-  // add a callback called on abort
-  // differences with signal.addEventListener('abort')
-  // - operation.end awaits the return value of this callback
-  // - It won't increase the count of listeners for "abort" that would
-  //   trigger max listeners warning when count > 10
-  const addAbortCallback = (callback) => {
-    // It would be painful and not super redable to check if signal is aborted
-    // before deciding if it's an abort or end callback
-    // with pseudo-code below where we want to stop server either
-    // on abort or when ended because signal is aborted
-    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
-    //   await server.stop()
-    // })
-    if (operationSignal.aborted) {
-      return addEndCallback(callback);
-    }
-    return abortCallbackList.add(callback);
-  };
-
-  const addEndCallback = (callback) => {
-    return endCallbackList.add(callback);
-  };
-
-  const end = async ({ abortAfterEnd = false } = {}) => {
-    await Promise.all(endCallbackList.notify());
-
-    // "abortAfterEnd" can be handy to ensure "abort" callbacks
-    // added with { once: true } are removed
-    // It might also help garbage collection because
-    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
-    // as settled and clean up things
-    if (abortAfterEnd) {
-      // because of operationSignal.onabort = null
-      // + abortCallbackList.clear() this won't re-call
-      // callbacks
-      if (!operationSignal.aborted) {
-        isAbortAfterEnd = true;
-        operationAbortController.abort();
-      }
-    }
-  };
-
-  const addAbortSignal = (
-    signal,
-    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
-  ) => {
-    const applyAbortEffects = () => {
-      const onAbortCallback = onAbort;
-      onAbort = callbackNoop;
-      onAbortCallback();
-    };
-    const applyRemoveEffects = () => {
-      const onRemoveCallback = onRemove;
-      onRemove = callbackNoop;
-      onAbort = callbackNoop;
-      onRemoveCallback();
-    };
-
-    if (operationSignal.aborted) {
-      applyAbortEffects();
-      applyRemoveEffects();
-      return callbackNoop;
-    }
-
-    if (signal.aborted) {
-      operationAbortController.abort();
-      applyAbortEffects();
-      applyRemoveEffects();
-      return callbackNoop;
-    }
-
-    const cancelRace = raceCallbacks(
-      {
-        operation_abort: (cb) => {
-          return addAbortCallback(cb);
-        },
-        operation_end: (cb) => {
-          return addEndCallback(cb);
-        },
-        child_abort: (cb) => {
-          return addEventListener(signal, "abort", cb);
-        },
-      },
-      (winner) => {
-        const raceEffects = {
-          // Both "operation_abort" and "operation_end"
-          // means we don't care anymore if the child aborts.
-          // So we can:
-          // - remove "abort" event listener on child (done by raceCallback)
-          // - remove abort callback on operation (done by raceCallback)
-          // - remove end callback on operation (done by raceCallback)
-          // - call any custom cancel function
-          operation_abort: () => {
-            applyAbortEffects();
-            applyRemoveEffects();
-          },
-          operation_end: () => {
-            // Exists to
-            // - remove abort callback on operation
-            // - remove "abort" event listener on child
-            // - call any custom cancel function
-            applyRemoveEffects();
-          },
-          child_abort: () => {
-            applyAbortEffects();
-            operationAbortController.abort();
-          },
-        };
-        raceEffects[winner.name](winner.value);
-      },
-    );
-
-    return () => {
-      cancelRace();
-      applyRemoveEffects();
-    };
-  };
-
-  const addAbortSource = (abortSourceCallback) => {
-    const abortSource = {
-      cleaned: false,
-      signal: null,
-      remove: callbackNoop,
-    };
-    const abortSourceController = new AbortController();
-    const abortSourceSignal = abortSourceController.signal;
-    abortSource.signal = abortSourceSignal;
-    if (operationSignal.aborted) {
-      return abortSource;
-    }
-    const returnValue = abortSourceCallback((value) => {
-      abortSourceController.abort(value);
-    });
-    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
-      onRemove: () => {
-        if (typeof returnValue === "function") {
-          returnValue();
-        }
-        abortSource.cleaned = true;
-      },
-    });
-    abortSource.remove = removeAbortSignal;
-    return abortSource;
-  };
-
-  const timeout = (ms) => {
-    return addAbortSource((abort) => {
-      const timeoutId = setTimeout(abort, ms);
-      // an abort source return value is called when:
-      // - operation is aborted (by an other source)
-      // - operation ends
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    });
-  };
-
-  const withSignal = async (asyncCallback) => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    const removeAbortSignal = addAbortSignal(signal, {
-      onAbort: () => {
-        abortController.abort();
-      },
-    });
-    try {
-      const value = await asyncCallback(signal);
-      removeAbortSignal();
-      return value;
-    } catch (e) {
-      removeAbortSignal();
-      throw e;
-    }
-  };
-
-  const withSignalSync = (callback) => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    const removeAbortSignal = addAbortSignal(signal, {
-      onAbort: () => {
-        abortController.abort();
-      },
-    });
-    try {
-      const value = callback(signal);
-      removeAbortSignal();
-      return value;
-    } catch (e) {
-      removeAbortSignal();
-      throw e;
-    }
-  };
-
-  return {
-    // We could almost hide the operationSignal
-    // But it can be handy for 2 things:
-    // - know if operation is aborted (operation.signal.aborted)
-    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
-    signal: operationSignal,
-
-    throwIfAborted,
-    addAbortCallback,
-    addAbortSignal,
-    addAbortSource,
-    timeout,
-    withSignal,
-    withSignalSync,
-    addEndCallback,
-    end,
-  };
-};
-
-const callbackNoop = () => {};
-
-const addEventListener = (target, eventName, cb) => {
-  target.addEventListener(eventName, cb);
-  return () => {
-    target.removeEventListener(eventName, cb);
-  };
-};
-
-const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
-  return raceCallbacks(
-    {
-      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
-      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
-      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
-      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
-      ...(processTeardownEvents.exit ? EXIT_CALLBACK : {}),
-    },
-    callback,
-  );
-};
-
-const SIGHUP_CALLBACK = {
-  SIGHUP: (cb) => {
-    process.on("SIGHUP", cb);
-    return () => {
-      process.removeListener("SIGHUP", cb);
-    };
-  },
-};
-
-const SIGTERM_CALLBACK = {
-  SIGTERM: (cb) => {
-    process.on("SIGTERM", cb);
-    return () => {
-      process.removeListener("SIGTERM", cb);
-    };
-  },
-};
-
-const BEFORE_EXIT_CALLBACK = {
-  beforeExit: (cb) => {
-    process.on("beforeExit", cb);
-    return () => {
-      process.removeListener("beforeExit", cb);
-    };
-  },
-};
-
-const EXIT_CALLBACK = {
-  exit: (cb) => {
-    process.on("exit", cb);
-    return () => {
-      process.removeListener("exit", cb);
-    };
-  },
-};
-
-const SIGINT_CALLBACK = {
-  SIGINT: (cb) => {
-    process.on("SIGINT", cb);
-    return () => {
-      process.removeListener("SIGINT", cb);
-    };
-  },
 };
 
 const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
@@ -2708,6 +2708,22 @@ const startSpinner = ({
   return spinner;
 };
 
+const createTeardown = () => {
+  const teardownCallbackSet = new Set();
+  return {
+    addCallback: (callback) => {
+      teardownCallbackSet.add(callback);
+    },
+    trigger: async () => {
+      await Promise.all(
+        Array.from(teardownCallbackSet.values()).map(async (callback) => {
+          await callback();
+        }),
+      );
+    },
+  };
+};
+
 const generateCoverageJsonFile = async ({
   coverage,
   coverageJsonFileUrl,
@@ -2866,50 +2882,39 @@ const basicFetch = async (
   });
 };
 
-const assertAndNormalizeWebServer = async (webServer) => {
+const assertAndNormalizeWebServer = async (
+  webServer,
+  { signal, logger, teardown },
+) => {
   if (!webServer) {
     throw new TypeError(
       `webServer is required when running tests on browser(s)`,
     );
   }
   const unexpectedParamNames = Object.keys(webServer).filter((key) => {
-    return !["origin", "moduleUrl", "rootDirectoryUrl"].includes(key);
+    return ![
+      "origin",
+      "moduleUrl",
+      "command",
+      "cwd",
+      "rootDirectoryUrl",
+    ].includes(key);
   });
   if (unexpectedParamNames.length > 0) {
     throw new TypeError(
       `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
     );
   }
-
-  let aServerIsListening = await pingServer(webServer.origin);
-  if (!aServerIsListening) {
-    if (!webServer.moduleUrl) {
-      throw new TypeError(
-        `webServer.moduleUrl is required as there is no server listening "${webServer.origin}"`,
-      );
-    }
-    try {
-      process.env.IMPORTED_BY_TEST_PLAN = "1";
-      await import(webServer.moduleUrl);
-      delete process.env.IMPORTED_BY_TEST_PLAN;
-    } catch (e) {
-      if (
-        e.code === "ERR_MODULE_NOT_FOUND" &&
-        e.message.includes(fileURLToPath(webServer.moduleUrl))
-      ) {
-        throw new Error(
-          `webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`,
-        );
-      }
-      throw e;
-    }
-    aServerIsListening = await pingServer(webServer.origin);
-    if (!aServerIsListening) {
-      throw new Error(
-        `webServer.moduleUrl did not start a server listening at "${webServer.origin}", check file at "${webServer.moduleUrl}"`,
-      );
-    }
+  if (typeof webServer.origin !== "string") {
+    throw new TypeError(
+      `webServer.origin must be a string, got ${webServer.origin}`,
+    );
   }
+  await ensureWebServerIsStarted(webServer, {
+    signal,
+    teardown,
+    logger,
+  });
   const { headers } = await basicFetch(webServer.origin, {
     method: "GET",
     rejectUnauthorized: false,
@@ -2936,6 +2941,201 @@ const assertAndNormalizeWebServer = async (webServer) => {
       webServer.rootDirectoryUrl,
       "webServer.rootDirectoryUrl",
     );
+  }
+};
+
+const ensureWebServerIsStarted = async (
+  webServer,
+  { signal, teardown, logger, allocatedMs = 5_000 },
+) => {
+  const aServerIsListening = await pingServer(webServer.origin);
+  if (aServerIsListening) {
+    return;
+  }
+  if (webServer.moduleUrl) {
+    await startServerUsingDynamicImport(webServer, {
+      signal,
+      allocatedMs,
+    });
+    return;
+  }
+  if (webServer.command) {
+    await startServerUsingCommand(webServer, {
+      signal,
+      allocatedMs,
+      teardown,
+      logger,
+    });
+    return;
+  }
+  throw new TypeError(
+    `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
+  );
+};
+
+const startServerUsingDynamicImport = async (
+  webServer,
+  { signal, allocatedMs },
+) => {
+  const startOperation = Abort.startOperation();
+  startOperation.addAbortSignal(signal);
+  const timeoutAbortSource = startOperation.timeout(allocatedMs);
+
+  const doImport = async () => {
+    try {
+      process.env.IMPORTED_BY_TEST_PLAN = "1";
+      await import(webServer.moduleUrl);
+      delete process.env.IMPORTED_BY_TEST_PLAN;
+    } catch (e) {
+      if (
+        e.code === "ERR_MODULE_NOT_FOUND" &&
+        e.message.includes(fileURLToPath(webServer.moduleUrl))
+      ) {
+        throw new Error(
+          `webServer.moduleUrl does not lead to a file at "${webServer.moduleUrl}"`,
+        );
+      }
+      throw e;
+    }
+  };
+
+  try {
+    await doImport();
+    const aServerIsListening = await pingServer(webServer.origin);
+    if (!aServerIsListening) {
+      throw new Error(
+        `"${webServer.moduleUrl}" file did not start a server listening at "${webServer.origin}" (webServer.moduleUrl)`,
+      );
+    }
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource.signal.aborted) {
+        // aborted by timeout
+        throw new Error(
+          `"${webServer.moduleUrl}" file did not start a server in less than ${allocatedMs}ms (webServer.moduleUrl)`,
+        );
+      }
+      if (signal.aborted) {
+        // aborted from outside
+        return;
+      }
+    }
+    throw e;
+  } finally {
+    await startOperation.end();
+  }
+};
+
+const startServerUsingCommand = async (
+  webServer,
+  { signal, allocatedMs, logger, teardown },
+) => {
+  const spawnedProcess = spawn(webServer.command, [], {
+    // On non-windows platforms, `detached: true` makes child process a leader of a new
+    // process group, making it possible to kill child process tree with `.kill(-pid)` command.
+    // @see https://nodejs.org/api/child_process.html#child_process_options_detached
+    detached: process.platform !== "win32",
+    stdio: ["pipe", "pipe", "pipe"],
+    shell: true,
+    cwd: webServer.cwd,
+  });
+  if (!spawnedProcess.pid) {
+    await new Promise((resolve, reject) => {
+      spawnedProcess.once("error", (error) => {
+        reject(new Error(`Failed to launch: ${error}`));
+      });
+    });
+  }
+  spawnedProcess.on("error", () => {});
+  // const stdout = readline.createInterface({ input: spawnedProcess.stdout });
+  // stdout.on("line", () => {
+  //   logger.debug(`[pid=${spawnedProcess.pid}][out] ${data}`);
+  // });
+  // const stderr = readline.createInterface({ input: spawnedProcess.stderr });
+  // stderr.on("line", (data) => {
+  //   logger.debug(`[pid=${spawnedProcess.pid}][err] ${data}`);
+  // });
+  let processClosed = false;
+  const closedPromise = new Promise((resolve) => {
+    spawnedProcess.once("exit", (exitCode, signal) => {
+      logger.info(
+        `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
+      );
+      processClosed = true;
+      resolve();
+    });
+  });
+  const killProcess = async () => {
+    logger.info(`[pid=${spawnedProcess.pid}] <kill>`);
+    if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
+      logger.info(
+        `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
+      );
+      return;
+    }
+    logger.info(`[pid=${spawnedProcess.pid}] <will force kill>`);
+    // Force kill the browser.
+    try {
+      if (process.platform === "win32") {
+        const taskkillProcess = spawnSync(
+          `taskkill /pid ${spawnedProcess.pid} /T /F`,
+          { shell: true },
+        );
+        const [stdout, stderr] = [
+          taskkillProcess.stdout.toString(),
+          taskkillProcess.stderr.toString(),
+        ];
+        if (stdout)
+          logger.info(`[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`);
+        if (stderr)
+          logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
+      } else {
+        process.kill(-spawnedProcess.pid, "SIGKILL");
+      }
+    } catch (e) {
+      logger.info(
+        `[pid=${spawnedProcess.pid}] exception while trying to kill process: ${e}`,
+      );
+      // the process might have already stopped
+    }
+    await closedPromise;
+  };
+
+  const startOperation = Abort.startOperation();
+  startOperation.addAbortSignal(signal);
+  const timeoutAbortSource = startOperation.timeout(allocatedMs);
+  startOperation.addAbortCallback(killProcess);
+  teardown.addCallback(killProcess);
+
+  try {
+    const logScale = [100, 250, 500];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const connected = await pingServer(webServer.origin);
+      if (connected) {
+        break;
+      }
+      startOperation.throwIfAborted();
+      const delay = logScale.shift() || 1000;
+      logger.debug(`Waiting ${delay}ms`);
+      await new Promise((x) => setTimeout(x, delay));
+    }
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource.signal.aborted) {
+        // aborted by timeout
+        throw new Error(
+          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms (webServer.command)`,
+        );
+      }
+      if (signal.aborted) {
+        // aborted from outside
+        return;
+      }
+    }
+    throw e;
+  } finally {
+    await startOperation.end();
   }
 };
 
@@ -4209,7 +4409,7 @@ const executeSteps = async (
   executionSteps,
   {
     signal,
-    handleSIGINT,
+    teardown,
     logger,
     logRefresh,
     logRuntime,
@@ -4249,23 +4449,9 @@ const executeSteps = async (
   const executePlanReturnValue = {};
   const report = {};
   const callbacks = [];
-  const stopAfterAllSignal = { notify: () => {} };
 
   const multipleExecutionsOperation = Abort.startOperation();
   multipleExecutionsOperation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    multipleExecutionsOperation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGINT: true,
-        },
-        () => {
-          logger.debug(`SIGINT abort`);
-          abort();
-        },
-      );
-    });
-  }
   const failFastAbortController = new AbortController();
   if (failFast) {
     multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
@@ -4318,7 +4504,8 @@ const executeSteps = async (
       coverageConfig,
       coverageMethodForBrowsers,
       coverageMethodForNodeJs,
-      stopAfterAllSignal,
+      isTestPlan: true,
+      teardown,
     };
 
     if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
@@ -4516,8 +4703,8 @@ const executeSteps = async (
       },
     });
     if (!keepRunning) {
-      logger.debug("stopAfterAllSignal.notify()");
-      await stopAfterAllSignal.notify();
+      logger.debug("trigger test plan teardown");
+      await teardown.trigger();
     }
 
     counters.cancelled = counters.total - counters.done;
@@ -4539,10 +4726,9 @@ const executeSteps = async (
     executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted;
     executePlanReturnValue.planSummary = summary;
     executePlanReturnValue.planReport = report;
-    await callbacks.reduce(async (previous, callback) => {
-      await previous;
+    for (const callback of callbacks) {
       await callback();
-    }, Promise.resolve());
+    }
     return executePlanReturnValue;
   } finally {
     await multipleExecutionsOperation.end();
@@ -4708,6 +4894,25 @@ const executeTestPlan = async ({
   coverageReportHtmlDirectoryUrl,
   ...rest
 }) => {
+  const teardown = createTeardown();
+
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        () => {
+          logger.debug(`SIGINT abort`);
+          abort();
+        },
+      );
+    });
+  }
+
+  let logger;
   let someNeedsServer = false;
   let someHasCoverageV8 = false;
   let someNodeRuntime = false;
@@ -4731,6 +4936,8 @@ const executeTestPlan = async ({
       throw new Error(`testPlan must be an object, got ${testPlan}`);
     }
 
+    logger = createLogger({ logLevel });
+
     Object.keys(testPlan).forEach((filePattern) => {
       const filePlan = testPlan[filePattern];
       if (!filePlan) return;
@@ -4753,7 +4960,11 @@ const executeTestPlan = async ({
     });
 
     if (someNeedsServer) {
-      await assertAndNormalizeWebServer(webServer);
+      await assertAndNormalizeWebServer(webServer, {
+        signal: operation.signal,
+        teardown,
+        logger,
+      });
     }
 
     if (coverageEnabled) {
@@ -4838,7 +5049,6 @@ const executeTestPlan = async ({
     }
   }
 
-  const logger = createLogger({ logLevel });
   logger.debug(
     createDetailedMessage(`Prepare executing plan`, {
       runtimes: JSON.stringify(runtimes, null, "  "),
@@ -4893,7 +5103,7 @@ const executeTestPlan = async ({
 
   const result = await executeSteps(executionSteps, {
     signal,
-    handleSIGINT,
+    teardown,
     logger,
     logRefresh,
     logSummary,
@@ -5217,7 +5427,8 @@ const createRuntimeUsingPlaywright = ({
     coverageMethodForBrowsers,
     coverageFileUrl,
 
-    stopAfterAllSignal,
+    teardown,
+    isTestPlan,
     stopSignal,
     keepRunning,
     onConsole,
@@ -5236,7 +5447,7 @@ const createRuntimeUsingPlaywright = ({
       await cleanupCallbackList.notify({ reason });
     });
 
-    const isBrowserDedicatedToExecution = isolatedTab || !stopAfterAllSignal;
+    const isBrowserDedicatedToExecution = isolatedTab || !isTestPlan;
     let browserAndContextPromise = isBrowserDedicatedToExecution
       ? null
       : browserPromiseCache.get(label);
@@ -5485,15 +5696,11 @@ const createRuntimeUsingPlaywright = ({
               cleanupCallbackList.add(() => {
                 browser.removeListener("disconnected", disconnectedCallback);
               });
-              const notifyPrevious = stopAfterAllSignal.notify;
-              stopAfterAllSignal.notify = async () => {
-                await notifyPrevious();
+              teardown.addCallback(async () => {
                 browser.removeListener("disconnected", disconnectedCallback);
-                logger.debug(
-                  `stopAfterAllSignal notified -> closing ${browserName}`,
-                );
+                logger.debug(`testPlan teardown -> closing ${browserName}`);
                 await closeBrowser();
-              };
+              });
             }
           },
           response: async (cb) => {
@@ -6840,6 +7047,7 @@ const execute = async ({
     rootDirectoryUrl,
     "rootDirectoryUrl",
   );
+  const teardown = createTeardown();
   const executeOperation = Abort.startOperation();
   executeOperation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -6854,7 +7062,7 @@ const execute = async ({
   }
 
   if (runtime.type === "browser") {
-    await assertAndNormalizeWebServer(webServer);
+    await assertAndNormalizeWebServer(webServer, { signal, teardown, logger });
   }
 
   let resultTransformer = (result) => result;
@@ -6863,6 +7071,7 @@ const execute = async ({
     webServer,
     fileRelativeUrl,
     importMap,
+    teardown,
     ...runtimeParams,
   };
 
@@ -6902,6 +7111,7 @@ const execute = async ({
     }
     return result;
   } finally {
+    await teardown.trigger();
     await executeOperation.end();
   }
 };
