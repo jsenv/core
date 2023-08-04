@@ -31,9 +31,13 @@ export const jsenvPluginJsModuleFallbackOnWorkers = () => {
       name: `jsenv:js_module_fallback_on_${subtype}`,
       appliesDuring: "*",
       init: (context) => {
+        if (Object.keys(context.runtimeCompat).toString() === "node") {
+          return false;
+        }
         if (context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
           return false;
         }
+
         return true;
       },
       redirectReference: {

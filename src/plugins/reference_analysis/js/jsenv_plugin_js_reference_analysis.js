@@ -1,5 +1,6 @@
 import { createMagicSource } from "@jsenv/sourcemap";
 import { parseJsUrls, getUrlForContentInsideJs } from "@jsenv/ast";
+import { urlToExtension } from "@jsenv/urls";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
@@ -34,6 +35,8 @@ const parseAndTransformJsReferences = async (
   const magicSource = createMagicSource(urlInfo.content);
   const parallelActions = [];
   const sequentialActions = [];
+  const isNodeJs =
+    Object.keys(urlInfo.context.runtimeCompat).toString() === "node";
 
   const onInlineReference = (inlineReferenceInfo) => {
     const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, {
@@ -81,6 +84,19 @@ const parseAndTransformJsReferences = async (
     ) {
       urlInfo.data.usesImport = true;
     }
+    if (
+      isNodeJs &&
+      externalReferenceInfo.type === "js_url" &&
+      externalReferenceInfo.expectedSubtype === "worker" &&
+      externalReferenceInfo.expectedType === "js_classic" &&
+      // TODO: it's true also if closest package.json
+      // is type: module
+      urlToExtension(
+        new URL(externalReferenceInfo.specifier, urlInfo.url).href,
+      ) === ".mjs"
+    ) {
+      externalReferenceInfo.expectedType = "js_module";
+    }
     const reference = urlInfo.dependencies.found({
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
@@ -123,6 +139,7 @@ const parseAndTransformJsReferences = async (
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
     inlineContent,
+    isNodeJs,
   });
   for (const jsReferenceInfo of jsReferenceInfos) {
     if (jsReferenceInfo.isInline) {
