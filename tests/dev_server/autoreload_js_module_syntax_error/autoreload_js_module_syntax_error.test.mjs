@@ -66,9 +66,8 @@ try {
   });
   {
     const actual = {
-      displayedAfterFixAndAutoreload: await getErrorOverlayDisplayedOnPage(
-        page,
-      ),
+      displayedAfterFixAndAutoreload:
+        await getErrorOverlayDisplayedOnPage(page),
     };
     const expected = {
       displayedAfterFixAndAutoreload: false,
