@@ -1,3 +1,7 @@
+# 38.2.1
+
+- Update dependencies
+
 # 38.0.0
 
 - bundling and minification enabled by default during build
