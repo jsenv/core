@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "5.1.2",
+    "@jsenv/ast": "5.1.3",
     "@preact/signals": "1.2.1"
   },
   "scripts": {
