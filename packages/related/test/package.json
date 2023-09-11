@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -47,7 +47,7 @@
     "istanbul-lib-instrument": "6.0.0",
     "istanbul-lib-report": "3.0.1",
     "istanbul-reports": "3.1.6",
-    "@paralleldrive/cuid2": "2.2.1",
+    "@paralleldrive/cuid2": "2.2.2",
     "@c88/v8-coverage": "0.1.1",
     "strip-ansi": "7.1.0",
     "wrap-ansi": "8.1.0",

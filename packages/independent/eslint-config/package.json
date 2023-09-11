@@ -42,12 +42,12 @@
     "@jsenv/eslint-import-resolver": "8.0.2"
   },
   "devDependencies": {
-    "@babel/core": "7.22.9",
-    "@babel/preset-env": "7.22.9",
-    "@babel/eslint-parser": "7.22.9",
-    "@babel/plugin-syntax-decorators": "7.22.5",
+    "@babel/core": "7.22.17",
+    "@babel/preset-env": "7.22.15",
+    "@babel/eslint-parser": "7.22.15",
+    "@babel/plugin-syntax-decorators": "7.22.10",
     "@babel/plugin-syntax-jsx": "7.22.5",
     "eslint-plugin-html": "7.1.0",
-    "eslint-plugin-react": "7.33.1"
+    "eslint-plugin-react": "7.33.2"
   }
 }
