@@ -1,12 +1,12 @@
 import require$$0 from "stream";
 import require$$0$3 from "events";
 import require$$2 from "http";
-import require$$1 from "https";
-import require$$3 from "net";
-import require$$4 from "tls";
-import require$$5 from "crypto";
+import require$$1 from "crypto";
 import require$$0$1 from "zlib";
 import require$$0$2 from "buffer";
+import require$$1$1 from "https";
+import require$$3 from "net";
+import require$$4 from "tls";
 import require$$7 from "url";
 
 function getDefaultExportFromCjs (x) {
@@ -876,12 +876,15 @@ const { concat, toArrayBuffer, unmask } = bufferUtilExports;
 const { isValidStatusCode: isValidStatusCode$1, isValidUTF8 } = validationExports;
 
 const FastBuffer = Buffer[Symbol.species];
+const promise = Promise.resolve();
+
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
 const GET_PAYLOAD_LENGTH_64 = 2;
 const GET_MASK = 3;
 const GET_DATA = 4;
 const INFLATING = 5;
+const WAIT_MICROTASK = 6;
 
 /**
  * HyBi Receiver implementation.
@@ -1020,9 +1023,23 @@ let Receiver$1 = class Receiver extends Writable {
         case GET_DATA:
           err = this.getData(cb);
           break;
-        default:
-          // `INFLATING`
+        case INFLATING:
           this._loop = false;
+          return;
+        default:
+          //
+          // `WAIT_MICROTASK`.
+          //
+          this._loop = false;
+
+          //
+          // `queueMicrotask()` is not available in Node.js < 11 and is no
+          // better anyway.
+          //
+          promise.then(() => {
+            this._state = GET_INFO;
+            this.startLoop(cb);
+          });
           return;
       }
     } while (this._loop);
@@ -1405,7 +1422,7 @@ let Receiver$1 = class Receiver extends Writable {
       }
     }
 
-    this._state = GET_INFO;
+    this._state = WAIT_MICROTASK;
   }
 
   /**
@@ -1422,6 +1439,8 @@ let Receiver$1 = class Receiver extends Writable {
       if (data.length === 0) {
         this.emit('conclude', 1005, EMPTY_BUFFER$2);
         this.end();
+
+        this._state = GET_INFO;
       } else {
         const code = data.readUInt16BE(0);
 
@@ -1453,14 +1472,16 @@ let Receiver$1 = class Receiver extends Writable {
 
         this.emit('conclude', code, buf);
         this.end();
+
+        this._state = GET_INFO;
       }
     } else if (this._opcode === 0x09) {
       this.emit('ping', data);
+      this._state = WAIT_MICROTASK;
     } else {
       this.emit('pong', data);
+      this._state = WAIT_MICROTASK;
     }
-
-    this._state = GET_INFO;
   }
 };
 
@@ -1489,8 +1510,8 @@ function error(ErrorCtor, message, prefix, statusCode, errorCode) {
   return err;
 }
 
-/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^net|tls$" }] */
-const { randomFillSync } = require$$5;
+/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex" }] */
+const { randomFillSync } = require$$1;
 
 const PerMessageDeflate$2 = permessageDeflate;
 const { EMPTY_BUFFER: EMPTY_BUFFER$1 } = constants;
@@ -1507,7 +1528,7 @@ let Sender$1 = class Sender {
   /**
    * Creates a Sender instance.
    *
-   * @param {(net.Socket|tls.Socket)} socket The connection socket
+   * @param {Duplex} socket The connection socket
    * @param {Object} [extensions] An object containing the negotiated extensions
    * @param {Function} [generateMask] The function used to generate the masking
    *     key
@@ -2456,14 +2477,14 @@ function format$1(extensions) {
 
 var extension$1 = { format: format$1, parse: parse$2 };
 
-/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Readable$" }] */
+/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex|Readable$" }] */
 
 const EventEmitter$1 = require$$0$3;
-const https = require$$1;
+const https = require$$1$1;
 const http$1 = require$$2;
 const net = require$$3;
 const tls = require$$4;
-const { randomBytes, createHash: createHash$1 } = require$$5;
+const { randomBytes, createHash: createHash$1 } = require$$1;
 const { URL } = require$$7;
 
 const PerMessageDeflate$1 = permessageDeflate;
@@ -2644,8 +2665,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
   /**
    * Set up the socket and the internal resources.
    *
-   * @param {(net.Socket|tls.Socket)} socket The network socket between the
-   *     server and client
+   * @param {Duplex} socket The network socket between the server and client
    * @param {Buffer} head The first packet of the upgraded stream
    * @param {Object} options Options object
    * @param {Function} [options.generateMask] The function used to generate the
@@ -2678,8 +2698,11 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     receiver.on('ping', receiverOnPing);
     receiver.on('pong', receiverOnPong);
 
-    socket.setTimeout(0);
-    socket.setNoDelay();
+    //
+    // These methods may not be available if `socket` is just a `Duplex`.
+    //
+    if (socket.setTimeout) socket.setTimeout(0);
+    if (socket.setNoDelay) socket.setNoDelay();
 
     if (head.length > 0) socket.unshift(head);
 
@@ -3122,16 +3145,21 @@ function initAsClient(websocket, address, protocols, options) {
 
   if (address instanceof URL) {
     parsedUrl = address;
-    websocket._url = address.href;
   } else {
     try {
       parsedUrl = new URL(address);
     } catch (e) {
       throw new SyntaxError(`Invalid URL: ${address}`);
     }
-
-    websocket._url = address;
   }
+
+  if (parsedUrl.protocol === 'http:') {
+    parsedUrl.protocol = 'ws:';
+  } else if (parsedUrl.protocol === 'https:') {
+    parsedUrl.protocol = 'wss:';
+  }
+
+  websocket._url = parsedUrl.href;
 
   const isSecure = parsedUrl.protocol === 'wss:';
   const isIpcUrl = parsedUrl.protocol === 'ws+unix:';
@@ -3139,7 +3167,8 @@ function initAsClient(websocket, address, protocols, options) {
 
   if (parsedUrl.protocol !== 'ws:' && !isSecure && !isIpcUrl) {
     invalidUrlMessage =
-      'The URL\'s protocol must be one of "ws:", "wss:", or "ws+unix:"';
+      'The URL\'s protocol must be one of "ws:", "wss:", ' +
+      '"http:", "https", or "ws+unix:"';
   } else if (isIpcUrl && !parsedUrl.pathname) {
     invalidUrlMessage = "The URL's pathname is empty";
   } else if (parsedUrl.hash) {
@@ -3673,7 +3702,7 @@ function resume(stream) {
 }
 
 /**
- * The listener of the `net.Socket` `'close'` event.
+ * The listener of the socket `'close'` event.
  *
  * @private
  */
@@ -3724,7 +3753,7 @@ function socketOnClose() {
 }
 
 /**
- * The listener of the `net.Socket` `'data'` event.
+ * The listener of the socket `'data'` event.
  *
  * @param {Buffer} chunk A chunk of data
  * @private
@@ -3736,7 +3765,7 @@ function socketOnData(chunk) {
 }
 
 /**
- * The listener of the `net.Socket` `'end'` event.
+ * The listener of the socket `'end'` event.
  *
  * @private
  */
@@ -3749,7 +3778,7 @@ function socketOnEnd() {
 }
 
 /**
- * The listener of the `net.Socket` `'error'` event.
+ * The listener of the socket `'error'` event.
  *
  * @private
  */
@@ -3826,11 +3855,11 @@ function parse(header) {
 
 var subprotocol$1 = { parse };
 
-/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^net|tls|https$" }] */
+/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex$" }] */
 
 const EventEmitter = require$$0$3;
 const http = require$$2;
-const { createHash } = require$$5;
+const { createHash } = require$$1;
 
 const extension = extension$1;
 const PerMessageDeflate = permessageDeflate;
@@ -4044,8 +4073,7 @@ class WebSocketServer extends EventEmitter {
    * Handle a HTTP Upgrade request.
    *
    * @param {http.IncomingMessage} req The request object
-   * @param {(net.Socket|tls.Socket)} socket The network socket between the
-   *     server and client
+   * @param {Duplex} socket The network socket between the server and client
    * @param {Buffer} head The first packet of the upgraded stream
    * @param {Function} cb Callback
    * @public
@@ -4169,8 +4197,7 @@ class WebSocketServer extends EventEmitter {
    * @param {String} key The value of the `Sec-WebSocket-Key` header
    * @param {Set} protocols The subprotocols
    * @param {http.IncomingMessage} req The request object
-   * @param {(net.Socket|tls.Socket)} socket The network socket between the
-   *     server and client
+   * @param {Duplex} socket The network socket between the server and client
    * @param {Buffer} head The first packet of the upgraded stream
    * @param {Function} cb Callback
    * @throws {Error} If called more than once with the same socket
@@ -4300,7 +4327,7 @@ function socketOnError() {
 /**
  * Close the connection when preconditions are not fulfilled.
  *
- * @param {(net.Socket|tls.Socket)} socket The socket of the upgrade request
+ * @param {Duplex} socket The socket of the upgrade request
  * @param {Number} code The HTTP response status code
  * @param {String} [message] The HTTP response body
  * @param {Object} [headers] Additional HTTP response headers
@@ -4341,7 +4368,7 @@ function abortHandshake(socket, code, message, headers) {
  *
  * @param {WebSocketServer} server The WebSocket server
  * @param {http.IncomingMessage} req The request object
- * @param {(net.Socket|tls.Socket)} socket The socket of the upgrade request
+ * @param {Duplex} socket The socket of the upgrade request
  * @param {Number} code The HTTP response status code
  * @param {String} message The HTTP response body
  * @private

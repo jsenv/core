@@ -70,12 +70,10 @@ try {
   // - it is not displayed on page not depending on this file
   {
     const actual = {
-      displayedOnPageGeneratingError: await getErrorOverlayDisplayedOnPage(
-        pageGeneratingError,
-      ),
-      displayedOnUnrelatedPage: await getErrorOverlayDisplayedOnPage(
-        pageUnrelated,
-      ),
+      displayedOnPageGeneratingError:
+        await getErrorOverlayDisplayedOnPage(pageGeneratingError),
+      displayedOnUnrelatedPage:
+        await getErrorOverlayDisplayedOnPage(pageUnrelated),
       displayedOnRelatedPage: await getErrorOverlayDisplayedOnPage(pageRelated),
     };
     const expected = {

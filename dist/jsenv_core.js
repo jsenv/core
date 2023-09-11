@@ -10579,9 +10579,13 @@ const jsenvPluginJsModuleFallbackOnWorkers = () => {
       name: `jsenv:js_module_fallback_on_${subtype}`,
       appliesDuring: "*",
       init: (context) => {
+        if (Object.keys(context.runtimeCompat).toString() === "node") {
+          return false;
+        }
         if (context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
           return false;
         }
+
         return true;
       },
       redirectReference: {
@@ -15482,6 +15486,8 @@ const parseAndTransformJsReferences = async (
   const magicSource = createMagicSource(urlInfo.content);
   const parallelActions = [];
   const sequentialActions = [];
+  const isNodeJs =
+    Object.keys(urlInfo.context.runtimeCompat).toString() === "node";
 
   const onInlineReference = (inlineReferenceInfo) => {
     const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, {
@@ -15529,6 +15535,19 @@ const parseAndTransformJsReferences = async (
     ) {
       urlInfo.data.usesImport = true;
     }
+    if (
+      isNodeJs &&
+      externalReferenceInfo.type === "js_url" &&
+      externalReferenceInfo.expectedSubtype === "worker" &&
+      externalReferenceInfo.expectedType === "js_classic" &&
+      // TODO: it's true also if closest package.json
+      // is type: module
+      urlToExtension$1(
+        new URL(externalReferenceInfo.specifier, urlInfo.url).href,
+      ) === ".mjs"
+    ) {
+      externalReferenceInfo.expectedType = "js_module";
+    }
     const reference = urlInfo.dependencies.found({
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
@@ -15571,6 +15590,7 @@ const parseAndTransformJsReferences = async (
     isJsModule: urlInfo.type === "js_module",
     isWebWorker: isWebWorkerUrlInfo(urlInfo),
     inlineContent,
+    isNodeJs,
   });
   for (const jsReferenceInfo of jsReferenceInfos) {
     if (jsReferenceInfo.isInline) {
