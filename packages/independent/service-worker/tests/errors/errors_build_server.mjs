@@ -23,7 +23,7 @@ const buildStory = async (story) => {
     ],
     injections: {
       "**/sw_*.js": () => ({
-        "window.NAME": story,
+        "self.NAME": story,
       }),
     },
     minification: false,
