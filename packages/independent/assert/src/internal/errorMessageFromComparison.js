@@ -12,7 +12,7 @@ import { mapEntryComparisonToErrorMessage } from "./error_message/mapEntryCompar
 import { matchesRegExpToErrorMessage } from "./error_message/matchesRegExpToErrorMessage.js";
 import { notComparisonToErrorMessage } from "./error_message/notComparisonToErrorMessage.js";
 import { arrayLengthComparisonToMessage } from "./error_message/arrayLengthComparisonToMessage.js";
-import { stringsComparisonToErrorMessage } from "./error_message/stringsComparisonToErrorMessage.js";
+import { stringsComparisonToErrorMessage } from "./string_error_message/strings_error_message.js";
 
 export const errorMessageFromComparison = (comparison) => {
   const failedComparison = deepestComparison(comparison);
