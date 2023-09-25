@@ -4,8 +4,8 @@ import {
   createAnyExpectation,
   createMatchesRegExpExpectation,
 } from "./internal/compare.js";
-import { errorMessageFromComparison } from "./internal/errorMessageFromComparison.js";
-import { createAssertionError } from "./assertionError.js";
+import { errorMessageFromComparison } from "./internal/error_message_from_comparison.js";
+import { createAssertionError } from "./assertion_error.js";
 
 export const assert = (...args) => {
   if (args.length === 0) {
