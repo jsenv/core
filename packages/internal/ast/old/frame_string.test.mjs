@@ -1,4 +1,4 @@
-import { frameString } from "@jsenv/assert/src/internal/frame_string.js";
+import { frameString } from "./frame_string.js";
 
 const assertStrings = ({ actual, expected }) => {
   if (actual !== expected) {

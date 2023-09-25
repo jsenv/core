@@ -23,8 +23,8 @@ export const frameString = (
   while (lineIndex < lineEnd) {
     const lineString = lineStrings[lineIndex];
     const isMainLine = lineIndex === line;
-    lineIndex++;
     const isLastLine = lineIndex === lineEnd;
+    lineIndex++;
     const lineStringTruncated = truncateLine(
       lineString,
       columnStart,

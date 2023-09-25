@@ -1,4 +1,4 @@
-import { createLineAndColumnConverter } from "@jsenv/assert/src/internal/line_and_column.js";
+import { createLineAndColumnConverter } from "./line_and_column.js";
 
 const assertLineAndColumn = ({ actual, expected }) => {
   if (actual.line !== expected.line) {

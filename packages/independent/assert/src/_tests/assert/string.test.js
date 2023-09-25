@@ -1,67 +1,62 @@
 import { assert } from "@jsenv/assert";
 import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-// {
-//   const actual = String.fromCharCode(127);
-//   const expected = "";
-//   try {
-//     assert({ actual, expected });
-//   } catch (e) {
-//     ensureAssertionErrorWithMessage(
-//       e,
-//       `string is too long, it has 1 extra character
-// --- trace ---
-// \\x7F
-// ^ unexpected char
-// --- found ---
-// 2 characters
-// --- expected ---
-// 1 character
-// --- path ---
-// actual`,
-//     );
-//   }
-// }
+// mismatch
+{
+  const actual = `	 `;
+  const expected = `  `;
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string mismatch, "\\t" was found instead of " "
+--- details ---
+"\\t "
+ ^ unexpected character
+--- path ---
+actual[0]`,
+    );
+  }
+}
 
-// {
-//   const actual = `	`;
-//   const expected = ` `;
-//   try {
-//     assert({ actual, expected });
-//   } catch (e) {
-//     ensureAssertionErrorWithMessage(
-//       e,
-//       `unexpected character, "\\t" was found instead of " "
-// --- details ---
+// too long
+{
+  const actual = String.fromCharCode(127);
+  const expected = "";
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string is too long, it contains one extra character
+--- details ---
+"\\x7F"
+ ^ an empty string was expected
+--- path ---
+actual`,
+    );
+  }
+}
+{
+  const actual = `aa`;
+  const expected = ``;
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string is too long, it contains 2 extra characters
+--- details ---
+"aa"
+ ^ an empty string was expected
+--- path ---
+actual`,
+    );
+  }
+}
 
-// ^ unexpected character
-// --- path ---
-// actual[0]`,
-//     );
-//   }
-// }
-
-// {
-//   const actual = `aa`;
-//   const expected = ``;
-//   try {
-//     assert({ actual, expected });
-//   } catch (e) {
-//     ensureAssertionErrorWithMessage(
-//       e,
-//       `unequal strings
-// --- found ---
-// "aa"
-// --- expected ---
-// ""
-// --- path ---
-// actual
-// --- details ---
-// string found is too long, it has 2 extra characters`,
-//     );
-//   }
-// }
-
+// too short
 {
   const actual = `a`;
   const expected = `ab`;
@@ -70,33 +65,48 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected end of string after character "a"
+      `string is too short, one character is missing
 --- details ---
-ab
-^ unexpected end of string
+"a"
+  ^ expected string continues with "b"
 --- path ---
-actual[1]`,
+actual`,
     );
   }
 }
-
-// {
-//   const actual = ``;
-//   const expected = `aa`;
-//   try {
-//     assert({ actual, expected });
-//   } catch (e) {
-//     ensureAssertionErrorWithMessage(
-//       e,
-//       `unequal strings
-// --- found ---
-// ""
-// --- expected ---
-// "aa"
-// --- path ---
-// actual
-// --- details ---
-// string found is too short, 2 characters are missing`,
-//     );
-//   }
-// }
+{
+  const actual = ``;
+  const expected = `aa`;
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string is too short, 2 characters are missing
+--- details ---
+""
+ ^ expected string continues with "aa"
+--- path ---
+actual`,
+    );
+  }
+}
+{
+  const actual = `Hello,
+I am ben`;
+  const expected = `Hello,
+I am benjamin`;
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string is too short, 5 characters are missing
+--- details ---
+"I am ben"
+         ^ expected string continues with "jam"...
+--- path ---
+actual`,
+    );
+  }
+}
