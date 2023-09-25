@@ -1,18 +1,17 @@
-/* eslint-disable import/max-dependencies */
-import { anyComparisonToErrorMessage } from "./error_message/anyComparisonToErrorMessage.js";
-import { defaultComparisonToErrorMessage } from "./error_message/defaultComparisonToErrorMessage.js";
-import { referenceComparisonToErrorMessage } from "./error_message/referenceComparisonToErrorMessage.js";
-import { prototypeComparisonToErrorMessage } from "./error_message/prototypeComparisonToErrorMessage.js";
-import { propertiesComparisonToErrorMessage } from "./error_message/propertiesComparisonToErrorMessage.js";
-import { propertiesOrderComparisonToErrorMessage } from "./error_message/propertiesOrderComparisonToErrorMessage.js";
-import { symbolsComparisonToErrorMessage } from "./error_message/symbolsComparisonToErrorMessage.js";
-import { symbolsOrderComparisonToErrorMessage } from "./error_message/symbolsOrderComparisonToErrorMessage.js";
-import { setSizeComparisonToMessage } from "./error_message/setSizeComparisonToMessage.js";
-import { mapEntryComparisonToErrorMessage } from "./error_message/mapEntryComparisonToErrorMessage.js";
-import { matchesRegExpToErrorMessage } from "./error_message/matchesRegExpToErrorMessage.js";
-import { notComparisonToErrorMessage } from "./error_message/notComparisonToErrorMessage.js";
-import { arrayLengthComparisonToMessage } from "./error_message/arrayLengthComparisonToMessage.js";
-import { stringsComparisonToErrorMessage } from "./error_message/strings_error_message.js";
+import { anyComparisonToErrorMessage } from "./error_message/any.js";
+import { defaultComparisonToErrorMessage } from "./error_message/default.js";
+import { referenceComparisonToErrorMessage } from "./error_message/reference.js";
+import { prototypeComparisonToErrorMessage } from "./error_message/prototype.js";
+import { propertiesComparisonToErrorMessage } from "./error_message/properties.js";
+import { propertiesOrderComparisonToErrorMessage } from "./error_message/properties_order.js";
+import { symbolsComparisonToErrorMessage } from "./error_message/symbols.js";
+import { symbolsOrderComparisonToErrorMessage } from "./error_message/symbols_order.js";
+import { setSizeComparisonToMessage } from "./error_message/set_size.js";
+import { mapEntryComparisonToErrorMessage } from "./error_message/map_entry.js";
+import { matchesRegExpToErrorMessage } from "./error_message/matches_reg_exp.js";
+import { notComparisonToErrorMessage } from "./error_message/not.js";
+import { arrayLengthComparisonToMessage } from "./error_message/array_length.js";
+import { stringsComparisonToErrorMessage } from "./error_message/strings.js";
 
 export const errorMessageFromComparison = (comparison) => {
   const failedComparison = deepestComparison(comparison);
