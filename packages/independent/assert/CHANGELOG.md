@@ -1,3 +1,103 @@
+# 2.10.0
+
+#### Improve message for strings
+
+When `actual` contains multiple lines the error message will display them.
+There is also a short message around the point of failure showing the unexpected character
+
+````md
+<!-- Input -->
+
+```js
+assert({
+  actual: `Hello,
+my name is Damien`,
+  expected: `Hello,
+my name is Flore`,
+});
+```
+
+<!-- @jsenv/assert 2.9.0 -->
+
+```console
+unequal strings
+--- found ---
+"Hello,\nmy name is Damien"
+--- expected ---
+"Hello,\nmy name is Flore"
+--- path ---
+actual
+--- details ---
+unexpected character at index 18, "D" was found instead of "F"
+```
+
+<!-- @jsenv/assert 2.10.0 -->
+
+```console
+unexpected string, "D" was found instead of "F" at index 18
+--- details ---
+"Hello,
+my name is Damien"
+           ^ unexpected character, expected string continues with "Flore"
+--- path ---
+actual[18]#L2C12
+```
+````
+
+#### Limit message length for strings
+
+When `actual` is too big, a subset of the string is displayed around the point of failure
+
+````md
+<!-- Input -->
+
+```js
+assert({
+  actual: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello world]abcdefghijklmnopqrstuvwxyz`,
+  expected: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello france]abcdefghijklmnopqrstuvwxyz`,
+});
+```
+
+<!-- @jsenv/assert 2.9.0 -->
+
+```console
+unequal strings
+--- found ---
+"1abcdefghijklmnopqrstuvwx\n2abcdefghijklmnopqrstuvwxy\n3abcdefghijklmnopqrstuvwx\n4abcdefghijklmnopqrstuvwxy\n5abcdefghijklmnopqrstuvwxy\n[Hello world]abcdefghijklmnopqrstuvwxyz"
+--- expected ---
+"1abcdefghijklmnopqrstuvwx\n2abcdefghijklmnopqrstuvwxy\n3abcdefghijklmnopqrstuvwx\n4abcdefghijklmnopqrstuvwxy\n5abcdefghijklmnopqrstuvwxy\n[Hello france]abcdefghijklmnopqrstuvwxyz"
+--- path ---
+actual
+--- details ---
+unexpected character at index 140, "w" was found instead of "f"
+```
+
+<!-- @jsenv/assert 2.10.0 -->
+
+```console
+unexpected string, "w" was found instead of "f" at index 140
+--- details ---
+…"nopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello world]abcdefghijklmnopqrstuvwxyz"
+       ^ unexpected character, expected string continues with "france]abcdefgh"…
+--- path ---
+actual[140]#L6C8
+```
+````
+
 # 2.9.0
 
 - Improve speed when comparing two node buffers
