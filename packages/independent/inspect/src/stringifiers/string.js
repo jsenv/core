@@ -23,7 +23,7 @@ export const inspectString = (
   return surroundStringWith(value, { quote, preserveLineBreaks });
 };
 
-const determineQuote = (string, canUseTemplateString) => {
+export const determineQuote = (string, canUseTemplateString) => {
   const containsDoubleQuote = string.includes(DOUBLE_QUOTE);
   if (!containsDoubleQuote) {
     return DOUBLE_QUOTE;
@@ -41,6 +41,33 @@ const determineQuote = (string, canUseTemplateString) => {
   return null;
 };
 
+export const inspectChar = (char, { quote, preserveLineBreaks }) => {
+  const point = char.charCodeAt(0);
+  if (preserveLineBreaks && (char === "\n" || char === "\r")) {
+    return char;
+  }
+  if (
+    char === quote ||
+    point === 92 ||
+    point < 32 ||
+    (point > 126 && point < 160) ||
+    // line separators
+    point === 8232 ||
+    point === 8233
+  ) {
+    const replacement =
+      char === quote
+        ? `\\${quote}`
+        : point === 8232
+        ? "\\u2028"
+        : point === 8233
+        ? "\\u2029"
+        : meta[point];
+    return replacement;
+  }
+  return char;
+};
+
 // https://github.com/jsenv/jsenv-uneval/blob/6c97ef9d8f2e9425a66f2c88347e0a118d427f3a/src/internal/escapeString.js#L3
 // https://github.com/jsenv/jsenv-inspect/blob/bb11de3adf262b68f71ed82b0a37d4528dd42229/src/internal/string.js#L3
 // https://github.com/joliss/js-string-escape/blob/master/index.js
@@ -51,26 +78,9 @@ const surroundStringWith = (string, { quote, preserveLineBreaks }) => {
   const lastIndex = string.length;
   let i = 0;
   while (i < lastIndex) {
-    const charAt = string[i];
-    const point = string.charCodeAt(i);
-    if (preserveLineBreaks && (charAt === "\n" || charAt === "\r")) {
-    } else if (
-      charAt === quote ||
-      point === 92 ||
-      point < 32 ||
-      (point > 126 && point < 160) ||
-      // line separators
-      point === 8232 ||
-      point === 8233
-    ) {
-      const replacement =
-        charAt === quote
-          ? `\\${quote}`
-          : point === 8232
-          ? "\\u2028"
-          : point === 8233
-          ? "\\u2029"
-          : meta[point];
+    const char = string[i];
+    const replacement = inspectChar(char, { quote, preserveLineBreaks });
+    if (char !== replacement) {
       if (last === i) {
         result += replacement;
       } else {
