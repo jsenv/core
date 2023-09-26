@@ -22,15 +22,12 @@ import { executeInNewContext } from "../executeInNewContext.js";
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unequal regexps
---- found ---
-"/a/"
---- expected ---
-"/b/"
---- path ---
-actual.toString()
+      `unexpected regexp, "a" was found instead of "b" at index 1
 --- details ---
-unexpected character at index 1, "a" was found instead of "b"`,
+"/a/"
+  ^ unexpected character, expected string continues with "b/"
+--- path ---
+actual.toString()[1]`,
     );
   }
 }
@@ -43,15 +40,12 @@ unexpected character at index 1, "a" was found instead of "b"`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unequal regexps
---- found ---
-"/a/"
---- expected ---
-"/b/"
---- path ---
-actual.toString()
+      `unexpected regexp, "a" was found instead of "b" at index 1
 --- details ---
-unexpected character at index 1, "a" was found instead of "b"`,
+"/a/"
+  ^ unexpected character, expected string continues with "b/"
+--- path ---
+actual.toString()[1]`,
     );
   }
 }
