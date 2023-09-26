@@ -1,7 +1,7 @@
 import { inspect } from "@jsenv/inspect";
 
 import { createDetailedMessage } from "../detailed_message.js";
-import { comparisonToPath } from "../comparisonToPath.js";
+import { comparisonToPath } from "../comparison_to_path.js";
 
 export const propertiesComparisonToErrorMessage = (comparison) => {
   if (comparison.type !== "properties") {

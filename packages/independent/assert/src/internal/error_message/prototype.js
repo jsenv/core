@@ -1,8 +1,9 @@
 import { inspect } from "@jsenv/inspect";
-import { comparisonToPath } from "../comparisonToPath.js";
-import { valueToWellKnown } from "../wellKnownValue.js";
-import { comparisonToRootComparison } from "../comparisonToRootComparison.js";
-import { findSelfOrAncestorComparison } from "../findSelfOrAncestorComparison.js";
+
+import { comparisonToPath } from "../comparison_to_path.js";
+import { valueToWellKnown } from "../well_known_value.js";
+import { comparisonToRootComparison } from "../comparison_to_root_comparison.js";
+import { findSelfOrAncestorComparison } from "../find_self_or_ancestor_comparison.js";
 
 export const prototypeComparisonToErrorMessage = (comparison) => {
   const prototypeComparison = findSelfOrAncestorComparison(

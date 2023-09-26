@@ -32,15 +32,12 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unequal function names
---- found ---
-"${actual.name}"
---- expected ---
-"${expected.name}"
---- path ---
-actual.name
+      `unexpected function name, "a" was found instead of "e" at index 0
 --- details ---
-unexpected character at index 0, "a" was found instead of "e"`,
+"actual"
+ ^ unexpected character, expected string continues with "expected"
+--- path ---
+actual.name[0]`,
     );
   }
 }

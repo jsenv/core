@@ -1,8 +1,8 @@
 import { inspect } from "@jsenv/inspect";
 
 import { createDetailedMessage } from "../detailed_message.js";
-import { comparisonToPath } from "../comparisonToPath.js";
-import { isArray } from "../object-subtype.js";
+import { comparisonToPath } from "../comparison_to_path.js";
+import { isArray } from "../object_subtype.js";
 
 export const arrayLengthComparisonToMessage = (comparison) => {
   if (comparison.type !== "identity") return undefined;

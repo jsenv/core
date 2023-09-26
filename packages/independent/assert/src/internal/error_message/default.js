@@ -1,6 +1,6 @@
 import { createDetailedMessage } from "../detailed_message.js";
-import { comparisonToPath } from "../comparisonToPath.js";
-import { valueToString } from "../valueToString.js";
+import { comparisonToPath } from "../comparison_to_path.js";
+import { valueToString } from "../value_to_string.js";
 
 export const defaultComparisonToErrorMessage = (comparison) => {
   const path = comparisonToPath(comparison);

@@ -1,4 +1,4 @@
-import { propertyToAccessorString } from "./propertyToAccessorString.js";
+import { propertyToAccessorString } from "./property_to_accessor_string.js";
 
 export const comparisonToPath = (comparison, name = "actual") => {
   const comparisonPath = [];

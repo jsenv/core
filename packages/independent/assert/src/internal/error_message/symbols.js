@@ -1,5 +1,6 @@
 import { inspect } from "@jsenv/inspect";
-import { comparisonToPath } from "../comparisonToPath.js";
+
+import { comparisonToPath } from "../comparison_to_path.js";
 
 export const symbolsComparisonToErrorMessage = (comparison) => {
   if (comparison.type !== "symbols") return undefined;

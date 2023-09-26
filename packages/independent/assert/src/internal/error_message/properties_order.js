@@ -1,5 +1,6 @@
 import { inspect } from "@jsenv/inspect";
-import { comparisonToPath } from "../comparisonToPath.js";
+
+import { comparisonToPath } from "../comparison_to_path.js";
 
 export const propertiesOrderComparisonToErrorMessage = (comparison) => {
   if (comparison.type !== "properties-order") return undefined;

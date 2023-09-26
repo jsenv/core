@@ -1,5 +1,5 @@
-import { comparisonToPath } from "../comparisonToPath.js";
-import { valueToString } from "../valueToString.js";
+import { comparisonToPath } from "../comparison_to_path.js";
+import { valueToString } from "../value_to_string.js";
 
 export const matchesRegExpToErrorMessage = (comparison) => {
   if (comparison.type !== "matchesRegExp") {

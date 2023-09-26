@@ -6,4 +6,4 @@
  */
 
 export { assert } from "./assert.js";
-export { isAssertionError, createAssertionError } from "./assertionError.js";
+export { isAssertionError, createAssertionError } from "./assertion_error.js";

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -32,10 +32,11 @@
   ],
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
-    "test": "node ./scripts/test.mjs"
+    "test": "node ./scripts/test.mjs",
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html"
   },
   "dependencies": {
-    "@jsenv/inspect": "1.7.3"
+    "@jsenv/inspect": "1.8.0"
   },
   "devDependencies": {}
 }

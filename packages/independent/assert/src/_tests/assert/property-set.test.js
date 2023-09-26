@@ -60,15 +60,12 @@ actual.foo[[Set]]`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unequal function names
---- found ---
-"actualSetter"
---- expected ---
-"expectedSetter"
---- path ---
-actual.foo[[Set]].name
+      `unexpected function name, "a" was found instead of "e" at index 0
 --- details ---
-unexpected character at index 0, "a" was found instead of "e"`,
+"actualSetter"
+ ^ unexpected character, expected string continues with "expectedSetter"
+--- path ---
+actual.foo[[Set]].name[0]`,
     );
   }
 }

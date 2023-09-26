@@ -1,6 +1,6 @@
-import { comparisonToPath } from "../comparisonToPath.js";
-import { valueToString } from "../valueToString.js";
-import { findSelfOrAncestorComparison } from "../findSelfOrAncestorComparison.js";
+import { comparisonToPath } from "../comparison_to_path.js";
+import { valueToString } from "../value_to_string.js";
+import { findSelfOrAncestorComparison } from "../find_self_or_ancestor_comparison.js";
 
 export const mapEntryComparisonToErrorMessage = (comparison) => {
   const mapEntryComparison = findSelfOrAncestorComparison(
