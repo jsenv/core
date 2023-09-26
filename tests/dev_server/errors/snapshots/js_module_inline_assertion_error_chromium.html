@@ -2,15 +2,12 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text">unequal strings
---- found ---
-"foo"
---- expected ---
-"bar"
---- path ---
-actual
+  <pre class="text">unexpected string, "f" was found instead of "b" at index 0
 --- details ---
-unexpected character at index 0, "f" was found instead of "b"
+"foo"
+ ^ unexpected character, expected string continues with "bar"
+--- path ---
+actual[0]
     at <a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A12')">file:///js_module_inline_assertion_error/main.html:13:12</a>
 
 <a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A12')">file:///js_module_inline_assertion_error/main.html:13:12</a>
