@@ -10,12 +10,12 @@ export const inspectString = (
     quote = "auto",
     canUseTemplateString = false,
     preserveLineBreaks = false,
-    fallback = DOUBLE_QUOTE,
+    quoteDefault = DOUBLE_QUOTE,
   } = {},
 ) => {
   quote =
     quote === "auto"
-      ? determineQuote(value, canUseTemplateString) || fallback
+      ? determineQuote(value, { canUseTemplateString, quoteDefault })
       : quote;
   if (quote === BACKTICK) {
     return `\`${escapeTemplateStringSpecialCharacters(value)}\``;
@@ -23,7 +23,10 @@ export const inspectString = (
   return surroundStringWith(value, { quote, preserveLineBreaks });
 };
 
-export const determineQuote = (string, canUseTemplateString) => {
+export const determineQuote = (
+  string,
+  { canUseTemplateString, quoteDefault = DOUBLE_QUOTE } = {},
+) => {
   const containsDoubleQuote = string.includes(DOUBLE_QUOTE);
   if (!containsDoubleQuote) {
     return DOUBLE_QUOTE;
@@ -38,7 +41,15 @@ export const determineQuote = (string, canUseTemplateString) => {
       return BACKTICK;
     }
   }
-  return null;
+  const doubleQuoteCount = string.split(DOUBLE_QUOTE).length - 1;
+  const singleQuoteCount = string.split(SINGLE_QUOTE).length - 1;
+  if (singleQuoteCount > doubleQuoteCount) {
+    return DOUBLE_QUOTE;
+  }
+  if (doubleQuoteCount > singleQuoteCount) {
+    return SINGLE_QUOTE;
+  }
+  return quoteDefault;
 };
 
 export const inspectChar = (char, { quote, preserveLineBreaks }) => {
