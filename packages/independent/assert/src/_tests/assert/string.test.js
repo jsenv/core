@@ -12,7 +12,7 @@ my name is Flore`;
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `string mismatch, "D" was found instead of "F"
+      `unexpected string, "D" was found instead of "F" at index 18
 --- details ---
 "Hello,
 my name is Damien"
@@ -39,7 +39,7 @@ Hello europa
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `string mismatch, "w" was found instead of "e"
+      `unexpected string, "w" was found instead of "e" at index 59
 --- details ---
 "1abcdefghijklmnopqrstuvwx
 2abcdefghijklmnopqrstuvwxy
@@ -69,7 +69,7 @@ actual[59]#L3C7`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `string mismatch, "w" was found instead of "f"
+      `unexpected string, "w" was found instead of "f" at index 140
 --- details ---
 …"nopqrstuvwxy
 3abcdefghijklmnopqrstuvwx
@@ -92,7 +92,7 @@ c`;
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `string mismatch, "c" was found instead of "\\n"
+      `unexpected string, "c" was found instead of "\\n" at index 2
 --- details ---
 "abc"
    ^ unexpected character, expected string continues with "\\nc"
@@ -110,7 +110,7 @@ actual[2]`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `string mismatch, "\\t" was found instead of " "
+      `unexpected string, "\\t" was found instead of " " at index 0
 --- details ---
 "\\t "
  ^ unexpected character, expected string continues with "  "

@@ -2,6 +2,7 @@ import { inspect, determineQuote, inspectChar } from "@jsenv/inspect";
 
 import { createDetailedMessage } from "../detailed_message.js";
 import { comparisonToPath } from "../comparison_to_path.js";
+import { isRegExp, isError } from "../object_subtype.js";
 
 const MAX_CHARS_AROUND_MISMATCH = 200;
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 15;
@@ -37,6 +38,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     });
   };
 
+  const stringName = stringNameFromComparison(comparison);
   const actualLength = actual.length;
   const expectedLength = expected.length;
   let i = 0;
@@ -128,9 +130,9 @@ export const stringsComparisonToErrorMessage = (comparison) => {
       const actualChar = actual[i];
       const expectedChar = expected[i];
       if (actualChar !== expectedChar) {
-        let message = `string mismatch, ${inspect(
+        const message = `unexpected ${stringName}, ${inspect(
           actualChar,
-        )} was found instead of ${inspect(expectedChar)}`;
+        )} was found instead of ${inspect(expectedChar)} at index ${i}`;
         return createDetailedMessage(message, {
           details: formatDetails({
             charsToDisplayBefore: Math.floor(MAX_CHARS_AROUND_MISMATCH / 2),
@@ -151,7 +153,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
   too_short: {
     if (actualLength < expectedLength) {
       const missingCharacterCount = expectedLength - actualLength;
-      let message = `string is too short`;
+      let message = `${stringName} is too short`;
       if (missingCharacterCount === 1) {
         message += `, one character is missing`;
       } else {
@@ -170,7 +172,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
   too_long: {
     i = expectedLength;
     const extraCharacterCount = actualLength - expectedLength;
-    let message = `string is too long`;
+    let message = `${stringName} is too long`;
     if (extraCharacterCount === 1) {
       message += `, it contains one extra character`;
     } else {
@@ -194,69 +196,69 @@ const isLineBreak = (char) => {
   return char === "\n" || char === "\r";
 };
 
-// const comparisonNameFromComparison = (comparison) => {
-//   if (detectRegExpToStringComparison(comparison)) {
-//     return `regexp`;
-//   }
-//   if (detectErrorMessageComparison(comparison)) {
-//     return `error message`;
-//   }
-//   if (detectFunctionNameComparison(comparison)) {
-//     return `function name`;
-//   }
-//   return `string`;
-// };
-// const detectRegExpToStringComparison = (comparison) => {
-//   const parentComparison = comparison.parent;
-//   if (parentComparison.type !== "to-string-return-value") {
-//     return false;
-//   }
+const stringNameFromComparison = (comparison) => {
+  if (detectRegExpToStringComparison(comparison)) {
+    return `regexp`;
+  }
+  if (detectErrorMessageComparison(comparison)) {
+    return `error message`;
+  }
+  if (detectFunctionNameComparison(comparison)) {
+    return `function name`;
+  }
+  return `string`;
+};
+const detectRegExpToStringComparison = (comparison) => {
+  const parentComparison = comparison.parent;
+  if (parentComparison.type !== "to-string-return-value") {
+    return false;
+  }
 
-//   const grandParentComparison = parentComparison.parent;
-//   if (
-//     !isRegExp(grandParentComparison.actual) ||
-//     !isRegExp(grandParentComparison.expected)
-//   ) {
-//     return false;
-//   }
+  const grandParentComparison = parentComparison.parent;
+  if (
+    !isRegExp(grandParentComparison.actual) ||
+    !isRegExp(grandParentComparison.expected)
+  ) {
+    return false;
+  }
 
-//   return true;
-// };
-// const detectErrorMessageComparison = (comparison) => {
-//   const parentComparison = comparison.parent;
-//   if (parentComparison.type !== "property-value") {
-//     return false;
-//   }
-//   if (parentComparison.data !== "message") {
-//     return false;
-//   }
+  return true;
+};
+const detectErrorMessageComparison = (comparison) => {
+  const parentComparison = comparison.parent;
+  if (parentComparison.type !== "property-value") {
+    return false;
+  }
+  if (parentComparison.data !== "message") {
+    return false;
+  }
 
-//   const grandParentComparison = parentComparison.parent;
-//   if (
-//     !isError(grandParentComparison.actual) ||
-//     !isError(grandParentComparison.expected)
-//   ) {
-//     return false;
-//   }
+  const grandParentComparison = parentComparison.parent;
+  if (
+    !isError(grandParentComparison.actual) ||
+    !isError(grandParentComparison.expected)
+  ) {
+    return false;
+  }
 
-//   return true;
-// };
-// const detectFunctionNameComparison = (comparison) => {
-//   const parentComparison = comparison.parent;
-//   if (parentComparison.type !== "property-value") {
-//     return false;
-//   }
-//   if (parentComparison.data !== "name") {
-//     return false;
-//   }
+  return true;
+};
+const detectFunctionNameComparison = (comparison) => {
+  const parentComparison = comparison.parent;
+  if (parentComparison.type !== "property-value") {
+    return false;
+  }
+  if (parentComparison.data !== "name") {
+    return false;
+  }
 
-//   const grandParentComparison = parentComparison.parent;
-//   if (
-//     typeof grandParentComparison.actual !== "function" ||
-//     typeof grandParentComparison.expected !== "function"
-//   ) {
-//     return false;
-//   }
+  const grandParentComparison = parentComparison.parent;
+  if (
+    typeof grandParentComparison.actual !== "function" ||
+    typeof grandParentComparison.expected !== "function"
+  ) {
+    return false;
+  }
 
-//   return true;
-// };
+  return true;
+};
