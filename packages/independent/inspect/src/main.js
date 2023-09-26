@@ -12,6 +12,7 @@ export const inspect = (
     indentUsingTab = false,
     indentSize = 2,
     numericSeparator = true,
+    preserveLineBreaks = false,
   } = {},
 ) => {
   const scopedInspect = (scopedValue, scopedOptions) => {
@@ -38,6 +39,7 @@ export const inspect = (
     indentUsingTab,
     indentSize,
     numericSeparator,
+    preserveLineBreaks,
     depth: 0,
   });
 };

@@ -32,7 +32,8 @@
   ],
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
-    "test": "node ./scripts/test.mjs"
+    "test": "node ./scripts/test.mjs",
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html"
   },
   "dependencies": {
     "@jsenv/inspect": "1.7.3"

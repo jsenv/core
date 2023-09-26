@@ -1,5 +1,5 @@
-import { isComposite } from "./isComposite.js";
-import { propertyToAccessorString } from "./propertyToAccessorString.js";
+import { isComposite } from "./is_composite.js";
+import { propertyToAccessorString } from "./property_to_accessor_string.js";
 
 export const valueToWellKnown = (value) => {
   const compositeWellKnownPath = valueToCompositeWellKnownPath(value);

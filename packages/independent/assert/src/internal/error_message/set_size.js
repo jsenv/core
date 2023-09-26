@@ -1,4 +1,4 @@
-import { comparisonToPath } from "../comparisonToPath.js";
+import { comparisonToPath } from "../comparison_to_path.js";
 
 export const setSizeComparisonToMessage = (comparison) => {
   if (comparison.type !== "set-size") return undefined;

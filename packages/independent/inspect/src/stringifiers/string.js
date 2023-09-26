@@ -9,6 +9,7 @@ export const inspectString = (
   {
     quote = "auto",
     canUseTemplateString = false,
+    preserveLineBreaks = false,
     fallback = DOUBLE_QUOTE,
   } = {},
 ) => {
@@ -19,7 +20,7 @@ export const inspectString = (
   if (quote === BACKTICK) {
     return `\`${escapeTemplateStringSpecialCharacters(value)}\``;
   }
-  return surroundStringWith(value, quote);
+  return surroundStringWith(value, { quote, preserveLineBreaks });
 };
 
 const determineQuote = (string, canUseTemplateString) => {
@@ -44,7 +45,7 @@ const determineQuote = (string, canUseTemplateString) => {
 // https://github.com/jsenv/jsenv-inspect/blob/bb11de3adf262b68f71ed82b0a37d4528dd42229/src/internal/string.js#L3
 // https://github.com/joliss/js-string-escape/blob/master/index.js
 // http://javascript.crockford.com/remedial.html
-const surroundStringWith = (string, quote) => {
+const surroundStringWith = (string, { quote, preserveLineBreaks }) => {
   let result = "";
   let last = 0;
   const lastIndex = string.length;
@@ -52,7 +53,8 @@ const surroundStringWith = (string, quote) => {
   while (i < lastIndex) {
     const charAt = string[i];
     const point = string.charCodeAt(i);
-    if (
+    if (preserveLineBreaks && (charAt === "\n" || charAt === "\r")) {
+    } else if (
       charAt === quote ||
       point === 92 ||
       point < 32 ||

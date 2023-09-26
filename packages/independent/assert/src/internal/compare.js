@@ -1,5 +1,5 @@
-import { isPrimitive } from "./isComposite.js";
-import { findPreviousComparison } from "./findPreviousComparison.js";
+import { isPrimitive } from "./is_composite.js";
+import { findPreviousComparison } from "./find_previous_comparison.js";
 import {
   isSet,
   isMap,
@@ -7,7 +7,7 @@ import {
   isError,
   isArray,
   somePrototypeMatch,
-} from "./object-subtype.js";
+} from "./object_subtype.js";
 
 export const compare = ({ actual, expected }, { checkPropertiesOrder }) => {
   const comparison = createComparison({

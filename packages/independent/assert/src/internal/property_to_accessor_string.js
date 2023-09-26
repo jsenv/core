@@ -1,6 +1,6 @@
 import { inspect } from "@jsenv/inspect";
 
-import { propertyNameToDotNotationAllowed } from "./propertyNameToDotNotationAllowed.js";
+import { propertyNameToDotNotationAllowed } from "./property_name_to_dot_notation_allowed.js";
 
 export const propertyToAccessorString = (property) => {
   if (typeof property === "number") {
