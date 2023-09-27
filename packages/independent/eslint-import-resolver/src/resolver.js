@@ -9,7 +9,6 @@ import {
   ensureWindowsDriveLetter,
   getRealFileSystemUrlSync,
 } from "@jsenv/filesystem";
-
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import {
   determineModuleSystem,
@@ -18,6 +17,7 @@ import {
   readCustomConditionsFromProcessArgs,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
+
 import { createLogger } from "./logger.js";
 import { applyImportmapResolution } from "./importmap_resolution.js";
 import { applyUrlResolution } from "./url_resolution.js";
@@ -123,7 +123,10 @@ ${fileURLToPath(rootDirectoryUrl)}`);
       );
     }
     logger.debug(`-> consider found because of scheme ${url}`);
-    return handleRemainingUrl();
+    return {
+      found: true,
+      path: null,
+    };
   };
 
   const specifier = source;
@@ -162,9 +165,9 @@ ${fileURLToPath(rootDirectoryUrl)}`);
     });
     if (moduleSystem === "commonjs") {
       const requireForImporter = createRequire(importer);
-      let url;
+      let filesystemPath;
       try {
-        url = requireForImporter.resolve(specifier);
+        filesystemPath = requireForImporter.resolve(specifier);
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
           triggerNotFoundWarning({
@@ -176,6 +179,7 @@ ${fileURLToPath(rootDirectoryUrl)}`);
         }
         throw e;
       }
+      const url = String(pathToFileURL(filesystemPath));
       return onUrl(url, {
         resolvedBy: "commonjs",
       });
@@ -273,13 +277,6 @@ If you do so keep in mind windows users would not find that file.`,
   return {
     found: true,
     path: realFilePath,
-  };
-};
-
-const handleRemainingUrl = () => {
-  return {
-    found: true,
-    path: null,
   };
 };
 
