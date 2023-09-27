@@ -162,9 +162,9 @@ ${fileURLToPath(rootDirectoryUrl)}`);
     });
     if (moduleSystem === "commonjs") {
       const requireForImporter = createRequire(importer);
-      let url;
+      let filesystemPath;
       try {
-        url = requireForImporter.resolve(specifier);
+        filesystemPath = requireForImporter.resolve(specifier);
       } catch (e) {
         if (e.code === "MODULE_NOT_FOUND") {
           triggerNotFoundWarning({
@@ -176,6 +176,7 @@ ${fileURLToPath(rootDirectoryUrl)}`);
         }
         throw e;
       }
+      const url = String(pathToFileURL(filesystemPath));
       return onUrl(url, {
         resolvedBy: "commonjs",
       });
