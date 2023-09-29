@@ -14,7 +14,7 @@
     "prettier": "prettier --write ."
   },
   "dependencies": {
-    "preact": "10.17.1"
+    "preact": "10.18.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.22.15",
@@ -28,12 +28,12 @@
     "@jsenv/eslint-config": "16.4.3",
     "@jsenv/eslint-import-resolver": "8.0.3",
     "@jsenv/test": "1.6.3",
-    "eslint": "8.49.0",
+    "eslint": "8.50.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.28.1",
     "eslint-plugin-react": "7.33.2",
     "open": "9.1.0",
-    "playwright": "1.37.1",
+    "playwright": "1.38.1",
     "prettier": "3.0.3"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "15.1.1",
+  "version": "15.1.2",
   "description": "Write your Node.js server using pure functions",
   "license": "MIT",
   "author": {
@@ -38,7 +38,7 @@
     "@jsenv/log": "3.4.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/utils": "2.0.1",
-    "ws": "8.14.1"
+    "ws": "8.14.2"
   },
   "devDependencies": {
     "@jsenv/fetch": "../fetch/",
