@@ -10,7 +10,7 @@
  * - File execution result is returned, it contains status/errors/namespace/consoleCalls
  */
 
-import { createId } from "@paralleldrive/cuid2";
+import crypto from "node:crypto";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { ensureParentDirectories } from "@jsenv/filesystem";
 
@@ -73,7 +73,7 @@ export const run = async ({
   let coverageFileUrl;
   if (coverageEnabled) {
     coverageFileUrl = new URL(
-      `./${runtime.name}/${createId()}.json`,
+      `./${runtime.name}/${crypto.randomUUID()}.json`,
       coverageTempDirectoryUrl,
     ).href;
     await ensureParentDirectories(coverageFileUrl);

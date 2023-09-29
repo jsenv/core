@@ -1,3 +1,7 @@
+# 1.6.5
+
+- Use node `crypto.randomUUID()` instead of `@paralleldrive/cuid2` because later is not installed by NPM for some reason
+
 # 1.6.0
 
 - Add webServer.command
