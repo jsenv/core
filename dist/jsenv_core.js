@@ -2543,9 +2543,7 @@ callback: ${callback}`);
   return { registerCleanupCallback, cleanup };
 };
 
-const isLinux = process.platform === "linux";
-// linux does not support recursive option
-const fsWatchSupportsRecursive = !isLinux;
+const fsWatchSupportsRecursive = true;
 
 const registerDirectoryLifecycle = (
   source,
@@ -2781,25 +2779,6 @@ const registerDirectoryLifecycle = (
           handleEntryFound(childEntryInfo, { notify });
         }
       });
-      // we must watch manually every directory we find
-      if (!fsWatchSupportsRecursive) {
-        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
-          persistent: keepProcessAlive,
-        });
-        tracker.registerCleanupCallback(() => {
-          watcher.close();
-        });
-        watcher.on("change", (eventType, filename) => {
-          handleDirectoryEvent({
-            directoryRelativeUrl: entryInfo.relativeUrl,
-            filename: filename
-              ? // replace back slashes with slashes
-                filename.replace(/\\/g, "/")
-              : "",
-            eventType,
-          });
-        });
-      }
     }
     if (added && entryInfo.patternValue && notify) {
       added({
