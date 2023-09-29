@@ -7751,9 +7751,10 @@ const getCompressedResponse = async ({ sourceUrl, headers }) => {
   }
 
   const fileReadableStream = fileUrlToReadableStream(sourceUrl);
-  const body = await availableCompressionFormats[acceptedCompressionFormat](
-    fileReadableStream,
-  );
+  const body =
+    await availableCompressionFormats[acceptedCompressionFormat](
+      fileReadableStream,
+    );
 
   return {
     status: 200,

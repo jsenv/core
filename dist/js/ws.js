@@ -878,6 +878,12 @@ const { isValidStatusCode: isValidStatusCode$1, isValidUTF8 } = validationExport
 const FastBuffer = Buffer[Symbol.species];
 const promise = Promise.resolve();
 
+//
+// `queueMicrotask()` is not available in Node.js < 11.
+//
+const queueTask =
+  typeof queueMicrotask === 'function' ? queueMicrotask : queueMicrotaskShim;
+
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
 const GET_PAYLOAD_LENGTH_64 = 2;
@@ -1032,11 +1038,7 @@ let Receiver$1 = class Receiver extends Writable {
           //
           this._loop = false;
 
-          //
-          // `queueMicrotask()` is not available in Node.js < 11 and is no
-          // better anyway.
-          //
-          promise.then(() => {
+          queueTask(() => {
             this._state = GET_INFO;
             this.startLoop(cb);
           });
@@ -1508,6 +1510,35 @@ function error(ErrorCtor, message, prefix, statusCode, errorCode) {
   err.code = errorCode;
   err[kStatusCode$1] = statusCode;
   return err;
+}
+
+/**
+ * A shim for `queueMicrotask()`.
+ *
+ * @param {Function} cb Callback
+ */
+function queueMicrotaskShim(cb) {
+  promise.then(cb).catch(throwErrorNextTick);
+}
+
+/**
+ * Throws an error.
+ *
+ * @param {Error} err The error to throw
+ * @private
+ */
+function throwError(err) {
+  throw err;
+}
+
+/**
+ * Throws an error in the next tick.
+ *
+ * @param {Error} err The error to throw
+ * @private
+ */
+function throwErrorNextTick(err) {
+  process.nextTick(throwError, err);
 }
 
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex" }] */
