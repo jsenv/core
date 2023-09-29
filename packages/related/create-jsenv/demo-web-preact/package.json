@@ -27,7 +27,7 @@
     "@jsenv/plugin-minification": "1.5.2",
     "@jsenv/eslint-config": "16.4.4",
     "@jsenv/eslint-import-resolver": "8.0.4",
-    "@jsenv/test": "1.6.4",
+    "@jsenv/test": "1.6.5",
     "eslint": "8.50.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.28.1",
