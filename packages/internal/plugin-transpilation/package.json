@@ -53,9 +53,9 @@
     "@babel/plugin-transform-unicode-regex": "7.22.5",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
-    "@jsenv/ast": "5.1.3",
+    "@jsenv/ast": "5.1.4",
     "@jsenv/runtime-compat": "1.2.0",
-    "@jsenv/js-module-fallback": "1.3.4",
+    "@jsenv/js-module-fallback": "1.3.5",
     "lightningcss": "1.22.0"
   }
 }

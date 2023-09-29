@@ -27,7 +27,7 @@
     "@jsenv/log": "3.4.0",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.2.1",
-    "@jsenv/sourcemap": "1.2.2",
+    "@jsenv/sourcemap": "1.2.3",
     "acorn-import-assertions": "1.9.0",
     "lightningcss": "1.22.0",
     "rollup": "3.29.4"
