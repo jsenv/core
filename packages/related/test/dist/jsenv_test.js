@@ -1,7 +1,7 @@
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, existsSync, readdirSync } from "node:fs";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import "node:crypto";
+import crypto from "node:crypto";
 import { dirname } from "node:path";
 import process$1, { memoryUsage } from "node:process";
 import os from "node:os";
@@ -13,7 +13,6 @@ import { createServer } from "node:net";
 import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { applyBabelPlugins } from "@jsenv/ast";
-import { createId } from "@paralleldrive/cuid2";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
@@ -3865,7 +3864,7 @@ const run = async ({
   let coverageFileUrl;
   if (coverageEnabled) {
     coverageFileUrl = new URL(
-      `./${runtime.name}/${createId()}.json`,
+      `./${runtime.name}/${crypto.randomUUID()}.json`,
       coverageTempDirectoryUrl,
     ).href;
     await ensureParentDirectories(coverageFileUrl);
@@ -6751,9 +6750,7 @@ const nodeWorkerThread = ({
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-        commandLineOptions.push(
-          `--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`,
-        );
+        commandLineOptions.push(`--import=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
         commandLineOptions.push(
           `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
         );
