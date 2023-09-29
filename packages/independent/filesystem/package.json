@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/filesystem",
-  "version": "4.2.6",
+  "version": "4.3.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -16,6 +16,9 @@
     "url": "https://twitter.com/damienmaillard"
   },
   "type": "module",
+  "engines": {
+    "node": ">=19.1.0"
+  },
   "exports": {
     ".": {
       "import": "./src/main.js"

@@ -8,9 +8,7 @@ import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js";
 import { createWatcher } from "./internal/createWatcher.js";
 import { trackResources } from "./internal/track_resources.js";
 
-const isLinux = process.platform === "linux";
-// linux does not support recursive option
-const fsWatchSupportsRecursive = !isLinux;
+const fsWatchSupportsRecursive = true;
 
 export const registerDirectoryLifecycle = (
   source,
