@@ -1,6 +1,7 @@
 # 1.6.5
 
 - Use node `crypto.randomUUID()` instead of `@paralleldrive/cuid2` because later is not installed by NPM for some reason
+- Use `--import=module` instead of `--experimental-loader=module` because the later is deprecated and does not work with worker threads after node v20+
 
 # 1.6.0
 

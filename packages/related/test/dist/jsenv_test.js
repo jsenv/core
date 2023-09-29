@@ -6750,9 +6750,7 @@ const nodeWorkerThread = ({
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
-        commandLineOptions.push(
-          `--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`,
-        );
+        commandLineOptions.push(`--import=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
         commandLineOptions.push(
           `--require=${fileURLToPath(NO_EXPERIMENTAL_WARNING_FILE_URL)}`,
         );
