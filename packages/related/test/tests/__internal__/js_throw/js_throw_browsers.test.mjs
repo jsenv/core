@@ -54,8 +54,7 @@ const test = async (params) => {
     assert({ actual, expected, context: "firefox" });
   }
   if (params.runtime.name === "webkit") {
-    const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:18
-module code@${devServer.origin}/main.js:3:13`;
+    const expected = `module code@${devServer.origin}/main.js:3:13`;
     const actual = error.originalStack.slice(0, expected.length);
     assert({ actual, expected, context: "webkit" });
   }
