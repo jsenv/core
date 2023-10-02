@@ -2509,7 +2509,9 @@ const createWatcher = (sourcePath, options) => {
           if (e.code === "ENOENT") {
             return;
           }
-          console.error(`error while fixing windows eperm: ${e.stack}`);
+          console.error(
+            `error while trying to get rid of windows EPERM: ${e.stack}`,
+          );
           throw error;
         }
       } else {
@@ -2543,7 +2545,7 @@ callback: ${callback}`);
   return { registerCleanupCallback, cleanup };
 };
 
-const fsWatchSupportsRecursive = true;
+const fsWatchSupportsRecursive = false;
 
 const registerDirectoryLifecycle = (
   source,
@@ -2626,8 +2628,8 @@ const registerDirectoryLifecycle = (
     try {
       const relativeUrl = urlToRelativeUrl(url, source);
       const previousInfo = infoMap.get(relativeUrl);
-      const stats = statSync(new URL(url));
-      const type = statsToType(stats);
+      const stat = statSync(new URL(url));
+      const type = statsToType(stat);
       const patternValue = previousInfo
         ? previousInfo.patternValue
         : getWatchPatternValue({ url, type });
@@ -2636,13 +2638,15 @@ const registerDirectoryLifecycle = (
         url,
         relativeUrl,
         type,
-        atimeMs: stats.atimeMs,
-        mtimeMs: stats.mtimeMs,
+        stat,
         patternValue,
       };
     } catch (e) {
       if (e.code === "ENOENT") {
-        return null;
+        return {
+          type: null,
+          stat: null,
+        };
       }
       throw e;
     }
@@ -2715,7 +2719,7 @@ const registerDirectoryLifecycle = (
   const handleChange = (relativeUrl) => {
     const entryUrl = new URL(relativeUrl, sourceUrl).href;
     const entryInfo = readEntryInfo(entryUrl);
-    if (!entryInfo) {
+    if (entryInfo.type === null) {
       const previousEntryInfo = infoMap.get(relativeUrl);
       if (!previousEntryInfo) {
         // on MacOS it's possible to receive a "rename" event for
@@ -2775,17 +2779,36 @@ const registerDirectoryLifecycle = (
       readdirSync(new URL(directoryUrl)).forEach((entryName) => {
         const childEntryUrl = new URL(entryName, directoryUrl).href;
         const childEntryInfo = readEntryInfo(childEntryUrl);
-        if (childEntryInfo && childEntryInfo.patternValue) {
+        if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
           handleEntryFound(childEntryInfo, { notify });
         }
       });
+      // we must watch manually every directory we find
+      {
+        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
+          persistent: keepProcessAlive,
+        });
+        tracker.registerCleanupCallback(() => {
+          watcher.close();
+        });
+        watcher.on("change", (eventType, filename) => {
+          handleDirectoryEvent({
+            directoryRelativeUrl: entryInfo.relativeUrl,
+            filename: filename
+              ? // replace back slashes with slashes
+                filename.replace(/\\/g, "/")
+              : "",
+            eventType,
+          });
+        });
+      }
     }
     if (added && entryInfo.patternValue && notify) {
       added({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
+        mtime: entryInfo.stat.mtimeMs,
       });
     }
   };
@@ -2796,19 +2819,19 @@ const registerDirectoryLifecycle = (
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
+        mtime: entryInfo.stat.mtimeMs,
       });
     }
   };
   const handleEntryUpdated = (entryInfo) => {
     infoMap.set(entryInfo.relativeUrl, entryInfo);
-    if (updated && entryInfo.patternValue) {
+    if (updated && entryInfo.patternValue && shouldCallUpdated(entryInfo)) {
       updated({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
-        previousMtime: entryInfo.previousInfo.mtimeMs,
+        mtime: entryInfo.stat.mtimeMs,
+        previousMtime: entryInfo.previousInfo.stat.mtimeMs,
       });
     }
   };
@@ -2816,7 +2839,7 @@ const registerDirectoryLifecycle = (
   readdirSync(new URL(sourceUrl)).forEach((entry) => {
     const entryUrl = new URL(entry, sourceUrl).href;
     const entryInfo = readEntryInfo(entryUrl);
-    if (entryInfo && entryInfo.patternValue) {
+    if (entryInfo.type !== null && entryInfo.patternValue) {
       handleEntryFound(entryInfo, {
         notify: notifyExistent,
       });
@@ -2848,6 +2871,20 @@ ${relativeUrls.join("\n")}`,
   });
 
   return tracker.cleanup;
+};
+
+const shouldCallUpdated = (entryInfo) => {
+  const { stat, previousInfo } = entryInfo;
+  if (!stat.atimeMs) {
+    return true;
+  }
+  if (stat.atimeMs < stat.mtimeMs) {
+    return true;
+  }
+  if (stat.mtimeMs > previousInfo.stat.mtimeMs) {
+    return true;
+  }
+  return false;
 };
 
 const undefinedOrFunction = (value) => {
@@ -13214,6 +13251,7 @@ const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("as_json_module");
     generatedUrlObject.searchParams.delete("as_text_module");
     generatedUrlObject.searchParams.delete("dynamic_import");
+    generatedUrlObject.searchParams.delete("cjs_as_js_module");
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
 
