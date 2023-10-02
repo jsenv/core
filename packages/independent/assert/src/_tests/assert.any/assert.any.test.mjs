@@ -133,3 +133,28 @@ any(String)
 actual.token`,
   );
 }
+
+try {
+  const actual = [
+    {
+      age: "dam",
+    },
+  ];
+  const expected = [
+    {
+      age: assert.any(Number),
+    },
+  ];
+  assert({ actual, expected });
+} catch (e) {
+  ensureAssertionErrorWithMessage(
+    e,
+    `unexpected value
+--- found ---
+"dam"
+--- expected ---
+any(Number)
+--- path ---
+actual[0].age`,
+  );
+}
