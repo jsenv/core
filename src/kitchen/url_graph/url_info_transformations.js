@@ -149,6 +149,7 @@ export const createUrlInfoTransformer = ({
     generatedUrlObject.searchParams.delete("as_json_module");
     generatedUrlObject.searchParams.delete("as_text_module");
     generatedUrlObject.searchParams.delete("dynamic_import");
+    generatedUrlObject.searchParams.delete("cjs_as_js_module");
     const urlForSourcemap = generatedUrlObject.href;
     urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
 
