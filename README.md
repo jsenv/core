@@ -13,7 +13,7 @@ The pillars of jsenv are:
 
 # The best parts
 
-- Tools and knowledge used in source files [can be reused in test files](<https://github.com/jsenv/core/wiki/D)-Test>).
+- Tools and habits used in source files [can be reused in test files](<https://github.com/jsenv/core/wiki/D)-Test>).
 - A [large browser support during dev](<https://github.com/jsenv/core/wiki/B)-Dev#21-browser-support>). Because some people might be happy to use an other browser than the latest chrome during dev. Moreover it is useful to reproduce bug specific to certain browsers.
 - A [large browser support after build](<https://github.com/jsenv/core/wiki/C)-Build#211-maximal-browser-support>). Because some product still needs to support old versions of Firefox, Chrome and Safari.
 - A [single set of files during build](<https://github.com/jsenv/core/wiki/C)-Build#212-same-build-for-all-browsers>). Because a single one is simpler to properly support in every aspects.
