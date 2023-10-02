@@ -201,3 +201,14 @@ import { URL_META } from "@jsenv/url-meta";
     assert({ actual, expected });
   }
 }
+
+{
+  const actual = URL_META.applyAssociations({
+    associations: {
+      "**/*.map": false,
+    },
+    url: " file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/related/plugin-preact/tests/preact_and_redux/.jsenv/chrome@117.00/@fs/Users/d.maillard/dev/jsenv/jsenv-core/node_modules/hoist-non-react-statics/dist/hoist-non-react-statics.cjs.js.map",
+  });
+  const expected = {};
+  assert({ actual, expected });
+}
