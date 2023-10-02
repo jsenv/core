@@ -197,7 +197,7 @@ const shouldCallUpdated = (stat, prevStat) => {
   if (!stat.atimeMs) {
     return true;
   }
-  if (stat.atimeMs <= stat.mtimeMs) {
+  if (stat.atimeMs < stat.mtimeMs) {
     return true;
   }
   if (stat.mtimeMs > prevStat.mtimeMs) {

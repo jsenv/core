@@ -8,7 +8,7 @@ import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js";
 import { createWatcher } from "./internal/createWatcher.js";
 import { trackResources } from "./internal/track_resources.js";
 
-const fsWatchSupportsRecursive = true;
+const fsWatchSupportsRecursive = false;
 
 export const registerDirectoryLifecycle = (
   source,
@@ -288,7 +288,7 @@ export const registerDirectoryLifecycle = (
   };
   const handleEntryUpdated = (entryInfo) => {
     infoMap.set(entryInfo.relativeUrl, entryInfo);
-    if (updated && entryInfo.patternValue && shouldCallUpdate(entryInfo)) {
+    if (updated && entryInfo.patternValue && shouldCallUpdated(entryInfo)) {
       updated({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
@@ -336,16 +336,15 @@ ${relativeUrls.join("\n")}`,
   return tracker.cleanup;
 };
 
-const shouldCallUpdate = (entryInfo) => {
+const shouldCallUpdated = (entryInfo) => {
   const { stat, previousInfo } = entryInfo;
-
   if (!stat.atimeMs) {
     return true;
   }
-  if (stat.atimeMs <= stat.mtimeMs) {
+  if (stat.atimeMs < stat.mtimeMs) {
     return true;
   }
-  if (stat.mtimeMs >= previousInfo.stat.mtimeMs) {
+  if (stat.mtimeMs > previousInfo.stat.mtimeMs) {
     return true;
   }
   return false;
