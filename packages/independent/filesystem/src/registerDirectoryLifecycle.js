@@ -91,8 +91,8 @@ export const registerDirectoryLifecycle = (
     try {
       const relativeUrl = urlToRelativeUrl(url, source);
       const previousInfo = infoMap.get(relativeUrl);
-      const stats = statSync(new URL(url));
-      const type = statsToType(stats);
+      const stat = statSync(new URL(url));
+      const type = statsToType(stat);
       const patternValue = previousInfo
         ? previousInfo.patternValue
         : getWatchPatternValue({ url, type });
@@ -101,13 +101,15 @@ export const registerDirectoryLifecycle = (
         url,
         relativeUrl,
         type,
-        atimeMs: stats.atimeMs,
-        mtimeMs: stats.mtimeMs,
+        stat,
         patternValue,
       };
     } catch (e) {
       if (e.code === "ENOENT") {
-        return null;
+        return {
+          type: null,
+          stat: null,
+        };
       }
       throw e;
     }
@@ -180,7 +182,7 @@ export const registerDirectoryLifecycle = (
   const handleChange = (relativeUrl) => {
     const entryUrl = new URL(relativeUrl, sourceUrl).href;
     const entryInfo = readEntryInfo(entryUrl);
-    if (!entryInfo) {
+    if (entryInfo.type === null) {
       const previousEntryInfo = infoMap.get(relativeUrl);
       if (!previousEntryInfo) {
         // on MacOS it's possible to receive a "rename" event for
@@ -240,7 +242,7 @@ export const registerDirectoryLifecycle = (
       readdirSync(new URL(directoryUrl)).forEach((entryName) => {
         const childEntryUrl = new URL(entryName, directoryUrl).href;
         const childEntryInfo = readEntryInfo(childEntryUrl);
-        if (childEntryInfo && childEntryInfo.patternValue) {
+        if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
           handleEntryFound(childEntryInfo, { notify });
         }
       });
@@ -269,7 +271,7 @@ export const registerDirectoryLifecycle = (
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
+        mtime: entryInfo.stat.mtimeMs,
       });
     }
   };
@@ -280,19 +282,19 @@ export const registerDirectoryLifecycle = (
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
+        mtime: entryInfo.stat.mtimeMs,
       });
     }
   };
   const handleEntryUpdated = (entryInfo) => {
     infoMap.set(entryInfo.relativeUrl, entryInfo);
-    if (updated && entryInfo.patternValue) {
+    if (updated && entryInfo.patternValue && shouldCallUpdate(entryInfo)) {
       updated({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
         patternValue: entryInfo.patternValue,
-        mtime: entryInfo.mtimeMs,
-        previousMtime: entryInfo.previousInfo.mtimeMs,
+        mtime: entryInfo.stat.mtimeMs,
+        previousMtime: entryInfo.previousInfo.stat.mtimeMs,
       });
     }
   };
@@ -300,7 +302,7 @@ export const registerDirectoryLifecycle = (
   readdirSync(new URL(sourceUrl)).forEach((entry) => {
     const entryUrl = new URL(entry, sourceUrl).href;
     const entryInfo = readEntryInfo(entryUrl);
-    if (entryInfo && entryInfo.patternValue) {
+    if (entryInfo.type !== null && entryInfo.patternValue) {
       handleEntryFound(entryInfo, {
         notify: notifyExistent,
       });
@@ -332,6 +334,21 @@ ${relativeUrls.join("\n")}`,
   });
 
   return tracker.cleanup;
+};
+
+const shouldCallUpdate = (entryInfo) => {
+  const { stat, previousInfo } = entryInfo;
+
+  if (!stat.atimeMs) {
+    return true;
+  }
+  if (stat.atimeMs <= stat.mtimeMs) {
+    return true;
+  }
+  if (stat.mtimeMs >= previousInfo.stat.mtimeMs) {
+    return true;
+  }
+  return false;
 };
 
 const undefinedOrFunction = (value) => {

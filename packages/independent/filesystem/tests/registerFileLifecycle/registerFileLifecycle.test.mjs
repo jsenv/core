@@ -73,6 +73,9 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     added: () => {
       mutations.push({ type: "added" });
     },
+    updated: () => {
+      mutations.push({ type: "updated" });
+    },
     keepProcessAlive: false,
   });
   await writeFile(fileUrl);
