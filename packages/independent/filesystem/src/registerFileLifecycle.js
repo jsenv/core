@@ -164,7 +164,7 @@ const watchFileMutation = (
   sourceUrl,
   { updated, removed, keepProcessAlive, stat },
 ) => {
-  let currentStat = stat;
+  let prevStat = stat;
   let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
     persistent: keepProcessAlive,
   });
@@ -179,14 +179,11 @@ const watchFileMutation = (
         removed();
       }
     } else if (type === "file") {
-      if (updated) {
-        if (shouldCallUpdate(currentStat, stat)) {
-          updated();
-        }
+      if (updated && shouldCallUpdated(stat, prevStat)) {
+        updated();
       }
     }
-
-    currentStat = stat;
+    prevStat = stat;
   });
 
   return () => {
@@ -196,14 +193,14 @@ const watchFileMutation = (
   };
 };
 
-const shouldCallUpdate = (stat, prevStat) => {
+const shouldCallUpdated = (stat, prevStat) => {
   if (!stat.atimeMs) {
     return true;
   }
   if (stat.atimeMs <= stat.mtimeMs) {
     return true;
   }
-  if (stat.mtimeMs >= prevStat.mtimeMs) {
+  if (stat.mtimeMs > prevStat.mtimeMs) {
     return true;
   }
   return false;
