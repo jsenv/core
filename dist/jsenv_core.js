@@ -2545,7 +2545,8 @@ callback: ${callback}`);
   return { registerCleanupCallback, cleanup };
 };
 
-const fsWatchSupportsRecursive = process.platform !== "linux";
+const isLinux = process.platform === "linux";
+const fsWatchSupportsRecursive = !isLinux;
 
 const registerDirectoryLifecycle = (
   source,
@@ -2881,10 +2882,10 @@ const shouldCallUpdated = (entryInfo) => {
   if (stat.atimeMs < stat.mtimeMs) {
     return true;
   }
-  if (stat.mtimeMs > previousInfo.stat.mtimeMs) {
-    return true;
+  if (isLinux && stat.mtimeMs <= previousInfo.stat.mtimeMs) {
+    return false;
   }
-  return false;
+  return true;
 };
 
 const undefinedOrFunction = (value) => {

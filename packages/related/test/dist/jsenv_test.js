@@ -1674,7 +1674,7 @@ const readFile = async (value, { as = "buffer" } = {}) => {
 
 process.platform === "win32";
 
-process.platform !== "linux";
+process.platform === "linux";
 
 const writeFile = async (destination, content = "") => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);

@@ -19,7 +19,13 @@ import { inspectRegExp } from "./stringifiers/regexp.js";
 import { inspectStringObject } from "./stringifiers/string_object.js";
 import { inspectConstructor } from "./stringifiers/constructor.js";
 
+export const inspectMethodSymbol = Symbol.for("inspect");
+
 export const inspectValue = (value, options) => {
+  const customInspect = value && value[inspectMethodSymbol];
+  if (customInspect) {
+    return customInspect(options);
+  }
   const primitiveType = primitiveTypeFromValue(value);
   const primitiveStringifier = primitiveStringifiers[primitiveType];
   if (primitiveStringifier) {

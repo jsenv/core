@@ -8,7 +8,8 @@ import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js";
 import { createWatcher } from "./internal/createWatcher.js";
 import { trackResources } from "./internal/track_resources.js";
 
-const fsWatchSupportsRecursive = process.platform !== "linux";
+const isLinux = process.platform === "linux";
+const fsWatchSupportsRecursive = !isLinux;
 
 export const registerDirectoryLifecycle = (
   source,
@@ -344,10 +345,10 @@ const shouldCallUpdated = (entryInfo) => {
   if (stat.atimeMs < stat.mtimeMs) {
     return true;
   }
-  if (stat.mtimeMs > previousInfo.stat.mtimeMs) {
-    return true;
+  if (isLinux && stat.mtimeMs <= previousInfo.stat.mtimeMs) {
+    return false;
   }
-  return false;
+  return true;
 };
 
 const undefinedOrFunction = (value) => {

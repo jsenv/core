@@ -1,3 +1,5 @@
+import { inspectMethodSymbol } from "@jsenv/inspect";
+
 import { isPrimitive } from "./is_composite.js";
 import { findPreviousComparison } from "./find_previous_comparison.js";
 import {
@@ -21,15 +23,15 @@ export const compare = ({ actual, expected }, { checkPropertiesOrder }) => {
 
 const expectationSymbol = Symbol.for("expectation");
 
-const createExpectation = (data) => {
+const createExpectation = (comparerProperties) => {
   return {
     [expectationSymbol]: true,
-    data,
+    comparerProperties,
   };
 };
 
 export const createNotExpectation = (value) => {
-  return createExpectation({
+  const notExpectation = createExpectation({
     type: "not",
     expected: value,
     comparer: ({ actual }) => {
@@ -42,10 +44,14 @@ export const createNotExpectation = (value) => {
       return actual !== value;
     },
   });
+  notExpectation[inspectMethodSymbol] = () => {
+    return `an other value`;
+  };
+  return notExpectation;
 };
 
 export const createAnyExpectation = (expectedConstructor) => {
-  return createExpectation({
+  const anyExpectation = createExpectation({
     type: "any",
     expected: expectedConstructor,
     comparer: ({ actual }) => {
@@ -58,10 +64,14 @@ export const createAnyExpectation = (expectedConstructor) => {
       );
     },
   });
+  anyExpectation[inspectMethodSymbol] = () => {
+    return `any(${expectedConstructor.name})`;
+  };
+  return anyExpectation;
 };
 
 export const createMatchesRegExpExpectation = (regexp) => {
-  return createExpectation({
+  const matchesRegexpExpectation = createExpectation({
     type: "matchesRegExp",
     expected: regexp,
     comparer: ({ actual }) => {
@@ -71,6 +81,10 @@ export const createMatchesRegExpExpectation = (regexp) => {
       return regexp.test(actual);
     },
   });
+  matchesRegexpExpectation[inspectMethodSymbol] = () => {
+    return `matchesRegExp(${regexp})`;
+  };
+  return matchesRegexpExpectation;
 };
 
 const createComparison = ({ parent = null, children = [], ...rest }) => {
@@ -91,7 +105,7 @@ const defaultComparer = (comparison, options) => {
     expectationSymbol in expected
   ) {
     subcompare(comparison, {
-      ...expected.data,
+      ...expected.comparerProperties,
       actual,
       options,
     });
