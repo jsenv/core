@@ -1,3 +1,7 @@
+# 4.3.1
+
+- Improve file and directory watch for ubuntu 20
+
 # 4.2.1
 
 - Add optional name for better error message during files url validation

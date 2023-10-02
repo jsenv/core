@@ -2545,7 +2545,7 @@ callback: ${callback}`);
   return { registerCleanupCallback, cleanup };
 };
 
-const fsWatchSupportsRecursive = false;
+const fsWatchSupportsRecursive = process.platform !== "linux";
 
 const registerDirectoryLifecycle = (
   source,
@@ -2784,7 +2784,7 @@ const registerDirectoryLifecycle = (
         }
       });
       // we must watch manually every directory we find
-      {
+      if (!fsWatchSupportsRecursive) {
         const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
           persistent: keepProcessAlive,
         });
