@@ -16,7 +16,9 @@ export const createWatcher = (sourcePath, options) => {
           if (e.code === "ENOENT") {
             return;
           }
-          console.error(`error while fixing windows eperm: ${e.stack}`);
+          console.error(
+            `error while trying to get rid of windows EPERM: ${e.stack}`,
+          );
           throw error;
         }
       } else {

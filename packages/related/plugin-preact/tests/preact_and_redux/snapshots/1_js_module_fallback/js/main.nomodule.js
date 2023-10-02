@@ -944,10 +944,23 @@ System.register([], function (_export, _context) {
   }
   function createSubscription(store, parentSub) {
     let unsubscribe;
-    let listeners = nullListeners;
+    let listeners = nullListeners; // Reasons to keep the subscription active
+
+    let subscriptionsAmount = 0; // Is this specific subscription subscribed (or only nested ones?)
+
+    let selfSubscribed = false;
     function addNestedSub(listener) {
       trySubscribe();
-      return listeners.subscribe(listener);
+      const cleanupListener = listeners.subscribe(listener); // cleanup nested sub
+
+      let removed = false;
+      return () => {
+        if (!removed) {
+          removed = true;
+          cleanupListener();
+          tryUnsubscribe();
+        }
+      };
     }
     function notifyNestedSubs() {
       listeners.notify();
@@ -958,20 +971,34 @@ System.register([], function (_export, _context) {
       }
     }
     function isSubscribed() {
-      return Boolean(unsubscribe);
+      return selfSubscribed;
     }
     function trySubscribe() {
+      subscriptionsAmount++;
       if (!unsubscribe) {
         unsubscribe = parentSub ? parentSub.addNestedSub(handleChangeWrapper) : store.subscribe(handleChangeWrapper);
         listeners = createListenerCollection();
       }
     }
     function tryUnsubscribe() {
-      if (unsubscribe) {
+      subscriptionsAmount--;
+      if (unsubscribe && subscriptionsAmount === 0) {
         unsubscribe();
         unsubscribe = undefined;
         listeners.clear();
         listeners = nullListeners;
+      }
+    }
+    function trySubscribeSelf() {
+      if (!selfSubscribed) {
+        selfSubscribed = true;
+        trySubscribe();
+      }
+    }
+    function tryUnsubscribeSelf() {
+      if (selfSubscribed) {
+        selfSubscribed = false;
+        tryUnsubscribe();
       }
     }
     const subscription = {
@@ -979,8 +1006,8 @@ System.register([], function (_export, _context) {
       notifyNestedSubs,
       handleChangeWrapper,
       isSubscribed,
-      trySubscribe,
-      tryUnsubscribe,
+      trySubscribe: trySubscribeSelf,
+      tryUnsubscribe: tryUnsubscribeSelf,
       getListeners: () => listeners
     };
     return subscription;

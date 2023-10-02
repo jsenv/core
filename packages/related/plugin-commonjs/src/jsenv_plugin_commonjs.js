@@ -43,12 +43,18 @@ export const jsenvPluginCommonJs = ({
     init: ({ rootDirectoryUrl }) => {
       associations = URL_META.resolveAssociations(
         {
-          commonjs: include,
+          commonjs: {
+            ...include,
+            "/**/*.map": false,
+          },
         },
         rootDirectoryUrl,
       );
     },
     redirectReference: (reference) => {
+      if (reference.type === "sourcemap_comment") {
+        return null;
+      }
       if (reference.searchParams.has("cjs_as_js_module")) {
         markAsJsModuleProxy(reference);
         return null;

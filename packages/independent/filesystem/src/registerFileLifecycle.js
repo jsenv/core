@@ -47,7 +47,7 @@ export const registerFileLifecycle = (
 
   const tracker = trackResources();
 
-  const handleFileFound = ({ existent }) => {
+  const handleFileFound = ({ stat, existent }) => {
     const fileMutationStopWatching = watchFileMutation(sourceUrl, {
       updated,
       removed: () => {
@@ -58,6 +58,7 @@ export const registerFileLifecycle = (
         }
       },
       keepProcessAlive,
+      stat,
     });
     const fileMutationStopTracking = tracker.registerCleanupCallback(
       fileMutationStopWatching,
@@ -77,9 +78,9 @@ export const registerFileLifecycle = (
   const watchFileAdded = () => {
     const fileCreationStopWatching = watchFileCreation(
       sourceUrl,
-      () => {
+      (stat) => {
         fileCreationgStopTracking();
-        handleFileFound({ existent: false });
+        handleFileFound({ stat, existent: false });
       },
       keepProcessAlive,
     );
@@ -88,8 +89,8 @@ export const registerFileLifecycle = (
     );
   };
 
-  const sourceType = entryToTypeOrNull(sourceUrl);
-  if (sourceType === null) {
+  const { type, stat } = readFileInfo(sourceUrl);
+  if (type === null) {
     if (added) {
       watchFileAdded();
     } else {
@@ -97,8 +98,8 @@ export const registerFileLifecycle = (
         `${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`,
       );
     }
-  } else if (sourceType === "file") {
-    handleFileFound({ existent: true });
+  } else if (type === "file") {
+    handleFileFound({ stat, existent: true });
   } else {
     throw new Error(
       `${urlToFileSystemPath(
@@ -110,13 +111,19 @@ export const registerFileLifecycle = (
   return tracker.cleanup;
 };
 
-const entryToTypeOrNull = (url) => {
+const readFileInfo = (url) => {
   try {
-    const stats = statSync(new URL(url));
-    return statsToType(stats);
+    const stat = statSync(new URL(url));
+    return {
+      type: statsToType(stat),
+      stat,
+    };
   } catch (e) {
     if (e.code === "ENOENT") {
-      return null;
+      return {
+        type: null,
+        stat: null,
+      };
     }
     throw e;
   }
@@ -135,14 +142,15 @@ const watchFileCreation = (source, callback, keepProcessAlive) => {
   directoryWatcher.on("change", (eventType, filename) => {
     if (filename && filename !== sourceFilename) return;
 
-    const type = entryToTypeOrNull(source);
+    const { type, stat } = readFileInfo(source);
     // ignore if something else with that name gets created
     // we are only interested into files
-    if (type !== "file") return;
-
+    if (type !== "file") {
+      return;
+    }
     directoryWatcher.close();
     directoryWatcher = undefined;
-    callback();
+    callback(stat);
   });
 
   return () => {
@@ -154,26 +162,28 @@ const watchFileCreation = (source, callback, keepProcessAlive) => {
 
 const watchFileMutation = (
   sourceUrl,
-  { updated, removed, keepProcessAlive },
+  { updated, removed, keepProcessAlive, stat },
 ) => {
+  let prevStat = stat;
   let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
     persistent: keepProcessAlive,
   });
 
   watcher.on("change", () => {
-    const sourceType = entryToTypeOrNull(sourceUrl);
+    const { type, stat } = readFileInfo(sourceUrl);
 
-    if (sourceType === null) {
+    if (type === null) {
       watcher.close();
       watcher = undefined;
       if (removed) {
         removed();
       }
-    } else if (sourceType === "file") {
-      if (updated) {
+    } else if (type === "file") {
+      if (updated && shouldCallUpdated(stat, prevStat)) {
         updated();
       }
     }
+    prevStat = stat;
   });
 
   return () => {
@@ -181,4 +191,17 @@ const watchFileMutation = (
       watcher.close();
     }
   };
+};
+
+const shouldCallUpdated = (stat, prevStat) => {
+  if (!stat.atimeMs) {
+    return true;
+  }
+  if (stat.atimeMs < stat.mtimeMs) {
+    return true;
+  }
+  if (stat.mtimeMs > prevStat.mtimeMs) {
+    return true;
+  }
+  return false;
 };

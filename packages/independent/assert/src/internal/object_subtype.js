@@ -29,6 +29,9 @@ export const isMap = (value) =>
   );
 
 export const somePrototypeMatch = (value, predicate) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
   let prototype = Object.getPrototypeOf(value);
   while (prototype) {
     if (predicate(prototype)) return true;
