@@ -8,7 +8,7 @@ import { guardTooFastSecondCallPerFile } from "./internal/guard_second_call.js";
 import { createWatcher } from "./internal/createWatcher.js";
 import { trackResources } from "./internal/track_resources.js";
 
-const fsWatchSupportsRecursive = false;
+const fsWatchSupportsRecursive = process.platform !== "linux";
 
 export const registerDirectoryLifecycle = (
   source,
