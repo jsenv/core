@@ -1,6 +1,6 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
-Jsenv is a tool to develop test and build projects using JavaScript. Jsenv is simple, easy to understand and well [documented](<https://github.com/jsenv/core/wiki/A)-directory-structure>).
+Jsenv is a tool to develop test and build projects using JavaScript. Jsenv is simple, easy to understand and well documented.
 
 Jsenv cares a lot about the developper experience, especially when it comes to tests.
 
@@ -10,6 +10,8 @@ The pillars of jsenv are:
 2. A build generating an optimized version of source files into a directory
 3. A build server serving build files
 4. A test runner executing test files in web browser(s)
+
+[Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
 # The best parts
 
@@ -56,9 +58,6 @@ npm start
 ```
 
 After running the suggested commands the demo is ready.
-
-> **Info**
-> "npm install" can take time because tests are runned in headless browsers that needs to be installed first.
 
 The demo contains preconfigured scripts:
 

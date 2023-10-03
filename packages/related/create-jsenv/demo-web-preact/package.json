@@ -11,7 +11,8 @@
     "build": "node ./scripts/build.mjs",
     "build:serve": "node ./scripts/build_serve.mjs --open",
     "eslint": "npx eslint . --ext=.html,.js,.jsx,.mjs,.cjs",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
     "preact": "10.18.1"
