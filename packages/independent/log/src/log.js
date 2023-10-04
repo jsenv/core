@@ -109,6 +109,7 @@ export const createLog = ({
     write,
     dynamicWrite,
     destroy,
+    stream,
   });
   return log;
 };

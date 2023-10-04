@@ -2610,6 +2610,7 @@ const createLog = ({
     write,
     dynamicWrite,
     destroy,
+    stream,
   });
   return log;
 };
@@ -2644,7 +2645,7 @@ const startSpinner = ({
   stopOnVerticalOverflow = true,
   render = () => "",
   effect = () => {},
-  animated = true,
+  animated = log.stream.isTTY,
 }) => {
   let frameIndex = 0;
   let interval;
