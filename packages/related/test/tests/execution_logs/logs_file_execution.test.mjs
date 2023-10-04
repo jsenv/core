@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { formatConsoleOutput } from "./logs_file_execution.js";
+import { formatConsoleOutput } from "@jsenv/test/src/execution/logs_file_execution.js";
 
 {
   const actual = formatConsoleOutput([
