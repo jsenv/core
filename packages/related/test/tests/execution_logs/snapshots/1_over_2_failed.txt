@@ -1,0 +1,15 @@
+✖ execution 1 of 2 failed
+file: file.js
+runtime: chrome/10.0.0
+duration: 0.01 second
+-------- error --------
+AssertionError: unequal values
+--- found ---
+false
+--- expected ---
+true
+--- path ---
+actual.foo
+  at node_modules/@jsenv/assert/src/main.js:10:3
+-------------------------
+

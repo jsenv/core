@@ -60,5 +60,61 @@ const snapshots = {
       },
     },
   ),
+  "1_over_2_failed.txt": test(
+    {
+      executionIndex: 0,
+      fileRelativeUrl: "file.js",
+      runtimeName: "chrome",
+      runtimeVersion: "10.0.0",
+      executionResult: {
+        status: "failed",
+        errors: [
+          {
+            stack: `AssertionError: unequal values
+--- found ---
+false
+--- expected ---
+true
+--- path ---
+actual.foo
+  at node_modules/@jsenv/assert/src/main.js:10:3`,
+          },
+        ],
+      },
+      startMs: 10,
+      endMs: 20,
+    },
+    {
+      counters: {
+        total: 2,
+        aborted: 0,
+        timedout: 0,
+        failed: 1,
+        completed: 0,
+        done: 0,
+      },
+    },
+  ),
+  "1_over_2_completed.txt": test(
+    {
+      executionIndex: 0,
+      fileRelativeUrl: "file.js",
+      runtimeName: "chrome",
+      runtimeVersion: "10.0.0",
+      executionResult: { status: "completed" },
+      startMs: 10,
+      endMs: 20,
+    },
+    {
+      counters: {
+        total: 2,
+        aborted: 0,
+        timedout: 0,
+        failed: 0,
+        completed: 1,
+        done: 0,
+      },
+    },
+  ),
 };
 writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, snapshots);

@@ -9,13 +9,9 @@ if (!process.env.CI) {
     "./snapshots/html/",
     import.meta.url,
   );
-  const snapshotDirectoryContent = readSnapshotsFromDirectory(
-    snapshotsHtmlDirectoryUrl,
-  );
+  const expected = readSnapshotsFromDirectory(snapshotsHtmlDirectoryUrl);
   process.env.FROM_TESTS = "true";
   await import("./errors_snapshots.mjs");
-  const directoryContent = readSnapshotsFromDirectory(
-    snapshotsHtmlDirectoryUrl,
-  );
-  assertSnapshots({ directoryContent, snapshotDirectoryContent });
+  const actual = readSnapshotsFromDirectory(snapshotsHtmlDirectoryUrl);
+  assertSnapshots({ actual, expected });
 }
