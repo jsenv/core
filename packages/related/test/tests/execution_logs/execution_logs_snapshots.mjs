@@ -15,6 +15,29 @@ const test = (data, options) =>
   );
 
 const snapshots = {
+  "1_over_2_executing.txt": test(
+    {
+      executionIndex: 0,
+      fileRelativeUrl: "file.js",
+      runtimeName: "chrome",
+      runtimeVersion: "10.0.0",
+      executionResult: {
+        status: "executing",
+      },
+      startMs: 1000,
+      nowMs: 2000,
+    },
+    {
+      counters: {
+        total: 2,
+        aborted: 0,
+        timedout: 0,
+        failed: 0,
+        completed: 0,
+        done: 0,
+      },
+    },
+  ),
   "1_over_2_aborted.txt": test(
     {
       executionIndex: 0,

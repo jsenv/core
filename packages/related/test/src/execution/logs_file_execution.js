@@ -19,6 +19,7 @@ export const createExecutionLog = (
     executionResult,
     startMs,
     endMs,
+    nowMs,
   },
   {
     logShortForCompletedExecutions,
@@ -58,7 +59,7 @@ export const createExecutionLog = (
           ? {
               duration:
                 status === "executing"
-                  ? msAsEllapsedTime(Date.now() - startMs)
+                  ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
                   : msAsDuration(endMs - startMs),
             }
           : {}),

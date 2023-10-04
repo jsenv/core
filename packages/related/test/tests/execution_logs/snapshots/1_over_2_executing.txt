@@ -1,0 +1,4 @@
+executing 1 of 2
+file: file.js
+runtime: chrome/10.0.0
+duration: 1 second
