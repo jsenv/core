@@ -24,7 +24,7 @@ const test = async (params) => {
     collectErrors: true,
   });
   const errorStack =
-    returnValue.executionResults["/main.js"].exception.stackNormalized;
+    returnValue.executionResults["/main.js"].exception.stackTrace;
   const actual = {
     errorStack,
     pageErrors,

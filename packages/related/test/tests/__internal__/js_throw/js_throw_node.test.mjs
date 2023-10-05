@@ -41,6 +41,6 @@ assert({ actual, expected });
 {
   const expected = `  at triggerError (${clientDirectoryUrl}/trigger_error.js:2:9)
   at ${clientDirectoryUrl}/main.js:3:1`;
-  const actual = error.stackNormalized.slice(0, expected.length);
+  const actual = error.stackTrace.slice(0, expected.length);
   assert({ actual, expected });
 }

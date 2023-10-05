@@ -430,10 +430,11 @@ window.__supervisor__ = (() => {
         reportedBy,
         code: null,
         message: null,
-        stack: null,
-        stackFormatIsV8: null,
+        stack: "", // the stack v8 format
         stackSourcemapped: null,
-        stackNormalized: null,
+        stackOriginal: "", // the stack from runtime, not normalized to v8
+        stackTrace: "", // the stack trace (without error name and message)
+        stackFormatted: null,
         meta: null,
         site: {
           isInline: null,
@@ -465,23 +466,18 @@ window.__supervisor__ = (() => {
             // stackTrace formatted by V8
             exception.message = message;
             exception.stack = error.stack;
-            exception.stackFormatIsV8 = true;
             exception.stackSourcemapped = true;
-            exception.stackNormalized = getErrorStackWithoutErrorMessage(error);
+            exception.stackTrace = getErrorStackWithoutErrorMessage(error);
           } else {
             exception.message = message;
             if (error.stack) {
               const name = error.name || "Error";
               const message = error.message || "";
-              const stackString = error.stack;
-              exception.stack = `${name}: ${message}\n  ${stackString}`;
-              exception.stackNormalized = stackString;
-            } else {
-              exception.stack = null;
-              exception.stackNormalized = null;
+              const stackTrace = `${error.stack}`;
+              exception.stack = `${name}: ${message}\n${stackTrace}`;
+              exception.stackSourcemapped = false;
+              exception.stackTrace = stackTrace;
             }
-            exception.stackFormatIsV8 = false;
-            exception.stackSourcemapped = false;
           }
           if (error.reportedBy) {
             exception.reportedBy = error.reportedBy;
@@ -541,8 +537,8 @@ window.__supervisor__ = (() => {
       // first create a version of the stack with file://
       // (and use it to locate exception url+line+column)
       if (exception.stack) {
-        exception.stackNormalized = replaceUrls(
-          exception.stackNormalized,
+        exception.stackFormatted = replaceUrls(
+          exception.stack,
           (serverUrlSite) => {
             const fileUrlSite = resolveUrlSite(serverUrlSite);
             if (exception.site.url === null) {
@@ -574,12 +570,12 @@ window.__supervisor__ = (() => {
       return exception;
     };
 
-    const stringifyMessageAndStack = ({ message, stack }) => {
-      if (message && stack) {
-        return `${message}\n${stack}`;
+    const stringifyMessageAndStack = ({ message, stackTrace }) => {
+      if (message && stackTrace) {
+        return `${message}\n${stackTrace}`;
       }
-      if (stack) {
-        return stack;
+      if (stackTrace) {
+        return stackTrace;
       }
       return message;
     };
@@ -759,8 +755,8 @@ window.__supervisor__ = (() => {
           message: exceptionInfo.message
             ? generateClickableText(exceptionInfo.message)
             : "",
-          stack: exceptionInfo.stack
-            ? generateClickableText(exceptionInfo.stack)
+          stackTrace: exceptionInfo.stackTrace
+            ? generateClickableText(exceptionInfo.stackTrace)
             : "",
         });
         if (exceptionInfo.site.url) {
@@ -791,11 +787,11 @@ window.__supervisor__ = (() => {
                   causeInfo.code === "NOT_FOUND"
                     ? stringifyMessageAndStack({
                         message: generateClickableText(causeInfo.reason),
-                        stack: generateClickableText(causeInfo.codeFrame),
+                        stackTrace: generateClickableText(causeInfo.codeFrame),
                       })
                     : stringifyMessageAndStack({
                         message: generateClickableText(causeInfo.stack),
-                        stack: generateClickableText(causeInfo.codeFrame),
+                        stackTrace: generateClickableText(causeInfo.codeFrame),
                       });
                 return {
                   cause: causeText,

@@ -27,7 +27,7 @@ const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
 const sendActionFailed = (error) => {
   const { prepareStackTrace } = Error;
   let stackObject;
-  let stackNormalized;
+  let stackTrace;
   Error.prepareStackTrace = (e, secondArg) => {
     Error.prepareStackTrace = prepareStackTrace;
     stackObject = secondArg;
@@ -36,7 +36,7 @@ const sendActionFailed = (error) => {
     const stackString = secondArg
       .map((callSite) => `  at ${callSite}`)
       .join("\n");
-    stackNormalized = stackString;
+    stackTrace = stackString;
     return `${name}: ${message}\n  ${stackString}`;
   };
   // eslint-disable-next-line no-unused-expressions
@@ -46,11 +46,10 @@ const sendActionFailed = (error) => {
   const exception = {
     isException: true,
     isError: true,
-    stackFormatIsV8: true,
     name: error.name,
     message: `${error.name}: ${error.message}`,
     stack: stackString,
-    stackNormalized,
+    stackTrace,
     site: getSite(firstCallSite),
   };
 

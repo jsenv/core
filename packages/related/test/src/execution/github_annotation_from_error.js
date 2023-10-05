@@ -8,16 +8,13 @@ export const githubAnnotationFromError = (
     return {
       annotation_level: "failure",
       title: error.site.message,
-      message: replaceUrls(
-        error.stackNormalized,
-        ({ match, url, line, column }) => {
-          if (urlIsInsideOf(url, rootDirectoryUrl)) {
-            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-            match = stringifyUrlSite({ url: relativeUrl, line, column });
-          }
-          return match;
-        },
-      ),
+      message: replaceUrls(error.stackTrace, ({ match, url, line, column }) => {
+        if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          match = stringifyUrlSite({ url: relativeUrl, line, column });
+        }
+        return match;
+      }),
       ...(typeof error.site.line === "number"
         ? {
             start_line: error.site.line,
