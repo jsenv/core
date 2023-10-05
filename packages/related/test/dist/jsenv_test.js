@@ -7,6 +7,7 @@ import process$1, { memoryUsage } from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
+import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import { createRequire } from "node:module";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { createServer } from "node:net";
@@ -3977,38 +3978,44 @@ const createExecutionLog = (
     executionResult,
     startMs,
     endMs,
+    nowMs,
+    timeEllapsed,
+    memoryHeap,
+    counters,
   },
   {
     logShortForCompletedExecutions,
-    counters,
     logRuntime,
     logEachDuration,
-    timeEllapsed,
-    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
   },
 ) => {
   const { status } = executionResult;
-  const descriptionFormatter = descriptionFormatters[status];
-  const description = descriptionFormatter({
-    index: executionIndex,
-    total: counters.total,
-    executionParams,
-  });
-  const summary = createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap,
-  });
+  const label = formatExecutionLabel(
+    {
+      executionIndex,
+      executionParams,
+      status,
+      timeEllapsed,
+      memoryHeap,
+      counters,
+    },
+    {
+      logTimeUsage,
+      logMemoryHeapUsage,
+    },
+  );
+
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
-    log = `${description}${summary}`;
+    log = label;
   } else {
     const { consoleCalls = [], errors = [] } = executionResult;
     const consoleOutput = formatConsoleCalls(consoleCalls);
     const errorsOutput = formatErrors(errors);
     log = formatExecution({
-      label: `${description}${summary}`,
+      label,
       details: {
         file: fileRelativeUrl,
         ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
@@ -4016,7 +4023,7 @@ const createExecutionLog = (
           ? {
               duration:
                 status === "executing"
-                  ? msAsEllapsedTime(Date.now() - startMs)
+                  ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
                   : msAsDuration(endMs - startMs),
             }
           : {}),
@@ -4042,6 +4049,34 @@ const createExecutionLog = (
     return `${log}\n\n`;
   }
   return log;
+};
+
+const formatExecutionLabel = (
+  {
+    executionIndex,
+    executionParams,
+    status,
+    timeEllapsed,
+    memoryHeap,
+    counters,
+  },
+  { logTimeUsage, logMemoryHeapUsage } = {},
+) => {
+  const descriptionFormatter = descriptionFormatters[status];
+  const description = descriptionFormatter({
+    index: executionIndex,
+    total: counters.total,
+    executionParams,
+  });
+  const summary = createIntermediateSummary({
+    executionIndex,
+    counters,
+    timeEllapsed,
+    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
+  });
+  return `${description}${summary}`;
 };
 
 const formatErrors = (errors) => {
@@ -4071,7 +4106,7 @@ ${output.join(`\n`)}
 ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 };
 
-const createSummaryLog = (
+const formatSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
 ${createAllExecutionsSummary(summary)}
@@ -4094,6 +4129,8 @@ const createIntermediateSummary = ({
   counters,
   memoryHeap,
   timeEllapsed,
+  logTimeUsage,
+  logMemoryHeapUsage,
 }) => {
   const parts = [];
   if (executionIndex > 0 || counters.done > 0) {
@@ -4106,10 +4143,10 @@ const createIntermediateSummary = ({
       }),
     );
   }
-  if (timeEllapsed) {
+  if (logTimeUsage && timeEllapsed) {
     parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
   }
-  if (memoryHeap) {
+  if (logMemoryHeapUsage && memoryHeap) {
     parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
   }
   if (parts.length === 0) {
@@ -4549,6 +4586,9 @@ const executeSteps = async (
           executionResult: {
             status: "executing",
           },
+          counters,
+          timeEllapsed: Date.now() - startMs,
+          memoryHeap: memoryUsage().heapUsed,
         };
         if (typeof executionParams.allocatedMs === "function") {
           executionParams.allocatedMs =
@@ -4560,17 +4600,10 @@ const executeSteps = async (
             log: executionLog,
             render: () => {
               return createExecutionLog(beforeExecutionInfo, {
-                counters,
                 logRuntime,
                 logEachDuration,
-                ...(logTimeUsage
-                  ? {
-                      timeEllapsed: Date.now() - startMs,
-                    }
-                  : {}),
-                ...(logMemoryHeapUsage
-                  ? { memoryHeap: memoryUsage().heapUsed }
-                  : {}),
+                logTimeUsage,
+                logMemoryHeapUsage,
               });
             },
           });
@@ -4638,7 +4671,6 @@ const executeSteps = async (
         if (executionLogsEnabled) {
           const log = createExecutionLog(afterExecutionInfo, {
             logShortForCompletedExecutions,
-            counters,
             logRuntime,
             logEachDuration,
             ...(logTimeUsage
@@ -4693,7 +4725,7 @@ const executeSteps = async (
       duration: Date.now() - startMs,
     };
     if (logSummary) {
-      const summaryLog = createSummaryLog(summary);
+      const summaryLog = formatSummaryLog(summary);
       rawOutput += stripAnsi(summaryLog);
       logger.info(summaryLog);
     }
@@ -4832,6 +4864,15 @@ const executeTestPlan = async ({
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
 
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
+  githubCheckLogLevel,
+  githubCheckName = "jsenv tests",
+  githubCheckTitle,
+  githubCheckToken,
+  githubCheckRepositoryOwner,
+  githubCheckRepositoryName,
+  githubCheckCommitSha,
+
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
     "file:///**/node_modules/": false,
@@ -4944,6 +4985,19 @@ const executeTestPlan = async ({
         teardown,
         logger,
       });
+    }
+
+    if (githubCheckEnabled) {
+      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+        ? readGitHubWorkflowEnv()
+        : {};
+      githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
+      githubCheckRepositoryOwner =
+        githubCheckRepositoryOwner || githubCheckInfoFromEnv.githubToken;
+      githubCheckRepositoryName =
+        githubCheckRepositoryName || githubCheckInfoFromEnv.githubToken;
+      githubCheckCommitSha =
+        githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
     }
 
     if (coverageEnabled) {
@@ -5079,6 +5133,68 @@ const executeTestPlan = async ({
     rootDirectoryUrl,
   });
   logger.debug(`${executionSteps.length} executions planned`);
+  let beforeExecutionCallback;
+  let afterExecutionCallback;
+  let afterAllExecutionCallback = () => {};
+  console.log({ githubCheckEnabled });
+  if (githubCheckEnabled) {
+    const githubCheckRun = await startGithubCheckRun({
+      logLevel: githubCheckLogLevel,
+      githubToken: githubCheckToken,
+      repositoryOwner: githubCheckRepositoryOwner,
+      repositoryName: githubCheckRepositoryName,
+      commitSha: githubCheckCommitSha,
+      checkName: githubCheckName,
+      checkTitle: `Tests executions`,
+      checkSummary: `${executionSteps.length} files will be executed`,
+    });
+    beforeExecutionCallback = (beforeExecutionInfo) => {
+      githubCheckRun.progress({
+        summary: formatExecutionLabel(beforeExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      });
+    };
+    afterExecutionCallback = (afterExecutionInfo) => {
+      const annotations = [];
+      const { errors = [] } = afterExecutionInfo;
+      for (const error of errors) {
+        const errorSource = error.stack || error.message || error;
+        annotations.push({
+          annotation_level: "failure",
+          path: afterExecutionInfo.fileRelativeUrl,
+          // pour trouver la ligne on pourrait parse la stack trace non?
+          // dailleurs on devrait plutot faire ça
+          // pour "path" aussi, et non pas utiliser fileRelativeUrl
+          // start_line: "",
+          // end_line: "",
+          // title: "",
+          message: errorSource,
+        });
+      }
+
+      githubCheckRun.progress({
+        summary: formatExecutionLabel(afterExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      });
+    };
+    afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      if (
+        testPlanSummary.counters.total !== testPlanSummary.counters.complete
+      ) {
+        await githubCheckRun.fail({
+          summary: formatSummaryLog(testPlanSummary),
+        });
+        return;
+      }
+      await githubCheckRun.pass({
+        summary: formatSummaryLog(testPlanSummary),
+      });
+    };
+  }
 
   const result = await executeSteps(executionSteps, {
     signal,
@@ -5103,6 +5219,14 @@ const executeTestPlan = async ({
     cooldownBetweenExecutions,
     gcBetweenExecutions,
 
+    githubCheckEnabled,
+    githubCheckName,
+    githubCheckTitle,
+    githubCheckToken,
+    githubCheckRepositoryOwner,
+    githubCheckRepositoryName,
+    githubCheckCommitSha,
+
     coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
@@ -5110,11 +5234,14 @@ const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
+
+    beforeExecutionCallback,
+    afterExecutionCallback,
   });
-  if (
-    updateProcessExitCode &&
-    result.planSummary.counters.total !== result.planSummary.counters.completed
-  ) {
+
+  const hasFailed =
+    result.planSummary.counters.total !== result.planSummary.counters.complete;
+  if (updateProcessExitCode && hasFailed) {
     process.exitCode = 1;
   }
   const planCoverage = result.planCoverage;
@@ -5161,12 +5288,15 @@ const executeTestPlan = async ({
     }
     await Promise.all(promises);
   }
-  return {
+
+  const returnValue = {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage,
   };
+  await afterAllExecutionCallback(returnValue);
+  return returnValue;
 };
 
 const memoize = (compute) => {
