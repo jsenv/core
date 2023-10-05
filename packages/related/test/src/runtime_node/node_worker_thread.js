@@ -16,8 +16,8 @@ import { EXIT_CODES } from "./exit_codes.js";
 import { IMPORTMAP_NODE_LOADER_FILE_URL } from "./importmap_node_loader_file_url.js";
 import { NO_EXPERIMENTAL_WARNING_FILE_URL } from "./no_experimental_warnings_file_url.js";
 
-const CONTROLLABLE_WORKER_THREAD_URL = new URL(
-  "./controllable_worker_thread.mjs?entry_point",
+const CONTROLLED_WORKER_THREAD_URL = new URL(
+  "./node_worker_thread_controlled.mjs?entry_point",
   import.meta.url,
 ).href;
 
@@ -94,7 +94,7 @@ export const nodeWorkerThread = ({
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
       const workerThread = new Worker(
-        fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL),
+        fileURLToPath(CONTROLLED_WORKER_THREAD_URL),
         {
           env: envForWorkerThread,
           execArgv: execArgvForWorkerThread,

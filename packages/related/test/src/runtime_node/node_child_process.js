@@ -15,8 +15,8 @@ import { EXIT_CODES } from "./exit_codes.js";
 import { IMPORTMAP_NODE_LOADER_FILE_URL } from "./importmap_node_loader_file_url.js";
 import { NO_EXPERIMENTAL_WARNING_FILE_URL } from "./no_experimental_warnings_file_url.js";
 
-const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
-  "./controllable_child_process.mjs?entry_point",
+const CONTROLLED_CHILD_PROCESS_URL = new URL(
+  "./node_child_process_controlled.mjs?entry_point",
   import.meta.url,
 ).href;
 
@@ -103,10 +103,10 @@ export const nodeChildProcess = ({
       };
       logger[logProcessCommand ? "info" : "debug"](
         `${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(
-          CONTROLLABLE_CHILD_PROCESS_URL,
+          CONTROLLED_CHILD_PROCESS_URL,
         )}`,
       );
-      const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
+      const childProcess = fork(fileURLToPath(CONTROLLED_CHILD_PROCESS_URL), {
         execArgv,
         // silent: true
         stdio: ["pipe", "pipe", "pipe", "ipc"],
