@@ -8,6 +8,10 @@ import {
   assertAndNormalizeFileUrl,
 } from "@jsenv/filesystem";
 import { createLogger, createDetailedMessage } from "@jsenv/log";
+import {
+  startGithubCheckRun,
+  readGitHubWorkflowEnv,
+} from "@jsenv/github-check-run";
 
 import { createTeardown } from "../helpers/teardown.js";
 import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_file.js";
@@ -63,6 +67,14 @@ export const executeTestPlan = async ({
   keepRunning = false,
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
+
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
+  githubCheckName = "jsenv tests",
+  githubCheckTitle,
+  githubCheckToken,
+  githubCheckRepositoryOwner,
+  githubCheckRepositoryName,
+  githubCheckCommitSha,
 
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
@@ -176,6 +188,19 @@ export const executeTestPlan = async ({
         teardown,
         logger,
       });
+    }
+
+    if (githubCheckEnabled) {
+      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+        ? readGitHubWorkflowEnv()
+        : {};
+      githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
+      githubCheckRepositoryOwner =
+        githubCheckRepositoryOwner || githubCheckInfoFromEnv.githubToken;
+      githubCheckRepositoryName =
+        githubCheckRepositoryName || githubCheckInfoFromEnv.githubToken;
+      githubCheckCommitSha =
+        githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
     }
 
     if (coverageEnabled) {
@@ -311,6 +336,30 @@ export const executeTestPlan = async ({
     rootDirectoryUrl,
   });
   logger.debug(`${executionSteps.length} executions planned`);
+  let beforeExecutionCallback;
+  let afterExecutionCallback;
+  if (githubCheckEnabled) {
+    const githubCheckRun = await startGithubCheckRun({
+      logLevel,
+      githubToken: githubCheckToken,
+      repositoryOwner: githubCheckRepositoryOwner,
+      repositoryName: githubCheckRepositoryName,
+      commitSha: githubCheckCommitSha,
+      checkName: githubCheckName,
+      checkTitle: `Tests executions`,
+      checkSummary: `${executionSteps.length} files will be executed`,
+    });
+    beforeExecutionCallback = ({ intermediateSummary }) => {
+      githubCheckRun.progress({
+        summary: intermediateSummary,
+      });
+    };
+    afterExecutionCallback = ({ intermediateSummary }) => {
+      githubCheckRun.progress({
+        summary: intermediateSummary,
+      });
+    };
+  }
 
   const result = await executeSteps(executionSteps, {
     signal,
@@ -335,6 +384,14 @@ export const executeTestPlan = async ({
     cooldownBetweenExecutions,
     gcBetweenExecutions,
 
+    githubCheckEnabled,
+    githubCheckName,
+    githubCheckTitle,
+    githubCheckToken,
+    githubCheckRepositoryOwner,
+    githubCheckRepositoryName,
+    githubCheckCommitSha,
+
     coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
@@ -342,6 +399,9 @@ export const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
+
+    beforeExecutionCallback,
+    afterExecutionCallback,
   });
   if (
     updateProcessExitCode &&

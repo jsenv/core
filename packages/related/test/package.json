@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "1.6.9",
+  "version": "1.7.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -42,6 +42,7 @@
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/uneval": "1.6.0",
     "@jsenv/utils": "2.0.1",
+    "@jsenv/github-check-run": "0.0.3",
     "v8-to-istanbul": "9.1.0",
     "istanbul-lib-coverage": "3.2.0",
     "istanbul-lib-instrument": "6.0.0",

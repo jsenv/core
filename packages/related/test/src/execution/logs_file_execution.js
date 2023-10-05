@@ -20,14 +20,16 @@ export const createExecutionLog = (
     startMs,
     endMs,
     nowMs,
+    timeEllapsed,
+    memoryHeap,
   },
   {
     logShortForCompletedExecutions,
     counters,
     logRuntime,
     logEachDuration,
-    timeEllapsed,
-    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
   },
 ) => {
   const { status } = executionResult;
@@ -42,6 +44,8 @@ export const createExecutionLog = (
     counters,
     timeEllapsed,
     memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
   });
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
@@ -137,6 +141,8 @@ const createIntermediateSummary = ({
   counters,
   memoryHeap,
   timeEllapsed,
+  logTimeUsage,
+  logMemoryHeapUsage,
 }) => {
   const parts = [];
   if (executionIndex > 0 || counters.done > 0) {
@@ -149,10 +155,10 @@ const createIntermediateSummary = ({
       }),
     );
   }
-  if (timeEllapsed) {
+  if (logTimeUsage && timeEllapsed) {
     parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
   }
-  if (memoryHeap) {
+  if (logMemoryHeapUsage && memoryHeap) {
     parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
   }
   if (parts.length === 0) {

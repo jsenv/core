@@ -177,6 +177,8 @@ export const executeSteps = async (
           executionResult: {
             status: "executing",
           },
+          timeEllapsed: Date.now() - startMs,
+          memoryHeap: memoryUsage().heapUsed,
         };
         if (typeof executionParams.allocatedMs === "function") {
           executionParams.allocatedMs =
@@ -191,14 +193,8 @@ export const executeSteps = async (
                 counters,
                 logRuntime,
                 logEachDuration,
-                ...(logTimeUsage
-                  ? {
-                      timeEllapsed: Date.now() - startMs,
-                    }
-                  : {}),
-                ...(logMemoryHeapUsage
-                  ? { memoryHeap: memoryUsage().heapUsed }
-                  : {}),
+                logTimeUsage,
+                logMemoryHeapUsage,
               });
             },
           });
