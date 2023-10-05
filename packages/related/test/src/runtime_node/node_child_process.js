@@ -356,8 +356,7 @@ const onceChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       childProcess.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "");
+      callback(message.data ? JSON.parse(message.data) : "");
     }
   };
   childProcess.on("message", onmessage);

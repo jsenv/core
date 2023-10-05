@@ -425,6 +425,7 @@ window.__supervisor__ = (() => {
     ) => {
       const exception = {
         reason,
+        isException: true,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         reportedBy,
         code: null,
@@ -432,7 +433,7 @@ window.__supervisor__ = (() => {
         stack: null,
         stackFormatIsV8: null,
         stackSourcemapped: null,
-        originalStack: null,
+        stackNormalized: null,
         meta: null,
         site: {
           isInline: null,
@@ -463,12 +464,22 @@ window.__supervisor__ = (() => {
           if (Error.captureStackTrace) {
             // stackTrace formatted by V8
             exception.message = message;
-            exception.stack = getErrorStackWithoutErrorMessage(error);
+            exception.stack = error.stack;
             exception.stackFormatIsV8 = true;
             exception.stackSourcemapped = true;
+            exception.stackNormalized = getErrorStackWithoutErrorMessage(error);
           } else {
             exception.message = message;
-            exception.stack = error.stack ? `  ${error.stack}` : null;
+            if (error.stack) {
+              const name = error.name || "Error";
+              const message = error.message || "";
+              const stackString = error.stack;
+              exception.stack = `${name}: ${message}\n  ${stackString}`;
+              exception.stackNormalized = stackString;
+            } else {
+              exception.stack = null;
+              exception.stackNormalized = null;
+            }
             exception.stackFormatIsV8 = false;
             exception.stackSourcemapped = false;
           }
@@ -530,9 +541,8 @@ window.__supervisor__ = (() => {
       // first create a version of the stack with file://
       // (and use it to locate exception url+line+column)
       if (exception.stack) {
-        exception.originalStack = exception.stack;
-        exception.stack = replaceUrls(
-          exception.originalStack,
+        exception.stackNormalized = replaceUrls(
+          exception.stackNormalized,
           (serverUrlSite) => {
             const fileUrlSite = resolveUrlSite(serverUrlSite);
             if (exception.site.url === null) {

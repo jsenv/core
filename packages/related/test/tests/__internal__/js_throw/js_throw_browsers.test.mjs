@@ -41,13 +41,13 @@ const test = async (params) => {
 
   // error stack
   if (params.runtime.name === "chromium") {
-    const actual = error.originalStack;
+    const actual = error.stackNormalized;
     const expected = `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
     at ${devServer.origin}/main.js:3:1`;
     assert({ actual, expected, context: "chromium" });
   }
   if (params.runtime.name === "firefox") {
-    const actual = error.originalStack;
+    const actual = error.stackNormalized;
     const expected = `  triggerError@${devServer.origin}/trigger_error.js:2:9
 @${devServer.origin}/main.js:3:1
 `;
@@ -55,7 +55,7 @@ const test = async (params) => {
   }
   if (params.runtime.name === "webkit") {
     const expected = `module code@${devServer.origin}/main.js:3:13`;
-    const actual = error.originalStack.slice(0, expected.length);
+    const actual = error.stackNormalized.slice(0, expected.length);
     assert({ actual, expected, context: "webkit" });
   }
 };

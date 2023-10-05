@@ -24,6 +24,7 @@ import {
   formatExecutionLabel,
   formatSummaryLog,
 } from "./logs_file_execution.js";
+import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -368,18 +369,12 @@ export const executeTestPlan = async ({
       const annotations = [];
       const { errors = [] } = afterExecutionInfo;
       for (const error of errors) {
-        const errorSource = error.stack || error.message || error;
-        annotations.push({
-          annotation_level: "failure",
-          path: afterExecutionInfo.fileRelativeUrl,
-          // pour trouver la ligne on pourrait parse la stack trace non?
-          // dailleurs on devrait plutot faire ça
-          // pour "path" aussi, et non pas utiliser fileRelativeUrl
-          // start_line: "",
-          // end_line: "",
-          // title: "",
-          message: errorSource,
-        });
+        annotations.push(
+          githubAnnotationFromError(error, {
+            rootDirectoryUrl,
+            executionInfo: afterExecutionInfo,
+          }),
+        );
       }
 
       githubCheckRun.progress({
