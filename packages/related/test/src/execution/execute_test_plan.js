@@ -20,6 +20,10 @@ import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { executionStepsFromTestPlan } from "./execution_steps.js";
 import { executeSteps } from "./execute_steps.js";
+import {
+  formatExecutionLabel,
+  formatSummaryLog,
+} from "./logs_file_execution.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -338,6 +342,7 @@ export const executeTestPlan = async ({
   logger.debug(`${executionSteps.length} executions planned`);
   let beforeExecutionCallback;
   let afterExecutionCallback;
+  let afterAllExecutionCallback = () => {};
   if (githubCheckEnabled) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel,
@@ -349,14 +354,50 @@ export const executeTestPlan = async ({
       checkTitle: `Tests executions`,
       checkSummary: `${executionSteps.length} files will be executed`,
     });
-    beforeExecutionCallback = ({ intermediateSummary }) => {
+    beforeExecutionCallback = (beforeExecutionInfo) => {
       githubCheckRun.progress({
-        summary: intermediateSummary,
+        summary: formatExecutionLabel(beforeExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
       });
     };
-    afterExecutionCallback = ({ intermediateSummary }) => {
+    afterExecutionCallback = (afterExecutionInfo) => {
+      const annotations = [];
+      const { errors = [] } = afterExecutionInfo;
+      for (const error of errors) {
+        const errorSource = error.stack || error.message || error;
+        annotations.push({
+          annotation_level: "failure",
+          path: afterExecutionInfo.fileRelativeUrl,
+          // pour trouver la ligne on pourrait parse la stack trace non?
+          // dailleurs on devrait plutot faire ça
+          // pour "path" aussi, et non pas utiliser fileRelativeUrl
+          // start_line: "",
+          // end_line: "",
+          // title: "",
+          message: errorSource,
+        });
+      }
+
       githubCheckRun.progress({
-        summary: intermediateSummary,
+        summary: formatExecutionLabel(afterExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      });
+    };
+    afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      if (
+        testPlanSummary.counters.total !== testPlanSummary.counters.complete
+      ) {
+        await githubCheckRun.fail({
+          summary: formatSummaryLog(testPlanSummary),
+        });
+        return;
+      }
+      await githubCheckRun.pass({
+        summary: formatSummaryLog(testPlanSummary),
       });
     };
   }
@@ -403,10 +444,10 @@ export const executeTestPlan = async ({
     beforeExecutionCallback,
     afterExecutionCallback,
   });
-  if (
-    updateProcessExitCode &&
-    result.planSummary.counters.total !== result.planSummary.counters.completed
-  ) {
+
+  const hasFailed =
+    result.planSummary.counters.total !== result.planSummary.counters.complete;
+  if (updateProcessExitCode && hasFailed) {
     process.exitCode = 1;
   }
   const planCoverage = result.planCoverage;
@@ -453,10 +494,13 @@ export const executeTestPlan = async ({
     }
     await Promise.all(promises);
   }
-  return {
+
+  const returnValue = {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage,
   };
+  await afterAllExecutionCallback(returnValue);
+  return returnValue;
 };

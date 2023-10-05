@@ -22,10 +22,10 @@ export const createExecutionLog = (
     nowMs,
     timeEllapsed,
     memoryHeap,
+    counters,
   },
   {
     logShortForCompletedExecutions,
-    counters,
     logRuntime,
     logEachDuration,
     logTimeUsage,
@@ -33,29 +33,30 @@ export const createExecutionLog = (
   },
 ) => {
   const { status } = executionResult;
-  const descriptionFormatter = descriptionFormatters[status];
-  const description = descriptionFormatter({
-    index: executionIndex,
-    total: counters.total,
-    executionParams,
-  });
-  const summary = createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap,
-    logTimeUsage,
-    logMemoryHeapUsage,
-  });
+  const label = formatExecutionLabel(
+    {
+      executionIndex,
+      executionParams,
+      status,
+      timeEllapsed,
+      memoryHeap,
+      counters,
+    },
+    {
+      logTimeUsage,
+      logMemoryHeapUsage,
+    },
+  );
+
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
-    log = `${description}${summary}`;
+    log = label;
   } else {
     const { consoleCalls = [], errors = [] } = executionResult;
     const consoleOutput = formatConsoleCalls(consoleCalls);
     const errorsOutput = formatErrors(errors);
     log = formatExecution({
-      label: `${description}${summary}`,
+      label,
       details: {
         file: fileRelativeUrl,
         ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
@@ -91,6 +92,34 @@ export const createExecutionLog = (
   return log;
 };
 
+export const formatExecutionLabel = (
+  {
+    executionIndex,
+    executionParams,
+    status,
+    timeEllapsed,
+    memoryHeap,
+    counters,
+  },
+  { logTimeUsage, logMemoryHeapUsage } = {},
+) => {
+  const descriptionFormatter = descriptionFormatters[status];
+  const description = descriptionFormatter({
+    index: executionIndex,
+    total: counters.total,
+    executionParams,
+  });
+  const summary = createIntermediateSummary({
+    executionIndex,
+    counters,
+    timeEllapsed,
+    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
+  });
+  return `${description}${summary}`;
+};
+
 const formatErrors = (errors) => {
   if (errors.length === 0) {
     return "";
@@ -118,7 +147,7 @@ ${output.join(`\n`)}
 ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 };
 
-export const createSummaryLog = (
+export const formatSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
 ${createAllExecutionsSummary(summary)}
