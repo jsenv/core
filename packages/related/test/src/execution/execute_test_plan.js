@@ -73,6 +73,7 @@ export const executeTestPlan = async ({
   gcBetweenExecutions = logMemoryHeapUsage,
 
   githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
+  githubCheckLogLevel,
   githubCheckName = "jsenv tests",
   githubCheckTitle,
   githubCheckToken,
@@ -343,9 +344,10 @@ export const executeTestPlan = async ({
   let beforeExecutionCallback;
   let afterExecutionCallback;
   let afterAllExecutionCallback = () => {};
+  console.log({ githubCheckEnabled });
   if (githubCheckEnabled) {
     const githubCheckRun = await startGithubCheckRun({
-      logLevel,
+      logLevel: githubCheckLogLevel,
       githubToken: githubCheckToken,
       repositoryOwner: githubCheckRepositoryOwner,
       repositoryName: githubCheckRepositoryName,
