@@ -4969,7 +4969,8 @@ const executeTestPlan = async ({
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
 
-  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW) &&
+    Boolean(process.env.GITHUB_TOKEN),
   githubCheckLogLevel,
   githubCheckName = "jsenv tests",
   githubCheckTitle,
@@ -5271,7 +5272,6 @@ const executeTestPlan = async ({
           }),
         );
       }
-
       githubCheckRun.progress({
         summary: formatExecutionLabel(afterExecutionInfo, {
           logTimeUsage,
