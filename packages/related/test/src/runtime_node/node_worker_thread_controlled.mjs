@@ -1,6 +1,6 @@
 import { parentPort } from "node:worker_threads";
-import { uneval } from "@jsenv/uneval";
 
+import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
 const ACTIONS_AVAILABLE = {
@@ -12,20 +12,13 @@ const ACTION_RESPONSE_STATUS_FAILED = "action-failed";
 const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
 
 const sendActionFailed = (error) => {
-  if (error.hasOwnProperty("toString")) {
-    delete error.toString;
-  }
+  const exception = createException(error);
   sendToParent(
     ACTION_RESPONSE_EVENT_NAME,
-    // process.send algorithm does not send non enumerable values
-    // so use @jsenv/uneval
-    uneval(
-      {
-        status: ACTION_RESPONSE_STATUS_FAILED,
-        value: error,
-      },
-      { ignoreSymbols: true },
-    ),
+    JSON.stringify({
+      status: ACTION_RESPONSE_STATUS_FAILED,
+      value: exception,
+    }),
   );
 };
 

@@ -1,3 +1,4 @@
+import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
 const ACTIONS_AVAILABLE = {
@@ -25,34 +26,7 @@ const ACTION_RESPONSE_STATUS_FAILED = "action-failed";
 const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
 
 const sendActionFailed = (error) => {
-  const { prepareStackTrace } = Error;
-  let stackObject;
-  let stackTrace;
-  Error.prepareStackTrace = (e, secondArg) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    stackObject = secondArg;
-    const name = error.name || "Error";
-    const message = error.message || "";
-    const stackString = secondArg
-      .map((callSite) => `  at ${callSite}`)
-      .join("\n");
-    stackTrace = stackString;
-    return `${name}: ${message}\n  ${stackString}`;
-  };
-  // eslint-disable-next-line no-unused-expressions
-  const stackString = error.stack;
-  const [firstCallSite] = stackObject;
-
-  const exception = {
-    isException: true,
-    isError: true,
-    name: error.name,
-    message: `${error.name}: ${error.message}`,
-    stack: stackString,
-    stackTrace,
-    site: getSite(firstCallSite),
-  };
-
+  const exception = createException(error);
   sendToParent(
     ACTION_RESPONSE_EVENT_NAME,
     JSON.stringify({
@@ -60,65 +34,6 @@ const sendActionFailed = (error) => {
       value: exception,
     }),
   );
-};
-
-// const getErrorStackWithoutErrorMessage = (error) => {
-//   let stack = error.stack;
-//   if (!stack) return "";
-//   const messageInStack = `${error.name}: ${error.message}`;
-//   if (stack.startsWith(messageInStack)) {
-//     stack = stack.slice(messageInStack.length);
-//   }
-//   const nextLineIndex = stack.indexOf("\n");
-//   if (nextLineIndex > -1) {
-//     stack = stack.slice(nextLineIndex + 1);
-//   }
-//   return stack;
-// };
-const getSite = (firstCallSite) => {
-  const source =
-    firstCallSite.getFileName() || firstCallSite.getScriptNameOrSourceURL();
-  if (source) {
-    const line = firstCallSite.getLineNumber();
-    const column = firstCallSite.getColumnNumber() - 1;
-    return {
-      source,
-      line,
-      column,
-    };
-  }
-  // Code called using eval() needs special handling
-  if (firstCallSite.isEval()) {
-    const origin = firstCallSite.getEvalOrigin();
-    if (origin) {
-      return getEvalSite(origin);
-    }
-    return {};
-  }
-  return {};
-};
-const getEvalSite = (origin) => {
-  // Most eval() calls are in this format
-  const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(
-    origin,
-  );
-  if (topLevelEvalMatch) {
-    const source = topLevelEvalMatch[2];
-    const line = Number(topLevelEvalMatch[3]);
-    const column = topLevelEvalMatch[4] - 1;
-    return {
-      source,
-      line,
-      column,
-    };
-  }
-
-  // Parse nested eval() calls using recursion
-  const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
-  if (nestedEvalMatch) {
-    return getEvalSite(nestedEvalMatch[2]);
-  }
-  return {};
 };
 
 const sendActionCompleted = (value) => {

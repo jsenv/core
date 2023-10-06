@@ -1,8 +1,6 @@
 import { assert } from "@jsenv/assert";
 import { execute, nodeChildProcess } from "@jsenv/test";
 
-// TODO: test also worker_thread
-
 const test = async (params) => {
   const { errors } = await execute({
     // logLevel: "debug"
@@ -24,23 +22,22 @@ const clientDirectoryUrl = new URL("./client", import.meta.url).href;
 
 const actual = {
   isException: error.isException,
+  name: error.name,
   message: error.message,
+  stack: error.stack,
   site: error.site,
 };
 const expected = {
   isException: true,
-  message: "Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+  name: "Error",
+  message: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+  stack: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+  at triggerError (${clientDirectoryUrl}/trigger_error.js:2:9)
+  at ${clientDirectoryUrl}/main.js:3:1`),
   site: {
-    source: `${clientDirectoryUrl}/trigger_error.js`,
+    url: `${clientDirectoryUrl}/trigger_error.js`,
     line: 2,
     column: 8,
   },
 };
 assert({ actual, expected });
-
-{
-  const expected = `  at triggerError (${clientDirectoryUrl}/trigger_error.js:2:9)
-  at ${clientDirectoryUrl}/main.js:3:1`;
-  const actual = error.stackTrace.slice(0, expected.length);
-  assert({ actual, expected });
-}

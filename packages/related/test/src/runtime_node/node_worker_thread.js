@@ -281,8 +281,7 @@ const onceWorkerThreadMessage = (workerThread, type, callback) => {
   const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       workerThread.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : undefined);
+      callback(message.data ? JSON.parse(message.data) : undefined);
     }
   };
   workerThread.on("message", onmessage);
