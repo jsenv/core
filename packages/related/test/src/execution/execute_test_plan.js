@@ -389,7 +389,8 @@ ${summary}
         }),
       );
       const annotations = [];
-      const { errors = [] } = afterExecutionInfo;
+      const { executionResult } = afterExecutionInfo;
+      const { errors = [] } = executionResult;
       for (const error of errors) {
         const annotation = githubAnnotationFromError(error, {
           rootDirectoryUrl,
