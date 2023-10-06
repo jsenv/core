@@ -40,6 +40,6 @@ jobs:
       - name: Install node modules
         run: npm install
       - name: Run tests
-        run: node ./.github/workflows/check_run_playground/test.mjs
+        run: node --conditions=development ./.github/workflows/check_run_playground/test.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

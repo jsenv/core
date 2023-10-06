@@ -5264,9 +5264,12 @@ const executeTestPlan = async ({
         }),
       );
       githubCheckLogger.debug(
-        `update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
+        `
+update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
 --- summary ---
-${summary}`,
+${summary}
+
+`,
       );
       githubCheckRun.progress({ summary });
     };
@@ -5287,13 +5290,14 @@ ${summary}`,
         annotations.push(annotation);
       }
       githubCheckLogger.debug(
-        `update github check after execution of ${
-          afterExecutionInfo.fileRelativeUrl
-        }
+        `
+update github check after execution of ${afterExecutionInfo.fileRelativeUrl}
 --- summary ---
 ${summary}
 --- annotations ---
-${JSON.stringify(annotations, null, "  ")}`,
+${JSON.stringify(annotations, null, "  ")}
+
+`,
       );
       githubCheckRun.progress({
         summary,
