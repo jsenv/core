@@ -435,6 +435,11 @@ window.__supervisor__ = (() => {
         stackSourcemapped: null,
         stackOriginal: "", // the stack from runtime, not normalized to v8
         stackTrace: "", // the stack trace (without error name and message)
+        withServerUrls: {
+          message: "",
+          stackTrace: "",
+          stack: "",
+        },
         meta: null,
         site: {
           isInline: null,
@@ -551,23 +556,34 @@ window.__supervisor__ = (() => {
         }
         Object.assign(exception.site, fileUrlSite);
       }
+
+      exception.withServerUrls.message = exception.message;
+      exception.withServerUrls.stackTrace = exception.stackTrace;
+      exception.withServerUrls.stack = exception.stack;
+      exception.message = exception.message
+        ? replaceUrls(exception.message, (serverUrlSite) => {
+            const fileUrlSite = resolveUrlSite(serverUrlSite);
+            return stringifyUrlSite(fileUrlSite);
+          })
+        : "";
+      exception.stackTrace = exception.stackTrace
+        ? replaceUrls(exception.stackTrace, (serverUrlSite) => {
+            const fileUrlSite = resolveUrlSite(serverUrlSite);
+            if (exception.site.url === null) {
+              Object.assign(exception.site, fileUrlSite);
+            }
+            return stringifyUrlSite(fileUrlSite);
+          })
+        : "";
+      exception.stack = stringifyStack({
+        name: exception.name,
+        message: exception.message,
+        stackTrace: exception.stackTrace,
+      });
       exception.text = stringifyStack({
         name: exception.name,
-        message: exception.message
-          ? replaceUrls(exception.message, (serverUrlSite) => {
-              const fileUrlSite = resolveUrlSite(serverUrlSite);
-              return stringifyUrlSite(fileUrlSite);
-            })
-          : "",
-        stackTrace: exception.stackTrace
-          ? replaceUrls(exception.stackTrace, (serverUrlSite) => {
-              const fileUrlSite = resolveUrlSite(serverUrlSite);
-              if (exception.site.url === null) {
-                Object.assign(exception.site, fileUrlSite);
-              }
-              return stringifyUrlSite(fileUrlSite);
-            })
-          : "",
+        message: exception.message,
+        stackTrace: exception.stackTrace,
       });
       return exception;
     };

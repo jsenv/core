@@ -30,34 +30,28 @@ const test = async (params) => {
   const actual = {
     status,
     errorMessage: error.message,
+    errorStack: error.withServerUrls.stack,
     consoleCalls,
   };
+  const expectedErrorStack = {
+    chromium: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+    at triggerError (${devServer.origin}/trigger_error.js:2:9)
+    at ${devServer.origin}/main.js:3:1`),
+    firefox: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+triggerError@${devServer.origin}/trigger_error.js:2:9
+@${devServer.origin}/main.js:3:1`),
+    webkit: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+triggerError@${devServer.origin}/trigger_error.js:2:18
+module code@${devServer.origin}/main.js:3:13`),
+  }[params.runtime.name];
+
   const expected = {
     status: "failed",
     errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+    errorStack: expectedErrorStack,
     consoleCalls: [],
   };
   assert({ actual, expected });
-
-  // error stack
-  if (params.runtime.name === "chromium") {
-    const actual = error.stackTrace;
-    const expected = `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
-    at ${devServer.origin}/main.js:3:1`;
-    assert({ actual, expected, context: "chromium" });
-  }
-  if (params.runtime.name === "firefox") {
-    const actual = error.stackTrace;
-    const expected = `triggerError@${devServer.origin}/trigger_error.js:2:9
-@${devServer.origin}/main.js:3:1
-`;
-    assert({ actual, expected, context: "firefox" });
-  }
-  if (params.runtime.name === "webkit") {
-    const expected = `module code@${devServer.origin}/main.js:3:13`;
-    const actual = error.stackTrace.slice(0, expected.length);
-    assert({ actual, expected, context: "webkit" });
-  }
 };
 
 await test({ runtime: chromium() });

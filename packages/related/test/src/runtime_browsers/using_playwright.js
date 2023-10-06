@@ -402,15 +402,9 @@ export const createRuntimeUsingPlaywright = ({
         if (executionResult.status === "failed") {
           result.status = "failed";
           if (executionResult.exception) {
-            result.errors.push({
-              ...executionResult.exception,
-              stack: executionResult.exception.text,
-            });
+            result.errors.push(executionResult.exception);
           } else {
-            result.errors.push({
-              ...executionResult.error,
-              stack: executionResult.error.stack,
-            });
+            result.errors.push(executionResult.error);
           }
         }
       });
