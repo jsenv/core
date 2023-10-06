@@ -375,7 +375,6 @@ export const executeTestPlan = async ({
           }),
         );
       }
-
       githubCheckRun.progress({
         summary: formatExecutionLabel(afterExecutionInfo, {
           logTimeUsage,
