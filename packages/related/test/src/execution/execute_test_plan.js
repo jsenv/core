@@ -8,7 +8,7 @@ import {
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
 } from "@jsenv/filesystem";
-import { createLogger, createDetailedMessage } from "@jsenv/log";
+import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/log";
 import {
   startGithubCheckRun,
   readGitHubWorkflowEnv,
@@ -74,8 +74,7 @@ export const executeTestPlan = async ({
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
 
-  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW) &&
-    Boolean(process.env.GITHUB_TOKEN),
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
   githubCheckLogLevel,
   githubCheckName = "jsenv tests",
   githubCheckTitle,
@@ -198,6 +197,34 @@ export const executeTestPlan = async ({
       });
     }
 
+    if (githubCheckEnabled && !process.env.GITHUB_TOKEN) {
+      githubCheckEnabled = false;
+      const suggestions = [];
+      if (process.env.GITHUB_WORKFLOW_REF) {
+        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+        const refsIndex = workflowFileRef.indexOf("@refs/");
+        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        const workflowFilePath =
+          refsIndex === -1
+            ? workflowFileRef
+            : workflowFileRef.slice(0, refsIndex);
+        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+\`\`\`yml
+env:
+  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+\`\`\``);
+      }
+      suggestions.push(`Disable github check with githubCheckEnabled: false`);
+      logger.warn(
+        `${
+          UNICODE.WARNING
+        } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
+To prevent errors integration with Github check API is disabled.
+
+To fix this warning:
+- ${suggestions.join("\n- ")}`,
+      );
+    }
     if (githubCheckEnabled) {
       const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
         ? readGitHubWorkflowEnv()
@@ -415,16 +442,19 @@ ${JSON.stringify(annotations, null, "  ")}
       });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      const title = "File executions";
       const summary = stripAnsi(formatSummaryLog(testPlanSummary));
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
         await githubCheckRun.fail({
+          title,
           summary,
         });
         return;
       }
       await githubCheckRun.pass({
+        title,
         summary,
       });
     };
