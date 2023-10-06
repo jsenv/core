@@ -589,12 +589,13 @@ window.__supervisor__ = (() => {
     };
 
     const stringifyStack = ({ name, message, stackTrace }) => {
-      let stack = "";
-      if (name) {
-        stack += `${name}`;
-      }
-      if (message) {
-        stack += `: ${message}`;
+      let stack;
+      if (name && message) {
+        stack = `${name}: ${message}`;
+      } else if (message) {
+        stack = message;
+      } else {
+        stack = "";
       }
       if (stackTrace) {
         stack += `\n${stackTrace}`;

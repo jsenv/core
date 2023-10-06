@@ -53,6 +53,13 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     annotationLabel,
     expectedOverview = true,
   }) => {
+    if (actual.includes("^ unexpected character")) {
+      return {
+        actual: inspect(actual, { preserveLineBreaks: true }),
+        expected: inspect(expected, { preserveLineBreaks: true }),
+      };
+    }
+
     let details = "";
     let indexStart = i - charsToDisplayBefore;
     if (indexStart < 0) {
@@ -124,7 +131,9 @@ export const stringsComparisonToErrorMessage = (comparison) => {
         }
       }
     }
-    return details;
+    return {
+      details,
+    };
   };
 
   mismatch: {
@@ -136,7 +145,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
           actualChar,
         )} was found instead of ${inspect(expectedChar)} at index ${i}`;
         return createDetailedMessage(message, {
-          details: formatDetails({
+          ...formatDetails({
             charsToDisplayBefore: Math.floor(MAX_CHARS_AROUND_MISMATCH / 2),
             annotationLabel: `^ unexpected character, expected string continues with`,
           }),
@@ -162,7 +171,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
         message += `, ${missingCharacterCount} characters are missing`;
       }
       return createDetailedMessage(message, {
-        details: formatDetails({
+        ...formatDetails({
           charsToDisplayBefore: MAX_CHARS_AROUND_MISMATCH,
           charsToDisplayAfter: 0,
           annotationLabel: `^ expected string continues with`,
@@ -182,7 +191,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     }
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
     return createDetailedMessage(message, {
-      details: formatDetails({
+      ...formatDetails({
         charsToDisplayBefore: Math.floor(MAX_CHARS_AROUND_MISMATCH / 2),
         annotationLabel:
           expectedLength === 0
