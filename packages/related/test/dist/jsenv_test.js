@@ -5243,6 +5243,9 @@ const executeTestPlan = async ({
   let afterExecutionCallback;
   let afterAllExecutionCallback = () => {};
   if (githubCheckEnabled) {
+    const githubCheckLogger = createLogger({
+      logLevel: githubCheckLogLevel,
+    });
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheckLogLevel,
       githubToken: githubCheckToken,
@@ -5254,29 +5257,43 @@ const executeTestPlan = async ({
       checkSummary: `${executionSteps.length} files will be executed`,
     });
     beforeExecutionCallback = (beforeExecutionInfo) => {
-      githubCheckRun.progress({
-        summary: formatExecutionLabel(beforeExecutionInfo, {
-          logTimeUsage,
-          logMemoryHeapUsage,
-        }),
+      const summary = formatExecutionLabel(beforeExecutionInfo, {
+        logTimeUsage,
+        logMemoryHeapUsage,
       });
+      githubCheckLogger.debug(
+        `update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
+--- summary ---
+${summary}`,
+      );
+      githubCheckRun.progress({ summary });
     };
     afterExecutionCallback = (afterExecutionInfo) => {
+      const summary = formatExecutionLabel(afterExecutionInfo, {
+        logTimeUsage,
+        logMemoryHeapUsage,
+      });
       const annotations = [];
       const { errors = [] } = afterExecutionInfo;
       for (const error of errors) {
-        annotations.push(
-          githubAnnotationFromError(error, {
-            rootDirectoryUrl,
-            executionInfo: afterExecutionInfo,
-          }),
-        );
+        const annotation = githubAnnotationFromError(error, {
+          rootDirectoryUrl,
+          executionInfo: afterExecutionInfo,
+        });
+        annotations.push(annotation);
       }
+      githubCheckLogger.debug(
+        `update github check after execution of ${
+          afterExecutionInfo.fileRelativeUrl
+        }
+--- summary ---
+${summary}
+--- annotations ---
+${JSON.stringify(annotations, null, "  ")}`,
+      );
       githubCheckRun.progress({
-        summary: formatExecutionLabel(afterExecutionInfo, {
-          logTimeUsage,
-          logMemoryHeapUsage,
-        }),
+        summary,
+        annotations,
       });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
