@@ -4817,6 +4817,123 @@ const executeInParallel = async ({
   return executionResults;
 };
 
+const githubAnnotationFromError = (
+  error,
+  { rootDirectoryUrl, executionInfo },
+) => {
+  if (error.isException) {
+    return {
+      annotation_level: "failure",
+      title: error.site.message,
+      message: replaceUrls(error.stackTrace, ({ match, url, line, column }) => {
+        if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          match = stringifyUrlSite({ url: relativeUrl, line, column });
+        }
+        return match;
+      }),
+      ...(typeof error.site.line === "number"
+        ? {
+            start_line: error.site.line,
+            end_line: error.site.line,
+          }
+        : {}),
+    };
+  }
+  if (error.stack) {
+    const annotation = {
+      annotation_level: "failure",
+      path: executionInfo.fileRelativeUrl,
+    };
+    let firstSite = true;
+    const stack = replaceUrls(error.stack, ({ match, url, line, column }) => {
+      if (urlIsInsideOf(url, rootDirectoryUrl)) {
+        const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+        match = stringifyUrlSite({ url: relativeUrl, line, column });
+      }
+      if (firstSite) {
+        firstSite = false;
+        annotation.path = url;
+        annotation.start_line = line;
+        annotation.end_line = line;
+      }
+      return match;
+    });
+    annotation.message = stack;
+    return annotation;
+  }
+  if (error.message) {
+    return {
+      annotation_level: "failure",
+      path: executionInfo.fileRelativeUrl,
+      message: error.message,
+    };
+  }
+  return {
+    annotation_level: "failure",
+    path: executionInfo.fileRelativeUrl,
+    message: error,
+  };
+};
+
+const stringifyUrlSite = ({ url, line, column }) => {
+  let string = url;
+  if (typeof line === "number") {
+    string += `:${line}`;
+    if (typeof column === "number") {
+      string += `:${column}`;
+    }
+  }
+  return string;
+};
+
+const replaceUrls = (source, replace) => {
+  return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
+    let replacement = "";
+    const lastChar = match[match.length - 1];
+
+    // hotfix because our url regex sucks a bit
+    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+    if (endsWithSeparationChar) {
+      match = match.slice(0, -1);
+    }
+
+    const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
+    const lineAndColumMatch = match.match(lineAndColumnPattern);
+    if (lineAndColumMatch) {
+      const lineAndColumnString = lineAndColumMatch[0];
+      const lineString = lineAndColumMatch[1];
+      const columnString = lineAndColumMatch[2];
+      replacement = replace({
+        match: lineAndColumMatch,
+        url: match.slice(0, -lineAndColumnString.length),
+        line: lineString ? parseInt(lineString) : null,
+        column: columnString ? parseInt(columnString) : null,
+      });
+    } else {
+      const linePattern = /:([0-9]+)$/;
+      const lineMatch = match.match(linePattern);
+      if (lineMatch) {
+        const lineString = lineMatch[0];
+        replacement = replace({
+          match: lineMatch,
+          url: match.slice(0, -lineString.length),
+          line: lineString ? parseInt(lineString) : null,
+        });
+      } else {
+        replacement = replace({
+          match: lineMatch,
+          url: match,
+        });
+      }
+    }
+    if (endsWithSeparationChar) {
+      return `${replacement}${lastChar}`;
+    }
+    return replacement;
+  });
+};
+
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
@@ -5136,7 +5253,6 @@ const executeTestPlan = async ({
   let beforeExecutionCallback;
   let afterExecutionCallback;
   let afterAllExecutionCallback = () => {};
-  console.log({ githubCheckEnabled });
   if (githubCheckEnabled) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheckLogLevel,
@@ -5160,18 +5276,12 @@ const executeTestPlan = async ({
       const annotations = [];
       const { errors = [] } = afterExecutionInfo;
       for (const error of errors) {
-        const errorSource = error.stack || error.message || error;
-        annotations.push({
-          annotation_level: "failure",
-          path: afterExecutionInfo.fileRelativeUrl,
-          // pour trouver la ligne on pourrait parse la stack trace non?
-          // dailleurs on devrait plutot faire ça
-          // pour "path" aussi, et non pas utiliser fileRelativeUrl
-          // start_line: "",
-          // end_line: "",
-          // title: "",
-          message: errorSource,
-        });
+        annotations.push(
+          githubAnnotationFromError(error, {
+            rootDirectoryUrl,
+            executionInfo: afterExecutionInfo,
+          }),
+        );
       }
 
       githubCheckRun.progress({
@@ -5886,15 +5996,9 @@ const createRuntimeUsingPlaywright = ({
         if (executionResult.status === "failed") {
           result.status = "failed";
           if (executionResult.exception) {
-            result.errors.push({
-              ...executionResult.exception,
-              stack: executionResult.exception.text,
-            });
+            result.errors.push(executionResult.exception);
           } else {
-            result.errors.push({
-              ...executionResult.error,
-              stack: executionResult.error.stack,
-            });
+            result.errors.push(executionResult.error);
           }
         }
       });
@@ -6470,8 +6574,8 @@ const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL(
   import.meta.url,
 ).href;
 
-const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
-  "./controllable_child_process.mjs",
+const CONTROLLED_CHILD_PROCESS_URL = new URL(
+  "./node_child_process_controlled.mjs",
   import.meta.url,
 ).href;
 
@@ -6558,10 +6662,10 @@ const nodeChildProcess = ({
       };
       logger[logProcessCommand ? "info" : "debug"](
         `${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(
-          CONTROLLABLE_CHILD_PROCESS_URL,
+          CONTROLLED_CHILD_PROCESS_URL,
         )}`,
       );
-      const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
+      const childProcess = fork(fileURLToPath(CONTROLLED_CHILD_PROCESS_URL), {
         execArgv,
         // silent: true
         stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -6811,8 +6915,7 @@ const onceChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       childProcess.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "");
+      callback(message.data ? JSON.parse(message.data) : "");
     }
   };
   childProcess.on("message", onmessage);
@@ -6832,8 +6935,8 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 // https://nodejs.org/api/worker_threads.html
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 
-const CONTROLLABLE_WORKER_THREAD_URL = new URL(
-  "./controllable_worker_thread.mjs",
+const CONTROLLED_WORKER_THREAD_URL = new URL(
+  "./node_worker_thread_controlled.mjs",
   import.meta.url,
 ).href;
 
@@ -6910,7 +7013,7 @@ const nodeWorkerThread = ({
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
       const workerThread = new Worker(
-        fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL),
+        fileURLToPath(CONTROLLED_WORKER_THREAD_URL),
         {
           env: envForWorkerThread,
           execArgv: execArgvForWorkerThread,
@@ -7097,8 +7200,7 @@ const onceWorkerThreadMessage = (workerThread, type, callback) => {
   const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       workerThread.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : undefined);
+      callback(message.data ? JSON.parse(message.data) : undefined);
     }
   };
   workerThread.on("message", onmessage);
