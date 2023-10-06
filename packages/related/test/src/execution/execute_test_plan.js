@@ -377,7 +377,7 @@ ${summary}
 `,
       );
       githubCheckRun.progress({
-        title: "before exec title",
+        title: "File executions",
         summary,
       });
     };
@@ -408,7 +408,7 @@ ${JSON.stringify(annotations, null, "  ")}
 `,
       );
       githubCheckRun.progress({
-        title: "after exec title",
+        title: "File executions",
         summary,
         annotations,
       });
