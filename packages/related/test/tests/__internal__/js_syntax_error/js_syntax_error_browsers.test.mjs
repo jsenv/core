@@ -24,19 +24,20 @@ const test = async (params) => {
     ...params,
   });
   devServer.stop();
+  const [error] = errors;
   if (params.runtime.name === "chromium") {
-    const actual = errors[0].reason;
+    const actual = error.stack;
     const expected = "SyntaxError: Unexpected end of input";
     assert({ actual, expected });
   }
   if (params.runtime.name === "firefox") {
-    const actual = errors[0].reason;
-    const expected = "SyntaxError: expected expression, got end of script\n";
+    const actual = error.stack;
+    const expected = "SyntaxError: expected expression, got end of script";
     assert({ actual, expected });
   }
   if (params.runtime.name === "webkit") {
-    const actual = errors[0].reason;
-    const expected = `SyntaxError: Unexpected end of script\nundefined`;
+    const actual = error.stack;
+    const expected = `SyntaxError: Unexpected end of script`;
     assert({ actual, expected });
   }
 };
