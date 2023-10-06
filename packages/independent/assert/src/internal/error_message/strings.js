@@ -180,6 +180,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     } else {
       message += `, it contains ${extraCharacterCount} extra characters`;
     }
+    // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
     return createDetailedMessage(message, {
       details: formatDetails({
         charsToDisplayBefore: Math.floor(MAX_CHARS_AROUND_MISMATCH / 2),
