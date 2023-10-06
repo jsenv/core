@@ -203,9 +203,9 @@ export const executeTestPlan = async ({
         : {};
       githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
       githubCheckRepositoryOwner =
-        githubCheckRepositoryOwner || githubCheckInfoFromEnv.githubToken;
+        githubCheckRepositoryOwner || githubCheckInfoFromEnv.repositoryOwner;
       githubCheckRepositoryName =
-        githubCheckRepositoryName || githubCheckInfoFromEnv.githubToken;
+        githubCheckRepositoryName || githubCheckInfoFromEnv.repositoryName;
       githubCheckCommitSha =
         githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
     }
