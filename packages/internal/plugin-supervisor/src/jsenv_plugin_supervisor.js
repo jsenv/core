@@ -117,6 +117,7 @@ export const jsenvPluginSupervisor = ({
           causeInfo
             ? {
                 code: causeInfo.code,
+                name: causeInfo.name,
                 message: causeInfo.message,
                 reason: causeInfo.reason,
                 stack: errorBaseUrl
