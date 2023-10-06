@@ -9,10 +9,11 @@ console.warn = (...args) => {
   warnCalls.push(args.join(""));
 };
 try {
+  const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
     logLevel: "warn",
     serverLogLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     keepProcessAlive: false,
     port: 0,
   });
@@ -38,9 +39,9 @@ try {
   --- reason ---
   no entry on filesystem
   --- url ---
-  ${new URL("./client/not_found.js", import.meta.url).href}
+  ${sourceDirectoryUrl}not_found.js
   --- url reference trace ---
-  ${new URL("./client/intermediate.js", import.meta.url)}:2:7
+  ${sourceDirectoryUrl}intermediate.js:2:7
     1 | // eslint-disable-next-line import/no-unresolved
   > 2 | import "./not_found.js";
               ^
@@ -52,7 +53,7 @@ try {
     consoleErrors: [
       `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
     ],
-    errorMessage: `Error while loading module: ${devServer.origin}/main.js`,
+    errorMessage: `Error while loading module: ${sourceDirectoryUrl}main.js`,
   };
   assert({ actual, expected });
 } finally {
