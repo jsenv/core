@@ -442,7 +442,7 @@ export const executeTestPlan = async ({
   });
 
   const hasFailed =
-    result.planSummary.counters.total !== result.planSummary.counters.complete;
+    result.planSummary.counters.total !== result.planSummary.counters.completed;
   if (updateProcessExitCode && hasFailed) {
     process.exitCode = 1;
   }
