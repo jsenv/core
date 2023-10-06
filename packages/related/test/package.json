@@ -41,7 +41,7 @@
     "@jsenv/urls": "2.2.1",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/utils": "2.0.1",
-    "@jsenv/github-check-run": "0.0.10",
+    "@jsenv/github-check-run": "0.0.11",
     "v8-to-istanbul": "9.1.0",
     "istanbul-lib-coverage": "3.2.0",
     "istanbul-lib-instrument": "6.0.0",
