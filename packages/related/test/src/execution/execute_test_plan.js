@@ -375,9 +375,6 @@ To fix this warning:
   let afterExecutionCallback;
   let afterAllExecutionCallback = () => {};
   if (githubCheckEnabled) {
-    const githubCheckLogger = createLogger({
-      logLevel: githubCheckLogLevel,
-    });
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheckLogLevel,
       githubToken: githubCheckToken,
@@ -388,26 +385,6 @@ To fix this warning:
       checkTitle: `Tests executions`,
       checkSummary: `${executionSteps.length} files will be executed`,
     });
-    beforeExecutionCallback = (beforeExecutionInfo) => {
-      const summary = stripAnsi(
-        formatExecutionLabel(beforeExecutionInfo, {
-          logTimeUsage,
-          logMemoryHeapUsage,
-        }),
-      );
-      githubCheckLogger.debug(
-        `
-update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
---- summary ---
-${summary}
-
-`,
-      );
-      githubCheckRun.progress({
-        title: "File executions",
-        summary,
-      });
-    };
     afterExecutionCallback = (afterExecutionInfo) => {
       const summary = stripAnsi(
         formatExecutionLabel(afterExecutionInfo, {
@@ -425,9 +402,11 @@ ${summary}
         });
         annotations.push(annotation);
       }
-      githubCheckLogger.debug(
+      logger.debug(
         `
-update github check after execution of ${afterExecutionInfo.fileRelativeUrl}
+${UNICODE.INFO} update github check after execution of ${
+          afterExecutionInfo.fileRelativeUrl
+        }
 --- summary ---
 ${summary}
 --- annotations ---
@@ -447,12 +426,22 @@ ${JSON.stringify(annotations, null, "  ")}
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
+        logger.debug(
+          `${UNICODE.INFO} fail github check
+--- summary ---
+${summary}`,
+        );
         await githubCheckRun.fail({
           title,
           summary,
         });
         return;
       }
+      logger.debug(
+        `${UNICODE.INFO} PATCH github check 
+--- summary ---
+${summary}`,
+      );
       await githubCheckRun.pass({
         title,
         summary,
