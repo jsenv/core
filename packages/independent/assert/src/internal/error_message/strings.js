@@ -8,7 +8,9 @@ const MAX_CHARS_AROUND_MISMATCH = 200;
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 15;
 
 export const stringsComparisonToErrorMessage = (comparison) => {
-  if (comparison.type !== "identity") {
+  const isStartsWithComparison = comparison.type === "starts_with";
+
+  if (comparison.type !== "identity" && !isStartsWithComparison) {
     return undefined;
   }
   const { actual, expected } = comparison;

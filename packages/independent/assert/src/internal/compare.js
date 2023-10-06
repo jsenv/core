@@ -1,4 +1,4 @@
-import { inspectMethodSymbol } from "@jsenv/inspect";
+import { inspect, inspectMethodSymbol } from "@jsenv/inspect";
 
 import { isPrimitive } from "./is_composite.js";
 import { findPreviousComparison } from "./find_previous_comparison.js";
@@ -72,7 +72,7 @@ export const createAnyExpectation = (expectedConstructor) => {
 
 export const createMatchesRegExpExpectation = (regexp) => {
   const matchesRegexpExpectation = createExpectation({
-    type: "matchesRegExp",
+    type: "matches_reg_exp",
     expected: regexp,
     comparer: ({ actual }) => {
       if (typeof actual !== "string") {
@@ -85,6 +85,23 @@ export const createMatchesRegExpExpectation = (regexp) => {
     return `matchesRegExp(${regexp})`;
   };
   return matchesRegexpExpectation;
+};
+
+export const createStartsWithExpectation = (string) => {
+  const startsWithExpectation = createExpectation({
+    type: "starts_with",
+    expected: string,
+    comparer: ({ actual }) => {
+      if (typeof actual !== "string") {
+        return false;
+      }
+      return actual.startsWith(string);
+    },
+  });
+  startsWithExpectation[inspectMethodSymbol] = () => {
+    return `startsWith(${inspect(string)})`;
+  };
+  return startsWithExpectation;
 };
 
 const createComparison = ({ parent = null, children = [], ...rest }) => {
