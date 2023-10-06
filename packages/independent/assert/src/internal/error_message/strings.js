@@ -66,12 +66,14 @@ export const stringsComparisonToErrorMessage = (comparison) => {
       indexStart = 0;
     }
     let index = indexStart;
+    let annotationColumn = 0;
     write_chars_before_point_on_failure: {
       // put some chars before the first mismatch
       if (indexStart > 0) {
         details += "…"; // tell that some chars are skipped
       }
       details += `${actualQuote}`;
+      let lineDisplayedBefore = 0;
       while (charsToDisplayBefore-- && index < i) {
         const actualChar = actual[index];
         index++;
@@ -79,6 +81,19 @@ export const stringsComparisonToErrorMessage = (comparison) => {
           break;
         }
         details += formatActualChar(actualChar);
+
+        if (isLineBreak(actualChar)) {
+          lineDisplayedBefore++;
+          annotationColumn = 0;
+        } else {
+          annotationColumn++;
+        }
+      }
+      if (lineDisplayedBefore === 0) {
+        if (indexStart > 0) {
+          annotationColumn++; // ... injection at the beginning
+        }
+        annotationColumn++; // " injection at the begining
       }
     }
     write_chars_after_point_on_failure: {
@@ -97,14 +112,6 @@ export const stringsComparisonToErrorMessage = (comparison) => {
       }
     }
     write_annotation: {
-      let annotationColumn = columnIndex;
-      // put annotation
-      if (lineIndex === 0) {
-        if (indexStart > 0) {
-          annotationColumn++; // ... injection at the beginning
-        }
-        annotationColumn++; // " injection at the begining
-      }
       const annotationIndentation = " ".repeat(annotationColumn);
       details += `\n${annotationIndentation}`;
       details += `${annotationLabel}`;

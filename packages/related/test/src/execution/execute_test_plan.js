@@ -345,7 +345,6 @@ export const executeTestPlan = async ({
   let beforeExecutionCallback;
   let afterExecutionCallback;
   let afterAllExecutionCallback = () => {};
-  console.log({ githubCheckEnabled });
   if (githubCheckEnabled) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheckLogLevel,
