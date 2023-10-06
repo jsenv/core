@@ -3991,12 +3991,11 @@ const createExecutionLog = (
     logMemoryHeapUsage,
   },
 ) => {
-  const { status } = executionResult;
   const label = formatExecutionLabel(
     {
       executionIndex,
       executionParams,
-      status,
+      executionResult,
       timeEllapsed,
       memoryHeap,
       counters,
@@ -4007,6 +4006,7 @@ const createExecutionLog = (
     },
   );
 
+  const { status } = executionResult;
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
     log = label;
@@ -4055,13 +4055,14 @@ const formatExecutionLabel = (
   {
     executionIndex,
     executionParams,
-    status,
+    executionResult,
     timeEllapsed,
     memoryHeap,
     counters,
   },
   { logTimeUsage, logMemoryHeapUsage } = {},
 ) => {
+  const { status } = executionResult;
   const descriptionFormatter = descriptionFormatters[status];
   const description = descriptionFormatter({
     index: executionIndex,
@@ -4821,30 +4822,23 @@ const githubAnnotationFromError = (
   error,
   { rootDirectoryUrl, executionInfo },
 ) => {
+  const annotation = {
+    annotation_level: "failure",
+    title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
+  };
+  if (error === undefined || error === null || typeof error === "string") {
+    annotation.message = String(error);
+    return annotation;
+  }
   if (error.isException) {
-    return {
-      annotation_level: "failure",
-      title: error.site.message,
-      message: replaceUrls(error.stackTrace, ({ match, url, line, column }) => {
-        if (urlIsInsideOf(url, rootDirectoryUrl)) {
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-          match = stringifyUrlSite({ url: relativeUrl, line, column });
-        }
-        return match;
-      }),
-      ...(typeof error.site.line === "number"
-        ? {
-            start_line: error.site.line,
-            end_line: error.site.line,
-          }
-        : {}),
-    };
+    if (typeof error.site.line === "number") {
+      annotation.path = urlToRelativeUrl(error.site.url, rootDirectoryUrl);
+      annotation.start_line = error.site.line;
+      annotation.end_line = error.site.line;
+    }
+    return annotation;
   }
   if (error.stack) {
-    const annotation = {
-      annotation_level: "failure",
-      path: executionInfo.fileRelativeUrl,
-    };
     let firstSite = true;
     const stack = replaceUrls(error.stack, ({ match, url, line, column }) => {
       if (urlIsInsideOf(url, rootDirectoryUrl)) {
@@ -4863,17 +4857,11 @@ const githubAnnotationFromError = (
     return annotation;
   }
   if (error.message) {
-    return {
-      annotation_level: "failure",
-      path: executionInfo.fileRelativeUrl,
-      message: error.message,
-    };
+    annotation.message = error.message;
+    return annotation;
   }
-  return {
-    annotation_level: "failure",
-    path: executionInfo.fileRelativeUrl,
-    message: error,
-  };
+  annotation.message = error;
+  return annotation;
 };
 
 const stringifyUrlSite = ({ url, line, column }) => {

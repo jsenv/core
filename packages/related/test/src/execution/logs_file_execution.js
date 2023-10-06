@@ -32,12 +32,11 @@ export const createExecutionLog = (
     logMemoryHeapUsage,
   },
 ) => {
-  const { status } = executionResult;
   const label = formatExecutionLabel(
     {
       executionIndex,
       executionParams,
-      status,
+      executionResult,
       timeEllapsed,
       memoryHeap,
       counters,
@@ -48,6 +47,7 @@ export const createExecutionLog = (
     },
   );
 
+  const { status } = executionResult;
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
     log = label;
@@ -96,13 +96,14 @@ export const formatExecutionLabel = (
   {
     executionIndex,
     executionParams,
-    status,
+    executionResult,
     timeEllapsed,
     memoryHeap,
     counters,
   },
   { logTimeUsage, logMemoryHeapUsage } = {},
 ) => {
+  const { status } = executionResult;
   const descriptionFormatter = descriptionFormatters[status];
   const description = descriptionFormatter({
     index: executionIndex,
