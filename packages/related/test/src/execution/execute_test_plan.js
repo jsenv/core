@@ -376,7 +376,10 @@ ${summary}
 
 `,
       );
-      githubCheckRun.progress({ summary });
+      githubCheckRun.progress({
+        title: "before exec title",
+        summary,
+      });
     };
     afterExecutionCallback = (afterExecutionInfo) => {
       const summary = stripAnsi(
@@ -405,6 +408,7 @@ ${JSON.stringify(annotations, null, "  ")}
 `,
       );
       githubCheckRun.progress({
+        title: "after exec title",
         summary,
         annotations,
       });
