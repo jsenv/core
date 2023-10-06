@@ -4,9 +4,10 @@ import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
+  const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
     logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     keepProcessAlive: false,
     clientAutoreload: {
       clientServerEventsConfig: {
@@ -23,16 +24,16 @@ const test = async (params) => {
     collectConsole: true,
     collectErrors: true,
   });
-  const errorStack =
-    returnValue.executionResults["/main.js"].exception.stackTrace;
+  const errorStack = returnValue.executionResults["/main.js"].exception.stack;
   const actual = {
     errorStack,
     pageErrors,
     consoleOutputRaw: consoleOutput.raw,
   };
   const expected = {
-    errorStack: `    at triggerError (${devServer.origin}/trigger_error.js:2:9)
-    at ${devServer.origin}/main.js:3:1`,
+    errorStack: `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
+    at triggerError (${sourceDirectoryUrl}trigger_error.js:2:9)
+    at ${sourceDirectoryUrl}main.js:3:1`,
     pageErrors: [
       Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
         name: "Error",
