@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import stripAnsi from "strip-ansi";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { URL_META } from "@jsenv/url-meta";
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
@@ -361,10 +362,12 @@ export const executeTestPlan = async ({
       checkSummary: `${executionSteps.length} files will be executed`,
     });
     beforeExecutionCallback = (beforeExecutionInfo) => {
-      const summary = formatExecutionLabel(beforeExecutionInfo, {
-        logTimeUsage,
-        logMemoryHeapUsage,
-      });
+      const summary = stripAnsi(
+        formatExecutionLabel(beforeExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      );
       githubCheckLogger.debug(
         `update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
 --- summary ---
@@ -373,10 +376,12 @@ ${summary}`,
       githubCheckRun.progress({ summary });
     };
     afterExecutionCallback = (afterExecutionInfo) => {
-      const summary = formatExecutionLabel(afterExecutionInfo, {
-        logTimeUsage,
-        logMemoryHeapUsage,
-      });
+      const summary = stripAnsi(
+        formatExecutionLabel(afterExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      );
       const annotations = [];
       const { errors = [] } = afterExecutionInfo;
       for (const error of errors) {
@@ -401,16 +406,17 @@ ${JSON.stringify(annotations, null, "  ")}`,
       });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      const summary = stripAnsi(formatSummaryLog(testPlanSummary));
       if (
-        testPlanSummary.counters.total !== testPlanSummary.counters.complete
+        testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
         await githubCheckRun.fail({
-          summary: formatSummaryLog(testPlanSummary),
+          summary,
         });
         return;
       }
       await githubCheckRun.pass({
-        summary: formatSummaryLog(testPlanSummary),
+        summary,
       });
     };
   }

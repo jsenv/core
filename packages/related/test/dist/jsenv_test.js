@@ -1,4 +1,5 @@
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import stripAnsi from "strip-ansi";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto from "node:crypto";
@@ -12,7 +13,6 @@ import { createRequire } from "node:module";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { createServer } from "node:net";
 import v8, { takeCoverage } from "node:v8";
-import stripAnsi from "strip-ansi";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
@@ -5257,10 +5257,12 @@ const executeTestPlan = async ({
       checkSummary: `${executionSteps.length} files will be executed`,
     });
     beforeExecutionCallback = (beforeExecutionInfo) => {
-      const summary = formatExecutionLabel(beforeExecutionInfo, {
-        logTimeUsage,
-        logMemoryHeapUsage,
-      });
+      const summary = stripAnsi(
+        formatExecutionLabel(beforeExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      );
       githubCheckLogger.debug(
         `update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
 --- summary ---
@@ -5269,10 +5271,12 @@ ${summary}`,
       githubCheckRun.progress({ summary });
     };
     afterExecutionCallback = (afterExecutionInfo) => {
-      const summary = formatExecutionLabel(afterExecutionInfo, {
-        logTimeUsage,
-        logMemoryHeapUsage,
-      });
+      const summary = stripAnsi(
+        formatExecutionLabel(afterExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      );
       const annotations = [];
       const { errors = [] } = afterExecutionInfo;
       for (const error of errors) {
@@ -5297,16 +5301,17 @@ ${JSON.stringify(annotations, null, "  ")}`,
       });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      const summary = stripAnsi(formatSummaryLog(testPlanSummary));
       if (
-        testPlanSummary.counters.total !== testPlanSummary.counters.complete
+        testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
         await githubCheckRun.fail({
-          summary: formatSummaryLog(testPlanSummary),
+          summary,
         });
         return;
       }
       await githubCheckRun.pass({
-        summary: formatSummaryLog(testPlanSummary),
+        summary,
       });
     };
   }
