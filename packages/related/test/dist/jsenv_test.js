@@ -4011,26 +4011,22 @@ const createExecutionLog = (
   if (logShortForCompletedExecutions && status === "completed") {
     log = label;
   } else {
-    const { consoleCalls = [], errors = [] } = executionResult;
-    const consoleOutput = formatConsoleCalls(consoleCalls);
-    const errorsOutput = formatErrors(errors);
-    log = formatExecution({
-      label,
-      details: {
-        file: fileRelativeUrl,
-        ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
-        ...(logEachDuration
-          ? {
-              duration:
-                status === "executing"
-                  ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
-                  : msAsDuration(endMs - startMs),
-            }
-          : {}),
+    log = formatExecution(
+      {
+        fileRelativeUrl,
+        runtimeName,
+        runtimeVersion,
+        executionResult,
+        startMs,
+        endMs,
+        nowMs,
       },
-      consoleOutput,
-      errorsOutput,
-    });
+      {
+        label,
+        logRuntime,
+        logEachDuration,
+      },
+    );
   }
 
   const { columns = 80 } = process.stdout;
@@ -4051,6 +4047,54 @@ const createExecutionLog = (
   return log;
 };
 
+const formatExecution = (
+  {
+    fileRelativeUrl,
+    runtimeName,
+    runtimeVersion,
+    executionResult,
+    startMs,
+    endMs,
+    nowMs,
+  },
+  { label, logRuntime = true, logEachDuration = true } = {},
+) => {
+  const { status } = executionResult;
+  const { consoleCalls = [], errors = [] } = executionResult;
+  const consoleOutput = formatConsoleCalls(consoleCalls);
+  const errorsOutput = formatErrors(errors);
+
+  const details = {
+    file: fileRelativeUrl,
+    ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
+    ...(logEachDuration
+      ? {
+          duration:
+            status === "executing"
+              ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
+              : msAsDuration(endMs - startMs),
+        }
+      : {}),
+  };
+  let message = ``;
+  if (label) {
+    message += label;
+  }
+  Object.keys(details).forEach((key) => {
+    if (message.length > 0) {
+      message += "\n";
+    }
+    message += `${key}: ${details[key]}`;
+  });
+  if (consoleOutput) {
+    message += `\n${consoleOutput}`;
+  }
+  if (errorsOutput) {
+    message += `\n${errorsOutput}`;
+  }
+  return message;
+};
+
 const formatExecutionLabel = (
   {
     executionIndex,
@@ -4069,7 +4113,7 @@ const formatExecutionLabel = (
     total: counters.total,
     executionParams,
   });
-  const summary = createIntermediateSummary({
+  const intermediateSummaryText = createIntermediateSummary({
     executionIndex,
     counters,
     timeEllapsed,
@@ -4077,14 +4121,22 @@ const formatExecutionLabel = (
     logTimeUsage,
     logMemoryHeapUsage,
   });
-  return `${description}${summary}`;
+  return `${description}${intermediateSummaryText}`;
 };
 
 const formatErrors = (errors) => {
   if (errors.length === 0) {
     return "";
   }
-  const formatError = (error) => error.stack || error.message || error;
+  const formatError = (error) => {
+    if (error === null || error === undefined) {
+      return String(error);
+    }
+    if (error) {
+      return error.stack || error.message || error;
+    }
+    return error;
+  };
 
   if (errors.length === 1) {
     return `${ANSI.color(`-------- error --------`, ANSI.RED)}
@@ -4110,9 +4162,13 @@ ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 const formatSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
-${createAllExecutionsSummary(summary)}
-total duration: ${msAsDuration(summary.duration)}
+${formatSummary(summary)}
 ----------------------------------------`;
+
+const formatSummary = (summary) => `${createAllExecutionsSummary(
+  summary,
+)}
+total duration: ${msAsDuration(summary.duration)}`;
 
 const createAllExecutionsSummary = ({ counters }) => {
   if (counters.total === 0) {
@@ -4401,27 +4457,6 @@ const formatConsoleSummary = (repartition) => {
   return `console (${parts.join(" ")})`;
 };
 
-const formatExecution = ({
-  label,
-  details = {},
-  consoleOutput,
-  errorsOutput,
-}) => {
-  let message = ``;
-  message += label;
-  Object.keys(details).forEach((key) => {
-    message += `
-${key}: ${details[key]}`;
-  });
-  if (consoleOutput) {
-    message += `\n${consoleOutput}`;
-  }
-  if (errorsOutput) {
-    message += `\n${errorsOutput}`;
-  }
-  return message;
-};
-
 const executeSteps = async (
   executionSteps,
   {
@@ -4655,7 +4690,6 @@ const executeSteps = async (
           endMs: Date.now(),
           executionResult,
         };
-        afterExecutionCallback(afterExecutionInfo);
 
         if (executionResult.status === "aborted") {
           counters.aborted++;
@@ -4699,6 +4733,7 @@ const executeSteps = async (
             executionLog = createLog({ newLine: "" });
           }
         }
+        afterExecutionCallback(afterExecutionInfo);
         const isLastExecutionLog = executionIndex === executionSteps.length - 1;
         const cancelRemaining =
           failFast &&
@@ -4824,44 +4859,71 @@ const githubAnnotationFromError = (
 ) => {
   const annotation = {
     annotation_level: "failure",
+    path: executionInfo.fileRelativeUrl,
+    start_line: 1,
+    end_line: 1,
     title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
   };
-  if (error === undefined || error === null || typeof error === "string") {
-    annotation.message = String(error);
-    return annotation;
+  const exception = asException(error, { rootDirectoryUrl });
+  if (typeof exception.site.line === "number") {
+    annotation.path = urlToRelativeUrl(exception.site.url, rootDirectoryUrl);
+    annotation.start_line = exception.site.line;
+    annotation.end_line = exception.site.line;
+    annotation.start_column = exception.site.column;
+    annotation.end_column = exception.site.column;
   }
-  if (error.isException) {
-    if (typeof error.site.line === "number") {
-      annotation.path = urlToRelativeUrl(error.site.url, rootDirectoryUrl);
-      annotation.start_line = error.site.line;
-      annotation.end_line = error.site.line;
-    }
-    return annotation;
-  }
-  if (error.stack) {
-    let firstSite = true;
-    const stack = replaceUrls(error.stack, ({ match, url, line, column }) => {
-      if (urlIsInsideOf(url, rootDirectoryUrl)) {
-        const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-        match = stringifyUrlSite({ url: relativeUrl, line, column });
-      }
-      if (firstSite) {
-        firstSite = false;
-        annotation.path = url;
-        annotation.start_line = line;
-        annotation.end_line = line;
-      }
-      return match;
-    });
-    annotation.message = stack;
-    return annotation;
-  }
-  if (error.message) {
-    annotation.message = error.message;
-    return annotation;
-  }
-  annotation.message = error;
+  annotation.message = exception.stack;
   return annotation;
+};
+
+const asException = (error, { rootDirectoryUrl }) => {
+  const exception = {
+    isException: true,
+    stack: "",
+    site: {},
+  };
+  if (error === null || error === undefined || typeof error === "string") {
+    exception.message = String(error);
+    return exception;
+  }
+  if (error) {
+    exception.message = error.message;
+    if (error.isException) {
+      Object.assign(exception, error);
+      exception.stack = replaceUrls(
+        error.stack,
+        ({ match, url, line = 1, column = 1 }) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
+          }
+          return match;
+        },
+      );
+    } else if (error.stack) {
+      let firstSite = true;
+      exception.stack = replaceUrls(
+        error.stack,
+        ({ match, url, line = 1, column = 1 }) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
+          }
+          if (firstSite) {
+            firstSite = false;
+            exception.site.url = url;
+            exception.site.line = line;
+            exception.site.column = column;
+          }
+          return match;
+        },
+      );
+    }
+
+    return exception;
+  }
+  exception.message = error;
+  return exception;
 };
 
 const stringifyUrlSite = ({ url, line, column }) => {
@@ -4895,8 +4957,8 @@ const replaceUrls = (source, replace) => {
       replacement = replace({
         match: lineAndColumMatch,
         url: match.slice(0, -lineAndColumnString.length),
-        line: lineString ? parseInt(lineString) : null,
-        column: columnString ? parseInt(columnString) : null,
+        line: lineString ? parseInt(lineString) : undefined,
+        column: columnString ? parseInt(columnString) : undefined,
       });
     } else {
       const linePattern = /:([0-9]+)$/;
@@ -4906,7 +4968,7 @@ const replaceUrls = (source, replace) => {
         replacement = replace({
           match: lineMatch,
           url: match.slice(0, -lineString.length),
-          line: lineString ? parseInt(lineString) : null,
+          line: lineString ? parseInt(lineString) : undefined,
         });
       } else {
         replacement = replace({
@@ -4969,10 +5031,9 @@ const executeTestPlan = async ({
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
 
-  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW) &&
-    Boolean(process.env.GITHUB_TOKEN),
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
   githubCheckLogLevel,
-  githubCheckName = "jsenv tests",
+  githubCheckName = "Jsenv tests",
   githubCheckTitle,
   githubCheckToken,
   githubCheckRepositoryOwner,
@@ -5093,6 +5154,34 @@ const executeTestPlan = async ({
       });
     }
 
+    if (githubCheckEnabled && !process.env.GITHUB_TOKEN) {
+      githubCheckEnabled = false;
+      const suggestions = [];
+      if (process.env.GITHUB_WORKFLOW_REF) {
+        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+        const refsIndex = workflowFileRef.indexOf("@refs/");
+        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        const workflowFilePath =
+          refsIndex === -1
+            ? workflowFileRef
+            : workflowFileRef.slice(0, refsIndex);
+        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+\`\`\`yml
+env:
+  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+\`\`\``);
+      }
+      suggestions.push(`Disable github check with githubCheckEnabled: false`);
+      logger.warn(
+        `${
+          UNICODE.WARNING
+        } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
+Integration with Github check API is disabled
+To fix this warning:
+- ${suggestions.join("\n- ")}
+`,
+      );
+    }
     if (githubCheckEnabled) {
       const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
         ? readGitHubWorkflowEnv()
@@ -5243,9 +5332,6 @@ const executeTestPlan = async ({
   let afterExecutionCallback;
   let afterAllExecutionCallback = () => {};
   if (githubCheckEnabled) {
-    const githubCheckLogger = createLogger({
-      logLevel: githubCheckLogLevel,
-    });
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheckLogLevel,
       githubToken: githubCheckToken,
@@ -5256,23 +5342,6 @@ const executeTestPlan = async ({
       checkTitle: `Tests executions`,
       checkSummary: `${executionSteps.length} files will be executed`,
     });
-    beforeExecutionCallback = (beforeExecutionInfo) => {
-      const summary = stripAnsi(
-        formatExecutionLabel(beforeExecutionInfo, {
-          logTimeUsage,
-          logMemoryHeapUsage,
-        }),
-      );
-      githubCheckLogger.debug(
-        `
-update github check before executing ${beforeExecutionInfo.fileRelativeUrl}
---- summary ---
-${summary}
-
-`,
-      );
-      githubCheckRun.progress({ summary });
-    };
     afterExecutionCallback = (afterExecutionInfo) => {
       const summary = stripAnsi(
         formatExecutionLabel(afterExecutionInfo, {
@@ -5281,7 +5350,8 @@ ${summary}
         }),
       );
       const annotations = [];
-      const { errors = [] } = afterExecutionInfo;
+      const { executionResult } = afterExecutionInfo;
+      const { errors = [] } = executionResult;
       for (const error of errors) {
         const annotation = githubAnnotationFromError(error, {
           rootDirectoryUrl,
@@ -5289,32 +5359,26 @@ ${summary}
         });
         annotations.push(annotation);
       }
-      githubCheckLogger.debug(
-        `
-update github check after execution of ${afterExecutionInfo.fileRelativeUrl}
---- summary ---
-${summary}
---- annotations ---
-${JSON.stringify(annotations, null, "  ")}
-
-`,
-      );
       githubCheckRun.progress({
+        title: "Jsenv test executions",
         summary,
         annotations,
       });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
-      const summary = stripAnsi(formatSummaryLog(testPlanSummary));
+      const title = "Jsenv test results";
+      const summary = stripAnsi(formatSummary(testPlanSummary));
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
         await githubCheckRun.fail({
+          title,
           summary,
         });
         return;
       }
       await githubCheckRun.pass({
+        title,
         summary,
       });
     };

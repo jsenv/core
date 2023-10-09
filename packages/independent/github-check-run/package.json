@@ -34,7 +34,7 @@
     "test": "node ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/fetch": "1.1.40",
+    "@jsenv/fetch": "1.1.41",
     "@jsenv/log": "3.4.1"
   }
 }
