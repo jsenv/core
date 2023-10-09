@@ -1,3 +1,4 @@
+import stripAnsi from "strip-ansi";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 import {
@@ -14,12 +15,9 @@ export const githubAnnotationFromError = (
     path: executionInfo.fileRelativeUrl,
     start_line: 1,
     end_line: 1,
-    title: formatExecutionLabel(executionInfo),
+    title: stripAnsi(formatExecutionLabel(executionInfo)),
   };
-  const exception =
-    error && error.isException
-      ? error
-      : asException(error, { rootDirectoryUrl });
+  const exception = asException(error, { rootDirectoryUrl });
   if (typeof exception.site.line === "number") {
     annotation.path = urlToRelativeUrl(exception.site.url, rootDirectoryUrl);
     annotation.start_line = exception.site.line;
@@ -27,13 +25,15 @@ export const githubAnnotationFromError = (
     annotation.start_column = exception.site.column;
     annotation.end_column = exception.site.column;
   }
-  annotation.message = formatExecution({
-    ...executionInfo,
-    executionResult: {
-      ...executionInfo.executionResult,
-      errors: [exception],
-    },
-  });
+  annotation.message = stripAnsi(
+    formatExecution({
+      ...executionInfo,
+      executionResult: {
+        ...executionInfo.executionResult,
+        errors: [exception],
+      },
+    }),
+  );
   return annotation;
 };
 
@@ -49,7 +49,19 @@ const asException = (error, { rootDirectoryUrl }) => {
   }
   if (error) {
     exception.message = error.message;
-    if (error.stack) {
+    if (error.isException) {
+      Object.assign(exception, error);
+      exception.stack = replaceUrls(
+        error.stack,
+        ({ match, url, line = 1, column = 1 }) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
+          }
+          return match;
+        },
+      );
+    } else if (error.stack) {
       let firstSite = true;
       exception.stack = replaceUrls(
         error.stack,
