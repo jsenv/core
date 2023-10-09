@@ -219,10 +219,10 @@ env:
         `${
           UNICODE.WARNING
         } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
-To prevent errors integration with Github check API is disabled.
-
+Integration with Github check API is disabled
 To fix this warning:
-- ${suggestions.join("\n- ")}`,
+- ${suggestions.join("\n- ")}
+`,
       );
     }
     if (githubCheckEnabled) {
