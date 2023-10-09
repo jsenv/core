@@ -34,10 +34,10 @@ import { executeInNewContext } from "../executeInNewContext.js";
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected error message, "f" was found instead of "b" at index 0
+      `unexpected character in error message
 --- details ---
-"foo"
- ^ unexpected character, expected string continues with "bar"
+foo
+^ unexpected "f", expected to continue with "bar"
 --- path ---
 actual.message[0]`,
     );

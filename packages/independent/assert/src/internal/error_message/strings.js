@@ -9,14 +9,6 @@ let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 15;
 
-// use more width when terminal has lot of horizontal space
-if (typeof process === "object") {
-  const { columns = 80 } = process.stdout;
-  if (columns > MAX_WIDTH) {
-    MAX_WIDTH = Math.min(columns, 180);
-  }
-}
-
 export const stringsComparisonToErrorMessage = (comparison) => {
   const isStartsWithComparison = comparison.type === "starts_with";
 

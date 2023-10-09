@@ -22,10 +22,10 @@ import { executeInNewContext } from "../executeInNewContext.js";
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected regexp, "a" was found instead of "b" at index 1
+      `unexpected character in regexp
 --- details ---
-"/a/"
-  ^ unexpected character, expected string continues with "b/"
+/a/
+ ^ unexpected "a", expected to continue with "b/"
 --- path ---
 actual.toString()[1]`,
     );
@@ -40,10 +40,10 @@ actual.toString()[1]`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected regexp, "a" was found instead of "b" at index 1
+      `unexpected character in regexp
 --- details ---
-"/a/"
-  ^ unexpected character, expected string continues with "b/"
+/a/
+ ^ unexpected "a", expected to continue with "b/"
 --- path ---
 actual.toString()[1]`,
     );

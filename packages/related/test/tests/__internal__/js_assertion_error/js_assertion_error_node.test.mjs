@@ -24,17 +24,16 @@ const test = async (params) => {
   const expected = {
     isException: true,
     name: "AssertionError",
-    message: `unexpected string, "f" was found instead of "b" at index 0
+    message: `unexpected character in string
 --- details ---
-"foo"
- ^ unexpected character, expected string continues with "bar"
+foo
+^ unexpected "f", expected to continue with "bar"
 --- path ---
 actual[0]`,
-    stack:
-      assert.startsWith(`AssertionError: unexpected string, "f" was found instead of "b" at index 0
+    stack: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
-"foo"
- ^ unexpected character, expected string continues with "bar"
+foo
+^ unexpected "f", expected to continue with "bar"
 --- path ---
 actual[0]
   at ${clientDirectoryUrl}/main.mjs:3:1`),

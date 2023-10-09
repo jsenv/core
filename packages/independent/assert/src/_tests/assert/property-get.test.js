@@ -65,10 +65,10 @@ actual.foo[[Get]]`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected function name, "a" was found instead of "e" at index 0
+      `unexpected character in function name
 --- details ---
-"actualGetter"
- ^ unexpected character, expected string continues with "expectedGetter"
+actualGetter
+^ unexpected "a", expected to continue with "expectedGetter"
 --- path ---
 actual.foo[[Get]].name[0]`,
     );

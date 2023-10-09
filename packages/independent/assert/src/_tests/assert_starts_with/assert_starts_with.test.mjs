@@ -15,10 +15,10 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "A" was found instead of "B" at index 1
+      `unexpected character in string
 --- details ---
-"AABB"
-  ^ unexpected character, expected string continues with "B"
+AABB
+ ^ unexpected "A", expected to continue with "B"
 --- path ---
 actual[1]`,
     );

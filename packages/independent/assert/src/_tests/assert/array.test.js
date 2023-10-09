@@ -105,10 +105,10 @@ actual.length`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "a" was found instead of "b" at index 0
+      `unexpected character in string
 --- details ---
-"a"
- ^ unexpected character, expected string continues with "b"
+a
+^ unexpected "a", expected to continue with "b"
 --- path ---
 actual[0][0]`,
     );

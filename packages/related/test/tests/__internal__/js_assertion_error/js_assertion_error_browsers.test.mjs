@@ -37,25 +37,23 @@ const test = async (params) => {
   };
   const expectedErrorStack = {
     chromium:
-      assert.startsWith(`Uncaught AssertionError: unexpected string, "f" was found instead of "b" at index 0
+      assert.startsWith(`Uncaught AssertionError: unexpected character in string
 --- details ---
-"foo"
- ^ unexpected character, expected string continues with "bar"
+foo
+^ unexpected "f", expected to continue with "bar"
 --- path ---
 actual[0]`),
-    firefox:
-      assert.startsWith(`AssertionError: unexpected string, "f" was found instead of "b" at index 0
+    firefox: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
-"foo"
- ^ unexpected character, expected string continues with "bar"
+foo
+^ unexpected "f", expected to continue with "bar"
 --- path ---
 actual[0]
 createAssertionError@`),
-    webkit:
-      assert.startsWith(`AssertionError: unexpected string, "f" was found instead of "b" at index 0
+    webkit: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
-"foo"
- ^ unexpected character, expected string continues with "bar"
+foo
+^ unexpected "f", expected to continue with "bar"
 --- path ---
 actual[0]
 createAssertionError@`),
