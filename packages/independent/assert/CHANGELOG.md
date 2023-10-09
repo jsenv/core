@@ -67,6 +67,7 @@ const expected = assert.startsWith(`Error: message
   at files.js:10:1`);
 assert({ actual, expected });
 ```
+````
 
 It was also possible to use `matchesRegExp` to obtain `startsWith` but again not very handy to write:
 
@@ -78,7 +79,6 @@ const expected = /Error\: message\\n  at files.js\:10\:1.*+/;
 const actual = stack.slice(0, expected.length);
 assert({ actual, expected });
 ```
-````
 
 # 2.10.0
 
@@ -183,4 +183,3 @@ actual[140]#L6C8
 # 2.9.0
 
 - Improve speed when comparing two node buffers
-`````
