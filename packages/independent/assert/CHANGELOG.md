@@ -44,7 +44,7 @@ actual[79]
 
 Add a new helper method `assert.startsWith`. It is useful to perform assertion only on the beginning of a string and allow the rest to be anything. Very useful for error stack where the beginning is know but the rest of error stack is dependent on the filesystem an other things like node modules.
 
-`````md
+````md
 <!-- @jsenv/assert 2.10.0 -->
 
 ```js
@@ -78,6 +78,7 @@ const expected = /Error\: message\\n  at files.js\:10\:1.*+/;
 const actual = stack.slice(0, expected.length);
 assert({ actual, expected });
 ```
+````
 
 # 2.10.0
 
