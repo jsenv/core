@@ -44,6 +44,7 @@ export const createExecutionLog = (
     {
       logTimeUsage,
       logMemoryHeapUsage,
+      intermediateSummary: true,
     },
   );
 
@@ -145,7 +146,7 @@ export const formatExecutionLabel = (
     memoryHeap,
     counters,
   },
-  { logTimeUsage, logMemoryHeapUsage } = {},
+  { logTimeUsage, logMemoryHeapUsage, intermediateSummary } = {},
 ) => {
   const { status } = executionResult;
   const descriptionFormatter = descriptionFormatters[status];
@@ -154,7 +155,10 @@ export const formatExecutionLabel = (
     total: counters.total,
     executionParams,
   });
-  const summary = createIntermediateSummary({
+  if (!intermediateSummary) {
+    return description;
+  }
+  const intermediateSummaryText = createIntermediateSummary({
     executionIndex,
     counters,
     timeEllapsed,
@@ -162,7 +166,7 @@ export const formatExecutionLabel = (
     logTimeUsage,
     logMemoryHeapUsage,
   });
-  return `${description}${summary}`;
+  return `${description}${intermediateSummaryText}`;
 };
 
 const formatErrors = (errors) => {
