@@ -10,4 +10,5 @@ await executeTestPlan({
     },
   },
   githubCheckLogLevel: "debug",
+  updateProcessExitCode: false,
 });
