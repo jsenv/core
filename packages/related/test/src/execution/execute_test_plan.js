@@ -411,6 +411,7 @@ To fix this warning:
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
       const title = "File executions";
       const summary = stripAnsi(formatSummaryLog(testPlanSummary));
+      console.log(`summary ${summary}`);
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {

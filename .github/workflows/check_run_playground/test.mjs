@@ -1,9 +1,9 @@
 import { executeTestPlan, nodeChildProcess } from "@jsenv/test";
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: new URL("../../../", import.meta.url),
   testPlan: {
-    "./**/*.test.mjs": {
+    "./.github/workflows/check_run_playground/**/*.test.mjs": {
       node: {
         runtime: nodeChildProcess(),
       },
