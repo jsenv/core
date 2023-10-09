@@ -17,7 +17,7 @@ import { applyBabelPlugins } from "@jsenv/ast";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
-import { generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
+import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 
@@ -5338,14 +5338,8 @@ To fix this warning:
       checkTitle: `Tests executions`,
       checkSummary: `${executionSteps.length} files will be executed`,
     });
+    const annotations = [];
     afterExecutionCallback = (afterExecutionInfo) => {
-      const summary = stripAnsi(
-        formatExecutionLabel(afterExecutionInfo, {
-          logTimeUsage,
-          logMemoryHeapUsage,
-        }),
-      );
-      const annotations = [];
       const { executionResult } = afterExecutionInfo;
       const { errors = [] } = executionResult;
       for (const error of errors) {
@@ -5355,11 +5349,6 @@ To fix this warning:
         });
         annotations.push(annotation);
       }
-      githubCheckRun.progress({
-        title: "Jsenv test executions",
-        summary,
-        annotations,
-      });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
       const title = "Jsenv test results";
@@ -5370,12 +5359,14 @@ To fix this warning:
         await githubCheckRun.fail({
           title,
           summary,
+          annotations,
         });
         return;
       }
       await githubCheckRun.pass({
         title,
         summary,
+        annotations,
       });
     };
   }
