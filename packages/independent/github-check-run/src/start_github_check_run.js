@@ -217,7 +217,7 @@ ${JSON.stringify(body, null, "  ")}`);
       if (pendingAbortController) {
         pendingAbortController.abort();
       }
-      // TODO: wait to any update before PATCH
+      // TODO: wait to any pending PATCH (progress call) before final PATCH?
       return update({
         status: "completed",
         conclusion: "failure",
@@ -237,7 +237,7 @@ ${JSON.stringify(body, null, "  ")}`);
       if (pendingAbortController) {
         pendingAbortController.abort();
       }
-      // TODO: wait to any pending update before PATCH
+      // TODO: wait to any pending PATCH (progress call) before final PATCH?
       return update({
         status: "completed",
         conclusion: "success",

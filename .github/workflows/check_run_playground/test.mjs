@@ -9,6 +9,5 @@ await executeTestPlan({
       },
     },
   },
-  logLevel: "debug",
-  // githubCheckLogLevel: 'debug'
+  githubCheckLogLevel: "debug",
 });

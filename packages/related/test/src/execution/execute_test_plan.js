@@ -402,18 +402,6 @@ To fix this warning:
         });
         annotations.push(annotation);
       }
-      logger.debug(
-        `
-${UNICODE.INFO} update github check after execution of ${
-          afterExecutionInfo.fileRelativeUrl
-        }
---- summary ---
-${summary}
---- annotations ---
-${JSON.stringify(annotations, null, "  ")}
-
-`,
-      );
       githubCheckRun.progress({
         title: "File executions",
         summary,
@@ -426,22 +414,12 @@ ${JSON.stringify(annotations, null, "  ")}
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
-        logger.debug(
-          `${UNICODE.INFO} fail github check
---- summary ---
-${summary}`,
-        );
         await githubCheckRun.fail({
           title,
           summary,
         });
         return;
       }
-      logger.debug(
-        `${UNICODE.INFO} PATCH github check 
---- summary ---
-${summary}`,
-      );
       await githubCheckRun.pass({
         title,
         summary,
