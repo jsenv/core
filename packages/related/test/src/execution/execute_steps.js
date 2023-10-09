@@ -245,7 +245,6 @@ export const executeSteps = async (
           endMs: Date.now(),
           executionResult,
         };
-        afterExecutionCallback(afterExecutionInfo);
 
         if (executionResult.status === "aborted") {
           counters.aborted++;
@@ -289,6 +288,7 @@ export const executeSteps = async (
             executionLog = createLog({ newLine: "" });
           }
         }
+        afterExecutionCallback(afterExecutionInfo);
         const isLastExecutionLog = executionIndex === executionSteps.length - 1;
         const cancelRemaining =
           failFast &&

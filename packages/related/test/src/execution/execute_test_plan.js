@@ -402,16 +402,17 @@ To fix this warning:
         });
         annotations.push(annotation);
       }
-      githubCheckRun.progress({
-        title: "File executions",
-        summary,
-        annotations,
-      });
+      console.log("after exec");
+      // githubCheckRun.progress({
+      //   title: "File executions",
+      //   summary,
+      //   annotations,
+      // });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
       const title = "File executions";
       const summary = stripAnsi(formatSummaryLog(testPlanSummary));
-      console.log(`summary ${summary}`);
+      console.log(`all exec done`);
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {
