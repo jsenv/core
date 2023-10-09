@@ -1,4 +1,5 @@
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import stripAnsi from "strip-ansi";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto from "node:crypto";
@@ -7,11 +8,11 @@ import process$1, { memoryUsage } from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
+import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import { createRequire } from "node:module";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { createServer } from "node:net";
 import v8, { takeCoverage } from "node:v8";
-import stripAnsi from "strip-ansi";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
@@ -3977,53 +3978,55 @@ const createExecutionLog = (
     executionResult,
     startMs,
     endMs,
+    nowMs,
+    timeEllapsed,
+    memoryHeap,
+    counters,
   },
   {
     logShortForCompletedExecutions,
-    counters,
     logRuntime,
     logEachDuration,
-    timeEllapsed,
-    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
   },
 ) => {
+  const label = formatExecutionLabel(
+    {
+      executionIndex,
+      executionParams,
+      executionResult,
+      timeEllapsed,
+      memoryHeap,
+      counters,
+    },
+    {
+      logTimeUsage,
+      logMemoryHeapUsage,
+    },
+  );
+
   const { status } = executionResult;
-  const descriptionFormatter = descriptionFormatters[status];
-  const description = descriptionFormatter({
-    index: executionIndex,
-    total: counters.total,
-    executionParams,
-  });
-  const summary = createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap,
-  });
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
-    log = `${description}${summary}`;
+    log = label;
   } else {
-    const { consoleCalls = [], errors = [] } = executionResult;
-    const consoleOutput = formatConsoleCalls(consoleCalls);
-    const errorsOutput = formatErrors(errors);
-    log = formatExecution({
-      label: `${description}${summary}`,
-      details: {
-        file: fileRelativeUrl,
-        ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
-        ...(logEachDuration
-          ? {
-              duration:
-                status === "executing"
-                  ? msAsEllapsedTime(Date.now() - startMs)
-                  : msAsDuration(endMs - startMs),
-            }
-          : {}),
+    log = formatExecution(
+      {
+        fileRelativeUrl,
+        runtimeName,
+        runtimeVersion,
+        executionResult,
+        startMs,
+        endMs,
+        nowMs,
       },
-      consoleOutput,
-      errorsOutput,
-    });
+      {
+        label,
+        logRuntime,
+        logEachDuration,
+      },
+    );
   }
 
   const { columns = 80 } = process.stdout;
@@ -4044,11 +4047,96 @@ const createExecutionLog = (
   return log;
 };
 
+const formatExecution = (
+  {
+    fileRelativeUrl,
+    runtimeName,
+    runtimeVersion,
+    executionResult,
+    startMs,
+    endMs,
+    nowMs,
+  },
+  { label, logRuntime = true, logEachDuration = true } = {},
+) => {
+  const { status } = executionResult;
+  const { consoleCalls = [], errors = [] } = executionResult;
+  const consoleOutput = formatConsoleCalls(consoleCalls);
+  const errorsOutput = formatErrors(errors);
+
+  const details = {
+    file: fileRelativeUrl,
+    ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
+    ...(logEachDuration
+      ? {
+          duration:
+            status === "executing"
+              ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
+              : msAsDuration(endMs - startMs),
+        }
+      : {}),
+  };
+  let message = ``;
+  if (label) {
+    message += label;
+  }
+  Object.keys(details).forEach((key) => {
+    if (message.length > 0) {
+      message += "\n";
+    }
+    message += `${key}: ${details[key]}`;
+  });
+  if (consoleOutput) {
+    message += `\n${consoleOutput}`;
+  }
+  if (errorsOutput) {
+    message += `\n${errorsOutput}`;
+  }
+  return message;
+};
+
+const formatExecutionLabel = (
+  {
+    executionIndex,
+    executionParams,
+    executionResult,
+    timeEllapsed,
+    memoryHeap,
+    counters,
+  },
+  { logTimeUsage, logMemoryHeapUsage } = {},
+) => {
+  const { status } = executionResult;
+  const descriptionFormatter = descriptionFormatters[status];
+  const description = descriptionFormatter({
+    index: executionIndex,
+    total: counters.total,
+    executionParams,
+  });
+  const intermediateSummaryText = createIntermediateSummary({
+    executionIndex,
+    counters,
+    timeEllapsed,
+    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
+  });
+  return `${description}${intermediateSummaryText}`;
+};
+
 const formatErrors = (errors) => {
   if (errors.length === 0) {
     return "";
   }
-  const formatError = (error) => error.stack || error.message || error;
+  const formatError = (error) => {
+    if (error === null || error === undefined) {
+      return String(error);
+    }
+    if (error) {
+      return error.stack || error.message || error;
+    }
+    return error;
+  };
 
   if (errors.length === 1) {
     return `${ANSI.color(`-------- error --------`, ANSI.RED)}
@@ -4071,12 +4159,16 @@ ${output.join(`\n`)}
 ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 };
 
-const createSummaryLog = (
+const formatSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
-${createAllExecutionsSummary(summary)}
-total duration: ${msAsDuration(summary.duration)}
+${formatSummary(summary)}
 ----------------------------------------`;
+
+const formatSummary = (summary) => `${createAllExecutionsSummary(
+  summary,
+)}
+total duration: ${msAsDuration(summary.duration)}`;
 
 const createAllExecutionsSummary = ({ counters }) => {
   if (counters.total === 0) {
@@ -4094,6 +4186,8 @@ const createIntermediateSummary = ({
   counters,
   memoryHeap,
   timeEllapsed,
+  logTimeUsage,
+  logMemoryHeapUsage,
 }) => {
   const parts = [];
   if (executionIndex > 0 || counters.done > 0) {
@@ -4106,10 +4200,10 @@ const createIntermediateSummary = ({
       }),
     );
   }
-  if (timeEllapsed) {
+  if (logTimeUsage && timeEllapsed) {
     parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
   }
-  if (memoryHeap) {
+  if (logMemoryHeapUsage && memoryHeap) {
     parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
   }
   if (parts.length === 0) {
@@ -4363,27 +4457,6 @@ const formatConsoleSummary = (repartition) => {
   return `console (${parts.join(" ")})`;
 };
 
-const formatExecution = ({
-  label,
-  details = {},
-  consoleOutput,
-  errorsOutput,
-}) => {
-  let message = ``;
-  message += label;
-  Object.keys(details).forEach((key) => {
-    message += `
-${key}: ${details[key]}`;
-  });
-  if (consoleOutput) {
-    message += `\n${consoleOutput}`;
-  }
-  if (errorsOutput) {
-    message += `\n${errorsOutput}`;
-  }
-  return message;
-};
-
 const executeSteps = async (
   executionSteps,
   {
@@ -4549,6 +4622,9 @@ const executeSteps = async (
           executionResult: {
             status: "executing",
           },
+          counters,
+          timeEllapsed: Date.now() - startMs,
+          memoryHeap: memoryUsage().heapUsed,
         };
         if (typeof executionParams.allocatedMs === "function") {
           executionParams.allocatedMs =
@@ -4560,17 +4636,10 @@ const executeSteps = async (
             log: executionLog,
             render: () => {
               return createExecutionLog(beforeExecutionInfo, {
-                counters,
                 logRuntime,
                 logEachDuration,
-                ...(logTimeUsage
-                  ? {
-                      timeEllapsed: Date.now() - startMs,
-                    }
-                  : {}),
-                ...(logMemoryHeapUsage
-                  ? { memoryHeap: memoryUsage().heapUsed }
-                  : {}),
+                logTimeUsage,
+                logMemoryHeapUsage,
               });
             },
           });
@@ -4621,7 +4690,6 @@ const executeSteps = async (
           endMs: Date.now(),
           executionResult,
         };
-        afterExecutionCallback(afterExecutionInfo);
 
         if (executionResult.status === "aborted") {
           counters.aborted++;
@@ -4638,7 +4706,6 @@ const executeSteps = async (
         if (executionLogsEnabled) {
           const log = createExecutionLog(afterExecutionInfo, {
             logShortForCompletedExecutions,
-            counters,
             logRuntime,
             logEachDuration,
             ...(logTimeUsage
@@ -4666,6 +4733,7 @@ const executeSteps = async (
             executionLog = createLog({ newLine: "" });
           }
         }
+        afterExecutionCallback(afterExecutionInfo);
         const isLastExecutionLog = executionIndex === executionSteps.length - 1;
         const cancelRemaining =
           failFast &&
@@ -4693,7 +4761,7 @@ const executeSteps = async (
       duration: Date.now() - startMs,
     };
     if (logSummary) {
-      const summaryLog = createSummaryLog(summary);
+      const summaryLog = formatSummaryLog(summary);
       rawOutput += stripAnsi(summaryLog);
       logger.info(summaryLog);
     }
@@ -4785,6 +4853,137 @@ const executeInParallel = async ({
   return executionResults;
 };
 
+const githubAnnotationFromError = (
+  error,
+  { rootDirectoryUrl, executionInfo },
+) => {
+  const annotation = {
+    annotation_level: "failure",
+    path: executionInfo.fileRelativeUrl,
+    start_line: 1,
+    end_line: 1,
+    title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
+  };
+  const exception = asException(error, { rootDirectoryUrl });
+  if (typeof exception.site.line === "number") {
+    annotation.path = urlToRelativeUrl(exception.site.url, rootDirectoryUrl);
+    annotation.start_line = exception.site.line;
+    annotation.end_line = exception.site.line;
+    annotation.start_column = exception.site.column;
+    annotation.end_column = exception.site.column;
+  }
+  annotation.message = exception.stack;
+  return annotation;
+};
+
+const asException = (error, { rootDirectoryUrl }) => {
+  const exception = {
+    isException: true,
+    stack: "",
+    site: {},
+  };
+  if (error === null || error === undefined || typeof error === "string") {
+    exception.message = String(error);
+    return exception;
+  }
+  if (error) {
+    exception.message = error.message;
+    if (error.isException) {
+      Object.assign(exception, error);
+      exception.stack = replaceUrls(
+        error.stack,
+        ({ match, url, line = 1, column = 1 }) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
+          }
+          return match;
+        },
+      );
+    } else if (error.stack) {
+      let firstSite = true;
+      exception.stack = replaceUrls(
+        error.stack,
+        ({ match, url, line = 1, column = 1 }) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
+          }
+          if (firstSite) {
+            firstSite = false;
+            exception.site.url = url;
+            exception.site.line = line;
+            exception.site.column = column;
+          }
+          return match;
+        },
+      );
+    }
+
+    return exception;
+  }
+  exception.message = error;
+  return exception;
+};
+
+const stringifyUrlSite = ({ url, line, column }) => {
+  let string = url;
+  if (typeof line === "number") {
+    string += `:${line}`;
+    if (typeof column === "number") {
+      string += `:${column}`;
+    }
+  }
+  return string;
+};
+
+const replaceUrls = (source, replace) => {
+  return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
+    let replacement = "";
+    const lastChar = match[match.length - 1];
+
+    // hotfix because our url regex sucks a bit
+    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+    if (endsWithSeparationChar) {
+      match = match.slice(0, -1);
+    }
+
+    const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
+    const lineAndColumMatch = match.match(lineAndColumnPattern);
+    if (lineAndColumMatch) {
+      const lineAndColumnString = lineAndColumMatch[0];
+      const lineString = lineAndColumMatch[1];
+      const columnString = lineAndColumMatch[2];
+      replacement = replace({
+        match: lineAndColumMatch,
+        url: match.slice(0, -lineAndColumnString.length),
+        line: lineString ? parseInt(lineString) : undefined,
+        column: columnString ? parseInt(columnString) : undefined,
+      });
+    } else {
+      const linePattern = /:([0-9]+)$/;
+      const lineMatch = match.match(linePattern);
+      if (lineMatch) {
+        const lineString = lineMatch[0];
+        replacement = replace({
+          match: lineMatch,
+          url: match.slice(0, -lineString.length),
+          line: lineString ? parseInt(lineString) : undefined,
+        });
+      } else {
+        replacement = replace({
+          match: lineMatch,
+          url: match,
+        });
+      }
+    }
+    if (endsWithSeparationChar) {
+      return `${replacement}${lastChar}`;
+    }
+    return replacement;
+  });
+};
+
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
@@ -4831,6 +5030,15 @@ const executeTestPlan = async ({
   keepRunning = false,
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
+
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
+  githubCheckLogLevel,
+  githubCheckName = "Jsenv tests",
+  githubCheckTitle,
+  githubCheckToken,
+  githubCheckRepositoryOwner,
+  githubCheckRepositoryName,
+  githubCheckCommitSha,
 
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
@@ -4944,6 +5152,47 @@ const executeTestPlan = async ({
         teardown,
         logger,
       });
+    }
+
+    if (githubCheckEnabled && !process.env.GITHUB_TOKEN) {
+      githubCheckEnabled = false;
+      const suggestions = [];
+      if (process.env.GITHUB_WORKFLOW_REF) {
+        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+        const refsIndex = workflowFileRef.indexOf("@refs/");
+        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        const workflowFilePath =
+          refsIndex === -1
+            ? workflowFileRef
+            : workflowFileRef.slice(0, refsIndex);
+        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+\`\`\`yml
+env:
+  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+\`\`\``);
+      }
+      suggestions.push(`Disable github check with githubCheckEnabled: false`);
+      logger.warn(
+        `${
+          UNICODE.WARNING
+        } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
+Integration with Github check API is disabled
+To fix this warning:
+- ${suggestions.join("\n- ")}
+`,
+      );
+    }
+    if (githubCheckEnabled) {
+      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+        ? readGitHubWorkflowEnv()
+        : {};
+      githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
+      githubCheckRepositoryOwner =
+        githubCheckRepositoryOwner || githubCheckInfoFromEnv.repositoryOwner;
+      githubCheckRepositoryName =
+        githubCheckRepositoryName || githubCheckInfoFromEnv.repositoryName;
+      githubCheckCommitSha =
+        githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
     }
 
     if (coverageEnabled) {
@@ -5079,6 +5328,61 @@ const executeTestPlan = async ({
     rootDirectoryUrl,
   });
   logger.debug(`${executionSteps.length} executions planned`);
+  let beforeExecutionCallback;
+  let afterExecutionCallback;
+  let afterAllExecutionCallback = () => {};
+  if (githubCheckEnabled) {
+    const githubCheckRun = await startGithubCheckRun({
+      logLevel: githubCheckLogLevel,
+      githubToken: githubCheckToken,
+      repositoryOwner: githubCheckRepositoryOwner,
+      repositoryName: githubCheckRepositoryName,
+      commitSha: githubCheckCommitSha,
+      checkName: githubCheckName,
+      checkTitle: `Tests executions`,
+      checkSummary: `${executionSteps.length} files will be executed`,
+    });
+    afterExecutionCallback = (afterExecutionInfo) => {
+      const summary = stripAnsi(
+        formatExecutionLabel(afterExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      );
+      const annotations = [];
+      const { executionResult } = afterExecutionInfo;
+      const { errors = [] } = executionResult;
+      for (const error of errors) {
+        const annotation = githubAnnotationFromError(error, {
+          rootDirectoryUrl,
+          executionInfo: afterExecutionInfo,
+        });
+        annotations.push(annotation);
+      }
+      githubCheckRun.progress({
+        title: "Jsenv test executions",
+        summary,
+        annotations,
+      });
+    };
+    afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      const title = "Jsenv test results";
+      const summary = stripAnsi(formatSummary(testPlanSummary));
+      if (
+        testPlanSummary.counters.total !== testPlanSummary.counters.completed
+      ) {
+        await githubCheckRun.fail({
+          title,
+          summary,
+        });
+        return;
+      }
+      await githubCheckRun.pass({
+        title,
+        summary,
+      });
+    };
+  }
 
   const result = await executeSteps(executionSteps, {
     signal,
@@ -5103,6 +5407,14 @@ const executeTestPlan = async ({
     cooldownBetweenExecutions,
     gcBetweenExecutions,
 
+    githubCheckEnabled,
+    githubCheckName,
+    githubCheckTitle,
+    githubCheckToken,
+    githubCheckRepositoryOwner,
+    githubCheckRepositoryName,
+    githubCheckCommitSha,
+
     coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
@@ -5110,11 +5422,14 @@ const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
+
+    beforeExecutionCallback,
+    afterExecutionCallback,
   });
-  if (
-    updateProcessExitCode &&
-    result.planSummary.counters.total !== result.planSummary.counters.completed
-  ) {
+
+  const hasFailed =
+    result.planSummary.counters.total !== result.planSummary.counters.completed;
+  if (updateProcessExitCode && hasFailed) {
     process.exitCode = 1;
   }
   const planCoverage = result.planCoverage;
@@ -5161,12 +5476,15 @@ const executeTestPlan = async ({
     }
     await Promise.all(promises);
   }
-  return {
+
+  const returnValue = {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage,
   };
+  await afterAllExecutionCallback(returnValue);
+  return returnValue;
 };
 
 const memoize = (compute) => {
@@ -5756,15 +6074,9 @@ const createRuntimeUsingPlaywright = ({
         if (executionResult.status === "failed") {
           result.status = "failed";
           if (executionResult.exception) {
-            result.errors.push({
-              ...executionResult.exception,
-              stack: executionResult.exception.text,
-            });
+            result.errors.push(executionResult.exception);
           } else {
-            result.errors.push({
-              ...executionResult.error,
-              stack: executionResult.error.stack,
-            });
+            result.errors.push(executionResult.error);
           }
         }
       });
@@ -6340,8 +6652,8 @@ const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL(
   import.meta.url,
 ).href;
 
-const CONTROLLABLE_CHILD_PROCESS_URL = new URL(
-  "./controllable_child_process.mjs",
+const CONTROLLED_CHILD_PROCESS_URL = new URL(
+  "./node_child_process_controlled.mjs",
   import.meta.url,
 ).href;
 
@@ -6428,10 +6740,10 @@ const nodeChildProcess = ({
       };
       logger[logProcessCommand ? "info" : "debug"](
         `${process.argv[0]} ${execArgv.join(" ")} ${fileURLToPath(
-          CONTROLLABLE_CHILD_PROCESS_URL,
+          CONTROLLED_CHILD_PROCESS_URL,
         )}`,
       );
-      const childProcess = fork(fileURLToPath(CONTROLLABLE_CHILD_PROCESS_URL), {
+      const childProcess = fork(fileURLToPath(CONTROLLED_CHILD_PROCESS_URL), {
         execArgv,
         // silent: true
         stdio: ["pipe", "pipe", "pipe", "ipc"],
@@ -6681,8 +6993,7 @@ const onceChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       childProcess.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "");
+      callback(message.data ? JSON.parse(message.data) : "");
     }
   };
   childProcess.on("message", onmessage);
@@ -6702,8 +7013,8 @@ const onceChildProcessEvent = (childProcess, type, callback) => {
 // https://nodejs.org/api/worker_threads.html
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 
-const CONTROLLABLE_WORKER_THREAD_URL = new URL(
-  "./controllable_worker_thread.mjs",
+const CONTROLLED_WORKER_THREAD_URL = new URL(
+  "./node_worker_thread_controlled.mjs",
   import.meta.url,
 ).href;
 
@@ -6780,7 +7091,7 @@ const nodeWorkerThread = ({
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
       const workerThread = new Worker(
-        fileURLToPath(CONTROLLABLE_WORKER_THREAD_URL),
+        fileURLToPath(CONTROLLED_WORKER_THREAD_URL),
         {
           env: envForWorkerThread,
           execArgv: execArgvForWorkerThread,
@@ -6967,8 +7278,7 @@ const onceWorkerThreadMessage = (workerThread, type, callback) => {
   const onmessage = (message) => {
     if (message && message.jsenv && message.type === type) {
       workerThread.removeListener("message", onmessage);
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : undefined);
+      callback(message.data ? JSON.parse(message.data) : undefined);
     }
   };
   workerThread.on("message", onmessage);

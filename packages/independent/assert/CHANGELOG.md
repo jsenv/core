@@ -1,3 +1,84 @@
+# 2.11.0
+
+### improve string failure message
+
+- basic error message is simplified to "unexpected character in string" to make it easier to recognize in a glimpse.
+  - failing character moves next to "^" to emphazie the failing character
+  - location (index, line, column) removes from error message (already available in "--- path ---")
+- the width of the log is truncated when too large to make it more readable
+
+````md
+<!-- Input -->
+
+```js
+assert({
+  actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
+  expected: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
+});
+```
+
+<!-- @jsenv/assert 2.10.0 -->
+
+```console
+unexpected string, "s" was found instead of "/" at index 79
+--- details ---
+"file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js"
+                                                                                ^ unexpected character, expected string continues with "/something.js"
+--- path ---
+actual[79]
+```
+
+<!-- @jsenv/assert 2.11.0 -->
+
+```console
+unexpected character in string
+--- details ---
+…node_modules/@jsenv/assert/src/internal/something.js
+                                         ^ unexpected "s", expected to continue with "/something.js"
+--- path ---
+actual[79]
+```
+````
+
+### add `assert.startsWith`
+
+Add a new helper method `assert.startsWith`. It is useful to perform assertion only on the beginning of a string and allow the rest to be anything. Very useful for error stack where the beginning is know but the rest of error stack is dependent on the filesystem an other things like node modules.
+
+`````md
+<!-- @jsenv/assert 2.10.0 -->
+
+```js
+const stack = `Error: message
+  at file.js:10:1
+  at node_modules/foo/foo.js:125:10`;
+const expected = `Error: message 
+  at files.js:10:1`;
+const actual = stack.slice(0, expected.length);
+assert({ actual, expected });
+```
+
+<!-- @jsenv/assert 2.11.0 -->
+
+```js
+const actual = `Error: message
+  at file.js:10:1
+  at node_modules/foo/foo.js:125:10`;
+const expected = assert.startsWith(`Error: message
+  at files.js:10:1`);
+assert({ actual, expected });
+```
+
+It was also possible to use `matchesRegExp` to obtain `startsWith` but again not very handy to write:
+
+```js
+const actual = `Error: message
+  at file.js:10:1
+  at node_modules/foo/foo.js:125:10`;
+const expected = /Error\: message\\n  at files.js\:10\:1.*+/;
+const actual = stack.slice(0, expected.length);
+assert({ actual, expected });
+```
+
 # 2.10.0
 
 #### Improve message for strings
@@ -101,3 +182,4 @@ actual[140]#L6C8
 # 2.9.0
 
 - Improve speed when comparing two node buffers
+`````

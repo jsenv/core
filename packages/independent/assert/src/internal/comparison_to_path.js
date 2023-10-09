@@ -67,10 +67,13 @@ export const comparisonToPath = (comparison, name = "actual") => {
     if (type === "value-of-return-value") {
       return `${previous}.valueOf()`;
     }
-    if (type === "identity" || type === "not") {
-      return previous;
-    }
-    if (type === "any" || type === "matchesRegExp") {
+    if (
+      type === "identity" ||
+      type === "not" ||
+      type === "any" ||
+      type === "matches_reg_exp" ||
+      type === "starts_with"
+    ) {
       return previous;
     }
     return `${previous} type:${type}, data:${data}`;

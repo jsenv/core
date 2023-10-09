@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import stripAnsi from "strip-ansi";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { URL_META } from "@jsenv/url-meta";
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
@@ -7,7 +8,11 @@ import {
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
 } from "@jsenv/filesystem";
-import { createLogger, createDetailedMessage } from "@jsenv/log";
+import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/log";
+import {
+  startGithubCheckRun,
+  readGitHubWorkflowEnv,
+} from "@jsenv/github-check-run";
 
 import { createTeardown } from "../helpers/teardown.js";
 import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_file.js";
@@ -16,6 +21,8 @@ import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { executionStepsFromTestPlan } from "./execution_steps.js";
 import { executeSteps } from "./execute_steps.js";
+import { formatExecutionLabel, formatSummary } from "./logs_file_execution.js";
+import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -63,6 +70,15 @@ export const executeTestPlan = async ({
   keepRunning = false,
   cooldownBetweenExecutions = 0,
   gcBetweenExecutions = logMemoryHeapUsage,
+
+  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
+  githubCheckLogLevel,
+  githubCheckName = "Jsenv tests",
+  githubCheckTitle,
+  githubCheckToken,
+  githubCheckRepositoryOwner,
+  githubCheckRepositoryName,
+  githubCheckCommitSha,
 
   coverageEnabled = process.argv.includes("--coverage"),
   coverageConfig = {
@@ -176,6 +192,47 @@ export const executeTestPlan = async ({
         teardown,
         logger,
       });
+    }
+
+    if (githubCheckEnabled && !process.env.GITHUB_TOKEN) {
+      githubCheckEnabled = false;
+      const suggestions = [];
+      if (process.env.GITHUB_WORKFLOW_REF) {
+        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+        const refsIndex = workflowFileRef.indexOf("@refs/");
+        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+        const workflowFilePath =
+          refsIndex === -1
+            ? workflowFileRef
+            : workflowFileRef.slice(0, refsIndex);
+        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+\`\`\`yml
+env:
+  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+\`\`\``);
+      }
+      suggestions.push(`Disable github check with githubCheckEnabled: false`);
+      logger.warn(
+        `${
+          UNICODE.WARNING
+        } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
+Integration with Github check API is disabled
+To fix this warning:
+- ${suggestions.join("\n- ")}
+`,
+      );
+    }
+    if (githubCheckEnabled) {
+      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+        ? readGitHubWorkflowEnv()
+        : {};
+      githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
+      githubCheckRepositoryOwner =
+        githubCheckRepositoryOwner || githubCheckInfoFromEnv.repositoryOwner;
+      githubCheckRepositoryName =
+        githubCheckRepositoryName || githubCheckInfoFromEnv.repositoryName;
+      githubCheckCommitSha =
+        githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
     }
 
     if (coverageEnabled) {
@@ -311,6 +368,61 @@ export const executeTestPlan = async ({
     rootDirectoryUrl,
   });
   logger.debug(`${executionSteps.length} executions planned`);
+  let beforeExecutionCallback;
+  let afterExecutionCallback;
+  let afterAllExecutionCallback = () => {};
+  if (githubCheckEnabled) {
+    const githubCheckRun = await startGithubCheckRun({
+      logLevel: githubCheckLogLevel,
+      githubToken: githubCheckToken,
+      repositoryOwner: githubCheckRepositoryOwner,
+      repositoryName: githubCheckRepositoryName,
+      commitSha: githubCheckCommitSha,
+      checkName: githubCheckName,
+      checkTitle: `Tests executions`,
+      checkSummary: `${executionSteps.length} files will be executed`,
+    });
+    afterExecutionCallback = (afterExecutionInfo) => {
+      const summary = stripAnsi(
+        formatExecutionLabel(afterExecutionInfo, {
+          logTimeUsage,
+          logMemoryHeapUsage,
+        }),
+      );
+      const annotations = [];
+      const { executionResult } = afterExecutionInfo;
+      const { errors = [] } = executionResult;
+      for (const error of errors) {
+        const annotation = githubAnnotationFromError(error, {
+          rootDirectoryUrl,
+          executionInfo: afterExecutionInfo,
+        });
+        annotations.push(annotation);
+      }
+      githubCheckRun.progress({
+        title: "Jsenv test executions",
+        summary,
+        annotations,
+      });
+    };
+    afterAllExecutionCallback = async ({ testPlanSummary }) => {
+      const title = "Jsenv test results";
+      const summary = stripAnsi(formatSummary(testPlanSummary));
+      if (
+        testPlanSummary.counters.total !== testPlanSummary.counters.completed
+      ) {
+        await githubCheckRun.fail({
+          title,
+          summary,
+        });
+        return;
+      }
+      await githubCheckRun.pass({
+        title,
+        summary,
+      });
+    };
+  }
 
   const result = await executeSteps(executionSteps, {
     signal,
@@ -335,6 +447,14 @@ export const executeTestPlan = async ({
     cooldownBetweenExecutions,
     gcBetweenExecutions,
 
+    githubCheckEnabled,
+    githubCheckName,
+    githubCheckTitle,
+    githubCheckToken,
+    githubCheckRepositoryOwner,
+    githubCheckRepositoryName,
+    githubCheckCommitSha,
+
     coverageEnabled,
     coverageConfig,
     coverageIncludeMissing,
@@ -342,11 +462,14 @@ export const executeTestPlan = async ({
     coverageMethodForNodeJs,
     coverageV8ConflictWarning,
     coverageTempDirectoryUrl,
+
+    beforeExecutionCallback,
+    afterExecutionCallback,
   });
-  if (
-    updateProcessExitCode &&
-    result.planSummary.counters.total !== result.planSummary.counters.completed
-  ) {
+
+  const hasFailed =
+    result.planSummary.counters.total !== result.planSummary.counters.completed;
+  if (updateProcessExitCode && hasFailed) {
     process.exitCode = 1;
   }
   const planCoverage = result.planCoverage;
@@ -393,10 +516,13 @@ export const executeTestPlan = async ({
     }
     await Promise.all(promises);
   }
-  return {
+
+  const returnValue = {
     testPlanAborted: result.aborted,
     testPlanSummary: result.planSummary,
     testPlanReport: result.planReport,
     testPlanCoverage: planCoverage,
   };
+  await afterAllExecutionCallback(returnValue);
+  return returnValue;
 };

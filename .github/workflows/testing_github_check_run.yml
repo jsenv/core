@@ -1,0 +1,45 @@
+# This is a GitHub workflow YAML file
+# see https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+#
+# If you want to update this file it's recommended to use a YAML validator
+# https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
+# configured to validate with https://json.schemastore.org/github-workflow.json
+#
+# This workflow is responsible to perform various checks related to the codebase,
+# For every push to main or on a pull request, it
+# - ensures there is no eslint error on files
+# - ensures there is no test failing
+# - uploads code coverage from tests to codecov
+#
+# If all these steps are passing and there is a secrets.NPM_TOKEN and version in package.json
+# is not already published, workflow published the package on npm.
+
+name: testing_github_check_run
+
+on:
+  push:
+    branches:
+      - github_annotations
+  pull_request:
+    branches:
+      - github_annotations
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        node: [20.8.0]
+    runs-on: ${{ matrix.os }}
+    name: test on ${{ matrix.os }} and node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install node modules
+        run: npm install
+      - name: Run tests
+        run: node --conditions=development ./.github/workflows/check_run_playground/test.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

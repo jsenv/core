@@ -20,53 +20,54 @@ export const createExecutionLog = (
     startMs,
     endMs,
     nowMs,
+    timeEllapsed,
+    memoryHeap,
+    counters,
   },
   {
     logShortForCompletedExecutions,
-    counters,
     logRuntime,
     logEachDuration,
-    timeEllapsed,
-    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
   },
 ) => {
+  const label = formatExecutionLabel(
+    {
+      executionIndex,
+      executionParams,
+      executionResult,
+      timeEllapsed,
+      memoryHeap,
+      counters,
+    },
+    {
+      logTimeUsage,
+      logMemoryHeapUsage,
+    },
+  );
+
   const { status } = executionResult;
-  const descriptionFormatter = descriptionFormatters[status];
-  const description = descriptionFormatter({
-    index: executionIndex,
-    total: counters.total,
-    executionParams,
-  });
-  const summary = createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap,
-  });
   let log;
   if (logShortForCompletedExecutions && status === "completed") {
-    log = `${description}${summary}`;
+    log = label;
   } else {
-    const { consoleCalls = [], errors = [] } = executionResult;
-    const consoleOutput = formatConsoleCalls(consoleCalls);
-    const errorsOutput = formatErrors(errors);
-    log = formatExecution({
-      label: `${description}${summary}`,
-      details: {
-        file: fileRelativeUrl,
-        ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
-        ...(logEachDuration
-          ? {
-              duration:
-                status === "executing"
-                  ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
-                  : msAsDuration(endMs - startMs),
-            }
-          : {}),
+    log = formatExecution(
+      {
+        fileRelativeUrl,
+        runtimeName,
+        runtimeVersion,
+        executionResult,
+        startMs,
+        endMs,
+        nowMs,
       },
-      consoleOutput,
-      errorsOutput,
-    });
+      {
+        label,
+        logRuntime,
+        logEachDuration,
+      },
+    );
   }
 
   const { columns = 80 } = process.stdout;
@@ -87,11 +88,96 @@ export const createExecutionLog = (
   return log;
 };
 
+export const formatExecution = (
+  {
+    fileRelativeUrl,
+    runtimeName,
+    runtimeVersion,
+    executionResult,
+    startMs,
+    endMs,
+    nowMs,
+  },
+  { label, logRuntime = true, logEachDuration = true } = {},
+) => {
+  const { status } = executionResult;
+  const { consoleCalls = [], errors = [] } = executionResult;
+  const consoleOutput = formatConsoleCalls(consoleCalls);
+  const errorsOutput = formatErrors(errors);
+
+  const details = {
+    file: fileRelativeUrl,
+    ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
+    ...(logEachDuration
+      ? {
+          duration:
+            status === "executing"
+              ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
+              : msAsDuration(endMs - startMs),
+        }
+      : {}),
+  };
+  let message = ``;
+  if (label) {
+    message += label;
+  }
+  Object.keys(details).forEach((key) => {
+    if (message.length > 0) {
+      message += "\n";
+    }
+    message += `${key}: ${details[key]}`;
+  });
+  if (consoleOutput) {
+    message += `\n${consoleOutput}`;
+  }
+  if (errorsOutput) {
+    message += `\n${errorsOutput}`;
+  }
+  return message;
+};
+
+export const formatExecutionLabel = (
+  {
+    executionIndex,
+    executionParams,
+    executionResult,
+    timeEllapsed,
+    memoryHeap,
+    counters,
+  },
+  { logTimeUsage, logMemoryHeapUsage } = {},
+) => {
+  const { status } = executionResult;
+  const descriptionFormatter = descriptionFormatters[status];
+  const description = descriptionFormatter({
+    index: executionIndex,
+    total: counters.total,
+    executionParams,
+  });
+  const intermediateSummaryText = createIntermediateSummary({
+    executionIndex,
+    counters,
+    timeEllapsed,
+    memoryHeap,
+    logTimeUsage,
+    logMemoryHeapUsage,
+  });
+  return `${description}${intermediateSummaryText}`;
+};
+
 const formatErrors = (errors) => {
   if (errors.length === 0) {
     return "";
   }
-  const formatError = (error) => error.stack || error.message || error;
+  const formatError = (error) => {
+    if (error === null || error === undefined) {
+      return String(error);
+    }
+    if (error) {
+      return error.stack || error.message || error;
+    }
+    return error;
+  };
 
   if (errors.length === 1) {
     return `${ANSI.color(`-------- error --------`, ANSI.RED)}
@@ -114,12 +200,16 @@ ${output.join(`\n`)}
 ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 };
 
-export const createSummaryLog = (
+export const formatSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
-${createAllExecutionsSummary(summary)}
-total duration: ${msAsDuration(summary.duration)}
+${formatSummary(summary)}
 ----------------------------------------`;
+
+export const formatSummary = (summary) => `${createAllExecutionsSummary(
+  summary,
+)}
+total duration: ${msAsDuration(summary.duration)}`;
 
 const createAllExecutionsSummary = ({ counters }) => {
   if (counters.total === 0) {
@@ -137,6 +227,8 @@ const createIntermediateSummary = ({
   counters,
   memoryHeap,
   timeEllapsed,
+  logTimeUsage,
+  logMemoryHeapUsage,
 }) => {
   const parts = [];
   if (executionIndex > 0 || counters.done > 0) {
@@ -149,10 +241,10 @@ const createIntermediateSummary = ({
       }),
     );
   }
-  if (timeEllapsed) {
+  if (logTimeUsage && timeEllapsed) {
     parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
   }
-  if (memoryHeap) {
+  if (logMemoryHeapUsage && memoryHeap) {
     parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
   }
   if (parts.length === 0) {
@@ -404,25 +496,4 @@ const formatConsoleSummary = (repartition) => {
     return `console`;
   }
   return `console (${parts.join(" ")})`;
-};
-
-const formatExecution = ({
-  label,
-  details = {},
-  consoleOutput,
-  errorsOutput,
-}) => {
-  let message = ``;
-  message += label;
-  Object.keys(details).forEach((key) => {
-    message += `
-${key}: ${details[key]}`;
-  });
-  if (consoleOutput) {
-    message += `\n${consoleOutput}`;
-  }
-  if (errorsOutput) {
-    message += `\n${errorsOutput}`;
-  }
-  return message;
 };

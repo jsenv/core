@@ -10,7 +10,7 @@ import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { reportToCoverage } from "../coverage/report_to_coverage.js";
 import { run } from "./run.js";
 import { ensureGlobalGc } from "./gc.js";
-import { createExecutionLog, createSummaryLog } from "./logs_file_execution.js";
+import { createExecutionLog, formatSummaryLog } from "./logs_file_execution.js";
 
 export const executeSteps = async (
   executionSteps,
@@ -177,6 +177,9 @@ export const executeSteps = async (
           executionResult: {
             status: "executing",
           },
+          counters,
+          timeEllapsed: Date.now() - startMs,
+          memoryHeap: memoryUsage().heapUsed,
         };
         if (typeof executionParams.allocatedMs === "function") {
           executionParams.allocatedMs =
@@ -188,17 +191,10 @@ export const executeSteps = async (
             log: executionLog,
             render: () => {
               return createExecutionLog(beforeExecutionInfo, {
-                counters,
                 logRuntime,
                 logEachDuration,
-                ...(logTimeUsage
-                  ? {
-                      timeEllapsed: Date.now() - startMs,
-                    }
-                  : {}),
-                ...(logMemoryHeapUsage
-                  ? { memoryHeap: memoryUsage().heapUsed }
-                  : {}),
+                logTimeUsage,
+                logMemoryHeapUsage,
               });
             },
           });
@@ -249,7 +245,6 @@ export const executeSteps = async (
           endMs: Date.now(),
           executionResult,
         };
-        afterExecutionCallback(afterExecutionInfo);
 
         if (executionResult.status === "aborted") {
           counters.aborted++;
@@ -266,7 +261,6 @@ export const executeSteps = async (
         if (executionLogsEnabled) {
           const log = createExecutionLog(afterExecutionInfo, {
             logShortForCompletedExecutions,
-            counters,
             logRuntime,
             logEachDuration,
             ...(logTimeUsage
@@ -294,6 +288,7 @@ export const executeSteps = async (
             executionLog = createLog({ newLine: "" });
           }
         }
+        afterExecutionCallback(afterExecutionInfo);
         const isLastExecutionLog = executionIndex === executionSteps.length - 1;
         const cancelRemaining =
           failFast &&
@@ -321,7 +316,7 @@ export const executeSteps = async (
       duration: Date.now() - startMs,
     };
     if (logSummary) {
-      const summaryLog = createSummaryLog(summary);
+      const summaryLog = formatSummaryLog(summary);
       rawOutput += stripAnsi(summaryLog);
       logger.info(summaryLog);
     }

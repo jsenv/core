@@ -9,6 +9,8 @@ window.__supervisor__ = (() => {
     reloadSupervisedScript: notImplemented,
     getDocumentExecutionResult: notImplemented,
   };
+  const isWebkitOrSafari =
+    typeof window.webkitConvertPointFromNodeToPage === "function";
 
   const executionResults = {};
   let documentExecutionStartTime;
@@ -192,8 +194,6 @@ window.__supervisor__ = (() => {
       executions[src] = { isInline: true, start, end, error };
     };
 
-    const isWebkitOrSafari =
-      typeof window.webkitConvertPointFromNodeToPage === "function";
     // https://twitter.com/damienmaillard/status/1554752482273787906
     const prepareJsModuleExecutionWithDynamicImport = (src) => {
       const urlObject = new URL(src, window.location);
@@ -425,14 +425,21 @@ window.__supervisor__ = (() => {
     ) => {
       const exception = {
         reason,
+        isException: true,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
         reportedBy,
         code: null,
+        name: null,
         message: null,
-        stack: null,
-        stackFormatIsV8: null,
+        stack: "", // the stack v8 format
         stackSourcemapped: null,
-        originalStack: null,
+        stackOriginal: "", // the stack from runtime, not normalized to v8
+        stackTrace: "", // the stack trace (without error name and message)
+        withServerUrls: {
+          message: "",
+          stackTrace: "",
+          stack: "",
+        },
         meta: null,
         site: {
           isInline: null,
@@ -458,20 +465,24 @@ window.__supervisor__ = (() => {
         }
         if (reason instanceof Error) {
           const error = reason;
-          let message = error.message;
           exception.isError = true;
-          if (Error.captureStackTrace) {
+          exception.name = error.name || "Error";
+          exception.message = error.message || "";
+          if (
+            Error.captureStackTrace &&
+            // captureStackTrace exists on webkit but error.stack is not v8
+            !isWebkitOrSafari
+          ) {
             // stackTrace formatted by V8
-            exception.message = message;
-            exception.stack = getErrorStackWithoutErrorMessage(error);
-            exception.stackFormatIsV8 = true;
             exception.stackSourcemapped = true;
-          } else {
-            exception.message = message;
-            exception.stack = error.stack ? `  ${error.stack}` : null;
-            exception.stackFormatIsV8 = false;
+            exception.stack = error.stack;
+            exception.stackTrace = getErrorStackTrace(error);
+          } else if (error.stack) {
             exception.stackSourcemapped = false;
+            exception.stackTrace = error.stack;
+            exception.stack = stringifyStack(exception);
           }
+
           if (error.reportedBy) {
             exception.reportedBy = error.reportedBy;
           }
@@ -480,24 +491,24 @@ window.__supervisor__ = (() => {
           }
           export_missing: {
             // chrome
-            if (message.includes("does not provide an export named")) {
+            if (error.message.includes("does not provide an export named")) {
               exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
               return;
             }
             // firefox
             if (
-              message.startsWith("import not found:") ||
-              message.startsWith("ambiguous indirect export:")
+              error.message.startsWith("import not found:") ||
+              error.message.startsWith("ambiguous indirect export:")
             ) {
               exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
               return;
             }
             // safari
-            if (message.startsWith("import binding name")) {
+            if (error.message.startsWith("import binding name")) {
               exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
               return;
             }
-            if (message.includes("Importing a module script failed")) {
+            if (error.message.includes("Importing a module script failed")) {
               exception.code = DYNAMIC_IMPORT_FETCH_ERROR;
               return;
             }
@@ -527,21 +538,6 @@ window.__supervisor__ = (() => {
       };
       writeBasicProperties();
 
-      // first create a version of the stack with file://
-      // (and use it to locate exception url+line+column)
-      if (exception.stack) {
-        exception.originalStack = exception.stack;
-        exception.stack = replaceUrls(
-          exception.originalStack,
-          (serverUrlSite) => {
-            const fileUrlSite = resolveUrlSite(serverUrlSite);
-            if (exception.site.url === null) {
-              Object.assign(exception.site, fileUrlSite);
-            }
-            return stringifyUrlSite(fileUrlSite);
-          },
-        );
-      }
       // then if it fails, use url+line+column passed
       if (exception.site.url === null && url) {
         if (typeof line === "string") {
@@ -560,18 +556,51 @@ window.__supervisor__ = (() => {
         }
         Object.assign(exception.site, fileUrlSite);
       }
-      exception.text = stringifyMessageAndStack(exception);
+
+      exception.withServerUrls.message = exception.message;
+      exception.withServerUrls.stackTrace = exception.stackTrace;
+      exception.withServerUrls.stack = exception.stack;
+      exception.message = exception.message
+        ? replaceUrls(exception.message, (serverUrlSite) => {
+            const fileUrlSite = resolveUrlSite(serverUrlSite);
+            return stringifyUrlSite(fileUrlSite);
+          })
+        : "";
+      exception.stackTrace = exception.stackTrace
+        ? replaceUrls(exception.stackTrace, (serverUrlSite) => {
+            const fileUrlSite = resolveUrlSite(serverUrlSite);
+            if (exception.site.url === null) {
+              Object.assign(exception.site, fileUrlSite);
+            }
+            return stringifyUrlSite(fileUrlSite);
+          })
+        : "";
+      exception.stack = stringifyStack({
+        name: exception.name,
+        message: exception.message,
+        stackTrace: exception.stackTrace,
+      });
+      exception.text = stringifyStack({
+        name: exception.name,
+        message: exception.message,
+        stackTrace: exception.stackTrace,
+      });
       return exception;
     };
 
-    const stringifyMessageAndStack = ({ message, stack }) => {
-      if (message && stack) {
-        return `${message}\n${stack}`;
+    const stringifyStack = ({ name, message, stackTrace }) => {
+      let stack;
+      if (name && message) {
+        stack = `${name}: ${message}`;
+      } else if (message) {
+        stack = message;
+      } else {
+        stack = "";
       }
-      if (stack) {
-        return stack;
+      if (stackTrace) {
+        stack += `\n${stackTrace}`;
       }
-      return message;
+      return stack;
     };
 
     const stringifyUrlSite = ({ url, line, column }) => {
@@ -618,7 +647,7 @@ window.__supervisor__ = (() => {
       };
     };
 
-    const getErrorStackWithoutErrorMessage = (error) => {
+    const getErrorStackTrace = (error) => {
       let stack = error.stack;
       if (!stack) return "";
       const messageInStack = `${error.name}: ${error.message}`;
@@ -745,12 +774,13 @@ window.__supervisor__ = (() => {
           return textWithHtmlLinks;
         };
 
-        errorParts.text = stringifyMessageAndStack({
+        errorParts.text = stringifyStack({
+          name: exceptionInfo.name,
           message: exceptionInfo.message
             ? generateClickableText(exceptionInfo.message)
             : "",
-          stack: exceptionInfo.stack
-            ? generateClickableText(exceptionInfo.stack)
+          stackTrace: exceptionInfo.stackTrace
+            ? generateClickableText(exceptionInfo.stackTrace)
             : "",
         });
         if (exceptionInfo.site.url) {
@@ -779,13 +809,15 @@ window.__supervisor__ = (() => {
                 }
                 const causeText =
                   causeInfo.code === "NOT_FOUND"
-                    ? stringifyMessageAndStack({
+                    ? stringifyStack({
+                        name: causeInfo.name,
                         message: generateClickableText(causeInfo.reason),
-                        stack: generateClickableText(causeInfo.codeFrame),
+                        stackTrace: generateClickableText(causeInfo.codeFrame),
                       })
-                    : stringifyMessageAndStack({
+                    : stringifyStack({
+                        name: causeInfo.name,
                         message: generateClickableText(causeInfo.stack),
-                        stack: generateClickableText(causeInfo.codeFrame),
+                        stackTrace: generateClickableText(causeInfo.codeFrame),
                       });
                 return {
                   cause: causeText,

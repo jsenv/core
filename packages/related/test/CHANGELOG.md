@@ -1,3 +1,9 @@
+# 1.7.0
+
+- Implement github annotations, enabled by default when runned inside GitHub workflow
+
+  ![img](./docs/github_annotation.png)
+
 # 1.6.5
 
 - Use node `crypto.randomUUID()` instead of `@paralleldrive/cuid2` because later is not installed by NPM for some reason

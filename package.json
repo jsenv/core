@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "38.2.6",
+  "version": "38.2.7",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -74,7 +74,7 @@
     "@jsenv/plugin-bundling": "2.5.5",
     "@jsenv/plugin-minification": "1.5.2",
     "@jsenv/plugin-transpilation": "1.3.4",
-    "@jsenv/plugin-supervisor": "1.3.4",
+    "@jsenv/plugin-supervisor": "1.3.5",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.2.1",
     "@jsenv/utils": "2.0.1"

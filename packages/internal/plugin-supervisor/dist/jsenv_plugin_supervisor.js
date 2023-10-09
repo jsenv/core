@@ -1018,6 +1018,7 @@ const jsenvPluginSupervisor = ({
         const causeInfo = getErrorCauseInfo();
         const body = JSON.stringify(causeInfo ? {
           code: causeInfo.code,
+          name: causeInfo.name,
           message: causeInfo.message,
           reason: causeInfo.reason,
           stack: errorBaseUrl ? "stack mocked for snapshot" : causeInfo.stack,

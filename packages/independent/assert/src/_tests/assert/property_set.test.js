@@ -1,21 +1,18 @@
+/* eslint-disable accessor-pairs */
 import { assert } from "@jsenv/assert";
 import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 {
-  const actual = Object.defineProperty({}, "foo", { get: () => 1 });
-  const expected = Object.defineProperty({}, "foo", { get: () => 1 });
+  const actual = Object.defineProperty({}, "foo", { set: () => {} });
+  const expected = Object.defineProperty({}, "foo", { set: () => {} });
   assert({ actual, expected });
 }
 
 {
   // eslint-disable-next-line no-inner-declarations
-  function get() {
-    return 1;
-  }
+  function set() {}
   const actual = Object.defineProperty({}, "foo", {});
-  const expected = Object.defineProperty({}, "foo", {
-    get,
-  });
+  const expected = Object.defineProperty({}, "foo", { set });
   try {
     assert({ actual, expected });
   } catch (e) {
@@ -25,19 +22,17 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
 --- found ---
 undefined
 --- expected ---
-function ${get.name}() {/* hidden */}
+function ${set.name}() {/* hidden */}
 --- path ---
-actual.foo[[Get]]`,
+actual.foo[[Set]]`,
     );
   }
 }
 
 {
   // eslint-disable-next-line no-inner-declarations
-  function get() {
-    return 1;
-  }
-  const actual = Object.defineProperty({}, "foo", { get });
+  function set() {}
+  const actual = Object.defineProperty({}, "foo", { set });
   const expected = Object.defineProperty({}, "foo", {});
   try {
     assert({ actual, expected });
@@ -46,31 +41,31 @@ actual.foo[[Get]]`,
       e,
       `unequal values
 --- found ---
-function ${get.name}() {/* hidden */}
+function ${set.name}() {/* hidden */}
 --- expected ---
 undefined
 --- path ---
-actual.foo[[Get]]`,
+actual.foo[[Set]]`,
     );
   }
 }
 
 {
-  const actualGetter = () => 1;
-  const expectedGetter = () => 1;
-  const actual = Object.defineProperty({}, "foo", { get: actualGetter });
-  const expected = Object.defineProperty({}, "foo", { get: expectedGetter });
+  const actualSetter = () => 1;
+  const expectedSetter = () => 1;
   try {
+    const actual = Object.defineProperty({}, "foo", { set: actualSetter });
+    const expected = Object.defineProperty({}, "foo", { set: expectedSetter });
     assert({ actual, expected });
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected function name, "a" was found instead of "e" at index 0
+      `unexpected character in function name
 --- details ---
-"actualGetter"
- ^ unexpected character, expected string continues with "expectedGetter"
+actualSetter
+^ unexpected "a", expected to continue with "expectedSetter"
 --- path ---
-actual.foo[[Get]].name[0]`,
+actual.foo[[Set]].name[0]`,
     );
   }
 }

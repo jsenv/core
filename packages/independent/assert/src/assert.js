@@ -2,6 +2,7 @@ import {
   compare,
   createNotExpectation,
   createAnyExpectation,
+  createStartsWithExpectation,
   createMatchesRegExpExpectation,
 } from "./internal/compare.js";
 import { errorMessageFromComparison } from "./internal/error_message_from_comparison.js";
@@ -79,6 +80,9 @@ assert.matchesRegExp = (regexp) => {
     );
   }
   return createMatchesRegExpExpectation(regexp);
+};
+assert.startsWith = (string) => {
+  return createStartsWithExpectation(string);
 };
 assert.asObjectWithoutPrototype = (object) => {
   const objectWithoutPrototype = Object.create(null);

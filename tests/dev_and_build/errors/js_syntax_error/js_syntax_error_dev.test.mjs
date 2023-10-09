@@ -4,9 +4,10 @@ import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
+  const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
     logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     keepProcessAlive: false,
     clientAutoreload: {
       clientServerEventsConfig: {
@@ -35,7 +36,7 @@ const test = async (params) => {
         name: "SyntaxError",
       }),
     ],
-    errorText: "Unexpected end of input",
+    errorText: "SyntaxError: Unexpected end of input",
     consoleOutputRaw: "",
   };
   assert({ actual, expected });

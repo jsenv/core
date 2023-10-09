@@ -1,0 +1,40 @@
+{
+  "name": "@jsenv/github-check-run",
+  "version": "0.1.0",
+  "description": "Interact with GitHub check rest API",
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/workflow",
+    "directory": "packages/github-check-run"
+  },
+  "engines": {
+    "node": ">=18.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/fetch": "1.1.41",
+    "@jsenv/log": "3.4.1"
+  }
+}

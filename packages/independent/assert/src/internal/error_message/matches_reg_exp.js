@@ -2,14 +2,12 @@ import { comparisonToPath } from "../comparison_to_path.js";
 import { valueToString } from "../value_to_string.js";
 
 export const matchesRegExpToErrorMessage = (comparison) => {
-  if (comparison.type !== "matchesRegExp") {
+  if (comparison.type !== "matches_reg_exp") {
     return undefined;
   }
-
   const path = comparisonToPath(comparison);
   const actualValue = valueToString(comparison.actual);
   const expectedRegexp = valueToString(comparison.expected);
-
   return createMatchesRegExpMessage({ path, actualValue, expectedRegexp });
 };
 
