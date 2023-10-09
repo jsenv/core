@@ -75,15 +75,15 @@ createAssertionError@`),
   assert({ actual, expected });
 };
 
-await test({ runtime: chromium() });
 if (!process.env.CI) {
   // disabled on CI because generates the following warning
   // Window 'showModalDialog' function is deprecated and will be removed soon
   // for some reason
+  await test({ runtime: chromium() });
   await test({
     runtime: firefox({
       disableOnWindowsBecauseFlaky: false,
     }),
   });
+  await test({ runtime: webkit() });
 }
-await test({ runtime: webkit() });
