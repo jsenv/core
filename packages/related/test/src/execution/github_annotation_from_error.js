@@ -1,10 +1,7 @@
 import stripAnsi from "strip-ansi";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
-import {
-  formatExecutionLabel,
-  formatExecution,
-} from "./logs_file_execution.js";
+import { formatExecution } from "./logs_file_execution.js";
 
 export const githubAnnotationFromError = (
   error,
@@ -15,7 +12,7 @@ export const githubAnnotationFromError = (
     path: executionInfo.fileRelativeUrl,
     start_line: 1,
     end_line: 1,
-    title: stripAnsi(formatExecutionLabel(executionInfo)),
+    title: formatAnnotationTitle(executionInfo),
   };
   const exception = asException(error, { rootDirectoryUrl });
   if (typeof exception.site.line === "number") {
@@ -35,6 +32,31 @@ export const githubAnnotationFromError = (
     }),
   );
   return annotation;
+};
+
+const formatAnnotationTitle = (executionInfo) => {
+  return titleFormatters[executionInfo.executionResult.status](executionInfo);
+};
+
+const titleFormatters = {
+  executing: () => {
+    return `Executing`;
+  },
+  aborted: () => {
+    return `Execution aborted`;
+  },
+  timedout: ({ executionParams }) => {
+    return `Timeout after ${executionParams.allocatedMs}ms`;
+  },
+  failed: () => {
+    return `Execution failed`;
+  },
+  completed: () => {
+    return `Execution completed`;
+  },
+  cancelled: () => {
+    return `Execution cancelled`;
+  },
 };
 
 const asException = (error, { rootDirectoryUrl }) => {
