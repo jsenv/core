@@ -21,7 +21,7 @@ import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { executionStepsFromTestPlan } from "./execution_steps.js";
 import { executeSteps } from "./execute_steps.js";
-import { formatExecutionLabel, formatSummary } from "./logs_file_execution.js";
+import { formatSummary } from "./logs_file_execution.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 
 /**
@@ -382,14 +382,8 @@ To fix this warning:
       checkTitle: `Tests executions`,
       checkSummary: `${executionSteps.length} files will be executed`,
     });
+    const annotations = [];
     afterExecutionCallback = (afterExecutionInfo) => {
-      const summary = stripAnsi(
-        formatExecutionLabel(afterExecutionInfo, {
-          logTimeUsage,
-          logMemoryHeapUsage,
-        }),
-      );
-      const annotations = [];
       const { executionResult } = afterExecutionInfo;
       const { errors = [] } = executionResult;
       for (const error of errors) {
@@ -399,11 +393,6 @@ To fix this warning:
         });
         annotations.push(annotation);
       }
-      githubCheckRun.progress({
-        title: "Jsenv test executions",
-        summary,
-        annotations,
-      });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
       const title = "Jsenv test results";
@@ -414,12 +403,14 @@ To fix this warning:
         await githubCheckRun.fail({
           title,
           summary,
+          annotations,
         });
         return;
       }
       await githubCheckRun.pass({
         title,
         summary,
+        annotations,
       });
     };
   }
