@@ -6,6 +6,9 @@ export const githubAnnotationFromError = (
 ) => {
   const annotation = {
     annotation_level: "failure",
+    path: executionInfo.fileRelativeUrl,
+    start_line: 1,
+    end_line: 1,
     title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
   };
   if (error === undefined || error === null || typeof error === "string") {
@@ -13,28 +16,36 @@ export const githubAnnotationFromError = (
     return annotation;
   }
   if (error.isException) {
+    annotation.message = error.message;
     if (typeof error.site.line === "number") {
       annotation.path = urlToRelativeUrl(error.site.url, rootDirectoryUrl);
       annotation.start_line = error.site.line;
       annotation.end_line = error.site.line;
+      annotation.start_column = error.site.column;
+      annotation.end_column = error.site.column;
     }
     return annotation;
   }
   if (error.stack) {
     let firstSite = true;
-    const stack = replaceUrls(error.stack, ({ match, url, line, column }) => {
-      if (urlIsInsideOf(url, rootDirectoryUrl)) {
-        const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-        match = stringifyUrlSite({ url: relativeUrl, line, column });
-      }
-      if (firstSite) {
-        firstSite = false;
-        annotation.path = url;
-        annotation.start_line = line;
-        annotation.end_line = line;
-      }
-      return match;
-    });
+    const stack = replaceUrls(
+      error.stack,
+      ({ match, url, line = 1, column = 1 }) => {
+        if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+          match = stringifyUrlSite({ url: relativeUrl, line, column });
+        }
+        if (firstSite) {
+          firstSite = false;
+          annotation.path = url;
+          annotation.start_line = line;
+          annotation.end_line = line;
+          annotation.start_column = column;
+          annotation.end_column = column;
+        }
+        return match;
+      },
+    );
     annotation.message = stack;
     return annotation;
   }
@@ -77,8 +88,8 @@ const replaceUrls = (source, replace) => {
       replacement = replace({
         match: lineAndColumMatch,
         url: match.slice(0, -lineAndColumnString.length),
-        line: lineString ? parseInt(lineString) : null,
-        column: columnString ? parseInt(columnString) : null,
+        line: lineString ? parseInt(lineString) : undefined,
+        column: columnString ? parseInt(columnString) : undefined,
       });
     } else {
       const linePattern = /:([0-9]+)$/;
@@ -88,7 +99,7 @@ const replaceUrls = (source, replace) => {
         replacement = replace({
           match: lineMatch,
           url: match.slice(0, -lineString.length),
-          line: lineString ? parseInt(lineString) : null,
+          line: lineString ? parseInt(lineString) : undefined,
         });
       } else {
         replacement = replace({
