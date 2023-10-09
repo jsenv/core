@@ -14,10 +14,10 @@ export const startGithubCheckRun = async ({
   repositoryOwner,
   repositoryName,
   commitSha,
-  checkStatus = "in_progress",
   checkName,
   checkTitle,
   checkSummary,
+  checkStatus = "in_progress",
 }) => {
   if (typeof githubToken !== "string") {
     throw new TypeError(
@@ -74,42 +74,30 @@ export const startGithubCheckRun = async ({
     return { progress: () => {}, fail: () => {}, pass: () => {} };
   }
 
-  let checkConclusion;
-
-  const update = async ({
+  const updateState = async ({
     status,
     conclusion,
-    title,
-    summary,
+    title = check.title,
+    summary = check.summary,
     annotations = [],
   }) => {
-    if (typeof title !== "string") {
-      throw new TypeError(`title must be a string, got ${title}`);
-    }
-    if (typeof summary !== "string") {
-      throw new TypeError(`summary must be a string, got ${summary}`);
-    }
-    if (conclusion) {
-      checkConclusion = conclusion;
-    }
-
     let annotationsSent = 0;
     const annotationsBatch = annotations.slice(annotationsSent, 50);
+    const body = {
+      ...(status ? { status } : {}),
+      ...(conclusion ? { conclusion } : {}),
+      output: {
+        title: title === undefined ? check.title : title,
+        summary: summary === undefined ? check.summary : summary,
+        ...(annotationsBatch.length ? { annotations: annotationsBatch } : {}),
+      },
+    };
 
     try {
-      const body = {
-        ...(status ? { status } : {}),
-        ...(conclusion ? { conclusion } : {}),
-        output: {
-          title,
-          summary,
-          ...(annotationsBatch.length ? { annotations: annotationsBatch } : {}),
-        },
-      };
       logger.debug(`PATCH check ${check.html_url}
 --- body ---
 ${JSON.stringify(body, null, "  ")}`);
-      await PATCH({
+      check = await PATCH({
         url: check.url,
         githubToken,
         body,
@@ -123,20 +111,11 @@ ${JSON.stringify(body, null, "  ")}`);
       );
       return;
     }
-    if (status) {
-      checkStatus = status;
-    }
-    if (title) {
-      checkTitle = title;
-    }
-    if (summary) {
-      checkSummary = summary;
-    }
 
     annotationsSent += annotationsBatch.length;
     while (annotationsSent < annotations.length) {
       const annotationsBatch = annotations.slice(annotationsSent, 50);
-      await PATCH({
+      check = await PATCH({
         url: check.url,
         githubToken,
         body: {
@@ -153,72 +132,76 @@ ${JSON.stringify(body, null, "  ")}`);
   let lastProgressCall;
   let pendingAnnotations = [];
   let pendingAbortController;
+  let pendingProgressPromise = Promise.resolve();
   let msBetweenProgressCalls = 500;
 
   return {
     progress: async ({ title, summary, annotations = [] }) => {
-      if (checkConclusion === "failure") {
+      if (check.conclusion === "failure") {
         throw new Error(`cannot progress() after fail()`);
       }
-      if (checkConclusion === "success") {
+      if (check.conclusion === "success") {
         throw new Error(`cannot progress() after pass()`);
       }
-      const nowMs = Date.now();
-      const isFirstCall = !lastProgressCall;
-      lastProgressCall = nowMs;
-      if (isFirstCall) {
-        await update({
+      pendingProgressPromise = (async () => {
+        const nowMs = Date.now();
+        const isFirstCall = !lastProgressCall;
+        lastProgressCall = nowMs;
+        if (isFirstCall) {
+          await updateState({
+            title,
+            summary,
+            annotations,
+          });
+          return;
+        }
+        if (pendingAbortController) {
+          pendingAbortController.abort();
+        }
+        const msEllapsedSinceLastProgressCall = nowMs - lastProgressCall;
+        const msEllapsedIsBigEnough =
+          msEllapsedSinceLastProgressCall > msBetweenProgressCalls;
+        if (msEllapsedIsBigEnough) {
+          annotations = [...pendingAnnotations, ...annotations];
+          pendingAnnotations.length = 0;
+          await updateState({
+            title,
+            summary,
+            annotations,
+          });
+          return;
+        }
+        pendingAnnotations.push(...annotations);
+        pendingAbortController = new AbortController();
+        await new Promise((resolve) => {
+          pendingAbortController.signal.onabort = resolve;
+          setTimeout(resolve, msBetweenProgressCalls);
+        });
+        if (pendingAbortController && pendingAbortController.signal.aborted) {
+          return;
+        }
+        pendingAbortController = null;
+        await updateState({
           title,
           summary,
           annotations,
         });
-        return;
-      }
+      })();
+      await pendingProgressPromise;
+      pendingProgressPromise = Promise.resolve();
+    },
+    fail: async ({ title, summary, annotations } = {}) => {
+      await pendingProgressPromise;
       if (pendingAbortController) {
         pendingAbortController.abort();
       }
-      const msEllapsedSinceLastProgressCall = nowMs - lastProgressCall;
-      const msEllapsedIsBigEnough =
-        msEllapsedSinceLastProgressCall > msBetweenProgressCalls;
-      if (msEllapsedIsBigEnough) {
-        annotations = [...pendingAnnotations, ...annotations];
-        pendingAnnotations.length = 0;
-        await update({
-          title,
-          summary,
-          annotations,
-        });
-        return;
-      }
-      pendingAnnotations.push(...annotations);
-      pendingAbortController = new AbortController();
-      await new Promise((resolve) => {
-        pendingAbortController.signal.onabort = resolve;
-        setTimeout(resolve, msBetweenProgressCalls);
-      });
-      if (pendingAbortController && pendingAbortController.signal.aborted) {
-        return;
-      }
-      pendingAbortController = null;
-      await update({
-        title,
-        summary,
-        annotations,
-      });
-    },
-    fail: ({ title, summary, annotations } = {}) => {
-      if (checkConclusion === "failure") {
+      if (check.conclusion === "failure") {
         throw new Error(`already failed`);
       }
-      if (checkConclusion === "success") {
+      if (check.conclusion === "success") {
         throw new Error(`cannot fail() after pass()`);
       }
-
-      if (pendingAbortController) {
-        pendingAbortController.abort();
-      }
-      // TODO: wait to any pending PATCH (progress call) before final PATCH?
-      return update({
+      return updateState({
         status: "completed",
         conclusion: "failure",
         title,
@@ -226,19 +209,18 @@ ${JSON.stringify(body, null, "  ")}`);
         annotations,
       });
     },
-    pass: ({ title, summary, annotations } = {}) => {
-      if (checkConclusion === "success") {
-        throw new Error(`already passed`);
-      }
-      if (checkConclusion === "failure") {
-        throw new Error(`cannot pass() after fail()`);
-      }
-
+    pass: async ({ title, summary, annotations } = {}) => {
+      await pendingProgressPromise;
       if (pendingAbortController) {
         pendingAbortController.abort();
       }
-      // TODO: wait to any pending PATCH (progress call) before final PATCH?
-      return update({
+      if (check.conclusion === "failure") {
+        throw new Error(`cannot pass() after fail()`);
+      }
+      if (check.conclusion === "success") {
+        throw new Error(`already passed`);
+      }
+      return updateState({
         status: "completed",
         conclusion: "success",
         title,
