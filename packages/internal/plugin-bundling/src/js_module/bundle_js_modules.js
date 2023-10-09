@@ -416,14 +416,9 @@ const applyRollupPlugins = async ({
     const rollupModule = await import("rollup");
     rollup = rollupModule.rollup;
   }
-  const { importAssertions } = await import("acorn-import-assertions");
   const rollupReturnValue = await rollup({
     ...rollupInput,
     plugins: rollupPlugins,
-    acornInjectPlugins: [
-      importAssertions,
-      ...(rollupInput.acornInjectPlugins || []),
-    ],
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
   return rollupOutputArray;

@@ -17,7 +17,7 @@ import { applyBabelPlugins } from "@jsenv/ast";
 import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
-import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 
@@ -4077,14 +4077,10 @@ const formatExecution = (
       : {}),
   };
   let message = ``;
-  if (label) {
-    message += label;
-  }
+  message += label;
   Object.keys(details).forEach((key) => {
-    if (message.length > 0) {
-      message += "\n";
-    }
-    message += `${key}: ${details[key]}`;
+    message += `
+${key}: ${details[key]}`;
   });
   if (consoleOutput) {
     message += `\n${consoleOutput}`;

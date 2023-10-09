@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-minification",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
   "dependencies": {
     "html-minifier": "4.0.0",
     "lightningcss": "1.22.0",
-    "terser": "5.20.0"
+    "terser": "5.21.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"

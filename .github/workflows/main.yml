@@ -60,14 +60,12 @@ jobs:
         # env:
         #   NODE_V8_COVERAGE: .coverage/packages
         run: npm run test:packages
-        # TODO: uncomment once github check work as expected
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run core tests
         run: npm test
-        # TODO: uncomment once github check work as expected
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # - name: Run core tests
       #   env:
       #     NODE_V8_COVERAGE: .coverage/core

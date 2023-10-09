@@ -118,14 +118,10 @@ export const formatExecution = (
       : {}),
   };
   let message = ``;
-  if (label) {
-    message += label;
-  }
+  message += label;
   Object.keys(details).forEach((key) => {
-    if (message.length > 0) {
-      message += "\n";
-    }
-    message += `${key}: ${details[key]}`;
+    message += `
+${key}: ${details[key]}`;
   });
   if (consoleOutput) {
     message += `\n${consoleOutput}`;
