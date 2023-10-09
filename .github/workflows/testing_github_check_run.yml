@@ -19,10 +19,10 @@ name: testing_github_check_run
 on:
   push:
     branches:
-      - main
+      - github_annotations
   pull_request:
     branches:
-      - "**"
+      - github_annotations
 
 jobs:
   test:
