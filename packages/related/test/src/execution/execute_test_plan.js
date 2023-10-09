@@ -21,10 +21,7 @@ import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { executionStepsFromTestPlan } from "./execution_steps.js";
 import { executeSteps } from "./execute_steps.js";
-import {
-  formatExecutionLabel,
-  formatSummaryLog,
-} from "./logs_file_execution.js";
+import { formatExecutionLabel, formatSummary } from "./logs_file_execution.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 
 /**
@@ -76,7 +73,7 @@ export const executeTestPlan = async ({
 
   githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
   githubCheckLogLevel,
-  githubCheckName = "jsenv tests",
+  githubCheckName = "Jsenv tests",
   githubCheckTitle,
   githubCheckToken,
   githubCheckRepositoryOwner,
@@ -403,14 +400,14 @@ To fix this warning:
         annotations.push(annotation);
       }
       githubCheckRun.progress({
-        title: "File executions",
+        title: "Jsenv test executions",
         summary,
         annotations,
       });
     };
     afterAllExecutionCallback = async ({ testPlanSummary }) => {
-      const title = "File executions";
-      const summary = stripAnsi(formatSummaryLog(testPlanSummary));
+      const title = "Jsenv test results";
+      const summary = stripAnsi(formatSummary(testPlanSummary));
       if (
         testPlanSummary.counters.total !== testPlanSummary.counters.completed
       ) {

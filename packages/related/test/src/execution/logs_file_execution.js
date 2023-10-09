@@ -52,26 +52,22 @@ export const createExecutionLog = (
   if (logShortForCompletedExecutions && status === "completed") {
     log = label;
   } else {
-    const { consoleCalls = [], errors = [] } = executionResult;
-    const consoleOutput = formatConsoleCalls(consoleCalls);
-    const errorsOutput = formatErrors(errors);
-    log = formatExecution({
-      label,
-      details: {
-        file: fileRelativeUrl,
-        ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
-        ...(logEachDuration
-          ? {
-              duration:
-                status === "executing"
-                  ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
-                  : msAsDuration(endMs - startMs),
-            }
-          : {}),
+    log = formatExecution(
+      {
+        fileRelativeUrl,
+        runtimeName,
+        runtimeVersion,
+        executionResult,
+        startMs,
+        endMs,
+        nowMs,
       },
-      consoleOutput,
-      errorsOutput,
-    });
+      {
+        label,
+        logRuntime,
+        logEachDuration,
+      },
+    );
   }
 
   const { columns = 80 } = process.stdout;
@@ -90,6 +86,54 @@ export const createExecutionLog = (
     return `${log}\n\n`;
   }
   return log;
+};
+
+export const formatExecution = (
+  {
+    fileRelativeUrl,
+    runtimeName,
+    runtimeVersion,
+    executionResult,
+    startMs,
+    endMs,
+    nowMs,
+  },
+  { label, logRuntime = true, logEachDuration = true } = {},
+) => {
+  const { status } = executionResult;
+  const { consoleCalls = [], errors = [] } = executionResult;
+  const consoleOutput = formatConsoleCalls(consoleCalls);
+  const errorsOutput = formatErrors(errors);
+
+  const details = {
+    file: fileRelativeUrl,
+    ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
+    ...(logEachDuration
+      ? {
+          duration:
+            status === "executing"
+              ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
+              : msAsDuration(endMs - startMs),
+        }
+      : {}),
+  };
+  let message = ``;
+  if (label) {
+    message += label;
+  }
+  Object.keys(details).forEach((key) => {
+    if (message.length > 0) {
+      message += "\n";
+    }
+    message += `${key}: ${details[key]}`;
+  });
+  if (consoleOutput) {
+    message += `\n${consoleOutput}`;
+  }
+  if (errorsOutput) {
+    message += `\n${errorsOutput}`;
+  }
+  return message;
 };
 
 export const formatExecutionLabel = (
@@ -125,7 +169,15 @@ const formatErrors = (errors) => {
   if (errors.length === 0) {
     return "";
   }
-  const formatError = (error) => error.stack || error.message || error;
+  const formatError = (error) => {
+    if (error === null || error === undefined) {
+      return String(error);
+    }
+    if (error) {
+      return error.stack || error.message || error;
+    }
+    return error;
+  };
 
   if (errors.length === 1) {
     return `${ANSI.color(`-------- error --------`, ANSI.RED)}
@@ -151,9 +203,13 @@ ${ANSI.color(`-------------------------`, ANSI.RED)}`;
 export const formatSummaryLog = (
   summary,
 ) => `-------------- summary -----------------
-${createAllExecutionsSummary(summary)}
-total duration: ${msAsDuration(summary.duration)}
+${formatSummary(summary)}
 ----------------------------------------`;
+
+export const formatSummary = (summary) => `${createAllExecutionsSummary(
+  summary,
+)}
+total duration: ${msAsDuration(summary.duration)}`;
 
 const createAllExecutionsSummary = ({ counters }) => {
   if (counters.total === 0) {
@@ -440,25 +496,4 @@ const formatConsoleSummary = (repartition) => {
     return `console`;
   }
   return `console (${parts.join(" ")})`;
-};
-
-const formatExecution = ({
-  label,
-  details = {},
-  consoleOutput,
-  errorsOutput,
-}) => {
-  let message = ``;
-  message += label;
-  Object.keys(details).forEach((key) => {
-    message += `
-${key}: ${details[key]}`;
-  });
-  if (consoleOutput) {
-    message += `\n${consoleOutput}`;
-  }
-  if (errorsOutput) {
-    message += `\n${errorsOutput}`;
-  }
-  return message;
 };

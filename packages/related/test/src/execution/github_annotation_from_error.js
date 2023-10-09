@@ -1,5 +1,10 @@
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
+import {
+  formatExecutionLabel,
+  formatExecution,
+} from "./logs_file_execution.js";
+
 export const githubAnnotationFromError = (
   error,
   { rootDirectoryUrl, executionInfo },
@@ -9,52 +14,65 @@ export const githubAnnotationFromError = (
     path: executionInfo.fileRelativeUrl,
     start_line: 1,
     end_line: 1,
-    title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
+    title: formatExecutionLabel(executionInfo),
   };
-  if (error === undefined || error === null || typeof error === "string") {
-    annotation.message = String(error);
-    return annotation;
+  const exception =
+    error && error.isException
+      ? error
+      : asException(error, { rootDirectoryUrl });
+  if (typeof exception.site.line === "number") {
+    annotation.path = urlToRelativeUrl(exception.site.url, rootDirectoryUrl);
+    annotation.start_line = exception.site.line;
+    annotation.end_line = exception.site.line;
+    annotation.start_column = exception.site.column;
+    annotation.end_column = exception.site.column;
   }
-  if (error.isException) {
-    annotation.message = error.message;
-    if (typeof error.site.line === "number") {
-      annotation.path = urlToRelativeUrl(error.site.url, rootDirectoryUrl);
-      annotation.start_line = error.site.line;
-      annotation.end_line = error.site.line;
-      annotation.start_column = error.site.column;
-      annotation.end_column = error.site.column;
-    }
-    return annotation;
-  }
-  if (error.stack) {
-    let firstSite = true;
-    const stack = replaceUrls(
-      error.stack,
-      ({ match, url, line = 1, column = 1 }) => {
-        if (urlIsInsideOf(url, rootDirectoryUrl)) {
-          const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-          match = stringifyUrlSite({ url: relativeUrl, line, column });
-        }
-        if (firstSite) {
-          firstSite = false;
-          annotation.path = url;
-          annotation.start_line = line;
-          annotation.end_line = line;
-          annotation.start_column = column;
-          annotation.end_column = column;
-        }
-        return match;
-      },
-    );
-    annotation.message = stack;
-    return annotation;
-  }
-  if (error.message) {
-    annotation.message = error.message;
-    return annotation;
-  }
-  annotation.message = error;
+  annotation.message = formatExecution({
+    ...executionInfo,
+    executionResult: {
+      ...executionInfo.executionResult,
+      errors: [exception],
+    },
+  });
   return annotation;
+};
+
+const asException = (error, { rootDirectoryUrl }) => {
+  const exception = {
+    isException: true,
+    stack: "",
+    site: {},
+  };
+  if (error === null || error === undefined || typeof error === "string") {
+    exception.message = String(error);
+    return exception;
+  }
+  if (error) {
+    exception.message = error.message;
+    if (error.stack) {
+      let firstSite = true;
+      exception.stack = replaceUrls(
+        error.stack,
+        ({ match, url, line = 1, column = 1 }) => {
+          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+            const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
+          }
+          if (firstSite) {
+            firstSite = false;
+            exception.site.url = url;
+            exception.site.line = line;
+            exception.site.column = column;
+          }
+          return match;
+        },
+      );
+    }
+
+    return exception;
+  }
+  exception.message = error;
+  return exception;
 };
 
 const stringifyUrlSite = ({ url, line, column }) => {
