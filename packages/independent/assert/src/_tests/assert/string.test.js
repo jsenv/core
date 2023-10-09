@@ -12,11 +12,11 @@ my name is Flore`;
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "D" was found instead of "F" at index 18
+      `unexpected character in string
 --- details ---
-"Hello,
-my name is Damien"
-           ^ unexpected character, expected string continues with "Flore"
+Hello,
+my name is Damien
+           ^ unexpected "D", expected to continue with "Flore"
 --- path ---
 actual[18]#L2C12`,
     );
@@ -39,12 +39,13 @@ Hello europa
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "w" was found instead of "e" at index 59
+      `unexpected character in string
 --- details ---
-"1abcdefghijklmnopqrstuvwx
+1abcdefghijklmnopqrstuvwx
 2abcdefghijklmnopqrstuvwxy
-Hello world"…
-      ^ unexpected character, expected string continues with "europa"…
+Hello world
+      ^ unexpected "w", expected to continue with "europa"…
+3abcdefghijklmnopqrstuvwxy
 --- path ---
 actual[59]#L3C7`,
     );
@@ -69,16 +70,35 @@ actual[59]#L3C7`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "w" was found instead of "f" at index 140
+      `unexpected character in string
 --- details ---
-…"nopqrstuvwxy
+1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
 3abcdefghijklmnopqrstuvwx
 4abcdefghijklmnopqrstuvwxy
 5abcdefghijklmnopqrstuvwxy
-[Hello world]abcdefghijklmnopqrstuvwxyz"
-       ^ unexpected character, expected string continues with "france]abcdefgh"…
+[Hello world]abcdefghijklmnopqrstuvwxyz
+       ^ unexpected "w", expected to continue with "france]abcdefgh"…
 --- path ---
 actual[140]#L6C8`,
+    );
+  }
+}
+// mismatch double slash + truncate column
+{
+  const actual = `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`;
+  const expected = `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`;
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `unexpected character in string
+--- details ---
+…node_modules/@jsenv/assert/src/internal/something.js
+                                         ^ unexpected "s", expected to continue with "/something.js"
+--- path ---
+actual[79]`,
     );
   }
 }
@@ -92,10 +112,10 @@ c`;
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "c" was found instead of "\\n" at index 2
+      `unexpected character in string
 --- details ---
-"abc"
-   ^ unexpected character, expected string continues with "\\nc"
+abc
+  ^ unexpected "c", expected to continue with "\\nc"
 --- path ---
 actual[2]`,
     );
@@ -110,10 +130,10 @@ actual[2]`,
   } catch (e) {
     ensureAssertionErrorWithMessage(
       e,
-      `unexpected string, "\\t" was found instead of " " at index 0
+      `unexpected character in string
 --- details ---
-"\\t "
- ^ unexpected character, expected string continues with "  "
+\\t 
+^ unexpected "\\t", expected to continue with "  "
 --- path ---
 actual[0]`,
     );
@@ -131,8 +151,8 @@ actual[0]`,
       e,
       `string is too short, one character is missing
 --- details ---
-"a"
-  ^ expected string continues with "b"
+a
+ ^ expected to continue with "b"
 --- path ---
 actual`,
     );
@@ -149,8 +169,8 @@ actual`,
       e,
       `string is too short, 2 characters are missing
 --- details ---
-""
- ^ expected string continues with "aa"
+
+^ expected to continue with "aa"
 --- path ---
 actual`,
     );
@@ -169,9 +189,9 @@ I am benjamin`;
       e,
       `string is too short, 5 characters are missing
 --- details ---
-"Hello,
-I am ben"
-        ^ expected string continues with "jamin"
+Hello,
+I am ben
+        ^ expected to continue with "jamin"
 --- path ---
 actual`,
     );
@@ -191,15 +211,15 @@ I am ben`;
       e,
       `string is too long, it contains 5 extra characters
 --- details ---
-"Hello,
-I am benjamin"
-        ^ string was expected to end here
+Hello,
+I am benjamin
+       ^ expected to end here, on "n"
 --- path ---
 actual`,
     );
   }
 }
-// too long (string given instead og empty string)
+// too long (string given instead of empty string)
 {
   const actual = `aa`;
   const expected = ``;
@@ -210,8 +230,8 @@ actual`,
       e,
       `string is too long, it contains 2 extra characters
 --- details ---
-"aa"
- ^ an empty string was expected
+aa
+^ an empty string was expected
 --- path ---
 actual`,
     );
@@ -228,8 +248,8 @@ actual`,
       e,
       `string is too long, it contains one extra character
 --- details ---
-"\\x7F"
- ^ an empty string was expected
+\\x7F
+^ an empty string was expected
 --- path ---
 actual`,
     );

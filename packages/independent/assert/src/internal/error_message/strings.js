@@ -4,8 +4,18 @@ import { createDetailedMessage } from "../detailed_message.js";
 import { comparisonToPath } from "../comparison_to_path.js";
 import { isRegExp, isError } from "../object_subtype.js";
 
-const MAX_CHARS_AROUND_MISMATCH = 200;
+const MAX_HEIGHT = 10;
+let MAX_WIDTH = 80;
+const COLUMN_MARKER_CHAR = "^";
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 15;
+
+// use more width when terminal has lot of horizontal space
+if (typeof process === "object") {
+  const { columns = 80 } = process.stdout;
+  if (columns > MAX_WIDTH) {
+    MAX_WIDTH = Math.min(columns, 180);
+  }
+}
 
 export const stringsComparisonToErrorMessage = (comparison) => {
   const isStartsWithComparison = comparison.type === "starts_with";
@@ -46,14 +56,10 @@ export const stringsComparisonToErrorMessage = (comparison) => {
   let i = 0;
   let lineIndex = 0;
   let columnIndex = 0;
+  const lineStrings = actual.split(/\r?\n/);
 
-  const formatDetails = ({
-    charsToDisplayBefore,
-    charsToDisplayAfter = MAX_CHARS_AROUND_MISMATCH - charsToDisplayBefore,
-    annotationLabel,
-    expectedOverview = true,
-  }) => {
-    if (actual.includes("^ unexpected character")) {
+  const formatDetails = ({ annotationLabel, expectedOverview = true }) => {
+    if (actual.includes(`${COLUMN_MARKER_CHAR} unexpected character`)) {
       return {
         actual: inspect(actual, { preserveLineBreaks: true }),
         expected: inspect(expected, { preserveLineBreaks: true }),
@@ -61,57 +67,51 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     }
 
     let details = "";
-    let indexStart = i - charsToDisplayBefore;
-    if (indexStart < 0) {
-      indexStart = 0;
-    }
-    let index = indexStart;
-    let annotationColumn = 0;
-    write_chars_before_point_on_failure: {
-      // put some chars before the first mismatch
-      if (indexStart > 0) {
-        details += "…"; // tell that some chars are skipped
-      }
-      details += `${actualQuote}`;
-      let lineDisplayedBefore = 0;
-      while (charsToDisplayBefore-- && index < i) {
-        const actualChar = actual[index];
-        index++;
-        if (index > i) {
-          break;
-        }
-        details += formatActualChar(actualChar);
+    let lineDisplayed = 0;
 
-        if (isLineBreak(actualChar)) {
-          lineDisplayedBefore++;
-          annotationColumn = 0;
-        } else {
-          annotationColumn++;
-        }
-      }
-      if (lineDisplayedBefore === 0) {
-        if (indexStart > 0) {
-          annotationColumn++; // ... injection at the beginning
-        }
-        annotationColumn++; // " injection at the begining
-      }
+    const idealNumberOfRowBefore = Math.ceil(MAX_WIDTH / 2);
+    let columnStart = columnIndex - idealNumberOfRowBefore;
+    if (columnStart < 0) {
+      columnStart = 0;
     }
-    write_chars_after_point_on_failure: {
-      // now put chars until end of line or end of chars to display
-      while (charsToDisplayAfter-- && index < actualLength) {
-        const actualChar = actual[index];
-        if (isLineBreak(actualChar)) {
-          break;
-        }
-        index++;
-        details += formatActualChar(actualChar);
-      }
-      details += `${actualQuote}`;
-      if (index < actualLength) {
+    let columnEnd = columnStart + MAX_WIDTH;
+
+    const writeLine = (lineSource) => {
+      const lastCharIndex = lineSource.length;
+      let charIndex = columnStart;
+      if (columnStart > 0) {
         details += "…";
       }
+      while (charIndex < columnEnd && charIndex < lastCharIndex) {
+        const char = lineSource[charIndex];
+        charIndex++;
+        details += formatActualChar(char);
+      }
+      if (lastCharIndex > columnEnd) {
+        details += "…";
+      }
+    };
+
+    write_chars_before_annotation: {
+      const idealNumberOfLineBefore = Math.ceil(MAX_HEIGHT / 2);
+      let beforeLineStart = lineIndex - idealNumberOfLineBefore;
+      if (beforeLineStart < 0) {
+        beforeLineStart = 0;
+      }
+      const beforeLineEnd = lineIndex + 1;
+      let beforeLineIndex = beforeLineStart;
+      while (beforeLineIndex < beforeLineEnd) {
+        const lineBefore = lineStrings[beforeLineIndex];
+        beforeLineIndex++;
+        writeLine(lineBefore);
+        details += `\n`;
+        lineDisplayed++;
+      }
+      details = details.slice(0, -1);
     }
     write_annotation: {
+      const annotationColumn =
+        columnStart === 0 ? columnIndex : columnIndex - columnStart + 1;
       const annotationIndentation = " ".repeat(annotationColumn);
       details += `\n${annotationIndentation}`;
       details += `${annotationLabel}`;
@@ -138,6 +138,32 @@ export const stringsComparisonToErrorMessage = (comparison) => {
         }
       }
     }
+    write_chars_after_annotation: {
+      const lastLineIndex = lineStrings.length - 1;
+      const idealNumberOfLineAfter = MAX_HEIGHT - lineDisplayed;
+      let lineAfterStart = lineIndex + 1;
+      if (lineAfterStart >= lastLineIndex) {
+        break write_chars_after_annotation;
+      }
+      let lineAfterEnd = lineAfterStart + idealNumberOfLineAfter;
+      if (lineAfterEnd > lastLineIndex) {
+        lineAfterEnd = lastLineIndex;
+      }
+      if (lineAfterStart === lineAfterEnd) {
+        break write_chars_after_annotation;
+      }
+      details += `\n`;
+      let lineAfterIndex = lineAfterStart;
+      while (lineAfterIndex < lineAfterEnd) {
+        const afterLineSource = lineStrings[lineAfterIndex];
+        lineAfterIndex++;
+        writeLine(afterLineSource);
+        details += `\n`;
+        lineDisplayed++;
+      }
+      details = details.slice(0, -1);
+    }
+
     return {
       details,
     };
@@ -148,13 +174,12 @@ export const stringsComparisonToErrorMessage = (comparison) => {
       const actualChar = actual[i];
       const expectedChar = expected[i];
       if (actualChar !== expectedChar) {
-        const message = `unexpected ${stringName}, ${inspect(
-          actualChar,
-        )} was found instead of ${inspect(expectedChar)} at index ${i}`;
+        let message = `unexpected character in ${stringName}`;
         return createDetailedMessage(message, {
           ...formatDetails({
-            charsToDisplayBefore: Math.floor(MAX_CHARS_AROUND_MISMATCH / 2),
-            annotationLabel: `^ unexpected character, expected string continues with`,
+            annotationLabel: `${COLUMN_MARKER_CHAR} unexpected ${inspect(
+              actualChar,
+            )}, expected to continue with`,
           }),
           path: enrichPath(path, i, lineIndex, columnIndex),
         });
@@ -179,9 +204,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
       }
       return createDetailedMessage(message, {
         ...formatDetails({
-          charsToDisplayBefore: MAX_CHARS_AROUND_MISMATCH,
-          charsToDisplayAfter: 0,
-          annotationLabel: `^ expected string continues with`,
+          annotationLabel: `${COLUMN_MARKER_CHAR} expected to continue with`,
         }),
         path,
       });
@@ -196,14 +219,18 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     } else {
       message += `, it contains ${extraCharacterCount} extra characters`;
     }
+    if (expectedLength > 0) {
+      columnIndex--;
+    }
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
     return createDetailedMessage(message, {
       ...formatDetails({
-        charsToDisplayBefore: Math.floor(MAX_CHARS_AROUND_MISMATCH / 2),
         annotationLabel:
           expectedLength === 0
-            ? `^ an empty string was expected`
-            : `^ string was expected to end here`,
+            ? `${COLUMN_MARKER_CHAR} an empty string was expected`
+            : `${COLUMN_MARKER_CHAR} expected to end here, on ${inspect(
+                actual[actualLength - 1],
+              )}`,
         expectedOverview: false,
       }),
       path,
