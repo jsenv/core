@@ -10,8 +10,7 @@ export const fetchUsingXHR = async (
 ) => {
   const headersPromise = createPromiseAndHooks();
   const bodyPromise = createPromiseAndHooks();
-
-  const xhr = new XMLHttpRequest();
+  let xhr = new XMLHttpRequest();
 
   const failure = (error) => {
     // if it was already resolved, we must reject the body promise
@@ -25,44 +24,39 @@ export const fetchUsingXHR = async (
   const cleanup = () => {
     xhr.ontimeout = null;
     xhr.onerror = null;
-    xhr.onload = null;
     xhr.onreadystatechange = null;
+    xhr.onload = null;
+    xhr = null;
   };
 
+  signal.addEventListener("abort", () => {
+    if (xhr) {
+      xhr.abort();
+      const abortError = new Error("aborted");
+      abortError.name = "AbortError";
+      failure(abortError);
+    }
+  });
   xhr.ontimeout = () => {
     cleanup();
     failure(new Error(`xhr request timeout on ${url}.`));
   };
-
   xhr.onerror = (error) => {
     cleanup();
     // unfortunately with have no clue why it fails
     // might be cors for instance
     failure(createRequestError(error, { url }));
   };
-
-  xhr.onload = () => {
-    cleanup();
-    bodyPromise.resolve();
-  };
-
-  signal.addEventListener("abort", () => {
-    xhr.abort();
-    const abortError = new Error("aborted");
-    abortError.name = "AbortError";
-    failure(abortError);
-  });
-
   xhr.onreadystatechange = () => {
     // https://developer.mozilla.org/fr/docs/Web/API/XMLHttpRequest/readyState
-    const { readyState } = xhr;
-
-    if (readyState === 2) {
+    if (xhr.readyState === 2) {
       headersPromise.resolve();
-    } else if (readyState === 4) {
-      cleanup();
-      bodyPromise.resolve();
     }
+  };
+  xhr.onload = () => {
+    const body = "response" in xhr ? xhr.response : xhr.responseText;
+    bodyPromise.resolve(body);
+    cleanup();
   };
 
   xhr.open(method, url, true);
@@ -85,16 +79,11 @@ export const fetchUsingXHR = async (
   const responseHeaders = getHeadersFromXHR(xhr);
 
   const readBody = async () => {
-    await bodyPromise;
-
-    const { status } = xhr;
+    const { body } = await bodyPromise;
     // in Chrome on file:/// URLs, status is 0
-    if (status === 0) {
+    if (responseStatus === 0) {
       responseStatus = 200;
     }
-
-    const body = "response" in xhr ? xhr.response : xhr.responseText;
-
     return {
       responseBody: body,
       responseBodyType: detectBodyType(body),
