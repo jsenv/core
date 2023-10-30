@@ -19,7 +19,18 @@ export const jsenvPluginAutoreloadServer = ({
           return url;
         };
         const propagateUpdate = (firstUrlInfo) => {
-          const iterate = (urlInfo, seen) => {
+          const seenSet = new Set();
+          const iterate = (urlInfo, chain) => {
+            if (false && seenSet.has(urlInfo.url)) {
+              return {
+                accepted: true,
+                reason: "circular dependency",
+                acceptedBy: formatUrlForClient(urlInfo.url),
+                instructions: [],
+              };
+            }
+            seenSet.add(urlInfo.url);
+
             if (urlInfo.data.hotAcceptSelf) {
               return {
                 accepted: true,
@@ -34,6 +45,13 @@ export const jsenvPluginAutoreloadServer = ({
                     acceptedBy: formatUrlForClient(urlInfo.url),
                   },
                 ],
+              };
+            }
+            if (urlInfo.data.hotDecline) {
+              return {
+                declined: true,
+                reason: `file declines hot reload`,
+                declinedBy: urlInfo.url,
               };
             }
             const instructions = [];
@@ -64,16 +82,16 @@ export const jsenvPluginAutoreloadServer = ({
                 });
                 continue;
               }
-              if (seen.includes(urlInfoReferencingThisOne.url)) {
+              if (chain.includes(urlInfoReferencingThisOne.url)) {
                 return {
                   declined: true,
-                  reason: "circular dependency",
+                  reason: "dead end",
                   declinedBy: formatUrlForClient(urlInfoReferencingThisOne.url),
                 };
               }
               const dependentPropagationResult = iterate(
                 urlInfoReferencingThisOne,
-                [...seen, urlInfoReferencingThisOne.url],
+                [...chain, urlInfoReferencingThisOne.url],
               );
               if (dependentPropagationResult.accepted) {
                 instructions.push(...dependentPropagationResult.instructions);
@@ -99,8 +117,7 @@ export const jsenvPluginAutoreloadServer = ({
               instructions,
             };
           };
-          const seen = [];
-          return iterate(firstUrlInfo, seen);
+          return iterate(firstUrlInfo, []);
         };
 
         // We are delaying the moment we tell client how to reload because:

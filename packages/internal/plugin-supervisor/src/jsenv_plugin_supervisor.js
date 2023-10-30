@@ -144,15 +144,18 @@ export const jsenvPluginSupervisor = ({
           "/__open_in_editor__/".length,
         );
         file = decodeURIComponent(file);
+
         if (!file) {
           return {
             status: 400,
             body: "Missing file in url",
           };
         }
+        const fileUrl = new URL(file, serveInfo.rootDirectoryUrl);
+        const filePath = fileURLToPath(fileUrl);
         const require = createRequire(import.meta.url);
         const launch = require("launch-editor");
-        launch(fileURLToPath(file), () => {
+        launch(filePath, () => {
           // ignore error for now
         });
         return {

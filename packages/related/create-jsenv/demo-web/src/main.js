@@ -1,24 +1,15 @@
-import mainStyleSheet from "./main.css" assert { type: "css" };
+import "./app/app_custom_element.js";
 
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, mainStyleSheet];
+const AppCustomElement = customElements.get("my-app");
 
 const jsenvLogoUrl = new URL("/jsenv_logo.svg", import.meta.url);
-
-document.querySelector("#root").innerHTML = `
-  <h1>Hello world!</h1>
-  <img class="logo" src=${jsenvLogoUrl} alt="logo" />
-  <p>
-    Edit <code>jsenv_logo.svg</code> and save to test HMR updates.
-  </p>
-  <a href="https://github.com/jsenv/core" target="_blank">Documentation</a>
-`;
+const appCustomElement = new AppCustomElement({
+  logoUrl: jsenvLogoUrl,
+});
+document.querySelector("#root").appendChild(appCustomElement);
 
 if (import.meta.hot) {
-  import.meta.hot.accept();
-  import.meta.hot.dispose(() => {
-    document.querySelector("#root").innerHTML = "";
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-      (s) => s !== mainStyleSheet,
-    );
-  });
+  // custom element registry is not compatible with hot reload
+  // (would have to proxy all custom elements to update them on reload)
+  import.meta.hot.decline();
 }
