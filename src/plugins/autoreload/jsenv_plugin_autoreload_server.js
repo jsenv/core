@@ -19,18 +19,7 @@ export const jsenvPluginAutoreloadServer = ({
           return url;
         };
         const propagateUpdate = (firstUrlInfo) => {
-          const seenSet = new Set();
           const iterate = (urlInfo, chain) => {
-            if (false && seenSet.has(urlInfo.url)) {
-              return {
-                accepted: true,
-                reason: "circular dependency",
-                acceptedBy: formatUrlForClient(urlInfo.url),
-                instructions: [],
-              };
-            }
-            seenSet.add(urlInfo.url);
-
             if (urlInfo.data.hotAcceptSelf) {
               return {
                 accepted: true,
@@ -89,7 +78,7 @@ export const jsenvPluginAutoreloadServer = ({
                   declinedBy: formatUrlForClient(urlInfoReferencingThisOne.url),
                 };
               }
-              const dependentPropagationResult = iterate(
+              const dependentPropagationResult = iterateMemoized(
                 urlInfoReferencingThisOne,
                 [...chain, urlInfoReferencingThisOne.url],
               );
@@ -117,7 +106,18 @@ export const jsenvPluginAutoreloadServer = ({
               instructions,
             };
           };
-          return iterate(firstUrlInfo, []);
+
+          const map = new Map();
+          const iterateMemoized = (urlInfo, chain) => {
+            const resultFromCache = map.get(urlInfo.url);
+            if (resultFromCache) {
+              return resultFromCache;
+            }
+            const result = iterate(urlInfo, chain);
+            map.set(urlInfo.url, result);
+            return result;
+          };
+          return iterateMemoized(firstUrlInfo, []);
         };
 
         // We are delaying the moment we tell client how to reload because:
