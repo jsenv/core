@@ -488,7 +488,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
           const errorInfo =
-            e.code === "PARSE_ERROR"
+            e.code === "PARSE_ERROR" && e.cause
               ? `${e.cause.reasonCode}\n${e.traceMessage}`
               : e.stack;
           logger.error(
