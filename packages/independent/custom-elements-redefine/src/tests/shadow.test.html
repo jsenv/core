@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <title>shadow tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import "@jsenv/custom-elements-redefine";
+      import { createAnimationFramePromise } from "./test_helpers.js";
+
+      const test = async (MyElement, expectedInnerHTML) => {
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        assert({
+          actual: node.shadowRoot.innerHTML,
+          expected: expectedInnerHTML,
+        });
+      };
+
+      // first define
+      await test(
+        class extends HTMLElement {
+          test = "world";
+          constructor() {
+            super();
+            const shadow = this.attachShadow({ mode: "open" });
+            shadow.innerHTML = `a`;
+          }
+        },
+        "a",
+      );
+
+      // override
+      await test(
+        class extends HTMLElement {
+          test = "world";
+          constructor() {
+            super();
+            const shadow = this.attachShadow({ mode: "open" });
+            shadow.innerHTML = `b`;
+          }
+        },
+        "b",
+      );
+    </script>
+  </body>
+</html>
