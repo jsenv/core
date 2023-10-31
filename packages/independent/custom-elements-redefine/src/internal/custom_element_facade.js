@@ -11,6 +11,48 @@ export const createCustomElementFacade = (
       return [];
     }
 
+    constructor(...args) {
+      const CustomElementClass = customElementClassMap.get(customElementName);
+
+      if (CustomElementClass !== customElementFirstClass) {
+        update_prototype_chain: {
+          let ClassCandidate = CustomElementClass;
+          while (ClassCandidate) {
+            const nextClassCandidate = Object.getPrototypeOf(ClassCandidate);
+            if (!nextClassCandidate) {
+              break;
+            }
+            const name = nextClassCandidate.name;
+            if (name) {
+              const constructor = window[name];
+              if (constructor && constructor.prototype instanceof Element) {
+                patchProperties(
+                  CustomElementFacade.prototype,
+                  ClassCandidate.prototype,
+                );
+                break;
+              }
+            }
+            ClassCandidate = nextClassCandidate;
+          }
+        }
+        update_prototype: {
+          const CustomElementPrototype = CustomElementClass.prototype;
+          patchProperties(
+            CustomElementFacade.prototype,
+            CustomElementPrototype,
+          );
+        }
+      }
+      const customElementInstance = Reflect.construct(
+        CustomElementClass,
+        args,
+        CustomElementFacade,
+      );
+      // eslint-disable-next-line no-constructor-return
+      return customElementInstance;
+    }
+
     connectedCallback(...args) {
       const CustomElementClass = customElementClassMap.get(customElementName);
       const CustomElementPrototype = CustomElementClass.prototype;
@@ -86,44 +128,7 @@ export const createCustomElementFacade = (
       }
     }
   }
-
-  return new Proxy(CustomElementFacade, {
-    construct: (element, args, newTarget) => {
-      const CustomElementClass = customElementClassMap.get(customElementName);
-
-      if (CustomElementClass !== customElementFirstClass) {
-        update_prototype_chain: {
-          let ClassCandidate = CustomElementClass;
-          while (ClassCandidate) {
-            const nextClassCandidate = Object.getPrototypeOf(ClassCandidate);
-            if (!nextClassCandidate) {
-              break;
-            }
-            const name = nextClassCandidate.name;
-            if (name) {
-              const constructor = window[name];
-              if (constructor && constructor.prototype instanceof Element) {
-                patchProperties(newTarget.prototype, ClassCandidate.prototype);
-                break;
-              }
-            }
-            ClassCandidate = nextClassCandidate;
-          }
-        }
-        update_prototype: {
-          const CustomElementPrototype = CustomElementClass.prototype;
-          patchProperties(newTarget.prototype, CustomElementPrototype);
-        }
-      }
-      const customElementInstance = Reflect.construct(
-        CustomElementClass,
-        args,
-        newTarget,
-      );
-      // eslint-disable-next-line no-constructor-return
-      return customElementInstance;
-    },
-  });
+  return CustomElementFacade;
 };
 
 const patchProperties = (into, from) => {
