@@ -6,17 +6,14 @@ await executeTestPlan({
     "./src/**/*.test.html": {
       chromium: {
         runtime: chromium(),
-        allocatedMs: 90_000,
       },
       firefox: {
         runtime: firefox({
           disableOnWindowsBecauseFlaky: true,
         }),
-        allocatedMs: 90_000,
       },
       webkit: {
         runtime: webkit(),
-        allocatedMs: 90_000,
       },
     },
   },
