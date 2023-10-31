@@ -18,10 +18,6 @@ class AppCustomElement extends HTMLElement {
 </p>
 <a href="https://github.com/jsenv/core" target="_blank">Documentation</a>`;
   }
-
-  toto() {
-    console.log("here");
-  }
 }
 
 customElements.define("my-app", AppCustomElement);
