@@ -93,17 +93,21 @@ export const createCustomElementFacade = (
 
       if (CustomElementClass !== customElementFirstClass) {
         update_prototype_chain: {
-          let baseCandidate = Object.getPrototypeOf(CustomElementClass);
-          while (baseCandidate) {
-            const name = baseCandidate.name;
+          let ClassCandidate = CustomElementClass;
+          while (ClassCandidate) {
+            const nextClassCandidate = Object.getPrototypeOf(ClassCandidate);
+            if (!nextClassCandidate) {
+              break;
+            }
+            const name = nextClassCandidate.name;
             if (name) {
-              const proto = window[name].prototype;
-              if (proto instanceof Element) {
-                patchProperties(newTarget.prototype, baseCandidate.prototype);
+              const constructor = window[name];
+              if (constructor && constructor.prototype instanceof Element) {
+                patchProperties(newTarget.prototype, ClassCandidate.prototype);
                 break;
               }
             }
-            baseCandidate = Object.getPrototypeOf(baseCandidate);
+            ClassCandidate = nextClassCandidate;
           }
         }
         update_prototype: {
@@ -111,14 +115,6 @@ export const createCustomElementFacade = (
           patchProperties(newTarget.prototype, CustomElementPrototype);
         }
       }
-
-      // console.log(
-      //   newTarget.prototype === CustomElementFacade.prototype,
-      //   newTarget === CustomElementFacade,
-      //   newTarget === CustomElementClass,
-      //   newTarget instanceof CustomElementFacade,
-      //   newTarget instanceof CustomElementClass,
-      // );
       const customElementInstance = Reflect.construct(
         CustomElementClass,
         args,
