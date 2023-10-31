@@ -33,7 +33,13 @@ const cwdUrl = `${pathToFileURL(process.cwd())}/`;
 const getParamsFromProcessAndPrompts = async () => {
   const argv = process.argv.slice(2);
   // not using readdir to control order
-  const availableDemoNames = ["web", "web-react", "web-preact", "node-package"];
+  const availableDemoNames = [
+    "web",
+    "web-components",
+    "web-react",
+    "web-preact",
+    "node-package",
+  ];
   let demoName = availableDemoNames.find((demoNameCandidate) =>
     argv.includes(`--${demoNameCandidate}`),
   );
