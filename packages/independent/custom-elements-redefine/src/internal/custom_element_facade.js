@@ -1,4 +1,3 @@
-import { patchObject } from "./patch_object.js";
 import { customElementClassMap } from "./custom_element_class_map.js";
 import { observedAttributesArraySymbol } from "./symbols.js";
 
@@ -92,29 +91,35 @@ export const createCustomElementFacade = (
   return new Proxy(CustomElementFacade, {
     construct: (element, args, newTarget) => {
       const CustomElementClass = customElementClassMap.get(customElementName);
-      const CustomElementPrototype = CustomElementClass.prototype;
 
-      if (customElementFirstClass !== CustomElementClass) {
+      if (CustomElementClass !== customElementFirstClass) {
         update_prototype_chain: {
-          let proto = CustomElementPrototype;
-          let base = null;
-          while (proto) {
-            if (proto instanceof Element) {
-              // if parent is instance of Element then we want it...
-              base = proto;
+          let baseCandidate = Object.getPrototypeOf(CustomElementClass);
+          while (baseCandidate) {
+            const name = baseCandidate.name;
+            if (name) {
+              const proto = window[name].prototype;
+              if (proto instanceof Element) {
+                patchProperties(newTarget.prototype, baseCandidate.prototype);
+                break;
+              }
             }
-            if (base) {
-              break;
-            }
-            proto = Object.getPrototypeOf(proto);
+            baseCandidate = Object.getPrototypeOf(baseCandidate);
           }
-          patchObject(base.prototype, newTarget.prototype);
         }
         update_prototype: {
-          patchObject(CustomElementPrototype, newTarget.prototype);
+          const CustomElementPrototype = CustomElementClass.prototype;
+          patchProperties(newTarget.prototype, CustomElementPrototype);
         }
       }
 
+      // console.log(
+      //   newTarget.prototype === CustomElementFacade.prototype,
+      //   newTarget === CustomElementFacade,
+      //   newTarget === CustomElementClass,
+      //   newTarget instanceof CustomElementFacade,
+      //   newTarget instanceof CustomElementClass,
+      // );
       const customElementInstance = Reflect.construct(
         CustomElementClass,
         args,
@@ -125,3 +130,28 @@ export const createCustomElementFacade = (
     },
   });
 };
+
+const patchProperties = (into, from) => {
+  const ownPropertyNames = Object.getOwnPropertyNames(from);
+  ownPropertyNames.forEach((ownPropertyName) => {
+    if (PROPERTY_NAMES_TO_SKIP.includes(ownPropertyName)) {
+      return;
+    }
+    const propertyDescriptor = Object.getOwnPropertyDescriptor(
+      from,
+      ownPropertyName,
+    );
+    if (!propertyDescriptor) {
+      return;
+    }
+    if (!propertyDescriptor.configurable) {
+      console.warn(
+        "[custom-elements-redefined]",
+        `${ownPropertyName} is not configurable, skipping`,
+      );
+      return;
+    }
+    Object.defineProperty(into, ownPropertyName, propertyDescriptor);
+  });
+};
+const PROPERTY_NAMES_TO_SKIP = ["name", "prototype", "length"];
