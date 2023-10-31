@@ -103,6 +103,7 @@ const eslintConfig = composeEslintConfig(
           "**/babel_helpers/**/*.js",
           "test/dev_server/**/*.js",
           "./packages/**/pwa/**/*.js",
+          "./packages/**/custom-elements-redefine/**/*.js",
           "**/jsenv_service_worker.js",
         ],
         env: {

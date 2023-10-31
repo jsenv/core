@@ -1,0 +1,39 @@
+{
+  "name": "@jsenv/custom-elements-redefine",
+  "version": "0.0.1",
+  "description": "Allow WebComponent re-definition at runtime",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/custom-elements-redefine"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "dev": "node ./scripts/start_dev_server.mjs",
+    "test": "node ./scripts/test.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
