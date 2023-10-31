@@ -1,7 +1,6 @@
 import { customElementClassMap } from "./custom_element_class_map.js";
-import { observedAttributesArraySymbol } from "./symbols.js";
 
-export const observerSymbol = Symbol.for("observedAttributesObserver");
+const observerSymbol = Symbol.for("observedAttributesObserver");
 
 export const createCustomElementFacade = (
   customElementName,
@@ -15,19 +14,19 @@ export const createCustomElementFacade = (
     connectedCallback(...args) {
       const CustomElementClass = customElementClassMap.get(customElementName);
       const CustomElementPrototype = CustomElementClass.prototype;
-      const attributes = CustomElementClass[observedAttributesArraySymbol];
+      const observedAttributes = CustomElementClass.observedAttributes;
 
       // call initial callback when class is created
-      if (attributes) {
-        if (Array.isArray(attributes)) {
-          attributes.forEach((attributeName) => {
-            const haveAtt = this.getAttributeNode(attributeName);
+      if (observedAttributes) {
+        if (Array.isArray(observedAttributes)) {
+          observedAttributes.forEach((observedAttributeName) => {
+            const haveAtt = this.getAttributeNode(observedAttributeName);
             if (haveAtt) {
               CustomElementPrototype.attributeChangedCallback.call(
                 this,
-                attributeName,
+                observedAttributeName,
                 null,
-                this.getAttribute(attributeName),
+                this.getAttribute(observedAttributeName),
                 null,
               );
             }
@@ -42,8 +41,8 @@ export const createCustomElementFacade = (
         mutationList.forEach((mutation) => {
           if (
             CustomElementPrototype.attributeChangedCallback &&
-            attributes &&
-            attributes.indexOf(mutation.attributeName) !== -1
+            observedAttributes &&
+            observedAttributes.includes(mutation.attributeName)
           ) {
             CustomElementPrototype.attributeChangedCallback.call(
               this,

@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+  <head>
+    <title>disconnectedCallback tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import "@jsenv/custom-elements-redefine";
+      import { createAnimationFramePromise } from "./test_helpers.js";
+
+      const attributeChangedCallbackCalls = [];
+
+      // observe [attribute-one]
+      {
+        class MyElement extends HTMLElement {
+          static get observedAttributes() {
+            return ["attribute-one"];
+          }
+
+          attributeChangedCallback(name, oldValue, newValue) {
+            attributeChangedCallbackCalls.push({ name, oldValue, newValue });
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML =
+          '<test-root id="my-element" attribute-one="initvalue"></test-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        node.setAttribute("attribute-one", "newvalue");
+        await createAnimationFramePromise();
+        assert({
+          actual: attributeChangedCallbackCalls,
+          expected: [
+            {
+              name: "attribute-one",
+              oldValue: null,
+              newValue: "initvalue",
+            },
+            {
+              name: "attribute-one",
+              oldValue: "initvalue",
+              newValue: "newvalue",
+            },
+          ],
+        });
+      }
+
+      // stop observing [attribute-one]
+      {
+        attributeChangedCallbackCalls.length = 0;
+        class MyElement extends HTMLElement {
+          attributeChangedCallback(name, oldValue, newValue) {
+            attributeChangedCallbackCalls.push({ name, oldValue, newValue });
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML =
+          '<test-root id="my-element" attribute-one="initvalue"></test-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        node.setAttribute("attribute-one", "newvalue");
+        await createAnimationFramePromise();
+        assert({
+          actual: attributeChangedCallbackCalls,
+          expected: [],
+        });
+      }
+
+      // restore observe on [attribute-one]
+      {
+        attributeChangedCallbackCalls.length = 0;
+        class MyElement extends HTMLElement {
+          static get observedAttributes() {
+            return ["attribute-one"];
+          }
+
+          attributeChangedCallback(name, oldValue, newValue) {
+            attributeChangedCallbackCalls.push({ name, oldValue, newValue });
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML =
+          '<test-root id="my-element" attribute-one="initvalue"></test-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        node.setAttribute("attribute-one", "newvalue");
+        await createAnimationFramePromise();
+        assert({
+          actual: attributeChangedCallbackCalls,
+          expected: [
+            {
+              name: "attribute-one",
+              oldValue: null,
+              newValue: "initvalue",
+            },
+            {
+              name: "attribute-one",
+              oldValue: "initvalue",
+              newValue: "newvalue",
+            },
+          ],
+        });
+      }
+
+      // observe only [attribute-two]
+      {
+        attributeChangedCallbackCalls.length = 0;
+        class MyElement extends HTMLElement {
+          static get observedAttributes() {
+            return ["attribute-two"];
+          }
+
+          attributeChangedCallback(name, oldValue, newValue) {
+            attributeChangedCallbackCalls.push({ name, oldValue, newValue });
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML =
+          '<test-root id="my-element" attribute-one="initvalue" attribute-two="initvalue1"></test-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        node.setAttribute("attribute-two", "newvalue1");
+        await createAnimationFramePromise();
+        assert({
+          actual: attributeChangedCallbackCalls,
+          expected: [
+            {
+              name: "attribute-two",
+              oldValue: null,
+              newValue: "initvalue1",
+            },
+            {
+              name: "attribute-two",
+              oldValue: "initvalue1",
+              newValue: "newvalue1",
+            },
+          ],
+        });
+      }
+
+      // observe both [attribute-one] and [attribute-two]
+      {
+        attributeChangedCallbackCalls.length = 0;
+        class MyElement extends HTMLElement {
+          static get observedAttributes() {
+            return ["attribute-one", "attribute-two"];
+          }
+
+          attributeChangedCallback(name, oldValue, newValue) {
+            attributeChangedCallbackCalls.push({ name, oldValue, newValue });
+          }
+        }
+        customElements.define("app-root", MyElement);
+        document.body.innerHTML =
+          '<app-root id="my-element" attribute-one="initvalue" attribute-two="initvalue1"></app-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        node.setAttribute("attribute-one", "newvalue");
+        node.setAttribute("attribute-two", "newvalue1");
+        await createAnimationFramePromise();
+        assert({
+          actual: attributeChangedCallbackCalls,
+          expected: [
+            {
+              name: "attribute-one",
+              oldValue: null,
+              newValue: "initvalue",
+            },
+            {
+              name: "attribute-two",
+              oldValue: null,
+              newValue: "initvalue1",
+            },
+            {
+              name: "attribute-one",
+              oldValue: "initvalue",
+              newValue: "newvalue",
+            },
+            {
+              name: "attribute-two",
+              oldValue: "initvalue1",
+              newValue: "newvalue1",
+            },
+          ],
+        });
+      }
+    </script>
+  </body>
+</html>
