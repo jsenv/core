@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <title>adoptedCallback tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import "@jsenv/custom-elements-redefine";
+      import { createAnimationFramePromise } from "./test_helpers.js";
+
+      const test = async (MyElement, expectedTextContent) => {
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        assert({
+          actual: node.textContent,
+          expected: expectedTextContent,
+        });
+      };
+
+      // first define
+      await test(
+        class extends HTMLElement {
+          test = "world";
+          constructor() {
+            super();
+            this.test = `hello ${this.test}`;
+          }
+
+          connectedCallback() {
+            if (this.isConnected) {
+              this.innerHTML = this.test;
+            }
+          }
+        },
+        "Hello world",
+      );
+
+      // replace this.test by "france"
+      await test(
+        class extends HTMLElement {
+          test = "france";
+          constructor() {
+            super();
+            this.test = `hello ${this.test}`;
+          }
+          connectedCallback() {
+            if (this.isConnected) {
+              this.innerHTML = this.test;
+            }
+          }
+        },
+        "Hello france",
+      );
+
+      // drop variable and constructor
+      await test(
+        class extends HTMLElement {
+          connectedCallback() {
+            if (this.isConnected) {
+              this.innerHTML = this.test;
+            }
+          }
+        },
+        "undefined",
+      );
+
+      // bring it back
+      await test(
+        class extends HTMLElement {
+          test = "world";
+          constructor() {
+            super();
+            this.test = `hello ${this.test}`;
+          }
+
+          connectedCallback() {
+            if (this.isConnected) {
+              this.innerHTML = this.test;
+            }
+          }
+        },
+        "hello world",
+      );
+    </script>
+  </body>
+</html>
