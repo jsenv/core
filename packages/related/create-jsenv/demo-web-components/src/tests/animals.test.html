@@ -1,0 +1,32 @@
+<!--
+This HTML file demo how to write a test using jsenv.
+This file is testing a "countDogs" function implemented in "animals.js"
+-->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import { countDogs } from "/app/animals.js";
+
+      {
+        const actual = countDogs(["dog", "dog"]);
+        const expected = 2;
+        assert({ actual, expected });
+      }
+
+      {
+        const actual = countDogs(["dog", "cat"]);
+        const expected = 1;
+        assert({ actual, expected });
+      }
+
+      document.body.appendChild(document.createTextNode("ok"));
+    </script>
+  </body>
+</html>
