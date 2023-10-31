@@ -22,6 +22,7 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
     const isSupported = urlInfo.context.isSupportedOnCurrentClients;
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.originalUrl,
+      content: urlInfo.content,
       isSupported,
       isJsModule,
       getImportSpecifier,

@@ -71,6 +71,7 @@ export const babelPluginCompatMap = {
     samsung: "9",
     electron: "3",
   },
+  "proposal-decorators": {},
   "transform-parameters": {
     chrome: "49",
     opera: "36",
