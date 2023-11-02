@@ -20,7 +20,7 @@ await executeTestPlan({
     },
   },
   webServer: {
-    origin: "http://localhost:3401",
+    origin: "http://localhost:3400",
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
   coverageEnabled: process.argv.includes("--coverage"),

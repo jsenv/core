@@ -9,7 +9,7 @@ await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
   buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: {
-    "./main.html": "index.html",
+    "./index.html": "index.html",
   },
   bundling: {
     js_module: {
