@@ -9,10 +9,12 @@
   <body>
     <script type="module">
       import { assert } from "@jsenv/assert";
-      import { enableRerenderOnCustomElementUpdate } from "@jsenv/custom-elements-redefine";
+      import { allowCustomElementsRedefine } from "@jsenv/custom-elements-redefine";
       import { createAnimationFramePromise } from "./test_helpers.js";
 
-      enableRerenderOnCustomElementUpdate();
+      allowCustomElementsRedefine({
+        updateWholeDOMOnRedefine: true,
+      });
 
       // first define with static test
       {

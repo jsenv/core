@@ -1,7 +1,5 @@
-import { enableRerenderOnCustomElementUpdate } from "@jsenv/custom-elements-redefine"; // TODO: find a way to treeshake after build
+import "./app/custom_elements_redefine.js";
 import "./app/app_custom_element.js";
-
-enableRerenderOnCustomElementUpdate();
 
 document.querySelector("#root").innerHTML = `<my-app></my-app>`;
 
