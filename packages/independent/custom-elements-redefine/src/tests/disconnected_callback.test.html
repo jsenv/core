@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <title>disconnectedCallback tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import { allowCustomElementsRedefine } from "@jsenv/custom-elements-redefine";
+      import { createAnimationFramePromise } from "./test_helpers.js";
+
+      allowCustomElementsRedefine();
+
+      let disconnectedValue;
+
+      // ensure disconnectedCallback method is called
+      {
+        class MyElement extends HTMLElement {
+          disconnectedCallback() {
+            disconnectedValue = "yay, it works";
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: undefined,
+        });
+        document.body.innerHTML = "";
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: "yay, it works",
+        });
+      }
+
+      // update disconnectedCallback
+      {
+        disconnectedValue = undefined;
+        class MyElement extends HTMLElement {
+          disconnectedCallback() {
+            disconnectedValue = "yay, it works again";
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: undefined,
+        });
+        document.body.innerHTML = "";
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: "yay, it works again",
+        });
+      }
+
+      // remove disconnectedCallback
+      {
+        disconnectedValue = undefined;
+        class MyElement extends HTMLElement {}
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: undefined,
+        });
+        document.body.innerHTML = "";
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: undefined,
+        });
+      }
+
+      // restore disconnectedCallback
+      {
+        disconnectedValue = undefined;
+        class MyElement extends HTMLElement {
+          disconnectedCallback() {
+            disconnectedValue = "restored";
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: undefined,
+        });
+        document.body.innerHTML = "";
+        await createAnimationFramePromise();
+        assert({
+          actual: disconnectedValue,
+          expected: "restored",
+        });
+      }
+    </script>
+  </body>
+</html>

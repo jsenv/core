@@ -39,6 +39,14 @@ export const getBaseBabelPluginStructure = ({
     babelPluginStructure["proposal-unicode-property-regex"] =
       requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
   }
+  // if (isBabelPluginNeeded("proposal-decorators") && content.includes("@")) {
+  //   babelPluginStructure["proposal-decorators"] = [
+  //     requireBabelPlugin("@babel/plugin-proposal-decorators"),
+  //     {
+  //       version: "2023-05",
+  //     },
+  //   ];
+  // }
   if (isBabelPluginNeeded("transform-async-to-promises")) {
     babelPluginStructure["transform-async-to-promises"] = [
       requireBabelPlugin("babel-plugin-transform-async-to-promises"),

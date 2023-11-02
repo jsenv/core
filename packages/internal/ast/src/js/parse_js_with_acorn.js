@@ -13,7 +13,7 @@ export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
       locations: true,
       allowAwaitOutsideFunction: true,
       sourceType: isJsModule ? "module" : "script",
-      ecmaVersion: 2022,
+      ecmaVersion: 2023,
       onComment: (block, text, start, end) => {
         comments.push({
           block,

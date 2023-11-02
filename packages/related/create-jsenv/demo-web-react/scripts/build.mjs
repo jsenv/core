@@ -1,7 +1,6 @@
 /*
  * Optimize source files and write them into "./dist/"
- * - npm run build
- * - npm run build:watch
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import { build } from "@jsenv/core";
@@ -11,7 +10,7 @@ await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
   buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: {
-    "./main.html": "index.html",
+    "./index.html": "index.html",
   },
   plugins: [jsenvPluginReact()],
   bundling: {

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "5.1.4",
+    "@jsenv/ast": "5.2.0",
     "@preact/signals": "1.2.1"
   },
   "scripts": {

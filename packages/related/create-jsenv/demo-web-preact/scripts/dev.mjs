@@ -1,6 +1,6 @@
 /*
  * Start a development server for files inside src/
- * - npm run dev
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import open from "open";
@@ -14,7 +14,7 @@ export const devServer = await startDevServer({
       refreshInstrumentation: { "file://**/*.jsx": true },
     }),
   ],
-  port: 3401,
+  port: 3400,
 });
 if (process.argv.includes("--open")) {
   open(`${devServer.origin}/main.html`);

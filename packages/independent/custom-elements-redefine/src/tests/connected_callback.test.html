@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <title>connectedCallback tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import { allowCustomElementsRedefine } from "@jsenv/custom-elements-redefine";
+      import { createAnimationFramePromise } from "./test_helpers.js";
+
+      allowCustomElementsRedefine();
+
+      const test = async (text) => {
+        class MyElement extends HTMLElement {
+          connectedCallback() {
+            if (this.isConnected) {
+              this.innerHTML = text;
+            }
+          }
+        }
+        customElements.define("test-root", MyElement);
+        document.body.innerHTML = '<test-root id="my-element"></test-root>';
+        await createAnimationFramePromise();
+        const node = document.getElementById("my-element");
+        assert({
+          actual: node.textContent,
+          expected: text,
+        });
+      };
+
+      await test("1st define");
+      await test("2nd define");
+      await test("3rd define");
+    </script>
+  </body>
+</html>

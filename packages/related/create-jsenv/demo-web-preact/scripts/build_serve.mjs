@@ -1,7 +1,7 @@
 /*
  * Start a server serving files into dist/.
  * Useful to test the files generated during the build
- * - npm run build:serve
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import open from "open";

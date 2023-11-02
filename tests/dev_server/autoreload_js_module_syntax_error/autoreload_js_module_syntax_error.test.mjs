@@ -11,6 +11,7 @@ import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 
+let debug = false;
 const jsFileUrl = new URL("./client/main.js", import.meta.url);
 const jsFileContent = {
   beforeTest: readFileSync(jsFileUrl),
@@ -21,10 +22,10 @@ const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  keepProcessAlive: false,
+  keepProcessAlive: !debug,
 });
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: !debug });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 
 try {
@@ -76,6 +77,8 @@ try {
   }
 } finally {
   jsFileContent.restore();
-  browser.close();
-  devServer.stop(); // required because for some reason the rooms are kept alive
+  if (!debug) {
+    browser.close();
+    devServer.stop(); // required because for some reason the rooms are kept alive
+  }
 }

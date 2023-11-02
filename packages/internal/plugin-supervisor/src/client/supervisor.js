@@ -662,7 +662,12 @@ window.__supervisor__ = (() => {
     };
 
     const resolveFileUrl = (url) => {
-      let urlObject = new URL(url, window.origin);
+      let urlObject;
+      try {
+        urlObject = new URL(url, window.origin);
+      } catch (e) {
+        return url;
+      }
       if (urlObject.origin === window.origin) {
         urlObject = new URL(
           `${urlObject.pathname.slice(1)}${urlObject.search}`,

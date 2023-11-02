@@ -11,6 +11,9 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
           urlInfo.url,
           urlInfo.context.rootDirectoryUrl,
         );
+        if (urlInfo.contentType !== "application/json") {
+          return null;
+        }
         const entryNames = JSON.parse(urlInfo.content);
         const newEntryNames = [];
         for (const entryName of entryNames) {

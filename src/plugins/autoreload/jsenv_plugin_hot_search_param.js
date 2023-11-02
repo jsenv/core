@@ -44,8 +44,16 @@ export const jsenvPluginHotSearchParam = () => {
       // At this stage the parent is using ?hot and we are going to decide if
       // we propagate the search param to child.
       const referencedUrlInfo = reference.urlInfo;
-      const { modifiedTimestamp, dereferencedTimestamp } = referencedUrlInfo;
-      if (!modifiedTimestamp && !dereferencedTimestamp) {
+      const {
+        modifiedTimestamp,
+        descendantModifiedTimestamp,
+        dereferencedTimestamp,
+      } = referencedUrlInfo;
+      if (
+        !modifiedTimestamp &&
+        !descendantModifiedTimestamp &&
+        !dereferencedTimestamp
+      ) {
         return null;
       }
       // The goal is to send an url that will bypass client (the browser) cache
@@ -58,10 +66,11 @@ export const jsenvPluginHotSearchParam = () => {
       // We use the latest timestamp to ensure it's fresh
       // The dereferencedTimestamp is needed because when a js module is re-referenced
       // browser must re-execute it, even if the code is not modified
-      const latestTimestamp =
-        dereferencedTimestamp && modifiedTimestamp
-          ? Math.max(dereferencedTimestamp, modifiedTimestamp)
-          : dereferencedTimestamp || modifiedTimestamp;
+      const latestTimestamp = Math.max(
+        modifiedTimestamp,
+        descendantModifiedTimestamp,
+        dereferencedTimestamp,
+      );
       return {
         hot: latestTimestamp,
       };

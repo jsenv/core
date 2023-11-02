@@ -1043,9 +1043,11 @@ const jsenvPluginSupervisor = ({
             body: "Missing file in url"
           };
         }
+        const fileUrl = new URL(file, serveInfo.rootDirectoryUrl);
+        const filePath = fileURLToPath(fileUrl);
         const require = createRequire(import.meta.url);
         const launch = require("launch-editor");
-        launch(fileURLToPath(file), () => {
+        launch(filePath, () => {
           // ignore error for now
         });
         return {

@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <title>adoptedCallback tests</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      // move to iframe and ensure adoptedCallback is called
+
+      import { assert } from "@jsenv/assert";
+      import { allowCustomElementsRedefine } from "@jsenv/custom-elements-redefine";
+      import { createAnimationFramePromise } from "./test_helpers.js";
+
+      allowCustomElementsRedefine();
+
+      let adoptedCallbackValue = "none";
+      class MyElement extends HTMLElement {
+        connectedCallback() {
+          if (this.isConnected) {
+            this.innerHTML = "I work";
+          }
+        }
+
+        adoptedCallback(oldDocument, newDocument) {
+          adoptedCallbackValue = `adopted from ${oldDocument.documentURI} to ${newDocument.documentURI}`;
+        }
+      }
+      customElements.define("test-root", MyElement);
+
+      document.body.innerHTML = '<test-root id="my-element"></test-root>';
+      // wait for render and check if value is set
+      await createAnimationFramePromise();
+      const node = document.getElementById("my-element");
+      assert({
+        actual: node.textContent,
+        expected: "I work",
+      });
+
+      const iframe2 = document.createElement("iframe");
+      iframe2.id = "i2";
+      document.body.appendChild(iframe2);
+      const iframe2Window = iframe2.contentWindow;
+      iframe2Window.document.body.appendChild(node);
+      await createAnimationFramePromise();
+      assert({
+        actual: adoptedCallbackValue,
+        expected: `adopted from ${window.location.href} to about:blank`,
+      });
+    </script>
+  </body>
+</html>

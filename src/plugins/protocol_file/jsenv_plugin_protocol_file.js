@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
+import { serveDirectory } from "@jsenv/server";
 import { pathToFileURL } from "node:url";
 import {
   urlIsInsideOf,
@@ -98,6 +99,7 @@ export const jsenvPluginProtocolFile = ({
         reference.leadsToADirectory = stat && stat.isDirectory();
         if (reference.leadsToADirectory) {
           const directoryAllowed =
+            reference.type === "http_request" ||
             reference.type === "filesystem" ||
             (typeof directoryReferenceAllowed === "function" &&
               directoryReferenceAllowed(reference)) ||
@@ -163,7 +165,6 @@ export const jsenvPluginProtocolFile = ({
         }
         const urlObject = new URL(urlInfo.url);
         if (urlInfo.firstReference.leadsToADirectory) {
-          const directoryEntries = readdirSync(urlObject);
           if (!urlInfo.filenameHint) {
             if (urlInfo.firstReference.type === "filesystem") {
               urlInfo.filenameHint = `${
@@ -173,10 +174,17 @@ export const jsenvPluginProtocolFile = ({
               urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
             }
           }
+          const { headers, body } = serveDirectory(urlObject.href, {
+            headers: urlInfo.context.request
+              ? urlInfo.context.request.headers
+              : {},
+            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+          });
           return {
             type: "directory",
-            contentType: "application/json",
-            content: JSON.stringify(directoryEntries, null, "  "),
+            contentType: headers["content-type"],
+            contentLength: headers["content-length"],
+            content: body,
           };
         }
         if (

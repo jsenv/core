@@ -11,7 +11,11 @@ export const serveDirectory = (
   const directoryContentArray = readdirSync(new URL(url));
   const responseProducers = {
     "application/json": () => {
-      const directoryContentJson = JSON.stringify(directoryContentArray);
+      const directoryContentJson = JSON.stringify(
+        directoryContentArray,
+        null,
+        "  ",
+      );
       return {
         status: 200,
         headers: {
