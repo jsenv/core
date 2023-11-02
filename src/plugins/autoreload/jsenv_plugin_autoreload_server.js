@@ -155,6 +155,7 @@ export const jsenvPluginAutoreloadServer = ({
             }
           };
           invalidateImporters(firstUrlInfo);
+          boundaries.clear();
           seen.clear();
           return {
             ...propagationResult,

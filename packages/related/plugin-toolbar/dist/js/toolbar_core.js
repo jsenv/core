@@ -14,10 +14,10 @@ l$2 = {
 }, "function" == typeof Promise ? Promise.prototype.then.bind(Promise.resolve()) : setTimeout;
 
 var t$1,
-  r$1,
+  r,
   u$1,
   i$1,
-  o$1 = 0,
+  o = 0,
   f = [],
   c$2 = [],
   e$1 = l$2.__b,
@@ -26,8 +26,8 @@ var t$1,
   l$1 = l$2.__c,
   m = l$2.unmount;
 function d$2(t, u) {
-  l$2.__h && l$2.__h(r$1, t, o$1 || u), o$1 = 0;
-  var i = r$1.__H || (r$1.__H = {
+  l$2.__h && l$2.__h(r, t, o || u), o = 0;
+  var i = r.__H || (r.__H = {
     __: [],
     __h: []
   });
@@ -47,19 +47,19 @@ function b$1() {
   }
 }
 l$2.__b = function (n) {
-  r$1 = null, e$1 && e$1(n);
+  r = null, e$1 && e$1(n);
 }, l$2.__r = function (n) {
   a$1 && a$1(n), t$1 = 0;
-  var i = (r$1 = n.__c).__H;
-  i && (u$1 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function (n) {
+  var i = (r = n.__c).__H;
+  i && (u$1 === r ? (i.__h = [], r.__h = [], i.__.forEach(function (n) {
     n.__N && (n.__ = n.__N), n.__V = c$2, n.__N = n.i = void 0;
-  })) : (i.__h.forEach(k), i.__h.forEach(w$1), i.__h = [], t$1 = 0)), u$1 = r$1;
+  })) : (i.__h.forEach(k), i.__h.forEach(w$1), i.__h = [], t$1 = 0)), u$1 = r;
 }, l$2.diffed = function (t) {
   v$2 && v$2(t);
   var o = t.__c;
   o && o.__H && (o.__H.__h.length && (1 !== f.push(o) && i$1 === l$2.requestAnimationFrame || ((i$1 = l$2.requestAnimationFrame) || j)(b$1)), o.__H.__.forEach(function (n) {
     n.i && (n.__H = n.i), n.__V !== c$2 && (n.__ = n.__V), n.i = void 0, n.__V = c$2;
-  })), u$1 = r$1 = null;
+  })), u$1 = r = null;
 }, l$2.__c = function (t, r) {
   r.some(function (t) {
     try {
@@ -94,13 +94,13 @@ function j(n) {
   g$1 && (t = requestAnimationFrame(r));
 }
 function k(n) {
-  var t = r$1,
+  var t = r,
     u = n.__c;
-  "function" == typeof u && (n.__c = void 0, u()), r$1 = t;
+  "function" == typeof u && (n.__c = void 0, u()), r = t;
 }
 function w$1(n) {
-  var t = r$1;
-  n.__c = n.__(), r$1 = t;
+  var t = r;
+  n.__c = n.__(), r = t;
 }
 function z(n, t) {
   return !n || n.length !== t.length || t.some(function (t, r) {
@@ -111,22 +111,23 @@ function z(n, t) {
 function i() {
   throw new Error("Cycle detected");
 }
-function t() {
-  if (r > 1) {
-    r--;
+const t = Symbol.for("preact-signals");
+function n() {
+  if (e > 1) {
+    e--;
     return;
   }
   let i,
     t = !1;
-  while (void 0 !== s) {
-    let n = s;
-    s = void 0;
-    e++;
+  while (void 0 !== h$1) {
+    let n = h$1;
+    h$1 = void 0;
+    c$1++;
     while (void 0 !== n) {
       const o = n.o;
       n.o = void 0;
       n.f &= -3;
-      if (!(8 & n.f) && l(n)) try {
+      if (!(8 & n.f) && a(n)) try {
         n.c();
       } catch (n) {
         if (!t) {
@@ -137,64 +138,65 @@ function t() {
       n = o;
     }
   }
-  e = 0;
-  r--;
+  c$1 = 0;
+  e--;
   if (t) throw i;
 }
-let o,
-  s;
-let r = 0,
-  e = 0,
-  c$1 = 0;
-function u(i) {
-  if (void 0 === o) return;
+let s,
+  h$1;
+let e = 0,
+  c$1 = 0,
+  u = 0;
+function d$1(i) {
+  if (void 0 === s) return;
   let t = i.n;
-  if (void 0 === t || t.t !== o) {
+  if (void 0 === t || t.t !== s) {
     t = {
       i: 0,
       S: i,
-      p: o.s,
+      p: s.s,
       n: void 0,
-      t: o,
+      t: s,
       e: void 0,
       x: void 0,
       r: t
     };
-    if (void 0 !== o.s) o.s.n = t;
-    o.s = t;
+    if (void 0 !== s.s) s.s.n = t;
+    s.s = t;
     i.n = t;
-    if (32 & o.f) i.S(t);
+    if (32 & s.f) i.S(t);
     return t;
   } else if (-1 === t.i) {
     t.i = 0;
     if (void 0 !== t.n) {
       t.n.p = t.p;
       if (void 0 !== t.p) t.p.n = t.n;
-      t.p = o.s;
+      t.p = s.s;
       t.n = void 0;
-      o.s.n = t;
-      o.s = t;
+      s.s.n = t;
+      s.s = t;
     }
     return t;
   }
 }
-function d$1(i) {
+function v$1(i) {
   this.v = i;
   this.i = 0;
   this.n = void 0;
   this.t = void 0;
 }
-d$1.prototype.h = function () {
+v$1.prototype.brand = t;
+v$1.prototype.h = function () {
   return !0;
 };
-d$1.prototype.S = function (i) {
+v$1.prototype.S = function (i) {
   if (this.t !== i && void 0 === i.e) {
     i.x = this.t;
     if (void 0 !== this.t) this.t.e = i;
     this.t = i;
   }
 };
-d$1.prototype.U = function (i) {
+v$1.prototype.U = function (i) {
   if (void 0 !== this.t) {
     const t = i.e,
       n = i.x;
@@ -209,9 +211,9 @@ d$1.prototype.U = function (i) {
     if (i === this.t) this.t = n;
   }
 };
-d$1.prototype.subscribe = function (i) {
+v$1.prototype.subscribe = function (i) {
   const t = this;
-  return E(function () {
+  return O(function () {
     const n = t.value,
       o = 32 & this.f;
     this.f &= -33;
@@ -222,50 +224,50 @@ d$1.prototype.subscribe = function (i) {
     }
   });
 };
-d$1.prototype.valueOf = function () {
+v$1.prototype.valueOf = function () {
   return this.value;
 };
-d$1.prototype.toString = function () {
+v$1.prototype.toString = function () {
   return this.value + "";
 };
-d$1.prototype.toJSON = function () {
+v$1.prototype.toJSON = function () {
   return this.value;
 };
-d$1.prototype.peek = function () {
+v$1.prototype.peek = function () {
   return this.v;
 };
-Object.defineProperty(d$1.prototype, "value", {
+Object.defineProperty(v$1.prototype, "value", {
   get() {
-    const i = u(this);
+    const i = d$1(this);
     if (void 0 !== i) i.i = this.i;
     return this.v;
   },
-  set(n) {
-    if (o instanceof y) !function () {
+  set(t) {
+    if (s instanceof _) !function () {
       throw new Error("Computed cannot have side-effects");
     }();
-    if (n !== this.v) {
-      if (e > 100) i();
-      this.v = n;
+    if (t !== this.v) {
+      if (c$1 > 100) i();
+      this.v = t;
       this.i++;
-      c$1++;
-      r++;
+      u++;
+      e++;
       try {
         for (let i = this.t; void 0 !== i; i = i.x) i.t.N();
       } finally {
-        t();
+        n();
       }
     }
   }
 });
-function v$1(i) {
-  return new d$1(i);
-}
 function l(i) {
+  return new v$1(i);
+}
+function a(i) {
   for (let t = i.s; void 0 !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0;
   return !1;
 }
-function a(i) {
+function y(i) {
   for (let t = i.s; void 0 !== t; t = t.n) {
     const n = t.S.n;
     if (void 0 !== n) t.r = n;
@@ -293,29 +295,29 @@ function w(i) {
   }
   i.s = t;
 }
-function y(i) {
-  d$1.call(this, void 0);
+function _(i) {
+  v$1.call(this, void 0);
   this.x = i;
   this.s = void 0;
-  this.g = c$1 - 1;
+  this.g = u - 1;
   this.f = 4;
 }
-(y.prototype = new d$1()).h = function () {
+(_.prototype = new v$1()).h = function () {
   this.f &= -3;
   if (1 & this.f) return !1;
   if (32 == (36 & this.f)) return !0;
   this.f &= -5;
-  if (this.g === c$1) return !0;
-  this.g = c$1;
+  if (this.g === u) return !0;
+  this.g = u;
   this.f |= 1;
-  if (this.i > 0 && !l(this)) {
+  if (this.i > 0 && !a(this)) {
     this.f &= -2;
     return !0;
   }
-  const i = o;
+  const i = s;
   try {
-    a(this);
-    o = this;
+    y(this);
+    s = this;
     const i = this.x();
     if (16 & this.f || this.v !== i || 0 === this.i) {
       this.v = i;
@@ -327,93 +329,93 @@ function y(i) {
     this.f |= 16;
     this.i++;
   }
-  o = i;
+  s = i;
   w(this);
   this.f &= -2;
   return !0;
 };
-y.prototype.S = function (i) {
+_.prototype.S = function (i) {
   if (void 0 === this.t) {
     this.f |= 36;
     for (let i = this.s; void 0 !== i; i = i.n) i.S.S(i);
   }
-  d$1.prototype.S.call(this, i);
+  v$1.prototype.S.call(this, i);
 };
-y.prototype.U = function (i) {
+_.prototype.U = function (i) {
   if (void 0 !== this.t) {
-    d$1.prototype.U.call(this, i);
+    v$1.prototype.U.call(this, i);
     if (void 0 === this.t) {
       this.f &= -33;
       for (let i = this.s; void 0 !== i; i = i.n) i.S.U(i);
     }
   }
 };
-y.prototype.N = function () {
+_.prototype.N = function () {
   if (!(2 & this.f)) {
     this.f |= 6;
     for (let i = this.t; void 0 !== i; i = i.x) i.t.N();
   }
 };
-y.prototype.peek = function () {
+_.prototype.peek = function () {
   if (!this.h()) i();
   if (16 & this.f) throw this.v;
   return this.v;
 };
-Object.defineProperty(y.prototype, "value", {
+Object.defineProperty(_.prototype, "value", {
   get() {
     if (1 & this.f) i();
-    const t = u(this);
+    const t = d$1(this);
     this.h();
     if (void 0 !== t) t.i = this.i;
     if (16 & this.f) throw this.v;
     return this.v;
   }
 });
-function _(i) {
-  return new y(i);
-}
 function p$1(i) {
-  const n = i.u;
+  return new _(i);
+}
+function g(i) {
+  const t = i.u;
   i.u = void 0;
-  if ("function" == typeof n) {
-    r++;
-    const s = o;
-    o = void 0;
+  if ("function" == typeof t) {
+    e++;
+    const o = s;
+    s = void 0;
     try {
-      n();
+      t();
     } catch (t) {
       i.f &= -2;
       i.f |= 8;
-      g(i);
+      b(i);
       throw t;
     } finally {
-      o = s;
-      t();
+      s = o;
+      n();
     }
   }
 }
-function g(i) {
+function b(i) {
   for (let t = i.s; void 0 !== t; t = t.n) t.S.U(t);
   i.x = void 0;
   i.s = void 0;
-  p$1(i);
-}
-function b(i) {
-  if (o !== this) throw new Error("Out-of-order effect");
-  w(this);
-  o = i;
-  this.f &= -2;
-  if (8 & this.f) g(this);
-  t();
+  g(i);
 }
 function x(i) {
+  if (s !== this) throw new Error("Out-of-order effect");
+  w(this);
+  s = i;
+  this.f &= -2;
+  if (8 & this.f) b(this);
+  n();
+}
+function E(i) {
   this.x = i;
   this.u = void 0;
   this.s = void 0;
   this.o = void 0;
   this.f = 32;
 }
-x.prototype.c = function () {
+E.prototype.c = function () {
   const i = this.S();
   try {
     if (8 & this.f) return;
@@ -424,30 +426,30 @@ x.prototype.c = function () {
     i();
   }
 };
-x.prototype.S = function () {
+E.prototype.S = function () {
   if (1 & this.f) i();
   this.f |= 1;
   this.f &= -9;
-  p$1(this);
-  a(this);
-  r++;
-  const t = o;
-  o = this;
-  return b.bind(this, t);
+  g(this);
+  y(this);
+  e++;
+  const t = s;
+  s = this;
+  return x.bind(this, t);
 };
-x.prototype.N = function () {
+E.prototype.N = function () {
   if (!(2 & this.f)) {
     this.f |= 2;
-    this.o = s;
-    s = this;
+    this.o = h$1;
+    h$1 = this;
   }
 };
-x.prototype.d = function () {
+E.prototype.d = function () {
   this.f |= 8;
-  if (!(1 & this.f)) g(this);
+  if (!(1 & this.f)) b(this);
 };
-function E(i) {
-  const t = new x(i);
+function O(i) {
+  const t = new E(i);
   try {
     t.c();
   } catch (i) {
@@ -483,7 +485,7 @@ function p({
         this.setState({});
       }
     };
-    return _(() => {
+    return p$1(() => {
       let t = i.value.value;
       return 0 === t ? 0 : !0 === t ? "" : t || "";
     });
@@ -491,7 +493,7 @@ function p({
   return o.value;
 }
 p.displayName = "_st";
-Object.defineProperties(d$1.prototype, {
+Object.defineProperties(v$1.prototype, {
   constructor: {
     configurable: !0,
     value: void 0
@@ -520,7 +522,7 @@ c("__b", (t, i) => {
     for (let n in e) {
       if ("children" === n) continue;
       let o = e[n];
-      if (o instanceof d$1) {
+      if (o instanceof v$1) {
         if (!t) i.__np = t = {};
         t[n] = o;
         e[n] = o.peek();
@@ -538,7 +540,7 @@ c("__r", (t, i) => {
     e = n.__$u;
     if (void 0 === e) n.__$u = e = function (t) {
       let i;
-      E(function () {
+      O(function () {
         i = this;
       });
       i.c = () => {
@@ -587,13 +589,13 @@ c("diffed", (t, i) => {
 });
 function v(t, i, e, n) {
   const o = i in t && void 0 === t.ownerSVGElement,
-    r = v$1(e);
+    r = l(e);
   return {
     o: (t, i) => {
       r.value = t;
       n = i;
     },
-    d: E(() => {
+    d: O(() => {
       const e = r.value.value;
       if (n[i] !== e) {
         n[i] = e;
@@ -632,7 +634,7 @@ c("__h", (t, i, e, n) => {
   t(i, e, n);
 });
 function useSignal(t) {
-  return F(() => v$1(t), []);
+  return F(() => l(t), []);
 }
 
 const paramsFromParentWindow = {};
@@ -644,9 +646,9 @@ const parentWindowReloader = window.parent.__reloader__;
 
 const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSON.parse(localStorage.getItem("jsenv_toolbar")) : {};
 
-const animationsEnabledSignal = v$1(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
+const animationsEnabledSignal = l(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
 
-E(() => {
+O(() => {
   const animationsEnabled = animationsEnabledSignal.value;
   if (animationsEnabled) {
     document.documentElement.removeAttribute("data-animation-disabled");
@@ -655,11 +657,11 @@ E(() => {
   }
 });
 
-const executionTooltipOpenedSignal = v$1(false);
-const executionSignal = v$1({
+const executionTooltipOpenedSignal = l(false);
+const executionSignal = l({
   status: "running"
 });
-const previousExecutionSignal = v$1(sessionStorage.hasOwnProperty(window.location.href) ? JSON.parse(sessionStorage.getItem(window.location.href)) : null);
+const previousExecutionSignal = l(sessionStorage.hasOwnProperty(window.location.href) ? JSON.parse(sessionStorage.getItem(window.location.href)) : null);
 window.parent.__supervisor__.getDocumentExecutionResult().then(({
   status,
   startTime,
@@ -674,8 +676,8 @@ window.parent.__supervisor__.getDocumentExecutionResult().then(({
 
 const notificationAPIDetected = typeof window.Notification === "function";
 
-const notificationsEnabledSignal = v$1(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
-const notificationPermissionSignal = v$1(Notification.permission);
+const notificationsEnabledSignal = l(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
+const notificationPermissionSignal = l(Notification.permission);
 
 const enableNotifications = () => {
   notificationsEnabledSignal.value = true;
@@ -781,13 +783,13 @@ const getFaviconHref = () => {
   return link ? link.href : undefined;
 };
 
-E(() => {
+O(() => {
   const execution = executionSignal.value;
   if (execution) {
     sessionStorage.setItem(window.location.href, JSON.stringify(execution));
   }
 });
-E(() => {
+O(() => {
   const execution = executionSignal.value;
   const previousExecution = previousExecutionSignal.value;
   if (execution) {
@@ -795,7 +797,7 @@ E(() => {
   }
 });
 
-E(() => {
+O(() => {
   const notificationsEnabled = notificationsEnabledSignal.value;
   if (!notificationsEnabled) {
     closeAllNotifications();
@@ -841,8 +843,8 @@ const disableAutoreload = () => {
   parentWindowReloader.autoreload.disable();
 };
 
-const serverTooltipOpenedSignal = v$1(false);
-const serverConnectionSignal = v$1("default");
+const serverTooltipOpenedSignal = l(false);
+const serverConnectionSignal = l("default");
 const serverEvents$1 = window.__server_events__;
 if (serverEvents$1) {
   serverEvents$1.readyState.onchange = () => {
@@ -863,7 +865,7 @@ const closeAllTooltips = () => {
   closeServerTooltip();
 };
 
-const openedSignal = v$1(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
+const openedSignal = l(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
 
 const getToolbarIframe = () => {
   const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
@@ -955,7 +957,7 @@ const startJavaScriptAnimation = ({
 };
 
 const initToolbarOpening = () => {
-  E(() => {
+  O(() => {
     const opened = openedSignal.value;
     if (opened) {
       showToolbar();
@@ -1198,7 +1200,7 @@ const closeOverflowMenu = () => {
   document.querySelector("#menu_overflow").removeAttribute("data-animate");
 };
 
-const settingsOpenedSignal = v$1(false);
+const settingsOpenedSignal = l(false);
 
 const openSettings = () => {
   settingsOpenedSignal.value = true;
@@ -1207,7 +1209,7 @@ const closeSettings = () => {
   settingsOpenedSignal.value = false;
 };
 
-const changesTooltipOpenedSignal = v$1(false);
+const changesTooltipOpenedSignal = l(false);
 
 const renderToolbarOverlay = () => {
   const toolbarOverlay = document.querySelector("#toolbar_overlay");
@@ -1215,7 +1217,7 @@ const renderToolbarOverlay = () => {
     closeAllTooltips();
     closeSettings();
   };
-  E(() => {
+  O(() => {
     if (!window.parent) {
       // can happen while parent iframe reloads
       return;
@@ -1342,11 +1344,11 @@ const renameAttribute = (node, name, newName) => {
 const executionIndicator = document.querySelector("#document_execution_indicator");
 const renderDocumentExecutionIndicator = async () => {
   removeForceHideElement(document.querySelector("#document_execution_indicator"));
-  E(() => {
+  O(() => {
     const execution = executionSignal.value;
     updateExecutionIndicator(execution);
   });
-  E(() => {
+  O(() => {
     const executionTooltipOpened = executionTooltipOpenedSignal.value;
     if (executionTooltipOpened) {
       executionIndicator.setAttribute("data-tooltip-visible", "");
@@ -1397,9 +1399,9 @@ const computeText = ({
   return "";
 };
 
-const autoreloadEnabledSignal = v$1(false);
-const reloaderStatusSignal = v$1("idle");
-const changesSignal = v$1(0);
+const autoreloadEnabledSignal = l(false);
+const reloaderStatusSignal = l("idle");
+const changesSignal = l(0);
 if (parentWindowReloader) {
   autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   parentWindowReloader.autoreload.onchange = () => {
@@ -1426,7 +1428,7 @@ const closeChangesToolip = () => {
 
 const changesIndicator = document.querySelector("#changes_indicator");
 const renderChangesIndicator = () => {
-  E(() => {
+  O(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     const changes = changesSignal.value;
     const changeCount = changes.length;
@@ -1448,7 +1450,7 @@ const renderChangesIndicator = () => {
   changesIndicator.querySelector(".tooltip_action").onclick = () => {
     parentWindowReloader.reload();
   };
-  E(() => {
+  O(() => {
     const changesTooltipOpened = changesTooltipOpenedSignal.value;
     if (changesTooltipOpened) {
       changesIndicator.setAttribute("data-tooltip-visible", "");
@@ -1481,11 +1483,11 @@ const serverEvents = window.__server_events__;
 const serverIndicator = document.querySelector("#server_indicator");
 const renderServerIndicator = () => {
   removeForceHideElement(document.querySelector("#server_indicator"));
-  E(() => {
+  O(() => {
     const serverConnection = serverConnectionSignal.value;
     updateServerIndicator(serverConnection);
   });
-  E(() => {
+  O(() => {
     const serverTooltipOpened = serverTooltipOpenedSignal.value;
     if (serverTooltipOpened) {
       serverIndicator.setAttribute("data-tooltip-visible", "");
@@ -1531,7 +1533,7 @@ const renderToolbarAutoreloadSetting = () => {
     return;
   }
   const autoreloadCheckbox = document.querySelector("#toggle_autoreload");
-  E(() => {
+  O(() => {
     const autoreloadEnabled = autoreloadEnabledSignal.value;
     if (autoreloadEnabled) {
       autoreloadCheckbox.checked = true;
@@ -1598,7 +1600,7 @@ const disableAnimations = () => {
 
 const renderToolbarAnimationSetting = () => {
   const animCheckbox = document.querySelector("#toggle_anims");
-  E(() => {
+  O(() => {
     const animationsEnabled = animationsEnabledSignal.value;
     animCheckbox.checked = animationsEnabled;
   });
@@ -1617,11 +1619,11 @@ const renderToolbarAnimationSetting = () => {
 
 const notifCheckbox = document.querySelector("#toggle_notifs");
 const renderToolbarNotificationSetting = () => {
-  E(() => {
+  O(() => {
     const notificationsEnabled = notificationsEnabledSignal.value;
     notifCheckbox.checked = notificationsEnabled;
   });
-  E(() => {
+  O(() => {
     const notificationPermission = notificationPermissionSignal.value;
     if (!notificationAPIDetected) {
       applyNotificationNotAvailableEffects();
@@ -1683,7 +1685,7 @@ const applyNotificationNOTGrantedEffects = () => {
   };
 };
 
-const themeSignal = v$1(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
+const themeSignal = l(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
 
 const switchToLightTheme = () => {
   themeSignal.value = "light";
@@ -1704,7 +1706,7 @@ const renderToolbarThemeSetting = () => {
   };
 };
 
-const ribbonDisplayedSignal = v$1(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
+const ribbonDisplayedSignal = l(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
 
 const ribbonBox = document.querySelector("#ribbon_box");
 const ribbonCheckbox = ribbonBox.querySelector("input");
@@ -1712,7 +1714,7 @@ const renderToolbarRibbonSetting = () => {
   const ribbonContainer = window.parent.document.querySelector("#jsenv_ribbon_container");
   if (ribbonContainer) {
     ribbonBox.style.display = "block";
-    E(() => {
+    O(() => {
       const ribbonDisplayed = ribbonDisplayedSignal.value;
       ribbonCheckbox.checked = ribbonDisplayed;
       if (ribbonDisplayed) {
@@ -1740,7 +1742,7 @@ const renderToolbarSettings = () => {
   renderToolbarNotificationSetting();
   renderToolbarThemeSetting();
   renderToolbarRibbonSetting();
-  E(() => {
+  O(() => {
     const settingsOpened = settingsOpenedSignal.value;
     if (settingsOpened) {
       activateToolbarSection(document.querySelector("#settings"));
@@ -1808,14 +1810,14 @@ addExternalCommandCallback("initToolbar", () => {
 });
 sendEventToParent("toolbar_ready");
 
-E(() => {
+O(() => {
   const serverConnection = serverConnectionSignal.value;
   if (serverConnection === "connecting" || serverConnection === "closed") {
     openServerTooltip();
   }
 });
 
-E(() => {
+O(() => {
   const theme = themeSignal.value;
   document.querySelector("html").setAttribute("data-theme", theme);
 });
@@ -1823,7 +1825,7 @@ E(() => {
 addExternalCommandCallback("openToolbar", openToolbar);
 addExternalCommandCallback("closeToolbar", closeToolbar);
 
-const toolbarStateSignal = _(() => {
+const toolbarStateSignal = p$1(() => {
   const opened = openedSignal.value;
   const theme = themeSignal.value;
   const animationsEnabled = animationsEnabledSignal.value;
@@ -1838,7 +1840,7 @@ const toolbarStateSignal = _(() => {
   };
 });
 
-E(() => {
+O(() => {
   const toolbarState = toolbarStateSignal.value;
   localStorage.setItem("jsenv_toolbar", JSON.stringify(toolbarState));
   sendEventToParent("toolbar_state_change", toolbarState);
