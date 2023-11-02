@@ -1,12 +1,11 @@
-import { useState, useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 
 import appStyleSheet from "./app.css" assert { type: "css" };
+import { Counter } from "./counter.jsx";
 
 const reactLogoUrl = new URL("../react_logo.svg", import.meta.url);
 
 export const App = () => {
-  const [count, setCount] = useState(0);
-
   useLayoutEffect(() => {
     document.adoptedStyleSheets = [
       ...document.adoptedStyleSheets,
@@ -25,14 +24,17 @@ export const App = () => {
         <img src={reactLogoUrl} className="app_logo" alt="logo" />
         <p>Hello jsenv + React!</p>
         <p>
-          <button type="button" onClick={() => setCount((count) => count + 1)}>
-            Click me
-          </button>
-          <br />
-          <span>number of click: {count}</span>
+          <Counter />
         </p>
         <p>
-          Edit <code>app.jsx</code> and save to test HMR updates.
+          Edit{" "}
+          <a
+            className="app_link"
+            href="javascript:window.fetch('/__open_in_editor__/app/app.jsx')"
+          >
+            app.jsx
+          </a>{" "}
+          and save to test HMR updates.
         </p>
         <p>
           <a

@@ -1,8 +1,11 @@
 /*
- * This file is not actually used in the app.
- * It exists to demo how to test a function by "animals.test.html"
+ * This file exists to show code using the browser runtime to operate:
+ * code writes "countDogs" function on window
+ *
+ * As a result testing "countDogs" should be done in a browser.
+ * See "animals.test.html"
  */
 
-export const countDogs = (animals) => {
+window.countDogs = (animals) => {
   return animals.filter((animal) => animal === "dog").length;
 };

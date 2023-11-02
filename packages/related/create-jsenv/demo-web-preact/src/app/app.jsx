@@ -29,7 +29,7 @@ export const App = () => {
         <p>
           Edit{" "}
           <a
-            class="app_link"
+            className="app_link"
             href="javascript:window.fetch('/__open_in_editor__/app/app.jsx')"
           >
             app.jsx
