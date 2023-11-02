@@ -3,5 +3,12 @@ import ReactDOM from "react-dom/client";
 
 import { App } from "./app/app.jsx";
 
-const root = ReactDOM.createRoot(document.querySelector("#root"));
-root.render(<App />);
+ReactDOM.createRoot(document.querySelector("#root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}

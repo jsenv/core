@@ -30,7 +30,10 @@ export const App = () => {
           Edit{" "}
           <a
             className="app_link"
-            href="javascript:window.fetch('/__open_in_editor__/app/app.jsx')"
+            onClick={(e) => {
+              e.preventDefault();
+              window.fetch("/__open_in_editor__/app/app.jsx");
+            }}
           >
             app.jsx
           </a>{" "}
