@@ -18,106 +18,148 @@ export const jsenvPluginAutoreloadServer = ({
           }
           return url;
         };
-        const propagateUpdate = (firstUrlInfo) => {
-          const iterate = (urlInfo, chain) => {
-            if (urlInfo.data.hotAcceptSelf) {
-              return {
-                accepted: true,
-                reason:
-                  urlInfo === firstUrlInfo
-                    ? `file accepts hot reload`
-                    : `a dependent file accepts hot reload`,
-                instructions: [
-                  {
-                    type: urlInfo.type,
-                    boundary: formatUrlForClient(urlInfo.url),
-                    acceptedBy: formatUrlForClient(urlInfo.url),
-                  },
-                ],
-              };
-            }
-            if (urlInfo.data.hotDecline) {
-              return {
-                declined: true,
-                reason: `file declines hot reload`,
-                declinedBy: urlInfo.url,
-              };
-            }
-            const instructions = [];
-            for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-              if (referenceFromOther.isImplicit && referenceFromOther.isWeak) {
-                if (!referenceFromOther.original) {
-                  continue;
-                }
-                if (referenceFromOther.original.isWeak) {
-                  continue;
-                }
-              }
-              const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-              if (urlInfoReferencingThisOne.data.hotDecline) {
+        const update = (firstUrlInfo) => {
+          const boundaries = new Set();
+          const instructions = [];
+          const propagateUpdate = (firstUrlInfo) => {
+            const iterate = (urlInfo, chain) => {
+              if (urlInfo.data.hotAcceptSelf) {
+                boundaries.add(urlInfo);
+                instructions.push({
+                  type: urlInfo.type,
+                  boundary: formatUrlForClient(urlInfo.url),
+                  acceptedBy: formatUrlForClient(urlInfo.url),
+                });
                 return {
-                  declined: true,
-                  reason: `a dependent file declines hot reload`,
-                  declinedBy: urlInfoReferencingThisOne.url,
+                  accepted: true,
+                  reason:
+                    urlInfo === firstUrlInfo
+                      ? `file accepts hot reload`
+                      : `a dependent file accepts hot reload`,
                 };
               }
+              if (urlInfo.data.hotDecline) {
+                return {
+                  declined: true,
+                  reason: `file declines hot reload`,
+                  declinedBy: formatUrlForClient(urlInfo.url),
+                };
+              }
+              let instructionCountBefore = instructions.length;
+              for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+                if (
+                  referenceFromOther.isImplicit &&
+                  referenceFromOther.isWeak
+                ) {
+                  if (!referenceFromOther.original) {
+                    continue;
+                  }
+                  if (referenceFromOther.original.isWeak) {
+                    continue;
+                  }
+                }
+                const urlInfoReferencingThisOne =
+                  referenceFromOther.ownerUrlInfo;
+                if (urlInfoReferencingThisOne.data.hotDecline) {
+                  return {
+                    declined: true,
+                    reason: `a dependent file declines hot reload`,
+                    declinedBy: formatUrlForClient(
+                      urlInfoReferencingThisOne.url,
+                    ),
+                  };
+                }
+                const { hotAcceptDependencies = [] } =
+                  urlInfoReferencingThisOne.data;
+                if (hotAcceptDependencies.includes(urlInfo.url)) {
+                  boundaries.add(urlInfoReferencingThisOne);
+                  instructions.push({
+                    type: urlInfoReferencingThisOne.type,
+                    boundary: formatUrlForClient(urlInfoReferencingThisOne.url),
+                    acceptedBy: formatUrlForClient(urlInfo.url),
+                  });
+                  continue;
+                }
+                if (chain.includes(urlInfoReferencingThisOne.url)) {
+                  return {
+                    declined: true,
+                    reason: "dead end",
+                    declinedBy: formatUrlForClient(
+                      urlInfoReferencingThisOne.url,
+                    ),
+                  };
+                }
+                const dependentPropagationResult = iterateMemoized(
+                  urlInfoReferencingThisOne,
+                  [...chain, urlInfoReferencingThisOne.url],
+                );
+                if (dependentPropagationResult.accepted) {
+                  continue;
+                }
+                if (
+                  // declined explicitely by an other file, it must decline the whole update
+                  dependentPropagationResult.declinedBy
+                ) {
+                  return dependentPropagationResult;
+                }
+                // declined by absence of boundary, we can keep searching
+              }
+              if (instructionCountBefore === instructions.length) {
+                return {
+                  declined: true,
+                  reason: `there is no file accepting hot reload while propagating update`,
+                };
+              }
+              return {
+                accepted: true,
+                reason: `${instructions.length} dependent file(s) accepts hot reload`,
+              };
+            };
+
+            const map = new Map();
+            const iterateMemoized = (urlInfo, chain) => {
+              const resultFromCache = map.get(urlInfo.url);
+              if (resultFromCache) {
+                return resultFromCache;
+              }
+              const result = iterate(urlInfo, chain);
+              map.set(urlInfo.url, result);
+              return result;
+            };
+            map.clear();
+            return iterateMemoized(firstUrlInfo, []);
+          };
+
+          const propagationResult = propagateUpdate(firstUrlInfo);
+          const seen = new Set();
+          const invalidateImporters = (urlInfo) => {
+            // to indicate this urlInfo should be modified
+            for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+              const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
               const { hotAcceptDependencies = [] } =
                 urlInfoReferencingThisOne.data;
               if (hotAcceptDependencies.includes(urlInfo.url)) {
-                instructions.push({
-                  type: urlInfoReferencingThisOne.type,
-                  boundary: formatUrlForClient(urlInfoReferencingThisOne.url),
-                  acceptedBy: formatUrlForClient(urlInfo.url),
-                });
                 continue;
               }
-              if (chain.includes(urlInfoReferencingThisOne.url)) {
-                return {
-                  declined: true,
-                  reason: "dead end",
-                  declinedBy: formatUrlForClient(urlInfoReferencingThisOne.url),
-                };
-              }
-              const dependentPropagationResult = iterateMemoized(
-                urlInfoReferencingThisOne,
-                [...chain, urlInfoReferencingThisOne.url],
-              );
-              if (dependentPropagationResult.accepted) {
-                instructions.push(...dependentPropagationResult.instructions);
+              if (seen.has(urlInfoReferencingThisOne)) {
                 continue;
               }
-              if (
-                // declined explicitely by an other file, it must decline the whole update
-                dependentPropagationResult.declinedBy
-              ) {
-                return dependentPropagationResult;
+              seen.add(urlInfoReferencingThisOne);
+              // see https://github.com/vitejs/vite/blob/ab5bb40942c7023046fa6f6d0b49cabc105b6073/packages/vite/src/node/server/moduleGraph.ts#L205C5-L207C6
+              if (boundaries.has(urlInfoReferencingThisOne)) {
+                return;
               }
-              // declined by absence of boundary, we can keep searching
+              urlInfoReferencingThisOne.descendantModifiedTimestamp =
+                Date.now();
+              invalidateImporters(urlInfoReferencingThisOne);
             }
-            if (instructions.length === 0) {
-              return {
-                declined: true,
-                reason: `there is no file accepting hot reload while propagating update`,
-              };
-            }
-            return {
-              accepted: true,
-              reason: `${instructions.length} dependent file(s) accepts hot reload`,
-              instructions,
-            };
           };
-
-          const map = new Map();
-          const iterateMemoized = (urlInfo, chain) => {
-            const resultFromCache = map.get(urlInfo.url);
-            if (resultFromCache) {
-              return resultFromCache;
-            }
-            const result = iterate(urlInfo, chain);
-            map.set(urlInfo.url, result);
-            return result;
+          invalidateImporters(firstUrlInfo);
+          seen.clear();
+          return {
+            ...propagationResult,
+            instructions,
           };
-          return iterateMemoized(firstUrlInfo, []);
         };
 
         // We are delaying the moment we tell client how to reload because:
@@ -151,7 +193,7 @@ export const jsenvPluginAutoreloadServer = ({
               if (!changedUrlInfo.isUsed()) {
                 continue;
               }
-              const hotUpdate = propagateUpdate(changedUrlInfo);
+              const hotUpdate = update(changedUrlInfo);
               const relativeUrl = formatUrlForClient(changedUrlInfo.url);
               if (hotUpdate.declined) {
                 reloadMessage = {
@@ -188,7 +230,7 @@ export const jsenvPluginAutoreloadServer = ({
               if (!ownerUrlInfo.isUsed()) {
                 continue;
               }
-              const ownerHotUpdate = propagateUpdate(ownerUrlInfo);
+              const ownerHotUpdate = update(ownerUrlInfo);
               const cause = `${formatUrlForClient(
                 prunedUrlInfo.url,
               )} is no longer referenced`;

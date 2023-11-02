@@ -181,6 +181,7 @@ const createUrlInfo = (url, context) => {
     context,
     error: null,
     modifiedTimestamp: 0,
+    descendantModifiedTimestamp: 0,
     dereferencedTimestamp: 0,
     originalContentEtag: null,
     contentEtag: null,

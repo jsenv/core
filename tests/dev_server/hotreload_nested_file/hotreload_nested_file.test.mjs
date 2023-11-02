@@ -10,7 +10,7 @@ import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 
-const debug = true;
+const debug = false;
 const jsFileUrl = new URL("./client/b.js", import.meta.url);
 const jsFileContent = {
   beforeTest: readFileSync(jsFileUrl),
@@ -58,6 +58,7 @@ try {
   {
     const actual = await getDocumentBodyInnerHTML();
     const expected = `init`;
+
     assert({ actual, expected });
   }
 } finally {
