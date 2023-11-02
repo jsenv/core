@@ -1,11 +1,9 @@
 /*
  * Execute all test files
- * - npm test
- * - npm test:coverage
- * Read more in https://github.com/jsenv/core/tree/main/packages/test#jsenvtest-
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
-import { executeTestPlan, chromium } from "@jsenv/test";
+import { executeTestPlan, chromium, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -13,6 +11,11 @@ await executeTestPlan({
     "./src/**/*.test.html": {
       chromium: {
         runtime: chromium(),
+      },
+    },
+    "./src/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
       },
     },
   },

@@ -1,6 +1,6 @@
 /*
  * Start a development server for files inside src/
- * - npm run dev
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import open from "open";

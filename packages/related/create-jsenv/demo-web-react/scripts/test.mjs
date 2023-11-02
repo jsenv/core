@@ -1,8 +1,6 @@
 /*
  * Execute all test files
- * - npm test
- * - npm test:coverage
- * Read more in https://github.com/jsenv/core/tree/main/packages/test#jsenvtest-
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import { executeTestPlan, chromium } from "@jsenv/test";

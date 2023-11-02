@@ -1,8 +1,6 @@
 /*
  * Execute all test files
- * - npm test
- * - npm test:coverage
- * Read more in https://github.com/jsenv/core/wiki/D)-Test
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import { executeTestPlan, chromium, nodeWorkerThread } from "@jsenv/test";

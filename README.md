@@ -40,6 +40,7 @@ It will prompt to choose one of the available demo:
 ```console
 ? Select a demo: › - Use arrow-keys. Return to submit.
 ❯   web
+    web-components
     web-react
     web-preact
     node-package

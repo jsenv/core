@@ -1,7 +1,6 @@
 /*
  * Optimize source files and write them into "./dist/"
- * - npm run build
- * - npm run build:watch
+ * Read more in https://github.com/jsenv/core/wiki
  */
 
 import { build } from "@jsenv/core";
