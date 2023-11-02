@@ -1,15 +1,16 @@
 import mainStyleSheet from "./main.css" assert { type: "css" };
+import { initCounter } from "./app/counter.js";
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, mainStyleSheet];
 
 const jsenvLogoUrl = new URL("/jsenv_logo.svg", import.meta.url);
-let clicks = 0;
+
 document.querySelector("#root").innerHTML = `<h1>Hello world!</h1>
 <img class="logo" src=${jsenvLogoUrl} alt="logo" />
 <p>
-  <button id="click_button">Click me!</button>
+  <button id="counter_button">Click me!</button>
   <p>
-    Number of clicks: <span id="click_output">${clicks}</span>
+    Number of clicks: <span id="counter_output"></span>
   </p>
 </p>
 <p>
@@ -17,12 +18,7 @@ document.querySelector("#root").innerHTML = `<h1>Hello world!</h1>
 </p>
 <a href="https://github.com/jsenv/core" target="_blank">Documentation</a>`;
 
-const button = document.querySelector("#click_button");
-const clickOutput = document.querySelector("#click_output");
-button.onclick = () => {
-  clicks++;
-  clickOutput.innerHTML = clicks;
-};
+initCounter();
 
 if (import.meta.hot) {
   import.meta.hot.accept();
