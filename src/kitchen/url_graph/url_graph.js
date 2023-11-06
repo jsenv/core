@@ -255,6 +255,9 @@ const createUrlInfo = (url, context) => {
         continue;
       }
       if (ref.gotInlined()) {
+        if (ref.ownerUrlInfo.isUsed()) {
+          return true;
+        }
         // the url info was inlined, an other reference is required
         // to consider the non-inlined urlInfo as used
         continue;
@@ -354,7 +357,7 @@ const createUrlInfo = (url, context) => {
   };
   urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
-    const iterate = (urlInfo) => {
+    const considerModified = (urlInfo) => {
       if (visitedSet.has(urlInfo)) {
         return;
       }
@@ -364,14 +367,21 @@ const createUrlInfo = (url, context) => {
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
         const referencedUrlInfo = referenceToOther.urlInfo;
         if (referencedUrlInfo.isInline) {
-          iterate(referencedUrlInfo);
+          considerModified(referencedUrlInfo);
+        }
+      }
+      for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+        if (referenceFromOther.gotInlined()) {
+          const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+          considerModified(urlInfoReferencingThisOne);
         }
       }
       for (const searchParamVariant of urlInfo.searchParamVariantSet) {
-        iterate(searchParamVariant);
+        considerModified(searchParamVariant);
       }
     };
-    iterate(urlInfo);
+    considerModified(urlInfo);
+    visitedSet.clear();
   };
   urlInfo.onDereferenced = (lastReferenceFromOther) => {
     urlInfo.dereferencedTimestamp = Date.now();

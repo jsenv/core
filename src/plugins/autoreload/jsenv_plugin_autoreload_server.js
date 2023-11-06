@@ -130,14 +130,22 @@ export const jsenvPluginAutoreloadServer = ({
             return iterateMemoized(firstUrlInfo, []);
           };
 
-          const propagationResult = propagateUpdate(firstUrlInfo);
+          let propagationResult = propagateUpdate(firstUrlInfo);
           const seen = new Set();
           const invalidateImporters = (urlInfo) => {
             // to indicate this urlInfo should be modified
             for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
               const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-              const { hotAcceptDependencies = [] } =
+              const { hotDecline, hotAcceptDependencies = [] } =
                 urlInfoReferencingThisOne.data;
+              if (hotDecline) {
+                propagationResult = {
+                  declined: true,
+                  reason: `file declines hot reload`,
+                  declinedBy: formatUrlForClient(urlInfoReferencingThisOne.url),
+                };
+                return;
+              }
               if (hotAcceptDependencies.includes(urlInfo.url)) {
                 continue;
               }

@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "a": "./a.js"
+        }
+      }
+    </script>
+    <script type="module">
+      // eslint-disable-next-line import/no-unresolved
+      import { answer } from "a";
+
+      window.answer = answer;
+      console.log(answer);
+    </script>
+  </body>
+</html>

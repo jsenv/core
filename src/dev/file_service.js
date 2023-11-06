@@ -135,7 +135,7 @@ export const createFileService = ({
         associations: watchAssociations,
       });
       urlInfoCreated.isWatched = watch;
-      // wehn an url depends on many others, we check all these (like package.json)
+      // when an url depends on many others, we check all these (like package.json)
       urlInfoCreated.isValid = () => {
         if (!urlInfoCreated.url.startsWith("file:")) {
           return false;

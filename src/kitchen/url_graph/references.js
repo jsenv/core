@@ -386,12 +386,12 @@ const createReference = ({
     ownerUrlInfo.context.finalizeReference(reference);
   };
 
-  // "formatReferencedUrl" can be async BUT this is an exception
+  // "formatReference" can be async BUT this is an exception
   // for most cases it will be sync. We want to favor the sync signature to keep things simpler
   // The only case where it needs to be async is when
   // the specifier is a `data:*` url
   // in this case we'll wait for the promise returned by
-  // "formatReferencedUrl"
+  // "formatReference"
   reference.readGeneratedSpecifier = () => {
     if (reference.generatedSpecifier.then) {
       return reference.generatedSpecifier.then((value) => {
