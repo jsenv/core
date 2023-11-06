@@ -2,7 +2,7 @@ import {
   parseHtmlString,
   stringifyHtmlAst,
   createHtmlNode,
-  injectHtmlNode,
+  injectHtmlNodeAsEarlyAsPossible,
 } from "@jsenv/ast";
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch } from "@jsenv/urls";
@@ -54,7 +54,7 @@ export const jsenvPluginRibbon = ({
           null,
           "  ",
         );
-        injectHtmlNode(
+        injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
