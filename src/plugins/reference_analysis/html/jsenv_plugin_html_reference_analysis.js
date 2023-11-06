@@ -257,7 +257,7 @@ const parseAndTransformHtmlReferences = async (
     });
 
     actions.push(async () => {
-      if (expectedType === "js_module" && importmapReadyPromise) {
+      if (expectedType === "js_module" && importmapFound) {
         await importmapReadyPromise;
       }
       await inlineReference.urlInfo.cook();
