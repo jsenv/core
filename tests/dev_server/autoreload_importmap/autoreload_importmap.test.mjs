@@ -18,8 +18,8 @@ const importmapFileContent = {
     writeFileSync(importmapFileUrl, importmapFileContent.beforeTest),
 };
 const devServer = await startDevServer({
-  logLevel: "off",
-  serverLogLevel: "off",
+  logLevel: "warn",
+  serverLogLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
