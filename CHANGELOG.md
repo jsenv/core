@@ -1,3 +1,10 @@
+# 38.3.0
+
+- [fix] ensure updating importmap (inline or inside a file trigger autoreload)
+- [fix] ensure dev server ribbon script is properly injected after any importmap script
+- [fix] ensure importmap is properly applies for code inlined inside `<script type="module">`
+- [feat] ensure import.meta.hot.decline() results in a full page reload
+
 # 38.2.1
 
 - Update dependencies
