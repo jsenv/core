@@ -515,7 +515,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
           },
         });
         if (!importmapFound) {
-          onImportmapReady(urlInfo.url);
+          onImportmapReady();
         }
         finalizeCallbacks.forEach((finalizeCallback) => {
           finalizeCallback();
