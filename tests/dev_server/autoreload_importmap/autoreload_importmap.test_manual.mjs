@@ -10,6 +10,7 @@ await startDevServer({
       logs: true,
     },
   },
+  ribbon: false,
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   sourcemaps: "none",
   port: 5467,
