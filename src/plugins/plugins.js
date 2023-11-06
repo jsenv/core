@@ -2,7 +2,6 @@ import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 
 import { jsenvPluginReferenceAnalysis } from "./reference_analysis/jsenv_plugin_reference_analysis.js";
-import { jsenvPluginImportmap } from "./importmap/jsenv_plugin_importmap.js";
 import { jsenvPluginNodeEsmResolution } from "./resolution_node_esm/jsenv_plugin_node_esm_resolution.js";
 import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_resolution.js";
 import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plugin_version_search_param.js";
@@ -55,7 +54,6 @@ export const getCorePlugins = ({
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     ...(injections ? [jsenvPluginInjections(injections)] : []),
     jsenvPluginTranspilation(transpilation),
-    jsenvPluginImportmap(),
     ...(inlining ? [jsenvPluginInlining()] : []),
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
 

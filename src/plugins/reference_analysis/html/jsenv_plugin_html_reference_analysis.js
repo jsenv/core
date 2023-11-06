@@ -4,6 +4,7 @@ import {
   getHtmlNodeText,
   setHtmlNodeText,
   removeHtmlNodeText,
+  removeHtmlNode,
   getHtmlNodeAttribute,
   getHtmlNodePosition,
   setHtmlNodeAttributes,
@@ -13,19 +14,94 @@ import {
   stringifyHtmlAst,
   getUrlForContentInsideHtml,
 } from "@jsenv/ast";
+import {
+  resolveImport,
+  composeTwoImportMaps,
+  normalizeImportMap,
+} from "@jsenv/importmap";
 
 export const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
   inlineConvertedScript,
 }) => {
+  /*
+   * About importmap found in HTML files:
+   * - feeds importmap files to jsenv kitchen
+   * - use importmap to resolve import (when there is one + fallback to other resolution mecanism)
+   * - inline importmap with [src=""]
+   *
+   * A correct importmap resolution should scope importmap resolution per html file.
+   * It would be doable by adding ?html_id to each js file in order to track
+   * the html file importing it.
+   * Considering it happens only when all the following conditions are met:
+   * - 2+ html files are using an importmap
+   * - the importmap used is not the same
+   * - the importmap contain conflicting mappings
+   * - these html files are both executed during the same scenario (dev, test, build)
+   * And that it would be ugly to see ?html_id all over the place
+   * -> The importmap resolution implemented here takes a shortcut and does the following:
+   * - All importmap found are merged into a single one that is applied to every import specifiers
+   */
+
+  let finalImportmap = null;
+  const importmaps = {};
+  const onHtmlImportmapParsed = (importmap, htmlUrl) => {
+    importmaps[htmlUrl] = importmap
+      ? normalizeImportMap(importmap, htmlUrl)
+      : null;
+    finalImportmap = Object.keys(importmaps).reduce((previous, url) => {
+      const importmap = importmaps[url];
+      if (!previous) {
+        return importmap;
+      }
+      if (!importmap) {
+        return previous;
+      }
+      return composeTwoImportMaps(previous, importmap);
+    }, null);
+  };
+
   return {
     name: "jsenv:html_reference_analysis",
     appliesDuring: "*",
+    resolveReference: {
+      js_import: (reference) => {
+        if (!finalImportmap) {
+          return null;
+        }
+        try {
+          let fromMapping = false;
+          const result = resolveImport({
+            specifier: reference.specifier,
+            importer: reference.ownerUrlInfo.url,
+            importMap: finalImportmap,
+            onImportMapping: () => {
+              fromMapping = true;
+            },
+          });
+          if (fromMapping) {
+            return result;
+          }
+          return null;
+        } catch (e) {
+          if (e.message.includes("bare specifier")) {
+            // in theory we should throw to be compliant with web behaviour
+            // but for now it's simpler to return null
+            // and let a chance to other plugins to handle the bare specifier
+            // (node esm resolution)
+            // and we want importmap to be prio over node esm so we cannot put this plugin after
+            return null;
+          }
+          throw e;
+        }
+      },
+    },
     transformUrlContent: {
       html: (urlInfo) =>
         parseAndTransformHtmlReferences(urlInfo, {
           inlineContent,
           inlineConvertedScript,
+          onHtmlImportmapParsed,
         }),
     },
   };
@@ -33,7 +109,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
 const parseAndTransformHtmlReferences = async (
   urlInfo,
-  { inlineContent, inlineConvertedScript },
+  { inlineContent, inlineConvertedScript, onHtmlImportmapParsed },
 ) => {
   const content = urlInfo.content;
   const htmlAst = parseHtmlString(content);
@@ -207,6 +283,7 @@ const parseAndTransformHtmlReferences = async (
     });
   };
 
+  let importmap;
   visitHtmlNodes(htmlAst, {
     link: (linkNode) => {
       const rel = getHtmlNodeAttribute(linkNode, "rel");
@@ -237,28 +314,24 @@ const parseAndTransformHtmlReferences = async (
         }
       : null,
     script: (scriptNode) => {
-      // during build the importmap is inlined
-      // and shoud not be considered as a dependency anymore
-      if (
-        getHtmlNodeAttribute(scriptNode, "jsenv-inlined-by") ===
-        "jsenv:importmap"
-      ) {
-        return;
-      }
-
       const { type, subtype, contentType, extension } =
         analyzeScriptNode(scriptNode);
-      // ignore <script type="whatever">foobar</script>
-      // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-      if (type !== "text") {
-        const externalRef = visitSrc(scriptNode, {
-          type: "script",
-          subtype: type,
-          expectedType: type,
-        });
-        if (externalRef) {
-          return;
-        }
+      if (type === "text") {
+        // ignore <script type="whatever">foobar</script>
+        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+        return;
+      }
+      if (type === "importmap") {
+        importmap = scriptNode;
+        return;
+      }
+      const externalRef = visitSrc(scriptNode, {
+        type: "script",
+        subtype: type,
+        expectedType: type,
+      });
+      if (externalRef) {
+        return;
       }
 
       // now visit the content, if any
@@ -342,6 +415,97 @@ const parseAndTransformHtmlReferences = async (
   finalizeCallbacks.forEach((finalizeCallback) => {
     finalizeCallback();
   });
+
+  if (importmap) {
+    const src = getHtmlNodeAttribute(importmap, "src");
+    if (src) {
+      // Browser would throw on remote importmap
+      // and won't sent a request to the server for it
+      // We must precook the importmap to know its content and inline it into the HTML
+      const importmapReference = createExternalReference(
+        importmap,
+        "src",
+        src,
+        {
+          type: "script",
+          subtype: "importmap",
+          expectedType: "importmap",
+        },
+      );
+      const { line, column, isOriginal } = getHtmlNodePosition(importmap, {
+        preferOriginal: true,
+      });
+      const importmapInlineUrl = getUrlForContentInsideHtml(importmap, {
+        htmlUrl: urlInfo.url,
+      });
+      const importmapReferenceInlined = importmapReference.inline({
+        line: line - 1,
+        column,
+        isOriginal,
+        specifier: importmapInlineUrl,
+        contentType: "application/importmap+json",
+      });
+      const importmapInlineUrlInfo = importmapReferenceInlined.urlInfo;
+      actions.push(async () => {
+        await importmapInlineUrlInfo.cook();
+        onHtmlImportmapParsed(
+          JSON.parse(importmapInlineUrlInfo.content),
+          urlInfo.url,
+        );
+        mutations.push(() => {
+          setHtmlNodeText(importmap, importmapInlineUrlInfo.content, {
+            indentation: "auto",
+          });
+          setHtmlNodeAttributes(importmap, {
+            "src": undefined,
+            "jsenv-inlined-by": "jsenv:html_reference_analysis",
+            "inlined-from-src": src,
+          });
+        });
+      });
+    } else {
+      const htmlNodeText = getHtmlNodeText(importmap);
+      if (htmlNodeText) {
+        const inlineImportmapReference = createInlineReference(
+          importmap,
+          htmlNodeText,
+          {
+            type: "script",
+            expectedType: "importmap",
+            contentType: "application/importmap+json",
+          },
+        );
+        const inlineImportmapUrlInfo = inlineImportmapReference.urlInfo;
+        actions.push(async () => {
+          await inlineImportmapUrlInfo.cook();
+          onHtmlImportmapParsed(
+            JSON.parse(inlineImportmapUrlInfo.content),
+            urlInfo.url,
+          );
+          mutations.push(() => {
+            setHtmlNodeText(importmap, inlineImportmapUrlInfo.content, {
+              indentation: "auto",
+            });
+            setHtmlNodeAttributes(importmap, {
+              "jsenv-cooked-by": "jsenv:html_reference_analysis",
+            });
+          });
+        });
+      }
+    }
+    // once this plugin knows the importmap, it will use it
+    // to map imports. These import specifiers will be normalized
+    // by "formatReference" making the importmap presence useless.
+    // In dev/test we keep importmap into the HTML to see it even if useless
+    // Duing build we get rid of it
+    if (urlInfo.context.build) {
+      mutations.push(() => {
+        removeHtmlNode(importmap);
+      });
+    }
+  } else {
+    onHtmlImportmapParsed(null, urlInfo.url);
+  }
 
   if (actions.length > 0) {
     await Promise.all(actions.map((action) => action()));
