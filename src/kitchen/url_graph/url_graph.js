@@ -255,6 +255,9 @@ const createUrlInfo = (url, context) => {
         continue;
       }
       if (ref.gotInlined()) {
+        if (ref.ownerUrlInfo.isUsed()) {
+          return true;
+        }
         // the url info was inlined, an other reference is required
         // to consider the non-inlined urlInfo as used
         continue;
