@@ -45,9 +45,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
   let globalImportmap = null;
   const importmaps = {};
-  const onImportmapParsed = async (htmlUrl, readyPromise) => {
-    if (readyPromise) {
-      const importmap = await readyPromise;
+  const onImportmapParsed = (htmlUrl, importmap) => {
+    if (importmap) {
       importmaps[htmlUrl] = normalizeImportMap(importmap, htmlUrl);
     } else {
       importmaps[htmlUrl] = null;
@@ -100,428 +99,441 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
     },
     transformUrlContent: {
-      html: (urlInfo) =>
-        parseAndTransformHtmlReferences(urlInfo, {
-          inlineContent,
-          inlineConvertedScript,
-          onImportmapParsed,
-        }),
-    },
-  };
-};
+      html: async (urlInfo) => {
+        let importmapFound = false;
+        let importmapParsedCallbackSet = new Set();
+        const onImportmapReady = (importmap) => {
+          onImportmapParsed(urlInfo.url, importmap);
+          importmapParsedCallbackSet.forEach((callback) => {
+            callback();
+          });
+          importmapParsedCallbackSet.clear();
+        };
 
-const parseAndTransformHtmlReferences = async (
-  urlInfo,
-  { inlineContent, inlineConvertedScript, onImportmapParsed },
-) => {
-  let importmapFound = false;
-  let _resolveImportmapReady;
-  const importmapReadyPromise = new Promise((resolve) => {
-    _resolveImportmapReady = resolve;
-  });
+        const content = urlInfo.content;
+        const htmlAst = parseHtmlString(content);
 
-  const content = urlInfo.content;
-  const htmlAst = parseHtmlString(content);
+        const mutations = [];
+        const actions = [];
+        const finalizeCallbacks = [];
 
-  const mutations = [];
-  const actions = [];
-  const finalizeCallbacks = [];
-
-  const createExternalReference = (
-    node,
-    attributeName,
-    attributeValue,
-    { type, subtype, expectedType, ...rest },
-  ) => {
-    let position;
-    if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
-      // when generated from inline content,
-      // line, column is not "src" nor "inlined-from-src" but "original-position"
-      position = getHtmlNodePosition(node);
-    } else {
-      position = getHtmlNodeAttributePosition(node, attributeName);
-    }
-    const {
-      line,
-      column,
-      // originalLine, originalColumn
-    } = position;
-    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-
-    const { crossorigin, integrity } = readFetchMetas(node);
-    const isResourceHint = [
-      "preconnect",
-      "dns-prefetch",
-      "prefetch",
-      "preload",
-      "modulepreload",
-    ].includes(subtype);
-    let attributeLocation = node.sourceCodeLocation.attrs[attributeName];
-    if (
-      !attributeLocation &&
-      attributeName === "href" &&
-      (node.tagName === "use" || node.tagName === "image")
-    ) {
-      attributeLocation = node.sourceCodeLocation.attrs["xlink:href"];
-    }
-    const attributeStart = attributeLocation.startOffset;
-    const attributeValueStart = urlInfo.content.indexOf(
-      attributeValue,
-      attributeStart + `${attributeName}=`.length,
-    );
-    const attributeValueEnd = attributeValueStart + attributeValue.length;
-    const reference = urlInfo.dependencies.found({
-      type,
-      subtype,
-      expectedType,
-      specifier: attributeValue,
-      specifierLine: line,
-      specifierColumn: column,
-      specifierStart: attributeValueStart,
-      specifierEnd: attributeValueEnd,
-      isResourceHint,
-      isWeak: isResourceHint,
-      crossorigin,
-      integrity,
-      debug,
-      astInfo: { node, attributeName },
-      ...rest,
-    });
-    actions.push(async () => {
-      await reference.readGeneratedSpecifier();
-      mutations.push(() => {
-        setHtmlNodeAttributes(node, {
-          [attributeName]: reference.generatedSpecifier,
-        });
-      });
-    });
-    return reference;
-  };
-  const visitHref = (node, referenceProps) => {
-    const href = getHtmlNodeAttribute(node, "href");
-    if (href) {
-      return createExternalReference(node, "href", href, referenceProps);
-    }
-    return null;
-  };
-  const visitSrc = (node, referenceProps) => {
-    const src = getHtmlNodeAttribute(node, "src");
-    if (src) {
-      return createExternalReference(node, "src", src, referenceProps);
-    }
-    return null;
-  };
-  const visitSrcset = (node, referenceProps) => {
-    const srcset = getHtmlNodeAttribute(node, "srcset");
-    if (srcset) {
-      const srcCandidates = parseSrcSet(srcset);
-      return srcCandidates.map((srcCandidate) => {
-        return createExternalReference(
+        const createExternalReference = (
           node,
-          "srcset",
-          srcCandidate.specifier,
-          referenceProps,
-        );
-      });
-    }
-    return null;
-  };
-
-  const createInlineReference = (
-    node,
-    inlineContent,
-    { type, expectedType, contentType },
-  ) => {
-    const hotAccept = getHtmlNodeAttribute(node, "hot-accept") !== undefined;
-    const { line, column, isOriginal } = getHtmlNodePosition(node, {
-      preferOriginal: true,
-    });
-    const inlineContentUrl = getUrlForContentInsideHtml(node, {
-      htmlUrl: urlInfo.url,
-    });
-    const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
-    const inlineReference = urlInfo.dependencies.foundInline({
-      type,
-      expectedType,
-      isOriginalPosition: isOriginal,
-      // we remove 1 to the line because imagine the following html:
-      // <style>body { color: red; }</style>
-      // -> content starts same line as <style> (same for <script>)
-      specifierLine: line - 1,
-      specifierColumn: column,
-      specifier: inlineContentUrl,
-      contentType,
-      content: inlineContent,
-      debug,
-      astInfo: { node },
-    });
-
-    actions.push(async () => {
-      if (expectedType === "js_module" && importmapFound) {
-        await importmapReadyPromise;
-      }
-      await inlineReference.urlInfo.cook();
-      mutations.push(() => {
-        if (hotAccept) {
-          removeHtmlNodeText(node);
-          setHtmlNodeAttributes(node, {
-            "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
-          });
-        } else {
-          setHtmlNodeText(node, inlineReference.urlInfo.content, {
-            indentation: false, // indentation would decrease stack trace precision
-          });
-          setHtmlNodeAttributes(node, {
-            "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
-          });
-        }
-      });
-    });
-    return inlineReference;
-  };
-  const visitTextContent = (
-    node,
-    { type, subtype, expectedType, contentType },
-  ) => {
-    const inlineContent = getHtmlNodeText(node);
-    if (!inlineContent) {
-      return null;
-    }
-    return createInlineReference(node, inlineContent, {
-      type,
-      subtype,
-      expectedType,
-      contentType,
-    });
-  };
-
-  visitHtmlNodes(htmlAst, {
-    link: (linkNode) => {
-      const rel = getHtmlNodeAttribute(linkNode, "rel");
-      const type = getHtmlNodeAttribute(linkNode, "type");
-      const ref = visitHref(linkNode, {
-        type: "link_href",
-        subtype: rel,
-        // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
-        expectedContentType: type,
-      });
-      if (ref) {
-        finalizeCallbacks.push(() => {
-          if (ref.expectedType) {
-            // might be set by other plugins, in that case respect it
+          attributeName,
+          attributeValue,
+          { type, subtype, expectedType, ...rest },
+        ) => {
+          let position;
+          if (getHtmlNodeAttribute(node, "jsenv-cooked-by")) {
+            // when generated from inline content,
+            // line, column is not "src" nor "inlined-from-src" but "original-position"
+            position = getHtmlNodePosition(node);
           } else {
-            ref.expectedType = decideLinkExpectedType(ref, urlInfo);
+            position = getHtmlNodeAttributePosition(node, attributeName);
           }
-        });
-      }
-    },
-    style: inlineContent
-      ? (styleNode) => {
-          visitTextContent(styleNode, {
-            type: "style",
-            expectedType: "css",
-            contentType: "text/css",
-          });
-        }
-      : null,
-    script: (scriptNode) => {
-      const { type, subtype, contentType, extension } =
-        analyzeScriptNode(scriptNode);
-      if (type === "text") {
-        // ignore <script type="whatever">foobar</script>
-        // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
-        return;
-      }
-      if (type === "importmap") {
-        importmapFound = true;
-        onImportmapParsed(urlInfo.url, importmapReadyPromise);
+          const {
+            line,
+            column,
+            // originalLine, originalColumn
+          } = position;
+          const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
 
-        const src = getHtmlNodeAttribute(scriptNode, "src");
-        if (src) {
-          // Browser would throw on remote importmap
-          // and won't sent a request to the server for it
-          // We must precook the importmap to know its content and inline it into the HTML
-          const importmapReference = createExternalReference(
-            scriptNode,
-            "src",
-            src,
-            {
-              type: "script",
-              subtype: "importmap",
-              expectedType: "importmap",
-            },
+          const { crossorigin, integrity } = readFetchMetas(node);
+          const isResourceHint = [
+            "preconnect",
+            "dns-prefetch",
+            "prefetch",
+            "preload",
+            "modulepreload",
+          ].includes(subtype);
+          let attributeLocation = node.sourceCodeLocation.attrs[attributeName];
+          if (
+            !attributeLocation &&
+            attributeName === "href" &&
+            (node.tagName === "use" || node.tagName === "image")
+          ) {
+            attributeLocation = node.sourceCodeLocation.attrs["xlink:href"];
+          }
+          const attributeStart = attributeLocation.startOffset;
+          const attributeValueStart = urlInfo.content.indexOf(
+            attributeValue,
+            attributeStart + `${attributeName}=`.length,
           );
-          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+          const attributeValueEnd = attributeValueStart + attributeValue.length;
+          const reference = urlInfo.dependencies.found({
+            type,
+            subtype,
+            expectedType,
+            specifier: attributeValue,
+            specifierLine: line,
+            specifierColumn: column,
+            specifierStart: attributeValueStart,
+            specifierEnd: attributeValueEnd,
+            isResourceHint,
+            isWeak: isResourceHint,
+            crossorigin,
+            integrity,
+            debug,
+            astInfo: { node, attributeName },
+            ...rest,
+          });
+          actions.push(async () => {
+            await reference.readGeneratedSpecifier();
+            mutations.push(() => {
+              setHtmlNodeAttributes(node, {
+                [attributeName]: reference.generatedSpecifier,
+              });
+            });
+          });
+          return reference;
+        };
+        const visitHref = (node, referenceProps) => {
+          const href = getHtmlNodeAttribute(node, "href");
+          if (href) {
+            return createExternalReference(node, "href", href, referenceProps);
+          }
+          return null;
+        };
+        const visitSrc = (node, referenceProps) => {
+          const src = getHtmlNodeAttribute(node, "src");
+          if (src) {
+            return createExternalReference(node, "src", src, referenceProps);
+          }
+          return null;
+        };
+        const visitSrcset = (node, referenceProps) => {
+          const srcset = getHtmlNodeAttribute(node, "srcset");
+          if (srcset) {
+            const srcCandidates = parseSrcSet(srcset);
+            return srcCandidates.map((srcCandidate) => {
+              return createExternalReference(
+                node,
+                "srcset",
+                srcCandidate.specifier,
+                referenceProps,
+              );
+            });
+          }
+          return null;
+        };
+
+        const createInlineReference = (
+          node,
+          inlineContent,
+          { type, expectedType, contentType },
+        ) => {
+          const hotAccept =
+            getHtmlNodeAttribute(node, "hot-accept") !== undefined;
+          const { line, column, isOriginal } = getHtmlNodePosition(node, {
             preferOriginal: true,
           });
-          const importmapInlineUrl = getUrlForContentInsideHtml(scriptNode, {
+          const inlineContentUrl = getUrlForContentInsideHtml(node, {
             htmlUrl: urlInfo.url,
           });
-          const importmapReferenceInlined = importmapReference.inline({
-            line: line - 1,
-            column,
-            isOriginal,
-            specifier: importmapInlineUrl,
-            contentType: "application/importmap+json",
+          const debug = getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
+          const inlineReference = urlInfo.dependencies.foundInline({
+            type,
+            expectedType,
+            isOriginalPosition: isOriginal,
+            // we remove 1 to the line because imagine the following html:
+            // <style>body { color: red; }</style>
+            // -> content starts same line as <style> (same for <script>)
+            specifierLine: line - 1,
+            specifierColumn: column,
+            specifier: inlineContentUrl,
+            contentType,
+            content: inlineContent,
+            debug,
+            astInfo: { node },
           });
-          const importmapInlineUrlInfo = importmapReferenceInlined.urlInfo;
+
           actions.push(async () => {
-            await importmapInlineUrlInfo.cook();
-            _resolveImportmapReady(JSON.parse(importmapInlineUrlInfo.content));
+            if (expectedType === "js_module" && importmapFound) {
+              await new Promise((resolve) => {
+                importmapParsedCallbackSet.add(resolve);
+              });
+            }
+            await inlineReference.urlInfo.cook();
             mutations.push(() => {
-              setHtmlNodeText(scriptNode, importmapInlineUrlInfo.content, {
-                indentation: "auto",
-              });
-              setHtmlNodeAttributes(scriptNode, {
-                "src": undefined,
-                "jsenv-inlined-by": "jsenv:html_reference_analysis",
-                "inlined-from-src": src,
-              });
+              if (hotAccept) {
+                removeHtmlNodeText(node);
+                setHtmlNodeAttributes(node, {
+                  "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
+                });
+              } else {
+                setHtmlNodeText(node, inlineReference.urlInfo.content, {
+                  indentation: false, // indentation would decrease stack trace precision
+                });
+                setHtmlNodeAttributes(node, {
+                  "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
+                });
+              }
             });
           });
-        } else {
-          const htmlNodeText = getHtmlNodeText(scriptNode);
-          if (htmlNodeText) {
-            const importmapReference = createInlineReference(
-              scriptNode,
-              htmlNodeText,
-              {
-                type: "script",
-                expectedType: "importmap",
-                contentType: "application/importmap+json",
-              },
-            );
-            const inlineImportmapUrlInfo = importmapReference.urlInfo;
-            actions.push(async () => {
-              await inlineImportmapUrlInfo.cook();
-              _resolveImportmapReady(
-                JSON.parse(inlineImportmapUrlInfo.content),
-              );
-              mutations.push(() => {
-                setHtmlNodeText(scriptNode, inlineImportmapUrlInfo.content, {
-                  indentation: "auto",
-                });
-                setHtmlNodeAttributes(scriptNode, {
-                  "jsenv-cooked-by": "jsenv:html_reference_analysis",
-                });
-              });
-            });
+          return inlineReference;
+        };
+        const visitTextContent = (
+          node,
+          { type, subtype, expectedType, contentType },
+        ) => {
+          const inlineContent = getHtmlNodeText(node);
+          if (!inlineContent) {
+            return null;
           }
-        }
-        // once this plugin knows the importmap, it will use it
-        // to map imports. These import specifiers will be normalized
-        // by "formatReference" making the importmap presence useless.
-        // In dev/test we keep importmap into the HTML to see it even if useless
-        // Duing build we get rid of it
-        if (urlInfo.context.build) {
-          mutations.push(() => {
-            removeHtmlNode(scriptNode);
+          return createInlineReference(node, inlineContent, {
+            type,
+            subtype,
+            expectedType,
+            contentType,
           });
-        }
-        return;
-      }
-      const externalRef = visitSrc(scriptNode, {
-        type: "script",
-        subtype: type,
-        expectedType: type,
-      });
-      if (externalRef) {
-        return;
-      }
+        };
 
-      // now visit the content, if any
-      if (!inlineContent) {
-        return;
-      }
-      // If the inline script was already handled by an other plugin, ignore it
-      // - we want to preserve inline scripts generated by html supervisor during dev
-      // - we want to avoid cooking twice a script during build
-      if (
-        !inlineConvertedScript &&
-        getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") ===
-          "jsenv:js_module_fallback"
-      ) {
-        return;
-      }
-
-      const inlineRef = visitTextContent(scriptNode, {
-        type: "script",
-        subtype,
-        expectedType: type,
-        contentType,
-      });
-      if (inlineRef) {
-        // 1. <script type="jsx"> becomes <script>
-        if (type === "js_classic" && extension !== ".js") {
-          mutations.push(() => {
-            setHtmlNodeAttributes(scriptNode, {
-              type: undefined,
+        visitHtmlNodes(htmlAst, {
+          link: (linkNode) => {
+            const rel = getHtmlNodeAttribute(linkNode, "rel");
+            const type = getHtmlNodeAttribute(linkNode, "type");
+            const ref = visitHref(linkNode, {
+              type: "link_href",
+              subtype: rel,
+              // https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types/preload#including_a_mime_type
+              expectedContentType: type,
             });
-          });
-        }
-        // 2. <script type="module/jsx"> becomes <script type="module">
-        if (type === "js_module" && extension !== ".js") {
-          mutations.push(() => {
-            setHtmlNodeAttributes(scriptNode, {
-              type: "module",
-            });
-          });
-        }
-      }
-    },
-    a: (aNode) => {
-      visitHref(aNode, {
-        type: "a_href",
-      });
-    },
-    iframe: (iframeNode) => {
-      visitSrc(iframeNode, {
-        type: "iframe_src",
-      });
-    },
-    img: (imgNode) => {
-      visitSrc(imgNode, {
-        type: "img_src",
-      });
-      visitSrcset(imgNode, {
-        type: "img_srcset",
-      });
-    },
-    source: (sourceNode) => {
-      visitSrc(sourceNode, {
-        type: "source_src",
-      });
-      visitSrcset(sourceNode, {
-        type: "source_srcset",
-      });
-    },
-    // svg <image> tag
-    image: (imageNode) => {
-      visitHref(imageNode, {
-        type: "image_href",
-      });
-    },
-    use: (useNode) => {
-      visitHref(useNode, {
-        type: "use_href",
-      });
-    },
-  });
-  if (!importmapFound) {
-    onImportmapParsed(urlInfo.url);
-  }
-  finalizeCallbacks.forEach((finalizeCallback) => {
-    finalizeCallback();
-  });
+            if (ref) {
+              finalizeCallbacks.push(() => {
+                if (ref.expectedType) {
+                  // might be set by other plugins, in that case respect it
+                } else {
+                  ref.expectedType = decideLinkExpectedType(ref, urlInfo);
+                }
+              });
+            }
+          },
+          style: inlineContent
+            ? (styleNode) => {
+                visitTextContent(styleNode, {
+                  type: "style",
+                  expectedType: "css",
+                  contentType: "text/css",
+                });
+              }
+            : null,
+          script: (scriptNode) => {
+            const { type, subtype, contentType, extension } =
+              analyzeScriptNode(scriptNode);
+            if (type === "text") {
+              // ignore <script type="whatever">foobar</script>
+              // per HTML spec https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-type
+              return;
+            }
+            if (type === "importmap") {
+              importmapFound = true;
 
-  if (actions.length > 0) {
-    await Promise.all(actions.map((action) => action()));
-  }
-  if (mutations.length === 0) {
-    return null;
-  }
-  mutations.forEach((mutation) => mutation());
-  return stringifyHtmlAst(htmlAst);
+              const src = getHtmlNodeAttribute(scriptNode, "src");
+              if (src) {
+                // Browser would throw on remote importmap
+                // and won't sent a request to the server for it
+                // We must precook the importmap to know its content and inline it into the HTML
+                const importmapReference = createExternalReference(
+                  scriptNode,
+                  "src",
+                  src,
+                  {
+                    type: "script",
+                    subtype: "importmap",
+                    expectedType: "importmap",
+                  },
+                );
+                const { line, column, isOriginal } = getHtmlNodePosition(
+                  scriptNode,
+                  {
+                    preferOriginal: true,
+                  },
+                );
+                const importmapInlineUrl = getUrlForContentInsideHtml(
+                  scriptNode,
+                  {
+                    htmlUrl: urlInfo.url,
+                  },
+                );
+                const importmapReferenceInlined = importmapReference.inline({
+                  line: line - 1,
+                  column,
+                  isOriginal,
+                  specifier: importmapInlineUrl,
+                  contentType: "application/importmap+json",
+                });
+                const importmapInlineUrlInfo =
+                  importmapReferenceInlined.urlInfo;
+                actions.push(async () => {
+                  await importmapInlineUrlInfo.cook();
+                  onImportmapReady(JSON.parse(importmapInlineUrlInfo.content));
+                  mutations.push(() => {
+                    setHtmlNodeText(
+                      scriptNode,
+                      importmapInlineUrlInfo.content,
+                      {
+                        indentation: "auto",
+                      },
+                    );
+                    setHtmlNodeAttributes(scriptNode, {
+                      "src": undefined,
+                      "jsenv-inlined-by": "jsenv:html_reference_analysis",
+                      "inlined-from-src": src,
+                    });
+                  });
+                });
+              } else {
+                const htmlNodeText = getHtmlNodeText(scriptNode);
+                if (htmlNodeText) {
+                  const importmapReference = createInlineReference(
+                    scriptNode,
+                    htmlNodeText,
+                    {
+                      type: "script",
+                      expectedType: "importmap",
+                      contentType: "application/importmap+json",
+                    },
+                  );
+                  const inlineImportmapUrlInfo = importmapReference.urlInfo;
+                  actions.push(async () => {
+                    await inlineImportmapUrlInfo.cook();
+                    onImportmapReady(
+                      JSON.parse(inlineImportmapUrlInfo.content),
+                    );
+                    mutations.push(() => {
+                      setHtmlNodeText(
+                        scriptNode,
+                        inlineImportmapUrlInfo.content,
+                        {
+                          indentation: "auto",
+                        },
+                      );
+                      setHtmlNodeAttributes(scriptNode, {
+                        "jsenv-cooked-by": "jsenv:html_reference_analysis",
+                      });
+                    });
+                  });
+                }
+              }
+              // once this plugin knows the importmap, it will use it
+              // to map imports. These import specifiers will be normalized
+              // by "formatReference" making the importmap presence useless.
+              // In dev/test we keep importmap into the HTML to see it even if useless
+              // Duing build we get rid of it
+              if (urlInfo.context.build) {
+                mutations.push(() => {
+                  removeHtmlNode(scriptNode);
+                });
+              }
+              return;
+            }
+            const externalRef = visitSrc(scriptNode, {
+              type: "script",
+              subtype: type,
+              expectedType: type,
+            });
+            if (externalRef) {
+              return;
+            }
+
+            // now visit the content, if any
+            if (!inlineContent) {
+              return;
+            }
+            // If the inline script was already handled by an other plugin, ignore it
+            // - we want to preserve inline scripts generated by html supervisor during dev
+            // - we want to avoid cooking twice a script during build
+            if (
+              !inlineConvertedScript &&
+              getHtmlNodeAttribute(scriptNode, "jsenv-injected-by") ===
+                "jsenv:js_module_fallback"
+            ) {
+              return;
+            }
+
+            const inlineRef = visitTextContent(scriptNode, {
+              type: "script",
+              subtype,
+              expectedType: type,
+              contentType,
+            });
+            if (inlineRef) {
+              // 1. <script type="jsx"> becomes <script>
+              if (type === "js_classic" && extension !== ".js") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(scriptNode, {
+                    type: undefined,
+                  });
+                });
+              }
+              // 2. <script type="module/jsx"> becomes <script type="module">
+              if (type === "js_module" && extension !== ".js") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(scriptNode, {
+                    type: "module",
+                  });
+                });
+              }
+            }
+          },
+          a: (aNode) => {
+            visitHref(aNode, {
+              type: "a_href",
+            });
+          },
+          iframe: (iframeNode) => {
+            visitSrc(iframeNode, {
+              type: "iframe_src",
+            });
+          },
+          img: (imgNode) => {
+            visitSrc(imgNode, {
+              type: "img_src",
+            });
+            visitSrcset(imgNode, {
+              type: "img_srcset",
+            });
+          },
+          source: (sourceNode) => {
+            visitSrc(sourceNode, {
+              type: "source_src",
+            });
+            visitSrcset(sourceNode, {
+              type: "source_srcset",
+            });
+          },
+          // svg <image> tag
+          image: (imageNode) => {
+            visitHref(imageNode, {
+              type: "image_href",
+            });
+          },
+          use: (useNode) => {
+            visitHref(useNode, {
+              type: "use_href",
+            });
+          },
+        });
+        if (!importmapFound) {
+          onImportmapReady(urlInfo.url);
+        }
+        finalizeCallbacks.forEach((finalizeCallback) => {
+          finalizeCallback();
+        });
+
+        if (actions.length > 0) {
+          await Promise.all(actions.map((action) => action()));
+          actions.length = 0;
+        }
+        if (mutations.length === 0) {
+          return null;
+        }
+        mutations.forEach((mutation) => mutation());
+        mutations.length = 0;
+        return stringifyHtmlAst(htmlAst);
+      },
+    },
+  };
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
