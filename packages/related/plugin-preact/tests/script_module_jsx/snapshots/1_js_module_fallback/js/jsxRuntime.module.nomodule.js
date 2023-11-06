@@ -1,15 +1,15 @@
 System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _context) {
   "use strict";
 
-  var r, _;
+  var _, r;
   function o(o, e, n, t, f, l) {
     var s,
-      u,
-      a = {};
-    for (u in e) "ref" == u ? s = e[u] : a[u] = e[u];
-    var i = {
+      i,
+      u = {};
+    for (i in e) "ref" == i ? s = e[i] : u[i] = e[i];
+    var a = {
       type: o,
-      props: a,
+      props: u,
       key: n,
       ref: s,
       __k: null,
@@ -20,12 +20,13 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       __c: null,
       __h: null,
       constructor: void 0,
-      __v: --_,
+      __v: --r,
+      __i: -1,
       __source: f,
       __self: l
     };
-    if ("function" == typeof o && (s = o.defaultProps)) for (u in s) void 0 === a[u] && (a[u] = s[u]);
-    return r.vnode && r.vnode(i), i;
+    if ("function" == typeof o && (s = o.defaultProps)) for (i in s) void 0 === u[i] && (u[i] = s[i]);
+    return _.vnode && _.vnode(a), a;
   }
   _export({
     jsx: o,
@@ -34,11 +35,11 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
   });
   return {
     setters: [function (_distPreactModuleJs) {
-      r = _distPreactModuleJs.options;
+      _ = _distPreactModuleJs.options;
       _export("Fragment", _distPreactModuleJs.Fragment);
     }],
     execute: function () {
-      _ = 0;
+      r = 0;
     }
   };
 });

@@ -15,7 +15,7 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "preact": "10.18.1"
+    "preact": "10.18.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.22.15",
