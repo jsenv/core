@@ -1,8 +1,6 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
-Jsenv is a tool to develop test and build projects using JavaScript. Jsenv is simple, easy to understand and well documented.
-
-Jsenv cares a lot about the developper experience, especially when it comes to tests.
+Jsenv is a tool to develop test and build projects using JavaScript. Jsenv encourages standards and simple things.
 
 The pillars of jsenv are:
 
@@ -10,6 +8,8 @@ The pillars of jsenv are:
 2. A build generating an optimized version of source files into a directory
 3. A build server serving build files
 4. A test runner executing test files in web browser(s)
+
+Jsenv cares a lot about the developer experience. As a result it can be enjoyed by people without much experience in tooling. Or by people wanting to use a simple tool, without hidden complexities.
 
 [Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
