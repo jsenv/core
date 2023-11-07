@@ -4861,7 +4861,7 @@ const githubAnnotationFromError = (
     title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
   };
   const exception = asException(error, { rootDirectoryUrl });
-  if (typeof exception.site.line === "number") {
+  if (exception.site && typeof exception.site.line === "number") {
     annotation.path = urlToRelativeUrl(exception.site.url, rootDirectoryUrl);
     annotation.start_line = exception.site.line;
     annotation.end_line = exception.site.line;
