@@ -10,7 +10,7 @@ The pillars of jsenv are:
 4. A test runner executing test files in web browser(s)
 
 Jsenv cares a lot about the developer experience.   
-As a result it can be enjoyed by people without much experience in tooling. People with experience in tooling and seeking for a simple tool without hidden complexities will enjoy it as well.
+As a result it can be enjoyed by people without much experience in tooling or seeking for a simple tool without hidden complexities.
 
 [Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
