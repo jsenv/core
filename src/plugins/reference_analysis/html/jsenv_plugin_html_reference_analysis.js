@@ -45,22 +45,39 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
   let globalImportmap = null;
   const importmaps = {};
-  const onImportmapParsed = (htmlUrl, importmap) => {
-    if (importmap) {
-      importmaps[htmlUrl] = normalizeImportMap(importmap, htmlUrl);
-    } else {
-      importmaps[htmlUrl] = null;
-    }
-    globalImportmap = Object.keys(importmaps).reduce((previous, url) => {
-      const importmap = importmaps[url];
-      if (!previous) {
-        return importmap;
+  let importmapLoadingCount = 0;
+  const allImportmapLoadedCallbackSet = new Set();
+  const startLoadingImportmap = (htmlUrlInfo) => {
+    importmapLoadingCount++;
+    return (importmapUrlInfo) => {
+      const htmlUrl = htmlUrlInfo.url;
+      if (importmapUrlInfo) {
+        // importmap was found in this HTML file and is known
+        const importmap = JSON.parse(importmapUrlInfo.content);
+        importmaps[htmlUrl] = normalizeImportMap(importmap, htmlUrl);
+      } else {
+        // no importmap in this HTML file
+        importmaps[htmlUrl] = null;
       }
-      if (!importmap) {
-        return previous;
+      globalImportmap = Object.keys(importmaps).reduce((previous, url) => {
+        const importmap = importmaps[url];
+        if (!previous) {
+          return importmap;
+        }
+        if (!importmap) {
+          return previous;
+        }
+        return composeTwoImportMaps(previous, importmap);
+      }, null);
+
+      importmapLoadingCount--;
+      if (importmapLoadingCount === 0) {
+        allImportmapLoadedCallbackSet.forEach((callback) => {
+          callback();
+        });
+        allImportmapLoadedCallbackSet.clear();
       }
-      return composeTwoImportMaps(previous, importmap);
-    }, null);
+    };
   };
 
   return {
@@ -99,16 +116,18 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
     },
     transformUrlContent: {
+      js_module: async () => {
+        // wait for importmap if any
+        // so that resolveReference can happen with importmap
+        if (importmapLoadingCount) {
+          await new Promise((resolve) => {
+            allImportmapLoadedCallbackSet.add(resolve);
+          });
+        }
+      },
       html: async (urlInfo) => {
         let importmapFound = false;
-        let importmapParsedCallbackSet = new Set();
-        const onImportmapReady = (importmap) => {
-          onImportmapParsed(urlInfo.url, importmap);
-          importmapParsedCallbackSet.forEach((callback) => {
-            callback();
-          });
-          importmapParsedCallbackSet.clear();
-        };
+        const importmapLoaded = startLoadingImportmap(urlInfo);
 
         const content = urlInfo.content;
         const htmlAst = parseHtmlString(content);
@@ -248,11 +267,6 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
           });
 
           actions.push(async () => {
-            if (expectedType === "js_module" && importmapFound) {
-              await new Promise((resolve) => {
-                importmapParsedCallbackSet.add(resolve);
-              });
-            }
             await inlineReference.urlInfo.cook();
             mutations.push(() => {
               if (hotAccept) {
@@ -366,7 +380,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                   importmapReferenceInlined.urlInfo;
                 actions.push(async () => {
                   await importmapInlineUrlInfo.cook();
-                  onImportmapReady(JSON.parse(importmapInlineUrlInfo.content));
+                  importmapLoaded(importmapInlineUrlInfo);
                   mutations.push(() => {
                     setHtmlNodeText(
                       scriptNode,
@@ -397,9 +411,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                   const inlineImportmapUrlInfo = importmapReference.urlInfo;
                   actions.push(async () => {
                     await inlineImportmapUrlInfo.cook();
-                    onImportmapReady(
-                      JSON.parse(inlineImportmapUrlInfo.content),
-                    );
+                    importmapLoaded(inlineImportmapUrlInfo);
                     mutations.push(() => {
                       setHtmlNodeText(
                         scriptNode,
@@ -515,7 +527,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
           },
         });
         if (!importmapFound) {
-          onImportmapReady();
+          importmapLoaded();
         }
         finalizeCallbacks.forEach((finalizeCallback) => {
           finalizeCallback();
