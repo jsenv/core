@@ -11,4 +11,5 @@ await executeTestPlan({
   },
   failFast: process.argv.includes("--workspace"),
   logShortForCompletedExecutions: true,
+  githubCheckEnabled: false,
 });
