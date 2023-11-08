@@ -2,9 +2,9 @@
  * Update all package versions to prepare for publishing a new version
  */
 
-import { updateWorkspaceVersions } from "@jsenv/package-workspace";
+import { syncPackagesVersions } from "@jsenv/monorepo";
 
-await updateWorkspaceVersions({
+await syncPackagesVersions({
   directoryUrl: new URL("../../", import.meta.url),
   packagesRelations: {
     "create-jsenv": [

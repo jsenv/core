@@ -3,7 +3,7 @@
  */
 
 import { readFile } from "@jsenv/filesystem";
-import { publishWorkspace } from "@jsenv/package-workspace";
+import { publishPackages } from "@jsenv/monorepo";
 
 if (!process.env.CI) {
   const secrets = await readFile(
@@ -12,6 +12,6 @@ if (!process.env.CI) {
   );
   Object.assign(process.env, secrets);
 }
-await publishWorkspace({
+await publishPackages({
   directoryUrl: new URL("../../", import.meta.url),
 });
