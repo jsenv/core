@@ -2032,8 +2032,7 @@ function isUnicodeSupported() {
 		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
 	}
 
-	return Boolean(process$1.env.CI)
-		|| Boolean(process$1.env.WT_SESSION) // Windows Terminal
+	return Boolean(process$1.env.WT_SESSION) // Windows Terminal
 		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
 		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
 		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
