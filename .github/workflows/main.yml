@@ -59,7 +59,7 @@ jobs:
       - name: Run packages tests
         # env:
         #   NODE_V8_COVERAGE: .coverage/packages
-        run: npm run test:packages
+        run: npm run test:workspace
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run core tests
