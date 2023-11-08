@@ -10,7 +10,7 @@ l$2 = {
     throw n;
   }
 }, t$2 = function (n) {
-  return null != n && void 0 === n.constructor;
+  return null != n && null == n.constructor;
 }, "function" == typeof Promise ? Promise.prototype.then.bind(Promise.resolve()) : setTimeout;
 
 var t$1,
