@@ -23,9 +23,10 @@ const getLogs = async (params) => {
 
 // on browsers
 {
-  const actual = await getLogs({
+  let actual = await getLogs({
     fileRelativeUrl: "./test_browser.js",
   });
+  actual = actual.replace(`√`, "✔"); // simplify comparison
   const expected = `✔ execution 1 of 1 completed (all completed)
 file: client/main.html
 -------- console (✖ 1 ⚠ 3 ℹ 1 ◆ 1) --------
