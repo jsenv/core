@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.5.7",
+  "version": "2.5.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.2.1",
     "@jsenv/sourcemap": "1.2.3",
-    "lightningcss": "1.22.0",
+    "lightningcss": "1.22.1",
     "rollup": "3.29.4"
   },
   "peerDependencies": {
