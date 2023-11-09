@@ -45,4 +45,5 @@ await executeTestPlan({
   },
   logMemoryHeapUsage: true,
   logShortForCompletedExecutions: process.env.CI,
+  githubCheckName: `@jsenv/core tests (${process.platform})`,
 });
