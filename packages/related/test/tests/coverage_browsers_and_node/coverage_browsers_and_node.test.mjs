@@ -53,6 +53,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageReportTextLog: false,
   coverageReportHtml: false,
   coverageV8ConflictWarning: false,
+  githubCheckEnabled: false,
 });
 const actual = testPlanCoverage;
 const expected = {

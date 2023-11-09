@@ -23,6 +23,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageConfig: {
     "main.js": true,
   },
+  githubCheckEnabled: false,
 });
 const actual = testPlanCoverage;
 const expected = {

@@ -24,4 +24,5 @@ await executeTestPlan({
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
   coverageEnabled: process.argv.includes("--coverage"),
+  githubCheckEnabled: false,
 });

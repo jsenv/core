@@ -28,6 +28,7 @@ const result = await executeTestPlan({
     origin: buildServer.origin,
     rootDirectoryUrl: new URL("./project/public/", import.meta.url),
   },
+  githubCheckEnabled: false,
 });
 
 const chromiumResult = result.testPlanReport["public/main.test.html"].chromium;

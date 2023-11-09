@@ -30,6 +30,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageMethodForNodeJs: "Profiler",
   coverageReportTextLog: false,
   coverageReportHtml: false,
+  githubCheckEnabled: false,
 });
 const actual = testPlanCoverage;
 const expected = {

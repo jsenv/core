@@ -24,4 +24,5 @@ await executeTestPlan({
   webServer: {
     origin: devServer.origin,
   },
+  githubCheckEnabled: false,
 });

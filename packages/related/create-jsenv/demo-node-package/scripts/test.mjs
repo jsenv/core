@@ -18,4 +18,5 @@ await executeTestPlan({
   },
   coverageEnabled: process.argv.includes("--coverage"),
   coverageMethodForNodeJs: "Profiler",
+  githubCheckEnabled: false,
 });

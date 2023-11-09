@@ -54,6 +54,7 @@ await executeTestPlan({
   coverageV8ConflictWarning: false,
   coverageReportTextLog: false,
   coverageReportHtml: false,
+  githubCheckEnabled: false,
 });
 
 const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =

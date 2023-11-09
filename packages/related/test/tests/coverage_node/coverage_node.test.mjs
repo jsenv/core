@@ -27,6 +27,7 @@ const test = async (params) => {
     coverageIncludeMissing: false,
     coverageReportTextLog: false,
     coverageReportHtml: false,
+    githubCheckEnabled: false,
   });
   const actual = testPlanCoverage;
   const expected = {

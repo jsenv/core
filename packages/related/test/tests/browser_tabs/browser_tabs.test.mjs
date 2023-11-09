@@ -30,6 +30,7 @@ const result = await executeTestPlan({
     origin: devServer.origin,
     rootDirectoryUrl: new URL("./client/", import.meta.url),
   },
+  githubCheckEnabled: false,
 });
 const actual = result;
 const expected = {
