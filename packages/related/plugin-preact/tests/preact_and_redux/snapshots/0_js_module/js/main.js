@@ -1,4 +1,4 @@
-import { compose, createStore, combineReducers, B, o, Provider } from "/js/vendors.js";
+import { compose, createStore, combineReducers, q, u, Provider } from "/js/vendors.js";
 
 const counterReducer = (state = { value: 0 }, action) => {
   if (action.type === "INCREMENT") {
@@ -45,9 +45,9 @@ let resolveRenderPromise;
 const renderPromise = new Promise(resolve => {
   resolveRenderPromise = resolve;
 });
-B(o(Provider, {
+q(u(Provider, {
   store: store,
-  children: o(App, {
+  children: u(App, {
     onRender: resolveRenderPromise
   })
 }), document.querySelector("#app"));

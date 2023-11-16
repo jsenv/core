@@ -1,7 +1,7 @@
 System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
   "use strict";
 
-  var ReactReduxContext, useReduxContext, createReduxContextHook, useSelector, p, o, useStore, useDispatch, increment, decrement, counterValueSelector, App;
+  var ReactReduxContext, useReduxContext, createReduxContextHook, useSelector, p, u, useStore, useDispatch, increment, decrement, counterValueSelector, App;
   /**
    * Hook factory, which creates a `useStore` hook bound to a given context.
    *
@@ -84,7 +84,7 @@ System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
       createReduxContextHook = _mainJsx.createReduxContextHook;
       useSelector = _mainJsx.useSelector;
       p = _mainJsx.p;
-      o = _mainJsx.o;
+      u = _mainJsx.u;
     }],
     execute: function () {
       useStore = /*#__PURE__*/createStoreHook();
@@ -110,20 +110,20 @@ System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
         p(() => {
           onRender();
         }, []);
-        return o("p", {
-          children: [o("button", {
+        return u("p", {
+          children: [u("button", {
             id: "increment",
             onClick: () => {
               dispatch(increment());
             },
             children: "+1"
-          }), o("button", {
+          }), u("button", {
             id: "decrement",
             onClick: () => {
               dispatch(decrement());
             },
             children: "-1"
-          }), o("span", {
+          }), u("span", {
             id: "counter_value",
             children: counterValue
           })]
