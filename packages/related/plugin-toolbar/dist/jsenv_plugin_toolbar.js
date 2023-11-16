@@ -1,4 +1,4 @@
-import { parseHtmlString, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst } from "@jsenv/ast";
+import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst } from "@jsenv/ast";
 
 const jsenvPluginToolbar = ({
   logLevel = "warn",
@@ -21,7 +21,10 @@ const jsenvPluginToolbar = ({
         if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
           return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url
+        });
         const toolbarInjectorReference = urlInfo.dependencies.inject({
           type: "js_import",
           expectedType: "js_module",
