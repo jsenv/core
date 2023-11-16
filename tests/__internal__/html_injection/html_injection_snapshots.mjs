@@ -4,7 +4,7 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 import { comparePathnames } from "@jsenv/filesystem";
 
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   injectHtmlNode,
@@ -16,7 +16,10 @@ let files = {};
 const transformFixtureFile = async (fixtureFilename) => {
   const url = new URL(`./fixtures/${fixtureFilename}`, import.meta.url);
   const originalContent = readFileSync(url, "utf8");
-  const htmlAst = parseHtmlString(originalContent);
+  const htmlAst = parseHtml({
+    html: originalContent,
+    url,
+  });
 
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,

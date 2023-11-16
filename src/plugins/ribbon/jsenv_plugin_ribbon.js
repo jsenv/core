@@ -1,5 +1,5 @@
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   createHtmlNode,
   injectHtmlNodeAsEarlyAsPossible,
@@ -42,7 +42,10 @@ export const jsenvPluginRibbon = ({
         if (!ribbon) {
           return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         const ribbonClientFileReference = urlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",

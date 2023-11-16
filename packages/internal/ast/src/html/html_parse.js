@@ -12,11 +12,36 @@ import {
 import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js";
 import { getHtmlNodeText } from "./html_node_text.js";
 
-export const parseHtmlString = (
-  htmlString,
-  { storeOriginalPositions = true } = {},
-) => {
-  const htmlAst = parse(htmlString, { sourceCodeLocationInfo: true });
+export const parseHtml = ({
+  html,
+  url,
+  storeOriginalPositions = true,
+} = {}) => {
+  const htmlAst = parse(html, {
+    sourceCodeLocationInfo: true,
+    onParseError: (parse5Error) => {
+      if (
+        [
+          "missing-doctype",
+          "abandoned-head-element-child",
+          "duplicate-attribute",
+          "non-void-html-element-start-tag-with-trailing-solidus",
+        ].includes(parse5Error.code)
+      ) {
+        return;
+      }
+      const htmlParseError = new Error(
+        `Unable to parse HTML; ${parse5Error.code}`,
+      );
+
+      htmlParseError.reasonCode = parse5Error.code;
+      htmlParseError.code = "PARSE_ERROR";
+      htmlParseError.url = url;
+      htmlParseError.line = parse5Error.startLine;
+      htmlParseError.column = parse5Error.startCol;
+      throw htmlParseError;
+    },
+  });
   if (storeOriginalPositions) {
     const htmlNode = findHtmlChildNode(
       htmlAst,

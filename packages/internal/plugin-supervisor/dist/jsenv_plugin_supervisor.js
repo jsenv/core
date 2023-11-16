@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { applyBabelPlugins, parseHtmlString, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
+import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const intToChar = new Uint8Array(64); // 64 possible chars.
@@ -704,7 +704,10 @@ const injectSupervisorIntoHTML = async ({
   }) => urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
   inlineAsRemote
 }) => {
-  const htmlAst = parseHtmlString(content);
+  const htmlAst = parseHtml({
+    html: content,
+    url
+  });
   const mutations = [];
   const actions = [];
   const scriptInfos = [];

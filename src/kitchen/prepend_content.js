@@ -1,6 +1,6 @@
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   createHtmlNode,
   injectHtmlNodeAsEarlyAsPossible,
@@ -44,7 +44,10 @@ export const prependContent = async (
 };
 
 const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
-  const htmlAst = parseHtmlString(htmlUrlInfo.content);
+  const htmlAst = parseHtml({
+    html: htmlUrlInfo.content,
+    url: htmlUrlInfo.url,
+  });
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({

@@ -349,6 +349,9 @@ export const createFileService = ({
         // it's not possible to do that when url info content is not available
         // (happens for js_module_fallback for instance)
         if (urlInfo.content !== undefined) {
+          kitchen.context.logger.error(`Error while handling ${request.url}:
+${originalError.reasonCode || originalError.code}
+${e.traceMessage}`);
           return {
             url: reference.url,
             status: 200,

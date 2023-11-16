@@ -9,7 +9,7 @@ import {
   renderUrlOrRelativeUrlFilename,
 } from "@jsenv/urls";
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   visitHtmlNodes,
   getHtmlNodeAttribute,
@@ -510,7 +510,9 @@ export const createBuildSpecifierManager = ({
           let content = urlInfo.content;
           if (urlInfo.type === "html") {
             content = stringifyHtmlAst(
-              parseHtmlString(urlInfo.content, {
+              parseHtml({
+                html: urlInfo.content,
+                url: urlInfo.url,
                 storeOriginalPositions: false,
               }),
               {
@@ -763,7 +765,9 @@ export const createBuildSpecifierManager = ({
         if (urlInfo.type !== "html") {
           return;
         }
-        const htmlAst = parseHtmlString(urlInfo.content, {
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
           storeOriginalPositions: false,
         });
         const mutations = [];

@@ -1,5 +1,5 @@
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
@@ -16,7 +16,10 @@ export const jsenvPluginAutoreloadClient = () => {
     appliesDuring: "dev",
     transformUrlContent: {
       html: (htmlUrlInfo) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const htmlAst = parseHtml({
+          html: htmlUrlInfo.content,
+          url: htmlUrlInfo.url,
+        });
         const autoreloadClientReference = htmlUrlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",

@@ -1,6 +1,6 @@
 import { createMagicSource } from "@jsenv/sourcemap";
 import {
-  parseHtmlString,
+  parseHtml,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
@@ -16,11 +16,13 @@ export const injectGlobals = (content, globals, urlInfo) => {
   throw new Error(`cannot inject globals into "${urlInfo.type}"`);
 };
 
-const globalInjectorOnHtml = (content, globals) => {
+const globalInjectorOnHtml = (content, globals, urlInfo) => {
   // ideally we would inject an importmap but browser support is too low
   // (even worse for worker/service worker)
   // so for now we inject code into entry points
-  const htmlAst = parseHtmlString(content, {
+  const htmlAst = parseHtml({
+    html: content,
+    url: urlInfo.url,
     storeOriginalPositions: false,
   });
   const clientCode = generateClientCodeForGlobals(globals, {

@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
@@ -388,7 +388,10 @@ const returnValueAssertions = [
 ];
 
 const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
-  const htmlAst = parseHtmlString(htmlUrlInfo.content);
+  const htmlAst = parseHtml({
+    html: htmlUrlInfo.content,
+    url: htmlUrlInfo.url,
+  });
 
   scriptInjections.reverse().forEach((scriptInjection) => {
     const { setup } = scriptInjection;

@@ -13,7 +13,7 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtmlString, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
@@ -10474,7 +10474,7 @@ const jsenvPluginJsModuleFallbackInsideHtml = ({
     },
     finalizeUrlContent: {
       html: async (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         const mutations = [];
         visitHtmlNodes(htmlAst, {
           link: (node) => {
@@ -11368,7 +11368,10 @@ const prependContent = async (
 };
 
 const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
-  const htmlAst = parseHtmlString(htmlUrlInfo.content);
+  const htmlAst = parseHtml({
+    html: htmlUrlInfo.content,
+    url: htmlUrlInfo.url,
+  });
   injectHtmlNodeAsEarlyAsPossible(
     htmlAst,
     createHtmlNode({
@@ -12978,7 +12981,10 @@ const returnValueAssertions = [
 ];
 
 const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
-  const htmlAst = parseHtmlString(htmlUrlInfo.content);
+  const htmlAst = parseHtml({
+    html: htmlUrlInfo.content,
+    url: htmlUrlInfo.url,
+  });
 
   scriptInjections.reverse().forEach((scriptInjection) => {
     const { setup } = scriptInjection;
@@ -14393,24 +14399,25 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         });
       } catch (e) {
         urlInfo.error = e;
-        if (e.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-          throw e;
-        }
-        if (urlInfo.isInline && errorOnInlineContentCanSkipThrow(urlInfo)) {
-          // When something like <style> or <script> contains syntax error
-          // the HTML in itself it still valid
-          // keep the syntax error and continue with the HTML
+        if (
+          urlInfo.isInline &&
+          e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
+          errorOnInlineContentCanSkipThrow(urlInfo)
+        ) {
           const errorInfo =
             e.code === "PARSE_ERROR" && e.cause
               ? `${e.cause.reasonCode}\n${e.traceMessage}`
               : e.stack;
+          // When something like <style> or <script> contains syntax error
+          // the HTML in itself it still valid
+          // keep the syntax error and continue with the HTML
           logger.error(
-            `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
+            `Error while cooking ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
 ${errorInfo}`,
           );
-        } else {
-          throw e;
+          return;
         }
+        throw e;
       }
     }
 
@@ -15842,8 +15849,10 @@ const jsenvPluginHtmlReferenceAnalysis = ({
         let importmapFound = false;
         const importmapLoaded = startLoadingImportmap(urlInfo);
 
-        const content = urlInfo.content;
-        const htmlAst = parseHtmlString(content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
 
         const mutations = [];
         const actions = [];
@@ -18409,7 +18418,10 @@ const jsenvPluginInliningIntoHtml = () => {
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         const mutations = [];
         const actions = [];
 
@@ -19145,7 +19157,10 @@ const jsenvPluginImportMetaHot = () => {
         if (htmlUrlInfo.context.build) {
           return;
         }
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const htmlAst = parseHtml({
+          html: htmlUrlInfo.content,
+          url: htmlUrlInfo.url,
+        });
         const hotReferences = collectHotDataFromHtmlAst(htmlAst);
         htmlUrlInfo.data.hotDecline = false;
         htmlUrlInfo.data.hotAcceptSelf = false;
@@ -19332,7 +19347,10 @@ const jsenvPluginAutoreloadClient = () => {
     appliesDuring: "dev",
     transformUrlContent: {
       html: (htmlUrlInfo) => {
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const htmlAst = parseHtml({
+          html: htmlUrlInfo.content,
+          url: htmlUrlInfo.url,
+        });
         const autoreloadClientReference = htmlUrlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",
@@ -19769,7 +19787,10 @@ const jsenvPluginRibbon = ({
         if (!ribbon) {
           return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         const ribbonClientFileReference = urlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",
@@ -19804,7 +19825,10 @@ const jsenvPluginCleanHTML = () => {
     appliesDuring: "dev",
     finalizeUrlContent: {
       html: (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         return stringifyHtmlAst(htmlAst, {
           cleanupPositionAttributes: true,
         });
@@ -20163,7 +20187,9 @@ const generateClientCodeForVersionMappings = (
 };
 
 const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
-  const htmlAst = parseHtmlString(urlInfo.content, {
+  const htmlAst = parseHtml({
+    html: urlInfo.content,
+    url: urlInfo.url,
     storeOriginalPositions: false,
   });
   // jsenv_plugin_importmap.js is removing importmap during build
@@ -20680,7 +20706,9 @@ const createBuildSpecifierManager = ({
           let content = urlInfo.content;
           if (urlInfo.type === "html") {
             content = stringifyHtmlAst(
-              parseHtmlString(urlInfo.content, {
+              parseHtml({
+                html: urlInfo.content,
+                url: urlInfo.url,
                 storeOriginalPositions: false,
               }),
               {
@@ -20933,7 +20961,9 @@ const createBuildSpecifierManager = ({
         if (urlInfo.type !== "html") {
           return;
         }
-        const htmlAst = parseHtmlString(urlInfo.content, {
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
           storeOriginalPositions: false,
         });
         const mutations = [];
@@ -21930,7 +21960,9 @@ build ${entryPointKeys.length} entry points`);
             return;
           }
           if (urlInfo.type === "html") {
-            const htmlAst = parseHtmlString(urlInfo.content, {
+            const htmlAst = parseHtml({
+              html: urlInfo.content,
+              url: urlInfo.url,
               storeOriginalPositions: false,
             });
             urlInfo.content = stringifyHtmlAst(htmlAst, {
@@ -22509,6 +22541,9 @@ const createFileService = ({
         // it's not possible to do that when url info content is not available
         // (happens for js_module_fallback for instance)
         if (urlInfo.content !== undefined) {
+          kitchen.context.logger.error(`Error while handling ${request.url}:
+${originalError.reasonCode || originalError.code}
+${e.traceMessage}`);
           return {
             url: reference.url,
             status: 200,

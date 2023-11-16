@@ -46,7 +46,7 @@
  */
 
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   visitHtmlNodes,
   getHtmlNodeAttribute,
@@ -80,7 +80,7 @@ export const injectSupervisorIntoHTML = async (
     inlineAsRemote,
   },
 ) => {
-  const htmlAst = parseHtmlString(content);
+  const htmlAst = parseHtml({ html: content, url });
   const mutations = [];
   const actions = [];
 

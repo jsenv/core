@@ -480,24 +480,25 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         });
       } catch (e) {
         urlInfo.error = e;
-        if (e.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-          throw e;
-        }
-        if (urlInfo.isInline && errorOnInlineContentCanSkipThrow(urlInfo)) {
-          // When something like <style> or <script> contains syntax error
-          // the HTML in itself it still valid
-          // keep the syntax error and continue with the HTML
+        if (
+          urlInfo.isInline &&
+          e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
+          errorOnInlineContentCanSkipThrow(urlInfo)
+        ) {
           const errorInfo =
             e.code === "PARSE_ERROR" && e.cause
               ? `${e.cause.reasonCode}\n${e.traceMessage}`
               : e.stack;
+          // When something like <style> or <script> contains syntax error
+          // the HTML in itself it still valid
+          // keep the syntax error and continue with the HTML
           logger.error(
-            `Error while handling ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
+            `Error while cooking ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
 ${errorInfo}`,
           );
-        } else {
-          throw e;
+          return;
         }
+        throw e;
       }
     }
 

@@ -7,7 +7,7 @@
 
 import { injectQueryParams } from "@jsenv/urls";
 import {
-  parseHtmlString,
+  parseHtml,
   visitHtmlNodes,
   stringifyHtmlAst,
   getHtmlNodeAttribute,
@@ -73,7 +73,7 @@ export const jsenvPluginJsModuleFallbackInsideHtml = ({
     },
     finalizeUrlContent: {
       html: async (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         const mutations = [];
         visitHtmlNodes(htmlAst, {
           link: (node) => {

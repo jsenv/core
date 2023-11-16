@@ -1,5 +1,5 @@
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
@@ -26,7 +26,7 @@ export const jsenvPluginReactRefreshPreamble = () => {
         ) {
           return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         const reactRefreshPreambleReference = urlInfo.dependencies.inject({
           type: "script",
           subtype: "js_module",

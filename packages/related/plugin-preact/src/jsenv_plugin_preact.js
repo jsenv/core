@@ -7,7 +7,7 @@ import { URL_META } from "@jsenv/url-meta";
 import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import {
   applyBabelPlugins,
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
@@ -82,7 +82,7 @@ export const jsenvPluginPreact = ({
         ) {
           return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         const preactDevtoolsReference = urlInfo.dependencies.inject({
           type: "js_import",
           expectedType: "js_module",
