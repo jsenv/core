@@ -1,6 +1,6 @@
 // html
 export {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   parseSvgString,
   stringifySvgAst,

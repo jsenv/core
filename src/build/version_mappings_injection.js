@@ -1,7 +1,7 @@
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 
 import {
-  parseHtmlString,
+  parseHtml,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
   stringifyHtmlAst,
@@ -58,7 +58,9 @@ const generateClientCodeForVersionMappings = (
 };
 
 export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
-  const htmlAst = parseHtmlString(urlInfo.content, {
+  const htmlAst = parseHtml({
+    html: urlInfo.content,
+    url: urlInfo.url,
     storeOriginalPositions: false,
   });
   // jsenv_plugin_importmap.js is removing importmap during build

@@ -1,5 +1,5 @@
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
@@ -33,7 +33,7 @@ export const jsenvPluginToolbar = ({
         if (urlInfo.url.startsWith(toolbarHtmlClientFileUrl)) {
           return null;
         }
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         const toolbarInjectorReference = urlInfo.dependencies.inject({
           type: "js_import",
           expectedType: "js_module",

@@ -1,5 +1,5 @@
 import {
-  parseHtmlString,
+  parseHtml,
   visitHtmlNodes,
   getHtmlNodeText,
   setHtmlNodeText,
@@ -129,8 +129,10 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
         let importmapFound = false;
         const importmapLoaded = startLoadingImportmap(urlInfo);
 
-        const content = urlInfo.content;
-        const htmlAst = parseHtmlString(content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
 
         const mutations = [];
         const actions = [];

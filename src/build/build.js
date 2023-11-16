@@ -23,7 +23,7 @@ import {
 } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/log";
-import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast";
+import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
@@ -587,7 +587,9 @@ build ${entryPointKeys.length} entry points`);
             return;
           }
           if (urlInfo.type === "html") {
-            const htmlAst = parseHtmlString(urlInfo.content, {
+            const htmlAst = parseHtml({
+              html: urlInfo.content,
+              url: urlInfo.url,
               storeOriginalPositions: false,
             });
             urlInfo.content = stringifyHtmlAst(htmlAst, {

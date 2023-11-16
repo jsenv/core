@@ -1,5 +1,5 @@
 import {
-  parseHtmlString,
+  parseHtml,
   stringifyHtmlAst,
   visitHtmlNodes,
   getHtmlNodeText,
@@ -17,7 +17,10 @@ export const jsenvPluginInliningIntoHtml = () => {
     appliesDuring: "*",
     transformUrlContent: {
       html: async (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         const mutations = [];
         const actions = [];
 

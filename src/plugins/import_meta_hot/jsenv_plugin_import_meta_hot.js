@@ -1,5 +1,5 @@
 import { createMagicSource } from "@jsenv/sourcemap";
-import { parseHtmlString, applyBabelPlugins } from "@jsenv/ast";
+import { parseHtml, applyBabelPlugins } from "@jsenv/ast";
 
 import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js";
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js";
@@ -19,7 +19,10 @@ export const jsenvPluginImportMetaHot = () => {
         if (htmlUrlInfo.context.build) {
           return;
         }
-        const htmlAst = parseHtmlString(htmlUrlInfo.content);
+        const htmlAst = parseHtml({
+          html: htmlUrlInfo.content,
+          url: htmlUrlInfo.url,
+        });
         const hotReferences = collectHotDataFromHtmlAst(htmlAst);
         htmlUrlInfo.data.hotDecline = false;
         htmlUrlInfo.data.hotAcceptSelf = false;

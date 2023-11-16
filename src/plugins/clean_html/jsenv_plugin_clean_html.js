@@ -1,4 +1,4 @@
-import { parseHtmlString, stringifyHtmlAst } from "@jsenv/ast";
+import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginCleanHTML = () => {
   return {
@@ -6,7 +6,10 @@ export const jsenvPluginCleanHTML = () => {
     appliesDuring: "dev",
     finalizeUrlContent: {
       html: (urlInfo) => {
-        const htmlAst = parseHtmlString(urlInfo.content);
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         return stringifyHtmlAst(htmlAst, {
           cleanupPositionAttributes: true,
         });
