@@ -7,7 +7,7 @@ export const notificationsEnabledSignal = signal(
   typeof stateFromLocalStorage.notificationsEnabled === "boolean"
     ? stateFromLocalStorage.notificationsEnabled
     : typeof paramsFromParentWindow.notificationsEnabled === "boolean"
-    ? paramsFromParentWindow.notificationsEnabled
-    : false,
+      ? paramsFromParentWindow.notificationsEnabled
+      : false,
 );
 export const notificationPermissionSignal = signal(Notification.permission);

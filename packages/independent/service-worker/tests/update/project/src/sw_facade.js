@@ -86,9 +86,8 @@ registration: {
   swFacade.subscribe(({ readyState, meta }) => {
     installingUI.style.display = readyState === "installing" ? "block" : "none";
     if (readyState === "installing") {
-      installingUI.querySelector(
-        "span",
-      ).innerHTML = `installing ${meta.name}...`;
+      installingUI.querySelector("span").innerHTML =
+        `installing ${meta.name}...`;
     }
   });
   const installedUI = document.querySelector("#installed");
@@ -184,9 +183,8 @@ update: {
     updateInstallingUI.style.display =
       update.readyState === "installing" ? "block" : "none";
     if (update.readyState === "installing") {
-      updateInstallingUI.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} is installing...`;
+      updateInstallingUI.querySelector("span").innerHTML =
+        `${update.meta.name} is installing...`;
       updateResolveInstallButton.disabled = !update.meta.installInstrumentation;
       updateRejectInstallButton.disabled = !update.meta.installInstrumentation;
     }
@@ -210,9 +208,8 @@ update: {
     if (update.readyState === "installed") {
       updateByRestartButton.disabled = !update.reloadRequired;
       updateNowButton.disabled = update.reloadRequired;
-      updateInstalledUI.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} installed`;
+      updateInstalledUI.querySelector("span").innerHTML =
+        `${update.meta.name} installed`;
     }
   });
 
@@ -233,9 +230,8 @@ update: {
     updateActivating.style.display =
       update.readyState === "activating" ? "block" : "none";
     if (update.readyState === "activating") {
-      updateActivating.querySelector(
-        "span",
-      ).innerHTML = `activating ${update.meta.name}...`;
+      updateActivating.querySelector("span").innerHTML =
+        `activating ${update.meta.name}...`;
       updateResolveActivateButton.disabled =
         !update.meta.activateInstrumentation;
       updateRejectActivateButton.disabled =
@@ -248,9 +244,8 @@ update: {
     udpateActivated.style.display =
       update.readyState === "activated" ? "block" : "none";
     if (update.readyState === "activated") {
-      udpateActivated.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} activated`;
+      udpateActivated.querySelector("span").innerHTML =
+        `${update.meta.name} activated`;
     }
   });
 
@@ -259,9 +254,8 @@ update: {
     udpateRedundant.style.display =
       update.readyState === "redundant" ? "block" : "none";
     if (update.readyState === "redundant") {
-      udpateRedundant.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} redundant`;
+      udpateRedundant.querySelector("span").innerHTML =
+        `${update.meta.name} redundant`;
     }
   });
 }

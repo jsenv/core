@@ -7,6 +7,6 @@ export const animationsEnabledSignal = signal(
   typeof stateFromLocalStorage.animationsEnabled === "boolean"
     ? stateFromLocalStorage.animationsEnabled
     : typeof paramsFromParentWindow.animationsEnabled === "boolean"
-    ? paramsFromParentWindow.animationsEnabled
-    : false,
+      ? paramsFromParentWindow.animationsEnabled
+      : false,
 );

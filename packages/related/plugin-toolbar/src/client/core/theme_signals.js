@@ -7,6 +7,6 @@ export const themeSignal = signal(
   typeof stateFromLocalStorage.theme === "string"
     ? stateFromLocalStorage.theme
     : typeof paramsFromParentWindow.theme === "string"
-    ? paramsFromParentWindow.theme
-    : "dark",
+      ? paramsFromParentWindow.theme
+      : "dark",
 );

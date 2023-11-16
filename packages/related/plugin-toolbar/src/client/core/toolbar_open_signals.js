@@ -7,6 +7,6 @@ export const openedSignal = signal(
   typeof stateFromLocalStorage.opened === "boolean"
     ? stateFromLocalStorage.opened
     : typeof paramsFromParentWindow.opened === "boolean"
-    ? paramsFromParentWindow.opened
-    : false,
+      ? paramsFromParentWindow.opened
+      : false,
 );

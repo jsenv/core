@@ -44,8 +44,8 @@ export const generateValueAst = (value) => {
     value === undefined
       ? "undefined"
       : value === null
-      ? "null"
-      : JSON.stringify(value),
+        ? "null"
+        : JSON.stringify(value),
   );
   return valueAst;
 };

@@ -100,8 +100,8 @@ export const getHtmlNodeAttributePosition = (node, attributeName) => {
     attributeName === "inlined-from-src"
       ? "original-src-position"
       : attributeName === "inlined-from-href"
-      ? "original-href-position"
-      : `original-${attributeName}-position`;
+        ? "original-href-position"
+        : `original-${attributeName}-position`;
   const originalPosition = getHtmlNodeAttribute(
     node,
     originalPositionAttributeName,

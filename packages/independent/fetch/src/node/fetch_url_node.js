@@ -48,8 +48,8 @@ export const fetchUrl = async (
       typeof responseBody === "string"
         ? Buffer.from(responseBody)
         : isFileHandle(responseBody)
-        ? fileHandleToReadableStream(responseBody)
-        : responseBody,
+          ? fileHandleToReadableStream(responseBody)
+          : responseBody,
       {
         url,
         status: responseProperties.status,

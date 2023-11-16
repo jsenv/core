@@ -94,13 +94,13 @@ const applyCompositionForcingLowerCase = (
       firstKey: keyExistsIn(keyLowercased, firstObject)
         ? keyLowercased
         : keyExistsIn(key, firstObject)
-        ? key
-        : null,
+          ? key
+          : null,
       secondKey: keyExistsIn(keyLowercased, secondObject)
         ? keyLowercased
         : keyExistsIn(key, secondObject)
-        ? key
-        : null,
+          ? key
+          : null,
     });
   });
   return composed;

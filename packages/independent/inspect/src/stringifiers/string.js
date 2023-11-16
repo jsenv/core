@@ -70,10 +70,10 @@ export const inspectChar = (char, { quote, preserveLineBreaks }) => {
       char === quote
         ? `\\${quote}`
         : point === 8232
-        ? "\\u2028"
-        : point === 8233
-        ? "\\u2029"
-        : meta[point];
+          ? "\\u2028"
+          : point === 8233
+            ? "\\u2029"
+            : meta[point];
     return replacement;
   }
   return char;

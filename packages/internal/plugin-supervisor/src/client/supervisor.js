@@ -960,15 +960,13 @@ window.__supervisor__ = (() => {
               }
               const { codeFrame, cause } = errorDetails;
               if (codeFrame) {
-                this.root.querySelector(
-                  ".text",
-                ).innerHTML += `\n\n${codeFrame}`;
+                this.root.querySelector(".text").innerHTML +=
+                  `\n\n${codeFrame}`;
               }
               if (cause) {
                 const causeIndented = prefixRemainingLines(cause, "  ");
-                this.root.querySelector(
-                  ".text",
-                ).innerHTML += `\n  [cause]: ${causeIndented}`;
+                this.root.querySelector(".text").innerHTML +=
+                  `\n  [cause]: ${causeIndented}`;
               }
             });
           }

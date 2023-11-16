@@ -203,9 +203,8 @@
           installingUI.style.display =
             readyState === "installing" ? "block" : "none";
           if (readyState === "installing") {
-            installingUI.querySelector(
-              "span",
-            ).innerHTML = `installing ${meta.version}...`;
+            installingUI.querySelector("span").innerHTML =
+              `installing ${meta.version}...`;
           }
         });
         const installedUI = document.querySelector("#installed");
@@ -213,9 +212,8 @@
           installedUI.style.display =
             readyState === "installed" ? "block" : "none";
           if (readyState === "installed") {
-            installedUI.querySelector(
-              "span",
-            ).innerHTML = `${meta.version} installed`;
+            installedUI.querySelector("span").innerHTML =
+              `${meta.version} installed`;
           }
         });
         const activating = document.querySelector("#activating");
@@ -223,9 +221,8 @@
           activating.style.display =
             readyState === "activating" ? "block" : "none";
           if (readyState === "activating") {
-            activating.querySelector(
-              "span",
-            ).innerHTML = `activating ${meta.version}...`;
+            activating.querySelector("span").innerHTML =
+              `activating ${meta.version}...`;
           }
         });
         const activated = document.querySelector("#activated");
@@ -233,9 +230,8 @@
           activated.style.display =
             readyState === "activated" ? "block" : "none";
           if (readyState === "activated") {
-            activated.querySelector(
-              "span",
-            ).innerHTML = `${meta.version} activated`;
+            activated.querySelector("span").innerHTML =
+              `${meta.version} activated`;
           }
         });
         const redundant = document.querySelector("#redundant");
@@ -243,9 +239,8 @@
           redundant.style.display =
             readyState === "redundant" ? "block" : "none";
           if (readyState === "redundant") {
-            redundant.querySelector(
-              "span",
-            ).innerHTML = `${meta.version} redundant`;
+            redundant.querySelector("span").innerHTML =
+              `${meta.version} redundant`;
           }
         });
 
@@ -316,9 +311,8 @@
           updateInstallingUI.style.display =
             update.readyState === "installing" ? "block" : "none";
           if (update.readyState === "installing") {
-            updateInstallingUI.querySelector(
-              "span",
-            ).innerHTML = `${update.meta.version} is installing...`;
+            updateInstallingUI.querySelector("span").innerHTML =
+              `${update.meta.version} is installing...`;
             updateResolveInstallButton.disabled =
               !update.meta.installInstrumentation;
             updateRejectInstallButton.disabled =
@@ -344,9 +338,8 @@
           if (update.readyState === "installed") {
             updateByRestartButton.disabled = !update.reloadRequired;
             updateNowButton.disabled = update.reloadRequired;
-            updateInstalledUI.querySelector(
-              "span",
-            ).innerHTML = `${update.meta.version} installed`;
+            updateInstalledUI.querySelector("span").innerHTML =
+              `${update.meta.version} installed`;
           }
         });
 
@@ -367,9 +360,8 @@
           updateActivating.style.display =
             update.readyState === "activating" ? "block" : "none";
           if (update.readyState === "activating") {
-            updateActivating.querySelector(
-              "span",
-            ).innerHTML = `activating ${update.meta.version}...`;
+            updateActivating.querySelector("span").innerHTML =
+              `activating ${update.meta.version}...`;
             updateResolveActivateButton.disabled =
               !update.meta.activateInstrumentation;
             updateRejectActivateButton.disabled =
@@ -382,9 +374,8 @@
           udpateActivated.style.display =
             update.readyState === "activated" ? "block" : "none";
           if (update.readyState === "activated") {
-            udpateActivated.querySelector(
-              "span",
-            ).innerHTML = `${update.meta.version} activated`;
+            udpateActivated.querySelector("span").innerHTML =
+              `${update.meta.version} activated`;
           }
         });
 
@@ -393,9 +384,8 @@
           udpateRedundant.style.display =
             update.readyState === "redundant" ? "block" : "none";
           if (update.readyState === "redundant") {
-            udpateRedundant.querySelector(
-              "span",
-            ).innerHTML = `${update.meta.version} redundant`;
+            udpateRedundant.querySelector("span").innerHTML =
+              `${update.meta.version} redundant`;
           }
         });
       }

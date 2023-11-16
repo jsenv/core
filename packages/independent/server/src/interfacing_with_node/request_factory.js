@@ -51,11 +51,11 @@ export const applyRedirectionToRequest = (
           baseUrl: request.url,
         })
       : pathname
-      ? getPropertiesFromPathname({
-          pathname,
-          baseUrl: request.url,
-        })
-      : {}),
+        ? getPropertiesFromPathname({
+            pathname,
+            baseUrl: request.url,
+          })
+        : {}),
     ...rest,
   };
 };

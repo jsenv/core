@@ -28,11 +28,11 @@ export const createUrlInfoTransformer = ({
           return sourcemapsSources(source, urlInfo);
         }
       : sourcemapsSources === "relative"
-      ? (source, urlInfo) => {
-          const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-          return sourceRelative || ".";
-        }
-      : null;
+        ? (source, urlInfo) => {
+            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+            return sourceRelative || ".";
+          }
+        : null;
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
     let { sources } = sourcemap;

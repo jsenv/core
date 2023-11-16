@@ -98,9 +98,8 @@ registration: {
   const installingUI = document.querySelector("#installing");
   swFacade.subscribe(({ readyState, meta }) => {
     if (readyState === "installing") {
-      installingUI.querySelector(
-        "span",
-      ).innerHTML = `installing ${meta.name}...`;
+      installingUI.querySelector("span").innerHTML =
+        `installing ${meta.name}...`;
       setReadyStateUI(installingUI);
     }
   });
@@ -114,9 +113,8 @@ registration: {
   const activatingUI = document.querySelector("#activating");
   swFacade.subscribe(({ readyState, meta }) => {
     if (readyState === "activating") {
-      activatingUI.querySelector(
-        "span",
-      ).innerHTML = `activating ${meta.name}...`;
+      activatingUI.querySelector("span").innerHTML =
+        `activating ${meta.name}...`;
       setReadyStateUI(activatingUI);
     }
   });
@@ -220,9 +218,8 @@ update: {
 
   swFacade.subscribe(({ update }) => {
     if (update.readyState === "installing") {
-      updateInstallingUI.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} is installing...`;
+      updateInstallingUI.querySelector("span").innerHTML =
+        `${update.meta.name} is installing...`;
       updateResolveInstallButton.disabled = !update.meta.installInstrumentation;
       updateRejectInstallButton.disabled = !update.meta.installInstrumentation;
       setUpdateReadyStateUI(updateInstallingUI);
@@ -245,9 +242,8 @@ update: {
     if (update.readyState === "installed") {
       updateByRestartButton.disabled = !update.reloadRequired;
       updateNowButton.disabled = update.reloadRequired;
-      updateInstalledUI.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} installed`;
+      updateInstalledUI.querySelector("span").innerHTML =
+        `${update.meta.name} installed`;
       setUpdateReadyStateUI(updateInstalledUI);
     }
   });
@@ -267,9 +263,8 @@ update: {
   };
   swFacade.subscribe(({ update }) => {
     if (update.readyState === "activating") {
-      updateActivatingUI.querySelector(
-        "span",
-      ).innerHTML = `activating ${update.meta.name}...`;
+      updateActivatingUI.querySelector("span").innerHTML =
+        `activating ${update.meta.name}...`;
       updateResolveActivateButton.disabled =
         !update.meta.activateInstrumentation;
       updateRejectActivateButton.disabled =
@@ -281,9 +276,8 @@ update: {
   const udpateActivatedUI = document.querySelector("#update_activated");
   swFacade.subscribe(({ update }) => {
     if (update.readyState === "activated") {
-      udpateActivatedUI.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} activated`;
+      udpateActivatedUI.querySelector("span").innerHTML =
+        `${update.meta.name} activated`;
       setUpdateReadyStateUI(udpateActivatedUI);
     }
   });
@@ -291,9 +285,8 @@ update: {
   const udpateRedundantUI = document.querySelector("#update_redundant");
   swFacade.subscribe(({ update }) => {
     if (update.readyState === "redundant") {
-      udpateRedundantUI.querySelector(
-        "span",
-      ).innerHTML = `${update.meta.name} redundant`;
+      udpateRedundantUI.querySelector("span").innerHTML =
+        `${update.meta.name} redundant`;
       setUpdateReadyStateUI(udpateRedundantUI);
     }
   });
