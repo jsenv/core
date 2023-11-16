@@ -15,11 +15,11 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "preact": "10.18.2"
+    "preact": "10.19.2"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.22.15",
-    "@babel/plugin-syntax-import-assertions": "7.22.5",
+    "@babel/eslint-parser": "7.23.3",
+    "@babel/plugin-syntax-import-assertions": "7.23.3",
     "@babel/plugin-transform-react-jsx": "7.22.15",
     "@jsenv/assert": "2.11.0",
     "@jsenv/core": "38.3.3",
@@ -35,6 +35,6 @@
     "eslint-plugin-react": "7.33.2",
     "open": "9.1.0",
     "playwright": "1.39.0",
-    "prettier": "3.0.3"
+    "prettier": "3.1.0"
   }
 }
