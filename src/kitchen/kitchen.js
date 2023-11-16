@@ -480,15 +480,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         });
       } catch (e) {
         urlInfo.error = e;
-        const errorInfo =
-          e.code === "PARSE_ERROR" && e.cause
-            ? `${e.cause.reasonCode}\n${e.traceMessage}`
-            : e.stack;
         if (
           urlInfo.isInline &&
           e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
           errorOnInlineContentCanSkipThrow(urlInfo)
         ) {
+          const errorInfo =
+            e.code === "PARSE_ERROR" && e.cause
+              ? `${e.cause.reasonCode}\n${e.traceMessage}`
+              : e.stack;
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
@@ -498,8 +498,6 @@ ${errorInfo}`,
           );
           return;
         }
-        logger.error(`Error while cooking ${urlInfo.type}:
-${errorInfo}`);
         throw e;
       }
     }

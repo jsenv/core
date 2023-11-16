@@ -22,19 +22,20 @@ const test = async (params) => {
       },
       ...params,
     });
+    const htmlServerUrl = `${devServer.origin}/main.html`;
+    const htmFileUrl = new URL("./main.html", sourceDirectoryUrl).href;
     const { pageErrors, consoleOutput } = await executeInBrowser({
-      url: `${devServer.origin}/main.html`,
+      url: htmlServerUrl,
       collectConsole: true,
       collectErrors: true,
     });
-    const htmFileUrl = new URL("./main.html", sourceDirectoryUrl).href;
     const actual = {
       consoleErrorOutput: consoleErrorCalls.join("\n"),
       pageErrors,
       consoleOutputRaw: consoleOutput.raw,
     };
     const expected = {
-      consoleErrorOutput: `Error while cooking html:
+      consoleErrorOutput: `Error while handling ${htmlServerUrl}:
 invalid-first-character-of-tag-name
 ${htmFileUrl}:4:12
   3 |   <body>
