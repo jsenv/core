@@ -5015,11 +5015,11 @@ const applyRedirectionToRequest = (
           baseUrl: request.url,
         })
       : pathname
-      ? getPropertiesFromPathname({
-          pathname,
-          baseUrl: request.url,
-        })
-      : {}),
+        ? getPropertiesFromPathname({
+            pathname,
+            baseUrl: request.url,
+          })
+        : {}),
     ...rest,
   };
 };
@@ -5602,13 +5602,13 @@ const applyCompositionForcingLowerCase = (
       firstKey: keyExistsIn(keyLowercased, firstObject)
         ? keyLowercased
         : keyExistsIn(key, firstObject)
-        ? key
-        : null,
+          ? key
+          : null,
       secondKey: keyExistsIn(keyLowercased, secondObject)
         ? keyLowercased
         : keyExistsIn(key, secondObject)
-        ? key
-        : null,
+          ? key
+          : null,
     });
   });
   return composed;
@@ -13156,11 +13156,11 @@ const createUrlInfoTransformer = ({
           return sourcemapsSources(source, urlInfo);
         }
       : sourcemapsSources === "relative"
-      ? (source, urlInfo) => {
-          const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
-          return sourceRelative || ".";
-        }
-      : null;
+        ? (source, urlInfo) => {
+            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+            return sourceRelative || ".";
+          }
+        : null;
 
   const normalizeSourcemap = (urlInfo, sourcemap) => {
     let { sources } = sourcemap;

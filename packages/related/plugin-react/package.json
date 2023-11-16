@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "1.4.22",
+  "version": "1.4.23",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,8 +26,8 @@
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.22.15",
     "@babel/plugin-transform-react-jsx-development": "7.22.5",
-    "@jsenv/ast": "6.0.0",
-    "@jsenv/plugin-commonjs": "2.6.9",
+    "@jsenv/ast": "6.0.1",
+    "@jsenv/plugin-commonjs": "2.6.10",
     "@jsenv/sourcemap": "1.2.4",
     "@jsenv/url-meta": "8.1.0",
     "react-refresh": "0.14.0"

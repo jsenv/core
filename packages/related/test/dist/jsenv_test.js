@@ -4417,8 +4417,8 @@ const prefixFirstAndIndentRemainingLines = ({
     result += line.length
       ? `\n${indentation}${line}`
       : trimLastLine && i === lines.length
-      ? ""
-      : `\n`;
+        ? ""
+        : `\n`;
   }
   return result;
 };
