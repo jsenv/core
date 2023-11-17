@@ -1,21 +1,21 @@
-import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, readdirSync, existsSync } from "node:fs";
+import process$1, { memoryUsage } from "node:process";
+import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 import { dirname } from "node:path";
-import process$1, { memoryUsage } from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import { createRequire } from "node:module";
+import { applyBabelPlugins } from "@jsenv/ast";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { createServer } from "node:net";
-import v8, { takeCoverage } from "node:v8";
-import { applyBabelPlugins } from "@jsenv/ast";
-import { runInNewContext } from "node:vm";
 import wrapAnsi from "wrap-ansi";
+import { runInNewContext } from "node:vm";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
@@ -2724,462 +2724,6 @@ const createTeardown = () => {
   };
 };
 
-const generateCoverageJsonFile = async ({
-  coverage,
-  coverageJsonFileUrl,
-  logger,
-}) => {
-  const coverageAsText = JSON.stringify(coverage, null, "  ");
-  logger.info(
-    `-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(
-      Buffer.byteLength(coverageAsText),
-    )})`,
-  );
-  await writeFile(coverageJsonFileUrl, coverageAsText);
-};
-
-const importWithRequire = createRequire(import.meta.url);
-
-const istanbulCoverageMapFromCoverage = (coverage) => {
-  const { createCoverageMap } = importWithRequire("istanbul-lib-coverage");
-
-  const coverageAdjusted = {};
-  Object.keys(coverage).forEach((key) => {
-    coverageAdjusted[key.slice(2)] = {
-      ...coverage[key],
-      path: key.slice(2),
-    };
-  });
-
-  const coverageMap = createCoverageMap(coverageAdjusted);
-  return coverageMap;
-};
-
-const generateCoverageHtmlDirectory = async (
-  coverage,
-  {
-    rootDirectoryUrl,
-    coverageHtmlDirectoryRelativeUrl,
-    coverageReportSkipEmpty,
-    coverageReportSkipFull,
-  },
-) => {
-  const libReport = importWithRequire("istanbul-lib-report");
-  const reports = importWithRequire("istanbul-reports");
-
-  const context = libReport.createContext({
-    dir: fileURLToPath(rootDirectoryUrl),
-    coverageMap: istanbulCoverageMapFromCoverage(coverage),
-    sourceFinder: (path) =>
-      readFileSync(new URL(path, rootDirectoryUrl), "utf8"),
-  });
-
-  const report = reports.create("html", {
-    skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull,
-    subdir: coverageHtmlDirectoryRelativeUrl,
-  });
-  report.execute(context);
-};
-
-const generateCoverageTextLog = (
-  coverage,
-  { coverageReportSkipEmpty, coverageReportSkipFull },
-) => {
-  const libReport = importWithRequire("istanbul-lib-report");
-  const reports = importWithRequire("istanbul-reports");
-
-  const context = libReport.createContext({
-    coverageMap: istanbulCoverageMapFromCoverage(coverage),
-  });
-  const report = reports.create("text", {
-    skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull,
-  });
-  report.execute(context);
-};
-
-const pingServer = async (url) => {
-  const server = createServer();
-  const { hostname, port } = new URL(url);
-
-  try {
-    await new Promise((resolve, reject) => {
-      server.on("error", reject);
-      server.on("listening", () => {
-        resolve();
-      });
-      server.listen(port, hostname);
-    });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return true;
-    }
-    if (error && error.code === "EACCES") {
-      return true;
-    }
-    throw error;
-  }
-  await new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
-  });
-  return false;
-};
-
-const startServerUsingCommand = async (
-  webServer,
-  { signal, allocatedMs, logger, teardown },
-) => {
-  const spawnedProcess = spawn(webServer.command, [], {
-    // On non-windows platforms, `detached: true` makes child process a leader of a new
-    // process group, making it possible to kill child process tree with `.kill(-pid)` command.
-    // @see https://nodejs.org/api/child_process.html#child_process_options_detached
-    detached: process.platform !== "win32",
-    stdio: ["pipe", "pipe", "pipe"],
-    shell: true,
-    cwd: webServer.cwd,
-  });
-  if (!spawnedProcess.pid) {
-    await new Promise((resolve, reject) => {
-      spawnedProcess.once("error", (error) => {
-        reject(new Error(`Failed to launch: ${error}`));
-      });
-    });
-  }
-
-  let errorReceived = false;
-  const errorPromise = new Promise((resolve, reject) => {
-    spawnedProcess.on("error", (e) => {
-      errorReceived = true;
-      reject(e);
-    });
-  });
-
-  // const stdout = readline.createInterface({ input: spawnedProcess.stdout });
-  // stdout.on("line", () => {
-  //   logger.debug(`[pid=${spawnedProcess.pid}][out] ${data}`);
-  // });
-  // const stderr = readline.createInterface({ input: spawnedProcess.stderr });
-  // stderr.on("line", (data) => {
-  //   logger.debug(`[pid=${spawnedProcess.pid}][err] ${data}`);
-  // });
-  let processClosed = false;
-  const closedPromise = new Promise((resolve) => {
-    spawnedProcess.once("exit", (exitCode, signal) => {
-      logger.debug(
-        `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
-      );
-      processClosed = true;
-      resolve();
-    });
-  });
-  const killProcess = async () => {
-    logger.debug(`[pid=${spawnedProcess.pid}] <kill>`);
-    if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
-      logger.debug(
-        `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
-      );
-      return;
-    }
-    logger.debug(`[pid=${spawnedProcess.pid}] <will force kill>`);
-    // Force kill the browser.
-    try {
-      if (process.platform === "win32") {
-        const taskkillProcess = spawnSync(
-          `taskkill /pid ${spawnedProcess.pid} /T /F`,
-          { shell: true },
-        );
-        const [stdout, stderr] = [
-          taskkillProcess.stdout.toString(),
-          taskkillProcess.stderr.toString(),
-        ];
-        if (stdout)
-          logger.debug(
-            `[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`,
-          );
-        if (stderr)
-          logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
-      } else {
-        process.kill(-spawnedProcess.pid, "SIGKILL");
-      }
-    } catch (e) {
-      logger.info(
-        `[pid=${spawnedProcess.pid}] exception while trying to kill process: ${e}`,
-      );
-      // the process might have already stopped
-    }
-    await closedPromise;
-  };
-
-  const startOperation = Abort.startOperation();
-  startOperation.addAbortSignal(signal);
-  const timeoutAbortSource = startOperation.timeout(allocatedMs);
-  startOperation.addAbortCallback(killProcess);
-  teardown.addCallback(killProcess);
-
-  const startedPromise = (async () => {
-    const logScale = [100, 250, 500];
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      if (errorReceived) {
-        break;
-      }
-      const connected = await pingServer(webServer.origin);
-      if (connected) {
-        break;
-      }
-      startOperation.throwIfAborted();
-      const delay = logScale.shift() || 1000;
-      logger.debug(`Waiting ${delay}ms`);
-      await new Promise((x) => setTimeout(x, delay));
-    }
-  })();
-
-  try {
-    await Promise.race([errorPromise, startedPromise]);
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      if (timeoutAbortSource.signal.aborted) {
-        // aborted by timeout
-        throw new Error(
-          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
-        );
-      }
-      if (signal.aborted) {
-        // aborted from outside
-        return;
-      }
-    }
-    throw e;
-  } finally {
-    await startOperation.end();
-  }
-};
-
-const startServerUsingModuleUrl = async (webServer, params) => {
-  if (!existsSync(new URL(webServer.moduleUrl))) {
-    throw new Error(`"${webServer.moduleUrl}" does not lead to a file`);
-  }
-  return startServerUsingCommand(
-    {
-      ...webServer,
-      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
-    },
-    params,
-  );
-};
-
-const basicFetch = async (
-  url,
-  { rejectUnauthorized = true, method = "GET", headers = {} } = {},
-) => {
-  let requestModule;
-  if (url.startsWith("http:")) {
-    requestModule = await import("node:http");
-  } else {
-    requestModule = await import("node:https");
-  }
-  const { request } = requestModule;
-
-  const urlObject = new URL(url);
-
-  return new Promise((resolve, reject) => {
-    const req = request({
-      rejectUnauthorized,
-      hostname: urlObject.hostname,
-      port: urlObject.port,
-      path: urlObject.pathname,
-      method,
-      headers,
-    });
-    req.on("response", (response) => {
-      resolve({
-        status: response.statusCode,
-        headers: response.headers,
-        json: () => {
-          req.setTimeout(0);
-          req.destroy();
-          return new Promise((resolve) => {
-            if (response.headers["content-type"] !== "application/json") {
-              console.warn("not json");
-            }
-            let responseBody = "";
-            response.setEncoding("utf8");
-            response.on("data", (chunk) => {
-              responseBody += chunk;
-            });
-            response.on("end", () => {
-              resolve(JSON.parse(responseBody));
-            });
-            response.on("error", (e) => {
-              reject(e);
-            });
-          });
-        },
-      });
-    });
-    req.on("error", reject);
-    req.end();
-  });
-};
-
-const assertAndNormalizeWebServer = async (
-  webServer,
-  { signal, logger, teardown },
-) => {
-  if (!webServer) {
-    throw new TypeError(
-      `webServer is required when running tests on browser(s)`,
-    );
-  }
-  const unexpectedParamNames = Object.keys(webServer).filter((key) => {
-    return ![
-      "origin",
-      "moduleUrl",
-      "command",
-      "cwd",
-      "rootDirectoryUrl",
-    ].includes(key);
-  });
-  if (unexpectedParamNames.length > 0) {
-    throw new TypeError(
-      `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
-    );
-  }
-  if (typeof webServer.origin !== "string") {
-    throw new TypeError(
-      `webServer.origin must be a string, got ${webServer.origin}`,
-    );
-  }
-  await ensureWebServerIsStarted(webServer, {
-    signal,
-    teardown,
-    logger,
-  });
-  const { headers } = await basicFetch(webServer.origin, {
-    method: "GET",
-    rejectUnauthorized: false,
-    headers: {
-      "x-server-inspect": "1",
-    },
-  });
-  if (String(headers["server"]).includes("jsenv_dev_server")) {
-    webServer.isJsenvDevServer = true;
-    const { json } = await basicFetch(`${webServer.origin}/__params__.json`, {
-      rejectUnauthorized: false,
-    });
-    if (webServer.rootDirectoryUrl === undefined) {
-      const jsenvDevServerParams = await json();
-      webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
-    } else {
-      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-        webServer.rootDirectoryUrl,
-        "webServer.rootDirectoryUrl",
-      );
-    }
-  } else {
-    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      webServer.rootDirectoryUrl,
-      "webServer.rootDirectoryUrl",
-    );
-  }
-};
-
-const ensureWebServerIsStarted = async (
-  webServer,
-  { signal, teardown, logger, allocatedMs = 5_000 },
-) => {
-  const aServerIsListening = await pingServer(webServer.origin);
-  if (aServerIsListening) {
-    return;
-  }
-  if (webServer.moduleUrl) {
-    await startServerUsingModuleUrl(webServer, {
-      signal,
-      allocatedMs,
-      teardown,
-      logger,
-    });
-    return;
-  }
-  if (webServer.command) {
-    await startServerUsingCommand(webServer, {
-      signal,
-      allocatedMs,
-      teardown,
-      logger,
-    });
-    return;
-  }
-  throw new TypeError(
-    `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
-  );
-};
-
-const executionStepsFromTestPlan = async ({
-  signal,
-  rootDirectoryUrl,
-  testPlan,
-}) => {
-  try {
-    const fileResultArray = await collectFiles({
-      signal,
-      directoryUrl: rootDirectoryUrl,
-      associations: { testPlan },
-      predicate: ({ testPlan }) => testPlan,
-    });
-    const executionSteps = [];
-    fileResultArray.forEach(({ relativeUrl, meta }) => {
-      const fileExecutionSteps = generateFileExecutionSteps({
-        fileRelativeUrl: relativeUrl,
-        filePlan: meta.testPlan,
-      });
-      executionSteps.push(...fileExecutionSteps);
-    });
-    return executionSteps;
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      return {
-        aborted: true,
-        planSummary: {},
-        planReport: {},
-        planCoverage: null,
-      };
-    }
-    throw e;
-  }
-};
-
-const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
-  const fileExecutionSteps = [];
-  Object.keys(filePlan).forEach((executionName) => {
-    const stepConfig = filePlan[executionName];
-    if (stepConfig === null || stepConfig === undefined) {
-      return;
-    }
-    if (typeof stepConfig !== "object") {
-      throw new TypeError(
-        createDetailedMessage(
-          `found unexpected value in plan, they must be object`,
-          {
-            ["file relative path"]: fileRelativeUrl,
-            ["execution name"]: executionName,
-            ["value"]: stepConfig,
-          },
-        ),
-      );
-    }
-    fileExecutionSteps.push({
-      executionName,
-      fileRelativeUrl,
-      ...stepConfig,
-    });
-  });
-  return fileExecutionSteps;
-};
-
 const readNodeV8CoverageDirectory = async ({
   logger,
   signal,
@@ -3260,6 +2804,8 @@ const readNodeV8CoverageDirectory = async ({
     await operation.end();
   }
 };
+
+const importWithRequire = createRequire(import.meta.url);
 
 const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   if (secondV8Coverage.result.length === 0) {
@@ -3793,169 +3339,458 @@ const getCoverageFromReport = async ({ signal, report, onMissing }) => {
 
 const isV8Coverage = (coverage) => Boolean(coverage.result);
 
-/*
- * Export a function capable to run a file on a runtime.
- *
- * - Used internally by "executeTestPlan" part of the documented API
- * - Used internally by "execute" an advanced API not documented
- * - logs generated during file execution can be collected
- * - logs generated during file execution can be mirrored (re-logged to the console)
- * - File is given allocatedMs to complete
- * - Errors are collected
- * - File execution result is returned, it contains status/errors/namespace/consoleCalls
- */
-
-
-const run = async ({
-  signal = new AbortController().signal,
+const generateCoverageJsonFile = async ({
+  coverage,
+  coverageJsonFileUrl,
   logger,
-  allocatedMs,
-  keepRunning = false,
-  mirrorConsole = false,
-  collectConsole = false,
-  coverageEnabled = false,
-  coverageTempDirectoryUrl,
-  collectPerformance = false,
-  runtime,
-  runtimeParams,
 }) => {
-  const result = {
-    status: "pending",
-    errors: [],
-    namespace: null,
-  };
-  const callbacks = [];
-
-  const onConsoleRef = { current: () => {} };
-  const stopSignal = { notify: () => {} };
-  const runtimeLabel = `${runtime.name}/${runtime.version}`;
-
-  const runOperation = Abort.startOperation();
-  runOperation.addAbortSignal(signal);
-  let timeoutAbortSource;
-  if (
-    // ideally we would rather log than the timeout is ignored
-    // when keepRunning is true
-    !keepRunning &&
-    typeof allocatedMs === "number" &&
-    allocatedMs !== Infinity
-  ) {
-    timeoutAbortSource = runOperation.timeout(allocatedMs);
-  }
-  const consoleCalls = [];
-  onConsoleRef.current = ({ type, text }) => {
-    if (mirrorConsole) {
-      if (type === "error") {
-        process.stderr.write(text);
-      } else {
-        process.stdout.write(text);
-      }
-    }
-    if (collectConsole) {
-      consoleCalls.push({ type, text });
-    }
-  };
-  if (collectConsole) {
-    result.consoleCalls = consoleCalls;
-  }
-
-  // we do not keep coverage in memory, it can grow very big
-  // instead we store it on the filesystem
-  // and they can be read later at "coverageFileUrl"
-  let coverageFileUrl;
-  if (coverageEnabled) {
-    coverageFileUrl = new URL(
-      `./${runtime.name}/${crypto.randomUUID()}.json`,
-      coverageTempDirectoryUrl,
-    ).href;
-    await ensureParentDirectories(coverageFileUrl);
-    if (coverageEnabled) {
-      result.coverageFileUrl = coverageFileUrl;
-      // written within the child_process/worker_thread or during runtime.run()
-      // for browsers
-      // (because it takes time to serialize and transfer the coverage object)
-    }
-  }
-
-  const startMs = Date.now();
-  callbacks.push(() => {
-    result.duration = Date.now() - startMs;
-  });
-
-  try {
-    logger.debug(`run() ${runtimeLabel}`);
-    runOperation.throwIfAborted();
-    const winnerPromise = new Promise((resolve) => {
-      raceCallbacks(
-        {
-          aborted: (cb) => {
-            runOperation.signal.addEventListener("abort", cb);
-            return () => {
-              runOperation.signal.removeEventListener("abort", cb);
-            };
-          },
-          runned: async (cb) => {
-            try {
-              const runResult = await runtime.run({
-                signal: runOperation.signal,
-                logger,
-                ...runtimeParams,
-                collectConsole,
-                collectPerformance,
-                coverageFileUrl,
-                keepRunning,
-                stopSignal,
-                onConsole: (log) => onConsoleRef.current(log),
-              });
-              cb(runResult);
-            } catch (e) {
-              cb({
-                status: "failed",
-                errors: [e],
-              });
-            }
-          },
-        },
-        resolve,
-      );
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      runOperation.throwIfAborted();
-    }
-    const { status, namespace, errors, performance } = winner.data;
-    result.status = status;
-    result.errors.push(...errors);
-    result.namespace = namespace;
-    if (collectPerformance) {
-      result.performance = performance;
-    }
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
-        result.status = "timedout";
-      } else {
-        result.status = "aborted";
-      }
-    } else {
-      result.status = "failed";
-      result.errors.push(e);
-    }
-  } finally {
-    await runOperation.end();
-  }
-
-  callbacks.forEach((callback) => {
-    callback();
-  });
-  return result;
+  const coverageAsText = JSON.stringify(coverage, null, "  ");
+  logger.info(
+    `-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(
+      Buffer.byteLength(coverageAsText),
+    )})`,
+  );
+  await writeFile(coverageJsonFileUrl, coverageAsText);
 };
 
-const ensureGlobalGc = () => {
-  if (!global.gc) {
-    v8.setFlagsFromString("--expose_gc");
-    global.gc = runInNewContext("gc");
+const istanbulCoverageMapFromCoverage = (coverage) => {
+  const { createCoverageMap } = importWithRequire("istanbul-lib-coverage");
+
+  const coverageAdjusted = {};
+  Object.keys(coverage).forEach((key) => {
+    coverageAdjusted[key.slice(2)] = {
+      ...coverage[key],
+      path: key.slice(2),
+    };
+  });
+
+  const coverageMap = createCoverageMap(coverageAdjusted);
+  return coverageMap;
+};
+
+const generateCoverageHtmlDirectory = async (
+  coverage,
+  {
+    rootDirectoryUrl,
+    coverageHtmlDirectoryRelativeUrl,
+    coverageReportSkipEmpty,
+    coverageReportSkipFull,
+  },
+) => {
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
+
+  const context = libReport.createContext({
+    dir: fileURLToPath(rootDirectoryUrl),
+    coverageMap: istanbulCoverageMapFromCoverage(coverage),
+    sourceFinder: (path) =>
+      readFileSync(new URL(path, rootDirectoryUrl), "utf8"),
+  });
+
+  const report = reports.create("html", {
+    skipEmpty: coverageReportSkipEmpty,
+    skipFull: coverageReportSkipFull,
+    subdir: coverageHtmlDirectoryRelativeUrl,
+  });
+  report.execute(context);
+};
+
+const generateCoverageTextLog = (
+  coverage,
+  { coverageReportSkipEmpty, coverageReportSkipFull },
+) => {
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
+
+  const context = libReport.createContext({
+    coverageMap: istanbulCoverageMapFromCoverage(coverage),
+  });
+  const report = reports.create("text", {
+    skipEmpty: coverageReportSkipEmpty,
+    skipFull: coverageReportSkipFull,
+  });
+  report.execute(context);
+};
+
+const pingServer = async (url) => {
+  const server = createServer();
+  const { hostname, port } = new URL(url);
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.on("error", reject);
+      server.on("listening", () => {
+        resolve();
+      });
+      server.listen(port, hostname);
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return true;
+    }
+    if (error && error.code === "EACCES") {
+      return true;
+    }
+    throw error;
   }
+  await new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+  return false;
+};
+
+const startServerUsingCommand = async (
+  webServer,
+  { signal, allocatedMs, logger, teardown },
+) => {
+  const spawnedProcess = spawn(webServer.command, [], {
+    // On non-windows platforms, `detached: true` makes child process a leader of a new
+    // process group, making it possible to kill child process tree with `.kill(-pid)` command.
+    // @see https://nodejs.org/api/child_process.html#child_process_options_detached
+    detached: process.platform !== "win32",
+    stdio: ["pipe", "pipe", "pipe"],
+    shell: true,
+    cwd: webServer.cwd,
+  });
+  if (!spawnedProcess.pid) {
+    await new Promise((resolve, reject) => {
+      spawnedProcess.once("error", (error) => {
+        reject(new Error(`Failed to launch: ${error}`));
+      });
+    });
+  }
+
+  let errorReceived = false;
+  const errorPromise = new Promise((resolve, reject) => {
+    spawnedProcess.on("error", (e) => {
+      errorReceived = true;
+      reject(e);
+    });
+  });
+
+  // const stdout = readline.createInterface({ input: spawnedProcess.stdout });
+  // stdout.on("line", () => {
+  //   logger.debug(`[pid=${spawnedProcess.pid}][out] ${data}`);
+  // });
+  // const stderr = readline.createInterface({ input: spawnedProcess.stderr });
+  // stderr.on("line", (data) => {
+  //   logger.debug(`[pid=${spawnedProcess.pid}][err] ${data}`);
+  // });
+  let processClosed = false;
+  const closedPromise = new Promise((resolve) => {
+    spawnedProcess.once("exit", (exitCode, signal) => {
+      logger.debug(
+        `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
+      );
+      processClosed = true;
+      resolve();
+    });
+  });
+  const killProcess = async () => {
+    logger.debug(`[pid=${spawnedProcess.pid}] <kill>`);
+    if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
+      logger.debug(
+        `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
+      );
+      return;
+    }
+    logger.debug(`[pid=${spawnedProcess.pid}] <will force kill>`);
+    // Force kill the browser.
+    try {
+      if (process.platform === "win32") {
+        const taskkillProcess = spawnSync(
+          `taskkill /pid ${spawnedProcess.pid} /T /F`,
+          { shell: true },
+        );
+        const [stdout, stderr] = [
+          taskkillProcess.stdout.toString(),
+          taskkillProcess.stderr.toString(),
+        ];
+        if (stdout)
+          logger.debug(
+            `[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`,
+          );
+        if (stderr)
+          logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
+      } else {
+        process.kill(-spawnedProcess.pid, "SIGKILL");
+      }
+    } catch (e) {
+      logger.info(
+        `[pid=${spawnedProcess.pid}] exception while trying to kill process: ${e}`,
+      );
+      // the process might have already stopped
+    }
+    await closedPromise;
+  };
+
+  const startOperation = Abort.startOperation();
+  startOperation.addAbortSignal(signal);
+  const timeoutAbortSource = startOperation.timeout(allocatedMs);
+  startOperation.addAbortCallback(killProcess);
+  teardown.addCallback(killProcess);
+
+  const startedPromise = (async () => {
+    const logScale = [100, 250, 500];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (errorReceived) {
+        break;
+      }
+      const connected = await pingServer(webServer.origin);
+      if (connected) {
+        break;
+      }
+      startOperation.throwIfAborted();
+      const delay = logScale.shift() || 1000;
+      logger.debug(`Waiting ${delay}ms`);
+      await new Promise((x) => setTimeout(x, delay));
+    }
+  })();
+
+  try {
+    await Promise.race([errorPromise, startedPromise]);
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource.signal.aborted) {
+        // aborted by timeout
+        throw new Error(
+          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
+        );
+      }
+      if (signal.aborted) {
+        // aborted from outside
+        return;
+      }
+    }
+    throw e;
+  } finally {
+    await startOperation.end();
+  }
+};
+
+const startServerUsingModuleUrl = async (webServer, params) => {
+  if (!existsSync(new URL(webServer.moduleUrl))) {
+    throw new Error(`"${webServer.moduleUrl}" does not lead to a file`);
+  }
+  return startServerUsingCommand(
+    {
+      ...webServer,
+      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
+    },
+    params,
+  );
+};
+
+const basicFetch = async (
+  url,
+  { rejectUnauthorized = true, method = "GET", headers = {} } = {},
+) => {
+  let requestModule;
+  if (url.startsWith("http:")) {
+    requestModule = await import("node:http");
+  } else {
+    requestModule = await import("node:https");
+  }
+  const { request } = requestModule;
+
+  const urlObject = new URL(url);
+
+  return new Promise((resolve, reject) => {
+    const req = request({
+      rejectUnauthorized,
+      hostname: urlObject.hostname,
+      port: urlObject.port,
+      path: urlObject.pathname,
+      method,
+      headers,
+    });
+    req.on("response", (response) => {
+      resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        json: () => {
+          req.setTimeout(0);
+          req.destroy();
+          return new Promise((resolve) => {
+            if (response.headers["content-type"] !== "application/json") {
+              console.warn("not json");
+            }
+            let responseBody = "";
+            response.setEncoding("utf8");
+            response.on("data", (chunk) => {
+              responseBody += chunk;
+            });
+            response.on("end", () => {
+              resolve(JSON.parse(responseBody));
+            });
+            response.on("error", (e) => {
+              reject(e);
+            });
+          });
+        },
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+};
+
+const assertAndNormalizeWebServer = async (
+  webServer,
+  { signal, logger, teardown },
+) => {
+  if (!webServer) {
+    throw new TypeError(
+      `webServer is required when running tests on browser(s)`,
+    );
+  }
+  const unexpectedParamNames = Object.keys(webServer).filter((key) => {
+    return ![
+      "origin",
+      "moduleUrl",
+      "command",
+      "cwd",
+      "rootDirectoryUrl",
+    ].includes(key);
+  });
+  if (unexpectedParamNames.length > 0) {
+    throw new TypeError(
+      `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
+    );
+  }
+  if (typeof webServer.origin !== "string") {
+    throw new TypeError(
+      `webServer.origin must be a string, got ${webServer.origin}`,
+    );
+  }
+  await ensureWebServerIsStarted(webServer, {
+    signal,
+    teardown,
+    logger,
+  });
+  const { headers } = await basicFetch(webServer.origin, {
+    method: "GET",
+    rejectUnauthorized: false,
+    headers: {
+      "x-server-inspect": "1",
+    },
+  });
+  if (String(headers["server"]).includes("jsenv_dev_server")) {
+    webServer.isJsenvDevServer = true;
+    const { json } = await basicFetch(`${webServer.origin}/__params__.json`, {
+      rejectUnauthorized: false,
+    });
+    if (webServer.rootDirectoryUrl === undefined) {
+      const jsenvDevServerParams = await json();
+      webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
+    } else {
+      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        webServer.rootDirectoryUrl,
+        "webServer.rootDirectoryUrl",
+      );
+    }
+  } else {
+    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      webServer.rootDirectoryUrl,
+      "webServer.rootDirectoryUrl",
+    );
+  }
+};
+
+const ensureWebServerIsStarted = async (
+  webServer,
+  { signal, teardown, logger, allocatedMs = 5_000 },
+) => {
+  const aServerIsListening = await pingServer(webServer.origin);
+  if (aServerIsListening) {
+    return;
+  }
+  if (webServer.moduleUrl) {
+    await startServerUsingModuleUrl(webServer, {
+      signal,
+      allocatedMs,
+      teardown,
+      logger,
+    });
+    return;
+  }
+  if (webServer.command) {
+    await startServerUsingCommand(webServer, {
+      signal,
+      allocatedMs,
+      teardown,
+      logger,
+    });
+    return;
+  }
+  throw new TypeError(
+    `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
+  );
+};
+
+const executionStepsFromTestPlan = async ({
+  signal,
+  rootDirectoryUrl,
+  testPlan,
+}) => {
+  try {
+    const fileResultArray = await collectFiles({
+      signal,
+      directoryUrl: rootDirectoryUrl,
+      associations: { testPlan },
+      predicate: ({ testPlan }) => testPlan,
+    });
+    const executionSteps = [];
+    fileResultArray.forEach(({ relativeUrl, meta }) => {
+      const fileExecutionSteps = generateFileExecutionSteps({
+        fileRelativeUrl: relativeUrl,
+        filePlan: meta.testPlan,
+      });
+      executionSteps.push(...fileExecutionSteps);
+    });
+    return executionSteps;
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      return {
+        aborted: true,
+        planSummary: {},
+        planReport: {},
+        planCoverage: null,
+      };
+    }
+    throw e;
+  }
+};
+
+const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
+  const fileExecutionSteps = [];
+  Object.keys(filePlan).forEach((executionName) => {
+    const stepConfig = filePlan[executionName];
+    if (stepConfig === null || stepConfig === undefined) {
+      return;
+    }
+    if (typeof stepConfig !== "object") {
+      throw new TypeError(
+        createDetailedMessage(
+          `found unexpected value in plan, they must be object`,
+          {
+            ["file relative path"]: fileRelativeUrl,
+            ["execution name"]: executionName,
+            ["value"]: stepConfig,
+          },
+        ),
+      );
+    }
+    fileExecutionSteps.push({
+      executionName,
+      fileRelativeUrl,
+      ...stepConfig,
+    });
+  });
+  return fileExecutionSteps;
 };
 
 const EXECUTION_COLORS = {
@@ -4452,402 +4287,6 @@ const formatConsoleSummary = (repartition) => {
   return `console (${parts.join(" ")})`;
 };
 
-const executeSteps = async (
-  executionSteps,
-  {
-    signal,
-    teardown,
-    logger,
-    logRefresh,
-    logRuntime,
-    logEachDuration,
-    logSummary,
-    logTimeUsage,
-    logMemoryHeapUsage,
-    logFileRelativeUrl,
-    logMergeForCompletedExecutions,
-    logShortForCompletedExecutions,
-    rootDirectoryUrl,
-    webServer,
-
-    keepRunning,
-    defaultMsAllocatedPerExecution,
-    maxExecutionsInParallel,
-    failFast,
-    gcBetweenExecutions,
-    cooldownBetweenExecutions,
-
-    coverageEnabled,
-    coverageConfig,
-    coverageIncludeMissing,
-    coverageMethodForBrowsers,
-    coverageMethodForNodeJs,
-    coverageV8ConflictWarning,
-    coverageTempDirectoryUrl,
-
-    beforeExecutionCallback = () => {},
-    afterExecutionCallback = () => {},
-  } = {},
-) => {
-  executionSteps = executionSteps.filter(
-    (executionStep) => !executionStep.runtime?.disabled,
-  );
-
-  const executePlanReturnValue = {};
-  const report = {};
-  const callbacks = [];
-
-  const multipleExecutionsOperation = Abort.startOperation();
-  multipleExecutionsOperation.addAbortSignal(signal);
-  const failFastAbortController = new AbortController();
-  if (failFast) {
-    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
-  }
-
-  try {
-    if (gcBetweenExecutions) {
-      ensureGlobalGc();
-    }
-
-    if (coverageEnabled) {
-      // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverageTempDirectoryUrl);
-      callbacks.push(async () => {
-        if (multipleExecutionsOperation.signal.aborted) {
-          // don't try to do the coverage stuff
-          return;
-        }
-        try {
-          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
-            takeCoverage();
-            // conceptually we don't need coverage anymore so it would be
-            // good to call v8.stopCoverage()
-            // but it logs a strange message about "result is not an object"
-          }
-          const planCoverage = await reportToCoverage(report, {
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageMethodForNodeJs,
-            coverageV8ConflictWarning,
-          });
-          executePlanReturnValue.planCoverage = planCoverage;
-        } catch (e) {
-          if (Abort.isAbortError(e)) {
-            return;
-          }
-          throw e;
-        }
-      });
-    }
-
-    const runtimeParams = {
-      rootDirectoryUrl,
-      webServer,
-
-      coverageEnabled,
-      coverageConfig,
-      coverageMethodForBrowsers,
-      coverageMethodForNodeJs,
-      isTestPlan: true,
-      teardown,
-    };
-
-    if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
-      logMergeForCompletedExecutions = false;
-      logger.debug(
-        `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
-      );
-    }
-    const debugLogsEnabled = logger.levels.debug;
-    const executionLogsEnabled = logger.levels.info;
-    const executionSpinner =
-      logRefresh &&
-      !debugLogsEnabled &&
-      executionLogsEnabled &&
-      process.stdout.isTTY &&
-      // if there is an error during execution npm will mess up the output
-      // (happens when npm runs several command in a workspace)
-      // so we enable spinner only when !process.exitCode (no error so far)
-      process.exitCode !== 1;
-
-    const startMs = Date.now();
-    let rawOutput = "";
-    let executionLog = createLog({ newLine: "" });
-    const counters = {
-      total: executionSteps.length,
-      aborted: 0,
-      timedout: 0,
-      failed: 0,
-      completed: 0,
-      done: 0,
-    };
-    await executeInParallel({
-      multipleExecutionsOperation,
-      maxExecutionsInParallel,
-      cooldownBetweenExecutions,
-      executionSteps,
-      start: async (paramsFromStep) => {
-        const executionIndex = executionSteps.indexOf(paramsFromStep);
-        const { executionName, fileRelativeUrl, runtime } = paramsFromStep;
-        const runtimeType = runtime.type;
-        const runtimeName = runtime.name;
-        const runtimeVersion = runtime.version;
-        const executionParams = {
-          measurePerformance: false,
-          collectPerformance: false,
-          collectConsole: true,
-          allocatedMs: defaultMsAllocatedPerExecution,
-          ...paramsFromStep,
-          runtimeParams: {
-            fileRelativeUrl,
-            ...paramsFromStep.runtimeParams,
-          },
-        };
-        const beforeExecutionInfo = {
-          fileRelativeUrl,
-          runtimeType,
-          runtimeName,
-          runtimeVersion,
-          executionIndex,
-          executionParams,
-          startMs: Date.now(),
-          executionResult: {
-            status: "executing",
-          },
-          counters,
-          timeEllapsed: Date.now() - startMs,
-          memoryHeap: memoryUsage().heapUsed,
-        };
-        if (typeof executionParams.allocatedMs === "function") {
-          executionParams.allocatedMs =
-            executionParams.allocatedMs(beforeExecutionInfo);
-        }
-        let spinner;
-        if (executionSpinner) {
-          spinner = startSpinner({
-            log: executionLog,
-            render: () => {
-              return createExecutionLog(beforeExecutionInfo, {
-                logRuntime,
-                logEachDuration,
-                logTimeUsage,
-                logMemoryHeapUsage,
-              });
-            },
-          });
-        }
-        beforeExecutionCallback(beforeExecutionInfo);
-
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
-        let executionResult;
-        if (existsSync(new URL(fileUrl))) {
-          executionResult = await run({
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            allocatedMs: executionParams.allocatedMs,
-            keepRunning,
-            mirrorConsole: false, // file are executed in parallel, log would be a mess to read
-            collectConsole: executionParams.collectConsole,
-            coverageEnabled,
-            coverageTempDirectoryUrl,
-            runtime: executionParams.runtime,
-            runtimeParams: {
-              ...runtimeParams,
-              ...executionParams.runtimeParams,
-            },
-          });
-        } else {
-          executionResult = {
-            status: "failed",
-            errors: [
-              new Error(
-                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
-              ),
-            ],
-          };
-        }
-        counters.done++;
-        const fileReport = report[fileRelativeUrl];
-        if (fileReport) {
-          fileReport[executionName] = executionResult;
-        } else {
-          report[fileRelativeUrl] = {
-            [executionName]: executionResult,
-          };
-        }
-
-        const afterExecutionInfo = {
-          ...beforeExecutionInfo,
-          runtimeVersion: runtime.version,
-          endMs: Date.now(),
-          executionResult,
-        };
-
-        if (executionResult.status === "aborted") {
-          counters.aborted++;
-        } else if (executionResult.status === "timedout") {
-          counters.timedout++;
-        } else if (executionResult.status === "failed") {
-          counters.failed++;
-        } else if (executionResult.status === "completed") {
-          counters.completed++;
-        }
-        if (gcBetweenExecutions) {
-          global.gc();
-        }
-        if (executionLogsEnabled) {
-          const log = createExecutionLog(afterExecutionInfo, {
-            logShortForCompletedExecutions,
-            logRuntime,
-            logEachDuration,
-            ...(logTimeUsage
-              ? {
-                  timeEllapsed: Date.now() - startMs,
-                }
-              : {}),
-            ...(logMemoryHeapUsage
-              ? { memoryHeap: memoryUsage().heapUsed }
-              : {}),
-          });
-          // replace spinner with this execution result
-          if (spinner) spinner.stop();
-          executionLog.write(log);
-          rawOutput += stripAnsi(log);
-
-          const canOverwriteLog = canOverwriteLogGetter({
-            logMergeForCompletedExecutions,
-            executionResult,
-          });
-          if (canOverwriteLog) {
-            // nothing to do, we reuse the current executionLog object
-          } else {
-            executionLog.destroy();
-            executionLog = createLog({ newLine: "" });
-          }
-        }
-        afterExecutionCallback(afterExecutionInfo);
-        const isLastExecutionLog = executionIndex === executionSteps.length - 1;
-        const cancelRemaining =
-          failFast &&
-          executionResult.status !== "completed" &&
-          counters.done < counters.total;
-        if (isLastExecutionLog && logger.levels.info) {
-          executionLog.write("\n");
-        }
-
-        if (cancelRemaining) {
-          logger.info(`"failFast" enabled -> cancel remaining executions`);
-          failFastAbortController.abort();
-        }
-      },
-    });
-    if (!keepRunning) {
-      logger.debug("trigger test plan teardown");
-      await teardown.trigger();
-    }
-
-    counters.cancelled = counters.total - counters.done;
-    const summary = {
-      counters,
-      // when execution is aborted, the remaining executions are "cancelled"
-      duration: Date.now() - startMs,
-    };
-    if (logSummary) {
-      const summaryLog = formatSummaryLog(summary);
-      rawOutput += stripAnsi(summaryLog);
-      logger.info(summaryLog);
-    }
-    if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
-      writeFileSync(logFileUrl, rawOutput);
-      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
-    }
-    executePlanReturnValue.aborted = multipleExecutionsOperation.signal.aborted;
-    executePlanReturnValue.planSummary = summary;
-    executePlanReturnValue.planReport = report;
-    for (const callback of callbacks) {
-      await callback();
-    }
-    return executePlanReturnValue;
-  } finally {
-    await multipleExecutionsOperation.end();
-  }
-};
-
-const canOverwriteLogGetter = ({
-  logMergeForCompletedExecutions,
-  executionResult,
-}) => {
-  if (!logMergeForCompletedExecutions) {
-    return false;
-  }
-  if (executionResult.status === "aborted") {
-    return true;
-  }
-  if (executionResult.status !== "completed") {
-    return false;
-  }
-  const { consoleCalls = [] } = executionResult;
-  if (consoleCalls.length > 0) {
-    return false;
-  }
-  return true;
-};
-
-const executeInParallel = async ({
-  multipleExecutionsOperation,
-  maxExecutionsInParallel,
-  cooldownBetweenExecutions,
-  executionSteps,
-  start,
-}) => {
-  const executionResults = [];
-  let progressionIndex = 0;
-  let remainingExecutionCount = executionSteps.length;
-
-  const nextChunk = async () => {
-    if (multipleExecutionsOperation.signal.aborted) {
-      return;
-    }
-    const outputPromiseArray = [];
-    while (
-      remainingExecutionCount > 0 &&
-      outputPromiseArray.length < maxExecutionsInParallel
-    ) {
-      remainingExecutionCount--;
-      const outputPromise = executeOne(progressionIndex);
-      progressionIndex++;
-      outputPromiseArray.push(outputPromise);
-    }
-    if (outputPromiseArray.length) {
-      await Promise.all(outputPromiseArray);
-      if (remainingExecutionCount > 0) {
-        await nextChunk();
-      }
-    }
-  };
-
-  const executeOne = async (index) => {
-    const input = executionSteps[index];
-    const output = await start(input);
-    if (!multipleExecutionsOperation.signal.aborted) {
-      executionResults[index] = output;
-    }
-    if (cooldownBetweenExecutions) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, cooldownBetweenExecutions),
-      );
-    }
-  };
-
-  await nextChunk();
-
-  return executionResults;
-};
-
 const githubAnnotationFromError = (
   error,
   { rootDirectoryUrl, executionInfo },
@@ -4979,6 +4418,171 @@ const replaceUrls = (source, replace) => {
   });
 };
 
+/*
+ * Export a function capable to run a file on a runtime.
+ *
+ * - Used internally by "executeTestPlan" part of the documented API
+ * - Used internally by "execute" an advanced API not documented
+ * - logs generated during file execution can be collected
+ * - logs generated during file execution can be mirrored (re-logged to the console)
+ * - File is given allocatedMs to complete
+ * - Errors are collected
+ * - File execution result is returned, it contains status/errors/namespace/consoleCalls
+ */
+
+
+const run = async ({
+  signal = new AbortController().signal,
+  logger,
+  allocatedMs,
+  keepRunning = false,
+  mirrorConsole = false,
+  collectConsole = false,
+  coverageEnabled = false,
+  coverageTempDirectoryUrl,
+  collectPerformance = false,
+  runtime,
+  runtimeParams,
+}) => {
+  const result = {
+    status: "pending",
+    errors: [],
+    namespace: null,
+  };
+  const callbacks = [];
+
+  const onConsoleRef = { current: () => {} };
+  const stopSignal = { notify: () => {} };
+  const runtimeLabel = `${runtime.name}/${runtime.version}`;
+
+  const runOperation = Abort.startOperation();
+  runOperation.addAbortSignal(signal);
+  let timeoutAbortSource;
+  if (
+    // ideally we would rather log than the timeout is ignored
+    // when keepRunning is true
+    !keepRunning &&
+    typeof allocatedMs === "number" &&
+    allocatedMs !== Infinity
+  ) {
+    timeoutAbortSource = runOperation.timeout(allocatedMs);
+  }
+  const consoleCalls = [];
+  onConsoleRef.current = ({ type, text }) => {
+    if (mirrorConsole) {
+      if (type === "error") {
+        process.stderr.write(text);
+      } else {
+        process.stdout.write(text);
+      }
+    }
+    if (collectConsole) {
+      consoleCalls.push({ type, text });
+    }
+  };
+  if (collectConsole) {
+    result.consoleCalls = consoleCalls;
+  }
+
+  // we do not keep coverage in memory, it can grow very big
+  // instead we store it on the filesystem
+  // and they can be read later at "coverageFileUrl"
+  let coverageFileUrl;
+  if (coverageEnabled) {
+    coverageFileUrl = new URL(
+      `./${runtime.name}/${crypto.randomUUID()}.json`,
+      coverageTempDirectoryUrl,
+    ).href;
+    await ensureParentDirectories(coverageFileUrl);
+    if (coverageEnabled) {
+      result.coverageFileUrl = coverageFileUrl;
+      // written within the child_process/worker_thread or during runtime.run()
+      // for browsers
+      // (because it takes time to serialize and transfer the coverage object)
+    }
+  }
+
+  const startMs = Date.now();
+  callbacks.push(() => {
+    result.duration = Date.now() - startMs;
+  });
+
+  try {
+    logger.debug(`run() ${runtimeLabel}`);
+    runOperation.throwIfAborted();
+    const winnerPromise = new Promise((resolve) => {
+      raceCallbacks(
+        {
+          aborted: (cb) => {
+            runOperation.signal.addEventListener("abort", cb);
+            return () => {
+              runOperation.signal.removeEventListener("abort", cb);
+            };
+          },
+          runned: async (cb) => {
+            try {
+              const runResult = await runtime.run({
+                signal: runOperation.signal,
+                logger,
+                ...runtimeParams,
+                collectConsole,
+                collectPerformance,
+                coverageFileUrl,
+                keepRunning,
+                stopSignal,
+                onConsole: (log) => onConsoleRef.current(log),
+              });
+              cb(runResult);
+            } catch (e) {
+              cb({
+                status: "failed",
+                errors: [e],
+              });
+            }
+          },
+        },
+        resolve,
+      );
+    });
+    const winner = await winnerPromise;
+    if (winner.name === "aborted") {
+      runOperation.throwIfAborted();
+    }
+    const { status, namespace, errors, performance } = winner.data;
+    result.status = status;
+    result.errors.push(...errors);
+    result.namespace = namespace;
+    if (collectPerformance) {
+      result.performance = performance;
+    }
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
+        result.status = "timedout";
+      } else {
+        result.status = "aborted";
+      }
+    } else {
+      result.status = "failed";
+      result.errors.push(e);
+    }
+  } finally {
+    await runOperation.end();
+  }
+
+  callbacks.forEach((callback) => {
+    callback();
+  });
+  return result;
+};
+
+const ensureGlobalGc = () => {
+  if (!global.gc) {
+    v8.setFlagsFromString("--expose_gc");
+    global.gc = runInNewContext("gc");
+  }
+};
+
 /**
  * Execute a list of files and log how it goes.
  * @param {Object} testPlanParameters
@@ -5029,7 +4633,7 @@ const executeTestPlan = async ({
   githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
   githubCheckLogLevel,
   githubCheckName = "Jsenv tests",
-  githubCheckTitle,
+  githubCheckTitle = "Tests executions",
   githubCheckToken,
   githubCheckRepositoryOwner,
   githubCheckRepositoryName,
@@ -5074,6 +4678,10 @@ const executeTestPlan = async ({
   coverageReportJsonFileUrl,
   coverageReportHtml = !process.env.CI,
   coverageReportHtmlDirectoryUrl,
+
+  beforeExecutionCallback = () => {},
+  afterExecutionCallback = () => {},
+  afterAllExecutionCallback = () => {},
   ...rest
 }) => {
   const teardown = createTeardown();
@@ -5317,15 +4925,12 @@ To fix this warning:
     "**/.jsenv/": null,
   };
   logger.debug(`Generate executions`);
-  const executionSteps = await executionStepsFromTestPlan({
+  let executionSteps = await executionStepsFromTestPlan({
     signal,
     testPlan,
     rootDirectoryUrl,
   });
   logger.debug(`${executionSteps.length} executions planned`);
-  let beforeExecutionCallback;
-  let afterExecutionCallback;
-  let afterAllExecutionCallback = () => {};
   if (githubCheckEnabled) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheckLogLevel,
@@ -5334,11 +4939,13 @@ To fix this warning:
       repositoryName: githubCheckRepositoryName,
       commitSha: githubCheckCommitSha,
       checkName: githubCheckName,
-      checkTitle: `Tests executions`,
+      checkTitle: githubCheckTitle,
       checkSummary: `${executionSteps.length} files will be executed`,
     });
     const annotations = [];
+    const afterExecutionCallbackPrevious = afterExecutionCallback;
     afterExecutionCallback = (afterExecutionInfo) => {
+      afterExecutionCallbackPrevious(afterExecutionInfo);
       const { executionResult } = afterExecutionInfo;
       const { errors = [] } = executionResult;
       for (const error of errors) {
@@ -5349,78 +4956,328 @@ To fix this warning:
         annotations.push(annotation);
       }
     };
-    afterAllExecutionCallback = async ({ testPlanSummary }) => {
+    const afterAllExecutionCallbackPrevious = afterAllExecutionCallback;
+    afterAllExecutionCallback = async (returnValue) => {
+      afterAllExecutionCallbackPrevious(returnValue);
+      const { summary } = returnValue;
       const title = "Jsenv test results";
-      const summary = stripAnsi(formatSummary(testPlanSummary));
-      if (
-        testPlanSummary.counters.total !== testPlanSummary.counters.completed
-      ) {
+      const summaryText = stripAnsi(formatSummary(summary));
+      if (summary.counters.total !== summary.counters.completed) {
         await githubCheckRun.fail({
           title,
-          summary,
+          summary: summaryText,
           annotations,
         });
         return;
       }
       await githubCheckRun.pass({
         title,
-        summary,
+        summary: summaryText,
         annotations,
       });
     };
   }
 
-  const result = await executeSteps(executionSteps, {
-    signal,
-    teardown,
-    logger,
-    logRefresh,
-    logSummary,
-    logRuntime,
-    logEachDuration,
-    logTimeUsage,
-    logMemoryHeapUsage,
-    logFileRelativeUrl,
-    logShortForCompletedExecutions,
-    logMergeForCompletedExecutions,
-    rootDirectoryUrl,
-    webServer,
+  executionSteps = executionSteps.filter(
+    (executionStep) => !executionStep.runtime?.disabled,
+  );
 
-    maxExecutionsInParallel,
-    defaultMsAllocatedPerExecution,
-    failFast,
-    keepRunning,
-    cooldownBetweenExecutions,
-    gcBetweenExecutions,
+  const returnValue = {
+    aborted: false,
+    summary: null,
+    report: null,
+    coverage: null,
+  };
+  const report = {};
+  const callbacks = [];
 
-    githubCheckEnabled,
-    githubCheckName,
-    githubCheckTitle,
-    githubCheckToken,
-    githubCheckRepositoryOwner,
-    githubCheckRepositoryName,
-    githubCheckCommitSha,
+  const multipleExecutionsOperation = Abort.startOperation();
+  multipleExecutionsOperation.addAbortSignal(signal);
+  const failFastAbortController = new AbortController();
+  if (failFast) {
+    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
+  }
 
-    coverageEnabled,
-    coverageConfig,
-    coverageIncludeMissing,
-    coverageMethodForBrowsers,
-    coverageMethodForNodeJs,
-    coverageV8ConflictWarning,
-    coverageTempDirectoryUrl,
+  try {
+    if (gcBetweenExecutions) {
+      ensureGlobalGc();
+    }
 
-    beforeExecutionCallback,
-    afterExecutionCallback,
-  });
+    if (coverageEnabled) {
+      // when runned multiple times, we don't want to keep previous files in this directory
+      await ensureEmptyDirectory(coverageTempDirectoryUrl);
+      callbacks.push(async () => {
+        if (multipleExecutionsOperation.signal.aborted) {
+          // don't try to do the coverage stuff
+          return;
+        }
+        try {
+          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+            takeCoverage();
+            // conceptually we don't need coverage anymore so it would be
+            // good to call v8.stopCoverage()
+            // but it logs a strange message about "result is not an object"
+          }
+          const coverage = await reportToCoverage(report, {
+            signal: multipleExecutionsOperation.signal,
+            logger,
+            rootDirectoryUrl,
+            coverageConfig,
+            coverageIncludeMissing,
+            coverageMethodForNodeJs,
+            coverageV8ConflictWarning,
+          });
+          returnValue.coverage = coverage;
+        } catch (e) {
+          if (Abort.isAbortError(e)) {
+            return;
+          }
+          throw e;
+        }
+      });
+    }
+
+    const runtimeParams = {
+      rootDirectoryUrl,
+      webServer,
+
+      coverageEnabled,
+      coverageConfig,
+      coverageMethodForBrowsers,
+      coverageMethodForNodeJs,
+      isTestPlan: true,
+      teardown,
+    };
+
+    if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
+      logMergeForCompletedExecutions = false;
+      logger.debug(
+        `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
+      );
+    }
+    const debugLogsEnabled = logger.levels.debug;
+    const executionLogsEnabled = logger.levels.info;
+    const executionSpinner =
+      logRefresh &&
+      !debugLogsEnabled &&
+      executionLogsEnabled &&
+      process.stdout.isTTY &&
+      // if there is an error during execution npm will mess up the output
+      // (happens when npm runs several command in a workspace)
+      // so we enable spinner only when !process.exitCode (no error so far)
+      process.exitCode !== 1;
+
+    const startMs = Date.now();
+    let rawOutput = "";
+    let executionLog = createLog({ newLine: "" });
+    const counters = {
+      total: executionSteps.length,
+      aborted: 0,
+      timedout: 0,
+      failed: 0,
+      completed: 0,
+      done: 0,
+    };
+    await executeInParallel({
+      multipleExecutionsOperation,
+      maxExecutionsInParallel,
+      cooldownBetweenExecutions,
+      executionSteps,
+      start: async (paramsFromStep) => {
+        const executionIndex = executionSteps.indexOf(paramsFromStep);
+        const { executionName, fileRelativeUrl, runtime } = paramsFromStep;
+        const runtimeType = runtime.type;
+        const runtimeName = runtime.name;
+        const runtimeVersion = runtime.version;
+        const executionParams = {
+          measurePerformance: false,
+          collectPerformance: false,
+          collectConsole: true,
+          allocatedMs: defaultMsAllocatedPerExecution,
+          ...paramsFromStep,
+          runtimeParams: {
+            fileRelativeUrl,
+            ...paramsFromStep.runtimeParams,
+          },
+        };
+        const beforeExecutionInfo = {
+          fileRelativeUrl,
+          runtimeType,
+          runtimeName,
+          runtimeVersion,
+          executionIndex,
+          executionParams,
+          startMs: Date.now(),
+          executionResult: {
+            status: "executing",
+          },
+          counters,
+          timeEllapsed: Date.now() - startMs,
+          memoryHeap: memoryUsage().heapUsed,
+        };
+        if (typeof executionParams.allocatedMs === "function") {
+          executionParams.allocatedMs =
+            executionParams.allocatedMs(beforeExecutionInfo);
+        }
+        let spinner;
+        if (executionSpinner) {
+          spinner = startSpinner({
+            log: executionLog,
+            render: () => {
+              return createExecutionLog(beforeExecutionInfo, {
+                logRuntime,
+                logEachDuration,
+                logTimeUsage,
+                logMemoryHeapUsage,
+              });
+            },
+          });
+        }
+        beforeExecutionCallback(beforeExecutionInfo);
+
+        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
+        let executionResult;
+        if (existsSync(new URL(fileUrl))) {
+          executionResult = await run({
+            signal: multipleExecutionsOperation.signal,
+            logger,
+            allocatedMs: executionParams.allocatedMs,
+            keepRunning,
+            mirrorConsole: false, // file are executed in parallel, log would be a mess to read
+            collectConsole: executionParams.collectConsole,
+            coverageEnabled,
+            coverageTempDirectoryUrl,
+            runtime: executionParams.runtime,
+            runtimeParams: {
+              ...runtimeParams,
+              ...executionParams.runtimeParams,
+            },
+          });
+        } else {
+          executionResult = {
+            status: "failed",
+            errors: [
+              new Error(
+                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
+              ),
+            ],
+          };
+        }
+        counters.done++;
+        const fileReport = report[fileRelativeUrl];
+        if (fileReport) {
+          fileReport[executionName] = executionResult;
+        } else {
+          report[fileRelativeUrl] = {
+            [executionName]: executionResult,
+          };
+        }
+
+        const afterExecutionInfo = {
+          ...beforeExecutionInfo,
+          runtimeVersion: runtime.version,
+          endMs: Date.now(),
+          executionResult,
+        };
+
+        if (executionResult.status === "aborted") {
+          counters.aborted++;
+        } else if (executionResult.status === "timedout") {
+          counters.timedout++;
+        } else if (executionResult.status === "failed") {
+          counters.failed++;
+        } else if (executionResult.status === "completed") {
+          counters.completed++;
+        }
+        if (gcBetweenExecutions) {
+          global.gc();
+        }
+        if (executionLogsEnabled) {
+          const log = createExecutionLog(afterExecutionInfo, {
+            logShortForCompletedExecutions,
+            logRuntime,
+            logEachDuration,
+            ...(logTimeUsage
+              ? {
+                  timeEllapsed: Date.now() - startMs,
+                }
+              : {}),
+            ...(logMemoryHeapUsage
+              ? { memoryHeap: memoryUsage().heapUsed }
+              : {}),
+          });
+          // replace spinner with this execution result
+          if (spinner) spinner.stop();
+          executionLog.write(log);
+          rawOutput += stripAnsi(log);
+
+          const canOverwriteLog = canOverwriteLogGetter({
+            logMergeForCompletedExecutions,
+            executionResult,
+          });
+          if (canOverwriteLog) {
+            // nothing to do, we reuse the current executionLog object
+          } else {
+            executionLog.destroy();
+            executionLog = createLog({ newLine: "" });
+          }
+        }
+        afterExecutionCallback(afterExecutionInfo);
+        const isLastExecutionLog = executionIndex === executionSteps.length - 1;
+        const cancelRemaining =
+          failFast &&
+          executionResult.status !== "completed" &&
+          counters.done < counters.total;
+        if (isLastExecutionLog && logger.levels.info) {
+          executionLog.write("\n");
+        }
+
+        if (cancelRemaining) {
+          logger.info(`"failFast" enabled -> cancel remaining executions`);
+          failFastAbortController.abort();
+        }
+      },
+    });
+    if (!keepRunning) {
+      logger.debug("trigger test plan teardown");
+      await teardown.trigger();
+    }
+
+    counters.cancelled = counters.total - counters.done;
+    const summary = {
+      counters,
+      // when execution is aborted, the remaining executions are "cancelled"
+      duration: Date.now() - startMs,
+    };
+    if (logSummary) {
+      const summaryLog = formatSummaryLog(summary);
+      rawOutput += stripAnsi(summaryLog);
+      logger.info(summaryLog);
+    }
+    if (summary.counters.total !== summary.counters.completed) {
+      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
+      writeFileSync(logFileUrl, rawOutput);
+      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
+    }
+    returnValue.aborted = multipleExecutionsOperation.signal.aborted;
+    returnValue.summary = summary;
+    returnValue.report = report;
+    for (const callback of callbacks) {
+      await callback();
+    }
+  } finally {
+    await multipleExecutionsOperation.end();
+  }
 
   const hasFailed =
-    result.planSummary.counters.total !== result.planSummary.counters.completed;
+    returnValue.summary.counters.total !==
+    returnValue.summary.counters.completed;
   if (updateProcessExitCode && hasFailed) {
     process.exitCode = 1;
   }
-  const planCoverage = result.planCoverage;
+  const coverage = returnValue.coverage;
   // planCoverage can be null when execution is aborted
-  if (planCoverage) {
+  if (coverage) {
     const promises = [];
     // keep this one first because it does ensureEmptyDirectory
     // and in case coverage json file gets written in the same directory
@@ -5432,7 +5289,7 @@ To fix this warning:
         `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
       );
       promises.push(
-        generateCoverageHtmlDirectory(planCoverage, {
+        generateCoverageHtmlDirectory(coverage, {
           rootDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
             coverageReportHtmlDirectoryUrl,
@@ -5446,7 +5303,7 @@ To fix this warning:
     if (coverageEnabled && coverageReportJson) {
       promises.push(
         generateCoverageJsonFile({
-          coverage: result.planCoverage,
+          coverage,
           coverageJsonFileUrl: coverageReportJsonFileUrl,
           logger,
         }),
@@ -5454,7 +5311,7 @@ To fix this warning:
     }
     if (coverageEnabled && coverageReportTextLog) {
       promises.push(
-        generateCoverageTextLog(result.planCoverage, {
+        generateCoverageTextLog(coverage, {
           coverageReportSkipEmpty,
           coverageReportSkipFull,
         }),
@@ -5463,14 +5320,79 @@ To fix this warning:
     await Promise.all(promises);
   }
 
-  const returnValue = {
-    testPlanAborted: result.aborted,
-    testPlanSummary: result.planSummary,
-    testPlanReport: result.planReport,
-    testPlanCoverage: planCoverage,
-  };
   await afterAllExecutionCallback(returnValue);
   return returnValue;
+};
+
+const canOverwriteLogGetter = ({
+  logMergeForCompletedExecutions,
+  executionResult,
+}) => {
+  if (!logMergeForCompletedExecutions) {
+    return false;
+  }
+  if (executionResult.status === "aborted") {
+    return true;
+  }
+  if (executionResult.status !== "completed") {
+    return false;
+  }
+  const { consoleCalls = [] } = executionResult;
+  if (consoleCalls.length > 0) {
+    return false;
+  }
+  return true;
+};
+
+const executeInParallel = async ({
+  multipleExecutionsOperation,
+  maxExecutionsInParallel,
+  cooldownBetweenExecutions,
+  executionSteps,
+  start,
+}) => {
+  const executionResults = [];
+  let progressionIndex = 0;
+  let remainingExecutionCount = executionSteps.length;
+
+  const nextChunk = async () => {
+    if (multipleExecutionsOperation.signal.aborted) {
+      return;
+    }
+    const outputPromiseArray = [];
+    while (
+      remainingExecutionCount > 0 &&
+      outputPromiseArray.length < maxExecutionsInParallel
+    ) {
+      remainingExecutionCount--;
+      const outputPromise = executeOne(progressionIndex);
+      progressionIndex++;
+      outputPromiseArray.push(outputPromise);
+    }
+    if (outputPromiseArray.length) {
+      await Promise.all(outputPromiseArray);
+      if (remainingExecutionCount > 0) {
+        await nextChunk();
+      }
+    }
+  };
+
+  const executeOne = async (index) => {
+    const input = executionSteps[index];
+    const output = await start(input);
+    if (!multipleExecutionsOperation.signal.aborted) {
+      executionResults[index] = output;
+    }
+    if (cooldownBetweenExecutions) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, cooldownBetweenExecutions),
+      );
+    }
+  };
+
+  await nextChunk();
+
+  return executionResults;
 };
 
 const memoize = (compute) => {
