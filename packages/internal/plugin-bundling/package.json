@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.5.8",
+  "version": "2.5.9",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/log": "3.4.2",
+    "@jsenv/log": "3.4.3",
     "@jsenv/url-meta": "8.1.0",
     "@jsenv/urls": "2.2.1",
     "@jsenv/sourcemap": "1.2.4",

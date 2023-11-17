@@ -2515,6 +2515,7 @@ const createLog = ({
   const { columns = 80, rows = 24 } = stream;
 
   const log = {
+    destroyed: false,
     onVerticalOverflow: () => {},
   };
 
@@ -2579,6 +2580,9 @@ const createLog = ({
   };
 
   const write = (string, outputFromOutside = streamOutputSpy()) => {
+    if (log.destroyed) {
+      throw new Error("Cannot write log after destroy");
+    }
     if (!lastOutput) {
       doWrite(string);
       return;
@@ -2599,6 +2603,7 @@ const createLog = ({
   };
 
   const destroy = () => {
+    log.destroyed = true;
     if (streamOutputSpy) {
       streamOutputSpy(); // this uninstalls the spy
       streamOutputSpy = null;
@@ -2722,6 +2727,46 @@ const createTeardown = () => {
       );
     },
   };
+};
+
+const createCallOrderer = () => {
+  const queue = [];
+  const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
+    if (queue[executionIndex]) {
+      throw new Error(`${executionIndex} already used`);
+    }
+
+    let allBeforeAreDone = true;
+    if (executionIndex > 0) {
+      let beforeIndex = executionIndex - 1;
+      do {
+        const value = queue[beforeIndex];
+        if (!value) {
+          allBeforeAreDone = false;
+          break;
+        }
+      } while (beforeIndex--);
+    }
+    if (!allBeforeAreDone) {
+      queue[executionIndex] = callback;
+      return;
+    }
+    queue[executionIndex] = true;
+    callback();
+    let afterIndex = executionIndex + 1;
+    while (afterIndex < queue.length) {
+      const value = queue[afterIndex];
+      if (value === undefined) {
+        break;
+      }
+      if (typeof value === "function") {
+        queue[afterIndex] = true;
+        value();
+      }
+      afterIndex++;
+    }
+  };
+  return callWhenPreviousExecutionAreDone;
 };
 
 const readNodeV8CoverageDirectory = async ({
@@ -4686,6 +4731,13 @@ const executeTestPlan = async ({
 }) => {
   const teardown = createTeardown();
 
+  const beforeExecutionCallbackSet = new Set();
+  const afterExecutionCallbackSet = new Set();
+  const afterAllExecutionCallbackSet = new Set();
+  beforeExecutionCallbackSet.add(beforeExecutionCallback);
+  afterExecutionCallbackSet.add(afterExecutionCallback);
+  afterAllExecutionCallbackSet.add(afterAllExecutionCallback);
+
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -4943,9 +4995,7 @@ To fix this warning:
       checkSummary: `${executionSteps.length} files will be executed`,
     });
     const annotations = [];
-    const afterExecutionCallbackPrevious = afterExecutionCallback;
-    afterExecutionCallback = (afterExecutionInfo) => {
-      afterExecutionCallbackPrevious(afterExecutionInfo);
+    afterExecutionCallbackSet.add((afterExecutionInfo) => {
       const { executionResult } = afterExecutionInfo;
       const { errors = [] } = executionResult;
       for (const error of errors) {
@@ -4955,10 +5005,8 @@ To fix this warning:
         });
         annotations.push(annotation);
       }
-    };
-    const afterAllExecutionCallbackPrevious = afterAllExecutionCallback;
-    afterAllExecutionCallback = async (returnValue) => {
-      afterAllExecutionCallbackPrevious(returnValue);
+    });
+    afterAllExecutionCallbackSet.add(async (returnValue) => {
       const { summary } = returnValue;
       const title = "Jsenv test results";
       const summaryText = stripAnsi(formatSummary(summary));
@@ -4975,7 +5023,7 @@ To fix this warning:
         summary: summaryText,
         annotations,
       });
-    };
+    });
   }
 
   executionSteps = executionSteps.filter(
@@ -5059,6 +5107,7 @@ To fix this warning:
     const executionLogsEnabled = logger.levels.info;
     const executionSpinner =
       logRefresh &&
+      maxExecutionsInParallel === 1 &&
       !debugLogsEnabled &&
       executionLogsEnabled &&
       process.stdout.isTTY &&
@@ -5078,6 +5127,9 @@ To fix this warning:
       completed: 0,
       done: 0,
     };
+
+    const callWhenPreviousExecutionAreDone = createCallOrderer();
+
     await executeInParallel({
       multipleExecutionsOperation,
       maxExecutionsInParallel,
@@ -5133,8 +5185,9 @@ To fix this warning:
             },
           });
         }
-        beforeExecutionCallback(beforeExecutionInfo);
-
+        for (const beforeExecutionCallback of beforeExecutionCallbackSet) {
+          beforeExecutionCallback(beforeExecutionInfo);
+        }
         const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
         let executionResult;
         if (existsSync(new URL(fileUrl))) {
@@ -5143,7 +5196,7 @@ To fix this warning:
             logger,
             allocatedMs: executionParams.allocatedMs,
             keepRunning,
-            mirrorConsole: false, // file are executed in parallel, log would be a mess to read
+            mirrorConsole: false, // might be executed in parallel: log would be a mess to read
             collectConsole: executionParams.collectConsole,
             coverageEnabled,
             coverageTempDirectoryUrl,
@@ -5163,7 +5216,6 @@ To fix this warning:
             ],
           };
         }
-        counters.done++;
         const fileReport = report[fileRelativeUrl];
         if (fileReport) {
           fileReport[executionName] = executionResult;
@@ -5180,58 +5232,65 @@ To fix this warning:
           executionResult,
         };
 
-        if (executionResult.status === "aborted") {
-          counters.aborted++;
-        } else if (executionResult.status === "timedout") {
-          counters.timedout++;
-        } else if (executionResult.status === "failed") {
-          counters.failed++;
-        } else if (executionResult.status === "completed") {
-          counters.completed++;
-        }
         if (gcBetweenExecutions) {
           global.gc();
         }
-        if (executionLogsEnabled) {
-          const log = createExecutionLog(afterExecutionInfo, {
-            logShortForCompletedExecutions,
-            logRuntime,
-            logEachDuration,
-            ...(logTimeUsage
-              ? {
-                  timeEllapsed: Date.now() - startMs,
-                }
-              : {}),
-            ...(logMemoryHeapUsage
-              ? { memoryHeap: memoryUsage().heapUsed }
-              : {}),
-          });
-          // replace spinner with this execution result
-          if (spinner) spinner.stop();
-          executionLog.write(log);
-          rawOutput += stripAnsi(log);
 
-          const canOverwriteLog = canOverwriteLogGetter({
-            logMergeForCompletedExecutions,
-            executionResult,
-          });
-          if (canOverwriteLog) {
-            // nothing to do, we reuse the current executionLog object
-          } else {
-            executionLog.destroy();
-            executionLog = createLog({ newLine: "" });
+        const timeEllapsed = Date.now() - startMs;
+        const memoryHeap = memoryUsage().heapUsed;
+        callWhenPreviousExecutionAreDone(executionIndex, () => {
+          counters.done++;
+          if (executionResult.status === "aborted") {
+            counters.aborted++;
+          } else if (executionResult.status === "timedout") {
+            counters.timedout++;
+          } else if (executionResult.status === "failed") {
+            counters.failed++;
+          } else if (executionResult.status === "completed") {
+            counters.completed++;
           }
+
+          if (executionLogsEnabled) {
+            // replace spinner with this execution result
+            if (spinner) {
+              spinner.stop();
+              spinner = null;
+            }
+
+            const log = createExecutionLog(afterExecutionInfo, {
+              logShortForCompletedExecutions,
+              logRuntime,
+              logEachDuration,
+              ...(logTimeUsage ? { timeEllapsed } : {}),
+              ...(logMemoryHeapUsage ? { memoryHeap } : {}),
+            });
+
+            executionLog.write(log);
+            rawOutput += stripAnsi(log);
+            const canOverwriteLog = canOverwriteLogGetter({
+              logMergeForCompletedExecutions,
+              executionResult,
+            });
+            if (canOverwriteLog) {
+              // nothing to do, we reuse the current executionLog object
+            } else {
+              executionLog.destroy();
+              executionLog = createLog({ newLine: "" });
+            }
+            const isLastExecutionLog =
+              executionIndex === executionSteps.length - 1;
+            if (isLastExecutionLog && logger.levels.info) {
+              executionLog.write("\n");
+            }
+          }
+        });
+        for (const afterExecutionCallback of afterExecutionCallbackSet) {
+          afterExecutionCallback(afterExecutionInfo);
         }
-        afterExecutionCallback(afterExecutionInfo);
-        const isLastExecutionLog = executionIndex === executionSteps.length - 1;
         const cancelRemaining =
           failFast &&
           executionResult.status !== "completed" &&
           counters.done < counters.total;
-        if (isLastExecutionLog && logger.levels.info) {
-          executionLog.write("\n");
-        }
-
         if (cancelRemaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
@@ -5320,7 +5379,9 @@ To fix this warning:
     await Promise.all(promises);
   }
 
-  await afterAllExecutionCallback(returnValue);
+  for (const afterAllExecutionCallback of afterAllExecutionCallbackSet) {
+    await afterAllExecutionCallback(returnValue);
+  }
   return returnValue;
 };
 
@@ -5360,12 +5421,14 @@ const executeInParallel = async ({
       return;
     }
     const outputPromiseArray = [];
+    let previousExecPromise = Promise.resolve();
     while (
       remainingExecutionCount > 0 &&
       outputPromiseArray.length < maxExecutionsInParallel
     ) {
       remainingExecutionCount--;
-      const outputPromise = executeOne(progressionIndex);
+      const outputPromise = executeOne(progressionIndex, previousExecPromise);
+      previousExecPromise = outputPromise;
       progressionIndex++;
       outputPromiseArray.push(outputPromise);
     }
@@ -5377,9 +5440,9 @@ const executeInParallel = async ({
     }
   };
 
-  const executeOne = async (index) => {
+  const executeOne = async (index, previousExecPromise) => {
     const input = executionSteps[index];
-    const output = await start(input);
+    const output = await start(input, previousExecPromise);
     if (!multipleExecutionsOperation.signal.aborted) {
       executionResults[index] = output;
     }
