@@ -66,7 +66,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
       return (async () => {
         await urlInfoInlined.cook();
         const base64Url = DATA_URL.stringify({
-          mediaType: urlInfoInlined.contentType,
+          contentType: urlInfoInlined.contentType,
           base64Flag: true,
           data: urlInfoInlined.content,
         });
