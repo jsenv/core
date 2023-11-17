@@ -628,7 +628,6 @@ To fix this warning:
             ],
           };
         }
-        counters.done++;
         const fileReport = report[fileRelativeUrl];
         if (fileReport) {
           fileReport[executionName] = executionResult;
@@ -648,24 +647,26 @@ To fix this warning:
         if (gcBetweenExecutions) {
           global.gc();
         }
-        if (executionLogsEnabled) {
-          // replace spinner with this execution result
-          if (spinner) {
-            spinner.stop();
-            spinner = null;
+
+        const timeEllapsed = Date.now() - startMs;
+        const memoryHeap = memoryUsage().heapUsed;
+        callWhenPreviousExecutionAreDone(executionIndex, () => {
+          counters.done++;
+          if (executionResult.status === "aborted") {
+            counters.aborted++;
+          } else if (executionResult.status === "timedout") {
+            counters.timedout++;
+          } else if (executionResult.status === "failed") {
+            counters.failed++;
+          } else if (executionResult.status === "completed") {
+            counters.completed++;
           }
 
-          const timeEllapsed = Date.now() - startMs;
-          const memoryHeap = memoryUsage().heapUsed;
-          callWhenPreviousExecutionAreDone(executionIndex, () => {
-            if (executionResult.status === "aborted") {
-              counters.aborted++;
-            } else if (executionResult.status === "timedout") {
-              counters.timedout++;
-            } else if (executionResult.status === "failed") {
-              counters.failed++;
-            } else if (executionResult.status === "completed") {
-              counters.completed++;
+          if (executionLogsEnabled) {
+            // replace spinner with this execution result
+            if (spinner) {
+              spinner.stop();
+              spinner = null;
             }
 
             const log = createExecutionLog(afterExecutionInfo, {
@@ -693,8 +694,8 @@ To fix this warning:
             if (isLastExecutionLog && logger.levels.info) {
               executionLog.write("\n");
             }
-          });
-        }
+          }
+        });
         for (const afterExecutionCallback of afterExecutionCallbackSet) {
           afterExecutionCallback(afterExecutionInfo);
         }
