@@ -504,8 +504,8 @@ export const startDevServer = async ({
             // (happens for js_module_fallback for instance)
             if (urlInfo.content !== undefined) {
               kitchen.context.logger.error(`Error while handling ${request.url}:
-    ${originalError.reasonCode || originalError.code}
-    ${e.traceMessage}`);
+${originalError.reasonCode || originalError.code}
+${e.traceMessage}`);
               return {
                 url: reference.url,
                 status: 200,
