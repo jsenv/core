@@ -19,6 +19,7 @@ const devServer = await startDevServer({
     });
   },
   sourcemaps: "off",
+  port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });
 try {

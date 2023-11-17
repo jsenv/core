@@ -14,6 +14,7 @@ const test = async (params) => {
         };
       },
     },
+    port: 0,
     ...params,
   });
   const { returnValue } = await executeInBrowser({

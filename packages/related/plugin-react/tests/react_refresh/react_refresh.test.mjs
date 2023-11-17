@@ -19,6 +19,7 @@ const test = async () => {
     clientAutoreload: {
       cooldownBetweenFileEvents: 150,
     },
+    port: 0,
   });
   const browser = await chromium.launch({
     headless: true,

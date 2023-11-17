@@ -6,6 +6,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
+  port: 0,
 });
 const browser = await chromium.launch({ headless: true });
 try {

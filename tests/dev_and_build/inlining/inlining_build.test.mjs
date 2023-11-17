@@ -23,6 +23,7 @@ const test = async (params) => {
     logLevel: "warn",
     keepProcessAlive: false,
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    port: 0,
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,

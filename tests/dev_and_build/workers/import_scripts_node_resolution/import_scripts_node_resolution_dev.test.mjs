@@ -11,6 +11,7 @@ const devServer = await startDevServer({
   supervisor: false,
   clientAutoreload: false,
   ribbon: false,
+  port: 0,
 });
 
 const test = async ({ browserLauncher }) => {

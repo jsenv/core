@@ -9,6 +9,7 @@ const test = async (params) => {
     sourceDirectoryUrl: new URL("client/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     keepProcessAlive: false,
+    port: 0,
     ...params,
   });
   const { returnValue } = await executeInBrowser({

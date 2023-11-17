@@ -8,6 +8,7 @@ const test = async (params) => {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
+    port: 0,
     ...params,
   });
   const { returnValue } = await executeInBrowser({

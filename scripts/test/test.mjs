@@ -4,11 +4,13 @@
  * Read more in https://github.com/jsenv/core/tree/main/packages/test#jsenvtest-
  */
 
+import os from "node:os";
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   logLevel: "info",
   rootDirectoryUrl: new URL("../../", import.meta.url),
+  maxExecutionsInParallel: Math.max(5, os.cpus().length),
   testPlan: {
     "./tests/**/*.test.mjs": {
       node: {

@@ -18,6 +18,7 @@ if (process.platform !== "win32") {
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     buildMainFilePath: "./main.html",
     keepProcessAlive: false,
+    port: 0,
   });
   const response = await fetchUrl(buildServer.origin);
   const actual = {

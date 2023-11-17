@@ -13,6 +13,7 @@ const test = async (params) => {
         logs: false,
       },
     },
+    port: 0,
     ...params,
   });
   const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({

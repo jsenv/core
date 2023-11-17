@@ -11,6 +11,7 @@ const test = async () => {
     keepProcessAlive: false,
     clientAutoreload: false,
     ribbon: false,
+    port: 0,
   });
   const { returnValue } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,

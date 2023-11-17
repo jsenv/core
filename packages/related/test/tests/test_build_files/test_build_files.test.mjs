@@ -11,6 +11,7 @@ const buildServer = await startBuildServer({
   logLevel: "warn",
   buildDirectoryUrl: new URL("./project/public/", import.meta.url),
   keepProcessAlive: false,
+  port: 0,
 });
 
 const result = await executeTestPlan({

@@ -18,6 +18,7 @@ try {
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
+    port: 0,
   });
   const { consoleOutput } = await executeInBrowser({
     url: `${devServer.origin}/main.html`,

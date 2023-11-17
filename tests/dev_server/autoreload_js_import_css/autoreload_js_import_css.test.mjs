@@ -122,6 +122,7 @@ const test = async ({
         logs: false,
       },
     },
+    port: 0,
     ...rest,
   });
   const browser = await browserLauncher.launch({ headless: !debug });

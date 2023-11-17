@@ -6,7 +6,7 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 const test = async (params) => {
   const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
-    logLevel: "warn",
+    logLevel: "off",
     sourceDirectoryUrl,
     keepProcessAlive: false,
     clientAutoreload: {
@@ -14,6 +14,7 @@ const test = async (params) => {
         logs: false,
       },
     },
+    port: 0,
     ...params,
   });
   const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({

@@ -34,6 +34,7 @@ const devServer = await startDevServer({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   plugins,
+  port: 0,
 });
 const { returnValue } = await executeInBrowser({
   url: `${devServer.origin}/main.html`,

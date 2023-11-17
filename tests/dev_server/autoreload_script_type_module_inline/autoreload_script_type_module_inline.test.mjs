@@ -20,6 +20,7 @@ const devServer = await startDevServer({
   clientAutoreload: {
     cooldownBetweenFileEvents: 250,
   },
+  port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });
 try {

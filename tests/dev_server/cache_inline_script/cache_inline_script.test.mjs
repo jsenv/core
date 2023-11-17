@@ -17,6 +17,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: true,
+  port: 0,
 });
 const browser = await chromium.launch({ headless: true });
 try {

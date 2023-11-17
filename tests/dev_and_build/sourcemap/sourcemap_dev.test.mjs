@@ -18,6 +18,7 @@ const test = async (params) => {
       sourceDirectoryUrl: new URL("./client/", import.meta.url),
       keepProcessAlive: false,
       outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+      port: 0,
       ...params,
     });
     await executeInBrowser({

@@ -13,6 +13,7 @@ const devServer = await startDevServer({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
+  port: 0,
 });
 
 const test = async ({ browserLauncher }) => {
