@@ -68,7 +68,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
         const base64Url = DATA_URL.stringify({
           contentType: urlInfoInlined.contentType,
           base64Flag: true,
-          data: urlInfoInlined.content,
+          data: dataToBase64(urlInfoInlined.content),
         });
         return base64Url;
       })();
@@ -91,3 +91,5 @@ export const jsenvPluginInliningAsDataUrl = () => {
     },
   };
 };
+
+const dataToBase64 = (data) => Buffer.from(data).toString("base64");

@@ -46,8 +46,9 @@ export const jsenvPluginDataUrlsAnalysis = () => {
         data: urlData,
       } = DATA_URL.parse(urlInfo.url);
       urlInfo.data.base64Flag = base64Flag;
+      const content = contentFromUrlData({ contentType, base64Flag, urlData });
       return {
-        content: contentFromUrlData({ contentType, base64Flag, urlData }),
+        content,
         contentType,
       };
     },
