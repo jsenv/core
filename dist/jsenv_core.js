@@ -3761,6 +3761,7 @@ const createLog = ({
   const { columns = 80, rows = 24 } = stream;
 
   const log = {
+    destroyed: false,
     onVerticalOverflow: () => {},
   };
 
@@ -3825,6 +3826,9 @@ const createLog = ({
   };
 
   const write = (string, outputFromOutside = streamOutputSpy()) => {
+    if (log.destroyed) {
+      throw new Error("Cannot write log after destroy");
+    }
     if (!lastOutput) {
       doWrite(string);
       return;
@@ -3845,6 +3849,7 @@ const createLog = ({
   };
 
   const destroy = () => {
+    log.destroyed = true;
     if (streamOutputSpy) {
       streamOutputSpy(); // this uninstalls the spy
       streamOutputSpy = null;

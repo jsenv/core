@@ -53,6 +53,6 @@ const expected = {
       b: assert.any(Object),
     },
   },
-  coverage: undefined,
+  coverage: null,
 };
 assert({ actual, expected });
