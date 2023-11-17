@@ -14,7 +14,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const { testPlanCoverage } = await executeTestPlan({
+const { coverage } = await executeTestPlan({
   logLevel: "off",
   rootDirectoryUrl: new URL("./", import.meta.url),
   webServer: {
@@ -44,7 +44,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageReportHtml: false,
   githubCheckEnabled: false,
 });
-const actual = testPlanCoverage;
+const actual = coverage;
 const expected = {
   "./client/js_syntax_error.js": {
     ...actual["./client/js_syntax_error.js"],

@@ -15,7 +15,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const { testPlanCoverage } = await executeTestPlan({
+const { coverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   webServer: {
@@ -55,7 +55,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageV8ConflictWarning: false,
   githubCheckEnabled: false,
 });
-const actual = testPlanCoverage;
+const actual = coverage;
 const expected = {
   "./client/file.js": {
     ...actual["./client/file.js"],

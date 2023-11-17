@@ -31,7 +31,7 @@ const result = await executeTestPlan({
   githubCheckEnabled: false,
 });
 
-const chromiumResult = result.testPlanReport["public/main.test.html"].chromium;
+const chromiumResult = result.report["public/main.test.html"].chromium;
 const actual = {
   status: chromiumResult.status,
   errorMessage: chromiumResult.errors[0].message,

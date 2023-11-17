@@ -15,7 +15,7 @@ const devServer = await startDevServer({
   clientAutoreload: false,
   ribbon: false,
 });
-const { testPlanCoverage } = await executeTestPlan({
+const { coverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   webServer: {
@@ -64,7 +64,7 @@ if (!process.env.CI) {
   fileServer.stop();
 }
 
-const actual = testPlanCoverage;
+const actual = coverage;
 const expected = {
   "./client/file.js": {
     ...actual["./client/file.js"],

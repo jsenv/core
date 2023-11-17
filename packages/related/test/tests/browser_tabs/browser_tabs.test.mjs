@@ -34,8 +34,8 @@ const result = await executeTestPlan({
 });
 const actual = result;
 const expected = {
-  testPlanAborted: false,
-  testPlanSummary: {
+  aborted: false,
+  summary: {
     counters: {
       total: 2,
       aborted: 0,
@@ -47,12 +47,12 @@ const expected = {
     },
     duration: assert.any(Number),
   },
-  testPlanReport: {
+  report: {
     "client/main.html": {
       a: assert.any(Object),
       b: assert.any(Object),
     },
   },
-  testPlanCoverage: undefined,
+  coverage: undefined,
 };
 assert({ actual, expected });

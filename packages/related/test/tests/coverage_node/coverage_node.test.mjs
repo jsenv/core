@@ -7,7 +7,7 @@ import {
 } from "@jsenv/test";
 
 const test = async (params) => {
-  const { testPlanCoverage } = await executeTestPlan({
+  const { coverage } = await executeTestPlan({
     logLevel: "warn",
     rootDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
@@ -29,7 +29,7 @@ const test = async (params) => {
     coverageReportHtml: false,
     githubCheckEnabled: false,
   });
-  const actual = testPlanCoverage;
+  const actual = coverage;
   const expected = {
     "./node_client/file.js": {
       ...actual["./node_client/file.js"],

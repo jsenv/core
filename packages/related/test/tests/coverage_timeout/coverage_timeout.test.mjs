@@ -13,7 +13,7 @@ const testPlan = {
     },
   },
 };
-const { testPlanCoverage } = await executeTestPlan({
+const { coverage } = await executeTestPlan({
   logLevel: "error",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan,
@@ -25,7 +25,7 @@ const { testPlanCoverage } = await executeTestPlan({
   },
   githubCheckEnabled: false,
 });
-const actual = testPlanCoverage;
+const actual = coverage;
 const expected = {
   "./main.js": {
     ...actual["./main.js"],

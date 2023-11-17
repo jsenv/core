@@ -7,7 +7,7 @@ import { assert } from "@jsenv/assert";
 
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
-const { testPlanCoverage } = await executeTestPlan({
+const { coverage } = await executeTestPlan({
   logLevel: "warn",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
@@ -32,7 +32,7 @@ const { testPlanCoverage } = await executeTestPlan({
   coverageReportHtml: false,
   githubCheckEnabled: false,
 });
-const actual = testPlanCoverage;
+const actual = coverage;
 const expected = {
   "./file.js": {
     ...actual["./file.js"],
