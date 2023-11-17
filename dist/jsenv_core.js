@@ -14993,7 +14993,7 @@ const jsenvPluginDataUrlsAnalysis = () => {
       contentType: urlInfo.contentType,
       base64Flag: urlInfo.data.base64Flag,
       data: urlInfo.data.base64Flag
-        ? dataToBase64(urlInfo.content)
+        ? dataToBase64$1(urlInfo.content)
         : String(urlInfo.content),
     });
     return specifier;
@@ -15027,8 +15027,9 @@ const jsenvPluginDataUrlsAnalysis = () => {
         data: urlData,
       } = DATA_URL.parse(urlInfo.url);
       urlInfo.data.base64Flag = base64Flag;
+      const content = contentFromUrlData({ contentType, base64Flag, urlData });
       return {
-        content: contentFromUrlData({ contentType, base64Flag, urlData }),
+        content,
         contentType,
       };
     },
@@ -15051,7 +15052,7 @@ const contentFromUrlData = ({ contentType, base64Flag, urlData }) => {
 const base64ToBuffer = (base64String) => Buffer.from(base64String, "base64");
 const base64ToString = (base64String) =>
   Buffer.from(base64String, "base64").toString("utf8");
-const dataToBase64 = (data) => Buffer.from(data).toString("base64");
+const dataToBase64$1 = (data) => Buffer.from(data).toString("base64");
 
 // duplicated from @jsenv/log to avoid the dependency
 const createDetailedMessage = (message, details = {}) => {
@@ -18412,9 +18413,11 @@ const jsenvPluginInliningAsDataUrl = () => {
       return (async () => {
         await urlInfoInlined.cook();
         const base64Url = DATA_URL.stringify({
-          mediaType: urlInfoInlined.contentType,
+          contentType: urlInfoInlined.contentType,
           base64Flag: true,
-          data: urlInfoInlined.content,
+          data: urlInfoInlined.data.base64Flag
+            ? urlInfoInlined.content
+            : dataToBase64(urlInfoInlined.content),
         });
         return base64Url;
       })();
@@ -18429,6 +18432,7 @@ const jsenvPluginInliningAsDataUrl = () => {
       const contentAsBase64 = Buffer.from(
         withoutBase64ParamUrlInfo.content,
       ).toString("base64");
+      urlInfo.data.base64Flag = true;
       return {
         originalContent: withoutBase64ParamUrlInfo.originalContent,
         content: contentAsBase64,
@@ -18437,6 +18441,8 @@ const jsenvPluginInliningAsDataUrl = () => {
     },
   };
 };
+
+const dataToBase64 = (data) => Buffer.from(data).toString("base64");
 
 const jsenvPluginInliningIntoHtml = () => {
   return {
@@ -22680,8 +22686,8 @@ const startDevServer = async ({
             // (happens for js_module_fallback for instance)
             if (urlInfo.content !== undefined) {
               kitchen.context.logger.error(`Error while handling ${request.url}:
-    ${originalError.reasonCode || originalError.code}
-    ${e.traceMessage}`);
+${originalError.reasonCode || originalError.code}
+${e.traceMessage}`);
               return {
                 url: reference.url,
                 status: 200,
