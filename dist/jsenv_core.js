@@ -1,5 +1,5 @@
-import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import crypto, { createHash } from "node:crypto";
 import { extname } from "node:path";
 import process$1 from "node:process";
@@ -19,6 +19,477 @@ import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
+
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(
+      `${name} must be a url but looks like a windows pathname, got ${value}`,
+    );
+  }
+  if (!hasScheme$1(value)) {
+    throw new TypeError(
+      `${name} must be a url and no scheme found, got ${value}`,
+    );
+  }
+};
+
+const isPlainObject = (value) => {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+
+const isWindowsPathnameSpecifier = (specifier) => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+
+const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
+
+const resolveAssociations = (associations, baseUrl) => {
+  assertUrlLike(baseUrl, "baseUrl");
+  const associationsResolved = {};
+  Object.keys(associations).forEach((key) => {
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      Object.keys(value).forEach((pattern) => {
+        const valueAssociated = value[pattern];
+        const patternResolved = normalizeUrlPattern(pattern, baseUrl);
+        valueMapResolved[patternResolved] = valueAssociated;
+      });
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
+  });
+  return associationsResolved;
+};
+
+const normalizeUrlPattern = (urlPattern, baseUrl) => {
+  try {
+    return String(new URL(urlPattern, baseUrl));
+  } catch (e) {
+    // it's not really an url, no need to perform url resolution nor encoding
+    return urlPattern;
+  }
+};
+
+const asFlatAssociations = (associations) => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(
+      `associations must be a plain object, got ${associations}`,
+    );
+  }
+  const flatAssociations = {};
+  Object.keys(associations).forEach((associationName) => {
+    const associationValue = associations[associationName];
+    if (isPlainObject(associationValue)) {
+      Object.keys(associationValue).forEach((pattern) => {
+        const patternValue = associationValue[pattern];
+        const previousValue = flatAssociations[pattern];
+        if (isPlainObject(previousValue)) {
+          flatAssociations[pattern] = {
+            ...previousValue,
+            [associationName]: patternValue,
+          };
+        } else {
+          flatAssociations[pattern] = {
+            [associationName]: patternValue,
+          };
+        }
+      });
+    }
+  });
+  return flatAssociations;
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+
+
+/** @module jsenv_url_meta **/
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+const applyPatternMatching = ({ url, pattern }) => {
+  assertUrlLike(pattern, "pattern");
+  assertUrlLike(url, "url");
+  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  groups.forEach((group) => {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  });
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups,
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = (count) => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+  const consumeString = (count) => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+  const matchOne = () => {
+    // pattern consumed and string consumed
+    if (remainingPattern === "" && remainingString === "") {
+      return true; // string fully matched pattern
+    }
+    // pattern consumed, string not consumed
+    if (remainingPattern === "" && remainingString !== "") {
+      return false; // fails because string longer than expected
+    }
+    // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+      if (remainingPattern === "*") {
+        groups.push({ string: "" });
+      }
+      return false; // fail because string shorter than expected
+    }
+    // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({ string: consumeRemainingString() });
+        return true;
+      }
+      return false;
+    }
+    // fast path trailing '**'
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    }
+    // pattern leading **
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+      let skipAllowed = true;
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+        // when remainingPattern was preceeded by "**/"
+        // and remainingString have no "/"
+        // then skip is not allowed, a regular match will be performed
+        if (!remainingString.includes("/")) {
+          skipAllowed = false;
+        }
+      }
+      // pattern ending with "**" or "**/" match remaining string
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+      if (skipAllowed) {
+        const skipResult = skipUntilMatch({
+          pattern: remainingPattern,
+          string: remainingString,
+          canSkipSlash: true,
+        });
+        groups.push(...skipResult.groups);
+        consumePattern(skipResult.patternIndex);
+        consumeRemainingString();
+        restoreIndexes = false;
+        return skipResult.matched;
+      }
+    }
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+      if (remainingPattern === "") {
+        // matches everything except "/"
+        const slashIndex = remainingString.indexOf("/");
+        if (slashIndex === -1) {
+          groups.push({ string: consumeRemainingString() });
+          return true;
+        }
+        groups.push({ string: consumeString(slashIndex) });
+        return false;
+      }
+      // the next char must not the one expected by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({ string: "" });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false,
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+    return undefined;
+  };
+  iterate();
+
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups,
+  };
+};
+
+const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
+  let index = 0;
+  let remainingString = string;
+  let longestAttemptRange = null;
+  let isLastAttempt = false;
+
+  const failure = () => {
+    return {
+      matched: false,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
+      group: {
+        string: string.slice(0, longestAttemptRange.index),
+      },
+    };
+  };
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string:
+            remainingString === ""
+              ? string
+              : string.slice(0, -remainingString.length),
+        },
+      };
+    }
+    const attemptIndex = matchAttempt.index;
+    const attemptRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: attemptIndex,
+      groups: matchAttempt.groups,
+    };
+    if (
+      !longestAttemptRange ||
+      longestAttemptRange.length < attemptRange.length
+    ) {
+      longestAttemptRange = attemptRange;
+    }
+    if (isLastAttempt) {
+      return failure();
+    }
+    const nextIndex = attemptIndex + 1;
+    if (nextIndex >= remainingString.length) {
+      return failure();
+    }
+    if (remainingString[0] === "/") {
+      if (!canSkipSlash) {
+        return failure();
+      }
+      // when it's the last slash, the next attempt is the last
+      if (remainingString.indexOf("/", 1) === -1) {
+        isLastAttempt = true;
+      }
+    }
+    // search against the next unattempted string
+    index += nextIndex;
+    remainingString = remainingString.slice(nextIndex);
+    return tryToMatch();
+  };
+  return tryToMatch();
+};
+
+const applyAssociations = ({ url, associations }) => {
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+    const { matched } = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matched) {
+      const value = flatAssociations[pattern];
+      if (isPlainObject(previousValue) && isPlainObject(value)) {
+        return {
+          ...previousValue,
+          ...value,
+        };
+      }
+      return value;
+    }
+    return previousValue;
+  }, {});
+};
+
+const applyAliases = ({ url, aliases }) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find((key) => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url,
+    });
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+    return false;
+  });
+  if (!aliasMatchingKey) {
+    return url;
+  }
+  const { matchGroups } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  const newUrl = parts.reduce((previous, value, index) => {
+    return `${previous}${value}${
+      index === parts.length - 1 ? "" : matchGroups[index]
+    }`;
+  }, "");
+  return newUrl;
+};
+
+const urlChildMayMatch = ({ url, associations, predicate }) => {
+  assertUrlLike(url, "url");
+  // the function was meants to be used on url ending with '/'
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  const flatAssociations = asFlatAssociations(associations);
+  // for full match we must create an object to allow pattern to override previous ones
+  let fullMatchMeta = {};
+  let someFullMatch = false;
+  // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+  const partialMatchMetaArray = [];
+  Object.keys(flatAssociations).forEach((pattern) => {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matchResult.matched) {
+      someFullMatch = true;
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = {
+          ...fullMatchMeta,
+          ...value,
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  });
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+  return partialMatchMetaArray.some((partialMatchMeta) =>
+    predicate(partialMatchMeta),
+  );
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  urlChildMayMatch,
+  applyPatternMatching,
+  applyAliases,
+};
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -1534,477 +2005,6 @@ const SIGINT_CALLBACK = {
       process.removeListener("SIGINT", cb);
     };
   },
-};
-
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(
-      `${name} must be a url but looks like a windows pathname, got ${value}`,
-    );
-  }
-  if (!hasScheme$1(value)) {
-    throw new TypeError(
-      `${name} must be a url and no scheme found, got ${value}`,
-    );
-  }
-};
-
-const isPlainObject = (value) => {
-  if (value === null) {
-    return false;
-  }
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-    return true;
-  }
-  return false;
-};
-
-const isWindowsPathnameSpecifier = (specifier) => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-
-const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
-
-const resolveAssociations = (associations, baseUrl) => {
-  assertUrlLike(baseUrl, "baseUrl");
-  const associationsResolved = {};
-  Object.keys(associations).forEach((key) => {
-    const value = associations[key];
-    if (typeof value === "object" && value !== null) {
-      const valueMapResolved = {};
-      Object.keys(value).forEach((pattern) => {
-        const valueAssociated = value[pattern];
-        const patternResolved = normalizeUrlPattern(pattern, baseUrl);
-        valueMapResolved[patternResolved] = valueAssociated;
-      });
-      associationsResolved[key] = valueMapResolved;
-    } else {
-      associationsResolved[key] = value;
-    }
-  });
-  return associationsResolved;
-};
-
-const normalizeUrlPattern = (urlPattern, baseUrl) => {
-  try {
-    return String(new URL(urlPattern, baseUrl));
-  } catch (e) {
-    // it's not really an url, no need to perform url resolution nor encoding
-    return urlPattern;
-  }
-};
-
-const asFlatAssociations = (associations) => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(
-      `associations must be a plain object, got ${associations}`,
-    );
-  }
-  const flatAssociations = {};
-  Object.keys(associations).forEach((associationName) => {
-    const associationValue = associations[associationName];
-    if (isPlainObject(associationValue)) {
-      Object.keys(associationValue).forEach((pattern) => {
-        const patternValue = associationValue[pattern];
-        const previousValue = flatAssociations[pattern];
-        if (isPlainObject(previousValue)) {
-          flatAssociations[pattern] = {
-            ...previousValue,
-            [associationName]: patternValue,
-          };
-        } else {
-          flatAssociations[pattern] = {
-            [associationName]: patternValue,
-          };
-        }
-      });
-    }
-  });
-  return flatAssociations;
-};
-
-/*
- * Link to things doing pattern matching:
- * https://git-scm.com/docs/gitignore
- * https://github.com/kaelzhang/node-ignore
- */
-
-
-/** @module jsenv_url_meta **/
-/**
- * An object representing the result of applying a pattern to an url
- * @typedef {Object} MatchResult
- * @property {boolean} matched Indicates if url matched pattern
- * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
- * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
- * @property {Array} matchGroups Array of strings captured during pattern matching
- */
-
-/**
- * Apply a pattern to an url
- * @param {Object} applyPatternMatchingParams
- * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
- * @param {string} applyPatternMatchingParams.url a string representing an url
- * @return {MatchResult}
- */
-const applyPatternMatching = ({ url, pattern }) => {
-  assertUrlLike(pattern, "pattern");
-  assertUrlLike(url, "url");
-  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
-  const matchGroups = [];
-  let groupIndex = 0;
-  groups.forEach((group) => {
-    if (group.name) {
-      matchGroups[group.name] = group.string;
-    } else {
-      matchGroups[groupIndex] = group.string;
-      groupIndex++;
-    }
-  });
-  return {
-    matched,
-    patternIndex,
-    urlIndex: index,
-    matchGroups,
-  };
-};
-
-const applyMatching = (pattern, string) => {
-  const groups = [];
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string;
-  let restoreIndexes = true;
-
-  const consumePattern = (count) => {
-    const subpattern = remainingPattern.slice(0, count);
-    remainingPattern = remainingPattern.slice(count);
-    patternIndex += count;
-    return subpattern;
-  };
-  const consumeString = (count) => {
-    const substring = remainingString.slice(0, count);
-    remainingString = remainingString.slice(count);
-    index += count;
-    return substring;
-  };
-  const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
-  };
-
-  let matched;
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
-  const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    }
-    // pattern consumed, string not consumed
-    if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expected
-    }
-    // -- from this point pattern is not consumed --
-    // string consumed, pattern not consumed
-    if (remainingString === "") {
-      if (remainingPattern === "**") {
-        // trailing "**" is optional
-        consumePattern(2);
-        return true;
-      }
-      if (remainingPattern === "*") {
-        groups.push({ string: "" });
-      }
-      return false; // fail because string shorter than expected
-    }
-    // -- from this point pattern and string are not consumed --
-    // fast path trailing slash
-    if (remainingPattern === "/") {
-      if (remainingString[0] === "/") {
-        // trailing slash match remaining
-        consumePattern(1);
-        groups.push({ string: consumeRemainingString() });
-        return true;
-      }
-      return false;
-    }
-    // fast path trailing '**'
-    if (remainingPattern === "**") {
-      consumePattern(2);
-      consumeRemainingString();
-      return true;
-    }
-    // pattern leading **
-    if (remainingPattern.slice(0, 2) === "**") {
-      consumePattern(2); // consumes "**"
-      let skipAllowed = true;
-      if (remainingPattern[0] === "/") {
-        consumePattern(1); // consumes "/"
-        // when remainingPattern was preceeded by "**/"
-        // and remainingString have no "/"
-        // then skip is not allowed, a regular match will be performed
-        if (!remainingString.includes("/")) {
-          skipAllowed = false;
-        }
-      }
-      // pattern ending with "**" or "**/" match remaining string
-      if (remainingPattern === "") {
-        consumeRemainingString();
-        return true;
-      }
-      if (skipAllowed) {
-        const skipResult = skipUntilMatch({
-          pattern: remainingPattern,
-          string: remainingString,
-          canSkipSlash: true,
-        });
-        groups.push(...skipResult.groups);
-        consumePattern(skipResult.patternIndex);
-        consumeRemainingString();
-        restoreIndexes = false;
-        return skipResult.matched;
-      }
-    }
-    if (remainingPattern[0] === "*") {
-      consumePattern(1); // consumes "*"
-      if (remainingPattern === "") {
-        // matches everything except "/"
-        const slashIndex = remainingString.indexOf("/");
-        if (slashIndex === -1) {
-          groups.push({ string: consumeRemainingString() });
-          return true;
-        }
-        groups.push({ string: consumeString(slashIndex) });
-        return false;
-      }
-      // the next char must not the one expected by remainingPattern[0]
-      // because * is greedy and expect to skip at least one char
-      if (remainingPattern[0] === remainingString[0]) {
-        groups.push({ string: "" });
-        patternIndex = patternIndex - 1;
-        return false;
-      }
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: false,
-      });
-      groups.push(skipResult.group, ...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeString(skipResult.index);
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-    if (remainingPattern[0] !== remainingString[0]) {
-      return false;
-    }
-    return undefined;
-  };
-  iterate();
-
-  return {
-    matched,
-    patternIndex,
-    index,
-    groups,
-  };
-};
-
-const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
-  let index = 0;
-  let remainingString = string;
-  let longestAttemptRange = null;
-  let isLastAttempt = false;
-
-  const failure = () => {
-    return {
-      matched: false,
-      patternIndex: longestAttemptRange.patternIndex,
-      index: longestAttemptRange.index + longestAttemptRange.length,
-      groups: longestAttemptRange.groups,
-      group: {
-        string: string.slice(0, longestAttemptRange.index),
-      },
-    };
-  };
-
-  const tryToMatch = () => {
-    const matchAttempt = applyMatching(pattern, remainingString);
-    if (matchAttempt.matched) {
-      return {
-        matched: true,
-        patternIndex: matchAttempt.patternIndex,
-        index: index + matchAttempt.index,
-        groups: matchAttempt.groups,
-        group: {
-          string:
-            remainingString === ""
-              ? string
-              : string.slice(0, -remainingString.length),
-        },
-      };
-    }
-    const attemptIndex = matchAttempt.index;
-    const attemptRange = {
-      patternIndex: matchAttempt.patternIndex,
-      index,
-      length: attemptIndex,
-      groups: matchAttempt.groups,
-    };
-    if (
-      !longestAttemptRange ||
-      longestAttemptRange.length < attemptRange.length
-    ) {
-      longestAttemptRange = attemptRange;
-    }
-    if (isLastAttempt) {
-      return failure();
-    }
-    const nextIndex = attemptIndex + 1;
-    if (nextIndex >= remainingString.length) {
-      return failure();
-    }
-    if (remainingString[0] === "/") {
-      if (!canSkipSlash) {
-        return failure();
-      }
-      // when it's the last slash, the next attempt is the last
-      if (remainingString.indexOf("/", 1) === -1) {
-        isLastAttempt = true;
-      }
-    }
-    // search against the next unattempted string
-    index += nextIndex;
-    remainingString = remainingString.slice(nextIndex);
-    return tryToMatch();
-  };
-  return tryToMatch();
-};
-
-const applyAssociations = ({ url, associations }) => {
-  assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
-    const { matched } = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matched) {
-      const value = flatAssociations[pattern];
-      if (isPlainObject(previousValue) && isPlainObject(value)) {
-        return {
-          ...previousValue,
-          ...value,
-        };
-      }
-      return value;
-    }
-    return previousValue;
-  }, {});
-};
-
-const applyAliases = ({ url, aliases }) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find((key) => {
-    const aliasMatchResult = applyPatternMatching({
-      pattern: key,
-      url,
-    });
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
-    }
-    return false;
-  });
-  if (!aliasMatchingKey) {
-    return url;
-  }
-  const { matchGroups } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${
-      index === parts.length - 1 ? "" : matchGroups[index]
-    }`;
-  }, "");
-  return newUrl;
-};
-
-const urlChildMayMatch = ({ url, associations, predicate }) => {
-  assertUrlLike(url, "url");
-  // the function was meants to be used on url ending with '/'
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-  const flatAssociations = asFlatAssociations(associations);
-  // for full match we must create an object to allow pattern to override previous ones
-  let fullMatchMeta = {};
-  let someFullMatch = false;
-  // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-  const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach((pattern) => {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matchResult.matched) {
-      someFullMatch = true;
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = {
-          ...fullMatchMeta,
-          ...value,
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  });
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-  return partialMatchMetaArray.some((partialMatchMeta) =>
-    predicate(partialMatchMeta),
-  );
-};
-
-const URL_META = {
-  resolveAssociations,
-  applyAssociations,
-  urlChildMayMatch,
-  applyPatternMatching,
-  applyAliases,
 };
 
 const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
@@ -8088,6 +8088,102 @@ const generateAccessControlHeaders = ({
   };
 };
 
+const WEB_URL_CONVERTER = {
+  asWebUrl: (fileUrl, webServer) => {
+    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      return moveUrl({
+        url: fileUrl,
+        from: webServer.rootDirectoryUrl,
+        to: `${webServer.origin}/`,
+      });
+    }
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
+    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
+  },
+  asFileUrl: (webUrl, webServer) => {
+    const { pathname, search } = new URL(webUrl);
+    if (pathname.startsWith("/@fs/")) {
+      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
+      return `file:///${fsRootRelativeUrl}${search}`;
+    }
+    return moveUrl({
+      url: webUrl,
+      from: `${webServer.origin}/`,
+      to: webServer.rootDirectoryUrl,
+    });
+  },
+};
+
+const watchSourceFiles = (
+  sourceDirectoryUrl,
+  callback,
+  { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
+) => {
+  // Project should use a dedicated directory (usually "src/")
+  // passed to the dev server via "sourceDirectoryUrl" param
+  // In that case all files inside the source directory should be watched
+  // But some project might want to use their root directory as source directory
+  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
+  // And jsenv should not consider these as source files and watch them (to not hurt performances)
+  const watchPatterns = {
+    "**/*": true, // by default watch everything inside the source directory
+    // line below is commented until @jsenv/url-meta fixes the fact that is matches
+    // any file with an extension
+    "**/.*": false, // file starting with a dot -> do not watch
+    "**/.*/": false, // directory starting with a dot -> do not watch
+    "**/node_modules/": false, // node_modules directory -> do not watch
+    ...sourceFileConfig,
+  };
+  const stopWatchingSourceFiles = registerDirectoryLifecycle(
+    sourceDirectoryUrl,
+    {
+      watchPatterns,
+      cooldownBetweenFileEvents,
+      keepProcessAlive,
+      recursive: true,
+      added: ({ relativeUrl }) => {
+        callback({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "added",
+        });
+      },
+      updated: ({ relativeUrl }) => {
+        callback({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "modified",
+        });
+      },
+      removed: ({ relativeUrl }) => {
+        callback({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "removed",
+        });
+      },
+    },
+  );
+  stopWatchingSourceFiles.watchPatterns = watchPatterns;
+  return stopWatchingSourceFiles;
+};
+
+const createEventEmitter = () => {
+  const callbackSet = new Set();
+  const on = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+  const off = (callback) => {
+    callbackSet.delete(callback);
+  };
+  const emit = (...args) => {
+    callbackSet.forEach((callback) => {
+      callback(...args);
+    });
+  };
+  return { on, off, emit };
+};
+
 const lookupPackageDirectory = (currentUrl) => {
   if (currentUrl === "file:///") {
     return null;
@@ -11026,57 +11122,6 @@ const jsenvPluginTranspilation = ({
   ];
 };
 
-const watchSourceFiles = (
-  sourceDirectoryUrl,
-  callback,
-  { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
-) => {
-  // Project should use a dedicated directory (usually "src/")
-  // passed to the dev server via "sourceDirectoryUrl" param
-  // In that case all files inside the source directory should be watched
-  // But some project might want to use their root directory as source directory
-  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
-  // And jsenv should not consider these as source files and watch them (to not hurt performances)
-  const watchPatterns = {
-    "**/*": true, // by default watch everything inside the source directory
-    // line below is commented until @jsenv/url-meta fixes the fact that is matches
-    // any file with an extension
-    "**/.*": false, // file starting with a dot -> do not watch
-    "**/.*/": false, // directory starting with a dot -> do not watch
-    "**/node_modules/": false, // node_modules directory -> do not watch
-    ...sourceFileConfig,
-  };
-  const stopWatchingSourceFiles = registerDirectoryLifecycle(
-    sourceDirectoryUrl,
-    {
-      watchPatterns,
-      cooldownBetweenFileEvents,
-      keepProcessAlive,
-      recursive: true,
-      added: ({ relativeUrl }) => {
-        callback({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "added",
-        });
-      },
-      updated: ({ relativeUrl }) => {
-        callback({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "modified",
-        });
-      },
-      removed: ({ relativeUrl }) => {
-        callback({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "removed",
-        });
-      },
-    },
-  );
-  stopWatchingSourceFiles.watchPatterns = watchPatterns;
-  return stopWatchingSourceFiles;
-};
-
 const GRAPH_VISITOR = {};
 
 GRAPH_VISITOR.map = (graph, callback) => {
@@ -11207,25 +11252,6 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (initialUrlInfo, callback) => {
   };
   iterateOnReferences(initialUrlInfo);
   seen.clear();
-};
-
-const createEventEmitter = () => {
-  const callbackSet = new Set();
-  const on = (callback) => {
-    callbackSet.add(callback);
-    return () => {
-      callbackSet.delete(callback);
-    };
-  };
-  const off = (callback) => {
-    callbackSet.delete(callback);
-  };
-  const emit = (...args) => {
-    callbackSet.forEach((callback) => {
-      callback(...args);
-    });
-  };
-  return { on, off, emit };
 };
 
 const urlSpecifierEncoding = {
@@ -14967,7 +14993,7 @@ const jsenvPluginDataUrlsAnalysis = () => {
       contentType: urlInfo.contentType,
       base64Flag: urlInfo.data.base64Flag,
       data: urlInfo.data.base64Flag
-        ? dataToBase64(urlInfo.content)
+        ? dataToBase64$1(urlInfo.content)
         : String(urlInfo.content),
     });
     return specifier;
@@ -15001,8 +15027,9 @@ const jsenvPluginDataUrlsAnalysis = () => {
         data: urlData,
       } = DATA_URL.parse(urlInfo.url);
       urlInfo.data.base64Flag = base64Flag;
+      const content = contentFromUrlData({ contentType, base64Flag, urlData });
       return {
-        content: contentFromUrlData({ contentType, base64Flag, urlData }),
+        content,
         contentType,
       };
     },
@@ -15025,7 +15052,7 @@ const contentFromUrlData = ({ contentType, base64Flag, urlData }) => {
 const base64ToBuffer = (base64String) => Buffer.from(base64String, "base64");
 const base64ToString = (base64String) =>
   Buffer.from(base64String, "base64").toString("utf8");
-const dataToBase64 = (data) => Buffer.from(data).toString("base64");
+const dataToBase64$1 = (data) => Buffer.from(data).toString("base64");
 
 // duplicated from @jsenv/log to avoid the dependency
 const createDetailedMessage = (message, details = {}) => {
@@ -18386,9 +18413,11 @@ const jsenvPluginInliningAsDataUrl = () => {
       return (async () => {
         await urlInfoInlined.cook();
         const base64Url = DATA_URL.stringify({
-          mediaType: urlInfoInlined.contentType,
+          contentType: urlInfoInlined.contentType,
           base64Flag: true,
-          data: urlInfoInlined.content,
+          data: urlInfoInlined.data.base64Flag
+            ? urlInfoInlined.content
+            : dataToBase64(urlInfoInlined.content),
         });
         return base64Url;
       })();
@@ -18403,6 +18432,7 @@ const jsenvPluginInliningAsDataUrl = () => {
       const contentAsBase64 = Buffer.from(
         withoutBase64ParamUrlInfo.content,
       ).toString("base64");
+      urlInfo.data.base64Flag = true;
       return {
         originalContent: withoutBase64ParamUrlInfo.originalContent,
         content: contentAsBase64,
@@ -18411,6 +18441,8 @@ const jsenvPluginInliningAsDataUrl = () => {
     },
   };
 };
+
+const dataToBase64 = (data) => Buffer.from(data).toString("base64");
 
 const jsenvPluginInliningIntoHtml = () => {
   return {
@@ -22102,32 +22134,6 @@ build ${entryPointKeys.length} entry points`);
   return stopWatchingSourceFiles;
 };
 
-const WEB_URL_CONVERTER = {
-  asWebUrl: (fileUrl, webServer) => {
-    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
-      return moveUrl({
-        url: fileUrl,
-        from: webServer.rootDirectoryUrl,
-        to: `${webServer.origin}/`,
-      });
-    }
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
-    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
-  },
-  asFileUrl: (webUrl, webServer) => {
-    const { pathname, search } = new URL(webUrl);
-    if (pathname.startsWith("/@fs/")) {
-      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
-      return `file:///${fsRootRelativeUrl}${search}`;
-    }
-    return moveUrl({
-      url: webUrl,
-      from: `${webServer.origin}/`,
-      to: webServer.rootDirectoryUrl,
-    });
-  },
-};
-
 /*
  * This plugin is very special because it is here
  * to provide "serverEvents" used by other plugins
@@ -22202,407 +22208,6 @@ const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
       family === "Other" ? "unknown" : `${major}.${minor}${patch}`,
   };
 });
-
-const createFileService = ({
-  signal,
-  logLevel,
-  serverStopCallbacks,
-  serverEventsDispatcher,
-  kitchenCache,
-  onKitchenCreated = () => {},
-
-  sourceDirectoryUrl,
-  sourceMainFilePath,
-  ignore,
-  sourceFilesConfig,
-  runtimeCompat,
-
-  plugins,
-  referenceAnalysis,
-  nodeEsmResolution,
-  magicExtensions,
-  magicDirectoryIndex,
-  supervisor,
-  injections,
-  transpilation,
-  clientAutoreload,
-  cacheControl,
-  ribbon,
-  sourcemaps,
-  sourcemapsSourcesContent,
-  outDirectoryUrl,
-}) => {
-  if (clientAutoreload === true) {
-    clientAutoreload = {};
-  }
-  if (clientAutoreload === false) {
-    clientAutoreload = { enabled: false };
-  }
-  const clientFileChangeEventEmitter = createEventEmitter();
-  const clientFileDereferencedEventEmitter = createEventEmitter();
-
-  clientAutoreload = {
-    enabled: true,
-    clientServerEventsConfig: {},
-    clientFileChangeEventEmitter,
-    clientFileDereferencedEventEmitter,
-    ...clientAutoreload,
-  };
-
-  const stopWatchingSourceFiles = watchSourceFiles(
-    sourceDirectoryUrl,
-    (fileInfo) => {
-      clientFileChangeEventEmitter.emit(fileInfo);
-    },
-    {
-      sourceFilesConfig,
-      keepProcessAlive: false,
-      cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
-    },
-  );
-  serverStopCallbacks.push(stopWatchingSourceFiles);
-
-  const getOrCreateKitchen = (request) => {
-    const { runtimeName, runtimeVersion } = parseUserAgentHeader(
-      request.headers["user-agent"] || "",
-    );
-    const runtimeId = `${runtimeName}@${runtimeVersion}`;
-    const existing = kitchenCache.get(runtimeId);
-    if (existing) {
-      return existing;
-    }
-    const watchAssociations = URL_META.resolveAssociations(
-      { watch: stopWatchingSourceFiles.watchPatterns },
-      sourceDirectoryUrl,
-    );
-    let kitchen;
-    clientFileChangeEventEmitter.on(({ url }) => {
-      const urlInfo = kitchen.graph.getUrlInfo(url);
-      if (urlInfo) {
-        urlInfo.onModified();
-      }
-    });
-    const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
-
-    kitchen = createKitchen({
-      name: runtimeId,
-      signal,
-      logLevel,
-      rootDirectoryUrl: sourceDirectoryUrl,
-      mainFilePath: sourceMainFilePath,
-      ignore,
-      dev: true,
-      runtimeCompat,
-      clientRuntimeCompat,
-      plugins: [
-        ...plugins,
-        ...getCorePlugins({
-          rootDirectoryUrl: sourceDirectoryUrl,
-          runtimeCompat,
-
-          referenceAnalysis,
-          nodeEsmResolution,
-          magicExtensions,
-          magicDirectoryIndex,
-          supervisor,
-          injections,
-          transpilation,
-
-          clientAutoreload,
-          cacheControl,
-          ribbon,
-        }),
-      ],
-      supervisor,
-      minification: false,
-      sourcemaps,
-      sourcemapsSourcesContent,
-      outDirectoryUrl: outDirectoryUrl
-        ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
-        : undefined,
-    });
-    kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
-      const { watch } = URL_META.applyAssociations({
-        url: urlInfoCreated.url,
-        associations: watchAssociations,
-      });
-      urlInfoCreated.isWatched = watch;
-      // when an url depends on many others, we check all these (like package.json)
-      urlInfoCreated.isValid = () => {
-        if (!urlInfoCreated.url.startsWith("file:")) {
-          return false;
-        }
-        if (urlInfoCreated.content === undefined) {
-          // urlInfo content is undefined when:
-          // - url info content never fetched
-          // - it is considered as modified because undelying file is watched and got saved
-          // - it is considered as modified because underlying file content
-          //   was compared using etag and it has changed
-          return false;
-        }
-        if (!watch) {
-          // file is not watched, check the filesystem
-          let fileContentAsBuffer;
-          try {
-            fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
-          } catch (e) {
-            if (e.code === "ENOENT") {
-              urlInfoCreated.onModified();
-              return false;
-            }
-            return false;
-          }
-          const fileContentEtag = bufferToEtag$1(fileContentAsBuffer);
-          if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
-            urlInfoCreated.onModified();
-            // restore content to be able to compare it again later
-            urlInfoCreated.kitchen.urlInfoTransformer.setContent(
-              urlInfoCreated,
-              String(fileContentAsBuffer),
-              {
-                contentEtag: fileContentEtag,
-              },
-            );
-            return false;
-          }
-        }
-        for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
-          const implicitUrlInfo = urlInfoCreated.graph.getUrlInfo(implicitUrl);
-          if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
-            return false;
-          }
-        }
-        return true;
-      };
-    });
-    kitchen.graph.urlInfoDereferencedEventEmitter.on(
-      (urlInfoDereferenced, lastReferenceFromOther) => {
-        clientFileDereferencedEventEmitter.emit(
-          urlInfoDereferenced,
-          lastReferenceFromOther,
-        );
-      },
-    );
-
-    serverStopCallbacks.push(() => {
-      kitchen.pluginController.callHooks("destroy", kitchen.context);
-    });
-    {
-      const allServerEvents = {};
-      kitchen.pluginController.plugins.forEach((plugin) => {
-        const { serverEvents } = plugin;
-        if (serverEvents) {
-          Object.keys(serverEvents).forEach((serverEventName) => {
-            // we could throw on serverEvent name conflict
-            // we could throw if serverEvents[serverEventName] is not a function
-            allServerEvents[serverEventName] = serverEvents[serverEventName];
-          });
-        }
-      });
-      const serverEventNames = Object.keys(allServerEvents);
-      if (serverEventNames.length > 0) {
-        Object.keys(allServerEvents).forEach((serverEventName) => {
-          const serverEventInfo = {
-            ...kitchen.context,
-            sendServerEvent: (data) => {
-              serverEventsDispatcher.dispatch({
-                type: serverEventName,
-                data,
-              });
-            },
-          };
-          const serverEventInit = allServerEvents[serverEventName];
-          serverEventInit(serverEventInfo);
-        });
-        // "pushPlugin" so that event source client connection can be put as early as possible in html
-        kitchen.pluginController.pushPlugin(
-          jsenvPluginServerEventsClientInjection(
-            clientAutoreload.clientServerEventsConfig,
-          ),
-        );
-      }
-    }
-
-    kitchenCache.set(runtimeId, kitchen);
-    onKitchenCreated(kitchen);
-    return kitchen;
-  };
-
-  return async (request) => {
-    const kitchen = getOrCreateKitchen(request);
-    const serveHookInfo = {
-      ...kitchen.context,
-      request,
-    };
-    const responseFromPlugin =
-      await kitchen.pluginController.callAsyncHooksUntil(
-        "serve",
-        serveHookInfo,
-      );
-    if (responseFromPlugin) {
-      return responseFromPlugin;
-    }
-    const { referer } = request.headers;
-    const parentUrl = referer
-      ? WEB_URL_CONVERTER.asFileUrl(referer, {
-          origin: request.origin,
-          rootDirectoryUrl: sourceDirectoryUrl,
-        })
-      : sourceDirectoryUrl;
-    let reference = kitchen.graph.inferReference(request.resource, parentUrl);
-    if (!reference) {
-      reference =
-        kitchen.graph.rootUrlInfo.dependencies.createResolveAndFinalize({
-          trace: { message: parentUrl },
-          type: "http_request",
-          specifier: request.resource,
-        });
-    }
-    const urlInfo = reference.urlInfo;
-    const ifNoneMatch = request.headers["if-none-match"];
-    const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
-
-    try {
-      if (!urlInfo.error && ifNoneMatch) {
-        const [clientOriginalContentEtag, clientContentEtag] =
-          ifNoneMatch.split("_");
-        if (
-          urlInfoTargetedByCache.originalContentEtag ===
-            clientOriginalContentEtag &&
-          urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-          urlInfoTargetedByCache.isValid()
-        ) {
-          const headers = {
-            "cache-control": `private,max-age=0,must-revalidate`,
-          };
-          Object.keys(urlInfo.headers).forEach((key) => {
-            if (key !== "content-length") {
-              headers[key] = urlInfo.headers[key];
-            }
-          });
-          return {
-            status: 304,
-            headers,
-          };
-        }
-      }
-
-      await urlInfo.cook({ request, reference });
-      let { response } = urlInfo;
-      if (response) {
-        return response;
-      }
-      response = {
-        url: reference.url,
-        status: 200,
-        headers: {
-          // when we send eTag to the client the next request to the server
-          // will send etag in request headers.
-          // If they match jsenv bypass cooking and returns 304
-          // This must not happen when a plugin uses "no-store" or "no-cache" as it means
-          // plugin logic wants to happens for every request to this url
-          ...(urlInfo.headers["cache-control"] === "no-store" ||
-          urlInfo.headers["cache-control"] === "no-cache"
-            ? {}
-            : {
-                "cache-control": `private,max-age=0,must-revalidate`,
-                // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
-              }),
-          ...urlInfo.headers,
-          "content-type": urlInfo.contentType,
-          "content-length": urlInfo.contentLength,
-        },
-        body: urlInfo.content,
-        timing: urlInfo.timing,
-      };
-      const augmentResponseInfo = {
-        ...kitchen.context,
-        reference,
-        urlInfo,
-      };
-      kitchen.pluginController.callHooks(
-        "augmentResponse",
-        augmentResponseInfo,
-        (returnValue) => {
-          response = composeTwoResponses(response, returnValue);
-        },
-      );
-      return response;
-    } catch (e) {
-      urlInfo.error = e;
-      const originalError = e ? e.cause || e : e;
-      if (originalError.asResponse) {
-        return originalError.asResponse();
-      }
-      const code = originalError.code;
-      if (code === "PARSE_ERROR") {
-        // when possible let browser re-throw the syntax error
-        // it's not possible to do that when url info content is not available
-        // (happens for js_module_fallback for instance)
-        if (urlInfo.content !== undefined) {
-          kitchen.context.logger.error(`Error while handling ${request.url}:
-${originalError.reasonCode || originalError.code}
-${e.traceMessage}`);
-          return {
-            url: reference.url,
-            status: 200,
-            // reason becomes the http response statusText, it must not contain invalid chars
-            // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
-            statusText: e.reason,
-            statusMessage: originalError.message,
-            headers: {
-              "content-type": urlInfo.contentType,
-              "content-length": urlInfo.contentLength,
-              "cache-control": "no-store",
-            },
-            body: urlInfo.content,
-          };
-        }
-        return {
-          url: reference.url,
-          status: 500,
-          statusText: e.reason,
-          statusMessage: originalError.message,
-          headers: {
-            "cache-control": "no-store",
-          },
-          body: urlInfo.content,
-        };
-      }
-      if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-        return serveDirectory(reference.url, {
-          headers: {
-            accept: "text/html",
-          },
-          canReadDirectory: true,
-          rootDirectoryUrl: sourceDirectoryUrl,
-        });
-      }
-      if (code === "NOT_ALLOWED") {
-        return {
-          url: reference.url,
-          status: 403,
-          statusText: originalError.reason,
-        };
-      }
-      if (code === "NOT_FOUND") {
-        return {
-          url: reference.url,
-          status: 404,
-          statusText: originalError.reason,
-          statusMessage: originalError.message,
-        };
-      }
-      return {
-        url: reference.url,
-        status: 500,
-        statusText: e.reason,
-        statusMessage: e.stack,
-      };
-    }
-  };
-};
 
 /**
  * Start a server for source files:
@@ -22689,6 +22294,16 @@ const startDevServer = async ({
     }
   }
 
+  // params normalization
+  {
+    if (clientAutoreload === true) {
+      clientAutoreload = {};
+    }
+    if (clientAutoreload === false) {
+      clientAutoreload = { enabled: false };
+    }
+  }
+
   const logger = createLogger({ logLevel });
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -22712,6 +22327,478 @@ const startDevServer = async ({
     serverEventsDispatcher.destroy();
   });
   const kitchenCache = new Map();
+
+  const finalServices = [];
+  // x-server-inspect service
+  {
+    finalServices.push({
+      handleRequest: (request) => {
+        if (request.headers["x-server-inspect"]) {
+          return { status: 200 };
+        }
+        if (request.pathname === "/__params__.json") {
+          const json = JSON.stringify({
+            sourceDirectoryUrl,
+          });
+          return {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(json),
+            },
+            body: json,
+          };
+        }
+        return null;
+      },
+      injectResponseHeaders: () => {
+        return { server: "jsenv_dev_server/1" };
+      },
+    });
+  }
+  // cors service
+  {
+    finalServices.push(
+      jsenvServiceCORS({
+        accessControlAllowRequestOrigin: true,
+        accessControlAllowRequestMethod: true,
+        accessControlAllowRequestHeaders: true,
+        accessControlAllowedRequestHeaders: [
+          ...jsenvAccessControlAllowedHeaders,
+          "x-jsenv-execution-id",
+        ],
+        accessControlAllowCredentials: true,
+        timingAllowOrigin: true,
+      }),
+    );
+  }
+  // custom services
+  {
+    finalServices.push(...services);
+  }
+  // file_service
+  {
+    const clientFileChangeEventEmitter = createEventEmitter();
+    const clientFileDereferencedEventEmitter = createEventEmitter();
+    clientAutoreload = {
+      enabled: true,
+      clientServerEventsConfig: {},
+      clientFileChangeEventEmitter,
+      clientFileDereferencedEventEmitter,
+      ...clientAutoreload,
+    };
+    const stopWatchingSourceFiles = watchSourceFiles(
+      sourceDirectoryUrl,
+      (fileInfo) => {
+        clientFileChangeEventEmitter.emit(fileInfo);
+      },
+      {
+        sourceFilesConfig,
+        keepProcessAlive: false,
+        cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
+      },
+    );
+    serverStopCallbacks.push(stopWatchingSourceFiles);
+
+    const getOrCreateKitchen = (request) => {
+      const { runtimeName, runtimeVersion } = parseUserAgentHeader(
+        request.headers["user-agent"] || "",
+      );
+      const runtimeId = `${runtimeName}@${runtimeVersion}`;
+      const existing = kitchenCache.get(runtimeId);
+      if (existing) {
+        return existing;
+      }
+      const watchAssociations = URL_META.resolveAssociations(
+        { watch: stopWatchingSourceFiles.watchPatterns },
+        sourceDirectoryUrl,
+      );
+      let kitchen;
+      clientFileChangeEventEmitter.on(({ url }) => {
+        const urlInfo = kitchen.graph.getUrlInfo(url);
+        if (urlInfo) {
+          urlInfo.onModified();
+        }
+      });
+      const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
+
+      kitchen = createKitchen({
+        name: runtimeId,
+        signal,
+        logLevel,
+        rootDirectoryUrl: sourceDirectoryUrl,
+        mainFilePath: sourceMainFilePath,
+        ignore,
+        dev: true,
+        runtimeCompat,
+        clientRuntimeCompat,
+        plugins: [
+          ...plugins,
+          ...getCorePlugins({
+            rootDirectoryUrl: sourceDirectoryUrl,
+            runtimeCompat,
+
+            referenceAnalysis,
+            nodeEsmResolution,
+            magicExtensions,
+            magicDirectoryIndex,
+            supervisor,
+            injections,
+            transpilation,
+
+            clientAutoreload,
+            cacheControl,
+            ribbon,
+          }),
+        ],
+        supervisor,
+        minification: false,
+        sourcemaps,
+        sourcemapsSourcesContent,
+        outDirectoryUrl: outDirectoryUrl
+          ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
+          : undefined,
+      });
+      kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
+        const { watch } = URL_META.applyAssociations({
+          url: urlInfoCreated.url,
+          associations: watchAssociations,
+        });
+        urlInfoCreated.isWatched = watch;
+        // when an url depends on many others, we check all these (like package.json)
+        urlInfoCreated.isValid = () => {
+          if (!urlInfoCreated.url.startsWith("file:")) {
+            return false;
+          }
+          if (urlInfoCreated.content === undefined) {
+            // urlInfo content is undefined when:
+            // - url info content never fetched
+            // - it is considered as modified because undelying file is watched and got saved
+            // - it is considered as modified because underlying file content
+            //   was compared using etag and it has changed
+            return false;
+          }
+          if (!watch) {
+            // file is not watched, check the filesystem
+            let fileContentAsBuffer;
+            try {
+              fileContentAsBuffer = readFileSync(new URL(urlInfoCreated.url));
+            } catch (e) {
+              if (e.code === "ENOENT") {
+                urlInfoCreated.onModified();
+                return false;
+              }
+              return false;
+            }
+            const fileContentEtag = bufferToEtag$1(fileContentAsBuffer);
+            if (fileContentEtag !== urlInfoCreated.originalContentEtag) {
+              urlInfoCreated.onModified();
+              // restore content to be able to compare it again later
+              urlInfoCreated.kitchen.urlInfoTransformer.setContent(
+                urlInfoCreated,
+                String(fileContentAsBuffer),
+                {
+                  contentEtag: fileContentEtag,
+                },
+              );
+              return false;
+            }
+          }
+          for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
+            const implicitUrlInfo =
+              urlInfoCreated.graph.getUrlInfo(implicitUrl);
+            if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
+              return false;
+            }
+          }
+          return true;
+        };
+      });
+      kitchen.graph.urlInfoDereferencedEventEmitter.on(
+        (urlInfoDereferenced, lastReferenceFromOther) => {
+          clientFileDereferencedEventEmitter.emit(
+            urlInfoDereferenced,
+            lastReferenceFromOther,
+          );
+        },
+      );
+
+      serverStopCallbacks.push(() => {
+        kitchen.pluginController.callHooks("destroy", kitchen.context);
+      });
+      {
+        const allServerEvents = {};
+        kitchen.pluginController.plugins.forEach((plugin) => {
+          const { serverEvents } = plugin;
+          if (serverEvents) {
+            Object.keys(serverEvents).forEach((serverEventName) => {
+              // we could throw on serverEvent name conflict
+              // we could throw if serverEvents[serverEventName] is not a function
+              allServerEvents[serverEventName] = serverEvents[serverEventName];
+            });
+          }
+        });
+        const serverEventNames = Object.keys(allServerEvents);
+        if (serverEventNames.length > 0) {
+          Object.keys(allServerEvents).forEach((serverEventName) => {
+            const serverEventInfo = {
+              ...kitchen.context,
+              sendServerEvent: (data) => {
+                serverEventsDispatcher.dispatch({
+                  type: serverEventName,
+                  data,
+                });
+              },
+            };
+            const serverEventInit = allServerEvents[serverEventName];
+            serverEventInit(serverEventInfo);
+          });
+          // "pushPlugin" so that event source client connection can be put as early as possible in html
+          kitchen.pluginController.pushPlugin(
+            jsenvPluginServerEventsClientInjection(
+              clientAutoreload.clientServerEventsConfig,
+            ),
+          );
+        }
+      }
+
+      kitchenCache.set(runtimeId, kitchen);
+      onKitchenCreated(kitchen);
+      return kitchen;
+    };
+
+    finalServices.push({
+      name: "jsenv:omega_file_service",
+      handleRequest: async (request) => {
+        const kitchen = getOrCreateKitchen(request);
+        const serveHookInfo = {
+          ...kitchen.context,
+          request,
+        };
+        const responseFromPlugin =
+          await kitchen.pluginController.callAsyncHooksUntil(
+            "serve",
+            serveHookInfo,
+          );
+        if (responseFromPlugin) {
+          return responseFromPlugin;
+        }
+        const { referer } = request.headers;
+        const parentUrl = referer
+          ? WEB_URL_CONVERTER.asFileUrl(referer, {
+              origin: request.origin,
+              rootDirectoryUrl: sourceDirectoryUrl,
+            })
+          : sourceDirectoryUrl;
+        let reference = kitchen.graph.inferReference(
+          request.resource,
+          parentUrl,
+        );
+        if (!reference) {
+          reference =
+            kitchen.graph.rootUrlInfo.dependencies.createResolveAndFinalize({
+              trace: { message: parentUrl },
+              type: "http_request",
+              specifier: request.resource,
+            });
+        }
+        const urlInfo = reference.urlInfo;
+        const ifNoneMatch = request.headers["if-none-match"];
+        const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
+
+        try {
+          if (!urlInfo.error && ifNoneMatch) {
+            const [clientOriginalContentEtag, clientContentEtag] =
+              ifNoneMatch.split("_");
+            if (
+              urlInfoTargetedByCache.originalContentEtag ===
+                clientOriginalContentEtag &&
+              urlInfoTargetedByCache.contentEtag === clientContentEtag &&
+              urlInfoTargetedByCache.isValid()
+            ) {
+              const headers = {
+                "cache-control": `private,max-age=0,must-revalidate`,
+              };
+              Object.keys(urlInfo.headers).forEach((key) => {
+                if (key !== "content-length") {
+                  headers[key] = urlInfo.headers[key];
+                }
+              });
+              return {
+                status: 304,
+                headers,
+              };
+            }
+          }
+
+          await urlInfo.cook({ request, reference });
+          let { response } = urlInfo;
+          if (response) {
+            return response;
+          }
+          response = {
+            url: reference.url,
+            status: 200,
+            headers: {
+              // when we send eTag to the client the next request to the server
+              // will send etag in request headers.
+              // If they match jsenv bypass cooking and returns 304
+              // This must not happen when a plugin uses "no-store" or "no-cache" as it means
+              // plugin logic wants to happens for every request to this url
+              ...(urlInfo.headers["cache-control"] === "no-store" ||
+              urlInfo.headers["cache-control"] === "no-cache"
+                ? {}
+                : {
+                    "cache-control": `private,max-age=0,must-revalidate`,
+                    // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+                    "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                  }),
+              ...urlInfo.headers,
+              "content-type": urlInfo.contentType,
+              "content-length": urlInfo.contentLength,
+            },
+            body: urlInfo.content,
+            timing: urlInfo.timing,
+          };
+          const augmentResponseInfo = {
+            ...kitchen.context,
+            reference,
+            urlInfo,
+          };
+          kitchen.pluginController.callHooks(
+            "augmentResponse",
+            augmentResponseInfo,
+            (returnValue) => {
+              response = composeTwoResponses(response, returnValue);
+            },
+          );
+          return response;
+        } catch (e) {
+          urlInfo.error = e;
+          const originalError = e ? e.cause || e : e;
+          if (originalError.asResponse) {
+            return originalError.asResponse();
+          }
+          const code = originalError.code;
+          if (code === "PARSE_ERROR") {
+            // when possible let browser re-throw the syntax error
+            // it's not possible to do that when url info content is not available
+            // (happens for js_module_fallback for instance)
+            if (urlInfo.content !== undefined) {
+              kitchen.context.logger.error(`Error while handling ${request.url}:
+${originalError.reasonCode || originalError.code}
+${e.traceMessage}`);
+              return {
+                url: reference.url,
+                status: 200,
+                // reason becomes the http response statusText, it must not contain invalid chars
+                // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                statusText: e.reason,
+                statusMessage: originalError.message,
+                headers: {
+                  "content-type": urlInfo.contentType,
+                  "content-length": urlInfo.contentLength,
+                  "cache-control": "no-store",
+                },
+                body: urlInfo.content,
+              };
+            }
+            return {
+              url: reference.url,
+              status: 500,
+              statusText: e.reason,
+              statusMessage: originalError.message,
+              headers: {
+                "cache-control": "no-store",
+              },
+              body: urlInfo.content,
+            };
+          }
+          if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+            return serveDirectory(reference.url, {
+              headers: {
+                accept: "text/html",
+              },
+              canReadDirectory: true,
+              rootDirectoryUrl: sourceDirectoryUrl,
+            });
+          }
+          if (code === "NOT_ALLOWED") {
+            return {
+              url: reference.url,
+              status: 403,
+              statusText: originalError.reason,
+            };
+          }
+          if (code === "NOT_FOUND") {
+            return {
+              url: reference.url,
+              status: 404,
+              statusText: originalError.reason,
+              statusMessage: originalError.message,
+            };
+          }
+          return {
+            url: reference.url,
+            status: 500,
+            statusText: e.reason,
+            statusMessage: e.stack,
+          };
+        }
+      },
+      handleWebsocket: (websocket, { request }) => {
+        if (request.headers["sec-websocket-protocol"] === "jsenv") {
+          serverEventsDispatcher.addWebsocket(websocket, request);
+        }
+      },
+    });
+  }
+  // jsenv error handler service
+  {
+    finalServices.push({
+      name: "jsenv:omega_error_handler",
+      handleError: (error) => {
+        const getResponseForError = () => {
+          if (error && error.asResponse) {
+            return error.asResponse();
+          }
+          if (error && error.statusText === "Unexpected directory operation") {
+            return {
+              status: 403,
+            };
+          }
+          return convertFileSystemErrorToResponseProperties(error);
+        };
+        const response = getResponseForError();
+        if (!response) {
+          return null;
+        }
+        const body = JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          body: response.body,
+        });
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        };
+      },
+    });
+  }
+  // default error handler
+  {
+    finalServices.push(
+      jsenvServiceErrorHandler({
+        sendErrorDetails: true,
+      }),
+    );
+  }
+
   const server = await startServer({
     signal,
     stopOnExit: false,
@@ -22729,122 +22816,7 @@ const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
-    services: [
-      {
-        handleRequest: (request) => {
-          if (request.headers["x-server-inspect"]) {
-            return { status: 200 };
-          }
-          if (request.pathname === "/__params__.json") {
-            const json = JSON.stringify({
-              sourceDirectoryUrl,
-            });
-            return {
-              status: 200,
-              headers: {
-                "content-type": "application/json",
-                "content-length": Buffer.byteLength(json),
-              },
-              body: json,
-            };
-          }
-          return null;
-        },
-        injectResponseHeaders: () => {
-          return { server: "jsenv_dev_server/1" };
-        },
-      },
-      jsenvServiceCORS({
-        accessControlAllowRequestOrigin: true,
-        accessControlAllowRequestMethod: true,
-        accessControlAllowRequestHeaders: true,
-        accessControlAllowedRequestHeaders: [
-          ...jsenvAccessControlAllowedHeaders,
-          "x-jsenv-execution-id",
-        ],
-        accessControlAllowCredentials: true,
-        timingAllowOrigin: true,
-      }),
-      ...services,
-      {
-        name: "jsenv:omega_file_service",
-        handleRequest: createFileService({
-          signal,
-          logLevel,
-          serverStopCallbacks,
-          serverEventsDispatcher,
-          kitchenCache,
-          onKitchenCreated,
-
-          sourceDirectoryUrl,
-          sourceMainFilePath,
-          ignore,
-          sourceFilesConfig,
-          runtimeCompat,
-
-          plugins,
-          referenceAnalysis,
-          nodeEsmResolution,
-          magicExtensions,
-          magicDirectoryIndex,
-          supervisor,
-          injections,
-          transpilation,
-          clientAutoreload,
-          cacheControl,
-          ribbon,
-          sourcemaps,
-          sourcemapsSourcesContent,
-          outDirectoryUrl,
-        }),
-        handleWebsocket: (websocket, { request }) => {
-          if (request.headers["sec-websocket-protocol"] === "jsenv") {
-            serverEventsDispatcher.addWebsocket(websocket, request);
-          }
-        },
-      },
-      {
-        name: "jsenv:omega_error_handler",
-        handleError: (error) => {
-          const getResponseForError = () => {
-            if (error && error.asResponse) {
-              return error.asResponse();
-            }
-            if (
-              error &&
-              error.statusText === "Unexpected directory operation"
-            ) {
-              return {
-                status: 403,
-              };
-            }
-            return convertFileSystemErrorToResponseProperties(error);
-          };
-          const response = getResponseForError();
-          if (!response) {
-            return null;
-          }
-          const body = JSON.stringify({
-            status: response.status,
-            statusText: response.statusText,
-            headers: response.headers,
-            body: response.body,
-          });
-          return {
-            status: 200,
-            headers: {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(body),
-            },
-            body,
-          };
-        },
-      },
-      // default error handling
-      jsenvServiceErrorHandler({
-        sendErrorDetails: true,
-      }),
-    ],
+    services: finalServices,
   });
   server.stoppedPromise.then((reason) => {
     onStop();

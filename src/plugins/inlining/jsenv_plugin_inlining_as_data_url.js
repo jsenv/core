@@ -66,9 +66,11 @@ export const jsenvPluginInliningAsDataUrl = () => {
       return (async () => {
         await urlInfoInlined.cook();
         const base64Url = DATA_URL.stringify({
-          mediaType: urlInfoInlined.contentType,
+          contentType: urlInfoInlined.contentType,
           base64Flag: true,
-          data: urlInfoInlined.content,
+          data: urlInfoInlined.data.base64Flag
+            ? urlInfoInlined.content
+            : dataToBase64(urlInfoInlined.content),
         });
         return base64Url;
       })();
@@ -83,6 +85,7 @@ export const jsenvPluginInliningAsDataUrl = () => {
       const contentAsBase64 = Buffer.from(
         withoutBase64ParamUrlInfo.content,
       ).toString("base64");
+      urlInfo.data.base64Flag = true;
       return {
         originalContent: withoutBase64ParamUrlInfo.originalContent,
         content: contentAsBase64,
@@ -91,3 +94,5 @@ export const jsenvPluginInliningAsDataUrl = () => {
     },
   };
 };
+
+const dataToBase64 = (data) => Buffer.from(data).toString("base64");

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "38.3.4",
+  "version": "38.3.5",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -45,9 +45,9 @@
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
     "test:workspace": "npm run test --workspaces --if-present -- --workspace",
-    "snapshots:core": "npm run test -- --no-snapshot-assertion",
-    "snapshots:packages": "npm run test --workspaces --if-present -- --workspace --no-snapshot-assertion",
-    "snapshots:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/generate_snapshot_files.mjs",
+    "test:snapshots_core": "npm run test -- --no-snapshot-assertion",
+    "test:snapshots_packages": "npm run test --workspaces --if-present -- --workspace --no-snapshot-assertion",
+    "test:snapshots_only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/generate_snapshot_files.mjs",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
     "build:workspace": "npm run build --workspaces --if-present --conditions=developement",
@@ -99,7 +99,7 @@
     "eslint-plugin-import": "2.29.0",
     "eslint-plugin-react": "7.33.2",
     "open": "9.1.0",
-    "playwright": "1.39.0",
+    "playwright": "1.40.0",
     "prettier": "3.1.0"
   }
 }
