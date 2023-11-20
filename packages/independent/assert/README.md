@@ -93,6 +93,11 @@ npm i --save-dev @jsenv/assert
 
 ```js
 import { assert } from "@jsenv/assert";
+
+assert({
+  actual: true,
+  expected: false,
+});
 ```
 
 ## Usage in a browser via CDN
@@ -215,7 +220,7 @@ const expected = true;
 assert({ actual, expected });
 ```
 
-> Code above is a great example of [the AAA pattern](./docs/AAA_pattern.md).
+> Code above is a great example of [the AAA pattern](./docs/aaa_pattern.md).
 
 #### Assert callback will be called
 
