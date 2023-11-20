@@ -380,6 +380,14 @@ To fix this warning:
         }
       }
     }
+    if (cooldownBetweenExecutions) {
+      if (cooldownBetweenExecutions < 0) {
+        cooldownBetweenExecutions = 0;
+      }
+      if (cooldownBetweenExecutions === Infinity) {
+        cooldownBetweenExecutions = 0;
+      }
+    }
   }
 
   testPlan = {
@@ -824,7 +832,6 @@ const executeConcurrently = async ({
   executionSteps,
   start,
 }) => {
-  const executionResults = [];
   let progressionIndex = 0;
   let remainingExecutionCount = executionSteps.length;
 
@@ -854,18 +861,23 @@ const executeConcurrently = async ({
 
   const executeOne = async (index, previousExecPromise) => {
     const input = executionSteps[index];
-    const output = await start(input, previousExecPromise);
-    if (!multipleExecutionsOperation.signal.aborted) {
-      executionResults[index] = output;
+    await start(input, previousExecPromise);
+    if (multipleExecutionsOperation.signal.aborted) {
+      return;
     }
     if (cooldownBetweenExecutions) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, cooldownBetweenExecutions),
-      );
+      await new Promise((resolve) => {
+        const timeoutId = setTimeout(() => {
+          removeClearTimeoutOnAbort();
+          resolve();
+        }, cooldownBetweenExecutions);
+        const removeClearTimeoutOnAbort =
+          multipleExecutionsOperation.signal.addAbortCallback(() => {
+            clearTimeout(timeoutId);
+          });
+      });
     }
   };
 
   await nextChunk();
-
-  return executionResults;
 };
