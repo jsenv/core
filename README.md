@@ -16,12 +16,13 @@ As a result it can be enjoyed by people without much experience in tooling or se
 
 # The best parts
 
-- Tools and habits used in source files [can be reused in test files](<https://github.com/jsenv/core/wiki/D)-Test>).
+- [Isolated environment](<https://github.com/jsenv/core/wiki/D)-Test#33-isolated-environment>) for each test file
+- Test files are [executed like standard files](<https://github.com/jsenv/core/wiki/D)-Test#14-executing-a-single-test>)
+- [Execute tests in multiple browsers](<https://github.com/jsenv/core/wiki/D)-Test#32-execute-on-more-browsers>): Chrome, Safari, Firefox
 - A [large browser support during dev](<https://github.com/jsenv/core/wiki/B)-Dev#21-browser-support>). Because some people might be happy to use an other browser than the latest chrome during dev. Moreover it is useful to reproduce bug specific to certain browsers.
 - A [large browser support after build](<https://github.com/jsenv/core/wiki/C)-Build#211-maximal-browser-support>). Because some product still needs to support old versions of Firefox, Chrome and Safari.
 - A [single set of files during build](<https://github.com/jsenv/core/wiki/C)-Build#212-same-build-for-all-browsers>). Because a single one is simpler to properly support in every aspects.
 - Versioning during build is robust and <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">avoids cascading hash changes</a><sup>↗</sup>
-- Ability to [execute tests in multiple browsers](<https://github.com/jsenv/core/wiki/D)-Test#32-executing-on-more-browsers>): Chrome, Safari, Firefox
 - An advanced support of top level await, allowing to use it everywhere
 - An advanced support of web workers including worker type module
 - Unlock js module features on a regular `<script>` when needed. If you need the behaviour of `<script>` which is to block execution of following `<script>` in the page, you'll be happy to [still have the power of js modules](<https://github.com/jsenv/core/wiki/G)-Plugins#22-asjsclassic>), like imports, at your disposal.
