@@ -8,7 +8,7 @@ _Jest:_
 
 ```js
 function compileAndroidCode() {
-  throw new Error("you are using the wrong JDK!");
+  throw new Error("wrong JDK!");
 }
 
 test("compiling android goes as expected", () => {
@@ -16,18 +16,22 @@ test("compiling android goes as expected", () => {
   expect(() => compileAndroidCode()).toThrow(Error);
 
   // You can also use a string that must be contained in the error message or a regexp
-  expect(() => compileAndroidCode()).toThrow("you are using the wrong JDK");
+  expect(() => compileAndroidCode()).toThrow("wrong JDK");
   expect(() => compileAndroidCode()).toThrow(/JDK/);
 
   // Or you can match an exact error message using a regexp like below
-  expect(() => compileAndroidCode()).toThrow(/^you are using the wrong JDK$/); // Test fails
-  expect(() => compileAndroidCode()).toThrow(/^you are using the wrong JDK!$/); // Test pass
+  expect(() => compileAndroidCode()).toThrow(/^wrong JDK$/); // Test fails
+  expect(() => compileAndroidCode()).toThrow(/^wrong JDK!$/); // Test pass
 });
 ```
 
 _@jsenv/assert:_
 
 ```js
+function compileAndroidCode() {
+  throw new Error("wrong JDK!");
+}
+
 // compiling android goes as expected
 try {
   compileAndroidCode();
@@ -36,7 +40,7 @@ try {
   // test error type + message
   assert({
     actual: e,
-    expected: new Error("you are using the wrong JDK!"),
+    expected: new Error("wrong JDK!"),
   });
   // test only the error type
   assert({
@@ -46,7 +50,7 @@ try {
   // test only the message
   assert({
     actual: e.message,
-    expected: "you are using the wrong JDK!",
+    expected: "wrong JDK!",
   });
 }
 ```
@@ -494,15 +498,10 @@ assert({
 
 Jest provide an API to regroup code into blocks depending what it does:
 
-- describe
-- beforeAll
-- beforeEach
-- test
-- afterEach
-- afterAll
+- describe, beforeAll, beforeEach, test, afterEach, afterAll
 
-These apis allow to identify code is special but disturbs while reading the code. The top-down execution flow is not that simple anymore.  
-Code execution flow with jest is not standard, see [Scoping](#scoping) and [Order of execution](#order-of-execution).  
+These apis allow to identify code is special but disturbs while reading the code. The top-down execution flow is not that simple anymore.
+Code execution flow with jest is not standard, see [Scoping](#scoping) and [Order of execution](#order-of-execution).
 As a result **only jest can execute test files**: you cannot use other tools without configuration/plugins:
 
 - a VSCode plugin to debug test file execution
@@ -511,8 +510,8 @@ As a result **only jest can execute test files**: you cannot use other tools wit
 
 ### Testing exception
 
-Jest has a specific way to test code throwing exceptions, see [Exceptions](#exceptions).  
-When the exception is thrown by async functions the API is different, see [Async via promises](#async-via-promises).  
+Jest has a specific way to test code throwing exceptions, see [Exceptions](#exceptions).
+When the exception is thrown by async functions the API is different, see [Async via promises](#async-via-promises).
 As a result, when code throw exception, the jest way to write assertions is different. And depending if the assertion is sync or async you have to use two different assertion API.
 
 ### Code portability
@@ -522,6 +521,6 @@ Jest api makes code dependent on jest:
 - tools cannot execute test files without plugins/configuration
 - humans cannot read test files without documentation
 
-As a result switching from a source file to a test file cost cognitivie energy. You might even need to re-read Jest documentation to remember what's going on. Things like [https://jestjs.io/docs/setup-teardown are hard to keep in memory and hurts the natural code execution flow present in source files.
+As a result switching from a source file to a test file cost cognitivie energy. You might even need to re-read Jest documentation to remember what's going on (see https://jestjs.io/docs/setup-teardown).
 
-`@jsenv/assert` favors standard. As a result code is portable. Switching from a standard file to a test file is designed to be easier. Test should be easier to read and easier to write because closer to the code in source files.
+`@jsenv/assert` favors standard. As a result code is portable. Switching from a standard file to a test file is designed to be easier and pleasant.
