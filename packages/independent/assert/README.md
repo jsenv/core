@@ -85,15 +85,7 @@ window.Error.prototype
 actual[[Prototype]]
 ```
 
-## Usage
-
-How to use _@jsenv/assert_ in 3 parts:
-
-1. Using _@jsenv/assert_ in Node.js
-2. Using _@jsenv/assert_ in a browser
-3. Writing tests with _@jsenv/assert_
-
-### Using _@jsenv/assert_ in Node.js
+## Usage in Node.js
 
 ```console
 npm i --save-dev @jsenv/assert
@@ -103,17 +95,20 @@ npm i --save-dev @jsenv/assert
 import { assert } from "@jsenv/assert";
 ```
 
-### Using _@jsenv/assert_ in a browser
-
-1 - Using a CDN
+## Usage in a browser via CDN
 
 ```html
 <script type="module">
   import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js";
+
+  assert({
+    actual: true,
+    expected: false,
+  });
 </script>
 ```
 
-2 - Using NPM
+## Usage in a browser via NPM
 
 ```console
 npm i --save-dev @jsenv/assert
@@ -130,12 +125,9 @@ npm i --save-dev @jsenv/assert
 </script>
 ```
 
-### Writing tests with _@jsenv/assert_
+## Writing tests with _@jsenv/assert_
 
-This part contain recommendations on how to write tests using _@jsenv/assert_.
-These guidelines helps to write consistent tests and illustrates how it is meant to be used.
-
-After an introduction on the AAA pattern, several practical examples are shown.
+This part contain examples where _@jsenv/assert_ is used to write tests.
 
 #### Assert exception
 
@@ -165,15 +157,31 @@ try {
 
 #### Assert async exception
 
-If _getCircleArea_ from previous example was async, add _await_ in front of it.
+```js
+import { assert } from "@jsenv/assert";
 
-```diff
+const getCircleArea = async (circleRadius) => {
+  if (isNaN(circleRadius)) {
+    throw new TypeError(
+      `circleRadius must be a number, received ${circleRadius}`,
+    );
+  }
+  return circleRadius * circleRadius * Math.PI;
+};
+
 try {
--  getCircleArea("toto")
-+  await getCircleArea("toto")
-  throw new Error("should throw") // this line throw if getCircleArea does not throw as it should
-} catch(e) {
+  await getCircleArea("toto");
+  throw new Error("should throw"); // this line throw if getCircleArea does not throw as it should
+} catch (error) {
+  const actual = error;
+  const expected = new TypeError(
+    `circleRadius must be a number, received toto`,
+  );
+  assert({ actual, expected });
+}
 ```
+
+> Note how code testing `getCircleArea` is similar in [Assert exception](#assert-exception) and [Assert async exception](#assert-async-exception).
 
 #### Assert callback is called
 
@@ -222,10 +230,7 @@ let called = false;
 callAfter50Ms(() => {
   called = true;
 });
-
-// Wait 80ms, then assert callback was called
 await new Promise((resolve) => setTimeout(resolve, 80));
-
 const actual = called;
 const expected = true;
 assert({ actual, expected });
