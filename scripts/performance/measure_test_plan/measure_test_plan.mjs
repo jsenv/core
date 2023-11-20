@@ -45,6 +45,7 @@ await executeTestPlan({
       },
     },
   },
+  concurrency: Boolean(process.env.CONCURRENCY),
   logLevel: "warn",
   coverageEnabled: true,
   coverageConfig: {

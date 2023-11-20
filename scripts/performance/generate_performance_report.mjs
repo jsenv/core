@@ -19,6 +19,7 @@ const {
   devServerMetrics,
   buildMetrics,
   testPlanMetrics,
+  testPlanMetricsWithConcurrency,
 } = await importMetricFromFiles({
   logLevel: process.argv.includes("--log") ? "info" : "warn",
   directoryUrl: new URL("./", import.meta.url),
@@ -47,6 +48,14 @@ const {
       iterations: process.argv.includes("--once") ? 1 : 3,
       msToWaitBetweenEachIteration: 500,
     },
+    testPlanMetricsWithConcurrency: {
+      file: "./measure_test_plan/measure_test_plan.mjs#testPlanMetrics",
+      env: {
+        CONCURRENCY: "1",
+      },
+      iterations: process.argv.includes("--once") ? 1 : 3,
+      msToWaitBetweenEachIteration: 500,
+    },
   },
 });
 
@@ -63,5 +72,8 @@ export const performanceReport = {
   },
   "test metrics": {
     ...testPlanMetrics,
+  },
+  "test metrics (with concurrency)": {
+    ...testPlanMetricsWithConcurrency,
   },
 };
