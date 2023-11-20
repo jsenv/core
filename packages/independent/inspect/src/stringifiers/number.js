@@ -51,11 +51,7 @@ const formatNumber = (numberString) => {
       minimumDigits: 5,
       groupLength: 3,
     });
-    const fractionalWithSeparators = addSeparatorFromLeft(fractional, {
-      minimumDigits: 5,
-      groupLength: 3,
-    });
-    return `${integerWithSeparators}.${fractionalWithSeparators}`;
+    return `${integerWithSeparators}.${fractional}`;
   }
 
   return addSeparator(integer, {
@@ -90,16 +86,16 @@ const groupDigits = (digits, { minimumDigits, groupLength }) => {
   return digitsWithSeparator;
 };
 
-const addSeparatorFromLeft = (value, { minimumDigits, groupLength }) => {
-  const { length } = value;
-  if (length < minimumDigits) {
-    return value;
-  }
+// const addSeparatorFromLeft = (value, { minimumDigits, groupLength }) => {
+//   const { length } = value;
+//   if (length < minimumDigits) {
+//     return value;
+//   }
 
-  const parts = [];
-  for (let start = 0; start < length; start += groupLength) {
-    const end = Math.min(start + groupLength, length);
-    parts.push(value.slice(start, end));
-  }
-  return parts.join("_");
-};
+//   const parts = [];
+//   for (let start = 0; start < length; start += groupLength) {
+//     const end = Math.min(start + groupLength, length);
+//     parts.push(value.slice(start, end));
+//   }
+//   return parts.join("_");
+// };

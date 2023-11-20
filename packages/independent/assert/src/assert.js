@@ -4,6 +4,7 @@ import {
   createAnyExpectation,
   createStartsWithExpectation,
   createMatchesRegExpExpectation,
+  createCloseToExpectation,
 } from "./internal/compare.js";
 import { errorMessageFromComparison } from "./internal/error_message_from_comparison.js";
 import { createAssertionError } from "./assertion_error.js";
@@ -83,6 +84,14 @@ assert.matchesRegExp = (regexp) => {
 };
 assert.startsWith = (string) => {
   return createStartsWithExpectation(string);
+};
+assert.closeTo = (value) => {
+  if (typeof value !== "number") {
+    throw new TypeError(
+      `assert.closeTo must be called with a number, received ${value}`,
+    );
+  }
+  return createCloseToExpectation(value);
 };
 assert.asObjectWithoutPrototype = (object) => {
   const objectWithoutPrototype = Object.create(null);

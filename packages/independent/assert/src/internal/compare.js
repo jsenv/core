@@ -104,6 +104,28 @@ export const createStartsWithExpectation = (string) => {
   return startsWithExpectation;
 };
 
+export const createCloseToExpectation = (number, precision = 2) => {
+  const closeToExpectation = createExpectation({
+    type: "close_to",
+    expected: number,
+    comparer: ({ actual }) => {
+      if (actual === Infinity && number === Infinity) {
+        return true;
+      }
+      if (actual === -Infinity && number === -Infinity) {
+        return true;
+      }
+      const expectedDiff = Math.pow(10, -precision) / 2;
+      const receivedDiff = Math.abs(number - actual);
+      return receivedDiff < expectedDiff;
+    },
+  });
+  closeToExpectation[inspectMethodSymbol] = () => {
+    return `closeTo(${inspect(number)})`;
+  };
+  return closeToExpectation;
+};
+
 const createComparison = ({ parent = null, children = [], ...rest }) => {
   const comparison = {
     parent,

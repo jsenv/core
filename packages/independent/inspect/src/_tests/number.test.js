@@ -107,7 +107,7 @@ import { inspect } from "@jsenv/inspect";
 
 {
   const actual = inspect(-0.120123);
-  const expected = "-0.120_123";
+  const expected = "-0.120123";
   assert({ actual, expected });
 }
 
@@ -121,7 +121,7 @@ import { inspect } from "@jsenv/inspect";
 // exponential
 {
   const actual = inspect(-1.23456e105);
-  const expected = "-1.234_56e+105";
+  const expected = "-1.23456e+105";
   assert({ actual, expected });
 }
 

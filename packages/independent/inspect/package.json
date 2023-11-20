@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/inspect",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Convert a value into a readable string",
   "license": "MIT",
   "repository": {
