@@ -1,3 +1,4 @@
+import os from "node:os";
 import { existsSync } from "node:fs";
 import { memoryUsage } from "node:process";
 import { takeCoverage } from "node:v8";
@@ -48,7 +49,7 @@ import { ensureGlobalGc } from "./gc.js";
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
  * @param {boolean} [testPlanParameters.logShortForCompletedExecutions=false] Abbreviate completed execution information to shorten terminal output
  * @param {boolean} [testPlanParameters.logMergeForCompletedExecutions=false] Merge completed execution logs to shorten terminal output
- * @param {number} [testPlanParameters.maxExecutionsInParallel=1] Maximum amount of execution in parallel
+ * @param {boolean|number} [testPlanParameters.concurrency=false] Maximum amount of execution running at the same time
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
  * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
@@ -75,7 +76,7 @@ export const executeTestPlan = async ({
   webServer,
   testPlan,
   updateProcessExitCode = true,
-  maxExecutionsInParallel = 1,
+  concurrency = false,
   defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
@@ -342,6 +343,10 @@ To fix this warning:
         }
       }
     }
+
+    if (typeof concurrency !== "boolean" && typeof concurrency !== "number") {
+      throw new TypeError(`concurrency must be a boolean or a number`);
+    }
   }
 
   logger.debug(
@@ -379,6 +384,25 @@ To fix this warning:
           );
         }
       }
+    }
+    if (cooldownBetweenExecutions) {
+      if (cooldownBetweenExecutions < 0) {
+        cooldownBetweenExecutions = 0;
+      }
+      if (cooldownBetweenExecutions === Infinity) {
+        cooldownBetweenExecutions = 0;
+      }
+    }
+    if (concurrency === true) {
+      const availableCpus = os.cpus().length;
+      concurrency =
+        availableCpus > 2
+          ? // One CPU is used to run this code so we do availableCpus - 1
+            availableCpus - 1
+          : 1;
+    }
+    if (concurrency === false) {
+      concurrency = 1;
     }
   }
 
@@ -519,7 +543,7 @@ To fix this warning:
     const executionLogsEnabled = logger.levels.info;
     const executionSpinner =
       logRefresh &&
-      maxExecutionsInParallel === 1 &&
+      concurrency === 1 &&
       !debugLogsEnabled &&
       executionLogsEnabled &&
       process.stdout.isTTY &&
@@ -542,9 +566,9 @@ To fix this warning:
 
     const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-    await executeInParallel({
+    await executeConcurrently({
       multipleExecutionsOperation,
-      maxExecutionsInParallel,
+      concurrency,
       cooldownBetweenExecutions,
       executionSteps,
       start: async (paramsFromStep) => {
@@ -817,55 +841,48 @@ const canOverwriteLogGetter = ({
   return true;
 };
 
-const executeInParallel = async ({
+const executeConcurrently = async ({
   multipleExecutionsOperation,
-  maxExecutionsInParallel,
+  concurrency,
   cooldownBetweenExecutions,
   executionSteps,
   start,
 }) => {
-  const executionResults = [];
   let progressionIndex = 0;
-  let remainingExecutionCount = executionSteps.length;
+  let remainingExecutionToStart = executionSteps.length;
 
-  const nextChunk = async () => {
+  const startNext = async () => {
+    if (remainingExecutionToStart === 0) {
+      return;
+    }
+    remainingExecutionToStart--;
+    const input = executionSteps[progressionIndex];
+    progressionIndex++;
+    await start(input);
     if (multipleExecutionsOperation.signal.aborted) {
       return;
     }
-    const outputPromiseArray = [];
-    let previousExecPromise = Promise.resolve();
-    while (
-      remainingExecutionCount > 0 &&
-      outputPromiseArray.length < maxExecutionsInParallel
-    ) {
-      remainingExecutionCount--;
-      const outputPromise = executeOne(progressionIndex, previousExecPromise);
-      previousExecPromise = outputPromise;
-      progressionIndex++;
-      outputPromiseArray.push(outputPromise);
-    }
-    if (outputPromiseArray.length) {
-      await Promise.all(outputPromiseArray);
-      if (remainingExecutionCount > 0) {
-        await nextChunk();
+    if (cooldownBetweenExecutions) {
+      await new Promise((resolve) => {
+        const timeoutId = setTimeout(() => {
+          removeClearTimeoutOnAbort();
+          resolve();
+        }, cooldownBetweenExecutions);
+        const removeClearTimeoutOnAbort =
+          multipleExecutionsOperation.signal.addAbortCallback(() => {
+            clearTimeout(timeoutId);
+          });
+      });
+      if (multipleExecutionsOperation.signal.aborted) {
+        return;
       }
     }
+    await startNext();
   };
 
-  const executeOne = async (index, previousExecPromise) => {
-    const input = executionSteps[index];
-    const output = await start(input, previousExecPromise);
-    if (!multipleExecutionsOperation.signal.aborted) {
-      executionResults[index] = output;
-    }
-    if (cooldownBetweenExecutions) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, cooldownBetweenExecutions),
-      );
-    }
-  };
-
-  await nextChunk();
-
-  return executionResults;
+  const promises = [];
+  while (concurrency--) {
+    promises.push(startNext());
+  }
+  await Promise.all(promises);
 };

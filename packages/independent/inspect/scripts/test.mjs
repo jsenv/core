@@ -29,7 +29,7 @@ await executeTestPlan({
       },
     },
   },
-  maxExecutionsInParallel: 4,
+  concurrency: true,
   webServer: {
     origin: "http://localhost:3456",
     moduleUrl: new URL("./dev.mjs", import.meta.url),
