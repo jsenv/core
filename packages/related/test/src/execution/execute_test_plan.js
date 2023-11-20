@@ -75,7 +75,7 @@ export const executeTestPlan = async ({
   webServer,
   testPlan,
   updateProcessExitCode = true,
-  maxExecutionsInParallel = 1,
+  concurrency = 1,
   defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
@@ -519,7 +519,7 @@ To fix this warning:
     const executionLogsEnabled = logger.levels.info;
     const executionSpinner =
       logRefresh &&
-      maxExecutionsInParallel === 1 &&
+      concurrency === 1 &&
       !debugLogsEnabled &&
       executionLogsEnabled &&
       process.stdout.isTTY &&
@@ -542,9 +542,9 @@ To fix this warning:
 
     const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-    await executeInParallel({
+    await executeConcurrently({
       multipleExecutionsOperation,
-      maxExecutionsInParallel,
+      concurrency,
       cooldownBetweenExecutions,
       executionSteps,
       start: async (paramsFromStep) => {
@@ -817,9 +817,9 @@ const canOverwriteLogGetter = ({
   return true;
 };
 
-const executeInParallel = async ({
+const executeConcurrently = async ({
   multipleExecutionsOperation,
-  maxExecutionsInParallel,
+  concurrency,
   cooldownBetweenExecutions,
   executionSteps,
   start,
@@ -836,7 +836,7 @@ const executeInParallel = async ({
     let previousExecPromise = Promise.resolve();
     while (
       remainingExecutionCount > 0 &&
-      outputPromiseArray.length < maxExecutionsInParallel
+      outputPromiseArray.length < concurrency
     ) {
       remainingExecutionCount--;
       const outputPromise = executeOne(progressionIndex, previousExecPromise);
