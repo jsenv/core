@@ -13,6 +13,7 @@ const devServer = await startDevServer({
   sourceDirectoryUrl: new URL("./basic_app/", import.meta.url),
   logLevel: "warn",
   keepProcessAlive: false,
+  port: 0,
 });
 const readyMetrics = readyMeasures.stop();
 Object.assign(devServerMetrics, {

@@ -1,3 +1,7 @@
+# 2.0.0
+
+- Allow to execute tests conccurently
+
 # 1.7.0
 
 - Implement github annotations, enabled by default when runned inside GitHub workflow
