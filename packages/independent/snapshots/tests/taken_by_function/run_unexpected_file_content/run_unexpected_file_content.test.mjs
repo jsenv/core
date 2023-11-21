@@ -20,7 +20,7 @@ try {
   const actual = e.message;
   const expected = `comparison with previous snapshot failed
 --- reason ---
-"a.js": unexpected character in file content
+unexpected character in "a.js" content
 --- details ---
 console.log('b');
             ^ unexpected "'", expected to continue with '"a");'…
