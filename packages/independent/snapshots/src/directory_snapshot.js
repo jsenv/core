@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+import { createAssertionError } from "@jsenv/assert";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 
 import {
@@ -36,13 +37,25 @@ export const assertSnapshotDirectoryTakenByFunction = async (
   snapshotDirectoryUrl,
   callback,
 ) => {
+  snapshotDirectoryUrl = assertAndNormalizeDirectoryUrl(snapshotDirectoryUrl);
+  const snapshotDirectoryUrlObject = new URL(snapshotDirectoryUrl);
   if (
     process.env.NO_SNAPSHOT_ASSERTION ||
-    !existsSync(new URL(snapshotDirectoryUrl))
+    !existsSync(snapshotDirectoryUrlObject)
   ) {
     // just call the callback and ensure it has written something
     await callback();
-    // TODO here: assert something was written
+    if (!existsSync(snapshotDirectoryUrlObject)) {
+      throw createAssertionError(
+        `function was expected to write file(s) in ${snapshotDirectoryUrl}`,
+      );
+    }
+    const snapshotContent = readdirSync(snapshotDirectoryUrlObject);
+    if (snapshotContent.length === 0) {
+      throw createAssertionError(
+        `function was expected to write file(s) in ${snapshotDirectoryUrl}`,
+      );
+    }
     return;
   }
   const snapshotDirectoryContentBeforeCall =
