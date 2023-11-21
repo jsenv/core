@@ -1,13 +1,8 @@
-import { readSnapshotsFromDirectory, assertSnapshots } from "@jsenv/snapshots";
+import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshots";
 
-const expected = readSnapshotsFromDirectory(
+assertSnapshotDirectoryTakenByFunction(
   new URL("./snapshots/", import.meta.url),
+  async () => {
+    await import("./execution_logs_snapshots.mjs");
+  },
 );
-await import("./execution_logs_snapshots.mjs");
-const actual = readSnapshotsFromDirectory(
-  new URL("./snapshots/", import.meta.url),
-);
-assertSnapshots({
-  actual,
-  expected,
-});

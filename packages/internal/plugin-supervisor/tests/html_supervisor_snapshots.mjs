@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { comparePathnames } from "@jsenv/filesystem";
-import { writeSnapshotsIntoDirectory } from "@jsenv/snapshots";
+import { writeDirectoryContent } from "@jsenv/snapshots";
 
 import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
 
@@ -40,4 +40,4 @@ await transformFixtureFile("script_src.html");
 await transformFixtureFile("script_type_module_inline.html");
 await transformFixtureFile("script_type_module_src.html");
 
-writeSnapshotsIntoDirectory(new URL("./snapshots/", import.meta.url), files);
+writeDirectoryContent(new URL("./snapshots/", import.meta.url), files);
