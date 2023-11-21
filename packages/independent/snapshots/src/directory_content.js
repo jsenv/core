@@ -1,13 +1,12 @@
-import { readdirSync, statSync, readFileSync, rmSync } from "node:fs";
+import { readdirSync, statSync, rmSync } from "node:fs";
 import {
   assertAndNormalizeDirectoryUrl,
   writeFileSync,
   comparePathnames,
 } from "@jsenv/filesystem";
 import { urlToRelativeUrl } from "@jsenv/urls";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-import { ensureUnixLineBreaks } from "./line_break_unix.js";
+import { readFileContent } from "./file_content.js";
 
 export const readDirectoryContent = (directoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
@@ -23,15 +22,8 @@ export const readDirectoryContent = (directoryUrl) => {
         if (stat.isDirectory()) {
           visitDirectory(new URL(`${contentUrl}/`));
         } else {
-          const isTextual = CONTENT_TYPE.isTextual(
-            CONTENT_TYPE.fromUrlExtension(contentUrl),
-          );
-          const content = readFileSync(contentUrl, isTextual ? "utf8" : null);
           const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
-          fileContents[relativeUrl] =
-            isTextual && process.platform === "win32"
-              ? ensureUnixLineBreaks(content)
-              : content;
+          fileContents[relativeUrl] = readFileContent(contentUrl);
         }
       });
     } catch (e) {
