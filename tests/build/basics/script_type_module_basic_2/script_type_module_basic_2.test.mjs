@@ -1,6 +1,6 @@
-import { build } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
+import { build } from "@jsenv/core";
 
 const test = async ({ name, ...params }) => {
   await build({

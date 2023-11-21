@@ -1,6 +1,5 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
-
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 const test = async (params) => {

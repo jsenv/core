@@ -1,5 +1,6 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
+
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
 await build({

@@ -5,11 +5,11 @@
 
 import { writeFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const debug = false; // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(

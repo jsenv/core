@@ -92,6 +92,7 @@
     "@jsenv/monorepo": "0.0.4",
     "@jsenv/performance-impact": "4.2.0",
     "@jsenv/plugin-as-js-classic": "./packages/related/plugin-as-js-classic/",
+    "@jsenv/snapshots": "./packages/independent/snapshots/",
     "@jsenv/test": "./packages/related/test/",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "eslint": "8.54.0",

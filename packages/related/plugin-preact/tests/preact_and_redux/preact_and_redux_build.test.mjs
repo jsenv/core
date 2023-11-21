@@ -1,7 +1,7 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 import { assert } from "@jsenv/assert";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 

@@ -1,8 +1,8 @@
-import { assert } from "@jsenv/assert";
 import stripAnsi from "strip-ansi";
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { assert } from "@jsenv/assert";
 
 import { build, startBuildServer } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const warnCalls = [];

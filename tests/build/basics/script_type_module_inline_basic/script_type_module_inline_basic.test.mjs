@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 
 import { build } from "@jsenv/core";
 

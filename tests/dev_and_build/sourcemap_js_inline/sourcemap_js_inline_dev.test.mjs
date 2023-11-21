@@ -1,8 +1,8 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 import { startDevServer } from "@jsenv/core";
+import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
   await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));

@@ -1,8 +1,8 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshots";
 import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const test = async () => {
   const devServer = await startDevServer({
