@@ -28,7 +28,7 @@ export const resolve = (
   source,
   file,
   {
-    logLevel,
+    logLevel = "error",
     rootDirectoryUrl,
     packageConditions = ["browser", "import"],
     ambiguousExtensions = [".js", ".html", ".jsx", ".ts", ".tsx"],
