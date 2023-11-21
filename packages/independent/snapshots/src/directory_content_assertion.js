@@ -82,7 +82,7 @@ ${extraUrls.join("\n")}`);
 --- reason ---
 "${relativeUrl}": ${message}
 --- file ---
-${snapshotDirectoryUrl}b.js`);
+${snapshotDirectoryUrl}${relativeUrl}`);
     }
   }
 };
