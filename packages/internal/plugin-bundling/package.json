@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.5.9",
+  "version": "2.6.0",
   "license": "MIT",
   "repository": {
     "type": "git",
