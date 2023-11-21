@@ -17,18 +17,11 @@ try {
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
-  const expected = `unexpected character in string
---- details ---
-console.log("c");
-             ^ unexpected "c", expected to continue with 'b");'…
---- path ---
-actual[13]
+  const expected = `comparison with previous snapshot failed
 --- reason ---
-file content does not match snapshot
---- file ---
-${sourceDirectoryUrl}b.js
---- snapshot url ---
-${snapshotsDirectoryUrl}b.js`;
+"file.txt" is missing
+--- snapshot directory url ---
+${snapshotsDirectoryUrl}`;
   assert({ actual, expected });
 
   const bFileContentInSnapshotDirectory = readDirectoryContent(
