@@ -19,9 +19,10 @@ try {
   const actual = e.message;
   const expected = `comparison with previous snapshot failed
 --- reason ---
-"file.txt" is missing
---- file missing ---
-${snapshotsDirectoryUrl}file.txt`;
+2 files are unexpected
+--- files unexpected ---
+${snapshotsDirectoryUrl}file.txt
+${snapshotsDirectoryUrl}hello.js`;
   assert({ actual, expected });
 
   const filesInSnapshotsDirectory = Object.keys(
@@ -29,7 +30,7 @@ ${snapshotsDirectoryUrl}file.txt`;
   );
   assert({
     actual: filesInSnapshotsDirectory,
-    expected: ["a.js", "b.js"],
+    expected: ["a.js", "b.js", "file.txt", "hello.js"],
   });
 } finally {
   writeDirectoryContent(sourceDirectoryUrl, sourceContentBeforeTest);
