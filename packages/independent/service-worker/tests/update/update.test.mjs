@@ -1,7 +1,4 @@
-import {
-  readSnapshotsFromDirectory,
-  assertSnapshots,
-} from "@jsenv/core/tests/snapshots_directory.js";
+import { readSnapshotsFromDirectory, assertSnapshots } from "@jsenv/snapshots";
 
 // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
 if (!process.env.CI) {

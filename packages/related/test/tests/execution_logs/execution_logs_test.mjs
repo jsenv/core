@@ -1,7 +1,4 @@
-import {
-  readSnapshotsFromDirectory,
-  assertSnapshots,
-} from "@jsenv/core/tests/snapshots_directory.js";
+import { readSnapshotsFromDirectory, assertSnapshots } from "@jsenv/snapshots";
 
 const expected = readSnapshotsFromDirectory(
   new URL("./snapshots/", import.meta.url),
