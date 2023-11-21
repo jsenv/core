@@ -2,14 +2,14 @@ import { assert } from "@jsenv/assert";
 
 import {
   takeDirectorySnapshot,
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
+  readDirectoryContent,
+  writeDirectoryContent,
 } from "@jsenv/snapshots";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
-const contentBeforeTest = readSnapshotsFromDirectory(snapshotsDirectoryUrl);
+const contentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
 
 try {
   takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
@@ -21,10 +21,14 @@ try {
 console.log("c");
              ^ unexpected "c", expected to continue with 'b");'…
 --- path ---
-actual["b.js"][13]
---- context ---
-${snapshotsDirectoryUrl}`;
+actual[13]
+--- reason ---
+file content does not match snapshot
+--- file ---
+${sourceDirectoryUrl}b.js
+--- snapshot url ---
+${snapshotsDirectoryUrl}b.js`;
   assert({ actual, expected });
 } finally {
-  writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, contentBeforeTest);
+  writeDirectoryContent(snapshotsDirectoryUrl, contentBeforeTest);
 }

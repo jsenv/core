@@ -11,9 +11,10 @@ export const takeDirectorySnapshot = (
   sourceDirectoryUrl,
   snapshotDirectoryUrl,
 ) => {
+  sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl);
   snapshotDirectoryUrl = assertAndNormalizeDirectoryUrl(snapshotDirectoryUrl);
-  snapshotDirectoryUrl = new URL(snapshotDirectoryUrl);
-  if (!existsSync(snapshotDirectoryUrl)) {
+
+  if (!existsSync(new URL(snapshotDirectoryUrl))) {
     const sourceDirectoryContent = readDirectoryContent(sourceDirectoryUrl);
     writeDirectoryContent(snapshotDirectoryUrl, sourceDirectoryContent);
     return;
@@ -21,15 +22,18 @@ export const takeDirectorySnapshot = (
   const snapshotDirectoryContent = readDirectoryContent(snapshotDirectoryUrl);
   const sourceDirectoryContent = readDirectoryContent(sourceDirectoryUrl);
   writeDirectoryContent(snapshotDirectoryUrl, sourceDirectoryContent);
-  assertDirectoryContent(sourceDirectoryContent, snapshotDirectoryContent);
+  assertDirectoryContent(
+    sourceDirectoryContent,
+    snapshotDirectoryContent,
+    sourceDirectoryUrl,
+    snapshotDirectoryUrl,
+  );
 };
 
 export const assertSnapshotDirectoryAfterCallback = async (
   snapshotDirectoryUrl,
   callback,
 ) => {
-  snapshotDirectoryUrl = assertAndNormalizeDirectoryUrl(snapshotDirectoryUrl);
-  snapshotDirectoryUrl = new URL(snapshotDirectoryUrl);
   const snapshotDirectoryContentBeforeCall =
     readDirectoryContent(snapshotDirectoryUrl);
   await callback();
@@ -38,5 +42,6 @@ export const assertSnapshotDirectoryAfterCallback = async (
   assertDirectoryContent(
     snapshotDirectoryContentAfterCall,
     snapshotDirectoryContentBeforeCall,
+    snapshotDirectoryUrl,
   );
 };
