@@ -1,3 +1,5 @@
+// TODO: also assert the content of snapshots/ is updated
+
 import { assert } from "@jsenv/assert";
 
 import {
@@ -29,6 +31,14 @@ ${sourceDirectoryUrl}b.js
 --- snapshot url ---
 ${snapshotsDirectoryUrl}b.js`;
   assert({ actual, expected });
+
+  const bFileContentInSnapshotDirectory = readDirectoryContent(
+    snapshotsDirectoryUrl,
+  )["b.js"];
+  assert({
+    actual: bFileContentInSnapshotDirectory,
+    expected: `console.log("c");\n`,
+  });
 } finally {
   writeDirectoryContent(snapshotsDirectoryUrl, contentBeforeTest);
 }
