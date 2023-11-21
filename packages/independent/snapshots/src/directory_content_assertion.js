@@ -6,9 +6,6 @@ export const assertDirectoryContent = (
   sourceDirectoryUrl,
   snapshotDirectoryUrl,
 ) => {
-  if (process.env.NO_SNAPSHOT_ASSERTION) {
-    return;
-  }
   const actualFiles = Object.keys(actualDirectoryContent).map(
     (relativeUrl) => new URL(relativeUrl, sourceDirectoryUrl).href,
   );

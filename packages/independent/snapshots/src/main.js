@@ -1,6 +1,6 @@
 export {
   takeDirectorySnapshot,
-  assertSnapshotDirectoryAfterCallback,
+  assertSnapshotDirectoryTakenByFunction,
 } from "./directory_snapshot.js";
 
 export {

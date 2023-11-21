@@ -1,5 +1,3 @@
-// TODO: also assert the content of snapshots/ is updated
-
 import { assert } from "@jsenv/assert";
 
 import {
@@ -11,7 +9,8 @@ import {
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
-const contentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
+const sourceContentBeforeTest = readDirectoryContent(sourceDirectoryUrl);
+const snapshotContentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
 
 try {
   takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
@@ -40,5 +39,6 @@ ${snapshotsDirectoryUrl}b.js`;
     expected: `console.log("c");\n`,
   });
 } finally {
-  writeDirectoryContent(snapshotsDirectoryUrl, contentBeforeTest);
+  writeDirectoryContent(sourceDirectoryUrl, sourceContentBeforeTest);
+  writeDirectoryContent(snapshotsDirectoryUrl, snapshotContentBeforeTest);
 }

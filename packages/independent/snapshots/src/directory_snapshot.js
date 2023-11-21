@@ -13,8 +13,11 @@ export const takeDirectorySnapshot = (
 ) => {
   sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(sourceDirectoryUrl);
   snapshotDirectoryUrl = assertAndNormalizeDirectoryUrl(snapshotDirectoryUrl);
-
-  if (!existsSync(new URL(snapshotDirectoryUrl))) {
+  if (
+    process.env.NO_SNAPSHOT_ASSERTION ||
+    !existsSync(new URL(snapshotDirectoryUrl))
+  ) {
+    // just update the snapshot directory content
     const sourceDirectoryContent = readDirectoryContent(sourceDirectoryUrl);
     writeDirectoryContent(snapshotDirectoryUrl, sourceDirectoryContent);
     return;
@@ -30,10 +33,19 @@ export const takeDirectorySnapshot = (
   );
 };
 
-export const assertSnapshotDirectoryAfterCallback = async (
+export const assertSnapshotDirectoryTakenByFunction = async (
   snapshotDirectoryUrl,
   callback,
 ) => {
+  if (
+    process.env.NO_SNAPSHOT_ASSERTION ||
+    !existsSync(new URL(snapshotDirectoryUrl))
+  ) {
+    // just call the callback and ensure it has written something
+    await callback();
+    // TODO here: assert something was written
+    return;
+  }
   const snapshotDirectoryContentBeforeCall =
     readDirectoryContent(snapshotDirectoryUrl);
   await callback();
@@ -42,6 +54,7 @@ export const assertSnapshotDirectoryAfterCallback = async (
   assertDirectoryContent(
     snapshotDirectoryContentAfterCall,
     snapshotDirectoryContentBeforeCall,
+    snapshotDirectoryUrl,
     snapshotDirectoryUrl,
   );
 };
