@@ -91,21 +91,23 @@ export const takeDirectorySnapshot = (
   snapshotDirectoryUrl,
   callAssert = true,
 ) => {
-  const directoryContent = readSnapshotsFromDirectory(directoryUrl);
-  writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent);
-
   snapshotDirectoryUrl = assertAndNormalizeDirectoryUrl(snapshotDirectoryUrl);
   snapshotDirectoryUrl = new URL(snapshotDirectoryUrl);
-  if (existsSync(snapshotDirectoryUrl)) {
-    const snapshotDirectoryContent =
-      readSnapshotsFromDirectory(snapshotDirectoryUrl);
-    if (callAssert) {
-      assertSnapshots({
-        actual: directoryContent,
-        expected: snapshotDirectoryContent,
-        snapshotUrl: snapshotDirectoryUrl,
-      });
-    }
+  if (!existsSync(snapshotDirectoryUrl)) {
+    const directoryContent = readSnapshotsFromDirectory(directoryUrl);
+    writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent);
+    return;
+  }
+  const snapshotDirectoryContent =
+    readSnapshotsFromDirectory(snapshotDirectoryUrl);
+  const directoryContent = readSnapshotsFromDirectory(directoryUrl);
+  writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent);
+  if (callAssert) {
+    assertSnapshots({
+      actual: directoryContent,
+      expected: snapshotDirectoryContent,
+      snapshotUrl: snapshotDirectoryUrl,
+    });
   }
 };
 
