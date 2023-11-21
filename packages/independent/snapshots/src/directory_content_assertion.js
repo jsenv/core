@@ -67,11 +67,18 @@ ${extraUrls.join("\n")}`);
     for (const relativeUrl of Object.keys(actualDirectoryContent)) {
       const actualContent = actualDirectoryContent[relativeUrl];
       const expectedContent = expectedDirectoryContent[relativeUrl];
+      if (Buffer.isBuffer(actualContent)) {
+        if (actualContent.equals(expectedContent)) {
+          continue;
+        }
+        throw createAssertionError(`comparison with previous snapshot failed
+--- reason ---
+"${relativeUrl}": content is unequal
+--- file ---
+${snapshotDirectoryUrl}${relativeUrl}`);
+      }
       if (actualContent === expectedContent) {
         continue;
-      }
-      if (Buffer.isBuffer(actualContent)) {
-        // TODO
       }
       const message = formatStringAssertionErrorMessage({
         actual: actualContent,
