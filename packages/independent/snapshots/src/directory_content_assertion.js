@@ -1,9 +1,9 @@
-import { assert, createAssertionError } from "@jsenv/assert";
+import { createAssertionError } from "@jsenv/assert";
+import { formatStringAssertionErrorMessage } from "@jsenv/assert/src/internal/error_message/strings.js";
 
 export const assertDirectoryContent = (
   actualDirectoryContent,
   expectedDirectoryContent,
-  sourceDirectoryUrl,
   snapshotDirectoryUrl,
 ) => {
   const actualRelativeUrls = Object.keys(actualDirectoryContent);
@@ -17,24 +17,23 @@ export const assertDirectoryContent = (
     );
     const missingFileCount = missingRelativeUrls.length;
     if (missingFileCount > 0) {
+      const missingUrls = missingRelativeUrls.map(
+        (relativeUrl) => new URL(relativeUrl, snapshotDirectoryUrl).href,
+      );
       if (missingFileCount === 1) {
         throw createAssertionError(
           `comparison with previous snapshot failed
 --- reason ---
 "${missingRelativeUrls[0]}" is missing
---- snapshot directory url ---
-${snapshotDirectoryUrl}`,
+--- file missing ---
+${missingUrls[0]}`,
         );
       }
-      throw createAssertionError(
-        `comparison with previous snapshot failed
+      throw createAssertionError(`comparison with previous snapshot failed
 --- reason ---
 ${missingFileCount} files are missing
 --- files missing ---
-${missingRelativeUrls.join("\n")}
---- snapshot directory url ---
-${snapshotDirectoryUrl}`,
-      );
+${missingUrls.join("\n")}`);
     }
   }
 
@@ -45,20 +44,21 @@ ${snapshotDirectoryUrl}`,
     );
     const extraFileCount = extraRelativeUrls.length;
     if (extraFileCount > 0) {
+      const extraUrls = extraRelativeUrls.map(
+        (relativeUrl) => new URL(relativeUrl, snapshotDirectoryUrl).href,
+      );
       if (extraFileCount === 1) {
         throw createAssertionError(`comparison with previous snapshot failed
 --- reason ---
-${extraRelativeUrls[0]} file is unexpected
---- snapshot directory url ---
-${snapshotDirectoryUrl}`);
+"${extraRelativeUrls[0]}" is unexpected
+--- file unexpected ---
+${extraUrls[0]}`);
       }
       throw createAssertionError(`comparison with previous snapshot failed
 --- reason ---
 ${extraFileCount} files are unexpected
 --- files unexpected ---
-${extraRelativeUrls.join("\n")}
---- snapshot directory url ---
-${snapshotDirectoryUrl}`);
+${extraUrls.join("\n")}`);
     }
   }
 
@@ -67,18 +67,22 @@ ${snapshotDirectoryUrl}`);
     for (const relativeUrl of Object.keys(actualDirectoryContent)) {
       const actualContent = actualDirectoryContent[relativeUrl];
       const expectedContent = expectedDirectoryContent[relativeUrl];
-      const sourceFileUrl = new URL(relativeUrl, sourceDirectoryUrl).href;
-      const snapshotFileUrl = new URL(relativeUrl, snapshotDirectoryUrl).href;
-
-      assert({
+      if (actualContent === expectedContent) {
+        continue;
+      }
+      if (Buffer.isBuffer(actualContent)) {
+        // TODO
+      }
+      const message = formatStringAssertionErrorMessage({
         actual: actualContent,
         expected: expectedContent,
-        details: {
-          "reason": "file content does not match snapshot",
-          "file": sourceFileUrl,
-          "snapshot url": snapshotFileUrl,
-        },
+        name: "file content",
       });
+      throw createAssertionError(`comparison with previous snapshot failed
+--- reason ---
+"${relativeUrl}": ${message}
+--- file ---
+${snapshotDirectoryUrl}b.js`);
     }
   }
 };

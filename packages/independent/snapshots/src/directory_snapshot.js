@@ -28,7 +28,6 @@ export const takeDirectorySnapshot = (
   assertDirectoryContent(
     sourceDirectoryContent,
     snapshotDirectoryContent,
-    sourceDirectoryUrl,
     snapshotDirectoryUrl,
   );
 };
@@ -54,7 +53,6 @@ export const assertSnapshotDirectoryTakenByFunction = async (
   assertDirectoryContent(
     snapshotDirectoryContentAfterCall,
     snapshotDirectoryContentBeforeCall,
-    snapshotDirectoryUrl,
     snapshotDirectoryUrl,
   );
 };
