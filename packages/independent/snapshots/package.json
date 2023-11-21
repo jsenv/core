@@ -1,43 +1,42 @@
 {
-    "name": "@jsenv/snapshots",
-    "version": "1.0.0",
-    "description": "Snapshots testing",
-    "license": "MIT",
-    "author": {
-      "name": "dmail",
-      "email": "dmaillard06@gmail.com",
-      "url": "https://twitter.com/damienmaillard"
+  "name": "@jsenv/snapshots",
+  "version": "1.0.0",
+  "description": "Snapshots testing",
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/snapshots"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
     },
-    "repository": {
-      "type": "git",
-      "url": "https://github.com/jsenv/core",
-      "directory": "packages/independent/snapshots"
-    },
-    "engines": {
-      "node": ">=20.0.0"
-    },
-    "publishConfig": {
-      "access": "public"
-    },
-    "type": "module",
-    "exports": {
-      ".": {
-        "import": "./src/main.js"
-      },
-      "./*": "./*"
-    },
-    "main": "./src/main.js",
-    "files": [
-      "/src/"
-    ],
-    "scripts": {
-      "test": "node --conditions=development ./scripts/test.mjs"
-    },
-    "dependencies": {
-      "@jsenv/filesystem": "4.3.2",
-      "@jsenv/urls": "2.2.1",
-      "@jsenv/utils": "2.0.1",
-      "@jsenv/assert": "2.12.0"
-    }
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node --conditions=development ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/filesystem": "4.3.2",
+    "@jsenv/urls": "2.2.1",
+    "@jsenv/utils": "2.0.1",
+    "@jsenv/assert": "2.12.0"
   }
-  
+}
