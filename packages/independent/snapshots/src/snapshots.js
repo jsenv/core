@@ -1,4 +1,10 @@
-import { readdirSync, statSync, readFileSync, rmSync } from "node:fs";
+import {
+  readdirSync,
+  statSync,
+  readFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import {
   assertAndNormalizeDirectoryUrl,
   writeFileSync,
@@ -15,24 +21,31 @@ export const readSnapshotsFromDirectory = (directoryUrl) => {
   const fileContents = {};
   directoryUrl = new URL(directoryUrl);
   const visitDirectory = (url) => {
-    const directoryContent = readdirSync(url);
-    directoryContent.forEach((filename) => {
-      const contentUrl = new URL(filename, url);
-      const stat = statSync(contentUrl);
-      if (stat.isDirectory()) {
-        visitDirectory(new URL(`${contentUrl}/`));
-      } else {
-        const isTextual = CONTENT_TYPE.isTextual(
-          CONTENT_TYPE.fromUrlExtension(contentUrl),
-        );
-        const content = readFileSync(contentUrl, isTextual ? "utf8" : null);
-        const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
-        fileContents[relativeUrl] =
-          isTextual && process.platform === "win32"
-            ? ensureUnixLineBreaks(content)
-            : content;
+    try {
+      const directoryContent = readdirSync(url);
+      directoryContent.forEach((filename) => {
+        const contentUrl = new URL(filename, url);
+        const stat = statSync(contentUrl);
+        if (stat.isDirectory()) {
+          visitDirectory(new URL(`${contentUrl}/`));
+        } else {
+          const isTextual = CONTENT_TYPE.isTextual(
+            CONTENT_TYPE.fromUrlExtension(contentUrl),
+          );
+          const content = readFileSync(contentUrl, isTextual ? "utf8" : null);
+          const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
+          fileContents[relativeUrl] =
+            isTextual && process.platform === "win32"
+              ? ensureUnixLineBreaks(content)
+              : content;
+        }
+      });
+    } catch (e) {
+      if (e && e.code === "ENOENT") {
+        return;
       }
-    });
+      throw e;
+    }
   };
   visitDirectory(directoryUrl);
   const sortedFileContents = {};
@@ -45,10 +58,16 @@ export const readSnapshotsFromDirectory = (directoryUrl) => {
 };
 
 export const writeSnapshotsIntoDirectory = (directoryUrl, fileContents) => {
-  rmSync(new URL(directoryUrl), {
-    recursive: true,
-    force: true,
-  });
+  try {
+    rmSync(new URL(directoryUrl), {
+      recursive: true,
+      force: true,
+    });
+  } catch (e) {
+    if (!e || e.code !== "ENOENT") {
+      throw e;
+    }
+  }
   Object.keys(fileContents).forEach((relativeUrl) => {
     const contentUrl = new URL(relativeUrl, directoryUrl);
     const content = fileContents[relativeUrl];
@@ -72,16 +91,21 @@ export const takeDirectorySnapshot = (
   snapshotDirectoryUrl,
   callAssert = true,
 ) => {
-  const snapshotDirectoryContent =
-    readSnapshotsFromDirectory(snapshotDirectoryUrl);
   const directoryContent = readSnapshotsFromDirectory(directoryUrl);
   writeSnapshotsIntoDirectory(snapshotDirectoryUrl, directoryContent);
-  if (callAssert) {
-    assertSnapshots({
-      actual: directoryContent,
-      expected: snapshotDirectoryContent,
-      snapshotUrl: snapshotDirectoryUrl,
-    });
+
+  snapshotDirectoryUrl = assertAndNormalizeDirectoryUrl(snapshotDirectoryUrl);
+  snapshotDirectoryUrl = new URL(snapshotDirectoryUrl);
+  if (existsSync(snapshotDirectoryUrl)) {
+    const snapshotDirectoryContent =
+      readSnapshotsFromDirectory(snapshotDirectoryUrl);
+    if (callAssert) {
+      assertSnapshots({
+        actual: directoryContent,
+        expected: snapshotDirectoryContent,
+        snapshotUrl: snapshotDirectoryUrl,
+      });
+    }
   }
 };
 
