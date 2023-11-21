@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "rollup": "3.29.4",
+    "rollup": "4.5.0",
     "@jsenv/filesystem": "4.3.2",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/node-esm-resolution": "1.0.1"
