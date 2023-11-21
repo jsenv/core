@@ -17,7 +17,7 @@ import { createServer } from "node:net";
 import wrapAnsi from "wrap-ansi";
 import { runInNewContext } from "node:vm";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
-import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 
