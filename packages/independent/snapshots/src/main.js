@@ -1,7 +1,9 @@
 export {
-  readSnapshotsFromDirectory,
-  writeSnapshotsIntoDirectory,
-  takeFileSnapshot,
   takeDirectorySnapshot,
-  assertSnapshots,
-} from "./snapshots.js";
+  assertSnapshotDirectoryAfterCallback,
+} from "./directory_snapshot.js";
+
+export {
+  readDirectoryContent,
+  writeDirectoryContent,
+} from "./directory_content.js";

@@ -1,10 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { removeEntry } from "@jsenv/filesystem";
 
-import {
-  takeDirectorySnapshot,
-  readSnapshotsFromDirectory,
-} from "@jsenv/snapshots";
+import { takeDirectorySnapshot, readDirectoryContent } from "@jsenv/snapshots";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
@@ -12,7 +9,7 @@ const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 removeEntry(snapshotsDirectoryUrl, { recursive: true, allowUseless: true });
 try {
   takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
-  const snapshotDirectoryContent = readSnapshotsFromDirectory(
+  const snapshotDirectoryContent = readDirectoryContent(
     new URL("./snapshots/", import.meta.url),
   );
   const actual = snapshotDirectoryContent;
