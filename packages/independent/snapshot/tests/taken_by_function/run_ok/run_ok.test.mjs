@@ -1,7 +1,7 @@
 import {
   assertSnapshotDirectoryTakenByFunction,
   writeDirectoryContent,
-} from "@jsenv/snapshots";
+} from "@jsenv/snapshot";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { writeDirectoryContent } from "@jsenv/snapshots";
+import { writeDirectoryContent } from "@jsenv/snapshot";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { comparePathnames } from "@jsenv/filesystem";
 

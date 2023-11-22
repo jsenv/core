@@ -1,5 +1,5 @@
 import { chromium } from "playwright";
-import { takeFileSnapshot } from "@jsenv/snapshots";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";

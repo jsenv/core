@@ -1,4 +1,4 @@
-# snapshots [![npm package](https://img.shields.io/npm/v/@jsenv/snapshots.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/snapshots)
+# snapshots [![npm package](https://img.shields.io/npm/v/@jsenv/snapshot.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/snapshot)
 
 ## takeDirectorySnapshot
 
@@ -16,7 +16,7 @@ project/
 ```
 
 ```js
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 takeDirectorySnapshot(
   new URL("./dist/", import.meta.url),

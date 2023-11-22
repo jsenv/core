@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { comparePathnames } from "@jsenv/filesystem";
-import { writeDirectoryContent } from "@jsenv/snapshots";
+import { writeDirectoryContent } from "@jsenv/snapshot";
 
 import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
 

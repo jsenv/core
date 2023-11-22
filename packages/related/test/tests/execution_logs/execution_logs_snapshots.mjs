@@ -1,5 +1,5 @@
 import stripAnsi from "strip-ansi";
-import { writeDirectoryContent } from "@jsenv/snapshots";
+import { writeDirectoryContent } from "@jsenv/snapshot";
 
 import { createExecutionLog } from "@jsenv/test/src/execution/logs_file_execution.js";
 

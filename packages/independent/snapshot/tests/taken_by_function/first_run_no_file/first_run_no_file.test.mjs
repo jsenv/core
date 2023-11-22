@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshots";
+import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshot";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 

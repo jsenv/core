@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 

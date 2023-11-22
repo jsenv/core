@@ -1,5 +1,5 @@
 import stripAnsi from "strip-ansi";
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build, startBuildServer } from "@jsenv/core";

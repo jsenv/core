@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";

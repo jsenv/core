@@ -1,4 +1,4 @@
-import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshots";
+import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshot";
 
 assertSnapshotDirectoryTakenByFunction(
   new URL("./snapshots/", import.meta.url),

@@ -5,7 +5,7 @@
  * whould throw in the worker context
  */
 
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";

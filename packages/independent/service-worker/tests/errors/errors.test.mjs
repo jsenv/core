@@ -1,4 +1,4 @@
-import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshots";
+import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshot";
 
 // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
 if (!process.env.CI) {

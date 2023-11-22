@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { build } from "@jsenv/core";

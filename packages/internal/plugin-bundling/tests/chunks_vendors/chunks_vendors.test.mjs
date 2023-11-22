@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshots";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
 
 const test = async ({ name, ...params }) => {
