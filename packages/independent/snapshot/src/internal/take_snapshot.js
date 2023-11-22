@@ -20,10 +20,10 @@ export const takeDirectorySnapshot = (directoryUrl) => {
         const stat = statSync(contentUrl);
         if (stat.isDirectory()) {
           visitDirectory(new URL(`${contentUrl}/`));
-        } else {
-          const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
-          snapshotNaturalOrder[relativeUrl] = takeFileSnapshot(contentUrl);
+          return;
         }
+        const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
+        snapshotNaturalOrder[relativeUrl] = takeFileSnapshot(contentUrl);
       });
     } catch (e) {
       if (e && e.code === "ENOENT") {
@@ -49,13 +49,13 @@ export const takeFileSnapshot = (fileUrl) => {
     CONTENT_TYPE.fromUrlExtension(fileUrl),
   );
   if (isTextual) {
-    const content = readFileSync(fileUrl, "utf8");
+    const content = readFileSync(new URL(fileUrl), "utf8");
     if (process.platform === "win32") {
       // ensure unix line breaks
       return content.replace(/\r\n/g, "\n");
     }
     return content;
   }
-  const content = readFileSync(fileUrl);
+  const content = readFileSync(new URL(fileUrl));
   return content;
 };

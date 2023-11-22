@@ -23,8 +23,8 @@ export const takeDirectorySnapshotAndCompare = (
     !existsSync(new URL(snapshotDirectoryUrl)) ||
     readdirSync(new URL(snapshotDirectoryUrl)).length === 0
   ) {
-    const sourceSnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
-    saveSnapshotOnFileSystem(sourceSnapshot, snapshotDirectoryUrl);
+    const currentDirectorySnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
+    saveSnapshotOnFileSystem(currentDirectorySnapshot, snapshotDirectoryUrl);
     return;
   }
   const previousDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);

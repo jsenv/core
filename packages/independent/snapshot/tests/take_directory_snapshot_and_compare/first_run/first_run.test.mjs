@@ -13,7 +13,7 @@ removeEntry(snapshotsDirectoryUrl, { recursive: true, allowUseless: true });
 try {
   takeDirectorySnapshotAndCompare(sourceDirectoryUrl, snapshotsDirectoryUrl);
   const snapshotDirectorySnapshot = takeDirectorySnapshot(
-    new URL("./snapshots/", import.meta.url),
+    snapshotsDirectoryUrl,
   );
   const actual = snapshotDirectorySnapshot;
   const expected = {
