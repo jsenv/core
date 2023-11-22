@@ -3,7 +3,7 @@ import { removeEntry } from "@jsenv/filesystem";
 
 import {
   compareSnapshotTakenByFunction,
-  saveDirectorySnapshot,
+  saveSnapshotOnFileSystem,
   takeDirectorySnapshot,
 } from "@jsenv/snapshot";
 
@@ -12,9 +12,12 @@ const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 removeEntry(snapshotsDirectoryUrl, { recursive: true, allowUseless: true });
 try {
   await compareSnapshotTakenByFunction(snapshotsDirectoryUrl, () => {
-    saveDirectorySnapshot(snapshotsDirectoryUrl, {
-      "a.js": `console.log("a");\n`,
-    });
+    saveSnapshotOnFileSystem(
+      {
+        "a.js": `console.log("a");\n`,
+      },
+      snapshotsDirectoryUrl,
+    );
   });
   const snapshotDirectoryContent = takeDirectorySnapshot(snapshotsDirectoryUrl);
   const actual = snapshotDirectoryContent;

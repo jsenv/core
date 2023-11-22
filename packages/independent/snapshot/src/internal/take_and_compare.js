@@ -10,7 +10,7 @@ import {
 } from "@jsenv/assert";
 
 import { takeDirectorySnapshot, takeFileSnapshot } from "./take_snapshot.js";
-import { saveDirectorySnapshot, saveFileSnapshot } from "./save_snapshot.js";
+import { saveSnapshotOnFileSystem } from "./save_snapshot.js";
 
 export const takeDirectorySnapshotAndCompare = (
   sourceDirectoryUrl,
@@ -24,15 +24,15 @@ export const takeDirectorySnapshotAndCompare = (
     readdirSync(new URL(snapshotDirectoryUrl)).length === 0
   ) {
     const sourceSnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
-    saveDirectorySnapshot(snapshotDirectoryUrl, sourceSnapshot);
+    saveSnapshotOnFileSystem(sourceSnapshot, snapshotDirectoryUrl);
     return;
   }
-  const expectedDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  const actualDirectorySnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
-  saveDirectorySnapshot(snapshotDirectoryUrl, actualDirectorySnapshot);
+  const previousDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  const currentDirectorySnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
+  saveSnapshotOnFileSystem(currentDirectorySnapshot, snapshotDirectoryUrl);
   compareDirectorySnapshots(
-    actualDirectorySnapshot,
-    expectedDirectorySnapshot,
+    currentDirectorySnapshot,
+    previousDirectorySnapshot,
     snapshotDirectoryUrl,
   );
 };
@@ -43,12 +43,12 @@ export const takeFileSnapshotAndCompare = (sourceFileUrl, snapshotFileUrl) => {
 
   if (!existsSync(new URL(snapshotFileUrl))) {
     const sourceFileContent = takeFileSnapshot(sourceFileUrl);
-    saveFileSnapshot(snapshotFileUrl, sourceFileContent);
+    saveSnapshotOnFileSystem(sourceFileContent, snapshotFileUrl);
     return;
   }
   const previousFileContent = takeFileSnapshot(snapshotFileUrl);
   const currentFileContent = takeFileSnapshot(sourceFileUrl);
-  saveFileSnapshot(snapshotFileUrl, currentFileContent);
+  saveSnapshotOnFileSystem(currentFileContent, snapshotFileUrl);
   compareFileSnapshots(
     currentFileContent,
     previousFileContent,

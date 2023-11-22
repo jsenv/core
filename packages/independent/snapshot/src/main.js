@@ -9,7 +9,4 @@ export {
   takeFileSnapshot,
 } from "./internal/take_snapshot.js";
 
-export {
-  saveDirectorySnapshot,
-  saveFileSnapshot,
-} from "./internal/save_snapshot.js";
+export { saveSnapshotOnFileSystem } from "./internal/save_snapshot.js";

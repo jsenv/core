@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert";
 import {
   compareSnapshotTakenByFunction,
   takeDirectorySnapshot,
-  saveDirectorySnapshot,
+  saveSnapshotOnFileSystem,
 } from "@jsenv/snapshot";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
@@ -11,9 +11,12 @@ const contentBeforeTestSnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 
 try {
   await compareSnapshotTakenByFunction(snapshotsDirectoryUrl, () => {
-    saveDirectorySnapshot(snapshotsDirectoryUrl, {
-      "a.js": `console.log('b');\n`,
-    });
+    saveSnapshotOnFileSystem(
+      {
+        "a.js": `console.log('b');\n`,
+      },
+      snapshotsDirectoryUrl,
+    );
   });
   throw new Error("should throw");
 } catch (e) {
@@ -38,5 +41,5 @@ ${snapshotsDirectoryUrl}a.js`;
     expected: `console.log('b');\n`,
   });
 } finally {
-  saveDirectorySnapshot(snapshotsDirectoryUrl, contentBeforeTestSnapshot);
+  saveSnapshotOnFileSystem(contentBeforeTestSnapshot, snapshotsDirectoryUrl);
 }

@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert";
 import {
   takeDirectorySnapshotAndCompare,
   takeDirectorySnapshot,
-  saveDirectorySnapshot,
+  saveSnapshotOnFileSystem,
 } from "@jsenv/snapshot";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
@@ -36,5 +36,5 @@ ${snapshotsDirectoryUrl}b.js`;
     expected: `console.log("c");\n`,
   });
 } finally {
-  saveDirectorySnapshot(snapshotsDirectoryUrl, contentBeforeTestSnapshot);
+  saveSnapshotOnFileSystem(contentBeforeTestSnapshot, snapshotsDirectoryUrl);
 }

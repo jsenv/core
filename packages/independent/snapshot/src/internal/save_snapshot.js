@@ -1,17 +1,15 @@
 import { writeFileSync, ensureEmptyDirectorySync } from "@jsenv/filesystem";
 
-export const saveDirectorySnapshot = (
-  directorySnapshot,
-  snapshotDirectoryUrl,
-) => {
-  ensureEmptyDirectorySync(snapshotDirectoryUrl);
-  Object.keys(directorySnapshot).forEach((relativeUrl) => {
-    const contentUrl = new URL(relativeUrl, snapshotDirectoryUrl);
-    const content = directorySnapshot[relativeUrl];
-    writeFileSync(contentUrl, content);
-  });
-};
+export const saveSnapshotOnFileSystem = (snapshot, snapshotUrl) => {
+  if (typeof snapshot === "string" || Buffer.isBuffer(snapshot)) {
+    writeFileSync(snapshotUrl, snapshot);
+    return;
+  }
 
-export const saveFileSnapshot = (fileSnapshot, snapshotFileUrl) => {
-  writeFileSync(snapshotFileUrl, fileSnapshot);
+  ensureEmptyDirectorySync(snapshotUrl);
+  Object.keys(snapshot).forEach((relativeUrl) => {
+    const entryUrl = new URL(relativeUrl, snapshotUrl);
+    const entrySnapshot = snapshot[relativeUrl];
+    saveSnapshotOnFileSystem(entrySnapshot, entryUrl);
+  });
 };
