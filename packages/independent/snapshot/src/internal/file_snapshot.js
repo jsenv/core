@@ -8,10 +8,7 @@ export const takeFileSnapshot = (sourceFileUrl, snapshotFileUrl) => {
   sourceFileUrl = assertAndNormalizeFileUrl(sourceFileUrl);
   snapshotFileUrl = assertAndNormalizeFileUrl(sourceFileUrl);
 
-  if (
-    process.env.NO_SNAPSHOT_ASSERTION ||
-    !existsSync(new URL(snapshotFileUrl))
-  ) {
+  if (!existsSync(new URL(snapshotFileUrl))) {
     const sourceFileContent = readFileContent(sourceFileUrl);
     writeFileSync(snapshotFileUrl, sourceFileContent);
     return;
