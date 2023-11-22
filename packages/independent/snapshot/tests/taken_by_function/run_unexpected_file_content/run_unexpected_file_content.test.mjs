@@ -2,16 +2,16 @@ import { assert } from "@jsenv/assert";
 
 import {
   compareSnapshotTakenByFunction,
-  readDirectoryContent,
-  writeDirectoryContent,
+  takeDirectorySnapshot,
+  saveDirectorySnapshot,
 } from "@jsenv/snapshot";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
-const contentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
+const contentBeforeTestSnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 
 try {
   await compareSnapshotTakenByFunction(snapshotsDirectoryUrl, () => {
-    writeDirectoryContent(snapshotsDirectoryUrl, {
+    saveDirectorySnapshot(snapshotsDirectoryUrl, {
       "a.js": `console.log('b');\n`,
     });
   });
@@ -30,7 +30,7 @@ console.log('b');
 ${snapshotsDirectoryUrl}a.js`;
   assert({ actual, expected });
 
-  const aFileContentInSnapshotDirectory = readDirectoryContent(
+  const aFileContentInSnapshotDirectory = takeDirectorySnapshot(
     snapshotsDirectoryUrl,
   )["a.js"];
   assert({
@@ -38,5 +38,5 @@ ${snapshotsDirectoryUrl}a.js`;
     expected: `console.log('b');\n`,
   });
 } finally {
-  writeDirectoryContent(snapshotsDirectoryUrl, contentBeforeTest);
+  saveDirectorySnapshot(snapshotsDirectoryUrl, contentBeforeTestSnapshot);
 }

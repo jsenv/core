@@ -1,19 +1,19 @@
 import { assert } from "@jsenv/assert";
 
 import {
+  takeDirectorySnapshotAndCompare,
   takeDirectorySnapshot,
-  readDirectoryContent,
-  writeDirectoryContent,
+  saveDirectorySnapshot,
 } from "@jsenv/snapshot";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
-const sourceContentBeforeTest = readDirectoryContent(sourceDirectoryUrl);
-const snapshotContentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
+const sourceBeforeTestSnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
+const snapshotBeforeTestSnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 
 try {
-  takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
+  takeDirectorySnapshotAndCompare(sourceDirectoryUrl, snapshotsDirectoryUrl);
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
@@ -25,13 +25,13 @@ ${snapshotsDirectoryUrl}file.txt`;
   assert({ actual, expected });
 
   const filesInSnapshotsDirectory = Object.keys(
-    readDirectoryContent(snapshotsDirectoryUrl),
+    takeDirectorySnapshot(snapshotsDirectoryUrl),
   );
   assert({
     actual: filesInSnapshotsDirectory,
     expected: ["a.js", "b.js"],
   });
 } finally {
-  writeDirectoryContent(sourceDirectoryUrl, sourceContentBeforeTest);
-  writeDirectoryContent(snapshotsDirectoryUrl, snapshotContentBeforeTest);
+  saveDirectorySnapshot(sourceDirectoryUrl, sourceBeforeTestSnapshot);
+  saveDirectorySnapshot(snapshotsDirectoryUrl, snapshotBeforeTestSnapshot);
 }

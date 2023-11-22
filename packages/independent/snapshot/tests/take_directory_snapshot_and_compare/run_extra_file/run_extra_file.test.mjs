@@ -1,22 +1,19 @@
 import { assert } from "@jsenv/assert";
-import {
-  readDirectoryStructureSync,
-  writeDirectoryStructureSync,
-} from "@jsenv/filesystem";
 
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import {
+  takeDirectorySnapshotAndCompare,
+  takeDirectorySnapshot,
+  saveDirectorySnapshot,
+} from "@jsenv/snapshot";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
-const sourceDirectoryStructureBeforeTest =
-  readDirectoryStructureSync(sourceDirectoryUrl);
-const snapshotDirectoryStructureBeforeTest = readDirectoryContent(
-  snapshotsDirectoryUrl,
-);
+const sourceBeforeTestSnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
+const snapshotBeforeTestSnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 
 try {
-  takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
+  takeDirectorySnapshotAndCompare(sourceDirectoryUrl, snapshotsDirectoryUrl);
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
@@ -29,19 +26,13 @@ ${snapshotsDirectoryUrl}hello.js`;
   assert({ actual, expected });
 
   const filesInSnapshotsDirectory = Object.keys(
-    readDirectoryContent(snapshotsDirectoryUrl),
+    takeDirectorySnapshot(snapshotsDirectoryUrl),
   );
   assert({
     actual: filesInSnapshotsDirectory,
     expected: ["a.js", "b.js", "file.txt", "hello.js"],
   });
 } finally {
-  writeDirectoryStructureSync(
-    sourceDirectoryUrl,
-    sourceDirectoryStructureBeforeTest,
-  );
-  writeDirectoryStructureSync(
-    snapshotsDirectoryUrl,
-    snapshotDirectoryStructureBeforeTest,
-  );
+  saveDirectorySnapshot(sourceDirectoryUrl, sourceBeforeTestSnapshot);
+  saveDirectorySnapshot(snapshotsDirectoryUrl, snapshotBeforeTestSnapshot);
 }
