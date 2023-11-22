@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
@@ -24,7 +24,7 @@ const test = async (params) => {
     url: `${devServer.origin}/main.html`,
   });
   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
     new URL(`./snapshots/dev/`, import.meta.url),
     false,

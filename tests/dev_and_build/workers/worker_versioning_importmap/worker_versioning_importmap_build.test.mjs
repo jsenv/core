@@ -3,7 +3,7 @@
  * as importmap are not supported in workers
  */
 
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
@@ -23,7 +23,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   });
 
   // 1. Snapshots
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL("./dist/", import.meta.url),
     snapshotsDirectoryUrl,
   );

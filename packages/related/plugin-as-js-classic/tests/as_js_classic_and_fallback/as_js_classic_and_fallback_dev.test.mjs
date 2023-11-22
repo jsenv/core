@@ -20,7 +20,7 @@ try {
   const page = await launchBrowserPage(browser);
   await page.goto(`${devServer.origin}/main.html`);
   //   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-  //   takeDirectorySnapshot(
+  //   takeDirectorySnapshotAndCompare(
   //     new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
   //     new URL(`./snapshots/dev/`, import.meta.url),
   //     false,

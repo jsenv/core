@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
@@ -14,7 +14,7 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL("./dist/", import.meta.url),
     new URL("./snapshots/build/", import.meta.url),
   );

@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
@@ -18,7 +18,7 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL("./dist/", import.meta.url),
     new URL("./snapshots/", import.meta.url),
   );

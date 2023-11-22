@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 
 import { build } from "@jsenv/core";
 
@@ -11,7 +11,7 @@ await build({
   },
   minification: false,
 });
-takeDirectorySnapshot(
+takeDirectorySnapshotAndCompare(
   new URL("./dist/", import.meta.url),
   new URL("./snapshots/", import.meta.url),
 );

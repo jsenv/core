@@ -3,7 +3,7 @@
  * not finalized -> Not supported for now
  */
 
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
@@ -21,7 +21,7 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/`, import.meta.url),
   );

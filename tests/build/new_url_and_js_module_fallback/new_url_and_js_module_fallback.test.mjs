@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
@@ -25,7 +25,7 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   });
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL("./dist/", import.meta.url),
     new URL("./snapshots/", import.meta.url),
   );

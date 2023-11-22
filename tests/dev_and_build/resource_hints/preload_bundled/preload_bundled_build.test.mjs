@@ -1,5 +1,5 @@
 import stripAnsi from "strip-ansi";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build, startBuildServer } from "@jsenv/core";
@@ -22,7 +22,7 @@ const test = async ({ name, ...params }) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  takeDirectorySnapshot(
+  takeDirectorySnapshotAndCompare(
     new URL("./dist/", import.meta.url),
     new URL(`./snapshots/${name}/`, import.meta.url),
   );
