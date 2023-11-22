@@ -1,26 +1,28 @@
+import { readdirSync } from "node:fs";
 import { assert } from "@jsenv/assert";
-import { resolveUrl } from "@jsenv/urls";
+import { saveSnapshotOnFileSystem } from "@jsenv/snapshot";
 
 import {
   clearDirectorySync,
-  writeFileStructureSync,
-  readFileStructureSync,
-  ensureEmptyDirectory,
+  ensureEmptyDirectorySync,
 } from "@jsenv/filesystem";
 
-const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
-await ensureEmptyDirectory(tempDirectoryUrl);
+const tempDirectoryUrl = new URL("./temp/", import.meta.url);
+ensureEmptyDirectorySync(tempDirectoryUrl);
 
 try {
-  writeFileStructureSync(tempDirectoryUrl, {
-    "src/a.js": 'console.log("a");\n',
-  });
+  saveSnapshotOnFileSystem(
+    {
+      "src/a.js": 'console.log("a");\n',
+    },
+    tempDirectoryUrl,
+  );
   clearDirectorySync(tempDirectoryUrl);
-  const names = Object.keys(readFileStructureSync(tempDirectoryUrl));
+  const names = readdirSync(tempDirectoryUrl);
   assert({
     actual: names,
     expected: [],
   });
 } finally {
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }

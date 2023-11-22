@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@jsenv/urls": "2.2.1",
-    "@jsenv/url-meta": "8.1.0",
+    "@jsenv/url-meta": "8.2.0",
     "@jsenv/abort": "4.2.4"
   }
 }

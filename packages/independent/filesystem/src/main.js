@@ -49,7 +49,11 @@ export { copyDirectoryContent } from "./copy/copy_directory_content.js";
 export { ensureEmptyDirectory } from "./remove/ensure_empty_directory.js";
 export { ensureEmptyDirectorySync } from "./remove/ensure_empty_directory_sync.js";
 export { clearDirectorySync } from "./remove/clear_directory_sync.js";
+export { removeDirectory } from "./remove/remove_directory.js";
+export { removeFile } from "./remove/remove_file.js";
 export { removeEntry } from "./remove/remove_entry.js";
+export { removeDirectorySync } from "./remove/remove_directory_sync.js";
+export { removeFileSync } from "./remove/remove_file_sync.js";
 export { removeEntrySync } from "./remove/remove_entry_sync.js";
 
 // lifecycle
