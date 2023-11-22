@@ -2,7 +2,7 @@
 
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { readdirsync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { URL_META } from "@jsenv/url-meta";
 import { removeEntry } from "@jsenv/filesystem";
 
@@ -35,12 +35,15 @@ const commandHandlers = {
       {
         clear: {
           [pattern]: true,
+          "**/.*": false,
+          "**/.*/": false,
+          "**/node_modules/": false,
         },
       },
       currentDirectoryUrl,
     );
     const visitDirectory = async (directoryUrl) => {
-      const entryNames = readdirsync(directoryUrl);
+      const entryNames = readdirSync(directoryUrl);
       for (const entryName of entryNames) {
         const entryUrl = new URL(entryName, directoryUrl);
         const meta = URL_META.applyAssociations({
