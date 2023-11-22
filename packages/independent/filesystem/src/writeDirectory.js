@@ -3,7 +3,7 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js";
 import { statsToType } from "./internal/statsToType.js";
-import { readEntryStat } from "./readEntryStat.js";
+import { readEntryStat } from "./read_entry_stat.js";
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
 const { mkdir } = promises;

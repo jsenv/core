@@ -8,9 +8,9 @@ import {
 
 import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
 import { ensureParentDirectories } from "./ensureParentDirectories.js";
-import { readEntryStat } from "./readEntryStat.js";
+import { readEntryStat } from "./read_entry_stat.js";
 import { readSymbolicLink } from "./readSymbolicLink.js";
-import { removeEntry } from "./removeEntry.js";
+import { removeEntry } from "./remove_entry.js";
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
 const { symlink } = promises;

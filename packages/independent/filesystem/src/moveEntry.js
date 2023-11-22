@@ -6,9 +6,9 @@ import { urlTargetsSameFileSystemPath } from "./internal/urlTargetsSameFileSyste
 import { statsToType } from "./internal/statsToType.js";
 import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
 import { ensureParentDirectories } from "./ensureParentDirectories.js";
-import { removeEntry } from "./removeEntry.js";
+import { removeEntry } from "./remove_entry.js";
 import { copyEntry } from "./copyEntry.js";
-import { readEntryStat } from "./readEntryStat.js";
+import { readEntryStat } from "./read_entry_stat.js";
 import { readSymbolicLink } from "./readSymbolicLink.js";
 
 export const moveEntry = async ({

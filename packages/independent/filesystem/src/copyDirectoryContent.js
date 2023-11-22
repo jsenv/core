@@ -2,7 +2,7 @@ import { Abort } from "@jsenv/abort";
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls";
 
 import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js";
-import { readEntryStat } from "./readEntryStat.js";
+import { readEntryStat } from "./read_entry_stat.js";
 import { readSymbolicLink } from "./readSymbolicLink.js";
 import { readDirectory } from "./readDirectory.js";
 import { copyEntry } from "./copyEntry.js";

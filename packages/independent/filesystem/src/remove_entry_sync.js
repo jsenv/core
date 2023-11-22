@@ -1,4 +1,10 @@
-import { unlink, rmdir, openSync, closeSync } from "node:fs";
+import {
+  unlinkSync,
+  rmdirSync,
+  readdirSync,
+  openSync,
+  closeSync,
+} from "node:fs";
 import { Abort } from "@jsenv/abort";
 import {
   ensurePathnameTrailingSlash,
@@ -7,10 +13,9 @@ import {
 } from "@jsenv/urls";
 
 import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
-import { readEntryStat } from "./readEntryStat.js";
-import { readDirectory } from "./readDirectory.js";
+import { readEntryStatSync } from "./read_entry_stat_sync.js";
 
-export const removeEntry = async (
+export const removeEntrySync = (
   source,
   {
     signal = new AbortController().signal,
@@ -28,7 +33,7 @@ export const removeEntry = async (
 
   try {
     removeOperation.throwIfAborted();
-    const sourceStats = await readEntryStat(sourceUrl, {
+    const sourceStats = readEntryStatSync(sourceUrl, {
       nullIfNotFound: true,
       followLink: false,
     });
@@ -48,7 +53,7 @@ export const removeEntry = async (
       sourceStats.isCharacterDevice() ||
       sourceStats.isBlockDevice()
     ) {
-      await removeNonDirectory(
+      removeNonDirectory(
         sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
         {
           maxRetries,
@@ -56,7 +61,7 @@ export const removeEntry = async (
         },
       );
     } else if (sourceStats.isDirectory()) {
-      await removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
+      removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
         signal: removeOperation.signal,
         recursive,
         maxRetries,
@@ -65,67 +70,49 @@ export const removeEntry = async (
       });
     }
   } finally {
-    await removeOperation.end();
+    removeOperation.end();
   }
 };
 
-const removeNonDirectory = (sourceUrl, { maxRetries, retryDelay }) => {
+const removeNonDirectory = (sourceUrl) => {
   const sourcePath = urlToFileSystemPath(sourceUrl);
-
-  let retryCount = 0;
   const attempt = () => {
-    return unlinkNaive(sourcePath, {
-      ...(retryCount >= maxRetries
-        ? {}
-        : {
-            handleTemporaryError: async () => {
-              retryCount++;
-              return new Promise((resolve) => {
-                setTimeout(() => {
-                  resolve(attempt());
-                }, retryCount * retryDelay);
-              });
-            },
-          }),
-    });
+    unlinkSyncNaive(sourcePath);
   };
-  return attempt();
+  attempt();
 };
 
-const unlinkNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
-  return new Promise((resolve, reject) => {
-    unlink(sourcePath, (error) => {
-      if (error) {
-        if (error.code === "ENOENT") {
-          resolve();
-        } else if (
-          handleTemporaryError &&
-          (error.code === "EBUSY" ||
-            error.code === "EMFILE" ||
-            error.code === "ENFILE" ||
-            error.code === "ENOENT")
-        ) {
-          resolve(handleTemporaryError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve();
-      }
-    });
-  });
+const unlinkSyncNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
+  try {
+    unlinkSync(sourcePath);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return;
+    }
+    if (
+      handleTemporaryError &&
+      (error.code === "EBUSY" ||
+        error.code === "EMFILE" ||
+        error.code === "ENFILE" ||
+        error.code === "ENOENT")
+    ) {
+      handleTemporaryError(error);
+      return;
+    }
+    throw error;
+  }
 };
 
-const removeDirectory = async (
+const removeDirectory = (
   rootDirectoryUrl,
   { signal, maxRetries, retryDelay, recursive, onlyContent },
 ) => {
   const removeDirectoryOperation = Abort.startOperation();
   removeDirectoryOperation.addAbortSignal(signal);
 
-  const visit = async (sourceUrl) => {
+  const visit = (sourceUrl) => {
     removeDirectoryOperation.throwIfAborted();
-    const sourceStats = await readEntryStat(sourceUrl, {
+    const sourceStats = readEntryStatSync(sourceUrl, {
       nullIfNotFound: true,
       followLink: false,
     });
@@ -140,31 +127,31 @@ const removeDirectory = async (
       sourceStats.isCharacterDevice() ||
       sourceStats.isBlockDevice()
     ) {
-      await visitFile(sourceUrl);
+      visitFile(sourceUrl);
     } else if (sourceStats.isSymbolicLink()) {
-      await visitSymbolicLink(sourceUrl);
+      visitSymbolicLink(sourceUrl);
     } else if (sourceStats.isDirectory()) {
-      await visitDirectory(`${sourceUrl}/`);
+      visitDirectory(`${sourceUrl}/`);
     }
   };
 
-  const visitDirectory = async (directoryUrl) => {
+  const visitDirectory = (directoryUrl) => {
     const directoryPath = urlToFileSystemPath(directoryUrl);
     const optionsFromRecursive = recursive
       ? {
-          handleNotEmptyError: async () => {
-            await removeDirectoryContent(directoryUrl);
-            await visitDirectory(directoryUrl);
+          handleNotEmptyError: () => {
+            removeDirectoryContent(directoryUrl);
+            visitDirectory(directoryUrl);
           },
         }
       : {};
     removeDirectoryOperation.throwIfAborted();
-    await removeDirectoryNaive(directoryPath, {
+    removeDirectoryNaive(directoryPath, {
       ...optionsFromRecursive,
       // Workaround for https://github.com/joyent/node/issues/4337
       ...(process.platform === "win32"
         ? {
-            handlePermissionError: async (error) => {
+            handlePermissionError: (error) => {
               console.error(
                 `trying to fix windows EPERM after readir on ${directoryPath}`,
               );
@@ -186,8 +173,7 @@ const removeDirectory = async (
                 );
                 throw error;
               }
-
-              await removeDirectoryNaive(directoryPath, {
+              removeDirectoryNaive(directoryPath, {
                 ...optionsFromRecursive,
               });
             },
@@ -196,33 +182,31 @@ const removeDirectory = async (
     });
   };
 
-  const removeDirectoryContent = async (directoryUrl) => {
+  const removeDirectoryContent = (directoryUrl) => {
     removeDirectoryOperation.throwIfAborted();
-    const names = await readDirectory(directoryUrl);
-    await Promise.all(
-      names.map(async (name) => {
-        const url = resolveUrl(name, directoryUrl);
-        await visit(url);
-      }),
-    );
+    const entryNames = readdirSync(directoryUrl);
+    for (const entryName of entryNames) {
+      const url = resolveUrl(entryName, directoryUrl);
+      visit(url);
+    }
   };
 
-  const visitFile = async (fileUrl) => {
-    await removeNonDirectory(fileUrl, { maxRetries, retryDelay });
+  const visitFile = (fileUrl) => {
+    removeNonDirectory(fileUrl, { maxRetries, retryDelay });
   };
 
-  const visitSymbolicLink = async (symbolicLinkUrl) => {
-    await removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
+  const visitSymbolicLink = (symbolicLinkUrl) => {
+    removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
   };
 
   try {
     if (onlyContent) {
-      await removeDirectoryContent(rootDirectoryUrl);
+      removeDirectoryContent(rootDirectoryUrl);
     } else {
-      await visitDirectory(rootDirectoryUrl);
+      visitDirectory(rootDirectoryUrl);
     }
   } finally {
-    await removeDirectoryOperation.end();
+    removeDirectoryOperation.end();
   }
 };
 
@@ -230,27 +214,26 @@ const removeDirectoryNaive = (
   directoryPath,
   { handleNotEmptyError = null, handlePermissionError = null } = {},
 ) => {
-  return new Promise((resolve, reject) => {
-    rmdir(directoryPath, (error, lstatObject) => {
-      if (error) {
-        if (handlePermissionError && error.code === "EPERM") {
-          resolve(handlePermissionError(error));
-        } else if (error.code === "ENOENT") {
-          resolve();
-        } else if (
-          handleNotEmptyError &&
-          // linux os
-          (error.code === "ENOTEMPTY" ||
-            // SunOS
-            error.code === "EEXIST")
-        ) {
-          resolve(handleNotEmptyError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(lstatObject);
-      }
-    });
-  });
+  try {
+    rmdirSync(directoryPath);
+  } catch (error) {
+    if (handlePermissionError && error.code === "EPERM") {
+      handlePermissionError(error);
+      return;
+    }
+    if (error.code === "ENOENT") {
+      return;
+    }
+    if (
+      handleNotEmptyError &&
+      // linux os
+      (error.code === "ENOTEMPTY" ||
+        // SunOS
+        error.code === "EEXIST")
+    ) {
+      handleNotEmptyError(error);
+      return;
+    }
+    throw error;
+  }
 };

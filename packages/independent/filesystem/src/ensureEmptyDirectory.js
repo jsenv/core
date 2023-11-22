@@ -3,8 +3,8 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
 import { statsToType } from "./internal/statsToType.js";
 import { writeDirectory } from "./writeDirectory.js";
-import { readEntryStat } from "./readEntryStat.js";
-import { removeEntry } from "./removeEntry.js";
+import { readEntryStat } from "./read_entry_stat.js";
+import { removeEntry } from "./remove_entry.js";
 
 export const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {

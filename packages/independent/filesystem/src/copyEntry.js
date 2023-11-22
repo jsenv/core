@@ -13,14 +13,14 @@ import { statsToType } from "./internal/statsToType.js";
 import { binaryFlagsToPermissions } from "./internal/permissions.js";
 import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
 import { writeDirectory } from "./writeDirectory.js";
-import { readEntryStat } from "./readEntryStat.js";
+import { readEntryStat } from "./read_entry_stat.js";
 import { ensureParentDirectories } from "./ensureParentDirectories.js";
 import { writeEntryPermissions } from "./writeEntryPermissions.js";
 import { writeEntryModificationTime } from "./writeEntryModificationTime.js";
 import { readDirectory } from "./readDirectory.js";
 import { readSymbolicLink } from "./readSymbolicLink.js";
 import { writeSymbolicLink } from "./writeSymbolicLink.js";
-import { removeEntry } from "./removeEntry.js";
+import { removeEntry } from "./remove_entry.js";
 
 export const copyEntry = async ({
   signal = new AbortController().signal,

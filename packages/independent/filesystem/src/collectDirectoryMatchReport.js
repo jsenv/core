@@ -1,10 +1,10 @@
 import { Abort } from "@jsenv/abort";
-
 import { URL_META } from "@jsenv/url-meta";
 import { urlToRelativeUrl } from "@jsenv/urls";
+
 import { assertAndNormalizeDirectoryUrl } from "./directory_url_validation.js";
 import { readDirectory } from "./readDirectory.js";
-import { readEntryStat } from "./readEntryStat.js";
+import { readEntryStat } from "./read_entry_stat.js";
 import { comparePathnames } from "./comparePathnames.js";
 
 export const collectDirectoryMatchReport = async ({
