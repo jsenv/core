@@ -20,6 +20,7 @@ export { ensureParentDirectories } from "./read_write/ensure_parent_directories.
 export { getRealFileSystemUrlSync } from "./read_write/get_real_file_system_url_sync.js";
 export { readDirectory } from "./read_write/read_directory.js";
 export { writeDirectory } from "./read_write/write_directory.js";
+export { writeDirectorySync } from "./read_write/write_directory_sync.js";
 export { readFileStructureSync } from "./read_write/read_file_structure_sync.js";
 export { writeFileStructureSync } from "./read_write/write_file_structure_sync.js";
 export { readFile } from "./read_write/read_file.js";
@@ -48,6 +49,7 @@ export { copyDirectoryContent } from "./copy/copy_directory_content.js";
 
 // remove
 export { ensureEmptyDirectory } from "./remove/ensure_empty_directory.js";
+export { ensureEmptyDirectorySync } from "./remove/ensure_empty_directory_sync.js";
 export { clearDirectorySync } from "./remove/clear_directory_sync.js";
 export { removeEntry } from "./remove/remove_entry.js";
 export { removeEntrySync } from "./remove/remove_entry_sync.js";

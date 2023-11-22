@@ -16,7 +16,7 @@ export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
     initialDirectoryUrl,
   );
   const visitDirectory = (directoryUrl) => {
-    const entryNames = readdirSync(directoryUrl);
+    const entryNames = readdirSync(new URL(directoryUrl));
     for (const entryName of entryNames) {
       const entryUrl = new URL(entryName, directoryUrl);
       let entryStat;

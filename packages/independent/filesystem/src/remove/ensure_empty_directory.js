@@ -13,15 +13,17 @@ export const ensureEmptyDirectory = async (source) => {
   });
   if (stats === null) {
     // if there is nothing, create a directory
-    return writeDirectory(source, { allowUseless: true });
+    await writeDirectory(source, { allowUseless: true });
+    return;
   }
   if (stats.isDirectory()) {
     // if there is a directory remove its content and done
-    return removeEntry(source, {
+    await removeEntry(source, {
       allowUseless: true,
       recursive: true,
       onlyContent: true,
     });
+    return;
   }
 
   const sourceType = statsToType(stats);

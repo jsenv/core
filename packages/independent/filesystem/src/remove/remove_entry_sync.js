@@ -61,7 +61,8 @@ export const removeEntrySync = (
         },
       );
     } else if (sourceStats.isDirectory()) {
-      removeDirectory(ensurePathnameTrailingSlash(sourceUrl), {
+      const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
+      removeDirectorySync(directoryUrl, {
         signal: removeOperation.signal,
         recursive,
         maxRetries,
@@ -103,7 +104,7 @@ const unlinkSyncNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
   }
 };
 
-const removeDirectory = (
+const removeDirectorySync = (
   rootDirectoryUrl,
   { signal, maxRetries, retryDelay, recursive, onlyContent },
 ) => {
@@ -146,7 +147,7 @@ const removeDirectory = (
         }
       : {};
     removeDirectoryOperation.throwIfAborted();
-    removeDirectoryNaive(directoryPath, {
+    removeDirectorySyncNaive(directoryPath, {
       ...optionsFromRecursive,
       // Workaround for https://github.com/joyent/node/issues/4337
       ...(process.platform === "win32"
@@ -173,7 +174,7 @@ const removeDirectory = (
                 );
                 throw error;
               }
-              removeDirectoryNaive(directoryPath, {
+              removeDirectorySyncNaive(directoryPath, {
                 ...optionsFromRecursive,
               });
             },
@@ -184,7 +185,7 @@ const removeDirectory = (
 
   const removeDirectoryContent = (directoryUrl) => {
     removeDirectoryOperation.throwIfAborted();
-    const entryNames = readdirSync(directoryUrl);
+    const entryNames = readdirSync(new URL(directoryUrl));
     for (const entryName of entryNames) {
       const url = resolveUrl(entryName, directoryUrl);
       visit(url);
@@ -210,7 +211,7 @@ const removeDirectory = (
   }
 };
 
-const removeDirectoryNaive = (
+const removeDirectorySyncNaive = (
   directoryPath,
   { handleNotEmptyError = null, handlePermissionError = null } = {},
 ) => {

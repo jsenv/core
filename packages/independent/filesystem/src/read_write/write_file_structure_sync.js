@@ -1,20 +1,8 @@
-import { writeFileSync, rmSync } from "node:fs";
-
-import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
+import { ensureEmptyDirectorySync } from "../remove/ensure_empty_directory_sync.js";
+import { writeFileSync } from "./write_file_sync.js";
 
 export const writeFileStructureSync = (directoryUrl, fileContents) => {
-  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-
-  try {
-    rmSync(new URL(directoryUrl), {
-      recursive: true,
-      force: true,
-    });
-  } catch (e) {
-    if (!e || e.code !== "ENOENT") {
-      throw e;
-    }
-  }
+  ensureEmptyDirectorySync(directoryUrl);
   Object.keys(fileContents).forEach((relativeUrl) => {
     const contentUrl = new URL(relativeUrl, directoryUrl);
     const content = fileContents[relativeUrl];

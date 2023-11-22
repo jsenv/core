@@ -13,12 +13,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
 try {
   writeFileStructureSync(tempDirectoryUrl, {
-    src: {
-      "a.js": 'console.log("a");\n',
-    },
+    "src/a.js": 'console.log("a");\n',
   });
   clearDirectorySync(tempDirectoryUrl);
-  const names = readFileStructureSync(tempDirectoryUrl);
+  const names = Object.keys(readFileStructureSync(tempDirectoryUrl));
   assert({
     actual: names,
     expected: [],
