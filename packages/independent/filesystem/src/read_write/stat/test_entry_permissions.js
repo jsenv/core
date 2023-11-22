@@ -1,6 +1,6 @@
 import { promises, constants } from "node:fs";
 
-import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
+import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
 
 const { access } = promises;
 const {

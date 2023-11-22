@@ -6,7 +6,7 @@
 import { promises } from "node:fs";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
-import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
+import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
 import { binaryFlagsToPermissions } from "./permissions.js";
 
 const { stat } = promises;

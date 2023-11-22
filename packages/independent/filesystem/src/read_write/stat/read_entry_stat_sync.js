@@ -3,15 +3,15 @@
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
-import { lstat, stat } from "node:fs";
+import { lstatSync, statSync } from "node:fs";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
-import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
-import { writeEntryPermissions } from "./write_entry_permissions.js";
+import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
+import { writeEntryPermissionsSync } from "./write_entry_permissions_sync.js";
 
 const isWindows = process.platform === "win32";
 
-export const readEntryStat = async (
+export const readEntryStatSync = (
   source,
   { nullIfNotFound = false, followLink = true } = {},
 ) => {
@@ -26,13 +26,13 @@ export const readEntryStat = async (
       }
     : {};
 
-  return readStat(sourcePath, {
+  return statSyncNaive(sourcePath, {
     followLink,
     ...handleNotFoundOption,
     ...(isWindows
       ? {
           // Windows can EPERM on stat
-          handlePermissionDeniedError: async (error) => {
+          handlePermissionDeniedError: (error) => {
             console.error(
               `trying to fix windows EPERM after stats on ${sourcePath}`,
             );
@@ -41,8 +41,8 @@ export const readEntryStat = async (
               // unfortunately it means we mutate the permissions
               // without being able to restore them to the previous value
               // (because reading current permission would also throw)
-              await writeEntryPermissions(sourceUrl, 0o666);
-              const stats = await readStat(sourcePath, {
+              writeEntryPermissionsSync(sourceUrl, 0o666);
+              const stats = statSyncNaive(sourcePath, {
                 followLink,
                 ...handleNotFoundOption,
                 // could not fix the permission error, give up and throw original error
@@ -64,7 +64,7 @@ export const readEntryStat = async (
   });
 };
 
-const readStat = (
+const statSyncNaive = (
   sourcePath,
   {
     followLink,
@@ -72,24 +72,21 @@ const readStat = (
     handlePermissionDeniedError = null,
   } = {},
 ) => {
-  const nodeMethod = followLink ? stat : lstat;
+  const nodeMethod = followLink ? statSync : lstatSync;
 
-  return new Promise((resolve, reject) => {
-    nodeMethod(sourcePath, (error, statsObject) => {
-      if (error) {
-        if (handleNotFoundError && error.code === "ENOENT") {
-          resolve(handleNotFoundError(error));
-        } else if (
-          handlePermissionDeniedError &&
-          (error.code === "EPERM" || error.code === "EACCES")
-        ) {
-          resolve(handlePermissionDeniedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(statsObject);
-      }
-    });
-  });
+  try {
+    const stats = nodeMethod(sourcePath);
+    return stats;
+  } catch (error) {
+    if (handleNotFoundError && error.code === "ENOENT") {
+      return handleNotFoundError(error);
+    }
+    if (
+      handlePermissionDeniedError &&
+      (error.code === "EPERM" || error.code === "EACCES")
+    ) {
+      return handlePermissionDeniedError(error);
+    }
+    throw error;
+  }
 };

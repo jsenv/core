@@ -4,8 +4,8 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { comparePathnames } from "../path_and_url/compare_pathnames.js";
-import { readEntryStat } from "../stat/read_entry_stat.js";
-import { readDirectory } from "../content/read_directory.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { readDirectory } from "../read_write/read_directory.js";
 
 export const collectFiles = async ({
   signal = new AbortController().signal,

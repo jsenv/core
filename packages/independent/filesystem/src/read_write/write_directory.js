@@ -2,8 +2,8 @@ import { promises } from "node:fs";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
-import { statsToType } from "../stat/stats_to_type.js";
-import { readEntryStat } from "../stat/read_entry_stat.js";
+import { statsToType } from "./stat/stats_to_type.js";
+import { readEntryStat } from "./stat/read_entry_stat.js";
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
 const { mkdir } = promises;

@@ -6,11 +6,11 @@ import {
   isFileSystemPath,
 } from "@jsenv/urls";
 
-import { readEntryStat } from "../stat/read_entry_stat.js";
-import { removeEntry } from "../remove/remove_entry.js";
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
-import { ensureParentDirectories } from "./ensure_parent_directories.js";
+import { removeEntry } from "../remove/remove_entry.js";
+import { readEntryStat } from "./stat/read_entry_stat.js";
 import { readSymbolicLink } from "./read_symbolic_link.js";
+import { ensureParentDirectories } from "./ensure_parent_directories.js";
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
 const { symlink } = promises;

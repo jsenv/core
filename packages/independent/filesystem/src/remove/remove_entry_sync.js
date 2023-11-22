@@ -12,8 +12,8 @@ import {
   resolveUrl,
 } from "@jsenv/urls";
 
-import { assertAndNormalizeFileUrl } from "./file_url_validation.js";
-import { readEntryStatSync } from "./read_entry_stat_sync.js";
+import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 
 export const removeEntrySync = (
   source,

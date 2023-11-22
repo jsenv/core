@@ -3,7 +3,7 @@ import { dirname, basename } from "node:path";
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
-import { statsToType } from "../stat/stats_to_type.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
 import { trackResources } from "./track_resources.js";
 import { createWatcher } from "./create_watcher.js";
 import { guardTooFastSecondCall } from "./guard_second_call.js";

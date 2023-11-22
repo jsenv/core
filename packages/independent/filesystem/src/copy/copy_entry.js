@@ -10,16 +10,16 @@ import {
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { urlTargetsSameFileSystemPath } from "../path_and_url/url_targets_same_file_system_path.js";
-import { readEntryStat } from "../stat/read_entry_stat.js";
-import { statsToType } from "../stat/stats_to_type.js";
-import { binaryFlagsToPermissions } from "../stat/permissions.js";
-import { writeEntryPermissions } from "../stat/write_entry_permissions.js";
-import { writeEntryModificationTime } from "../stat/write_entry_modification_time.js";
-import { writeDirectory } from "../content/write_directory.js";
-import { ensureParentDirectories } from "../content/ensure_parent_directories.js";
-import { readDirectory } from "../content/read_directory.js";
-import { readSymbolicLink } from "../content/read_symbolic_link.js";
-import { writeSymbolicLink } from "../content/write_symbolic_link.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
+import { binaryFlagsToPermissions } from "../read_write/stat/permissions.js";
+import { writeEntryPermissions } from "../read_write/stat/write_entry_permissions.js";
+import { writeEntryModificationTime } from "../read_write/stat/write_entry_modification_time.js";
+import { writeDirectory } from "../read_write/write_directory.js";
+import { ensureParentDirectories } from "../read_write/ensure_parent_directories.js";
+import { readDirectory } from "../read_write/read_directory.js";
+import { readSymbolicLink } from "../read_write/read_symbolic_link.js";
+import { writeSymbolicLink } from "../read_write/write_symbolic_link.js";
 import { removeEntry } from "../remove/remove_entry.js";
 
 export const copyEntry = async ({

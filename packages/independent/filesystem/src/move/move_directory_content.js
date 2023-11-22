@@ -3,10 +3,10 @@ import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls";
 
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { urlTargetsSameFileSystemPath } from "../path_and_url/url_targets_same_file_system_path.js";
-import { readEntryStat } from "../stat/read_entry_stat.js";
-import { statsToType } from "../stat/stats_to_type.js";
-import { readSymbolicLink } from "../content/read_symbolic_link.js";
-import { readDirectory } from "../content/read_directory.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
+import { readSymbolicLink } from "../read_write/read_symbolic_link.js";
+import { readDirectory } from "../read_write/read_directory.js";
 import { moveEntry } from "./move_entry.js";
 
 export const moveDirectoryContent = async ({

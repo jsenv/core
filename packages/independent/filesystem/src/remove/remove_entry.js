@@ -7,8 +7,8 @@ import {
 } from "@jsenv/urls";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
-import { readEntryStat } from "../stat/read_entry_stat.js";
-import { readDirectory } from "../content/read_directory.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { readDirectory } from "../read_write/read_directory.js";
 
 export const removeEntry = async (
   source,

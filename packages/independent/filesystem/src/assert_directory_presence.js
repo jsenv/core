@@ -1,8 +1,8 @@
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { assertAndNormalizeFileUrl } from "./path_and_url/file_url_validation.js";
-import { readEntryStat } from "./stat/read_entry_stat.js";
-import { statsToType } from "./stat/stats_to_type.js";
+import { readEntryStat } from "./read_write/stat/read_entry_stat.js";
+import { statsToType } from "./read_write/stat/stats_to_type.js";
 
 export const assertDirectoryPresence = async (source) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);

@@ -1,6 +1,6 @@
 import { chmodSync } from "node:fs";
 
-import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
+import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
 import { permissionsToBinaryFlags } from "./permissions.js";
 
 export const writeEntryPermissionsSync = (source, permissions) => {

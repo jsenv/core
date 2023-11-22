@@ -1,4 +1,4 @@
-import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
+import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
 import { readEntryPermissions } from "./read_entry_permissions.js";
 import { writeEntryPermissions } from "./write_entry_permissions.js";
 
