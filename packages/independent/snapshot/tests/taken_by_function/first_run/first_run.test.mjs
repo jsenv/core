@@ -2,21 +2,21 @@ import { assert } from "@jsenv/assert";
 import { removeEntry } from "@jsenv/filesystem";
 
 import {
-  assertSnapshotDirectoryTakenByFunction,
-  writeDirectoryContent,
-  readDirectoryContent,
+  compareSnapshotTakenByFunction,
+  saveDirectorySnapshot,
+  takeDirectorySnapshot,
 } from "@jsenv/snapshot";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
 removeEntry(snapshotsDirectoryUrl, { recursive: true, allowUseless: true });
 try {
-  await assertSnapshotDirectoryTakenByFunction(snapshotsDirectoryUrl, () => {
-    writeDirectoryContent(snapshotsDirectoryUrl, {
+  await compareSnapshotTakenByFunction(snapshotsDirectoryUrl, () => {
+    saveDirectorySnapshot(snapshotsDirectoryUrl, {
       "a.js": `console.log("a");\n`,
     });
   });
-  const snapshotDirectoryContent = readDirectoryContent(snapshotsDirectoryUrl);
+  const snapshotDirectoryContent = takeDirectorySnapshot(snapshotsDirectoryUrl);
   const actual = snapshotDirectoryContent;
   const expected = {
     "a.js": `console.log("a");\n`,

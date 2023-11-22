@@ -1,12 +1,12 @@
 import {
-  assertSnapshotDirectoryTakenByFunction,
-  writeDirectoryContent,
+  compareSnapshotTakenByFunction,
+  saveDirectorySnapshot,
 } from "@jsenv/snapshot";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
-await assertSnapshotDirectoryTakenByFunction(snapshotsDirectoryUrl, () => {
-  writeDirectoryContent(snapshotsDirectoryUrl, {
+await compareSnapshotTakenByFunction(snapshotsDirectoryUrl, () => {
+  saveDirectorySnapshot(snapshotsDirectoryUrl, {
     "a.js": `console.log("a");\n`,
   });
 });

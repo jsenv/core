@@ -1,6 +1,6 @@
-import { assertSnapshotDirectoryTakenByFunction } from "@jsenv/snapshot";
+import { compareSnapshotTakenByFunction } from "@jsenv/snapshot";
 
-assertSnapshotDirectoryTakenByFunction(
+compareSnapshotTakenByFunction(
   new URL("./snapshots/", import.meta.url),
   async () => {
     await import("./execution_logs_snapshots.mjs");

@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 
 import {
-  assertSnapshotDirectoryTakenByFunction,
+  compareSnapshotTakenByFunction,
   readDirectoryContent,
   writeDirectoryContent,
 } from "@jsenv/snapshot";
@@ -10,7 +10,7 @@ const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const contentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
 
 try {
-  await assertSnapshotDirectoryTakenByFunction(snapshotsDirectoryUrl, () => {
+  await compareSnapshotTakenByFunction(snapshotsDirectoryUrl, () => {
     writeDirectoryContent(snapshotsDirectoryUrl, {
       "a.js": `console.log('b');\n`,
     });
