@@ -3,6 +3,7 @@ import { asFlatAssociations } from "./as_flat_associations.js";
 import { applyPatternMatching } from "./pattern_matching.js";
 
 export const applyAssociations = ({ url, associations }) => {
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url);
   const flatAssociations = asFlatAssociations(associations);
   return Object.keys(flatAssociations).reduce((previousValue, pattern) => {

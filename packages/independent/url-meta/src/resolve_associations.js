@@ -1,6 +1,7 @@
 import { assertUrlLike } from "./assertions.js";
 
 export const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
   assertUrlLike(baseUrl, "baseUrl");
   const associationsResolved = {};
   Object.keys(associations).forEach((key) => {
