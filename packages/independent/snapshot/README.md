@@ -1,6 +1,6 @@
 # snapshots [![npm package](https://img.shields.io/npm/v/@jsenv/snapshot.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/snapshot)
 
-## takeDirectorySnapshot
+## takeDirectorySnapshotAndCompare
 
 This function write all files from a directory to an other called "snapshots directory".
 
@@ -16,9 +16,9 @@ project/
 ```
 
 ```js
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 
-takeDirectorySnapshot(
+takeDirectorySnapshotAndCompare(
   new URL("./dist/", import.meta.url),
   new URL("./snapshots/", import.meta.url),
 );
