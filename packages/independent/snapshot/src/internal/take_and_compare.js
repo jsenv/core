@@ -171,7 +171,7 @@ ${extraUrls.join("\n")}`);
 
   // file contents
   {
-    for (const relativeUrl of Object.keys(currentRelativeUrls)) {
+    for (const relativeUrl of currentRelativeUrls) {
       const currentFileSnapshot = currentDirectorySnapshot[relativeUrl];
       const previousFileSnapshot = previousDirectorySnapshot[relativeUrl];
       compareFileSnapshots(
