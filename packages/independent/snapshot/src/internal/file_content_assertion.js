@@ -1,6 +1,8 @@
 import { urlToFilename } from "@jsenv/urls";
-import { createAssertionError } from "@jsenv/assert";
-import { formatStringAssertionErrorMessage } from "@jsenv/assert/src/internal/error_message/strings.js";
+import {
+  createAssertionError,
+  formatStringAssertionErrorMessage,
+} from "@jsenv/assert";
 
 export const assertFileContent = (
   actualFileContent,

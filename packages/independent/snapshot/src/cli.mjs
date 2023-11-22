@@ -2,9 +2,7 @@
 
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { readdirSync, statSync } from "node:fs";
-import { URL_META } from "@jsenv/url-meta";
-import { removeEntry } from "@jsenv/filesystem";
+import { clearDirectorySync } from "@jsenv/filesystem";
 
 const options = {
   "help": {
@@ -31,35 +29,7 @@ pattern: files matching this pattern will be removed; can use "*" and "**"
 const commandHandlers = {
   clear: async (pattern) => {
     const currentDirectoryUrl = pathToFileURL(`${process.cwd()}/`);
-    const associations = URL_META.resolveAssociations(
-      {
-        clear: {
-          [pattern]: true,
-          "**/.*": false,
-          "**/.*/": false,
-          "**/node_modules/": false,
-        },
-      },
-      currentDirectoryUrl,
-    );
-    const visitDirectory = async (directoryUrl) => {
-      const entryNames = readdirSync(directoryUrl);
-      for (const entryName of entryNames) {
-        const entryUrl = new URL(entryName, directoryUrl);
-        const meta = URL_META.applyAssociations({
-          url: entryUrl.href,
-          associations,
-        });
-        if (meta.clear) {
-          await removeEntry(entryUrl, { recursive: true, allowUseless: true });
-        }
-        const entryStat = statSync(entryUrl);
-        if (entryStat.isDirectory()) {
-          await visitDirectory(entryUrl);
-        }
-      }
-    };
-    await visitDirectory(currentDirectoryUrl);
+    clearDirectorySync(currentDirectoryUrl, pattern);
   },
 };
 
