@@ -21,8 +21,6 @@ export { getRealFileSystemUrlSync } from "./read_write/get_real_file_system_url_
 export { readDirectory } from "./read_write/read_directory.js";
 export { writeDirectory } from "./read_write/write_directory.js";
 export { writeDirectorySync } from "./read_write/write_directory_sync.js";
-export { readFileStructureSync } from "./read_write/read_file_structure_sync.js";
-export { writeFileStructureSync } from "./read_write/write_file_structure_sync.js";
 export { readFile } from "./read_write/read_file.js";
 export { writeFile } from "./read_write/write_file.js";
 export { readFileSync } from "./read_write/read_file_sync.js";

@@ -1,16 +1,19 @@
 import { assert } from "@jsenv/assert";
-
 import {
-  takeDirectorySnapshot,
-  readDirectoryContent,
-  writeDirectoryContent,
-} from "@jsenv/snapshot";
+  readDirectoryStructureSync,
+  writeDirectoryStructureSync,
+} from "@jsenv/filesystem";
+
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
-const sourceContentBeforeTest = readDirectoryContent(sourceDirectoryUrl);
-const snapshotContentBeforeTest = readDirectoryContent(snapshotsDirectoryUrl);
+const sourceDirectoryStructureBeforeTest =
+  readDirectoryStructureSync(sourceDirectoryUrl);
+const snapshotDirectoryStructureBeforeTest = readDirectoryContent(
+  snapshotsDirectoryUrl,
+);
 
 try {
   takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
@@ -33,6 +36,12 @@ ${snapshotsDirectoryUrl}hello.js`;
     expected: ["a.js", "b.js", "file.txt", "hello.js"],
   });
 } finally {
-  writeDirectoryContent(sourceDirectoryUrl, sourceContentBeforeTest);
-  writeDirectoryContent(snapshotsDirectoryUrl, snapshotContentBeforeTest);
+  writeDirectoryStructureSync(
+    sourceDirectoryUrl,
+    sourceDirectoryStructureBeforeTest,
+  );
+  writeDirectoryStructureSync(
+    snapshotsDirectoryUrl,
+    snapshotDirectoryStructureBeforeTest,
+  );
 }

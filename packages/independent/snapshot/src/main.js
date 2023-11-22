@@ -1,10 +1,15 @@
 export {
-  takeDirectorySnapshot,
-  assertSnapshotDirectoryTakenByFunction,
-} from "./internal/directory_snapshot.js";
-export {
-  readDirectoryContent,
-  writeDirectoryContent,
-} from "./internal/directory_content.js";
+  takeDirectorySnapshotAndCompare,
+  takeFileSnapshotAndCompare,
+  compareSnapshotTakenByFunction,
+} from "./internal/take_and_compare.js";
 
-export { takeFileSnapshot } from "./internal/file_snapshot.js";
+export {
+  takeDirectorySnapshot,
+  takeFileSnapshot,
+} from "./internal/take_snapshot.js";
+
+export {
+  saveDirectorySnapshot,
+  saveFileSnapshot,
+} from "./internal/save_snapshot.js";

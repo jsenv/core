@@ -1,18 +1,18 @@
 import { assert } from "@jsenv/assert";
-import { removeEntry } from "@jsenv/filesystem";
+import { removeEntry, readFileStructureSync } from "@jsenv/filesystem";
 
-import { takeDirectorySnapshot, readDirectoryContent } from "@jsenv/snapshot";
+import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 
 const sourceDirectoryUrl = new URL("./source/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
 removeEntry(snapshotsDirectoryUrl, { recursive: true, allowUseless: true });
 try {
-  takeDirectorySnapshot(sourceDirectoryUrl, snapshotsDirectoryUrl);
-  const snapshotDirectoryContent = readDirectoryContent(
+  takeDirectorySnapshotAndCompare(sourceDirectoryUrl, snapshotsDirectoryUrl);
+  const snapshotFileStructure = readFileStructureSync(
     new URL("./snapshots/", import.meta.url),
   );
-  const actual = snapshotDirectoryContent;
+  const actual = snapshotFileStructure;
   const expected = {
     "a.js": `console.log("a");\n`,
     "b.js": `console.log("b");\n`,
