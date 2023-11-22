@@ -13,6 +13,7 @@
     "url": "https://github.com/jsenv/core",
     "directory": "packages/independent/snapshot"
   },
+  "bin": "./src/cli.mjs",
   "engines": {
     "node": ">=20.0.0"
   },
