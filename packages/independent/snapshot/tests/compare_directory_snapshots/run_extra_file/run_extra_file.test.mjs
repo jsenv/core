@@ -7,7 +7,7 @@ import {
 
 import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-const fixturesDirectoryUrl = new URL("./source/", import.meta.url);
+const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
 const snapshotDirectoryFileStructureBeforeTest = readFileStructureSync(
@@ -21,13 +21,14 @@ try {
   copyDirectoryContentSync({
     from: fixturesDirectoryUrl,
     to: snapshotsDirectoryUrl,
+    overwrite: true,
   });
   const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
   compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
-  const expected = `comparison with previous snapshot failed
+  const expected = `comparison with previous directory snapshot failed
 --- reason ---
 2 files are unexpected
 --- files unexpected ---
