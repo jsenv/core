@@ -1,37 +1,41 @@
 import { assert } from "@jsenv/assert";
-
 import {
-  takeDirectorySnapshotAndCompare,
-  takeDirectorySnapshot,
-  saveSnapshotOnFileSystem,
-} from "@jsenv/snapshot";
+  copyDirectorySync,
+  readFileStructureSync,
+  writeFileStructureSync,
+} from "@jsenv/filesystem";
 
-const sourceDirectoryUrl = new URL("./source/", import.meta.url);
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+
+const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
-
-const sourceBeforeTestSnapshot = takeDirectorySnapshot(sourceDirectoryUrl);
-const snapshotBeforeTestSnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+const snapshotDirectoryFileStructureBeforeTest = readFileStructureSync(
+  snapshotsDirectoryUrl,
+);
 
 try {
-  takeDirectorySnapshotAndCompare(sourceDirectoryUrl, snapshotsDirectoryUrl);
+  const expectedDirectorySnapshot = takeDirectorySnapshot(
+    snapshotsDirectoryUrl,
+  );
+  copyDirectorySync({
+    from: fixturesDirectoryUrl,
+    to: snapshotsDirectoryUrl,
+    overwrite: true,
+  });
+  const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+  compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
-  const expected = `comparison with previous snapshot failed
+  const expected = `comparison with previous directory snapshot failed
 --- reason ---
 "file.txt" is missing
 --- file missing ---
 ${snapshotsDirectoryUrl}file.txt`;
   assert({ actual, expected });
-
-  const filesInSnapshotsDirectory = Object.keys(
-    takeDirectorySnapshot(snapshotsDirectoryUrl),
-  );
-  assert({
-    actual: filesInSnapshotsDirectory,
-    expected: ["a.js", "b.js"],
-  });
 } finally {
-  saveSnapshotOnFileSystem(sourceBeforeTestSnapshot, sourceDirectoryUrl);
-  saveSnapshotOnFileSystem(snapshotBeforeTestSnapshot, snapshotsDirectoryUrl);
+  writeFileStructureSync(
+    snapshotsDirectoryUrl,
+    snapshotDirectoryFileStructureBeforeTest,
+  );
 }

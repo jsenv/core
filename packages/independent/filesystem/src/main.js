@@ -60,6 +60,7 @@ export { moveEntry } from "./move/move_entry.js";
 export { copyEntry } from "./copy/copy_entry.js";
 export { copyDirectoryContent } from "./copy/copy_directory_content.js";
 export { copyEntrySync } from "./copy/copy_entry_sync.js";
+export { copyDirectorySync } from "./copy/copy_directory_sync.js";
 export { copyDirectoryContentSync } from "./copy/copy_directory_content_sync.js";
 
 // remove

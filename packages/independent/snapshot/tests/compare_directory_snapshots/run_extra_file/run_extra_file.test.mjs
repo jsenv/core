@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 import {
-  copyDirectoryContentSync,
+  copyDirectorySync,
   readFileStructureSync,
   writeFileStructureSync,
 } from "@jsenv/filesystem";
@@ -9,7 +9,6 @@ import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
 const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
-
 const snapshotDirectoryFileStructureBeforeTest = readFileStructureSync(
   snapshotsDirectoryUrl,
 );
@@ -18,7 +17,7 @@ try {
   const expectedDirectorySnapshot = takeDirectorySnapshot(
     snapshotsDirectoryUrl,
   );
-  copyDirectoryContentSync({
+  copyDirectorySync({
     from: fixturesDirectoryUrl,
     to: snapshotsDirectoryUrl,
     overwrite: true,
