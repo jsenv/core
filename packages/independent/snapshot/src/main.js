@@ -233,22 +233,24 @@ ${extraUrls.join("\n")}`);
   },
   file: (currentFileSnapshot, previousFileSnapshot) => {
     const failureMessage = `comparison with previous file snapshot failed`;
-    if (Buffer.isBuffer(currentFileSnapshot)) {
-      if (currentFileSnapshot.equals(previousFileSnapshot)) {
+    const currentFileContent = currentFileSnapshot.content;
+    const previousFileContent = previousFileSnapshot.content;
+    if (Buffer.isBuffer(currentFileContent)) {
+      if (currentFileContent.equals(previousFileContent)) {
         return;
       }
       throw createAssertionError(`${failureMessage}
 --- reason ---
-"${urlToFilename(currentFileSnapshot.url)}" content is unequal
+"${urlToFilename(currentFileSnapshot.url)}" content has changed
 --- file ---
 ${currentFileSnapshot.url}`);
     }
-    if (currentFileSnapshot === previousFileSnapshot) {
+    if (currentFileContent === previousFileContent) {
       return;
     }
     const message = formatStringAssertionErrorMessage({
-      actual: currentFileSnapshot,
-      expected: previousFileSnapshot,
+      actual: currentFileContent,
+      expected: previousFileContent,
       name: `"${urlToFilename(currentFileSnapshot.url)}" content`,
     });
     throw createAssertionError(`${failureMessage}

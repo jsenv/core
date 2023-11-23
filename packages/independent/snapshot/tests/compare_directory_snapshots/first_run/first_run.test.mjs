@@ -1,7 +1,4 @@
-import {
-  ensureEmptyDirectorySync,
-  copyDirectoryContentSync,
-} from "@jsenv/filesystem";
+import { ensureEmptyDirectorySync, copyDirectorySync } from "@jsenv/filesystem";
 
 import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
@@ -13,9 +10,10 @@ try {
   const expectedDirectorySnapshot = takeDirectorySnapshot(
     snapshotsDirectoryUrl,
   );
-  copyDirectoryContentSync({
+  copyDirectorySync({
     from: fixturesDirectoryUrl,
     to: snapshotsDirectoryUrl,
+    overwrite: true,
   });
   const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
   compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
