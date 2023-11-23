@@ -25,10 +25,12 @@ const test = async ({ name, ...params }) => {
 {
   await test({
     name: "0_with_bundling",
+    base: "./",
     minification: false,
+    versioning: false,
   });
   // eslint-disable-next-line import/no-unresolved
-  const namespace = await import("./dist/main.js");
+  const namespace = await import("./snapshots/0_with_bundling/main.js");
   const actual = { ...namespace };
   const expected = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
@@ -40,11 +42,13 @@ const test = async ({ name, ...params }) => {
 {
   await test({
     name: "1_without_bundling",
+    base: "./",
     bundling: false,
     minification: false,
+    versioning: false,
   });
   // eslint-disable-next-line import/no-unresolved
-  const namespace = await import("./dist/main.js");
+  const namespace = await import("./snapshots/1_without_bundling/main.js");
   const actual = { ...namespace };
   const expected = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
