@@ -20,6 +20,7 @@ const test = async ({ name, ...params }) => {
   });
   const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+
   const server = await startFileServer({
     rootDirectoryUrl: snapshotDirectoryUrl,
   });
