@@ -1,23 +1,24 @@
-import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
 import { build } from "@jsenv/core";
 
 const test = async ({ name, ...params }) => {
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  takeDirectorySnapshotAndCompare(
-    new URL("./dist/", import.meta.url),
-    new URL(`./snapshots/${name}/`, import.meta.url),
-    !params.sourcemaps,
-  );
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  if (!params.sourcemap) {
+    compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+  }
 };
 
 // can use <script type="module">

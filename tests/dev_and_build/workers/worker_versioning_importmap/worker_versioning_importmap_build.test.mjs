@@ -3,14 +3,16 @@
  * as importmap are not supported in workers
  */
 
-import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
+const test = async ({ name, ...rest }) => {
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -21,12 +23,9 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
   });
-
-  // 1. Snapshots
-  takeDirectorySnapshotAndCompare(
-    new URL("./dist/", import.meta.url),
-    snapshotsDirectoryUrl,
-  );
+  // 1. snapshots
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
 
   // 2. Ensure file executes properly
   const server = await startFileServer({
@@ -49,7 +48,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
 
 // support importmap
 await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/importmap/", import.meta.url),
+  name: "importmap",
   runtimeCompat: { chrome: "89" },
   bundling: false,
   minification: false,
@@ -57,7 +56,7 @@ await test({
 
 // does not support importmap
 await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
+  name: "systemjs",
   runtimeCompat: { chrome: "88" },
   bundling: false,
   minification: false,

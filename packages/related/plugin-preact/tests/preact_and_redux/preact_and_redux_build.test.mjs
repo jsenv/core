@@ -1,4 +1,3 @@
-import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { build } from "@jsenv/core";
@@ -12,10 +11,11 @@ const test = async ({ name, ...params }) => {
   await ensureEmptyDirectory(
     new URL("./.jsenv/build/cjs_to_esm/", import.meta.url),
   );
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
     },
@@ -44,11 +44,6 @@ const test = async ({ name, ...params }) => {
     ],
     ...params,
   });
-  takeDirectorySnapshotAndCompare(
-    new URL("./dist/", import.meta.url),
-    new URL(`./snapshots/${name}/`, import.meta.url),
-    false,
-  );
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });

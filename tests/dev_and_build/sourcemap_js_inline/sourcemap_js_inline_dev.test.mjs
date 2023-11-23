@@ -1,5 +1,4 @@
-import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
-import { ensureEmptyDirectory } from "@jsenv/filesystem";
+import { ensureEmptyDirectory, copyDirectorySync } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
@@ -24,11 +23,11 @@ const test = async (params) => {
     url: `${devServer.origin}/main.html`,
   });
   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-  takeDirectorySnapshotAndCompare(
-    new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
-    new URL(`./snapshots/dev/`, import.meta.url),
-    false,
-  );
+  copyDirectorySync({
+    from: new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
+    to: new URL(`./snapshots/dev/`, import.meta.url),
+    overwrite: true,
+  });
 };
 
 await test();

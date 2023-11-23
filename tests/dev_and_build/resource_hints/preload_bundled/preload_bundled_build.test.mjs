@@ -1,5 +1,5 @@
 import stripAnsi from "strip-ansi";
-import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build, startBuildServer } from "@jsenv/core";
@@ -12,23 +12,24 @@ console.warn = (...args) => {
 
 const test = async ({ name, ...params }) => {
   warnCalls.length = 0;
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  takeDirectorySnapshotAndCompare(
-    new URL("./dist/", import.meta.url),
-    new URL(`./snapshots/${name}/`, import.meta.url),
-  );
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+
   const server = await startBuildServer({
     logLevel: "warn",
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     keepProcessAlive: false,
     port: 0,
   });

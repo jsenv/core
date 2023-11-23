@@ -5,7 +5,7 @@
 
 import { writeFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { takeDirectorySnapshotAndCompare } from "@jsenv/snapshot";
+import { copyDirectorySync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
@@ -69,11 +69,19 @@ try {
   };
   const takeDevFilesSnapshot = (name) => {
     const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-    takeDirectorySnapshotAndCompare(
-      new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
-      new URL(`./snapshots/${name}/`, import.meta.url),
-      false,
+    const jsenvDirectoryUrl = new URL(
+      `./.jsenv/${runtimeId}/`,
+      import.meta.url,
     );
+    const snapshotDirectoryUrl = new URL(
+      `./snapshots/${name}/`,
+      import.meta.url,
+    );
+    copyDirectorySync({
+      from: jsenvDirectoryUrl,
+      to: snapshotDirectoryUrl,
+      overwrite: true,
+    });
   };
 
   {
