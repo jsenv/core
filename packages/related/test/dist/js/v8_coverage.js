@@ -1,39 +1,39 @@
 const assertUrlLike = (value, name = "url") => {
   if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
+    throw new TypeError(`${name} must be a url string, got ${value}`)
   }
   if (isWindowsPathnameSpecifier(value)) {
     throw new TypeError(
       `${name} must be a url but looks like a windows pathname, got ${value}`,
-    );
+    )
   }
   if (!hasScheme(value)) {
     throw new TypeError(
       `${name} must be a url and no scheme found, got ${value}`,
-    );
+    )
   }
 };
 
 const isPlainObject = (value) => {
   if (value === null) {
-    return false;
+    return false
   }
   if (typeof value === "object") {
     if (Array.isArray(value)) {
-      return false;
+      return false
     }
-    return true;
+    return true
   }
-  return false;
+  return false
 };
 
 const isWindowsPathnameSpecifier = (specifier) => {
   const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  if (!/[a-zA-Z]/.test(firstChar)) return false
   const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
+  if (secondChar !== ":") return false
   const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
+  return thirdChar === "/" || thirdChar === "\\"
 };
 
 const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
@@ -55,15 +55,15 @@ const resolveAssociations = (associations, baseUrl) => {
       associationsResolved[key] = value;
     }
   });
-  return associationsResolved;
+  return associationsResolved
 };
 
 const normalizeUrlPattern = (urlPattern, baseUrl) => {
   try {
-    return String(new URL(urlPattern, baseUrl));
+    return String(new URL(urlPattern, baseUrl))
   } catch (e) {
     // it's not really an url, no need to perform url resolution nor encoding
-    return urlPattern;
+    return urlPattern
   }
 };
 
@@ -71,7 +71,7 @@ const asFlatAssociations = (associations) => {
   if (!isPlainObject(associations)) {
     throw new TypeError(
       `associations must be a plain object, got ${associations}`,
-    );
+    )
   }
   const flatAssociations = {};
   Object.keys(associations).forEach((associationName) => {
@@ -93,7 +93,7 @@ const asFlatAssociations = (associations) => {
       });
     }
   });
-  return flatAssociations;
+  return flatAssociations
 };
 
 /*
@@ -139,7 +139,7 @@ const applyPatternMatching = ({ url, pattern }) => {
     patternIndex,
     urlIndex: index,
     matchGroups,
-  };
+  }
 };
 
 const applyMatching = (pattern, string) => {
@@ -154,16 +154,16 @@ const applyMatching = (pattern, string) => {
     const subpattern = remainingPattern.slice(0, count);
     remainingPattern = remainingPattern.slice(count);
     patternIndex += count;
-    return subpattern;
+    return subpattern
   };
   const consumeString = (count) => {
     const substring = remainingString.slice(0, count);
     remainingString = remainingString.slice(count);
     index += count;
-    return substring;
+    return substring
   };
   const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
+    return consumeString(remainingString.length)
   };
 
   let matched;
@@ -175,7 +175,7 @@ const applyMatching = (pattern, string) => {
       consumePattern(1);
       consumeString(1);
       iterate();
-      return;
+      return
     }
     if (matched === false && restoreIndexes) {
       patternIndex = patternIndexBefore;
@@ -185,11 +185,11 @@ const applyMatching = (pattern, string) => {
   const matchOne = () => {
     // pattern consumed and string consumed
     if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
+      return true // string fully matched pattern
     }
     // pattern consumed, string not consumed
     if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expected
+      return false // fails because string longer than expected
     }
     // -- from this point pattern is not consumed --
     // string consumed, pattern not consumed
@@ -197,12 +197,12 @@ const applyMatching = (pattern, string) => {
       if (remainingPattern === "**") {
         // trailing "**" is optional
         consumePattern(2);
-        return true;
+        return true
       }
       if (remainingPattern === "*") {
         groups.push({ string: "" });
       }
-      return false; // fail because string shorter than expected
+      return false // fail because string shorter than expected
     }
     // -- from this point pattern and string are not consumed --
     // fast path trailing slash
@@ -211,15 +211,15 @@ const applyMatching = (pattern, string) => {
         // trailing slash match remaining
         consumePattern(1);
         groups.push({ string: consumeRemainingString() });
-        return true;
+        return true
       }
-      return false;
+      return false
     }
     // fast path trailing '**'
     if (remainingPattern === "**") {
       consumePattern(2);
       consumeRemainingString();
-      return true;
+      return true
     }
     // pattern leading **
     if (remainingPattern.slice(0, 2) === "**") {
@@ -237,7 +237,7 @@ const applyMatching = (pattern, string) => {
       // pattern ending with "**" or "**/" match remaining string
       if (remainingPattern === "") {
         consumeRemainingString();
-        return true;
+        return true
       }
       if (skipAllowed) {
         const skipResult = skipUntilMatch({
@@ -249,7 +249,7 @@ const applyMatching = (pattern, string) => {
         consumePattern(skipResult.patternIndex);
         consumeRemainingString();
         restoreIndexes = false;
-        return skipResult.matched;
+        return skipResult.matched
       }
     }
     if (remainingPattern[0] === "*") {
@@ -259,17 +259,17 @@ const applyMatching = (pattern, string) => {
         const slashIndex = remainingString.indexOf("/");
         if (slashIndex === -1) {
           groups.push({ string: consumeRemainingString() });
-          return true;
+          return true
         }
         groups.push({ string: consumeString(slashIndex) });
-        return false;
+        return false
       }
       // the next char must not the one expected by remainingPattern[0]
       // because * is greedy and expect to skip at least one char
       if (remainingPattern[0] === remainingString[0]) {
         groups.push({ string: "" });
         patternIndex = patternIndex - 1;
-        return false;
+        return false
       }
       const skipResult = skipUntilMatch({
         pattern: remainingPattern,
@@ -280,12 +280,12 @@ const applyMatching = (pattern, string) => {
       consumePattern(skipResult.patternIndex);
       consumeString(skipResult.index);
       restoreIndexes = false;
-      return skipResult.matched;
+      return skipResult.matched
     }
     if (remainingPattern[0] !== remainingString[0]) {
-      return false;
+      return false
     }
-    return undefined;
+    return undefined
   };
   iterate();
 
@@ -294,7 +294,7 @@ const applyMatching = (pattern, string) => {
     patternIndex,
     index,
     groups,
-  };
+  }
 };
 
 const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
@@ -312,7 +312,7 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
       group: {
         string: string.slice(0, longestAttemptRange.index),
       },
-    };
+    }
   };
 
   const tryToMatch = () => {
@@ -329,7 +329,7 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
               ? string
               : string.slice(0, -remainingString.length),
         },
-      };
+      }
     }
     const attemptIndex = matchAttempt.index;
     const attemptRange = {
@@ -345,15 +345,15 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
       longestAttemptRange = attemptRange;
     }
     if (isLastAttempt) {
-      return failure();
+      return failure()
     }
     const nextIndex = attemptIndex + 1;
     if (nextIndex >= remainingString.length) {
-      return failure();
+      return failure()
     }
     if (remainingString[0] === "/") {
       if (!canSkipSlash) {
-        return failure();
+        return failure()
       }
       // when it's the last slash, the next attempt is the last
       if (remainingString.indexOf("/", 1) === -1) {
@@ -363,9 +363,9 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
     // search against the next unattempted string
     index += nextIndex;
     remainingString = remainingString.slice(nextIndex);
-    return tryToMatch();
+    return tryToMatch()
   };
-  return tryToMatch();
+  return tryToMatch()
 };
 
 const applyAssociations = ({ url, associations }) => {
@@ -382,12 +382,12 @@ const applyAssociations = ({ url, associations }) => {
         return {
           ...previousValue,
           ...value,
-        };
+        }
       }
-      return value;
+      return value
     }
-    return previousValue;
-  }, {});
+    return previousValue
+  }, {})
 };
 
 const applyAliases = ({ url, aliases }) => {
@@ -399,12 +399,12 @@ const applyAliases = ({ url, aliases }) => {
     });
     if (aliasMatchResult.matched) {
       aliasFullMatchResult = aliasMatchResult;
-      return true;
+      return true
     }
-    return false;
+    return false
   });
   if (!aliasMatchingKey) {
-    return url;
+    return url
   }
   const { matchGroups } = aliasFullMatchResult;
   const alias = aliases[aliasMatchingKey];
@@ -412,19 +412,19 @@ const applyAliases = ({ url, aliases }) => {
   const newUrl = parts.reduce((previous, value, index) => {
     return `${previous}${value}${
       index === parts.length - 1 ? "" : matchGroups[index]
-    }`;
+    }`
   }, "");
-  return newUrl;
+  return newUrl
 };
 
 const urlChildMayMatch = ({ url, associations, predicate }) => {
   assertUrlLike(url, "url");
   // the function was meants to be used on url ending with '/'
   if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
+    throw new Error(`url should end with /, got ${url}`)
   }
   if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
+    throw new TypeError(`predicate must be a function, got ${predicate}`)
   }
   const flatAssociations = asFlatAssociations(associations);
   // for full match we must create an object to allow pattern to override previous ones
@@ -454,11 +454,11 @@ const urlChildMayMatch = ({ url, associations, predicate }) => {
     }
   });
   if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
+    return Boolean(predicate(fullMatchMeta))
   }
   return partialMatchMetaArray.some((partialMatchMeta) =>
     predicate(partialMatchMeta),
-  );
+  )
 };
 
 const URL_META = {
