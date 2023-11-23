@@ -27,7 +27,7 @@ export const readFileStructureSync = (directoryUrl) => {
       throw e;
     }
   };
-  visitDirectory(directoryUrl);
+  visitDirectory(new URL(directoryUrl));
 
   const relativeUrls = Object.keys(fileStructureNotOrdered);
   relativeUrls.sort(comparePathnames);
@@ -50,5 +50,8 @@ const readFileContent = (fileUrl) => {
     return content;
   }
   const content = readFileSync(new URL(fileUrl));
+  if (content.length === 0) {
+    return "";
+  }
   return content;
 };

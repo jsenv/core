@@ -1,14 +1,14 @@
 import { assert } from "@jsenv/assert";
 import { urlToFileSystemPath } from "@jsenv/urls";
-import { takeDirectorySnapshot, storeSnapshot } from "@jsenv/snapshot";
 
 import {
   copyDirectoryContentSync,
   ensureEmptyDirectorySync,
   writeFileSync,
   writeDirectorySync,
+  readFileStructureSync,
+  writeFileStructureSync,
 } from "@jsenv/filesystem";
-import { testFilePresence } from "@jsenv/filesystem/tests/testHelpers.js";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url);
 const test = (callback) => {
@@ -58,7 +58,6 @@ test(() => {
       )}`,
     );
     assert({ actual, expected });
-    ensureEmptyDirectory(tempDirectoryUrl);
   }
 });
 
@@ -109,22 +108,19 @@ test(() => {
 
 // copy directory into directory
 test(() => {
-  const sourceUrl = new URL("source", tempDirectoryUrl);
-  storeSnapshot(tempDirectoryUrl, {
-    "a": "",
-    "dest/a": "",
-    "dest/b": "",
+  writeFileStructureSync(tempDirectoryUrl, {
+    "source/a.txt": "",
+    "into/dest/b.txt": "",
   });
-
   copyDirectoryContentSync({
-    from: sourceUrl,
-    to: tempDirectoryUrl,
+    from: new URL("source", tempDirectoryUrl),
+    to: new URL("into/dest", tempDirectoryUrl),
   });
-  const actual = takeDirectorySnapshot(tempDirectoryUrl);
+  const actual = readFileStructureSync(tempDirectoryUrl);
   const expected = {
-    "a": "",
-    "dest/a": "",
-    "dest/b": "",
+    "into/dest/a.txt": "",
+    "into/dest/b.txt": "",
+    "source/a.txt": "",
   };
   assert({ actual, expected });
 });

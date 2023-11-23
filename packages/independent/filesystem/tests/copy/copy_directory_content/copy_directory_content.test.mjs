@@ -2,18 +2,28 @@ import { assert } from "@jsenv/assert";
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import {
+  copyDirectoryContent,
   ensureEmptyDirectory,
   writeDirectory,
   writeFile,
-  copyDirectoryContent,
+  readFileStructureSync,
+  writeFileStructureSync,
 } from "@jsenv/filesystem";
-import { testFilePresence } from "@jsenv/filesystem/tests/testHelpers.js";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
-await ensureEmptyDirectory(tempDirectoryUrl);
+
+const test = async (callback) => {
+  await ensureEmptyDirectory(tempDirectoryUrl);
+
+  try {
+    await callback();
+  } finally {
+    await ensureEmptyDirectory(tempDirectoryUrl);
+  }
+};
 
 // copy nothing into nothing
-{
+await test(async () => {
   const sourceUrl = resolveUrl("source", tempDirectoryUrl);
   const destinationUrl = resolveUrl("dest", tempDirectoryUrl);
 
@@ -26,10 +36,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     );
     assert({ actual, expected });
   }
-}
+});
 
 // copy file instead of directory
-{
+await test(async () => {
   const sourceUrl = resolveUrl("source", tempDirectoryUrl);
   const destinationUrl = resolveUrl("source", tempDirectoryUrl);
   await writeFile(sourceUrl, "coucou");
@@ -44,12 +54,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       )}`,
     );
     assert({ actual, expected });
-    await ensureEmptyDirectory(tempDirectoryUrl);
   }
-}
+});
 
 // copy directory into nothing
-{
+await test(async () => {
   const sourceUrl = resolveUrl("source", tempDirectoryUrl);
   const destinationUrl = resolveUrl("dest", tempDirectoryUrl);
   await writeDirectory(sourceUrl);
@@ -64,12 +73,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       )}`,
     );
     assert({ actual, expected });
-    await ensureEmptyDirectory(tempDirectoryUrl);
   }
-}
+});
 
 // move directory into file instead of directory
-{
+await test(async () => {
   const sourceUrl = resolveUrl("source", tempDirectoryUrl);
   const destinationUrl = resolveUrl("dest", tempDirectoryUrl);
   await writeDirectory(sourceUrl);
@@ -85,34 +93,24 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       )}`,
     );
     assert({ actual, expected });
-    await ensureEmptyDirectory(tempDirectoryUrl);
   }
-}
+});
 
 // copy directory into directory
-{
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl);
-  const fileASourceUrl = resolveUrl("source/a", tempDirectoryUrl);
-  const destinationUrl = resolveUrl("into/dest", tempDirectoryUrl);
-  const fileBDestinationUrl = resolveUrl("into/dest/b", tempDirectoryUrl);
-  const fileADestinationUrl = resolveUrl("into/dest/a", tempDirectoryUrl);
-  await writeDirectory(sourceUrl);
-  await writeFile(fileASourceUrl);
-  await writeDirectory(destinationUrl);
-  await writeFile(fileBDestinationUrl);
-
-  await copyDirectoryContent({ from: sourceUrl, to: destinationUrl });
-
-  const actual = {
-    fileASourcePresence: await testFilePresence(fileASourceUrl),
-    fileADestinationPresence: await testFilePresence(fileADestinationUrl),
-    fileBDestinationPresence: await testFilePresence(fileBDestinationUrl),
-  };
+await test(async () => {
+  writeFileStructureSync(tempDirectoryUrl, {
+    "source/a.txt": "",
+    "into/dest/b.txt": "",
+  });
+  await copyDirectoryContent({
+    from: new URL("source", tempDirectoryUrl),
+    to: new URL("into/dest", tempDirectoryUrl),
+  });
+  const actual = readFileStructureSync(tempDirectoryUrl);
   const expected = {
-    fileASourcePresence: true,
-    fileADestinationPresence: true,
-    fileBDestinationPresence: true,
+    "into/dest/a.txt": "",
+    "into/dest/b.txt": "",
+    "source/a.txt": "",
   };
   assert({ actual, expected });
-  await ensureEmptyDirectory(tempDirectoryUrl);
-}
+});
