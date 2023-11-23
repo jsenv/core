@@ -1,16 +1,7 @@
-import {
-  readSnapshotsFromDirectory,
-  assertSnapshots,
-} from "@jsenv/core/tests/snapshots_directory.js";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-const expected = readSnapshotsFromDirectory(
-  new URL("./snapshots/", import.meta.url),
-);
+const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url);
+const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
 await import("./execution_logs_snapshots.mjs");
-const actual = readSnapshotsFromDirectory(
-  new URL("./snapshots/", import.meta.url),
-);
-assertSnapshots({
-  actual,
-  expected,
-});
+const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+compareSnapshots(actualSnapshots, expectedSnapshots);

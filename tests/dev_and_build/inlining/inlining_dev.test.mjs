@@ -1,8 +1,8 @@
+import { copyDirectorySync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const test = async () => {
   const devServer = await startDevServer({
@@ -22,11 +22,11 @@ const test = async () => {
     /* eslint-enable no-undef */
   });
   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-  takeDirectorySnapshot(
-    new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
-    new URL(`./snapshots/dev/`, import.meta.url),
-    false,
-  );
+  copyDirectorySync({
+    from: new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
+    to: new URL(`./snapshots/dev/`, import.meta.url),
+    overwrite: true,
+  });
   const actual = returnValue;
   const expected = 42;
   assert({ actual, expected });

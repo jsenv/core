@@ -1,20 +1,21 @@
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const test = async ({ name, ...params }) => {
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
     },
     ...params,
   });
-  takeDirectorySnapshot(
-    new URL("./dist/", import.meta.url),
-    new URL(`./snapshots/${name}/`, import.meta.url),
-  );
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
 };
 
 if (process.platform === "darwin") {

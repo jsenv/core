@@ -1,7 +1,7 @@
-import { executionOrder } from "/js/execution_order.js?v=f54afd1a";
+import { executionOrder } from "./execution_order.js";
 /* eslint-disable import/no-cycle */
-import { Data, data } from "/js/data.js?v=4bf0fb76";
-import { Tag } from "/js/tag.js?v=7fe866f5";
+import { Data, data } from "./data.js";
+import { Tag } from "./tag.js";
 /* eslint-enable import/no-cycle */
 
 executionOrder.push("index");

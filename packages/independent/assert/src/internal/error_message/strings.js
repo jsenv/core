@@ -23,7 +23,22 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     return undefined;
   }
 
+  const name = stringNameFromComparison(comparison);
   const path = comparisonToPath(comparison);
+  return formatStringAssertionErrorMessage({
+    actual,
+    expected,
+    path,
+    name,
+  });
+};
+
+export const formatStringAssertionErrorMessage = ({
+  actual,
+  expected,
+  path = "",
+  name = "string",
+}) => {
   const enrichPath = (path, index, line, column) => {
     if (line === 0 && column < 100) {
       return `${path}[${index}]`;
@@ -42,7 +57,6 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     });
   };
 
-  const stringName = stringNameFromComparison(comparison);
   const actualLength = actual.length;
   const expectedLength = expected.length;
   let i = 0;
@@ -166,7 +180,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
       const actualChar = actual[i];
       const expectedChar = expected[i];
       if (actualChar !== expectedChar) {
-        let message = `unexpected character in ${stringName}`;
+        let message = `unexpected character in ${name}`;
         return createDetailedMessage(message, {
           ...formatDetails({
             annotationLabel: `${COLUMN_MARKER_CHAR} unexpected ${inspect(
@@ -188,7 +202,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
   too_short: {
     if (actualLength < expectedLength) {
       const missingCharacterCount = expectedLength - actualLength;
-      let message = `${stringName} is too short`;
+      let message = `${name} is too short`;
       if (missingCharacterCount === 1) {
         message += `, one character is missing`;
       } else {
@@ -205,7 +219,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
   too_long: {
     i = expectedLength;
     const extraCharacterCount = actualLength - expectedLength;
-    let message = `${stringName} is too long`;
+    let message = `${name} is too long`;
     if (extraCharacterCount === 1) {
       message += `, it contains one extra character`;
     } else {

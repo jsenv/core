@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/filesystem",
-  "version": "4.3.2",
+  "version": "4.4.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@jsenv/urls": "2.2.1",
-    "@jsenv/url-meta": "8.1.0",
-    "@jsenv/abort": "4.2.4"
+    "@jsenv/url-meta": "8.2.0",
+    "@jsenv/abort": "4.2.4",
+    "@jsenv/utils": "2.0.1"
   }
 }

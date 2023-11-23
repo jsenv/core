@@ -22,5 +22,5 @@ node_modules/
 /**/*.jsx
 /**/*.noeslint.*
 source-map@*.js
-snapshots/
+/**/tests/**/snapshots/
 !.eslintrc.js

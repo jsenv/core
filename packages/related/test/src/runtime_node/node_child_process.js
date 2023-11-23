@@ -256,9 +256,12 @@ export const nodeChildProcess = ({
             );
             return;
           }
+          if (code === null || code === 0) {
+            result.status = "completed";
+            result.namespace = {};
+            return;
+          }
           if (
-            code === null ||
-            code === 0 ||
             code === EXIT_CODES.SIGINT ||
             code === EXIT_CODES.SIGTERM ||
             code === EXIT_CODES.SIGABORT

@@ -25,6 +25,7 @@ import { assertUrlLike } from "./assertions.js";
  */
 export const applyPatternMatching = ({ url, pattern }) => {
   assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url, "url");
   const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];

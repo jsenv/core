@@ -1,28 +1,28 @@
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async ({ name, expectedUrl, ...rest }) => {
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
     },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...rest,
   });
-  takeDirectorySnapshot(
-    new URL("./dist/", import.meta.url),
-    new URL(`./snapshots/${name}/`, import.meta.url),
-  );
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
 
   const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    rootDirectoryUrl: snapshotDirectoryUrl,
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,

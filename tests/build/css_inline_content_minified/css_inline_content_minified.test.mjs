@@ -1,33 +1,38 @@
-import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
-await build({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  entryPoints: {
-    "./main.html": "main.html",
-  },
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-  runtimeCompat: {
-    chrome: "64",
-    edge: "79",
-    firefox: "67",
-    safari: "11.3",
-  },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: {
-          "**/node_modules/": true,
-          [jsenvSrcDirectoryUrl]: true,
+import { build } from "@jsenv/core";
+
+const test = async () => {
+  const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
+  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  await build({
+    logLevel: "warn",
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    entryPoints: {
+      "./main.html": "main.html",
+    },
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    runtimeCompat: {
+      chrome: "64",
+      edge: "79",
+      firefox: "67",
+      safari: "11.3",
+    },
+    bundling: {
+      js_module: {
+        chunks: {
+          vendors: {
+            "**/node_modules/": true,
+            [jsenvSrcDirectoryUrl]: true,
+          },
         },
       },
     },
-  },
-});
-takeDirectorySnapshot(
-  new URL("./dist/", import.meta.url),
-  new URL("./snapshots/", import.meta.url),
-);
+  });
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+};
+
+await test();

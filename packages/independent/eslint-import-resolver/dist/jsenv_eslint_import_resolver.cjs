@@ -3,8 +3,8 @@
 var node_module = require('module');
 var node_url = require('url');
 var node_fs = require('fs');
-require('crypto');
 require('path');
+require('crypto');
 
 const ensurePathnameTrailingSlash = (url) => {
   const urlObject = new URL(url);
@@ -164,14 +164,6 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-process.platform === "win32";
-
 const isWindows = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
@@ -239,6 +231,39 @@ const extractDriveLetter = (resource) => {
   return null;
 };
 
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+const readFileSync = (value, { as = "buffer" } = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = node_fs.readFileSync(new URL(fileUrl));
+  if (as === "buffer") {
+    return buffer;
+  }
+  if (as === "string") {
+    return buffer.toString();
+  }
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+  throw new Error(
+    `"as" must be one of "buffer","string","json" received "${as}"`,
+  );
+};
+
+process.platform === "win32";
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
 process.platform === "win32";
 
 const getRealFileSystemUrlSync = (
@@ -296,22 +321,7 @@ const getRealFileSystemUrlSync = (
   }
 };
 
-const readFileSync = (value, { as = "buffer" } = {}) => {
-  const fileUrl = assertAndNormalizeFileUrl(value);
-  const buffer = node_fs.readFileSync(new URL(fileUrl));
-  if (as === "buffer") {
-    return buffer;
-  }
-  if (as === "string") {
-    return buffer.toString();
-  }
-  if (as === "json") {
-    return JSON.parse(buffer.toString());
-  }
-  throw new Error(
-    `"as" must be one of "buffer","string","json" received "${as}"`,
-  );
-};
+process.platform === "win32";
 
 process.platform === "win32";
 
@@ -2258,7 +2268,7 @@ const resolve = (
   source,
   file,
   {
-    logLevel,
+    logLevel = "error",
     rootDirectoryUrl,
     packageConditions = ["browser", "import"],
     ambiguousExtensions = [".js", ".html", ".jsx", ".ts", ".tsx"],

@@ -45,7 +45,7 @@ export const assert = (...args) => {
     // const value = assert.sortProperties(value)
     // const expected = assert.sortProperties({ foo: true, bar: true })
     checkPropertiesOrder = true,
-    context,
+    details,
   } = firstArg;
   const expectation = {
     actual,
@@ -54,17 +54,30 @@ export const assert = (...args) => {
   const comparison = compare(expectation, { checkPropertiesOrder });
   if (comparison.failed) {
     let errorMessage = message || errorMessageFromComparison(comparison);
-    if (context) {
-      errorMessage += `
---- context ---
-${context}`;
-    }
+    errorMessage = appendDetails(errorMessage, details);
     const error = createAssertionError(errorMessage);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(error, assert);
     }
     throw error;
   }
+};
+
+const appendDetails = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+  return string;
 };
 
 assert.not = (value) => {

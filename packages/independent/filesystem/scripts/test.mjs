@@ -9,6 +9,7 @@ await executeTestPlan({
       },
     },
   },
+  concurrency: true,
   failFast: process.argv.includes("--workspace"),
   logShortForCompletedExecutions: true,
   logMergeForCompletedExecutions: process.argv.includes("--workspace"),

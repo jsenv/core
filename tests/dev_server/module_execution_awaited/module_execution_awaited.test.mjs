@@ -31,7 +31,13 @@ const test = async ({ browserLauncher }) => {
     const expected = {
       durationAroundSetTimeout: true,
     };
-    assert({ actual, expected, context: `${browserLauncher.name()}` });
+    assert({
+      actual,
+      expected,
+      details: {
+        browser: `${browserLauncher.name()}`,
+      },
+    });
   } finally {
     browser.close();
   }

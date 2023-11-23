@@ -3,7 +3,7 @@
     "**/.jsenv/**": true,
     "**/dist/**": true,
     "**/experiments/**": true,
-    "**/snapshots/**": true,
+    "**/tests/**/snapshots/**": true,
     "package-lock.json": true
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",

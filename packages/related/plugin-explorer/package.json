@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-explorer",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.3.2"
+    "@jsenv/filesystem": "4.4.0"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

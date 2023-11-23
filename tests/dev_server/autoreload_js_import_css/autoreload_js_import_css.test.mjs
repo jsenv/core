@@ -200,7 +200,13 @@ if (import.meta.hot) {
         bodyBackgroundColor: "rgba(0, 0, 0, 0)",
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected, context: browserName });
+      assert({
+        actual,
+        expected,
+        details: {
+          browser: browserName,
+        },
+      });
     }
     // restore deps on css file
     jsFileContent.update(`
@@ -221,7 +227,13 @@ if (import.meta.hot) {
         bodyBackgroundColor: "rgb(0, 128, 0)", // green
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected, context: browserName });
+      assert({
+        actual,
+        expected,
+        details: {
+          browswer: browserName,
+        },
+      });
     }
   } finally {
     if (!debug) {

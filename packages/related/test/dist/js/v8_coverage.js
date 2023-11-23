@@ -39,6 +39,7 @@ const isWindowsPathnameSpecifier = (specifier) => {
 const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
 const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
   assertUrlLike(baseUrl, "baseUrl");
   const associationsResolved = {};
   Object.keys(associations).forEach((key) => {
@@ -122,6 +123,7 @@ const asFlatAssociations = (associations) => {
  */
 const applyPatternMatching = ({ url, pattern }) => {
   assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url, "url");
   const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];
@@ -369,6 +371,7 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
 };
 
 const applyAssociations = ({ url, associations }) => {
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url);
   const flatAssociations = asFlatAssociations(associations);
   return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
@@ -418,6 +421,7 @@ const applyAliases = ({ url, aliases }) => {
 };
 
 const urlChildMayMatch = ({ url, associations, predicate }) => {
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url, "url");
   // the function was meants to be used on url ending with '/'
   if (!url.endsWith("/")) {

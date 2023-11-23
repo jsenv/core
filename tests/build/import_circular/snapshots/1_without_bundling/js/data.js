@@ -1,8 +1,8 @@
-import { executionOrder } from "/js/execution_order.js?v=f54afd1a";
+import { executionOrder } from "./execution_order.js";
 /* eslint-disable import/no-cycle */
-import { Tag } from "/js/tag.js?v=7fe866f5";
+import { Tag } from "./tag.js";
 /* eslint-enable import/no-cycle */
-import "/js/index.js?v=4e515a3e";
+import "./index.js";
 executionOrder.push("data");
 export const data = () => "data";
 export const Data = () => "Tag: ".concat(Tag());

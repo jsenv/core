@@ -5,11 +5,11 @@
 
 import { writeFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { copyDirectorySync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 
 const debug = false; // true to have browser UI + keep it open after test
 const fooPackageFileUrl = new URL(
@@ -69,11 +69,19 @@ try {
   };
   const takeDevFilesSnapshot = (name) => {
     const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-    takeDirectorySnapshot(
-      new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
-      new URL(`./snapshots/${name}/`, import.meta.url),
-      false,
+    const jsenvDirectoryUrl = new URL(
+      `./.jsenv/${runtimeId}/`,
+      import.meta.url,
     );
+    const snapshotDirectoryUrl = new URL(
+      `./snapshots/${name}/`,
+      import.meta.url,
+    );
+    copyDirectorySync({
+      from: jsenvDirectoryUrl,
+      to: snapshotDirectoryUrl,
+      overwrite: true,
+    });
   };
 
   {

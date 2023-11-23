@@ -1,16 +1,21 @@
-import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-await build({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  entryPoints: {
-    "./elements.css": "elements.css",
-  },
-  minification: false,
-});
-takeDirectorySnapshot(
-  new URL("./dist/", import.meta.url),
-  new URL("./snapshots/", import.meta.url),
-);
+import { build } from "@jsenv/core";
+
+const test = async () => {
+  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  await build({
+    logLevel: "warn",
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
+    entryPoints: {
+      "./elements.css": "elements.css",
+    },
+    minification: false,
+  });
+  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+};
+
+await test();

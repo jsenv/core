@@ -1,12 +1,12 @@
 import os from "node:os";
-import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, readFileSync, readdirSync, existsSync } from "node:fs";
+import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, readFileSync, readdirSync, existsSync } from "node:fs";
 import process$1, { memoryUsage } from "node:process";
 import v8, { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import crypto from "node:crypto";
 import { dirname } from "node:path";
+import crypto from "node:crypto";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
@@ -865,15 +865,158 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-const statsToType = (stats) => {
-  if (stats.isFile()) return "file";
-  if (stats.isDirectory()) return "directory";
-  if (stats.isSymbolicLink()) return "symbolic-link";
-  if (stats.isFIFO()) return "fifo";
-  if (stats.isSocket()) return "socket";
-  if (stats.isCharacterDevice()) return "character-device";
-  if (stats.isBlockDevice()) return "block-device";
-  return undefined;
+const comparePathnames = (leftPathame, rightPathname) => {
+  const leftPartArray = leftPathame.split("/");
+  const rightPartArray = rightPathname.split("/");
+
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
+
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+  while (i < maxLength) {
+    const leftPartExists = i in leftPartArray;
+    const rightPartExists = i in rightPartArray;
+
+    // longer comes first
+    if (!leftPartExists) {
+      return +1;
+    }
+    if (!rightPartExists) {
+      return -1;
+    }
+
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1;
+    // folder comes first
+    if (leftPartIsLast && !rightPartIsLast) {
+      return +1;
+    }
+    if (!leftPartIsLast && rightPartIsLast) {
+      return -1;
+    }
+
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++;
+    // local comparison comes first
+    const comparison = leftPart.localeCompare(rightPart);
+    if (comparison !== 0) {
+      return comparison;
+    }
+  }
+
+  if (leftLength < rightLength) {
+    return +1;
+  }
+  if (leftLength > rightLength) {
+    return -1;
+  }
+  return 0;
+};
+
+const isWindows$2 = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
+  }
+
+  if (!isWindows$2) {
+    return url;
+  }
+
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(
+      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    );
+  }
+
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+  const afterProtocol = url.slice("file://".length);
+  // we still have the windows drive letter
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  }
+
+  // drive letter was lost, restore it
+  const baseUrlOrFallback = baseUrl.startsWith("file://")
+    ? baseUrl
+    : baseUrlFallback;
+  const driveLetter = extractDriveLetter(
+    baseUrlOrFallback.slice("file://".length),
+  );
+  if (!driveLetter) {
+    throw new Error(
+      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    );
+  }
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+
+const extractDriveLetter = (resource) => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
+    return resource[1];
+  }
+  return null;
+};
+
+const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
+  const directoryUrlObject = new URL(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = async () => {
+    try {
+      const names = await new Promise((resolve, reject) => {
+        readdir(directoryUrlObject, (error, names) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(names);
+          }
+        });
+      });
+      return names.map(encodeURIComponent);
+    } catch (e) {
+      // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+      if (e.code === "EMFILE" || e.code === "ENFILE") {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw e;
+        }
+        await new Promise((resolve) => setTimeout(resolve), attemptCount);
+        return await attempt();
+      }
+      throw e;
+    }
+  };
+
+  return attempt();
 };
 
 // https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
@@ -996,7 +1139,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  */
 
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 
 const readEntryStat = async (
   source,
@@ -1016,7 +1159,7 @@ const readEntryStat = async (
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2
+    ...(isWindows$1
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: async (error) => {
@@ -1079,93 +1222,6 @@ const readStat = (
       }
     });
   });
-};
-
-const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
-  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
-  const directoryUrlObject = new URL(directoryUrl);
-  const startMs = Date.now();
-  let attemptCount = 0;
-
-  const attempt = async () => {
-    try {
-      const names = await new Promise((resolve, reject) => {
-        readdir(directoryUrlObject, (error, names) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(names);
-          }
-        });
-      });
-      return names.map(encodeURIComponent);
-    } catch (e) {
-      // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
-      if (e.code === "EMFILE" || e.code === "ENFILE") {
-        attemptCount++;
-        const nowMs = Date.now();
-        const timeSpentWaiting = nowMs - startMs;
-        if (timeSpentWaiting > emfileMaxWait) {
-          throw e;
-        }
-        await new Promise((resolve) => setTimeout(resolve), attemptCount);
-        return await attempt();
-      }
-      throw e;
-    }
-  };
-
-  return attempt();
-};
-
-const comparePathnames = (leftPathame, rightPathname) => {
-  const leftPartArray = leftPathame.split("/");
-  const rightPartArray = rightPathname.split("/");
-
-  const leftLength = leftPartArray.length;
-  const rightLength = rightPartArray.length;
-
-  const maxLength = Math.max(leftLength, rightLength);
-  let i = 0;
-  while (i < maxLength) {
-    const leftPartExists = i in leftPartArray;
-    const rightPartExists = i in rightPartArray;
-
-    // longer comes first
-    if (!leftPartExists) {
-      return +1;
-    }
-    if (!rightPartExists) {
-      return -1;
-    }
-
-    const leftPartIsLast = i === leftPartArray.length - 1;
-    const rightPartIsLast = i === rightPartArray.length - 1;
-    // folder comes first
-    if (leftPartIsLast && !rightPartIsLast) {
-      return +1;
-    }
-    if (!leftPartIsLast && rightPartIsLast) {
-      return -1;
-    }
-
-    const leftPart = leftPartArray[i];
-    const rightPart = rightPartArray[i];
-    i++;
-    // local comparison comes first
-    const comparison = leftPart.localeCompare(rightPart);
-    if (comparison !== 0) {
-      return comparison;
-    }
-  }
-
-  if (leftLength < rightLength) {
-    return +1;
-  }
-  if (leftLength > rightLength) {
-    return -1;
-  }
-  return 0;
 };
 
 const collectFiles = async ({
@@ -1259,6 +1315,17 @@ const collectFiles = async ({
   }
 };
 
+const statsToType = (stats) => {
+  if (stats.isFile()) return "file";
+  if (stats.isDirectory()) return "directory";
+  if (stats.isSymbolicLink()) return "symbolic-link";
+  if (stats.isFIFO()) return "fifo";
+  if (stats.isSocket()) return "socket";
+  if (stats.isCharacterDevice()) return "character-device";
+  if (stats.isBlockDevice()) return "block-device";
+  return undefined;
+};
+
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
 const { mkdir } = promises;
 
@@ -1292,6 +1359,86 @@ const writeDirectory = async (
     await mkdir(destinationPath, { recursive });
   } catch (error) {
     if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+    throw error;
+  }
+};
+
+const ensureParentDirectories = async (destination) => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationParentPath = dirname(destinationPath);
+
+  await writeDirectory(destinationParentPath, {
+    recursive: true,
+    allowUseless: true,
+  });
+};
+
+const readFile = async (value, { as = "buffer" } = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const buffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(fileUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+  if (as === "buffer") {
+    return buffer;
+  }
+  if (as === "string") {
+    return buffer.toString();
+  }
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+  throw new Error(
+    `"as" must be one of "buffer","string","json" received "${as}"`,
+  );
+};
+
+const writeFile = async (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+  try {
+    await writeFileNaive(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await ensureParentDirectories(destinationUrl);
+      await writeFileNaive(destinationUrlObject, content);
+      return;
+    }
+    throw error;
+  }
+};
+
+const writeFileNaive = (urlObject, content) => {
+  return new Promise((resolve, reject) => {
+    writeFile$1(urlObject, content, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const writeFileSync = (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+  try {
+    writeFileSync$1(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      mkdirSync(new URL("./", destinationUrlObject), {
+        recursive: true,
+      });
+      writeFileSync$1(destinationUrlObject, content);
       return;
     }
     throw error;
@@ -1543,6 +1690,18 @@ const removeDirectoryNaive = (
   });
 };
 
+process.platform === "win32";
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+process.platform === "win32";
+
 const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
     nullIfNotFound: true,
@@ -1550,15 +1709,17 @@ const ensureEmptyDirectory = async (source) => {
   });
   if (stats === null) {
     // if there is nothing, create a directory
-    return writeDirectory(source, { allowUseless: true });
+    await writeDirectory(source, { allowUseless: true });
+    return;
   }
   if (stats.isDirectory()) {
     // if there is a directory remove its content and done
-    return removeEntry(source, {
+    await removeEntry(source, {
       allowUseless: true,
       recursive: true,
       onlyContent: true,
     });
+    return;
   }
 
   const sourceType = statsToType(stats);
@@ -1568,158 +1729,9 @@ const ensureEmptyDirectory = async (source) => {
   );
 };
 
-const ensureParentDirectories = async (destination) => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationParentPath = dirname(destinationPath);
-
-  return writeDirectory(destinationParentPath, {
-    recursive: true,
-    allowUseless: true,
-  });
-};
-
-const isWindows$1 = process.platform === "win32";
-const baseUrlFallback = fileSystemPathToUrl(process.cwd());
-
-/**
- * Some url might be resolved or remapped to url without the windows drive letter.
- * For instance
- * new URL('/foo.js', 'file:///C:/dir/file.js')
- * resolves to
- * 'file:///foo.js'
- *
- * But on windows it becomes a problem because we need the drive letter otherwise
- * url cannot be converted to a filesystem path.
- *
- * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
- */
-
-const ensureWindowsDriveLetter = (url, baseUrl) => {
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`);
-  }
-
-  if (!isWindows$1) {
-    return url;
-  }
-
-  try {
-    baseUrl = String(new URL(baseUrl));
-  } catch (e) {
-    throw new Error(
-      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    );
-  }
-
-  if (!url.startsWith("file://")) {
-    return url;
-  }
-  const afterProtocol = url.slice("file://".length);
-  // we still have the windows drive letter
-  if (extractDriveLetter(afterProtocol)) {
-    return url;
-  }
-
-  // drive letter was lost, restore it
-  const baseUrlOrFallback = baseUrl.startsWith("file://")
-    ? baseUrl
-    : baseUrlFallback;
-  const driveLetter = extractDriveLetter(
-    baseUrlOrFallback.slice("file://".length),
-  );
-  if (!driveLetter) {
-    throw new Error(
-      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    );
-  }
-  return `file:///${driveLetter}:${afterProtocol}`;
-};
-
-const extractDriveLetter = (resource) => {
-  // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
-    return resource[1];
-  }
-  return null;
-};
-
-process.platform === "win32";
-
-const readFile = async (value, { as = "buffer" } = {}) => {
-  const fileUrl = assertAndNormalizeFileUrl(value);
-  const buffer = await new Promise((resolve, reject) => {
-    readFile$1(new URL(fileUrl), (error, buffer) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(buffer);
-      }
-    });
-  });
-  if (as === "buffer") {
-    return buffer;
-  }
-  if (as === "string") {
-    return buffer.toString();
-  }
-  if (as === "json") {
-    return JSON.parse(buffer.toString());
-  }
-  throw new Error(
-    `"as" must be one of "buffer","string","json" received "${as}"`,
-  );
-};
-
 process.platform === "win32";
 
 process.platform === "linux";
-
-const writeFile = async (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-  try {
-    await writeFileNaive(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await ensureParentDirectories(destinationUrl);
-      await writeFileNaive(destinationUrlObject, content);
-      return;
-    }
-    throw error;
-  }
-};
-
-const writeFileNaive = (urlObject, content) => {
-  return new Promise((resolve, reject) => {
-    writeFile$1(urlObject, content, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const writeFileSync = (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-  try {
-    writeFileSync$1(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      mkdirSync(new URL("./", destinationUrlObject), {
-        recursive: true,
-      });
-      writeFileSync$1(destinationUrlObject, content);
-      return;
-    }
-    throw error;
-  }
-};
 
 const LOG_LEVEL_OFF = "off";
 
@@ -6880,9 +6892,12 @@ const nodeChildProcess = ({
             );
             return;
           }
+          if (code === null || code === 0) {
+            result.status = "completed";
+            result.namespace = {};
+            return;
+          }
           if (
-            code === null ||
-            code === 0 ||
             code === EXIT_CODES.SIGINT ||
             code === EXIT_CODES.SIGTERM ||
             code === EXIT_CODES.SIGABORT
@@ -7186,9 +7201,12 @@ const nodeWorkerThread = ({
             );
             return;
           }
+          if (code === null || code === 0) {
+            result.status = "completed";
+            result.namespace = {};
+            return;
+          }
           if (
-            code === null ||
-            code === 0 ||
             code === EXIT_CODES.SIGINT ||
             code === EXIT_CODES.SIGTERM ||
             code === EXIT_CODES.SIGABORT

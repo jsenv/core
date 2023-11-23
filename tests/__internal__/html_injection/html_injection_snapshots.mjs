@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 
+import { writeDirectoryContent } from "@jsenv/snapshot";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { comparePathnames } from "@jsenv/filesystem";
 
@@ -10,7 +11,6 @@ import {
   injectHtmlNode,
   createHtmlNode,
 } from "@jsenv/ast";
-import { writeSnapshotsIntoDirectory } from "@jsenv/core/tests/snapshots_directory.js";
 
 let files = {};
 const transformFixtureFile = async (fixtureFilename) => {
@@ -58,4 +58,4 @@ const transformFixtureFile = async (fixtureFilename) => {
 
 await transformFixtureFile("a.html");
 
-writeSnapshotsIntoDirectory(new URL("./snapshots/", import.meta.url), files);
+writeDirectoryContent(new URL("./snapshots/", import.meta.url), files);

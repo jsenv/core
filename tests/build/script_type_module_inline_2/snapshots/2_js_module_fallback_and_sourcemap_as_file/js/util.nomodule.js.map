@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "../../client/src/util.js"
+    "../../../client/src/util.js"
   ],
   "names": [
     "util",

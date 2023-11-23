@@ -1,6 +1,6 @@
 import stripAnsi from "strip-ansi";
+import { writeDirectoryContent } from "@jsenv/snapshot";
 
-import { writeSnapshotsIntoDirectory } from "@jsenv/core/tests/snapshots_directory.js";
 import { createExecutionLog } from "@jsenv/test/src/execution/logs_file_execution.js";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
@@ -140,4 +140,4 @@ actual.foo
     },
   ),
 };
-writeSnapshotsIntoDirectory(snapshotsDirectoryUrl, snapshots);
+writeDirectoryContent(snapshotsDirectoryUrl, snapshots);

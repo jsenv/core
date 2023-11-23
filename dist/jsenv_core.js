@@ -1,7 +1,7 @@
-import { chmod, stat, lstat, readdir, promises, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, writeFileSync as writeFileSync$1, mkdirSync, createReadStream, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, promises, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import crypto, { createHash } from "node:crypto";
 import { extname } from "node:path";
+import crypto, { createHash } from "node:crypto";
 import process$1 from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
@@ -61,6 +61,7 @@ const isWindowsPathnameSpecifier = (specifier) => {
 const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
 const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
   assertUrlLike(baseUrl, "baseUrl");
   const associationsResolved = {};
   Object.keys(associations).forEach((key) => {
@@ -144,6 +145,7 @@ const asFlatAssociations = (associations) => {
  */
 const applyPatternMatching = ({ url, pattern }) => {
   assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url, "url");
   const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];
@@ -391,6 +393,7 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
 };
 
 const applyAssociations = ({ url, associations }) => {
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url);
   const flatAssociations = asFlatAssociations(associations);
   return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
@@ -440,6 +443,7 @@ const applyAliases = ({ url, aliases }) => {
 };
 
 const urlChildMayMatch = ({ url, associations, predicate }) => {
+  if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url, "url");
   // the function was meants to be used on url ending with '/'
   if (!url.endsWith("/")) {
@@ -1273,249 +1277,121 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-const statsToType = (stats) => {
-  if (stats.isFile()) return "file";
-  if (stats.isDirectory()) return "directory";
-  if (stats.isSymbolicLink()) return "symbolic-link";
-  if (stats.isFIFO()) return "fifo";
-  if (stats.isSocket()) return "socket";
-  if (stats.isCharacterDevice()) return "character-device";
-  if (stats.isBlockDevice()) return "block-device";
-  return undefined;
-};
+const comparePathnames = (leftPathame, rightPathname) => {
+  const leftPartArray = leftPathame.split("/");
+  const rightPartArray = rightPathname.split("/");
 
-// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
-// https://nodejs.org/api/fs.html#fs_file_modes
-// https://github.com/TooTallNate/stat-mode
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
 
-// cannot get from fs.constants because they are not available on windows
-const S_IRUSR = 256; /* 0000400 read permission, owner */
-const S_IWUSR = 128; /* 0000200 write permission, owner */
-const S_IXUSR = 64; /* 0000100 execute/search permission, owner */
-const S_IRGRP = 32; /* 0000040 read permission, group */
-const S_IWGRP = 16; /* 0000020 write permission, group */
-const S_IXGRP = 8; /* 0000010 execute/search permission, group */
-const S_IROTH = 4; /* 0000004 read permission, others */
-const S_IWOTH = 2; /* 0000002 write permission, others */
-const S_IXOTH = 1; /* 0000001 execute/search permission, others */
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+  while (i < maxLength) {
+    const leftPartExists = i in leftPartArray;
+    const rightPartExists = i in rightPartArray;
 
-const permissionsToBinaryFlags = ({ owner, group, others }) => {
-  let binaryFlags = 0;
-
-  if (owner.read) binaryFlags |= S_IRUSR;
-  if (owner.write) binaryFlags |= S_IWUSR;
-  if (owner.execute) binaryFlags |= S_IXUSR;
-
-  if (group.read) binaryFlags |= S_IRGRP;
-  if (group.write) binaryFlags |= S_IWGRP;
-  if (group.execute) binaryFlags |= S_IXGRP;
-
-  if (others.read) binaryFlags |= S_IROTH;
-  if (others.write) binaryFlags |= S_IWOTH;
-  if (others.execute) binaryFlags |= S_IXOTH;
-
-  return binaryFlags;
-};
-
-const writeEntryPermissions = async (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-
-  let binaryFlags;
-  if (typeof permissions === "object") {
-    permissions = {
-      owner: {
-        read: getPermissionOrComputeDefault("read", "owner", permissions),
-        write: getPermissionOrComputeDefault("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault("execute", "owner", permissions),
-      },
-      group: {
-        read: getPermissionOrComputeDefault("read", "group", permissions),
-        write: getPermissionOrComputeDefault("write", "group", permissions),
-        execute: getPermissionOrComputeDefault("execute", "group", permissions),
-      },
-      others: {
-        read: getPermissionOrComputeDefault("read", "others", permissions),
-        write: getPermissionOrComputeDefault("write", "others", permissions),
-        execute: getPermissionOrComputeDefault(
-          "execute",
-          "others",
-          permissions,
-        ),
-      },
-    };
-    binaryFlags = permissionsToBinaryFlags(permissions);
-  } else {
-    binaryFlags = permissions;
-  }
-
-  return new Promise((resolve, reject) => {
-    chmod(new URL(sourceUrl), binaryFlags, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const actionLevels = { read: 0, write: 1, execute: 2 };
-const subjectLevels = { others: 0, group: 1, owner: 2 };
-
-const getPermissionOrComputeDefault = (action, subject, permissions) => {
-  if (subject in permissions) {
-    const subjectPermissions = permissions[subject];
-    if (action in subjectPermissions) {
-      return subjectPermissions[action];
+    // longer comes first
+    if (!leftPartExists) {
+      return +1;
+    }
+    if (!rightPartExists) {
+      return -1;
     }
 
-    const actionLevel = actionLevels[action];
-    const actionFallback = Object.keys(actionLevels).find(
-      (actionFallbackCandidate) =>
-        actionLevels[actionFallbackCandidate] > actionLevel &&
-        actionFallbackCandidate in subjectPermissions,
-    );
-    if (actionFallback) {
-      return subjectPermissions[actionFallback];
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1;
+    // folder comes first
+    if (leftPartIsLast && !rightPartIsLast) {
+      return +1;
+    }
+    if (!leftPartIsLast && rightPartIsLast) {
+      return -1;
+    }
+
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++;
+    // local comparison comes first
+    const comparison = leftPart.localeCompare(rightPart);
+    if (comparison !== 0) {
+      return comparison;
     }
   }
 
-  const subjectLevel = subjectLevels[subject];
-  // do we have a subject with a stronger level (group or owner)
-  // where we could read the action permission ?
-  const subjectFallback = Object.keys(subjectLevels).find(
-    (subjectFallbackCandidate) =>
-      subjectLevels[subjectFallbackCandidate] > subjectLevel &&
-      subjectFallbackCandidate in permissions,
-  );
-  if (subjectFallback) {
-    const subjectPermissions = permissions[subjectFallback];
-    return action in subjectPermissions
-      ? subjectPermissions[action]
-      : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+  if (leftLength < rightLength) {
+    return +1;
   }
-
-  return false;
+  if (leftLength > rightLength) {
+    return -1;
+  }
+  return 0;
 };
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
 
 const isWindows$3 = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
-const readEntryStat = async (
-  source,
-  { nullIfNotFound = false, followLink = true } = {},
-) => {
-  let sourceUrl = assertAndNormalizeFileUrl(source);
-  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
-
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-
-  const handleNotFoundOption = nullIfNotFound
-    ? {
-        handleNotFoundError: () => null,
-      }
-    : {};
-
-  return readStat(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows$3
-      ? {
-          // Windows can EPERM on stat
-          handlePermissionDeniedError: async (error) => {
-            console.error(
-              `trying to fix windows EPERM after stats on ${sourcePath}`,
-            );
-
-            try {
-              // unfortunately it means we mutate the permissions
-              // without being able to restore them to the previous value
-              // (because reading current permission would also throw)
-              await writeEntryPermissions(sourceUrl, 0o666);
-              const stats = await readStat(sourcePath, {
-                followLink,
-                ...handleNotFoundOption,
-                // could not fix the permission error, give up and throw original error
-                handlePermissionDeniedError: () => {
-                  console.error(`still got EPERM after stats on ${sourcePath}`);
-                  throw error;
-                },
-              });
-              return stats;
-            } catch (e) {
-              console.error(
-                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
-              );
-              throw error;
-            }
-          },
-        }
-      : {}),
-  });
-};
-
-const readStat = (
-  sourcePath,
-  {
-    followLink,
-    handleNotFoundError = null,
-    handlePermissionDeniedError = null,
-  } = {},
-) => {
-  const nodeMethod = followLink ? stat : lstat;
-
-  return new Promise((resolve, reject) => {
-    nodeMethod(sourcePath, (error, statsObject) => {
-      if (error) {
-        if (handleNotFoundError && error.code === "ENOENT") {
-          resolve(handleNotFoundError(error));
-        } else if (
-          handlePermissionDeniedError &&
-          (error.code === "EPERM" || error.code === "EACCES")
-        ) {
-          resolve(handlePermissionDeniedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(statsObject);
-      }
-    });
-  });
-};
-
-/*
- * - Buffer documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/buffer.html
- * - eTag documentation on MDN
- *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
  */
 
-
-const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-
-const bufferToEtag$1 = (buffer) => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
   }
 
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT$1;
+  if (!isWindows$3) {
+    return url;
   }
 
-  const hash = createHash("sha1");
-  hash.update(buffer, "utf8");
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(
+      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    );
+  }
 
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+  const afterProtocol = url.slice("file://".length);
+  // we still have the windows drive letter
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  }
 
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+  // drive letter was lost, restore it
+  const baseUrlOrFallback = baseUrl.startsWith("file://")
+    ? baseUrl
+    : baseUrlFallback;
+  const driveLetter = extractDriveLetter(
+    baseUrlOrFallback.slice("file://".length),
+  );
+  if (!driveLetter) {
+    throw new Error(
+      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
+    );
+  }
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+
+const extractDriveLetter = (resource) => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
+    return resource[1];
+  }
+  return null;
 };
 
 /*
@@ -2044,54 +1920,220 @@ const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
   return attempt();
 };
 
-const comparePathnames = (leftPathame, rightPathname) => {
-  const leftPartArray = leftPathame.split("/");
-  const rightPartArray = rightPathname.split("/");
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
 
-  const leftLength = leftPartArray.length;
-  const rightLength = rightPartArray.length;
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR = 256; /* 0000400 read permission, owner */
+const S_IWUSR = 128; /* 0000200 write permission, owner */
+const S_IXUSR = 64; /* 0000100 execute/search permission, owner */
+const S_IRGRP = 32; /* 0000040 read permission, group */
+const S_IWGRP = 16; /* 0000020 write permission, group */
+const S_IXGRP = 8; /* 0000010 execute/search permission, group */
+const S_IROTH = 4; /* 0000004 read permission, others */
+const S_IWOTH = 2; /* 0000002 write permission, others */
+const S_IXOTH = 1; /* 0000001 execute/search permission, others */
 
-  const maxLength = Math.max(leftLength, rightLength);
-  let i = 0;
-  while (i < maxLength) {
-    const leftPartExists = i in leftPartArray;
-    const rightPartExists = i in rightPartArray;
+const permissionsToBinaryFlags = ({ owner, group, others }) => {
+  let binaryFlags = 0;
 
-    // longer comes first
-    if (!leftPartExists) {
-      return +1;
+  if (owner.read) binaryFlags |= S_IRUSR;
+  if (owner.write) binaryFlags |= S_IWUSR;
+  if (owner.execute) binaryFlags |= S_IXUSR;
+
+  if (group.read) binaryFlags |= S_IRGRP;
+  if (group.write) binaryFlags |= S_IWGRP;
+  if (group.execute) binaryFlags |= S_IXGRP;
+
+  if (others.read) binaryFlags |= S_IROTH;
+  if (others.write) binaryFlags |= S_IWOTH;
+  if (others.execute) binaryFlags |= S_IXOTH;
+
+  return binaryFlags;
+};
+
+const writeEntryPermissions = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault("read", "owner", permissions),
+        write: getPermissionOrComputeDefault("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions),
+      },
+      group: {
+        read: getPermissionOrComputeDefault("read", "group", permissions),
+        write: getPermissionOrComputeDefault("write", "group", permissions),
+        execute: getPermissionOrComputeDefault("execute", "group", permissions),
+      },
+      others: {
+        read: getPermissionOrComputeDefault("read", "others", permissions),
+        write: getPermissionOrComputeDefault("write", "others", permissions),
+        execute: getPermissionOrComputeDefault(
+          "execute",
+          "others",
+          permissions,
+        ),
+      },
+    };
+    binaryFlags = permissionsToBinaryFlags(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return new Promise((resolve, reject) => {
+    chmod(new URL(sourceUrl), binaryFlags, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const actionLevels = { read: 0, write: 1, execute: 2 };
+const subjectLevels = { others: 0, group: 1, owner: 2 };
+
+const getPermissionOrComputeDefault = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
     }
-    if (!rightPartExists) {
-      return -1;
-    }
 
-    const leftPartIsLast = i === leftPartArray.length - 1;
-    const rightPartIsLast = i === rightPartArray.length - 1;
-    // folder comes first
-    if (leftPartIsLast && !rightPartIsLast) {
-      return +1;
-    }
-    if (!leftPartIsLast && rightPartIsLast) {
-      return -1;
-    }
-
-    const leftPart = leftPartArray[i];
-    const rightPart = rightPartArray[i];
-    i++;
-    // local comparison comes first
-    const comparison = leftPart.localeCompare(rightPart);
-    if (comparison !== 0) {
-      return comparison;
+    const actionLevel = actionLevels[action];
+    const actionFallback = Object.keys(actionLevels).find(
+      (actionFallbackCandidate) =>
+        actionLevels[actionFallbackCandidate] > actionLevel &&
+        actionFallbackCandidate in subjectPermissions,
+    );
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
     }
   }
 
-  if (leftLength < rightLength) {
-    return +1;
+  const subjectLevel = subjectLevels[subject];
+  // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+  const subjectFallback = Object.keys(subjectLevels).find(
+    (subjectFallbackCandidate) =>
+      subjectLevels[subjectFallbackCandidate] > subjectLevel &&
+      subjectFallbackCandidate in permissions,
+  );
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions
+      ? subjectPermissions[action]
+      : getPermissionOrComputeDefault(action, subjectFallback, permissions);
   }
-  if (leftLength > rightLength) {
-    return -1;
-  }
-  return 0;
+
+  return false;
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+const isWindows$2 = process.platform === "win32";
+
+const readEntryStat = async (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return readStat(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$2
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: async (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              await writeEntryPermissions(sourceUrl, 0o666);
+              const stats = await readStat(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const readStat = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? stat : lstat;
+
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else if (
+          handlePermissionDeniedError &&
+          (error.code === "EPERM" || error.code === "EACCES")
+        ) {
+          resolve(handlePermissionDeniedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const statsToType = (stats) => {
+  if (stats.isFile()) return "file";
+  if (stats.isDirectory()) return "directory";
+  if (stats.isSymbolicLink()) return "symbolic-link";
+  if (stats.isFIFO()) return "fifo";
+  if (stats.isSocket()) return "socket";
+  if (stats.isCharacterDevice()) return "character-device";
+  if (stats.isBlockDevice()) return "block-device";
+  return undefined;
 };
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
@@ -2127,6 +2169,23 @@ const writeDirectory = async (
     await mkdir(destinationPath, { recursive });
   } catch (error) {
     if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+    throw error;
+  }
+};
+
+const writeFileSync = (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationUrlObject = new URL(destinationUrl);
+  try {
+    writeFileSync$1(destinationUrlObject, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      mkdirSync(new URL("./", destinationUrlObject), {
+        recursive: true,
+      });
+      writeFileSync$1(destinationUrlObject, content);
       return;
     }
     throw error;
@@ -2378,6 +2437,204 @@ const removeDirectoryNaive = (
   });
 };
 
+process.platform === "win32";
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+  },
+  "text/html": {
+    extensions: ["html"],
+  },
+  "text/css": {
+    extensions: ["css"],
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return (
+        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
+      );
+    });
+    return mediaTypeFound || "application/octet-stream";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
+};
+
+process.platform === "win32";
+
 const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
     nullIfNotFound: true,
@@ -2385,15 +2642,17 @@ const ensureEmptyDirectory = async (source) => {
   });
   if (stats === null) {
     // if there is nothing, create a directory
-    return writeDirectory(source, { allowUseless: true });
+    await writeDirectory(source, { allowUseless: true });
+    return;
   }
   if (stats.isDirectory()) {
     // if there is a directory remove its content and done
-    return removeEntry(source, {
+    await removeEntry(source, {
       allowUseless: true,
       recursive: true,
       onlyContent: true,
     });
+    return;
   }
 
   const sourceType = statsToType(stats);
@@ -2402,75 +2661,6 @@ const ensureEmptyDirectory = async (source) => {
     `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
   );
 };
-
-const isWindows$2 = process.platform === "win32";
-const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
-
-/**
- * Some url might be resolved or remapped to url without the windows drive letter.
- * For instance
- * new URL('/foo.js', 'file:///C:/dir/file.js')
- * resolves to
- * 'file:///foo.js'
- *
- * But on windows it becomes a problem because we need the drive letter otherwise
- * url cannot be converted to a filesystem path.
- *
- * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
- */
-
-const ensureWindowsDriveLetter = (url, baseUrl) => {
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`);
-  }
-
-  if (!isWindows$2) {
-    return url;
-  }
-
-  try {
-    baseUrl = String(new URL(baseUrl));
-  } catch (e) {
-    throw new Error(
-      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    );
-  }
-
-  if (!url.startsWith("file://")) {
-    return url;
-  }
-  const afterProtocol = url.slice("file://".length);
-  // we still have the windows drive letter
-  if (extractDriveLetter(afterProtocol)) {
-    return url;
-  }
-
-  // drive letter was lost, restore it
-  const baseUrlOrFallback = baseUrl.startsWith("file://")
-    ? baseUrl
-    : baseUrlFallback;
-  const driveLetter = extractDriveLetter(
-    baseUrlOrFallback.slice("file://".length),
-  );
-  if (!driveLetter) {
-    throw new Error(
-      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
-    );
-  }
-  return `file:///${driveLetter}:${afterProtocol}`;
-};
-
-const extractDriveLetter = (resource) => {
-  // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(resource[1]) && resource[2] === ":") {
-    return resource[1];
-  }
-  return null;
-};
-
-process.platform === "win32";
 
 const guardTooFastSecondCallPerFile = (
   callback,
@@ -2917,21 +3107,33 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename = (path) => {
   };
 };
 
-const writeFileSync = (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-  try {
-    writeFileSync$1(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      mkdirSync(new URL("./", destinationUrlObject), {
-        recursive: true,
-      });
-      writeFileSync$1(destinationUrlObject, content);
-      return;
-    }
-    throw error;
+/*
+ * - Buffer documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/buffer.html
+ * - eTag documentation on MDN
+ *   https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+ */
+
+
+const ETAG_FOR_EMPTY_CONTENT$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+
+const bufferToEtag$1 = (buffer) => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
   }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT$1;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
 const LOG_LEVEL_OFF = "off";
@@ -6912,192 +7114,6 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGINT: STOP_REASON_PROCESS_SIGINT,
   beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
   exit: STOP_REASON_PROCESS_EXIT,
-};
-
-const mediaTypeInfos = {
-  "application/json": {
-    extensions: ["json"],
-    isTextual: true,
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"],
-    isTextual: true,
-  },
-  "application/manifest+json": {
-    extensions: ["webmanifest"],
-    isTextual: true,
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"],
-  },
-  "application/xml": {
-    extensions: ["xml"],
-  },
-  "application/x-gzip": {
-    extensions: ["gz"],
-  },
-  "application/wasm": {
-    extensions: ["wasm"],
-  },
-  "application/zip": {
-    extensions: ["zip"],
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"],
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"],
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"],
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"],
-  },
-  "audio/webm": {
-    extensions: ["weba"],
-  },
-  "audio/x-wav": {
-    extensions: ["wav"],
-  },
-  "font/ttf": {
-    extensions: ["ttf"],
-  },
-  "font/woff": {
-    extensions: ["woff"],
-  },
-  "font/woff2": {
-    extensions: ["woff2"],
-  },
-  "image/png": {
-    extensions: ["png"],
-  },
-  "image/gif": {
-    extensions: ["gif"],
-  },
-  "image/jpeg": {
-    extensions: ["jpg"],
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"],
-    isTextual: true,
-  },
-  "text/plain": {
-    extensions: ["txt"],
-  },
-  "text/html": {
-    extensions: ["html"],
-  },
-  "text/css": {
-    extensions: ["css"],
-  },
-  "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
-  },
-  "text/x-sass": {
-    extensions: ["sass"],
-  },
-  "text/x-scss": {
-    extensions: ["scss"],
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"],
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"],
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
-  },
-  "video/ogg": {
-    extensions: ["ogv"],
-  },
-  "video/webm": {
-    extensions: ["webm"],
-  },
-};
-
-const CONTENT_TYPE = {
-  parse: (string) => {
-    const [mediaType, charset] = string.split(";");
-    return { mediaType: normalizeMediaType(mediaType), charset };
-  },
-
-  stringify: ({ mediaType, charset }) => {
-    if (charset) {
-      return `${mediaType};${charset}`;
-    }
-    return mediaType;
-  },
-
-  asMediaType: (value) => {
-    if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
-    }
-    if (typeof value === "object") {
-      return value.mediaType;
-    }
-    return null;
-  },
-
-  isJson: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    return (
-      mediaType === "application/json" ||
-      /^application\/\w+\+json$/.test(mediaType)
-    );
-  },
-
-  isTextual: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    if (mediaType.startsWith("text/")) {
-      return true;
-    }
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
-      return true;
-    }
-    // catch things like application/manifest+json, application/importmap+json
-    if (/^application\/\w+\+json$/.test(mediaType)) {
-      return true;
-    }
-    return false;
-  },
-
-  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
-
-  asFileExtension: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
-  },
-
-  fromUrlExtension: (url) => {
-    const { pathname } = new URL(url);
-    const extensionWithDot = extname(pathname);
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-    const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
-  },
-};
-
-const normalizeMediaType = (value) => {
-  if (value === "application/javascript") {
-    return "text/javascript";
-  }
-  return value;
 };
 
 const isFileSystemPath = (value) => {

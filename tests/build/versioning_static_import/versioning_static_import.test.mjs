@@ -15,16 +15,22 @@
 
 import { writeFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { copyDirectorySync } from "@jsenv/filesystem";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
-const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
-  const generateDist = async () => {
-    return await build({
+const test = async ({ name, ...rest }) => {
+  const generateDist = async (step) => {
+    const snapshotDirectoryUrl = new URL(
+      `./snapshots/${name}/${step}/`,
+      import.meta.url,
+    );
+    const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+    await build({
       logLevel: "warn",
       sourceDirectoryUrl: new URL("./client/", import.meta.url),
       buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -46,14 +52,17 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
       outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
       ...rest,
     });
+    copyDirectorySync({
+      from: new URL("./dist/", import.meta.url),
+      to: snapshotDirectoryUrl,
+      overwrite: true,
+    });
+    const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+    compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
   };
 
   // 1. Generate a first build
-  await generateDist();
-  takeDirectorySnapshot(
-    new URL("./dist/", import.meta.url),
-    new URL("./initial/", snapshotsDirectoryUrl),
-  );
+  await generateDist("initial");
 
   // 2. Ensure file executes properly
   const serverRequests = [];
@@ -91,11 +100,7 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
   // rebuild
   try {
     jsFileContent.update(`export const answer = 43`);
-    await generateDist();
-    takeDirectorySnapshot(
-      new URL("./dist/", import.meta.url),
-      new URL("./modified/", snapshotsDirectoryUrl),
-    );
+    await generateDist("modified");
 
     // reload then ensure the browser did not re-fetch app.js
     serverRequests.length = 0;
@@ -129,12 +134,12 @@ const test = async ({ snapshotsDirectoryUrl, ...rest }) => {
 
 // importmap are not supported
 await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/systemjs/", import.meta.url),
+  name: "systemjs",
   runtimeCompat: { chrome: "88" },
 });
 
 // importmap supported
 await test({
-  snapshotsDirectoryUrl: new URL("./snapshots/importmap/", import.meta.url),
+  name: "importmap",
   runtimeCompat: { chrome: "89" },
 });

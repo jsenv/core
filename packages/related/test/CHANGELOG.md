@@ -1,3 +1,7 @@
+# 2.1.0
+
+- `process.exit(0)` is fine on Node.js
+
 # 2.0.0
 
 - Allow to execute tests conccurently

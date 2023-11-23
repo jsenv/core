@@ -1,7 +1,8 @@
 import { chromium } from "playwright";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
+
 import { startDevServer } from "@jsenv/core";
-import { takeFileSnapshot } from "@jsenv/core/tests/snapshots_directory.js";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
