@@ -8,7 +8,7 @@
     "resolveResultPromise"
   ],
   "sources": [
-    "../client/main.html@L10C5-L14C14.js"
+    "../../client/main.html@L10C5-L14C14.js"
   ],
   "sourcesContent": [
     "\n      window.resultPromise = new Promise((resolve) => {\n        window.resolveResultPromise = resolve;\n      });\n    "
