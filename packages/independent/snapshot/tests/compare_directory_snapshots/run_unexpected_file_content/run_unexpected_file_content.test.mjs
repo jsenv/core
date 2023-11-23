@@ -1,22 +1,34 @@
 import { assert } from "@jsenv/assert";
 
 import {
-  takeDirectorySnapshotAndCompare,
-  takeDirectorySnapshot,
-  saveSnapshotOnFileSystem,
-} from "@jsenv/snapshot";
+  copyDirectorySync,
+  readFileStructureSync,
+  writeFileStructureSync,
+} from "@jsenv/filesystem";
 
-const sourceDirectoryUrl = new URL("./source/", import.meta.url);
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+
+const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
-
-const contentBeforeTestSnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+const snapshotDirectoryFileStructureBeforeTest = readFileStructureSync(
+  snapshotsDirectoryUrl,
+);
 
 try {
-  takeDirectorySnapshotAndCompare(sourceDirectoryUrl, snapshotsDirectoryUrl);
+  const expectedDirectorySnapshot = takeDirectorySnapshot(
+    snapshotsDirectoryUrl,
+  );
+  copyDirectorySync({
+    from: fixturesDirectoryUrl,
+    to: snapshotsDirectoryUrl,
+    overwrite: true,
+  });
+  const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+  compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
-  const expected = `comparison with previous snapshot failed
+  const expected = `comparison with previous file snapshot failed
 --- reason ---
 unexpected character in "b.js" content
 --- details ---
@@ -27,14 +39,9 @@ console.log("c");
 --- file ---
 ${snapshotsDirectoryUrl}b.js`;
   assert({ actual, expected });
-
-  const bFileContentInSnapshotDirectory = takeDirectorySnapshot(
-    snapshotsDirectoryUrl,
-  )["b.js"];
-  assert({
-    actual: bFileContentInSnapshotDirectory,
-    expected: `console.log("c");\n`,
-  });
 } finally {
-  saveSnapshotOnFileSystem(contentBeforeTestSnapshot, snapshotsDirectoryUrl);
+  writeFileStructureSync(
+    snapshotsDirectoryUrl,
+    snapshotDirectoryFileStructureBeforeTest,
+  );
 }
