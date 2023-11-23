@@ -1,3 +1,8 @@
+# 4.4.0
+
+- Add many public exports
+- Add many sync equivalent of async functions
+
 # 4.3.1
 
 - Improve file and directory watch for ubuntu 20
