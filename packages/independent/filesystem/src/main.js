@@ -1,3 +1,9 @@
+// we might wanna expose the sync versions as follows:
+// readDirectory.sync()
+// +1: very easy to switch between sync/async versions of a given function
+// -1: code splitting
+// -1: unusual
+
 // path_and_url
 export {
   validateDirectoryUrl,
@@ -17,16 +23,20 @@ export { listFilesMatching } from "./list/list_files_matching.js";
 
 // read and write
 export { ensureParentDirectories } from "./read_write/ensure_parent_directories.js";
-export { getRealFileSystemUrlSync } from "./read_write/get_real_file_system_url_sync.js";
 export { readDirectory } from "./read_write/read_directory.js";
 export { writeDirectory } from "./read_write/write_directory.js";
-export { writeDirectorySync } from "./read_write/write_directory_sync.js";
 export { readFile } from "./read_write/read_file.js";
 export { writeFile } from "./read_write/write_file.js";
 export { readFileSync } from "./read_write/read_file_sync.js";
 export { writeFileSync } from "./read_write/write_file_sync.js";
 export { readSymbolicLink } from "./read_write/read_symbolic_link.js";
 export { writeSymbolicLink } from "./read_write/write_symbolic_link.js";
+// read and write sync
+export { ensureParentDirectoriesSync } from "./read_write/ensure_parent_directories_sync.js";
+export { readDirectorySync } from "./read_write/read_directory_sync.js";
+export { getRealFileSystemUrlSync } from "./read_write/get_real_file_system_url_sync.js";
+export { readSymbolicLinkSync } from "./read_write/read_symbolic_link_sync.js";
+export { writeDirectorySync } from "./read_write/write_directory_sync.js";
 
 // stat
 export { readEntryStat } from "./read_write/stat/read_entry_stat.js";
@@ -36,6 +46,9 @@ export { readEntryPermissions } from "./read_write/stat/read_entry_permissions.j
 export { writeEntryPermissions } from "./read_write/stat/write_entry_permissions.js";
 export { grantPermissionsOnEntry } from "./read_write/stat/grant_permissions_on_entry.js";
 export { testEntryPermissions } from "./read_write/stat/test_entry_permissions.js";
+// stat sync
+export { readEntryStatSync } from "./read_write/stat/read_entry_stat_sync.js";
+export { writeEntryModificationTimeSync } from "./read_write/stat/write_entry_modification_time_sync.js";
 
 // move
 export { moveDirectoryContent } from "./move/move_directory_content.js";
@@ -44,6 +57,8 @@ export { moveEntry } from "./move/move_entry.js";
 // copy
 export { copyEntry } from "./copy/copy_entry.js";
 export { copyDirectoryContent } from "./copy/copy_directory_content.js";
+export { copyEntrySync } from "./copy/copy_entry_sync.js";
+export { copyDirectoryContentSync } from "./copy/copy_directory_content_sync.js";
 
 // remove
 export { ensureEmptyDirectory } from "./remove/ensure_empty_directory.js";
