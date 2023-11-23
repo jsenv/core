@@ -1,12 +1,13 @@
-import { compareSnapshotTakenByFunction } from "@jsenv/snapshot";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-// https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
-if (!process.env.CI) {
-  compareSnapshotTakenByFunction(
-    new URL("./snapshots/html/", import.meta.url),
-    async () => {
-      process.env.FROM_TESTS = "true";
-      await import("./update_snapshots.mjs");
-    },
-  );
+if (process.env.CI) {
+  // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
+  process.exit(0);
 }
+
+const snapshotDirectoryUrl = new URL("./snapshots/html/", import.meta.url);
+const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+process.env.FROM_TESTS = "true";
+await import("./update_snapshots.mjs");
+const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+compareSnapshots(actualSnapshots, expectedSnapshots);

@@ -1,8 +1,7 @@
-import { compareSnapshotTakenByFunction } from "@jsenv/snapshot";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-compareSnapshotTakenByFunction(
-  new URL("./snapshots/", import.meta.url),
-  async () => {
-    await import("./execution_logs_snapshots.mjs");
-  },
-);
+const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url);
+const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+await import("./execution_logs_snapshots.mjs");
+const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+compareSnapshots(actualSnapshots, expectedSnapshots);
