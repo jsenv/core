@@ -5,7 +5,7 @@ import { build, startBuildServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async (params) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+  const snapshotDirectoryUrl = new URL(`./snapshots/build/`, import.meta.url);
   const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
