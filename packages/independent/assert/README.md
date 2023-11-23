@@ -134,7 +134,7 @@ npm i --save-dev @jsenv/assert
 
 This part contain examples where _@jsenv/assert_ is used to write tests.
 
-### Ensure exception is thrown
+### Exception
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -160,7 +160,7 @@ try {
 }
 ```
 
-### Ensure async exception is thrown
+### Async exception
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -188,7 +188,7 @@ try {
 
 > Note how code testing `getCircleArea` is similar in [Assert exception](#assert-exception) and [Assert async exception](#assert-async-exception).
 
-### Ensure callback is called
+### Callback
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -222,7 +222,7 @@ assert({ actual, expected });
 
 > Code above is a great example of [the AAA pattern](./docs/aaa_pattern.md).
 
-### Ensure callback will be called
+### Callback with delay
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -241,7 +241,7 @@ const expected = true;
 assert({ actual, expected });
 ```
 
-### Ensure any value of a given type
+### Any
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -262,7 +262,7 @@ const expected = {
 assert({ actual, expected });
 ```
 
-#### Ensure it's not a given value
+#### Not
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -291,7 +291,7 @@ const expected = assert.not("toto");
 assert({ actual, expected });
 ```
 
-### Ensure some object properties
+### Subset of properties
 
 ```js
 import { assert } from "@jsenv/assert";
