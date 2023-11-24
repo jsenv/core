@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { urlToFilename } from "@jsenv/urls";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
@@ -18,10 +19,13 @@ const test = async (fixtureFilename) => {
       url: String(fileUrl),
     },
     {
-      supervisorScriptSrc: "mocked_for_test.js",
+      supervisorScriptSrc: "supervisor.js",
       supervisorOptions: {},
       webServer: {
-        rootDirectoryUrl: new URL("./fixtures/", import.meta.url),
+        rootDirectoryUrl: new URL("file:///web_root_directory_url/"),
+      },
+      generateInlineScriptSrc: ({ inlineScriptUrl }) => {
+        return urlToFilename(inlineScriptUrl);
       },
       sourcemaps: "none",
     },

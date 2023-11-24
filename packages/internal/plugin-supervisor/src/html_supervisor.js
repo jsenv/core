@@ -114,7 +114,10 @@ export const injectSupervisorIntoHTML = async (
       });
       if (inlineAsRemote) {
         // prefere la version src
-        scriptInfos.push({ type, src: inlineScriptSrc });
+        scriptInfos.push({
+          type,
+          src: inlineScriptSrc,
+        });
         const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
           type,
           src: inlineScriptSrc,
@@ -234,7 +237,9 @@ export const injectSupervisorIntoHTML = async (
       htmlAst,
       createHtmlNode({
         tagName: "script",
-        textContent: `window.__supervisor__.setup({${setupParamsSource}})`,
+        textContent: `window.__supervisor__.setup({
+  ${setupParamsSource}
+});`,
       }),
       "jsenv:supervisor",
     );
