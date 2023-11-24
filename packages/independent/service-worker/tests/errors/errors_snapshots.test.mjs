@@ -12,14 +12,12 @@ import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { fetchUrl } from "@jsenv/fetch";
 import { createTaskLog } from "@jsenv/log";
 
-import { buildServer } from "./errors_build_server.mjs";
-
-console.log("process.env.CI", process.env.CI);
 if (process.env.CI) {
   // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
   process.exit(0);
 }
 
+const { buildServer } = await import("./errors_build_server.mjs");
 const snapshotDirectoryUrl = new URL("./snapshots/html/", import.meta.url);
 const debug = false;
 const test = async () => {
