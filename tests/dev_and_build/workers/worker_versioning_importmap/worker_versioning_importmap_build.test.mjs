@@ -11,12 +11,12 @@ import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
 const test = async ({ name, ...rest }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}`, import.meta.url);
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
   const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
     },
@@ -28,7 +28,7 @@ const test = async ({ name, ...rest }) => {
 
   // 2. Ensure file executes properly
   const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    rootDirectoryUrl: snapshotDirectoryUrl,
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,

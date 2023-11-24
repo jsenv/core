@@ -21,7 +21,7 @@ const test = async ({ name, ...params }) => {
   buildDirectorySnapshot.compare();
 
   const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    rootDirectoryUrl: snapshotDirectoryUrl,
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
