@@ -1,6 +1,6 @@
 [Jest](https://github.com/jestjs/jest) is a popular test framework.
 
-This page shows how tests written with jest API could be written using `@jsenv/assert`. The goal is to illustrates the difference in design and should help the reader to make his own opinion about `@jsenv/assert`.
+This page shows how tests written with jest API could be written using `@jsenv/assert`. The goal is to illustrates the difference in design and should help the reader to make his own opinion about `@jsenv/assert`. It can also be used to migrate from jest to jsenv.
 
 ## Exceptions
 
@@ -25,7 +25,7 @@ test("compiling android goes as expected", () => {
 });
 ```
 
-_@jsenv/assert:_
+_jsenv:_
 
 ```js
 function compileAndroidCode() {
@@ -75,7 +75,7 @@ test("the fetch fails with an error", async () => {
 });
 ```
 
-_@jsenv/assert:_
+_jsenv:_
 
 ```js
 // the data is peanut butter
@@ -123,7 +123,7 @@ test("the data is peanut butter", (done) => {
 });
 ```
 
-_@jsenv/assert:_
+_jsenv:_
 
 ```js
 // the data is peanut butter
@@ -168,7 +168,7 @@ test("city database has San Juan", () => {
 });
 ```
 
-_@jsenv/assert:_
+_jsenv:_
 
 ```js
 const test = async (expectedCity) => {
@@ -208,7 +208,7 @@ test("city database has San Juan", () => {
 });
 ```
 
-_@jsenv/assert:_
+_jsenv:_
 
 ```js
 await initializeCityDatabase();
@@ -234,9 +234,9 @@ _Jest:_
 
 beforeEach, afterEach, beforeAll and afterAll are scoped per describe block, see https://jestjs.io/docs/setup-teardown#scoping
 
-_@jsenv/assert:_
+_jsenv:_
 
-Code executes top to bottom, no documentation needed
+Code execution is standard, no documentation needed
 
 ### Order of execution
 
@@ -244,9 +244,9 @@ _Jest:_
 
 beforeEach, afterEach, beforeAll and afterAll have a special execution order, see https://jestjs.io/docs/setup-teardown#order-of-execution
 
-_@jsenv/assert:_
+_jsenv:_
 
-Code executes top to bottom, no documentation needed
+Code execution is standard, no documentation needed
 
 ## Mock functions (also called spy)
 
@@ -269,16 +269,16 @@ const { forEach } = require("./for_each");
 const mockCallback = jest.fn((x) => 42 + x);
 
 test("forEach mock function", () => {
-  forEach([0, 1], mockCallback);
+  forEach(["a", "b"], mockCallback);
 
   // The mock function was called twice
   expect(mockCallback.mock.calls).toHaveLength(2);
 
-  // The first argument of the first call to the function was 0
-  expect(mockCallback.mock.calls[0][0]).toBe(0);
+  // The first argument of the first call to the function was "a"
+  expect(mockCallback.mock.calls[0][0]).toBe("a");
 
-  // The first argument of the second call to the function was 1
-  expect(mockCallback.mock.calls[1][0]).toBe(1);
+  // The first argument of the second call to the function was "b"
+  expect(mockCallback.mock.calls[1][0]).toBe("b");
 });
 ```
 
@@ -294,10 +294,10 @@ const mockCallback = (value) => {
 };
 // forEach mock function
 {
-  forEach([0, 1], mockCallback);
+  forEach(["a", "b"], mockCallback);
   assert({
     actual: calls,
-    expected: [0, 1],
+    expected: ["a", "b"],
   });
 }
 ```
@@ -343,7 +343,7 @@ expect({
 });
 ```
 
-## mock return value API
+## Mock function return value API
 
 _Jest:_
 
@@ -362,17 +362,129 @@ _@jsenv/assert:_
 
 ```js
 let callCount = 0;
-const returnValues = [10, "x"];
 const myMock = () => {
-  if (callCount < returnValues.length) {
+  if (callCount === 0) {
     callCount++;
-    return returnValues[callCount];
+    return 10;
   }
-  return undefined;
+  if (callCount === 1) {
+    callCount++;
+    return "x";
+  }
+  return true;
 };
 
 console.log(myMock(), myMock(), myMock(), myMock());
 // > 10, 'x', true, true
+```
+
+## Mock modules
+
+_jest_:
+
+```js
+import axios from "axios";
+import Users from "./users";
+
+jest.mock("axios");
+
+test("should fetch users", () => {
+  const users = [{ name: "Bob" }];
+  const resp = { data: users };
+  axios.get.mockResolvedValue(resp);
+
+  // or you could use the following depending on your use case:
+  // axios.get.mockImplementation(() => Promise.resolve(resp))
+
+  return Users.all().then((data) => expect(data).toEqual(users));
+});
+```
+
+:point_up: This is a super bad practice, I hope you don't have to do this.
+If you really don't have a choice it's doable with jsenv as follow:
+
+_@jsenv_:
+
+```js
+// "tests/axios.mock.js"
+export const axiosMock = {
+  get: () => undefined,
+};
+
+export default axiosMock;
+```
+
+```js
+// users.test.js
+import { axiosMock } from "axios";
+import { assert } from "@jsenv/assert";
+
+import Users from "./users.js";
+
+// should fetch users
+{
+  const users = [{ name: "Bob" }];
+  const resp = { data: users };
+  axiosMock.get = () => {
+    return { data: users };
+  };
+  const actual = await Users.all();
+  const expected = users;
+  assert({ actual, expected });
+}
+```
+
+Mock `"axios"` on browsers using importmap:
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "axios": "/tests/mocks/axios.mock.js"
+        }
+      }
+    </script>
+    <script type="module" src="users.test.js"></script>
+  </body>
+</html>
+```
+
+Mock axios on Node.js using importmap:
+
+```js
+// associate an importMap to "users.test.js"
+// see also https://github.com/jsenv/core/wiki/I)-Test-in-Node.js#54-importmap
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+
+const testPlanReport = await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+    "./**/users.test.js": {
+      node: {
+        runtime: nodeWorkerThread({
+          importMap: {
+            imports: {
+              axios: "/tests/mocks/axios.mock.js",
+            },
+          },
+        }),
+      },
+    },
+  },
+});
 ```
 
 ## Numbers
@@ -431,6 +543,16 @@ _@jsenv/assert:_
 ```js
 const value = 0.1 + 0.2;
 assert({
+  actual: value.toFixed(1),
+  expected: 0.3,
+});
+```
+
+If you absolutely need the closeTo behaviour you can use
+
+```js
+const value = 0.1 + 0.2;
+assert({
   actual: value,
   expected: assert.closeTo(0.3),
 });
@@ -449,12 +571,12 @@ _@jsenv/assert:_
 
 ```js
 assert({
-  actual: "team".match(/I/),
-  expected: null,
+  actual: /I/.test("team"),
+  expected: false,
 });
 assert({
-  actual: "Christoph",
-  expected: assert.matchesRegExp(/stop/),
+  actual: /stop/.test("Christoph")
+  expected: true,
 });
 ```
 
@@ -494,6 +616,14 @@ assert({
 
 ## Conclusion
 
+<!--
+TODO: rewrite this the other way around:
+"jest does X so I can't do Y"
+->
+"@jsenv does X so I can do Y"
+
+for example debugging withing vscode in one click
+
 ### Code execution flow
 
 Jest provide an API to regroup code into blocks depending what it does:
@@ -523,4 +653,4 @@ Jest api makes code dependent on jest:
 
 As a result switching from a source file to a test file cost cognitivie energy. You might even need to re-read Jest documentation to remember what's going on (see https://jestjs.io/docs/setup-teardown).
 
-`@jsenv/assert` favors standard. As a result code is portable. Switching from a standard file to a test file is designed to be easier and pleasant.
+`@jsenv/assert` favors standard. As a result code is portable. Switching from a standard file to a test file is designed to be easier and pleasant. -->
