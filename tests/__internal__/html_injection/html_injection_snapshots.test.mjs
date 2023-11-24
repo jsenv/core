@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { writeFileSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import {
   parseHtml,
@@ -46,7 +46,6 @@ const test = (fixtureFilename) => {
   writeFileSync(fileSnapshotUrl, content);
 };
 
-const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 test("a.html");
-const expectedDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
+directorySnapshot.compare();

@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit } from "playwright";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/log";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)
@@ -137,7 +137,7 @@ const test = async ({ browserLauncher, browserName }) => {
 };
 
 try {
-  const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   if (!process.env.CI) {
     await ensureEmptyDirectory(screenshotsDirectoryUrl);
   }
@@ -145,8 +145,7 @@ try {
   await test({ browserLauncher: chromium, browserName: "chromium" });
   await test({ browserLauncher: firefox, browserName: "firefox" });
   await test({ browserLauncher: webkit, browserName: "webkit" });
-  const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
-  compareSnapshots(actualSnapshots, expectedSnapshots);
+  directorySnapshot.compare();
 } finally {
   devServer.stop();
 }

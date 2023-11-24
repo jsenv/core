@@ -1,10 +1,10 @@
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 const test = async (params) => {
   const snapshotDirectoryUrl = new URL("./snapshots/build/", import.meta.url);
-  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -16,8 +16,7 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+  buildDirectorySnapshot.compare();
 };
 
 // support for <script type="module">

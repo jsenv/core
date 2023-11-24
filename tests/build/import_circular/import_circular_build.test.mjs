@@ -1,13 +1,13 @@
 // https://github.com/rollup/rollup/tree/dba6f13132a1d7dac507d5056399d8af0eed6375/test/function/samples/preserve-modules-circular-order
 
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
 
 const test = async ({ name, ...params }) => {
   const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -17,8 +17,7 @@ const test = async ({ name, ...params }) => {
     },
     ...params,
   });
-  const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+  buildDirectorySnapshot.compare();
 };
 
 // default (with bundling)

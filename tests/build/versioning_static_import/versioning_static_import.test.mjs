@@ -16,7 +16,7 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { copyDirectorySync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 
 import { build } from "@jsenv/core";
@@ -29,7 +29,7 @@ const test = async ({ name, ...rest }) => {
       `./snapshots/${name}/${step}/`,
       import.meta.url,
     );
-    const expectedBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+    const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
     await build({
       logLevel: "warn",
       sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -57,8 +57,7 @@ const test = async ({ name, ...rest }) => {
       to: snapshotDirectoryUrl,
       overwrite: true,
     });
-    const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-    compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
+    buildDirectorySnapshot.compare();
   };
 
   // 1. Generate a first build

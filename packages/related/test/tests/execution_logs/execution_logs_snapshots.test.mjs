@@ -1,11 +1,10 @@
 import stripAnsi from "strip-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { createExecutionLog } from "@jsenv/test/src/execution/logs_file_execution.js";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
-
 const test = (name, data, options) => {
   const snapshotFileUrl = new URL(name, snapshotsDirectoryUrl);
   const logRaw = stripAnsi(
@@ -18,7 +17,7 @@ const test = (name, data, options) => {
   writeFileSync(snapshotFileUrl, logRaw);
 };
 
-const expectedDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 test(
   "1_over_2_executing.txt",
   {
@@ -139,5 +138,4 @@ test(
   },
   {},
 );
-const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
+directorySnapshot.compare();
