@@ -4,13 +4,12 @@ import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/log";
 
-import { buildServer } from "./update_build_server.mjs";
-
 if (process.env.CI) {
   // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
   process.exit(0);
 }
 
+const { buildServer } = await import("./update_build_server.mjs");
 const snapshotDirectoryUrl = new URL("./snapshots/html/", import.meta.url);
 const screenshotDirectoryUrl = new URL("./snapshots/screen/", import.meta.url);
 const debug = false;

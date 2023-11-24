@@ -15,7 +15,7 @@ const test = async ({ name, ...params }) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  if (!params.sourcemap) {
+  if (!params.sourcemaps) {
     buildDirectorySnapshot.compare();
   }
 };
