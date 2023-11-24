@@ -26,6 +26,9 @@ export const takeDirectorySnapshot = (directoryUrl) => {
   const expectedDirectorySnapshot = createDirectorySnapshot(directoryUrl);
   ensureEmptyDirectorySync(directoryUrl);
   return {
+    addFile: (relativeUrl, content) => {
+      writeFileSync(new URL(relativeUrl, directoryUrl), content);
+    },
     compare: () => {
       const actualDirectorySnapshot = createDirectorySnapshot(directoryUrl);
       compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
@@ -126,6 +129,9 @@ export const takeFileSnapshot = (fileUrl) => {
   const expectedFileSnapshot = createFileSnapshot(fileUrl);
   removeFileSync(fileUrl);
   return {
+    writeContent: (content) => {
+      writeFileSync(fileUrl, content);
+    },
     compare: () => {
       const actualFileSnapshot = createFileSnapshot(fileUrl);
       compareSnapshots(actualFileSnapshot, expectedFileSnapshot);
