@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { urlToFilename } from "@jsenv/urls";
 import { writeFileSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
 
@@ -34,10 +34,9 @@ const test = async (fixtureFilename) => {
   writeFileSync(fileSnapshotUrl, content);
 };
 
-const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 await test("script_inline.html");
 await test("script_src.html");
 await test("script_type_module_inline.html");
 await test("script_type_module_src.html");
-const expectedDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
+directorySnapshot.compare();

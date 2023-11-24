@@ -42,6 +42,17 @@ export const takeDirectorySnapshot = (directoryUrl) => {
         ensureEmptyDirectorySync(directoryUrl);
         return;
       }
+
+      const fileStructure = {};
+      Object.keys(expectedDirectorySnapshot.fileSnapshots).forEach(
+        (relativeUrl) => {
+          const fileSnapshot =
+            expectedDirectorySnapshot.fileSnapshots[relativeUrl];
+          if (!fileSnapshot.empty) {
+            fileStructure[relativeUrl] = fileSnapshot.content;
+          }
+        },
+      );
       writeFileStructureSync(
         directoryUrl,
         expectedDirectorySnapshot.fileStructure,
@@ -56,7 +67,7 @@ const createDirectorySnapshot = (directoryUrl) => {
     type: "directory",
     url: directoryUrl.href,
     notFound: false,
-    fileStructure: {},
+    fileSnapshots: {},
   };
 
   let stat;
@@ -78,7 +89,7 @@ const createDirectorySnapshot = (directoryUrl) => {
     }
   }
 
-  const snapshotNaturalOrder = {};
+  const fileSnapshotsNaturalOrder = {};
   const visitDirectory = (url) => {
     try {
       const directoryContent = readdirSync(url);
@@ -90,7 +101,7 @@ const createDirectorySnapshot = (directoryUrl) => {
           return;
         }
         const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
-        snapshotNaturalOrder[relativeUrl] = takeFileSnapshot(contentUrl);
+        fileSnapshotsNaturalOrder[relativeUrl] = createFileSnapshot(contentUrl);
       });
     } catch (e) {
       if (e && e.code === "ENOENT") {
@@ -101,11 +112,11 @@ const createDirectorySnapshot = (directoryUrl) => {
   };
   visitDirectory(directoryUrl);
 
-  const relativeUrls = Object.keys(snapshotNaturalOrder);
+  const relativeUrls = Object.keys(fileSnapshotsNaturalOrder);
   relativeUrls.sort(comparePathnames);
   relativeUrls.forEach((relativeUrl) => {
-    directorySnapshot.fileStructure[relativeUrl] =
-      snapshotNaturalOrder[relativeUrl];
+    directorySnapshot.fileSnapshots[relativeUrl] =
+      fileSnapshotsNaturalOrder[relativeUrl];
   });
   return directorySnapshot;
 };
@@ -211,10 +222,10 @@ const compareSnapshots = (currentSnapshot, previousSnapshot) => {
 const snapshotComparers = {
   directory: (currentDirectorySnapshot, previousDirectorySnapshot) => {
     const failureMessage = `comparison with previous directory snapshot failed`;
-    const currentFileStructure = currentDirectorySnapshot.fileStructure;
-    const previousFileStructure = previousDirectorySnapshot.fileStructure;
-    const currentRelativeUrls = Object.keys(currentFileStructure);
-    const previousRelativeUrls = Object.keys(previousFileStructure);
+    const currentFileSnapshots = currentDirectorySnapshot.fileSnapshots;
+    const previousFileSnapshots = previousDirectorySnapshot.fileSnapshots;
+    const currentRelativeUrls = Object.keys(currentFileSnapshots);
+    const previousRelativeUrls = Object.keys(previousFileSnapshots);
 
     // missing_files
     {
@@ -273,8 +284,8 @@ ${extraUrls.join("\n")}`);
     // file contents
     {
       for (const relativeUrl of currentRelativeUrls) {
-        const currentFileSnapshot = currentFileStructure[relativeUrl];
-        const previousFileSnapshot = previousFileStructure[relativeUrl];
+        const currentFileSnapshot = currentFileSnapshots[relativeUrl];
+        const previousFileSnapshot = previousFileSnapshots[relativeUrl];
         compareSnapshots(currentFileSnapshot, previousFileSnapshot);
       }
     }
