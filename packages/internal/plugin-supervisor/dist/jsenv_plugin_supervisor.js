@@ -465,11 +465,11 @@ const replaceSourceMappingUrl = (source, regexp, callback) => {
  */
 
 const injectSupervisorIntoJs = async ({
-  webServer,
   content,
   url,
   type,
-  inlineSrc
+  inlineSrc,
+  sourcemaps
 }) => {
   const babelPluginJsSupervisor = type === "js_module" ? babelPluginJsModuleSupervisor : babelPluginJsClassicSupervisor;
   const result = await applyBabelPlugins({
@@ -481,14 +481,16 @@ const injectSupervisorIntoJs = async ({
     inputUrl: url
   });
   let code = result.code;
-  let map = result.map;
-  const sourcemapDataUrl = generateSourcemapDataUrl(map);
-  code = SOURCEMAP.writeComment({
-    contentType: "text/javascript",
-    content: code,
-    specifier: sourcemapDataUrl
-  });
-  code = "".concat(code, "\n//# sourceURL=").concat(urlToRelativeUrl(url, webServer.rootDirectoryUrl));
+  if (sourcemaps === "inline") {
+    const map = result.map;
+    const sourcemapDataUrl = generateSourcemapDataUrl(map);
+    code = SOURCEMAP.writeComment({
+      contentType: "text/javascript",
+      content: code,
+      specifier: sourcemapDataUrl
+    });
+  }
+  code = "".concat(code, "\n//# sourceURL=").concat(inlineSrc);
   return code;
 };
 const babelPluginJsModuleSupervisor = babel => {
@@ -702,7 +704,8 @@ const injectSupervisorIntoHTML = async ({
   generateInlineScriptSrc = ({
     inlineScriptUrl
   }) => urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
-  inlineAsRemote
+  inlineAsRemote,
+  sourcemaps = "inline"
 }) => {
   const htmlAst = parseHtml({
     html: content,
@@ -777,7 +780,8 @@ const injectSupervisorIntoHTML = async ({
               content: textContent,
               url: inlineScriptUrl,
               type,
-              inlineSrc: inlineScriptSrc
+              inlineSrc: inlineScriptSrc,
+              sourcemaps
             });
             mutations.push(() => {
               setHtmlNodeText(scriptNode, inlineJsSupervised, {
@@ -873,7 +877,7 @@ const injectSupervisorIntoHTML = async ({
     }, "  ");
     injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       tagName: "script",
-      textContent: "window.__supervisor__.setup({".concat(setupParamsSource, "})")
+      textContent: "window.__supervisor__.setup({\n  ".concat(setupParamsSource, "\n});")
     }), "jsenv:supervisor");
     injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
       tagName: "script",
@@ -1106,7 +1110,8 @@ const jsenvPluginSupervisor = ({
               content: textContent
             });
             return inlineScriptReference.generatedSpecifier;
-          }
+          },
+          sourcemaps: htmlUrlInfo.kitchen.context.sourcemaps
         });
       }
     }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "38.3.8",
+  "version": "38.3.9",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -63,7 +63,7 @@
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "6.0.1",
-    "@jsenv/filesystem": "4.4.0",
+    "@jsenv/filesystem": "4.5.0",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.1",
     "@jsenv/js-module-fallback": "1.3.9",
@@ -71,7 +71,7 @@
     "@jsenv/node-esm-resolution": "1.0.1",
     "@jsenv/plugin-bundling": "2.6.1",
     "@jsenv/plugin-minification": "1.5.4",
-    "@jsenv/plugin-supervisor": "1.3.9",
+    "@jsenv/plugin-supervisor": "1.4.0",
     "@jsenv/plugin-transpilation": "1.3.8",
     "@jsenv/runtime-compat": "1.2.0",
     "@jsenv/server": "15.1.7",
