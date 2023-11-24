@@ -2,37 +2,51 @@ import { readFileSync } from "node:fs";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 
-import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
+import {
+  parseHtml,
+  stringifyHtmlAst,
+  injectHtmlNodeAsEarlyAsPossible,
+  injectHtmlNode,
+  createHtmlNode,
+} from "@jsenv/ast";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
-const test = async (fixtureFilename) => {
+const test = (fixtureFilename) => {
   const fileUrl = new URL(`./fixtures/${fixtureFilename}`, import.meta.url);
   const fileSnapshotUrl = new URL(
     `./snapshots/${fixtureFilename}`,
     import.meta.url,
   );
   const originalContent = readFileSync(fileUrl, "utf8");
-  const { content } = await injectSupervisorIntoHTML(
-    {
-      content: originalContent,
-      url: String(fileUrl),
-    },
-    {
-      supervisorOptions: {},
-      webServer: {
-        rootDirectoryUrl: new URL("./fixtures/", import.meta.url),
-      },
-      sourcemaps: "none",
-    },
-  );
+  const htmlAst = parseHtml({
+    html: originalContent,
+    url: String(fileUrl),
+  });
 
+  injectHtmlNodeAsEarlyAsPossible(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      textContent: `console.log('Hello world');`,
+    }),
+    "jsenv:test",
+  );
+  injectHtmlNode(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+      type: "module",
+      textContent: `console.log('Hello again');`,
+    }),
+    "jsenv:test",
+  );
+  const content = stringifyHtmlAst(htmlAst, {
+    cleanupPositionAttributes: true,
+  });
   writeFileSync(fileSnapshotUrl, content);
 };
 
 const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-await test("script_inline.html");
-await test("script_src.html");
-await test("script_type_module_inline.html");
-await test("script_type_module_src.html");
+test("a.html");
 const expectedDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
 compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
