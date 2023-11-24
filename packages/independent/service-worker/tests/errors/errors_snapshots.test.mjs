@@ -14,6 +14,7 @@ import { createTaskLog } from "@jsenv/log";
 
 import { buildServer } from "./errors_build_server.mjs";
 
+console.log("process.env.CI", process.env.CI);
 if (process.env.CI) {
   // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
   process.exit(0);

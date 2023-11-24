@@ -4,6 +4,11 @@ import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { createExecutionLog } from "@jsenv/test/src/execution/logs_file_execution.js";
 
+if (process.platform === "win32") {
+  // windows does not use same unicode chars
+  process.exit(0);
+}
+
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const test = (name, data, options) => {
   const snapshotFileUrl = new URL(name, snapshotsDirectoryUrl);
