@@ -7,6 +7,11 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
+if (process.platform === "win32") {
+  // sometimes timeout on windows
+  process.exit(0);
+}
+
 const test = async ({ name, ...params }) => {
   await ensureEmptyDirectory(
     new URL("./.jsenv/build/cjs_to_esm/", import.meta.url),
@@ -45,7 +50,7 @@ const test = async ({ name, ...params }) => {
     ...params,
   });
   const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    rootDirectoryUrl: snapshotDirectoryUrl,
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
@@ -61,28 +66,25 @@ const test = async ({ name, ...params }) => {
   assert({ actual, expected });
 };
 
-// sometimes timeout on windows
-if (process.platform !== "win32") {
-  // support for <script type="module">
-  await test({
-    name: "0_js_module",
-    runtimeCompat: { chrome: "89" },
-    bundling: {
-      js_module: {
-        chunks: {
-          // IT's ABSOLUTELY MANDATORY
-          // WITHOUT THIS ROLLUP CREATES CIRCULAR DEP IN THE CODE
-          // THAT IS NEVER RESOLVING
-          vendors: { "file:///**/node_modules/": true },
-        },
+// support for <script type="module">
+await test({
+  name: "0_js_module",
+  runtimeCompat: { chrome: "89" },
+  bundling: {
+    js_module: {
+      chunks: {
+        // IT's ABSOLUTELY MANDATORY
+        // WITHOUT THIS ROLLUP CREATES CIRCULAR DEP IN THE CODE
+        // THAT IS NEVER RESOLVING
+        vendors: { "file:///**/node_modules/": true },
       },
     },
-    minification: false,
-  });
-  // no support for <script type="module">
-  await test({
-    name: "1_js_module_fallback",
-    runtimeCompat: { chrome: "62" },
-    minification: false,
-  });
-}
+  },
+  minification: false,
+});
+// no support for <script type="module">
+await test({
+  name: "1_js_module_fallback",
+  runtimeCompat: { chrome: "62" },
+  minification: false,
+});
