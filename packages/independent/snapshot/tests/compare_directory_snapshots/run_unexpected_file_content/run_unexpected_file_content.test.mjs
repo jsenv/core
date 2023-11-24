@@ -6,7 +6,7 @@ import {
   writeFileStructureSync,
 } from "@jsenv/filesystem";
 
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
@@ -15,16 +15,13 @@ const snapshotDirectoryFileStructureBeforeTest = readFileStructureSync(
 );
 
 try {
-  const expectedDirectorySnapshot = takeDirectorySnapshot(
-    snapshotsDirectoryUrl,
-  );
+  const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
   copyDirectorySync({
     from: fixturesDirectoryUrl,
     to: snapshotsDirectoryUrl,
     overwrite: true,
   });
-  const actualDirectorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-  compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
+  directorySnapshot.compare();
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;

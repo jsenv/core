@@ -8,9 +8,8 @@
 
 import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { fetchUrl } from "@jsenv/fetch";
-import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/log";
 
 import { buildServer } from "./errors_build_server.mjs";
@@ -126,11 +125,9 @@ const test = async () => {
 };
 
 try {
-  const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await ensureEmptyDirectory(snapshotDirectoryUrl);
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await test();
-  const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
-  compareSnapshots(actualSnapshots, expectedSnapshots);
+  directorySnapshot.compare();
 } finally {
   if (!debug) {
     buildServer.stop();

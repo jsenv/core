@@ -3,6 +3,11 @@ import {
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
   comparePathnames,
+  ensureEmptyDirectorySync,
+  removeFileSync,
+  writeFileSync,
+  removeDirectorySync,
+  writeFileStructureSync,
 } from "@jsenv/filesystem";
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -18,6 +23,33 @@ export const takeDirectorySnapshot = (directoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   directoryUrl = new URL(directoryUrl);
 
+  const expectedDirectorySnapshot = createDirectorySnapshot(directoryUrl);
+  ensureEmptyDirectorySync(directoryUrl);
+  return {
+    compare: () => {
+      const actualDirectorySnapshot = createDirectorySnapshot(directoryUrl);
+      compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
+    },
+    restore: () => {
+      if (expectedDirectorySnapshot.notFound) {
+        removeDirectorySync(directoryUrl, {
+          recursive: true,
+          allowUseless: true,
+        });
+        return;
+      }
+      if (expectedDirectorySnapshot.empty) {
+        ensureEmptyDirectorySync(directoryUrl);
+        return;
+      }
+      writeFileStructureSync(
+        directoryUrl,
+        expectedDirectorySnapshot.fileStructure,
+      );
+    },
+  };
+};
+const createDirectorySnapshot = (directoryUrl) => {
   const directorySnapshot = {
     [snapshotSymbol]: true,
     empty: false,
@@ -80,7 +112,23 @@ export const takeDirectorySnapshot = (directoryUrl) => {
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
-
+  const expectedFileSnapshot = createFileSnapshot(fileUrl);
+  removeFileSync(fileUrl);
+  return {
+    compare: () => {
+      const actualFileSnapshot = createFileSnapshot(fileUrl);
+      compareSnapshots(actualFileSnapshot, expectedFileSnapshot);
+    },
+    restore: () => {
+      if (expectedFileSnapshot.empty) {
+        removeFileSync(fileUrl, { allowUseless: true });
+        return;
+      }
+      writeFileSync(fileUrl, expectedFileSnapshot.content);
+    },
+  };
+};
+const createFileSnapshot = (fileUrl) => {
   const fileSnapshot = {
     [snapshotSymbol]: true,
     empty: false,
@@ -124,7 +172,7 @@ export const takeFileSnapshot = (fileUrl) => {
   return fileSnapshot;
 };
 
-export const compareSnapshots = (currentSnapshot, previousSnapshot) => {
+const compareSnapshots = (currentSnapshot, previousSnapshot) => {
   if (!currentSnapshot || !currentSnapshot[snapshotSymbol]) {
     throw new TypeError(
       `1st argument must be a snapshot, received ${currentSnapshot}`,

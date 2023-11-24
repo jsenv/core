@@ -1,5 +1,5 @@
 import { chromium } from "playwright";
-import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/log";
@@ -167,14 +167,12 @@ const test = async () => {
 };
 
 try {
-  const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await ensureEmptyDirectory(snapshotDirectoryUrl);
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   if (!process.env.CI) {
     await ensureEmptyDirectory(screenshotDirectoryUrl);
   }
   await test();
-  const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
-  compareSnapshots(actualSnapshots, expectedSnapshots);
+  directorySnapshot.compare();
 } finally {
   if (!debug) {
     buildServer.stop();
