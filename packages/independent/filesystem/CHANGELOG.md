@@ -1,3 +1,7 @@
+# 4.6.0
+
+- Add saveDirectoryContentSync
+
 # 4.4.0
 
 - Add many public exports

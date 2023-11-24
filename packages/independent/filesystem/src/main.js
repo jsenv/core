@@ -39,6 +39,7 @@ export { readSymbolicLinkSync } from "./read_write/read_symbolic_link_sync.js";
 export { writeDirectorySync } from "./read_write/write_directory_sync.js";
 export { readFileStructureSync } from "./read_write/read_file_structure_sync.js";
 export { writeFileStructureSync } from "./read_write/write_file_structure_sync.js";
+export { saveDirectoryContentSync } from "./read_write/save_directory_content_sync.js";
 
 // stat
 export { readEntryStat } from "./read_write/stat/read_entry_stat.js";

@@ -1,34 +1,37 @@
 import { assert } from "@jsenv/assert";
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 import {
   copyDirectoryContent,
-  ensureEmptyDirectory,
+  ensureEmptyDirectorySync,
   writeDirectory,
   writeFile,
   readFileStructureSync,
   writeFileStructureSync,
 } from "@jsenv/filesystem";
 
-const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
+const tempDirectoryUrl = new URL("./temp/", import.meta.url);
 
 const test = async (callback) => {
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 
   try {
     await callback();
   } finally {
-    await ensureEmptyDirectory(tempDirectoryUrl);
+    ensureEmptyDirectorySync(tempDirectoryUrl);
   }
 };
 
 // copy nothing into nothing
 await test(async () => {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl);
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl);
+  const sourceUrl = new URL("source", tempDirectoryUrl);
+  const destinationUrl = new URL("dest", tempDirectoryUrl);
 
   try {
-    await copyDirectoryContent({ from: sourceUrl, to: destinationUrl });
+    await copyDirectoryContent({
+      from: sourceUrl,
+      to: destinationUrl,
+    });
     throw new Error("should throw");
   } catch (actual) {
     const expected = new Error(
@@ -40,8 +43,8 @@ await test(async () => {
 
 // copy file instead of directory
 await test(async () => {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl);
-  const destinationUrl = resolveUrl("source", tempDirectoryUrl);
+  const sourceUrl = new URL("source", tempDirectoryUrl);
+  const destinationUrl = new URL("source", tempDirectoryUrl);
   await writeFile(sourceUrl, "coucou");
 
   try {
@@ -59,8 +62,8 @@ await test(async () => {
 
 // copy directory into nothing
 await test(async () => {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl);
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl);
+  const sourceUrl = new URL("source", tempDirectoryUrl);
+  const destinationUrl = new URL("dest", tempDirectoryUrl);
   await writeDirectory(sourceUrl);
 
   try {
@@ -78,8 +81,8 @@ await test(async () => {
 
 // move directory into file instead of directory
 await test(async () => {
-  const sourceUrl = resolveUrl("source", tempDirectoryUrl);
-  const destinationUrl = resolveUrl("dest", tempDirectoryUrl);
+  const sourceUrl = new URL("source", tempDirectoryUrl);
+  const destinationUrl = new URL("dest", tempDirectoryUrl);
   await writeDirectory(sourceUrl);
   await writeFile(destinationUrl);
 
