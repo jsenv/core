@@ -130,7 +130,11 @@ export const injectSupervisorIntoHTML = async (
           });
         });
       } else {
-        scriptInfos.push({ type, src: inlineScriptSrc, isInline: true });
+        scriptInfos.push({
+          type,
+          src: inlineScriptSrc,
+          isInline: true,
+        });
         actions.push(async () => {
           try {
             const inlineJsSupervised = await injectSupervisorIntoJs({

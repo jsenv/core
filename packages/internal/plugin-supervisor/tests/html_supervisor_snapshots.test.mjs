@@ -18,6 +18,7 @@ const test = async (fixtureFilename) => {
       url: String(fileUrl),
     },
     {
+      supervisorScriptSrc: "mocked_for_test.js",
       supervisorOptions: {},
       webServer: {
         rootDirectoryUrl: new URL("./fixtures/", import.meta.url),
