@@ -30,12 +30,16 @@ try {
 --- reason ---
 unexpected character in "a.js.map" content
 --- details ---
-console.log("c");
-             ^ unexpected "c", expected to continue with 'b");'…
+{
+  "sources": [
+    "b"
+     ^ unexpected "b", expected to continue with 'a"'…
+  ]
+}
 --- path ---
-[13]
+[22]#L3C6
 --- file ---
-${snapshotsDirectoryUrl}b.js`;
+${snapshotsDirectoryUrl}a.js.map`;
   assert({ actual, expected });
 } finally {
   writeFileStructureSync(
