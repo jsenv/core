@@ -378,115 +378,6 @@ console.log(myMock(), myMock(), myMock(), myMock());
 // > 10, 'x', true, true
 ```
 
-## Mock modules
-
-_jest_:
-
-```js
-import axios from "axios";
-import Users from "./users";
-
-jest.mock("axios");
-
-test("should fetch users", () => {
-  const users = [{ name: "Bob" }];
-  const resp = { data: users };
-  axios.get.mockResolvedValue(resp);
-
-  // or you could use the following depending on your use case:
-  // axios.get.mockImplementation(() => Promise.resolve(resp))
-
-  return Users.all().then((data) => expect(data).toEqual(users));
-});
-```
-
-:point_up: This is a super bad practice, I hope you don't have to do this.
-If you really don't have a choice it's doable with jsenv as follow:
-
-_@jsenv_:
-
-```js
-// "tests/axios.mock.js"
-export const axiosMock = {
-  get: () => undefined,
-};
-
-export default axiosMock;
-```
-
-```js
-// users.test.js
-import { axiosMock } from "axios";
-import { assert } from "@jsenv/assert";
-
-import Users from "./users.js";
-
-// should fetch users
-{
-  const users = [{ name: "Bob" }];
-  const resp = { data: users };
-  axiosMock.get = () => {
-    return { data: users };
-  };
-  const actual = await Users.all();
-  const expected = users;
-  assert({ actual, expected });
-}
-```
-
-Mock `"axios"` on browsers using importmap:
-
-```html
-<!doctype html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-  </head>
-
-  <body>
-    <script type="importmap">
-      {
-        "imports": {
-          "axios": "/tests/mocks/axios.mock.js"
-        }
-      }
-    </script>
-    <script type="module" src="users.test.js"></script>
-  </body>
-</html>
-```
-
-Mock axios on Node.js using importmap:
-
-```js
-// associate an importMap to "users.test.js"
-// see also https://github.com/jsenv/core/wiki/I)-Test-in-Node.js#54-importmap
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
-
-const testPlanReport = await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
-  testPlan: {
-    "./**/*.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
-    "./**/users.test.js": {
-      node: {
-        runtime: nodeWorkerThread({
-          importMap: {
-            imports: {
-              axios: "/tests/mocks/axios.mock.js",
-            },
-          },
-        }),
-      },
-    },
-  },
-});
-```
-
 ## Numbers
 
 _Jest:_
@@ -612,6 +503,135 @@ assert({
   actual: shoppingList.includes("milk"),
   expected: true,
 });
+```
+
+## Mock modules
+
+_jest_:
+
+```js
+import axios from "axios";
+import Users from "./users";
+
+jest.mock("axios");
+
+test("should fetch users", () => {
+  const users = [{ name: "Bob" }];
+  const resp = { data: users };
+  axios.get.mockResolvedValue(resp);
+
+  // or you could use the following depending on your use case:
+  // axios.get.mockImplementation(() => Promise.resolve(resp))
+
+  return Users.all().then((data) => expect(data).toEqual(users));
+});
+```
+
+:point_up: This is a super bad practice, I hope you don't have to do this.
+If you really don't have a choice it's doable with jsenv as follow:
+
+_@jsenv_:
+
+```js
+// "tests/axios.mock.js"
+export const axiosMock = {
+  get: () => undefined,
+};
+
+export default axiosMock;
+```
+
+```js
+// users.test.js
+import { axiosMock } from "axios";
+import { assert } from "@jsenv/assert";
+
+import Users from "./users.js";
+
+// should fetch users
+{
+  const users = [{ name: "Bob" }];
+  const resp = { data: users };
+  axiosMock.get = () => {
+    return { data: users };
+  };
+  const actual = await Users.all();
+  const expected = users;
+  assert({ actual, expected });
+}
+```
+
+Mock `"axios"` on browsers using importmap:
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "axios": "/tests/mocks/axios.mock.js"
+        }
+      }
+    </script>
+    <script type="module" src="users.test.js"></script>
+  </body>
+</html>
+```
+
+Mock axios on Node.js using importmap:
+
+```js
+// associate an importMap to "users.test.js"
+// see also https://github.com/jsenv/core/wiki/I)-Test-in-Node.js#54-importmap
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+
+const testPlanReport = await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+    "./**/users.test.js": {
+      node: {
+        runtime: nodeWorkerThread({
+          importMap: {
+            imports: {
+              axios: "/tests/mocks/axios.mock.js",
+            },
+          },
+        }),
+      },
+    },
+  },
+});
+```
+
+## Snapshot testing
+
+_Jest:_
+
+```js
+import renderer from "react-test-renderer";
+import Link from "../Link";
+
+it("renders correctly", () => {
+  const tree = renderer
+    .create(<Link page="http://www.facebook.com">Facebook</Link>)
+    .toJSON();
+  expect(tree).toMatchSnapshot();
+});
+```
+
+```js
+
 ```
 
 ## Conclusion
