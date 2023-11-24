@@ -58,8 +58,11 @@ export { moveEntry } from "./move/move_entry.js";
 
 // copy
 export { copyEntry } from "./copy/copy_entry.js";
+export { copyFile } from "./copy/copy_file.js";
+export { copyDirectory } from "./copy/copy_directory.js";
 export { copyDirectoryContent } from "./copy/copy_directory_content.js";
 export { copyEntrySync } from "./copy/copy_entry_sync.js";
+export { copyFileSync } from "./copy/copy_file_sync.js";
 export { copyDirectorySync } from "./copy/copy_directory_sync.js";
 export { copyDirectoryContentSync } from "./copy/copy_directory_content_sync.js";
 
