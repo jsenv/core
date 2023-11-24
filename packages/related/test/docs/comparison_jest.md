@@ -640,7 +640,7 @@ import { takeDirectorySnapshot } from "@jsenv/snapshot";
 const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
 const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 {
-  const browser = await browserLauncher.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto(`http://localhost:8000`);
   await page.waitForSelector(".link_to_facebook", { timeout: 5_000 });
