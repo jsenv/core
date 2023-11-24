@@ -630,8 +630,33 @@ it("renders correctly", () => {
 });
 ```
 
-```js
+_jsenv:_
 
+```js
+import { writeFileSync } from "node:fs";
+import { chromium } from "playwright";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
+
+const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+
+const expectedDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+{
+  const browser = await browserLauncher.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto(`http://localhost:8000`);
+  await page.waitForSelector(".link_to_facebook", { timeout: 5_000 });
+  const linkElementOuterHTML = await page.evaluate(
+    /* eslint-disable no-undef */
+    () => {
+      return document.querySelector(".link_to_facebook").outerHTML;
+    },
+    /* eslint-enable no-undef */
+  );
+  writeFileSync(new URL("./link_to_facebook.html", snapshotDirectoryUrl));
+  browser.close();
+}
+const actualDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+compareSnapshots(actualDirectorySnapshot, expectedDirectorySnapshot);
 ```
 
 ## Conclusion
