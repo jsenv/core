@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, removeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
@@ -22,10 +22,11 @@ const test = async (params) => {
   });
   const actualBuildSnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   compareSnapshots(actualBuildSnapshot, expectedBuildSnapshot);
-  writeFileSync(
-    new URL("./main.html", snapshotDirectoryUrl),
-    readFileSync(new URL("./client/main.html", import.meta.url)),
-  );
+  copyFileSync({
+    from: new URL("./client/main.html", import.meta.url),
+    to: new URL("./main.html", snapshotDirectoryUrl),
+    overwrite: true,
+  });
   const server = await startFileServer({
     rootDirectoryUrl: snapshotDirectoryUrl,
   });
@@ -35,6 +36,7 @@ const test = async (params) => {
     pageFunction: () => window.resultPromise,
     /* eslint-enable no-undef */
   });
+  removeFileSync(new URL("./main.html", snapshotDirectoryUrl));
   const actual = returnValue;
   const expected = {
     typeofCurrentScript: "object",
