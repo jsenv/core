@@ -216,6 +216,7 @@ export const jsenvPluginSupervisor = ({
                 });
               return inlineScriptReference.generatedSpecifier;
             },
+            sourcemaps: htmlUrlInfo.kitchen.context.sourcemaps,
           },
         );
       },

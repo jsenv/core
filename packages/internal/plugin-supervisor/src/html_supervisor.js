@@ -78,6 +78,7 @@ export const injectSupervisorIntoHTML = async (
     generateInlineScriptSrc = ({ inlineScriptUrl }) =>
       urlToRelativeUrl(inlineScriptUrl, webServer.rootDirectoryUrl),
     inlineAsRemote,
+    sourcemaps = "inline",
   },
 ) => {
   const htmlAst = parseHtml({ html: content, url });
@@ -138,6 +139,7 @@ export const injectSupervisorIntoHTML = async (
               url: inlineScriptUrl,
               type,
               inlineSrc: inlineScriptSrc,
+              sourcemaps,
             });
             mutations.push(() => {
               setHtmlNodeText(scriptNode, inlineJsSupervised, {

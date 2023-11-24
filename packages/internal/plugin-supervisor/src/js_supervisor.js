@@ -46,6 +46,7 @@ export const injectSupervisorIntoJs = async ({
   url,
   type,
   inlineSrc,
+  sourcemaps,
 }) => {
   const babelPluginJsSupervisor =
     type === "js_module"
@@ -58,13 +59,15 @@ export const injectSupervisorIntoJs = async ({
     inputUrl: url,
   });
   let code = result.code;
-  let map = result.map;
-  const sourcemapDataUrl = generateSourcemapDataUrl(map);
-  code = SOURCEMAP.writeComment({
-    contentType: "text/javascript",
-    content: code,
-    specifier: sourcemapDataUrl,
-  });
+  if (sourcemaps === "inline") {
+    const map = result.map;
+    const sourcemapDataUrl = generateSourcemapDataUrl(map);
+    code = SOURCEMAP.writeComment({
+      contentType: "text/javascript",
+      content: code,
+      specifier: sourcemapDataUrl,
+    });
+  }
   code = `${code}
 //# sourceURL=${urlToRelativeUrl(url, webServer.rootDirectoryUrl)}`;
   return code;
