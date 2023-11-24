@@ -1,6 +1,6 @@
 export const mediaTypeInfos = {
   "application/json": {
-    extensions: ["json"],
+    extensions: ["json", "map"],
     isTextual: true,
   },
   "application/importmap+json": {

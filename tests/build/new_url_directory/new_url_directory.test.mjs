@@ -36,7 +36,7 @@ const test = async (params) => {
   const actual = {
     returnValue,
     jsFileContent: String(
-      readFileSync(new URL("./dist/src/sub/file.js", import.meta.url)),
+      readFileSync(new URL("./snapshots/src/sub/file.js", import.meta.url)),
     ),
   };
   const expected = {

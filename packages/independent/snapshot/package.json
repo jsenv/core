@@ -35,9 +35,9 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.5.0",
+    "@jsenv/filesystem": "4.5.1",
     "@jsenv/urls": "2.2.1",
-    "@jsenv/utils": "2.0.1",
+    "@jsenv/utils": "2.1.0",
     "@jsenv/assert": "2.13.0"
   }
 }
