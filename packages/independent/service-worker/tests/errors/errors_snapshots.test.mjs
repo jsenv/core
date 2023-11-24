@@ -8,13 +8,20 @@
 
 import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { takeDirectorySnapshot, compareSnapshots } from "@jsenv/snapshot";
 import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/log";
+
 import { buildServer } from "./errors_build_server.mjs";
 
-const snapshotsDirectoryUrl = new URL("./snapshots/html/", import.meta.url);
-await ensureEmptyDirectory(snapshotsDirectoryUrl);
+if (process.env.CI) {
+  // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9
+  process.exit(0);
+}
+
+const snapshotDirectoryUrl = new URL("./snapshots/html/", import.meta.url);
+
 const debug = false;
 const browser = await chromium.launch({
   headless: !debug,
@@ -22,17 +29,16 @@ const browser = await chromium.launch({
   args: ["--ignore-certificate-errors"],
 });
 const context = await browser.newContext({ ignoreHTTPSErrors: true });
-const openPage = async (url) => {
-  const page = await context.newPage();
-  await page.setViewportSize({ width: 640, height: 480 }); // set a relatively small and predicatble size
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      console.error(message.text());
-    }
-  });
-  await page.goto(url);
-  return page;
-};
+const htmlUrl = `${buildServer.origin}/main.html`;
+const page = await context.newPage();
+await page.setViewportSize({ width: 640, height: 480 }); // set a relatively small and predicatble size
+page.on("console", (message) => {
+  if (message.type() === "error") {
+    console.error(message.text());
+  }
+});
+await page.goto(htmlUrl);
+
 const buildStory = async (name) => {
   await fetchUrl(`${buildServer.origin}/build_${name}`, {
     ignoreHttpsError: true,
@@ -56,10 +62,10 @@ const takeSnapshots = async (page, name) => {
   name = `${snapshotCount}_${name}`;
   snapshotCount++;
   const task = createTaskLog(`snapshoting "${name}" on chromium`, {
-    disabled: process.env.FROM_TESTS,
+    disabled: process.env.CI,
   });
   const uiLocator = await page.locator("#ui");
-  if (!process.env.FROM_TESTS) {
+  if (!process.env.CI) {
     const uiScreenshotBuffer = await uiLocator.screenshot();
     writeFileSync(
       new URL(`./snapshots/screen/${name}.png`, import.meta.url),
@@ -87,9 +93,8 @@ const takeSnapshots = async (page, name) => {
 };
 
 try {
-  const htmlUrl = `${buildServer.origin}/main.html`;
-  const page = await openPage(htmlUrl);
-
+  const expectedSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+  await ensureEmptyDirectory(snapshotDirectoryUrl);
   await waitForPageReady(page);
   await takeSnapshots(page, "after_load");
 
@@ -115,6 +120,8 @@ try {
   await buildStory("error_during_register");
   await clickToCheckUpdate(page);
   await takeSnapshots(page, "error_during_register_found");
+  const actualSnapshots = takeDirectorySnapshot(snapshotDirectoryUrl);
+  compareSnapshots(actualSnapshots, expectedSnapshots);
 } finally {
   if (!debug) {
     browser.close();
