@@ -1,6 +1,93 @@
 [Jest](https://github.com/jestjs/jest) is a popular test framework.
 
-This page shows how tests written with jest API could be written using `@jsenv/assert`. The goal is to illustrates the difference in design and should help the reader to make his own opinion about `@jsenv/assert`. It can also be used to migrate from jest to jsenv.
+This page shows how tests written with jest API could be written using `@jsenv/test`. The goal is to illustrates the difference in design and should help the reader to make his own opinion about `@jsenv/test`. It can also be used to migrate from jest to jsenv.
+
+## Executing a single test
+
+_Jest_:
+
+```console
+jest tests/file.js --config=jest.config.cjs
+```
+
+_@jsenv/test_:
+
+```console
+node ./tests/file.js
+```
+
+## Executing all tests
+
+_Jest_:
+
+```console
+jest --config=jest.config.cjs
+```
+
+```js
+// jest.config.cjs
+module.exports = {
+  roots: ["./src/", "./tests/"],
+  workerThreads: true,
+  maxConcurrency: 3,
+};
+```
+
+_@jsenv/test_:
+
+```console
+node ./scripts/test.mjs
+```
+
+```js
+// scripts/test.mjs
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+
+await executeTestPlan({
+  rootDirectoryUrl: new URL("../", import.meta.url),
+  testPlan: {
+    "./src/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+    "./tests/**/*.test.mjs": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+  },
+  concurrency: 3,
+});
+```
+
+## Configuring timeout for a test
+
+The goal is to configure a custom timeout after which "sum.test.mjs" is considered as failed. x
+
+_Jest_:
+
+```js
+jest.setTimeout(60_000);
+```
+
+_@jsenv/test_:
+
+```js
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+
+await executeTestPlan({
+  testPlan: {
+    "**/*.test.mjs": {
+      runtime: nodeWorkerThread(),
+    },
+    "**/sum.test.mjs": {
+      runtime: nodeWorkerThread(),
+      allocatedMs: 60_000,
+    },
+  },
+});
+```
 
 ## Exceptions
 
@@ -25,7 +112,7 @@ test("compiling android goes as expected", () => {
 });
 ```
 
-_jsenv:_
+_@jsenv/test:_
 
 ```js
 function compileAndroidCode() {
@@ -75,7 +162,7 @@ test("the fetch fails with an error", async () => {
 });
 ```
 
-_jsenv:_
+_@jsenv/test:_
 
 ```js
 // the data is peanut butter
@@ -123,7 +210,7 @@ test("the data is peanut butter", (done) => {
 });
 ```
 
-_jsenv:_
+_@jsenv/test:_
 
 ```js
 // the data is peanut butter
@@ -168,7 +255,7 @@ test("city database has San Juan", () => {
 });
 ```
 
-_jsenv:_
+_@jsenv/test:_
 
 ```js
 const test = async (expectedCity) => {
@@ -208,7 +295,7 @@ test("city database has San Juan", () => {
 });
 ```
 
-_jsenv:_
+_@jsenv/test:_
 
 ```js
 await initializeCityDatabase();
@@ -234,7 +321,7 @@ _Jest:_
 
 beforeEach, afterEach, beforeAll and afterAll are scoped per describe block, see https://jestjs.io/docs/setup-teardown#scoping
 
-_jsenv:_
+_@jsenv/test:_
 
 Code execution is standard, no documentation needed
 
@@ -244,7 +331,7 @@ _Jest:_
 
 beforeEach, afterEach, beforeAll and afterAll have a special execution order, see https://jestjs.io/docs/setup-teardown#order-of-execution
 
-_jsenv:_
+_@jsenv/test:_
 
 Code execution is standard, no documentation needed
 
@@ -630,7 +717,7 @@ it("renders correctly", () => {
 });
 ```
 
-_jsenv:_
+_@jsenv/test:_
 
 ```js
 import { writeFileSync } from "node:fs";
