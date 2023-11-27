@@ -235,7 +235,7 @@ export const formatStringAssertionErrorMessage = ({
           expectedLength === 0
             ? `${COLUMN_MARKER_CHAR} an empty string was expected`
             : `${COLUMN_MARKER_CHAR} expected to end here, on ${inspect(
-                actual[actualLength - 1],
+                expected[expectedLength - 1],
               )}`,
         expectedOverview: false,
       }),

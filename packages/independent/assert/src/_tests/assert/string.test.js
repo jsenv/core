@@ -219,6 +219,24 @@ actual`,
     );
   }
 }
+// too long last char
+{
+  const actual = "hey/";
+  const expected = "hey";
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string is too long, it contains one extra character
+--- details ---
+hey/
+  ^ expected to end here, on "y"
+--- path ---
+actual`,
+    );
+  }
+}
 // too long (string given instead of empty string)
 {
   const actual = `aa`;
