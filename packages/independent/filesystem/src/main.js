@@ -36,6 +36,7 @@ export { ensureParentDirectoriesSync } from "./read_write/ensure_parent_director
 export { readDirectorySync } from "./read_write/read_directory_sync.js";
 export { getRealFileSystemUrlSync } from "./read_write/get_real_file_system_url_sync.js";
 export { readSymbolicLinkSync } from "./read_write/read_symbolic_link_sync.js";
+export { writeSymbolicLinkSync } from "./read_write/write_symbolic_link_sync.js";
 export { writeDirectorySync } from "./read_write/write_directory_sync.js";
 export { readFileStructureSync } from "./read_write/read_file_structure_sync.js";
 export { writeFileStructureSync } from "./read_write/write_file_structure_sync.js";
