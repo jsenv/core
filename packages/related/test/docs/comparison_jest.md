@@ -719,8 +719,8 @@ Mock changes the behaviour of the code too deeply. They end up being:
 There is countless articles explaining why mock should be avoided.
 The simplest strategy to avoid mock:
 
-- Make your code more flexible so that test file does not need a mock to test the code
-- Use integration/end-to-end tests so that do the real things instead of mocking
+- Make code more flexible so that test file does not need mock(s).
+- Use integration/end-to-end tests so that do the real things instead of mocking. [playwright](https://playwright.dev/)<sup>↗</sup>, [cypress](https://www.cypress.io/)<sup>↗</sup>, ...
 
 That being said here is how you could mock things with jest and jsenv.
 
