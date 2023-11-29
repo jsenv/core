@@ -38,13 +38,13 @@ Test file can be executed on one or many runtime: it's possible to execute tests
 
 ## Executing one test in node
 
-### Jest
+##### Jest
 
 ```console
 jest tests/sum.test.js
 ```
 
-### @jsenv/test
+##### @jsenv/test
 
 ```console
 node tests/sum.test.js
@@ -52,11 +52,11 @@ node tests/sum.test.js
 
 ## Executing one test in a web browser
 
-_Jest_:
+##### Jest
 
 Not available
 
-_@jsenv/test_:
+##### @jsenv/test
 
 Write your test in a file like `sum.test.html`:
 
@@ -81,7 +81,7 @@ Write your test in a file like `sum.test.html`:
 
 ## Executing all tests
 
-_Jest_:
+##### Jest
 
 ```console
 jest --config=jest.config.cjs
@@ -94,7 +94,7 @@ module.exports = {
 };
 ```
 
-_@jsenv/test_:
+##### @jsenv/test
 
 ```console
 node ./scripts/test.js
@@ -133,7 +133,7 @@ await executeTestPlan({
 
 The goal is to configure a timeout for all tests and a custom timeout for "_tests/sum.test.js_".
 
-_Jest_:
+##### Jest
 
 ```js
 // jest.config.cjs
@@ -148,7 +148,7 @@ module.exports = {
 jest.setTimeout(60_000);
 ```
 
-_@jsenv/test_:
+##### @jsenv/test
 
 ```js
 // scripts/test.js
@@ -675,7 +675,7 @@ assert({
 
 ## Mock modules
 
-_jest_:
+##### Jest
 
 ```js
 import axios from "axios";
