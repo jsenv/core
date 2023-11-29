@@ -15,19 +15,68 @@ The [conclusion](#conclusion) highlights the best parts of the approach taken by
 
 # Executing tests
 
-## Executing one test
+## Configuring runtime
+
+_Jest:_
+
+Jest execute test file inside:
+
+- a child process (default)
+- a worker thread
+
+_@jsenv/test_:
+
+Jsenv execute test file inside:
+
+- a child process
+- a worker thread
+- a web browser: Chromium, Webkit, Firefox
+
+There is no default runtime: it must be explicitely configured.  
+Test file can be executed on one or many runtime: it's possible to execute tests on chromium and on firefox for example.
+
+## Executing one test in node
 
 _Jest_:
 
 ```console
-jest tests/file.js --config=jest.config.cjs
+jest tests/sum.test.js
 ```
 
 _@jsenv/test_:
 
 ```console
-node ./tests/file.js
+node tests/sum.test.js
 ```
+
+## Executing one test in a web browser
+
+_Jest_:
+
+Not available
+
+_@jsenv/test_:
+
+Write your test in a file like `sum.test.html`:
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script type="module" src="sum.test.js"></script>
+  </body>
+</html>
+```
+
+1. Start your web server
+2. Open a web browser (chrome, firefox, safari, ...)
+3. Go to `http://localhost/tests/sum.test.html`
+4. Use browser devtools to debug test execution
 
 ## Executing all tests
 
@@ -40,61 +89,77 @@ jest --config=jest.config.cjs
 ```js
 // jest.config.cjs
 module.exports = {
-  roots: ["./src/", "./tests/"],
-  workerThreads: true,
-  maxConcurrency: 3,
+  rootDir: "./tests/",
 };
 ```
 
 _@jsenv/test_:
 
 ```console
-node ./scripts/test.mjs
+node ./scripts/test.js
 ```
 
 ```js
-// scripts/test.mjs
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+// scripts/test.js
+import {
+  executeTestPlan,
+  nodeWorkerThread,
+  chromium,
+  firefox,
+} from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "./src/**/*.test.mjs": {
+    "./tests/**/*.test.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
     },
-    "./tests/**/*.test.mjs": {
-      node: {
-        runtime: nodeWorkerThread(),
+    "./tests/**/*.test.html": {
+      chromium: {
+        runtime: chromium(),
+      },
+      firefox: {
+        runtime: firefox(),
       },
     },
   },
-  concurrency: 3,
 });
 ```
 
-## Configuring timeout for a test
+## Configuring timeout
 
-The goal is to configure a custom timeout after which "sum.test.mjs" execution would be considered as failed.
+The goal is to configure a timeout for all tests and a custom timeout for "_tests/sum.test.js_".
 
 _Jest_:
 
 ```js
+// jest.config.cjs
+module.exports = {
+  rootDir: "./tests/",
+  testTimeout: 30_000,
+};
+```
+
+```js
+// sum.test.js
 jest.setTimeout(60_000);
 ```
 
 _@jsenv/test_:
 
 ```js
+// scripts/test.js
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   testPlan: {
-    "**/*.test.mjs": {
+    "./tests/**/*.test.js": {
       runtime: nodeWorkerThread(),
+      allocatedMs: 30_000,
     },
-    "**/sum.test.mjs": {
+    "./tests/**/sum.test.js": {
       runtime: nodeWorkerThread(),
       allocatedMs: 60_000,
     },
