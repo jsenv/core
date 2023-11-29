@@ -1,8 +1,21 @@
-[Jest](https://github.com/jestjs/jest) is a popular test framework.
+# Comparison with jest
 
-This page shows how tests written with jest API could be written using `@jsenv/test`. The goal is to illustrates the difference in design and should help the reader to make his own opinion about `@jsenv/test`. It can also be used to migrate from jest to jsenv.
+Comparing `@jsenv/test` and with [Jest](https://github.com/jestjs/jest)<sup>↗</sup>, a popular test framework.
 
-## Executing a single test
+# Introduction
+
+This document is a list of "how to do X" with jest and jsenv. It is split in 2 major parts:
+
+- [Executing tests](#executing-tests)
+- [Writing tests](#writing-tests)
+
+The goal is not to say one is better than ther other. It is to help the reader make his own opinion about `@jsenv/test`. It can also be used to migrate from jest to jsenv. Or the other way around.
+
+The [conclusion](#conclusion) highlights the best parts of the approach taken by `@jsenv/tests`.
+
+# Executing tests
+
+## Executing one test
 
 _Jest_:
 
@@ -63,7 +76,7 @@ await executeTestPlan({
 
 ## Configuring timeout for a test
 
-The goal is to configure a custom timeout after which "sum.test.mjs" is considered as failed. x
+The goal is to configure a custom timeout after which "sum.test.mjs" execution would be considered as failed.
 
 _Jest_:
 
@@ -88,6 +101,8 @@ await executeTestPlan({
   },
 });
 ```
+
+# Writing tests
 
 ## Exceptions
 
@@ -744,7 +759,7 @@ const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 directorySnapshot.compare();
 ```
 
-## Conclusion
+# Conclusion
 
 <!--
 TODO: rewrite this the other way around:
