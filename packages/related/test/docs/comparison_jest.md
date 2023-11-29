@@ -1,6 +1,6 @@
 # Comparison with jest
 
-Comparing `@jsenv/test` and with [Jest](https://github.com/jestjs/jest)<sup>↗</sup>, a popular test framework.
+Comparing `@jsenv/test` and [Jest](https://github.com/jestjs/jest)<sup>↗</sup>, a popular test framework.
 
 # Introduction
 
@@ -9,22 +9,23 @@ This document is a list of "how to do X" with jest and jsenv. It is split in 2 m
 - [Executing tests](#executing-tests)
 - [Writing tests](#writing-tests)
 
-The goal is not to say one is better than ther other. It is to help the reader make his own opinion about `@jsenv/test`. It can also be used to migrate from jest to jsenv. Or the other way around.
+The goal is not to say which one is better. The goal is to help the reader make his own opinion about `@jsenv/test`.  
+This documentation can also be used to migrate from jest to jsenv, or the other way around.
 
-The [conclusion](#conclusion) highlights the best parts of the approach taken by `@jsenv/tests`.
+Finally the [conclusion](#conclusion) highlights the best parts of the approach taken by `@jsenv/test`.
 
 # Executing tests
 
 ## Configuring runtime
 
-_Jest:_
+### Jest
 
 Jest execute test file inside:
 
 - a child process (default)
 - a worker thread
 
-_@jsenv/test_:
+### @jsenv/test
 
 Jsenv execute test file inside:
 
@@ -37,13 +38,13 @@ Test file can be executed on one or many runtime: it's possible to execute tests
 
 ## Executing one test in node
 
-_Jest_:
+### Jest
 
 ```console
 jest tests/sum.test.js
 ```
 
-_@jsenv/test_:
+### @jsenv/test
 
 ```console
 node tests/sum.test.js
