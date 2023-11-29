@@ -3,4 +3,5 @@
 Executing test files in web browsers or Node.js.  
 This tool enforce test files to be written as **standard** files, without any sort of complexity.
 
-[Documentation](<https://github.com/jsenv/core/wiki/D)-Test>)
+- [Documentation](<https://github.com/jsenv/core/wiki/D)-Test>)
+- [Comparison with Jest](./docs/comparison_jest.md)

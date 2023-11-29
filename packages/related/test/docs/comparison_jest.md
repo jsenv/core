@@ -826,41 +826,12 @@ directorySnapshot.compare();
 
 # Conclusion
 
-<!--
-TODO: rewrite this the other way around:
-"jest does X so I can't do Y"
-->
-"@jsenv does X so I can do Y"
+`@jsenv/test` allows to write test files like standard files. In the end a test file can be executed directly with Node.js or in a web browser.
 
-for example debugging withing vscode in one click
+In that regard:
 
-### Code execution flow
-
-Jest provide an API to regroup code into blocks depending what it does:
-
-- describe, beforeAll, beforeEach, test, afterEach, afterAll
-
-These apis allow to identify code is special but disturbs while reading the code. The top-down execution flow is not that simple anymore.
-Code execution flow with jest is not standard, see [Scoping](#scoping) and [Order of execution](#order-of-execution).
-As a result **only jest can execute test files**: you cannot use other tools without configuration/plugins:
-
-- a VSCode plugin to debug test file execution
-- configure ESLint to allow "describe/test/beforeEach/afterEach/beforeAll/afterAll" magic globals
-- ...and more...
-
-### Testing exception
-
-Jest has a specific way to test code throwing exceptions, see [Exceptions](#exceptions).
-When the exception is thrown by async functions the API is different, see [Async via promises](#async-via-promises).
-As a result, when code throw exception, the jest way to write assertions is different. And depending if the assertion is sync or async you have to use two different assertion API.
-
-### Code portability
-
-Jest api makes code dependent on jest:
-
-- tools cannot execute test files without plugins/configuration
-- humans cannot read test files without documentation
-
-As a result switching from a source file to a test file cost cognitivie energy. You might even need to re-read Jest documentation to remember what's going on (see https://jestjs.io/docs/setup-teardown).
-
-`@jsenv/assert` favors standard. As a result code is portable. Switching from a standard file to a test file is designed to be easier and pleasant. -->
+- Test files will never becomes obsolete or unable to run
+- Test files are immediatly compatible with other tools
+- Can use VSCode to debug test files written for Node.js in one click
+- Can use any browser to execute and debug a test file
+- Easier to switch from source files to test files and the other way around: because code is working same way.
