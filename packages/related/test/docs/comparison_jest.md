@@ -18,14 +18,14 @@ Finally the [conclusion](#conclusion) highlights the best parts of the approach 
 
 ## Configuring runtime
 
-### Jest
+##### Jest
 
 Jest execute test file inside:
 
 - a child process (default)
 - a worker thread
 
-### @jsenv/test
+##### @jsenv/test
 
 Jsenv execute test file inside:
 
@@ -172,7 +172,7 @@ await executeTestPlan({
 
 ## Exceptions
 
-_Jest:_
+##### Jest
 
 ```js
 function compileAndroidCode() {
@@ -193,7 +193,7 @@ test("compiling android goes as expected", () => {
 });
 ```
 
-_@jsenv/test:_
+##### @jsenv/test
 
 ```js
 function compileAndroidCode() {
@@ -225,7 +225,7 @@ try {
 
 ## Async via promises
 
-_Jest:_
+##### Jest
 
 ```js
 test("the data is peanut butter", async () => {
@@ -243,7 +243,7 @@ test("the fetch fails with an error", async () => {
 });
 ```
 
-_@jsenv/test:_
+##### @jsenv/test
 
 ```js
 // the data is peanut butter
@@ -270,7 +270,7 @@ _@jsenv/test:_
 
 ## Async via callback
 
-_Jest:_
+##### Jest
 
 ```js
 test("the data is peanut butter", (done) => {
@@ -291,7 +291,7 @@ test("the data is peanut butter", (done) => {
 });
 ```
 
-_@jsenv/test:_
+##### @jsenv/test
 
 ```js
 // the data is peanut butter
@@ -316,7 +316,7 @@ _@jsenv/test:_
 
 ### beforeEach/afterEach
 
-_Jest:_
+##### Jest
 
 ```js
 beforeEach(() => {
@@ -336,7 +336,7 @@ test("city database has San Juan", () => {
 });
 ```
 
-_@jsenv/test:_
+##### @jsenv/test
 
 ```js
 const test = async (expectedCity) => {
@@ -356,7 +356,7 @@ await test("San Juan");
 
 ### beforeAll/afterAll
 
-_Jest:_
+##### Jest
 
 ```js
 beforeAll(() => {
@@ -376,7 +376,7 @@ test("city database has San Juan", () => {
 });
 ```
 
-_@jsenv/test:_
+##### @jsenv/test
 
 ```js
 await initializeCityDatabase();
@@ -398,25 +398,25 @@ try {
 
 ### Scoping
 
-_Jest:_
+##### Jest
 
 beforeEach, afterEach, beforeAll and afterAll are scoped per describe block, see https://jestjs.io/docs/setup-teardown#scoping
 
-_@jsenv/test:_
+##### @jsenv/test
 
 Code execution is standard, no documentation needed
 
 ### Order of execution
 
-_Jest:_
+##### Jest
 
 beforeEach, afterEach, beforeAll and afterAll have a special execution order, see https://jestjs.io/docs/setup-teardown#order-of-execution
 
-_@jsenv/test:_
+##### @jsenv/test
 
 Code execution is standard, no documentation needed
 
-## Mock functions (also called spy)
+## Function calls
 
 Let's imagine we're testing an implementation of a function forEach, which invokes a callback for each item in a supplied array.
 
@@ -429,7 +429,7 @@ export function forEach(items, callback) {
 }
 ```
 
-_Jest:_
+##### Jest
 
 ```js
 const { forEach } = require("./for_each");
@@ -450,7 +450,7 @@ test("forEach mock function", () => {
 });
 ```
 
-_@jsenv/assert:_
+##### @jsenv/test
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -470,9 +470,9 @@ const mockCallback = (value) => {
 }
 ```
 
-## Mock function API
+## Function calls part 2
 
-_Jest:_
+##### Jest
 
 ```js
 // The function was called exactly once
@@ -488,7 +488,7 @@ expect(someMockFunction.mock.calls[0][1]).toBe("second arg");
 expect(someMockFunction.mock.lastCall[0]).toBe("test");
 ```
 
-_@jsenv/assert:_
+##### @jsenv/test
 
 ```js
 // The function was called exactly once
@@ -511,44 +511,9 @@ expect({
 });
 ```
 
-## Mock function return value API
-
-_Jest:_
-
-```js
-const myMock = jest.fn();
-console.log(myMock());
-// > undefined
-
-myMock.mockReturnValueOnce(10).mockReturnValueOnce("x").mockReturnValue(true);
-
-console.log(myMock(), myMock(), myMock(), myMock());
-// > 10, 'x', true, true
-```
-
-_@jsenv/assert:_
-
-```js
-let callCount = 0;
-const myMock = () => {
-  if (callCount === 0) {
-    callCount++;
-    return 10;
-  }
-  if (callCount === 1) {
-    callCount++;
-    return "x";
-  }
-  return true;
-};
-
-console.log(myMock(), myMock(), myMock(), myMock());
-// > 10, 'x', true, true
-```
-
 ## Numbers
 
-_Jest:_
+##### Jest
 
 ```js
 const value = 2 + 2;
@@ -561,7 +526,7 @@ expect(value).toBe(4);
 expect(value).toEqual(4);
 ```
 
-_@jsenv/assert:_
+##### @jsenv/test
 
 ```js
 const value = 2 + 2;
@@ -590,14 +555,14 @@ assert({
 
 ## Floats
 
-_Jest:_
+##### Jest
 
 ```js
 const value = 0.1 + 0.2;
 expect(value).toBeCloseTo(0.3);
 ```
 
-_@jsenv/assert:_
+##### @jsenv/test
 
 ```js
 const value = 0.1 + 0.2;
@@ -619,14 +584,14 @@ assert({
 
 ## Strings
 
-_Jest:_
+##### Jest
 
 ```js
 expect("team").not.toMatch(/I/);
 expect("Christoph").toMatch(/stop/);
 ```
 
-_@jsenv/assert:_
+##### @jsenv/test
 
 ```js
 assert({
@@ -641,7 +606,7 @@ assert({
 
 ## Arrays
 
-_Jest:_
+##### Jest
 
 ```js
 const shoppingList = [
@@ -653,11 +618,10 @@ const shoppingList = [
 ];
 test("the shopping list has milk on it", () => {
   expect(shoppingList).toContain("milk");
-  expect(new Set(shoppingList)).toContain("milk");
 });
 ```
 
-_@jsenv/assert:_
+##### @jsenv/test
 
 ```js
 const shoppingList = [
@@ -671,6 +635,128 @@ assert({
   actual: shoppingList.includes("milk"),
   expected: true,
 });
+```
+
+## Objects
+
+##### Jest
+
+```js
+test("object equality", () => {
+  expect({ foo: true }).toEqual({ foo: true });
+});
+
+test("array equality", () => {
+  expect(["a", "b"]).toEqual(["a", "b"]);
+});
+```
+
+##### @jsenv/test
+
+```js
+// object equality
+assert({
+  actual: { foo: true },
+  expected: { foo: true },
+});
+// array equality
+assert({
+  actual: ["a", "b"],
+  expected: ["a", "b"],
+});
+```
+
+## Snapshot testing
+
+##### Jest
+
+```js
+import renderer from "react-test-renderer";
+import Link from "../Link";
+
+it("renders correctly", () => {
+  const tree = renderer
+    .create(<Link page="http://www.facebook.com">Facebook</Link>)
+    .toJSON();
+  expect(tree).toMatchSnapshot();
+});
+```
+
+##### @jsenv/test
+
+```js
+import { writeFileSync } from "node:fs";
+import { chromium } from "playwright";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+
+const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+{
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto(`http://localhost:8000`);
+  await page.waitForSelector(".link_to_facebook", { timeout: 5_000 });
+  const linkElementOuterHTML = await page.evaluate(
+    /* eslint-disable no-undef */
+    () => {
+      return document.querySelector(".link_to_facebook").outerHTML;
+    },
+    /* eslint-enable no-undef */
+  );
+  writeFileSync(new URL("./link_to_facebook.html", snapshotDirectoryUrl));
+  browser.close();
+}
+directorySnapshot.compare();
+```
+
+## Mocks
+
+Mock changes the behaviour of the code too deeply. They end up being:
+
+- surprising
+- (very) hard to maintain
+
+There is countless articles explaining why mock should be avoided.
+The simplest strategy to avoid mock:
+
+- Make your code more flexible so that test file does not need a mock to test the code
+- Use integration/end-to-end tests so that do the real things instead of mocking
+
+That being said here is how you could mock things with jest and jsenv.
+
+### Mock function return value
+
+##### Jest
+
+```js
+const myMock = jest.fn();
+console.log(myMock());
+// > undefined
+
+myMock.mockReturnValueOnce(10).mockReturnValueOnce("x").mockReturnValue(true);
+
+console.log(myMock(), myMock(), myMock(), myMock());
+// > 10, 'x', true, true
+```
+
+##### @jsenv/test
+
+```js
+let callCount = 0;
+const myMock = () => {
+  if (callCount === 0) {
+    callCount++;
+    return 10;
+  }
+  if (callCount === 1) {
+    callCount++;
+    return "x";
+  }
+  return true;
+};
+
+console.log(myMock(), myMock(), myMock(), myMock());
+// > 10, 'x', true, true
 ```
 
 ## Mock modules
@@ -695,10 +781,7 @@ test("should fetch users", () => {
 });
 ```
 
-:point_up: This is a super bad practice, I hope you don't have to do this.
-If you really don't have a choice it's doable with jsenv as follow:
-
-_@jsenv_:
+##### @jsenv/test
 
 ```js
 // "tests/axios.mock.js"
@@ -780,49 +863,6 @@ const testPlanReport = await executeTestPlan({
     },
   },
 });
-```
-
-## Snapshot testing
-
-_Jest:_
-
-```js
-import renderer from "react-test-renderer";
-import Link from "../Link";
-
-it("renders correctly", () => {
-  const tree = renderer
-    .create(<Link page="http://www.facebook.com">Facebook</Link>)
-    .toJSON();
-  expect(tree).toMatchSnapshot();
-});
-```
-
-_@jsenv/test:_
-
-```js
-import { writeFileSync } from "node:fs";
-import { chromium } from "playwright";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
-const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-{
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto(`http://localhost:8000`);
-  await page.waitForSelector(".link_to_facebook", { timeout: 5_000 });
-  const linkElementOuterHTML = await page.evaluate(
-    /* eslint-disable no-undef */
-    () => {
-      return document.querySelector(".link_to_facebook").outerHTML;
-    },
-    /* eslint-enable no-undef */
-  );
-  writeFileSync(new URL("./link_to_facebook.html", snapshotDirectoryUrl));
-  browser.close();
-}
-directorySnapshot.compare();
 ```
 
 # Conclusion
