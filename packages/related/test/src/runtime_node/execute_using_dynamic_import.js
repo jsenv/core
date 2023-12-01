@@ -45,9 +45,8 @@ export const executeUsingDynamicImport = async ({
     }),
   );
   result.namespace = namespaceResolved;
-  await afterImportCallbacks.reduce(async (previous, afterImportCallback) => {
-    await previous;
+  for (const afterImportCallback of afterImportCallbacks) {
     await afterImportCallback();
-  }, Promise.resolve());
+  }
   return result;
 };
