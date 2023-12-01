@@ -1,6 +1,5 @@
 import { fileURLToPath } from "node:url";
 import { assert } from "@jsenv/assert";
-import { createTeardown } from "@jsenv/test/src/helpers/teardown.js";
 import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 
 import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_param.js";
@@ -12,11 +11,10 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     moduleUrl: new URL("./404.mjs", import.meta.url),
   };
   try {
-    const teardown = createTeardown();
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown,
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
@@ -36,11 +34,10 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     moduleUrl: new URL("./error.mjs", import.meta.url).href,
   };
   try {
-    const teardown = createTeardown();
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown,
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
@@ -60,11 +57,10 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     moduleUrl: new URL("./do_nothing.mjs", import.meta.url),
   };
   try {
-    const teardown = createTeardown();
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown,
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
@@ -81,7 +77,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
 
 // the module starts a server
 {
-  const teardown = createTeardown();
+  const teardownCallbackSet = new Set();
   const webServer = {
     origin: "http://localhost:3460",
     moduleUrl: new URL("./start_server.mjs", import.meta.url),
@@ -89,10 +85,12 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
   await ensureWebServerIsStarted(webServer, {
     signal: new AbortController().signal,
     logger: { debug: () => {}, info: () => {} },
-    teardown,
+    teardownCallbackSet,
   });
   const serverUp = await pingServer(webServer.origin);
-  await teardown.trigger();
+  for (const teardownCallback of teardownCallbackSet) {
+    await teardownCallback();
+  }
   await new Promise((resolve) => setTimeout(resolve, 1_000));
   const serverUpAfterTeardown = await pingServer(webServer.origin);
   const actual = {

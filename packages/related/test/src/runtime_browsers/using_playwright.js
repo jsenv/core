@@ -52,7 +52,7 @@ export const createRuntimeUsingPlaywright = ({
     coverageMethodForBrowsers,
     coverageFileUrl,
 
-    teardown,
+    teardownCallbackSet,
     isTestPlan,
     stopSignal,
     keepRunning,
@@ -321,7 +321,7 @@ export const createRuntimeUsingPlaywright = ({
               cleanupCallbackList.add(() => {
                 browser.removeListener("disconnected", disconnectedCallback);
               });
-              teardown.addCallback(async () => {
+              teardownCallbackSet.add(async () => {
                 browser.removeListener("disconnected", disconnectedCallback);
                 logger.debug(`testPlan teardown -> closing ${browserName}`);
                 await closeBrowser();

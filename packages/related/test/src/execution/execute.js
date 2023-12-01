@@ -14,7 +14,6 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger } from "@jsenv/log";
 
-import { createTeardown } from "../helpers/teardown.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { run } from "./run.js";
 
@@ -45,7 +44,7 @@ export const execute = async ({
     rootDirectoryUrl,
     "rootDirectoryUrl",
   );
-  const teardown = createTeardown();
+  const teardownCallbackSet = new Set();
   const executeOperation = Abort.startOperation();
   executeOperation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -60,7 +59,11 @@ export const execute = async ({
   }
 
   if (runtime.type === "browser") {
-    await assertAndNormalizeWebServer(webServer, { signal, teardown, logger });
+    await assertAndNormalizeWebServer(webServer, {
+      signal,
+      teardownCallbackSet,
+      logger,
+    });
   }
 
   let resultTransformer = (result) => result;
@@ -69,7 +72,7 @@ export const execute = async ({
     webServer,
     fileRelativeUrl,
     importMap,
-    teardown,
+    teardownCallbackSet,
     ...runtimeParams,
   };
 
@@ -109,7 +112,9 @@ export const execute = async ({
     }
     return result;
   } finally {
-    await teardown.trigger();
+    for (const teardownCallback of teardownCallbackSet) {
+      await teardownCallback();
+    }
     await executeOperation.end();
   }
 };

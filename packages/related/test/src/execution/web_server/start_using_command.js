@@ -5,7 +5,7 @@ import { pingServer } from "../../helpers/ping_server.js";
 
 export const startServerUsingCommand = async (
   webServer,
-  { signal, allocatedMs, logger, teardown },
+  { signal, allocatedMs, logger, teardownCallbackSet },
 ) => {
   const spawnedProcess = spawn(webServer.command, [], {
     // On non-windows platforms, `detached: true` makes child process a leader of a new
@@ -92,7 +92,7 @@ export const startServerUsingCommand = async (
   startOperation.addAbortSignal(signal);
   const timeoutAbortSource = startOperation.timeout(allocatedMs);
   startOperation.addAbortCallback(killProcess);
-  teardown.addCallback(killProcess);
+  teardownCallbackSet.add(killProcess);
 
   const startedPromise = (async () => {
     const logScale = [100, 250, 500];

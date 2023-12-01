@@ -69,7 +69,7 @@ export const assertAndNormalizeWebServer = async (
 
 export const ensureWebServerIsStarted = async (
   webServer,
-  { signal, teardown, logger, allocatedMs = 5_000 },
+  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
 ) => {
   const aServerIsListening = await pingServer(webServer.origin);
   if (aServerIsListening) {
@@ -79,7 +79,7 @@ export const ensureWebServerIsStarted = async (
     await startServerUsingModuleUrl(webServer, {
       signal,
       allocatedMs,
-      teardown,
+      teardownCallbackSet,
       logger,
     });
     return;
@@ -88,7 +88,7 @@ export const ensureWebServerIsStarted = async (
     await startServerUsingCommand(webServer, {
       signal,
       allocatedMs,
-      teardown,
+      teardownCallbackSet,
       logger,
     });
     return;
