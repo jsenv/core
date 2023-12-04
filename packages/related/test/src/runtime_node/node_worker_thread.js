@@ -143,7 +143,7 @@ export const nodeWorkerThread = ({
         status: "executing",
         errors: [],
         namespace: null,
-        duration: null,
+        timings: {},
         memoryUsage: null,
         performance: null,
       };

@@ -162,8 +162,12 @@ export const run = async ({
     result.errors.push(...errors);
     result.namespace = namespace;
     if (timings) {
-      result.timings.executionStart = relativeToTimingOrigin(timings.start);
-      result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+      if (timings.start) {
+        result.timings.executionStart = relativeToTimingOrigin(timings.start);
+      }
+      if (timings.end) {
+        result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+      }
     }
     result.memoryUsage = memoryUsage;
     result.performance = performance;

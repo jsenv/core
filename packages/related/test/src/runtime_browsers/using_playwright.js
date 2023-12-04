@@ -1,11 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { createDetailedMessage } from "@jsenv/log";
-import {
-  Abort,
-  createCallbackListNotifiedOnce,
-  raceProcessTeardownEvents,
-  raceCallbacks,
-} from "@jsenv/abort";
+import { Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
@@ -45,18 +40,20 @@ export const createRuntimeUsingPlaywright = ({
     webServer,
     fileRelativeUrl,
 
-    // measurePerformance,
+    keepRunning,
+    stopSignal,
+    onConsole,
+    onRuntimeStarted,
+    onRuntimeStopped,
+    teardownCallbackSet,
+    isTestPlan,
+
+    measureMemoryUsage,
     collectPerformance,
     coverageEnabled = false,
     coverageConfig,
     coverageMethodForBrowsers,
     coverageFileUrl,
-
-    teardownCallbackSet,
-    isTestPlan,
-    stopSignal,
-    keepRunning,
-    onConsole,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
@@ -67,9 +64,14 @@ export const createRuntimeUsingPlaywright = ({
   ${webServer.rootDirectoryUrl}`);
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
-    const cleanupCallbackList = createCallbackListNotifiedOnce();
+    const cleanupCallbackSet = new Set();
     const cleanup = memoize(async (reason) => {
-      await cleanupCallbackList.notify({ reason });
+      const promises = [];
+      for (const cleanupCallback of cleanupCallbackSet) {
+        promises.push(cleanupCallback({ reason }));
+      }
+      cleanupCallbackSet.clear();
+      await Promise.all(promises);
     });
 
     const isBrowserDedicatedToExecution = isolatedTab || !isTestPlan;
@@ -95,7 +97,7 @@ export const createRuntimeUsingPlaywright = ({
       })();
       if (!isBrowserDedicatedToExecution) {
         browserPromiseCache.set(label, browserAndContextPromise);
-        cleanupCallbackList.add(() => {
+        cleanupCallbackSet.add(() => {
           browserPromiseCache.delete(label);
         });
       }
@@ -124,8 +126,44 @@ export const createRuntimeUsingPlaywright = ({
       }
       await disconnected;
     };
+    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+    if (isBrowserDedicatedToExecution) {
+      cleanupCallbackSet.add(closeBrowser);
+      browser.on("disconnected", async () => {
+        onRuntimeStopped();
+      });
+    } else {
+      const disconnectedCallback = async () => {
+        throw new Error("browser disconnected during execution");
+      };
+      browser.on("disconnected", disconnectedCallback);
+      cleanupCallbackSet.add(() => {
+        browser.removeListener("disconnected", disconnectedCallback);
+      });
+      teardownCallbackSet.add(async () => {
+        browser.removeListener("disconnected", disconnectedCallback);
+        logger.debug(`testPlan teardown -> closing ${browserName}`);
+        await closeBrowser();
+      });
+    }
 
     const page = await browserContext.newPage();
+    if (!isBrowserDedicatedToExecution) {
+      page.on("close", () => {
+        onRuntimeStopped();
+      });
+    }
+    onRuntimeStarted();
+    cleanupCallbackSet.add(async () => {
+      try {
+        await page.close();
+      } catch (e) {
+        if (isTargetClosedError(e)) {
+          return;
+        }
+        throw e;
+      }
+    });
 
     const istanbulInstrumentationEnabled =
       coverageEnabled &&
@@ -145,23 +183,16 @@ export const createRuntimeUsingPlaywright = ({
         fileServerUrl,
       });
     }
-    const closePage = async () => {
-      try {
-        await page.close();
-      } catch (e) {
-        if (isTargetClosedError(e)) {
-          return;
-        }
-        throw e;
-      }
-    };
 
     const result = {
       status: "pending",
-      namespace: null,
       errors: [],
+      namespace: null,
+      timings: {},
+      memoryUsage: null,
+      performance: null,
     };
-    const callbacks = [];
+    const callbackSet = new Set();
     if (coverageEnabled) {
       if (
         runtime.capabilities.coverageV8 &&
@@ -170,7 +201,7 @@ export const createRuntimeUsingPlaywright = ({
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         });
-        callbacks.push(async () => {
+        callbackSet.add(async () => {
           const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage();
           // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
@@ -199,7 +230,7 @@ export const createRuntimeUsingPlaywright = ({
           );
         });
       } else {
-        callbacks.push(() => {
+        callbackSet.add(() => {
           const scriptExecutionResults = result.namespace;
           if (scriptExecutionResults) {
             const coverage =
@@ -212,7 +243,7 @@ export const createRuntimeUsingPlaywright = ({
         });
       }
     } else {
-      callbacks.push(() => {
+      callbackSet.add(() => {
         const scriptExecutionResults = result.namespace;
         if (scriptExecutionResults) {
           Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
@@ -222,8 +253,12 @@ export const createRuntimeUsingPlaywright = ({
       });
     }
 
+    if (measureMemoryUsage) {
+      // TODO
+    }
+
     if (collectPerformance) {
-      callbacks.push(async () => {
+      callbackSet.add(async () => {
         const performance = await page.evaluate(
           /* eslint-disable no-undef */
           /* istanbul ignore next */
@@ -262,173 +297,153 @@ export const createRuntimeUsingPlaywright = ({
         });
       },
     });
-    cleanupCallbackList.add(removeConsoleListener);
+    cleanupCallbackSet.add(removeConsoleListener);
     const actionOperation = Abort.startOperation();
     actionOperation.addAbortSignal(signal);
 
-    const winnerPromise = new Promise((resolve, reject) => {
-      raceCallbacks(
-        {
-          aborted: (cb) => {
-            return actionOperation.addAbortCallback(cb);
-          },
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-          error: (cb) => {
-            return registerEvent({
-              object: page,
-              eventType: "error",
-              callback: (error) => {
-                if (shouldIgnoreError(error, "error")) {
-                  return;
-                }
-                cb(transformErrorHook(error));
-              },
-            });
-          },
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          // pageerror: () => {
-          //   return registerEvent({
-          //     object: page,
-          //     eventType: "pageerror",
-          //     callback: (error) => {
-          //       if (
-          //         webServer.isJsenvDevServer ||
-          //         shouldIgnoreError(error, "pageerror")
-          //       ) {
-          //         return
-          //       }
-          //       result.errors.push(transformErrorHook(error))
-          //     },
-          //   })
-          // },
-          closed: (cb) => {
-            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-            if (isBrowserDedicatedToExecution) {
-              browser.on("disconnected", async () => {
-                cb({ reason: "browser disconnected" });
-              });
-              cleanupCallbackList.add(closePage);
-              cleanupCallbackList.add(closeBrowser);
-            } else {
-              const disconnectedCallback = async () => {
-                throw new Error("browser disconnected during execution");
-              };
-              browser.on("disconnected", disconnectedCallback);
-              page.on("close", () => {
-                cb({ reason: "page closed" });
-              });
-              cleanupCallbackList.add(closePage);
-              cleanupCallbackList.add(() => {
-                browser.removeListener("disconnected", disconnectedCallback);
-              });
-              teardownCallbackSet.add(async () => {
-                browser.removeListener("disconnected", disconnectedCallback);
-                logger.debug(`testPlan teardown -> closing ${browserName}`);
-                await closeBrowser();
-              });
-            }
-          },
-          response: async (cb) => {
-            try {
-              await page.goto(fileServerUrl, { timeout: 0 });
-              const returnValue = await page.evaluate(
-                /* eslint-disable no-undef */
-                /* istanbul ignore next */
-                async () => {
-                  let startTime;
-                  try {
-                    startTime = window.performance.timing.navigationStart;
-                  } catch (e) {
-                    startTime = Date.now();
-                  }
-                  if (!window.__supervisor__) {
-                    throw new Error("window.__supervisor__ is undefined");
-                  }
-                  const executionResultFromJsenvSupervisor =
-                    await window.__supervisor__.getDocumentExecutionResult();
-                  return {
-                    type: "window_supervisor",
-                    startTime,
-                    endTime: Date.now(),
-                    executionResults:
-                      executionResultFromJsenvSupervisor.executionResults,
-                  };
-                },
-                /* eslint-enable no-undef */
-              );
-              cb(returnValue);
-            } catch (e) {
-              reject(e);
-            }
-          },
-        },
-        resolve,
-      );
-    });
-
-    const writeResult = async () => {
-      const winner = await winnerPromise;
-      if (winner.name === "aborted") {
-        result.status = "aborted";
-        return;
-      }
-      if (winner.name === "error") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "pageerror") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "closed") {
-        result.status = "failed";
-        result.errors.push(
-          isBrowserDedicatedToExecution
-            ? new Error(`browser disconnected during execution`)
-            : new Error(`page closed during execution`),
-        );
-        return;
-      }
-      // winner.name === "response"
-      const { executionResults } = winner.data;
-      result.status = "completed";
-      result.namespace = executionResults;
-      Object.keys(executionResults).forEach((key) => {
-        const executionResult = executionResults[key];
-        if (executionResult.status === "failed") {
-          result.status = "failed";
-          if (executionResult.exception) {
-            result.errors.push(executionResult.exception);
-          } else {
-            result.errors.push(executionResult.error);
-          }
-        }
-      });
-    };
-
     try {
-      await writeResult();
+      const winnerPromise = new Promise((resolve, reject) => {
+        raceCallbacks(
+          {
+            aborted: (cb) => {
+              return actionOperation.addAbortCallback(cb);
+            },
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+            error: (cb) => {
+              return registerEvent({
+                object: page,
+                eventType: "error",
+                callback: (error) => {
+                  if (shouldIgnoreError(error, "error")) {
+                    return;
+                  }
+                  cb(transformErrorHook(error));
+                },
+              });
+            },
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+            // pageerror: () => {
+            //   return registerEvent({
+            //     object: page,
+            //     eventType: "pageerror",
+            //     callback: (error) => {
+            //       if (
+            //         webServer.isJsenvDevServer ||
+            //         shouldIgnoreError(error, "pageerror")
+            //       ) {
+            //         return
+            //       }
+            //       result.errors.push(transformErrorHook(error))
+            //     },
+            //   })
+            // },
+            closed: (cb) => {
+              if (isBrowserDedicatedToExecution) {
+                browser.on("disconnected", async () => {
+                  cb({ reason: "browser disconnected" });
+                });
+              } else {
+                page.on("close", () => {
+                  cb({ reason: "page closed" });
+                });
+              }
+            },
+            response: async (cb) => {
+              try {
+                await page.goto(fileServerUrl, { timeout: 0 });
+                const returnValue = await page.evaluate(
+                  /* eslint-disable no-undef */
+                  /* istanbul ignore next */
+                  async () => {
+                    let startTime;
+                    try {
+                      startTime = window.performance.timing.navigationStart;
+                    } catch (e) {
+                      startTime = Date.now();
+                    }
+                    if (!window.__supervisor__) {
+                      throw new Error("window.__supervisor__ is undefined");
+                    }
+                    const executionResultFromJsenvSupervisor =
+                      await window.__supervisor__.getDocumentExecutionResult();
+                    return {
+                      type: "window_supervisor",
+                      timings: {
+                        start: startTime,
+                        end: Date.now(),
+                      },
+                      executionResults:
+                        executionResultFromJsenvSupervisor.executionResults,
+                    };
+                  },
+                  /* eslint-enable no-undef */
+                );
+                cb(returnValue);
+              } catch (e) {
+                reject(e);
+              }
+            },
+          },
+          resolve,
+        );
+      });
+      const raceHandlers = {
+        aborted: () => {
+          result.status = "aborted";
+        },
+        error: (error) => {
+          result.status = "failed";
+          result.errors.push(error);
+        },
+        // pageerror: (error) => {
+        //   result.status = "failed";
+        //   result.errors.push(error);
+        // },
+        closed: () => {
+          result.status = "failed";
+          result.errors.push(
+            isBrowserDedicatedToExecution
+              ? new Error(`browser disconnected during execution`)
+              : new Error(`page closed during execution`),
+          );
+        },
+        response: ({ executionResults, timings }) => {
+          result.status = "completed";
+          result.namespace = executionResults;
+          result.timings = timings;
+          Object.keys(executionResults).forEach((key) => {
+            const executionResult = executionResults[key];
+            if (executionResult.status === "failed") {
+              result.status = "failed";
+              if (executionResult.exception) {
+                result.errors.push(executionResult.exception);
+              } else {
+                result.errors.push(executionResult.error);
+              }
+            }
+          });
+        },
+      };
+      const winner = await winnerPromise;
+      raceHandlers[winner.name](winner.data);
       if (collectPerformance) {
         result.performance = performance;
       }
-      await callbacks.reduce(async (previous, callback) => {
-        await previous;
+      for (const callback of callbackSet) {
         await callback();
-      }, Promise.resolve());
+      }
+      callbackSet.clear();
     } catch (e) {
       result.status = "failed";
       result.errors = [e];
+    } finally {
+      if (keepRunning) {
+        stopSignal.notify = cleanup;
+      } else {
+        await cleanup("execution done");
+      }
+      return result;
     }
-    if (keepRunning) {
-      stopSignal.notify = cleanup;
-    } else {
-      await cleanup("execution done");
-    }
-    return result;
   };
   return runtime;
 };

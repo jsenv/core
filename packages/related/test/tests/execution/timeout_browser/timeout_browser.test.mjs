@@ -1,12 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
-import {
-  execute,
-  chromium,
-  // firefox,
-  webkit,
-} from "@jsenv/test";
+import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -35,20 +30,18 @@ const test = async (params) => {
   };
   const expected = {
     status: "timedout",
-    consoleCalls:
-      // not reliable on windows for some reason
-      process.platform === "win32"
-        ? actual.consoleCalls
-        : [
-            {
-              type: "log",
-              text: `foo\n`,
-            },
-          ],
+    consoleCalls: [
+      {
+        type: "log",
+        text: `foo\n`,
+      },
+    ],
   };
   assert({ actual, expected });
 };
 
 await test({ runtime: chromium() });
-// await test({ runtime: firefox })
+if (process.platform !== "win32") {
+  await test({ runtime: firefox() });
+}
 await test({ runtime: webkit() });
