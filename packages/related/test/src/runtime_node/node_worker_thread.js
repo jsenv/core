@@ -51,6 +51,7 @@ export const nodeWorkerThread = ({
       onRuntimeStopped,
 
       measureMemoryUsage,
+      onMeasureMemoryAvailable,
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
@@ -116,10 +117,15 @@ export const nodeWorkerThread = ({
         },
       );
       const workerThreadReadyPromise = new Promise((resolve) => {
-        onceWorkerThreadMessage(workerThread, "ready", () => {
-          onRuntimeStarted();
-          resolve();
-        });
+        const removeReadyListener = onWorkerThreadMessage(
+          workerThread,
+          "ready",
+          () => {
+            removeReadyListener();
+            onRuntimeStarted();
+            resolve();
+          },
+        );
       });
       cleanupCallbackSet.add(
         onceWorkerThreadEvent(workerThread, "exit", () => {
@@ -149,6 +155,7 @@ export const nodeWorkerThread = ({
       };
 
       try {
+        let responseCallback;
         const winnerPromise = new Promise((resolve) => {
           raceCallbacks(
             {
@@ -168,11 +175,7 @@ export const nodeWorkerThread = ({
                 );
               },
               response: (cb) => {
-                return onceWorkerThreadMessage(
-                  workerThread,
-                  "action-result",
-                  cb,
-                );
+                responseCallback = cb;
               },
             },
             resolve,
@@ -242,11 +245,29 @@ export const nodeWorkerThread = ({
         actionOperation.throwIfAborted();
         await workerThreadReadyPromise;
         actionOperation.throwIfAborted();
-        await sendToWorkerThread(workerThread, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
+        if (onMeasureMemoryAvailable) {
+          onMeasureMemoryAvailable(async () => {
+            let _resolve;
+            const memoryUsagePromise = new Promise((resolve) => {
+              _resolve = resolve;
+            });
+            await requestActionOnWorkerThread(
+              workerThread,
+              {
+                type: "measure-memory-usage",
+              },
+              ({ value }) => {
+                _resolve(value);
+              },
+            );
+            return memoryUsagePromise;
+          });
+        }
+        await requestActionOnWorkerThread(
+          workerThread,
+          {
+            type: "execute-using-dynamic-import",
+            params: {
               rootDirectoryUrl,
               fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
               measureMemoryUsage,
@@ -258,7 +279,8 @@ export const nodeWorkerThread = ({
               exitAfterAction: true,
             },
           },
-        });
+          responseCallback,
+        );
         const winner = await winnerPromise;
         raceHandlers[winner.name](winner.data);
       } catch (e) {
@@ -296,14 +318,37 @@ const installWorkerThreadOutputListener = (workerThread, callback) => {
   };
 };
 
-const sendToWorkerThread = (worker, { type, data }) => {
-  worker.postMessage({ jsenv: true, type, data });
+let previousId = 0;
+const requestActionOnWorkerThread = (
+  workerThread,
+  { type, params },
+  onResponse,
+) => {
+  const actionId = previousId + 1;
+  previousId = actionId;
+  const removeResultListener = onWorkerThreadMessage(
+    workerThread,
+    "action-result",
+    ({ id, ...payload }) => {
+      if (id === actionId) {
+        removeResultListener();
+        onResponse(payload);
+      }
+    },
+  );
+  workerThread.postMessage({
+    __jsenv__: "action",
+    data: {
+      id: actionId,
+      type,
+      params,
+    },
+  });
 };
 
-const onceWorkerThreadMessage = (workerThread, type, callback) => {
+const onWorkerThreadMessage = (workerThread, type, callback) => {
   const onmessage = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      workerThread.removeListener("message", onmessage);
+    if (message && message.__jsenv__ === type) {
       callback(message.data ? JSON.parse(message.data) : undefined);
     }
   };

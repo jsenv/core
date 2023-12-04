@@ -56,6 +56,7 @@ export const nodeChildProcess = ({
       onRuntimeStopped,
 
       measureMemoryUsage,
+      onMeasureMemoryAvailable,
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
@@ -111,6 +112,8 @@ export const nodeChildProcess = ({
           CONTROLLED_CHILD_PROCESS_URL,
         )}`,
       );
+      const actionOperation = Abort.startOperation();
+      actionOperation.addAbortSignal(signal);
       const childProcess = fork(fileURLToPath(CONTROLLED_CHILD_PROCESS_URL), {
         execArgv,
         // silent: true
@@ -136,10 +139,15 @@ export const nodeChildProcess = ({
         childProcess.stderr.pipe(stderr);
       }
       const childProcessReadyPromise = new Promise((resolve) => {
-        onceChildProcessMessage(childProcess, "ready", () => {
-          onRuntimeStarted();
-          resolve();
-        });
+        const removeReadyListener = onChildProcessMessage(
+          childProcess,
+          "ready",
+          () => {
+            removeReadyListener();
+            onRuntimeStarted();
+            resolve();
+          },
+        );
       });
       cleanupCallbackSet.add(
         onceChildProcessEvent(childProcess, "exit", () => {
@@ -205,10 +213,9 @@ export const nodeChildProcess = ({
         memoryUsage: null,
         performance: null,
       };
-      const actionOperation = Abort.startOperation();
-      actionOperation.addAbortSignal(signal);
 
       try {
+        let responseCallback;
         const winnerPromise = new Promise((resolve) => {
           raceCallbacks(
             {
@@ -233,11 +240,7 @@ export const nodeChildProcess = ({
                 );
               },
               response: (cb) => {
-                return onceChildProcessMessage(
-                  childProcess,
-                  "action-result",
-                  cb,
-                );
+                responseCallback = cb;
               },
             },
             resolve,
@@ -307,11 +310,29 @@ export const nodeChildProcess = ({
         actionOperation.throwIfAborted();
         await childProcessReadyPromise;
         actionOperation.throwIfAborted();
-        await sendToChildProcess(childProcess, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
+        if (onMeasureMemoryAvailable) {
+          onMeasureMemoryAvailable(async () => {
+            let _resolve;
+            const memoryUsagePromise = new Promise((resolve) => {
+              _resolve = resolve;
+            });
+            await requestActionOnChildProcess(
+              childProcess,
+              {
+                type: "measure-memory-usage",
+              },
+              ({ value }) => {
+                _resolve(value);
+              },
+            );
+            return memoryUsagePromise;
+          });
+        }
+        await requestActionOnChildProcess(
+          childProcess,
+          {
+            type: "execute-using-dynamic-import",
+            params: {
               rootDirectoryUrl,
               fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
               measureMemoryUsage,
@@ -323,7 +344,8 @@ export const nodeChildProcess = ({
               exitAfterAction: true,
             },
           },
-        });
+          responseCallback,
+        );
         const winner = await winnerPromise;
         raceHandlers[winner.name](winner.data);
       } catch (e) {
@@ -345,21 +367,35 @@ export const nodeChildProcess = ({
   };
 };
 
-// http://man7.org/linux/man-pages/man7/signal.7.html
-// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
-const GRACEFUL_STOP_SIGNAL = "SIGTERM";
-const STOP_SIGNAL = "SIGKILL";
-// it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
-// but I'm not sure and it changes nothing so just use SIGKILL
-const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
+let previousId = 0;
+const requestActionOnChildProcess = async (
+  childProcess,
+  { type, params },
+  onResponse,
+) => {
+  const actionId = previousId + 1;
+  previousId = actionId;
 
-const sendToChildProcess = async (childProcess, { type, data }) => {
-  return new Promise((resolve, reject) => {
+  const removeMessageListener = onChildProcessMessage(
+    childProcess,
+    "action-result",
+    ({ id, ...payload }) => {
+      if (id === actionId) {
+        removeMessageListener();
+        onResponse(payload);
+      }
+    },
+  );
+
+  const sendPromise = new Promise((resolve, reject) => {
     childProcess.send(
       {
-        jsenv: true,
-        type,
-        data,
+        __jsenv__: "action",
+        data: {
+          id: actionId,
+          type,
+          params,
+        },
       },
       (error) => {
         if (error) {
@@ -370,7 +406,16 @@ const sendToChildProcess = async (childProcess, { type, data }) => {
       },
     );
   });
+  await sendPromise;
 };
+
+// http://man7.org/linux/man-pages/man7/signal.7.html
+// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+const GRACEFUL_STOP_SIGNAL = "SIGTERM";
+const STOP_SIGNAL = "SIGKILL";
+// it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
+// but I'm not sure and it changes nothing so just use SIGKILL
+const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
 
 const installChildProcessOutputListener = (childProcess, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
@@ -388,10 +433,9 @@ const installChildProcessOutputListener = (childProcess, callback) => {
   };
 };
 
-const onceChildProcessMessage = (childProcess, type, callback) => {
+const onChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      childProcess.removeListener("message", onmessage);
+    if (message && message.__jsenv__ === type) {
       callback(message.data ? JSON.parse(message.data) : "");
     }
   };

@@ -47,19 +47,6 @@ export const executeUsingDynamicImport = async ({
       result.performance = performance;
     });
   }
-  let memoryUsageBeforeImport;
-  if (measureMemoryUsage) {
-    if (!global.gc) {
-      const [v8, { runInNewContext }] = await Promise.all([
-        import("node:v8"),
-        import("node:vm"),
-      ]);
-      v8.setFlagsFromString("--expose_gc");
-      global.gc = runInNewContext("gc");
-    }
-    global.gc();
-    memoryUsageBeforeImport = memoryUsage();
-  }
 
   result.timings.start = Date.now();
   try {
@@ -75,10 +62,16 @@ export const executeUsingDynamicImport = async ({
   } finally {
     result.timings.end = Date.now();
     if (measureMemoryUsage) {
+      if (!global.gc) {
+        const [v8, { runInNewContext }] = await Promise.all([
+          import("node:v8"),
+          import("node:vm"),
+        ]);
+        v8.setFlagsFromString("--expose_gc");
+        global.gc = runInNewContext("gc");
+      }
       global.gc();
-      const memoryUsageAfterImport = memoryUsage();
-      result.memoryUsage =
-        memoryUsageAfterImport.heapUsed - memoryUsageBeforeImport.heapUsed;
+      result.memoryUsage = memoryUsage().heapUsed;
     }
     for (const afterImportCallback of afterImportCallbackSet) {
       await afterImportCallback();

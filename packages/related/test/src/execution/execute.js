@@ -32,6 +32,7 @@ export const execute = async ({
 
   collectConsole = false,
   measureMemoryUsage = false,
+  onMeasureMemoryAvailable,
   collectPerformance = false,
   collectCoverage = false,
   coverageTempDirectoryUrl,
@@ -85,6 +86,7 @@ export const execute = async ({
     mirrorConsole,
     collectConsole,
     measureMemoryUsage,
+    onMeasureMemoryAvailable,
     collectPerformance,
     collectCoverage,
     coverageTempDirectoryUrl,

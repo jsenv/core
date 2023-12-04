@@ -1,39 +1,16 @@
 import { parentPort } from "node:worker_threads";
+import { memoryUsage } from "node:process";
 
 import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
 const ACTIONS_AVAILABLE = {
-  "execute-using-dynamic-import": executeUsingDynamicImport,
-};
-const ACTION_REQUEST_EVENT_NAME = "action";
-const ACTION_RESPONSE_EVENT_NAME = "action-result";
-const ACTION_RESPONSE_STATUS_FAILED = "action-failed";
-const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
-
-const sendActionFailed = (error) => {
-  const exception = createException(error);
-  sendToParent(
-    ACTION_RESPONSE_EVENT_NAME,
-    JSON.stringify({
-      status: ACTION_RESPONSE_STATUS_FAILED,
-      value: exception,
-    }),
-  );
-};
-
-const sendActionCompleted = (value) => {
-  sendToParent(
-    ACTION_RESPONSE_EVENT_NAME,
-    // here we use JSON.stringify because we should not
-    // have non enumerable value (unlike there is on Error objects)
-    // otherwise uneval is quite slow to turn a giant object
-    // into a string (and value can be giant when using coverage)
-    JSON.stringify({
-      status: ACTION_RESPONSE_STATUS_COMPLETED,
-      value,
-    }),
-  );
+  "execute-using-dynamic-import": (params) => {
+    return executeUsingDynamicImport(params);
+  },
+  "measure-memory-usage": () => {
+    return memoryUsage().heapUsed;
+  },
 };
 
 const sendToParent = (type, data) => {
@@ -42,50 +19,73 @@ const sendToParent = (type, data) => {
   // It means node process may stay alive longer than expected
   // the time to send the data to the parent.
   parentPort.postMessage({
-    jsenv: true,
-    type,
+    __jsenv__: type,
     data,
   });
 };
 
-const onceParentMessage = (type, callback) => {
+const onActionRequestedByParent = (callback) => {
   const listener = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      removeListener(); // commenting this line keep this worker alive
+    if (message && message.__jsenv__ === "action") {
       callback(message.data);
     }
   };
   const removeListener = () => {
-    parentPort.removeListener("message", listener);
+    process.removeListener("message", listener);
   };
-  parentPort.on("message", listener);
+  process.on("message", listener);
   return removeListener;
 };
 
-const removeActionRequestListener = onceParentMessage(
-  ACTION_REQUEST_EVENT_NAME,
-  async ({ actionType, actionParams }) => {
-    const action = ACTIONS_AVAILABLE[actionType];
+const removeActionRequestListener = onActionRequestedByParent(
+  async ({ id, type, params = {} }) => {
+    const sendActionFailed = (id, error) => {
+      const exception = createException(error);
+      sendToParent(
+        "action-result",
+        JSON.stringify({
+          id,
+          status: "failed",
+          value: exception,
+        }),
+      );
+    };
+    const sendActionCompleted = (id, value) => {
+      sendToParent(
+        "action-result",
+        // here we use JSON.stringify because we should not
+        // have non enumerable value (unlike there is on Error objects)
+        // otherwise uneval is quite slow to turn a giant object
+        // into a string (and value can be giant when using coverage)
+        JSON.stringify({
+          id,
+          status: "completed",
+          value,
+        }),
+      );
+    };
+
+    const action = ACTIONS_AVAILABLE[type];
     if (!action) {
-      sendActionFailed(new Error(`unknown action ${actionType}`));
+      sendActionFailed(id, new Error(`unknown action ${type}`));
       return;
     }
 
     let value;
     let failed = false;
     try {
-      value = await action(actionParams);
+      value = await action(params);
     } catch (e) {
       failed = true;
       value = e;
     }
 
     if (failed) {
-      sendActionFailed(value);
+      sendActionFailed(id, value);
     } else {
-      sendActionCompleted(value);
+      sendActionCompleted(id, value);
     }
-    if (actionParams.exitAfterAction) {
+    if (params.exitAfterAction) {
       removeActionRequestListener();
     }
   },
