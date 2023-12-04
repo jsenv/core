@@ -56,6 +56,7 @@ export const nodeChildProcess = ({
       onRuntimeStopped,
 
       measureMemoryUsage,
+      collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
       coverageConfig,
@@ -153,6 +154,15 @@ export const nodeChildProcess = ({
         },
       );
       const stop = memoize(async ({ gracefulStopAllocatedMs } = {}) => {
+        // read all stdout before terminating
+        // (no need for stderr because it's sync)
+        if (collectConsole) {
+          while (childProcess.stdout.read() !== null) {}
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50);
+          });
+        }
+
         // all libraries are facing problem on windows when trying
         // to kill a process spawning other processes.
         // "killProcessTree" is theorically correct but sometimes keep process handing forever.
@@ -236,9 +246,8 @@ export const nodeChildProcess = ({
           result.status = "failed";
           result.errors.push(error);
         },
-        exit: async ({ code }) => {
+        exit: ({ code }) => {
           onRuntimeStopped();
-          await cleanup("process exit");
           if (code === 12) {
             result.status = "failed";
             result.errors.push(
@@ -310,20 +319,22 @@ export const nodeChildProcess = ({
           },
         });
         const winner = await winnerPromise;
-        await raceHandlers[winner.name](winner.data);
+        raceHandlers[winner.name](winner.data);
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);
+      } finally {
+        if (keepRunning) {
+          stopSignal.notify = stop;
+        } else {
+          await stop({
+            gracefulStopAllocatedMs,
+          });
+        }
+        await actionOperation.end();
+        await cleanup();
+        return result;
       }
-      if (keepRunning) {
-        stopSignal.notify = stop;
-      } else {
-        await stop({
-          gracefulStopAllocatedMs,
-        });
-      }
-      await actionOperation.end();
-      return result;
     },
   };
 };

@@ -3,11 +3,7 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 import { Worker } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
-import {
-  Abort,
-  createCallbackListNotifiedOnce,
-  raceCallbacks,
-} from "@jsenv/abort";
+import { Abort, raceCallbacks } from "@jsenv/abort";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createChildExecOptions } from "./child_exec_options.js";
@@ -51,7 +47,10 @@ export const nodeWorkerThread = ({
       keepRunning,
       stopSignal,
       onConsole,
+      onRuntimeStarted,
+      onRuntimeStopped,
 
+      measureMemoryUsage,
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
@@ -86,10 +85,16 @@ export const nodeWorkerThread = ({
         ...env,
       };
 
-      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanupCallbackSet = new Set();
       const cleanup = async (reason) => {
-        await cleanupCallbackList.notify({ reason });
+        const promises = [];
+        for (const cleanupCallback of cleanupCallbackSet) {
+          promises.push(cleanupCallback({ reason }));
+        }
+        cleanupCallbackSet.clear();
+        await Promise.all(promises);
       };
+
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
@@ -111,8 +116,16 @@ export const nodeWorkerThread = ({
         },
       );
       const workerThreadReadyPromise = new Promise((resolve) => {
-        onceWorkerThreadMessage(workerThread, "ready", resolve);
+        onceWorkerThreadMessage(workerThread, "ready", () => {
+          onRuntimeStarted();
+          resolve();
+        });
       });
+      cleanupCallbackSet.add(
+        onceWorkerThreadEvent(workerThread, "exit", () => {
+          onRuntimeStopped();
+        }),
+      );
 
       const stop = memoize(async () => {
         // read all stdout before terminating
@@ -126,6 +139,14 @@ export const nodeWorkerThread = ({
         await workerThread.terminate();
       });
 
+      const result = {
+        status: "executing",
+        errors: [],
+        namespace: null,
+        duration: null,
+        memoryUsage: null,
+        performance: null,
+      };
       const winnerPromise = new Promise((resolve) => {
         raceCallbacks(
           {
@@ -151,48 +172,16 @@ export const nodeWorkerThread = ({
           resolve,
         );
       });
-
-      const result = {
-        status: "executing",
-        errors: [],
-        namespace: null,
-      };
-
-      const writeResult = async () => {
-        actionOperation.throwIfAborted();
-        await workerThreadReadyPromise;
-        actionOperation.throwIfAborted();
-        await sendToWorkerThread(workerThread, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
-              rootDirectoryUrl,
-              fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-              collectPerformance,
-              coverageEnabled,
-              coverageConfig,
-              coverageMethodForNodeJs,
-              coverageFileUrl,
-              exitAfterAction: true,
-            },
-          },
-        });
-        const winner = await winnerPromise;
-        if (winner.name === "aborted") {
+      const raceHandlers = {
+        aborted: () => {
           result.status = "aborted";
-          return;
-        }
-        if (winner.name === "error") {
-          const error = winner.data;
+        },
+        error: (error) => {
           removeOutputListener();
           result.status = "failed";
           result.errors.push(error);
-          return;
-        }
-        if (winner.name === "exit") {
-          const { code } = winner.data;
-          await cleanup("process exit");
+        },
+        exit: ({ code }) => {
           if (code === 12) {
             result.status = "failed";
             result.errors.push(
@@ -226,34 +215,57 @@ export const nodeWorkerThread = ({
               `node worker thread exited with code ${code} during execution`,
             ),
           );
-        }
-        const { status, value } = winner.data;
-        if (status === "action-failed") {
-          result.status = "failed";
-          result.errors.push(value);
-          return;
-        }
-        const { namespace, performance, coverage } = value;
-        result.status = "completed";
-        result.namespace = namespace;
-        result.performance = performance;
-        result.coverage = coverage;
+        },
+        response: ({ status, value }) => {
+          if (status === "action-failed") {
+            result.status = "failed";
+            result.errors.push(value);
+            return;
+          }
+          const { namespace, performance, coverage } = value;
+          result.status = "completed";
+          result.namespace = namespace;
+          result.performance = performance;
+          result.coverage = coverage;
+        },
       };
 
       try {
-        await writeResult();
+        actionOperation.throwIfAborted();
+        await workerThreadReadyPromise;
+        actionOperation.throwIfAborted();
+        await sendToWorkerThread(workerThread, {
+          type: "action",
+          data: {
+            actionType: "execute-using-dynamic-import",
+            actionParams: {
+              rootDirectoryUrl,
+              fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              measureMemoryUsage,
+              collectPerformance,
+              coverageEnabled,
+              coverageConfig,
+              coverageMethodForNodeJs,
+              coverageFileUrl,
+              exitAfterAction: true,
+            },
+          },
+        });
+        const winner = await winnerPromise;
+        raceHandlers[winner.name](winner.data);
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);
+      } finally {
+        if (keepRunning) {
+          stopSignal.notify = stop;
+        } else {
+          await stop();
+        }
+        await actionOperation.end();
+        await cleanup();
+        return result;
       }
-
-      if (keepRunning) {
-        stopSignal.notify = stop;
-      } else {
-        await stop();
-      }
-      await actionOperation.end();
-      return result;
     },
   };
 };

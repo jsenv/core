@@ -53,6 +53,6 @@ await test({
 });
 
 // nodeWorkerThread
-// await test({
-//   runtime: nodeWorkerThread(),
-// });
+await test({
+  runtime: nodeWorkerThread(),
+});
