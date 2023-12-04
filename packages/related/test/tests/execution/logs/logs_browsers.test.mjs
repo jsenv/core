@@ -44,8 +44,6 @@ const test = async (params) => {
         value: null,
       },
     },
-    // there is also the html supervisor logs
-    // we likely don't want them now
     consoleCalls: [
       {
         type: "log",
