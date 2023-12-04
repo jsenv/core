@@ -14,14 +14,13 @@ const test = async (params) => {
   });
   const endMs = Date.now();
   const duration = endMs - startMs;
-  const durationIsAroundAllocatedMs = duration > 3_000 && duration < 10_000;
   const actual = {
     status: result.status,
-    durationIsAroundAllocatedMs,
+    duration,
   };
   const expected = {
     status: "timedout",
-    durationIsAroundAllocatedMs: true,
+    duration: assert.between(3_000, 10_000),
   };
   assert({ actual, expected });
 };
