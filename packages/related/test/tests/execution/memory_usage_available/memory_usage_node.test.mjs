@@ -21,9 +21,9 @@ const test = async (params) => {
   assert({ actual, expected });
 };
 
-// await test({
-//   runtime: nodeChildProcess(),
-// });
+await test({
+  runtime: nodeChildProcess(),
+});
 await test({
   runtime: nodeWorkerThread(),
 });

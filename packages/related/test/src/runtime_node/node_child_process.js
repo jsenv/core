@@ -215,7 +215,8 @@ export const nodeChildProcess = ({
       };
 
       try {
-        let responseCallback;
+        let executionFailedCallback;
+        let executionCompletedCallback;
         const winnerPromise = new Promise((resolve) => {
           raceCallbacks(
             {
@@ -239,8 +240,11 @@ export const nodeChildProcess = ({
                   },
                 );
               },
-              response: (cb) => {
-                responseCallback = cb;
+              execution_failed: (cb) => {
+                executionFailedCallback = cb;
+              },
+              execution_completed: (cb) => {
+                executionCompletedCallback = cb;
               },
             },
             resolve,
@@ -291,14 +295,17 @@ export const nodeChildProcess = ({
               ),
             );
           },
-          response: ({ status, value }) => {
-            if (status === "action-failed") {
-              result.status = "failed";
-              result.errors.push(value);
-              return;
-            }
-            const { namespace, timings, memoryUsage, performance, coverage } =
-              value;
+          execution_failed: (error) => {
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          execution_completed: ({
+            namespace,
+            timings,
+            memoryUsage,
+            performance,
+            coverage,
+          }) => {
             result.status = "completed";
             result.namespace = namespace;
             result.timings = timings;
@@ -344,7 +351,13 @@ export const nodeChildProcess = ({
               exitAfterAction: true,
             },
           },
-          responseCallback,
+          ({ status, value }) => {
+            if (status === "failed") {
+              executionFailedCallback(value);
+            } else {
+              executionCompletedCallback(value);
+            }
+          },
         );
         const winner = await winnerPromise;
         raceHandlers[winner.name](winner.data);

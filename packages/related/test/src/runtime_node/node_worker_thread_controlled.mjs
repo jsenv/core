@@ -31,9 +31,9 @@ const onActionRequestedByParent = (callback) => {
     }
   };
   const removeListener = () => {
-    process.removeListener("message", listener);
+    parentPort.removeListener("message", listener);
   };
-  process.on("message", listener);
+  parentPort.on("message", listener);
   return removeListener;
 };
 
