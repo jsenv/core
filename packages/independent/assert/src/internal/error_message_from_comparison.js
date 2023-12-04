@@ -12,6 +12,7 @@ import { matchesRegExpToErrorMessage } from "./error_message/matches_reg_exp.js"
 import { notComparisonToErrorMessage } from "./error_message/not.js";
 import { arrayLengthComparisonToMessage } from "./error_message/array_length.js";
 import { stringsComparisonToErrorMessage } from "./error_message/strings.js";
+import { betweenComparisonToMessage } from "./error_message/between.js";
 
 export const errorMessageFromComparison = (comparison) => {
   const failedComparison = deepestComparison(comparison);
@@ -30,6 +31,7 @@ export const errorMessageFromComparison = (comparison) => {
       setSizeComparisonToMessage,
       arrayLengthComparisonToMessage,
       stringsComparisonToErrorMessage,
+      betweenComparisonToMessage,
     ],
     failedComparison,
   );

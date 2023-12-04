@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "2.13.1",
+  "version": "2.14.0",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
