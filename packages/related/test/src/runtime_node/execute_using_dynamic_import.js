@@ -25,16 +25,6 @@ export const executeUsingDynamicImport = async ({
   };
   const afterImportCallbackSet = new Set();
 
-  if (measureMemoryUsage) {
-    global.gc();
-    const memoryUsageBeforeImport = memoryUsage().heapUsed;
-    afterImportCallbackSet.add(() => {
-      global.gc();
-      const memoryUsageAfterImport = memoryUsage().heapUsed;
-      result.memoryUsage = memoryUsageAfterImport - memoryUsageBeforeImport;
-    });
-  }
-
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
     const { filterV8Coverage } = await import("../coverage/v8_coverage.js");
     const { stopJsCoverage } = await startJsCoverage();
@@ -57,6 +47,20 @@ export const executeUsingDynamicImport = async ({
       result.performance = performance;
     });
   }
+  let memoryUsageBeforeImport;
+  if (measureMemoryUsage) {
+    if (!global.gc) {
+      const [v8, { runInNewContext }] = await Promise.all([
+        import("node:v8"),
+        import("node:vm"),
+      ]);
+      v8.setFlagsFromString("--expose_gc");
+      global.gc = runInNewContext("gc");
+    }
+    global.gc();
+    memoryUsageBeforeImport = memoryUsage();
+  }
+
   result.timings.start = Date.now();
   try {
     const namespace = await import(fileUrl);
@@ -70,6 +74,12 @@ export const executeUsingDynamicImport = async ({
     result.namespace = namespaceResolved;
   } finally {
     result.timings.end = Date.now();
+    if (measureMemoryUsage) {
+      global.gc();
+      const memoryUsageAfterImport = memoryUsage();
+      result.memoryUsage =
+        memoryUsageAfterImport.heapUsed - memoryUsageBeforeImport.heapUsed;
+    }
     for (const afterImportCallback of afterImportCallbackSet) {
       await afterImportCallback();
     }

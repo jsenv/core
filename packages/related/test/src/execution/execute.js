@@ -30,10 +30,10 @@ export const execute = async ({
   mirrorConsole = true,
   keepRunning = false,
 
-  collectConsole,
+  collectConsole = false,
   measureMemoryUsage = false,
   collectPerformance = false,
-  collectCoverage,
+  collectCoverage = false,
   coverageTempDirectoryUrl,
   runtime,
   runtimeParams,

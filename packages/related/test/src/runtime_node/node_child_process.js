@@ -156,7 +156,7 @@ export const nodeChildProcess = ({
       const stop = memoize(async ({ gracefulStopAllocatedMs } = {}) => {
         // read all stdout before terminating
         // (no need for stderr because it's sync)
-        if (collectConsole) {
+        if (collectConsole || onConsole) {
           while (childProcess.stdout.read() !== null) {}
           await new Promise((resolve) => {
             setTimeout(resolve, 50);

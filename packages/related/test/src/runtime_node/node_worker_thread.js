@@ -130,7 +130,7 @@ export const nodeWorkerThread = ({
       const stop = memoize(async () => {
         // read all stdout before terminating
         // (no need for stderr because it's sync)
-        if (collectConsole) {
+        if (collectConsole || onConsole) {
           while (workerThread.stdout.read() !== null) {}
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
@@ -147,90 +147,98 @@ export const nodeWorkerThread = ({
         memoryUsage: null,
         performance: null,
       };
-      const winnerPromise = new Promise((resolve) => {
-        raceCallbacks(
-          {
-            aborted: (cb) => {
-              return actionOperation.addAbortCallback(cb);
+
+      try {
+        const winnerPromise = new Promise((resolve) => {
+          raceCallbacks(
+            {
+              aborted: (cb) => {
+                return actionOperation.addAbortCallback(cb);
+              },
+              error: (cb) => {
+                return onceWorkerThreadEvent(workerThread, "error", cb);
+              },
+              exit: (cb) => {
+                return onceWorkerThreadEvent(
+                  workerThread,
+                  "exit",
+                  (code, signal) => {
+                    cb({ code, signal });
+                  },
+                );
+              },
+              response: (cb) => {
+                return onceWorkerThreadMessage(
+                  workerThread,
+                  "action-result",
+                  cb,
+                );
+              },
             },
-            error: (cb) => {
-              return onceWorkerThreadEvent(workerThread, "error", cb);
-            },
-            exit: (cb) => {
-              return onceWorkerThreadEvent(
-                workerThread,
-                "exit",
-                (code, signal) => {
-                  cb({ code, signal });
-                },
-              );
-            },
-            response: (cb) => {
-              return onceWorkerThreadMessage(workerThread, "action-result", cb);
-            },
+            resolve,
+          );
+        });
+        const raceHandlers = {
+          aborted: () => {
+            result.status = "aborted";
           },
-          resolve,
-        );
-      });
-      const raceHandlers = {
-        aborted: () => {
-          result.status = "aborted";
-        },
-        error: (error) => {
-          removeOutputListener();
-          result.status = "failed";
-          result.errors.push(error);
-        },
-        exit: ({ code }) => {
-          if (code === 12) {
+          error: (error) => {
+            removeOutputListener();
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          exit: ({ code }) => {
+            if (code === 12) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(
+                  `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                ),
+              );
+              return;
+            }
+            if (code === null || code === 0) {
+              result.status = "completed";
+              result.namespace = {};
+              return;
+            }
+            if (
+              code === EXIT_CODES.SIGINT ||
+              code === EXIT_CODES.SIGTERM ||
+              code === EXIT_CODES.SIGABORT
+            ) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(`node worker thread exited during execution`),
+              );
+              return;
+            }
+            // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+            // means there was an error even if we don't know exactly what.
             result.status = "failed";
             result.errors.push(
               new Error(
-                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                `node worker thread exited with code ${code} during execution`,
               ),
             );
-            return;
-          }
-          if (code === null || code === 0) {
+          },
+          response: ({ status, value }) => {
+            if (status === "action-failed") {
+              result.status = "failed";
+              result.errors.push(value);
+              return;
+            }
+            const { namespace, timings, memoryUsage, performance, coverage } =
+              value;
             result.status = "completed";
-            result.namespace = {};
-            return;
-          }
-          if (
-            code === EXIT_CODES.SIGINT ||
-            code === EXIT_CODES.SIGTERM ||
-            code === EXIT_CODES.SIGABORT
-          ) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(`node worker thread exited during execution`),
-            );
-            return;
-          }
-          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-          // means there was an error even if we don't know exactly what.
-          result.status = "failed";
-          result.errors.push(
-            new Error(
-              `node worker thread exited with code ${code} during execution`,
-            ),
-          );
-        },
-        response: ({ status, value }) => {
-          if (status === "action-failed") {
-            result.status = "failed";
-            result.errors.push(value);
-            return;
-          }
-          const { namespace, performance, coverage } = value;
-          result.status = "completed";
-          result.namespace = namespace;
-          result.performance = performance;
-          result.coverage = coverage;
-        },
-      };
+            result.namespace = namespace;
+            result.timings = timings;
+            result.memoryUsage = memoryUsage;
+            result.performance = performance;
+            result.coverage = coverage;
+          },
+        };
 
-      try {
         actionOperation.throwIfAborted();
         await workerThreadReadyPromise;
         actionOperation.throwIfAborted();
