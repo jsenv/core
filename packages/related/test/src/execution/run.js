@@ -21,19 +21,34 @@ export const run = async ({
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
+  measureMemoryUsage = false,
+  collectPerformance = false,
   coverageEnabled = false,
   coverageTempDirectoryUrl,
-  collectPerformance = false,
   runtime,
   runtimeParams,
 }) => {
+  const timingOrigin = Date.now();
+  const relativeToTimingOrigin = (ms) => ms - timingOrigin;
+
   const result = {
     status: "pending",
     errors: [],
     namespace: null,
+    consoleCalls: null,
+    timings: {
+      origin: timingOrigin,
+      start: 0,
+      runtimeStart: null,
+      executionStart: null,
+      executionEnd: null,
+      runtimeEnd: null,
+      end: null,
+    },
+    memoryUsage: null,
+    performance: null,
+    coverageFileUrl: null,
   };
-  const callbacks = [];
-
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
   const runtimeLabel = `${runtime.name}/${runtime.version}`;
@@ -77,18 +92,11 @@ export const run = async ({
       coverageTempDirectoryUrl,
     ).href;
     await ensureParentDirectories(coverageFileUrl);
-    if (coverageEnabled) {
-      result.coverageFileUrl = coverageFileUrl;
-      // written within the child_process/worker_thread or during runtime.run()
-      // for browsers
-      // (because it takes time to serialize and transfer the coverage object)
-    }
+    result.coverageFileUrl = coverageFileUrl;
+    // written within the child_process/worker_thread or during runtime.run()
+    // for browsers
+    // (because it takes time to serialize and transfer the coverage object)
   }
-
-  const startMs = Date.now();
-  callbacks.push(() => {
-    result.duration = Date.now() - startMs;
-  });
 
   try {
     logger.debug(`run() ${runtimeLabel}`);
@@ -109,11 +117,22 @@ export const run = async ({
                 logger,
                 ...runtimeParams,
                 collectConsole,
+                measureMemoryUsage,
                 collectPerformance,
                 coverageFileUrl,
                 keepRunning,
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
+                onRuntimeStarted: () => {
+                  result.timings.runtimeStart = relativeToTimingOrigin(
+                    Date.now(),
+                  );
+                },
+                onRuntimeStopped: () => {
+                  result.timings.runtimeEnd = relativeToTimingOrigin(
+                    Date.now(),
+                  );
+                },
               });
               cb(runResult);
             } catch (e) {
@@ -131,13 +150,23 @@ export const run = async ({
     if (winner.name === "aborted") {
       runOperation.throwIfAborted();
     }
-    const { status, namespace, errors, performance } = winner.data;
+    const {
+      status,
+      namespace,
+      errors,
+      timings = {},
+      memoryUsage,
+      performance,
+    } = winner.data;
     result.status = status;
     result.errors.push(...errors);
     result.namespace = namespace;
-    if (collectPerformance) {
-      result.performance = performance;
+    if (timings) {
+      result.timings.executionStart = relativeToTimingOrigin(timings.start);
+      result.timings.executionEnd = relativeToTimingOrigin(timings.end);
     }
+    result.memoryUsage = memoryUsage;
+    result.performance = performance;
   } catch (e) {
     if (Abort.isAbortError(e)) {
       if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
@@ -151,10 +180,7 @@ export const run = async ({
     }
   } finally {
     await runOperation.end();
+    result.timings.end = relativeToTimingOrigin(Date.now());
+    return result;
   }
-
-  callbacks.forEach((callback) => {
-    callback();
-  });
-  return result;
 };

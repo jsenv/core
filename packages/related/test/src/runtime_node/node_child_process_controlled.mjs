@@ -4,20 +4,33 @@ import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 const ACTIONS_AVAILABLE = {
   "execute-using-dynamic-import": executeUsingDynamicImport,
   "execute-using-require": async ({ fileUrl }) => {
-    const { createRequire } = await import("node:module");
-    const { fileURLToPath } = await import("node:url");
-    const filePath = fileURLToPath(fileUrl);
-    const require = createRequire(fileUrl);
-    // eslint-disable-next-line import/no-dynamic-require
-    const namespace = require(filePath);
-    const namespaceResolved = {};
-    await Promise.all(
-      Object.keys(namespace).map(async (key) => {
-        const value = await namespace[key];
-        namespaceResolved[key] = value;
-      }),
-    );
-    return namespaceResolved;
+    const result = {
+      timings: {
+        start: null,
+        end: null,
+      },
+      namespace: null,
+    };
+    try {
+      const { createRequire } = await import("node:module");
+      const { fileURLToPath } = await import("node:url");
+      const filePath = fileURLToPath(fileUrl);
+      const require = createRequire(fileUrl);
+      result.timings.start = Date.now();
+      // eslint-disable-next-line import/no-dynamic-require
+      const namespace = require(filePath);
+      const namespaceResolved = {};
+      await Promise.all(
+        Object.keys(namespace).map(async (key) => {
+          const value = await namespace[key];
+          namespaceResolved[key] = value;
+        }),
+      );
+      result.namespace = namespaceResolved;
+    } finally {
+      result.timings.end = Date.now();
+      return result;
+    }
   },
 };
 const ACTION_REQUEST_EVENT_NAME = "action";

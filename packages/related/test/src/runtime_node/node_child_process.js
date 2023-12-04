@@ -1,10 +1,6 @@
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import {
-  Abort,
-  raceCallbacks,
-  createCallbackListNotifiedOnce,
-} from "@jsenv/abort";
+import { Abort, raceCallbacks } from "@jsenv/abort";
 import { createDetailedMessage } from "@jsenv/log";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
@@ -56,12 +52,15 @@ export const nodeChildProcess = ({
       keepRunning,
       stopSignal,
       onConsole,
+      onRuntimeStarted,
+      onRuntimeStopped,
 
+      measureMemoryUsage,
+      collectPerformance,
       coverageEnabled = false,
       coverageConfig,
       coverageMethodForNodeJs,
       coverageFileUrl,
-      collectPerformance,
     }) => {
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
@@ -82,9 +81,14 @@ export const nodeChildProcess = ({
         );
       }
 
-      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanupCallbackSet = new Set();
       const cleanup = async (reason) => {
-        await cleanupCallbackList.notify({ reason });
+        const promises = [];
+        for (const cleanupCallback of cleanupCallbackSet) {
+          promises.push(cleanupCallback({ reason }));
+        }
+        cleanupCallbackSet.clear();
+        await Promise.all(promises);
       };
 
       const childExecOptions = await createChildExecOptions({
@@ -131,8 +135,17 @@ export const nodeChildProcess = ({
         childProcess.stderr.pipe(stderr);
       }
       const childProcessReadyPromise = new Promise((resolve) => {
-        onceChildProcessMessage(childProcess, "ready", resolve);
+        onceChildProcessMessage(childProcess, "ready", () => {
+          onRuntimeStarted();
+          resolve();
+        });
       });
+      cleanupCallbackSet.add(
+        onceChildProcessEvent(childProcess, "exit", () => {
+          onRuntimeStopped();
+        }),
+      );
+
       const removeOutputListener = installChildProcessOutputListener(
         childProcess,
         ({ type, text }) => {
@@ -174,6 +187,14 @@ export const nodeChildProcess = ({
         return;
       });
 
+      const result = {
+        status: "executing",
+        errors: [],
+        namespace: null,
+        duration: null,
+        memoryUsage: null,
+        performance: null,
+      };
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
       const winnerPromise = new Promise((resolve) => {
@@ -206,46 +227,17 @@ export const nodeChildProcess = ({
           resolve,
         );
       });
-      const result = {
-        status: "executing",
-        errors: [],
-        namespace: null,
-      };
-
-      const writeResult = async () => {
-        actionOperation.throwIfAborted();
-        await childProcessReadyPromise;
-        actionOperation.throwIfAborted();
-        await sendToChildProcess(childProcess, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
-              rootDirectoryUrl,
-              fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
-              collectPerformance,
-              coverageEnabled,
-              coverageConfig,
-              coverageMethodForNodeJs,
-              coverageFileUrl,
-              exitAfterAction: true,
-            },
-          },
-        });
-        const winner = await winnerPromise;
-        if (winner.name === "aborted") {
+      const raceHandlers = {
+        aborted: () => {
           result.status = "aborted";
-          return;
-        }
-        if (winner.name === "error") {
-          const error = winner.data;
+        },
+        error: (error) => {
           removeOutputListener();
           result.status = "failed";
           result.errors.push(error);
-          return;
-        }
-        if (winner.name === "exit") {
-          const { code } = winner.data;
+        },
+        exit: async ({ code }) => {
+          onRuntimeStopped();
           await cleanup("process exit");
           if (code === 12) {
             result.status = "failed";
@@ -278,23 +270,47 @@ export const nodeChildProcess = ({
           result.errors.push(
             new Error(`node process exited with code ${code} during execution`),
           );
-          return;
-        }
-        const { status, value } = winner.data;
-        if (status === "action-failed") {
-          result.status = "failed";
-          result.errors.push(value);
-          return;
-        }
-        const { namespace, performance, coverage } = value;
-        result.status = "completed";
-        result.namespace = namespace;
-        result.performance = performance;
-        result.coverage = coverage;
+        },
+        response: ({ status, value }) => {
+          if (status === "action-failed") {
+            result.status = "failed";
+            result.errors.push(value);
+            return;
+          }
+          const { namespace, timings, memoryUsage, performance, coverage } =
+            value;
+          result.status = "completed";
+          result.namespace = namespace;
+          result.timings = timings;
+          result.memoryUsage = memoryUsage;
+          result.performance = performance;
+          result.coverage = coverage;
+        },
       };
-
       try {
-        await writeResult();
+        actionOperation.throwIfAborted();
+        await childProcessReadyPromise;
+        // onRuntimeReady();
+        actionOperation.throwIfAborted();
+        await sendToChildProcess(childProcess, {
+          type: "action",
+          data: {
+            actionType: "execute-using-dynamic-import",
+            actionParams: {
+              rootDirectoryUrl,
+              fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              measureMemoryUsage,
+              collectPerformance,
+              coverageEnabled,
+              coverageConfig,
+              coverageMethodForNodeJs,
+              coverageFileUrl,
+              exitAfterAction: true,
+            },
+          },
+        });
+        const winner = await winnerPromise;
+        await raceHandlers[winner.name](winner.data);
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);

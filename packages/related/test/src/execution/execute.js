@@ -31,9 +31,10 @@ export const execute = async ({
   keepRunning = false,
 
   collectConsole,
+  measureMemoryUsage = false,
+  collectPerformance = false,
   collectCoverage,
   coverageTempDirectoryUrl,
-  collectPerformance = false,
   runtime,
   runtimeParams,
 
@@ -83,9 +84,10 @@ export const execute = async ({
     keepRunning,
     mirrorConsole,
     collectConsole,
+    measureMemoryUsage,
+    collectPerformance,
     collectCoverage,
     coverageTempDirectoryUrl,
-    collectPerformance,
     runtime,
     runtimeParams,
   });
