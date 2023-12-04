@@ -80,14 +80,32 @@ export const createRuntimeUsingPlaywright = ({
       : browserPromiseCache.get(label);
     if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
+        const options = {
+          ...playwrightLaunchOptions,
+          headless: headful === undefined ? !keepRunning : !headful,
+        };
+        if (measureMemoryUsage) {
+          const { ignoreDefaultArgs, args } = options;
+          if (ignoreDefaultArgs) {
+            if (!ignoreDefaultArgs.includes("--headless")) {
+              ignoreDefaultArgs.push("--headless");
+            }
+          } else {
+            options.ignoreDefaultArgs = ["--headless"];
+          }
+          if (args) {
+            if (!args.includes("--headless=new")) {
+              args.push("--headless=new");
+            }
+          } else {
+            options.args = ["--headless=new"];
+          }
+        }
         const browser = await launchBrowserUsingPlaywright({
           signal,
           browserName,
           stopOnExit: true,
-          playwrightLaunchOptions: {
-            ...playwrightLaunchOptions,
-            headless: headful === undefined ? !keepRunning : !headful,
-          },
+          playwrightLaunchOptions: options,
         });
         if (browser._initializer.version) {
           runtime.version = browser._initializer.version;
@@ -254,7 +272,40 @@ export const createRuntimeUsingPlaywright = ({
     }
 
     if (measureMemoryUsage) {
-      // TODO
+      const getMemoryUsage = async () => {
+        const memoryUsage = await page.evaluate(
+          /* eslint-disable no-undef */
+          /* istanbul ignore next */
+          async () => {
+            const { performance } = window;
+            if (!performance) {
+              return null;
+            }
+            // performance.memory is less accurate but way faster
+            // https://web.dev/articles/monitor-total-page-memory-usage#legacy-api
+            if (performance.memory) {
+              return performance.memory.totalJSHeapSize;
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/Performance/measureUserAgentSpecificMemory
+            if (
+              performance.measureUserAgentSpecificMemory &&
+              crossOriginIsolated
+            ) {
+              const memorySample =
+                await performance.measureUserAgentSpecificMemory();
+              return memorySample;
+            }
+            return null;
+          },
+          /* eslint-enable no-undef */
+        );
+        return memoryUsage;
+      };
+
+      callbackSet.add(async () => {
+        const memoryUsage = await getMemoryUsage();
+        result.memoryUsage = memoryUsage;
+      });
     }
 
     if (collectPerformance) {
@@ -426,9 +477,6 @@ export const createRuntimeUsingPlaywright = ({
       };
       const winner = await winnerPromise;
       raceHandlers[winner.name](winner.data);
-      if (collectPerformance) {
-        result.performance = performance;
-      }
       for (const callback of callbackSet) {
         await callback();
       }

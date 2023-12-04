@@ -7,11 +7,8 @@
   </head>
 
   <body>
-    <script type="module">
-      console.log("foo");
-      await new Promise((resolve) => {
-        setTimeout(resolve, 2_000);
-      });
+    <script>
+      window.array = Array(1e6).fill("some string");
     </script>
   </body>
 </html>
