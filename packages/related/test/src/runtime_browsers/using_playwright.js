@@ -16,6 +16,7 @@ export const createRuntimeUsingPlaywright = ({
   browserName,
   browserVersion,
   coveragePlaywrightAPIAvailable = false,
+  memoryUsageAPIAvailable = false,
   shouldIgnoreError = () => false,
   transformErrorHook = (error) => error,
   isolatedTab = false,
@@ -49,6 +50,7 @@ export const createRuntimeUsingPlaywright = ({
     isTestPlan,
 
     measureMemoryUsage,
+    onMeasureMemoryAvailable,
     collectPerformance,
     coverageEnabled = false,
     coverageConfig,
@@ -271,7 +273,7 @@ export const createRuntimeUsingPlaywright = ({
       });
     }
 
-    if (measureMemoryUsage) {
+    if (memoryUsageAPIAvailable) {
       const getMemoryUsage = async () => {
         const memoryUsage = await page.evaluate(
           /* eslint-disable no-undef */
@@ -302,10 +304,13 @@ export const createRuntimeUsingPlaywright = ({
         return memoryUsage;
       };
 
-      callbackSet.add(async () => {
-        const memoryUsage = await getMemoryUsage();
-        result.memoryUsage = memoryUsage;
-      });
+      onMeasureMemoryAvailable(getMemoryUsage);
+      if (measureMemoryUsage) {
+        callbackSet.add(async () => {
+          const memoryUsage = await getMemoryUsage();
+          result.memoryUsage = memoryUsage;
+        });
+      }
     }
 
     if (collectPerformance) {

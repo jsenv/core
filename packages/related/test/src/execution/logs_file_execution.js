@@ -133,27 +133,20 @@ ${key}: ${details[key]}`;
 };
 
 export const formatExecutionLabel = (
-  {
-    executionIndex,
-    executionParams,
-    executionResult,
-    timeEllapsed,
-    memoryHeap,
-    counters,
-  },
+  { index, params, result, duration, memoryHeap, counters },
   { logTimeUsage, logMemoryHeapUsage } = {},
 ) => {
-  const { status } = executionResult;
+  const { status } = result;
   const descriptionFormatter = descriptionFormatters[status];
   const description = descriptionFormatter({
-    index: executionIndex,
+    index,
     total: counters.total,
-    executionParams,
+    params,
   });
   const intermediateSummaryText = createIntermediateSummary({
-    executionIndex,
+    index,
     counters,
-    timeEllapsed,
+    duration,
     memoryHeap,
     logTimeUsage,
     logMemoryHeapUsage,

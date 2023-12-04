@@ -18,6 +18,7 @@ const createChromiumRuntine = (params) => {
     // see also https://github.com/microsoft/playwright/releases
     browserVersion: "unset",
     coveragePlaywrightAPIAvailable: true,
+    memoryUsageAPIAvailable: true,
     ...params,
   });
 };

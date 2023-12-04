@@ -14,6 +14,8 @@ const test = async (params) => {
     },
     ...params,
   });
+  // we compare usage end - usage start to prevent
+  // node or os specificities to influence the measures
   const actual = memoryUsage - usageAtStart;
   const expected = assert.between(5_000_000, 9_000_000); // around 7MB
   assert({ actual, expected });
