@@ -6,10 +6,11 @@ const test = async (params) => {
   const startMs = Date.now();
   const result = await execute({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./", import.meta.url),
+    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     fileRelativeUrl: `./main.js`,
     mirrorConsole: false,
     collectConsole: true,
+    allocatedMs: 2_000,
     ...params,
   });
   const endMs = Date.now();
@@ -27,9 +28,7 @@ const test = async (params) => {
 
 await test({
   runtime: nodeChildProcess(),
-  allocatedMs: 2_000,
 });
 await test({
   runtime: nodeWorkerThread(),
-  allocatedMs: 2_000,
 });

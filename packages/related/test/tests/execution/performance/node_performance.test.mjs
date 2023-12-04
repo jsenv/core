@@ -30,12 +30,9 @@ const test = async (params) => {
   assert({ actual, expected });
 };
 
-// nodeChildProcess
 await test({
   runtime: nodeChildProcess(),
 });
-
-// nodeWorkerThread
 await test({
   runtime: nodeWorkerThread(),
 });

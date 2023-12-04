@@ -3,6 +3,10 @@ import { startDevServer } from "@jsenv/core";
 
 import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 const test = async ({ runtime }) => {
   const devServer = await startDevServer({
     logLevel: "warn",
@@ -53,8 +57,6 @@ const test = async ({ runtime }) => {
   assert({ actual, expected });
 };
 
-if (process.platform !== "win32") {
-  await test({ runtime: chromium() });
-  await test({ runtime: firefox() });
-  await test({ runtime: webkit() });
-}
+await test({ runtime: chromium() });
+await test({ runtime: firefox() });
+await test({ runtime: webkit() });
