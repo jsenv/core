@@ -28,6 +28,13 @@ export const run = async ({
   runtime,
   runtimeParams,
 }) => {
+  if (keepRunning) {
+    allocatedMs = Infinity;
+  }
+  if (allocatedMs === Infinity) {
+    allocatedMs = 0;
+  }
+
   const timingOrigin = Date.now();
   const relativeToTimingOrigin = (ms) => ms - timingOrigin;
 
@@ -56,13 +63,7 @@ export const run = async ({
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
   let timeoutAbortSource;
-  if (
-    // ideally we would rather log than the timeout is ignored
-    // when keepRunning is true
-    !keepRunning &&
-    typeof allocatedMs === "number" &&
-    allocatedMs !== Infinity
-  ) {
+  if (allocatedMs) {
     timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
   const consoleCalls = [];

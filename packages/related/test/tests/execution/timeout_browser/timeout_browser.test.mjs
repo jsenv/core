@@ -4,6 +4,7 @@ import { startDevServer } from "@jsenv/core";
 import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
+  const startMs = Date.now();
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -18,15 +19,18 @@ const test = async (params) => {
       rootDirectoryUrl: new URL("./client/", import.meta.url),
     },
     fileRelativeUrl: `./main.html`,
-    allocatedMs: 5_000,
+    allocatedMs: 2_000,
     mirrorConsole: false,
     collectConsole: true,
     ...params,
   });
+  const endMs = Date.now();
+  const duration = endMs - startMs;
   devServer.stop();
   const actual = {
     status: result.status,
     consoleCalls: result.consoleCalls,
+    duration,
   };
   const expected = {
     status: "timedout",
@@ -36,6 +40,7 @@ const test = async (params) => {
         text: `foo\n`,
       },
     ],
+    duration: assert.between(2_000, 5_000),
   };
   assert({ actual, expected });
 };

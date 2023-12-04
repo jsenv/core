@@ -20,16 +20,16 @@ const test = async (params) => {
   };
   const expected = {
     status: "timedout",
-    duration: assert.between(3_000, 10_000),
+    duration: assert.between(2_000, 5_000),
   };
   assert({ actual, expected });
 };
 
 await test({
   runtime: nodeChildProcess(),
-  allocatedMs: 5_000,
+  allocatedMs: 2_000,
 });
 await test({
   runtime: nodeWorkerThread(),
-  allocatedMs: 5_000,
+  allocatedMs: 2_000,
 });

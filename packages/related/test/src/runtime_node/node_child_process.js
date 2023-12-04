@@ -207,99 +207,105 @@ export const nodeChildProcess = ({
       };
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
-      const winnerPromise = new Promise((resolve) => {
-        raceCallbacks(
-          {
-            aborted: (cb) => {
-              return actionOperation.addAbortCallback(cb);
+
+      try {
+        const winnerPromise = new Promise((resolve) => {
+          raceCallbacks(
+            {
+              aborted: (cb) => {
+                return actionOperation.addAbortCallback(cb);
+              },
+              // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+              // disconnect: (cb) => {
+              //   return onceProcessEvent(childProcess, "disconnect", cb)
+              // },
+              // https://nodejs.org/api/child_process.html#child_process_event_error
+              error: (cb) => {
+                return onceChildProcessEvent(childProcess, "error", cb);
+              },
+              exit: (cb) => {
+                return onceChildProcessEvent(
+                  childProcess,
+                  "exit",
+                  (code, signal) => {
+                    cb({ code, signal });
+                  },
+                );
+              },
+              response: (cb) => {
+                return onceChildProcessMessage(
+                  childProcess,
+                  "action-result",
+                  cb,
+                );
+              },
             },
-            // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-            // disconnect: (cb) => {
-            //   return onceProcessEvent(childProcess, "disconnect", cb)
-            // },
-            // https://nodejs.org/api/child_process.html#child_process_event_error
-            error: (cb) => {
-              return onceChildProcessEvent(childProcess, "error", cb);
-            },
-            exit: (cb) => {
-              return onceChildProcessEvent(
-                childProcess,
-                "exit",
-                (code, signal) => {
-                  cb({ code, signal });
-                },
-              );
-            },
-            response: (cb) => {
-              return onceChildProcessMessage(childProcess, "action-result", cb);
-            },
+            resolve,
+          );
+        });
+        const raceHandlers = {
+          aborted: () => {
+            result.status = "aborted";
           },
-          resolve,
-        );
-      });
-      const raceHandlers = {
-        aborted: () => {
-          result.status = "aborted";
-        },
-        error: (error) => {
-          removeOutputListener();
-          result.status = "failed";
-          result.errors.push(error);
-        },
-        exit: ({ code }) => {
-          onRuntimeStopped();
-          if (code === 12) {
+          error: (error) => {
+            removeOutputListener();
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          exit: ({ code }) => {
+            onRuntimeStopped();
+            if (code === 12) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(
+                  `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                ),
+              );
+              return;
+            }
+            if (code === null || code === 0) {
+              result.status = "completed";
+              result.namespace = {};
+              return;
+            }
+            if (
+              code === EXIT_CODES.SIGINT ||
+              code === EXIT_CODES.SIGTERM ||
+              code === EXIT_CODES.SIGABORT
+            ) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(`node process exited during execution`),
+              );
+              return;
+            }
+            // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+            // means there was an error even if we don't know exactly what.
             result.status = "failed";
             result.errors.push(
               new Error(
-                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                `node process exited with code ${code} during execution`,
               ),
             );
-            return;
-          }
-          if (code === null || code === 0) {
+          },
+          response: ({ status, value }) => {
+            if (status === "action-failed") {
+              result.status = "failed";
+              result.errors.push(value);
+              return;
+            }
+            const { namespace, timings, memoryUsage, performance, coverage } =
+              value;
             result.status = "completed";
-            result.namespace = {};
-            return;
-          }
-          if (
-            code === EXIT_CODES.SIGINT ||
-            code === EXIT_CODES.SIGTERM ||
-            code === EXIT_CODES.SIGABORT
-          ) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(`node process exited during execution`),
-            );
-            return;
-          }
-          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-          // means there was an error even if we don't know exactly what.
-          result.status = "failed";
-          result.errors.push(
-            new Error(`node process exited with code ${code} during execution`),
-          );
-        },
-        response: ({ status, value }) => {
-          if (status === "action-failed") {
-            result.status = "failed";
-            result.errors.push(value);
-            return;
-          }
-          const { namespace, timings, memoryUsage, performance, coverage } =
-            value;
-          result.status = "completed";
-          result.namespace = namespace;
-          result.timings = timings;
-          result.memoryUsage = memoryUsage;
-          result.performance = performance;
-          result.coverage = coverage;
-        },
-      };
-      try {
+            result.namespace = namespace;
+            result.timings = timings;
+            result.memoryUsage = memoryUsage;
+            result.performance = performance;
+            result.coverage = coverage;
+          },
+        };
         actionOperation.throwIfAborted();
         await childProcessReadyPromise;
-        // onRuntimeReady();
         actionOperation.throwIfAborted();
         await sendToChildProcess(childProcess, {
           type: "action",
