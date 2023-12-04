@@ -13,7 +13,7 @@ export const betweenComparisonToMessage = (comparison) => {
   if (typeof actual !== "number") {
     return createDetailedMessage(`not a number`, {
       found: inspect(actual),
-      expected: `a number between ${min} and ${max}`,
+      expected: `a number between ${inspect(min)} and ${inspect(max)}`,
       path,
     });
   }
@@ -21,14 +21,14 @@ export const betweenComparisonToMessage = (comparison) => {
   if (actual < min) {
     return createDetailedMessage(`too small`, {
       found: inspect(actual),
-      expected: `between ${min} and ${max}`,
+      expected: `between ${inspect(min)} and ${inspect(max)}`,
       path,
     });
   }
   // too big
   return createDetailedMessage(`too big`, {
     found: inspect(actual),
-    expected: `between ${min} and ${max}`,
+    expected: `between ${inspect(min)} and ${inspect(max)}`,
     path,
   });
 };

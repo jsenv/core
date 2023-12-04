@@ -110,17 +110,17 @@ assert.closeTo = (value) => {
 assert.between = (minValue, maxValue) => {
   if (typeof minValue !== "number") {
     throw new TypeError(
-      `assert.around 1st argument must be number, received ${minValue}`,
+      `assert.between 1st argument must be number, received ${minValue}`,
     );
   }
   if (typeof maxValue !== "number") {
     throw new TypeError(
-      `assert.around 2nd argument must be number, received ${maxValue}`,
+      `assert.between 2nd argument must be number, received ${maxValue}`,
     );
   }
   if (minValue > maxValue) {
     throw new Error(
-      `assert.around 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
+      `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
     );
   }
   return createBetweenExpectation(minValue, maxValue);
