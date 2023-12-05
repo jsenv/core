@@ -26,10 +26,9 @@ import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_fil
 import { generateCoverageHtmlDirectory } from "../coverage/coverage_reporter_html_directory.js";
 import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
-import { formatSummary } from "./logs_file_execution.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
-import { listReporter } from "./reporters/reporter_list.js";
+import { listReporter, renderFinalSummary } from "./reporters/reporter_list.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -51,12 +50,13 @@ export const executeTestPlan = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  logMemoryHeapUsage = true,
 
   rootDirectoryUrl,
   webServer,
   testPlan,
   updateProcessExitCode = true,
-  concurrency = false,
+  concurrency = false, // TODO: rename parellel
   defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
@@ -368,7 +368,13 @@ To fix this warning:
     }
   }
 
-  reporters.push(listReporter({ logger, rootDirectoryUrl }));
+  reporters.push(
+    listReporter({
+      logger,
+      logMemoryHeapUsage,
+      rootDirectoryUrl,
+    }),
+  );
 
   testPlan = {
     "file:///**/node_modules/": null,
@@ -380,6 +386,7 @@ To fix this warning:
 
   const testPlanReport = {
     aborted: false,
+    failed: false,
     summary: null,
     results: {},
     coverage: null,
@@ -513,12 +520,11 @@ To fix this warning:
     });
     const annotations = [];
     reporters.push({
-      beforeAllExecution: () => {
+      beforeAllExecution: (testPlanReport) => {
         return async () => {
-          const { summary } = testPlanReport;
           const title = "Jsenv test results";
-          const summaryText = stripAnsi(formatSummary(summary));
-          if (summary.counters.total !== summary.counters.completed) {
+          const summaryText = stripAnsi(renderFinalSummary(testPlanReport));
+          if (testPlanReport.failed) {
             await githubCheckRun.fail({
               title,
               summary: summaryText,
@@ -725,10 +731,10 @@ To fix this warning:
     }
   }
 
-  const hasFailed =
+  testPlanReport.failed =
     testPlanReport.summary.counters.total !==
     testPlanReport.summary.counters.completed;
-  if (updateProcessExitCode && hasFailed) {
+  if (updateProcessExitCode && testPlanReport.failed) {
     process.exitCode = 1;
   }
   const coverage = testPlanReport.coverage;

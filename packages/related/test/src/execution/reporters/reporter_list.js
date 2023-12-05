@@ -31,15 +31,25 @@ export const listReporter = ({
     // so we enable hot replace only when !process.exitCode (no error so far)
     process.exitCode !== 1;
   const callWhenPreviousExecutionAreDone = createCallOrderer();
+
   let rawOutput = "";
+  const writeOutput = (log) => {
+    if (logger.levels.info) {
+      process.stdout.write(log);
+    }
+    rawOutput += stripAnsi(log);
+    writeFileSync(jsenvOutputFileUrl, rawOutput);
+  };
 
   const addIntermediateSummary = !canEraseProcessStdout;
 
   return {
-    beforeAllExecution: (testPlanInfo) => {
-      logger.info(`${testPlanInfo.executions.size} executions planified`);
+    beforeAllExecution: (testPlanReport) => {
+      writeOutput(`${testPlanReport.executions.size} executions planified`);
       if (!canEraseProcessStdout) {
-        return null;
+        return () => {
+          writeOutput(renderFinalSummary());
+        };
       }
 
       const dynamicLog = createLog({ newLine: "" });
@@ -49,7 +59,6 @@ export const listReporter = ({
       const interval = setInterval(() => {
         dynamicLog.write(renderLog());
       }, 50);
-
       const renderLog = () => {
         frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
         const availableLines = process.stdout.rows;
@@ -82,7 +91,6 @@ export const listReporter = ({
         );
         return pendingExecutionLogs.join("\n");
       };
-
       return () => {
         clearInterval(interval);
       };
@@ -94,17 +102,34 @@ export const listReporter = ({
             logMemoryHeapUsage,
             addIntermediateSummary,
           });
-          if (logger.levels.info) {
-            process.stdout.write(log);
-          }
-          rawOutput += stripAnsi(log);
-          writeFileSync(jsenvOutputFileUrl, rawOutput);
+          writeOutput(log);
         });
       };
     },
   };
 };
 
+/*
+ *                         label
+ *       ┌───────────────────┴───────────────────────┐
+ *       │                               │           │
+ *  description                       metrics        │
+ *  ┌────┴─────┐                      ┌──┴───┐       │
+ *  │          │                      │      │       │
+ * icon      file          runtime duration memory intersummary
+ * ┌┴┐┌────────┴─────────┐ ┌──┴──┐ ┌──┴──┐┌──┴──┐ ┌──┴───┐
+ *  ✔ tests/file.test.html on node [10.4s/14.5MB] (✔10 ✖1)
+ *  ------- console (i1 ✖1) -------
+ *  i info
+ *  ✖ error
+ *  -------------------------------
+ *  ---------- error -------
+ *  1 | throw new Error("test");
+ *      ^
+ *  Error: test
+ *    at file://demo/file.test.js:1:1
+ *  ------------------------
+ */
 const renderExecutionLog = (
   execution,
   { logMemoryHeapUsage, addIntermediateSummary },
@@ -143,14 +168,6 @@ const renderExecutionLog = (
   return log;
 };
 
-/*
- *  description                metrics
- *  ┌────┴─────┐              ┌──┴───┐
- *  │          │              │      │
- * icon      file         duration memory intersummary
- * ┌┴┐┌────────┴─────────┐ ┌──┴──┐┌──┴──┐ ┌──┴───┐
- *  ✔ tests/file.test.html [10.4s/14.5MB] (✔10 ✖1)
- */
 const renderExecutionLabel = (
   execution,
   { logMemoryHeapUsage, addIntermediateSummary },
@@ -405,4 +422,65 @@ const renderError = (error) => {
     return error.stack || error.message || error;
   }
   return error;
+};
+
+export const renderFinalSummary = (testPlanReport) => {
+  let finalSummary = "";
+  const counters = testPlanReport.summary.counters;
+  const duration = testPlanReport.summary.duration;
+
+  // done + duration
+  if (counters.done === 1) {
+    finalSummary += `1 execution done in ${msAsEllapsedTime(duration)}`;
+  } else {
+    finalSummary += `${counters.done} executions done in ${msAsEllapsedTime(
+      duration,
+    )}`;
+  }
+  // status repartition
+  finalSummary += `\n${renderStatusRepartition(counters)}`;
+
+  return `-------------- summary -----------------
+${finalSummary}
+----------------------------------------`;
+};
+const renderStatusRepartition = (counters) => {
+  if (counters.aborted === counters.total) {
+    return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
+  }
+  if (counters.timedout === counters.total) {
+    return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
+  }
+  if (counters.failed === counters.total) {
+    return `all ${ANSI.color(`failed`, COLOR_FAILED)}`;
+  }
+  if (counters.completed === counters.total) {
+    return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
+  }
+  if (counters.cancelled === counters.total) {
+    return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
+  }
+  const parts = [];
+  if (counters.timedout) {
+    parts.push(
+      `${counters.timedout} ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`,
+    );
+  }
+  if (counters.failed) {
+    parts.push(`${counters.failed} ${ANSI.color(`failed`, COLOR_FAILED)}`);
+  }
+  if (counters.completed) {
+    parts.push(
+      `${counters.completed} ${ANSI.color(`completed`, COLOR_COMPLETED)}`,
+    );
+  }
+  if (counters.aborted) {
+    parts.push(`${counters.aborted} ${ANSI.color(`aborted`, COLOR_ABORTED)}`);
+  }
+  if (counters.cancelled) {
+    parts.push(
+      `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
+    );
+  }
+  return `${parts.join(", ")}`;
 };
