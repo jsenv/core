@@ -392,22 +392,24 @@ To fix this warning:
   logger.debug(`Generate executions`);
 
   const testPlanReport = {
+    counters: {
+      planified: 0,
+      remaining: 0,
+      aborted: 0,
+      timedout: 0,
+      failed: 0,
+      completed: 0,
+      done: 0,
+    },
     aborted: false,
     failed: false,
-    summary: null,
     results: {},
+    duration: 0,
     coverage: null,
   };
+  const counters = testPlanReport.counters;
   const results = testPlanReport.results;
   const executionPlanifiedSet = new Set();
-  const counters = {
-    total: 0,
-    aborted: 0,
-    timedout: 0,
-    failed: 0,
-    completed: 0,
-    done: 0,
-  };
 
   // collect files to execute + fill executionPlanifiedSet
   {
@@ -512,7 +514,7 @@ To fix this warning:
     }
   }
 
-  counters.total = executionPlanifiedSet.size;
+  counters.planified = executionPlanifiedSet.size;
   logger.debug(`${executionPlanifiedSet.size} executions planned`);
   if (githubCheckEnabled) {
     const githubCheckRun = await startGithubCheckRun({
@@ -648,7 +650,7 @@ To fix this warning:
       executionRunningSet.add(execution);
       const afterExecutionCallbackSet = new Set();
       for (const beforeExecutionCallback of reporters) {
-        const returnValue = beforeExecutionCallback(execution);
+        const returnValue = beforeExecutionCallback(execution, testPlanReport);
         if (typeof returnValue === "function") {
           afterExecutionCallbackSet.add(returnValue);
         }
@@ -680,6 +682,7 @@ To fix this warning:
       execution.status = "done";
       executionRunningSet.delete(execution);
       counters.done++;
+      counters.remaining--;
       if (execution.result.status === "aborted") {
         counters.aborted++;
       } else if (execution.result.status === "timedout") {
@@ -694,13 +697,15 @@ To fix this warning:
       }
       afterExecutionCallbackSet.clear();
 
-      const cancelRemaining =
-        failFast &&
-        execution.result.status !== "completed" &&
-        counters.done < counters.total;
-      if (cancelRemaining) {
-        logger.info(`"failFast" enabled -> cancel remaining executions`);
-        failFastAbortController.abort();
+      if (execution.result.status !== "completed") {
+        testPlanReport.failed = true;
+        if (updateProcessExitCode) {
+          process.exitCode = 1;
+        }
+        if (failFast && counters.remaining) {
+          logger.info(`"failFast" enabled -> cancel remaining executions`);
+          failFastAbortController.abort();
+        }
       }
     };
     try {
@@ -722,14 +727,10 @@ To fix this warning:
         }
         teardownCallbackSet.clear();
       }
+      // when execution is aborted, the remaining executions are "cancelled"
       counters.cancelled = counters.total - counters.done;
-      const summary = {
-        counters,
-        // when execution is aborted, the remaining executions are "cancelled"
-        duration: Date.now() - startMs,
-      };
       testPlanReport.aborted = multipleExecutionsOperation.signal.aborted;
-      testPlanReport.summary = summary;
+      testPlanReport.duration = Date.now() - startMs;
       if (finalizeCoverage) {
         await finalizeCoverage();
       }
@@ -738,12 +739,6 @@ To fix this warning:
     }
   }
 
-  testPlanReport.failed =
-    testPlanReport.summary.counters.total !==
-    testPlanReport.summary.counters.completed;
-  if (updateProcessExitCode && testPlanReport.failed) {
-    process.exitCode = 1;
-  }
   const coverage = testPlanReport.coverage;
   // planCoverage can be null when execution is aborted
   if (coverage) {

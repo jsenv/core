@@ -41,7 +41,7 @@ export const listReporter = ({
 
   return {
     beforeAllExecution: (testPlanReport) => {
-      writeOutput(`${testPlanReport.executions.size} executions planified`);
+      writeOutput(`${testPlanReport.counters.planified} executions planified`);
       if (!canEraseProcessStdout) {
         return () => {
           writeOutput(renderFinalSummary());
