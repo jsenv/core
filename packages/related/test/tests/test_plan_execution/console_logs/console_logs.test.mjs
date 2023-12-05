@@ -2,6 +2,12 @@ import { assert } from "@jsenv/assert";
 
 import { execute, nodeWorkerThread } from "@jsenv/test";
 
+// disable on windows because unicode symbols like
+// "✔" are "√" because unicode is supported returns false
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 process.env.FORCE_COLOR = "false";
 const getLogs = async (params) => {
   const result = await execute({
@@ -22,9 +28,7 @@ const getLogs = async (params) => {
 };
 
 // on browsers
-// disable on windows because unicode symbols like
-// "✔" are "√" because unicode is supported returns false
-if (process.platform !== "win32") {
+{
   const actual = await getLogs({
     fileRelativeUrl: "./test_browser.js",
   });
@@ -43,11 +47,12 @@ file: client/main.html
 -------------------------
 
 `;
+
   assert({ actual, expected });
 }
 
 // on node
-if (process.platform !== "win32") {
+{
   const actual = await getLogs({
     fileRelativeUrl: "./test_node.js",
   });
