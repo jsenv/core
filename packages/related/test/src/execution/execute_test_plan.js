@@ -120,8 +120,6 @@ export const executeTestPlan = async ({
 }) => {
   const teardownCallbackSet = new Set();
 
-  reporters.push(listReporter());
-
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -369,6 +367,8 @@ To fix this warning:
       concurrency = 1;
     }
   }
+
+  reporters.push(listReporter({ logger, rootDirectoryUrl }));
 
   testPlan = {
     "file:///**/node_modules/": null,
