@@ -41,7 +41,7 @@ import { listReporter, renderFinalSummary } from "./reporters/reporter_list.js";
  * @param {boolean|number} [testPlanParameters.concurrency=false] Maximum amount of execution running at the same time
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
- * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
+ * @param {boolean} [testPlanParameters.logMemoryUsage=false] Add memory heap usage during logs
  * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
  * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
  * @return {Object} An object containing the result of all file executions
@@ -49,7 +49,7 @@ import { listReporter, renderFinalSummary } from "./reporters/reporter_list.js";
 export const executeTestPlan = async ({
   logLevel = "info",
   logDynamic,
-  logMemoryHeapUsage = true,
+  logMemoryUsage = true,
   logFileUrl,
 
   rootDirectoryUrl,
@@ -378,7 +378,7 @@ To fix this warning:
     listReporter({
       logger,
       logDynamic,
-      logMemoryHeapUsage,
+      logMemoryUsage,
       logFileUrl,
     }),
   );
@@ -455,6 +455,7 @@ To fix this warning:
 
         const { runtime, runtimeParams } = stepConfig;
         const params = {
+          measureMemoryUsage: logMemoryUsage,
           measurePerformance: false,
           collectPerformance: false,
           collectConsole: true,
@@ -649,26 +650,26 @@ To fix this warning:
       executionRemainingSet.delete(execution);
       executionRunningSet.add(execution);
       const afterExecutionCallbackSet = new Set();
-      for (const beforeExecutionCallback of reporters) {
-        const returnValue = beforeExecutionCallback(execution, testPlanReport);
-        if (typeof returnValue === "function") {
-          afterExecutionCallbackSet.add(returnValue);
+      for (const reporter of reporters) {
+        const { beforeExecution } = reporter;
+        if (beforeExecution) {
+          const returnValue = beforeExecution(execution, testPlanReport);
+          if (typeof returnValue === "function") {
+            afterExecutionCallbackSet.add(returnValue);
+          }
         }
       }
 
       const fileUrl = `${rootDirectoryUrl}${execution.fileRelativeUrl}`;
       if (existsSync(new URL(fileUrl))) {
         const executionResult = await run({
+          ...execution.params,
           signal: multipleExecutionsOperation.signal,
           logger,
-          allocatedMs: execution.params.allocatedMs,
           keepRunning,
           mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-          collectConsole: execution.params.collectConsole,
           coverageEnabled,
           coverageTempDirectoryUrl,
-          runtime: execution.params.runtime,
-          runtimeParams: execution.params.runtimeParams,
         });
         Object.assign(execution.result, executionResult);
       } else {
@@ -713,7 +714,7 @@ To fix this warning:
       for (const reporter of reporters) {
         const beforeAllExecution = reporter.beforeAllExecution;
         if (beforeAllExecution) {
-          const returnValue = beforeAllExecution();
+          const returnValue = beforeAllExecution(testPlanReport);
           if (typeof returnValue === "function") {
             afterAllExecutionCallbackSet.add(returnValue);
           }

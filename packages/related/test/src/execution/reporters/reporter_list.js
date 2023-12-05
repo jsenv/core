@@ -5,7 +5,7 @@ import {
   createLog,
   ANSI,
   UNICODE,
-  msAsEllapsedTime,
+  msAsDuration,
   byteAsMemoryUsage,
 } from "@jsenv/log";
 
@@ -14,7 +14,7 @@ import { createCallOrderer } from "../../helpers/call_orderer.js";
 export const listReporter = ({
   logger,
   logDynamic,
-  logMemoryHeapUsage,
+  logMemoryUsage,
   logFileUrl,
 }) => {
   const canEraseProcessStdout =
@@ -41,10 +41,12 @@ export const listReporter = ({
 
   return {
     beforeAllExecution: (testPlanReport) => {
-      writeOutput(`${testPlanReport.counters.planified} executions planified`);
+      writeOutput(
+        `${testPlanReport.counters.planified} executions planified\n`,
+      );
       if (!canEraseProcessStdout) {
         return () => {
-          writeOutput(renderFinalSummary());
+          writeOutput(renderFinalSummary(testPlanReport));
         };
       }
 
@@ -93,9 +95,11 @@ export const listReporter = ({
     },
     beforeExecution: (execution) => {
       return () => {
+        const countersWhenExecutionEnded = { ...execution.counters };
         callWhenPreviousExecutionAreDone(execution.index, () => {
+          execution.counters = countersWhenExecutionEnded;
           const log = renderExecutionLog(execution, {
-            logMemoryHeapUsage,
+            logMemoryUsage,
             addIntermediateSummary,
           });
           writeOutput(log);
@@ -107,14 +111,14 @@ export const listReporter = ({
 
 /*
  *                         label
- *       ┌───────────────────┴───────────────────────┐
- *       │                               │           │
- *  description                       metrics        │
- *  ┌────┴─────┐                      ┌──┴───┐       │
- *  │          │                      │      │       │
- * icon      file          runtime duration memory intersummary
- * ┌┴┐┌────────┴─────────┐ ┌──┴──┐ ┌──┴──┐┌──┴──┐ ┌──┴───┐
- *  ✔ tests/file.test.html on node [10.4s/14.5MB] (✔10 ✖1)
+ *       ┌───────────────────┴───────────────────────────────┐
+ *       │                               │                   │
+ *  description                       metrics                │
+ *  ┌────┴─────┐                      ┌──┴───┐               │
+ *  │          │                      │      │               │
+ * icon      file          runtime duration memory  intermediate summary
+ * ┌┴┐┌────────┴─────────┐ ┌──┴──┐ ┌──┴──┐┌──┴──┐ ┌──────────┴──────────┐
+ *  ✔ tests/file.test.html on node [10.4s/14.5MB] (2 completed, 1 failed)
  *  ------- console (i1 ✖1) -------
  *  i info
  *  ✖ error
@@ -128,13 +132,13 @@ export const listReporter = ({
  */
 const renderExecutionLog = (
   execution,
-  { logMemoryHeapUsage, addIntermediateSummary },
+  { logMemoryUsage, addIntermediateSummary },
 ) => {
-  let log = "";
+  let log = "\n";
   // label
   {
     const label = renderExecutionLabel(execution, {
-      logMemoryHeapUsage,
+      logMemoryUsage,
       addIntermediateSummary,
     });
     log += label;
@@ -166,7 +170,7 @@ const renderExecutionLog = (
 
 const renderExecutionLabel = (
   execution,
-  { logMemoryHeapUsage, addIntermediateSummary },
+  { logMemoryUsage, addIntermediateSummary },
 ) => {
   let label = "";
 
@@ -177,15 +181,17 @@ const renderExecutionLabel = (
   }
   // metrics
   {
-    const metrics = renderMetrics(execution, { logMemoryHeapUsage });
+    const metrics = renderMetrics(execution, { logMemoryUsage });
     if (metrics) {
       label += ` [${metrics}]`;
     }
   }
   // intersummary
   if (addIntermediateSummary) {
-    const intermediateSummary = renderIntermediateSummary(execution.counters);
-    label += ` (${intermediateSummary})`;
+    const intermediateSummary = renderStatusRepartition(execution.counters);
+    if (intermediateSummary) {
+      label += ` (${intermediateSummary})`;
+    }
   }
 
   return label;
@@ -225,33 +231,19 @@ const descriptionFormatters = {
     );
   },
 };
-const renderMetrics = (execution, { logMemoryHeapUsage }) => {
+const renderMetrics = (execution, { logMemoryUsage }) => {
   const metrics = [];
-  const { timings, memoryUsage } = execution;
+  const { timings, memoryUsage } = execution.result;
   if (timings) {
     const duration = timings.executionEnd - timings.executionStart;
-    metrics.push(`${msAsEllapsedTime(duration)}`);
+    metrics.push(
+      ANSI.color(`${msAsDuration(duration, { short: true })}`, ANSI.GREY),
+    );
   }
-  if (logMemoryHeapUsage && typeof memoryUsage === "number") {
-    metrics.push(`${byteAsMemoryUsage(memoryUsage)}`);
+  if (logMemoryUsage && typeof memoryUsage === "number") {
+    metrics.push(ANSI.color(`${byteAsMemoryUsage(memoryUsage)}`, ANSI.GREY));
   }
   return metrics.join(`/`);
-};
-const renderIntermediateSummary = (counters) => {
-  const passedCount = counters.completed;
-  const failedCount = counters.timedout + counters.failed;
-
-  if (passedCount === counters.done) {
-    return ANSI.color(`${UNICODE.OK_RAW} all`, COLOR_COMPLETED);
-  }
-  if (failedCount === counters.done) {
-    return ANSI.color(`${UNICODE.FAILURE_RAW} all`, COLOR_FAILED);
-  }
-  const parts = [
-    ANSI.color(`${UNICODE.OK_RAW} ${passedCount}`, COLOR_COMPLETED),
-    ANSI.color(`${UNICODE.FAILURE_RAW} ${failedCount}`, COLOR_FAILED),
-  ];
-  return parts.join(" ");
 };
 const COLOR_EXECUTING = ANSI.BLUE;
 const COLOR_ABORTED = ANSI.MAGENTA;
@@ -287,12 +279,14 @@ const renderConsole = (consoleCalls) => {
     repartition[consoleCall.type]++;
   });
   const consoleOutput = renderConsoleOutput(consoleCalls);
-  return `${ANSI.color(
-    `-------- ${renderConsoleSummary(repartition)} --------`,
-    ANSI.GREY,
-  )}
+  const consoleHeader = `-------- ${renderConsoleSummary(
+    repartition,
+  )} --------`;
+  const consoleFooter = `-`.repeat(stripAnsi(consoleHeader).length);
+
+  return `${ANSI.color(consoleHeader, ANSI.GREY)}
 ${consoleOutput}
-${ANSI.color(`-------------------------`, ANSI.GREY)}`;
+${ANSI.color(consoleFooter, ANSI.GREY)}`;
 };
 const renderConsoleSummary = (repartition) => {
   const { debug, info, warning, error } = repartition;
@@ -422,38 +416,35 @@ const renderError = (error) => {
 
 export const renderFinalSummary = (testPlanReport) => {
   let finalSummary = "";
-  const counters = testPlanReport.summary.counters;
-  const duration = testPlanReport.summary.duration;
+  const counters = testPlanReport.counters;
+  const duration = testPlanReport.duration;
 
-  // done + duration
   if (counters.done === 1) {
-    finalSummary += `1 execution done in ${msAsEllapsedTime(duration)}`;
+    finalSummary += `1 execution: `;
   } else {
-    finalSummary += `${counters.done} executions done in ${msAsEllapsedTime(
-      duration,
-    )}`;
+    finalSummary += `${counters.done} executions `;
   }
-  // status repartition
-  finalSummary += `\n${renderStatusRepartition(counters)}`;
+  finalSummary += renderStatusRepartition(counters);
+  finalSummary += `\nduration: ${msAsDuration(duration)}`;
 
-  return `-------------- summary -----------------
+  return `\n\n-------------- summary -----------------
 ${finalSummary}
 ----------------------------------------`;
 };
 const renderStatusRepartition = (counters) => {
-  if (counters.aborted === counters.total) {
+  if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
-  if (counters.timedout === counters.total) {
+  if (counters.timedout === counters.planified) {
     return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
   }
-  if (counters.failed === counters.total) {
+  if (counters.failed === counters.planified) {
     return `all ${ANSI.color(`failed`, COLOR_FAILED)}`;
   }
-  if (counters.completed === counters.total) {
+  if (counters.completed === counters.planified) {
     return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
   }
-  if (counters.cancelled === counters.total) {
+  if (counters.cancelled === counters.planified) {
     return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
   const parts = [];

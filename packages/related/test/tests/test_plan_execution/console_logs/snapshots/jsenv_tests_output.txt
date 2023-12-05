@@ -1,0 +1,19 @@
+1 executions planified
+
+✔ main.js [0.002s/0 B] (all completed)
+-------- console (✖ 4) --------
+✖ toto
+  ho
+✖ hey
+✖ hey
+✖ test
+  multiline
+  info
+  verbose log
+  la
+-------------------------------
+
+-------------- summary -----------------
+1 execution: all completed
+duration: 0.3 second
+----------------------------------------

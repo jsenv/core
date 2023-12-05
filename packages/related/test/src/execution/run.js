@@ -172,7 +172,12 @@ export const run = async ({
         result.timings.executionEnd = relativeToTimingOrigin(timings.end);
       }
     }
-    result.memoryUsage = memoryUsage;
+    result.memoryUsage =
+      typeof memoryUsage === "number"
+        ? memoryUsage < 0
+          ? 0
+          : memoryUsage
+        : memoryUsage;
     result.performance = performance;
   } catch (e) {
     if (Abort.isAbortError(e)) {

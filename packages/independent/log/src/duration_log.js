@@ -1,27 +1,45 @@
 import { setRoundedPrecision } from "./decimals.js";
 
-export const msAsEllapsedTime = (ms) => {
+export const msAsEllapsedTime = (ms, { short } = {}) => {
   if (ms < 1000) {
-    return "0 second";
+    return short ? "0s" : "0 second";
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
-    return formatEllapsedUnit(primary);
+    return formatEllapsedUnit(primary, short);
   }
-  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
+  return `${formatEllapsedUnit(primary, short)} and ${formatEllapsedUnit(
+    remaining,
+    short,
+  )}`;
 };
-
-const formatEllapsedUnit = (unit) => {
+const formatEllapsedUnit = (unit, short) => {
   const count =
     unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    if (count <= 1) {
+      return `${count}${name}`;
+    }
+    return `${count}${name}s`;
   }
-  return `${count} ${unit.name}s`;
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s",
 };
 
-export const msAsDuration = (ms) => {
+export const msAsDuration = (ms, { short } = {}) => {
   // ignore ms below meaningfulMs so that:
   // msAsDuration(0.5) -> "0 second"
   // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
@@ -30,26 +48,39 @@ export const msAsDuration = (ms) => {
   // yes we could return "0.1 millisecond" but we choosed consistency over precision
   // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
   if (ms < 1) {
-    return "0 second";
+    return short ? "0s" : "0 second";
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
-    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
+    return formatDurationUnit(
+      primary,
+      primary.name === "second" ? 1 : 0,
+      short,
+    );
   }
   return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(
     remaining,
     0,
+    short,
   )}`;
 };
 
-const formatDurationUnit = (unit, decimals) => {
+const formatDurationUnit = (unit, decimals, short) => {
   const count = setRoundedPrecision(unit.count, {
     decimals,
   });
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    if (count <= 1) {
+      return `${count}${name}`;
+    }
+    return `${count}${name}s`;
   }
-  return `${count} ${unit.name}s`;
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
 };
 
 const MS_PER_UNITS = {
