@@ -3,6 +3,12 @@ import { memoryUsage } from "node:process";
 import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
+let memoryHeapUsedAtStart;
+if (process.env.MEASURE_MEMORY_AT_START) {
+  global.gc();
+  memoryHeapUsedAtStart = memoryUsage().heapUsed;
+}
+
 const ACTIONS_AVAILABLE = {
   "execute-using-dynamic-import": (params) => {
     return executeUsingDynamicImport(params);
@@ -37,7 +43,9 @@ const ACTIONS_AVAILABLE = {
     }
   },
   "measure-memory-usage": () => {
-    return memoryUsage().heapUsed;
+    // we compare usage - usageAtstart to prevent
+    // node or os specificities to have too much influences on the measures
+    return memoryUsage().heapUsed - memoryHeapUsedAtStart;
   },
 };
 

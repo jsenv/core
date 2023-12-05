@@ -23,13 +23,24 @@ export const executeUsingDynamicImport = async ({
     performance: null,
     namespace: null,
   };
-  const afterImportCallbackSet = new Set();
 
+  let finalizePerformance;
+  if (collectPerformance) {
+    const getPerformance = startObservingPerformances();
+    finalizePerformance = async () => {
+      const performance = await getPerformance();
+      result.performance = performance;
+    };
+  }
+
+  let finalizeCoverage;
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
-    const { filterV8Coverage } = await import("../coverage/v8_coverage.js");
     const { stopJsCoverage } = await startJsCoverage();
-    afterImportCallbackSet.add(async () => {
-      const coverage = await stopJsCoverage();
+    finalizeCoverage = async () => {
+      const [coverage, { filterV8Coverage }] = await [
+        stopJsCoverage(),
+        import("../coverage/v8_coverage.js"),
+      ];
       const coverageLight = await filterV8Coverage(coverage, {
         rootDirectoryUrl,
         coverageConfig,
@@ -38,14 +49,19 @@ export const executeUsingDynamicImport = async ({
         new URL(coverageFileUrl),
         JSON.stringify(coverageLight, null, "  "),
       );
-    });
+    };
   }
-  if (collectPerformance) {
-    const getPerformance = startObservingPerformances();
-    afterImportCallbackSet.add(async () => {
-      const performance = await getPerformance();
-      result.performance = performance;
-    });
+
+  let finalizeMemoryUsage;
+  if (measureMemoryUsage) {
+    global.gc();
+    const memoryHeapUsedBeforeExecution = memoryUsage().heapUsed;
+    finalizeMemoryUsage = () => {
+      global.gc();
+      const memoryHeapUsedAfterExecution = memoryUsage().heapUsed;
+      result.memoryUsage =
+        memoryHeapUsedAfterExecution - memoryHeapUsedBeforeExecution;
+    };
   }
 
   result.timings.start = Date.now();
@@ -61,20 +77,17 @@ export const executeUsingDynamicImport = async ({
     result.namespace = namespaceResolved;
   } finally {
     result.timings.end = Date.now();
-    if (measureMemoryUsage) {
-      if (!global.gc) {
-        const [v8, { runInNewContext }] = await Promise.all([
-          import("node:v8"),
-          import("node:vm"),
-        ]);
-        v8.setFlagsFromString("--expose_gc");
-        global.gc = runInNewContext("gc");
-      }
-      global.gc();
-      result.memoryUsage = memoryUsage().heapUsed;
+    if (finalizeCoverage) {
+      await finalizeCoverage();
+      finalizeCoverage = null;
     }
-    for (const afterImportCallback of afterImportCallbackSet) {
-      await afterImportCallback();
+    if (finalizePerformance) {
+      await finalizePerformance();
+      finalizePerformance = null;
+    }
+    if (finalizeMemoryUsage) {
+      finalizeMemoryUsage();
+      finalizeMemoryUsage = null;
     }
     return result;
   }

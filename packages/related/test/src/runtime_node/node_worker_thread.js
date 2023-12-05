@@ -62,6 +62,9 @@ export const nodeWorkerThread = ({
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
       }
+      if (onMeasureMemoryAvailable) {
+        env.MEASURE_MEMORY_AT_START = "1";
+      }
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;

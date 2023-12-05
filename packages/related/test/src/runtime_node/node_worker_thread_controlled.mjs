@@ -1,15 +1,28 @@
 import { parentPort } from "node:worker_threads";
 import { memoryUsage } from "node:process";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 
 import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
+
+setFlagsFromString("--expose_gc");
+global.gc = runInNewContext("gc");
+
+let memoryHeapUsedAtStart;
+if (process.env.MEASURE_MEMORY_AT_START) {
+  global.gc();
+  memoryHeapUsedAtStart = memoryUsage().heapUsed;
+}
 
 const ACTIONS_AVAILABLE = {
   "execute-using-dynamic-import": (params) => {
     return executeUsingDynamicImport(params);
   },
   "measure-memory-usage": () => {
-    return memoryUsage().heapUsed;
+    // we compare usage - usageAtstart to prevent
+    // node or os specificities to have too much influences on the measures
+    return memoryUsage().heapUsed - memoryHeapUsedAtStart;
   },
 };
 

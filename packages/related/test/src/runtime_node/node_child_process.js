@@ -71,7 +71,14 @@ export const nodeChildProcess = ({
         "--experimental-import-meta-resolve",
         ...commandLineOptions,
       ];
-
+      if (onMeasureMemoryAvailable) {
+        env.MEASURE_MEMORY_AT_START = "1";
+      }
+      if (measureMemoryUsage || onMeasureMemoryAvailable) {
+        if (!commandLineOptions.includes("--expose-gc")) {
+          commandLineOptions.push("--expose-gc");
+        }
+      }
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
