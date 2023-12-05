@@ -13,14 +13,10 @@ import { createCallOrderer } from "../../helpers/call_orderer.js";
 
 export const listReporter = ({
   logger,
-  rootDirectoryUrl,
   logDynamic,
   logMemoryHeapUsage,
+  logFileUrl,
 }) => {
-  const jsenvOutputFileUrl = new URL(
-    "./.jsenv/jsenv_tests_output.txt",
-    rootDirectoryUrl,
-  );
   const canEraseProcessStdout =
     logDynamic &&
     process.stdout.isTTY &&
@@ -38,7 +34,7 @@ export const listReporter = ({
       process.stdout.write(log);
     }
     rawOutput += stripAnsi(log);
-    writeFileSync(jsenvOutputFileUrl, rawOutput);
+    writeFileSync(logFileUrl, rawOutput);
   };
 
   const addIntermediateSummary = !canEraseProcessStdout;

@@ -47,14 +47,17 @@ import { listReporter, renderFinalSummary } from "./reporters/reporter_list.js";
  * @return {Object} An object containing the result of all file executions
  */
 export const executeTestPlan = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
   logLevel = "info",
+  logDynamic,
   logMemoryHeapUsage = true,
+  logFileUrl,
 
   rootDirectoryUrl,
   webServer,
   testPlan,
+
+  signal = new AbortController().signal,
+  handleSIGINT = true,
   updateProcessExitCode = true,
   concurrency = false, // TODO: rename parellel
   defaultMsAllocatedPerExecution = 30_000,
@@ -327,6 +330,9 @@ To fix this warning:
 
   // param normalization
   {
+    if (logFileUrl === undefined) {
+      logFileUrl = new URL("./.jsenv/jsenv_tests_output.txt", rootDirectoryUrl);
+    }
     if (coverageEnabled) {
       if (Object.keys(coverageConfig).length === 0) {
         logger.warn(
@@ -371,8 +377,9 @@ To fix this warning:
   reporters.push(
     listReporter({
       logger,
+      logDynamic,
       logMemoryHeapUsage,
-      rootDirectoryUrl,
+      logFileUrl,
     }),
   );
 
