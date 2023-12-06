@@ -6,5 +6,9 @@ export { firefox, firefoxIsolatedTab } from "./runtime_browsers/firefox.js";
 export { webkit, webkitIsolatedTab } from "./runtime_browsers/webkit.js";
 export { nodeChildProcess } from "./runtime_node/node_child_process.js";
 export { nodeWorkerThread } from "./runtime_node/node_worker_thread.js";
+// coverage
+export { reportCoverageInConsole } from "./coverage/report_coverage_in_console.js";
+export { reportCoverageAsJson } from "./coverage/report_coverage_as_json.js";
+export { reportCoverageAsHtml } from "./coverage/report_coverage_as_html.js";
 // advanced
 export { execute } from "./execution/execute.js";
