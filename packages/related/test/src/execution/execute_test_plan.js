@@ -173,7 +173,7 @@ export const executeTestPlan = async ({
         `${unexpectedLogsKeys.join(",")}: no such key on logs`,
       );
     }
-    Object.assign(logs, logsDefault);
+    logs = { ...logsDefault, ...logs };
 
     logger = createLogger({ logLevel: logs.level });
 
@@ -249,7 +249,7 @@ To fix this warning:
       const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
         ? readGitHubWorkflowEnv()
         : {};
-      Object.assign(githubCheck, githubCheckDefault);
+      githubCheck = { ...githubCheckDefault, githubCheck };
       if (githubCheck.token === undefined) {
         githubCheck.token = githubCheckInfoFromEnv.githubToken;
       }
@@ -277,7 +277,7 @@ To fix this warning:
           `${unexpectedKeys.join(",")}: no such key on coverage`,
         );
       }
-      Object.assign(coverage, coverageDefault);
+      coverage = { ...coverageDefault, coverage };
       if (coverage.methodForBrowsers === undefined) {
         coverage.methodForBrowsers = someHasCoverageV8
           ? "playwright"
@@ -468,9 +468,9 @@ To fix this warning:
             webServer,
 
             coverageEnabled: Boolean(coverage),
-            coverageConfig: coverage.include,
-            coverageMethodForBrowsers: coverage.methodForBrowsers,
-            coverageMethodForNodeJs: coverage.methodForNodeJs,
+            coverageConfig: coverage?.include,
+            coverageMethodForBrowsers: coverage?.methodForBrowsers,
+            coverageMethodForNodeJs: coverage?.methodForNodeJs,
             isTestPlan: true,
             fileRelativeUrl: relativeUrl,
             ...runtimeParams,
@@ -654,7 +654,7 @@ To fix this warning:
           keepRunning,
           mirrorConsole: false, // might be executed in parallel: log would be a mess to read
           coverageEnabled: Boolean(coverage),
-          coverageTempDirectoryUrl: coverage.tempDirectoryUrl,
+          coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
         });
         Object.assign(execution.result, executionResult);
       } else {
@@ -698,6 +698,9 @@ To fix this warning:
       // eslint-disable-next-line no-constant-condition
       while (true) {
         if (multipleExecutionsOperation.signal.aborted) {
+          break;
+        }
+        if (executionRemainingSet.size === 0) {
           break;
         }
         if (executionExecutingSet.size >= parallel.max) {

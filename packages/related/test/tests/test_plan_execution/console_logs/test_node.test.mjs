@@ -8,8 +8,11 @@ const logFileUrl = new URL(
 );
 const logFileSnapshot = takeFileSnapshot(logFileUrl);
 await executeTestPlan({
-  logLevel: "warn",
-  logFileUrl,
+  logs: {
+    level: "warn",
+    fileUrl: logFileUrl,
+    dynamic: false,
+  },
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
     "./main.js": {
@@ -19,6 +22,6 @@ await executeTestPlan({
       },
     },
   },
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
 logFileSnapshot.compare();
