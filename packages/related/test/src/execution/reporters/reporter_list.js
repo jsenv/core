@@ -181,7 +181,10 @@ const renderExecutionLabel = (
   }
   // intersummary
   if (addIntermediateSummary) {
-    const intermediateSummary = renderStatusRepartition(execution.counters);
+    const intermediateSummary = renderStatusRepartition({
+      ...execution.countersInOrder,
+      planified: execution.index + 1,
+    });
     if (intermediateSummary) {
       label += ` (${intermediateSummary})`;
     }
@@ -412,10 +415,10 @@ export const renderFinalSummary = (testPlanReport) => {
   const counters = testPlanReport.counters;
   const duration = testPlanReport.duration;
 
-  if (counters.done === 1) {
+  if (counters.planified === 1) {
     finalSummary += `1 execution: `;
   } else {
-    finalSummary += `${counters.done} executions `;
+    finalSummary += `${counters.planified} executions `;
   }
   finalSummary += renderStatusRepartition(counters);
   finalSummary += `\nduration: ${msAsDuration(duration)}`;

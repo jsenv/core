@@ -409,6 +409,7 @@ To fix this warning:
     coverage: null,
   };
   const counters = testPlanResult.counters;
+  const countersInOrder = { ...counters };
   const results = testPlanResult.results;
   const executionPlanifiedSet = new Set();
 
@@ -481,6 +482,7 @@ To fix this warning:
 
         const execution = {
           counters,
+          countersInOrder,
           index,
           isLast: false,
           name: executionName,
@@ -517,6 +519,7 @@ To fix this warning:
   }
 
   counters.planified = executionPlanifiedSet.size;
+  countersInOrder.planified = executionPlanifiedSet.size;
   logger.debug(`${executionPlanifiedSet.size} executions planned`);
   if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
@@ -617,7 +620,9 @@ To fix this warning:
     const executionRemainingSet = new Set(executionPlanifiedSet);
     const executionExecutingSet = new Set();
     const start = async (execution) => {
-      counters.executing++;
+      mutateCountersBeforeExecutionStarts(counters, execution);
+      mutateCountersBeforeExecutionStarts(countersInOrder, execution);
+
       execution.status = "executing";
       executionRemainingSet.delete(execution);
       executionExecutingSet.add(execution);
@@ -660,40 +665,32 @@ To fix this warning:
           ),
         ];
       }
+
       execution.status = "executed";
       executionExecutingSet.delete(execution);
-      counters.executing--;
-      counters.executed++;
-      counters.remaining--;
-      if (execution.result.status === "aborted") {
-        counters.aborted++;
-      } else if (execution.result.status === "timedout") {
-        counters.timedout++;
-      } else if (execution.result.status === "failed") {
-        counters.failed++;
-      } else if (execution.result.status === "completed") {
-        counters.completed++;
+      mutateCountersAfterExecutionEnds(counters, execution);
+      if (execution.result.status !== "completed") {
+        testPlanResult.failed = true;
+        if (updateProcessExitCode) {
+          process.exitCode = 1;
+        }
       }
+
       for (const afterExecutionCallback of afterExecutionCallbackSet) {
         afterExecutionCallback();
       }
       afterExecutionCallbackSet.clear();
       callWhenPreviousExecutionAreDone(execution.index, () => {
+        mutateCountersAfterExecutionEnds(countersInOrder, execution);
         for (const afterExecutionInOrderCallback of afterExecutionInOrderCallbackSet) {
           afterExecutionInOrderCallback();
         }
         afterExecutionInOrderCallbackSet.clear();
       });
 
-      if (execution.result.status !== "completed") {
-        testPlanResult.failed = true;
-        if (updateProcessExitCode) {
-          process.exitCode = 1;
-        }
-        if (failFast && counters.remaining) {
-          logger.info(`"failFast" enabled -> cancel remaining executions`);
-          failFastAbortController.abort();
-        }
+      if (testPlanResult.failed && failFast && counters.remaining) {
+        logger.info(`"failFast" enabled -> cancel remaining executions`);
+        failFastAbortController.abort();
       }
     };
     const startAsMuchAsPossible = async () => {
@@ -775,4 +772,23 @@ To fix this warning:
   }
   afterAllExecutionCallbackSet.clear();
   return testPlanResult;
+};
+
+const mutateCountersBeforeExecutionStarts = (counters) => {
+  counters.executing++;
+};
+
+const mutateCountersAfterExecutionEnds = (counters, execution) => {
+  counters.executing--;
+  counters.executed++;
+  counters.remaining--;
+  if (execution.result.status === "aborted") {
+    counters.aborted++;
+  } else if (execution.result.status === "timedout") {
+    counters.timedout++;
+  } else if (execution.result.status === "failed") {
+    counters.failed++;
+  } else if (execution.result.status === "completed") {
+    counters.completed++;
+  }
 };
