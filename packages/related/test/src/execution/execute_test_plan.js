@@ -2,7 +2,6 @@
  *
  */
 
-import os from "node:os";
 import { existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -19,6 +18,7 @@ import {
   readGitHubWorkflowEnv,
 } from "@jsenv/github-check-run";
 
+import { startMeasuringCpuUsage } from "../helpers/cpu_usage.js";
 import { reportToCoverage } from "../coverage/report_to_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
@@ -85,6 +85,11 @@ const coverageDefault = {
   v8ConflictWarning: true,
   tempDirectoryUrl: undefined,
 };
+const parallelDefault = {
+  max: 5, // "50%",
+  maxCpu: "50%",
+  maxMemory: "50%",
+};
 
 export const executeTestPlan = async ({
   logs = logsDefault,
@@ -96,7 +101,7 @@ export const executeTestPlan = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   updateProcessExitCode = true,
-  concurrency = false, // TODO: rename parellel
+  parallel = parallelDefault,
   defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
@@ -129,6 +134,9 @@ export const executeTestPlan = async ({
       );
     });
   }
+
+  const cpuUsage = startMeasuringCpuUsage();
+  operation.addEndCallback(cpuUsage.stop);
 
   let logger;
   let someNeedsServer = false;
@@ -321,10 +329,6 @@ To fix this warning:
         );
       }
     }
-
-    if (typeof concurrency !== "boolean" && typeof concurrency !== "number") {
-      throw new TypeError(`concurrency must be a boolean or a number`);
-    }
   }
 
   logger.debug(
@@ -365,17 +369,6 @@ To fix this warning:
         }
       }
     }
-    if (concurrency === true) {
-      const availableCpus = os.cpus().length;
-      concurrency =
-        availableCpus > 2
-          ? // One CPU is used to run this code so we do availableCpus - 1
-            availableCpus - 1
-          : 1;
-    }
-    if (concurrency === false) {
-      concurrency = 1;
-    }
   }
 
   reporters.push(
@@ -400,11 +393,13 @@ To fix this warning:
     counters: {
       planified: 0,
       remaining: 0,
+      executing: 0,
+      executed: 0,
+
       aborted: 0,
       timedout: 0,
       failed: 0,
       completed: 0,
-      done: 0,
     },
     aborted: false,
     failed: false,
@@ -617,43 +612,12 @@ To fix this warning:
     }
 
     const executionRemainingSet = new Set(executionPlanifiedSet);
-    const executionRunningSet = new Set();
-    const start = async ({ skipCPUCheck } = {}) => {
-      // here we decide if we can pick a new execution
-      // for now it's just based on concurrency
-      // but it will becomes more powerful: available cpu and
-      // only if no conflict in "using", etc..
-      // to keep in mind: if cpu is too high but there is no execution running
-      // then we will still try to execute
-      // ideally we should be able to wait before picking next
-      // like the cooldown stuff if cpu is too high
-
-      if (multipleExecutionsOperation.signal.aborted) {
-        return;
-      }
-      if (executionRunningSet.size >= concurrency) {
-        return;
-      }
-      if (
-        !skipCPUCheck &&
-        executionRunningSet.size === 0 &&
-        global.cpuIsTooHigh
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await start({ skipCPUCheck: true });
-        return;
-      }
-      let execution;
-      for (const executionCandidate of executionRemainingSet) {
-        execution = executionCandidate;
-        break;
-      }
-      if (!execution) {
-        return;
-      }
-      execution.status = "running";
+    const executionExecutingSet = new Set();
+    const start = async (execution) => {
+      counters.executing++;
+      execution.status = "executing";
       executionRemainingSet.delete(execution);
-      executionRunningSet.add(execution);
+      executionExecutingSet.add(execution);
       const afterExecutionCallbackSet = new Set();
       for (const reporter of reporters) {
         const { beforeExecution } = reporter;
@@ -685,9 +649,10 @@ To fix this warning:
           ),
         ];
       }
-      execution.status = "done";
-      executionRunningSet.delete(execution);
-      counters.done++;
+      execution.status = "executed";
+      executionExecutingSet.delete(execution);
+      counters.executing--;
+      counters.executed++;
       counters.remaining--;
       if (execution.result.status === "aborted") {
         counters.aborted++;
@@ -714,6 +679,49 @@ To fix this warning:
         }
       }
     };
+    const startAsMuchAsPossible = async () => {
+      const promises = [];
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (multipleExecutionsOperation.signal.aborted) {
+          break;
+        }
+        if (executionExecutingSet.size >= parallel.max) {
+          break;
+        }
+        if (
+          // cpu limitation applies only if we try to execute
+          // in parallel. If nothing is currently executing we'll
+          // keep going
+          executionExecutingSet.size > 0 &&
+          cpuUsage.overall.active > parallel.maxCpu
+        ) {
+          // retry after Xms in case cpu usage decreases
+          const promise = (async () => {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            await startAsMuchAsPossible();
+          })();
+          promises.push(promise);
+          break;
+        }
+
+        let execution;
+        for (const executionCandidate of executionRemainingSet) {
+          // TODO: this is where we'll check if it can be executed
+          // according to upcoming "using" execution param
+          execution = executionCandidate;
+          break;
+        }
+        if (execution) {
+          promises.push(start(execution));
+        }
+      }
+      if (promises.length) {
+        await Promise.all(promises);
+        promises.length = 0;
+      }
+    };
+
     try {
       const startMs = Date.now();
       for (const reporter of reporters) {
@@ -725,7 +733,7 @@ To fix this warning:
           }
         }
       }
-      await start();
+      await startAsMuchAsPossible();
       if (!keepRunning) {
         logger.debug("trigger test plan teardown");
         for (const teardownCallback of teardownCallbackSet) {
@@ -734,7 +742,7 @@ To fix this warning:
         teardownCallbackSet.clear();
       }
       // when execution is aborted, the remaining executions are "cancelled"
-      counters.cancelled = counters.total - counters.done;
+      counters.cancelled = counters.planified - counters.executed;
       testPlanResult.aborted = multipleExecutionsOperation.signal.aborted;
       testPlanResult.duration = Date.now() - startMs;
       if (finalizeCoverage) {
