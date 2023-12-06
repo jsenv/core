@@ -9,8 +9,6 @@ import {
   byteAsMemoryUsage,
 } from "@jsenv/log";
 
-import { createCallOrderer } from "../../helpers/call_orderer.js";
-
 export const listReporter = ({
   logger,
   logDynamic,
@@ -26,7 +24,6 @@ export const listReporter = ({
     // (happens when npm runs several command in a workspace)
     // so we enable hot replace only when !process.exitCode (no error so far)
     process.exitCode !== 1;
-  const callWhenPreviousExecutionAreDone = createCallOrderer();
 
   let rawOutput = "";
   const writeOutput = (log) => {
@@ -93,17 +90,13 @@ export const listReporter = ({
         clearInterval(interval);
       };
     },
-    beforeExecution: (execution) => {
+    beforeExecutionInOrder: (execution) => {
       return () => {
-        const countersWhenExecutionEnded = { ...execution.counters };
-        callWhenPreviousExecutionAreDone(execution.index, () => {
-          execution.counters = countersWhenExecutionEnded;
-          const log = renderExecutionLog(execution, {
-            logMemoryUsage,
-            addIntermediateSummary,
-          });
-          writeOutput(log);
+        const log = renderExecutionLog(execution, {
+          logMemoryUsage,
+          addIntermediateSummary,
         });
+        writeOutput(log);
       };
     },
   };

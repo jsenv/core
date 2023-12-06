@@ -19,6 +19,7 @@ import {
 } from "@jsenv/github-check-run";
 
 import { startMeasuringCpuUsage } from "../helpers/cpu_usage.js";
+import { createCallOrderer } from "../helpers/call_orderer.js";
 import { reportToCoverage } from "../coverage/report_to_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
@@ -611,6 +612,8 @@ To fix this warning:
       };
     }
 
+    const callWhenPreviousExecutionAreDone = createCallOrderer();
+
     const executionRemainingSet = new Set(executionPlanifiedSet);
     const executionExecutingSet = new Set();
     const start = async (execution) => {
@@ -619,12 +622,20 @@ To fix this warning:
       executionRemainingSet.delete(execution);
       executionExecutingSet.add(execution);
       const afterExecutionCallbackSet = new Set();
+      const afterExecutionInOrderCallbackSet = new Set();
       for (const reporter of reporters) {
         const { beforeExecution } = reporter;
         if (beforeExecution) {
           const returnValue = beforeExecution(execution, testPlanResult);
           if (typeof returnValue === "function") {
             afterExecutionCallbackSet.add(returnValue);
+          }
+        }
+        const { beforeExecutionInOrder } = reporter;
+        if (beforeExecutionInOrder) {
+          const returnValue = beforeExecutionInOrder(execution, testPlanResult);
+          if (typeof returnValue === "function") {
+            afterExecutionInOrderCallbackSet.add(returnValue);
           }
         }
       }
@@ -667,6 +678,12 @@ To fix this warning:
         afterExecutionCallback();
       }
       afterExecutionCallbackSet.clear();
+      callWhenPreviousExecutionAreDone(execution.index, () => {
+        for (const afterExecutionInOrderCallback of afterExecutionInOrderCallbackSet) {
+          afterExecutionInOrderCallback();
+        }
+        afterExecutionInOrderCallbackSet.clear();
+      });
 
       if (execution.result.status !== "completed") {
         testPlanResult.failed = true;
