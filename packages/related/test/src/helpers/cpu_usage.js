@@ -112,7 +112,7 @@ export const startMeasuringCpuUsage = () => {
       // console.log(formatUsage(globalUsageInfo));
       samples.length = 0;
     }
-  }, 25);
+  }, 15);
   interval.unref();
 
   return {

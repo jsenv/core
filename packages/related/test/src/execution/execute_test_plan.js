@@ -2,6 +2,7 @@
  *
  */
 
+import { cpus, availableParallelism, freemem, totalmem } from "node:os";
 import { existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -87,9 +88,9 @@ const coverageDefault = {
   tempDirectoryUrl: undefined,
 };
 const parallelDefault = {
-  max: 5, // "50%",
-  maxCpu: "50%",
-  maxMemory: "50%",
+  max: "80%",
+  maxCpu: "90%",
+  maxMemory: "90%",
 };
 
 export const executeTestPlan = async ({
@@ -144,61 +145,123 @@ export const executeTestPlan = async ({
   let someHasCoverageV8 = false;
   let someNodeRuntime = false;
   const runtimes = {};
-  // param validation
+  // param validation and normalization
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
       throw new TypeError(`${unexpectedParamNames.join(",")}: no such param`);
     }
-    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      rootDirectoryUrl,
-      "rootDirectoryUrl",
-    );
-    if (!existsSync(new URL(rootDirectoryUrl))) {
-      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
-    }
-    if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`);
-    }
-
-    if (typeof logs !== "object") {
-      throw new TypeError(`logs must be an object, got ${logs}`);
-    }
-
-    const unexpectedLogsKeys = Object.keys(logs).filter(
-      (key) => !Object.hasOwn(logsDefault, key),
-    );
-    if (unexpectedLogsKeys.length > 0) {
-      throw new TypeError(
-        `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+    // logs
+    {
+      if (typeof logs !== "object") {
+        throw new TypeError(`logs must be an object, got ${logs}`);
+      }
+      const unexpectedLogsKeys = Object.keys(logs).filter(
+        (key) => !Object.hasOwn(logsDefault, key),
       );
+      if (unexpectedLogsKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+        );
+      }
+      logs = { ...logsDefault, ...logs };
+      if (logs.fileUrl === undefined) {
+        logs.fileUrl = new URL(
+          "./.jsenv/jsenv_tests_output.txt",
+          rootDirectoryUrl,
+        );
+      }
+      logger = createLogger({ logLevel: logs.level });
     }
-    logs = { ...logsDefault, ...logs };
-
-    logger = createLogger({ logLevel: logs.level });
-
-    for (const filePattern of Object.keys(testPlan)) {
-      const filePlan = testPlan[filePattern];
-      if (!filePlan) continue;
-      for (const executionName of Object.keys(filePlan)) {
-        const executionConfig = filePlan[executionName];
-        const { runtime } = executionConfig;
-        if (!runtime || runtime.disabled) {
-          continue;
+    // rootDirectoryUrl
+    {
+      rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        rootDirectoryUrl,
+        "rootDirectoryUrl",
+      );
+      if (!existsSync(new URL(rootDirectoryUrl))) {
+        throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
+      }
+    }
+    // parallel
+    {
+      if (typeof parallel !== "object") {
+        throw new TypeError(`parallel must be an object, got ${parallel}`);
+      }
+      const unexpectedParallelKeys = Object.keys(parallel).filter(
+        (key) => !Object.hasOwn(parallelDefault, key),
+      );
+      if (unexpectedParallelKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedParallelKeys.join(",")}: no such key on parallel`,
+        );
+      }
+      parallel = { ...parallelDefault, ...parallel };
+      const assertPercentageAndConvertToRatio = (string) => {
+        const lastChar = string[string.length - 1];
+        if (lastChar !== "%") {
+          throw new TypeError(`string is not a percentage, got ${string}`);
         }
-        runtimes[runtime.name] = runtime.version;
-        if (runtime.type === "browser") {
-          if (runtime.capabilities && runtime.capabilities.coverageV8) {
-            someHasCoverageV8 = true;
+        const percentageString = max.slice(-1);
+        const percentageNumber = parseInt(percentageString);
+        if (percentageNumber <= 0) {
+          return 0;
+        }
+        if (percentageNumber >= 100) {
+          return 1;
+        }
+        const ratio = Math.floor(percentageNumber / 100);
+        return ratio;
+      };
+      const max = parallel.max;
+      if (typeof max === "string") {
+        const maxAsRatio = assertPercentageAndConvertToRatio(max);
+        const availableCpus = countAvailableCpus();
+        parallel.max = maxAsRatio * availableCpus || 1;
+      } else if (typeof max !== "number") {
+        throw new TypeError(
+          `parallel.max must be a number or a percentage, got ${max}`,
+        );
+      }
+
+      const maxMemory = parallel.maxMemory;
+      if (typeof maxMemory === "string") {
+        const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
+        parallel.maxMemory = maxMemoryAsRatio * totalmem();
+      } else if (typeof maxMemory !== "number") {
+        throw new TypeError(
+          `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
+        );
+      }
+    }
+    // testPlan
+    {
+      if (typeof testPlan !== "object") {
+        throw new Error(`testPlan must be an object, got ${testPlan}`);
+      }
+      for (const filePattern of Object.keys(testPlan)) {
+        const filePlan = testPlan[filePattern];
+        if (!filePlan) continue;
+        for (const executionName of Object.keys(filePlan)) {
+          const executionConfig = filePlan[executionName];
+          const { runtime } = executionConfig;
+          if (!runtime || runtime.disabled) {
+            continue;
           }
-          someNeedsServer = true;
-        }
-        if (runtime.type === "node") {
-          someNodeRuntime = true;
+          runtimes[runtime.name] = runtime.version;
+          if (runtime.type === "browser") {
+            if (runtime.capabilities && runtime.capabilities.coverageV8) {
+              someHasCoverageV8 = true;
+            }
+            someNeedsServer = true;
+          }
+          if (runtime.type === "node") {
+            someNodeRuntime = true;
+          }
         }
       }
     }
-
+    // webServer
     if (someNeedsServer) {
       await assertAndNormalizeWebServer(webServer, {
         signal: operation.signal,
@@ -206,69 +269,70 @@ export const executeTestPlan = async ({
         logger,
       });
     }
-
-    if (githubCheck && !process.env.GITHUB_TOKEN) {
-      githubCheck = false;
-      const suggestions = [];
-      if (process.env.GITHUB_WORKFLOW_REF) {
-        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
-        const refsIndex = workflowFileRef.indexOf("@refs/");
-        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-        const workflowFilePath =
-          refsIndex === -1
-            ? workflowFileRef
-            : workflowFileRef.slice(0, refsIndex);
-        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+    // githubCheck
+    {
+      if (githubCheck && !process.env.GITHUB_TOKEN) {
+        githubCheck = false;
+        const suggestions = [];
+        if (process.env.GITHUB_WORKFLOW_REF) {
+          const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+          const refsIndex = workflowFileRef.indexOf("@refs/");
+          // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+          const workflowFilePath =
+            refsIndex === -1
+              ? workflowFileRef
+              : workflowFileRef.slice(0, refsIndex);
+          suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
 \`\`\`yml
 env:
   GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 \`\`\``);
-      }
-      suggestions.push(`Disable github check with githubCheck: false`);
-      logger.warn(
-        `${UNICODE.WARNING} githubCheck requires process.env.GITHUB_TOKEN.
+        }
+        suggestions.push(`Disable github check with githubCheck: false`);
+        logger.warn(
+          `${UNICODE.WARNING} githubCheck requires process.env.GITHUB_TOKEN.
 Integration with Github check API is disabled
 To fix this warning:
 - ${suggestions.join("\n- ")}
 `,
-      );
-    }
-    if (githubCheck) {
-      if (typeof githubCheck !== "object") {
-        throw new TypeError(`coverage must be an object, got ${coverage}`);
-      }
-      const unexpectedKeys = Object.keys(githubCheck).filter(
-        (key) => !Object.hasOwn(githubCheckDefault, key),
-      );
-      if (unexpectedKeys.length > 0) {
-        throw new TypeError(
-          `${unexpectedKeys.join(",")}: no such key on githubCheck`,
         );
       }
+      if (githubCheck) {
+        if (typeof githubCheck !== "object") {
+          throw new TypeError(`coverage must be an object, got ${coverage}`);
+        }
+        const unexpectedKeys = Object.keys(githubCheck).filter(
+          (key) => !Object.hasOwn(githubCheckDefault, key),
+        );
+        if (unexpectedKeys.length > 0) {
+          throw new TypeError(
+            `${unexpectedKeys.join(",")}: no such key on githubCheck`,
+          );
+        }
 
-      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
-        ? readGitHubWorkflowEnv()
-        : {};
-      githubCheck = { ...githubCheckDefault, githubCheck };
-      if (githubCheck.token === undefined) {
-        githubCheck.token = githubCheckInfoFromEnv.githubToken;
-      }
-      if (githubCheck.repositoryOwner === undefined) {
-        githubCheck.repositoryOwner = githubCheckInfoFromEnv.repositoryOwner;
-      }
-      if (githubCheck.repositoryName === undefined) {
-        githubCheck.repositoryName = githubCheckInfoFromEnv.repositoryName;
-      }
-      if (githubCheck.commitSha === undefined) {
-        githubCheck.commitSha = githubCheckInfoFromEnv.commitSha;
+        const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+          ? readGitHubWorkflowEnv()
+          : {};
+        githubCheck = { ...githubCheckDefault, githubCheck };
+        if (githubCheck.token === undefined) {
+          githubCheck.token = githubCheckInfoFromEnv.githubToken;
+        }
+        if (githubCheck.repositoryOwner === undefined) {
+          githubCheck.repositoryOwner = githubCheckInfoFromEnv.repositoryOwner;
+        }
+        if (githubCheck.repositoryName === undefined) {
+          githubCheck.repositoryName = githubCheckInfoFromEnv.repositoryName;
+        }
+        if (githubCheck.commitSha === undefined) {
+          githubCheck.commitSha = githubCheckInfoFromEnv.commitSha;
+        }
       }
     }
-
+    // coverage
     if (coverage) {
       if (typeof coverage !== "object") {
         throw new TypeError(`coverage must be an object, got ${coverage}`);
       }
-
       const unexpectedKeys = Object.keys(coverage).filter(
         (key) => !Object.hasOwn(coverageDefault, key),
       );
@@ -278,15 +342,37 @@ To fix this warning:
         );
       }
       coverage = { ...coverageDefault, coverage };
+      if (typeof coverage.include !== "object") {
+        throw new TypeError(
+          `coverage.include must be an object, got ${coverage.include}`,
+        );
+      }
+      if (Object.keys(coverage.include).length === 0) {
+        logger.warn(
+          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+        );
+      }
       if (coverage.methodForBrowsers === undefined) {
         coverage.methodForBrowsers = someHasCoverageV8
           ? "playwright"
           : "istanbul";
       }
-      if (typeof coverage.include !== "object") {
-        throw new TypeError(
-          `coverage.include must be an object, got ${coverage.include}`,
-        );
+      if (someNodeRuntime && coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
+        if (process.env.NODE_V8_COVERAGE) {
+          // when runned multiple times, we don't want to keep previous files in this directory
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
+        } else {
+          coverage.methodForNodeJs = "Profiler";
+          logger.warn(
+            createDetailedMessage(
+              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              {
+                "suggestion": `set process.env.NODE_V8_COVERAGE`,
+                "suggestion 2": `use coverage.methodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+              },
+            ),
+          );
+        }
       }
       if (!coverage.coverageAndExecutionAllowed) {
         const associationsForExecute = URL_META.resolveAssociations(
@@ -337,40 +423,6 @@ To fix this warning:
       runtimes: JSON.stringify(runtimes, null, "  "),
     }),
   );
-
-  // param normalization
-  {
-    if (logs.fileUrl === undefined) {
-      logs.fileUrl = new URL(
-        "./.jsenv/jsenv_tests_output.txt",
-        rootDirectoryUrl,
-      );
-    }
-    if (coverage) {
-      if (Object.keys(coverage.include).length === 0) {
-        logger.warn(
-          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        );
-      }
-      if (someNodeRuntime && coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
-        if (process.env.NODE_V8_COVERAGE) {
-          // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
-        } else {
-          coverage.methodForNodeJs = "Profiler";
-          logger.warn(
-            createDetailedMessage(
-              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
-              {
-                "suggestion": `set process.env.NODE_V8_COVERAGE`,
-                "suggestion 2": `use coverage.methodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
-              },
-            ),
-          );
-        }
-      }
-    }
-  }
 
   reporters.push(
     listReporter({
@@ -706,20 +758,34 @@ To fix this warning:
         if (executionExecutingSet.size >= parallel.max) {
           break;
         }
+
         if (
-          // cpu limitation applies only if we try to execute
-          // in parallel. If nothing is currently executing we'll
-          // keep going
-          executionExecutingSet.size > 0 &&
-          cpuUsage.overall.active > parallel.maxCpu
+          // starting execution in parallel is limited by
+          // cpu and memory only when trying to parallelize
+          // if nothing is executing these limitations don't apply
+          executionExecutingSet.size > 0
         ) {
-          // retry after Xms in case cpu usage decreases
-          const promise = (async () => {
-            await new Promise((resolve) => setTimeout(resolve, 200));
-            await startAsMuchAsPossible();
-          })();
-          promises.push(promise);
-          break;
+          const availableMemory = freemem();
+          const totalMemory = totalmem();
+          const usedMemory = totalMemory - availableMemory;
+          if (usedMemory > parallel.maxMemory) {
+            // retry after Xms in case memory usage decreases
+            const promise = (async () => {
+              await new Promise((resolve) => setTimeout(resolve, 200));
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
+          }
+
+          if (cpuUsage.overall.active > parallel.maxCpu) {
+            // retry after Xms in case cpu usage decreases
+            const promise = (async () => {
+              await new Promise((resolve) => setTimeout(resolve, 200));
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
+            break;
+          }
         }
 
         let execution;
@@ -775,6 +841,14 @@ To fix this warning:
   }
   afterAllExecutionCallbackSet.clear();
   return testPlanResult;
+};
+
+const countAvailableCpus = () => {
+  if (typeof availableParallelism === "function") {
+    return availableParallelism();
+  }
+  const cpuArray = cpus();
+  return cpuArray.length || 1;
 };
 
 const mutateCountersBeforeExecutionStarts = (counters) => {
