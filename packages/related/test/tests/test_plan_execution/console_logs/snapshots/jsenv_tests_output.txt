@@ -1,4 +1,4 @@
-1 executions planified
+executing 1 file on node_worker_thread@20.8.0
 
 ✔ main.js [0.002s/0 B] (all completed)
 -------- console (✖ 4) --------

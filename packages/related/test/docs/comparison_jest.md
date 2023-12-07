@@ -842,7 +842,7 @@ Mock axios on Node.js using importmap:
 // see also https://github.com/jsenv/core/wiki/I)-Test-in-Node.js#54-importmap
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
-const testPlanReport = await executeTestPlan({
+const testPlanInfo = await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
     "./**/*.test.mjs": {

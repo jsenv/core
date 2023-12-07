@@ -146,7 +146,6 @@ export const executeTestPlan = async ({
     someHasCoverageV8: false,
     someNodeRuntime: false,
   };
-  const runtimes = {};
   // param validation and normalization
   {
     const unexpectedParamNames = Object.keys(rest);
@@ -250,7 +249,6 @@ export const executeTestPlan = async ({
           if (!runtime || runtime.disabled) {
             continue;
           }
-          runtimes[runtime.name] = runtime.version;
           if (runtime.type === "browser") {
             if (runtime.capabilities && runtime.capabilities.coverageV8) {
               runtimeInfo.someHasCoverageV8 = true;
@@ -439,9 +437,9 @@ To fix this warning:
   );
 
   logger.debug(`Generate executions`);
-  const testPlanResult = {
+  const testPlanInfo = {
     rootDirectoryUrl: String(rootDirectoryUrl),
-    runtimes,
+    groups: {},
     counters: {
       planified: 0,
       remaining: 0,
@@ -459,9 +457,11 @@ To fix this warning:
     duration: 0,
     coverage: null,
   };
-  const counters = testPlanResult.counters;
+  const groups = testPlanInfo.groups;
+  const counters = testPlanInfo.counters;
   const countersInOrder = { ...counters };
-  const results = testPlanResult.results;
+  const results = testPlanInfo.results;
+
   const executionPlanifiedSet = new Set();
 
   // collect files to execute + fill executionPlanifiedSet
@@ -476,17 +476,18 @@ To fix this warning:
       });
     } catch (e) {
       if (Abort.isAbortError(e)) {
-        testPlanResult.aborted = true;
-        return testPlanResult;
+        testPlanInfo.aborted = true;
+        return testPlanInfo;
       }
       throw e;
     }
     let index = 0;
     let lastExecution;
+    const fileExecutionCountMap = new Map();
     for (const { relativeUrl, meta } of fileResultArray) {
       const filePlan = meta.testPlan;
-      for (const executionName of Object.keys(filePlan)) {
-        const stepConfig = filePlan[executionName];
+      for (const groupName of Object.keys(filePlan)) {
+        const stepConfig = filePlan[groupName];
         if (stepConfig === null || stepConfig === undefined) {
           continue;
         }
@@ -496,7 +497,7 @@ To fix this warning:
               `found unexpected value in plan, they must be object`,
               {
                 ["file relative path"]: relativeUrl,
-                ["execution name"]: executionName,
+                ["group"]: groupName,
                 ["value"]: stepConfig,
               },
             ),
@@ -531,13 +532,24 @@ To fix this warning:
         const runtimeName = runtime.name;
         const runtimeVersion = runtime.version;
 
+        let fileExecutionCount;
+        if (fileExecutionCountMap.has(relativeUrl)) {
+          fileExecutionCount = fileExecutionCountMap.get(relativeUrl) + 1;
+          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+        } else {
+          fileExecutionCount = 1;
+          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+        }
+
         const execution = {
           counters,
           countersInOrder,
           index,
           isLast: false,
-          name: executionName,
+          group: groupName,
           fileRelativeUrl: relativeUrl,
+          fileExecutionIndex: fileExecutionCount - 1,
+          fileExecutionCount: null,
           runtimeType,
           runtimeName,
           runtimeVersion,
@@ -555,15 +567,27 @@ To fix this warning:
         executionPlanifiedSet.add(execution);
         const existingResults = results[relativeUrl];
         if (existingResults) {
-          existingResults[execution.name] = execution.result;
+          existingResults[groupName] = execution.result;
         } else {
           results[relativeUrl] = {
-            [execution.name]: execution.result,
+            [groupName]: execution.result,
+          };
+        }
+        const existingGroup = groups[groupName];
+        if (existingGroup) {
+          groups[groupName].count++;
+        } else {
+          groups[groupName] = {
+            count: 1,
+            runtimeType,
+            runtimeName,
+            runtimeVersion,
           };
         }
         index++;
       }
     }
+    fileExecutionCountMap.clear();
     if (lastExecution) {
       lastExecution.isLast = true;
     }
@@ -585,11 +609,11 @@ To fix this warning:
     });
     const annotations = [];
     reporters.push({
-      beforeAllExecution: (testPlanReport) => {
+      beforeAllExecution: (testPlanInfo) => {
         return async () => {
           const title = "Jsenv test results";
-          const summaryText = stripAnsi(renderFinalSummary(testPlanReport));
-          if (testPlanReport.failed) {
+          const summaryText = stripAnsi(renderFinalSummary(testPlanInfo));
+          if (testPlanInfo.failed) {
             await githubCheckRun.fail({
               title,
               summary: summaryText,
@@ -656,7 +680,7 @@ To fix this warning:
             coverageMethodForNodeJs: coverage.methodForNodeJs,
             coverageV8ConflictWarning: coverage.v8ConflictWarning,
           });
-          testPlanResult.coverage = testPlanCoverage;
+          testPlanInfo.coverage = testPlanCoverage;
         } catch (e) {
           if (Abort.isAbortError(e)) {
             return;
@@ -671,6 +695,9 @@ To fix this warning:
     const executionRemainingSet = new Set(executionPlanifiedSet);
     const executionExecutingSet = new Set();
     const start = async (execution) => {
+      execution.fileExecutionCount = Object.keys(
+        testPlanInfo.results[execution.fileRelativeUrl],
+      ).length;
       mutateCountersBeforeExecutionStarts(counters, execution);
       mutateCountersBeforeExecutionStarts(countersInOrder, execution);
 
@@ -682,14 +709,14 @@ To fix this warning:
       for (const reporter of reporters) {
         const { beforeExecution } = reporter;
         if (beforeExecution) {
-          const returnValue = beforeExecution(execution, testPlanResult);
+          const returnValue = beforeExecution(execution, testPlanInfo);
           if (typeof returnValue === "function") {
             afterExecutionCallbackSet.add(returnValue);
           }
         }
         const { beforeExecutionInOrder } = reporter;
         if (beforeExecutionInOrder) {
-          const returnValue = beforeExecutionInOrder(execution, testPlanResult);
+          const returnValue = beforeExecutionInOrder(execution, testPlanInfo);
           if (typeof returnValue === "function") {
             afterExecutionInOrderCallbackSet.add(returnValue);
           }
@@ -721,7 +748,7 @@ To fix this warning:
       executionExecutingSet.delete(execution);
       mutateCountersAfterExecutionEnds(counters, execution);
       if (execution.result.status !== "completed") {
-        testPlanResult.failed = true;
+        testPlanInfo.failed = true;
         if (updateProcessExitCode) {
           process.exitCode = 1;
         }
@@ -739,7 +766,7 @@ To fix this warning:
         afterExecutionInOrderCallbackSet.clear();
       });
 
-      if (testPlanResult.failed && failFast && counters.remaining) {
+      if (testPlanInfo.failed && failFast && counters.remaining) {
         logger.info(`"failFast" enabled -> cancel remaining executions`);
         failFastAbortController.abort();
       }
@@ -809,7 +836,7 @@ To fix this warning:
       for (const reporter of reporters) {
         const beforeAllExecution = reporter.beforeAllExecution;
         if (beforeAllExecution) {
-          const returnValue = beforeAllExecution(testPlanResult);
+          const returnValue = beforeAllExecution(testPlanInfo);
           if (typeof returnValue === "function") {
             afterAllExecutionCallbackSet.add(returnValue);
           }
@@ -825,8 +852,8 @@ To fix this warning:
       }
       // when execution is aborted, the remaining executions are "cancelled"
       counters.cancelled = counters.planified - counters.executed;
-      testPlanResult.aborted = multipleExecutionsOperation.signal.aborted;
-      testPlanResult.duration = Date.now() - startMs;
+      testPlanInfo.aborted = multipleExecutionsOperation.signal.aborted;
+      testPlanInfo.duration = Date.now() - startMs;
       if (finalizeCoverage) {
         await finalizeCoverage();
       }
@@ -836,10 +863,10 @@ To fix this warning:
   }
 
   for (const afterAllExecutionCallback of afterAllExecutionCallbackSet) {
-    await afterAllExecutionCallback(testPlanResult);
+    await afterAllExecutionCallback(testPlanInfo);
   }
   afterAllExecutionCallbackSet.clear();
-  return testPlanResult;
+  return testPlanInfo;
 };
 
 const countAvailableCpus = () => {

@@ -37,13 +37,11 @@ export const listReporter = ({
   const addIntermediateSummary = !canEraseProcessStdout;
 
   return {
-    beforeAllExecution: (testPlanReport) => {
-      writeOutput(
-        `${testPlanReport.counters.planified} executions planified\n`,
-      );
+    beforeAllExecution: (testPlanInfo) => {
+      writeOutput(renderIntro(testPlanInfo));
       if (!canEraseProcessStdout) {
         return () => {
-          writeOutput(renderFinalSummary(testPlanReport));
+          writeOutput(renderFinalSummary(testPlanInfo));
         };
       }
 
@@ -102,16 +100,50 @@ export const listReporter = ({
   };
 };
 
+const renderIntro = (testPlanInfo) => {
+  const { counters } = testPlanInfo;
+  const planified = counters.planified;
+  const { groups } = testPlanInfo;
+  const groupNames = Object.keys(groups);
+
+  if (planified === 0) {
+    return `nothing to execute\n`;
+  }
+  if (planified === 1) {
+    const groupName = groupNames[0];
+    const groupInfo = groups[groupName];
+    return `executing 1 file on ${getGroupRenderedName(groupInfo)}\n`;
+  }
+  if (groupNames.length === 1) {
+    const groupName = groupNames[0];
+    const groupInfo = groups[groupName];
+    return `executing ${planified} files on ${getGroupRenderedName(
+      groupInfo,
+    )}\n`;
+  }
+
+  let intro = `executing ${planified} files\n`;
+  for (const groupName of groupNames) {
+    const groupInfo = groups[groupName];
+    intro += `- ${groupInfo.count} on ${getGroupRenderedName(groupInfo)}`;
+  }
+  return intro;
+};
+
+const getGroupRenderedName = (groupInfo) => {
+  return `${groupInfo.runtimeName}@${groupInfo.runtimeVersion}`;
+};
+
 /*
  *                         label
- *       ┌───────────────────┴───────────────────────────────┐
- *       │                               │                   │
- *  description                       metrics                │
- *  ┌────┴─────┐                      ┌──┴───┐               │
- *  │          │                      │      │               │
- * icon      file          runtime duration memory  intermediate summary
- * ┌┴┐┌────────┴─────────┐ ┌──┴──┐ ┌──┴──┐┌──┴──┐ ┌──────────┴──────────┐
- *  ✔ tests/file.test.html on node [10.4s/14.5MB] (2 completed, 1 failed)
+ *       ┌───────────────────┴────────────────────────────────┐
+ *       │                           │                        │
+ *   description                runtime info                  │
+ *  ┌────┴─────┐               ┌─────┴───────┐                │
+ *  │          │               │       │     │                │
+ * icon      file            group duration memory intermediate summary
+ * ┌┴┐┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
+ *  ✔ tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
  *  ------- console (i1 ✖1) -------
  *  i info
  *  ✖ error
@@ -172,11 +204,11 @@ const renderExecutionLabel = (
     const description = renderDescription(execution);
     label += description;
   }
-  // metrics
+  // runtimeInfo
   {
-    const metrics = renderMetrics(execution, { logMemoryUsage });
-    if (metrics) {
-      label += ` [${metrics}]`;
+    const runtimeInfo = renderRuntimeInfo(execution, { logMemoryUsage });
+    if (runtimeInfo) {
+      label += ` [${runtimeInfo}]`;
     }
   }
   // intersummary
@@ -227,19 +259,23 @@ const descriptionFormatters = {
     );
   },
 };
-const renderMetrics = (execution, { logMemoryUsage }) => {
-  const metrics = [];
+const renderRuntimeInfo = (execution, { logMemoryUsage }) => {
+  const infos = [];
+  const { fileExecutionCount } = execution;
+  if (fileExecutionCount > 1) {
+    infos.push(ANSI.color(execution.groupName));
+  }
   const { timings, memoryUsage } = execution.result;
   if (timings) {
     const duration = timings.executionEnd - timings.executionStart;
-    metrics.push(
+    infos.push(
       ANSI.color(`${msAsDuration(duration, { short: true })}`, ANSI.GREY),
     );
   }
   if (logMemoryUsage && typeof memoryUsage === "number") {
-    metrics.push(ANSI.color(`${byteAsMemoryUsage(memoryUsage)}`, ANSI.GREY));
+    infos.push(ANSI.color(`${byteAsMemoryUsage(memoryUsage)}`, ANSI.GREY));
   }
-  return metrics.join(`/`);
+  return infos.join(ANSI.color(`/`, ANSI.GREY));
 };
 const COLOR_EXECUTING = ANSI.BLUE;
 const COLOR_ABORTED = ANSI.MAGENTA;
@@ -410,10 +446,10 @@ const renderError = (error) => {
   return error;
 };
 
-export const renderFinalSummary = (testPlanReport) => {
+export const renderFinalSummary = (testPlanInfo) => {
   let finalSummary = "";
-  const counters = testPlanReport.counters;
-  const duration = testPlanReport.duration;
+  const counters = testPlanInfo.counters;
+  const duration = testPlanInfo.duration;
 
   if (counters.planified === 1) {
     finalSummary += `1 execution: `;
