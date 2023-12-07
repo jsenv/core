@@ -88,7 +88,7 @@ const coverageDefault = {
   tempDirectoryUrl: undefined,
 };
 const parallelDefault = {
-  max: "80%",
+  max: "80%", // percentage resolved against the available cpus
   maxCpu: "90%",
   maxMemory: "90%",
 };
@@ -141,9 +141,11 @@ export const executeTestPlan = async ({
   operation.addEndCallback(cpuUsage.stop);
 
   let logger;
-  let someNeedsServer = false;
-  let someHasCoverageV8 = false;
-  let someNodeRuntime = false;
+  const runtimeInfo = {
+    someNeedsServer: false,
+    someHasCoverageV8: false,
+    someNodeRuntime: false,
+  };
   const runtimes = {};
   // param validation and normalization
   {
@@ -251,18 +253,24 @@ export const executeTestPlan = async ({
           runtimes[runtime.name] = runtime.version;
           if (runtime.type === "browser") {
             if (runtime.capabilities && runtime.capabilities.coverageV8) {
-              someHasCoverageV8 = true;
+              runtimeInfo.someHasCoverageV8 = true;
             }
-            someNeedsServer = true;
+            runtimeInfo.someNeedsServer = true;
           }
           if (runtime.type === "node") {
-            someNodeRuntime = true;
+            runtimeInfo.someNodeRuntime = true;
           }
         }
       }
+      testPlan = {
+        "file:///**/node_modules/": null,
+        "**/*./": null,
+        ...testPlan,
+        "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
+      };
     }
     // webServer
-    if (someNeedsServer) {
+    if (runtimeInfo.someNeedsServer) {
       await assertAndNormalizeWebServer(webServer, {
         signal: operation.signal,
         teardownCallbackSet,
@@ -353,11 +361,14 @@ To fix this warning:
         );
       }
       if (coverage.methodForBrowsers === undefined) {
-        coverage.methodForBrowsers = someHasCoverageV8
+        coverage.methodForBrowsers = runtimeInfo.someHasCoverageV8
           ? "playwright"
           : "istanbul";
       }
-      if (someNodeRuntime && coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
+      if (
+        runtimeInfo.someNodeRuntime &&
+        coverage.methodForNodeJs === "NODE_V8_COVERAGE"
+      ) {
         if (process.env.NODE_V8_COVERAGE) {
           // when runned multiple times, we don't want to keep previous files in this directory
           await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
@@ -418,12 +429,6 @@ To fix this warning:
     }
   }
 
-  logger.debug(
-    createDetailedMessage(`Prepare executing plan`, {
-      runtimes: JSON.stringify(runtimes, null, "  "),
-    }),
-  );
-
   reporters.push(
     listReporter({
       logger,
@@ -433,16 +438,10 @@ To fix this warning:
     }),
   );
 
-  testPlan = {
-    "file:///**/node_modules/": null,
-    "**/*./": null,
-    ...testPlan,
-    "**/.jsenv/": null,
-  };
   logger.debug(`Generate executions`);
-
   const testPlanResult = {
     rootDirectoryUrl: String(rootDirectoryUrl),
+    runtimes,
     counters: {
       planified: 0,
       remaining: 0,
