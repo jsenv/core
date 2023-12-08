@@ -755,7 +755,9 @@ To fix this warning:
       if (testPlanInfo.failed && failFast && counters.remaining) {
         logger.info(`"failFast" enabled -> cancel remaining executions`);
         failFastAbortController.abort();
+        return;
       }
+      await startAsMuchAsPossible();
     };
     const startAsMuchAsPossible = async () => {
       const promises = [];

@@ -3,8 +3,9 @@
 - 1 on firefox@119.0
 
 ✔ b.html [chromium/<mock>/<mock>] (all completed)
+✔ b.html [firefox/<mock>] (all completed)
 
 -------------- summary -----------------
-2 executions: 1 completed, 1 cancelled
+2 executions: all completed
 duration: <mock>
 ----------------------------------------
