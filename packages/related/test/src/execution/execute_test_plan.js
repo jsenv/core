@@ -585,6 +585,7 @@ To fix this warning:
         index++;
       }
     }
+    fileResultArray.length = 0;
     fileExecutionCountMap.clear();
     if (lastExecution) {
       lastExecution.isLast = true;
