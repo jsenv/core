@@ -9,14 +9,9 @@ import {
   byteAsMemoryUsage,
 } from "@jsenv/log";
 
-export const listReporter = ({
-  logger,
-  logDynamic,
-  logMemoryUsage,
-  logFileUrl,
-}) => {
+export const listReporter = ({ logger, logs }) => {
   const canEraseProcessStdout =
-    logDynamic &&
+    logs.dynamic &&
     process.stdout.isTTY &&
     !logger.levels.debug &&
     !logger.levels.info &&
@@ -31,20 +26,23 @@ export const listReporter = ({
       process.stdout.write(log);
     }
     rawOutput += stripAnsi(log);
-    writeFileSync(logFileUrl, rawOutput);
+    writeFileSync(logs.fileUrl, rawOutput);
   };
 
-  const addIntermediateSummary = !canEraseProcessStdout;
-  let logGroup;
+  const logOptions = {
+    ...logs,
+    group: false,
+    intermediateSummary: !canEraseProcessStdout,
+  };
 
   return {
     beforeAllExecution: (testPlanInfo) => {
-      logGroup = Object.keys(testPlanInfo.groups).length > 1;
+      logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
 
-      writeOutput(renderIntro(testPlanInfo));
+      writeOutput(renderIntro(testPlanInfo, logOptions));
       if (!canEraseProcessStdout) {
         return () => {
-          writeOutput(renderFinalSummary(testPlanInfo));
+          writeOutput(renderFinalSummary(testPlanInfo, logOptions));
         };
       }
 
@@ -93,18 +91,14 @@ export const listReporter = ({
     },
     beforeExecutionInOrder: (execution) => {
       return () => {
-        const log = renderExecutionLog(execution, {
-          logGroup,
-          logMemoryUsage,
-          addIntermediateSummary,
-        });
+        const log = renderExecutionLog(execution, logOptions);
         writeOutput(log);
       };
     },
   };
 };
 
-const renderIntro = (testPlanInfo) => {
+const renderIntro = (testPlanInfo, logOptions) => {
   const { counters } = testPlanInfo;
   const planified = counters.planified;
   const { groups } = testPlanInfo;
@@ -116,26 +110,37 @@ const renderIntro = (testPlanInfo) => {
   if (planified === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `1 execution to run on ${getGroupRenderedName(groupInfo)}\n`;
+    return `1 execution to run on ${getGroupRenderedName(
+      groupInfo,
+      logOptions,
+    )}\n`;
   }
   if (groupNames.length === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
     return `${planified} executions to run on ${getGroupRenderedName(
       groupInfo,
+      logOptions,
     )}\n`;
   }
 
   let intro = `${planified} executions to run\n`;
   for (const groupName of groupNames) {
     const groupInfo = groups[groupName];
-    intro += `- ${groupInfo.count} on ${getGroupRenderedName(groupInfo)}`;
+    intro += `- ${groupInfo.count} on ${getGroupRenderedName(
+      groupInfo,
+      logOptions,
+    )}`;
   }
   return intro;
 };
 
-const getGroupRenderedName = (groupInfo) => {
-  return `${groupInfo.runtimeName}@${groupInfo.runtimeVersion}`;
+const getGroupRenderedName = (groupInfo, logOptions) => {
+  let { runtimeName, runtimeVersion } = groupInfo;
+  if (logOptions.mockFluctuatingValues && groupInfo.runtimeType === "node") {
+    runtimeVersion = "<mock>";
+  }
+  return `${runtimeName}@${runtimeVersion}`;
 };
 
 /*
@@ -159,18 +164,11 @@ const getGroupRenderedName = (groupInfo) => {
  *    at file://demo/file.test.js:1:1
  *  ------------------------
  */
-const renderExecutionLog = (
-  execution,
-  { logMemoryUsage, logGroup, addIntermediateSummary },
-) => {
+const renderExecutionLog = (execution, logOptions) => {
   let log = "\n";
   // label
   {
-    const label = renderExecutionLabel(execution, {
-      logGroup,
-      logMemoryUsage,
-      addIntermediateSummary,
-    });
+    const label = renderExecutionLabel(execution, logOptions);
     log += label;
   }
   // console calls
@@ -198,10 +196,7 @@ const renderExecutionLog = (
   return log;
 };
 
-const renderExecutionLabel = (
-  execution,
-  { logGroup, logMemoryUsage, addIntermediateSummary },
-) => {
+const renderExecutionLabel = (execution, logOptions) => {
   let label = "";
 
   // description
@@ -211,16 +206,13 @@ const renderExecutionLabel = (
   }
   // runtimeInfo
   {
-    const runtimeInfo = renderRuntimeInfo(execution, {
-      logGroup,
-      logMemoryUsage,
-    });
+    const runtimeInfo = renderRuntimeInfo(execution, logOptions);
     if (runtimeInfo) {
       label += ` [${runtimeInfo}]`;
     }
   }
   // intersummary
-  if (addIntermediateSummary) {
+  if (logOptions.intermediateSummary) {
     const intermediateSummary = renderStatusRepartition({
       ...execution.countersInOrder,
       planified: execution.index + 1,
@@ -267,20 +259,24 @@ const descriptionFormatters = {
     );
   },
 };
-const renderRuntimeInfo = (execution, { logGroup, logMemoryUsage }) => {
+const renderRuntimeInfo = (execution, logOptions) => {
   const infos = [];
-  if (logGroup) {
+  if (logOptions.group) {
     infos.push(ANSI.color(execution.groupName));
   }
   const { timings, memoryUsage } = execution.result;
   if (timings) {
     const duration = timings.executionEnd - timings.executionStart;
-    infos.push(
-      ANSI.color(`${msAsDuration(duration, { short: true })}`, ANSI.GREY),
-    );
+    const durationFormatted = logOptions.mockFluctuatingValues
+      ? `<mock>`
+      : msAsDuration(duration, { short: true });
+    infos.push(ANSI.color(durationFormatted, ANSI.GREY));
   }
-  if (logMemoryUsage && typeof memoryUsage === "number") {
-    infos.push(ANSI.color(`${byteAsMemoryUsage(memoryUsage)}`, ANSI.GREY));
+  if (logOptions.memoryUsage && typeof memoryUsage === "number") {
+    const memoryUsageFormatted = logOptions.mockFluctuatingValues
+      ? `<mock>`
+      : byteAsMemoryUsage(memoryUsage);
+    infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
   }
   return infos.join(ANSI.color(`/`, ANSI.GREY));
 };
@@ -453,18 +449,23 @@ const renderError = (error) => {
   return error;
 };
 
-export const renderFinalSummary = (testPlanInfo) => {
+export const renderFinalSummary = (testPlanInfo, logOptions) => {
   let finalSummary = "";
-  const counters = testPlanInfo.counters;
-  const duration = testPlanInfo.duration;
+  const { counters } = testPlanInfo;
+  const { planified } = counters;
 
-  if (counters.planified === 1) {
+  if (planified === 1) {
     finalSummary += `1 execution: `;
   } else {
-    finalSummary += `${counters.planified} executions `;
+    finalSummary += `${planified} executions `;
   }
   finalSummary += renderStatusRepartition(counters);
-  finalSummary += `\nduration: ${msAsDuration(duration)}`;
+
+  const { duration } = testPlanInfo;
+  const durationFormatted = logOptions.mockFluctuatingValues
+    ? "<mock>"
+    : msAsDuration(duration);
+  finalSummary += `\nduration: ${durationFormatted}`;
 
   return `\n\n-------------- summary -----------------
 ${finalSummary}

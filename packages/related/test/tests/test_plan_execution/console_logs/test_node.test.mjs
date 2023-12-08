@@ -10,8 +10,9 @@ const logFileSnapshot = takeFileSnapshot(logFileUrl);
 await executeTestPlan({
   logs: {
     level: "warn",
-    fileUrl: logFileUrl,
     dynamic: false,
+    mockFluctuatingValues: true,
+    fileUrl: logFileUrl,
   },
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {

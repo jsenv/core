@@ -1,6 +1,6 @@
-executing 1 file on node_worker_thread@20.8.0
+1 execution to run on node_worker_thread@<mock>
 
-✔ main.js [0.002s/0 B] (all completed)
+✔ main.js [<mock>/<mock>] (all completed)
 -------- console (✖ 4) --------
 ✖ toto
   ho
@@ -15,5 +15,5 @@ executing 1 file on node_worker_thread@20.8.0
 
 -------------- summary -----------------
 1 execution: all completed
-duration: 0.3 second
+duration: <mock>
 ----------------------------------------

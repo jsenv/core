@@ -45,6 +45,7 @@ const logsDefault = {
   level: "info",
   dynamic: true,
   memoryUsage: true,
+  mockFluctuatingValues: false, // used for snapshot testing logs
   fileUrl: undefined,
 };
 const githubCheckDefault = {
@@ -430,9 +431,7 @@ To fix this warning:
   reporters.push(
     listReporter({
       logger,
-      logDynamic: logs.dynamic,
-      logMemoryUsage: logs.memoryUsage,
-      logFileUrl: logs.fileUrl,
+      logs,
     }),
   );
 
