@@ -1,0 +1,10 @@
+2 executions to run
+- 1 on chromium@120.0.6099.28
+- 1 on firefox@119.0
+
+✔ b.html [chromium/<mock>/<mock>] (all completed)
+
+-------------- summary -----------------
+2 executions: 1 completed, 1 cancelled
+duration: <mock>
+----------------------------------------

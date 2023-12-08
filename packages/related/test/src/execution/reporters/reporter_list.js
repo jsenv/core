@@ -130,7 +130,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
     intro += `- ${groupInfo.count} on ${getGroupRenderedName(
       groupInfo,
       logOptions,
-    )}`;
+    )}\n`;
   }
   return intro;
 };
@@ -262,7 +262,7 @@ const descriptionFormatters = {
 const renderRuntimeInfo = (execution, logOptions) => {
   const infos = [];
   if (logOptions.group) {
-    infos.push(ANSI.color(execution.groupName));
+    infos.push(ANSI.color(execution.group, ANSI.GREY));
   }
   const { timings, memoryUsage } = execution.result;
   if (timings) {
@@ -457,7 +457,7 @@ export const renderFinalSummary = (testPlanInfo, logOptions) => {
   if (planified === 1) {
     finalSummary += `1 execution: `;
   } else {
-    finalSummary += `${planified} executions `;
+    finalSummary += `${planified} executions: `;
   }
   finalSummary += renderStatusRepartition(counters);
 
