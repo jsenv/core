@@ -46,6 +46,7 @@ Hello europa
 Hello world
       ^ unexpected "w", expected to continue with "europa"…
 3abcdefghijklmnopqrstuvwxy
+4abcdefghijklmnopqrstuvwxy
 --- path ---
 actual[59]#L3C7`,
     );
@@ -268,6 +269,27 @@ actual`,
 --- details ---
 \\x7F
 ^ an empty string was expected
+--- path ---
+actual`,
+    );
+  }
+}
+// too long again
+{
+  const actual = `a
+b`;
+  const expected = `a
+`;
+  try {
+    assert({ actual, expected });
+  } catch (e) {
+    ensureAssertionErrorWithMessage(
+      e,
+      `string is too long, it contains one extra character
+--- details ---
+a
+ ^ expected to end here, on "\\n"
+b
 --- path ---
 actual`,
     );

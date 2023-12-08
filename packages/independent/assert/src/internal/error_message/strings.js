@@ -148,12 +148,12 @@ export const formatStringAssertionErrorMessage = ({
       const lastLineIndex = lineStrings.length - 1;
       const idealNumberOfLineAfter = MAX_HEIGHT - lineDisplayed;
       let lineAfterStart = lineIndex + 1;
-      if (lineAfterStart >= lastLineIndex) {
+      if (lineAfterStart > lastLineIndex) {
         break write_chars_after_annotation;
       }
       let lineAfterEnd = lineAfterStart + idealNumberOfLineAfter;
-      if (lineAfterEnd > lastLineIndex) {
-        lineAfterEnd = lastLineIndex;
+      if (lineAfterEnd > lineStrings.length) {
+        lineAfterEnd = lineStrings.length;
       }
       if (lineAfterStart === lineAfterEnd) {
         break write_chars_after_annotation;
@@ -225,18 +225,25 @@ export const formatStringAssertionErrorMessage = ({
     } else {
       message += `, it contains ${extraCharacterCount} extra characters`;
     }
-    if (expectedLength > 0) {
-      columnIndex--;
+    let annotationLabel;
+    if (expectedLength === 0) {
+      annotationLabel = `${COLUMN_MARKER_CHAR} an empty string was expected`;
+    } else {
+      if (columnIndex === 0) {
+        lineIndex--;
+        columnIndex = lineStrings[lineIndex].length;
+      } else {
+        columnIndex--;
+      }
+      annotationLabel = `${COLUMN_MARKER_CHAR} expected to end here, on ${inspect(
+        expected[expectedLength - 1],
+      )}`;
     }
+
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
     return createDetailedMessage(message, {
       ...formatDetails({
-        annotationLabel:
-          expectedLength === 0
-            ? `${COLUMN_MARKER_CHAR} an empty string was expected`
-            : `${COLUMN_MARKER_CHAR} expected to end here, on ${inspect(
-                expected[expectedLength - 1],
-              )}`,
+        annotationLabel,
         expectedOverview: false,
       }),
       path,
