@@ -1,4 +1,4 @@
-import { takeFileSnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
@@ -8,12 +8,12 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
+const snapshotDirectoryUrl = new URL("./snapshots/node/", import.meta.url);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
-    `./snapshots/jsenv_tests_output_${name}.txt`,
+    `./snapshots/node/jsenv_tests_output_${name}.txt`,
     import.meta.url,
   );
-  const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
       level: "warn",
@@ -24,11 +24,11 @@ const test = async ({ name, ...params }) => {
     githubCheck: false,
     ...params,
   });
-  logFileSnapshot.compare();
 };
 
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({
-  name: "node",
+  name: "one",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
     "./main.js": {
@@ -40,7 +40,7 @@ await test({
   },
 });
 await test({
-  name: "node_multiple",
+  name: "many",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
     "./a.js": {
@@ -57,3 +57,4 @@ await test({
     },
   },
 });
+directorySnapshot.compare();

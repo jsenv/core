@@ -1,6 +1,6 @@
 2 executions to run
-- 1 on chromium@120.0.6099.28
-- 1 on firefox@119.0
+- 1 on chromium (chromium@120.0.6099.28)
+- 1 on firefox (firefox@119.0)
 
 ✔ b.html [chromium/<mock>/<mock>] (all completed)
 ✔ b.html [firefox/<mock>] (all completed)

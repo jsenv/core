@@ -1,4 +1,4 @@
-import { takeFileSnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
 import { executeTestPlan, chromium, firefox } from "@jsenv/test";
@@ -15,12 +15,12 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
+const snapshotDirectoryUrl = new URL("./snapshots/browser/", import.meta.url);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
-    `./snapshots/jsenv_tests_output_${name}.txt`,
+    `./snapshots/browser/jsenv_tests_output_${name}.txt`,
     import.meta.url,
   );
-  const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
       level: "warn",
@@ -31,11 +31,11 @@ const test = async ({ name, ...params }) => {
     githubCheck: false,
     ...params,
   });
-  logFileSnapshot.compare();
 };
 
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({
-  name: "chromium",
+  name: "one",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
     "./main.html": {
@@ -50,7 +50,7 @@ await test({
   },
 });
 await test({
-  name: "browsers",
+  name: "many",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
     "./b.html": {
@@ -67,3 +67,4 @@ await test({
     origin: devServer.origin,
   },
 });
+directorySnapshot.compare();
