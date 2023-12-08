@@ -434,8 +434,6 @@ To fix this warning:
       logs,
     }),
   );
-
-  logger.debug(`Generate executions`);
   const testPlanInfo = {
     rootDirectoryUrl: String(rootDirectoryUrl),
     groups: {},
@@ -517,6 +515,7 @@ To fix this warning:
           runtimeParams: {
             rootDirectoryUrl,
             webServer,
+            teardownCallbackSet,
 
             coverageEnabled: Boolean(coverage),
             coverageConfig: coverage?.include,
@@ -594,7 +593,6 @@ To fix this warning:
 
   counters.planified = executionPlanifiedSet.size;
   countersInOrder.planified = executionPlanifiedSet.size;
-  logger.debug(`${executionPlanifiedSet.size} executions planned`);
   if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheck.logLevel,
@@ -721,28 +719,16 @@ To fix this warning:
           }
         }
       }
-
-      const fileUrl = `${rootDirectoryUrl}${execution.fileRelativeUrl}`;
-      if (existsSync(new URL(fileUrl))) {
-        const executionResult = await run({
-          ...execution.params,
-          signal: multipleExecutionsOperation.signal,
-          logger,
-          keepRunning,
-          mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-          coverageEnabled: Boolean(coverage),
-          coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
-        });
-        Object.assign(execution.result, executionResult);
-      } else {
-        execution.result.status = "failed";
-        execution.result.errors = [
-          new Error(
-            `No file at ${execution.fileRelativeUrl} for execution "${execution.name}"`,
-          ),
-        ];
-      }
-
+      const executionResult = await run({
+        ...execution.params,
+        signal: multipleExecutionsOperation.signal,
+        logger,
+        keepRunning,
+        mirrorConsole: false, // might be executed in parallel: log would be a mess to read
+        coverageEnabled: Boolean(coverage),
+        coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
+      });
+      Object.assign(execution.result, executionResult);
       execution.status = "executed";
       executionExecutingSet.delete(execution);
       mutateCountersAfterExecutionEnds(counters, execution);
@@ -774,9 +760,7 @@ To fix this warning:
       const promises = [];
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        if (multipleExecutionsOperation.signal.aborted) {
-          break;
-        }
+        multipleExecutionsOperation.throwIfAborted();
         if (executionRemainingSet.size === 0) {
           break;
         }
@@ -796,7 +780,7 @@ To fix this warning:
           if (usedMemory > parallel.maxMemory) {
             // retry after Xms in case memory usage decreases
             const promise = (async () => {
-              await new Promise((resolve) => setTimeout(resolve, 200));
+              await multipleExecutionsOperation.wait(200);
               await startAsMuchAsPossible();
             })();
             promises.push(promise);
@@ -805,7 +789,7 @@ To fix this warning:
           if (cpuUsage.overall.active > parallel.maxCpu) {
             // retry after Xms in case cpu usage decreases
             const promise = (async () => {
-              await new Promise((resolve) => setTimeout(resolve, 200));
+              await multipleExecutionsOperation.wait(200);
               await startAsMuchAsPossible();
             })();
             promises.push(promise);
@@ -855,6 +839,12 @@ To fix this warning:
       testPlanInfo.duration = Date.now() - startMs;
       if (finalizeCoverage) {
         await finalizeCoverage();
+      }
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        testPlanInfo.aborted = true;
+      } else {
+        throw e;
       }
     } finally {
       await multipleExecutionsOperation.end();

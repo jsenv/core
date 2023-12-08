@@ -304,7 +304,9 @@ export const createRuntimeUsingPlaywright = ({
         return memoryUsage;
       };
 
-      onMeasureMemoryAvailable(getMemoryUsage);
+      if (onMeasureMemoryAvailable) {
+        onMeasureMemoryAvailable(getMemoryUsage);
+      }
       if (measureMemoryUsage) {
         callbackSet.add(async () => {
           const memoryUsage = await getMemoryUsage();
