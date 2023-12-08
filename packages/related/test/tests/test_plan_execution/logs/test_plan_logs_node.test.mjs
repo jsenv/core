@@ -39,3 +39,21 @@ await test({
     },
   },
 });
+await test({
+  name: "node_multiple",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./a.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+      node2: {
+        runtime: nodeWorkerThread({
+          env: {
+            foo: "foo",
+          },
+        }),
+      },
+    },
+  },
+});
