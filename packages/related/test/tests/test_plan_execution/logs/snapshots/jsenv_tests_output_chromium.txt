@@ -1,0 +1,14 @@
+1 execution to run on chromium@unset
+
+✖ main.html [<mock>] (all failed)
+-------- error --------
+TypeError: Cannot read properties of undefined (reading 'add')
+    at runtime.run (file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/src/runtime_browsers/using_pl
+aywright.js:163:27)
+    at async runned (file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/src/execution/run.js:117:33)
+-------------------------
+
+-------------- summary -----------------
+1 execution: all failed
+duration: <mock>
+----------------------------------------
