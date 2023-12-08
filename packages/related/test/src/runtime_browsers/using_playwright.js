@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import { createDetailedMessage } from "@jsenv/log";
 import { Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
 import { urlIsInsideOf } from "@jsenv/urls";
@@ -14,7 +14,6 @@ const browserPromiseCache = new Map();
 
 export const createRuntimeUsingPlaywright = ({
   browserName,
-  browserVersion,
   coveragePlaywrightAPIAvailable = false,
   memoryUsageAPIAvailable = false,
   shouldIgnoreError = () => false,
@@ -24,6 +23,7 @@ export const createRuntimeUsingPlaywright = ({
   playwrightLaunchOptions = {},
   ignoreHTTPSErrors = true,
 }) => {
+  const browserVersion = getBrowserVersion(browserName);
   const label = `${browserName}${browserVersion}`;
   const runtime = {
     type: "browser",
@@ -109,9 +109,9 @@ export const createRuntimeUsingPlaywright = ({
           stopOnExit: true,
           playwrightLaunchOptions: options,
         });
-        if (browser._initializer.version) {
-          runtime.version = browser._initializer.version;
-        }
+        // if (browser._initializer.version) {
+        //   runtime.version = browser._initializer.version;
+        // }
         const browserContext = await browser.newContext({ ignoreHTTPSErrors });
         return { browser, browserContext };
       })();
@@ -501,6 +501,27 @@ export const createRuntimeUsingPlaywright = ({
     }
   };
   return runtime;
+};
+
+// see also https://github.com/microsoft/playwright/releases
+const getBrowserVersion = (browserName) => {
+  const playwrightPackageJsonFileUrl = import.meta.resolve(
+    "playwright-core/package.json",
+  );
+  const playwrightBrowsersJsonFileUrl = new URL(
+    "./browsers.json",
+    playwrightPackageJsonFileUrl,
+  );
+  const browsersJson = JSON.parse(
+    readFileSync(playwrightBrowsersJsonFileUrl, "utf8"),
+  );
+  const { browsers } = browsersJson;
+  for (const browser of browsers) {
+    if (browser.name === browserName) {
+      return browser.browserVersion;
+    }
+  }
+  return "unkown";
 };
 
 const generateCoverageForPage = (scriptExecutionResults) => {

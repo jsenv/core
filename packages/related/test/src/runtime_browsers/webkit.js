@@ -14,9 +14,6 @@ export const webkitIsolatedTab = (params) => {
 const createWekbitRuntime = (params) => {
   return createRuntimeUsingPlaywright({
     browserName: "webkit",
-    // browserVersion will be set by "browser._initializer.version"
-    // see also https://github.com/microsoft/playwright/releases
-    browserVersion: "unset",
     shouldIgnoreError: (error) => {
       // we catch error during execution but safari throw unhandled rejection
       // in a non-deterministic way.

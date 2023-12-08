@@ -1,4 +1,4 @@
-1 execution to run on chromium@unset
+1 execution to run on chromium@120.0.6099.28
 
 ✔ main.html [<mock>/<mock>] (all completed)
 -------- console (✖ 1 ⚠ 3 ℹ 1 ◆ 1) --------
