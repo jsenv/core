@@ -35,9 +35,12 @@ export const listReporter = ({
   };
 
   const addIntermediateSummary = !canEraseProcessStdout;
+  let logGroup;
 
   return {
     beforeAllExecution: (testPlanInfo) => {
+      logGroup = Object.keys(testPlanInfo.groups).length > 1;
+
       writeOutput(renderIntro(testPlanInfo));
       if (!canEraseProcessStdout) {
         return () => {
@@ -91,6 +94,7 @@ export const listReporter = ({
     beforeExecutionInOrder: (execution) => {
       return () => {
         const log = renderExecutionLog(execution, {
+          logGroup,
           logMemoryUsage,
           addIntermediateSummary,
         });
@@ -112,17 +116,17 @@ const renderIntro = (testPlanInfo) => {
   if (planified === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `executing 1 file on ${getGroupRenderedName(groupInfo)}\n`;
+    return `1 execution to run on ${getGroupRenderedName(groupInfo)}\n`;
   }
   if (groupNames.length === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `executing ${planified} files on ${getGroupRenderedName(
+    return `${planified} executions to run on ${getGroupRenderedName(
       groupInfo,
     )}\n`;
   }
 
-  let intro = `executing ${planified} files\n`;
+  let intro = `${planified} executions to run\n`;
   for (const groupName of groupNames) {
     const groupInfo = groups[groupName];
     intro += `- ${groupInfo.count} on ${getGroupRenderedName(groupInfo)}`;
@@ -157,12 +161,13 @@ const getGroupRenderedName = (groupInfo) => {
  */
 const renderExecutionLog = (
   execution,
-  { logMemoryUsage, addIntermediateSummary },
+  { logMemoryUsage, logGroup, addIntermediateSummary },
 ) => {
   let log = "\n";
   // label
   {
     const label = renderExecutionLabel(execution, {
+      logGroup,
       logMemoryUsage,
       addIntermediateSummary,
     });
@@ -195,7 +200,7 @@ const renderExecutionLog = (
 
 const renderExecutionLabel = (
   execution,
-  { logMemoryUsage, addIntermediateSummary },
+  { logGroup, logMemoryUsage, addIntermediateSummary },
 ) => {
   let label = "";
 
@@ -206,7 +211,10 @@ const renderExecutionLabel = (
   }
   // runtimeInfo
   {
-    const runtimeInfo = renderRuntimeInfo(execution, { logMemoryUsage });
+    const runtimeInfo = renderRuntimeInfo(execution, {
+      logGroup,
+      logMemoryUsage,
+    });
     if (runtimeInfo) {
       label += ` [${runtimeInfo}]`;
     }
@@ -259,10 +267,9 @@ const descriptionFormatters = {
     );
   },
 };
-const renderRuntimeInfo = (execution, { logMemoryUsage }) => {
+const renderRuntimeInfo = (execution, { logGroup, logMemoryUsage }) => {
   const infos = [];
-  const { fileExecutionCount } = execution;
-  if (fileExecutionCount > 1) {
+  if (logGroup) {
     infos.push(ANSI.color(execution.groupName));
   }
   const { timings, memoryUsage } = execution.result;
