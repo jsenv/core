@@ -1,9 +1,9 @@
 2 executions to run
-- 1 on node (node_worker_thread@<mock>)
-- 1 on node2 (node_worker_thread@<mock>)
+  1 with node (node_worker_thread@<mock>)
+  1 with node2 (node_worker_thread@<mock>)
 
-✔ a.js [node/<mock>/<mock>] (all completed)
-✔ a.js [node2/<mock>/<mock>] (all completed)
+✔ a.js [node/<mock>/<mock>] 1/2
+✔ a.js [node2/<mock>/<mock>] 2/2
 
 -------------- summary -----------------
 2 executions: all completed

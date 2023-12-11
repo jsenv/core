@@ -1,6 +1,6 @@
-1 execution to run on chrome (chromium@120.0.6099.28)
+1 execution to run with chrome (chromium@120.0.6099.28)
 
-✔ main.html [<mock>/<mock>] (all completed)
+✔ main.html [<mock>/<mock>] 1/1
 -------- console (✖ 1 ⚠ 3 ℹ 1 ◆ 1) --------
 ⚠ toto
 ✖ hey

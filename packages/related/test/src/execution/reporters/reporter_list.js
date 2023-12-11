@@ -214,13 +214,19 @@ const renderExecutionLabel = (execution, logOptions) => {
   }
   // intersummary
   if (logOptions.intermediateSummary) {
-    const intermediateSummary = renderStatusRepartition({
-      ...execution.countersInOrder,
-      planified: execution.index + 1,
-    });
-    if (intermediateSummary) {
-      label += ` (${intermediateSummary})`;
+    let intermediateSummary = "";
+    const number = execution.index + 1;
+    const total = execution.countersInOrder.planified;
+    intermediateSummary += `${number}/${total}`;
+    const failed =
+      execution.countersInOrder.failed + execution.countersInOrder.timedout;
+    if (failed) {
+      intermediateSummary += `(${ANSI.color(
+        UNICODE.FAILURE_RAW,
+        COLOR_FAILED,
+      )} ${failed})`;
     }
+    label += ` ${intermediateSummary}`;
   }
 
   return label;

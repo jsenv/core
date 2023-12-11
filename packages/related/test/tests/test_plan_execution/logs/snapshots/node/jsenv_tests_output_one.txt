@@ -1,6 +1,6 @@
-1 execution to run on node (node_worker_thread@<mock>)
+1 execution to run with node (node_worker_thread@<mock>)
 
-✔ main.js [<mock>/<mock>] (all completed)
+✔ main.js [<mock>/<mock>] 1/1
 -------- console (✖ 4) --------
 ✖ toto
   ho
