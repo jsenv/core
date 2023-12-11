@@ -75,9 +75,10 @@ export const listReporter = ({ logger, logs }) => {
             }
             // TODO: append duration and memory usage if enabled and available
             return ANSI.color(
-              `executing ${padNumber(
-                pendingExecution.index,
+              `executing ${fillLeft(
+                pendingExecution.index + 1,
                 pendingExecution.total,
+                "0",
               )} of ${pendingExecution.total}`,
               ANSI.BLUE,
             );
@@ -286,18 +287,28 @@ const COLOR_TIMEOUT = ANSI.MAGENTA;
 const COLOR_FAILED = ANSI.RED;
 const COLOR_COMPLETED = ANSI.GREEN;
 const COLOR_CANCELLED = ANSI.GREY;
-const padNumber = (index, total, char = "0") => {
-  const number = index + 1;
-  const numberWidth = String(number).length;
-  const totalWith = String(total).length;
-  let missingWidth = totalWith - numberWidth;
+const fillLeft = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
   let padded = "";
   while (missingWidth--) {
     padded += char;
   }
-  padded += number;
+  padded += value;
   return padded;
 };
+// const fillRight = (value, biggestValue, char = " ") => {
+//   const width = String(value).length;
+//   const biggestWidth = String(biggestValue).length;
+//   let missingWidth = biggestWidth - width;
+//   let padded = "";
+//   padded += value;
+//   while (missingWidth--) {
+//     padded += char;
+//   }
+//   return padded;
+// };
 
 const renderConsole = (consoleCalls) => {
   if (consoleCalls.length === 0) {
