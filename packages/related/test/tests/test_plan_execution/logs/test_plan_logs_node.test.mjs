@@ -67,4 +67,16 @@ await test({
     },
   },
 });
+await test({
+  name: "error",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./error.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+        allocatedMs: Infinity,
+      },
+    },
+  },
+});
 directorySnapshot.compare();

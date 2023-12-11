@@ -34,7 +34,8 @@ export const stringifyUrlSite = (
   { url, line, column, content },
   {
     showCodeFrame = true,
-    numberOfSurroundingLinesToShow,
+    maxLinesAbove,
+    maxLinesBelow,
     lineMaxLength,
     color,
   } = {},
@@ -56,7 +57,8 @@ export const stringifyUrlSite = (
     content,
     line,
     column,
-    numberOfSurroundingLinesToShow,
+    maxLinesAbove,
+    maxLinesBelow,
     lineMaxLength,
     color,
   });
@@ -69,7 +71,8 @@ export const showSourceLocation = ({
   content,
   line,
   column,
-  numberOfSurroundingLinesToShow = 1,
+  maxLinesAbove = 3,
+  maxLinesBelow = 1,
   lineMaxLength = 120,
 } = {}) => {
   let mark = (string) => string;
@@ -85,12 +88,12 @@ export const showSourceLocation = ({
     start: line - 1,
     end: line,
   };
-  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
+  lineRange = moveLineRangeUp(lineRange, maxLinesAbove);
+  lineRange = moveLineRangeDown(lineRange, maxLinesBelow);
   lineRange = lineRangeWithinLines(lineRange, lines);
   const linesToShow = lines.slice(lineRange.start, lineRange.end);
   const endLineNumber = lineRange.end;
-  const lineNumberMaxWidth = String(endLineNumber).length;
+  const displayLineMarker = line < lineRange.end;
 
   if (column === 0) column = 1;
 
@@ -106,33 +109,55 @@ export const showSourceLocation = ({
     columnRange.end = lineMaxLength;
   }
 
-  return linesToShow.map((lineSource, index) => {
+  let source = "";
+  let index = 0;
+  for (const lineSource of linesToShow) {
     const lineNumber = lineRange.start + index + 1;
+    const isLastLine = index === lineRange.end - 2;
+    index++;
     const isMainLine = lineNumber === line;
     const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
-    const lineNumberWidth = String(lineNumber).length;
-    // ensure if line moves from 7,8,9 to 10 the display is still great
-    const lineNumberRightSpacing = " ".repeat(
-      lineNumberMaxWidth - lineNumberWidth,
-    );
-    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
-    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
-    if (isMainLine) {
-      if (column === undefined) {
-        return `${mark(">")} ${lineFormatted}`;
+    // fillRight to ensure if line moves from 7,8,9 to 10 the display is still great
+    const asideSource = `${fillRight(lineNumber, endLineNumber)} |`;
+
+    if (displayLineMarker) {
+      if (isMainLine) {
+        source += `${mark(">")} `;
+      } else {
+        source += "  ";
       }
-      const spacing = stringToSpaces(
-        `${asideSource} ${lineSourceTruncated.slice(
-          0,
-          column - columnRange.start - 1,
-        )}`,
-      );
-      return `${mark(">")} ${lineFormatted}
-  ${spacing}${mark("^")}`;
     }
-    return `  ${lineFormatted}`;
-  }).join(`
-`);
+    source += `${aside(asideSource)} ${lineSourceTruncated}`;
+    if (isMainLine && typeof column === "number") {
+      source += `\n`;
+      if (displayLineMarker) {
+        source += "  ";
+      }
+      const charsOnThatLine = lineSourceTruncated.slice(
+        0,
+        column - columnRange.start - 1,
+      );
+      const spacing = stringToSpaces(`${asideSource} ${charsOnThatLine}`);
+      source += spacing;
+      source += mark("^");
+    }
+    if (!isLastLine) {
+      source += "\n";
+    }
+  }
+  return source;
+};
+
+const fillRight = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  padded += value;
+  while (missingWidth--) {
+    padded += char;
+  }
+  return padded;
 };
 
 const applyColumnRange = ({ start, end }, line) => {

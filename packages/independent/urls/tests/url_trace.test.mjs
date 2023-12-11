@@ -32,6 +32,8 @@ const e = false;
 `,
     column: 1,
     line: 3,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
   });
   const expected = `
   2 | const b = true;
@@ -50,7 +52,8 @@ const d = true;
 const e = false;`,
     column: 7,
     line: 3,
-    numberOfSurroundingLinesToShow: 10,
+    maxLinesAbove: 4,
+    maxLinesBelow: 2,
   });
   const expected = `
   1 | const a = false;
@@ -73,7 +76,8 @@ const e = false;
 `,
     column: 1,
     line: 3,
-    numberOfSurroundingLinesToShow: 10,
+    maxLinesAbove: 4,
+    maxLinesBelow: 3,
   });
   const expected = `
   1 | const a = false;
@@ -96,6 +100,8 @@ const d = true;
 const e = false;
 `,
     line: 3,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
   });
   const expected = `
   2 | const b = true;
@@ -119,6 +125,8 @@ const i = true;
 const j = true;
 const k = true;
 const l = true;`,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
     line: 10,
   });
   const expected = `
@@ -138,6 +146,8 @@ const d = true;
 const e = false;
 `,
     line: 3,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
     lineMaxLength: 15,
   });
   const expected = `
@@ -158,6 +168,8 @@ const e = false;
 `,
     line: 3,
     column: 4,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
     lineMaxLength: 15,
   });
   const expected = `
@@ -179,6 +191,8 @@ const e = false;
 `,
     line: 3,
     column: 20,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
     lineMaxLength: 15,
   });
   const expected = `
@@ -200,6 +214,8 @@ const e = false;
 `,
     line: 3,
     column: 35,
+    maxLinesAbove: 1,
+    maxLinesBelow: 1,
     lineMaxLength: 15,
   });
   const expected = `

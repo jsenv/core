@@ -85,7 +85,7 @@ const removeActionRequestListener = onActionRequestedByParent(
         "action-result",
         JSON.stringify({
           id,
-          status: "failed",
+          status: "error",
           value: exception,
         }),
       );

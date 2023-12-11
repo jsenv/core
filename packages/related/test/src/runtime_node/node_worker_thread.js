@@ -158,7 +158,7 @@ export const nodeWorkerThread = ({
       };
 
       try {
-        let executionFailedCallback;
+        let executionInternalErrorCallback;
         let executionCompletedCallback;
         const winnerPromise = new Promise((resolve) => {
           raceCallbacks(
@@ -178,8 +178,8 @@ export const nodeWorkerThread = ({
                   },
                 );
               },
-              execution_failed: (cb) => {
-                executionFailedCallback = cb;
+              execution_internal_error: (cb) => {
+                executionInternalErrorCallback = cb;
               },
               execution_completed: (cb) => {
                 executionCompletedCallback = cb;
@@ -237,13 +237,16 @@ export const nodeWorkerThread = ({
             result.errors.push(error);
           },
           execution_completed: ({
+            status,
+            errors,
             namespace,
             timings,
             memoryUsage,
             performance,
             coverage,
           }) => {
-            result.status = "completed";
+            result.status = status;
+            result.errors = errors;
             result.namespace = namespace;
             result.timings = timings;
             result.memoryUsage = memoryUsage;
@@ -290,8 +293,8 @@ export const nodeWorkerThread = ({
             },
           },
           ({ status, value }) => {
-            if (status === "failed") {
-              executionFailedCallback(value);
+            if (status === "error") {
+              executionInternalErrorCallback(value);
             } else {
               executionCompletedCallback(value);
             }

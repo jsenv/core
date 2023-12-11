@@ -17,6 +17,12 @@
  * The browser part can be found in "supervisor.js"
  */
 
+import { readFileSync } from "node:fs";
+import { urlIsInsideOf, showSourceLocation } from "@jsenv/urls";
+import { fileURLToPath } from "node:url";
+
+const jsenvTestSourceDirectoryUrl = new URL("../", import.meta.url);
+
 export const createException = (reason) => {
   const exception = {
     isException: true,
@@ -44,14 +50,87 @@ export const createException = (reason) => {
     exception.isError = true;
     exception.name = reason.name;
     exception.message = reason.message;
-    const stackInfo = getStackInfo(reason);
-    if (stackInfo) {
-      const { stackTrace, stackObject } = stackInfo;
-      exception.stackTrace = stackTrace;
-      const [firstCallSite] = stackObject;
-      writePropertiesFromCallSite(exception, firstCallSite);
+
+    if (reason instanceof Error) {
+      const { prepareStackTrace } = Error;
+      Error.prepareStackTrace = (e, callSites) => {
+        Error.prepareStackTrace = prepareStackTrace;
+
+        let firstMeaningFullCall;
+        for (const callSite of callSites) {
+          if (!isNodeJsOrJsenvInternal(callSite)) {
+            firstMeaningFullCall = callSite;
+            break;
+          }
+        }
+        if (firstMeaningFullCall) {
+          callSites = callSites.filter(
+            (callSite) => !isNodeJsOrJsenvInternal(callSite),
+          );
+        }
+        const [firstCallSite] = callSites;
+        if (firstCallSite) {
+          const source =
+            firstCallSite.getFileName() ||
+            firstCallSite.getScriptNameOrSourceURL();
+          if (source) {
+            const line = firstCallSite.getLineNumber();
+            const column = firstCallSite.getColumnNumber() - 1;
+            exception.site = {
+              url: source,
+              line,
+              column,
+            };
+          }
+          // Code called using eval() needs special handling
+          else if (firstCallSite.isEval()) {
+            const origin = firstCallSite.getEvalOrigin();
+            if (origin) {
+              writePropertiesFromEvalOrigin(exception, origin);
+            }
+          }
+        }
+
+        let stackTrace = "";
+        for (const callSite of callSites) {
+          if (stackTrace) stackTrace += "\n";
+          const callSiteAsString = String(callSite);
+          try {
+            const callSiteAsPath = fileURLToPath(callSiteAsString);
+            stackTrace += `  at ${callSiteAsPath}`;
+          } catch (e) {
+            stackTrace += `  at ${callSiteAsString}`;
+          }
+        }
+        exception.stackTrace = stackTrace;
+
+        const name = e.name || "Error";
+        const message = e.message || "";
+        let stack = ``;
+        if (exception.site && exception.site.url.startsWith("file:")) {
+          const content = readFileSync(new URL(exception.site.url), "utf8");
+          stack += showSourceLocation({
+            content,
+            line: exception.site.line,
+            column: exception.site.column,
+            maxLinesAbove: 2,
+            maxLinesBelow: 0,
+            lineMaxLength: process.stdout.columns,
+          });
+          stack += `\n`;
+        }
+
+        stack += `${name}: ${message}`;
+        if (stackTrace) {
+          stack += `\n${stackTrace}`;
+        }
+        exception.stack = stack;
+        return stack;
+      };
+      // eslint-disable-next-line no-unused-expressions
+      reason.stack;
+      return exception;
     }
-    exception.stack = reason.stack;
     return exception;
   }
   if (typeof reason === "object") {
@@ -64,55 +143,20 @@ export const createException = (reason) => {
   return exception;
 };
 
-const getStackInfo = (reason) => {
-  if (reason instanceof Error) {
-    const { prepareStackTrace } = Error;
-    let stackTrace;
-    let stackObject;
-    Error.prepareStackTrace = (e, secondArg) => {
-      Error.prepareStackTrace = prepareStackTrace;
-      stackObject = secondArg;
-      stackTrace = secondArg.map((callSite) => `  at ${callSite}`).join("\n");
-      const name = e.name || "Error";
-      const message = e.message || "";
-      let stack = `${name}: ${message}`;
-      if (stackTrace) {
-        stack += `\n${stackTrace}`;
-      }
-      return stack;
-    };
-    // eslint-disable-next-line no-unused-expressions
-    reason.stack;
-    if (stackTrace === undefined) {
-      return null;
-    }
-    return {
-      stackTrace,
-      stackObject,
-    };
+const isNodeJsOrJsenvInternal = (callSite) => {
+  const fileName = callSite.getFileName();
+  if (fileName.startsWith("node:")) {
+    return true;
   }
-  return null;
+  if (
+    fileName.startsWith("file:") &&
+    urlIsInsideOf(fileName, jsenvTestSourceDirectoryUrl)
+  ) {
+    return true;
+  }
+  return false;
 };
-const writePropertiesFromCallSite = (exception, callSite) => {
-  const source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-  if (source) {
-    const line = callSite.getLineNumber();
-    const column = callSite.getColumnNumber() - 1;
-    exception.site = {
-      url: source,
-      line,
-      column,
-    };
-    return;
-  }
-  // Code called using eval() needs special handling
-  if (callSite.isEval()) {
-    const origin = callSite.getEvalOrigin();
-    if (origin) {
-      writePropertiesFromEvalOrigin(exception, origin);
-    }
-  }
-};
+
 const writePropertiesFromEvalOrigin = (exception, origin) => {
   // Most eval() calls are in this format
   const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(

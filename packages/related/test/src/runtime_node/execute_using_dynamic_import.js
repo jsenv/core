@@ -3,6 +3,7 @@ import { memoryUsage } from "node:process";
 
 import { startJsCoverage } from "./profiler_v8_coverage.js";
 import { startObservingPerformances } from "./node_execution_performance.js";
+import { createException } from "../execution/exception.js";
 
 export const executeUsingDynamicImport = async ({
   rootDirectoryUrl,
@@ -19,9 +20,10 @@ export const executeUsingDynamicImport = async ({
       start: null,
       end: null,
     },
+    errors: [],
+    namespace: null,
     memoryUsage: null,
     performance: null,
-    namespace: null,
   };
 
   let finalizePerformance;
@@ -74,7 +76,11 @@ export const executeUsingDynamicImport = async ({
         namespaceResolved[key] = value;
       }),
     );
+    result.status = "completed";
     result.namespace = namespaceResolved;
+  } catch (e) {
+    result.status = "failed";
+    result.errors.push(createException(e));
   } finally {
     result.timings.end = Date.now();
     if (finalizeCoverage) {
