@@ -2,8 +2,8 @@
   1 with node (node_worker_thread@<mock>)
   1 with node2 (node_worker_thread@<mock>)
 
-✔ a.js [node/<mock>/<mock>] 1/2
-✔ a.js [node2/<mock>/<mock>] 2/2
+✔ a.js [node/<mock>/<mock>] 1/2 (1 completed, 1 remaining)
+✔ a.js [node2/<mock>/<mock>] 2/2 (all completed)
 
 -------------- summary -----------------
 2 executions: all completed

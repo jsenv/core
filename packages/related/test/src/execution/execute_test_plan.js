@@ -592,8 +592,9 @@ To fix this warning:
     }
   }
 
-  counters.planified = executionPlanifiedSet.size;
-  countersInOrder.planified = executionPlanifiedSet.size;
+  counters.planified = counters.remaining = executionPlanifiedSet.size;
+  countersInOrder.planified = countersInOrder.remaining =
+    executionPlanifiedSet.size;
   if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheck.logLevel,
@@ -836,10 +837,10 @@ To fix this warning:
         }
         teardownCallbackSet.clear();
       }
-      // when execution is aborted, the remaining executions are "cancelled"
-      counters.cancelled = counters.planified - counters.executed;
       testPlanInfo.aborted = multipleExecutionsOperation.signal.aborted;
       testPlanInfo.duration = Date.now() - startMs;
+      mutateCountersAfterAllExecution(counters, testPlanInfo);
+      mutateCountersAfterAllExecution(countersInOrder, testPlanInfo);
       if (finalizeCoverage) {
         await finalizeCoverage();
       }
@@ -872,7 +873,6 @@ const countAvailableCpus = () => {
 const mutateCountersBeforeExecutionStarts = (counters) => {
   counters.executing++;
 };
-
 const mutateCountersAfterExecutionEnds = (counters, execution) => {
   counters.executing--;
   counters.executed++;
@@ -885,5 +885,12 @@ const mutateCountersAfterExecutionEnds = (counters, execution) => {
     counters.failed++;
   } else if (execution.result.status === "completed") {
     counters.completed++;
+  }
+};
+const mutateCountersAfterAllExecution = (counters, testPlanResult) => {
+  if (testPlanResult.aborted) {
+    // when execution is aborted, the remaining executions are "cancelled"
+    counters.cancelled = counters.planified - counters.executed;
+    counters.remaining = 0;
   }
 };

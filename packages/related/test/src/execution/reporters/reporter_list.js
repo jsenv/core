@@ -218,14 +218,9 @@ const renderExecutionLabel = (execution, logOptions) => {
     const number = execution.index + 1;
     const total = execution.countersInOrder.planified;
     intermediateSummary += `${number}/${total}`;
-    const failed =
-      execution.countersInOrder.failed + execution.countersInOrder.timedout;
-    if (failed) {
-      intermediateSummary += `(${ANSI.color(
-        UNICODE.FAILURE_RAW,
-        COLOR_FAILED,
-      )} ${failed})`;
-    }
+    intermediateSummary += ` (${renderStatusRepartition(
+      execution.countersInOrder,
+    )})`;
     label += ` ${intermediateSummary}`;
   }
 
@@ -320,7 +315,7 @@ const renderConsole = (consoleCalls) => {
   if (consoleCalls.length === 0) {
     return "";
   }
-  const repartition = {
+  const consoleRepartition = {
     debug: 0,
     info: 0,
     warning: 0,
@@ -328,11 +323,11 @@ const renderConsole = (consoleCalls) => {
     log: 0,
   };
   consoleCalls.forEach((consoleCall) => {
-    repartition[consoleCall.type]++;
+    consoleRepartition[consoleCall.type]++;
   });
   const consoleOutput = renderConsoleOutput(consoleCalls);
   const consoleHeader = `-------- ${renderConsoleSummary(
-    repartition,
+    consoleRepartition,
   )} --------`;
   const consoleFooter = `-`.repeat(stripAnsi(consoleHeader).length);
 
@@ -340,8 +335,8 @@ const renderConsole = (consoleCalls) => {
 ${consoleOutput}
 ${ANSI.color(consoleFooter, ANSI.GREY)}`;
 };
-const renderConsoleSummary = (repartition) => {
-  const { debug, info, warning, error } = repartition;
+const renderConsoleSummary = (consoleRepartition) => {
+  const { debug, info, warning, error } = consoleRepartition;
   const parts = [];
   if (error) {
     parts.push(`${CONSOLE_ICONS.error} ${error}`);
@@ -525,6 +520,9 @@ const renderStatusRepartition = (counters) => {
     parts.push(
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
+  }
+  if (counters.remaining) {
+    parts.push(`${counters.remaining} remaining`);
   }
   return `${parts.join(", ")}`;
 };
