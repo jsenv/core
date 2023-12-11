@@ -11,6 +11,9 @@ export const reportCoverageAsHtml = (
   directoryUrl,
   { skipEmpty, skipFull } = {},
 ) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
   const testPlanCoverage = testPlanResult.coverage;
   if (!testPlanCoverage) {
     // TODO

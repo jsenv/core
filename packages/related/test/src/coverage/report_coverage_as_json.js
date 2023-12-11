@@ -3,6 +3,9 @@ import { writeFileSync } from "@jsenv/filesystem";
 import { byteAsFileSize } from "@jsenv/log";
 
 export const reportCoverageAsJson = (testPlanResult, fileUrl) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
   const testPlanCoverage = testPlanResult.coverage;
   if (!testPlanCoverage) {
     // TODO

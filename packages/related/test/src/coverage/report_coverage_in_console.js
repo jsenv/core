@@ -5,6 +5,9 @@ export const reportCoverageInConsole = (
   testPlanResult,
   { skipEmpty, skipFull } = {},
 ) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
   const testPlanCoverage = testPlanResult.coverage;
   if (!testPlanCoverage) {
     // TODO
