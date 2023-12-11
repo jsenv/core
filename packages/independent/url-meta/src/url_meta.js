@@ -78,14 +78,22 @@ export const applyAssociations = ({ url, associations }) => {
     });
     if (matched) {
       const value = flatAssociations[pattern];
-      if (isPlainObject(associatedValue) && isPlainObject(value)) {
-        Object.assign(associatedValue, value);
-      } else {
-        associatedValue = value;
-      }
+      associatedValue = deepAssign(associatedValue, value);
     }
   }
   return associatedValue;
+};
+
+const deepAssign = (firstValue, secondValue) => {
+  if (!isPlainObject(firstValue) || !isPlainObject(secondValue)) {
+    return secondValue;
+  }
+  for (const key of Object.keys(secondValue)) {
+    const leftValue = firstValue[key];
+    const rightValue = secondValue[key];
+    firstValue[key] = deepAssign(leftValue, rightValue);
+  }
+  return firstValue;
 };
 
 export const urlChildMayMatch = ({ url, associations, predicate }) => {
