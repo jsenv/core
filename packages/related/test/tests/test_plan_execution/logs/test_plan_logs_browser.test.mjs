@@ -38,10 +38,9 @@ await test({
   name: "one",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
-    "./main.html": {
+    "./a.html": {
       chrome: {
         runtime: chromium(),
-        collectConsole: true,
       },
     },
   },
@@ -53,10 +52,26 @@ await test({
   name: "many",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
-    "./b.html": {
+    "./a.html": {
       chromium: {
         runtime: chromium(),
-        collectConsole: true,
+      },
+      firefox: {
+        runtime: firefox(),
+      },
+    },
+  },
+  webServer: {
+    origin: devServer.origin,
+  },
+});
+await test({
+  name: "console",
+  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  testPlan: {
+    "./console.html": {
+      chromium: {
+        runtime: chromium(),
       },
       firefox: {
         runtime: firefox(),

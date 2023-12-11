@@ -42,7 +42,7 @@ export const listReporter = ({ logger, logs }) => {
       writeOutput(renderIntro(testPlanInfo, logOptions));
       if (!canEraseProcessStdout) {
         return () => {
-          writeOutput(renderFinalSummary(testPlanInfo, logOptions));
+          writeOutput(renderOutro(testPlanInfo, logOptions));
         };
       }
 
@@ -106,34 +106,42 @@ const renderIntro = (testPlanInfo, logOptions) => {
   const groupNames = Object.keys(groups);
 
   if (planified === 0) {
-    return `nothing to execute\n`;
+    return `${renderBigSection({
+      title: "nothing to execute",
+      content: "",
+    })}\n`;
   }
   if (planified === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `1 execution to run with ${groupName} (${getGroupRenderedName(
-      groupInfo,
-      logOptions,
-    )})\n`;
+    return `${renderBigSection({
+      title: "1 execution to run",
+      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
+    })}\n`;
   }
   if (groupNames.length === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `${planified} executions to run with ${groupName} (${getGroupRenderedName(
-      groupInfo,
-      logOptions,
-    )})\n`;
+    return `${renderBigSection({
+      title: `${planified} executions to run`,
+      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
+    })}\n`;
   }
 
-  let intro = `${planified} executions to run\n`;
+  let introLines = [];
   for (const groupName of groupNames) {
     const groupInfo = groups[groupName];
-    intro += `  ${groupInfo.count} with ${groupName} (${getGroupRenderedName(
-      groupInfo,
-      logOptions,
-    )})\n`;
+    introLines.push(
+      `${groupInfo.count} with ${groupName} (${getGroupRenderedName(
+        groupInfo,
+        logOptions,
+      )})`,
+    );
   }
-  return intro;
+  return `${renderBigSection({
+    title: `${planified} executions to run`,
+    content: introLines.join("\n"),
+  })}\n`;
 };
 
 const getGroupRenderedName = (groupInfo, logOptions) => {
@@ -326,14 +334,11 @@ const renderConsole = (consoleCalls) => {
     consoleRepartition[consoleCall.type]++;
   });
   const consoleOutput = renderConsoleOutput(consoleCalls);
-  const consoleHeader = `-------- ${renderConsoleSummary(
-    consoleRepartition,
-  )} --------`;
-  const consoleFooter = `-`.repeat(stripAnsi(consoleHeader).length);
-
-  return `${ANSI.color(consoleHeader, ANSI.GREY)}
-${consoleOutput}
-${ANSI.color(consoleFooter, ANSI.GREY)}`;
+  const consoleSummary = renderConsoleSummary(consoleRepartition);
+  return renderSection({
+    title: consoleSummary,
+    content: consoleOutput,
+  });
 };
 const renderConsoleSummary = (consoleRepartition) => {
   const { debug, info, warning, error } = consoleRepartition;
@@ -432,9 +437,11 @@ const renderErrors = (errors) => {
   }
 
   if (errors.length === 1) {
-    return `${ANSI.color(`-------- error --------`, ANSI.RED)}
-${renderError(errors[0])}
-${ANSI.color(`-------------------------`, ANSI.RED)}`;
+    return renderSection({
+      dashColor: ANSI.RED,
+      title: "error",
+      content: renderError(errors[0]),
+    });
   }
 
   let output = [];
@@ -447,9 +454,11 @@ ${ANSI.color(`-------------------------`, ANSI.RED)}`;
       }),
     );
   });
-  return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
-${output.join(`\n`)}
-${ANSI.color(`-------------------------`, ANSI.RED)}`;
+  return renderSection({
+    dashColor: ANSI.RED,
+    title: `errors (${errors.length})`,
+    content: output.join(`\n`),
+  });
 };
 const renderError = (error) => {
   if (error === null || error === undefined) {
@@ -461,7 +470,7 @@ const renderError = (error) => {
   return error;
 };
 
-export const renderFinalSummary = (testPlanInfo, logOptions) => {
+export const renderOutro = (testPlanInfo, logOptions) => {
   let finalSummary = "";
   const { counters } = testPlanInfo;
   const { planified } = counters;
@@ -479,9 +488,7 @@ export const renderFinalSummary = (testPlanInfo, logOptions) => {
     : msAsDuration(duration);
   finalSummary += `\nduration: ${durationFormatted}`;
 
-  return `\n\n-------------- summary -----------------
-${finalSummary}
-----------------------------------------`;
+  return `\n\n${renderBigSection({ title: "summary", content: finalSummary })}`;
 };
 const renderStatusRepartition = (counters) => {
   if (counters.aborted === counters.planified) {
@@ -525,4 +532,41 @@ const renderStatusRepartition = (counters) => {
     parts.push(`${counters.remaining} remaining`);
   }
   return `${parts.join(", ")}`;
+};
+
+const renderBigSection = (params) => {
+  return renderSection({
+    width: 42,
+    ...params,
+  });
+};
+
+const renderSection = ({
+  title,
+  content,
+  dashColor = ANSI.GREY,
+  width = 32,
+}) => {
+  let section = "";
+
+  const titleWidth = stripAnsi(title).length;
+  const minWidthRequired = `--- … ---`.length;
+  const needsTruncate = titleWidth + minWidthRequired >= width;
+  if (needsTruncate) {
+    const titleTruncated = title.slice(0, width - minWidthRequired);
+    const leftDashes = ANSI.color("---", dashColor);
+    const rightDashes = ANSI.color("---", dashColor);
+    section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+  } else {
+    const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+    const dashLeftCount = Math.floor(remainingWidth / 2);
+    const dashRightCount = remainingWidth - dashLeftCount;
+    const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
+    const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
+    section += `${leftDashes} ${title} ${rightDashes}`;
+  }
+  section += `\n${content}\n`;
+  const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
+  section += bottomDashes;
+  return section;
 };

@@ -86,7 +86,7 @@ export const createRuntimeUsingPlaywright = ({
           ...playwrightLaunchOptions,
           headless: headful === undefined ? !keepRunning : !headful,
         };
-        if (measureMemoryUsage) {
+        if (memoryUsageAPIAvailable && measureMemoryUsage) {
           const { ignoreDefaultArgs, args } = options;
           if (ignoreDefaultArgs) {
             if (!ignoreDefaultArgs.includes("--headless")) {
@@ -307,7 +307,7 @@ export const createRuntimeUsingPlaywright = ({
       if (onMeasureMemoryAvailable) {
         onMeasureMemoryAvailable(getMemoryUsage);
       }
-      if (measureMemoryUsage) {
+      if (memoryUsageAPIAvailable && measureMemoryUsage) {
         callbackSet.add(async () => {
           const memoryUsage = await getMemoryUsage();
           result.memoryUsage = memoryUsage;

@@ -2,7 +2,18 @@
 node (node_worker_thread@<mock>)
 ------------------------------------------
 
-✔ a.js [<mock>/<mock>] 1/1 (all completed)
+✔ console.js [<mock>/<mock>] 1/1 (all completed)
+-------- console (✖ 4) ---------
+✖ toto
+  ho
+✖ hey
+✖ hey
+✖ test
+  multiline
+  info
+  verbose log
+  la
+--------------------------------
 
 ---------------- summary -----------------
 1 execution: all completed

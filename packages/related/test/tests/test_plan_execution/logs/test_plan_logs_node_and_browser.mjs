@@ -1,6 +1,14 @@
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { startDevServer } from "@jsenv/core";
 
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+import {
+  executeTestPlan,
+  nodeWorkerThread,
+  nodeChildProcess,
+  chromium,
+  firefox,
+  webkit,
+} from "@jsenv/test";
 
 // disable on windows because unicode symbols like
 // "✔" are "√" because unicode is supported returns false
@@ -8,10 +16,16 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
+const devServer = await startDevServer({
+  logLevel: "warn",
+  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  keepProcessAlive: false,
+  port: 0,
+});
 const snapshotDirectoryUrl = new URL("./snapshots/node/", import.meta.url);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
-    `./snapshots/node/jsenv_tests_output_${name}.txt`,
+    `./snapshots/node_and_browser/jsenv_tests_output_${name}.txt`,
     import.meta.url,
   );
   await executeTestPlan({
@@ -29,42 +43,30 @@ const test = async ({ name, ...params }) => {
 const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({
   name: "one",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./a.js": {
+    "./node_client/a.js": {
       node: {
         runtime: nodeWorkerThread(),
+      },
+      node_2: {
+        runtime: nodeChildProcess(),
+      },
+    },
+    "./client/a.html": {
+      chrome: {
+        runtime: chromium(),
+      },
+      firefox: {
+        runtime: firefox(),
+      },
+      webkit: {
+        runtime: webkit(),
       },
     },
   },
-});
-await test({
-  name: "many",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-  testPlan: {
-    "./a.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-      node2: {
-        runtime: nodeWorkerThread({
-          env: {
-            foo: "foo",
-          },
-        }),
-      },
-    },
-  },
-});
-await test({
-  name: "console",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-  testPlan: {
-    "./console.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
+  webServer: {
+    origin: devServer.origin,
   },
 });
 directorySnapshot.compare();

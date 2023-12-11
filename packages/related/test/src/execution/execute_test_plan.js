@@ -25,7 +25,7 @@ import { reportToCoverage } from "../coverage/report_to_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
-import { listReporter, renderFinalSummary } from "./reporters/reporter_list.js";
+import { listReporter, renderOutro } from "./reporters/reporter_list.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -611,7 +611,7 @@ To fix this warning:
       beforeAllExecution: (testPlanInfo) => {
         return async () => {
           const title = "Jsenv test results";
-          const summaryText = stripAnsi(renderFinalSummary(testPlanInfo));
+          const summaryText = stripAnsi(renderOutro(testPlanInfo));
           if (testPlanInfo.failed) {
             await githubCheckRun.fail({
               title,
