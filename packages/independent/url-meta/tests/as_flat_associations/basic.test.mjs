@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { asFlatAssociations } from "@jsenv/url-meta/src/as_flat_associations.js";
+import { asFlatAssociations } from "@jsenv/url-meta/src/url_meta.js";
 
 {
   const actual = asFlatAssociations({

@@ -24,6 +24,17 @@ import { URL_META } from "@jsenv/url-meta";
 //   assert({ actual, expected });
 // }
 
+try {
+  URL_META.applyAssociations({
+    url: ["*$^="],
+  });
+  throw new Error("shoud crash");
+} catch (error) {
+  const actual = error;
+  const expected = new TypeError(`url must be a url string, got *$^=`);
+  assert({ actual, expected });
+}
+
 // associate "foo.js" to { a: true }
 {
   const test = (url) =>
