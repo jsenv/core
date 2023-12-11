@@ -22,7 +22,10 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const snapshotDirectoryUrl = new URL("./snapshots/node/", import.meta.url);
+const snapshotDirectoryUrl = new URL(
+  "./snapshots/node_and_browser/",
+  import.meta.url,
+);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
     `./snapshots/node_and_browser/jsenv_tests_output_${name}.txt`,

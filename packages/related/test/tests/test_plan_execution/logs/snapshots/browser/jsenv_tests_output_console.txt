@@ -1,17 +1,17 @@
 ------------ 1 execution to run -------------
-node (node_worker_thread@<mock>)
+chromium (chromium@120.0.6099.28)
 ---------------------------------------------
 
-✔ console.js [<mock>/<mock>] 1/1 (all completed)
------------ console (✖ 4) ------------
-✖ toto
+✔ console.html [<mock>/<mock>] 1/1 (all completed)
+----- console (✖ 1 ⚠ 3 ℹ 1 ◆ 1) ------
+⚠ toto
+✖ hey
+⚠ hey
   ho
-✖ hey
-✖ hey
-✖ test
+ℹ info
+⚠ test
   multiline
-  info
-  verbose log
+◆ verbose log
   la
 --------------------------------------
 

@@ -1,11 +1,12 @@
-2 executions to run
-  1 with chromium (chromium@120.0.6099.28)
-  1 with firefox (firefox@119.0)
+------------ 2 executions to run ------------
+1 with chromium (chromium@120.0.6099.28)
+1 with firefox (firefox@119.0)
+---------------------------------------------
 
-✔ b.html [chromium/<mock>/<mock>] 1/2
-✔ b.html [firefox/<mock>] 2/2
+✔ a.html [chromium/<mock>/<mock>] 1/2 (1 completed, 1 remaining)
+✔ a.html [firefox/<mock>] 2/2 (all completed)
 
--------------- summary -----------------
+------------------ summary ------------------
 2 executions: all completed
 duration: <mock>
-----------------------------------------
+---------------------------------------------

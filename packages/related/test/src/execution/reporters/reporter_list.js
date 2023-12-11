@@ -536,7 +536,7 @@ const renderStatusRepartition = (counters) => {
 
 const renderBigSection = (params) => {
   return renderSection({
-    width: 42,
+    width: 45,
     ...params,
   });
 };
@@ -545,7 +545,7 @@ const renderSection = ({
   title,
   content,
   dashColor = ANSI.GREY,
-  width = 32,
+  width = 38,
 }) => {
   let section = "";
 

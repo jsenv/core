@@ -73,9 +73,6 @@ await test({
       chromium: {
         runtime: chromium(),
       },
-      firefox: {
-        runtime: firefox(),
-      },
     },
   },
   webServer: {

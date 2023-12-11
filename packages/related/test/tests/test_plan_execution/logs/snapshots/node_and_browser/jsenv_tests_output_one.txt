@@ -1,0 +1,18 @@
+------------ 5 executions to run ------------
+1 with chrome (chromium@120.0.6099.28)
+1 with firefox (firefox@119.0)
+1 with webkit (webkit@17.4)
+1 with node (node_worker_thread@<mock>)
+1 with node_2 (node_child_process@<mock>)
+---------------------------------------------
+
+✔ client/a.html [chrome/<mock>/<mock>] 1/5 (1 completed, 4 remaining)
+✔ client/a.html [firefox/<mock>] 2/5 (2 completed, 3 remaining)
+✔ client/a.html [webkit/<mock>] 3/5 (3 completed, 2 remaining)
+✔ node_client/a.js [node/<mock>/<mock>] 4/5 (4 completed, 1 remaining)
+✔ node_client/a.js [node_2/<mock>/<mock>] 5/5 (all completed)
+
+------------------ summary ------------------
+5 executions: all completed
+duration: <mock>
+---------------------------------------------
