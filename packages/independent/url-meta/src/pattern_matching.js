@@ -4,8 +4,6 @@
  * https://github.com/kaelzhang/node-ignore
  */
 
-import { assertUrlLike } from "./assertions.js";
-
 /** @module jsenv_url_meta **/
 /**
  * An object representing the result of applying a pattern to an url
@@ -23,10 +21,7 @@ import { assertUrlLike } from "./assertions.js";
  * @param {string} applyPatternMatchingParams.url a string representing an url
  * @return {MatchResult}
  */
-export const applyPatternMatching = ({ url, pattern }) => {
-  assertUrlLike(pattern, "pattern");
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
+export const applyPattern = ({ url, pattern }) => {
   const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];
   let groupIndex = 0;

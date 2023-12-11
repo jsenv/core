@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/url-meta",
-  "version": "8.2.0",
+  "version": "8.3.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,7 +18,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/url_meta.js"
+      "import": "./src/main.js"
     },
     "./*": "./*"
   },
