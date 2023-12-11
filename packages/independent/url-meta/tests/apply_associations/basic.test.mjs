@@ -18,8 +18,10 @@ import { URL_META } from "@jsenv/url-meta";
 //     },
 //   });
 //   const expected = {
-//     foo: true,
-//     bar: true,
+//     node: {
+//       foo: true,
+//       bar: true,
+//     },
 //   };
 //   assert({ actual, expected });
 // }

@@ -25,14 +25,14 @@ export const applyPattern = ({ url, pattern }) => {
   const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];
   let groupIndex = 0;
-  groups.forEach((group) => {
+  for (const group of groups) {
     if (group.name) {
       matchGroups[group.name] = group.string;
     } else {
       matchGroups[groupIndex] = group.string;
       groupIndex++;
     }
-  });
+  }
   return {
     matched,
     patternIndex,

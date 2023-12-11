@@ -43,25 +43,26 @@ export const asFlatAssociations = (associations) => {
     );
   }
   const flatAssociations = {};
-  Object.keys(associations).forEach((associationName) => {
+  for (const associationName of Object.keys(associations)) {
     const associationValue = associations[associationName];
-    if (isPlainObject(associationValue)) {
-      Object.keys(associationValue).forEach((pattern) => {
-        const patternValue = associationValue[pattern];
-        const previousValue = flatAssociations[pattern];
-        if (isPlainObject(previousValue)) {
-          flatAssociations[pattern] = {
-            ...previousValue,
-            [associationName]: patternValue,
-          };
-        } else {
-          flatAssociations[pattern] = {
-            [associationName]: patternValue,
-          };
-        }
-      });
+    if (!isPlainObject(associationValue)) {
+      continue;
     }
-  });
+    for (const pattern of Object.keys(associationValue)) {
+      const patternValue = associationValue[pattern];
+      const previousValue = flatAssociations[pattern];
+      if (isPlainObject(previousValue)) {
+        flatAssociations[pattern] = {
+          ...previousValue,
+          [associationName]: patternValue,
+        };
+      } else {
+        flatAssociations[pattern] = {
+          [associationName]: patternValue,
+        };
+      }
+    }
+  }
   return flatAssociations;
 };
 
@@ -69,23 +70,22 @@ export const applyAssociations = ({ url, associations }) => {
   if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url);
   const flatAssociations = asFlatAssociations(associations);
-  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+  let associatedValue = {};
+  for (const pattern of Object.keys(flatAssociations)) {
     const { matched } = applyPatternMatching({
       pattern,
       url,
     });
     if (matched) {
       const value = flatAssociations[pattern];
-      if (isPlainObject(previousValue) && isPlainObject(value)) {
-        return {
-          ...previousValue,
-          ...value,
-        };
+      if (isPlainObject(associatedValue) && isPlainObject(value)) {
+        Object.assign(associatedValue, value);
+      } else {
+        associatedValue = value;
       }
-      return value;
     }
-    return previousValue;
-  }, {});
+  }
+  return associatedValue;
 };
 
 export const urlChildMayMatch = ({ url, associations, predicate }) => {
@@ -105,7 +105,7 @@ export const urlChildMayMatch = ({ url, associations, predicate }) => {
   // for partial match, any meta satisfying predicate will be valid because
   // we don't know for sure if pattern will still match for a file inside pathname
   const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach((pattern) => {
+  for (const pattern of Object.keys(flatAssociations)) {
     const value = flatAssociations[pattern];
     const matchResult = applyPatternMatching({
       pattern,
@@ -124,7 +124,7 @@ export const urlChildMayMatch = ({ url, associations, predicate }) => {
     } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
       partialMatchMetaArray.push(value);
     }
-  });
+  }
   if (someFullMatch) {
     return Boolean(predicate(fullMatchMeta));
   }
@@ -152,11 +152,15 @@ export const applyAliases = ({ url, aliases }) => {
   const { matchGroups } = aliasFullMatchResult;
   const alias = aliases[aliasMatchingKey];
   const parts = alias.split("*");
-  const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${
-      index === parts.length - 1 ? "" : matchGroups[index]
-    }`;
-  }, "");
+  let newUrl = "";
+  let index = 0;
+  for (const part of parts) {
+    newUrl += `${part}`;
+    if (index < parts.length - 1) {
+      newUrl += matchGroups[index];
+    }
+    index++;
+  }
   return newUrl;
 };
 
