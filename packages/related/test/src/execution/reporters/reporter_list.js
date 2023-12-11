@@ -111,7 +111,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
   if (planified === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `1 execution to run on ${groupName} (${getGroupRenderedName(
+    return `1 execution to run with ${groupName} (${getGroupRenderedName(
       groupInfo,
       logOptions,
     )})\n`;
@@ -119,7 +119,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
   if (groupNames.length === 1) {
     const groupName = groupNames[0];
     const groupInfo = groups[groupName];
-    return `${planified} executions to run on ${groupName} (${getGroupRenderedName(
+    return `${planified} executions to run with ${groupName} (${getGroupRenderedName(
       groupInfo,
       logOptions,
     )})\n`;
@@ -128,7 +128,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
   let intro = `${planified} executions to run\n`;
   for (const groupName of groupNames) {
     const groupInfo = groups[groupName];
-    intro += `- ${groupInfo.count} on ${groupName} (${getGroupRenderedName(
+    intro += `  ${groupInfo.count} with ${groupName} (${getGroupRenderedName(
       groupInfo,
       logOptions,
     )})\n`;
