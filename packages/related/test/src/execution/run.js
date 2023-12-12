@@ -155,8 +155,8 @@ export const run = async ({
     }
     const {
       status,
-      namespace,
       errors,
+      namespace,
       timings = {},
       memoryUsage,
       performance,

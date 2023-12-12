@@ -122,6 +122,20 @@ await test({
   },
 });
 await test({
+  name: "unhandled_rejection_in_test",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./unhandled_rejection_in_test.spec.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+      node_2: {
+        runtime: nodeChildProcess(),
+      },
+    },
+  },
+});
+await test({
   name: "error_jsenv_assert",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {

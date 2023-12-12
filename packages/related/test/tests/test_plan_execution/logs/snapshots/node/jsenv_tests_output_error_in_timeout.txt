@@ -10,7 +10,7 @@
 3 |     throw new Error("here");
               ^
 Error: here
-    at Timeout._onTimeout (<mock>/error_in_timeout.spec.js:3:11)
+  at Timeout._onTimeout (<mock>/error_in_timeout.spec.js:3:11)
 --------------------------------------
 ✖ error_in_timeout.spec.js [node_2/<mock>] 2/2 (all failed)
 --------------- error ----------------

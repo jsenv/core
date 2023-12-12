@@ -1,0 +1,24 @@
+------------ 2 executions to run ------------
+1 with node (node_worker_thread@<mock>)
+1 with node_2 (node_child_process@<mock>)
+---------------------------------------------
+
+✖ unhandled_rejection_in_test.spec.js [node/<mock>] 1/2 (1 failed, 1 remaining)
+--------------- error ----------------
+1 | Promise.reject(new Error("toto"));
+                   ^
+Error: toto
+  at <mock>/unhandled_rejection_in_test.spec.js:1:16
+--------------------------------------
+✖ unhandled_rejection_in_test.spec.js [node_2/<mock>] 2/2 (all failed)
+--------------- error ----------------
+1 | Promise.reject(new Error("toto"));
+                   ^
+Error: toto
+  at <mock>/unhandled_rejection_in_test.spec.js:1:16
+--------------------------------------
+
+------------------ summary ------------------
+2 executions: all failed
+duration: <mock>
+---------------------------------------------
