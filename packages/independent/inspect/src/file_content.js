@@ -23,7 +23,7 @@ export const inspectFileContent = ({
   if (lineEndIndex > lineStrings.length - 1) {
     lineEndIndex = lineStrings.length - 1;
   }
-  if (lineStartIndex === lineEndIndex) {
+  if (line - 1 === lineEndIndex) {
     lineMarker = false; // useless because last line
   }
   let lineIndex = lineStartIndex;

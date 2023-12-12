@@ -143,3 +143,12 @@ test("line_and_column_are_zero.txt", {
   line: 0,
   column: 0,
 });
+
+test("line_is_last.txt", {
+  content: `const a = false;
+const b = false;
+const c = true;`,
+  line: 2,
+  linesBelow: 0,
+  column: 0,
+});
