@@ -74,31 +74,41 @@ export const formatErrorForTerminal = (
   text += `${error.name}: ${error.message}`;
   write_stack: {
     let stackTrace = "";
+    const mainFileUrl = new URL(mainFileRelativeUrl, rootDirectoryUrl).href;
+    let lastStackFrameForMain;
+    for (const stackFrame of stackFrames) {
+      if (stackFrame.url === mainFileUrl) {
+        lastStackFrameForMain = stackFrame;
+      }
+    }
     for (const stackFrame of stackFrames) {
       if (atLeastOneNonNative && stackFrame.native) {
         continue;
       }
+      let stackFrameString = stackFrame.raw;
+      stackFrameString = replaceUrls(
+        stackFrameString,
+        ({ url, line, column }) => {
+          let urlAsPath = urlToFileSystemPath(url);
+          if (mockFluctuatingValues) {
+            const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+            urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+          }
+          if (stackFrame === lastStackFrameForMain) {
+            urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
+          }
+          const replacement = stringifyUrlSite({
+            url: urlAsPath,
+            line,
+            column,
+          });
+          return replacement;
+        },
+      );
       if (stackTrace) stackTrace += "\n";
-      stackTrace += stackFrame.raw;
+      stackTrace += stackFrameString;
     }
-    const mainFileUrl = new URL(mainFileRelativeUrl, rootDirectoryUrl).href;
-    stackTrace = replaceUrls(stackTrace, ({ url, line, column }) => {
-      let urlAsPath = urlToFileSystemPath(url);
-      if (mockFluctuatingValues) {
-        const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
-      }
-      if (url === mainFileUrl) {
-        urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
-      }
 
-      const replacement = stringifyUrlSite({
-        url: urlAsPath,
-        line,
-        column,
-      });
-      return replacement;
-    });
     if (stackTrace) {
       text += `\n${stackTrace}`;
     }
