@@ -232,7 +232,7 @@ export const nodeWorkerThread = ({
               ),
             );
           },
-          execution_failed: (error) => {
+          execution_internal_error: (error) => {
             result.status = "failed";
             result.errors.push(error);
           },

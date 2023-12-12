@@ -79,7 +79,7 @@ const onActionRequestedByParent = (callback) => {
 
 const removeActionRequestListener = onActionRequestedByParent(
   async ({ id, type, params = {} }) => {
-    const sendActionFailed = (id, error) => {
+    const sendActionInternalError = (id, error) => {
       const exception = createException(error);
       sendToParent(
         "action-result",
@@ -107,26 +107,19 @@ const removeActionRequestListener = onActionRequestedByParent(
 
     const action = ACTIONS_AVAILABLE[type];
     if (!action) {
-      sendActionFailed(id, new Error(`unknown action ${type}`));
+      sendActionInternalError(id, new Error(`unknown action ${type}`));
       return;
     }
 
-    let value;
-    let failed = false;
     try {
-      value = await action(params);
-    } catch (e) {
-      failed = true;
-      value = e;
-    }
-
-    if (failed) {
-      sendActionFailed(id, value);
-    } else {
+      const value = await action(params);
       sendActionCompleted(id, value);
-    }
-    if (params.exitAfterAction) {
-      removeActionRequestListener();
+    } catch (e) {
+      sendActionInternalError(id, e);
+    } finally {
+      if (params.exitAfterAction) {
+        removeActionRequestListener();
+      }
     }
   },
 );

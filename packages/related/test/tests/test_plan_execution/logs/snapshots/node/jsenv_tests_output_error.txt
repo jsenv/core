@@ -1,8 +1,16 @@
------------- 1 execution to run -------------
-node (node_worker_thread@<mock>)
+------------ 2 executions to run ------------
+1 with node (node_worker_thread@<mock>)
+1 with node_2 (node_child_process@<mock>)
 ---------------------------------------------
 
-✖ error.spec.js [<mock>/<mock>] 1/1 (all failed)
+✖ error.spec.js [node/<mock>/<mock>] 1/2 (1 failed, 1 remaining)
+--------------- error ----------------
+1 | throw new Error("here");
+          ^
+Error: here
+  at <mock>/error.spec.js:1:7
+--------------------------------------
+✖ error.spec.js [node_2/<mock>/<mock>] 2/2 (all failed)
 --------------- error ----------------
 1 | throw new Error("here");
           ^
@@ -11,6 +19,6 @@ Error: here
 --------------------------------------
 
 ------------------ summary ------------------
-1 execution: all failed
+2 executions: all failed
 duration: <mock>
 ---------------------------------------------

@@ -1,6 +1,10 @@
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+import {
+  executeTestPlan,
+  nodeWorkerThread,
+  nodeChildProcess,
+} from "@jsenv/test";
 
 // disable on windows because unicode symbols like
 // "✔" are "√" because unicode is supported returns false
@@ -74,6 +78,9 @@ await test({
     "./error.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
+      },
+      node_2: {
+        runtime: nodeChildProcess(),
       },
     },
   },

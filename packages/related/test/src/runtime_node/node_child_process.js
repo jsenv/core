@@ -222,7 +222,7 @@ export const nodeChildProcess = ({
       };
 
       try {
-        let executionFailedCallback;
+        let executionInternalErrorCallback;
         let executionCompletedCallback;
         const winnerPromise = new Promise((resolve) => {
           raceCallbacks(
@@ -247,8 +247,8 @@ export const nodeChildProcess = ({
                   },
                 );
               },
-              execution_failed: (cb) => {
-                executionFailedCallback = cb;
+              execution_internal_error: (cb) => {
+                executionInternalErrorCallback = cb;
               },
               execution_completed: (cb) => {
                 executionCompletedCallback = cb;
@@ -302,18 +302,21 @@ export const nodeChildProcess = ({
               ),
             );
           },
-          execution_failed: (error) => {
+          execution_internal_error: (error) => {
             result.status = "failed";
             result.errors.push(error);
           },
           execution_completed: ({
+            status,
+            errors,
             namespace,
             timings,
             memoryUsage,
             performance,
             coverage,
           }) => {
-            result.status = "completed";
+            result.status = status;
+            result.errors = errors;
             result.namespace = namespace;
             result.timings = timings;
             result.memoryUsage = memoryUsage;
@@ -359,8 +362,8 @@ export const nodeChildProcess = ({
             },
           },
           ({ status, value }) => {
-            if (status === "failed") {
-              executionFailedCallback(value);
+            if (status === "error") {
+              executionInternalErrorCallback(value);
             } else {
               executionCompletedCallback(value);
             }
