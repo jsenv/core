@@ -18,8 +18,9 @@
  */
 
 import { readFileSync } from "node:fs";
-import { urlIsInsideOf, showSourceLocation } from "@jsenv/urls";
 import { fileURLToPath } from "node:url";
+import { inspectFileContent } from "@jsenv/inspect";
+import { urlIsInsideOf } from "@jsenv/urls";
 
 const jsenvTestSourceDirectoryUrl = new URL("../", import.meta.url);
 
@@ -109,13 +110,13 @@ export const createException = (reason) => {
         let stack = ``;
         if (exception.site && exception.site.url.startsWith("file:")) {
           const content = readFileSync(new URL(exception.site.url), "utf8");
-          stack += showSourceLocation({
+          stack += inspectFileContent({
             content,
             line: exception.site.line,
             column: exception.site.column,
-            maxLinesAbove: 2,
-            maxLinesBelow: 0,
-            lineMaxLength: process.stdout.columns,
+            linesAbove: 2,
+            linesBelow: 0,
+            lineMaxWidth: process.stdout.columns,
           });
           stack += `\n`;
         }

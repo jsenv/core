@@ -1,0 +1,3 @@
+  9  | const i = true;
+> 10 | const j = true;
+  11 | const k = true;

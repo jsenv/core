@@ -1,0 +1,7 @@
+  1 | const a = false;
+  2 | const b = true;
+> 3 | const c = true;
+      ^
+  4 | const d = true;
+  5 | const e = false;
+  6 |   
