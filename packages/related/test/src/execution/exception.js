@@ -44,7 +44,6 @@ export const createException = (reason) => {
     exception.isError = true;
     exception.name = reason.name;
     exception.message = reason.message;
-
     if (reason instanceof Error) {
       const { prepareStackTrace } = Error;
       Error.prepareStackTrace = (e, callSites) => {
@@ -57,7 +56,7 @@ export const createException = (reason) => {
             firstCallSite.getScriptNameOrSourceURL();
           if (source) {
             const line = firstCallSite.getLineNumber();
-            const column = firstCallSite.getColumnNumber() - 1;
+            const column = firstCallSite.getColumnNumber();
             exception.site = {
               url: source,
               line,
@@ -73,12 +72,25 @@ export const createException = (reason) => {
           }
         }
 
+        const stackFrames = [];
         let stackTrace = "";
         for (const callSite of callSites) {
           if (stackTrace) stackTrace += "\n";
-          const callSiteAsString = String(callSite);
-          stackTrace += `  at ${callSiteAsString}`;
+          const stackFrame = {
+            raw: `  at ${String(callSite)}`,
+            url: callSite.getFileName() || callSite.getScriptNameOrSourceURL(),
+            line: callSite.getLineNumber(),
+            column: callSite.getColumnNumber(),
+            functionName: callSite.getFunctionName(),
+            isNative: callSite.isNative(),
+            isEval: callSite.isEval(),
+            isConstructor: callSite.isConstructor(),
+            isAsync: callSite.isAsync(),
+          };
+          stackFrames.push(stackFrame);
+          stackTrace += stackFrame.raw;
         }
+        exception.stackFrames = stackFrames;
         exception.stackTrace = stackTrace;
 
         const name = e.name || "Error";

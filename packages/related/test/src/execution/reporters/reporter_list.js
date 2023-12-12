@@ -443,10 +443,8 @@ const renderErrors = (execution, logOptions) => {
       dashColor: ANSI.RED,
       title: "error",
       content: formatErrorForTerminal(errors[0], {
-        mainFileUrl: new URL(
-          execution.fileRelativeUrl,
-          execution.rootDirectoryUrl,
-        ).href,
+        rootDirectoryUrl: execution.rootDirectoryUrl,
+        mainFileRelativeUrl: execution.fileRelativeUrl,
         mockFluctuatingValues: logOptions.mockFluctuatingValues,
       }),
     });
@@ -459,10 +457,8 @@ const renderErrors = (execution, logOptions) => {
         prefix: `${UNICODE.CIRCLE_CROSS} `,
         indentation: "   ",
         text: formatErrorForTerminal(error, {
-          mainFileUrl: new URL(
-            execution.fileRelativeUrl,
-            execution.rootDirectoryUrl,
-          ).href,
+          rootDirectoryUrl: execution.rootDirectoryUrl,
+          mainFileRelativeUrl: execution.fileRelativeUrl,
           mockFluctuatingValues: logOptions.mockFluctuatingValues,
         }),
       }),

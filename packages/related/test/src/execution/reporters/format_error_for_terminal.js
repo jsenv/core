@@ -4,14 +4,14 @@ import { parseStackTrace } from "errorstacks";
 
 import { readFileSync } from "node:fs";
 import { inspectFileContent } from "@jsenv/inspect";
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsInsideOf, urlToFileSystemPath } from "@jsenv/urls";
 import { ANSI } from "@jsenv/log";
 
 const jsenvTestSourceDirectoryUrl = new URL("../../", import.meta.url);
 
 export const formatErrorForTerminal = (
   error,
-  { mainFileUrl, mockFluctuatingValues },
+  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
 ) => {
   if (!error) {
     return String(error);
@@ -19,36 +19,41 @@ export const formatErrorForTerminal = (
   if (!error.stack) {
     return error.message || error;
   }
-  const calls = parseStackTrace(error.stack);
-  const meaningfullCalls = [];
-  for (const call of calls) {
-    if (call.type === "native") {
-      continue;
-    }
-    if (call.fileName.startsWith("node:")) {
+  const stackFrames =
+    error.stackFrames ||
+    // if we don't have stack frame we'll do our best to parse them from stack
+    getStackFramesFromErrorStack(error.stack);
+
+  let atLeastOneNonNative = false;
+  for (const stackFrame of stackFrames) {
+    if (stackFrame.url.startsWith("node:")) {
+      stackFrame.native = "node";
       continue;
     }
     if (
-      call.fileName.startsWith("file:") &&
-      urlIsInsideOf(call.fileName, jsenvTestSourceDirectoryUrl)
+      stackFrame.url.startsWith("file:") &&
+      urlIsInsideOf(stackFrame.url, jsenvTestSourceDirectoryUrl)
     ) {
+      stackFrame.native = "jsenv";
       continue;
     }
-    meaningfullCalls.push(call);
+    if (!stackFrame.native) {
+      atLeastOneNonNative = true;
+    }
   }
 
   let text = "";
   write_code_frame: {
-    const firstCall = calls[0];
+    const [firstStackFrame] = stackFrames;
     if (
-      typeof firstCall.line === "number" &&
-      firstCall.fileName.startsWith("file:")
+      typeof firstStackFrame.line === "number" &&
+      firstStackFrame.url.startsWith("file:")
     ) {
-      const content = readFileSync(new URL(firstCall.fileName), "utf8");
+      const content = readFileSync(new URL(firstStackFrame.url), "utf8");
       text += inspectFileContent({
         content,
-        line: firstCall.line,
-        column: firstCall.column,
+        line: firstStackFrame.line,
+        column: firstStackFrame.column,
         linesAbove: 2,
         linesBelow: 0,
         lineMaxWidth: process.stdout.columns,
@@ -69,18 +74,106 @@ export const formatErrorForTerminal = (
   text += `${error.name}: ${error.message}`;
   write_stack: {
     let stackTrace = "";
-    for (const call of meaningfullCalls.length ? meaningfullCalls : calls) {
+    for (const stackFrame of stackFrames) {
+      if (atLeastOneNonNative && stackFrame.native) {
+        continue;
+      }
       if (stackTrace) stackTrace += "\n";
-      let trace = call.raw;
-      trace = trace.replace(mainFileUrl, ANSI.effect(mainFileUrl, ANSI.BOLD));
-      // ideally replace file:// by path version
-      // but here it must happen for every url like thing
-      // TODO: if mockFluctuatingValues
-      stackTrace += trace;
+      stackTrace += stackFrame.raw;
     }
+    const mainFileUrl = new URL(mainFileRelativeUrl, rootDirectoryUrl).href;
+    stackTrace = replaceUrls(stackTrace, ({ url, line, column }) => {
+      let urlAsPath = urlToFileSystemPath(url);
+      if (mockFluctuatingValues) {
+        const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+      }
+      if (url === mainFileUrl) {
+        urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
+      }
+
+      const replacement = stringifyUrlSite({
+        url: urlAsPath,
+        line,
+        column,
+      });
+      return replacement;
+    });
     if (stackTrace) {
       text += `\n${stackTrace}`;
     }
   }
   return text;
+};
+
+const stringifyUrlSite = ({ url, line, column }) => {
+  if (typeof line === "number" && typeof column === "number") {
+    return `${url}:${line}:${column}`;
+  }
+  if (typeof line === "number") {
+    return `${url}:${line}`;
+  }
+  return url;
+};
+
+// `Error: yo
+// at Object.execute (http://127.0.0.1:57300/build/src/__test__/file-throw.js:9:13)
+// at doExec (http://127.0.0.1:3000/src/__test__/file-throw.js:452:38)
+// at postOrderExec (http://127.0.0.1:3000/src/__test__/file-throw.js:448:16)
+// at http://127.0.0.1:3000/src/__test__/file-throw.js:399:18`.replace(/(?:https?|ftp|file):\/\/(.*+)$/gm, (...args) => {
+//   debugger
+// })
+const replaceUrls = (source, replace) => {
+  return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
+    let replacement = "";
+    const lastChar = match[match.length - 1];
+
+    // hotfix because our url regex sucks a bit
+    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+    if (endsWithSeparationChar) {
+      match = match.slice(0, -1);
+    }
+
+    const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
+    const lineAndColumMatch = match.match(lineAndColumnPattern);
+    if (lineAndColumMatch) {
+      const lineAndColumnString = lineAndColumMatch[0];
+      const lineString = lineAndColumMatch[1];
+      const columnString = lineAndColumMatch[2];
+      replacement = replace({
+        url: match.slice(0, -lineAndColumnString.length),
+        line: lineString ? parseInt(lineString) : null,
+        column: columnString ? parseInt(columnString) : null,
+      });
+    } else {
+      const linePattern = /:([0-9]+)$/;
+      const lineMatch = match.match(linePattern);
+      if (lineMatch) {
+        const lineString = lineMatch[0];
+        replacement = replace({
+          url: match.slice(0, -lineString.length),
+          line: lineString ? parseInt(lineString) : null,
+        });
+      } else {
+        replacement = replace({
+          url: match,
+        });
+      }
+    }
+    if (endsWithSeparationChar) {
+      return `${replacement}${lastChar}`;
+    }
+    return replacement;
+  });
+};
+
+const getStackFramesFromErrorStack = (errorStack) => {
+  const calls = parseStackTrace(errorStack);
+  const stackFrames = [];
+  for (const call of calls) {
+    stackFrames.push({
+      native: call.type === "native",
+    });
+  }
+  return stackFrames;
 };
