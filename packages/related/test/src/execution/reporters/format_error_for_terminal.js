@@ -1,11 +1,9 @@
-// https://github.com/marvinhagemeister/errorstacks/tree/main
-// https://cdn.jsdelivr.net/npm/errorstacks@latest/dist/esm/index.mjs
-import { parseStackTrace } from "errorstacks";
-
 import { readFileSync } from "node:fs";
 import { inspectFileContent } from "@jsenv/inspect";
 import { urlIsInsideOf, urlToFileSystemPath } from "@jsenv/urls";
 import { ANSI } from "@jsenv/log";
+
+import { createException } from "../exception.js";
 
 const jsenvTestSourceDirectoryUrl = new URL("../../", import.meta.url);
 
@@ -19,10 +17,8 @@ export const formatErrorForTerminal = (
   if (!error.stack) {
     return error.message || error;
   }
-  const stackFrames =
-    error.stackFrames ||
-    // if we don't have stack frame we'll do our best to parse them from stack
-    getStackFramesFromErrorStack(error.stack);
+  const exception = createException(error);
+  const stackFrames = exception.stackFrames;
 
   let atLeastOneNonNative = false;
   for (const stackFrame of stackFrames) {
@@ -175,15 +171,4 @@ const replaceUrls = (source, replace) => {
     }
     return replacement;
   });
-};
-
-const getStackFramesFromErrorStack = (errorStack) => {
-  const calls = parseStackTrace(errorStack);
-  const stackFrames = [];
-  for (const call of calls) {
-    stackFrames.push({
-      native: call.type === "native",
-    });
-  }
-  return stackFrames;
 };

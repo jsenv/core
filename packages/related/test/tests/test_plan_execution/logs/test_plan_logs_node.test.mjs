@@ -85,3 +85,14 @@ await test({
     },
   },
 });
+await test({
+  name: "error_in_timeout",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./error_in_timeout.spec.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+  },
+});
