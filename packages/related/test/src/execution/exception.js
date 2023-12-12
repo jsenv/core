@@ -17,14 +17,6 @@
  * The browser part can be found in "supervisor.js"
  */
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { inspectFileContent } from "@jsenv/inspect";
-import { urlIsInsideOf } from "@jsenv/urls";
-import { ANSI } from "@jsenv/log";
-
-const jsenvTestSourceDirectoryUrl = new URL("../", import.meta.url);
-
 export const createException = (reason) => {
   const exception = {
     isException: true,
@@ -58,18 +50,6 @@ export const createException = (reason) => {
       Error.prepareStackTrace = (e, callSites) => {
         Error.prepareStackTrace = prepareStackTrace;
 
-        let firstMeaningFullCall;
-        for (const callSite of callSites) {
-          if (!isNodeJsOrJsenvInternal(callSite)) {
-            firstMeaningFullCall = callSite;
-            break;
-          }
-        }
-        if (firstMeaningFullCall) {
-          callSites = callSites.filter(
-            (callSite) => !isNodeJsOrJsenvInternal(callSite),
-          );
-        }
         const [firstCallSite] = callSites;
         if (firstCallSite) {
           const source =
@@ -95,45 +75,15 @@ export const createException = (reason) => {
 
         let stackTrace = "";
         for (const callSite of callSites) {
-          // TODO: mettre en gras le fichier courant (s'il existe, le plus bas seulement)
-          // TODO: ne pas compter sur fileURLToPath c'est trop fragile
           if (stackTrace) stackTrace += "\n";
           const callSiteAsString = String(callSite);
-          try {
-            const callSiteAsPath = fileURLToPath(callSiteAsString);
-            stackTrace += `  at ${callSiteAsPath}`;
-          } catch (e) {
-            stackTrace += `  at ${callSiteAsString}`;
-          }
+          stackTrace += `  at ${callSiteAsString}`;
         }
         exception.stackTrace = stackTrace;
 
         const name = e.name || "Error";
         const message = e.message || "";
         let stack = ``;
-        if (exception.site && exception.site.url.startsWith("file:")) {
-          const content = readFileSync(new URL(exception.site.url), "utf8");
-          stack += inspectFileContent({
-            content,
-            line: exception.site.line,
-            column: exception.site.column,
-            linesAbove: 2,
-            linesBelow: 0,
-            lineMaxWidth: process.stdout.columns,
-            format: (string, type) => {
-              return {
-                line_number_aside: () => ANSI.color(string, ANSI.GREY),
-                char: () => string,
-                marker_overflow_left: () => ANSI.color(string, ANSI.GREY),
-                marker_overflow_right: () => ANSI.color(string, ANSI.GREY),
-                marker_line: () => ANSI.color(string, ANSI.RED),
-                marker_column: () => ANSI.color(string, ANSI.RED),
-              }[type]();
-            },
-          });
-          stack += `\n`;
-        }
-
         stack += `${name}: ${message}`;
         if (stackTrace) {
           stack += `\n${stackTrace}`;
@@ -155,20 +105,6 @@ export const createException = (reason) => {
   }
   exception.message = JSON.stringify(reason);
   return exception;
-};
-
-const isNodeJsOrJsenvInternal = (callSite) => {
-  const fileName = callSite.getFileName();
-  if (fileName.startsWith("node:")) {
-    return true;
-  }
-  if (
-    fileName.startsWith("file:") &&
-    urlIsInsideOf(fileName, jsenvTestSourceDirectoryUrl)
-  ) {
-    return true;
-  }
-  return false;
 };
 
 const writePropertiesFromEvalOrigin = (exception, origin) => {

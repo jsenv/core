@@ -9,6 +9,8 @@ import {
   byteAsMemoryUsage,
 } from "@jsenv/log";
 
+import { formatErrorForTerminal } from "./format_error_for_terminal.js";
+
 export const listReporter = ({ logger, logs }) => {
   const canEraseProcessStdout =
     logs.dynamic &&
@@ -190,8 +192,7 @@ const renderExecutionLog = (execution, logOptions) => {
   }
   // errors
   {
-    const { errors = [] } = execution.result;
-    const errorOutput = renderErrors(errors);
+    const errorOutput = renderErrors(execution, logOptions);
     if (errorOutput) {
       log += `\n${errorOutput}`;
     }
@@ -431,7 +432,8 @@ const CONSOLE_ICONS = {
   log: " ",
 };
 
-const renderErrors = (errors) => {
+const renderErrors = (execution, logOptions) => {
+  const { errors = [] } = execution.result;
   if (errors.length === 0) {
     return "";
   }
@@ -440,7 +442,13 @@ const renderErrors = (errors) => {
     return renderSection({
       dashColor: ANSI.RED,
       title: "error",
-      content: renderError(errors[0]),
+      content: formatErrorForTerminal(errors[0], {
+        mainFileUrl: new URL(
+          execution.fileRelativeUrl,
+          execution.rootDirectoryUrl,
+        ).href,
+        mockFluctuatingValues: logOptions.mockFluctuatingValues,
+      }),
     });
   }
 
@@ -450,7 +458,13 @@ const renderErrors = (errors) => {
       prefixFirstAndIndentRemainingLines({
         prefix: `${UNICODE.CIRCLE_CROSS} `,
         indentation: "   ",
-        text: renderError(error),
+        text: formatErrorForTerminal(error, {
+          mainFileUrl: new URL(
+            execution.fileRelativeUrl,
+            execution.rootDirectoryUrl,
+          ).href,
+          mockFluctuatingValues: logOptions.mockFluctuatingValues,
+        }),
       }),
     );
   });
@@ -459,15 +473,6 @@ const renderErrors = (errors) => {
     title: `errors (${errors.length})`,
     content: output.join(`\n`),
   });
-};
-const renderError = (error) => {
-  if (error === null || error === undefined) {
-    return String(error);
-  }
-  if (error) {
-    return error.stack || error.message || error;
-  }
-  return error;
 };
 
 export const renderOutro = (testPlanInfo, logOptions) => {

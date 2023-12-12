@@ -545,6 +545,7 @@ To fix this warning:
           index,
           isLast: false,
           group: groupName,
+          rootDirectoryUrl: String(rootDirectoryUrl),
           fileRelativeUrl: relativeUrl,
           fileExecutionIndex: fileExecutionCount - 1,
           fileExecutionCount: null,

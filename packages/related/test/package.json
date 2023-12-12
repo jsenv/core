@@ -33,23 +33,24 @@
     "playwright": "1.x"
   },
   "dependencies": {
+    "@c88/v8-coverage": "0.1.1",
     "@jsenv/abort": "4.2.4",
     "@jsenv/ast": "6.0.1",
-    "@jsenv/filesystem": "4.6.0",
-    "@jsenv/log": "3.4.3",
-    "@jsenv/plugin-supervisor": "1.4.0",
-    "@jsenv/urls": "2.2.1",
-    "@jsenv/url-meta": "8.2.0",
-    "@jsenv/utils": "2.1.0",
+    "@jsenv/filesystem": "4.6.1",
     "@jsenv/github-check-run": "0.1.6",
-    "v8-to-istanbul": "9.2.0",
+    "@jsenv/log": "3.5.0",
+    "@jsenv/plugin-supervisor": "1.4.0",
+    "@jsenv/url-meta": "8.3.0",
+    "@jsenv/urls": "2.2.1",
+    "@jsenv/utils": "2.1.0",
+    "errorstacks": "2.4.1",
     "istanbul-lib-coverage": "3.2.2",
     "istanbul-lib-instrument": "6.0.1",
     "istanbul-lib-report": "3.0.1",
     "istanbul-reports": "3.1.6",
-    "@c88/v8-coverage": "0.1.1",
+    "pidtree": "0.6.0",
     "strip-ansi": "7.1.0",
-    "wrap-ansi": "9.0.0",
-    "pidtree": "0.6.0"
+    "v8-to-istanbul": "9.2.0",
+    "wrap-ansi": "9.0.0"
   }
 }
