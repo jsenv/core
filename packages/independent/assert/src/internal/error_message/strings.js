@@ -83,19 +83,18 @@ export const formatStringAssertionErrorMessage = ({
     let columnEnd = columnStart + MAX_WIDTH;
 
     const writeLine = (lineSource) => {
-      const lastCharIndex = lineSource.length;
-      let charIndex = columnStart;
-      if (columnStart > 0) {
-        details += "…";
-      }
-      while (charIndex < columnEnd && charIndex < lastCharIndex) {
-        const char = lineSource[charIndex];
-        charIndex++;
-        details += formatActualChar(char);
-      }
-      if (lastCharIndex > columnEnd) {
-        details += "…";
-      }
+      details += truncateLine(lineSource, {
+        start: columnStart,
+        end: columnEnd,
+        prefix: "…",
+        suffix: "…",
+        format: (char, type) => {
+          if (type === "char") {
+            return formatActualChar(char);
+          }
+          return char;
+        },
+      });
     };
 
     write_chars_before_annotation: {
@@ -117,7 +116,7 @@ export const formatStringAssertionErrorMessage = ({
     }
     write_annotation: {
       const annotationColumn =
-        columnStart === 0 ? columnIndex : columnIndex - columnStart + 1;
+        columnStart === 0 ? columnIndex : columnIndex - columnStart;
       const annotationIndentation = " ".repeat(annotationColumn);
       details += `\n${annotationIndentation}`;
       details += `${annotationLabel}`;
@@ -249,6 +248,45 @@ export const formatStringAssertionErrorMessage = ({
       path,
     });
   }
+};
+
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+  let result = "";
+  while (from < to) {
+    result += format(line[from], "char");
+    from++;
+  }
+  if (result.length === 0) {
+    return "";
+  }
+  if (startTruncated && endTruncated) {
+    return `${format(prefix, "prefix")}${result}${format(suffix, "suffix")}`;
+  }
+  if (startTruncated) {
+    return `${format(prefix, "prefix")}${result}`;
+  }
+  if (endTruncated) {
+    return `${result}${format(suffix, "suffix")}`;
+  }
+  return result;
 };
 
 const isLineBreak = (char) => {

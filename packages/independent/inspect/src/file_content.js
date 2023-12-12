@@ -77,8 +77,15 @@ export const inspectFileContent = ({
         end: columnsAfter,
         prefix: "…",
         suffix: "…",
-        formatPrefix: (prefix) => formatMarker(prefix, "overflow_left"),
-        formatSuffix: (suffix) => formatMarker(suffix, "overflow_right"),
+        format: (char, type) => {
+          if (type === "prefix") {
+            return formatMarker(char, "overflow_left");
+          }
+          if (type === "suffix") {
+            return formatMarker(char, "overflow_right");
+          }
+          return char;
+        },
       });
     }
     write_column_marker: {
@@ -103,10 +110,7 @@ export const inspectFileContent = ({
   return source;
 };
 
-const truncateLine = (
-  line,
-  { start, end, prefix, suffix, formatPrefix, formatSuffix },
-) => {
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
   const lastIndex = line.length;
 
   if (line.length === 0) {
@@ -127,20 +131,20 @@ const truncateLine = (
   }
   let result = "";
   while (from < to) {
-    result += line[from];
+    result += format(line[from], "char");
     from++;
   }
   if (result.length === 0) {
     return "";
   }
   if (startTruncated && endTruncated) {
-    return `${formatPrefix(prefix)}${result}${formatSuffix(suffix)}`;
+    return `${format(prefix, "prefix")}${result}${format(suffix, "suffix")}`;
   }
   if (startTruncated) {
-    return `${formatPrefix(prefix)}${result}`;
+    return `${format(prefix, "prefix")}${result}`;
   }
   if (endTruncated) {
-    return `${result}${formatSuffix(suffix)}`;
+    return `${result}${format(suffix, "suffix")}`;
   }
   return result;
 };

@@ -96,8 +96,8 @@ actual[140]#L6C8`,
       e,
       `unexpected character in string
 --- details ---
-…node_modules/@jsenv/assert/src/internal/something.js
-                                         ^ unexpected "s", expected to continue with "/something.js"
+…ode_modules/@jsenv/assert/src/internal/something.js
+                                        ^ unexpected "s", expected to continue with "/something.js"
 --- path ---
 actual[79]`,
     );
