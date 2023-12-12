@@ -165,6 +165,16 @@ export const nodeChildProcess = ({
       const removeOutputListener = installChildProcessOutputListener(
         childProcess,
         ({ type, text }) => {
+          if (type === "error" && text.startsWith("Debugger attached.")) {
+            return;
+          }
+          if (
+            type === "error" &&
+            text.startsWith("Waiting for the debugger to disconnect...")
+          ) {
+            return;
+          }
+
           onConsole({ type, text });
         },
       );

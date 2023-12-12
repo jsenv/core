@@ -96,3 +96,14 @@ await test({
     },
   },
 });
+await test({
+  name: "error_in_source",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./error_in_source.spec.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+  },
+});
