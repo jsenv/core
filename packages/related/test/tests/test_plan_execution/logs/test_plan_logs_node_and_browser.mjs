@@ -22,9 +22,9 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const test = async ({ name, ...params }) => {
+const test = async (name, params) => {
   const logFileUrl = new URL(
-    `./snapshots/node_and_browser/jsenv_tests_output_${name}.txt`,
+    `./snapshots/node_and_browser/${name}`,
     import.meta.url,
   );
   const logFileSnapshot = takeFileSnapshot(logFileUrl);
@@ -35,15 +35,17 @@ const test = async ({ name, ...params }) => {
       mockFluctuatingValues: true,
       fileUrl: logFileUrl,
     },
+    rootDirectoryUrl: new URL("./", import.meta.url),
+    webServer: {
+      origin: devServer.origin,
+    },
     githubCheck: false,
     ...params,
   });
   logFileSnapshot.compare();
 };
 
-await test({
-  name: "one",
-  rootDirectoryUrl: new URL("./", import.meta.url),
+await test("mixed.txt", {
   testPlan: {
     "./node_client/a.spec.js": {
       node: {
@@ -64,8 +66,5 @@ await test({
         runtime: webkit(),
       },
     },
-  },
-  webServer: {
-    origin: devServer.origin,
   },
 });

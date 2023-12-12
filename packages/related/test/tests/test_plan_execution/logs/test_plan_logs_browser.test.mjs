@@ -15,11 +15,8 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const test = async ({ name, ...params }) => {
-  const logFileUrl = new URL(
-    `./snapshots/browser/jsenv_tests_output_${name}.txt`,
-    import.meta.url,
-  );
+const test = async (name, params) => {
+  const logFileUrl = new URL(`./snapshots/${name}`, import.meta.url);
   const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
@@ -28,15 +25,17 @@ const test = async ({ name, ...params }) => {
       mockFluctuatingValues: true,
       fileUrl: logFileUrl,
     },
+    rootDirectoryUrl: new URL("./client/", import.meta.url),
     githubCheck: false,
+    webServer: {
+      origin: devServer.origin,
+    },
     ...params,
   });
   logFileSnapshot.compare();
 };
 
-await test({
-  name: "one",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+await test("browser_chromium.txt", {
   testPlan: {
     "./a.spec.html": {
       chrome: {
@@ -44,13 +43,17 @@ await test({
       },
     },
   },
-  webServer: {
-    origin: devServer.origin,
+});
+await test("browser_console.txt", {
+  testPlan: {
+    "./console.spec.html": {
+      chromium: {
+        runtime: chromium(),
+      },
+    },
   },
 });
-await test({
-  name: "many",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+await test("browser_many.txt", {
   testPlan: {
     "./a.spec.html": {
       chromium: {
@@ -60,22 +63,5 @@ await test({
         runtime: firefox(),
       },
     },
-  },
-  webServer: {
-    origin: devServer.origin,
-  },
-});
-await test({
-  name: "console",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
-  testPlan: {
-    "./console.spec.html": {
-      chromium: {
-        runtime: chromium(),
-      },
-    },
-  },
-  webServer: {
-    origin: devServer.origin,
   },
 });

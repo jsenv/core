@@ -12,11 +12,8 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-const test = async ({ name, ...params }) => {
-  const logFileUrl = new URL(
-    `./snapshots/node/jsenv_tests_output_${name}.txt`,
-    import.meta.url,
-  );
+const test = async (name, params) => {
+  const logFileUrl = new URL(`./snapshots/${name}`, import.meta.url);
   const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
@@ -25,15 +22,14 @@ const test = async ({ name, ...params }) => {
       mockFluctuatingValues: true,
       fileUrl: logFileUrl,
     },
+    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     githubCheck: false,
     ...params,
   });
   logFileSnapshot.compare();
 };
 
-await test({
-  name: "one",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_one.txt", {
   testPlan: {
     "./a.spec.js": {
       node: {
@@ -42,27 +38,7 @@ await test({
     },
   },
 });
-await test({
-  name: "many",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-  testPlan: {
-    "./a.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-      node2: {
-        runtime: nodeWorkerThread({
-          env: {
-            foo: "foo",
-          },
-        }),
-      },
-    },
-  },
-});
-await test({
-  name: "console",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_console.txt", {
   testPlan: {
     "./console.spec.js": {
       node: {
@@ -71,9 +47,7 @@ await test({
     },
   },
 });
-await test({
-  name: "error_in_test",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_error_in_test.txt", {
   testPlan: {
     "./error_in_test.spec.js": {
       node: {
@@ -85,9 +59,7 @@ await test({
     },
   },
 });
-await test({
-  name: "error_in_test_indirect",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_error_in_test_indirect.txt", {
   testPlan: {
     "./error_in_test_indirect.spec.js": {
       node: {
@@ -96,9 +68,7 @@ await test({
     },
   },
 });
-await test({
-  name: "error_in_source",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_error_in_source.txt", {
   testPlan: {
     "./error_in_source.spec.js": {
       node: {
@@ -107,9 +77,7 @@ await test({
     },
   },
 });
-await test({
-  name: "error_in_timeout",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_error_in_timeout.txt", {
   testPlan: {
     "./error_in_timeout.spec.js": {
       node: {
@@ -121,9 +89,7 @@ await test({
     },
   },
 });
-await test({
-  name: "unhandled_rejection_in_test",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_unhandled_rejection_in_test.txt", {
   testPlan: {
     "./unhandled_rejection_in_test.spec.js": {
       node: {
@@ -135,13 +101,27 @@ await test({
     },
   },
 });
-await test({
-  name: "error_jsenv_assert",
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await test("node_error_jsenv_assert.txt", {
   testPlan: {
     "./error_jsenv_assert.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
+      },
+    },
+  },
+});
+await test("node_many.txt", {
+  testPlan: {
+    "./a.spec.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+      node2: {
+        runtime: nodeWorkerThread({
+          env: {
+            foo: "foo",
+          },
+        }),
       },
     },
   },
