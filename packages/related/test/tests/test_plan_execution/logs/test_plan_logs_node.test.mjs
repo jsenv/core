@@ -72,15 +72,37 @@ await test({
   },
 });
 await test({
-  name: "error",
+  name: "error_in_test",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
-    "./error.spec.js": {
+    "./error_in_test.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
       node_2: {
         runtime: nodeChildProcess(),
+      },
+    },
+  },
+});
+await test({
+  name: "error_in_test_indirect",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./error_in_test_indirect.spec.js": {
+      node: {
+        runtime: nodeWorkerThread(),
+      },
+    },
+  },
+});
+await test({
+  name: "error_in_source",
+  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+  testPlan: {
+    "./error_in_source.spec.js": {
+      node: {
+        runtime: nodeWorkerThread(),
       },
     },
   },
@@ -93,14 +115,17 @@ await test({
       node: {
         runtime: nodeWorkerThread(),
       },
+      node_2: {
+        runtime: nodeChildProcess(),
+      },
     },
   },
 });
 await test({
-  name: "error_in_source",
+  name: "error_jsenv_assert",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
-    "./error_in_source.spec.js": {
+    "./error_jsenv_assert.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },

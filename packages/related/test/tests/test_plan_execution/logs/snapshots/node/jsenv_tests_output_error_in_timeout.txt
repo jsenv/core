@@ -1,8 +1,9 @@
------------- 1 execution to run -------------
-node (node_worker_thread@<mock>)
+------------ 2 executions to run ------------
+1 with node (node_worker_thread@<mock>)
+1 with node_2 (node_child_process@<mock>)
 ---------------------------------------------
 
-✖ error_in_timeout.spec.js [<mock>] 1/1 (all failed)
+✖ error_in_timeout.spec.js [node/<mock>] 1/2 (1 failed, 1 remaining)
 --------------- error ----------------
 1 | await new Promise(() => {
 2 |   setTimeout(() => {
@@ -11,8 +12,34 @@ node (node_worker_thread@<mock>)
 Error: here
     at Timeout._onTimeout (<mock>/error_in_timeout.spec.js:3:11)
 --------------------------------------
+✖ error_in_timeout.spec.js [node_2/<mock>] 2/2 (all failed)
+----------- console (✖ 1) ------------
+✖ file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/tests/test_plan_execution/logs/node_client/error_in_timeo
+ut.spec.js:3
+  throw new Error("here");
+  ^
+
+  Error: here
+  at Timeout._onTimeout (file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/tests/test_plan_execution/logs/node
+_client/error_in_timeout.spec.js:3:11)
+  at listOnTimeout (node:internal/timers:573:17)
+  at process.processTimers (node:internal/timers:514:7)
+
+  Node.js v20.8.0
+--------------------------------------
+--------------- error ----------------
+308 |             result.status = "failed";
+309 |             result.errors.push(
+310 |               new Error(
+                    ^
+Error: node process exited with code 1 during execution
+    at Object.exit (/Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/src/runtime_node/node_child_process.js:310:15)
+    at Object.run (/Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/src/runtime_node/node_child_process.js:383:34)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runned (/Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/src/execution/run.js:117:33)
+--------------------------------------
 
 ------------------ summary ------------------
-1 execution: all failed
+2 executions: all failed
 duration: <mock>
 ---------------------------------------------

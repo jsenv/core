@@ -3,19 +3,19 @@
 1 with node_2 (node_child_process@<mock>)
 ---------------------------------------------
 
-✖ error.spec.js [node/<mock>/<mock>] 1/2 (1 failed, 1 remaining)
+✖ error_in_test.spec.js [node/<mock>/<mock>] 1/2 (1 failed, 1 remaining)
 --------------- error ----------------
 1 | throw new Error("here");
           ^
 Error: here
-  at <mock>/error.spec.js:1:7
+  at <mock>/error_in_test.spec.js:1:7
 --------------------------------------
-✖ error.spec.js [node_2/<mock>/<mock>] 2/2 (all failed)
+✖ error_in_test.spec.js [node_2/<mock>/<mock>] 2/2 (all failed)
 --------------- error ----------------
 1 | throw new Error("here");
           ^
 Error: here
-  at <mock>/error.spec.js:1:7
+  at <mock>/error_in_test.spec.js:1:7
 --------------------------------------
 
 ------------------ summary ------------------
