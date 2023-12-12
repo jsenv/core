@@ -1,5 +1,4 @@
-const asideFormatterDefault = (v) => v;
-const markerFormatterDefault = (v) => v;
+const formatDefault = (v) => v;
 
 export const inspectFileContent = ({
   content,
@@ -12,11 +11,8 @@ export const inspectFileContent = ({
   lineNumbersOnTheLeft = true,
   lineMarker = true,
   columnMarker = true,
-  formatter = {},
+  format = formatDefault,
 } = {}) => {
-  const formatAside = formatter.aside || asideFormatterDefault;
-  const formatMarker = formatter.marker || markerFormatterDefault;
-
   const lineStrings = content.split(/\r?\n/);
   if (line === 0) line = 1;
   let lineStartIndex = line - 1 - linesAbove;
@@ -60,7 +56,7 @@ export const inspectFileContent = ({
     write_aside: {
       if (lineMarker) {
         if (isMainLine) {
-          source += `${formatMarker(">", "line")} `;
+          source += `${format(">", "marker_line")} `;
         } else {
           source += "  ";
         }
@@ -68,7 +64,7 @@ export const inspectFileContent = ({
       if (lineNumbersOnTheLeft) {
         // fillRight to ensure if line moves from 7,8,9 to 10 the display is still great
         const asideSource = `${fillRight(lineNumber, lineEndIndex + 1)} |`;
-        source += `${formatAside(asideSource)} `;
+        source += `${format(asideSource, "line_number_aside")} `;
       }
     }
     write_line: {
@@ -77,15 +73,7 @@ export const inspectFileContent = ({
         end: columnsAfter,
         prefix: "…",
         suffix: "…",
-        format: (char, type) => {
-          if (type === "prefix") {
-            return formatMarker(char, "overflow_left");
-          }
-          if (type === "suffix") {
-            return formatMarker(char, "overflow_right");
-          }
-          return char;
-        },
+        format,
       });
     }
     write_column_marker: {
@@ -100,7 +88,7 @@ export const inspectFileContent = ({
           source += " ".repeat(asideSpaces);
         }
         source += " ".repeat(columnMarkerIndex);
-        source += formatMarker("^", "column");
+        source += format("^", "marker_column");
       }
     }
     if (!isLastLine) {
@@ -138,13 +126,16 @@ const truncateLine = (line, { start, end, prefix, suffix, format }) => {
     return "";
   }
   if (startTruncated && endTruncated) {
-    return `${format(prefix, "prefix")}${result}${format(suffix, "suffix")}`;
+    return `${format(prefix, "marker_overflow_left")}${result}${format(
+      suffix,
+      "marker_overflow_right",
+    )}`;
   }
   if (startTruncated) {
-    return `${format(prefix, "prefix")}${result}`;
+    return `${format(prefix, "marker_overflow_left")}${result}`;
   }
   if (endTruncated) {
-    return `${result}${format(suffix, "suffix")}`;
+    return `${result}${format(suffix, "marker_overflow_right")}`;
   }
   return result;
 };

@@ -74,7 +74,6 @@ await test({
     "./error.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
-        allocatedMs: Infinity,
       },
     },
   },

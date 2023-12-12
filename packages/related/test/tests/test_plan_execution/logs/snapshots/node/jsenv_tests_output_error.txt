@@ -7,8 +7,7 @@ node (node_worker_thread@<mock>)
 1 | throw new Error("here");
          ^
 Error: here
-  at /Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/tests/test_plan_execution/logs/node_client/error.spec.
-js:1:7
+  at /Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/tests/test_plan_execution/logs/node_client/error.spec.js:1:7
 --------------------------------------
 
 ------------------ summary ------------------

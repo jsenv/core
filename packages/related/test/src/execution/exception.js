@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { inspectFileContent } from "@jsenv/inspect";
 import { urlIsInsideOf } from "@jsenv/urls";
+import { ANSI } from "@jsenv/log";
 
 const jsenvTestSourceDirectoryUrl = new URL("../", import.meta.url);
 
@@ -94,6 +95,8 @@ export const createException = (reason) => {
 
         let stackTrace = "";
         for (const callSite of callSites) {
+          // TODO: mettre en gras le fichier courant (s'il existe, le plus bas seulement)
+          // TODO: ne pas compter sur fileURLToPath c'est trop fragile
           if (stackTrace) stackTrace += "\n";
           const callSiteAsString = String(callSite);
           try {
@@ -117,6 +120,16 @@ export const createException = (reason) => {
             linesAbove: 2,
             linesBelow: 0,
             lineMaxWidth: process.stdout.columns,
+            format: (string, type) => {
+              return {
+                line_number_aside: () => ANSI.color(string, ANSI.GREY),
+                char: () => string,
+                marker_overflow_left: () => ANSI.color(string, ANSI.GREY),
+                marker_overflow_right: () => ANSI.color(string, ANSI.GREY),
+                marker_line: () => ANSI.color(string, ANSI.RED),
+                marker_column: () => ANSI.color(string, ANSI.RED),
+              }[type]();
+            },
           });
           stack += `\n`;
         }
