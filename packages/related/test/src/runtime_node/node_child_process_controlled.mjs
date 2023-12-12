@@ -111,12 +111,23 @@ const removeActionRequestListener = onActionRequestedByParent(
       return;
     }
 
+    let gotInternalError = false;
+    const onUncaughtException = (err) => {
+      gotInternalError = true;
+      sendActionInternalError(id, err);
+      process.exit(1);
+    };
+    process.on("uncaughtException", onUncaughtException);
+
     try {
       const value = await action(params);
-      sendActionCompleted(id, value);
+      if (!gotInternalError) {
+        sendActionCompleted(id, value);
+      }
     } catch (e) {
       sendActionInternalError(id, e);
     } finally {
+      process.removeListener("uncaughtException", onUncaughtException);
       if (params.exitAfterAction) {
         removeActionRequestListener();
       }
