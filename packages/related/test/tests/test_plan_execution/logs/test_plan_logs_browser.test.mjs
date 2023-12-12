@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
 import { executeTestPlan, chromium, firefox } from "@jsenv/test";
@@ -15,12 +15,12 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const snapshotDirectoryUrl = new URL("./snapshots/browser/", import.meta.url);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
     `./snapshots/browser/jsenv_tests_output_${name}.txt`,
     import.meta.url,
   );
+  const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
       level: "warn",
@@ -31,14 +31,14 @@ const test = async ({ name, ...params }) => {
     githubCheck: false,
     ...params,
   });
+  logFileSnapshot.compare();
 };
 
-const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({
   name: "one",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
-    "./a.html": {
+    "./a.spec.html": {
       chrome: {
         runtime: chromium(),
       },
@@ -52,7 +52,7 @@ await test({
   name: "many",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
-    "./a.html": {
+    "./a.spec.html": {
       chromium: {
         runtime: chromium(),
       },
@@ -69,7 +69,7 @@ await test({
   name: "console",
   rootDirectoryUrl: new URL("./client/", import.meta.url),
   testPlan: {
-    "./console.html": {
+    "./console.spec.html": {
       chromium: {
         runtime: chromium(),
       },
@@ -79,4 +79,3 @@ await test({
     origin: devServer.origin,
   },
 });
-directorySnapshot.compare();

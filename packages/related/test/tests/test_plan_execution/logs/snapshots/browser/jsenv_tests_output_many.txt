@@ -3,8 +3,8 @@
 1 with firefox (firefox@119.0)
 ---------------------------------------------
 
-✔ a.html [chromium/<mock>/<mock>] 1/2 (1 completed, 1 remaining)
-✔ a.html [firefox/<mock>] 2/2 (all completed)
+✔ a.spec.html [chromium/<mock>/<mock>] 1/2 (1 completed, 1 remaining)
+✔ a.spec.html [firefox/<mock>] 2/2 (all completed)
 
 ------------------ summary ------------------
 2 executions: all completed

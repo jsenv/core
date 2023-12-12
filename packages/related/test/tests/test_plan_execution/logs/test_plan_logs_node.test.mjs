@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
@@ -8,12 +8,12 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-const snapshotDirectoryUrl = new URL("./snapshots/node/", import.meta.url);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
     `./snapshots/node/jsenv_tests_output_${name}.txt`,
     import.meta.url,
   );
+  const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
       level: "warn",
@@ -24,14 +24,14 @@ const test = async ({ name, ...params }) => {
     githubCheck: false,
     ...params,
   });
+  logFileSnapshot.compare();
 };
 
-const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({
   name: "one",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
-    "./a.js": {
+    "./a.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
@@ -42,7 +42,7 @@ await test({
   name: "many",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
-    "./a.js": {
+    "./a.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
@@ -60,7 +60,7 @@ await test({
   name: "console",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
-    "./console.js": {
+    "./console.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
@@ -71,7 +71,7 @@ await test({
   name: "error",
   rootDirectoryUrl: new URL("./node_client/", import.meta.url),
   testPlan: {
-    "./error.js": {
+    "./error.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
         allocatedMs: Infinity,
@@ -79,4 +79,3 @@ await test({
     },
   },
 });
-directorySnapshot.compare();

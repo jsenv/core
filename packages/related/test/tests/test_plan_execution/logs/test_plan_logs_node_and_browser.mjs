@@ -1,4 +1,4 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
 import {
@@ -22,15 +22,12 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const snapshotDirectoryUrl = new URL(
-  "./snapshots/node_and_browser/",
-  import.meta.url,
-);
 const test = async ({ name, ...params }) => {
   const logFileUrl = new URL(
     `./snapshots/node_and_browser/jsenv_tests_output_${name}.txt`,
     import.meta.url,
   );
+  const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
       level: "warn",
@@ -41,14 +38,14 @@ const test = async ({ name, ...params }) => {
     githubCheck: false,
     ...params,
   });
+  logFileSnapshot.compare();
 };
 
-const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({
   name: "one",
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "./node_client/a.js": {
+    "./node_client/a.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
@@ -56,7 +53,7 @@ await test({
         runtime: nodeChildProcess(),
       },
     },
-    "./client/a.html": {
+    "./client/a.spec.html": {
       chrome: {
         runtime: chromium(),
       },
@@ -72,4 +69,3 @@ await test({
     origin: devServer.origin,
   },
 });
-directorySnapshot.compare();

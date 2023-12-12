@@ -2,7 +2,7 @@
 chrome (chromium@120.0.6099.28)
 ---------------------------------------------
 
-✔ a.html [<mock>/<mock>] 1/1 (all completed)
+✔ a.spec.html [<mock>/<mock>] 1/1 (all completed)
 
 ------------------ summary ------------------
 1 execution: all completed

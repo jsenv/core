@@ -2,7 +2,7 @@
 node (node_worker_thread@<mock>)
 ---------------------------------------------
 
-✔ a.js [<mock>/<mock>] 1/1 (all completed)
+✔ a.spec.js [<mock>/<mock>] 1/1 (all completed)
 
 ------------------ summary ------------------
 1 execution: all completed

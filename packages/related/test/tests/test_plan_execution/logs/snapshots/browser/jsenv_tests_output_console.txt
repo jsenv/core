@@ -2,7 +2,7 @@
 chromium (chromium@120.0.6099.28)
 ---------------------------------------------
 
-✔ console.html [<mock>/<mock>] 1/1 (all completed)
+✔ console.spec.html [<mock>/<mock>] 1/1 (all completed)
 ----- console (✖ 1 ⚠ 3 ℹ 1 ◆ 1) ------
 ⚠ toto
 ✖ hey

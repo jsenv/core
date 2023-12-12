@@ -6,11 +6,11 @@
 1 with node_2 (node_child_process@<mock>)
 ---------------------------------------------
 
-✔ client/a.html [chrome/<mock>/<mock>] 1/5 (1 completed, 4 remaining)
-✔ client/a.html [firefox/<mock>] 2/5 (2 completed, 3 remaining)
-✔ client/a.html [webkit/<mock>] 3/5 (3 completed, 2 remaining)
-✔ node_client/a.js [node/<mock>/<mock>] 4/5 (4 completed, 1 remaining)
-✔ node_client/a.js [node_2/<mock>/<mock>] 5/5 (all completed)
+✔ client/a.spec.html [chrome/<mock>/<mock>] 1/5 (1 completed, 4 remaining)
+✔ client/a.spec.html [firefox/<mock>] 2/5 (2 completed, 3 remaining)
+✔ client/a.spec.html [webkit/<mock>] 3/5 (3 completed, 2 remaining)
+✔ node_client/a.spec.js [node/<mock>/<mock>] 4/5 (4 completed, 1 remaining)
+✔ node_client/a.spec.js [node_2/<mock>/<mock>] 5/5 (all completed)
 
 ------------------ summary ------------------
 5 executions: all completed
