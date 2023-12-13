@@ -482,115 +482,113 @@ window.__supervisor__ = (() => {
         exception.name = reason.name || "Error";
         exception.message = reason.message || message || "";
         exception.reportedBy = reason.reportedBy;
-        if (Object.hasOwnProperty.call(reason, "stack")) {
-          if (
-            Error.captureStackTrace &&
-            // captureStackTrace exists on webkit but error.stack is not v8
-            !isWebkitOrSafari
-          ) {
-            // stackTrace formatted by V8
-            const { prepareStackTrace } = Error;
-            Error.prepareStackTrace = (e, callSites) => {
-              Error.prepareStackTrace = prepareStackTrace;
 
-              const getPropertiesFromEvalOrigin = (origin) => {
-                // Most eval() calls are in this format
-                const topLevelEvalMatch =
-                  /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
-                if (topLevelEvalMatch) {
-                  const source = topLevelEvalMatch[2];
-                  const line = Number(topLevelEvalMatch[3]);
-                  const column = topLevelEvalMatch[4] - 1;
-                  return {
-                    url: source,
-                    line,
-                    column,
-                  };
-                }
-                // Parse nested eval() calls using recursion
-                const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(
-                  origin,
-                );
-                if (nestedEvalMatch) {
-                  return getPropertiesFromEvalOrigin(nestedEvalMatch[2]);
-                }
-                return null;
-              };
+        if (
+          Error.captureStackTrace &&
+          // captureStackTrace exists on webkit but error.stack is not v8
+          !isWebkitOrSafari &&
+          "stack" in reason
+        ) {
+          // stackTrace formatted by V8
+          const { prepareStackTrace } = Error;
+          Error.prepareStackTrace = (e, callSites) => {
+            Error.prepareStackTrace = prepareStackTrace;
 
-              const stackFrames = [];
-              let stackTrace = "";
-              for (const callSite of callSites) {
-                if (stackTrace) stackTrace += "\n";
-
-                const url =
-                  callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-                const line = callSite.getLineNumber();
-                const column = callSite.getColumnNumber();
-                const site = resolveUrlSite({ url, line, column });
-                const stackFrame = {
-                  raw: `  at ${String(callSite)}`,
-                  url: site.url,
-                  line: site.line,
-                  column: site.column,
-                  functionName: callSite.getFunctionName(),
-                  isNative: callSite.isNative(),
-                  isEval: callSite.isEval(),
-                  isConstructor: callSite.isConstructor(),
-                  isAsync: callSite.isAsync(),
-                  evalSite: null,
+            const getPropertiesFromEvalOrigin = (origin) => {
+              // Most eval() calls are in this format
+              const topLevelEvalMatch =
+                /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
+              if (topLevelEvalMatch) {
+                const source = topLevelEvalMatch[2];
+                const line = Number(topLevelEvalMatch[3]);
+                const column = topLevelEvalMatch[4] - 1;
+                return {
+                  url: source,
+                  line,
+                  column,
                 };
-                if (stackFrame.isEval) {
-                  const evalOrigin = stackFrame.getEvalOrigin();
-                  if (evalOrigin) {
-                    stackFrame.evalSite =
-                      getPropertiesFromEvalOrigin(evalOrigin);
-                  }
-                }
-
-                stackFrames.push(stackFrame);
-                stackTrace += stackFrame.raw;
               }
-              exception.stackFrames = stackFrames;
-              exception.stackTrace = stackTrace;
-
-              const name = e.name || "Error";
-              const message = e.message || "";
-              let stack = ``;
-              stack += `${name}: ${message}`;
-              if (stackTrace) {
-                stack += `\n${stackTrace}`;
+              // Parse nested eval() calls using recursion
+              const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
+              if (nestedEvalMatch) {
+                return getPropertiesFromEvalOrigin(nestedEvalMatch[2]);
               }
-              return stack;
+              return null;
             };
-            exception.stackSourcemapped = true;
-            exception.stack = reason.stack;
-            if (exception.stackFrames === undefined) {
-              // Error.prepareStackTrace not trigerred
-              // - reason is not an error
-              // - reason.stack already get
-              Error.prepareStackTrace = prepareStackTrace;
-              exception.stackTrace = getErrorStackTrace(reason);
-            }
-            if (exception.stackFrames) {
-              const [firstCallFrame] = exception.stackFrames;
-              if (
-                exception.site.url === null &&
-                firstCallFrame &&
-                firstCallFrame.url
-              ) {
-                Object.assign(exception.site, {
-                  url: firstCallFrame.url,
-                  line: firstCallFrame.line,
-                  column: firstCallFrame.column,
-                });
+
+            const stackFrames = [];
+            let stackTrace = "";
+            for (const callSite of callSites) {
+              if (stackTrace) stackTrace += "\n";
+
+              const url =
+                callSite.getFileName() || callSite.getScriptNameOrSourceURL();
+              const line = callSite.getLineNumber();
+              const column = callSite.getColumnNumber();
+              const site = resolveUrlSite({ url, line, column });
+              const stackFrame = {
+                raw: `  at ${String(callSite)}`,
+                url: site.url,
+                line: site.line,
+                column: site.column,
+                functionName: callSite.getFunctionName(),
+                isNative: callSite.isNative(),
+                isEval: callSite.isEval(),
+                isConstructor: callSite.isConstructor(),
+                isAsync: callSite.isAsync(),
+                evalSite: null,
+              };
+              if (stackFrame.isEval) {
+                const evalOrigin = stackFrame.getEvalOrigin();
+                if (evalOrigin) {
+                  stackFrame.evalSite = getPropertiesFromEvalOrigin(evalOrigin);
+                }
               }
+
+              stackFrames.push(stackFrame);
+              stackTrace += stackFrame.raw;
             }
-          } else if (reason.stack) {
-            exception.stackSourcemapped = false;
-            exception.stackTrace = reason.stack;
-            exception.stack = stringifyStack(exception);
+            exception.stackFrames = stackFrames;
+            exception.stackTrace = stackTrace;
+
+            const name = e.name || "Error";
+            const message = e.message || "";
+            let stack = ``;
+            stack += `${name}: ${message}`;
+            if (stackTrace) {
+              stack += `\n${stackTrace}`;
+            }
+            return stack;
+          };
+          exception.stackSourcemapped = true;
+          exception.stack = reason.stack;
+          if (exception.stackFrames === undefined) {
+            // Error.prepareStackTrace not trigerred
+            // - reason is not an error
+            // - reason.stack already get
+            Error.prepareStackTrace = prepareStackTrace;
+            exception.stackTrace = getErrorStackTrace(reason);
           }
+          if (exception.stackFrames) {
+            const [firstCallFrame] = exception.stackFrames;
+            if (
+              exception.site.url === null &&
+              firstCallFrame &&
+              firstCallFrame.url
+            ) {
+              Object.assign(exception.site, {
+                url: firstCallFrame.url,
+                line: firstCallFrame.line,
+                column: firstCallFrame.column,
+              });
+            }
+          }
+        } else {
+          exception.stackSourcemapped = false;
+          exception.stackTrace = reason.stack;
+          exception.stack = stringifyStack(exception);
         }
+
         if (exception.site.url === null && reason.url) {
           Object.assign(exception.site, resolveUrlSite({ url: reason.url }));
         }

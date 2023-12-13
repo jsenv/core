@@ -4,6 +4,7 @@ import {
   applyAliases,
   applyPatternMatching,
   urlChildMayMatch,
+  matches,
 } from "./url_meta.js";
 
 export const URL_META = {
@@ -12,4 +13,5 @@ export const URL_META = {
   applyAliases,
   applyPatternMatching,
   urlChildMayMatch,
+  matches,
 };

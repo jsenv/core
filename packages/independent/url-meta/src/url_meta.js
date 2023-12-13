@@ -172,6 +172,17 @@ export const applyAliases = ({ url, aliases }) => {
   return newUrl;
 };
 
+export const matches = (url, patterns) => {
+  return Boolean(
+    applyAssociations({
+      url,
+      associations: {
+        yes: patterns,
+      },
+    }).yes,
+  );
+};
+
 // const assertSpecifierMetaMap = (value, checkComposition = true) => {
 //   if (!isPlainObject(value)) {
 //     throw new TypeError(

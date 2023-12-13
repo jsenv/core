@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { inspectFileContent } from "@jsenv/inspect";
-import { urlIsInsideOf, urlToFileSystemPath } from "@jsenv/urls";
+import { urlToFileSystemPath } from "@jsenv/urls";
+import { URL_META } from "@jsenv/url-meta";
 import { ANSI } from "@jsenv/log";
 
 import { createException } from "../exception.js";
 
-const jsenvTestSourceDirectoryUrl = new URL("../../", import.meta.url);
-
+const isDev = process.execArgv.includes("--conditions=development");
+const jsenvCoreDirectoryUrl = new URL("../../../../../../", import.meta.url);
 export const formatErrorForTerminal = (
   error,
   { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
@@ -59,12 +60,30 @@ export const formatErrorForTerminal = (
           stackFrame.native = "node";
           continue;
         }
-        if (
-          stackFrame.url.startsWith("file:") &&
-          urlIsInsideOf(stackFrame.url, jsenvTestSourceDirectoryUrl)
-        ) {
-          stackFrame.native = "jsenv";
-          continue;
+        if (stackFrame.url.startsWith("file:")) {
+          // while developing jsenv itself we want to exclude any
+          // - src/*
+          // - packages/**/src/
+          // for the users of jsenv it's easier, we want to exclude
+          // - **/node_modules/@jsenv/**
+          if (isDev) {
+            if (
+              URL_META.matches(stackFrame.url, {
+                [`${jsenvCoreDirectoryUrl}src/`]: true,
+                [`${jsenvCoreDirectoryUrl}packages/**/src/`]: true,
+              })
+            ) {
+              stackFrame.native = "jsenv";
+              continue;
+            }
+          } else if (
+            URL_META.matches(stackFrame.url, {
+              "file:///**/node_modules/@jsenv/core/": true,
+            })
+          ) {
+            stackFrame.native = "jsenv";
+            continue;
+          }
         }
         if (stackFrame.url === mainFileUrl) {
           lastStackFrameForMain = stackFrame;

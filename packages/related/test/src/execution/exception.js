@@ -49,14 +49,14 @@ export const createException = (reason) => {
     exception.message = JSON.stringify(reason);
     return exception;
   }
-  if (reason.isException) {
+  if (reason.isException && reason.stackFrames) {
     return reason;
   }
   exception.isError = reason instanceof Error;
   exception.code = reason.code;
   exception.name = reason.name;
   exception.message = reason.message;
-  if (Object.hasOwn(reason, "stack")) {
+  if ("stack" in reason) {
     const { prepareStackTrace } = Error;
     Error.prepareStackTrace = (e, callSites) => {
       Error.prepareStackTrace = prepareStackTrace;
@@ -109,6 +109,9 @@ export const createException = (reason) => {
       const calls = parseStackTrace(reason.stack);
       const stackFrames = [];
       for (const call of calls) {
+        if (call.fileName === "") {
+          continue;
+        }
         stackFrames.push({
           raw: call.raw,
           functionName: call.name,
