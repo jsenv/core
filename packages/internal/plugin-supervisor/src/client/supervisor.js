@@ -924,7 +924,14 @@ window.__supervisor__ = (() => {
                   `\n  [cause]: ${causeTextIndented}`;
               }
             }
-            if (exception.reportedBy === "script_error_event") {
+            if (
+              exception.reportedBy === "script_error_event" ||
+              exception.reportedBy === "window_error_event" ||
+              exception.name === "SyntaxError" ||
+              exception.code === DYNAMIC_IMPORT_FETCH_ERROR ||
+              exception.code === DYNAMIC_IMPORT_EXPORT_MISSING ||
+              exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
+            ) {
               let traceSite = stringifyUrlSite(trace);
               if (traceSite) {
                 root.querySelector(".text").innerHTML +=
