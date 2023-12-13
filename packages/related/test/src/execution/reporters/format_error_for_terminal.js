@@ -102,7 +102,22 @@ export const formatErrorForTerminal = (
         stackTrace += stackFrameString;
       }
     } else {
-      stackTrace = exception.stackTrace;
+      stackTrace = replaceUrls(
+        exception.stackTrace,
+        ({ url, line, column }) => {
+          let urlAsPath = urlToFileSystemPath(url);
+          if (mockFluctuatingValues) {
+            const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+            urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+          }
+          const replacement = stringifyUrlSite({
+            url: urlAsPath,
+            line,
+            column,
+          });
+          return replacement;
+        },
+      );
     }
 
     if (stackTrace) {

@@ -4,31 +4,31 @@
 1 with webkit (webkit@17.4)
 ---------------------------------------------
 
-✖ error_in_script.spec.html [chromium/<mock>/<mock>] 1/3 (1 failed, 2 remaining)
+✖ error_in_script_module.spec.html [chromium/<mock>/<mock>] 1/3 (1 failed, 2 remaining)
 --------------- error ----------------
 9  |   <body>
-10 |     <script>
+10 |     <script type="module">
 11 |       throw new Error("here");
                       ^
 Error: here
-  at <mock>/error_in_script.spec.html:11:18
+  at <mock>/error_in_script_module.spec.html:11:18
 --------------------------------------
-✖ error_in_script.spec.html [firefox/<mock>] 2/3 (2 failed, 1 remaining)
+✖ error_in_script_module.spec.html [firefox/<mock>] 2/3 (2 failed, 1 remaining)
 --------------- error ----------------
 9  |   <body>
-10 |     <script>
+10 |     <script type="module">
 11 |       throw new Error("here");
                       ^
 Error: here
 --------------------------------------
-✖ error_in_script.spec.html [webkit/<mock>] 3/3 (all failed)
+✖ error_in_script_module.spec.html [webkit/<mock>] 3/3 (all failed)
 --------------- error ----------------
-9  |   <body>
-10 |     <script>
-11 |       throw new Error("here");
-                                       ^
+7 |   </head>
+8 | 
+9 |   <body>
+        ^
 Error: here
-global code@<mock>/error_in_script.spec.html:11:27
+module code@<mock>/error_in_script_module.spec.html:11:27
 --------------------------------------
 
 ------------------ summary ------------------

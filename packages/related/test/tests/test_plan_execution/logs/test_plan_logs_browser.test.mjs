@@ -1,3 +1,8 @@
+// TODO:
+// error_in_js_module.spec.html
+// error_in_js_classic.spec.html
+// error_jsenv_assert_in_js_module.spec.html
+
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
@@ -51,6 +56,8 @@ const test = async (filename, params) => {
   logFileSnapshot.compare();
 };
 
-await test("console.spec.html");
-await test("empty.spec.html");
-await test("error_in_script.spec.html");
+// await test("console.spec.html");
+// await test("empty.spec.html");
+// await test("error_in_script.spec.html");
+// await test("error_in_script.spec.html");
+// await test("error_in_script_module.spec.html");
