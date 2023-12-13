@@ -1,0 +1,28 @@
+------------ 2 executions to run ------------
+1 with worker_thread (node_worker_thread@<mock>)
+1 with child_process (node_child_process@<mock>)
+---------------------------------------------
+
+✖ error_in_test_function.spec.js [worker_thread/<mock>/<mock>] 1/2 (1 failed, 1 remaining)
+--------------- error ----------------
+1 | const getCircle = () => {
+2 |   throw new Error("circle");
+            ^
+Error: circle
+  at getCircle (<mock>/error_in_test_function.spec.js:2:9)
+  at <mock>/error_in_test_function.spec.js:5:1
+--------------------------------------
+✖ error_in_test_function.spec.js [child_process/<mock>/<mock>] 2/2 (all failed)
+--------------- error ----------------
+1 | const getCircle = () => {
+2 |   throw new Error("circle");
+            ^
+Error: circle
+  at getCircle (<mock>/error_in_test_function.spec.js:2:9)
+  at <mock>/error_in_test_function.spec.js:5:1
+--------------------------------------
+
+------------------ summary ------------------
+2 executions: all failed
+duration: <mock>
+---------------------------------------------

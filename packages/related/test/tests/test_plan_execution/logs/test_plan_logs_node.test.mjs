@@ -12,8 +12,11 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-const test = async (name, params) => {
-  const logFileUrl = new URL(`./snapshots/${name}`, import.meta.url);
+const test = async (filename, params) => {
+  const logFileUrl = new URL(
+    `./snapshots/node/${filename}.txt`,
+    import.meta.url,
+  );
   const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
@@ -23,106 +26,27 @@ const test = async (name, params) => {
       fileUrl: logFileUrl,
     },
     rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+    testPlan: {
+      [filename]: {
+        worker_thread: {
+          runtime: nodeWorkerThread(),
+        },
+        child_process: {
+          runtime: nodeChildProcess(),
+        },
+      },
+    },
     githubCheck: false,
     ...params,
   });
   logFileSnapshot.compare();
 };
 
-await test("node_one.txt", {
-  testPlan: {
-    "./a.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
-  },
-});
-await test("node_console.txt", {
-  testPlan: {
-    "./console.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
-  },
-});
-await test("node_error_in_test.txt", {
-  testPlan: {
-    "./error_in_test.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-      node_2: {
-        runtime: nodeChildProcess(),
-      },
-    },
-  },
-});
-await test("node_error_in_test_indirect.txt", {
-  testPlan: {
-    "./error_in_test_indirect.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
-  },
-});
-await test("node_error_in_source.txt", {
-  testPlan: {
-    "./error_in_source.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
-  },
-});
-await test("node_error_in_timeout.txt", {
-  testPlan: {
-    "./error_in_timeout.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-      node_2: {
-        runtime: nodeChildProcess(),
-      },
-    },
-  },
-});
-await test("node_unhandled_rejection_in_test.txt", {
-  testPlan: {
-    "./unhandled_rejection_in_test.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-      node_2: {
-        runtime: nodeChildProcess(),
-      },
-    },
-  },
-});
-await test("node_error_jsenv_assert.txt", {
-  testPlan: {
-    "./error_jsenv_assert.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-    },
-  },
-});
-await test("node_many.txt", {
-  testPlan: {
-    "./a.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
-      },
-      node2: {
-        runtime: nodeWorkerThread({
-          env: {
-            foo: "foo",
-          },
-        }),
-      },
-    },
-  },
-});
+await test("console.spec.js");
+await test("empty.spec.js");
+await test("error_in_source_function.spec.js");
+await test("error_in_test_function.spec.js");
+await test("error_in_test_jsenv_assert.spec.js");
+await test("error_in_test.spec.js");
+await test("error_in_timeout.spec.js");
+await test("unhandled_rejection_in_test.spec.js");
