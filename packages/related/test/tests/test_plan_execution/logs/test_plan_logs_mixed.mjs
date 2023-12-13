@@ -23,10 +23,7 @@ const devServer = await startDevServer({
   port: 0,
 });
 const test = async (name, params) => {
-  const logFileUrl = new URL(
-    `./snapshots/node_and_browser/${name}`,
-    import.meta.url,
-  );
+  const logFileUrl = new URL(`./snapshots/mixed/${name}`, import.meta.url);
   const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
@@ -45,9 +42,9 @@ const test = async (name, params) => {
   logFileSnapshot.compare();
 };
 
-await test("mixed.txt", {
+await test("empty.txt", {
   testPlan: {
-    "./node_client/a.spec.js": {
+    "./node_client/empty.spec.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
@@ -55,7 +52,7 @@ await test("mixed.txt", {
         runtime: nodeChildProcess(),
       },
     },
-    "./client/a.spec.html": {
+    "./client/empty.spec.html": {
       chrome: {
         runtime: chromium(),
       },
