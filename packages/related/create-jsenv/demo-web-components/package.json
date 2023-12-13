@@ -18,7 +18,7 @@
     "@babel/eslint-parser": "7.23.3",
     "@babel/plugin-syntax-import-assertions": "7.23.3",
     "@jsenv/custom-elements-redefine": "0.0.1",
-    "@jsenv/assert": "2.14.0",
+    "@jsenv/assert": "3.0.0",
     "@jsenv/core": "38.3.12",
     "@jsenv/plugin-bundling": "2.6.3",
     "@jsenv/plugin-minification": "1.5.4",

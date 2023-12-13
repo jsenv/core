@@ -38,6 +38,6 @@
     "@jsenv/filesystem": "4.6.2",
     "@jsenv/urls": "2.2.1",
     "@jsenv/utils": "2.1.0",
-    "@jsenv/assert": "2.14.0"
+    "@jsenv/assert": "3.0.0"
   }
 }

@@ -1,7 +1,7 @@
-import { isAssertionError } from "@jsenv/assert";
+import { assert } from "@jsenv/assert";
 
 export const ensureAssertionErrorWithMessage = (value, message) => {
-  if (!isAssertionError(value)) {
+  if (!assert.isAssertionError(value)) {
     throw new Error(`assertionError expected, got ${value.stack}`);
   }
   if (value.message !== message) {

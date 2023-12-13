@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "2.14.0",
+  "version": "3.0.0",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -22,19 +22,25 @@
   "type": "module",
   "exports": {
     ".": {
-      "node": "./src/main_node.js",
-      "browser": "./src/main_browser.js"
+      "node": "./src/assert_node.js",
+      "browser": {
+        "development": "./src/assert_browser.js",
+        "default": "./dist/jsenv_assert_browser.js"
+      }
     },
     "./*": "./*"
   },
   "main": "./src/main.js",
   "files": [
+    "/dist/",
     "/src/"
   ],
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
     "test": "node ./scripts/test.mjs",
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html"
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@jsenv/inspect": "1.9.1"
