@@ -22,7 +22,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/main.js"
+      "node": "./src/main_node.js",
+      "browser": "./src/main_browser.js"
     },
     "./*": "./*"
   },
