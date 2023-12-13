@@ -20,13 +20,14 @@ Error: here
 11 |       throw new Error("here");
                       ^
 Error: here
+@<mock>/error_in_script.spec.html:11:18
 --------------------------------------
 ✖ error_in_script.spec.html [webkit/<mock>] 3/3 (all failed)
 --------------- error ----------------
 9  |   <body>
 10 |     <script>
 11 |       throw new Error("here");
-                                       ^
+                               ^
 Error: here
 global code@<mock>/error_in_script.spec.html:11:27
 --------------------------------------

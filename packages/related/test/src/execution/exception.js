@@ -20,6 +20,10 @@
 // https://github.com/marvinhagemeister/errorstacks/tree/main
 // https://cdn.jsdelivr.net/npm/errorstacks@latest/dist/esm/index.mjs
 import { parseStackTrace } from "errorstacks";
+import { URL_META } from "@jsenv/url-meta";
+
+const isDev = process.execArgv.includes("--conditions=development");
+const jsenvCoreDirectoryUrl = new URL("../../../../../", import.meta.url);
 
 export const createException = (reason) => {
   const exception = {
@@ -123,6 +127,44 @@ export const createException = (reason) => {
       }
       exception.stackFrames = stackFrames;
     }
+
+    const stackFramesNonNative = [];
+    for (const stackFrame of exception.stackFrames) {
+      if (stackFrame.url.startsWith("node:")) {
+        stackFrame.native = "node";
+        continue;
+      }
+      if (stackFrame.url.startsWith("file:")) {
+        // while developing jsenv itself we want to exclude any
+        // - src/*
+        // - packages/**/src/
+        // for the users of jsenv it's easier, we want to exclude
+        // - **/node_modules/@jsenv/**
+        if (isDev) {
+          if (
+            URL_META.matches(stackFrame.url, {
+              [`${jsenvCoreDirectoryUrl}src/`]: true,
+              [`${jsenvCoreDirectoryUrl}packages/**/src/`]: true,
+            })
+          ) {
+            stackFrame.native = "jsenv";
+            continue;
+          }
+        } else if (
+          URL_META.matches(stackFrame.url, {
+            "file:///**/node_modules/@jsenv/core/": true,
+          })
+        ) {
+          stackFrame.native = "jsenv";
+          continue;
+        }
+      }
+      stackFramesNonNative.push(stackFrame);
+    }
+    if (stackFramesNonNative.length) {
+      exception.stackFrames = stackFramesNonNative;
+    }
+
     const [firstCallFrame] = exception.stackFrames;
     if (firstCallFrame) {
       exception.site = firstCallFrame.url

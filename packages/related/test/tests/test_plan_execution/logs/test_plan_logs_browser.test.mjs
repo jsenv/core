@@ -31,15 +31,15 @@ const test = async (filename, params) => {
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     testPlan: {
       [filename]: {
-        // chromium: {
-        //   runtime: chromium(),
-        // },
+        chromium: {
+          runtime: chromium(),
+        },
         firefox: {
           runtime: firefox(),
         },
-        // webkit: {
-        //   runtime: webkit(),
-        // },
+        webkit: {
+          runtime: webkit(),
+        },
       },
     },
     githubCheck: false,
@@ -51,11 +51,11 @@ const test = async (filename, params) => {
   logFileSnapshot.compare();
 };
 
-// await test("console.spec.html");
-// await test("empty.spec.html");
-// await test("error_in_script.spec.html");
-// await test("error_in_script.spec.html");
-// await test("error_in_script_module.spec.html");
-// await test("error_in_js_module.spec.html");
-// await test("error_in_js_classic.spec.html");
+await test("console.spec.html");
+await test("empty.spec.html");
+await test("error_in_script.spec.html");
+await test("error_in_script.spec.html");
+await test("error_in_script_module.spec.html");
+await test("error_in_js_module.spec.html");
+await test("error_in_js_classic.spec.html");
 await test("error_jsenv_assert_in_script_module.spec.html");

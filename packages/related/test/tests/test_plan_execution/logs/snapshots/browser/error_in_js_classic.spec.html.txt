@@ -16,9 +16,12 @@ Error: here
 1 | throw new Error("here");
           ^
 Error: here
+@<mock>/error_in_js_module.spec.js:1:7
 --------------------------------------
 ✖ error_in_js_classic.spec.html [webkit/<mock>] 3/3 (all failed)
 --------------- error ----------------
+1 | throw new Error("here");
+                   ^
 Error: here
 module code@<mock>/error_in_js_module.spec.js:1:16
 --------------------------------------
