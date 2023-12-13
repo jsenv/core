@@ -487,7 +487,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         ) {
           const errorInfo =
             e.code === "PARSE_ERROR" && e.cause
-              ? `${e.cause.reasonCode}\n${e.traceMessage}`
+              ? `${e.cause.reasonCode}\n${e.trace?.message}`
               : e.stack;
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid

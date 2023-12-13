@@ -162,7 +162,7 @@ window.__supervisor__ = (() => {
         parentNode.replaceChild(currentScriptClone, nodeToReplace);
         const { detectedBy, failed, errorEvent } = await scriptLoadPromise;
         if (failed) {
-          const messageDefault = `Error while loading script: ${urlObject.href}`;
+          const messageDefault = `Error while loading script`;
           const { error, message, filename, lineno, colno } = errorEvent;
           if (detectedBy === "script_error_event") {
             // window.error won't be dispatched for this error
@@ -226,7 +226,7 @@ window.__supervisor__ = (() => {
           return result;
         } catch (e) {
           fail(e, {
-            message: `Error while importing module: ${urlObject.href}`,
+            message: `Error while importing module`,
             reportedBy: "dynamic_import",
             url: urlObject.href,
           });
@@ -276,7 +276,7 @@ window.__supervisor__ = (() => {
           await scriptLoadResultPromise;
 
         if (failed) {
-          const messageDefault = `Error while loading module: ${urlObject.href}`;
+          const messageDefault = `Error while loading module`;
           const { error, message, filename, lineno, colno } = errorEvent;
           // if (detectedBy === "script_error_event") {
           //   reportErrorBackToBrowser(error)
@@ -894,9 +894,12 @@ window.__supervisor__ = (() => {
           };
 
           const renderException = () => {
+            const { cause = {} } = exception;
+            const { trace = {} } = cause;
+
             root.querySelector(".text").innerHTML = stringifyStack({
-              codeFrame: exception.codeFrame
-                ? generateClickableText(exception.codeFrame)
+              codeFrame: trace.codeFrame
+                ? generateClickableText(trace.codeFrame)
                 : "",
               name: exception.name,
               message: exception.message
@@ -906,18 +909,27 @@ window.__supervisor__ = (() => {
                 ? generateClickableText(exception.stackTrace)
                 : "",
             });
-            if (exception.cause) {
+            if (cause) {
               const causeText = stringifyStack({
-                name: exception.cause.name,
-                message: exception.cause.reason
-                  ? generateClickableText(exception.cause.reason)
-                  : exception.cause.stack
-                    ? generateClickableText(exception.cause.stack)
+                name: cause.name,
+                message: cause.reason
+                  ? generateClickableText(cause.reason)
+                  : cause.stack
+                    ? generateClickableText(cause.stack)
                     : "",
               });
-              const causeTextIndented = prefixRemainingLines(causeText, "  ");
-              root.querySelector(".text").innerHTML +=
-                `\n  [cause]: ${causeTextIndented}`;
+              if (causeText) {
+                const causeTextIndented = prefixRemainingLines(causeText, "  ");
+                root.querySelector(".text").innerHTML +=
+                  `\n  [cause]: ${causeTextIndented}`;
+              }
+            }
+            if (exception.reportedBy === "script_error_event") {
+              let traceSite = stringifyUrlSite(trace);
+              if (traceSite) {
+                root.querySelector(".text").innerHTML +=
+                  `\n  at ${generateClickableText(traceSite)}`;
+              }
             }
           };
           renderException();
@@ -942,15 +954,13 @@ window.__supervisor__ = (() => {
                   if (!causeInfo) {
                     return;
                   }
-                  const { codeFrame, ...causeProperties } = causeInfo;
-                  exception.codeFrame = codeFrame;
-                  exception.cause = causeProperties;
+                  exception.cause = causeInfo;
                   renderException();
                   return;
                 }
                 if (exception.site.line !== undefined) {
                   const urlToFetch = new URL(
-                    `/__get_code_frame__/${encodeURIComponent(
+                    `/__get_cause_trace__/${encodeURIComponent(
                       stringifyUrlSite(exception.site),
                     )}`,
                     window.origin,
@@ -962,8 +972,10 @@ window.__supervisor__ = (() => {
                   if (response.status !== 200) {
                     return;
                   }
-                  const codeFrame = await response.text();
-                  exception.codeFrame = codeFrame;
+                  const causeTrace = await response.json();
+                  exception.cause = {
+                    trace: causeTrace,
+                  };
                   renderException();
                   return;
                 }

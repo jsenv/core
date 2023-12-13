@@ -6,7 +6,7 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { getOriginalPosition } from "@jsenv/sourcemap";
-import { stringifyUrlSite } from "@jsenv/urls";
+import { inspectFileContent } from "@jsenv/inspect";
 
 import {
   supervisorFileUrl,
@@ -24,10 +24,10 @@ export const jsenvPluginSupervisor = ({
     name: "jsenv:supervisor",
     appliesDuring: "dev",
     serve: async (serveInfo) => {
-      if (serveInfo.request.pathname.startsWith("/__get_code_frame__/")) {
+      if (serveInfo.request.pathname.startsWith("/__get_cause_trace__/")) {
         const { pathname, searchParams } = new URL(serveInfo.request.url);
         let urlWithLineAndColumn = pathname.slice(
-          "/__get_code_frame__/".length,
+          "/__get_cause_trace__/".length,
         );
         urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
         const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
@@ -67,20 +67,26 @@ export const jsenvPluginSupervisor = ({
             }
           }
         }
-        const codeFrame = stringifyUrlSite({
+        const causeTrace = {
           url: file,
           line,
           column,
-          content: urlInfo.originalContent,
-        });
+          codeFrame: inspectFileContent({
+            line,
+            column,
+            content: urlInfo.originalContent,
+          }),
+        };
+        const causeTraceJson = JSON.stringify(causeTrace, null, "  ");
+
         return {
           status: 200,
           headers: {
             "cache-control": "no-store",
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(codeFrame),
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(causeTraceJson),
           },
-          body: codeFrame,
+          body: causeTraceJson,
         };
       }
       if (serveInfo.request.pathname.startsWith("/__get_error_cause__/")) {
@@ -123,7 +129,7 @@ export const jsenvPluginSupervisor = ({
                 stack: errorBaseUrl
                   ? `stack mocked for snapshot`
                   : causeInfo.stack,
-                codeFrame: causeInfo.traceMessage,
+                trace: causeInfo.trace,
               }
             : null,
           null,
