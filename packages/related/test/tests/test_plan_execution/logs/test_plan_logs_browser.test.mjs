@@ -34,9 +34,9 @@ const test = async (filename, params) => {
         chromium: {
           runtime: chromium(),
         },
-        // firefox: {
-        //   runtime: firefox(),
-        // },
+        firefox: {
+          runtime: firefox(),
+        },
         // webkit: {
         //   runtime: webkit(),
         // },

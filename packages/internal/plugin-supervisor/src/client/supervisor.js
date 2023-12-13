@@ -162,13 +162,14 @@ window.__supervisor__ = (() => {
         parentNode.replaceChild(currentScriptClone, nodeToReplace);
         const { detectedBy, failed, errorEvent } = await scriptLoadPromise;
         if (failed) {
+          const messageDefault = `Error while loading script: ${urlObject.href}`;
           const { error, message, filename, lineno, colno } = errorEvent;
           if (detectedBy === "script_error_event") {
             // window.error won't be dispatched for this error
-            reportErrorBackToBrowser(error);
+            reportErrorBackToBrowser(error || errorEvent);
           }
-          fail(error || message, {
-            message: `Error while loading script: ${urlObject.href}`,
+          fail(error || message || messageDefault, {
+            message: messageDefault,
             reportedBy: "script_error_event",
             url: filename || urlObject.href,
             line: lineno,
@@ -275,12 +276,13 @@ window.__supervisor__ = (() => {
           await scriptLoadResultPromise;
 
         if (failed) {
+          const messageDefault = `Error while loading module: ${urlObject.href}`;
           const { error, message, filename, lineno, colno } = errorEvent;
           // if (detectedBy === "script_error_event") {
           //   reportErrorBackToBrowser(error)
           // }
-          fail(error || message, {
-            message: `Error while loading module: ${urlObject.href}`,
+          fail(error || message || messageDefault, {
+            message: messageDefault,
             reportedBy: "script_error_event",
             url: filename || urlObject.href,
             line: lineno,
@@ -478,7 +480,7 @@ window.__supervisor__ = (() => {
         // isError can be false when reason is an ErrorEvent for instance
         exception.isError = reason instanceof Error;
         exception.name = reason.name || "Error";
-        exception.message = reason.message || message;
+        exception.message = reason.message || message || "";
         exception.reportedBy = reason.reportedBy;
         if (Object.hasOwnProperty.call(reason, "stack")) {
           if (
@@ -594,26 +596,26 @@ window.__supervisor__ = (() => {
         }
         export_missing: {
           // chrome
-          if (reason.message.includes("does not provide an export named")) {
+          if (exception.message.includes("does not provide an export named")) {
             exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
           }
           // firefox
           if (
-            reason.message.startsWith("import not found:") ||
-            reason.message.startsWith("ambiguous indirect export:")
+            exception.message.startsWith("import not found:") ||
+            exception.message.startsWith("ambiguous indirect export:")
           ) {
             exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
           }
           // safari
-          if (reason.message.startsWith("import binding name")) {
+          if (exception.message.startsWith("import binding name")) {
             exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
           }
-          if (reason.message.includes("Importing a module script failed")) {
+          if (exception.message.includes("Importing a module script failed")) {
             exception.code = DYNAMIC_IMPORT_FETCH_ERROR;
           }
         }
         js_syntax_error: {
-          if (reason.name === "SyntaxError" && typeof line === "number") {
+          if (exception.name === "SyntaxError" && typeof line === "number") {
             exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR;
           }
         }
@@ -670,14 +672,15 @@ window.__supervisor__ = (() => {
       return exception;
     };
 
-    const stringifyStack = ({ name, message, stackTrace }) => {
-      let stack;
+    const stringifyStack = ({ codeFrame, name, message, stackTrace }) => {
+      let stack = "";
+      if (codeFrame) {
+        stack += `${codeFrame}\n`;
+      }
       if (name && message) {
-        stack = `${name}: ${message}`;
+        stack += `${name}: ${message}`;
       } else if (message) {
-        stack = message;
-      } else {
-        stack = "";
+        stack += message;
       }
       if (stackTrace) {
         stack += `\n${stackTrace}`;
@@ -819,153 +822,6 @@ window.__supervisor__ = (() => {
       });
     };
 
-    let formatError;
-    error_formatter: {
-      formatError = (exceptionInfo) => {
-        const errorParts = {
-          theme: "dark",
-          title: "An error occured",
-          text: "",
-          tip: "",
-          errorDetailsPromise: null,
-        };
-        const tips = [];
-        tips.push("Click outside to close.");
-        errorParts.tip = tips.join(`\n    <br />\n    `);
-
-        const generateClickableText = (text) => {
-          const textWithHtmlLinks = makeLinksClickable(text, {
-            createLink: ({ url, line, column }) => {
-              const urlSite = resolveUrlSite({ url, line, column });
-              if (errorBaseUrl) {
-                if (urlSite.url.startsWith(rootDirectoryUrl)) {
-                  urlSite.url = `${errorBaseUrl}${urlSite.url.slice(
-                    rootDirectoryUrl.length,
-                  )}`;
-                } else {
-                  urlSite.url = "file:///mocked_for_snapshots";
-                }
-              }
-              const urlWithLineAndColumn = stringifyUrlSite(urlSite);
-              return {
-                href:
-                  urlSite.url.startsWith("file:") && openInEditor
-                    ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
-                        urlWithLineAndColumn,
-                      )}')`
-                    : urlSite.url,
-                text: urlWithLineAndColumn,
-              };
-            },
-          });
-          return textWithHtmlLinks;
-        };
-
-        errorParts.text = stringifyStack({
-          name: exceptionInfo.name,
-          message: exceptionInfo.message
-            ? generateClickableText(exceptionInfo.message)
-            : "",
-          stackTrace: exceptionInfo.stackTrace
-            ? generateClickableText(exceptionInfo.stackTrace)
-            : "",
-        });
-        if (exceptionInfo.site.url) {
-          errorParts.errorDetailsPromise = (async () => {
-            if (!serverIsJsenvDevServer) {
-              return null;
-            }
-            try {
-              if (
-                exceptionInfo.code === DYNAMIC_IMPORT_FETCH_ERROR ||
-                exceptionInfo.reportedBy === "script_error_event"
-              ) {
-                const response = await window.fetch(
-                  `/__get_error_cause__/${encodeURIComponent(
-                    exceptionInfo.site.isInline
-                      ? exceptionInfo.site.originalUrl
-                      : exceptionInfo.site.url,
-                  )}`,
-                );
-                if (response.status !== 200) {
-                  return null;
-                }
-                const causeInfo = await response.json();
-                if (!causeInfo) {
-                  return null;
-                }
-                const causeText =
-                  causeInfo.code === "NOT_FOUND"
-                    ? stringifyStack({
-                        name: causeInfo.name,
-                        message: generateClickableText(causeInfo.reason),
-                        stackTrace: generateClickableText(causeInfo.codeFrame),
-                      })
-                    : stringifyStack({
-                        name: causeInfo.name,
-                        message: generateClickableText(causeInfo.stack),
-                        stackTrace: generateClickableText(causeInfo.codeFrame),
-                      });
-                return {
-                  cause: causeText,
-                };
-              }
-              if (exceptionInfo.site.line !== undefined) {
-                const urlToFetch = new URL(
-                  `/__get_code_frame__/${encodeURIComponent(
-                    stringifyUrlSite(exceptionInfo.site),
-                  )}`,
-                  window.origin,
-                );
-                if (!exceptionInfo.stackSourcemapped) {
-                  urlToFetch.searchParams.set("remap", "");
-                }
-                const response = await window.fetch(urlToFetch);
-                if (response.status !== 200) {
-                  return null;
-                }
-                const codeFrame = await response.text();
-                return {
-                  codeFrame: generateClickableText(codeFrame),
-                };
-              }
-            } catch (e) {
-              // happens if server is closed for instance
-              return null;
-            }
-            return null;
-          })();
-        }
-        return errorParts;
-      };
-
-      const makeLinksClickable = (
-        string,
-        { createLink = ({ url }) => url },
-      ) => {
-        // normalize line breaks
-        string = string.replace(/\n/g, "\n");
-        string = escapeHtml(string);
-        // render links
-        string = replaceUrls(string, ({ url, line, column }) => {
-          const { href, text } = createLink({ url, line, column });
-          return link({ href, text });
-        });
-        return string;
-      };
-
-      const escapeHtml = (string) => {
-        return string
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      };
-
-      const link = ({ href, text = href }) => `<a href="${href}">${text}</a>`;
-    }
-
     let displayErrorNotification;
     error_notification: {
       const { Notification } = window;
@@ -1010,51 +866,157 @@ window.__supervisor__ = (() => {
       };
 
       class JsenvErrorOverlay extends HTMLElement {
-        constructor({ theme, title, text, tip, errorDetailsPromise }) {
+        constructor(exception) {
           super();
-          this.root = this.attachShadow({ mode: "open" });
-          this.root.innerHTML = `
+          const root = this.attachShadow({ mode: "open" });
+          const tips = [];
+          tips.push("Click outside to close.");
+          const tip = tips.join(`\n    <br />\n    `);
+          root.innerHTML = `
 <style>
   ${overlayCSS}
 </style>
 <div class="backdrop"></div>
-<div class="overlay" data-theme=${theme}>
+<div class="overlay" data-theme="dark">
   <h1 class="title">
-    ${title}
+    An error occured
   </h1>
-  <pre class="text">${text}</pre>
+  <pre class="text"></pre>
   <div class="tip">
     ${tip}
   </div>
 </div>`;
-          this.root.querySelector(".backdrop").onclick = () => {
+          root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
               // not in document anymore
               return;
             }
-            this.root.querySelector(".backdrop").onclick = null;
+            root.querySelector(".backdrop").onclick = null;
             this.parentNode.removeChild(this);
           };
-          if (errorDetailsPromise) {
-            errorDetailsPromise.then((errorDetails) => {
-              if (!errorDetails || !this.parentNode) {
+
+          const renderException = () => {
+            root.querySelector(".text").innerHTML = stringifyStack({
+              codeFrame: exception.codeFrame
+                ? generateClickableText(exception.codeFrame)
+                : "",
+              name: exception.name,
+              message: exception.message
+                ? generateClickableText(exception.message)
+                : "",
+              stackTrace: exception.stackTrace
+                ? generateClickableText(exception.stackTrace)
+                : "",
+            });
+            if (exception.cause) {
+              const causeText = stringifyStack({
+                name: exception.cause.name,
+                message: exception.cause.reason
+                  ? generateClickableText(exception.cause.reason)
+                  : exception.cause.stack
+                    ? generateClickableText(exception.cause.stack)
+                    : "",
+              });
+              const causeTextIndented = prefixRemainingLines(causeText, "  ");
+              root.querySelector(".text").innerHTML +=
+                `\n  [cause]: ${causeTextIndented}`;
+            }
+          };
+          renderException();
+          if (exception.site.url && serverIsJsenvDevServer) {
+            (async () => {
+              try {
+                if (
+                  exception.code === DYNAMIC_IMPORT_FETCH_ERROR ||
+                  exception.reportedBy === "script_error_event"
+                ) {
+                  const response = await window.fetch(
+                    `/__get_error_cause__/${encodeURIComponent(
+                      exception.site.isInline
+                        ? exception.site.originalUrl
+                        : exception.site.url,
+                    )}`,
+                  );
+                  if (response.status !== 200) {
+                    return;
+                  }
+                  const causeInfo = await response.json();
+                  if (!causeInfo) {
+                    return;
+                  }
+                  const { codeFrame, ...causeProperties } = causeInfo;
+                  exception.codeFrame = codeFrame;
+                  exception.cause = causeProperties;
+                  renderException();
+                  return;
+                }
+                if (exception.site.line !== undefined) {
+                  const urlToFetch = new URL(
+                    `/__get_code_frame__/${encodeURIComponent(
+                      stringifyUrlSite(exception.site),
+                    )}`,
+                    window.origin,
+                  );
+                  if (!exception.stackSourcemapped) {
+                    urlToFetch.searchParams.set("remap", "");
+                  }
+                  const response = await window.fetch(urlToFetch);
+                  if (response.status !== 200) {
+                    return;
+                  }
+                  const codeFrame = await response.text();
+                  exception.codeFrame = codeFrame;
+                  return;
+                }
+              } catch (e) {
+                // happens if server is closed for instance
                 return;
               }
-              const { codeFrame, cause } = errorDetails;
-              if (codeFrame) {
-                this.root.querySelector(".text").innerHTML +=
-                  `\n\n${codeFrame}`;
-              }
-              if (cause) {
-                const causeIndented = prefixRemainingLines(cause, "  ");
-                this.root.querySelector(".text").innerHTML +=
-                  `\n  [cause]: ${causeIndented}`;
-              }
-            });
+            })();
           }
         }
       }
-
+      const generateClickableText = (text) => {
+        const textWithHtmlLinks = makeLinksClickable(text, {
+          createLink: ({ url, line, column }) => {
+            const urlSite = resolveUrlSite({ url, line, column });
+            if (errorBaseUrl) {
+              if (urlSite.url.startsWith(rootDirectoryUrl)) {
+                urlSite.url = `${errorBaseUrl}${urlSite.url.slice(
+                  rootDirectoryUrl.length,
+                )}`;
+              } else {
+                urlSite.url = "file:///mocked_for_snapshots";
+              }
+            }
+            const urlWithLineAndColumn = stringifyUrlSite(urlSite);
+            return {
+              href:
+                urlSite.url.startsWith("file:") && openInEditor
+                  ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+                      urlWithLineAndColumn,
+                    )}')`
+                  : urlSite.url,
+              text: urlWithLineAndColumn,
+            };
+          },
+        });
+        return textWithHtmlLinks;
+      };
+      const makeLinksClickable = (
+        string,
+        { createLink = ({ url }) => url },
+      ) => {
+        // normalize line breaks
+        string = string.replace(/\n/g, "\n");
+        string = escapeHtml(string);
+        // render links
+        string = replaceUrls(string, ({ url, line, column }) => {
+          const { href, text } = createLink({ url, line, column });
+          return link({ href, text });
+        });
+        return string;
+      };
       const prefixRemainingLines = (text, prefix) => {
         const lines = text.split(/\r?\n/);
         const firstLine = lines.shift();
@@ -1067,6 +1029,15 @@ window.__supervisor__ = (() => {
         }
         return result;
       };
+      const escapeHtml = (string) => {
+        return string
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      };
+      const link = ({ href, text = href }) => `<a href="${href}">${text}</a>`;
 
       if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
         customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
@@ -1151,17 +1122,8 @@ window.__supervisor__ = (() => {
 
     supervisor.createException = createException;
     supervisor.reportException = (exception) => {
-      const { theme, title, text, tip, errorDetailsPromise } =
-        formatError(exception);
-
       if (errorOverlay) {
-        const removeErrorOverlay = displayJsenvErrorOverlay({
-          theme,
-          title,
-          text,
-          tip,
-          errorDetailsPromise,
-        });
+        const removeErrorOverlay = displayJsenvErrorOverlay(exception);
         if (window.__reloader__) {
           const onchange = window.__reloader__.status.onchange;
           window.__reloader__.status.onchange = () => {
@@ -1174,8 +1136,8 @@ window.__supervisor__ = (() => {
       }
       if (errorNotification) {
         displayErrorNotification({
-          title,
-          text,
+          title: "An error occured",
+          text: "todo",
         });
       }
       return exception;
@@ -1196,6 +1158,7 @@ window.__supervisor__ = (() => {
         // when error is reported within a worker error is null
         // but there is a message property on errorEvent
         reportedBy: "window_error_event",
+        message,
         url: filename,
         line: lineno,
         column: colno,
