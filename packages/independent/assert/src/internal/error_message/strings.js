@@ -7,7 +7,7 @@ import { isRegExp, isError } from "../object_subtype.js";
 const MAX_HEIGHT = 10;
 let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
-const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 15;
+const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 30;
 
 export const stringsComparisonToErrorMessage = (comparison) => {
   const isStartsWithComparison = comparison.type === "starts_with";
@@ -57,6 +57,7 @@ export const formatStringAssertionErrorMessage = ({
   let lineIndex = 0;
   let columnIndex = 0;
   const lineStrings = actual.split(/\r?\n/);
+  const lineNumbersOnTheLeft = lineStrings.length > 1;
 
   const formatDetails = ({ annotationLabel, expectedOverview = true }) => {
     if (actual.includes(`${COLUMN_MARKER_CHAR} unexpected character`)) {
@@ -76,7 +77,21 @@ export const formatStringAssertionErrorMessage = ({
     }
     let columnEnd = columnStart + MAX_WIDTH;
 
-    const writeLine = (lineSource) => {
+    const lastLineIndex = lineStrings.length - 1;
+    const idealNumberOfLineAfter = MAX_HEIGHT - lineDisplayed;
+    let lineAfterStart = lineIndex + 1;
+    let lineAfterEnd = lineAfterStart + idealNumberOfLineAfter;
+    if (lineAfterEnd > lineStrings.length) {
+      lineAfterEnd = lineStrings.length;
+    }
+
+    const writeLine = (index) => {
+      const lineSource = lineStrings[index];
+      if (lineNumbersOnTheLeft) {
+        let asideSource = `${fillRight(index + 1, lineAfterEnd)} |`;
+        details += `${asideSource} `;
+      }
+
       details += truncateLine(lineSource, {
         start: columnStart,
         end: columnEnd,
@@ -100,18 +115,25 @@ export const formatStringAssertionErrorMessage = ({
       const beforeLineEnd = lineIndex + 1;
       let beforeLineIndex = beforeLineStart;
       while (beforeLineIndex < beforeLineEnd) {
-        const lineBefore = lineStrings[beforeLineIndex];
+        writeLine(beforeLineIndex);
         beforeLineIndex++;
-        writeLine(lineBefore);
         details += `\n`;
         lineDisplayed++;
       }
       details = details.slice(0, -1);
     }
     write_annotation: {
-      const annotationColumn =
+      let annotationColumn =
         columnStart === 0 ? columnIndex : columnIndex - columnStart;
-      const annotationIndentation = " ".repeat(annotationColumn);
+
+      let annotationIndentation = "";
+      if (lineNumbersOnTheLeft) {
+        const spacesFromLineNumbers = `${fillRight(lineIndex, lineAfterEnd)} | `
+          .length;
+        annotationIndentation += " ".repeat(spacesFromLineNumbers);
+      }
+      annotationIndentation += " ".repeat(annotationColumn);
+
       details += `\n${annotationIndentation}${COLUMN_MARKER_CHAR}`;
       details += `\n${annotationLabel}`;
       if (expectedOverview) {
@@ -138,15 +160,8 @@ export const formatStringAssertionErrorMessage = ({
       }
     }
     write_chars_after_annotation: {
-      const lastLineIndex = lineStrings.length - 1;
-      const idealNumberOfLineAfter = MAX_HEIGHT - lineDisplayed;
-      let lineAfterStart = lineIndex + 1;
       if (lineAfterStart > lastLineIndex) {
         break write_chars_after_annotation;
-      }
-      let lineAfterEnd = lineAfterStart + idealNumberOfLineAfter;
-      if (lineAfterEnd > lineStrings.length) {
-        lineAfterEnd = lineStrings.length;
       }
       if (lineAfterStart === lineAfterEnd) {
         break write_chars_after_annotation;
@@ -154,9 +169,8 @@ export const formatStringAssertionErrorMessage = ({
       details += `\n`;
       let lineAfterIndex = lineAfterStart;
       while (lineAfterIndex < lineAfterEnd) {
-        const afterLineSource = lineStrings[lineAfterIndex];
+        writeLine(lineAfterIndex);
         lineAfterIndex++;
-        writeLine(afterLineSource);
         details += `\n`;
         lineDisplayed++;
       }
@@ -281,6 +295,18 @@ const truncateLine = (line, { start, end, prefix, suffix, format }) => {
     return `${result}${format(suffix, "suffix")}`;
   }
   return result;
+};
+
+const fillRight = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  padded += value;
+  while (missingWidth--) {
+    padded += char;
+  }
+  return padded;
 };
 
 const isLineBreak = (char) => {

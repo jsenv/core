@@ -14,9 +14,9 @@ my name is Flore`;
       e,
       `unexpected character in string
 --- details ---
-Hello,
-my name is Damien
-           ^
+1 | Hello,
+2 | my name is Damien
+               ^
 unexpected "D", expected to continue with "Flore"
 --- path ---
 actual`,
@@ -42,13 +42,13 @@ Hello europa
       e,
       `unexpected character in string
 --- details ---
-1abcdefghijklmnopqrstuvwx
-2abcdefghijklmnopqrstuvwxy
-Hello world
-      ^
+1 | 1abcdefghijklmnopqrstuvwx
+2 | 2abcdefghijklmnopqrstuvwxy
+3 | Hello world
+          ^
 unexpected "w", expected to continue with "europa"…
-3abcdefghijklmnopqrstuvwxy
-4abcdefghijklmnopqrstuvwxy
+4 | 3abcdefghijklmnopqrstuvwxy
+5 | 4abcdefghijklmnopqrstuvwxy
 --- path ---
 actual`,
     );
@@ -75,14 +75,14 @@ actual`,
       e,
       `unexpected character in string
 --- details ---
-1abcdefghijklmnopqrstuvwx
-2abcdefghijklmnopqrstuvwxy
-3abcdefghijklmnopqrstuvwx
-4abcdefghijklmnopqrstuvwxy
-5abcdefghijklmnopqrstuvwxy
-[Hello world]abcdefghijklmnopqrstuvwxyz
-       ^
-unexpected "w", expected to continue with "france]abcdefgh"…
+1 | 1abcdefghijklmnopqrstuvwx
+2 | 2abcdefghijklmnopqrstuvwxy
+3 | 3abcdefghijklmnopqrstuvwx
+4 | 4abcdefghijklmnopqrstuvwxy
+5 | 5abcdefghijklmnopqrstuvwxy
+6 | [Hello world]abcdefghijklmnopqrstuvwxyz
+           ^
+unexpected "w", expected to continue with "france]abcdefghijklmnopqrstuvw"…
 --- path ---
 actual`,
     );
@@ -198,9 +198,9 @@ I am benjamin`;
       e,
       `string is too short, 5 characters are missing
 --- details ---
-Hello,
-I am ben
-        ^
+1 | Hello,
+2 | I am ben
+            ^
 expected to continue with "jamin"
 --- path ---
 actual`,
@@ -221,9 +221,9 @@ I am ben`;
       e,
       `string is too long, it contains 5 extra characters
 --- details ---
-Hello,
-I am benjamin
-       ^
+1 | Hello,
+2 | I am benjamin
+           ^
 expected to end here, on "n"
 --- path ---
 actual`,
@@ -300,10 +300,10 @@ b`;
       e,
       `string is too long, it contains one extra character
 --- details ---
-a
- ^
+1 | a
+     ^
 expected to end here, on "\\n"
-b
+2 | b
 --- path ---
 actual`,
     );
