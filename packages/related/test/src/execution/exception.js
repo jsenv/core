@@ -29,6 +29,7 @@ export const createException = (reason) => {
     message: "",
     stack: "",
     stackTrace: "",
+    stackFrames: undefined,
     site: null,
   };
 
@@ -36,21 +37,26 @@ export const createException = (reason) => {
     exception.message = "undefined";
     return exception;
   }
-  if (reason === undefined) {
-    exception.message = "undefined";
+  if (reason === null) {
+    exception.message = "null";
     return exception;
   }
   if (typeof reason === "string") {
     exception.message = reason;
     return exception;
   }
+  if (typeof reason !== "object") {
+    exception.message = JSON.stringify(reason);
+    return exception;
+  }
   if (reason.isException) {
     return reason;
   }
+  exception.isError = reason instanceof Error;
+  exception.code = reason.code;
+  exception.name = reason.name;
+  exception.message = reason.message;
   if (Object.hasOwn(reason, "stack")) {
-    exception.isError = true;
-    exception.name = reason.name;
-    exception.message = reason.message;
     const { prepareStackTrace } = Error;
     Error.prepareStackTrace = (e, callSites) => {
       Error.prepareStackTrace = prepareStackTrace;
@@ -114,7 +120,6 @@ export const createException = (reason) => {
       }
       exception.stackFrames = stackFrames;
     }
-
     const [firstCallFrame] = exception.stackFrames;
     if (firstCallFrame) {
       exception.site = firstCallFrame.url
@@ -125,16 +130,7 @@ export const createException = (reason) => {
           }
         : firstCallFrame.evalSite;
     }
-
-    return exception;
   }
-  if (typeof reason === "object") {
-    exception.code = reason.code;
-    exception.message = reason.message;
-    exception.stack = reason.stack;
-    return exception;
-  }
-  exception.message = JSON.stringify(reason);
   return exception;
 };
 

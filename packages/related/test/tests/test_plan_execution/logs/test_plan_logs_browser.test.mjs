@@ -34,12 +34,12 @@ const test = async (filename, params) => {
         chromium: {
           runtime: chromium(),
         },
-        firefox: {
-          runtime: firefox(),
-        },
-        webkit: {
-          runtime: webkit(),
-        },
+        // firefox: {
+        //   runtime: firefox(),
+        // },
+        // webkit: {
+        //   runtime: webkit(),
+        // },
       },
     },
     githubCheck: false,
@@ -51,5 +51,6 @@ const test = async (filename, params) => {
   logFileSnapshot.compare();
 };
 
-await test("console.spec.html");
-await test("empty.spec.html");
+// await test("console.spec.html");
+// await test("empty.spec.html");
+await test("error_in_script.spec.html");

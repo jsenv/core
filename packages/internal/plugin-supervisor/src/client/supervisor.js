@@ -160,16 +160,19 @@ window.__supervisor__ = (() => {
         }
         const scriptLoadPromise = getScriptLoadPromise(currentScriptClone);
         parentNode.replaceChild(currentScriptClone, nodeToReplace);
-        const { detectedBy, failed, error } = await scriptLoadPromise;
+        const { detectedBy, failed, errorEvent } = await scriptLoadPromise;
         if (failed) {
+          const { error, message, filename, lineno, colno } = errorEvent;
           if (detectedBy === "script_error_event") {
             // window.error won't be dispatched for this error
             reportErrorBackToBrowser(error);
           }
-          fail(error, {
+          fail(error || message, {
             message: `Error while loading script: ${urlObject.href}`,
             reportedBy: "script_error_event",
-            url: urlObject.href,
+            url: filename || urlObject.href,
+            line: lineno,
+            column: colno,
           });
           if (detectedBy === "script_error_event") {
             supervisor.reportException(result.exception);
@@ -268,16 +271,20 @@ window.__supervisor__ = (() => {
         const scriptLoadResultPromise =
           getScriptLoadPromise(currentScriptClone);
         parentNode.replaceChild(currentScriptClone, nodeToReplace);
-        const { detectedBy, failed, error } = await scriptLoadResultPromise;
+        const { detectedBy, failed, errorEvent } =
+          await scriptLoadResultPromise;
 
         if (failed) {
+          const { error, message, filename, lineno, colno } = errorEvent;
           // if (detectedBy === "script_error_event") {
           //   reportErrorBackToBrowser(error)
           // }
-          fail(error, {
+          fail(error || message, {
             message: `Error while loading module: ${urlObject.href}`,
             reportedBy: "script_error_event",
-            url: urlObject.href,
+            url: filename || urlObject.href,
+            line: lineno,
+            column: colno,
           });
           if (detectedBy === "script_error_event") {
             supervisor.reportException(result.exception);
@@ -435,10 +442,11 @@ window.__supervisor__ = (() => {
         stackSourcemapped: null,
         stackOriginal: "", // the stack from runtime, not normalized to v8
         stackTrace: "", // the stack trace (without error name and message)
+        stackFrames: undefined,
         withServerUrls: {
           message: "",
-          stackTrace: "",
           stack: "",
+          stackTrace: "",
         },
         meta: null,
         site: {
@@ -463,78 +471,152 @@ window.__supervisor__ = (() => {
           exception.message = reason;
           return;
         }
-        if (reason instanceof Error) {
-          const error = reason;
-          exception.isError = true;
-          exception.name = error.name || "Error";
-          exception.message = error.message || "";
+        if (typeof reason !== "object") {
+          exception.message = JSON.stringify(reason);
+          return;
+        }
+        // isError can be false when reason is an ErrorEvent for instance
+        exception.isError = reason instanceof Error;
+        exception.name = reason.name || "Error";
+        exception.message = reason.message || message;
+        exception.reportedBy = reason.reportedBy;
+        if (Object.hasOwnProperty.call(reason, "stack")) {
           if (
             Error.captureStackTrace &&
             // captureStackTrace exists on webkit but error.stack is not v8
             !isWebkitOrSafari
           ) {
             // stackTrace formatted by V8
+            const { prepareStackTrace } = Error;
+            Error.prepareStackTrace = (e, callSites) => {
+              Error.prepareStackTrace = prepareStackTrace;
+
+              const getPropertiesFromEvalOrigin = (origin) => {
+                // Most eval() calls are in this format
+                const topLevelEvalMatch =
+                  /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
+                if (topLevelEvalMatch) {
+                  const source = topLevelEvalMatch[2];
+                  const line = Number(topLevelEvalMatch[3]);
+                  const column = topLevelEvalMatch[4] - 1;
+                  return {
+                    url: source,
+                    line,
+                    column,
+                  };
+                }
+                // Parse nested eval() calls using recursion
+                const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(
+                  origin,
+                );
+                if (nestedEvalMatch) {
+                  return getPropertiesFromEvalOrigin(nestedEvalMatch[2]);
+                }
+                return null;
+              };
+
+              const stackFrames = [];
+              let stackTrace = "";
+              for (const callSite of callSites) {
+                if (stackTrace) stackTrace += "\n";
+
+                const url =
+                  callSite.getFileName() || callSite.getScriptNameOrSourceURL();
+                const line = callSite.getLineNumber();
+                const column = callSite.getColumnNumber();
+                const site = resolveUrlSite({ url, line, column });
+                const stackFrame = {
+                  raw: `  at ${String(callSite)}`,
+                  url: site.url,
+                  line: site.line,
+                  column: site.column,
+                  functionName: callSite.getFunctionName(),
+                  isNative: callSite.isNative(),
+                  isEval: callSite.isEval(),
+                  isConstructor: callSite.isConstructor(),
+                  isAsync: callSite.isAsync(),
+                  evalSite: null,
+                };
+                if (stackFrame.isEval) {
+                  const evalOrigin = stackFrame.getEvalOrigin();
+                  if (evalOrigin) {
+                    stackFrame.evalSite =
+                      getPropertiesFromEvalOrigin(evalOrigin);
+                  }
+                }
+
+                stackFrames.push(stackFrame);
+                stackTrace += stackFrame.raw;
+              }
+              exception.stackFrames = stackFrames;
+              exception.stackTrace = stackTrace;
+
+              const name = e.name || "Error";
+              const message = e.message || "";
+              let stack = ``;
+              stack += `${name}: ${message}`;
+              if (stackTrace) {
+                stack += `\n${stackTrace}`;
+              }
+              return stack;
+            };
             exception.stackSourcemapped = true;
-            exception.stack = error.stack;
-            exception.stackTrace = getErrorStackTrace(error);
-          } else if (error.stack) {
+            exception.stack = reason.stack;
+            if (exception.stackFrames === undefined) {
+              // Error.prepareStackTrace not trigerred
+              // - reason is not an error
+              // - reason.stack already get
+              Error.prepareStackTrace = prepareStackTrace;
+              exception.stackTrace = getErrorStackTrace(reason);
+            }
+            if (exception.stackFrames) {
+              const [firstCallFrame] = exception.stackFrames;
+              if (
+                exception.site.url === null &&
+                firstCallFrame &&
+                firstCallFrame.url
+              ) {
+                Object.assign(exception.site, {
+                  url: firstCallFrame.url,
+                  line: firstCallFrame.line,
+                  column: firstCallFrame.column,
+                });
+              }
+            }
+          } else if (reason.stack) {
             exception.stackSourcemapped = false;
-            exception.stackTrace = error.stack;
+            exception.stackTrace = reason.stack;
             exception.stack = stringifyStack(exception);
           }
-
-          if (error.reportedBy) {
-            exception.reportedBy = error.reportedBy;
-          }
-          if (error.url) {
-            Object.assign(exception.site, resolveUrlSite({ url: error.url }));
-          }
-          export_missing: {
-            // chrome
-            if (error.message.includes("does not provide an export named")) {
-              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
-              return;
-            }
-            // firefox
-            if (
-              error.message.startsWith("import not found:") ||
-              error.message.startsWith("ambiguous indirect export:")
-            ) {
-              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
-              return;
-            }
-            // safari
-            if (error.message.startsWith("import binding name")) {
-              exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
-              return;
-            }
-            if (error.message.includes("Importing a module script failed")) {
-              exception.code = DYNAMIC_IMPORT_FETCH_ERROR;
-              return;
-            }
-          }
-          js_syntax_error: {
-            if (error.name === "SyntaxError" && typeof line === "number") {
-              exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR;
-              return;
-            }
-          }
-          return;
         }
-        if (typeof reason === "object") {
-          // happens when reason is an Event for instance
-          exception.code = reason.code;
-          exception.message = reason.message || message;
-          exception.stack = reason.stack;
-          if (reason.reportedBy) {
-            exception.reportedBy = reason.reportedBy;
-          }
-          if (reason.url) {
-            Object.assign(exception.site, resolveUrlSite({ url: reason.url }));
-          }
-          return;
+        if (exception.site.url === null && reason.url) {
+          Object.assign(exception.site, resolveUrlSite({ url: reason.url }));
         }
-        exception.message = JSON.stringify(reason);
+        export_missing: {
+          // chrome
+          if (reason.message.includes("does not provide an export named")) {
+            exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
+          }
+          // firefox
+          if (
+            reason.message.startsWith("import not found:") ||
+            reason.message.startsWith("ambiguous indirect export:")
+          ) {
+            exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
+          }
+          // safari
+          if (reason.message.startsWith("import binding name")) {
+            exception.code = DYNAMIC_IMPORT_EXPORT_MISSING;
+          }
+          if (reason.message.includes("Importing a module script failed")) {
+            exception.code = DYNAMIC_IMPORT_FETCH_ERROR;
+          }
+        }
+        js_syntax_error: {
+          if (reason.name === "SyntaxError" && typeof line === "number") {
+            exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR;
+          }
+        }
       };
       writeBasicProperties();
 
@@ -1159,7 +1241,7 @@ window.__supervisor__ = (() => {
           resolve({
             detectedBy: "window_error_event",
             failed: true,
-            error: errorEvent,
+            errorEvent,
           });
         }
       };
@@ -1172,7 +1254,7 @@ window.__supervisor__ = (() => {
         resolve({
           detectedBy: "script_error_event",
           failed: true,
-          error: errorEvent,
+          errorEvent,
         });
       });
       script.addEventListener("load", () => {

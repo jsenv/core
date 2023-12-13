@@ -1,0 +1,18 @@
+------------ 1 execution to run -------------
+chromium (chromium@120.0.6099.28)
+---------------------------------------------
+
+✖ error_in_script.spec.html [<mock>/<mock>] 1/1 (all failed)
+--------------- error ----------------
+9  |   <body>
+10 |     <script>
+11 |       throw new Error("here");
+                      ^
+Error: here
+  at file:///Users/d.maillard/dev/jsenv/jsenv-core/packages/related/test/tests/test_plan_execution/logs/client/error_in_script.spec.html:11:18
+--------------------------------------
+
+------------------ summary ------------------
+1 execution: all failed
+duration: <mock>
+---------------------------------------------

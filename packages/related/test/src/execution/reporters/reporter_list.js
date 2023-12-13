@@ -1,5 +1,5 @@
 import stripAnsi from "strip-ansi";
-import wrapAnsi from "wrap-ansi";
+// import wrapAnsi from "wrap-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
 import {
   createLog,
@@ -197,12 +197,12 @@ const renderExecutionLog = (execution, logOptions) => {
       log += `\n${errorOutput}`;
     }
   }
-  const { columns = 80 } = process.stdout;
-  log = wrapAnsi(log, columns, {
-    trim: false,
-    hard: true,
-    wordWrap: false,
-  });
+  // const { columns = 80 } = process.stdout;
+  // log = wrapAnsi(log, columns, {
+  //   trim: false,
+  //   hard: true,
+  //   wordWrap: false,
+  // });
   return log;
 };
 
