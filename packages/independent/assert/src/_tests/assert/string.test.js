@@ -16,9 +16,10 @@ my name is Flore`;
 --- details ---
 Hello,
 my name is Damien
-           ^ unexpected "D", expected to continue with "Flore"
+           ^
+unexpected "D", expected to continue with "Flore"
 --- path ---
-actual[18]#L2C12`,
+actual`,
     );
   }
 }
@@ -44,11 +45,12 @@ Hello europa
 1abcdefghijklmnopqrstuvwx
 2abcdefghijklmnopqrstuvwxy
 Hello world
-      ^ unexpected "w", expected to continue with "europa"…
+      ^
+unexpected "w", expected to continue with "europa"…
 3abcdefghijklmnopqrstuvwxy
 4abcdefghijklmnopqrstuvwxy
 --- path ---
-actual[59]#L3C7`,
+actual`,
     );
   }
 }
@@ -79,9 +81,10 @@ actual[59]#L3C7`,
 4abcdefghijklmnopqrstuvwxy
 5abcdefghijklmnopqrstuvwxy
 [Hello world]abcdefghijklmnopqrstuvwxyz
-       ^ unexpected "w", expected to continue with "france]abcdefgh"…
+       ^
+unexpected "w", expected to continue with "france]abcdefgh"…
 --- path ---
-actual[140]#L6C8`,
+actual`,
     );
   }
 }
@@ -97,9 +100,10 @@ actual[140]#L6C8`,
       `unexpected character in string
 --- details ---
 …ode_modules/@jsenv/assert/src/internal/something.js
-                                        ^ unexpected "s", expected to continue with "/something.js"
+                                        ^
+unexpected "s", expected to continue with "/something.js"
 --- path ---
-actual[79]`,
+actual`,
     );
   }
 }
@@ -116,9 +120,10 @@ c`;
       `unexpected character in string
 --- details ---
 abc
-  ^ unexpected "c", expected to continue with "\\nc"
+  ^
+unexpected "c", expected to continue with "\\nc"
 --- path ---
-actual[2]`,
+actual`,
     );
   }
 }
@@ -134,9 +139,10 @@ actual[2]`,
       `unexpected character in string
 --- details ---
 \\t 
-^ unexpected "\\t", expected to continue with "  "
+^
+unexpected "\\t", expected to continue with "  "
 --- path ---
-actual[0]`,
+actual`,
     );
   }
 }
@@ -153,7 +159,8 @@ actual[0]`,
       `string is too short, one character is missing
 --- details ---
 a
- ^ expected to continue with "b"
+ ^
+expected to continue with "b"
 --- path ---
 actual`,
     );
@@ -171,7 +178,8 @@ actual`,
       `string is too short, 2 characters are missing
 --- details ---
 
-^ expected to continue with "aa"
+^
+expected to continue with "aa"
 --- path ---
 actual`,
     );
@@ -192,7 +200,8 @@ I am benjamin`;
 --- details ---
 Hello,
 I am ben
-        ^ expected to continue with "jamin"
+        ^
+expected to continue with "jamin"
 --- path ---
 actual`,
     );
@@ -214,7 +223,8 @@ I am ben`;
 --- details ---
 Hello,
 I am benjamin
-       ^ expected to end here, on "n"
+       ^
+expected to end here, on "n"
 --- path ---
 actual`,
     );
@@ -232,7 +242,8 @@ actual`,
       `string is too long, it contains one extra character
 --- details ---
 hey/
-  ^ expected to end here, on "y"
+  ^
+expected to end here, on "y"
 --- path ---
 actual`,
     );
@@ -250,7 +261,8 @@ actual`,
       `string is too long, it contains 2 extra characters
 --- details ---
 aa
-^ an empty string was expected
+^
+an empty string was expected
 --- path ---
 actual`,
     );
@@ -268,7 +280,8 @@ actual`,
       `string is too long, it contains one extra character
 --- details ---
 \\x7F
-^ an empty string was expected
+^
+an empty string was expected
 --- path ---
 actual`,
     );
@@ -288,7 +301,8 @@ b`;
       `string is too long, it contains one extra character
 --- details ---
 a
- ^ expected to end here, on "\\n"
+ ^
+expected to end here, on "\\n"
 b
 --- path ---
 actual`,

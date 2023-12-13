@@ -39,12 +39,6 @@ export const formatStringAssertionErrorMessage = ({
   path = "",
   name = "string",
 }) => {
-  const enrichPath = (path, index, line, column) => {
-    if (line === 0 && column < 100) {
-      return `${path}[${index}]`;
-    }
-    return `${path}[${index}]#L${line + 1}C${column + 1}`;
-  };
   const actualQuote = determineQuote(actual);
   const formatActualChar = (char) => {
     return inspectChar(char, { quote: actualQuote, preserveLineBreaks: true });
@@ -118,8 +112,8 @@ export const formatStringAssertionErrorMessage = ({
       const annotationColumn =
         columnStart === 0 ? columnIndex : columnIndex - columnStart;
       const annotationIndentation = " ".repeat(annotationColumn);
-      details += `\n${annotationIndentation}`;
-      details += `${annotationLabel}`;
+      details += `\n${annotationIndentation}${COLUMN_MARKER_CHAR}`;
+      details += `\n${annotationLabel}`;
       if (expectedOverview) {
         details += ` ${expectedQuote}`;
         // put expected chars
@@ -182,11 +176,11 @@ export const formatStringAssertionErrorMessage = ({
         let message = `unexpected character in ${name}`;
         return createDetailedMessage(message, {
           ...formatDetails({
-            annotationLabel: `${COLUMN_MARKER_CHAR} unexpected ${inspect(
+            annotationLabel: `unexpected ${inspect(
               actualChar,
             )}, expected to continue with`,
           }),
-          path: enrichPath(path, i, lineIndex, columnIndex),
+          path,
         });
       }
       if (isLineBreak(actualChar)) {
@@ -209,7 +203,7 @@ export const formatStringAssertionErrorMessage = ({
       }
       return createDetailedMessage(message, {
         ...formatDetails({
-          annotationLabel: `${COLUMN_MARKER_CHAR} expected to continue with`,
+          annotationLabel: `expected to continue with`,
         }),
         path,
       });
@@ -226,7 +220,7 @@ export const formatStringAssertionErrorMessage = ({
     }
     let annotationLabel;
     if (expectedLength === 0) {
-      annotationLabel = `${COLUMN_MARKER_CHAR} an empty string was expected`;
+      annotationLabel = `an empty string was expected`;
     } else {
       if (columnIndex === 0) {
         lineIndex--;
@@ -234,7 +228,7 @@ export const formatStringAssertionErrorMessage = ({
       } else {
         columnIndex--;
       }
-      annotationLabel = `${COLUMN_MARKER_CHAR} expected to end here, on ${inspect(
+      annotationLabel = `expected to end here, on ${inspect(
         expected[expectedLength - 1],
       )}`;
     }
