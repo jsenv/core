@@ -15,6 +15,12 @@ export const inspectFileContent = ({
 } = {}) => {
   const lineStrings = content.split(/\r?\n/);
   if (line === 0) line = 1;
+  if (column === undefined) {
+    columnMarker = false;
+    column = 1;
+  }
+  if (column === 0) column = 1;
+
   let lineStartIndex = line - 1 - linesAbove;
   if (lineStartIndex < 0) {
     lineStartIndex = 0;
@@ -23,16 +29,14 @@ export const inspectFileContent = ({
   if (lineEndIndex > lineStrings.length - 1) {
     lineEndIndex = lineStrings.length - 1;
   }
+  if (columnMarker) {
+    // human reader deduce the line when there is a column marker
+    lineMarker = false;
+  }
   if (line - 1 === lineEndIndex) {
     lineMarker = false; // useless because last line
   }
   let lineIndex = lineStartIndex;
-
-  if (column === undefined) {
-    columnMarker = false;
-    column = 1;
-  }
-  if (column === 0) column = 1;
 
   let columnsBefore;
   let columnsAfter;
