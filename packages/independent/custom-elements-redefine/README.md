@@ -13,6 +13,8 @@ The goal is to make code using custom elements compatible with hot reloading: ab
 It fixes issues like https://github.com/lit/lit/issues/1844
 This package is a modified version of https://github.com/vegarringdal/custom-elements-hmr-polyfill
 
+# Usage
+
 ```js
 import { allowCustomElementsRedefine } from "@jsenv/custom-elements-redefine";
 
