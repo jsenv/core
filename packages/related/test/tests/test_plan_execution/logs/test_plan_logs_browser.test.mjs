@@ -1,7 +1,7 @@
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
-import { executeTestPlan, chromium, firefox } from "@jsenv/test";
+import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
 
 // disable on windows because unicode symbols like
 // "✔" are "√" because unicode is supported returns false
@@ -15,8 +15,11 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const test = async (name, params) => {
-  const logFileUrl = new URL(`./snapshots/${name}`, import.meta.url);
+const test = async (filename, params) => {
+  const logFileUrl = new URL(
+    `./snapshots/browser/${filename}.txt`,
+    import.meta.url,
+  );
   const logFileSnapshot = takeFileSnapshot(logFileUrl);
   await executeTestPlan({
     logs: {
@@ -26,6 +29,19 @@ const test = async (name, params) => {
       fileUrl: logFileUrl,
     },
     rootDirectoryUrl: new URL("./client/", import.meta.url),
+    testPlan: {
+      [filename]: {
+        chromium: {
+          runtime: chromium(),
+        },
+        firefox: {
+          runtime: firefox(),
+        },
+        webkit: {
+          runtime: webkit(),
+        },
+      },
+    },
     githubCheck: false,
     webServer: {
       origin: devServer.origin,
@@ -35,33 +51,5 @@ const test = async (name, params) => {
   logFileSnapshot.compare();
 };
 
-await test("browser_chromium.txt", {
-  testPlan: {
-    "./a.spec.html": {
-      chrome: {
-        runtime: chromium(),
-      },
-    },
-  },
-});
-await test("browser_console.txt", {
-  testPlan: {
-    "./console.spec.html": {
-      chromium: {
-        runtime: chromium(),
-      },
-    },
-  },
-});
-await test("browser_many.txt", {
-  testPlan: {
-    "./a.spec.html": {
-      chromium: {
-        runtime: chromium(),
-      },
-      firefox: {
-        runtime: firefox(),
-      },
-    },
-  },
-});
+await test("console.spec.html");
+await test("empty.spec.html");
