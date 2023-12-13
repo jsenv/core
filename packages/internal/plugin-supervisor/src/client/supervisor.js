@@ -966,6 +966,7 @@ window.__supervisor__ = (() => {
                   }
                   const codeFrame = await response.text();
                   exception.codeFrame = codeFrame;
+                  renderException();
                   return;
                 }
               } catch (e) {
