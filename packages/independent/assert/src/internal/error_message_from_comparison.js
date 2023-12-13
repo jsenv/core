@@ -14,7 +14,7 @@ import { arrayLengthComparisonToMessage } from "./error_message/array_length.js"
 import { stringsComparisonToErrorMessage } from "./error_message/strings.js";
 import { betweenComparisonToMessage } from "./error_message/between.js";
 
-export const errorMessageFromComparison = (comparison) => {
+export const errorMessageFromComparison = (comparison, { format }) => {
   const failedComparison = deepestComparison(comparison);
   const errorMessageFromCandidates = firstFunctionReturningSomething(
     [
@@ -34,30 +34,29 @@ export const errorMessageFromComparison = (comparison) => {
       betweenComparisonToMessage,
     ],
     failedComparison,
+    { format },
   );
   return (
     errorMessageFromCandidates ||
-    defaultComparisonToErrorMessage(failedComparison)
+    defaultComparisonToErrorMessage(failedComparison, { format })
   );
 };
 
 const deepestComparison = (comparison) => {
   let current = comparison;
-
   while (current) {
     const { children } = current;
     if (children.length === 0) break;
     current = children[children.length - 1];
   }
-
   return current;
 };
 
-const firstFunctionReturningSomething = (fnCandidates, failedComparison) => {
+const firstFunctionReturningSomething = (fnCandidates, ...args) => {
   let i = 0;
   while (i < fnCandidates.length) {
     const fnCandidate = fnCandidates[i];
-    const returnValue = fnCandidate(failedComparison);
+    const returnValue = fnCandidate(...args);
     if (returnValue !== null && returnValue !== undefined) {
       return returnValue;
     }

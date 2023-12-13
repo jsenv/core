@@ -10,7 +10,7 @@ import {
 import { errorMessageFromComparison } from "./internal/error_message_from_comparison.js";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
-export const createAssert = () => {
+export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
     if (args.length === 0) {
       throw new Error(
@@ -55,7 +55,8 @@ export const createAssert = () => {
     };
     const comparison = compare(expectation, { checkPropertiesOrder });
     if (comparison.failed) {
-      let errorMessage = message || errorMessageFromComparison(comparison);
+      let errorMessage =
+        message || errorMessageFromComparison(comparison, { format });
       errorMessage = appendDetails(errorMessage, details);
       const error = createAssertionError(errorMessage);
       if (Error.captureStackTrace) {
@@ -115,6 +116,7 @@ export const createAssert = () => {
     return objectWithoutPrototype;
   };
 
+  assert.format = format;
   assert.isAssertionError = isAssertionError;
   assert.createAssertionError = createAssertionError;
 

@@ -9,7 +9,7 @@ let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 30;
 
-export const stringsComparisonToErrorMessage = (comparison) => {
+export const stringsComparisonToErrorMessage = (comparison, { format }) => {
   const isStartsWithComparison = comparison.type === "starts_with";
 
   if (comparison.type !== "identity" && !isStartsWithComparison) {
@@ -30,6 +30,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     expected,
     path,
     name,
+    format,
   });
 };
 
@@ -38,6 +39,7 @@ export const formatStringAssertionErrorMessage = ({
   expected,
   path = "",
   name = "string",
+  format,
 }) => {
   const actualQuote = determineQuote(actual);
   const formatActualChar = (char) => {
@@ -89,6 +91,7 @@ export const formatStringAssertionErrorMessage = ({
       const lineSource = lineStrings[index];
       if (lineNumbersOnTheLeft) {
         let asideSource = `${fillRight(index + 1, lineAfterEnd)} |`;
+        asideSource = format(asideSource, "line_number_aside");
         details += `${asideSource} `;
       }
 
@@ -134,7 +137,8 @@ export const formatStringAssertionErrorMessage = ({
       }
       annotationIndentation += " ".repeat(annotationColumn);
 
-      details += `\n${annotationIndentation}${COLUMN_MARKER_CHAR}`;
+      details += `\n${annotationIndentation}`;
+      details += format(COLUMN_MARKER_CHAR, "column_marker_char");
       details += `\n${annotationLabel}`;
       if (expectedOverview) {
         details += ` ${expectedQuote}`;
