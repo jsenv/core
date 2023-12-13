@@ -5,16 +5,18 @@
   <pre class="text">AssertionError: unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]
-    at <a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A12')">file:///js_module_inline_assertion_error/main.html:13:12</a>
+actual
+  at <a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A12')">file:///js_module_inline_assertion_error/main.html:13:12</a>
 
 <a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A12')">file:///js_module_inline_assertion_error/main.html:13:12</a>
-  12 | 
-> 13 |       assert({
-                  ^
-  14 |         actual: "foo",</pre>
+10 |     <script type="module">
+11 |       import { assert } from "@jsenv/assert";
+12 | 
+13 |       assert({
+                ^</pre>
   <div class="tip">
     Click outside to close.
   </div>
