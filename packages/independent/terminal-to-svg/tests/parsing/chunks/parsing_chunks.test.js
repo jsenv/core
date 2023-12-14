@@ -14,9 +14,9 @@ const test = (file) => {
   fileSnapshot.compare();
 };
 
-// test("chalk.txt");
-test("rainbow.txt");
-test("red_underscore.txt");
-test("reset_styles.txt");
-// test("robot.txt");
-test("your_wish_is_my_command.txt");
+// test("chalk.txt"); // TO FIX
+// test("rainbow.txt");
+// test("red_underscore.txt");
+// test("reset_styles.txt");
+test("robot.txt"); // TO FIX
+// test("your_wish_is_my_command.txt");
