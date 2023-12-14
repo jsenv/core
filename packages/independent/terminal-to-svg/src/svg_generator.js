@@ -1,12 +1,11 @@
 import he from "he";
 
-export const startGeneratingSvg = () => {
-  const createElement = (name) => {
+export const startGeneratingSvg = (attributes) => {
+  const createElement = (name, attributes = {}) => {
     const isSelfClosing = selfClosingTags.includes(name);
     const canReceiveChild = name !== "text" && !isSelfClosing;
     const canReceiveContent = name === "text" || name === "style";
 
-    const attributes = {};
     const children = [];
     const setAttributes = (namedValues) => {
       Object.assign(attributes, namedValues);
@@ -103,7 +102,7 @@ export const startGeneratingSvg = () => {
     return node;
   };
 
-  return createElement("svg");
+  return createElement("svg", attributes);
 };
 
 const selfClosingTags = ["path", "rect"];

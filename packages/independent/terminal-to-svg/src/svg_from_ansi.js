@@ -39,6 +39,7 @@ const colorsDefault = {
 export const svgFromAnsi = (
   ansi,
   {
+    title = "ansi to terminal",
     // Font: (use monospace fonts for best results)
     fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
     fontFace,
@@ -46,12 +47,12 @@ export const svgFromAnsi = (
     fontSize = 14,
     lineHeight = 18,
     paddingTop = 0,
-    paddingLeft = 0,
+    paddingLeft = 10,
     paddingBottom = 0,
-    paddingRight = 0,
+    paddingRight = 10,
 
-    globalBackgroundColor = "#000000",
-    globalForegroundColor = "#D3D3D3",
+    globalBackgroundColor = "#282c34",
+    globalForegroundColor = "#abb2bf",
     colors = colorsDefault,
   } = {},
 ) => {
@@ -66,36 +67,85 @@ export const svgFromAnsi = (
     emHeightAscent: 10.5546875,
     emHeightDescent: 3.4453125,
   };
+  const topBarHeight = 40;
   const textAreaWidth = columns * font.width;
   const textAreaHeight = rows * (font.lineHeight + 1) + font.emHeightDescent;
   const globalWidth = paddingLeft + textAreaWidth + paddingRight;
-  const globalHeight = paddingTop + textAreaHeight + paddingBottom;
+  const globalHeight =
+    paddingTop + topBarHeight + textAreaHeight + paddingBottom;
   const offsetTop = paddingTop + font.lineHeight - font.emHeightDescent;
   const offsetLeft = paddingLeft;
 
-  const svg = startGeneratingSvg();
-  svg.setAttributes({
+  const svg = startGeneratingSvg({
     "xmlns": "http://www.w3.org/2000/svg",
     "font-family": font.family,
     "font-size": font.size,
     "viewBox": `0, 0, ${globalWidth}, ${globalHeight}`,
     "backgroundColor": globalBackgroundColor,
   });
-  const g = svg.createElement("g");
-  g.setAttributes({
-    fill: globalForegroundColor,
-  });
-  svg.appendChild(g);
 
-  const rect = svg.createElement("rect");
-  rect.setAttributes({
-    x: 0,
-    y: 0,
-    width: globalWidth,
-    height: globalHeight,
-    fill: globalBackgroundColor,
+  const backgroundRect = svg.createElement("rect", {
+    "x": 1,
+    "y": 1,
+    "width": globalWidth,
+    "height": globalHeight,
+    "fill": globalBackgroundColor,
+    "stroke": "rgba(255,255,255,0.35)",
+    "stroke-width": 1,
+    "rx": 8,
   });
-  g.appendChild(rect);
+  svg.appendChild(backgroundRect);
+
+  top_bar: {
+    const topbarGroup = svg.createElement("g", {
+      id: "top_bar",
+    });
+    const iconsGroup = svg.createElement("g", {
+      transform: `translate(20,${topBarHeight / 2})`,
+    });
+    const circleA = svg.createElement("circle", {
+      cx: 0,
+      cy: 0,
+      r: 6,
+      fill: "#ff5f57",
+    });
+    iconsGroup.appendChild(circleA);
+    const circleB = svg.createElement("circle", {
+      cx: 20,
+      cy: 0,
+      r: 6,
+      fill: "#febc2e",
+    });
+    iconsGroup.appendChild(circleB);
+    const circleC = svg.createElement("circle", {
+      cx: 40,
+      cy: 0,
+      r: 6,
+      fill: "#28c840",
+    });
+    iconsGroup.appendChild(circleC);
+    topbarGroup.appendChild(iconsGroup);
+
+    const text = svg.createElement("text", {
+      "class": "terminal-3560942001-title",
+      "fill": "#abb2bf",
+      "text-anchor": "middle",
+      "x": globalWidth / 2,
+      "y": topBarHeight / 2,
+    });
+    text.setContent(title);
+    topbarGroup.appendChild(text);
+    svg.appendChild(topbarGroup);
+  }
+
+  const mainGroup = svg.createElement("g", {
+    "id": "main",
+    "fill": globalForegroundColor,
+    "transform": `translate(0, ${topBarHeight})`,
+    "font-family": "monospace",
+    "font-variant-east-asian": "full-width",
+  });
+  svg.appendChild(mainGroup);
 
   for (const chunk of chunks) {
     const { type, value, style } = chunk;
@@ -121,8 +171,7 @@ export const svgFromAnsi = (
     }
     if (style.backgroundColor) {
       const backgroundColor = colors[style.backgroundColor];
-      const rect = svg.createElement("rect");
-      rect.setAttributes({
+      const rect = svg.createElement("rect", {
         x,
         y: y - font.lineHeight + font.emHeightDescent,
         width: w,
@@ -130,7 +179,7 @@ export const svgFromAnsi = (
         fill: backgroundColor,
         ...(opacity ? { opacity } : {}),
       });
-      g.appendChild(rect);
+      mainGroup.appendChild(rect);
     }
 
     let foregroundColor;
@@ -146,23 +195,21 @@ export const svgFromAnsi = (
       const yOffset = font.height * 0.14;
       const ys = y - -yOffset;
       const xw = x + w;
-      const path = svg.createElement("path");
-      path.setAttributes({
+      const path = svg.createElement("path", {
         d: `M${x},${ys} L${xw},${ys} Z`,
         stroke: foregroundColor || globalForegroundColor,
       });
-      g.appendChild(path);
+      mainGroup.appendChild(path);
     }
     if (style.strikethrough) {
       const yOffset = font.height * 0.3;
       const ys = y - yOffset;
       const xw = x + w;
-      const path = svg.createElement("path");
-      path.setAttributes({
+      const path = svg.createElement("path", {
         d: `M${x},${ys} L${xw},${ys} Z`,
         stroke: foregroundColor || globalForegroundColor,
       });
-      g.appendChild(path);
+      mainGroup.appendChild(path);
     }
 
     // Do not output elements containing whitespace with no style
@@ -173,14 +220,13 @@ export const svgFromAnsi = (
       continue;
     }
 
-    const text = svg.createElement("text");
-    text.setAttributes({
+    const text = svg.createElement("text", {
       x,
       y,
       ...attrs,
     });
     text.setContent(value);
-    g.appendChild(text);
+    mainGroup.appendChild(text);
   }
 
   return svg.renderAsString();
