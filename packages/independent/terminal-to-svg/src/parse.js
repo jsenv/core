@@ -110,6 +110,47 @@ export const parse = (ansi) => {
     hidden: false,
     strikethrough: false,
   };
+  const decoratorEffects = {
+    foregroundColorOpen: (color) => styleStack.foregroundColor.push(color),
+    foregroundColorClose: () => styleStack.foregroundColor.pop(),
+    backgroundColorOpen: (color) => styleStack.backgroundColor.push(color),
+    backgroundColorClose: () => styleStack.backgroundColor.pop(),
+    boldOpen: () => styleStack.boldDim.push("bold"),
+    dimOpen: () => styleStack.boldDim.push("dim"),
+    boldDimClose: () => styleStack.boldDim.pop(),
+    italicOpen: () => {
+      styleState.italic = true;
+    },
+    italicClose: () => {
+      styleState.italic = false;
+    },
+    underlineOpen: () => {
+      styleState.underline = true;
+    },
+    underlineClose: () => {
+      styleState.underline = false;
+    },
+    inverseOpen: () => {
+      styleState.inverse = true;
+    },
+    inverseClose: () => {
+      styleState.inverse = false;
+    },
+    strikethroughOpen: () => {
+      styleState.strikethrough = true;
+    },
+    strikethroughClose: () => {
+      styleState.strikethrough = false;
+    },
+    reset: () => {
+      styleState.strikethrough = false;
+      styleState.inverse = false;
+      styleState.italic = false;
+      styleStack.boldDim = [];
+      styleStack.backgroundColor = [];
+      styleStack.foregroundColor = [];
+    },
+  };
 
   let x = 0;
   let y = 0;
@@ -186,7 +227,6 @@ export const parse = (ansi) => {
       nPlain += 1;
       continue;
     }
-
     // Text characters
     if (delimiters.includes(word) === false) {
       const chunk = bundle("text", word);
@@ -197,88 +237,22 @@ export const parse = (ansi) => {
       nPlain += word.length;
       continue;
     }
-
     // ANSI Escape characters
     const ansiTag = ansiTags[word];
     const decorator = decorators[ansiTag];
-    const color = ansiTag;
-
-    if (decorator === "foregroundColorOpen") {
-      styleStack.foregroundColor.push(color);
+    if (decorator) {
+      const decoratorEffect = decoratorEffects[decorator];
+      if (decoratorEffect) {
+        decoratorEffect(ansiTag);
+      }
     }
-
-    if (decorator === "foregroundColorClose") {
-      styleStack.foregroundColor.pop();
-    }
-
-    if (decorator === "backgroundColorOpen") {
-      styleStack.backgroundColor.push(color);
-    }
-
-    if (decorator === "backgroundColorClose") {
-      styleStack.backgroundColor.pop();
-    }
-
-    if (decorator === "boldOpen") {
-      styleStack.boldDim.push("bold");
-    }
-
-    if (decorator === "dimOpen") {
-      styleStack.boldDim.push("dim");
-    }
-
-    if (decorator === "boldDimClose") {
-      styleStack.boldDim.pop();
-    }
-
-    if (decorator === "italicOpen") {
-      styleState.italic = true;
-    }
-
-    if (decorator === "italicClose") {
-      styleState.italic = false;
-    }
-
-    if (decorator === "underlineOpen") {
-      styleState.underline = true;
-    }
-
-    if (decorator === "underlineClose") {
-      styleState.underline = false;
-    }
-
-    if (decorator === "inverseOpen") {
-      styleState.inverse = true;
-    }
-
-    if (decorator === "inverseClose") {
-      styleState.inverse = false;
-    }
-
-    if (decorator === "strikethroughOpen") {
-      styleState.strikethrough = true;
-    }
-
-    if (decorator === "strikethroughClose") {
-      styleState.strikethrough = false;
-    }
-
-    if (decorator === "reset") {
-      styleState.strikethrough = false;
-      styleState.inverse = false;
-      styleState.italic = false;
-      styleStack.boldDim = [];
-      styleStack.backgroundColor = [];
-      styleStack.foregroundColor = [];
-    }
-
     const chunk = bundle("ansi", {
       tag: ansiTag,
       ansi: word,
       decorator,
     });
-
     result.chunks.push(chunk);
+
     nAnsi += word.length;
   }
 
