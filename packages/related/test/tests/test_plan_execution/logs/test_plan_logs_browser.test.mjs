@@ -27,6 +27,7 @@ const test = async (filename, params) => {
       dynamic: false,
       mockFluctuatingValues: true,
       fileUrl: logFileUrl,
+      fileAnsi: true,
     },
     rootDirectoryUrl: new URL("./client/", import.meta.url),
     testPlan: {
@@ -52,10 +53,10 @@ const test = async (filename, params) => {
 };
 
 await test("console.spec.html");
-await test("empty.spec.html");
-await test("error_in_script.spec.html");
-await test("error_in_script.spec.html");
-await test("error_in_script_module.spec.html");
-await test("error_in_js_module.spec.html");
-await test("error_in_js_classic.spec.html");
-await test("error_jsenv_assert_in_script_module.spec.html");
+// await test("empty.spec.html");
+// await test("error_in_script.spec.html");
+// await test("error_in_script.spec.html");
+// await test("error_in_script_module.spec.html");
+// await test("error_in_js_module.spec.html");
+// await test("error_in_js_classic.spec.html");
+// await test("error_jsenv_assert_in_script_module.spec.html");

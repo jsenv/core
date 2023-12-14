@@ -27,7 +27,7 @@ export const listReporter = ({ logger, logs }) => {
     if (logger.levels.info) {
       process.stdout.write(log);
     }
-    rawOutput += stripAnsi(log);
+    rawOutput += logs.fileAnsi ? log : stripAnsi(log);
     writeFileSync(logs.fileUrl, rawOutput);
   };
 

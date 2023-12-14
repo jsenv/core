@@ -47,6 +47,7 @@ const logsDefault = {
   memoryUsage: true,
   mockFluctuatingValues: false, // used for snapshot testing logs
   fileUrl: undefined,
+  fileAnsi: false,
 };
 const githubCheckDefault = {
   logLevel: "info",
