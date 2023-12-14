@@ -1,7 +1,7 @@
 import ansiRegex from "ansi-regex";
 import stripAnsi from "strip-ansi";
 
-export const parse = (ansi) => {
+export const parseAnsi = (ansi) => {
   const plainText = stripAnsi(ansi);
   const lines = plainText.split("\n");
   const rows = lines.length;

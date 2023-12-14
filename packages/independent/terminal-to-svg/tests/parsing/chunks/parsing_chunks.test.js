@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { parse } from "@jsenv/terminal-to-svg/src/parse.js";
+import { parseAnsi } from "@jsenv/terminal-to-svg/src/parse_ansi.js";
 
 const test = (file) => {
   const fixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
@@ -9,7 +9,7 @@ const test = (file) => {
 
   const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
   const fixtureFileContent = readFileSync(fixtureFileUrl, "utf8");
-  const { chunks } = parse(fixtureFileContent);
+  const { chunks } = parseAnsi(fixtureFileContent);
   writeFileSync(snapshotFileUrl, JSON.stringify(chunks, null, "  "));
   fileSnapshot.compare();
 };

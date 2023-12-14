@@ -5,6 +5,9 @@
     ".": "./src/terminal_to_svg.js",
     "./*": "./*"
   },
+  "scripts": {
+    "test": "node ./scripts/test.mjs"
+  },
   "dependencies": {
     "ansi-regex": "6.0.1",
     "strip-ansi": "7.1.0"
