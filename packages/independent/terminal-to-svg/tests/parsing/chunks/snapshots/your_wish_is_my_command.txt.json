@@ -1,5 +1,16 @@
 [
   {
+    "type": "text",
+    "value": "Your ",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {}
+  },
+  {
     "type": "ansi",
     "value": {
       "tag": "red",
@@ -7,10 +18,10 @@
       "decorator": "foregroundColorOpen"
     },
     "position": {
-      "x": 0,
+      "x": 5,
       "y": 0,
-      "n": 0,
-      "raw": 0
+      "n": 5,
+      "raw": 5
     },
     "style": {
       "foregroundColor": "red"
@@ -18,12 +29,12 @@
   },
   {
     "type": "text",
-    "value": "RED",
+    "value": "wish",
     "position": {
-      "x": 0,
+      "x": 5,
       "y": 0,
-      "n": 0,
-      "raw": 5
+      "n": 5,
+      "raw": 10
     },
     "style": {
       "foregroundColor": "red"
@@ -37,10 +48,21 @@
       "decorator": "foregroundColorClose"
     },
     "position": {
-      "x": 3,
+      "x": 9,
       "y": 0,
-      "n": 3,
-      "raw": 8
+      "n": 9,
+      "raw": 14
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": " is",
+    "position": {
+      "x": 9,
+      "y": 0,
+      "n": 9,
+      "raw": 19
     },
     "style": {}
   },
@@ -48,40 +70,51 @@
     "type": "newline",
     "value": "\n",
     "position": {
-      "x": 3,
+      "x": 12,
       "y": 0,
-      "n": 3,
-      "raw": 13
-    }
-  },
-  {
-    "type": "ansi",
-    "value": {
-      "tag": "bgGreen",
-      "ansi": "\u001b[42m",
-      "decorator": "backgroundColorOpen"
-    },
-    "position": {
-      "x": 0,
-      "y": 1,
-      "n": 4,
-      "raw": 14
-    },
-    "style": {
-      "backgroundColor": "bgGreen"
+      "n": 12,
+      "raw": 22
     }
   },
   {
     "type": "text",
-    "value": "GREEN",
+    "value": " ",
     "position": {
       "x": 0,
       "y": 1,
-      "n": 4,
-      "raw": 19
+      "n": 13,
+      "raw": 23
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "bgYellow",
+      "ansi": "\u001b[43m",
+      "decorator": "backgroundColorOpen"
+    },
+    "position": {
+      "x": 1,
+      "y": 1,
+      "n": 14,
+      "raw": 24
     },
     "style": {
-      "backgroundColor": "bgGreen"
+      "backgroundColor": "bgYellow"
+    }
+  },
+  {
+    "type": "text",
+    "value": "my",
+    "position": {
+      "x": 1,
+      "y": 1,
+      "n": 14,
+      "raw": 29
+    },
+    "style": {
+      "backgroundColor": "bgYellow"
     }
   },
   {
@@ -92,10 +125,21 @@
       "decorator": "backgroundColorClose"
     },
     "position": {
-      "x": 5,
+      "x": 3,
       "y": 1,
-      "n": 9,
-      "raw": 24
+      "n": 16,
+      "raw": 31
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": " command.",
+    "position": {
+      "x": 3,
+      "y": 1,
+      "n": 16,
+      "raw": 36
     },
     "style": {}
   }
