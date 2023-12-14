@@ -49,6 +49,12 @@ export const startGeneratingSvg = () => {
               ) {
                 attributeValue = round(attributeValue);
               }
+              if (attributeName === "viewBox") {
+                attributeValue = attributeValue
+                  .split(",")
+                  .map((v) => round(parseFloat(v.trim())))
+                  .join(", ");
+              }
               nodeString += ` ${attributeName}="${attributeValue}"`;
             }
           }
