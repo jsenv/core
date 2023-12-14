@@ -39,20 +39,17 @@ export const startGeneratingSvg = () => {
 
           write_attributes: {
             const attributeNames = Object.keys(node.attributes);
-            if (attributeNames.length) {
-              nodeString += " ";
-              for (const attributeName of attributeNames) {
-                let attributeValue = node.attributes[attributeName];
-                if (
-                  attributeName === "width" ||
-                  attributeName === "height" ||
-                  attributeName === "x" ||
-                  attributeName === "y"
-                ) {
-                  attributeValue = round(attributeValue);
-                }
-                nodeString += `${attributeName}="${attributeValue}"`;
+            for (const attributeName of attributeNames) {
+              let attributeValue = node.attributes[attributeName];
+              if (
+                attributeName === "width" ||
+                attributeName === "height" ||
+                attributeName === "x" ||
+                attributeName === "y"
+              ) {
+                attributeValue = round(attributeValue);
               }
+              nodeString += ` ${attributeName}="${attributeValue}"`;
             }
           }
 
@@ -76,9 +73,9 @@ export const startGeneratingSvg = () => {
           }
           write_children: {
             if (node.children.length > 0) {
-              nodeString += "\n  ";
-              nodeString += "  ".repeat(depth);
               for (const child of node.children) {
+                nodeString += "\n  ";
+                nodeString += "  ".repeat(depth);
                 nodeString += renderNode(child, {
                   depth: depth + 1,
                 });
@@ -87,7 +84,7 @@ export const startGeneratingSvg = () => {
               nodeString += "  ".repeat(depth);
             }
           }
-          nodeString += `</${name}>`;
+          nodeString += `</${node.name}>`;
           return nodeString;
         };
 

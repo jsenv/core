@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" viewBox="0, 0, 630.1025390625, 896.4453125" backgroundColor="#000000">
+  <g fill="#D3D3D3">
+    <rect x="0" y="0" width="630.1" height="896.45" fill="#000000"/>
+    <text x="0" y="14.55" fill="#A9A9A9">------------</text>
+    <text x="109.22" y="14.55"> 3 executions to run </text>
+    <text x="277.25" y="14.55" fill="#A9A9A9">------------</text>
+    <text x="0" y="33.55">1 with chromium (chromium@120.0.6099.28)</text>
+    <text x="0" y="52.55">1 with firefox (firefox@119.0)</text>
+    <text x="0" y="71.55">1 with webkit (webkit@17.4)</text>
+    <text x="0" y="90.55" fill="#A9A9A9">---------------------------------------------</text>
+    <text x="0" y="128.55" fill="#32CD32">&#x2714; console.spec.html</text>
+    <text x="168.03" y="128.55"> [</text>
+    <text x="176.43" y="128.55" fill="#A9A9A9">chromium</text>
+    <text x="243.64" y="128.55" fill="#A9A9A9">/</text>
+    <text x="252.04" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+    <text x="302.45" y="128.55" fill="#A9A9A9">/</text>
+    <text x="310.85" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+    <text x="361.26" y="128.55">] 1/3 (1 </text>
+    <text x="436.87" y="128.55" fill="#32CD32">completed</text>
+    <text x="512.48" y="128.55">, 2 remaining)</text>
+    <text x="0" y="147.55" fill="#A9A9A9">-----</text>
+    <text x="50.41" y="147.55"> console (</text>
+    <text x="126.02" y="147.55" fill="#B22222">&#x2716;</text>
+    <text x="142.82" y="147.55"> 1 </text>
+    <text x="159.63" y="147.55" fill="#DAA520">&#x26A0;</text>
+    <text x="176.43" y="147.55"> 3 </text>
+    <text x="193.23" y="147.55" fill="#4169E1">&#x2139;</text>
+    <text x="210.03" y="147.55"> 1 </text>
+    <text x="226.84" y="147.55" fill="#A9A9A9">&#x25C6;</text>
+    <text x="243.64" y="147.55"> 1) </text>
+    <text x="268.84" y="147.55" fill="#A9A9A9">------</text>
+    <text x="0" y="166.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="166.55"> toto</text>
+    <text x="0" y="185.55" fill="#B22222">&#x2716;</text>
+    <text x="16.8" y="185.55"> hey</text>
+    <text x="0" y="204.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="204.55"> hey</text>
+    <text x="16.8" y="223.55">  ho</text>
+    <text x="0" y="242.55" fill="#4169E1">&#x2139;</text>
+    <text x="16.8" y="242.55"> info</text>
+    <text x="0" y="261.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="261.55"> test</text>
+    <text x="16.8" y="280.55">  multiline</text>
+    <text x="0" y="299.55" fill="#A9A9A9">&#x25C6;</text>
+    <text x="16.8" y="299.55"> verbose log</text>
+    <text x="16.8" y="318.55">  la</text>
+    <text x="0" y="337.55" fill="#A9A9A9">--------------------------------------</text>
+    <text x="0" y="356.55" fill="#32CD32">&#x2714; console.spec.html</text>
+    <text x="168.03" y="356.55"> [</text>
+    <text x="176.43" y="356.55" fill="#A9A9A9">firefox</text>
+    <text x="235.24" y="356.55" fill="#A9A9A9">/</text>
+    <text x="243.64" y="356.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+    <text x="294.05" y="356.55">] 2/3 (2 </text>
+    <text x="369.66" y="356.55" fill="#32CD32">completed</text>
+    <text x="445.27" y="356.55">, 1 remaining)</text>
+    <text x="0" y="375.55" fill="#A9A9A9">-----</text>
+    <text x="50.41" y="375.55"> console (</text>
+    <text x="126.02" y="375.55" fill="#B22222">&#x2716;</text>
+    <text x="142.82" y="375.55"> 1 </text>
+    <text x="159.63" y="375.55" fill="#DAA520">&#x26A0;</text>
+    <text x="176.43" y="375.55"> 3 </text>
+    <text x="193.23" y="375.55" fill="#4169E1">&#x2139;</text>
+    <text x="210.03" y="375.55"> 1 </text>
+    <text x="226.84" y="375.55" fill="#A9A9A9">&#x25C6;</text>
+    <text x="243.64" y="375.55"> 1) </text>
+    <text x="268.84" y="375.55" fill="#A9A9A9">------</text>
+    <text x="0" y="394.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="394.55"> toto</text>
+    <text x="0" y="413.55" fill="#B22222">&#x2716;</text>
+    <text x="16.8" y="413.55"> hey</text>
+    <text x="0" y="432.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="432.55"> hey</text>
+    <text x="16.8" y="451.55">  ho</text>
+    <text x="0" y="470.55" fill="#4169E1">&#x2139;</text>
+    <text x="16.8" y="470.55"> info</text>
+    <text x="0" y="489.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="489.55"> test</text>
+    <text x="16.8" y="508.55">  multiline</text>
+    <text x="0" y="527.55" fill="#A9A9A9">&#x25C6;</text>
+    <text x="16.8" y="527.55"> verbose log</text>
+    <text x="16.8" y="546.55">  la</text>
+    <text x="0" y="565.55" fill="#A9A9A9">--------------------------------------</text>
+    <text x="0" y="584.55" fill="#32CD32">&#x2714; console.spec.html</text>
+    <text x="168.03" y="584.55"> [</text>
+    <text x="176.43" y="584.55" fill="#A9A9A9">webkit</text>
+    <text x="226.84" y="584.55" fill="#A9A9A9">/</text>
+    <text x="235.24" y="584.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+    <text x="285.65" y="584.55">] 3/3 (all </text>
+    <text x="378.06" y="584.55" fill="#32CD32">completed</text>
+    <text x="453.67" y="584.55">)</text>
+    <text x="0" y="603.55" fill="#A9A9A9">-----</text>
+    <text x="50.41" y="603.55"> console (</text>
+    <text x="126.02" y="603.55" fill="#B22222">&#x2716;</text>
+    <text x="142.82" y="603.55"> 1 </text>
+    <text x="159.63" y="603.55" fill="#DAA520">&#x26A0;</text>
+    <text x="176.43" y="603.55"> 3 </text>
+    <text x="193.23" y="603.55" fill="#4169E1">&#x2139;</text>
+    <text x="210.03" y="603.55"> 1 </text>
+    <text x="226.84" y="603.55" fill="#A9A9A9">&#x25C6;</text>
+    <text x="243.64" y="603.55"> 1) </text>
+    <text x="268.84" y="603.55" fill="#A9A9A9">------</text>
+    <text x="0" y="622.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="622.55"> toto</text>
+    <text x="0" y="641.55" fill="#B22222">&#x2716;</text>
+    <text x="16.8" y="641.55"> hey</text>
+    <text x="0" y="660.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="660.55"> hey</text>
+    <text x="16.8" y="679.55">  ho</text>
+    <text x="0" y="698.55" fill="#4169E1">&#x2139;</text>
+    <text x="16.8" y="698.55"> info</text>
+    <text x="0" y="717.55" fill="#DAA520">&#x26A0;</text>
+    <text x="16.8" y="717.55"> test</text>
+    <text x="16.8" y="736.55">  multiline</text>
+    <text x="0" y="755.55" fill="#A9A9A9">&#x25C6;</text>
+    <text x="16.8" y="755.55"> verbose log</text>
+    <text x="16.8" y="774.55">  la</text>
+    <text x="0" y="793.55" fill="#A9A9A9">--------------------------------------</text>
+    <text x="0" y="831.55" fill="#A9A9A9">------------------</text>
+    <text x="159.63" y="831.55"> summary </text>
+    <text x="226.84" y="831.55" fill="#A9A9A9">------------------</text>
+    <text x="0" y="850.55">3 executions: all </text>
+    <text x="151.22" y="850.55" fill="#32CD32">completed</text>
+    <text x="0" y="869.55">duration: &#x3C;mock&#x3E;</text>
+    <text x="0" y="888.55" fill="#A9A9A9">---------------------------------------------</text>
+  </g>
+</svg>

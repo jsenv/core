@@ -4,14 +4,17 @@ import { takeFileSnapshot } from "@jsenv/snapshot";
 import { parseAnsi } from "@jsenv/terminal-to-svg/src/parse_ansi.js";
 
 const test = (file) => {
-  const fixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
-  const snapshotFileUrl = new URL(`./snapshots/${file}.json`, import.meta.url);
+  const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
+  const jsonSnapshotFileUrl = new URL(
+    `./snapshots/${file}.json`,
+    import.meta.url,
+  );
 
-  const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
-  const fixtureFileContent = readFileSync(fixtureFileUrl, "utf8");
-  const { chunks } = parseAnsi(fixtureFileContent);
-  writeFileSync(snapshotFileUrl, JSON.stringify(chunks, null, "  "));
-  fileSnapshot.compare();
+  const jsonFileSnapshot = takeFileSnapshot(jsonSnapshotFileUrl);
+  const ansi = readFileSync(ansiFixtureFileUrl, "utf8");
+  const { chunks } = parseAnsi(ansi);
+  writeFileSync(jsonSnapshotFileUrl, JSON.stringify(chunks, null, "  "));
+  jsonFileSnapshot.compare();
 };
 
 test("chalk.txt");
