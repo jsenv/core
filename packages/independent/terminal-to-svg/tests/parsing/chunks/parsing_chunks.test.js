@@ -14,7 +14,7 @@ const test = (file) => {
   fileSnapshot.compare();
 };
 
-// test("chalk.txt"); // TO FIX
+test("chalk.txt");
 test("rainbow.txt");
 test("red_underscore.txt");
 test("reset_styles.txt");

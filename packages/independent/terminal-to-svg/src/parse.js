@@ -80,29 +80,24 @@ export const parse = (ansi) => {
     backgroundColor: [],
     boldDim: [],
   };
-
   const getForegroundColor = () => {
     if (styleStack.foregroundColor.length > 0) {
       return styleStack.foregroundColor[styleStack.foregroundColor.length - 1];
     }
     return false;
   };
-
   const getBackgroundColor = () => {
     if (styleStack.backgroundColor.length > 0) {
       return styleStack.backgroundColor[styleStack.backgroundColor.length - 1];
     }
     return false;
   };
-
   const getDim = () => {
     return styleStack.boldDim.includes("dim");
   };
-
   const getBold = () => {
     return styleStack.boldDim.includes("bold");
   };
-
   const styleState = {
     italic: false,
     underline: false,

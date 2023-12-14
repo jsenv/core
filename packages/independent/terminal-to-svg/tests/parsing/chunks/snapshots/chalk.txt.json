@@ -4004,15 +4004,5 @@
     "style": {
       "foregroundColor": "whiteBright"
     }
-  },
-  {
-    "type": "newline",
-    "value": "\n",
-    "position": {
-      "x": 136,
-      "y": 4,
-      "n": 650,
-      "raw": 1487
-    }
   }
 ]
