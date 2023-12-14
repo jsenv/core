@@ -21,7 +21,59 @@ export const parse = (ansi) => {
     chunks: [],
   };
 
-  const { ansies, words } = atomize(ansi);
+  let words;
+  const delimiters = [];
+  {
+    const matches = ansi.match(ansiRegex()) || [];
+    for (const match of matches) {
+      if (!delimiters.includes(match)) {
+        delimiters.push(match);
+      }
+    }
+    delimiters.push("\n");
+
+    const splitString = (str, delimiter) => {
+      const result = [];
+      let index = 0;
+      const parts = str.split(delimiter);
+      for (const part of parts) {
+        result.push(part);
+        if (index < parts.length - 1) {
+          result.push(delimiter);
+        }
+        index++;
+      }
+      return result;
+    };
+    const splitArray = (array, delimiter) => {
+      let result = [];
+      for (const part of array) {
+        let subRes = splitString(part, delimiter);
+        subRes = subRes.filter((str) => {
+          return Boolean(str);
+        });
+        result = result.concat(subRes);
+      }
+      return result;
+    };
+    const superSplit = (splittable, delimiters) => {
+      if (delimiters.length === 0) {
+        return splittable;
+      }
+      if (typeof splittable === "string") {
+        const delimiter = delimiters[delimiters.length - 1];
+        const split = splitString(splittable, delimiter);
+        return superSplit(split, delimiters.slice(0, -1));
+      }
+      if (Array.isArray(splittable)) {
+        const delimiter = delimiters[delimiters.length - 1];
+        const split = splitArray(splittable, delimiter);
+        return superSplit(split, delimiters.slice(0, -1));
+      }
+      return false;
+    };
+    words = superSplit(ansi, delimiters);
+  }
 
   const styleStack = {
     foregroundColor: [],
@@ -136,7 +188,7 @@ export const parse = (ansi) => {
     }
 
     // Text characters
-    if (ansies.includes(word) === false) {
+    if (delimiters.includes(word) === false) {
       const chunk = bundle("text", word);
       result.chunks.push(chunk);
 
@@ -347,25 +399,4 @@ const decorators = {
   strikethroughClose: "strikethroughClose",
 
   reset: "reset",
-};
-
-const atomize = (text) => {
-  const ansies = Array.from(new Set(text.match(ansiRegex())));
-  const delimiters = ansies.concat(["\n"]);
-  const words = [];
-  for (const delimiter of delimiters) {
-    const parts = ansies.split(delimiter);
-    let index = 0;
-    for (const part of parts) {
-      words.push(part);
-      if (index < parts.length - 1) {
-        words.push(delimiter);
-      }
-      index++;
-    }
-  }
-  return {
-    ansies,
-    words,
-  };
 };
