@@ -1,0 +1,12 @@
+{
+  "name": "@jsenv/terminal-to-svg",
+  "type": "module",
+  "exports": {
+    ".": "./src/terminal_to_svg.js",
+    "./*": "./*"
+  },
+  "dependencies": {
+    "ansi-regex": "6.0.1",
+    "strip-ansi": "7.1.0"
+  }
+}
