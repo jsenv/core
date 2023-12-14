@@ -93,28 +93,29 @@ export const svgFromAnsi = (
     y: 0,
     width: globalWidth,
     height: globalHeight,
-    color: globalBackgroundColor,
+    fill: globalBackgroundColor,
   });
   g.appendChild(rect);
 
   for (const chunk of chunks) {
-    const { type, value, position, style } = chunk;
+    const { type, value, style } = chunk;
     if (type !== "text") {
       continue;
     }
 
+    const { position } = chunk;
     const x = offsetLeft + adjustXforWhitespace(value, position.x) * font.width;
     const y = offsetTop + (position.y + font.lineHeight * position.y);
     const w = font.width * value.length;
-    const fontStyle = {};
     const attrs = {};
-    let opacity = 1;
     if (style.bold) {
       attrs["font-weight"] = "bold";
     }
     if (style.italic) {
       attrs["font-style"] = "italic";
     }
+
+    let opacity = 1;
     if (style.dim) {
       opacity = 0.5;
     }
@@ -126,7 +127,7 @@ export const svgFromAnsi = (
         y: y - font.lineHeight + font.emHeightDescent,
         width: w,
         height: font.lineHeight + 1,
-        color: backgroundColor,
+        fill: backgroundColor,
         ...(opacity ? { opacity } : {}),
       });
       g.appendChild(rect);
@@ -148,7 +149,7 @@ export const svgFromAnsi = (
       const path = svg.createElement("path");
       path.setAttributes({
         d: `M${x},${ys} L${xw},${ys} Z`,
-        color: foregroundColor || globalForegroundColor,
+        stroke: foregroundColor || globalForegroundColor,
       });
       g.appendChild(path);
     }
@@ -159,7 +160,7 @@ export const svgFromAnsi = (
       const path = svg.createElement("path");
       path.setAttributes({
         d: `M${x},${ys} L${xw},${ys} Z`,
-        color: foregroundColor || globalForegroundColor,
+        stroke: foregroundColor || globalForegroundColor,
       });
       g.appendChild(path);
     }
@@ -176,7 +177,7 @@ export const svgFromAnsi = (
     text.setAttributes({
       x,
       y,
-      fontStyle,
+      ...attrs,
     });
     text.setContent(value);
     g.appendChild(text);
