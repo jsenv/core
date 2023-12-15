@@ -1,8 +1,8 @@
 {
-  "name": "@jsenv/terminal-to-svg",
+  "name": "@jsenv/terminal-snapshot",
   "type": "module",
   "exports": {
-    ".": "./src/render_terminal_svg.js",
+    ".": "./src/terminal_snapshot.js",
     "./*": "./*"
   },
   "scripts": {
