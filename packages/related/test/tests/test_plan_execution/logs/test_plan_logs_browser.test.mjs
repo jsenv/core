@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
@@ -15,48 +17,55 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
+
 const test = async (filename, params) => {
-  const logFileUrl = new URL(
-    `./snapshots/browser/${filename}.txt`,
+  const terminalSnapshotFileUrl = new URL(
+    `./snapshots/browser/${filename}.svg`,
     import.meta.url,
   );
-  const logFileSnapshot = takeFileSnapshot(logFileUrl);
-  await executeTestPlan({
-    logs: {
-      level: "warn",
-      dynamic: false,
-      mockFluctuatingValues: true,
-      fileUrl: logFileUrl,
-      fileAnsi: true,
-    },
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    testPlan: {
-      [filename]: {
-        chromium: {
-          runtime: chromium(),
-        },
-        firefox: {
-          runtime: firefox(),
-        },
-        webkit: {
-          runtime: webkit(),
+  const terminalFileSnapshot = takeFileSnapshot(terminalSnapshotFileUrl);
+  {
+    let stdout = "";
+    const { write } = process.stdout;
+    process.stdout.write = (...args) => {
+      stdout += args;
+    };
+    await executeTestPlan({
+      logs: {
+        dynamic: false,
+        mockFluctuatingValues: true,
+      },
+      rootDirectoryUrl: new URL("./client/", import.meta.url),
+      testPlan: {
+        [filename]: {
+          chromium: {
+            runtime: chromium(),
+          },
+          firefox: {
+            runtime: firefox(),
+          },
+          webkit: {
+            runtime: webkit(),
+          },
         },
       },
-    },
-    githubCheck: false,
-    webServer: {
-      origin: devServer.origin,
-    },
-    ...params,
-  });
-  logFileSnapshot.compare();
+      githubCheck: false,
+      webServer: {
+        origin: devServer.origin,
+      },
+      ...params,
+    });
+    process.stdout.write = write;
+    writeFileSync(terminalSnapshotFileUrl, await renderTerminalSvg(stdout));
+  }
+  terminalFileSnapshot.compare();
 };
 
 await test("console.spec.html");
-// await test("empty.spec.html");
-// await test("error_in_script.spec.html");
-// await test("error_in_script.spec.html");
-// await test("error_in_script_module.spec.html");
-// await test("error_in_js_module.spec.html");
-// await test("error_in_js_classic.spec.html");
-// await test("error_jsenv_assert_in_script_module.spec.html");
+await test("empty.spec.html");
+await test("error_in_script.spec.html");
+await test("error_in_script.spec.html");
+await test("error_in_script_module.spec.html");
+await test("error_in_js_module.spec.html");
+await test("error_in_js_classic.spec.html");
+await test("error_jsenv_assert_in_script_module.spec.html");

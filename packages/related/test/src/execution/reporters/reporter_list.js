@@ -27,8 +27,11 @@ export const listReporter = ({ logger, logs }) => {
     if (logger.levels.info) {
       process.stdout.write(log);
     }
-    rawOutput += logs.fileAnsi ? log : stripAnsi(log);
-    writeFileSync(logs.fileUrl, rawOutput);
+    rawOutput += stripAnsi(log);
+    // ansiOutput += log;
+    if (logs.fileUrl) {
+      writeFileSync(logs.fileUrl, rawOutput);
+    }
   };
 
   const logOptions = {
@@ -155,15 +158,15 @@ const getGroupRenderedName = (groupInfo, logOptions) => {
 };
 
 /*
- *                         label
- *       ┌───────────────────┴────────────────────────────────┐
- *       │                           │                        │
- *   description                runtime info                  │
- *  ┌────┴─────┐               ┌─────┴───────┐                │
- *  │          │               │       │     │                │
- * icon      file            group duration memory intermediate summary
- * ┌┴┐┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
- *  ✔ tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
+ *                                 label
+ *           ┌───────────────────────┴────────────────────────────────┐
+ *           │                               │                        │
+ *       description                     runtime info                 │
+ *  ┌────────┴─────────┐               ┌─────┴───────┐                │
+ *  │                  │               │       │     │                │
+ * icon number        file            group duration memory intermediate summary
+ * ┌┴┐┌───┴─┐ ┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
+ *  ✔ 001/100 tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
  *  ------- console (i1 ✖1) -------
  *  i info
  *  ✖ error
@@ -224,9 +227,6 @@ const renderExecutionLabel = (execution, logOptions) => {
   // intersummary
   if (logOptions.intermediateSummary) {
     let intermediateSummary = "";
-    const number = execution.index + 1;
-    const total = execution.countersInOrder.planified;
-    intermediateSummary += `${number}/${total}`;
     intermediateSummary += ` (${renderStatusRepartition(
       execution.countersInOrder,
     )})`;
@@ -242,30 +242,48 @@ const descriptionFormatters = {
   executing: ({ fileRelativeUrl }) => {
     return ANSI.color(`${fileRelativeUrl}`, COLOR_EXECUTING);
   },
-  aborted: ({ fileRelativeUrl }) => {
+  aborted: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total);
+
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${fileRelativeUrl}`,
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
       COLOR_ABORTED,
     );
   },
-  timedout: ({ fileRelativeUrl, params }) => {
+  timedout: ({ index, countersInOrder, fileRelativeUrl, params }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total);
+
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${fileRelativeUrl} timeout after ${params.allocatedMs}ms`,
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl} timeout after ${params.allocatedMs}ms`,
       COLOR_TIMEOUT,
     );
   },
-  failed: ({ fileRelativeUrl }) => {
+  failed: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total);
+
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${fileRelativeUrl}`,
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
       COLOR_FAILED,
     );
   },
-  completed: ({ fileRelativeUrl }) => {
-    return ANSI.color(`${UNICODE.OK_RAW} ${fileRelativeUrl}`, COLOR_COMPLETED);
-  },
-  cancelled: ({ fileRelativeUrl }) => {
+  completed: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total);
+
     return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${fileRelativeUrl}`,
+      `${UNICODE.OK_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_COMPLETED,
+    );
+  },
+  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total);
+
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
       COLOR_CANCELLED,
     );
   },

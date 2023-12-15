@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import {
@@ -13,33 +15,40 @@ if (process.platform === "win32") {
 }
 
 const test = async (filename, params) => {
-  const logFileUrl = new URL(
-    `./snapshots/node/${filename}.txt`,
+  const terminalSnapshotFileUrl = new URL(
+    `./snapshots/node/${filename}.svg`,
     import.meta.url,
   );
-  const logFileSnapshot = takeFileSnapshot(logFileUrl);
-  await executeTestPlan({
-    logs: {
-      level: "warn",
-      dynamic: false,
-      mockFluctuatingValues: true,
-      fileUrl: logFileUrl,
-    },
-    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-    testPlan: {
-      [filename]: {
-        worker_thread: {
-          runtime: nodeWorkerThread(),
-        },
-        child_process: {
-          runtime: nodeChildProcess(),
+  const terminalFileSnapshot = takeFileSnapshot(terminalSnapshotFileUrl);
+  {
+    let stdout = "";
+    const { write } = process.stdout;
+    process.stdout.write = (...args) => {
+      stdout += args;
+    };
+    await executeTestPlan({
+      logs: {
+        dynamic: false,
+        mockFluctuatingValues: true,
+      },
+      rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+      testPlan: {
+        [filename]: {
+          worker_thread: {
+            runtime: nodeWorkerThread(),
+          },
+          child_process: {
+            runtime: nodeChildProcess(),
+          },
         },
       },
-    },
-    githubCheck: false,
-    ...params,
-  });
-  logFileSnapshot.compare();
+      githubCheck: false,
+      ...params,
+    });
+    process.stdout.write = write;
+    writeFileSync(terminalSnapshotFileUrl, await renderTerminalSvg(stdout));
+  }
+  terminalFileSnapshot.compare();
 };
 
 await test("console.spec.js");

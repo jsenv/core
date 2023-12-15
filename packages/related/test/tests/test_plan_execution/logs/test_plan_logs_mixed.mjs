@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
 
@@ -23,23 +25,33 @@ const devServer = await startDevServer({
   port: 0,
 });
 const test = async (name, params) => {
-  const logFileUrl = new URL(`./snapshots/mixed/${name}`, import.meta.url);
-  const logFileSnapshot = takeFileSnapshot(logFileUrl);
-  await executeTestPlan({
-    logs: {
-      level: "warn",
-      dynamic: false,
-      mockFluctuatingValues: true,
-      fileUrl: logFileUrl,
-    },
-    rootDirectoryUrl: new URL("./", import.meta.url),
-    webServer: {
-      origin: devServer.origin,
-    },
-    githubCheck: false,
-    ...params,
-  });
-  logFileSnapshot.compare();
+  const terminalSnapshotFileUrl = new URL(
+    `./snapshots/mixed/${name}.svg`,
+    import.meta.url,
+  );
+  const terminalFileSnapshot = takeFileSnapshot(terminalSnapshotFileUrl);
+  {
+    let stdout = "";
+    const { write } = process.stdout;
+    process.stdout.write = (...args) => {
+      stdout += args;
+    };
+    await executeTestPlan({
+      logs: {
+        dynamic: false,
+        mockFluctuatingValues: true,
+      },
+      rootDirectoryUrl: new URL("./", import.meta.url),
+      webServer: {
+        origin: devServer.origin,
+      },
+      githubCheck: false,
+      ...params,
+    });
+    process.stdout.write = write;
+    writeFileSync(terminalSnapshotFileUrl, await renderTerminalSvg(stdout));
+  }
+  terminalFileSnapshot.compare();
 };
 
 await test("empty.txt", {
