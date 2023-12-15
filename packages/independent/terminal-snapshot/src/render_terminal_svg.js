@@ -55,7 +55,10 @@ export const renderTerminalSvg = (
     foregroundColor = "#abb2bf",
     colors = colorsDefault,
 
-    maxWidth = 640,
+    // by default: fixed width of 640 + fluid height maxed to 480
+    width = 640,
+    height,
+    maxWidth,
     maxHeight = 480,
   } = {},
 ) => {
@@ -74,18 +77,36 @@ export const renderTerminalSvg = (
   const headerHeight = 40;
   const textWidth = columns * font.width;
   const textHeight = rows * (font.lineHeight + 1) + font.emHeightDescent;
-  const contentWidth = paddingLeft + textWidth + paddingRight;
-  const contentHeight = paddingTop + headerHeight + textHeight + paddingBottom;
-  const width = contentWidth > maxWidth ? maxWidth : contentWidth;
-  const height = contentHeight > maxHeight ? maxHeight : contentHeight;
+  const bodyContentWidth = paddingLeft + textWidth + paddingRight;
+  const bodyContentHeight = paddingTop + textHeight + paddingBottom;
+  const contentWidth = bodyContentWidth;
+  const contentHeight = headerHeight + bodyContentHeight;
+
+  let computedWidth;
+  if (typeof width === "number") {
+    computedWidth = width;
+  } else {
+    computedWidth = contentWidth;
+  }
+  if (typeof maxWidth === "number" && computedWidth > maxWidth) {
+    computedWidth = maxWidth;
+  }
+  let computedHeight;
+  if (typeof height === "number") {
+    computedHeight = height;
+  } else {
+    computedHeight = contentHeight;
+  }
+  if (typeof maxHeight === "number" && computedHeight > maxHeight) {
+    computedHeight = maxHeight;
+  }
 
   const svg = startGeneratingSvg({
     "xmlns": "http://www.w3.org/2000/svg",
     "font-family": font.family,
     "font-size": font.size,
-    width,
-    height,
-    // "viewBox": `0, 0, ${globalWidth}, ${globalHeight}`,
+    "width": computedWidth,
+    "height": computedHeight,
     backgroundColor,
   });
 
@@ -96,8 +117,8 @@ export const renderTerminalSvg = (
     const backgroundRect = svg.createElement("rect", {
       "x": 1,
       "y": 1,
-      "width": width - 2,
-      "height": height - 2,
+      "width": computedWidth - 2,
+      "height": computedHeight - 2,
       "fill": backgroundColor,
       "stroke": "rgba(255,255,255,0.35)",
       "stroke-width": 1,
@@ -141,7 +162,7 @@ export const renderTerminalSvg = (
       "class": "terminal-3560942001-title",
       "fill": "#abb2bf",
       "text-anchor": "middle",
-      "x": width / 2,
+      "x": computedWidth / 2,
       "y": headerHeight / 2,
     });
     text.setContent(title);
@@ -150,28 +171,29 @@ export const renderTerminalSvg = (
   }
 
   body: {
+    const bodyComputedHeight = computedHeight - headerHeight + paddingBottom;
     const foreignObject = svg.createElement("foreignObject", {
       id: "body",
       y: headerHeight,
-      width: paddingLeft + width + paddingRight,
-      height: height - headerHeight + paddingBottom,
+      width: "100%",
+      height: bodyComputedHeight,
       overflow: "auto",
     });
+
     svg.appendChild(foreignObject);
     const bodySvg = svg.createElement("svg", {
-      "x": paddingLeft,
-      "width": paddingLeft + textWidth + paddingRight,
-      "height": textHeight,
+      "width": bodyContentWidth,
+      "height": bodyContentHeight,
       "font-family": "monospace",
       "font-variant-east-asian": "full-width",
       "fill": foregroundColor,
     });
     foreignObject.appendChild(bodySvg);
 
+    const offsetLeft = paddingLeft;
+    const offsetTop = paddingTop + font.lineHeight - font.emHeightDescent;
     const textContainer = svg.createElement("g", {
-      transform: `translate(${paddingLeft}, ${
-        paddingTop + font.lineHeight - font.emHeightDescent
-      })`,
+      // transform: `translate(${paddingLeft}, ${offsetTop})`,
     });
     bodySvg.appendChild(textContainer);
 
@@ -182,8 +204,9 @@ export const renderTerminalSvg = (
       }
 
       const { position } = chunk;
-      const x = adjustXforWhitespace(value, position.x) * font.width;
-      const y = position.y + font.lineHeight * position.y;
+      const x =
+        offsetLeft + adjustXforWhitespace(value, position.x) * font.width;
+      const y = offsetTop + position.y + font.lineHeight * position.y;
       const w = font.width * value.length;
       const attrs = {};
       if (style.bold) {
