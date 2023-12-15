@@ -1,15 +1,17 @@
 import he from "he";
 
-export const startGeneratingSvg = (attributes) => {
-  const createElement = (name, attributes = {}) => {
+const createXmlGenerator = ({
+  rootNodeName,
+  canSelfCloseNames = [],
+  canReceiveChildNames = [],
+  canReceiveContentNames = [],
+}) => {
+  const createNode = (name, attributes = {}) => {
     const canSelfClose = canSelfCloseNames.includes(name);
     const canReceiveChild = canReceiveChildNames.includes(name);
     const canReceiveContent = canReceiveContentNames.includes(name);
 
     const children = [];
-    const setAttributes = (namedValues) => {
-      Object.assign(attributes, namedValues);
-    };
 
     const node = {
       name,
@@ -17,13 +19,13 @@ export const startGeneratingSvg = (attributes) => {
       children,
       attributes,
       canSelfClose,
-      setAttributes,
-      createElement,
+      createNode,
       appendChild: (childNode) => {
         if (!canReceiveChild) {
           throw new Error(`cannot appendChild into ${name}`);
         }
         children.push(childNode);
+        return childNode;
       },
       setContent: (value) => {
         if (!canReceiveContent) {
@@ -118,12 +120,23 @@ export const startGeneratingSvg = (attributes) => {
     return node;
   };
 
-  return createElement("svg", attributes);
+  return (rootNodeAttributes) => createNode(rootNodeName, rootNodeAttributes);
 };
 
-const canSelfCloseNames = ["path", "rect", "circle"];
-const canReceiveChildNames = ["svg", "foreignObject", "g"];
-const canReceiveContentNames = ["text", "style"];
+export const createSvgRootNode = createXmlGenerator({
+  rootNodeName: "svg",
+  canSelfCloseNames: ["path", "rect", "circle"],
+  canReceiveChildNames: ["svg", "foreignObject", "g"],
+  canReceiveContentNames: ["text", "style"],
+});
+
+export const createXmlRootNode = createXmlGenerator({
+  rootNodeName: "xml",
+});
+
+export const createHtmlRootNode = createXmlGenerator({
+  rootNodeName: "html",
+});
 
 // Round: Make number values smaller in output
 // Eg: 14.23734 becomes 14.24

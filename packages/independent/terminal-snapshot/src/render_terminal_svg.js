@@ -1,5 +1,5 @@
 import { parseAnsi } from "./parse_ansi.js";
-import { startGeneratingSvg } from "./svg_generator.js";
+import { createSvgRootNode } from "./xml_generator.js";
 
 const colorsDefault = {
   black: "#000000",
@@ -101,7 +101,7 @@ export const renderTerminalSvg = (
     computedHeight = maxHeight;
   }
 
-  const svg = startGeneratingSvg({
+  const svg = createSvgRootNode({
     "xmlns": "http://www.w3.org/2000/svg",
     "font-family": font.family,
     "font-size": font.size,
@@ -111,10 +111,10 @@ export const renderTerminalSvg = (
   });
 
   background: {
-    const backgroundGroup = svg.createElement("g", {
+    const backgroundGroup = svg.createNode("g", {
       id: "background",
     });
-    const backgroundRect = svg.createElement("rect", {
+    const backgroundRect = svg.createNode("rect", {
       "x": 1,
       "y": 1,
       "width": computedWidth - 2,
@@ -129,27 +129,27 @@ export const renderTerminalSvg = (
   }
 
   header: {
-    const headerGroup = svg.createElement("g", {
+    const headerGroup = svg.createNode("g", {
       id: "header",
     });
-    const iconsGroup = svg.createElement("g", {
+    const iconsGroup = svg.createNode("g", {
       transform: `translate(20,${headerHeight / 2})`,
     });
-    const circleA = svg.createElement("circle", {
+    const circleA = svg.createNode("circle", {
       cx: 0,
       cy: 0,
       r: 6,
       fill: "#ff5f57",
     });
     iconsGroup.appendChild(circleA);
-    const circleB = svg.createElement("circle", {
+    const circleB = svg.createNode("circle", {
       cx: 20,
       cy: 0,
       r: 6,
       fill: "#febc2e",
     });
     iconsGroup.appendChild(circleB);
-    const circleC = svg.createElement("circle", {
+    const circleC = svg.createNode("circle", {
       cx: 40,
       cy: 0,
       r: 6,
@@ -158,7 +158,7 @@ export const renderTerminalSvg = (
     iconsGroup.appendChild(circleC);
     headerGroup.appendChild(iconsGroup);
 
-    const text = svg.createElement("text", {
+    const text = svg.createNode("text", {
       "class": "terminal-3560942001-title",
       "fill": "#abb2bf",
       "text-anchor": "middle",
@@ -172,7 +172,7 @@ export const renderTerminalSvg = (
 
   body: {
     const bodyComputedHeight = computedHeight - headerHeight + paddingBottom;
-    const foreignObject = svg.createElement("foreignObject", {
+    const foreignObject = svg.createNode("foreignObject", {
       id: "body",
       y: headerHeight,
       width: "100%",
@@ -185,7 +185,7 @@ export const renderTerminalSvg = (
     });
 
     svg.appendChild(foreignObject);
-    const bodySvg = svg.createElement("svg", {
+    const bodySvg = svg.createNode("svg", {
       "width": bodyContentWidth,
       "height": bodyContentHeight,
       "font-family": "monospace",
@@ -196,7 +196,7 @@ export const renderTerminalSvg = (
 
     const offsetLeft = paddingLeft;
     const offsetTop = paddingTop + font.lineHeight - font.emHeightDescent;
-    const textContainer = svg.createElement("g", {
+    const textContainer = svg.createNode("g", {
       // transform: `translate(${paddingLeft}, ${offsetTop})`,
     });
     bodySvg.appendChild(textContainer);
@@ -226,7 +226,7 @@ export const renderTerminalSvg = (
       }
       if (style.backgroundColor) {
         const backgroundColor = colors[style.backgroundColor];
-        const rect = svg.createElement("rect", {
+        const rect = svg.createNode("rect", {
           x,
           y: y - font.lineHeight + font.emHeightDescent,
           width: w,
@@ -250,7 +250,7 @@ export const renderTerminalSvg = (
         const yOffset = font.height * 0.14;
         const ys = y - -yOffset;
         const xw = x + w;
-        const path = svg.createElement("path", {
+        const path = svg.createNode("path", {
           d: `M${x},${ys} L${xw},${ys} Z`,
           stroke: textForegroundColor || foregroundColor,
         });
@@ -260,7 +260,7 @@ export const renderTerminalSvg = (
         const yOffset = font.height * 0.3;
         const ys = y - yOffset;
         const xw = x + w;
-        const path = svg.createElement("path", {
+        const path = svg.createNode("path", {
           d: `M${x},${ys} L${xw},${ys} Z`,
           stroke: textForegroundColor || foregroundColor,
         });
@@ -275,7 +275,7 @@ export const renderTerminalSvg = (
         continue;
       }
 
-      const text = svg.createElement("text", {
+      const text = svg.createNode("text", {
         x,
         y,
         ...attrs,
