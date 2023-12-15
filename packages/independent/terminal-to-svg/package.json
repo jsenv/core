@@ -2,7 +2,7 @@
   "name": "@jsenv/terminal-to-svg",
   "type": "module",
   "exports": {
-    ".": "./src/terminal_to_svg.js",
+    ".": "./src/render_terminal_svg.js",
     "./*": "./*"
   },
   "scripts": {

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { svgFromAnsi } from "@jsenv/terminal-to-svg/src/svg_from_ansi.js";
+import { renderTerminalSvg } from "@jsenv/terminal-to-svg";
 
 const test = (file) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
@@ -12,7 +12,7 @@ const test = (file) => {
 
   const svgFileSnapshot = takeFileSnapshot(svgSnapshotFileUrl);
   const ansi = readFileSync(ansiFixtureFileUrl, "utf8");
-  const svgString = svgFromAnsi(ansi);
+  const svgString = renderTerminalSvg(ansi);
   writeFileSync(svgSnapshotFileUrl, svgString);
   svgFileSnapshot.compare();
 };

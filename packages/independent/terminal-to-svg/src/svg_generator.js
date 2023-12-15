@@ -38,23 +38,39 @@ export const startGeneratingSvg = (attributes) => {
 
           write_attributes: {
             const attributeNames = Object.keys(node.attributes);
-            for (const attributeName of attributeNames) {
-              let attributeValue = node.attributes[attributeName];
-              if (
-                attributeName === "width" ||
-                attributeName === "height" ||
-                attributeName === "x" ||
-                attributeName === "y"
-              ) {
-                attributeValue = round(attributeValue);
+            if (attributeNames.length) {
+              let attributesSingleLine = "";
+              let attributesMultiLine = "";
+
+              for (const attributeName of attributeNames) {
+                let attributeValue = node.attributes[attributeName];
+                if (
+                  attributeName === "width" ||
+                  attributeName === "height" ||
+                  attributeName === "x" ||
+                  attributeName === "y"
+                ) {
+                  attributeValue = round(attributeValue);
+                }
+                if (attributeName === "viewBox") {
+                  attributeValue = attributeValue
+                    .split(",")
+                    .map((v) => round(parseFloat(v.trim())))
+                    .join(", ");
+                }
+                attributesSingleLine += ` ${attributeName}="${attributeValue}"`;
+                attributesMultiLine += `\n  `;
+                attributesMultiLine += "  ".repeat(depth);
+                attributesMultiLine += `${attributeName}="${attributeValue}"`;
               }
-              if (attributeName === "viewBox") {
-                attributeValue = attributeValue
-                  .split(",")
-                  .map((v) => round(parseFloat(v.trim())))
-                  .join(", ");
+              attributesMultiLine += "\n";
+              attributesMultiLine += "  ".repeat(depth);
+
+              if (attributesSingleLine.length < 100) {
+                nodeString += attributesSingleLine;
+              } else {
+                nodeString += attributesMultiLine;
               }
-              nodeString += ` ${attributeName}="${attributeValue}"`;
             }
           }
 

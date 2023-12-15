@@ -1,6 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" viewBox="0, 0, 650.1, 936.45" backgroundColor="#282c34">
-  <rect x="1" y="1" width="650.1" height="936.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"/>
-  <g id="top_bar">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
+  font-size="14"
+  viewBox="0, 0, 650.1, 936.45"
+  backgroundColor="#282c34"
+>
+  <g id="background">
+    <rect
+      x="1"
+      y="1"
+      width="648.1"
+      height="934.45"
+      fill="#282c34"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="1"
+      rx="8"
+    />
+  </g>
+  <g id="header">
     <g transform="translate(20,20)">
       <circle cx="0" cy="0" r="6" fill="#ff5f57"></circle>
       <circle cx="20" cy="0" r="6" fill="#febc2e"></circle>
@@ -8,7 +25,13 @@
     </g>
     <text class="terminal-3560942001-title" fill="#abb2bf" text-anchor="middle" x="325.05" y="20">ansi to terminal</text>
   </g>
-  <g id="main" fill="#abb2bf" transform="translate(0, 40)" font-family="monospace" font-variant-east-asian="full-width">
+  <g
+    id="body"
+    fill="#abb2bf"
+    transform="translate(0, 40)"
+    font-family="monospace"
+    font-variant-east-asian="full-width"
+  >
     <text x="10" y="14.55" fill="#A9A9A9">------------</text>
     <text x="119.22" y="14.55"> 3 executions to run </text>
     <text x="287.25" y="14.55" fill="#A9A9A9">------------</text>
