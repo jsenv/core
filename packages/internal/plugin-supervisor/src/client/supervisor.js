@@ -613,7 +613,11 @@ window.__supervisor__ = (() => {
           }
         }
         js_syntax_error: {
-          if (exception.name === "SyntaxError" && typeof line === "number") {
+          if (
+            !exception.code &&
+            exception.name === "SyntaxError" &&
+            typeof line === "number"
+          ) {
             exception.code = DYNAMIC_IMPORT_SYNTAX_ERROR;
           }
         }
@@ -631,7 +635,8 @@ window.__supervisor__ = (() => {
         const fileUrlSite = resolveUrlSite({ url, line, column });
         if (
           fileUrlSite.isInline &&
-          exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
+          exception.name === "SyntaxError" &&
+          exception.code !== DYNAMIC_IMPORT_EXPORT_MISSING
         ) {
           // syntax error on inline script need line-1 for some reason
           fileUrlSite.line = fileUrlSite.line - 1;

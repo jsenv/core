@@ -1,6 +1,5 @@
 import { chromium, firefox, webkit } from "playwright";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
-import { createTaskLog } from "@jsenv/log";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 if (process.platform === "win32") {
@@ -17,9 +16,6 @@ const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true });
 
   const generateHtmlForStory = async ({ story }) => {
-    const task = createTaskLog(`snapshoting ${story} on ${browserName}`, {
-      disabled: process.env.CI,
-    });
     const page = await browser.newPage();
     try {
       await page.goto(`${devServer.origin}/${story}/main.html`);
@@ -70,7 +66,9 @@ const test = async ({ browserLauncher, browserName }) => {
         : htmlGenerated,
     );
     await page.close();
-    task.done();
+    if (!process.env.CI) {
+      console.log(`"${story}" snapshot generated for ${browserName}`);
+    }
   };
 
   try {
@@ -142,9 +140,11 @@ try {
     await ensureEmptyDirectory(screenshotsDirectoryUrl);
   }
   await ensureEmptyDirectory(snapshotDirectoryUrl);
-  await test({ browserLauncher: chromium, browserName: "chromium" });
-  await test({ browserLauncher: firefox, browserName: "firefox" });
-  await test({ browserLauncher: webkit, browserName: "webkit" });
+  await Promise.all([
+    test({ browserLauncher: chromium, browserName: "chromium" }),
+    test({ browserLauncher: firefox, browserName: "firefox" }),
+    test({ browserLauncher: webkit, browserName: "webkit" }),
+  ]);
   directorySnapshot.compare();
 } finally {
   devServer.stop();
