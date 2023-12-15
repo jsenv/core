@@ -227,10 +227,8 @@ const renderExecutionLabel = (execution, logOptions) => {
   // intersummary
   if (logOptions.intermediateSummary) {
     let intermediateSummary = "";
-    intermediateSummary += ` (${renderStatusRepartition(
-      execution.countersInOrder,
-    )})`;
-    label += ` ${intermediateSummary}`;
+    intermediateSummary += renderStatusRepartition(execution.countersInOrder);
+    label += ` (${intermediateSummary})`;
   }
 
   return label;

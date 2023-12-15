@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="683.71"
+      width="675.31"
       height="649.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -65,8 +65,8 @@
         <text x="371.26" y="109.55" fill="#A9A9A9">/</text>
         <text x="379.66" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="430.07" y="109.55">] (1 </text>
-        <text x="480.48" y="109.55" fill="#32CD32">completed</text>
-        <text x="556.09" y="109.55">, 1 remaining)</text>
+        <text x="472.08" y="109.55" fill="#32CD32">completed</text>
+        <text x="547.69" y="109.55">, 1 remaining)</text>
         <text x="10" y="128.55" fill="#A9A9A9">-----------</text>
         <text x="110.82" y="128.55"> console (</text>
         <text x="186.43" y="128.55" fill="#B22222">&#x2716;</text>
@@ -98,8 +98,8 @@
         <text x="371.26" y="337.55" fill="#A9A9A9">/</text>
         <text x="379.66" y="337.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="430.07" y="337.55">] (all </text>
-        <text x="497.28" y="337.55" fill="#32CD32">completed</text>
-        <text x="572.89" y="337.55">)</text>
+        <text x="488.88" y="337.55" fill="#32CD32">completed</text>
+        <text x="564.49" y="337.55">)</text>
         <text x="10" y="356.55" fill="#A9A9A9">-----------</text>
         <text x="110.82" y="356.55"> console (</text>
         <text x="186.43" y="356.55" fill="#B22222">&#x2716;</text>
@@ -109,8 +109,8 @@
         <text x="26.8" y="375.55"> toto</text>
         <text x="10" y="394.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="394.55"> hey</text>
+        <text x="10" y="413.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="413.55"> hey</text>
-        <text x="10" y="432.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="432.55"> test</text>
         <text x="26.8" y="451.55"> multiline</text>
         <text x="26.8" y="470.55"> ho</text>

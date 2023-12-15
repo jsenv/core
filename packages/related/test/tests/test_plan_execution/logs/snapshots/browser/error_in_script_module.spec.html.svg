@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="759.32"
+      width="750.92"
       height="725.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -62,8 +62,8 @@
         <text x="472.08" y="128.55" fill="#A9A9A9">/</text>
         <text x="480.48" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="530.88" y="128.55">] (1 </text>
-        <text x="581.29" y="128.55" fill="#B22222">failed</text>
-        <text x="631.7" y="128.55">, 2 remaining)</text>
+        <text x="572.89" y="128.55" fill="#B22222">failed</text>
+        <text x="623.3" y="128.55">, 2 remaining)</text>
         <text x="10" y="147.55" fill="#B22222">---------------</text>
         <text x="144.42" y="147.55"> error </text>
         <text x="194.83" y="147.55" fill="#B22222">----------------</text>
@@ -93,8 +93,8 @@
         <text x="404.86" y="299.55" fill="#A9A9A9">/</text>
         <text x="413.27" y="299.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="463.67" y="299.55">] (2 </text>
-        <text x="514.08" y="299.55" fill="#B22222">failed</text>
-        <text x="564.49" y="299.55">, 1 remaining)</text>
+        <text x="505.68" y="299.55" fill="#B22222">failed</text>
+        <text x="556.09" y="299.55">, 1 remaining)</text>
         <text x="10" y="318.55" fill="#B22222">---------------</text>
         <text x="144.42" y="318.55"> error </text>
         <text x="194.83" y="318.55" fill="#B22222">----------------</text>
@@ -124,8 +124,8 @@
         <text x="396.46" y="470.55" fill="#A9A9A9">/</text>
         <text x="404.86" y="470.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="455.27" y="470.55">] (all </text>
-        <text x="522.48" y="470.55" fill="#B22222">failed</text>
-        <text x="572.89" y="470.55">)</text>
+        <text x="514.08" y="470.55" fill="#B22222">failed</text>
+        <text x="564.49" y="470.55">)</text>
         <text x="10" y="489.55" fill="#B22222">---------------</text>
         <text x="144.42" y="489.55"> error </text>
         <text x="194.83" y="489.55" fill="#B22222">----------------</text>

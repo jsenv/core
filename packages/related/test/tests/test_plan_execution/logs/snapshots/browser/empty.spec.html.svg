@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="641.7"
+      width="633.3"
       height="269.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -62,8 +62,8 @@
         <text x="329.25" y="128.55" fill="#A9A9A9">/</text>
         <text x="337.65" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="388.06" y="128.55">] (1 </text>
-        <text x="438.47" y="128.55" fill="#32CD32">completed</text>
-        <text x="514.08" y="128.55">, 2 remaining)</text>
+        <text x="430.07" y="128.55" fill="#32CD32">completed</text>
+        <text x="505.68" y="128.55">, 2 remaining)</text>
         <text x="10" y="147.55" fill="#32CD32"
           >&#x2714; 2/3 empty.spec.html</text
         >
@@ -72,8 +72,8 @@
         <text x="262.04" y="147.55" fill="#A9A9A9">/</text>
         <text x="270.44" y="147.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="320.85" y="147.55">] (2 </text>
-        <text x="371.26" y="147.55" fill="#32CD32">completed</text>
-        <text x="446.87" y="147.55">, 1 remaining)</text>
+        <text x="362.86" y="147.55" fill="#32CD32">completed</text>
+        <text x="438.47" y="147.55">, 1 remaining)</text>
         <text x="10" y="166.55" fill="#32CD32"
           >&#x2714; 3/3 empty.spec.html</text
         >
@@ -82,8 +82,8 @@
         <text x="253.64" y="166.55" fill="#A9A9A9">/</text>
         <text x="262.04" y="166.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="312.45" y="166.55">] (all </text>
-        <text x="379.66" y="166.55" fill="#32CD32">completed</text>
-        <text x="455.27" y="166.55">)</text>
+        <text x="371.26" y="166.55" fill="#32CD32">completed</text>
+        <text x="446.87" y="166.55">)</text>
         <text x="10" y="204.55" fill="#A9A9A9">------------------</text>
         <text x="169.63" y="204.55"> summary </text>
         <text x="236.84" y="204.55" fill="#A9A9A9">------------------</text>

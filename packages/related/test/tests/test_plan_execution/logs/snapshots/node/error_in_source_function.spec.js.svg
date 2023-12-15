@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="801.33"
+      width="792.93"
       height="535.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -65,8 +65,8 @@
         <text x="514.08" y="109.55" fill="#A9A9A9">/</text>
         <text x="522.48" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="572.89" y="109.55">] (1 </text>
-        <text x="623.3" y="109.55" fill="#B22222">failed</text>
-        <text x="673.71" y="109.55">, 1 remaining)</text>
+        <text x="614.9" y="109.55" fill="#B22222">failed</text>
+        <text x="665.31" y="109.55">, 1 remaining)</text>
         <text x="10" y="128.55" fill="#B22222">---------------</text>
         <text x="144.42" y="128.55"> error </text>
         <text x="194.83" y="128.55" fill="#B22222">----------------</text>
@@ -101,8 +101,8 @@
         <text x="514.08" y="280.55" fill="#A9A9A9">/</text>
         <text x="522.48" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="572.89" y="280.55">] (all </text>
-        <text x="640.1" y="280.55" fill="#B22222">failed</text>
-        <text x="690.51" y="280.55">)</text>
+        <text x="631.7" y="280.55" fill="#B22222">failed</text>
+        <text x="682.11" y="280.55">)</text>
         <text x="10" y="299.55" fill="#B22222">---------------</text>
         <text x="144.42" y="299.55"> error </text>
         <text x="194.83" y="299.55" fill="#B22222">----------------</text>

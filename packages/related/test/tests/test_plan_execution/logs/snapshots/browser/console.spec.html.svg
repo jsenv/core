@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="658.5"
+      width="650.1"
       height="896.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -62,8 +62,8 @@
         <text x="346.05" y="128.55" fill="#A9A9A9">/</text>
         <text x="354.46" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="404.86" y="128.55">] (1 </text>
-        <text x="455.27" y="128.55" fill="#32CD32">completed</text>
-        <text x="530.88" y="128.55">, 2 remaining)</text>
+        <text x="446.87" y="128.55" fill="#32CD32">completed</text>
+        <text x="522.48" y="128.55">, 2 remaining)</text>
         <text x="10" y="147.55" fill="#A9A9A9">-----</text>
         <text x="60.41" y="147.55"> console (</text>
         <text x="136.02" y="147.55" fill="#B22222">&#x2716;</text>
@@ -101,8 +101,8 @@
         <text x="278.84" y="356.55" fill="#A9A9A9">/</text>
         <text x="287.25" y="356.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="337.65" y="356.55">] (2 </text>
-        <text x="388.06" y="356.55" fill="#32CD32">completed</text>
-        <text x="463.67" y="356.55">, 1 remaining)</text>
+        <text x="379.66" y="356.55" fill="#32CD32">completed</text>
+        <text x="455.27" y="356.55">, 1 remaining)</text>
         <text x="10" y="375.55" fill="#A9A9A9">-----</text>
         <text x="60.41" y="375.55"> console (</text>
         <text x="136.02" y="375.55" fill="#B22222">&#x2716;</text>
@@ -140,8 +140,8 @@
         <text x="270.44" y="584.55" fill="#A9A9A9">/</text>
         <text x="278.84" y="584.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="329.25" y="584.55">] (all </text>
-        <text x="396.46" y="584.55" fill="#32CD32">completed</text>
-        <text x="472.08" y="584.55">)</text>
+        <text x="388.06" y="584.55" fill="#32CD32">completed</text>
+        <text x="463.67" y="584.55">)</text>
         <text x="10" y="603.55" fill="#A9A9A9">-----</text>
         <text x="60.41" y="603.55"> console (</text>
         <text x="136.02" y="603.55" fill="#B22222">&#x2716;</text>

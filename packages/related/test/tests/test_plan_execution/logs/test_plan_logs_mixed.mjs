@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync } from "@jsenv/filesystem";
 import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
