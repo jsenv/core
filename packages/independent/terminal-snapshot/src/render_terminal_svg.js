@@ -153,12 +153,13 @@ export const renderTerminalSvg = (
     const foreignObject = svg.createElement("foreignObject", {
       id: "body",
       y: headerHeight,
-      width,
-      height: height - headerHeight - paddingTop - paddingBottom,
+      width: paddingLeft + width + paddingRight,
+      height: height - headerHeight + paddingBottom,
       overflow: "auto",
     });
     svg.appendChild(foreignObject);
     const bodySvg = svg.createElement("svg", {
+      "x": paddingLeft,
       "width": paddingLeft + textWidth + paddingRight,
       "height": textHeight,
       "font-family": "monospace",
@@ -167,8 +168,13 @@ export const renderTerminalSvg = (
     });
     foreignObject.appendChild(bodySvg);
 
-    const offsetTop = paddingTop + font.lineHeight - font.emHeightDescent;
-    const offsetLeft = paddingLeft;
+    const textContainer = svg.createElement("g", {
+      transform: `translate(${paddingLeft}, ${
+        paddingTop + font.lineHeight - font.emHeightDescent
+      })`,
+    });
+    bodySvg.appendChild(textContainer);
+
     for (const chunk of chunks) {
       const { type, value, style } = chunk;
       if (type !== "text") {
@@ -176,9 +182,8 @@ export const renderTerminalSvg = (
       }
 
       const { position } = chunk;
-      const x =
-        offsetLeft + adjustXforWhitespace(value, position.x) * font.width;
-      const y = offsetTop + (position.y + font.lineHeight * position.y);
+      const x = adjustXforWhitespace(value, position.x) * font.width;
+      const y = position.y + font.lineHeight * position.y;
       const w = font.width * value.length;
       const attrs = {};
       if (style.bold) {
@@ -202,7 +207,7 @@ export const renderTerminalSvg = (
           fill: backgroundColor,
           ...(opacity ? { opacity } : {}),
         });
-        bodySvg.appendChild(rect);
+        textContainer.appendChild(rect);
       }
 
       let textForegroundColor;
@@ -222,7 +227,7 @@ export const renderTerminalSvg = (
           d: `M${x},${ys} L${xw},${ys} Z`,
           stroke: textForegroundColor || foregroundColor,
         });
-        bodySvg.appendChild(path);
+        textContainer.appendChild(path);
       }
       if (style.strikethrough) {
         const yOffset = font.height * 0.3;
@@ -232,7 +237,7 @@ export const renderTerminalSvg = (
           d: `M${x},${ys} L${xw},${ys} Z`,
           stroke: textForegroundColor || foregroundColor,
         });
-        bodySvg.appendChild(path);
+        textContainer.appendChild(path);
       }
 
       // Do not output elements containing whitespace with no style
@@ -249,7 +254,7 @@ export const renderTerminalSvg = (
         ...attrs,
       });
       text.setContent(value);
-      bodySvg.appendChild(text);
+      textContainer.appendChild(text);
     }
   }
 
