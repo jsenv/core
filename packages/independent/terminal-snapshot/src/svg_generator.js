@@ -2,9 +2,9 @@ import he from "he";
 
 export const startGeneratingSvg = (attributes) => {
   const createElement = (name, attributes = {}) => {
-    const isSelfClosing = selfClosingTags.includes(name);
-    const canReceiveChild = name !== "text" && !isSelfClosing;
-    const canReceiveContent = name === "text" || name === "style";
+    const canSelfClose = canSelfCloseNames.includes(name);
+    const canReceiveChild = canReceiveChildNames.includes(name);
+    const canReceiveContent = canReceiveContentNames.includes(name);
 
     const children = [];
     const setAttributes = (namedValues) => {
@@ -16,7 +16,7 @@ export const startGeneratingSvg = (attributes) => {
       content: "",
       children,
       attributes,
-      isSelfClosing,
+      canSelfClose,
       setAttributes,
       createElement,
       appendChild: (childNode) => {
@@ -44,12 +44,7 @@ export const startGeneratingSvg = (attributes) => {
 
               for (const attributeName of attributeNames) {
                 let attributeValue = node.attributes[attributeName];
-                if (
-                  attributeName === "width" ||
-                  attributeName === "height" ||
-                  attributeName === "x" ||
-                  attributeName === "y"
-                ) {
+                if (typeof attributeValue === "number") {
                   attributeValue = round(attributeValue);
                 }
                 if (attributeName === "viewBox") {
@@ -74,38 +69,43 @@ export const startGeneratingSvg = (attributes) => {
             }
           }
 
-          if (node.isSelfClosing) {
-            nodeString += `/>`;
-            return nodeString;
-          }
-
-          nodeString += `>`;
+          let innerHTML = "";
           if (node.content) {
             if (node.name !== "text") {
-              nodeString += "\n  ";
-              nodeString += "  ".repeat(depth);
+              innerHTML += "\n  ";
+              innerHTML += "  ".repeat(depth);
             }
             const contentEncoded = he.encode(node.content, { decimal: false });
-            nodeString += contentEncoded;
+            innerHTML += contentEncoded;
             if (node.name !== "text") {
-              nodeString += "\n";
-              nodeString += "  ".repeat(depth);
+              innerHTML += "\n";
+              innerHTML += "  ".repeat(depth);
             }
           }
           write_children: {
             if (node.children.length > 0) {
               for (const child of node.children) {
-                nodeString += "\n  ";
-                nodeString += "  ".repeat(depth);
-                nodeString += renderNode(child, {
+                innerHTML += "\n  ";
+                innerHTML += "  ".repeat(depth);
+                innerHTML += renderNode(child, {
                   depth: depth + 1,
                 });
               }
-              nodeString += "\n";
-              nodeString += "  ".repeat(depth);
+              innerHTML += "\n";
+              innerHTML += "  ".repeat(depth);
             }
           }
-          nodeString += `</${node.name}>`;
+          if (innerHTML === "") {
+            if (node.canSelfClose) {
+              nodeString += `/>`;
+            } else {
+              nodeString += `></${node.name}>`;
+            }
+          } else {
+            nodeString += `>`;
+            nodeString += innerHTML;
+            nodeString += `</${node.name}>`;
+          }
           return nodeString;
         };
 
@@ -121,7 +121,9 @@ export const startGeneratingSvg = (attributes) => {
   return createElement("svg", attributes);
 };
 
-const selfClosingTags = ["path", "rect"];
+const canSelfCloseNames = ["path", "rect", "circle"];
+const canReceiveChildNames = ["svg", "foreignObject", "g"];
+const canReceiveContentNames = ["text", "style"];
 
 // Round: Make number values smaller in output
 // Eg: 14.23734 becomes 14.24

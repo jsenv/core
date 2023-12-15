@@ -51,9 +51,12 @@ export const renderTerminalSvg = (
     paddingBottom = 0,
     paddingRight = 10,
 
-    globalBackgroundColor = "#282c34",
-    globalForegroundColor = "#abb2bf",
+    backgroundColor = "#282c34",
+    foregroundColor = "#abb2bf",
     colors = colorsDefault,
+
+    maxWidth = 640,
+    maxHeight = 480,
   } = {},
 ) => {
   const { rows, columns, chunks } = parseAnsi(ansi);
@@ -67,21 +70,23 @@ export const renderTerminalSvg = (
     emHeightAscent: 10.5546875,
     emHeightDescent: 3.4453125,
   };
-  const topBarHeight = 40;
-  const textAreaWidth = columns * font.width;
-  const textAreaHeight = rows * (font.lineHeight + 1) + font.emHeightDescent;
-  const globalWidth = paddingLeft + textAreaWidth + paddingRight;
-  const globalHeight =
-    paddingTop + topBarHeight + textAreaHeight + paddingBottom;
-  const offsetTop = paddingTop + font.lineHeight - font.emHeightDescent;
-  const offsetLeft = paddingLeft;
+
+  const headerHeight = 40;
+  const textWidth = columns * font.width;
+  const textHeight = rows * (font.lineHeight + 1) + font.emHeightDescent;
+  const contentWidth = paddingLeft + textWidth + paddingRight;
+  const contentHeight = paddingTop + headerHeight + textHeight + paddingBottom;
+  const width = contentWidth > maxWidth ? maxWidth : contentWidth;
+  const height = contentHeight > maxHeight ? maxHeight : contentHeight;
 
   const svg = startGeneratingSvg({
     "xmlns": "http://www.w3.org/2000/svg",
     "font-family": font.family,
     "font-size": font.size,
-    "viewBox": `0, 0, ${globalWidth}, ${globalHeight}`,
-    "backgroundColor": globalBackgroundColor,
+    width,
+    height,
+    // "viewBox": `0, 0, ${globalWidth}, ${globalHeight}`,
+    backgroundColor,
   });
 
   background: {
@@ -91,9 +96,9 @@ export const renderTerminalSvg = (
     const backgroundRect = svg.createElement("rect", {
       "x": 1,
       "y": 1,
-      "width": globalWidth - 2,
-      "height": globalHeight - 2,
-      "fill": globalBackgroundColor,
+      "width": width - 2,
+      "height": height - 2,
+      "fill": backgroundColor,
       "stroke": "rgba(255,255,255,0.35)",
       "stroke-width": 1,
       "rx": 8,
@@ -107,7 +112,7 @@ export const renderTerminalSvg = (
       id: "header",
     });
     const iconsGroup = svg.createElement("g", {
-      transform: `translate(20,${topBarHeight / 2})`,
+      transform: `translate(20,${headerHeight / 2})`,
     });
     const circleA = svg.createElement("circle", {
       cx: 0,
@@ -136,8 +141,8 @@ export const renderTerminalSvg = (
       "class": "terminal-3560942001-title",
       "fill": "#abb2bf",
       "text-anchor": "middle",
-      "x": globalWidth / 2,
-      "y": topBarHeight / 2,
+      "x": width / 2,
+      "y": headerHeight / 2,
     });
     text.setContent(title);
     headerGroup.appendChild(text);
@@ -145,13 +150,25 @@ export const renderTerminalSvg = (
   }
 
   body: {
-    const bodyGroup = svg.createElement("g", {
-      "id": "body",
-      "fill": globalForegroundColor,
-      "transform": `translate(0, ${topBarHeight})`,
+    const foreignObject = svg.createElement("foreignObject", {
+      id: "body",
+      y: headerHeight,
+      width,
+      height: height - headerHeight - paddingTop - paddingBottom,
+      overflow: "auto",
+    });
+    svg.appendChild(foreignObject);
+    const bodySvg = svg.createElement("svg", {
+      "width": paddingLeft + textWidth + paddingRight,
+      "height": textHeight,
       "font-family": "monospace",
       "font-variant-east-asian": "full-width",
+      "fill": foregroundColor,
     });
+    foreignObject.appendChild(bodySvg);
+
+    const offsetTop = paddingTop + font.lineHeight - font.emHeightDescent;
+    const offsetLeft = paddingLeft;
     for (const chunk of chunks) {
       const { type, value, style } = chunk;
       if (type !== "text") {
@@ -185,13 +202,13 @@ export const renderTerminalSvg = (
           fill: backgroundColor,
           ...(opacity ? { opacity } : {}),
         });
-        bodyGroup.appendChild(rect);
+        bodySvg.appendChild(rect);
       }
 
-      let foregroundColor;
+      let textForegroundColor;
       if (style.foregroundColor) {
-        foregroundColor = colors[style.foregroundColor];
-        attrs["fill"] = foregroundColor;
+        textForegroundColor = colors[style.foregroundColor];
+        attrs["fill"] = textForegroundColor;
       }
 
       // Underline & Strikethrough:
@@ -203,9 +220,9 @@ export const renderTerminalSvg = (
         const xw = x + w;
         const path = svg.createElement("path", {
           d: `M${x},${ys} L${xw},${ys} Z`,
-          stroke: foregroundColor || globalForegroundColor,
+          stroke: textForegroundColor || foregroundColor,
         });
-        bodyGroup.appendChild(path);
+        bodySvg.appendChild(path);
       }
       if (style.strikethrough) {
         const yOffset = font.height * 0.3;
@@ -213,9 +230,9 @@ export const renderTerminalSvg = (
         const xw = x + w;
         const path = svg.createElement("path", {
           d: `M${x},${ys} L${xw},${ys} Z`,
-          stroke: foregroundColor || globalForegroundColor,
+          stroke: textForegroundColor || foregroundColor,
         });
-        bodyGroup.appendChild(path);
+        bodySvg.appendChild(path);
       }
 
       // Do not output elements containing whitespace with no style
@@ -232,9 +249,8 @@ export const renderTerminalSvg = (
         ...attrs,
       });
       text.setContent(value);
-      bodyGroup.appendChild(text);
+      bodySvg.appendChild(text);
     }
-    svg.appendChild(bodyGroup);
   }
 
   return svg.renderAsString();

@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { parseAnsi } from "@jsenv/terminal-to-svg/src/parse_ansi.js";
+import { parseAnsi } from "@jsenv/terminal-snapshot/src/parse_ansi.js";
 
 // reset bold
 {
