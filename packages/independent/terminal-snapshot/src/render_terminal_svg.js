@@ -1,3 +1,4 @@
+import prettier from "prettier";
 import { parseAnsi } from "./parse_ansi.js";
 import { createSvgRootNode } from "./xml_generator.js";
 
@@ -36,7 +37,7 @@ const colorsDefault = {
   bgWhiteBright: "#FFFFFF",
 };
 
-export const renderTerminalSvg = (
+export const renderTerminalSvg = async (
   ansi,
   {
     title = "ansi to terminal",
@@ -159,7 +160,6 @@ export const renderTerminalSvg = (
     headerGroup.appendChild(iconsGroup);
 
     const text = svg.createNode("text", {
-      "class": "terminal-3560942001-title",
       "fill": "#abb2bf",
       "text-anchor": "middle",
       "x": computedWidth / 2,
@@ -285,7 +285,13 @@ export const renderTerminalSvg = (
     }
   }
 
-  return svg.renderAsString();
+  const svgString = svg.renderAsString();
+  const options = await prettier.resolveConfig(import.meta.url);
+  const formatted = await prettier.format(svgString, {
+    parser: "html",
+    ...options,
+  });
+  return formatted;
 };
 
 // Some SVG Implementations drop whitespaces

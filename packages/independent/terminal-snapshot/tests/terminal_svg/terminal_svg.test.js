@@ -3,7 +3,7 @@ import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
 
-const test = (file, snapshotFilename = `${file}.svg`, options) => {
+const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
   const svgSnapshotFileUrl = new URL(
     `./snapshots/${snapshotFilename}`,
@@ -12,16 +12,20 @@ const test = (file, snapshotFilename = `${file}.svg`, options) => {
 
   const svgFileSnapshot = takeFileSnapshot(svgSnapshotFileUrl);
   const ansi = readFileSync(ansiFixtureFileUrl, "utf8");
-  const svgString = renderTerminalSvg(ansi, options);
+  const svgString = await renderTerminalSvg(ansi, options);
   writeFileSync(svgSnapshotFileUrl, svgString);
   svgFileSnapshot.compare();
 };
 
-test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg");
-test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
+await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg");
+await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
   width: "auto",
 });
-test("jsenv_test_output.txt", "jsenv_test_output_width_auto_height_480.svg", {
-  width: "auto",
-  height: 480,
-});
+await test(
+  "jsenv_test_output.txt",
+  "jsenv_test_output_width_auto_height_480.svg",
+  {
+    width: "auto",
+    height: 480,
+  },
+);
