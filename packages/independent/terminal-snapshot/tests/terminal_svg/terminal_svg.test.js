@@ -17,7 +17,11 @@ const test = (file, snapshotFilename = `${file}.svg`, options) => {
   svgFileSnapshot.compare();
 };
 
-test("jsenv_test_output.txt", "jsenv_test_output.svg");
-test("jsenv_test_output.txt", "jsenv_test_output_auto.svg", {
+test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg");
+test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
   width: "auto",
+});
+test("jsenv_test_output.txt", "jsenv_test_output_width_auto_height_480.svg", {
+  width: "auto",
+  height: 480,
 });

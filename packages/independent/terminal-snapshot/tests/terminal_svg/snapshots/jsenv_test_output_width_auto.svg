@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="650.1"
-  height="480"
+  height="936.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="648.1"
-      height="478"
+      height="934.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -26,7 +26,7 @@
     </g>
     <text class="terminal-3560942001-title" fill="#abb2bf" text-anchor="middle" x="325.05" y="20">ansi to terminal</text>
   </g>
-  <foreignObject id="body" y="40" width="100%" height="440" overflow="auto">
+  <foreignObject id="body" y="40" width="100%" height="896.45" overflow="hidden">
     <svg
       width="650.1"
       height="896.45"

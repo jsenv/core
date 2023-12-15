@@ -55,11 +55,11 @@ export const renderTerminalSvg = (
     foregroundColor = "#abb2bf",
     colors = colorsDefault,
 
-    // by default: fixed width of 640 + fluid height maxed to 480
+    // by default: fixed width of 640 + fluid height
     width = 640,
     height,
     maxWidth,
-    maxHeight = 480,
+    maxHeight,
   } = {},
 ) => {
   const { rows, columns, chunks } = parseAnsi(ansi);
@@ -177,7 +177,11 @@ export const renderTerminalSvg = (
       y: headerHeight,
       width: "100%",
       height: bodyComputedHeight,
-      overflow: "auto",
+      // we can't really know in advance the size of the scrollbar
+      // so putting overflow: "auto"
+      // is not that great as it would create a scrollbar
+      // in both axes when a single one is required
+      overflow: "hidden",
     });
 
     svg.appendChild(foreignObject);
