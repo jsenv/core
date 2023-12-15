@@ -15,6 +15,7 @@ await build({
     "file://**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
     "file://**/node_modules/@jsenv/filesystem/": false,
     "file://**/node_modules/@jsenv/importmap/": false,
+    "file://**/node_modules/@jsenv/inspect/": false,
     "file://**/node_modules/@jsenv/integrity/": false,
     "file://**/node_modules/@jsenv/log/": false,
     "file://**/node_modules/@jsenv/node-esm-resolution/": false,

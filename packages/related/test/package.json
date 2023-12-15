@@ -38,6 +38,7 @@
     "@jsenv/ast": "6.0.1",
     "@jsenv/filesystem": "4.6.2",
     "@jsenv/github-check-run": "0.1.7",
+    "@jsenv/inspect": "1.9.1",
     "@jsenv/log": "3.5.0",
     "@jsenv/plugin-supervisor": "1.4.0",
     "@jsenv/url-meta": "8.3.0",
@@ -52,5 +53,8 @@
     "strip-ansi": "7.1.0",
     "v8-to-istanbul": "9.2.0",
     "wrap-ansi": "9.0.0"
+  },
+  "devDependencies": {
+    "@jsenv/terminal-snapshot": "../independent/terminal-snapshot/"
   }
 }
