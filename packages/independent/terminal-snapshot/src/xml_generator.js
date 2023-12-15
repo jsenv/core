@@ -130,10 +130,12 @@ export const createSvgRootNode = createXmlGenerator({
   canReceiveContentNames: ["text", "style"],
 });
 
+// not used for now and needs to configure canReceiveChildNames and so on...
 export const createXmlRootNode = createXmlGenerator({
   rootNodeName: "xml",
 });
 
+// not used for now and needs to configure canReceiveChildNames and so on...
 export const createHtmlRootNode = createXmlGenerator({
   rootNodeName: "html",
 });
@@ -145,17 +147,3 @@ const round = (x) => {
   const rounded = Number(`${Math.round(`${x}e2`)}e-2`);
   return rounded;
 };
-
-// const svg = startGeneratingSvg();
-
-// svg.setAttributes({
-//   width: 200,
-// });
-// const g = svg.createElement("g");
-// g.setAttributes({
-//   fill: "red",
-// });
-// svg.appendChild(g);
-
-// const string = svg.renderAsString();
-// console.log(string);

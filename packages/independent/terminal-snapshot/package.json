@@ -1,5 +1,21 @@
 {
   "name": "@jsenv/terminal-snapshot",
+  "version": "1.0.0",
+  "description": "Convert terminal output to nice svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/terminal-snapshot"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": "./src/terminal_snapshot.js",
