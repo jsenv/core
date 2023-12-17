@@ -65,9 +65,9 @@ After running the suggested commands the demo is ready.
 The demo contains preconfigured scripts:
 
 - `npm run dev`: starts a server for source files; Documented in [B) Dev](<https://github.com/jsenv/core/wiki/B)-Dev>).
-- `npm run build`: generate files optimized for production; Documented in [C) Build](<https://github.com/jsenv/core/wiki/C)-Build>).
+- `npm run build`: generate build  files; Documented in [C) Build](<https://github.com/jsenv/core/wiki/C)-Build>).
 - `npm run build:serve`: start a server for build files; Documented in [C) Build#how-to-serve-build-files](<https://github.com/jsenv/core/wiki/C)-Build#3-how-to-serve-build-files>).
-- `npm run test`: execute test files on browsers(s); Documented in [D) Test](<https://github.com/jsenv/core/wiki/D)-Test>).
+- `npm run test`: execute test files; Documented in [D) Test](<https://github.com/jsenv/core/wiki/D)-Test>).
 
 <!--
 The following commands can be used to skip the prompt
