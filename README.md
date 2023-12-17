@@ -7,10 +7,10 @@ As a result it can be enjoyed by people without much experience in tooling or se
 
 The pillars of jsenv are:
 
-1. A dev server serving source files with autoreload
-2. A build generating an optimized version of source files into a directory
-3. A build server serving build files
-4. A test runner executing test files in web browser(s)
+1. A dev server for source files
+2. A build to generate an optimized version of source files into a directory
+3. A build server for build files
+4. A test runner for test files
 
 [Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
