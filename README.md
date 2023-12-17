@@ -7,10 +7,10 @@ As a result it can be enjoyed by people without much experience in tooling or se
 
 The core tools provided by jsenv:
 
-1. A dev server for source files
-2. A build to generate an optimized version of source files into a directory
-3. A build server for build files
-4. A test runner for test files
+1. dev server: a server for source files
+2. build: ability to generate an optimized version of source files into a directory
+3. build server: a server for build files
+4. test runner: ability to execute all test files at once
 
 [Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
