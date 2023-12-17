@@ -5,7 +5,7 @@ It encourages standards and simplicity.
 
 As a result it can be enjoyed by people without much experience in tooling or seeking for a simple tool without hidden complexities.
 
-The pillars of jsenv are:
+The core tools provided by jsenv:
 
 1. A dev server for source files
 2. A build to generate an optimized version of source files into a directory
