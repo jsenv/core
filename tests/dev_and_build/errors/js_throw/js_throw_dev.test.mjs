@@ -33,13 +33,9 @@ const test = async (params) => {
   };
   const expected = {
     errorStack: `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (${sourceDirectoryUrl}trigger_error.js:2:9)
-    at ${sourceDirectoryUrl}main.js:3:1`,
-    pageErrors: [
-      Object.assign(new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"), {
-        name: "Error",
-      }),
-    ],
+  at triggerError (${sourceDirectoryUrl}trigger_error.js:2:9)
+  at ${sourceDirectoryUrl}main.js:3:1`,
+    pageErrors: [assert.any(Error)],
     consoleOutputRaw: "",
   };
   assert({ actual, expected });

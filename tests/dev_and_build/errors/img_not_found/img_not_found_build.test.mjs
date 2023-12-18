@@ -21,10 +21,11 @@ no entry on filesystem
 ${new URL("./client/img.png", import.meta.url).href}
 --- url reference trace ---
 ${new URL("./client/main.html", import.meta.url).href}:9:10
-  8  |   <body>
-> 9  |     <img src="./img.png" />
-                ^
-  10 |   </body>
+6 |   </head>
+7 | 
+8 |   <body>
+9 |     <img src="./img.png" />
+             ^
 --- plugin name ---
 "jsenv:file_url_fetching"`;
   assert({ actual, expected });

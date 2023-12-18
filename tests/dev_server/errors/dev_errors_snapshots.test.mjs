@@ -66,7 +66,7 @@ const test = async ({ browserLauncher, browserName }) => {
         : htmlGenerated,
     );
     await page.close();
-    if (!process.env.CI) {
+    if (!process.env.CI && !process.env.JSENV) {
       console.log(`"${story}" snapshot generated for ${browserName}`);
     }
   };
