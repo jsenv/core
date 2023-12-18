@@ -1,23 +1,23 @@
 // primitives
-import { inspectBoolean } from "./stringifiers/boolean.js";
-import { inspectNull } from "./stringifiers/null.js";
-import { inspectNumber } from "./stringifiers/number.js";
-import { inspectString } from "./stringifiers/string.js";
-import { inspectSymbol } from "./stringifiers/symbol.js";
-import { inspectUndefined } from "./stringifiers/undefined.js";
-import { inspectBigInt } from "./stringifiers/bigint.js";
-import { inspectArray } from "./stringifiers/array.js";
+import { inspectBoolean } from "./boolean.js";
+import { inspectNull } from "./null.js";
+import { inspectNumber } from "./number.js";
+import { inspectString } from "./string.js";
+import { inspectSymbol } from "./symbol.js";
+import { inspectUndefined } from "./undefined.js";
+import { inspectBigInt } from "./bigint.js";
+import { inspectArray } from "./array.js";
 // composites
-import { inspectBigIntObject } from "./stringifiers/bigint_object.js";
-import { inspectBooleanObject } from "./stringifiers/boolean_object.js";
-import { inspectError } from "./stringifiers/error.js";
-import { inspectDate } from "./stringifiers/date.js";
-import { inspectFunction } from "./stringifiers/function.js";
-import { inspectNumberObject } from "./stringifiers/number_object.js";
-import { inspectObject } from "./stringifiers/object.js";
-import { inspectRegExp } from "./stringifiers/regexp.js";
-import { inspectStringObject } from "./stringifiers/string_object.js";
-import { inspectConstructor } from "./stringifiers/constructor.js";
+import { inspectBigIntObject } from "./bigint_object.js";
+import { inspectBooleanObject } from "./boolean_object.js";
+import { inspectError } from "./error.js";
+import { inspectDate } from "./date.js";
+import { inspectFunction } from "./function.js";
+import { inspectNumberObject } from "./number_object.js";
+import { inspectObject } from "./object.js";
+import { inspectRegExp } from "./regexp.js";
+import { inspectStringObject } from "./string_object.js";
+import { inspectConstructor } from "./constructor.js";
 
 export const inspectMethodSymbol = Symbol.for("inspect");
 

@@ -7,7 +7,7 @@ import { basicFetch } from "../helpers/basic_fetch.js";
 
 export const assertAndNormalizeWebServer = async (
   webServer,
-  { signal, logger, teardown },
+  { signal, logger, teardownCallbackSet },
 ) => {
   if (!webServer) {
     throw new TypeError(
@@ -35,7 +35,7 @@ export const assertAndNormalizeWebServer = async (
   }
   await ensureWebServerIsStarted(webServer, {
     signal,
-    teardown,
+    teardownCallbackSet,
     logger,
   });
   const { headers } = await basicFetch(webServer.origin, {

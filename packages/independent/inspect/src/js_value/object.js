@@ -1,7 +1,7 @@
 import {
   preNewLineAndIndentation,
   wrapNewLineAndIndentation,
-} from "../utils.js";
+} from "../internal/indentation.js";
 import { inspectConstructor } from "./constructor.js";
 
 export const inspectObject = (

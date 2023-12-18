@@ -29,13 +29,9 @@ await executeTestPlan({
       },
     },
   },
-  concurrency: true,
   webServer: {
     origin: "http://localhost:3456",
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
-  failFast: process.argv.includes("--workspace"),
-  logShortForCompletedExecutions: true,
-  logMergeForCompletedExecutions: process.argv.includes("--workspace"),
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
