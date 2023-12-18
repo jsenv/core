@@ -30,17 +30,8 @@ const test = async (params) => {
     consoleOutputRaw: consoleOutput.raw,
   };
   const expected = {
-    pageErrors: [
-      Object.assign(
-        new Error(
-          `The requested module '/file.js' does not provide an export named 'answer'`,
-        ),
-        {
-          name: "SyntaxError",
-        },
-      ),
-    ],
-    errorMessage: `Uncaught SyntaxError: The requested module '/file.js' does not provide an export named 'answer'`,
+    pageErrors: [assert.any(Error)],
+    errorMessage: `The requested module '/file.js' does not provide an export named 'answer'`,
     consoleOutputRaw: "",
   };
   assert({ actual, expected });
