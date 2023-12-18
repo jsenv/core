@@ -192,6 +192,9 @@ export const executeTestPlan = async ({
     }
     // parallel
     {
+      if (parallel === false) {
+        parallel = { max: 1 };
+      }
       if (typeof parallel !== "object") {
         throw new TypeError(`parallel must be an object, got ${parallel}`);
       }
@@ -209,7 +212,7 @@ export const executeTestPlan = async ({
         if (lastChar !== "%") {
           throw new TypeError(`string is not a percentage, got ${string}`);
         }
-        const percentageString = max.slice(-1);
+        const percentageString = max.slice(0, -1);
         const percentageNumber = parseInt(percentageString);
         if (percentageNumber <= 0) {
           return 0;
@@ -217,15 +220,19 @@ export const executeTestPlan = async ({
         if (percentageNumber >= 100) {
           return 1;
         }
-        const ratio = Math.floor(percentageNumber / 100);
+        const ratio = percentageNumber / 100;
         return ratio;
       };
       const max = parallel.max;
       if (typeof max === "string") {
         const maxAsRatio = assertPercentageAndConvertToRatio(max);
         const availableCpus = countAvailableCpus();
-        parallel.max = maxAsRatio * availableCpus || 1;
-      } else if (typeof max !== "number") {
+        parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
+      } else if (typeof max === "number") {
+        if (max < 1) {
+          parallel.max = 1;
+        }
+      } else {
         throw new TypeError(
           `parallel.max must be a number or a percentage, got ${max}`,
         );
@@ -234,7 +241,7 @@ export const executeTestPlan = async ({
       const maxMemory = parallel.maxMemory;
       if (typeof maxMemory === "string") {
         const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
-        parallel.maxMemory = maxMemoryAsRatio * totalmem();
+        parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
       } else if (typeof maxMemory !== "number") {
         throw new TypeError(
           `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
