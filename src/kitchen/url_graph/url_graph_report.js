@@ -1,4 +1,6 @@
-import { ANSI, byteAsFileSize, distributePercentages } from "@jsenv/log";
+import { inspectFileSize, distributePercentages } from "@jsenv/inspect";
+import { ANSI } from "@jsenv/log";
+
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
 export const createUrlGraphSummary = (
@@ -166,7 +168,7 @@ const determineCategory = (urlInfo) => {
 const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   const addPart = (name, { count, size, percentage }) => {
     parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${byteAsFileSize(
+      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${inspectFileSize(
         size,
       )} / ${percentage} %)`,
     );

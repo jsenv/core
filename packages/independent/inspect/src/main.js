@@ -8,3 +8,5 @@ export { inspectFileContent } from "./file_content/file_content.js";
 export { inspectDuration, inspectEllapsedTime } from "./time/time.js";
 // byte
 export { inspectFileSize, inspectMemoryUsage } from "./byte/byte.js";
+// percentages
+export { distributePercentages } from "./percentage/distribute_percentages.js";

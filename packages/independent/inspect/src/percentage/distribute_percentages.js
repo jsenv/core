@@ -1,4 +1,4 @@
-import { getPrecision, setRoundedPrecision } from "./decimals.js";
+import { getPrecision, setRoundedPrecision } from "../internal/decimals.js";
 
 export const distributePercentages = (
   namedNumbers,
