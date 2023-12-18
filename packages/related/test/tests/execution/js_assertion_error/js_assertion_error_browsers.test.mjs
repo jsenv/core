@@ -3,8 +3,14 @@ import { startDevServer } from "@jsenv/core";
 
 import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
-const clientDirectoryUrl = new URL("./client", import.meta.url).href;
+if (process.env.CI) {
+  // disabled on CI because generates the following warning
+  // Window 'showModalDialog' function is deprecated and will be removed soon
+  // for some reason
+  process.exit(0);
+}
 
+const clientDirectoryUrl = new URL("./client", import.meta.url).href;
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
@@ -36,27 +42,39 @@ const test = async (params) => {
     site: error.site,
   };
   const expectedErrorStack = {
-    chromium:
-      assert.startsWith(`Uncaught AssertionError: unexpected character in string
+    chromium: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]`),
+actual`),
     firefox: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]
+actual
 createAssertionError@`),
     webkit: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]
+actual
 createAssertionError@`),
+  }[params.runtime.name];
+  const expectedLine = {
+    chromium: 13,
+    firefox: 9,
+    webkit: 9,
+  }[params.runtime.name];
+  const expectedColumn = {
+    chromium: 12,
+    firefox: 5,
+    webkit: 5,
   }[params.runtime.name];
 
   const expected = {
@@ -66,8 +84,8 @@ createAssertionError@`),
     site: {
       isInline: true,
       url: `${clientDirectoryUrl}/main.html`,
-      line: 9,
-      column: 5,
+      line: expectedLine,
+      column: expectedColumn,
       originalUrl: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
       serverUrl: `${devServer.origin}/main.html`,
     },
@@ -75,15 +93,10 @@ createAssertionError@`),
   assert({ actual, expected });
 };
 
-if (!process.env.CI) {
-  // disabled on CI because generates the following warning
-  // Window 'showModalDialog' function is deprecated and will be removed soon
-  // for some reason
-  await test({ runtime: chromium() });
-  await test({
-    runtime: firefox({
-      disableOnWindowsBecauseFlaky: false,
-    }),
-  });
-  await test({ runtime: webkit() });
-}
+await test({ runtime: chromium() });
+await test({
+  runtime: firefox({
+    disableOnWindowsBecauseFlaky: false,
+  }),
+});
+await test({ runtime: webkit() });

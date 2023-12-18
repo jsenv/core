@@ -16,6 +16,7 @@ const test = async (params) => {
   const clientDirectoryUrl = new URL("./client", import.meta.url).href;
   const actual = {
     isException: error.isException,
+    isError: error.isError,
     name: error.name,
     message: error.message,
     stack: error.stack,
@@ -23,24 +24,27 @@ const test = async (params) => {
   };
   const expected = {
     isException: true,
+    isError: true,
     name: "AssertionError",
     message: `unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]`,
+actual`,
     stack: assert.startsWith(`AssertionError: unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]
+actual
   at ${clientDirectoryUrl}/main.mjs:3:1`),
     site: {
       url: `${clientDirectoryUrl}/main.mjs`,
       line: 3,
-      column: 0,
+      column: 1,
     },
   };
   assert({ actual, expected });
