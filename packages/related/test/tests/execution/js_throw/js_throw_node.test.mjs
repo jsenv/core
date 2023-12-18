@@ -16,6 +16,7 @@ const test = async (params) => {
   const clientDirectoryUrl = new URL("./client", import.meta.url).href;
   const actual = {
     isException: error.isException,
+    isError: error.isError,
     name: error.name,
     message: error.message,
     stack: error.stack,
@@ -23,6 +24,7 @@ const test = async (params) => {
   };
   const expected = {
     isException: true,
+    isError: true,
     name: "Error",
     message: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
     stack: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
@@ -31,7 +33,7 @@ const test = async (params) => {
     site: {
       url: `${clientDirectoryUrl}/trigger_error.js`,
       line: 2,
-      column: 8,
+      column: 9,
     },
   };
   assert({ actual, expected });

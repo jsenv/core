@@ -35,8 +35,8 @@ const test = async (params) => {
   };
   const expectedErrorStack = {
     chromium: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (${devServer.origin}/trigger_error.js:2:9)
-    at ${devServer.origin}/main.js:3:1`),
+  at triggerError (${devServer.origin}/trigger_error.js:2:9)
+  at ${devServer.origin}/main.js:3:1`),
     firefox: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
 triggerError@${devServer.origin}/trigger_error.js:2:9
 @${devServer.origin}/main.js:3:1`),
