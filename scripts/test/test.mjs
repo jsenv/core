@@ -45,7 +45,9 @@ await executeTestPlan({
       },
     },
   },
-  githubCheck: {
-    name: `@jsenv/core tests (${process.platform})`,
-  },
+  githubCheck: process.env.CI
+    ? {
+        name: `@jsenv/core tests (${process.platform})`,
+      }
+    : null,
 });

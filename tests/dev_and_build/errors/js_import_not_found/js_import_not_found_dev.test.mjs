@@ -42,10 +42,9 @@ try {
   ${sourceDirectoryUrl}not_found.js
   --- url reference trace ---
   ${sourceDirectoryUrl}intermediate.js:2:7
-    1 | // eslint-disable-next-line import/no-unresolved
-  > 2 | import "./not_found.js";
-              ^
-    3 | 
+  1 | // eslint-disable-next-line import/no-unresolved
+  2 | import "./not_found.js";
+            ^
   --- plugin name ---
   "jsenv:file_url_fetching"`,
     pageErrors: [],
@@ -53,7 +52,7 @@ try {
     consoleErrors: [
       `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
     ],
-    errorMessage: `Error while loading module: ${sourceDirectoryUrl}main.js`,
+    errorMessage: `Error while loading module`,
   };
   assert({ actual, expected });
 } finally {

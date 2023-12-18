@@ -91,6 +91,7 @@ export const listReporter = ({ logger, logs }) => {
       }, 150);
 
       return () => {
+        dynamicLog.write("");
         dynamicLog.destroy();
         dynamicLog = null;
         clearInterval(interval);
