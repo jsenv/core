@@ -7,9 +7,10 @@
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
-  logLevel: "info",
+  logs: {
+    level: "info",
+  },
   rootDirectoryUrl: new URL("../../", import.meta.url),
-  concurrency: true,
   testPlan: {
     "./tests/**/*.test.mjs": {
       node: {
@@ -44,7 +45,7 @@ await executeTestPlan({
       },
     },
   },
-  logMemoryHeapUsage: true,
-  logShortForCompletedExecutions: process.env.CI,
-  githubCheckName: `@jsenv/core tests (${process.platform})`,
+  githubCheck: {
+    name: `@jsenv/core tests (${process.platform})`,
+  },
 });

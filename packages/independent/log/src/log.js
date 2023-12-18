@@ -33,10 +33,14 @@ export const createLog = ({
 
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
-    logLines.forEach((logLine) => {
+    for (const logLine of logLines) {
       const width = stringWidth(logLine);
-      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
-    });
+      if (width === 0) {
+        visualLineCount++;
+      } else {
+        visualLineCount += Math.ceil(width / columns);
+      }
+    }
 
     if (visualLineCount > rows) {
       // the whole log cannot be cleared because it's vertically to long
@@ -65,7 +69,15 @@ export const createLog = ({
   };
 
   const doWrite = (string) => {
-    string = addNewLines(string, newLine);
+    if (newLine === "before") {
+      string = `\n${string}`;
+    }
+    if (newLine === "after") {
+      string = `${string}\n`;
+    }
+    if (newLine === "around") {
+      string = `\n${string}\n`;
+    }
     stream.write(string);
     lastOutput = string;
     clearAttemptResult = undefined;
@@ -110,8 +122,18 @@ export const createLog = ({
     }
   };
 
+  const pause = () => {
+    streamOutputSpy(); // this uninstalls the spy
+    streamOutputSpy = null;
+  };
+  const resume = () => {
+    streamOutputSpy = spyStream();
+  };
+
   Object.assign(log, {
     write,
+    pause,
+    resume,
     dynamicWrite,
     destroy,
     stream,
@@ -120,22 +142,3 @@ export const createLog = ({
 };
 
 const noopStreamSpy = () => "";
-
-// could be inlined but vscode do not correctly
-// expand/collapse template strings, so I put it at the bottom
-const addNewLines = (string, newLine) => {
-  if (newLine === "before") {
-    return `
-${string}`;
-  }
-  if (newLine === "after") {
-    return `${string}
-`;
-  }
-  if (newLine === "around") {
-    return `
-${string}
-`;
-  }
-  return string;
-};

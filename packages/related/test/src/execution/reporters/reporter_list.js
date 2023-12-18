@@ -16,7 +16,6 @@ export const listReporter = ({ logger, logs }) => {
     logs.dynamic &&
     process.stdout.isTTY &&
     !logger.levels.debug &&
-    !logger.levels.info &&
     // if there is an error during execution npm will mess up the output
     // (happens when npm runs several command in a workspace)
     // so we enable hot replace only when !process.exitCode (no error so far)
@@ -40,6 +39,23 @@ export const listReporter = ({ logger, logs }) => {
     intermediateSummary: !canEraseProcessStdout,
   };
 
+  let dynamicLog = createLog({ newLine: "" });
+  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  let frameIndex = 0;
+  let currentDynamicLogContent;
+  const renderDynamicLog = (testPlanInfo) => {
+    frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+    let dynamicLogContent = "";
+    dynamicLogContent += `${frames[frameIndex]} `;
+    dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
+      showExecuting: true,
+    });
+    dynamicLogContent = `\n${dynamicLogContent}\n`;
+    // TOOD: add [duration/memoryUsage]
+    currentDynamicLogContent = dynamicLogContent;
+    return dynamicLogContent;
+  };
+
   return {
     beforeAllExecution: (testPlanInfo) => {
       logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
@@ -51,54 +67,25 @@ export const listReporter = ({ logger, logs }) => {
         };
       }
 
-      const dynamicLog = createLog({ newLine: "" });
-      const pendingExecutionSet = new Set();
-      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-      let frameIndex = 0;
       const interval = setInterval(() => {
-        dynamicLog.write(renderLog());
-      }, 50);
-      const renderLog = () => {
-        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-        const availableLines = process.stdout.rows;
-        const pendingExecutions = Array.from(pendingExecutionSet);
-        const pendingExecutionsSubset = pendingExecutions.slice(
-          0,
-          availableLines,
-        );
-        const pendingExecutionLogs = pendingExecutionsSubset.map(
-          (pendingExecution) => {
-            if (pendingExecution.result.status === "pending") {
-              // this execution might be over
-              // but we want to wait before displaying more info
-              // that others before are done
-              // otherwise we can't properly update the logs
-              // (only for failed execution)
-              // (otherwise we could update as line would still take same height)
-              // also not when execution contains warning for instance
-              pendingExecution.duration = new Date() - pendingExecution.startMs;
-            }
-            // TODO: append duration and memory usage if enabled and available
-            return ANSI.color(
-              `executing ${fillLeft(
-                pendingExecution.index + 1,
-                pendingExecution.total,
-                "0",
-              )} of ${pendingExecution.total}`,
-              ANSI.BLUE,
-            );
-          },
-        );
-        return pendingExecutionLogs.join("\n");
-      };
+        dynamicLog.write(renderDynamicLog(testPlanInfo));
+      }, 150);
+
       return () => {
+        dynamicLog.destroy();
+        dynamicLog = null;
         clearInterval(interval);
+        writeOutput(renderOutro(testPlanInfo, logOptions));
       };
     },
     beforeExecutionInOrder: (execution) => {
       return () => {
+        dynamicLog.write("");
+        dynamicLog.destroy();
         const log = renderExecutionLog(execution, logOptions);
         writeOutput(log);
+        dynamicLog = createLog({ newLine: "" });
+        dynamicLog.write(currentDynamicLogContent);
       };
     },
   };
@@ -179,7 +166,7 @@ const getGroupRenderedName = (groupInfo, logOptions) => {
  *  ------------------------
  */
 const renderExecutionLog = (execution, logOptions) => {
-  let log = "\n";
+  let log = "";
   // label
   {
     const label = renderExecutionLabel(execution, logOptions);
@@ -206,7 +193,7 @@ const renderExecutionLog = (execution, logOptions) => {
   //   hard: true,
   //   wordWrap: false,
   // });
-  return log;
+  return `${log}\n`;
 };
 
 const renderExecutionLabel = (execution, logOptions) => {
@@ -242,7 +229,7 @@ const descriptionFormatters = {
   },
   aborted: ({ index, countersInOrder, fileRelativeUrl }) => {
     const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total);
+    const number = fillLeft(index + 1, total, "0");
 
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
@@ -251,7 +238,7 @@ const descriptionFormatters = {
   },
   timedout: ({ index, countersInOrder, fileRelativeUrl, params }) => {
     const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total);
+    const number = fillLeft(index + 1, total, "0");
 
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl} timeout after ${params.allocatedMs}ms`,
@@ -260,7 +247,7 @@ const descriptionFormatters = {
   },
   failed: ({ index, countersInOrder, fileRelativeUrl }) => {
     const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total);
+    const number = fillLeft(index + 1, total, "0");
 
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
@@ -269,7 +256,7 @@ const descriptionFormatters = {
   },
   completed: ({ index, countersInOrder, fileRelativeUrl }) => {
     const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total);
+    const number = fillLeft(index + 1, total, "0");
 
     return ANSI.color(
       `${UNICODE.OK_RAW} ${number}/${total} ${fileRelativeUrl}`,
@@ -278,7 +265,7 @@ const descriptionFormatters = {
   },
   cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
     const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total);
+    const number = fillLeft(index + 1, total, "0");
 
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
@@ -507,7 +494,7 @@ export const renderOutro = (testPlanInfo, logOptions) => {
 
   return `\n\n${renderBigSection({ title: "summary", content: finalSummary })}`;
 };
-const renderStatusRepartition = (counters) => {
+const renderStatusRepartition = (counters, { showExecuting } = {}) => {
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
@@ -547,6 +534,9 @@ const renderStatusRepartition = (counters) => {
   }
   if (counters.remaining) {
     parts.push(`${counters.remaining} remaining`);
+  }
+  if (showExecuting) {
+    parts.push(`${counters.executing} executing`);
   }
   return `${parts.join(", ")}`;
 };
