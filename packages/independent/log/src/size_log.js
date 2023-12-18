@@ -4,11 +4,11 @@ export const byteAsFileSize = (numberOfBytes) => {
   return formatBytes(numberOfBytes);
 };
 
-export const byteAsMemoryUsage = (metricValue) => {
-  return formatBytes(metricValue, { fixedDecimals: true });
+export const byteAsMemoryUsage = (metricValue, { decimals } = {}) => {
+  return formatBytes(metricValue, { decimals, fixedDecimals: true });
 };
 
-const formatBytes = (number, { fixedDecimals = false } = {}) => {
+const formatBytes = (number, { fixedDecimals = false, decimals } = {}) => {
   if (number === 0) {
     return `0 B`;
   }
@@ -18,13 +18,19 @@ const formatBytes = (number, { fixedDecimals = false } = {}) => {
   );
   const unitNumber = number / Math.pow(1000, exponent);
   const unitName = BYTE_UNITS[exponent];
-  const maxDecimals = unitNumber < 100 ? 1 : 0;
+  if (decimals === undefined) {
+    if (unitNumber < 100) {
+      decimals = 1;
+    } else {
+      decimals = 0;
+    }
+  }
   const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals: maxDecimals,
+    decimals,
     decimalsWhenSmall: 1,
   });
   if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(maxDecimals)} ${unitName}`;
+    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
   }
   return `${unitNumberRounded} ${unitName}`;
 };

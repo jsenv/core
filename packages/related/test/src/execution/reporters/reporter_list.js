@@ -1,3 +1,4 @@
+import { memoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
 // import wrapAnsi from "wrap-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
@@ -39,6 +40,7 @@ export const listReporter = ({ logger, logs }) => {
     intermediateSummary: !canEraseProcessStdout,
   };
 
+  let startMs = Date.now();
   let dynamicLog = createLog({ newLine: "" });
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let frameIndex = 0;
@@ -50,8 +52,28 @@ export const listReporter = ({ logger, logs }) => {
     dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
       showExecuting: true,
     });
+
+    const msEllapsed = Date.now() - startMs;
+    const infos = [];
+    const duration = msAsDuration(msEllapsed, {
+      short: true,
+      decimals: 0,
+      rounded: false,
+    });
+    infos.push(ANSI.color(duration, ANSI.GREY));
+    const memoryHeapUsed = memoryUsage().heapUsed;
+    const memoryHeapUsedFormatted = byteAsMemoryUsage(memoryHeapUsed, {
+      decimals: 0,
+    });
+    infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
+
+    const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+    dynamicLogContent += ` ${ANSI.color(
+      "[",
+      ANSI.GREY,
+    )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
     dynamicLogContent = `\n${dynamicLogContent}\n`;
-    // TOOD: add [duration/memoryUsage]
     currentDynamicLogContent = dynamicLogContent;
     return dynamicLogContent;
   };
@@ -208,7 +230,10 @@ const renderExecutionLabel = (execution, logOptions) => {
   {
     const runtimeInfo = renderRuntimeInfo(execution, logOptions);
     if (runtimeInfo) {
-      label += ` [${runtimeInfo}]`;
+      label += ` ${ANSI.color("[", ANSI.GREY)}${runtimeInfo}${ANSI.color(
+        "]",
+        ANSI.GREY,
+      )}`;
     }
   }
   // intersummary

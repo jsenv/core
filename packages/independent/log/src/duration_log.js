@@ -1,4 +1,4 @@
-import { setRoundedPrecision } from "./decimals.js";
+import { setPrecision, setRoundedPrecision } from "./decimals.js";
 
 export const msAsEllapsedTime = (ms, { short } = {}) => {
   if (ms < 1000) {
@@ -39,7 +39,7 @@ const unitShort = {
   second: "s",
 };
 
-export const msAsDuration = (ms, { short } = {}) => {
+export const msAsDuration = (ms, { short, rounded = true, decimals } = {}) => {
   // ignore ms below meaningfulMs so that:
   // msAsDuration(0.5) -> "0 second"
   // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
@@ -52,30 +52,32 @@ export const msAsDuration = (ms, { short } = {}) => {
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
-    return formatDurationUnit(
-      primary,
-      primary.name === "second" ? 1 : 0,
+    return formatDurationUnit(primary, {
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
       short,
-    );
+      rounded,
+    });
   }
-  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(
-    remaining,
-    0,
+  return `${formatDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
     short,
-  )}`;
+    rounded,
+  })} and ${formatDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })}`;
 };
 
-const formatDurationUnit = (unit, decimals, short) => {
-  const count = setRoundedPrecision(unit.count, {
-    decimals,
-  });
+const formatDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
   let name = unit.name;
   if (short) {
     name = unitShort[name];
-    if (count <= 1) {
-      return `${count}${name}`;
-    }
-    return `${count}${name}s`;
+    return `${count}${name}`;
   }
   if (count <= 1) {
     return `${count} ${name}`;
