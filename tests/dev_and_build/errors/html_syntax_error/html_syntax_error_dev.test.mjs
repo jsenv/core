@@ -39,10 +39,11 @@ const test = async (params) => {
       consoleErrorOutput: `Error while handling ${htmlServerUrl}:
 invalid-first-character-of-tag-name
 ${htmFileUrl}:4:12
-  3 |   <body>
-> 4 |     <pre>
-               ^
-  5 |       foo <=> baz;`,
+1 | <!doctype html>
+2 | <html lang="en">
+3 |   <body>
+4 |     <pre>
+               ^`,
       pageErrors: [],
       consoleOutputRaw: "",
     };
