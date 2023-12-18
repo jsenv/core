@@ -40,38 +40,6 @@ export const listReporter = ({ logger, logs }) => {
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let frameIndex = 0;
   let currentDynamicLogContent;
-  const renderDynamicLog = (testPlanInfo) => {
-    frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-    let dynamicLogContent = "";
-    dynamicLogContent += `${frames[frameIndex]} `;
-    dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-      showExecuting: true,
-    });
-
-    const msEllapsed = Date.now() - startMs;
-    const infos = [];
-    const duration = inspectDuration(msEllapsed, {
-      short: true,
-      decimals: 0,
-      rounded: false,
-    });
-    infos.push(ANSI.color(duration, ANSI.GREY));
-    const memoryHeapUsed = memoryUsage().heapUsed;
-    const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
-      decimals: 0,
-    });
-    infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
-
-    const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
-    dynamicLogContent += ` ${ANSI.color(
-      "[",
-      ANSI.GREY,
-    )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
-
-    dynamicLogContent = `\n${dynamicLogContent}\n`;
-    currentDynamicLogContent = dynamicLogContent;
-    return dynamicLogContent;
-  };
 
   return {
     beforeAllExecution: (testPlanInfo) => {
@@ -84,6 +52,40 @@ export const listReporter = ({ logger, logs }) => {
         };
       }
 
+      const renderDynamicLog = (testPlanInfo) => {
+        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+        let dynamicLogContent = "";
+        dynamicLogContent += `${frames[frameIndex]} `;
+        dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
+          showExecuting: true,
+        });
+
+        const msEllapsed = Date.now() - startMs;
+        const infos = [];
+        const duration = inspectDuration(msEllapsed, {
+          short: true,
+          decimals: 0,
+          rounded: false,
+        });
+        infos.push(ANSI.color(duration, ANSI.GREY));
+        const memoryHeapUsed = memoryUsage().heapUsed;
+        const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+          decimals: 0,
+        });
+        infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
+
+        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+        dynamicLogContent += ` ${ANSI.color(
+          "[",
+          ANSI.GREY,
+        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+        dynamicLogContent = `\n${dynamicLogContent}\n`;
+        currentDynamicLogContent = dynamicLogContent;
+        return dynamicLogContent;
+      };
+
+      dynamicLog.write(renderDynamicLog(testPlanInfo));
       const interval = setInterval(() => {
         dynamicLog.write(renderDynamicLog(testPlanInfo));
       }, 150);
