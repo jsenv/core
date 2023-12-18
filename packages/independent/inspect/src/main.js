@@ -1,6 +1,10 @@
-export { inspect } from "./inspect.js";
-
-export { inspectMethodSymbol } from "./inspect_value.js";
-export { determineQuote, inspectChar } from "./stringifiers/string.js";
-
-export { inspectFileContent } from "./file_content.js";
+// js value
+export { inspect } from "./js_value/inspect.js";
+export { inspectMethodSymbol } from "./js_value/inspect_value.js";
+export { determineQuote, inspectChar } from "./js_value/string.js";
+// file content
+export { inspectFileContent } from "./file_content/file_content.js";
+// time
+export { inspectDuration, inspectEllapsedTime } from "./time/time.js";
+// byte
+export { inspectFileSize, inspectMemoryUsage } from "./byte/byte.js";
