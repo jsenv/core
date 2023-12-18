@@ -4,40 +4,49 @@ import isUnicodeSupported from "is-unicode-supported";
 
 import { ANSI } from "./ansi.js";
 
-const canUseUnicode = isUnicodeSupported();
-
-const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
-const OK_RAW = canUseUnicode ? `✔` : `√`;
-const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
-const DEBUG_RAW = canUseUnicode ? `◆` : `♦`;
-const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
-const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
-const CIRCLE_CROSS_RAW = canUseUnicode ? `ⓧ` : `(×)`;
-
-const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-const OK = ANSI.color(OK_RAW, ANSI.GREEN);
-const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
-const DEBUG = ANSI.color(DEBUG_RAW, ANSI.GREY);
-const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
-const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
-const CIRCLE_CROSS = ANSI.color(CIRCLE_CROSS_RAW, ANSI.RED);
-
 export const UNICODE = {
-  COMMAND,
-  OK,
-  FAILURE,
-  DEBUG,
-  INFO,
-  WARNING,
-  CIRCLE_CROSS,
+  supported: isUnicodeSupported(),
 
-  COMMAND_RAW,
-  OK_RAW,
-  FAILURE_RAW,
-  DEBUG_RAW,
-  INFO_RAW,
-  WARNING_RAW,
-  CIRCLE_CROSS_RAW,
-
-  supported: canUseUnicode,
+  get COMMAND_RAW() {
+    return UNICODE.supported ? `❯` : `>`;
+  },
+  get OK_RAW() {
+    return UNICODE.supported ? `✔` : `√`;
+  },
+  get FAILURE_RAW() {
+    return UNICODE.supported ? `✖` : `×`;
+  },
+  get DEBUG_RAW() {
+    return UNICODE.supported ? `◆` : `♦`;
+  },
+  get INFO_RAW() {
+    return UNICODE.supported ? `ℹ` : `i`;
+  },
+  get WARNING_RAW() {
+    return UNICODE.supported ? `⚠` : `‼`;
+  },
+  get CIRCLE_CROSS_RAW() {
+    return UNICODE.supported ? `ⓧ` : `(×)`;
+  },
+  get COMMAND() {
+    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+  },
+  get OK() {
+    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+  },
+  get FAILURE() {
+    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+  },
+  get DEBUG() {
+    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+  },
+  get INFO() {
+    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+  },
+  get WARNING() {
+    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+  },
+  get CIRCLE_CROSS() {
+    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
 };

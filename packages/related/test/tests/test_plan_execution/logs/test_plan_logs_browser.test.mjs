@@ -1,15 +1,15 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
+import { UNICODE, ANSI } from "@jsenv/log";
 import { startDevServer } from "@jsenv/core";
 
 import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
 
-// disable on windows because unicode symbols like
-// "✔" are "√" because unicode is supported returns false
-if (process.platform === "win32") {
-  process.exit(0);
-}
+// force unicode and color support on windows
+// to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
+UNICODE.supported = true;
+ANSI.supported = true;
 
 const devServer = await startDevServer({
   logLevel: "warn",
