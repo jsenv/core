@@ -5,7 +5,7 @@ import { execute, chromium, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({
-    logLevel: "warn",
+    logLevel: "off",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
@@ -25,21 +25,14 @@ const test = async (params) => {
   });
   devServer.stop();
   const [error] = errors;
-  if (params.runtime.name === "chromium") {
-    const actual = error.stack;
-    const expected = "SyntaxError: Unexpected end of input";
-    assert({ actual, expected });
-  }
-  if (params.runtime.name === "firefox") {
-    const actual = error.stack;
-    const expected = "SyntaxError: expected expression, got end of script";
-    assert({ actual, expected });
-  }
-  if (params.runtime.name === "webkit") {
-    const actual = error.stack;
-    const expected = `SyntaxError: Unexpected end of script`;
-    assert({ actual, expected });
-  }
+  const expectedStack = {
+    chromium: "SyntaxError: Unexpected end of input",
+    firefox: "SyntaxError: expected expression, got end of script",
+    webkit: "SyntaxError: Unexpected end of script",
+  }[params.runtime.name];
+  const actual = error.stack;
+  const expected = expectedStack;
+  assert({ actual, expected });
 };
 
 await test({ runtime: chromium() });

@@ -9,13 +9,15 @@ import {
 } from "@jsenv/test";
 
 const devServer = await startDevServer({
-  logLevel: "warn",
+  logLevel: "off",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
 });
 const { coverage } = await executeTestPlan({
-  logLevel: "off",
+  logs: {
+    level: "off",
+  },
   rootDirectoryUrl: new URL("./", import.meta.url),
   webServer: {
     origin: devServer.origin,
@@ -36,13 +38,12 @@ const { coverage } = await executeTestPlan({
       },
     },
   },
-  coverageEnabled: true,
-  coverageConfig: {
-    "./client/js_syntax_error.js": true,
+  coverage: {
+    include: {
+      "./client/js_syntax_error.js": true,
+    },
   },
-  coverageReportTextLog: false,
-  coverageReportHtml: false,
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
 const actual = coverage;
 const expected = {

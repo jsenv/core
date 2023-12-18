@@ -8,8 +8,13 @@ import { createLog, ANSI, UNICODE } from "@jsenv/log";
 import { formatErrorForTerminal } from "./format_error_for_terminal.js";
 
 export const listReporter = ({ logger, logs }) => {
-  const canEraseProcessStdout =
+  if (!logger.levels.info) {
+    return {};
+  }
+
+  const dynamicLogEnabled =
     logs.dynamic &&
+    // canEraseProcessStdout
     process.stdout.isTTY &&
     !logger.levels.debug &&
     // if there is an error during execution npm will mess up the output
@@ -32,7 +37,7 @@ export const listReporter = ({ logger, logs }) => {
   const logOptions = {
     ...logs,
     group: false,
-    intermediateSummary: !canEraseProcessStdout,
+    intermediateSummary: !dynamicLogEnabled,
   };
 
   let startMs = Date.now();
@@ -46,7 +51,7 @@ export const listReporter = ({ logger, logs }) => {
       logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
 
       writeOutput(renderIntro(testPlanInfo, logOptions));
-      if (!canEraseProcessStdout) {
+      if (!dynamicLogEnabled) {
         return () => {
           writeOutput(renderOutro(testPlanInfo, logOptions));
         };

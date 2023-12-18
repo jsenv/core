@@ -33,12 +33,10 @@ import { listReporter, renderOutro } from "./reporters/reporter_list.js";
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
- * @param {boolean|number} [testPlanParameters.concurrency=false] Maximum amount of execution running at the same time
+ * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
- * @param {boolean} [testPlanParameters.logMemoryUsage=false] Add memory heap usage during logs
- * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
- * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
+ * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
  * @return {Object} An object containing the result of all file executions
  */
 const logsDefault = {
@@ -360,7 +358,7 @@ To fix this warning:
           `${unexpectedKeys.join(",")}: no such key on coverage`,
         );
       }
-      coverage = { ...coverageDefault, coverage };
+      coverage = { ...coverageDefault, ...coverage };
       if (typeof coverage.include !== "object") {
         throw new TypeError(
           `coverage.include must be an object, got ${coverage.include}`,
