@@ -2,13 +2,8 @@ import { memoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
 // import wrapAnsi from "wrap-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
-import {
-  createLog,
-  ANSI,
-  UNICODE,
-  msAsDuration,
-  byteAsMemoryUsage,
-} from "@jsenv/log";
+import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
+import { createLog, ANSI, UNICODE } from "@jsenv/log";
 
 import { formatErrorForTerminal } from "./format_error_for_terminal.js";
 
@@ -55,14 +50,14 @@ export const listReporter = ({ logger, logs }) => {
 
     const msEllapsed = Date.now() - startMs;
     const infos = [];
-    const duration = msAsDuration(msEllapsed, {
+    const duration = inspectDuration(msEllapsed, {
       short: true,
       decimals: 0,
       rounded: false,
     });
     infos.push(ANSI.color(duration, ANSI.GREY));
     const memoryHeapUsed = memoryUsage().heapUsed;
-    const memoryHeapUsedFormatted = byteAsMemoryUsage(memoryHeapUsed, {
+    const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
       decimals: 0,
     });
     infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
@@ -308,13 +303,13 @@ const renderRuntimeInfo = (execution, logOptions) => {
     const duration = timings.executionEnd - timings.executionStart;
     const durationFormatted = logOptions.mockFluctuatingValues
       ? `<mock>`
-      : msAsDuration(duration, { short: true });
+      : inspectDuration(duration, { short: true });
     infos.push(ANSI.color(durationFormatted, ANSI.GREY));
   }
   if (logOptions.memoryUsage && typeof memoryUsage === "number") {
     const memoryUsageFormatted = logOptions.mockFluctuatingValues
       ? `<mock>`
-      : byteAsMemoryUsage(memoryUsage);
+      : inspectMemoryUsage(memoryUsage);
     infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
   }
   return infos.join(ANSI.color(`/`, ANSI.GREY));
@@ -514,7 +509,7 @@ export const renderOutro = (testPlanInfo, logOptions) => {
   const { duration } = testPlanInfo;
   const durationFormatted = logOptions.mockFluctuatingValues
     ? "<mock>"
-    : msAsDuration(duration);
+    : inspectDuration(duration);
   finalSummary += `\nduration: ${durationFormatted}`;
 
   return `\n\n${renderBigSection({ title: "summary", content: finalSummary })}`;

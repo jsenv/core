@@ -44,8 +44,8 @@ export const inspectDuration = (
   { short, rounded = true, decimals } = {},
 ) => {
   // ignore ms below meaningfulMs so that:
-  // msAsDuration(0.5) -> "0 second"
-  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // inspectDuration(0.5) -> "0 second"
+  // inspectDuration(1.1) -> "0.001 second" (and not "0.0011 second")
   // This tool is meant to be read by humans and it would be barely readable to see
   // "0.0001 second" (stands for 0.1 millisecond)
   // yes we could return "0.1 millisecond" but we choosed consistency over precision

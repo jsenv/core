@@ -13,17 +13,6 @@ export { UNICODE } from "./unicode.js";
 
 // formatting messages
 export { createDetailedMessage } from "./detailed_message.js";
-export { msAsEllapsedTime, msAsDuration } from "./duration_log.js";
-export { byteAsFileSize, byteAsMemoryUsage } from "./size_log.js";
-export { distributePercentages } from "./percentage_distribution.js";
-export {
-  getPrecision,
-  setRoundedPrecision,
-  setFlooredPrecision,
-  setCeiledPrecision,
-  setPrecision,
-} from "./decimals.js";
-
 // dynamic logs (log that can update themselves in the terminal)
 export { createLog } from "./log.js";
 export { startSpinner } from "./spinner.js";

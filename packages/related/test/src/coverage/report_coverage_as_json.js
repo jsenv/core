@@ -1,6 +1,6 @@
 import { urlToFileSystemPath } from "@jsenv/urls";
 import { writeFileSync } from "@jsenv/filesystem";
-import { byteAsFileSize } from "@jsenv/log";
+import { inspectFileSize } from "@jsenv/inspect";
 
 export const reportCoverageAsJson = (testPlanResult, fileUrl) => {
   if (testPlanResult.aborted) {
@@ -13,7 +13,7 @@ export const reportCoverageAsJson = (testPlanResult, fileUrl) => {
   const coverageAsText = JSON.stringify(testPlanCoverage, null, "  ");
   writeFileSync(fileUrl, coverageAsText);
   console.log(
-    `-> ${urlToFileSystemPath(fileUrl)} (${byteAsFileSize(
+    `-> ${urlToFileSystemPath(fileUrl)} (${inspectFileSize(
       Buffer.byteLength(coverageAsText),
     )})`,
   );

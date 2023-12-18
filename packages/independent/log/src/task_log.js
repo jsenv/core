@@ -1,4 +1,5 @@
-import { msAsDuration } from "./duration_log.js";
+import { inspectDuration } from "@jsenv/inspect";
+
 import { UNICODE } from "./unicode.js";
 import { createLog } from "./log.js";
 import { startSpinner } from "./spinner.js";
@@ -31,7 +32,7 @@ export const createTaskLog = (
     done: () => {
       const msEllapsed = Date.now() - startMs;
       taskSpinner.stop(
-        `${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`,
+        `${UNICODE.OK} ${label} (done in ${inspectDuration(msEllapsed)})`,
       );
     },
     happen: (message) => {

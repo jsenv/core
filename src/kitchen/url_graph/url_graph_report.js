@@ -179,7 +179,7 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   //   parts.push(
   //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
   //       sourcemaps.count
-  //     } (${byteAsFileSize(sourcemaps.size)})`,
+  //     } (${inspectFileSize(sourcemaps.size)})`,
   //   )
   // }
   if (html.count) {
