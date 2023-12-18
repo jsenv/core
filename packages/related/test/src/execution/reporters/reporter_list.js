@@ -118,7 +118,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
     return `${renderBigSection({
       title: "nothing to execute",
       content: "",
-    })}\n`;
+    })}\n\n`;
   }
   if (planified === 1) {
     const groupName = groupNames[0];
@@ -126,7 +126,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
     return `${renderBigSection({
       title: "1 execution to run",
       content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
-    })}\n`;
+    })}\n\n`;
   }
   if (groupNames.length === 1) {
     const groupName = groupNames[0];
@@ -134,7 +134,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
     return `${renderBigSection({
       title: `${planified} executions to run`,
       content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
-    })}\n`;
+    })}\n\n`;
   }
 
   let introLines = [];
@@ -150,7 +150,7 @@ const renderIntro = (testPlanInfo, logOptions) => {
   return `${renderBigSection({
     title: `${planified} executions to run`,
     content: introLines.join("\n"),
-  })}\n`;
+  })}\n\n`;
 };
 
 const getGroupRenderedName = (groupInfo, logOptions) => {
@@ -512,7 +512,7 @@ export const renderOutro = (testPlanInfo, logOptions) => {
     : inspectDuration(duration);
   finalSummary += `\nduration: ${durationFormatted}`;
 
-  return `\n\n${renderBigSection({ title: "summary", content: finalSummary })}`;
+  return `\n${renderBigSection({ title: "summary", content: finalSummary })}`;
 };
 const renderStatusRepartition = (counters, { showExecuting } = {}) => {
   if (counters.aborted === counters.planified) {

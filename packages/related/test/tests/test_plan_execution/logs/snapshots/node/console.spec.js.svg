@@ -58,13 +58,14 @@
         <text x="10" y="109.55" fill="#32CD32"
           >&#x2714; 1/2 console.spec.js</text
         >
-        <text x="194.83" y="109.55"> [</text>
+        <text x="194.83" y="109.55" fill="#A9A9A9">[</text>
         <text x="203.23" y="109.55" fill="#A9A9A9">worker_thread</text>
         <text x="312.45" y="109.55" fill="#A9A9A9">/</text>
         <text x="320.85" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="371.26" y="109.55" fill="#A9A9A9">/</text>
         <text x="379.66" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="430.07" y="109.55">] (1 </text>
+        <text x="430.07" y="109.55" fill="#A9A9A9">]</text>
+        <text x="446.87" y="109.55"> (1 </text>
         <text x="472.08" y="109.55" fill="#32CD32">completed</text>
         <text x="547.69" y="109.55">, 1 remaining)</text>
         <text x="10" y="128.55" fill="#A9A9A9">-----------</text>
@@ -91,13 +92,14 @@
         <text x="10" y="337.55" fill="#32CD32"
           >&#x2714; 2/2 console.spec.js</text
         >
-        <text x="194.83" y="337.55"> [</text>
+        <text x="194.83" y="337.55" fill="#A9A9A9">[</text>
         <text x="203.23" y="337.55" fill="#A9A9A9">child_process</text>
         <text x="312.45" y="337.55" fill="#A9A9A9">/</text>
         <text x="320.85" y="337.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="371.26" y="337.55" fill="#A9A9A9">/</text>
         <text x="379.66" y="337.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="430.07" y="337.55">] (all </text>
+        <text x="430.07" y="337.55" fill="#A9A9A9">]</text>
+        <text x="446.87" y="337.55"> (all </text>
         <text x="488.88" y="337.55" fill="#32CD32">completed</text>
         <text x="564.49" y="337.55">)</text>
         <text x="10" y="356.55" fill="#A9A9A9">-----------</text>

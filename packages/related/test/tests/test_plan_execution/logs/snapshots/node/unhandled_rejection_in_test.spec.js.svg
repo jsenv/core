@@ -58,11 +58,12 @@
         <text x="10" y="109.55" fill="#B22222"
           >&#x2716; 1/2 unhandled_rejection_in_test.spec.js</text
         >
-        <text x="362.86" y="109.55"> [</text>
+        <text x="362.86" y="109.55" fill="#A9A9A9">[</text>
         <text x="371.26" y="109.55" fill="#A9A9A9">worker_thread</text>
         <text x="480.48" y="109.55" fill="#A9A9A9">/</text>
         <text x="488.88" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="539.29" y="109.55">] (1 </text>
+        <text x="539.29" y="109.55" fill="#A9A9A9">]</text>
+        <text x="556.09" y="109.55"> (1 </text>
         <text x="581.29" y="109.55" fill="#B22222">failed</text>
         <text x="631.7" y="109.55">, 1 remaining)</text>
         <text x="10" y="128.55" fill="#B22222">---------------</text>
@@ -85,11 +86,12 @@
         <text x="10" y="242.55" fill="#B22222"
           >&#x2716; 2/2 unhandled_rejection_in_test.spec.js</text
         >
-        <text x="362.86" y="242.55"> [</text>
+        <text x="362.86" y="242.55" fill="#A9A9A9">[</text>
         <text x="371.26" y="242.55" fill="#A9A9A9">child_process</text>
         <text x="480.48" y="242.55" fill="#A9A9A9">/</text>
         <text x="488.88" y="242.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="539.29" y="242.55">] (all </text>
+        <text x="539.29" y="242.55" fill="#A9A9A9">]</text>
+        <text x="556.09" y="242.55"> (all </text>
         <text x="598.1" y="242.55" fill="#B22222">failed</text>
         <text x="648.5" y="242.55">)</text>
         <text x="10" y="261.55" fill="#B22222">---------------</text>

@@ -58,13 +58,14 @@
         <text x="10" y="109.55" fill="#B22222"
           >&#x2716; 1/2 error_in_test_function.spec.js</text
         >
-        <text x="320.85" y="109.55"> [</text>
+        <text x="320.85" y="109.55" fill="#A9A9A9">[</text>
         <text x="329.25" y="109.55" fill="#A9A9A9">worker_thread</text>
         <text x="438.47" y="109.55" fill="#A9A9A9">/</text>
         <text x="446.87" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="497.28" y="109.55" fill="#A9A9A9">/</text>
         <text x="505.68" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="556.09" y="109.55">] (1 </text>
+        <text x="556.09" y="109.55" fill="#A9A9A9">]</text>
+        <text x="572.89" y="109.55"> (1 </text>
         <text x="598.1" y="109.55" fill="#B22222">failed</text>
         <text x="648.5" y="109.55">, 1 remaining)</text>
         <text x="10" y="128.55" fill="#B22222">---------------</text>
@@ -91,13 +92,14 @@
         <text x="10" y="280.55" fill="#B22222"
           >&#x2716; 2/2 error_in_test_function.spec.js</text
         >
-        <text x="320.85" y="280.55"> [</text>
+        <text x="320.85" y="280.55" fill="#A9A9A9">[</text>
         <text x="329.25" y="280.55" fill="#A9A9A9">child_process</text>
         <text x="438.47" y="280.55" fill="#A9A9A9">/</text>
         <text x="446.87" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
         <text x="497.28" y="280.55" fill="#A9A9A9">/</text>
         <text x="505.68" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="556.09" y="280.55">] (all </text>
+        <text x="556.09" y="280.55" fill="#A9A9A9">]</text>
+        <text x="572.89" y="280.55"> (all </text>
         <text x="614.9" y="280.55" fill="#B22222">failed</text>
         <text x="665.31" y="280.55">)</text>
         <text x="10" y="299.55" fill="#B22222">---------------</text>
