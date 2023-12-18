@@ -1,6 +1,6 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { createDetailedMessage } from "@jsenv/log";
-import { Abort, raceProcessTeardownEvents, raceCallbacks } from "@jsenv/abort";
+import { Abort, raceCallbacks } from "@jsenv/abort";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
@@ -60,10 +60,10 @@ export const createRuntimeUsingPlaywright = ({
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
-  --- file --- 
-  ${fileUrl}
-  --- web server root directory url ---
-  ${webServer.rootDirectoryUrl}`);
+--- file --- 
+${fileUrl}
+--- web server root directory url ---
+${webServer.rootDirectoryUrl}`);
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
     const cleanupCallbackSet = new Set();
@@ -106,7 +106,6 @@ export const createRuntimeUsingPlaywright = ({
         const browser = await launchBrowserUsingPlaywright({
           signal,
           browserName,
-          stopOnExit: true,
           playwrightLaunchOptions: options,
         });
         // if (browser._initializer.version) {
@@ -541,26 +540,11 @@ const generateCoverageForPage = (scriptExecutionResults) => {
 const launchBrowserUsingPlaywright = async ({
   signal,
   browserName,
-  stopOnExit,
   playwrightLaunchOptions,
 }) => {
   const launchBrowserOperation = Abort.startOperation();
   launchBrowserOperation.addAbortSignal(signal);
   const playwright = await importPlaywright({ browserName });
-  if (stopOnExit) {
-    launchBrowserOperation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGHUP: true,
-          SIGTERM: true,
-          SIGINT: true,
-          beforeExit: true,
-          exit: true,
-        },
-        abort,
-      );
-    });
-  }
   const browserClass = playwright[browserName];
   try {
     const browser = await browserClass.launch({

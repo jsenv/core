@@ -104,6 +104,8 @@ export const executeTestPlan = async ({
 
   signal = new AbortController().signal,
   handleSIGINT = true,
+  handleSIGUP = true,
+  handleSIGTERM = true,
   updateProcessExitCode = true,
   parallel = parallelDefault,
   defaultMsAllocatedPerExecution = 30_000,
@@ -125,14 +127,16 @@ export const executeTestPlan = async ({
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
-  if (handleSIGINT) {
+  if (handleSIGINT || handleSIGUP || handleSIGTERM) {
     operation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
-          SIGINT: true,
+          SIGINT: handleSIGINT,
+          SIGHUP: handleSIGUP,
+          SIGTERM: handleSIGTERM,
         },
-        () => {
-          logger.debug(`SIGINT abort`);
+        ({ name }) => {
+          logger.debug(`${name} -> abort`);
           abort();
         },
       );

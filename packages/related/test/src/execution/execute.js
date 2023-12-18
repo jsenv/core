@@ -20,6 +20,8 @@ import { run } from "./run.js";
 export const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
+  handleSIGUP = true,
+  handleSIGTERM = true,
   logLevel,
   rootDirectoryUrl,
   webServer,
@@ -49,11 +51,13 @@ export const execute = async ({
   const teardownCallbackSet = new Set();
   const executeOperation = Abort.startOperation();
   executeOperation.addAbortSignal(signal);
-  if (handleSIGINT) {
+  if (handleSIGINT || handleSIGUP || handleSIGTERM) {
     executeOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
-          SIGINT: true,
+          SIGINT: handleSIGINT,
+          SIGHUP: handleSIGUP,
+          SIGTERM: handleSIGTERM,
         },
         abort,
       );
