@@ -7,6 +7,7 @@ import ansiEscapes from "ansi-escapes";
 
 export const createDynamicLog = ({
   stream = process.stdout,
+  clearTerminalAllowed,
   onVerticalOverflow = () => {},
   onWriteFromOutside = () => {},
 } = {}) => {
@@ -43,6 +44,10 @@ export const createDynamicLog = ({
     }
 
     if (visualLineCount > rows) {
+      if (clearTerminalAllowed) {
+        clearAttemptResult = true;
+        return ansiEscapes.clearTerminal;
+      }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
       // readline.moveCursor cannot move cursor higher than screen height

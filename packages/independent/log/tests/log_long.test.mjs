@@ -6,7 +6,8 @@
 import { createDynamicLog } from "@jsenv/log";
 
 const log = createDynamicLog();
-log.update(`1
+log.update(`
+1
 2
 3
 4
@@ -24,13 +25,15 @@ log.update(`1
 16
 17
 18`);
-log.update(`a
+log.update(`
+a
 b
 c
 d
 e
 f
 g`);
-log.update(`alpha
+log.update(`
+alpha
 beta
 gamma`);
