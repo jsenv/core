@@ -14,7 +14,9 @@ const devServer = await startDevServer({
   port: 0,
 });
 const result = await executeTestPlan({
-  logLevel: "warn",
+  logs: {
+    level: "warn",
+  },
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./client/*.html": {
@@ -30,29 +32,45 @@ const result = await executeTestPlan({
     origin: devServer.origin,
     rootDirectoryUrl: new URL("./client/", import.meta.url),
   },
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
 const actual = result;
 const expected = {
-  aborted: false,
-  summary: {
-    counters: {
-      total: 2,
-      aborted: 0,
-      timedout: 0,
-      failed: 0,
-      completed: 2,
-      done: 2,
-      cancelled: 0,
+  rootDirectoryUrl: new URL("./", import.meta.url).href,
+  groups: {
+    a: {
+      count: 1,
+      runtimeType: "browser",
+      runtimeName: "chromium",
+      runtimeVersion: assert.any(String),
     },
-    duration: assert.any(Number),
+    b: {
+      count: 1,
+      runtimeType: "browser",
+      runtimeName: "chromium",
+      runtimeVersion: assert.any(String),
+    },
   },
-  report: {
+  counters: {
+    planified: 2,
+    remaining: 0,
+    executing: 0,
+    executed: 2,
+    aborted: 0,
+    cancelled: 0,
+    timedout: 0,
+    failed: 0,
+    completed: 2,
+  },
+  aborted: false,
+  failed: false,
+  duration: assert.any(Number),
+  coverage: null,
+  results: {
     "client/main.html": {
       a: assert.any(Object),
       b: assert.any(Object),
     },
   },
-  coverage: null,
 };
 assert({ actual, expected });

@@ -10,7 +10,9 @@ const devServer = await startDevServer({
   port: 0,
 });
 const { coverage } = await executeTestPlan({
-  logLevel: "warn",
+  logs: {
+    level: "warn",
+  },
   rootDirectoryUrl: new URL("./", import.meta.url),
   webServer: {
     origin: devServer.origin,
@@ -26,13 +28,12 @@ const { coverage } = await executeTestPlan({
     },
   },
   // keepRunning: true,
-  coverageEnabled: true,
-  coverageConfig: {
-    "./client/file.js": true,
+  coverage: {
+    include: {
+      "./client/file.js": true,
+    },
   },
-  coverageReportTextLog: false,
-  coverageReportHtml: false,
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
 const actual = coverage;
 const expected = {

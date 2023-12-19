@@ -454,15 +454,16 @@ To fix this warning:
       executed: 0,
 
       aborted: 0,
+      cancelled: 0,
       timedout: 0,
       failed: 0,
       completed: 0,
     },
     aborted: false,
     failed: false,
-    results: {},
     duration: 0,
     coverage: null,
+    results: {},
   };
   const groups = testPlanInfo.groups;
   const counters = testPlanInfo.counters;
