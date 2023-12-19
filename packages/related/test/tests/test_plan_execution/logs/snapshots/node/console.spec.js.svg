@@ -105,20 +105,18 @@
         <text x="10" y="356.55" fill="#A9A9A9">-----------</text>
         <text x="110.82" y="356.55"> console (</text>
         <text x="186.43" y="356.55" fill="#B22222">&#x2716;</text>
-        <text x="203.23" y="356.55"> 3) </text>
+        <text x="203.23" y="356.55"> 1) </text>
         <text x="228.44" y="356.55" fill="#A9A9A9">------------</text>
         <text x="10" y="375.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="375.55"> toto</text>
-        <text x="10" y="394.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="394.55"> hey</text>
         <text x="26.8" y="413.55"> hey</text>
-        <text x="26.8" y="432.55"> ho</text>
-        <text x="26.8" y="451.55"> info</text>
-        <text x="26.8" y="470.55"> verbose log</text>
-        <text x="26.8" y="489.55"> la</text>
-        <text x="10" y="508.55" fill="#B22222">&#x2716;</text>
-        <text x="26.8" y="508.55"> test</text>
-        <text x="26.8" y="527.55"> multiline</text>
+        <text x="26.8" y="432.55"> test</text>
+        <text x="26.8" y="451.55"> multiline</text>
+        <text x="26.8" y="470.55"> ho</text>
+        <text x="26.8" y="489.55"> info</text>
+        <text x="26.8" y="508.55"> verbose log</text>
+        <text x="26.8" y="527.55"> la</text>
         <text x="10" y="546.55" fill="#A9A9A9"
           >--------------------------------------</text
         >

@@ -524,7 +524,7 @@ export const renderOutro = (testPlanInfo, logOptions) => {
     : inspectDuration(duration);
   finalSummary += `\nduration: ${durationFormatted}`;
 
-  return `\n${renderBigSection({ title: "summary", content: finalSummary })}`;
+  return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
 };
 const renderStatusRepartition = (counters, { showExecuting } = {}) => {
   if (counters.aborted === counters.planified) {
