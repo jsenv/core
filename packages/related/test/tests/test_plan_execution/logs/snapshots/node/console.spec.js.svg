@@ -47,7 +47,7 @@
         <text x="119.22" y="14.55"> 1 execution to run </text>
         <text x="278.84" y="14.55" fill="#A9A9A9">-------------</text>
         <text x="10" y="33.55"
-          >child_process (node_child_process@&#x3C;mock&#x3E;)</text
+          >worker_thread (node_worker_thread@&#x3C;mock&#x3E;)</text
         >
         <text x="10" y="52.55" fill="#A9A9A9"
           >---------------------------------------------</text
@@ -70,15 +70,15 @@
         <text x="228.44" y="109.55" fill="#A9A9A9">------------</text>
         <text x="10" y="128.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="128.55"> toto</text>
-        <text x="10" y="147.55" fill="#B22222">&#x2716;</text>
-        <text x="26.8" y="147.55"> hey</text>
+        <text x="26.8" y="147.55"> ho</text>
         <text x="10" y="166.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="166.55"> hey</text>
-        <text x="26.8" y="185.55"> ho</text>
-        <text x="26.8" y="204.55"> info</text>
-        <text x="10" y="223.55" fill="#B22222">&#x2716;</text>
-        <text x="26.8" y="223.55"> test</text>
-        <text x="26.8" y="242.55"> multiline</text>
+        <text x="10" y="185.55" fill="#B22222">&#x2716;</text>
+        <text x="26.8" y="185.55"> hey</text>
+        <text x="10" y="204.55" fill="#B22222">&#x2716;</text>
+        <text x="26.8" y="204.55"> test</text>
+        <text x="26.8" y="223.55"> multiline</text>
+        <text x="26.8" y="242.55"> info</text>
         <text x="26.8" y="261.55"> verbose log</text>
         <text x="26.8" y="280.55"> la</text>
         <text x="10" y="299.55" fill="#A9A9A9"

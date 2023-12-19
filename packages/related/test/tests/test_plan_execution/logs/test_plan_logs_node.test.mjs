@@ -34,17 +34,16 @@ const test = async (filename, params) => {
       rootDirectoryUrl: new URL("./node_client/", import.meta.url),
       testPlan: {
         [filename]: {
-          // console output order in not predictible on child_process
-          ...(filename === "console.spec.js"
-            ? {}
-            : {
-                worker_thread: {
-                  runtime: nodeWorkerThread(),
-                },
-              }),
-          child_process: {
-            runtime: nodeChildProcess(),
+          worker_thread: {
+            runtime: nodeWorkerThread(),
           },
+          child_process:
+            // console output order in not predictible on child_process
+            filename === "console.spec.js"
+              ? null
+              : {
+                  runtime: nodeChildProcess(),
+                },
         },
       },
       githubCheck: false,

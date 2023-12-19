@@ -256,6 +256,9 @@ export const executeTestPlan = async ({
         if (!filePlan) continue;
         for (const executionName of Object.keys(filePlan)) {
           const executionConfig = filePlan[executionName];
+          if (executionConfig === null) {
+            continue;
+          }
           const { runtime } = executionConfig;
           if (!runtime || runtime.disabled) {
             continue;
