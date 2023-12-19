@@ -114,11 +114,19 @@ export const createDynamicLog = ({
     }
   };
 
+  const clearDuringFunctionCall = (callback) => {
+    const currentOutput = lastOutput;
+    update("");
+    callback();
+    update(currentOutput);
+  };
+
   Object.assign(log, {
     update,
     dynamicUpdate,
     destroy,
     stream,
+    clearDuringFunctionCall,
   });
   return log;
 };
