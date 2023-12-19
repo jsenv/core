@@ -517,13 +517,17 @@ To fix this warning:
           continue;
         }
 
-        const { runtime, runtimeParams } = stepConfig;
+        const {
+          runtime,
+          runtimeParams,
+          allocatedMs = defaultMsAllocatedPerExecution,
+        } = stepConfig;
         const params = {
           measureMemoryUsage: logs.memoryUsage,
           measurePerformance: false,
           collectPerformance: false,
           collectConsole: true,
-          allocatedMs: defaultMsAllocatedPerExecution,
+          allocatedMs,
           runtime,
           runtimeParams: {
             rootDirectoryUrl,
