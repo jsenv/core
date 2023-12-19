@@ -368,7 +368,7 @@ To fix this warning:
       }
       if (Object.keys(coverage.include).length === 0) {
         logger.warn(
-          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+          `coverage.include is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
         );
       }
       if (coverage.methodForBrowsers === undefined) {
@@ -531,7 +531,7 @@ To fix this warning:
             teardownCallbackSet,
 
             coverageEnabled: Boolean(coverage),
-            coverageConfig: coverage?.include,
+            coverageInclude: coverage?.include,
             coverageMethodForBrowsers: coverage?.methodForBrowsers,
             coverageMethodForNodeJs: coverage?.methodForNodeJs,
             isTestPlan: true,

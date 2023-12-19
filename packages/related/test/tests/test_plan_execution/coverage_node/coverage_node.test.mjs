@@ -31,7 +31,7 @@ const test = async (name, params) => {
   await takeCoverageScreenshots(
     testPlanResult,
     new URL(`./screenshots/${name}/`, import.meta.url),
-    ["node_client/file.js"],
+    ["file.js"],
   );
 };
 

@@ -7,10 +7,10 @@ import { babelPluginInstrument } from "../coverage/babel_plugin_instrument.js";
 
 export const initIstanbulMiddleware = async (
   page,
-  { webServer, rootDirectoryUrl, coverageConfig },
+  { webServer, rootDirectoryUrl, coverageInclude },
 ) => {
   const associations = URL_META.resolveAssociations(
-    { cover: coverageConfig },
+    { cover: coverageInclude },
     rootDirectoryUrl,
   );
   await page.route("**", async (route) => {

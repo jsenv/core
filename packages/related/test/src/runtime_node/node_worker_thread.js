@@ -55,7 +55,7 @@ export const nodeWorkerThread = ({
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
-      coverageConfig,
+      coverageInclude,
       coverageMethodForNodeJs,
       coverageFileUrl,
     }) => {
@@ -286,7 +286,7 @@ export const nodeWorkerThread = ({
               measureMemoryUsage,
               collectPerformance,
               coverageEnabled,
-              coverageConfig,
+              coverageInclude,
               coverageMethodForNodeJs,
               coverageFileUrl,
               exitAfterAction: true,
