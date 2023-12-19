@@ -111,14 +111,14 @@
         <text x="26.8" y="375.55"> toto</text>
         <text x="10" y="394.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="394.55"> hey</text>
-        <text x="10" y="413.55" fill="#B22222">&#x2716;</text>
         <text x="26.8" y="413.55"> hey</text>
-        <text x="26.8" y="432.55"> test</text>
-        <text x="26.8" y="451.55"> multiline</text>
-        <text x="26.8" y="470.55"> ho</text>
-        <text x="26.8" y="489.55"> info</text>
-        <text x="26.8" y="508.55"> verbose log</text>
-        <text x="26.8" y="527.55"> la</text>
+        <text x="26.8" y="432.55"> ho</text>
+        <text x="26.8" y="451.55"> info</text>
+        <text x="26.8" y="470.55"> verbose log</text>
+        <text x="26.8" y="489.55"> la</text>
+        <text x="10" y="508.55" fill="#B22222">&#x2716;</text>
+        <text x="26.8" y="508.55"> test</text>
+        <text x="26.8" y="527.55"> multiline</text>
         <text x="10" y="546.55" fill="#A9A9A9"
           >--------------------------------------</text
         >

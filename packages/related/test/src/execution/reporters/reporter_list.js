@@ -452,10 +452,18 @@ const prefixFirstAndIndentRemainingLines = ({
   return result;
 };
 const CONSOLE_ICONS = {
-  debug: UNICODE.DEBUG,
-  info: UNICODE.INFO,
-  warning: UNICODE.WARNING,
-  error: UNICODE.FAILURE,
+  get debug() {
+    return UNICODE.DEBUG;
+  },
+  get info() {
+    return UNICODE.INFO;
+  },
+  get warning() {
+    return UNICODE.WARNING;
+  },
+  get error() {
+    return UNICODE.FAILURE;
+  },
   log: " ",
 };
 
