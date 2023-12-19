@@ -3,10 +3,10 @@
 // either the whole log can be rewritten (updated)
 // or it will be kept and second log appended at the bottom
 
-import { createLog } from "@jsenv/log";
+import { createDynamicLog } from "@jsenv/log";
 
-const log = createLog();
-log.write(`1
+const log = createDynamicLog();
+log.update(`1
 2
 3
 4
@@ -24,13 +24,13 @@ log.write(`1
 16
 17
 18`);
-log.write(`a
+log.update(`a
 b
 c
 d
 e
 f
 g`);
-log.write(`alpha
+log.update(`alpha
 beta
 gamma`);

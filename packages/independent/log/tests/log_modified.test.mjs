@@ -1,9 +1,9 @@
-import { createLog } from "@jsenv/log";
+import { createDynamicLog } from "@jsenv/log";
 
-const log = createLog({
+const dynamicLog = createDynamicLog({
   // newLine: false
 });
-log.write("hello");
+dynamicLog.update("hello");
 console.log("hey");
-log.write("world");
-log.write("!");
+dynamicLog.update("world");
+dynamicLog.update("!");

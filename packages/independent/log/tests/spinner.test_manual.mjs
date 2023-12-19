@@ -1,15 +1,15 @@
-import { createLog, startSpinner } from "@jsenv/log";
+import { createDynamicLog, startSpinner } from "@jsenv/log";
 
-const log = createLog();
+const dynamicLog = createDynamicLog();
 const spinner = startSpinner({
-  log,
+  dynamicLog,
   render: () => "Loading and I would say event more",
   stopOnWriteFromOutside: true,
 });
 
 await new Promise((resolve) => setTimeout(resolve, 2500));
 
-log.write("Hey");
+dynamicLog.update("Hey");
 spinner.stop();
 
 await new Promise((resolve) => setTimeout(resolve, 500));
