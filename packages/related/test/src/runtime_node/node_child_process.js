@@ -60,7 +60,7 @@ export const nodeChildProcess = ({
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
-      coverageConfig,
+      coverageInclude,
       coverageMethodForNodeJs,
       coverageFileUrl,
     }) => {
@@ -365,7 +365,7 @@ export const nodeChildProcess = ({
               measureMemoryUsage,
               collectPerformance,
               coverageEnabled,
-              coverageConfig,
+              coverageInclude,
               coverageMethodForNodeJs,
               coverageFileUrl,
               exitAfterAction: true,

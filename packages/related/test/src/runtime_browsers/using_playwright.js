@@ -53,7 +53,7 @@ export const createRuntimeUsingPlaywright = ({
     onMeasureMemoryAvailable,
     collectPerformance,
     coverageEnabled = false,
-    coverageConfig,
+    coverageInclude,
     coverageMethodForBrowsers,
     coverageFileUrl,
   }) => {
@@ -192,7 +192,7 @@ ${webServer.rootDirectoryUrl}`);
       await initIstanbulMiddleware(page, {
         webServer,
         rootDirectoryUrl,
-        coverageConfig,
+        coverageInclude,
       });
     }
     if (!webServer.isJsenvDevServer) {
@@ -240,7 +240,7 @@ ${webServer.rootDirectoryUrl}`);
             { result: v8CoveragesWithFsUrls },
             {
               rootDirectoryUrl,
-              coverageConfig,
+              coverageInclude,
             },
           );
           writeFileSync(

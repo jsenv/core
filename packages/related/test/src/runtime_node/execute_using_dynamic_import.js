@@ -11,7 +11,7 @@ export const executeUsingDynamicImport = async ({
   measureMemoryUsage,
   collectPerformance,
   coverageEnabled,
-  coverageConfig,
+  coverageInclude,
   coverageMethodForNodeJs,
   coverageFileUrl,
 }) => {
@@ -39,13 +39,13 @@ export const executeUsingDynamicImport = async ({
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
     const { stopJsCoverage } = await startJsCoverage();
     finalizeCoverage = async () => {
-      const [coverage, { filterV8Coverage }] = await [
+      const [coverage, { filterV8Coverage }] = await Promise.all([
         stopJsCoverage(),
         import("../coverage/v8_coverage.js"),
-      ];
+      ]);
       const coverageLight = await filterV8Coverage(coverage, {
         rootDirectoryUrl,
-        coverageConfig,
+        coverageInclude,
       });
       writeFileSync(
         new URL(coverageFileUrl),

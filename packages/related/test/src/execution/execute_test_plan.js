@@ -21,7 +21,7 @@ import {
 
 import { startMeasuringCpuUsage } from "../helpers/cpu_usage.js";
 import { createCallOrderer } from "../helpers/call_orderer.js";
-import { reportToCoverage } from "../coverage/report_to_coverage.js";
+import { generateCoverage } from "../coverage/generate_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
@@ -316,7 +316,9 @@ To fix this warning:
       }
       if (githubCheck) {
         if (typeof githubCheck !== "object") {
-          throw new TypeError(`coverage must be an object, got ${coverage}`);
+          throw new TypeError(
+            `githubCheck must be an object, got ${githubCheck}`,
+          );
         }
         const unexpectedKeys = Object.keys(githubCheck).filter(
           (key) => !Object.hasOwn(githubCheckDefault, key),
@@ -682,14 +684,11 @@ To fix this warning:
             // good to call v8.stopCoverage()
             // but it logs a strange message about "result is not an object"
           }
-          const testPlanCoverage = await reportToCoverage(results, {
+          const testPlanCoverage = await generateCoverage(testPlanInfo, {
             signal: multipleExecutionsOperation.signal,
             logger,
             rootDirectoryUrl,
-            coverageConfig: coverage.include,
-            coverageIncludeMissing: coverage.includeMissing,
-            coverageMethodForNodeJs: coverage.methodForNodeJs,
-            coverageV8ConflictWarning: coverage.v8ConflictWarning,
+            coverage,
           });
           testPlanInfo.coverage = testPlanCoverage;
         } catch (e) {
