@@ -1,4 +1,3 @@
-import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 import {
@@ -8,6 +7,7 @@ import {
   firefox,
   webkit,
 } from "@jsenv/test";
+import { takeCoverageScreenshots } from "../take_coverage_screenshots.js";
 
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -15,7 +15,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const { coverage } = await executeTestPlan({
+const testPlanResult = await executeTestPlan({
   logs: {
     level: "warn",
   },
@@ -56,21 +56,8 @@ const { coverage } = await executeTestPlan({
   },
   githubCheck: false,
 });
-const actual = coverage;
-const expected = {
-  "./client/file.js": {
-    ...actual["./client/file.js"],
-    path: "./client/file.js",
-    s: {
-      0: 3,
-      1: 3,
-      2: 1,
-      3: 2,
-      4: 2,
-      5: 2,
-      6: 0,
-      7: 0,
-    },
-  },
-};
-assert({ actual, expected });
+await takeCoverageScreenshots(
+  testPlanResult,
+  new URL(`./screenshots/`, import.meta.url),
+  ["file.js"],
+);

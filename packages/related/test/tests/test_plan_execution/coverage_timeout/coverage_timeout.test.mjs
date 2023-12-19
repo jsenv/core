@@ -1,35 +1,32 @@
-import { assert } from "@jsenv/assert";
-
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+import { takeCoverageScreenshots } from "../take_coverage_screenshots.js";
 
-const testPlan = {
-  "main.js": {
-    node: {
-      runtime: nodeWorkerThread({
-        gracefulStopAllocatedMs: 1000,
-        env: { AWAIT_FOREVER: true },
-      }),
-      allocatedMs: 5000,
+const testPlanResult = await executeTestPlan({
+  logs: {
+    level: "error",
+  },
+  rootDirectoryUrl: new URL("./", import.meta.url),
+  testPlan: {
+    "main.js": {
+      node: {
+        runtime: nodeWorkerThread({
+          gracefulStopAllocatedMs: 1_000,
+          env: { AWAIT_FOREVER: true },
+        }),
+        allocatedMs: 3_000,
+      },
     },
   },
-};
-const { coverage } = await executeTestPlan({
-  logLevel: "error",
-  rootDirectoryUrl: new URL("./", import.meta.url),
-  testPlan,
-  coverageEnabled: true,
-  coverageAndExecutionAllowed: true,
-  coverageReportTextLog: false,
-  coverageConfig: {
-    "main.js": true,
+  coverage: {
+    include: {
+      "main.js": true,
+    },
+    coverageAndExecutionAllowed: true,
   },
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
-const actual = coverage;
-const expected = {
-  "./main.js": {
-    ...actual["./main.js"],
-    s: { 0: 0, 1: 0, 2: 0 },
-  },
-};
-assert({ actual, expected });
+await takeCoverageScreenshots(
+  testPlanResult,
+  new URL(`./screenshots/`, import.meta.url),
+  ["main.js"],
+);
