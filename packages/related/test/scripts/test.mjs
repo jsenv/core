@@ -6,16 +6,21 @@ await executeTestPlan({
     "./tests/**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
-        allocatedMs: ({ fileRelativeUrl }) => {
-          if (
-            fileRelativeUrl.endsWith("coverage_browsers_and_node.test.mjs") ||
-            fileRelativeUrl.endsWith("_browsers.test.mjs") ||
-            fileRelativeUrl.endsWith("browser_tabs.test.mjs")
-          ) {
-            return 60_000;
-          }
-          return 30_000;
-        },
+      },
+    },
+    "./tests/**/coverage_browsers_and_node.test.mjs": {
+      node: {
+        allocatedMs: 60_000,
+      },
+    },
+    "./tests/**/browser_tabs.test.mjs": {
+      node: {
+        allocatedMs: 60_000,
+      },
+    },
+    "./tests/**/*_browsers.test.mjs": {
+      node: {
+        allocatedMs: 60_000,
       },
     },
   },

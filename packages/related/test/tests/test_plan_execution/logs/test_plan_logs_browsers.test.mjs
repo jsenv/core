@@ -20,7 +20,7 @@ const devServer = await startDevServer({
 
 const test = async (filename, params) => {
   const terminalSnapshotFileUrl = new URL(
-    `./snapshots/browser/${filename}.svg`,
+    `./snapshots/browsers/${filename}.svg`,
     import.meta.url,
   );
   const terminalFileSnapshot = takeFileSnapshot(terminalSnapshotFileUrl);
