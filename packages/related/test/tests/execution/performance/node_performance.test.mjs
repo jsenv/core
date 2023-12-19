@@ -19,9 +19,9 @@ const test = async (params) => {
   const expected = {
     namespace: { answer: 42 },
     performance: {
-      nodeTiming: assert.any(Number),
+      nodeTiming: assert.any(Object),
       timeOrigin: assert.any(Number),
-      eventLoopUtilization: assert.any(Number),
+      eventLoopUtilization: assert.any(Object),
       measures: {
         "a to b": assert.any(Number),
       },
