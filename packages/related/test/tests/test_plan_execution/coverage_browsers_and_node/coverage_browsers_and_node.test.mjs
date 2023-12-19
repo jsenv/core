@@ -7,7 +7,7 @@ import {
   firefox,
   webkit,
 } from "@jsenv/test";
-import { takeCoverageScreenshots } from "../take_coverage_screenshots.js";
+import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -56,8 +56,8 @@ const testPlanResult = await executeTestPlan({
   },
   githubCheck: false,
 });
-await takeCoverageScreenshots(
+await takeCoverageSnapshots(
   testPlanResult,
-  new URL(`./screenshots/`, import.meta.url),
+  new URL(`./snapshots/`, import.meta.url),
   ["file.js"],
 );

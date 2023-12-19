@@ -3,7 +3,7 @@ import {
   nodeChildProcess,
   nodeWorkerThread,
 } from "@jsenv/test";
-import { takeCoverageScreenshots } from "../take_coverage_screenshots.js";
+import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 const test = async (name, params) => {
   const testPlanResult = await executeTestPlan({
@@ -28,9 +28,9 @@ const test = async (name, params) => {
     },
     githubCheck: false,
   });
-  await takeCoverageScreenshots(
+  await takeCoverageSnapshots(
     testPlanResult,
-    new URL(`./screenshots/${name}/`, import.meta.url),
+    new URL(`./snapshots/${name}/`, import.meta.url),
     ["file.js"],
   );
 };
