@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync } from "@jsenv/filesystem";
 import { chromium as playwrightChromium } from "playwright";
 
 import { reportCoverageAsHtml } from "@jsenv/test";

@@ -1,14 +1,15 @@
-import { assert } from "@jsenv/assert";
-
 import {
   executeTestPlan,
   nodeChildProcess,
   nodeWorkerThread,
 } from "@jsenv/test";
+import { takeCoverageScreenshots } from "../take_coverage_screenshots.js";
 
-const test = async (params) => {
-  const { coverage } = await executeTestPlan({
-    logLevel: "warn",
+const test = async (name, params) => {
+  const testPlanResult = await executeTestPlan({
+    logs: {
+      level: "warn",
+    },
     rootDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
       "./node_client/main.js": {
@@ -18,40 +19,25 @@ const test = async (params) => {
         },
       },
     },
-    // keepRunning: true,
-    coverageEnabled: true,
-    coverageConfig: {
-      "./node_client/file.js": true,
-    },
-    coverageMethodForNodeJs: "Profiler",
-    coverageIncludeMissing: false,
-    coverageReportTextLog: false,
-    coverageReportHtml: false,
-    githubCheckEnabled: false,
-  });
-  const actual = coverage;
-  const expected = {
-    "./node_client/file.js": {
-      ...actual["./node_client/file.js"],
-      path: "./node_client/file.js",
-      s: {
-        0: 1,
-        1: 1,
-        2: 0,
-        3: 1,
-        4: 1,
-        5: 1,
-        6: 0,
-        7: 0,
+    coverage: {
+      include: {
+        "./node_client/file.js": true,
       },
+      includeMissing: false,
+      methodForNodeJs: "Profiler",
     },
-  };
-  assert({ actual, expected });
+    githubCheck: false,
+  });
+  await takeCoverageScreenshots(
+    testPlanResult,
+    new URL(`./screenshots/${name}/`, import.meta.url),
+    ["node_client/file.js"],
+  );
 };
 
-await test({
+await test("child_process", {
   runtime: nodeChildProcess(),
 });
-await test({
+await test("worker_thread", {
   runtime: nodeWorkerThread(),
 });
