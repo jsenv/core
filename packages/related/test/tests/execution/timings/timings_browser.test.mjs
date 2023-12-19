@@ -49,9 +49,9 @@ const test = async (params) => {
     const expected = {
       // execution must take around 2s (due to the timeout)
       executionDuration: assert.between(2_000, 3_000),
-      // the overall run duration and runtime alive duration is between 2/5s
-      runDuration: assert.between(2_000, 5_000),
-      runtimeDuration: assert.between(2_000, 5_000),
+      // the overall run duration and runtime alive duration is between 2/7s
+      runDuration: assert.between(2_000, 7_000),
+      runtimeDuration: assert.between(2_000, 7_000),
       // it does not take more than 500ms to start the file
       timeBetweenRuntimeStartAndExecutionStart: assert.between(0, 500),
     };

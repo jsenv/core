@@ -61,7 +61,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown: new Set(),
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
