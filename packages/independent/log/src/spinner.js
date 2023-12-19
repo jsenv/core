@@ -33,13 +33,7 @@ export const startSpinner = ({
 
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      dynamicLog.dynamicUpdate(({ outputFromOutside }) => {
-        if (outputFromOutside && stopOnWriteFromOutside) {
-          stop();
-          return "";
-        }
-        return update(render());
-      });
+      dynamicLog.update(render());
     }, 1000 / fps);
     if (!keepProcessAlive) {
       interval.unref();
@@ -67,6 +61,9 @@ export const startSpinner = ({
 
   if (stopOnVerticalOverflow) {
     dynamicLog.onVerticalOverflow = stop;
+  }
+  if (stopOnWriteFromOutside) {
+    dynamicLog.onWriteFromOutside = stop;
   }
 
   return spinner;

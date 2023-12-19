@@ -3,7 +3,7 @@ import stripAnsi from "strip-ansi";
 // import wrapAnsi from "wrap-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
 import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
-import { createLog, ANSI, UNICODE } from "@jsenv/log";
+import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
 
 import { formatErrorForTerminal } from "./format_error_for_terminal.js";
 
@@ -41,10 +41,9 @@ export const listReporter = ({ logger, logs }) => {
   };
 
   let startMs = Date.now();
-  let dynamicLog = createLog({ newLine: "" });
+  let dynamicLog = createDynamicLog();
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let frameIndex = 0;
-  let currentDynamicLogContent;
 
   return {
     beforeAllExecution: (testPlanInfo) => {
@@ -86,17 +85,16 @@ export const listReporter = ({ logger, logs }) => {
         )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
 
         dynamicLogContent = `\n${dynamicLogContent}\n`;
-        currentDynamicLogContent = dynamicLogContent;
         return dynamicLogContent;
       };
 
-      dynamicLog.write(renderDynamicLog(testPlanInfo));
+      dynamicLog.update(renderDynamicLog(testPlanInfo));
       const interval = setInterval(() => {
-        dynamicLog.write(renderDynamicLog(testPlanInfo));
+        dynamicLog.update(renderDynamicLog(testPlanInfo));
       }, 150);
 
       return () => {
-        dynamicLog.write("");
+        dynamicLog.update("");
         dynamicLog.destroy();
         dynamicLog = null;
         clearInterval(interval);
@@ -105,12 +103,10 @@ export const listReporter = ({ logger, logs }) => {
     },
     beforeExecutionInOrder: (execution) => {
       return () => {
-        dynamicLog.write("");
-        dynamicLog.destroy();
-        const log = renderExecutionLog(execution, logOptions);
-        writeOutput(log);
-        dynamicLog = createLog({ newLine: "" });
-        dynamicLog.write(currentDynamicLogContent);
+        dynamicLog.clearDuringFunctionCall(() => {
+          const log = renderExecutionLog(execution, logOptions);
+          writeOutput(log);
+        });
       };
     },
   };

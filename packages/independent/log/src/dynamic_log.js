@@ -7,18 +7,20 @@ import ansiEscapes from "ansi-escapes";
 
 export const createDynamicLog = ({
   stream = process.stdout,
-  newLine = "",
+  onVerticalOverflow = () => {},
+  onWriteFromOutside = () => {},
 } = {}) => {
   const { columns = 80, rows = 24 } = stream;
-
-  const log = {
+  const dynamicLog = {
     destroyed: false,
-    onVerticalOverflow: () => {},
+    onVerticalOverflow,
+    onWriteFromOutside,
   };
 
   let lastOutput = "";
+  let lastOutputFromOutside = "";
   let clearAttemptResult;
-  let streamOutputSpy = noopStreamSpy;
+  let writing = false;
 
   const getErasePreviousOutput = () => {
     // nothing to clear
@@ -47,7 +49,7 @@ export const createDynamicLog = ({
       // it means we would only clear the visible part of the log
       // better keep the log untouched
       clearAttemptResult = false;
-      log.onVerticalOverflow();
+      dynamicLog.onVerticalOverflow();
       return "";
     }
 
@@ -55,89 +57,102 @@ export const createDynamicLog = ({
     return ansiEscapes.eraseLines(visualLineCount);
   };
 
-  const spyStream = () => {
-    if (stream === process.stdout) {
-      const stdoutSpy = spyStreamOutput(process.stdout);
-      const stderrSpy = spyStreamOutput(process.stderr);
-      return () => {
-        return stdoutSpy() + stderrSpy();
-      };
-    }
-    return spyStreamOutput(stream);
-  };
-
-  const update = (string, outputFromOutside = streamOutputSpy()) => {
-    if (log.destroyed) {
+  const update = (string) => {
+    if (dynamicLog.destroyed) {
       throw new Error("Cannot write log after destroy");
     }
+    let stringToWrite = string;
     if (lastOutput) {
-      if (outputFromOutside) {
+      if (lastOutputFromOutside) {
+        // We don't want to clear logs written by other code,
+        // it makes output unreadable and might erase precious information
+        // To detect this we put a spy on the stream.
+        // The spy is required only if we actually wrote something in the stream
         // something else than this code has written in the stream
         // so we just write without clearing (append instead of replacing)
+        lastOutputFromOutside = "";
       } else {
-        string = `${getErasePreviousOutput()}${string}`;
+        stringToWrite = `${getErasePreviousOutput()}${string}`;
       }
     }
-
-    if (newLine === "before") {
-      string = `\n${string}`;
-    }
-    if (newLine === "after") {
-      string = `${string}\n`;
-    }
-    if (newLine === "around") {
-      string = `\n${string}\n`;
-    }
-    stream.write(string);
+    writing = true;
+    stream.write(stringToWrite);
     lastOutput = string;
+    writing = false;
     clearAttemptResult = undefined;
-    // We don't want to clear logs written by other code,
-    // it makes output unreadable and might erase precious information
-    // To detect this we put a spy on the stream.
-    // The spy is required only if we actually wrote something in the stream
-    // otherwise tryToClear() won't do a thing so spy is useless
-    streamOutputSpy = string ? spyStream() : noopStreamSpy;
-  };
-
-  const dynamicUpdate = (callback) => {
-    const outputFromOutside = streamOutputSpy();
-    const string = callback({ outputFromOutside });
-    return update(string, outputFromOutside);
-  };
-
-  const destroy = () => {
-    log.destroyed = true;
-    if (streamOutputSpy) {
-      streamOutputSpy(); // this uninstalls the spy
-      streamOutputSpy = null;
-      lastOutput = "";
-    }
   };
 
   const clearDuringFunctionCall = (callback) => {
+    // 1. Erase the current log
+    // 2. Call callback (expected to write something on stdout)
+    // 3. Restore the current log
+    // During step 2. we expect a "write from outside" so we uninstall
+    // the stream spy during function call
     const currentOutput = lastOutput;
     update("");
+
+    writing = true;
     callback();
+    writing = false;
+
     update(currentOutput);
   };
 
-  Object.assign(log, {
+  const writeFromOutsideEffect = (value) => {
+    if (!lastOutput) {
+      // we don't care if the log never wrote anything
+      // or if last update() wrote an empty string
+      return;
+    }
+    if (writing) {
+      return;
+    }
+    lastOutputFromOutside = value;
+    dynamicLog.onWriteFromOutside(value);
+  };
+
+  let removeStreamSpy;
+  if (stream === process.stdout) {
+    const removeStdoutSpy = spyStreamOutput(
+      process.stdout,
+      writeFromOutsideEffect,
+    );
+    const removeStderrSpy = spyStreamOutput(
+      process.stderr,
+      writeFromOutsideEffect,
+    );
+    removeStreamSpy = () => {
+      removeStdoutSpy();
+      removeStderrSpy();
+    };
+  } else {
+    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
+  }
+
+  const destroy = () => {
+    dynamicLog.destroyed = true;
+    if (removeStreamSpy) {
+      removeStreamSpy();
+      removeStreamSpy = null;
+      lastOutput = "";
+      lastOutputFromOutside = "";
+    }
+  };
+
+  Object.assign(dynamicLog, {
     update,
-    dynamicUpdate,
     destroy,
     stream,
     clearDuringFunctionCall,
   });
-  return log;
+  return dynamicLog;
 };
-
-const noopStreamSpy = () => "";
 
 // maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
 // the problem with listening data on stdout
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
-const spyStreamOutput = (stream) => {
+const spyStreamOutput = (stream, callback) => {
   const originalWrite = stream.write;
 
   let output = "";
@@ -145,6 +160,7 @@ const spyStreamOutput = (stream) => {
 
   stream.write = function (...args /* chunk, encoding, callback */) {
     output += args;
+    callback(output);
     return originalWrite.call(stream, ...args);
   };
 
