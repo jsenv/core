@@ -14,8 +14,10 @@ const buildServer = await startBuildServer({
   port: 0,
 });
 
-const result = await executeTestPlan({
-  logLevel: "warn",
+const testPlanResult = await executeTestPlan({
+  logs: {
+    level: "warn",
+  },
   rootDirectoryUrl: new URL("./project/", import.meta.url),
   testPlan: {
     "./public/**/*.test.html": {
@@ -29,10 +31,10 @@ const result = await executeTestPlan({
     origin: buildServer.origin,
     rootDirectoryUrl: new URL("./project/public/", import.meta.url),
   },
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
 
-const chromiumResult = result.report["public/main.test.html"].chromium;
+const chromiumResult = testPlanResult.results["public/main.test.html"].chromium;
 const actual = {
   status: chromiumResult.status,
   errorMessage: chromiumResult.errors[0].message,
