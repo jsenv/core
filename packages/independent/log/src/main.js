@@ -14,6 +14,6 @@ export { UNICODE } from "./unicode.js";
 // formatting messages
 export { createDetailedMessage } from "./detailed_message.js";
 // dynamic logs (log that can update themselves in the terminal)
-export { createLog } from "./log.js";
+export { createDynamicLog } from "./dynamic_log.js";
 export { startSpinner } from "./spinner.js";
 export { createTaskLog } from "./task_log.js";

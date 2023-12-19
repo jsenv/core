@@ -1,7 +1,7 @@
 import { ANSI } from "./ansi.js";
 
 export const startSpinner = ({
-  log,
+  dynamicLog,
   frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   fps = 20,
   keepProcessAlive = false,
@@ -9,7 +9,7 @@ export const startSpinner = ({
   stopOnVerticalOverflow = true,
   render = () => "",
   effect = () => {},
-  animated = log.stream.isTTY,
+  animated = dynamicLog.stream.isTTY,
 }) => {
   let frameIndex = 0;
   let interval;
@@ -29,11 +29,11 @@ export const startSpinner = ({
   if (animated && ANSI.supported) {
     running = true;
     cleanup = effect();
-    log.write(update(render()));
+    dynamicLog.update(update(render()));
 
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      log.dynamicWrite(({ outputFromOutside }) => {
+      dynamicLog.dynamicUpdate(({ outputFromOutside }) => {
         if (outputFromOutside && stopOnWriteFromOutside) {
           stop();
           return "";
@@ -45,7 +45,7 @@ export const startSpinner = ({
       interval.unref();
     }
   } else {
-    log.write(update(render()));
+    dynamicLog.update(update(render()));
   }
 
   const stop = (message) => {
@@ -58,15 +58,15 @@ export const startSpinner = ({
       cleanup();
       cleanup = null;
     }
-    if (log && message) {
-      log.write(update(message));
-      log = null;
+    if (dynamicLog && message) {
+      dynamicLog.update(update(message));
+      dynamicLog = null;
     }
   };
   spinner.stop = stop;
 
   if (stopOnVerticalOverflow) {
-    log.onVerticalOverflow = stop;
+    dynamicLog.onVerticalOverflow = stop;
   }
 
   return spinner;

@@ -1,7 +1,7 @@
 import { inspectDuration } from "@jsenv/inspect";
 
 import { UNICODE } from "./unicode.js";
-import { createLog } from "./log.js";
+import { createDynamicLog } from "./dynamic_log.js";
 import { startSpinner } from "./spinner.js";
 
 export const createTaskLog = (
@@ -17,10 +17,10 @@ export const createTaskLog = (
     };
   }
   const startMs = Date.now();
-  const log = createLog();
+  const dynamicLog = createDynamicLog();
   let message = label;
   const taskSpinner = startSpinner({
-    log,
+    dynamicLog,
     render: () => message,
     stopOnWriteFromOutside,
     animated,
