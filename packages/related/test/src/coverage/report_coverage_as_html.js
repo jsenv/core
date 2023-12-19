@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
-import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
+import { urlToRelativeUrl } from "@jsenv/urls";
 import { ensureEmptyDirectorySync } from "@jsenv/filesystem";
 
 import { importWithRequire } from "../helpers/import_with_require.js";
@@ -40,6 +40,6 @@ export const reportCoverageAsHtml = (
     subdir: coverageHtmlDirectoryRelativeUrl,
   });
   report.execute(context);
-  const htmlCoverageDirectoryIndexFileUrl = `${directoryUrl}index.html`;
-  console.log(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
+  // const htmlCoverageDirectoryIndexFileUrl = `${directoryUrl}index.html`;
+  // console.log(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
 };
