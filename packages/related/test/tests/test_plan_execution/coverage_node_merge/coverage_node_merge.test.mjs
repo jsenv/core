@@ -3,12 +3,13 @@
  * https://github.com/SimenB/jest/blob/917efc3398577c205f33c1c2f9a1aeabfaad6f7d/packages/jest-coverage/src/index.ts
  */
 
-import { assert } from "@jsenv/assert";
-
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+import { takeCoverageScreenshots } from "../take_coverage_screenshots.js";
 
-const { coverage } = await executeTestPlan({
-  logLevel: "warn",
+const testPlanResult = await executeTestPlan({
+  logs: {
+    level: "warn",
+  },
   rootDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
     "./main.js": {
@@ -23,31 +24,16 @@ const { coverage } = await executeTestPlan({
     },
   },
   // keepRunning: true,
-  coverageEnabled: true,
-  coverageConfig: {
-    "./file.js": true,
+  coverage: {
+    include: {
+      "./file.js": true,
+    },
+    methodForNodeJs: "Profiler",
   },
-  coverageMethodForNodeJs: "Profiler",
-  coverageReportTextLog: false,
-  coverageReportHtml: false,
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
-const actual = coverage;
-const expected = {
-  "./file.js": {
-    ...actual["./file.js"],
-    path: "./file.js",
-    b: {
-      0: [2],
-      1: [1],
-    },
-    s: {
-      0: 2,
-      1: 1,
-      2: 1,
-      3: 1,
-      4: 1,
-    },
-  },
-};
-assert({ actual, expected });
+await takeCoverageScreenshots(
+  testPlanResult,
+  new URL(`./screenshots/`, import.meta.url),
+  ["file.js"],
+);
