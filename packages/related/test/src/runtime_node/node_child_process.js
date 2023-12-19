@@ -123,7 +123,7 @@ export const nodeChildProcess = ({
       actionOperation.addAbortSignal(signal);
       const childProcess = fork(fileURLToPath(CONTROLLED_CHILD_PROCESS_URL), {
         execArgv,
-        // silent: true
+        // silent: true,
         stdio: ["pipe", "pipe", "pipe", "ipc"],
         env: envForChildProcess,
       });
@@ -462,7 +462,7 @@ const installChildProcessOutputListener = (childProcess, callback) => {
   childProcess.stderr.on("data", stdErrorDataCallback);
   return () => {
     childProcess.stdout.removeListener("data", stdoutDataCallback);
-    childProcess.stderr.removeListener("data", stdoutDataCallback);
+    childProcess.stderr.removeListener("data", stdErrorDataCallback);
   };
 };
 
