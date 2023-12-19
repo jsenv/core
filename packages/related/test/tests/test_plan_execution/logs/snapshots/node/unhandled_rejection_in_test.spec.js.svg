@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="499.45"
+  height="518.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="497.45"
+      height="516.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="459.45"
+    height="478.45"
     overflow="hidden"
   >
     <svg
       width="759.32"
-      height="459.45"
+      height="478.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#abb2bf"

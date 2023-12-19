@@ -34,9 +34,14 @@ const test = async (filename, params) => {
       rootDirectoryUrl: new URL("./node_client/", import.meta.url),
       testPlan: {
         [filename]: {
-          worker_thread: {
-            runtime: nodeWorkerThread(),
-          },
+          // console output order in not predictible on child_process
+          ...(filename === "console.spec.js"
+            ? {}
+            : {
+                worker_thread: {
+                  runtime: nodeWorkerThread(),
+                },
+              }),
           child_process: {
             runtime: nodeChildProcess(),
           },
@@ -48,10 +53,7 @@ const test = async (filename, params) => {
     process.stdout.write = write;
     writeFileSync(terminalSnapshotFileUrl, await renderTerminalSvg(stdout));
   }
-  if (filename !== "console.spec.js") {
-    // console output order in not predictible on child_process
-    terminalFileSnapshot.compare();
-  }
+  terminalFileSnapshot.compare();
 };
 
 await test("console.spec.js");
