@@ -18,10 +18,10 @@ The core tools provided by jsenv:
 
 - Test files are [executed like standard files](<https://github.com/jsenv/core/wiki/D)-Test#14-executing-a-single-test>)
 - [Isolated environment](<https://github.com/jsenv/core/wiki/D)-Test#33-isolated-environment>) for each test file
-- [Execute tests in multiple browsers](<https://github.com/jsenv/core/wiki/D)-Test#32-execute-on-more-browsers>): Chrome, Safari, Firefox
+- Execute [tests in multiple browsers](<https://github.com/jsenv/core/wiki/D)-Test#32-execute-on-more-browsers>): Chrome, Safari, Firefox
 - [Large browser support during dev](<https://github.com/jsenv/core/wiki/B)-Dev#21-browser-support>). Because some people might be happy to use an other browser than the latest chrome during dev. Moreover it is useful to reproduce bug specific to certain browsers.
 - [Large browser support after build](<https://github.com/jsenv/core/wiki/C)-Build#211-maximal-browser-support>). Because some product still needs to support old versions of Firefox, Chrome and Safari.
-- [Single set of files during build](<https://github.com/jsenv/core/wiki/C)-Build#212-same-build-for-all-browsers>). Because a single one is simpler to properly support in every aspects.
+- [Single set of files after build](<https://github.com/jsenv/core/wiki/C)-Build#212-same-build-for-all-browsers>). Because a single one is simpler to properly support in every aspects.
 - Versioning during build is robust and <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">avoids cascading hash changes</a><sup>↗</sup>
 - Advanced support of top level await, allowing to use it everywhere
 - Advanced support of web workers including worker type module
