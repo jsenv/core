@@ -1,7 +1,7 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
 Jsenv is a tool to develop test and build projects using JavaScript.
-It encourages standards and simplicity.  
+It favors standards and simplicity.  
 
 As a result it can be enjoyed by people without much experience in tooling or seeking for a simple tool without hidden complexities.
 
