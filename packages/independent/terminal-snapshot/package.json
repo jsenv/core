@@ -26,7 +26,9 @@
   },
   "dependencies": {
     "ansi-regex": "6.0.1",
+    "he": "1.2.0",
     "strip-ansi": "7.1.0",
-    "he": "1.2.0"
+    "xterm": "5.3.0",
+    "xterm-addon-canvas": "0.5.0"
   }
 }

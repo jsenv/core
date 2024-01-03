@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div style="display: flex">
+      <div id="terminal"></div>
+      <div style="width: 10px"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+    <button id="start">Start recording</button>
+    <button id="stop">Stop recording</button>
+    <video controls></video>
+
+    <script type="module">
+      /*
+       on veut pouvoir:
+       - mettre le terminal dans un "fake terminal" genre
+       avec le style de celui svg
+       - enregister une vidéo du terminal
+       ça faut que je regarde les apis canvas
+
+       https://github.com/welefen/canvas2video/blob/master/src/index.ts
+       https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
+       https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
+       https://webglfundamentals.org/webgl/lessons/webgl-tips.html
+       */
+
+      import "xterm";
+      import "xterm-addon-canvas";
+
+      const { Terminal } = window;
+      const { CanvasAddon } = window.CanvasAddon;
+
+      const cssUrl = new URL("xterm/css/xterm.css", import.meta.url);
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = cssUrl;
+      document.head.appendChild(link);
+
+      // https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
+      const term = new Terminal({
+        allowProposedApi: true,
+        cols: 80,
+        rows: 20,
+        // fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
+        // fontSize: 14,
+        // disableStdin: true,
+        // lineHeight: 18,
+        theme: {
+          background: "#282c34",
+          foreground: "#abb2bf",
+          selectionBackground: "#001122",
+          selectionForeground: "#777777",
+          brightRed: "#B22222",
+          brightBlue: "#87CEEB",
+        },
+      });
+      term.loadAddon(new CanvasAddon());
+      const terminalElement = document.getElementById("terminal");
+      term.open(terminalElement);
+      term.writeln("Hello from \x1B[1;3;31mxterm.js\x1B[0m");
+      setInterval(() => {
+        term.writeln("coucou");
+      }, 1_000);
+
+      const canvas = document.querySelector("#canvas");
+      const context = canvas.getContext("2d");
+
+      const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
+      if (xtermCanvas) {
+        canvas.width = xtermCanvas.width;
+        canvas.height = xtermCanvas.height;
+
+        // periodically write terminal content to canvas
+        // TODO: make terminal prettier (with header)
+        setInterval(() => {
+          context.drawImage(
+            xtermCanvas,
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+          );
+        }, 60);
+      }
+
+      let stream;
+      let mediaRecorder;
+      let stopPromise;
+      let chunks = [];
+      const startRecording = () => {
+        stream = canvas.captureStream();
+        console.log("start recording");
+        mediaRecorder = new MediaRecorder(stream, {
+          videoBitsPerSecond: 2_500_000,
+          mimeType: "video/webm;codecs=h264",
+        });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size) {
+            chunks.push(e.data);
+          }
+        };
+        stopPromise = new Promise((resolve, reject) => {
+          mediaRecorder.onstop = () => {
+            console.log("mediaRecorder stopped");
+            resolve();
+          };
+          mediaRecorder.onerror = (e) => {
+            reject(e);
+          };
+        });
+        mediaRecorder.start();
+      };
+      const stopRecording = async () => {
+        console.log("stopping media recorder");
+        mediaRecorder.stop();
+        await stopPromise;
+
+        // we want to write this to a file
+        // but for now let's play it inside a video tag
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+        const objectUrl = window.URL.createObjectURL(blob);
+        document.querySelector("video").src = objectUrl;
+      };
+
+      document.querySelector("#start").onclick = startRecording;
+      document.querySelector("#stop").onclick = stopRecording;
+    </script>
+  </body>
+</html>
