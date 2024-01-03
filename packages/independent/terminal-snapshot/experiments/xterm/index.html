@@ -45,8 +45,11 @@
       // https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
       const term = new Terminal({
         allowProposedApi: true,
+        // cursorBlink: false,
+        cursorInactiveStyle: "none",
+        convertEol: true,
         cols: 80,
-        rows: 20,
+        rows: 10,
         // fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
         // fontSize: 14,
         // disableStdin: true,
@@ -65,7 +68,7 @@
       term.open(terminalElement);
       term.writeln("Hello from \x1B[1;3;31mxterm.js\x1B[0m");
       setInterval(() => {
-        term.writeln("coucou");
+        term.write("coucou\n");
       }, 1_000);
 
       const canvas = document.querySelector("#canvas");
