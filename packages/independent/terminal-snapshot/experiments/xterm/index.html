@@ -9,13 +9,13 @@
   <body>
     <div style="display: flex">
       <div id="terminal"></div>
-      <div style="width: 10px"></div>
       <canvas id="canvas"></canvas>
     </div>
-    <button id="start">Start recording</button>
-    <button id="stop">Stop recording</button>
-    <video controls></video>
-
+    <script>
+      window.xtreamReadyPromise = new Promise((resolve) => {
+        window.resolveXtermReadyPromise = resolve;
+      });
+    </script>
     <script type="module">
       /*
        on veut pouvoir:
@@ -28,6 +28,7 @@
        https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
        https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
        https://webglfundamentals.org/webgl/lessons/webgl-tips.html
+       https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
        */
 
       import "xterm";
@@ -35,108 +36,116 @@
 
       const { Terminal } = window;
       const { CanvasAddon } = window.CanvasAddon;
-
       const cssUrl = new URL("xterm/css/xterm.css", import.meta.url);
       const link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = cssUrl;
       document.head.appendChild(link);
 
-      // https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
-      const term = new Terminal({
-        allowProposedApi: true,
-        // cursorBlink: false,
-        cursorInactiveStyle: "none",
-        convertEol: true,
-        cols: 80,
-        rows: 10,
-        // fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
-        // fontSize: 14,
-        // disableStdin: true,
-        // lineHeight: 18,
-        theme: {
-          background: "#282c34",
-          foreground: "#abb2bf",
-          selectionBackground: "#001122",
-          selectionForeground: "#777777",
-          brightRed: "#B22222",
-          brightBlue: "#87CEEB",
-        },
-      });
-      term.loadAddon(new CanvasAddon());
-      const terminalElement = document.getElementById("terminal");
-      term.open(terminalElement);
-      term.writeln("Hello from \x1B[1;3;31mxterm.js\x1B[0m");
-      setInterval(() => {
-        term.write("coucou\n");
-      }, 1_000);
+      window.initTerminal = ({ cols = 80 } = {}) => {
+        const term = new Terminal({
+          convertEol: true,
+          disableStdin: true,
+          // cursorBlink: false,
+          cursorInactiveStyle: "none",
+          cols,
+          rows: 20,
+          fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
+          fontSize: 14,
+          // lineHeight: 18,
+          theme: {
+            background: "#282c34",
+            foreground: "#abb2bf",
+            selectionBackground: "#001122",
+            selectionForeground: "#777777",
+            brightRed: "#B22222",
+            brightBlue: "#87CEEB",
+          },
+        });
+        term.loadAddon(new CanvasAddon());
+        const terminalElement = document.getElementById("terminal");
+        term.open(terminalElement);
 
-      const canvas = document.querySelector("#canvas");
-      const context = canvas.getContext("2d");
+        const canvas = document.querySelector("#canvas");
+        const context = canvas.getContext("2d");
 
-      const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
-      if (xtermCanvas) {
+        const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
         canvas.width = xtermCanvas.width;
         canvas.height = xtermCanvas.height;
 
-        // periodically write terminal content to canvas
-        // TODO: make terminal prettier (with header)
-        setInterval(() => {
-          context.drawImage(
-            xtermCanvas,
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-          );
-        }, 60);
-      }
+        window.startRecording = async ({
+          mimeType = "video/webm;codecs=h264",
+        } = {}) => {
+          // periodically write terminal content to canvas
+          setInterval(() => {
+            context.drawImage(
+              xtermCanvas,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
+          }, 60);
 
-      let stream;
-      let mediaRecorder;
-      let stopPromise;
-      let chunks = [];
-      const startRecording = () => {
-        stream = canvas.captureStream();
-        console.log("start recording");
-        mediaRecorder = new MediaRecorder(stream, {
-          videoBitsPerSecond: 2_500_000,
-          mimeType: "video/webm;codecs=h264",
-        });
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size) {
-            chunks.push(e.data);
-          }
+          const stream = canvas.captureStream();
+          const mediaRecorder = new MediaRecorder(stream, {
+            videoBitsPerSecond: 2_500_000,
+            mimeType,
+          });
+          const chunks = [];
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size) {
+              chunks.push(e.data);
+            }
+          };
+          const startPromise = new Promise((resolve) => {
+            mediaRecorder.onstart = resolve;
+          });
+          mediaRecorder.start();
+          await startPromise;
+
+          window.writeIntoTerminal = (data) => {
+            term.write(data);
+          };
+          window.stopRecording = async () => {
+            const stopPromise = new Promise((resolve, reject) => {
+              mediaRecorder.onstop = () => {
+                resolve();
+              };
+              mediaRecorder.onerror = (e) => {
+                reject(e);
+              };
+            });
+            mediaRecorder.stop();
+            await stopPromise;
+            const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+            return blobToBinaryString(blob);
+          };
         };
-        stopPromise = new Promise((resolve, reject) => {
-          mediaRecorder.onstop = () => {
-            console.log("mediaRecorder stopped");
-            resolve();
-          };
-          mediaRecorder.onerror = (e) => {
-            reject(e);
-          };
+      };
+
+      const blobToBinaryString = (blob) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsBinaryString(blob);
         });
-        mediaRecorder.start();
-      };
-      const stopRecording = async () => {
-        console.log("stopping media recorder");
-        mediaRecorder.stop();
-        await stopPromise;
-
-        // we want to write this to a file
-        // but for now let's play it inside a video tag
-        const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
-        const objectUrl = window.URL.createObjectURL(blob);
-        document.querySelector("video").src = objectUrl;
       };
 
-      document.querySelector("#start").onclick = startRecording;
-      document.querySelector("#stop").onclick = stopRecording;
+      window.resolveXtermReadyPromise();
+
+      window.initTerminal();
+      await window.startRecording();
+      window.writeIntoTerminal("hello\n");
+      window.writeIntoTerminal("world");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const videoAsBinaryString = await window.stopRecording();
+      console.log(videoAsBinaryString);
     </script>
   </body>
 </html>

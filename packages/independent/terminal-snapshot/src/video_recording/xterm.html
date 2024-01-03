@@ -42,13 +42,13 @@
       link.href = cssUrl;
       document.head.appendChild(link);
 
-      window.initTerminal = () => {
+      window.initTerminal = ({ cols = 80 } = {}) => {
         const term = new Terminal({
           convertEol: true,
           disableStdin: true,
           // cursorBlink: false,
           cursorInactiveStyle: "none",
-          cols: 80,
+          cols,
           rows: 20,
           fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
           fontSize: 14,
@@ -73,9 +73,10 @@
         canvas.width = xtermCanvas.width;
         canvas.height = xtermCanvas.height;
 
-        window.startRecording = () => {
-          // periodically write terminal content to canvas
-          setInterval(() => {
+        window.startRecording = async ({
+          mimeType = "video/webm;codecs=h264",
+        } = {}) => {
+          const replicateOnCanvas = () => {
             context.drawImage(
               xtermCanvas,
               0,
@@ -87,12 +88,13 @@
               canvas.width,
               canvas.height,
             );
-          }, 60);
+          };
+          setInterval(replicateOnCanvas, 25);
 
           const stream = canvas.captureStream();
           const mediaRecorder = new MediaRecorder(stream, {
             videoBitsPerSecond: 2_500_000,
-            mimeType: "video/webm;codecs=h264",
+            mimeType,
           });
           const chunks = [];
           mediaRecorder.ondataavailable = (e) => {
@@ -100,12 +102,21 @@
               chunks.push(e.data);
             }
           };
+          const startPromise = new Promise((resolve) => {
+            mediaRecorder.onstart = resolve;
+          });
           mediaRecorder.start();
+          await startPromise;
 
           window.writeIntoTerminal = (data) => {
             term.write(data);
+            replicateOnCanvas();
           };
           window.stopRecording = async () => {
+            replicateOnCanvas();
+            await new Promise((resolve) => {
+              setTimeout(resolve, 50);
+            });
             const stopPromise = new Promise((resolve, reject) => {
               mediaRecorder.onstop = () => {
                 resolve();
@@ -116,7 +127,9 @@
             });
             mediaRecorder.stop();
             await stopPromise;
-            const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+            const blob = new Blob(chunks, {
+              type: mediaRecorder.mimeType,
+            });
             return blobToBinaryString(blob);
           };
         };

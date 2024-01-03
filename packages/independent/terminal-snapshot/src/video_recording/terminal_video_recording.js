@@ -9,18 +9,19 @@
  - we should have a webm video
 */
 
-import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { startDevServer } from "@jsenv/core";
 
-export const startTerminalVideoRecording = async () => {
+export const startTerminalVideoRecording = async ({ mimeType } = {}) => {
   const devServer = await startDevServer({
+    logLevel: "warn",
     sourceDirectoryUrl: new URL("./", import.meta.url),
     keepProcessAlive: false,
     clientAutoreload: false,
     ribbon: false,
   });
   const browser = await chromium.launch({
+    channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
     headless: true,
     // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
     args: ["--ignore-certificate-errors"],
@@ -39,18 +40,22 @@ export const startTerminalVideoRecording = async () => {
   );
   await page.evaluate(
     /* eslint-env browser */
-    async () => {
-      await window.startRecording();
+    async ({ mimeType }) => {
+      await window.startRecording({
+        mimeType,
+      });
     },
+    { mimeType },
     /* eslint-env node */
   );
   return {
-    write: async () => {
+    write: async (data) => {
       await page.evaluate(
         /* eslint-env browser */
-        () => {
-          window.writeIntoTerminal("hello");
+        (data) => {
+          window.writeIntoTerminal(data);
         },
+        data,
         /* eslint-env node */
       );
     },
@@ -62,20 +67,20 @@ export const startTerminalVideoRecording = async () => {
         },
         /* eslint-env node */
       );
-      const videoWebmAsBuffer = Buffer.from(videoWebmAsBinayString, "binary");
       devServer.stop();
       browser.close();
-      return videoWebmAsBuffer;
+      const videoWebmBuffer = Buffer.from(videoWebmAsBinayString, "binary");
+      return {
+        webm: () => {
+          return videoWebmBuffer;
+        },
+        mp4: async () => {
+          const webmToMp4Namespace = await import("webm-to-mp4");
+          const webmToMp4 = webmToMp4Namespace.default;
+          const videoMp4Buffer = Buffer.from(webmToMp4(videoWebmBuffer));
+          return videoMp4Buffer;
+        },
+      };
     },
   };
 };
-
-const terminalVideoRecorder = await startTerminalVideoRecording();
-
-terminalVideoRecorder.write("hello");
-await new Promise((resolve) => {
-  setTimeout(resolve, 500);
-});
-terminalVideoRecorder.write("world");
-const videoWebmAsBuffer = await terminalVideoRecorder.stop();
-writeFileSync(new URL("./video.webm", import.meta.url), videoWebmAsBuffer);
