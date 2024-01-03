@@ -116,15 +116,21 @@
             });
             mediaRecorder.stop();
             await stopPromise;
-
-            // we want to write this to a file
-            // but for now let's play it inside a video tag
             const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
-            const objectUrl = window.URL.createObjectURL(blob);
-            document.querySelector("video").src = objectUrl;
+            return blobToBinaryString(blob);
           };
         };
       };
+
+      const blobToBinaryString = (blob) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsBinaryString(blob);
+        });
+      };
+
       window.resolveXtermReadyPromise();
     </script>
   </body>
