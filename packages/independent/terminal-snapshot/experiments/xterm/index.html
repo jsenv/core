@@ -18,18 +18,16 @@
     </script>
     <script type="module">
       /*
-       on veut pouvoir:
-       - mettre le terminal dans un "fake terminal" genre
-       avec le style de celui svg
-       - enregister une vidéo du terminal
-       ça faut que je regarde les apis canvas
+             on veut pouvoir:
+             - mettre le terminal dans un "fake terminal" genre
+             avec le style de celui svg
 
-       https://github.com/welefen/canvas2video/blob/master/src/index.ts
-       https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
-       https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
-       https://webglfundamentals.org/webgl/lessons/webgl-tips.html
-       https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
-       */
+             https://github.com/welefen/canvas2video/blob/master/src/index.ts
+             https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream
+             https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
+             https://webglfundamentals.org/webgl/lessons/webgl-tips.html
+             https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
+             */
 
       import "xterm";
       import "xterm-addon-canvas";
@@ -42,7 +40,13 @@
       link.href = cssUrl;
       document.head.appendChild(link);
 
-      window.initTerminal = ({ cols = 80 } = {}) => {
+      window.initTerminal = ({
+        cols = 80,
+        paddingLeft = 15,
+        paddingRight = 15,
+        fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
+        fontSize = 12,
+      } = {}) => {
         const term = new Terminal({
           convertEol: true,
           disableStdin: true,
@@ -50,8 +54,8 @@
           cursorInactiveStyle: "none",
           cols,
           rows: 20,
-          fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
-          fontSize: 14,
+          fontFamily,
+          fontSize,
           // lineHeight: 18,
           theme: {
             background: "#282c34",
@@ -70,26 +74,107 @@
         const context = canvas.getContext("2d");
 
         const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
-        canvas.width = xtermCanvas.width;
-        canvas.height = xtermCanvas.height;
+        canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
+        canvas.height = 40 + xtermCanvas.height;
+
+        const replicateTerminalOnCanvas = () => {
+          context.drawImage(
+            xtermCanvas,
+            0,
+            0,
+            xtermCanvas.width,
+            xtermCanvas.height,
+            paddingLeft,
+            40,
+            xtermCanvas.width,
+            xtermCanvas.height,
+          );
+        };
+
+        draw_header: {
+          const drawRectangle = ({
+            x,
+            y,
+            width,
+            height,
+            radius,
+            fill,
+            stroke,
+            strokeWidth,
+          }) => {
+            if (radius) {
+              context.beginPath();
+              context.roundRect(x, y, width, height, [radius]);
+              if (fill) {
+                context.fillStyle = fill;
+                context.fill();
+              }
+              if (stroke) {
+                context.strokeWidth = strokeWidth;
+                context.strokeStyle = stroke;
+                context.stroke();
+              }
+            }
+          };
+          const drawCircle = ({ x, y, radius, fill, stroke, borderWidth }) => {
+            context.beginPath();
+            context.arc(x, y, radius, 0, 2 * Math.PI, false);
+            if (fill) {
+              context.fillStyle = fill;
+              context.fill();
+            }
+            if (borderWidth) {
+              context.lineWidth = 5;
+            }
+            if (stroke) {
+              context.strokeStyle = stroke;
+              context.stroke();
+            }
+          };
+          drawRectangle({
+            x: 0,
+            y: 0,
+            width: canvas.width,
+            height: canvas.height,
+            fill: "#282c34",
+            stroke: "rgba(255,255,255,0.35)",
+            strokeWidth: 10,
+            radius: 8,
+          });
+          drawCircle({
+            x: 20,
+            y: 20,
+            radius: 6,
+            fill: "#ff5f57",
+          });
+          drawCircle({
+            x: 40,
+            y: 20,
+            radius: 6,
+            fill: "#febc2e",
+          });
+          drawCircle({
+            x: 60,
+            y: 20,
+            radius: 6,
+            fill: "#28c840",
+          });
+
+          // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_text
+          const text = "Terminal";
+          context.font = `${fontSize}px ${fontFamily}`;
+          context.textBaseline = "middle";
+          context.textAlign = "center";
+          // const textSize = context.measureText(text);
+          context.fillStyle = "#abb2bf";
+          context.fillText(text, canvas.width / 2, 20);
+        }
 
         window.startRecording = async ({
           mimeType = "video/webm;codecs=h264",
         } = {}) => {
           // periodically write terminal content to canvas
-          setInterval(() => {
-            context.drawImage(
-              xtermCanvas,
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-          }, 60);
+          setInterval(replicateTerminalOnCanvas, 60);
 
           const stream = canvas.captureStream();
           const mediaRecorder = new MediaRecorder(stream, {
@@ -142,6 +227,7 @@
       window.initTerminal();
       await window.startRecording();
       window.writeIntoTerminal("hello\n");
+      await new Promise((resolve) => setTimeout(resolve, 500));
       window.writeIntoTerminal("world");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const videoAsBinaryString = await window.stopRecording();
