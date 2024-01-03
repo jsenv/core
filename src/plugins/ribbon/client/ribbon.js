@@ -1,7 +1,7 @@
 export const injectRibbon = ({ text }) => {
   const css = /* css */ `
       #jsenv_ribbon_container {
-        position: absolute;
+        position: fixed;
         z-index: 1001;
         top: 0;
         right: 0;
