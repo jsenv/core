@@ -15,7 +15,10 @@ import {
   reporterList,
 } from "@jsenv/test";
 
-const isDev = process.execArgv.includes("--conditions=development");
+const terminalVideoRecording =
+  process.execArgv.includes("--conditions=development") &&
+  !process.env.CI &&
+  !process.env.JSENV;
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
 UNICODE.supported = true;
@@ -57,7 +60,7 @@ const test = async (filename, params) => {
           };
         },
       }),
-      ...(isDev
+      ...(terminalVideoRecording
         ? [
             reporterList({
               dynamic: true,

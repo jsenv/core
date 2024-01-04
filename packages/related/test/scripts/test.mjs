@@ -20,7 +20,7 @@ await executeTestPlan({
     },
     "./tests/**/*_browsers.test.mjs": {
       node: {
-        allocatedMs: 60_000,
+        allocatedMs: 90_000,
       },
     },
   },

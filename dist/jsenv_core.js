@@ -8819,7 +8819,10 @@ const rollupPluginJsenv = ({
                   // rollup generate specifiers only for static and dynamic imports
                   // other references (like new URL()) are ignored
                   // there is no need to remap them back
-                  if (reference.type === "js_import") {
+                  if (
+                    reference.type === "js_import" &&
+                    reference.subtype !== "import_meta_resolve"
+                  ) {
                     return specifierToUrlMap.get(reference.specifier);
                   }
                   return reference.specifier;
@@ -10886,7 +10889,7 @@ const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        const jsUrls = await parseJsUrls({
+        const jsUrls = parseJsUrls({
           js: urlInfo.content,
           url: urlInfo.url,
           isJsModule: true,
@@ -16589,18 +16592,20 @@ const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
       name: "jsenv:js_reference_analysis",
       appliesDuring: "*",
       transformUrlContent: {
-        js_classic: (urlInfo) =>
-          parseAndTransformJsReferences(urlInfo, {
+        js_classic: (urlInfo) => {
+          return parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
               urlInfo.context.isSupportedOnCurrentClients("template_literals"),
-          }),
-        js_module: (urlInfo) =>
-          parseAndTransformJsReferences(urlInfo, {
+          });
+        },
+        js_module: (urlInfo) => {
+          return parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
               urlInfo.context.isSupportedOnCurrentClients("template_literals"),
-          }),
+          });
+        },
       },
     },
   ];
@@ -16729,13 +16734,9 @@ const parseAndTransformJsReferences = async (
   if (parallelActions.length > 0) {
     await Promise.all(parallelActions.map((action) => action()));
   }
-  if (sequentialActions.length > 0) {
-    await sequentialActions.reduce(async (previous, action) => {
-      await previous;
-      await action();
-    }, Promise.resolve());
+  for (const sequentialAction of sequentialActions) {
+    await sequentialAction();
   }
-
   const { content, sourcemap } = magicSource.toContentAndSourcemap();
   return { content, sourcemap };
 };
@@ -21760,6 +21761,17 @@ const build = async ({
     }
   }
 
+  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+    assetsDirectory = `${assetsDirectory}/`;
+  }
+  if (directoryToClean === undefined) {
+    if (assetsDirectory === undefined) {
+      directoryToClean = buildDirectoryUrl;
+    } else {
+      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
+    }
+  }
+
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -21771,17 +21783,6 @@ const build = async ({
         abort,
       );
     });
-  }
-
-  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
-    assetsDirectory = `${assetsDirectory}/`;
-  }
-  if (directoryToClean === undefined) {
-    if (assetsDirectory === undefined) {
-      directoryToClean = buildDirectoryUrl;
-    } else {
-      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
-    }
   }
 
   const runBuild = async ({ signal, logLevel }) => {
@@ -22224,7 +22225,15 @@ build ${entryPointKeys.length} entry points`);
   };
 
   if (!watch) {
-    return runBuild({ signal: operation.signal, logLevel });
+    try {
+      const result = await runBuild({
+        signal: operation.signal,
+        logLevel,
+      });
+      return result;
+    } finally {
+      await operation.end();
+    }
   }
 
   let resolveFirstBuild;

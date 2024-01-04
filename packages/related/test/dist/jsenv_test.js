@@ -4859,7 +4859,7 @@ const replaceUrls = (source, replace) => {
 };
 
 const reporterList = ({
-  dynamic,
+  dynamic = true,
   mockFluctuatingValues, // used for snapshot testing logs
   showMemoryUsage = true,
   spy = () => {
