@@ -21,12 +21,21 @@
     ".": "./src/terminal_snapshot.js",
     "./*": "./*"
   },
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
   "scripts": {
-    "test": "node ./scripts/test.mjs"
+    "test": "node ./scripts/test.mjs",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@jsenv/server": "15.1.9",
+    "@playwright/browser-chromium": "1.40.1",
     "ansi-regex": "6.0.1",
     "he": "1.2.0",
+    "playwright": "1.40.1",
     "strip-ansi": "7.1.0",
     "webm-to-mp4": "1.0.0",
     "xterm": "5.3.0",

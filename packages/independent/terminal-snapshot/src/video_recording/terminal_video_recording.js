@@ -10,16 +10,47 @@
 */
 
 import { chromium } from "playwright";
-import { startDevServer } from "@jsenv/core";
+
+const isDev = process.execArgv.includes("--conditions=development");
+
+const startLocalServer = async () => {
+  if (isDev) {
+    const serverDirectoryUrl = new URL("./", import.meta.url);
+    const { startDevServer } = await import("@jsenv/core");
+    const devServer = await startDevServer({
+      logLevel: "warn",
+      port: 0,
+      sourceDirectoryUrl: serverDirectoryUrl,
+      keepProcessAlive: false,
+      clientAutoreload: false,
+      ribbon: false,
+    });
+    return devServer;
+  }
+
+  const serverDirectoryUrl = new URL("../../dist/", import.meta.url);
+  const { startServer, fetchFileSystem } = await import("@jsenv/server");
+  const server = await startServer({
+    logLevel: "warn",
+    port: 0,
+    services: [
+      {
+        handleRequest: async (request) => {
+          const fileUrl = new URL(
+            request.resource.slice(1),
+            serverDirectoryUrl,
+          );
+          const response = await fetchFileSystem(fileUrl, request);
+          return response;
+        },
+      },
+    ],
+  });
+  return server;
+};
 
 export const startTerminalVideoRecording = async ({ mimeType } = {}) => {
-  const devServer = await startDevServer({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./", import.meta.url),
-    keepProcessAlive: false,
-    clientAutoreload: false,
-    ribbon: false,
-  });
+  const server = await startLocalServer();
   const browser = await chromium.launch({
     channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
     headless: true,
@@ -29,7 +60,10 @@ export const startTerminalVideoRecording = async ({ mimeType } = {}) => {
   const page = await browser.newPage({
     ignoreHTTPSErrors: true,
   });
-  await page.goto(`${devServer.origin}/xterm.html`);
+  page.on("pageerror", (error) => {
+    throw error;
+  });
+  await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
     /* eslint-env browser */
     async () => {
@@ -67,7 +101,7 @@ export const startTerminalVideoRecording = async ({ mimeType } = {}) => {
         },
         /* eslint-env node */
       );
-      devServer.stop();
+      server.stop();
       browser.close();
       const videoWebmBuffer = Buffer.from(videoWebmAsBinayString, "binary");
       return {
