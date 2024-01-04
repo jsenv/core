@@ -33,7 +33,7 @@ await build({
     "file://**/node_modules/supports-color/": false,
   },
   runtimeCompat: {
-    node: "16.14",
+    node: "20.0",
   },
   scenarioPlaceholders: false,
 });

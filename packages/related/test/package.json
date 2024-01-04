@@ -7,6 +7,9 @@
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/test"
   },
+  "engines": {
+    "node": ">=20.8.0"
+  },
   "publishConfig": {
     "access": "public"
   },
