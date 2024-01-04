@@ -15,7 +15,6 @@ import {
 } from "@jsenv/test";
 
 const isDev = process.execArgv.includes("--conditions=development");
-
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
 UNICODE.supported = true;

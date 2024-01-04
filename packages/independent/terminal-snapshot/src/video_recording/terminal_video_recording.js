@@ -24,6 +24,7 @@ const startLocalServer = async () => {
       keepProcessAlive: false,
       clientAutoreload: false,
       ribbon: false,
+      handleSIGINT: false,
     });
     return devServer;
   }

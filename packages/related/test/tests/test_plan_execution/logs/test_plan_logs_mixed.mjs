@@ -1,5 +1,8 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
+import {
+  renderTerminalSvg,
+  startTerminalVideoRecording,
+} from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { UNICODE, ANSI } from "@jsenv/log";
 import { startDevServer } from "@jsenv/core";
@@ -11,8 +14,10 @@ import {
   chromium,
   firefox,
   webkit,
+  reporterList,
 } from "@jsenv/test";
 
+const isDev = process.execArgv.includes("--conditions=development");
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
 UNICODE.supported = true;
@@ -24,34 +29,74 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const test = async (name, params) => {
-  const terminalSnapshotFileUrl = new URL(
-    `./snapshots/mixed/${name}.svg`,
-    import.meta.url,
-  );
-  const terminalFileSnapshot = takeFileSnapshot(terminalSnapshotFileUrl);
-  {
-    let stdout = "";
-    const { write } = process.stdout;
-    process.stdout.write = (...args) => {
-      stdout += args;
-    };
-    await executeTestPlan({
-      logs: {
+const test = async (filename, params) => {
+  await executeTestPlan({
+    listReporter: false,
+    fileReporter: false,
+    reporters: [
+      reporterList({
         dynamic: false,
         mockFluctuatingValues: true,
-      },
-      rootDirectoryUrl: new URL("./", import.meta.url),
-      webServer: {
-        origin: devServer.origin,
-      },
-      githubCheck: false,
-      ...params,
-    });
-    process.stdout.write = write;
-    writeFileSync(terminalSnapshotFileUrl, await renderTerminalSvg(stdout));
-  }
-  terminalFileSnapshot.compare();
+        spy: () => {
+          const terminalSnapshotFileUrl = new URL(
+            `./snapshots/mixed/${filename}.svg`,
+            import.meta.url,
+          );
+          const terminalFileSnapshot = takeFileSnapshot(
+            terminalSnapshotFileUrl,
+          );
+          let stdout = "";
+          return {
+            write: (log) => {
+              stdout += log;
+            },
+            end: async () => {
+              const svg = await renderTerminalSvg(stdout);
+              writeFileSync(terminalSnapshotFileUrl, svg);
+              terminalFileSnapshot.compare();
+            },
+          };
+        },
+      }),
+      ...(isDev
+        ? [
+            reporterList({
+              dynamic: true,
+              spy: async () => {
+                const terminalVideoRecorder = await startTerminalVideoRecording(
+                  {
+                    columns: 120,
+                    rows: 30,
+                  },
+                );
+                return {
+                  write: async (log) => {
+                    await terminalVideoRecorder.write(log);
+                  },
+                  end: async () => {
+                    const terminalVideo = await terminalVideoRecorder.stop();
+                    const terminalVideoMp4 = await terminalVideo.mp4();
+                    writeFileSync(
+                      new URL(
+                        `./snapshots/node/${filename}.mp4`,
+                        import.meta.url,
+                      ),
+                      terminalVideoMp4,
+                    );
+                  },
+                };
+              },
+            }),
+          ]
+        : []),
+    ],
+    rootDirectoryUrl: new URL("./", import.meta.url),
+    webServer: {
+      origin: devServer.origin,
+    },
+    githubCheck: false,
+    ...params,
+  });
 };
 
 await test("empty.txt", {
