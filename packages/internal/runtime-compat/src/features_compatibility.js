@@ -33,6 +33,7 @@ export const featuresCompatMap = {
     chrome: "107",
     edge: "105",
     firefox: "106",
+    node: "20.0.0",
   },
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
   import_dynamic: {
