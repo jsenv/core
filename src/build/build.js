@@ -195,6 +195,17 @@ export const build = async ({
     }
   }
 
+  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+    assetsDirectory = `${assetsDirectory}/`;
+  }
+  if (directoryToClean === undefined) {
+    if (assetsDirectory === undefined) {
+      directoryToClean = buildDirectoryUrl;
+    } else {
+      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
+    }
+  }
+
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -206,17 +217,6 @@ export const build = async ({
         abort,
       );
     });
-  }
-
-  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
-    assetsDirectory = `${assetsDirectory}/`;
-  }
-  if (directoryToClean === undefined) {
-    if (assetsDirectory === undefined) {
-      directoryToClean = buildDirectoryUrl;
-    } else {
-      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
-    }
   }
 
   const runBuild = async ({ signal, logLevel }) => {
@@ -661,7 +661,15 @@ build ${entryPointKeys.length} entry points`);
   };
 
   if (!watch) {
-    return runBuild({ signal: operation.signal, logLevel });
+    try {
+      const result = await runBuild({
+        signal: operation.signal,
+        logLevel,
+      });
+      return result;
+    } finally {
+      await operation.end();
+    }
   }
 
   let resolveFirstBuild;
