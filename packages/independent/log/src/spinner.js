@@ -20,7 +20,9 @@ export const startSpinner = ({
   };
 
   const update = (message) => {
-    spinner.message = running ? `${frames[frameIndex]} ${message}` : message;
+    spinner.message = running
+      ? `${frames[frameIndex]} ${message}\n`
+      : `${message}\n`;
     return spinner.message;
   };
   spinner.update = update;
@@ -33,7 +35,7 @@ export const startSpinner = ({
 
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      dynamicLog.update(render());
+      dynamicLog.update(update(render()));
     }, 1000 / fps);
     if (!keepProcessAlive) {
       interval.unref();
