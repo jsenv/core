@@ -1031,7 +1031,7 @@ window.__supervisor__ = (() => {
         { createLink = ({ url }) => url },
       ) => {
         // normalize line breaks
-        string = string.replace(/\n/g, "\n");
+        string = string.replace(/\r\n/g, "\n");
         string = escapeHtml(string);
         // render links
         string = replaceUrls(string, ({ url, line, column }) => {
