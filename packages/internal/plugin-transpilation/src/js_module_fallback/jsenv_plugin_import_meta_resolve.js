@@ -17,7 +17,7 @@ export const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {
-        const jsUrls = await parseJsUrls({
+        const jsUrls = parseJsUrls({
           js: urlInfo.content,
           url: urlInfo.url,
           isJsModule: true,

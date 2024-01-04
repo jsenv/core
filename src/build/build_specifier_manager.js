@@ -164,9 +164,6 @@ export const createBuildSpecifierManager = ({
         const url = new URL(reference.specifier, ownerRawUrl).href;
         return url;
       }
-      if (!reference.specifier) {
-        debugger;
-      }
       if (reference.specifier[0] === "/") {
         const url = new URL(reference.specifier.slice(1), sourceDirectoryUrl)
           .href;

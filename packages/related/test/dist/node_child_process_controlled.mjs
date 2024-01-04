@@ -1,55 +1,54 @@
-import { createException, executeUsingDynamicImport } from "./js/execute_using_dynamic_import.js";
+import { memoryUsage } from "node:process";
+import { createException } from "./js/exception.js";
+import { executeUsingDynamicImport } from "./js/execute_using_dynamic_import.js";
 import "node:fs";
 import "node:inspector";
 import "node:perf_hooks";
 
+let memoryHeapUsedAtStart;
+if (process.env.MEASURE_MEMORY_AT_START) {
+  global.gc();
+  memoryHeapUsedAtStart = memoryUsage().heapUsed;
+}
+
 const ACTIONS_AVAILABLE = {
-  "execute-using-dynamic-import": executeUsingDynamicImport,
-  "execute-using-require": async ({ fileUrl }) => {
-    const { createRequire } = await import("node:module");
-    const { fileURLToPath } = await import("node:url");
-    const filePath = fileURLToPath(fileUrl);
-    const require = createRequire(fileUrl);
-    // eslint-disable-next-line import/no-dynamic-require
-    const namespace = require(filePath);
-    const namespaceResolved = {};
-    await Promise.all(
-      Object.keys(namespace).map(async (key) => {
-        const value = await namespace[key];
-        namespaceResolved[key] = value;
-      }),
-    );
-    return namespaceResolved;
+  "execute-using-dynamic-import": (params) => {
+    return executeUsingDynamicImport(params);
   },
-};
-const ACTION_REQUEST_EVENT_NAME = "action";
-const ACTION_RESPONSE_EVENT_NAME = "action-result";
-const ACTION_RESPONSE_STATUS_FAILED = "action-failed";
-const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
-
-const sendActionFailed = (error) => {
-  const exception = createException(error);
-  sendToParent(
-    ACTION_RESPONSE_EVENT_NAME,
-    JSON.stringify({
-      status: ACTION_RESPONSE_STATUS_FAILED,
-      value: exception,
-    }),
-  );
-};
-
-const sendActionCompleted = (value) => {
-  sendToParent(
-    ACTION_RESPONSE_EVENT_NAME,
-    // here we use JSON.stringify because we should not
-    // have non enumerable value (unlike there is on Error objects)
-    // otherwise uneval is quite slow to turn a giant object
-    // into a string (and value can be giant when using coverage)
-    JSON.stringify({
-      status: ACTION_RESPONSE_STATUS_COMPLETED,
-      value,
-    }),
-  );
+  "execute-using-require": async ({ fileUrl }) => {
+    const result = {
+      timings: {
+        start: null,
+        end: null,
+      },
+      namespace: null,
+    };
+    try {
+      const { createRequire } = await import("node:module");
+      const { fileURLToPath } = await import("node:url");
+      const filePath = fileURLToPath(fileUrl);
+      const require = createRequire(fileUrl);
+      result.timings.start = Date.now();
+      // eslint-disable-next-line import/no-dynamic-require
+      const namespace = require(filePath);
+      const namespaceResolved = {};
+      await Promise.all(
+        Object.keys(namespace).map(async (key) => {
+          const value = await namespace[key];
+          namespaceResolved[key] = value;
+        }),
+      );
+      result.namespace = namespaceResolved;
+    } finally {
+      result.timings.end = Date.now();
+      return result;
+    }
+  },
+  "measure-memory-usage": () => {
+    // we compare usage - usageAtstart to prevent
+    // node or os specificities to have too much influences on the measures
+    return memoryUsage().heapUsed - memoryHeapUsedAtStart;
+  },
 };
 
 const sendToParent = (type, data) => {
@@ -63,16 +62,13 @@ const sendToParent = (type, data) => {
   // It means node process may stay alive longer than expected
   // the time to send the data to the parent.
   process.send({
-    jsenv: true,
-    type,
+    __jsenv__: type,
     data,
   });
 };
-
-const onceParentMessage = (type, callback) => {
+const onActionRequestedByParent = (callback) => {
   const listener = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      removeListener(); // commenting this line keep this process alive
+    if (message && message.__jsenv__ === "action") {
       callback(message.data);
     }
   };
@@ -83,37 +79,60 @@ const onceParentMessage = (type, callback) => {
   return removeListener;
 };
 
-const removeActionRequestListener = onceParentMessage(
-  ACTION_REQUEST_EVENT_NAME,
-  async ({ actionType, actionParams }) => {
-    const action = ACTIONS_AVAILABLE[actionType];
+const removeActionRequestListener = onActionRequestedByParent(
+  async ({ id, type, params = {} }) => {
+    const sendActionInternalError = (id, error) => {
+      const exception = createException(error);
+      sendToParent(
+        "action-result",
+        JSON.stringify({
+          id,
+          status: "error",
+          value: exception,
+        }),
+      );
+    };
+    const sendActionCompleted = (id, value) => {
+      sendToParent(
+        "action-result",
+        // here we use JSON.stringify because we should not
+        // have non enumerable value (unlike there is on Error objects)
+        // otherwise uneval is quite slow to turn a giant object
+        // into a string (and value can be giant when using coverage)
+        JSON.stringify({
+          id,
+          status: "completed",
+          value,
+        }),
+      );
+    };
+
+    const action = ACTIONS_AVAILABLE[type];
     if (!action) {
-      sendActionFailed(new Error(`unknown action ${actionType}`));
+      sendActionInternalError(id, new Error(`unknown action ${type}`));
       return;
     }
 
-    let value;
-    let failed = false;
+    let gotInternalError = false;
+    const onUncaughtException = (err) => {
+      gotInternalError = true;
+      sendActionInternalError(id, err);
+      process.exit(1);
+    };
+    process.on("uncaughtException", onUncaughtException);
+
     try {
-      value = await action(actionParams);
+      const value = await action(params);
+      if (!gotInternalError) {
+        sendActionCompleted(id, value);
+      }
     } catch (e) {
-      failed = true;
-      value = e;
-    }
-
-    // setTimeout(() => {}, 100)
-
-    if (failed) {
-      sendActionFailed(value);
-    } else {
-      sendActionCompleted(value);
-    }
-
-    // removeActionRequestListener()
-    if (actionParams.exitAfterAction) {
-      removeActionRequestListener();
-      // for some reason this fixes v8 coverage directory sometimes empty on Ubuntu
-      // process.exit()
+      sendActionInternalError(id, e);
+    } finally {
+      process.removeListener("uncaughtException", onUncaughtException);
+      if (params.exitAfterAction) {
+        removeActionRequestListener();
+      }
     }
   },
 );

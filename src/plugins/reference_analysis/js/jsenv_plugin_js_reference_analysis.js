@@ -11,18 +11,20 @@ export const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
       name: "jsenv:js_reference_analysis",
       appliesDuring: "*",
       transformUrlContent: {
-        js_classic: (urlInfo) =>
-          parseAndTransformJsReferences(urlInfo, {
+        js_classic: (urlInfo) => {
+          return parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
               urlInfo.context.isSupportedOnCurrentClients("template_literals"),
-          }),
-        js_module: (urlInfo) =>
-          parseAndTransformJsReferences(urlInfo, {
+          });
+        },
+        js_module: (urlInfo) => {
+          return parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
               urlInfo.context.isSupportedOnCurrentClients("template_literals"),
-          }),
+          });
+        },
       },
     },
   ];
@@ -151,13 +153,9 @@ const parseAndTransformJsReferences = async (
   if (parallelActions.length > 0) {
     await Promise.all(parallelActions.map((action) => action()));
   }
-  if (sequentialActions.length > 0) {
-    await sequentialActions.reduce(async (previous, action) => {
-      await previous;
-      await action();
-    }, Promise.resolve());
+  for (const sequentialAction of sequentialActions) {
+    await sequentialAction();
   }
-
   const { content, sourcemap } = magicSource.toContentAndSourcemap();
   return { content, sourcemap };
 };

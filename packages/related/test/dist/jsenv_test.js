@@ -1,21 +1,20 @@
-import os from "node:os";
-import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFile as writeFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, readFileSync, readdirSync, existsSync } from "node:fs";
-import process$1, { memoryUsage } from "node:process";
-import v8, { takeCoverage } from "node:v8";
+import os, { cpus, totalmem, availableParallelism, freemem } from "node:os";
+import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, chmodSync, statSync, lstatSync, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
+import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
-import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
+import { URL_META, createException } from "./js/exception.js";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import crypto from "node:crypto";
+import process$1, { memoryUsage } from "node:process";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
+import { filterV8Coverage } from "./js/v8_coverage.js";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { createServer } from "node:net";
-import wrapAnsi from "wrap-ansi";
-import { runInNewContext } from "node:vm";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
@@ -388,6 +387,18 @@ const createOperation = () => {
     });
   };
 
+  const wait = (ms) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        removeAbortCallback();
+        resolve();
+      }, ms);
+      const removeAbortCallback = addAbortCallback(() => {
+        clearTimeout(timeoutId);
+      });
+    });
+  };
+
   const withSignal = async (asyncCallback) => {
     const abortController = new AbortController();
     const signal = abortController.signal;
@@ -436,6 +447,7 @@ const createOperation = () => {
     addAbortSignal,
     addAbortSource,
     timeout,
+    wait,
     withSignal,
     withSignalSync,
     addEndCallback,
@@ -509,6 +521,390 @@ const SIGINT_CALLBACK = {
     };
   },
 };
+
+const formatDefault = (v) => v;
+
+const inspectFileContent = ({
+  content,
+  line,
+  column,
+
+  linesAbove = 3,
+  linesBelow = 0,
+  lineMaxWidth = 120,
+  lineNumbersOnTheLeft = true,
+  lineMarker = true,
+  columnMarker = true,
+  format = formatDefault,
+} = {}) => {
+  const lineStrings = content.split(/\r?\n/);
+  if (line === 0) line = 1;
+  if (column === undefined) {
+    columnMarker = false;
+    column = 1;
+  }
+  if (column === 0) column = 1;
+
+  let lineStartIndex = line - 1 - linesAbove;
+  if (lineStartIndex < 0) {
+    lineStartIndex = 0;
+  }
+  let lineEndIndex = line - 1 + linesBelow;
+  if (lineEndIndex > lineStrings.length - 1) {
+    lineEndIndex = lineStrings.length - 1;
+  }
+  if (columnMarker) {
+    // human reader deduce the line when there is a column marker
+    lineMarker = false;
+  }
+  if (line - 1 === lineEndIndex) {
+    lineMarker = false; // useless because last line
+  }
+  let lineIndex = lineStartIndex;
+
+  let columnsBefore;
+  let columnsAfter;
+  if (column > lineMaxWidth) {
+    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
+    columnsAfter = column + Math.floor(lineMaxWidth / 2);
+  } else {
+    columnsBefore = 0;
+    columnsAfter = lineMaxWidth;
+  }
+  let columnMarkerIndex = column - 1 - columnsBefore;
+
+  let source = "";
+  while (lineIndex <= lineEndIndex) {
+    const lineString = lineStrings[lineIndex];
+    const lineNumber = lineIndex + 1;
+    const isLastLine = lineIndex === lineEndIndex;
+    const isMainLine = lineNumber === line;
+    lineIndex++;
+
+    {
+      if (lineMarker) {
+        if (isMainLine) {
+          source += `${format(">", "marker_line")} `;
+        } else {
+          source += "  ";
+        }
+      }
+      if (lineNumbersOnTheLeft) {
+        // fillRight to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = `${fillRight(lineNumber, lineEndIndex + 1)} |`;
+        source += `${format(asideSource, "line_number_aside")} `;
+      }
+    }
+    {
+      source += truncateLine(lineString, {
+        start: columnsBefore,
+        end: columnsAfter,
+        prefix: "…",
+        suffix: "…",
+        format,
+      });
+    }
+    {
+      if (columnMarker && isMainLine) {
+        source += `\n`;
+        if (lineMarker) {
+          source += "  ";
+        }
+        if (lineNumbersOnTheLeft) {
+          const asideSpaces = `${fillRight(lineNumber, lineEndIndex + 1)} | `
+            .length;
+          source += " ".repeat(asideSpaces);
+        }
+        source += " ".repeat(columnMarkerIndex);
+        source += format("^", "marker_column");
+      }
+    }
+    if (!isLastLine) {
+      source += "\n";
+    }
+  }
+  return source;
+};
+
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+  let result = "";
+  while (from < to) {
+    result += format(line[from], "char");
+    from++;
+  }
+  if (result.length === 0) {
+    return "";
+  }
+  if (startTruncated && endTruncated) {
+    return `${format(prefix, "marker_overflow_left")}${result}${format(
+      suffix,
+      "marker_overflow_right",
+    )}`;
+  }
+  if (startTruncated) {
+    return `${format(prefix, "marker_overflow_left")}${result}`;
+  }
+  if (endTruncated) {
+    return `${result}${format(suffix, "marker_overflow_right")}`;
+  }
+  return result;
+};
+
+const fillRight = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  padded += value;
+  while (missingWidth--) {
+    padded += char;
+  }
+  return padded;
+};
+
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round,
+  });
+};
+
+const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt,
+  });
+};
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
+  if (number === 0) {
+    return 0;
+  }
+  let numberCandidate = Math.abs(number);
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s",
+};
+
+const inspectDuration = (
+  ms,
+  { short, rounded = true, decimals } = {},
+) => {
+  // ignore ms below meaningfulMs so that:
+  // inspectDuration(0.5) -> "0 second"
+  // inspectDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return short ? "0s" : "0 second";
+  }
+  const { primary, remaining } = parseMs(ms);
+  if (!remaining) {
+    return inspectDurationUnit(primary, {
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      short,
+      rounded,
+    });
+  }
+  return `${inspectDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })} and ${inspectDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })}`;
+};
+const inspectDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    return `${count}${name}`;
+  }
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+};
+
+const parseMs = (ms) => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+    return false;
+  });
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  // - 1 year and 1 month is great
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount,
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount,
+    },
+  };
+};
+
+const inspectFileSize = (numberOfBytes) => {
+  return inspectBytes(numberOfBytes);
+};
+
+const inspectMemoryUsage = (metricValue, { decimals } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true });
+};
+
+const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+  const exponent = Math.min(
+    Math.floor(Math.log10(number) / 3),
+    BYTE_UNITS.length - 1,
+  );
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  if (decimals === undefined) {
+    if (unitNumber < 100) {
+      decimals = 1;
+    } else {
+      decimals = 0;
+    }
+  }
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals,
+    decimalsWhenSmall: 1,
+  });
+  if (fixedDecimals) {
+    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  }
+  return `${unitNumberRounded} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
 const urlToScheme = (url) => {
   const urlString = String(url);
@@ -915,7 +1311,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
   return 0;
 };
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$3 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
@@ -938,7 +1334,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expected but got ${url}`);
   }
 
-  if (!isWindows$2) {
+  if (!isWindows$3) {
     return url;
   }
 
@@ -1059,19 +1455,19 @@ const writeEntryPermissions = async (source, permissions) => {
   if (typeof permissions === "object") {
     permissions = {
       owner: {
-        read: getPermissionOrComputeDefault("read", "owner", permissions),
-        write: getPermissionOrComputeDefault("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault("execute", "owner", permissions),
+        read: getPermissionOrComputeDefault$1("read", "owner", permissions),
+        write: getPermissionOrComputeDefault$1("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "owner", permissions),
       },
       group: {
-        read: getPermissionOrComputeDefault("read", "group", permissions),
-        write: getPermissionOrComputeDefault("write", "group", permissions),
-        execute: getPermissionOrComputeDefault("execute", "group", permissions),
+        read: getPermissionOrComputeDefault$1("read", "group", permissions),
+        write: getPermissionOrComputeDefault$1("write", "group", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "group", permissions),
       },
       others: {
-        read: getPermissionOrComputeDefault("read", "others", permissions),
-        write: getPermissionOrComputeDefault("write", "others", permissions),
-        execute: getPermissionOrComputeDefault(
+        read: getPermissionOrComputeDefault$1("read", "others", permissions),
+        write: getPermissionOrComputeDefault$1("write", "others", permissions),
+        execute: getPermissionOrComputeDefault$1(
           "execute",
           "others",
           permissions,
@@ -1094,20 +1490,20 @@ const writeEntryPermissions = async (source, permissions) => {
   });
 };
 
-const actionLevels = { read: 0, write: 1, execute: 2 };
-const subjectLevels = { others: 0, group: 1, owner: 2 };
+const actionLevels$1 = { read: 0, write: 1, execute: 2 };
+const subjectLevels$1 = { others: 0, group: 1, owner: 2 };
 
-const getPermissionOrComputeDefault = (action, subject, permissions) => {
+const getPermissionOrComputeDefault$1 = (action, subject, permissions) => {
   if (subject in permissions) {
     const subjectPermissions = permissions[subject];
     if (action in subjectPermissions) {
       return subjectPermissions[action];
     }
 
-    const actionLevel = actionLevels[action];
-    const actionFallback = Object.keys(actionLevels).find(
+    const actionLevel = actionLevels$1[action];
+    const actionFallback = Object.keys(actionLevels$1).find(
       (actionFallbackCandidate) =>
-        actionLevels[actionFallbackCandidate] > actionLevel &&
+        actionLevels$1[actionFallbackCandidate] > actionLevel &&
         actionFallbackCandidate in subjectPermissions,
     );
     if (actionFallback) {
@@ -1115,19 +1511,19 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
     }
   }
 
-  const subjectLevel = subjectLevels[subject];
+  const subjectLevel = subjectLevels$1[subject];
   // do we have a subject with a stronger level (group or owner)
   // where we could read the action permission ?
-  const subjectFallback = Object.keys(subjectLevels).find(
+  const subjectFallback = Object.keys(subjectLevels$1).find(
     (subjectFallbackCandidate) =>
-      subjectLevels[subjectFallbackCandidate] > subjectLevel &&
+      subjectLevels$1[subjectFallbackCandidate] > subjectLevel &&
       subjectFallbackCandidate in permissions,
   );
   if (subjectFallback) {
     const subjectPermissions = permissions[subjectFallback];
     return action in subjectPermissions
       ? subjectPermissions[action]
-      : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+      : getPermissionOrComputeDefault$1(action, subjectFallback, permissions);
   }
 
   return false;
@@ -1139,7 +1535,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  */
 
 
-const isWindows$1 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 
 const readEntryStat = async (
   source,
@@ -1159,7 +1555,7 @@ const readEntryStat = async (
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$1
+    ...(isWindows$2
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: async (error) => {
@@ -1401,33 +1797,6 @@ const readFile = async (value, { as = "buffer" } = {}) => {
   );
 };
 
-const writeFile = async (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationUrlObject = new URL(destinationUrl);
-  try {
-    await writeFileNaive(destinationUrlObject, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await ensureParentDirectories(destinationUrl);
-      await writeFileNaive(destinationUrlObject, content);
-      return;
-    }
-    throw error;
-  }
-};
-
-const writeFileNaive = (urlObject, content) => {
-  return new Promise((resolve, reject) => {
-    writeFile$1(urlObject, content, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
 const writeFileSync = (destination, content = "") => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
@@ -1483,7 +1852,7 @@ const removeEntry = async (
       sourceStats.isCharacterDevice() ||
       sourceStats.isBlockDevice()
     ) {
-      await removeNonDirectory(
+      await removeNonDirectory$1(
         sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
         {
           maxRetries,
@@ -1504,7 +1873,7 @@ const removeEntry = async (
   }
 };
 
-const removeNonDirectory = (sourceUrl, { maxRetries, retryDelay }) => {
+const removeNonDirectory$1 = (sourceUrl, { maxRetries, retryDelay }) => {
   const sourcePath = urlToFileSystemPath(sourceUrl);
 
   let retryCount = 0;
@@ -1643,11 +2012,11 @@ const removeDirectory = async (
   };
 
   const visitFile = async (fileUrl) => {
-    await removeNonDirectory(fileUrl, { maxRetries, retryDelay });
+    await removeNonDirectory$1(fileUrl, { maxRetries, retryDelay });
   };
 
   const visitSymbolicLink = async (symbolicLinkUrl) => {
-    await removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
+    await removeNonDirectory$1(symbolicLinkUrl, { maxRetries, retryDelay });
   };
 
   try {
@@ -1692,15 +2061,455 @@ const removeDirectoryNaive = (
 
 process.platform === "win32";
 
+const writeEntryPermissionsSync = (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault("read", "owner", permissions),
+        write: getPermissionOrComputeDefault("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions),
+      },
+      group: {
+        read: getPermissionOrComputeDefault("read", "group", permissions),
+        write: getPermissionOrComputeDefault("write", "group", permissions),
+        execute: getPermissionOrComputeDefault("execute", "group", permissions),
+      },
+      others: {
+        read: getPermissionOrComputeDefault("read", "others", permissions),
+        write: getPermissionOrComputeDefault("write", "others", permissions),
+        execute: getPermissionOrComputeDefault(
+          "execute",
+          "others",
+          permissions,
+        ),
+      },
+    };
+    binaryFlags = permissionsToBinaryFlags(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  chmodSync(new URL(sourceUrl), binaryFlags);
+};
+
+const actionLevels = { read: 0, write: 1, execute: 2 };
+const subjectLevels = { others: 0, group: 1, owner: 2 };
+
+const getPermissionOrComputeDefault = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels[action];
+    const actionFallback = Object.keys(actionLevels).find(
+      (actionFallbackCandidate) =>
+        actionLevels[actionFallbackCandidate] > actionLevel &&
+        actionFallbackCandidate in subjectPermissions,
+    );
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels[subject];
+  // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+  const subjectFallback = Object.keys(subjectLevels).find(
+    (subjectFallbackCandidate) =>
+      subjectLevels[subjectFallbackCandidate] > subjectLevel &&
+      subjectFallbackCandidate in permissions,
+  );
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions
+      ? subjectPermissions[action]
+      : getPermissionOrComputeDefault(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
 
-process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
+
+const readEntryStatSync = (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return statSyncNaive(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$1
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              writeEntryPermissionsSync(sourceUrl, 0o666);
+              const stats = statSyncNaive(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const statSyncNaive = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? statSync : lstatSync;
+
+  try {
+    const stats = nodeMethod(sourcePath);
+    return stats;
+  } catch (error) {
+    if (handleNotFoundError && error.code === "ENOENT") {
+      return handleNotFoundError(error);
+    }
+    if (
+      handlePermissionDeniedError &&
+      (error.code === "EPERM" || error.code === "EACCES")
+    ) {
+      return handlePermissionDeniedError(error);
+    }
+    throw error;
+  }
+};
+
+const writeDirectorySync = (
+  destination,
+  { recursive = true, allowUseless = false } = {},
+) => {
+  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+
+  const destinationStats = readEntryStatSync(destinationUrl, {
+    nullIfNotFound: true,
+    followLink: false,
+  });
+
+  if (destinationStats) {
+    if (destinationStats.isDirectory()) {
+      if (allowUseless) {
+        return;
+      }
+      throw new Error(`directory already exists at ${destinationPath}`);
+    }
+
+    const destinationType = statsToType(destinationStats);
+    throw new Error(
+      `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
+    );
+  }
+
+  try {
+    mkdirSync(destinationPath, { recursive });
+  } catch (error) {
+    if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+    throw error;
+  }
+};
+
+const removeEntrySync = (
+  source,
+  {
+    signal = new AbortController().signal,
+    allowUseless = false,
+    recursive = false,
+    maxRetries = 3,
+    retryDelay = 100,
+    onlyContent = false,
+  } = {},
+) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  const removeOperation = Abort.startOperation();
+  removeOperation.addAbortSignal(signal);
+
+  try {
+    removeOperation.throwIfAborted();
+    const sourceStats = readEntryStatSync(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false,
+    });
+    if (!sourceStats) {
+      if (allowUseless) {
+        return;
+      }
+      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+    }
+
+    // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+    // other libraries ignore them, let's do the same.
+    if (
+      sourceStats.isFile() ||
+      sourceStats.isSymbolicLink() ||
+      sourceStats.isCharacterDevice() ||
+      sourceStats.isBlockDevice()
+    ) {
+      removeNonDirectory(
+        sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
+        {
+          maxRetries,
+          retryDelay,
+        },
+      );
+    } else if (sourceStats.isDirectory()) {
+      const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
+      removeDirectorySync(directoryUrl, {
+        signal: removeOperation.signal,
+        recursive,
+        maxRetries,
+        retryDelay,
+        onlyContent,
+      });
+    }
+  } finally {
+    removeOperation.end();
+  }
+};
+
+const removeNonDirectory = (sourceUrl) => {
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const attempt = () => {
+    unlinkSyncNaive(sourcePath);
+  };
+  attempt();
+};
+
+const unlinkSyncNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
+  try {
+    unlinkSync(sourcePath);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return;
+    }
+    if (
+      handleTemporaryError &&
+      (error.code === "EBUSY" ||
+        error.code === "EMFILE" ||
+        error.code === "ENFILE" ||
+        error.code === "ENOENT")
+    ) {
+      handleTemporaryError(error);
+      return;
+    }
+    throw error;
+  }
+};
+
+const removeDirectorySync = (
+  rootDirectoryUrl,
+  { signal, maxRetries, retryDelay, recursive, onlyContent },
+) => {
+  const removeDirectoryOperation = Abort.startOperation();
+  removeDirectoryOperation.addAbortSignal(signal);
+
+  const visit = (sourceUrl) => {
+    removeDirectoryOperation.throwIfAborted();
+    const sourceStats = readEntryStatSync(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false,
+    });
+
+    // file/directory not found
+    if (sourceStats === null) {
+      return;
+    }
+
+    if (
+      sourceStats.isFile() ||
+      sourceStats.isCharacterDevice() ||
+      sourceStats.isBlockDevice()
+    ) {
+      visitFile(sourceUrl);
+    } else if (sourceStats.isSymbolicLink()) {
+      visitSymbolicLink(sourceUrl);
+    } else if (sourceStats.isDirectory()) {
+      visitDirectory(`${sourceUrl}/`);
+    }
+  };
+
+  const visitDirectory = (directoryUrl) => {
+    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const optionsFromRecursive = recursive
+      ? {
+          handleNotEmptyError: () => {
+            removeDirectoryContent(directoryUrl);
+            visitDirectory(directoryUrl);
+          },
+        }
+      : {};
+    removeDirectoryOperation.throwIfAborted();
+    removeDirectorySyncNaive(directoryPath, {
+      ...optionsFromRecursive,
+      // Workaround for https://github.com/joyent/node/issues/4337
+      ...(process.platform === "win32"
+        ? {
+            handlePermissionError: (error) => {
+              console.error(
+                `trying to fix windows EPERM after readir on ${directoryPath}`,
+              );
+
+              let openOrCloseError;
+              try {
+                const fd = openSync(directoryPath);
+                closeSync(fd);
+              } catch (e) {
+                openOrCloseError = e;
+              }
+
+              if (openOrCloseError) {
+                if (openOrCloseError.code === "ENOENT") {
+                  return;
+                }
+                console.error(
+                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                );
+                throw error;
+              }
+              removeDirectorySyncNaive(directoryPath, {
+                ...optionsFromRecursive,
+              });
+            },
+          }
+        : {}),
+    });
+  };
+
+  const removeDirectoryContent = (directoryUrl) => {
+    removeDirectoryOperation.throwIfAborted();
+    const entryNames = readdirSync(new URL(directoryUrl));
+    for (const entryName of entryNames) {
+      const url = resolveUrl(entryName, directoryUrl);
+      visit(url);
+    }
+  };
+
+  const visitFile = (fileUrl) => {
+    removeNonDirectory(fileUrl);
+  };
+
+  const visitSymbolicLink = (symbolicLinkUrl) => {
+    removeNonDirectory(symbolicLinkUrl);
+  };
+
+  try {
+    if (onlyContent) {
+      removeDirectoryContent(rootDirectoryUrl);
+    } else {
+      visitDirectory(rootDirectoryUrl);
+    }
+  } finally {
+    removeDirectoryOperation.end();
+  }
+};
+
+const removeDirectorySyncNaive = (
+  directoryPath,
+  { handleNotEmptyError = null, handlePermissionError = null } = {},
+) => {
+  try {
+    rmdirSync(directoryPath);
+  } catch (error) {
+    if (handlePermissionError && error.code === "EPERM") {
+      handlePermissionError(error);
+      return;
+    }
+    if (error.code === "ENOENT") {
+      return;
+    }
+    if (
+      handleNotEmptyError &&
+      // linux os
+      (error.code === "ENOTEMPTY" ||
+        // SunOS
+        error.code === "EEXIST")
+    ) {
+      handleNotEmptyError(error);
+      return;
+    }
+    throw error;
+  }
+};
 
 process.platform === "win32";
+
+const ensureEmptyDirectorySync = (source) => {
+  const stat = readEntryStatSync(source, {
+    nullIfNotFound: true,
+    followLink: false,
+  });
+
+  if (stat === null) {
+    // if there is nothing, create a directory
+    writeDirectorySync(source, { allowUseless: true });
+    return;
+  }
+  if (stat.isDirectory()) {
+    removeEntrySync(source, {
+      recursive: true,
+      onlyContent: true,
+      allowUseless: true,
+    });
+    return;
+  }
+
+  const sourceType = statsToType(stat);
+  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
+  throw new Error(
+    `ensureEmptyDirectorySync expect directory at ${sourcePath}, found ${sourceType} instead`,
+  );
+};
 
 const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
@@ -1999,45 +2808,40 @@ function createSupportsColor(stream, options = {}) {
 });
 
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
-let canUseColors = processSupportsBasicColor;
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+
+const ANSI = {
+  supported: processSupportsBasicColor,
+
+  RED: "\x1b[31m",
+  GREEN: "\x1b[32m",
+  YELLOW: "\x1b[33m",
+  BLUE: "\x1b[34m",
+  MAGENTA: "\x1b[35m",
+  GREY: "\x1b[90m",
+  color: (text, ANSI_COLOR) => {
+    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
+  },
+
+  BOLD: "\x1b[1m",
+  effect: (text, ANSI_EFFECT) => {
+    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
+  },
+};
 
 // GitHub workflow does support ANSI but "supports-color" returns false
 // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (process.env.GITHUB_WORKFLOW) {
+if (
+  process.env.GITHUB_WORKFLOW &&
   // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  if (process.env.FORCE_COLOR !== "false") {
-    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
-    // that colors are not supported. Let it have priority
-    canUseColors = true;
-  }
+  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+  // that colors are not supported. Let it have priority
+  process.env.FORCE_COLOR !== "false"
+) {
+  ANSI.supported = true;
 }
-
-// https://github.com/Marak/colors.js/blob/master/lib/styles.js
-const RED = "\x1b[31m";
-const GREEN = "\x1b[32m";
-const YELLOW = "\x1b[33m";
-const BLUE = "\x1b[34m";
-const MAGENTA = "\x1b[35m";
-const GREY = "\x1b[90m";
-const RESET = "\x1b[0m";
-
-const setANSIColor = canUseColors
-  ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}`
-  : (text) => text;
-
-const ANSI = {
-  supported: canUseColors,
-
-  RED,
-  GREEN,
-  YELLOW,
-  BLUE,
-  MAGENTA,
-  GREY,
-  RESET,
-
-  color: setANSIColor,
-};
 
 function isUnicodeSupported() {
 	if (process$1.platform !== 'win32') {
@@ -2057,42 +2861,51 @@ function isUnicodeSupported() {
 // see also https://github.com/sindresorhus/figures
 
 
-const canUseUnicode = isUnicodeSupported();
-
-const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
-const OK_RAW = canUseUnicode ? `✔` : `√`;
-const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
-const DEBUG_RAW = canUseUnicode ? `◆` : `♦`;
-const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
-const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
-const CIRCLE_CROSS_RAW = canUseUnicode ? `ⓧ` : `(×)`;
-
-const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-const OK = ANSI.color(OK_RAW, ANSI.GREEN);
-const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
-const DEBUG = ANSI.color(DEBUG_RAW, ANSI.GREY);
-const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
-const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
-const CIRCLE_CROSS = ANSI.color(CIRCLE_CROSS_RAW, ANSI.RED);
-
 const UNICODE = {
-  COMMAND,
-  OK,
-  FAILURE,
-  DEBUG,
-  INFO,
-  WARNING,
-  CIRCLE_CROSS,
+  supported: isUnicodeSupported(),
 
-  COMMAND_RAW,
-  OK_RAW,
-  FAILURE_RAW,
-  DEBUG_RAW,
-  INFO_RAW,
-  WARNING_RAW,
-  CIRCLE_CROSS_RAW,
-
-  supported: canUseUnicode,
+  get COMMAND_RAW() {
+    return UNICODE.supported ? `❯` : `>`;
+  },
+  get OK_RAW() {
+    return UNICODE.supported ? `✔` : `√`;
+  },
+  get FAILURE_RAW() {
+    return UNICODE.supported ? `✖` : `×`;
+  },
+  get DEBUG_RAW() {
+    return UNICODE.supported ? `◆` : `♦`;
+  },
+  get INFO_RAW() {
+    return UNICODE.supported ? `ℹ` : `i`;
+  },
+  get WARNING_RAW() {
+    return UNICODE.supported ? `⚠` : `‼`;
+  },
+  get CIRCLE_CROSS_RAW() {
+    return UNICODE.supported ? `ⓧ` : `(×)`;
+  },
+  get COMMAND() {
+    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+  },
+  get OK() {
+    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+  },
+  get FAILURE() {
+    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+  },
+  get DEBUG() {
+    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+  },
+  get INFO() {
+    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+  },
+  get WARNING() {
+    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+  },
+  get CIRCLE_CROSS() {
+    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
 };
 
 const createDetailedMessage = (message, details = {}) => {
@@ -2112,210 +2925,6 @@ ${
 
   return string;
 };
-
-const setRoundedPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round,
-  });
-};
-
-const setDecimalsPrecision = (
-  number,
-  {
-    transform,
-    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
-    decimalsWhenSmall, // max decimals for number in [-1,1]
-  } = {},
-) => {
-  if (number === 0) {
-    return 0;
-  }
-  let numberCandidate = Math.abs(number);
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-};
-
-// https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const msAsEllapsedTime = (ms) => {
-  if (ms < 1000) {
-    return "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return formatEllapsedUnit(primary);
-  }
-  return `${formatEllapsedUnit(primary)} and ${formatEllapsedUnit(remaining)}`;
-};
-
-const formatEllapsedUnit = (unit) => {
-  const count =
-    unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
-  }
-  return `${count} ${unit.name}s`;
-};
-
-const msAsDuration = (ms) => {
-  // ignore ms below meaningfulMs so that:
-  // msAsDuration(0.5) -> "0 second"
-  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
-  }
-  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(
-    remaining,
-    0,
-  )}`;
-};
-
-const formatDurationUnit = (unit, decimals) => {
-  const count = setRoundedPrecision(unit.count, {
-    decimals,
-  });
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
-  }
-  return `${count} ${unit.name}s`;
-};
-
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000,
-};
-
-const parseMs = (ms) => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex((unitName) => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-    return false;
-  });
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
-  // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  // - 1 year and 1 month is great
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount,
-    },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount,
-    },
-  };
-};
-
-const byteAsFileSize = (numberOfBytes) => {
-  return formatBytes(numberOfBytes);
-};
-
-const byteAsMemoryUsage = (metricValue) => {
-  return formatBytes(metricValue, { fixedDecimals: true });
-};
-
-const formatBytes = (number, { fixedDecimals = false } = {}) => {
-  if (number === 0) {
-    return `0 B`;
-  }
-  const exponent = Math.min(
-    Math.floor(Math.log10(number) / 3),
-    BYTE_UNITS.length - 1,
-  );
-  const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
-  const maxDecimals = unitNumber < 100 ? 1 : 0;
-  const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals: maxDecimals,
-    decimalsWhenSmall: 1,
-  });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(maxDecimals)} ${unitName}`;
-  }
-  return `${unitNumberRounded} ${unitName}`;
-};
-
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
 const ESC = '\u001B[';
 const OSC = '\u001B]';
@@ -2483,14 +3092,163 @@ ansiEscapes.iTerm = {
 };
 
 /*
- *
+ * see also https://github.com/vadimdemedes/ink
  */
+
+
+const createDynamicLog = ({
+  stream = process.stdout,
+  clearTerminalAllowed,
+  onVerticalOverflow = () => {},
+  onWriteFromOutside = () => {},
+} = {}) => {
+  const { columns = 80, rows = 24 } = stream;
+  const dynamicLog = {
+    destroyed: false,
+    onVerticalOverflow,
+    onWriteFromOutside,
+  };
+
+  let lastOutput = "";
+  let lastOutputFromOutside = "";
+  let clearAttemptResult;
+  let writing = false;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    for (const logLine of logLines) {
+      const width = stringWidth(logLine);
+      if (width === 0) {
+        visualLineCount++;
+      } else {
+        visualLineCount += Math.ceil(width / columns);
+      }
+    }
+
+    if (visualLineCount > rows) {
+      if (clearTerminalAllowed) {
+        clearAttemptResult = true;
+        return ansiEscapes.clearTerminal;
+      }
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      dynamicLog.onVerticalOverflow();
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return ansiEscapes.eraseLines(visualLineCount);
+  };
+
+  const update = (string) => {
+    if (dynamicLog.destroyed) {
+      throw new Error("Cannot write log after destroy");
+    }
+    let stringToWrite = string;
+    if (lastOutput) {
+      if (lastOutputFromOutside) {
+        // We don't want to clear logs written by other code,
+        // it makes output unreadable and might erase precious information
+        // To detect this we put a spy on the stream.
+        // The spy is required only if we actually wrote something in the stream
+        // something else than this code has written in the stream
+        // so we just write without clearing (append instead of replacing)
+        lastOutputFromOutside = "";
+      } else {
+        stringToWrite = `${getErasePreviousOutput()}${string}`;
+      }
+    }
+    writing = true;
+    stream.write(stringToWrite);
+    lastOutput = string;
+    writing = false;
+    clearAttemptResult = undefined;
+  };
+
+  const clearDuringFunctionCall = (callback) => {
+    // 1. Erase the current log
+    // 2. Call callback (expected to write something on stdout)
+    // 3. Restore the current log
+    // During step 2. we expect a "write from outside" so we uninstall
+    // the stream spy during function call
+    const currentOutput = lastOutput;
+    update("");
+
+    writing = true;
+    callback();
+    writing = false;
+
+    update(currentOutput);
+  };
+
+  const writeFromOutsideEffect = (value) => {
+    if (!lastOutput) {
+      // we don't care if the log never wrote anything
+      // or if last update() wrote an empty string
+      return;
+    }
+    if (writing) {
+      return;
+    }
+    lastOutputFromOutside = value;
+    dynamicLog.onWriteFromOutside(value);
+  };
+
+  let removeStreamSpy;
+  if (stream === process.stdout) {
+    const removeStdoutSpy = spyStreamOutput(
+      process.stdout,
+      writeFromOutsideEffect,
+    );
+    const removeStderrSpy = spyStreamOutput(
+      process.stderr,
+      writeFromOutsideEffect,
+    );
+    removeStreamSpy = () => {
+      removeStdoutSpy();
+      removeStderrSpy();
+    };
+  } else {
+    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
+  }
+
+  const destroy = () => {
+    dynamicLog.destroyed = true;
+    if (removeStreamSpy) {
+      removeStreamSpy();
+      removeStreamSpy = null;
+      lastOutput = "";
+      lastOutputFromOutside = "";
+    }
+  };
+
+  Object.assign(dynamicLog, {
+    update,
+    destroy,
+    stream,
+    clearDuringFunctionCall,
+  });
+  return dynamicLog;
+};
 
 // maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
 // the problem with listening data on stdout
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
-const spyStreamOutput = (stream) => {
+const spyStreamOutput = (stream, callback) => {
   const originalWrite = stream.write;
 
   let output = "";
@@ -2498,6 +3256,7 @@ const spyStreamOutput = (stream) => {
 
   stream.write = function (...args /* chunk, encoding, callback */) {
     output += args;
+    callback(output);
     return originalWrite.call(stream, ...args);
   };
 
@@ -2515,228 +3274,127 @@ const spyStreamOutput = (stream) => {
   };
 };
 
-/*
- * see also https://github.com/vadimdemedes/ink
- */
+// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
 
 
-const createLog = ({
-  stream = process.stdout,
-  newLine = "after",
-} = {}) => {
-  const { columns = 80, rows = 24 } = stream;
+const startMeasuringCpuUsage = () => {
+  let previousCpuArray = cpus();
+  let previousMs = Date.now();
 
-  const log = {
-    destroyed: false,
-    onVerticalOverflow: () => {},
+  const overall = {
+    inactive: 100,
+    active: 0,
+    system: 0,
+    user: 0,
   };
+  const details = previousCpuArray.map(() => {
+    return {
+      inactive: 100,
+      active: 0,
+      system: 0,
+      user: 0,
+    };
+  });
 
-  let lastOutput = "";
-  let clearAttemptResult;
-  let streamOutputSpy = noopStreamSpy;
+  const samples = [];
+  const interval = setInterval(() => {
+    let cpuArray = cpus();
+    const ms = Date.now();
+    const ellapsedMs = ms - previousMs;
+    const cpuUsagesSample = [];
+    let overallSystemMs = 0;
+    let overallUserMs = 0;
+    let overallInactiveMs = 0;
+    let overallActiveMs = 0;
+    let overallMsEllapsed = 0;
+    let index = 0;
+    for (const cpu of cpuArray) {
+      const previousCpuTimes = previousCpuArray[index].times;
+      const cpuTimes = cpu.times;
+      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
+      const userMs = cpuTimes.user - previousCpuTimes.user;
+      const activeMs = systemMs + userMs;
+      const inactiveMs = ellapsedMs - activeMs;
+      const cpuUsageSample = {
+        inactive: inactiveMs / ellapsedMs,
+        active: activeMs / ellapsedMs,
+        system: systemMs / ellapsedMs,
+        user: userMs / ellapsedMs,
+      };
+      cpuUsagesSample.push(cpuUsageSample);
 
-  const getErasePreviousOutput = () => {
-    // nothing to clear
-    if (!lastOutput) {
-      return "";
+      overallSystemMs += systemMs;
+      overallUserMs += userMs;
+      overallInactiveMs += inactiveMs;
+      overallActiveMs += activeMs;
+      overallMsEllapsed += ellapsedMs;
+      index++;
     }
-    if (clearAttemptResult !== undefined) {
-      return "";
-    }
-
-    const logLines = lastOutput.split(/\r\n|\r|\n/);
-    let visualLineCount = 0;
-    logLines.forEach((logLine) => {
-      const width = stringWidth(logLine);
-      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
+    const overallUsageSample = {
+      inactive: overallInactiveMs / overallMsEllapsed,
+      active: overallActiveMs / overallMsEllapsed,
+      system: overallSystemMs / overallMsEllapsed,
+      user: overallUserMs / overallMsEllapsed,
+    };
+    previousCpuArray = cpuArray;
+    previousMs = ms;
+    samples.push({
+      cpuUsagesSample,
+      overallUsageSample,
     });
 
-    if (visualLineCount > rows) {
-      // the whole log cannot be cleared because it's vertically to long
-      // (longer than terminal height)
-      // readline.moveCursor cannot move cursor higher than screen height
-      // it means we would only clear the visible part of the log
-      // better keep the log untouched
-      clearAttemptResult = false;
-      log.onVerticalOverflow();
-      return "";
-    }
-
-    clearAttemptResult = true;
-    return ansiEscapes.eraseLines(visualLineCount);
-  };
-
-  const spyStream = () => {
-    if (stream === process.stdout) {
-      const stdoutSpy = spyStreamOutput(process.stdout);
-      const stderrSpy = spyStreamOutput(process.stderr);
-      return () => {
-        return stdoutSpy() + stderrSpy();
-      };
-    }
-    return spyStreamOutput(stream);
-  };
-
-  const doWrite = (string) => {
-    string = addNewLines(string, newLine);
-    stream.write(string);
-    lastOutput = string;
-    clearAttemptResult = undefined;
-
-    // We don't want to clear logs written by other code,
-    // it makes output unreadable and might erase precious information
-    // To detect this we put a spy on the stream.
-    // The spy is required only if we actually wrote something in the stream
-    // otherwise tryToClear() won't do a thing so spy is useless
-    streamOutputSpy = string ? spyStream() : noopStreamSpy;
-  };
-
-  const write = (string, outputFromOutside = streamOutputSpy()) => {
-    if (log.destroyed) {
-      throw new Error("Cannot write log after destroy");
-    }
-    if (!lastOutput) {
-      doWrite(string);
-      return;
-    }
-    if (outputFromOutside) {
-      // something else than this code has written in the stream
-      // so we just write without clearing (append instead of replacing)
-      doWrite(string);
-    } else {
-      doWrite(`${getErasePreviousOutput()}${string}`);
-    }
-  };
-
-  const dynamicWrite = (callback) => {
-    const outputFromOutside = streamOutputSpy();
-    const string = callback({ outputFromOutside });
-    return write(string, outputFromOutside);
-  };
-
-  const destroy = () => {
-    log.destroyed = true;
-    if (streamOutputSpy) {
-      streamOutputSpy(); // this uninstalls the spy
-      streamOutputSpy = null;
-      lastOutput = "";
-    }
-  };
-
-  Object.assign(log, {
-    write,
-    dynamicWrite,
-    destroy,
-    stream,
-  });
-  return log;
-};
-
-const noopStreamSpy = () => "";
-
-// could be inlined but vscode do not correctly
-// expand/collapse template strings, so I put it at the bottom
-const addNewLines = (string, newLine) => {
-  if (newLine === "before") {
-    return `
-${string}`;
-  }
-  if (newLine === "after") {
-    return `${string}
-`;
-  }
-  if (newLine === "around") {
-    return `
-${string}
-`;
-  }
-  return string;
-};
-
-const startSpinner = ({
-  log,
-  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-  fps = 20,
-  keepProcessAlive = false,
-  stopOnWriteFromOutside = true,
-  stopOnVerticalOverflow = true,
-  render = () => "",
-  effect = () => {},
-  animated = log.stream.isTTY,
-}) => {
-  let frameIndex = 0;
-  let interval;
-  let running = true;
-
-  const spinner = {
-    message: undefined,
-  };
-
-  const update = (message) => {
-    spinner.message = running ? `${frames[frameIndex]} ${message}` : message;
-    return spinner.message;
-  };
-  spinner.update = update;
-
-  let cleanup;
-  if (animated && ANSI.supported) {
-    running = true;
-    cleanup = effect();
-    log.write(update(render()));
-
-    interval = setInterval(() => {
-      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      log.dynamicWrite(({ outputFromOutside }) => {
-        if (outputFromOutside && stopOnWriteFromOutside) {
-          stop();
-          return "";
+    if (samples.length === 10) {
+      let index = 0;
+      for (const detail of details) {
+        let systemSum = 0;
+        let userSum = 0;
+        let inactiveSum = 0;
+        let activeSum = 0;
+        for (const sample of samples) {
+          const { cpuUsagesSample } = sample;
+          const cpuUsageSample = cpuUsagesSample[index];
+          inactiveSum += cpuUsageSample.inactive;
+          activeSum += cpuUsageSample.active;
+          systemSum += cpuUsageSample.system;
+          userSum += cpuUsageSample.user;
         }
-        return update(render());
+        Object.assign(detail, {
+          inactive: inactiveSum / samples.length,
+          active: activeSum / samples.length,
+          system: systemSum / samples.length,
+          user: userSum / samples.length,
+        });
+        index++;
+      }
+
+      let overallSystemSum = 0;
+      let overallUserSum = 0;
+      let overallInactiveSum = 0;
+      let overallActiveSum = 0;
+      for (const sample of samples) {
+        const { overallUsageSample } = sample;
+        overallSystemSum += overallUsageSample.system;
+        overallUserSum += overallUsageSample.user;
+        overallInactiveSum += overallUsageSample.inactive;
+        overallActiveSum += overallUsageSample.active;
+      }
+      Object.assign(overall, {
+        inactive: overallInactiveSum / samples.length,
+        active: overallActiveSum / samples.length,
+        system: overallSystemSum / samples.length,
+        user: overallUserSum / samples.length,
       });
-    }, 1000 / fps);
-    if (!keepProcessAlive) {
-      interval.unref();
+      // console.log(formatUsage(globalUsageInfo));
+      samples.length = 0;
     }
-  } else {
-    log.write(update(render()));
-  }
+  }, 15);
+  interval.unref();
 
-  const stop = (message) => {
-    running = false;
-    if (interval) {
-      clearInterval(interval);
-      interval = null;
-    }
-    if (cleanup) {
-      cleanup();
-      cleanup = null;
-    }
-    if (log && message) {
-      log.write(update(message));
-      log = null;
-    }
-  };
-  spinner.stop = stop;
-
-  if (stopOnVerticalOverflow) {
-    log.onVerticalOverflow = stop;
-  }
-
-  return spinner;
-};
-
-const createTeardown = () => {
-  const teardownCallbackSet = new Set();
   return {
-    addCallback: (callback) => {
-      teardownCallbackSet.add(callback);
-    },
-    trigger: async () => {
-      await Promise.all(
-        Array.from(teardownCallbackSet.values()).map(async (callback) => {
-          await callback();
-        }),
-      );
+    overall,
+    details,
+    stop: () => {
+      clearInterval(interval);
     },
   };
 };
@@ -3011,7 +3669,7 @@ const sourcesFromLineLengths = (lineLengths) => {
 const composeV8AndIstanbul = (
   v8FileByFileCoverage,
   istanbulFileByFileCoverage,
-  { coverageV8ConflictWarning },
+  { v8ConflictWarning },
 ) => {
   const fileByFileCoverage = {};
   const v8Files = Object.keys(v8FileByFileCoverage);
@@ -3023,15 +3681,15 @@ const composeV8AndIstanbul = (
   istanbulFiles.forEach((key) => {
     const v8Coverage = v8FileByFileCoverage[key];
     if (v8Coverage) {
-      if (coverageV8ConflictWarning) {
+      if (v8ConflictWarning) {
         console.warn(
           createDetailedMessage(
             `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
             {
               "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
               "suggestion":
-                "disable this warning with coverageV8ConflictWarning: false",
-              "suggestion 2": `force coverage using istanbul with coverageMethodForBrowsers: "istanbul"`,
+                "disable this warning with coverage.v8ConflictWarning: false",
+              "suggestion 2": `force coverage using istanbul with coverage.methodForBrowsers: "istanbul"`,
             },
           ),
         );
@@ -3068,12 +3726,12 @@ const normalizeFileByFileCoveragePaths = (
 const listRelativeFileUrlToCover = async ({
   signal,
   rootDirectoryUrl,
-  coverageConfig,
+  coverageInclude,
 }) => {
   const matchingFileResultArray = await collectFiles({
     signal,
     directoryUrl: rootDirectoryUrl,
-    associations: { cover: coverageConfig },
+    associations: { cover: coverageInclude },
     predicate: ({ cover }) => cover,
   });
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);
@@ -3175,13 +3833,13 @@ const createEmptyCoverage = (relativeUrl) => {
 const getMissingFileByFileCoverage = async ({
   signal,
   rootDirectoryUrl,
-  coverageConfig,
+  coverageInclude,
   fileByFileCoverage,
 }) => {
   const relativeUrlsToCover = await listRelativeFileUrlToCover({
     signal,
     rootDirectoryUrl,
-    coverageConfig,
+    coverageInclude,
   });
   const relativeUrlsMissing = relativeUrlsToCover.filter((relativeUrlToCover) =>
     Object.keys(fileByFileCoverage).every((key) => {
@@ -3209,60 +3867,52 @@ const getMissingFileByFileCoverage = async ({
   return missingFileByFileCoverage;
 };
 
-const reportToCoverage = async (
-  report,
-  {
-    signal,
-    logger,
-    rootDirectoryUrl,
-    coverageConfig,
-    coverageIncludeMissing,
-    coverageMethodForNodeJs,
-    coverageV8ConflictWarning,
-  },
+const generateCoverage = async (
+  testPlanResult,
+  { signal, logger, rootDirectoryUrl, coverage },
 ) => {
   // collect v8 and istanbul coverage from executions
-  let { v8Coverage, fileByFileIstanbulCoverage } = await getCoverageFromReport({
-    signal,
-    report,
-    onMissing: ({ file, executionResult, executionName }) => {
-      // several reasons not to have coverage here:
-      // 1. the file we executed did not import an instrumented file.
-      // - a test file without import
-      // - a test file importing only file excluded from coverage
-      // - a coverDescription badly configured so that we don't realize
-      // a file should be covered
+  let { v8Coverage, fileByFileIstanbulCoverage } =
+    await getCoverageFromTestPlanResults(testPlanResult.results, {
+      signal,
+      onMissing: ({ file, executionResult, executionName }) => {
+        // several reasons not to have coverage here:
+        // 1. the file we executed did not import an instrumented file.
+        // - a test file without import
+        // - a test file importing only file excluded from coverage
+        // - a coverDescription badly configured so that we don't realize
+        // a file should be covered
 
-      // 2. the file we wanted to executed timedout
-      // - infinite loop
-      // - too extensive operation
-      // - a badly configured or too low allocatedMs for that execution.
+        // 2. the file we wanted to executed timedout
+        // - infinite loop
+        // - too extensive operation
+        // - a badly configured or too low allocatedMs for that execution.
 
-      // 3. the file we wanted to execute contains syntax-error
+        // 3. the file we wanted to execute contains syntax-error
 
-      // in any scenario we are fine because
-      // coverDescription will generate empty coverage for files
-      // that were suppose to be coverage but were not.
-      if (
-        executionResult.status === "completed" &&
-        executionResult.type === "node" &&
-        coverageMethodForNodeJs !== "NODE_V8_COVERAGE"
-      ) {
-        logger.warn(
-          `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
-        );
-      }
-    },
-  });
+        // in any scenario we are fine because
+        // coverDescription will generate empty coverage for files
+        // that were suppose to be coverage but were not.
+        if (
+          executionResult.status === "completed" &&
+          executionResult.type === "node" &&
+          coverage.methodForNodeJs !== "NODE_V8_COVERAGE"
+        ) {
+          logger.warn(
+            `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
+          );
+        }
+      },
+    });
 
-  if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+  if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
     await readNodeV8CoverageDirectory({
       logger,
       signal,
       onV8Coverage: async (nodeV8Coverage) => {
         const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
           rootDirectoryUrl,
-          coverageConfig,
+          coverageInclude: coverage.include,
         });
         v8Coverage = v8Coverage
           ? composeTwoV8Coverages(v8Coverage, nodeV8CoverageLight)
@@ -3291,7 +3941,7 @@ const reportToCoverage = async (
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
         fileByFileIstanbulCoverage,
-        { coverageV8ConflictWarning },
+        { v8ConflictWarning: coverage.v8ConflictWarning },
       );
     } else {
       fileByFileCoverage = v8FileByFileCoverage;
@@ -3310,11 +3960,11 @@ const reportToCoverage = async (
   }
 
   // now add coverage for file not covered
-  if (coverageIncludeMissing) {
+  if (coverage.includeMissing) {
     const missingFileByFileCoverage = await getMissingFileByFileCoverage({
       signal,
       rootDirectoryUrl,
-      coverageConfig,
+      coverageInclude: coverage.include,
       fileByFileCoverage,
     });
     Object.assign(
@@ -3329,7 +3979,10 @@ const reportToCoverage = async (
   return fileByFileCoverage;
 };
 
-const getCoverageFromReport = async ({ signal, report, onMissing }) => {
+const getCoverageFromTestPlanResults = async (
+  executionResults,
+  { signal, onMissing },
+) => {
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
 
@@ -3338,52 +3991,45 @@ const getCoverageFromReport = async ({ signal, report, onMissing }) => {
     let fileByFileIstanbulCoverage;
 
     // collect v8 and istanbul coverage from executions
-    await Object.keys(report).reduce(async (previous, file) => {
-      operation.throwIfAborted();
-      await previous;
+    for (const file of Object.keys(executionResults)) {
+      const executionResultForFile = executionResults[file];
+      for (const executionName of Object.keys(executionResultForFile)) {
+        operation.throwIfAborted();
 
-      const executionResultForFile = report[file];
-      await Object.keys(executionResultForFile).reduce(
-        async (previous, executionName) => {
-          operation.throwIfAborted();
-          await previous;
-
-          const executionResultForFileOnRuntime =
-            executionResultForFile[executionName];
-          const { coverageFileUrl } = executionResultForFileOnRuntime;
-          let executionCoverage;
-          try {
-            executionCoverage = JSON.parse(
-              String(readFileSync(new URL(coverageFileUrl))),
-            );
-          } catch (e) {
-            if (e.code === "ENOENT" || e.name === "SyntaxError") {
-              onMissing({
-                executionName,
-                file,
-                executionResult: executionResultForFileOnRuntime,
-              });
-              return;
-            }
-            throw e;
+        const executionResultForFileOnRuntime =
+          executionResultForFile[executionName];
+        const { coverageFileUrl } = executionResultForFileOnRuntime;
+        let executionCoverage;
+        try {
+          executionCoverage = JSON.parse(
+            String(readFileSync(new URL(coverageFileUrl))),
+          );
+        } catch (e) {
+          if (e.code === "ENOENT" || e.name === "SyntaxError") {
+            onMissing({
+              executionName,
+              file,
+              executionResult: executionResultForFileOnRuntime,
+            });
+            continue;
           }
+          throw e;
+        }
 
-          if (isV8Coverage(executionCoverage)) {
-            v8Coverage = v8Coverage
-              ? composeTwoV8Coverages(v8Coverage, executionCoverage)
-              : executionCoverage;
-          } else {
-            fileByFileIstanbulCoverage = fileByFileIstanbulCoverage
-              ? composeTwoFileByFileIstanbulCoverages(
-                  fileByFileIstanbulCoverage,
-                  executionCoverage,
-                )
-              : executionCoverage;
-          }
-        },
-        Promise.resolve(),
-      );
-    }, Promise.resolve());
+        if (isV8Coverage(executionCoverage)) {
+          v8Coverage = v8Coverage
+            ? composeTwoV8Coverages(v8Coverage, executionCoverage)
+            : executionCoverage;
+        } else {
+          fileByFileIstanbulCoverage = fileByFileIstanbulCoverage
+            ? composeTwoFileByFileIstanbulCoverages(
+                fileByFileIstanbulCoverage,
+                executionCoverage,
+              )
+            : executionCoverage;
+        }
+      }
+    }
 
     return {
       v8Coverage,
@@ -3395,79 +4041,6 @@ const getCoverageFromReport = async ({ signal, report, onMissing }) => {
 };
 
 const isV8Coverage = (coverage) => Boolean(coverage.result);
-
-const generateCoverageJsonFile = async ({
-  coverage,
-  coverageJsonFileUrl,
-  logger,
-}) => {
-  const coverageAsText = JSON.stringify(coverage, null, "  ");
-  logger.info(
-    `-> ${urlToFileSystemPath(coverageJsonFileUrl)} (${byteAsFileSize(
-      Buffer.byteLength(coverageAsText),
-    )})`,
-  );
-  await writeFile(coverageJsonFileUrl, coverageAsText);
-};
-
-const istanbulCoverageMapFromCoverage = (coverage) => {
-  const { createCoverageMap } = importWithRequire("istanbul-lib-coverage");
-
-  const coverageAdjusted = {};
-  Object.keys(coverage).forEach((key) => {
-    coverageAdjusted[key.slice(2)] = {
-      ...coverage[key],
-      path: key.slice(2),
-    };
-  });
-
-  const coverageMap = createCoverageMap(coverageAdjusted);
-  return coverageMap;
-};
-
-const generateCoverageHtmlDirectory = async (
-  coverage,
-  {
-    rootDirectoryUrl,
-    coverageHtmlDirectoryRelativeUrl,
-    coverageReportSkipEmpty,
-    coverageReportSkipFull,
-  },
-) => {
-  const libReport = importWithRequire("istanbul-lib-report");
-  const reports = importWithRequire("istanbul-reports");
-
-  const context = libReport.createContext({
-    dir: fileURLToPath(rootDirectoryUrl),
-    coverageMap: istanbulCoverageMapFromCoverage(coverage),
-    sourceFinder: (path) =>
-      readFileSync(new URL(path, rootDirectoryUrl), "utf8"),
-  });
-
-  const report = reports.create("html", {
-    skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull,
-    subdir: coverageHtmlDirectoryRelativeUrl,
-  });
-  report.execute(context);
-};
-
-const generateCoverageTextLog = (
-  coverage,
-  { coverageReportSkipEmpty, coverageReportSkipFull },
-) => {
-  const libReport = importWithRequire("istanbul-lib-report");
-  const reports = importWithRequire("istanbul-reports");
-
-  const context = libReport.createContext({
-    coverageMap: istanbulCoverageMapFromCoverage(coverage),
-  });
-  const report = reports.create("text", {
-    skipEmpty: coverageReportSkipEmpty,
-    skipFull: coverageReportSkipFull,
-  });
-  report.execute(context);
-};
 
 const pingServer = async (url) => {
   const server = createServer();
@@ -3500,7 +4073,7 @@ const pingServer = async (url) => {
 
 const startServerUsingCommand = async (
   webServer,
-  { signal, allocatedMs, logger, teardown },
+  { signal, allocatedMs, logger, teardownCallbackSet },
 ) => {
   const spawnedProcess = spawn(webServer.command, [], {
     // On non-windows platforms, `detached: true` makes child process a leader of a new
@@ -3587,7 +4160,7 @@ const startServerUsingCommand = async (
   startOperation.addAbortSignal(signal);
   const timeoutAbortSource = startOperation.timeout(allocatedMs);
   startOperation.addAbortCallback(killProcess);
-  teardown.addCallback(killProcess);
+  teardownCallbackSet.add(killProcess);
 
   const startedPromise = (async () => {
     const logScale = [100, 250, 500];
@@ -3697,7 +4270,7 @@ const basicFetch = async (
 
 const assertAndNormalizeWebServer = async (
   webServer,
-  { signal, logger, teardown },
+  { signal, logger, teardownCallbackSet },
 ) => {
   if (!webServer) {
     throw new TypeError(
@@ -3725,7 +4298,7 @@ const assertAndNormalizeWebServer = async (
   }
   await ensureWebServerIsStarted(webServer, {
     signal,
-    teardown,
+    teardownCallbackSet,
     logger,
   });
   const { headers } = await basicFetch(webServer.origin, {
@@ -3759,7 +4332,7 @@ const assertAndNormalizeWebServer = async (
 
 const ensureWebServerIsStarted = async (
   webServer,
-  { signal, teardown, logger, allocatedMs = 5_000 },
+  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
 ) => {
   const aServerIsListening = await pingServer(webServer.origin);
   if (aServerIsListening) {
@@ -3769,7 +4342,7 @@ const ensureWebServerIsStarted = async (
     await startServerUsingModuleUrl(webServer, {
       signal,
       allocatedMs,
-      teardown,
+      teardownCallbackSet,
       logger,
     });
     return;
@@ -3778,7 +4351,7 @@ const ensureWebServerIsStarted = async (
     await startServerUsingCommand(webServer, {
       signal,
       allocatedMs,
-      teardown,
+      teardownCallbackSet,
       logger,
     });
     return;
@@ -3786,562 +4359,6 @@ const ensureWebServerIsStarted = async (
   throw new TypeError(
     `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
   );
-};
-
-const executionStepsFromTestPlan = async ({
-  signal,
-  rootDirectoryUrl,
-  testPlan,
-}) => {
-  try {
-    const fileResultArray = await collectFiles({
-      signal,
-      directoryUrl: rootDirectoryUrl,
-      associations: { testPlan },
-      predicate: ({ testPlan }) => testPlan,
-    });
-    const executionSteps = [];
-    fileResultArray.forEach(({ relativeUrl, meta }) => {
-      const fileExecutionSteps = generateFileExecutionSteps({
-        fileRelativeUrl: relativeUrl,
-        filePlan: meta.testPlan,
-      });
-      executionSteps.push(...fileExecutionSteps);
-    });
-    return executionSteps;
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      return {
-        aborted: true,
-        planSummary: {},
-        planReport: {},
-        planCoverage: null,
-      };
-    }
-    throw e;
-  }
-};
-
-const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
-  const fileExecutionSteps = [];
-  Object.keys(filePlan).forEach((executionName) => {
-    const stepConfig = filePlan[executionName];
-    if (stepConfig === null || stepConfig === undefined) {
-      return;
-    }
-    if (typeof stepConfig !== "object") {
-      throw new TypeError(
-        createDetailedMessage(
-          `found unexpected value in plan, they must be object`,
-          {
-            ["file relative path"]: fileRelativeUrl,
-            ["execution name"]: executionName,
-            ["value"]: stepConfig,
-          },
-        ),
-      );
-    }
-    fileExecutionSteps.push({
-      executionName,
-      fileRelativeUrl,
-      ...stepConfig,
-    });
-  });
-  return fileExecutionSteps;
-};
-
-const EXECUTION_COLORS = {
-  executing: ANSI.BLUE,
-  aborted: ANSI.MAGENTA,
-  timedout: ANSI.MAGENTA,
-  failed: ANSI.RED,
-  completed: ANSI.GREEN,
-  cancelled: ANSI.GREY,
-};
-
-const createExecutionLog = (
-  {
-    executionIndex,
-    fileRelativeUrl,
-    runtimeName,
-    runtimeVersion,
-    executionParams,
-    executionResult,
-    startMs,
-    endMs,
-    nowMs,
-    timeEllapsed,
-    memoryHeap,
-    counters,
-  },
-  {
-    logShortForCompletedExecutions,
-    logRuntime,
-    logEachDuration,
-    logTimeUsage,
-    logMemoryHeapUsage,
-  },
-) => {
-  const label = formatExecutionLabel(
-    {
-      executionIndex,
-      executionParams,
-      executionResult,
-      timeEllapsed,
-      memoryHeap,
-      counters,
-    },
-    {
-      logTimeUsage,
-      logMemoryHeapUsage,
-    },
-  );
-
-  const { status } = executionResult;
-  let log;
-  if (logShortForCompletedExecutions && status === "completed") {
-    log = label;
-  } else {
-    log = formatExecution(
-      {
-        fileRelativeUrl,
-        runtimeName,
-        runtimeVersion,
-        executionResult,
-        startMs,
-        endMs,
-        nowMs,
-      },
-      {
-        label,
-        logRuntime,
-        logEachDuration,
-      },
-    );
-  }
-
-  const { columns = 80 } = process.stdout;
-  log = wrapAnsi(log, columns, {
-    trim: false,
-    hard: true,
-    wordWrap: false,
-  });
-  if (endMs) {
-    if (logShortForCompletedExecutions) {
-      return `${log}\n`;
-    }
-    if (executionIndex === counters.total - 1) {
-      return `${log}\n`;
-    }
-    return `${log}\n\n`;
-  }
-  return log;
-};
-
-const formatExecution = (
-  {
-    fileRelativeUrl,
-    runtimeName,
-    runtimeVersion,
-    executionResult,
-    startMs,
-    endMs,
-    nowMs,
-  },
-  { label, logRuntime = true, logEachDuration = true } = {},
-) => {
-  const { status } = executionResult;
-  const { consoleCalls = [], errors = [] } = executionResult;
-  const consoleOutput = formatConsoleCalls(consoleCalls);
-  const errorsOutput = formatErrors(errors);
-
-  const details = {
-    file: fileRelativeUrl,
-    ...(logRuntime ? { runtime: `${runtimeName}/${runtimeVersion}` } : {}),
-    ...(logEachDuration
-      ? {
-          duration:
-            status === "executing"
-              ? msAsEllapsedTime((nowMs || Date.now()) - startMs)
-              : msAsDuration(endMs - startMs),
-        }
-      : {}),
-  };
-  let message = ``;
-  message += label;
-  Object.keys(details).forEach((key) => {
-    message += `
-${key}: ${details[key]}`;
-  });
-  if (consoleOutput) {
-    message += `\n${consoleOutput}`;
-  }
-  if (errorsOutput) {
-    message += `\n${errorsOutput}`;
-  }
-  return message;
-};
-
-const formatExecutionLabel = (
-  {
-    executionIndex,
-    executionParams,
-    executionResult,
-    timeEllapsed,
-    memoryHeap,
-    counters,
-  },
-  { logTimeUsage, logMemoryHeapUsage } = {},
-) => {
-  const { status } = executionResult;
-  const descriptionFormatter = descriptionFormatters[status];
-  const description = descriptionFormatter({
-    index: executionIndex,
-    total: counters.total,
-    executionParams,
-  });
-  const intermediateSummaryText = createIntermediateSummary({
-    executionIndex,
-    counters,
-    timeEllapsed,
-    memoryHeap,
-    logTimeUsage,
-    logMemoryHeapUsage,
-  });
-  return `${description}${intermediateSummaryText}`;
-};
-
-const formatErrors = (errors) => {
-  if (errors.length === 0) {
-    return "";
-  }
-  const formatError = (error) => {
-    if (error === null || error === undefined) {
-      return String(error);
-    }
-    if (error) {
-      return error.stack || error.message || error;
-    }
-    return error;
-  };
-
-  if (errors.length === 1) {
-    return `${ANSI.color(`-------- error --------`, ANSI.RED)}
-${formatError(errors[0])}
-${ANSI.color(`-------------------------`, ANSI.RED)}`;
-  }
-
-  let output = [];
-  errors.forEach((error) => {
-    output.push(
-      prefixFirstAndIndentRemainingLines({
-        prefix: `${UNICODE.CIRCLE_CROSS} `,
-        indentation: "   ",
-        text: formatError(error),
-      }),
-    );
-  });
-  return `${ANSI.color(`-------- errors (${errors.length}) --------`, ANSI.RED)}
-${output.join(`\n`)}
-${ANSI.color(`-------------------------`, ANSI.RED)}`;
-};
-
-const formatSummaryLog = (
-  summary,
-) => `-------------- summary -----------------
-${formatSummary(summary)}
-----------------------------------------`;
-
-const formatSummary = (summary) => `${createAllExecutionsSummary(
-  summary,
-)}
-total duration: ${msAsDuration(summary.duration)}`;
-
-const createAllExecutionsSummary = ({ counters }) => {
-  if (counters.total === 0) {
-    return `no execution`;
-  }
-  const executionLabel =
-    counters.total === 1 ? `1 execution` : `${counters.total} executions`;
-  return `${executionLabel}: ${createStatusSummary({
-    counters,
-  })}`;
-};
-
-const createIntermediateSummary = ({
-  executionIndex,
-  counters,
-  memoryHeap,
-  timeEllapsed,
-  logTimeUsage,
-  logMemoryHeapUsage,
-}) => {
-  const parts = [];
-  if (executionIndex > 0 || counters.done > 0) {
-    parts.push(
-      createStatusSummary({
-        counters: {
-          ...counters,
-          total: executionIndex + 1,
-        },
-      }),
-    );
-  }
-  if (logTimeUsage && timeEllapsed) {
-    parts.push(`duration: ${msAsEllapsedTime(timeEllapsed)}`);
-  }
-  if (logMemoryHeapUsage && memoryHeap) {
-    parts.push(`memory heap: ${byteAsMemoryUsage(memoryHeap)}`);
-  }
-  if (parts.length === 0) {
-    return "";
-  }
-  return ` (${parts.join(` / `)})`;
-};
-
-const createStatusSummary = ({ counters }) => {
-  if (counters.aborted === counters.total) {
-    return `all ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`;
-  }
-  if (counters.timedout === counters.total) {
-    return `all ${ANSI.color(`timed out`, EXECUTION_COLORS.timedout)}`;
-  }
-  if (counters.failed === counters.total) {
-    return `all ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`;
-  }
-  if (counters.completed === counters.total) {
-    return `all ${ANSI.color(`completed`, EXECUTION_COLORS.completed)}`;
-  }
-  if (counters.cancelled === counters.total) {
-    return `all ${ANSI.color(`cancelled`, EXECUTION_COLORS.cancelled)}`;
-  }
-  return createMixedDetails({
-    counters,
-  });
-};
-
-const createMixedDetails = ({ counters }) => {
-  const parts = [];
-  if (counters.timedout) {
-    parts.push(
-      `${counters.timedout} ${ANSI.color(
-        `timed out`,
-        EXECUTION_COLORS.timedout,
-      )}`,
-    );
-  }
-  if (counters.failed) {
-    parts.push(
-      `${counters.failed} ${ANSI.color(`failed`, EXECUTION_COLORS.failed)}`,
-    );
-  }
-  if (counters.completed) {
-    parts.push(
-      `${counters.completed} ${ANSI.color(
-        `completed`,
-        EXECUTION_COLORS.completed,
-      )}`,
-    );
-  }
-  if (counters.aborted) {
-    parts.push(
-      `${counters.aborted} ${ANSI.color(`aborted`, EXECUTION_COLORS.aborted)}`,
-    );
-  }
-  if (counters.cancelled) {
-    parts.push(
-      `${counters.cancelled} ${ANSI.color(
-        `cancelled`,
-        EXECUTION_COLORS.cancelled,
-      )}`,
-    );
-  }
-  return `${parts.join(", ")}`;
-};
-
-const descriptionFormatters = {
-  executing: ({ index, total }) => {
-    return ANSI.color(
-      `executing ${padNumber(index, total)} of ${total}`,
-      EXECUTION_COLORS.executing,
-    );
-  },
-  aborted: ({ index, total }) => {
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${padNumber(
-        index,
-        total,
-      )} of ${total} aborted`,
-      EXECUTION_COLORS.aborted,
-    );
-  },
-  timedout: ({ index, total, executionParams }) => {
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${padNumber(
-        index,
-        total,
-      )} of ${total} timeout after ${executionParams.allocatedMs}ms`,
-      EXECUTION_COLORS.timedout,
-    );
-  },
-  failed: ({ index, total }) => {
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${padNumber(
-        index,
-        total,
-      )} of ${total} failed`,
-      EXECUTION_COLORS.failed,
-    );
-  },
-  completed: ({ index, total }) => {
-    return ANSI.color(
-      `${UNICODE.OK_RAW} execution ${padNumber(
-        index,
-        total,
-      )} of ${total} completed`,
-      EXECUTION_COLORS.completed,
-    );
-  },
-  cancelled: ({ index, total }) => {
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} execution ${padNumber(
-        index,
-        total,
-      )} of ${total} cancelled`,
-      EXECUTION_COLORS.cancelled,
-    );
-  },
-};
-
-const padNumber = (index, total) => {
-  const number = index + 1;
-  const numberWidth = String(number).length;
-  const totalWith = String(total).length;
-  let missingWidth = totalWith - numberWidth;
-  let padded = "";
-  while (missingWidth--) {
-    padded += "0";
-  }
-  padded += number;
-  return padded;
-};
-
-const formatConsoleCalls = (consoleCalls) => {
-  if (consoleCalls.length === 0) {
-    return "";
-  }
-  const repartition = {
-    debug: 0,
-    info: 0,
-    warning: 0,
-    error: 0,
-    log: 0,
-  };
-  consoleCalls.forEach((consoleCall) => {
-    repartition[consoleCall.type]++;
-  });
-  const consoleOutput = formatConsoleOutput(consoleCalls);
-
-  return `${ANSI.color(
-    `-------- ${formatConsoleSummary(repartition)} --------`,
-    ANSI.GREY,
-  )}
-${consoleOutput}
-${ANSI.color(`-------------------------`, ANSI.GREY)}`;
-};
-
-const formatConsoleOutput = (consoleCalls) => {
-  // inside Node.js you can do process.stdout.write()
-  // and in that case the consoleCall is not suffixed with "\n"
-  // we want to keep these calls together in the output
-  const regroupedCalls = [];
-  consoleCalls.forEach((consoleCall, index) => {
-    if (index === 0) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    const previousCall = consoleCalls[index - 1];
-    if (previousCall.type !== consoleCall.type) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    if (previousCall.text.endsWith("\n")) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    if (previousCall.text.endsWith("\r")) {
-      regroupedCalls.push(consoleCall);
-      return;
-    }
-    const previousRegroupedCallIndex = regroupedCalls.length - 1;
-    const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
-    previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
-  });
-
-  let consoleOutput = ``;
-  regroupedCalls.forEach((regroupedCall, index) => {
-    const text = regroupedCall.text;
-    const textFormatted = prefixFirstAndIndentRemainingLines({
-      prefix: CONSOLE_ICONS[regroupedCall.type],
-      text,
-      trimLines: true,
-      trimLastLine: index === regroupedCalls.length - 1,
-    });
-    consoleOutput += textFormatted;
-  });
-  return consoleOutput;
-};
-
-const prefixFirstAndIndentRemainingLines = ({
-  prefix,
-  indentation = "  ",
-  text,
-  trimLines,
-  trimLastLine,
-}) => {
-  const lines = text.split(/\r?\n/);
-  const firstLine = lines.shift();
-  let result = `${prefix} ${firstLine}`;
-  let i = 0;
-  while (i < lines.length) {
-    const line = trimLines ? lines[i].trim() : lines[i];
-    i++;
-    result += line.length
-      ? `\n${indentation}${line}`
-      : trimLastLine && i === lines.length
-        ? ""
-        : `\n`;
-  }
-  return result;
-};
-
-const CONSOLE_ICONS = {
-  debug: UNICODE.DEBUG,
-  info: UNICODE.INFO,
-  warning: UNICODE.WARNING,
-  error: UNICODE.FAILURE,
-  log: " ",
-};
-
-const formatConsoleSummary = (repartition) => {
-  const { debug, info, warning, error } = repartition;
-  const parts = [];
-  if (error) {
-    parts.push(`${CONSOLE_ICONS.error} ${error}`);
-  }
-  if (warning) {
-    parts.push(`${CONSOLE_ICONS.warning} ${warning}`);
-  }
-  if (info) {
-    parts.push(`${CONSOLE_ICONS.info} ${info}`);
-  }
-  if (debug) {
-    parts.push(`${CONSOLE_ICONS.debug} ${debug}`);
-  }
-  if (parts.length === 0) {
-    return `console`;
-  }
-  return `console (${parts.join(" ")})`;
 };
 
 const githubAnnotationFromError = (
@@ -4381,24 +4398,24 @@ const asException = (error, { rootDirectoryUrl }) => {
     exception.message = error.message;
     if (error.isException) {
       Object.assign(exception, error);
-      exception.stack = replaceUrls(
+      exception.stack = replaceUrls$1(
         error.stack,
         ({ match, url, line = 1, column = 1 }) => {
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-            match = stringifyUrlSite({ url: relativeUrl, line, column });
+            match = stringifyUrlSite$1({ url: relativeUrl, line, column });
           }
           return match;
         },
       );
     } else if (error.stack) {
       let firstSite = true;
-      exception.stack = replaceUrls(
+      exception.stack = replaceUrls$1(
         error.stack,
         ({ match, url, line = 1, column = 1 }) => {
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-            match = stringifyUrlSite({ url: relativeUrl, line, column });
+            match = stringifyUrlSite$1({ url: relativeUrl, line, column });
           }
           if (firstSite) {
             firstSite = false;
@@ -4417,7 +4434,7 @@ const asException = (error, { rootDirectoryUrl }) => {
   return exception;
 };
 
-const stringifyUrlSite = ({ url, line, column }) => {
+const stringifyUrlSite$1 = ({ url, line, column }) => {
   let string = url;
   if (typeof line === "number") {
     string += `:${line}`;
@@ -4428,7 +4445,7 @@ const stringifyUrlSite = ({ url, line, column }) => {
   return string;
 };
 
-const replaceUrls = (source, replace) => {
+const replaceUrls$1 = (source, replace) => {
   return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
     let replacement = "";
     const lastChar = match[match.length - 1];
@@ -4495,19 +4512,42 @@ const run = async ({
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
+  measureMemoryUsage = false,
+  onMeasureMemoryAvailable,
+  collectPerformance = false,
   coverageEnabled = false,
   coverageTempDirectoryUrl,
-  collectPerformance = false,
   runtime,
   runtimeParams,
 }) => {
+  if (keepRunning) {
+    allocatedMs = Infinity;
+  }
+  if (allocatedMs === Infinity) {
+    allocatedMs = 0;
+  }
+
+  const timingOrigin = Date.now();
+  const relativeToTimingOrigin = (ms) => ms - timingOrigin;
+
   const result = {
     status: "pending",
     errors: [],
     namespace: null,
+    consoleCalls: null,
+    timings: {
+      origin: timingOrigin,
+      start: 0,
+      runtimeStart: null,
+      executionStart: null,
+      executionEnd: null,
+      runtimeEnd: null,
+      end: null,
+    },
+    memoryUsage: null,
+    performance: null,
+    coverageFileUrl: null,
   };
-  const callbacks = [];
-
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
   const runtimeLabel = `${runtime.name}/${runtime.version}`;
@@ -4515,13 +4555,7 @@ const run = async ({
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
   let timeoutAbortSource;
-  if (
-    // ideally we would rather log than the timeout is ignored
-    // when keepRunning is true
-    !keepRunning &&
-    typeof allocatedMs === "number" &&
-    allocatedMs !== Infinity
-  ) {
+  if (allocatedMs) {
     timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
   const consoleCalls = [];
@@ -4551,18 +4585,11 @@ const run = async ({
       coverageTempDirectoryUrl,
     ).href;
     await ensureParentDirectories(coverageFileUrl);
-    if (coverageEnabled) {
-      result.coverageFileUrl = coverageFileUrl;
-      // written within the child_process/worker_thread or during runtime.run()
-      // for browsers
-      // (because it takes time to serialize and transfer the coverage object)
-    }
+    result.coverageFileUrl = coverageFileUrl;
+    // written within the child_process/worker_thread or during runtime.run()
+    // for browsers
+    // (because it takes time to serialize and transfer the coverage object)
   }
-
-  const startMs = Date.now();
-  callbacks.push(() => {
-    result.duration = Date.now() - startMs;
-  });
 
   try {
     logger.debug(`run() ${runtimeLabel}`);
@@ -4583,11 +4610,23 @@ const run = async ({
                 logger,
                 ...runtimeParams,
                 collectConsole,
+                measureMemoryUsage,
+                onMeasureMemoryAvailable,
                 collectPerformance,
                 coverageFileUrl,
                 keepRunning,
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
+                onRuntimeStarted: () => {
+                  result.timings.runtimeStart = relativeToTimingOrigin(
+                    Date.now(),
+                  );
+                },
+                onRuntimeStopped: () => {
+                  result.timings.runtimeEnd = relativeToTimingOrigin(
+                    Date.now(),
+                  );
+                },
               });
               cb(runResult);
             } catch (e) {
@@ -4605,13 +4644,32 @@ const run = async ({
     if (winner.name === "aborted") {
       runOperation.throwIfAborted();
     }
-    const { status, namespace, errors, performance } = winner.data;
+    const {
+      status,
+      errors,
+      namespace,
+      timings = {},
+      memoryUsage,
+      performance,
+    } = winner.data;
     result.status = status;
     result.errors.push(...errors);
     result.namespace = namespace;
-    if (collectPerformance) {
-      result.performance = performance;
+    if (timings) {
+      if (timings.start) {
+        result.timings.executionStart = relativeToTimingOrigin(timings.start);
+      }
+      if (timings.end) {
+        result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+      }
     }
+    result.memoryUsage =
+      typeof memoryUsage === "number"
+        ? memoryUsage < 0
+          ? 0
+          : memoryUsage
+        : memoryUsage;
+    result.performance = performance;
   } catch (e) {
     if (Abort.isAbortError(e)) {
       if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
@@ -4625,20 +4683,824 @@ const run = async ({
     }
   } finally {
     await runOperation.end();
+    result.timings.end = relativeToTimingOrigin(Date.now());
+    return result;
+  }
+};
+
+const formatErrorForTerminal = (
+  error,
+  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
+) => {
+  const exception = createException(error);
+  if (!exception.stack) {
+    return exception.message;
   }
 
-  callbacks.forEach((callback) => {
-    callback();
+  let text = "";
+  {
+    if (
+      exception.site &&
+      exception.site.url &&
+      exception.site.url.startsWith("file:") &&
+      typeof exception.site.line === "number"
+    ) {
+      const content = readFileSync(new URL(exception.site.url), "utf8");
+      text += inspectFileContent({
+        content,
+        line: exception.site.line,
+        column: exception.site.column,
+        linesAbove: 2,
+        linesBelow: 0,
+        lineMaxWidth: process.stdout.columns,
+        format: (string, type) => {
+          return {
+            line_number_aside: () => ANSI.color(string, ANSI.GREY),
+            char: () => string,
+            marker_overflow_left: () => ANSI.color(string, ANSI.GREY),
+            marker_overflow_right: () => ANSI.color(string, ANSI.GREY),
+            marker_line: () => ANSI.color(string, ANSI.RED),
+            marker_column: () => ANSI.color(string, ANSI.RED),
+          }[type]();
+        },
+      });
+      text += `\n`;
+    }
+  }
+  text += `${exception.name}: ${exception.message}`;
+  {
+    let stackTrace = "";
+    const stackFrames = exception.stackFrames;
+    if (stackFrames) {
+      let atLeastOneNonNative = false;
+      let lastStackFrameForMain;
+      const mainFileUrl = new URL(mainFileRelativeUrl, rootDirectoryUrl).href;
+      for (const stackFrame of stackFrames) {
+        if (stackFrame.url === mainFileUrl) {
+          lastStackFrameForMain = stackFrame;
+        }
+        if (!stackFrame.native) {
+          atLeastOneNonNative = true;
+        }
+      }
+
+      for (const stackFrame of stackFrames) {
+        if (atLeastOneNonNative && stackFrame.native) {
+          continue;
+        }
+        let stackFrameString = stackFrame.raw;
+        stackFrameString = replaceUrls(
+          stackFrameString,
+          ({ url, line, column }) => {
+            let urlAsPath = urlToFileSystemPath(url);
+            if (mockFluctuatingValues) {
+              const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+              urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+            }
+            if (stackFrame === lastStackFrameForMain) {
+              urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
+            }
+            const replacement = stringifyUrlSite({
+              url: urlAsPath,
+              line,
+              column,
+            });
+            return replacement;
+          },
+        );
+        if (stackTrace) stackTrace += "\n";
+        stackTrace += stackFrameString;
+      }
+    } else {
+      stackTrace = replaceUrls(
+        exception.stackTrace,
+        ({ url, line, column }) => {
+          let urlAsPath = urlToFileSystemPath(url);
+          if (mockFluctuatingValues) {
+            const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+            urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+          }
+          const replacement = stringifyUrlSite({
+            url: urlAsPath,
+            line,
+            column,
+          });
+          return replacement;
+        },
+      );
+    }
+
+    if (stackTrace) {
+      text += `\n${stackTrace}`;
+    }
+  }
+  return text;
+};
+
+const stringifyUrlSite = ({ url, line, column }) => {
+  if (typeof line === "number" && typeof column === "number") {
+    return `${url}:${line}:${column}`;
+  }
+  if (typeof line === "number") {
+    return `${url}:${line}`;
+  }
+  return url;
+};
+
+// `Error: yo
+// at Object.execute (http://127.0.0.1:57300/build/src/__test__/file-throw.js:9:13)
+// at doExec (http://127.0.0.1:3000/src/__test__/file-throw.js:452:38)
+// at postOrderExec (http://127.0.0.1:3000/src/__test__/file-throw.js:448:16)
+// at http://127.0.0.1:3000/src/__test__/file-throw.js:399:18`.replace(/(?:https?|ftp|file):\/\/(.*+)$/gm, (...args) => {
+//   debugger
+// })
+const replaceUrls = (source, replace) => {
+  return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
+    let replacement = "";
+    const lastChar = match[match.length - 1];
+
+    // hotfix because our url regex sucks a bit
+    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+    if (endsWithSeparationChar) {
+      match = match.slice(0, -1);
+    }
+
+    const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
+    const lineAndColumMatch = match.match(lineAndColumnPattern);
+    if (lineAndColumMatch) {
+      const lineAndColumnString = lineAndColumMatch[0];
+      const lineString = lineAndColumMatch[1];
+      const columnString = lineAndColumMatch[2];
+      replacement = replace({
+        url: match.slice(0, -lineAndColumnString.length),
+        line: lineString ? parseInt(lineString) : null,
+        column: columnString ? parseInt(columnString) : null,
+      });
+    } else {
+      const linePattern = /:([0-9]+)$/;
+      const lineMatch = match.match(linePattern);
+      if (lineMatch) {
+        const lineString = lineMatch[0];
+        replacement = replace({
+          url: match.slice(0, -lineString.length),
+          line: lineString ? parseInt(lineString) : null,
+        });
+      } else {
+        replacement = replace({
+          url: match,
+        });
+      }
+    }
+    if (endsWithSeparationChar) {
+      return `${replacement}${lastChar}`;
+    }
+    return replacement;
   });
+};
+
+const reporterList = ({
+  dynamic,
+  mockFluctuatingValues, // used for snapshot testing logs
+  showMemoryUsage = true,
+  spy = () => {
+    return {
+      write: (log) => {
+        process.stdout.write(log);
+      },
+      end: () => {},
+    };
+  },
+}) => {
+  const dynamicLogEnabled =
+    dynamic &&
+    // canEraseProcessStdout
+    process.stdout.isTTY &&
+    // if there is an error during execution npm will mess up the output
+    // (happens when npm runs several command in a workspace)
+    // so we enable hot replace only when !process.exitCode (no error so far)
+    process.exitCode !== 1;
+
+  const logOptions = {
+    showMemoryUsage,
+    mockFluctuatingValues,
+    group: false,
+    intermediateSummary: !dynamicLogEnabled,
+  };
+
+  let startMs = Date.now();
+
+  return {
+    reporter: "list",
+    beforeAll: async (testPlanInfo) => {
+      let spyReturnValue = await spy();
+      let write = spyReturnValue.write;
+      let end = spyReturnValue.end;
+      spyReturnValue = undefined;
+
+      logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
+      write(renderIntro(testPlanInfo, logOptions));
+      if (!dynamicLogEnabled) {
+        return {
+          afterEachInOrder: (execution) => {
+            const log = renderExecutionLog(execution, logOptions);
+            write(log);
+          },
+          afterAll: async () => {
+            await write(renderOutro(testPlanInfo, logOptions));
+            write = undefined;
+            await end();
+            end = undefined;
+          },
+        };
+      }
+
+      let dynamicLog = createDynamicLog({
+        stream: { write },
+      });
+      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+      let frameIndex = 0;
+      const renderDynamicLog = (testPlanInfo) => {
+        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+        let dynamicLogContent = "";
+        dynamicLogContent += `${frames[frameIndex]} `;
+        dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
+          showExecuting: true,
+        });
+
+        const msEllapsed = Date.now() - startMs;
+        const infos = [];
+        const duration = inspectDuration(msEllapsed, {
+          short: true,
+          decimals: 0,
+          rounded: false,
+        });
+        infos.push(ANSI.color(duration, ANSI.GREY));
+        const memoryHeapUsed = memoryUsage().heapUsed;
+        const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+          decimals: 0,
+        });
+        infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
+
+        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+        dynamicLogContent += ` ${ANSI.color(
+          "[",
+          ANSI.GREY,
+        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+        dynamicLogContent = `\n${dynamicLogContent}\n`;
+        return dynamicLogContent;
+      };
+      dynamicLog.update(renderDynamicLog(testPlanInfo));
+      const interval = setInterval(() => {
+        dynamicLog.update(renderDynamicLog(testPlanInfo));
+      }, 150);
+
+      return {
+        afterEachInOrder: (execution) => {
+          dynamicLog.clearDuringFunctionCall(() => {
+            const log = renderExecutionLog(execution, logOptions);
+            write(log);
+          });
+        },
+        afterAll: async () => {
+          dynamicLog.update("");
+          dynamicLog.destroy();
+          dynamicLog = null;
+          clearInterval(interval);
+          await write(renderOutro(testPlanInfo, logOptions));
+          write = undefined;
+          await end();
+          end = undefined;
+        },
+      };
+    },
+  };
+};
+
+const renderIntro = (testPlanInfo, logOptions) => {
+  const { counters } = testPlanInfo;
+  const planified = counters.planified;
+  const { groups } = testPlanInfo;
+  const groupNames = Object.keys(groups);
+
+  if (planified === 0) {
+    return `${renderBigSection({
+      title: "nothing to execute",
+      content: "",
+    })}\n\n`;
+  }
+  if (planified === 1) {
+    const groupName = groupNames[0];
+    const groupInfo = groups[groupName];
+    return `${renderBigSection({
+      title: "1 execution to run",
+      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
+    })}\n\n`;
+  }
+  if (groupNames.length === 1) {
+    const groupName = groupNames[0];
+    const groupInfo = groups[groupName];
+    return `${renderBigSection({
+      title: `${planified} executions to run`,
+      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
+    })}\n\n`;
+  }
+
+  let introLines = [];
+  for (const groupName of groupNames) {
+    const groupInfo = groups[groupName];
+    introLines.push(
+      `${groupInfo.count} with ${groupName} (${getGroupRenderedName(
+        groupInfo,
+        logOptions,
+      )})`,
+    );
+  }
+  return `${renderBigSection({
+    title: `${planified} executions to run`,
+    content: introLines.join("\n"),
+  })}\n\n`;
+};
+
+const getGroupRenderedName = (groupInfo, logOptions) => {
+  let { runtimeName, runtimeVersion } = groupInfo;
+  if (logOptions.mockFluctuatingValues && groupInfo.runtimeType === "node") {
+    runtimeVersion = "<mock>";
+  }
+  return `${runtimeName}@${runtimeVersion}`;
+};
+
+/*
+ *                                 label
+ *           ┌───────────────────────┴────────────────────────────────┐
+ *           │                               │                        │
+ *       description                     runtime info                 │
+ *  ┌────────┴─────────┐               ┌─────┴───────┐                │
+ *  │                  │               │       │     │                │
+ * icon number        file            group duration memory intermediate summary
+ * ┌┴┐┌───┴─┐ ┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
+ *  ✔ 001/100 tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
+ *  ------- console (i1 ✖1) -------
+ *  i info
+ *  ✖ error
+ *  -------------------------------
+ *  ---------- error -------
+ *  1 | throw new Error("test");
+ *      ^
+ *  Error: test
+ *    at file://demo/file.test.js:1:1
+ *  ------------------------
+ */
+const renderExecutionLog = (execution, logOptions) => {
+  let log = "";
+  // label
+  {
+    const label = renderExecutionLabel(execution, logOptions);
+    log += label;
+  }
+  // console calls
+  {
+    const { consoleCalls = [] } = execution.result;
+    const consoleOutput = renderConsole(consoleCalls);
+    if (consoleOutput) {
+      log += `\n${consoleOutput}`;
+    }
+  }
+  // errors
+  {
+    const errorOutput = renderErrors(execution, logOptions);
+    if (errorOutput) {
+      log += `\n${errorOutput}`;
+    }
+  }
+  // const { columns = 80 } = process.stdout;
+  // log = wrapAnsi(log, columns, {
+  //   trim: false,
+  //   hard: true,
+  //   wordWrap: false,
+  // });
+  return `${log}\n`;
+};
+
+const renderExecutionLabel = (execution, logOptions) => {
+  let label = "";
+
+  // description
+  {
+    const description = renderDescription(execution);
+    label += description;
+  }
+  // runtimeInfo
+  {
+    const runtimeInfo = renderRuntimeInfo(execution, logOptions);
+    if (runtimeInfo) {
+      label += ` ${ANSI.color("[", ANSI.GREY)}${runtimeInfo}${ANSI.color(
+        "]",
+        ANSI.GREY,
+      )}`;
+    }
+  }
+  // intersummary
+  if (logOptions.intermediateSummary) {
+    let intermediateSummary = "";
+    intermediateSummary += renderStatusRepartition(execution.countersInOrder);
+    label += ` (${intermediateSummary})`;
+  }
+
+  return label;
+};
+const renderDescription = (execution) => {
+  return descriptionFormatters[execution.result.status](execution);
+};
+const descriptionFormatters = {
+  executing: ({ fileRelativeUrl }) => {
+    return ANSI.color(`${fileRelativeUrl}`, COLOR_EXECUTING);
+  },
+  aborted: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_ABORTED,
+    );
+  },
+  timedout: ({ index, countersInOrder, fileRelativeUrl, params }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl} timeout after ${params.allocatedMs}ms`,
+      COLOR_TIMEOUT,
+    );
+  },
+  failed: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_FAILED,
+    );
+  },
+  completed: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+
+    return ANSI.color(
+      `${UNICODE.OK_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_COMPLETED,
+    );
+  },
+  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_CANCELLED,
+    );
+  },
+};
+const renderRuntimeInfo = (execution, logOptions) => {
+  const infos = [];
+  if (logOptions.group) {
+    infos.push(ANSI.color(execution.group, ANSI.GREY));
+  }
+  const { timings, memoryUsage } = execution.result;
+  if (timings) {
+    const duration = timings.executionEnd - timings.executionStart;
+    const durationFormatted = logOptions.mockFluctuatingValues
+      ? `<mock>`
+      : inspectDuration(duration, { short: true });
+    infos.push(ANSI.color(durationFormatted, ANSI.GREY));
+  }
+  if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
+    const memoryUsageFormatted = logOptions.mockFluctuatingValues
+      ? `<mock>`
+      : inspectMemoryUsage(memoryUsage);
+    infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
+  }
+  return infos.join(ANSI.color(`/`, ANSI.GREY));
+};
+const COLOR_EXECUTING = ANSI.BLUE;
+const COLOR_ABORTED = ANSI.MAGENTA;
+const COLOR_TIMEOUT = ANSI.MAGENTA;
+const COLOR_FAILED = ANSI.RED;
+const COLOR_COMPLETED = ANSI.GREEN;
+const COLOR_CANCELLED = ANSI.GREY;
+const fillLeft = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  while (missingWidth--) {
+    padded += char;
+  }
+  padded += value;
+  return padded;
+};
+// const fillRight = (value, biggestValue, char = " ") => {
+//   const width = String(value).length;
+//   const biggestWidth = String(biggestValue).length;
+//   let missingWidth = biggestWidth - width;
+//   let padded = "";
+//   padded += value;
+//   while (missingWidth--) {
+//     padded += char;
+//   }
+//   return padded;
+// };
+
+const renderConsole = (consoleCalls) => {
+  if (consoleCalls.length === 0) {
+    return "";
+  }
+  const consoleRepartition = {
+    debug: 0,
+    info: 0,
+    warning: 0,
+    error: 0,
+    log: 0,
+  };
+  consoleCalls.forEach((consoleCall) => {
+    consoleRepartition[consoleCall.type]++;
+  });
+  const consoleOutput = renderConsoleOutput(consoleCalls);
+  const consoleSummary = renderConsoleSummary(consoleRepartition);
+  return renderSection({
+    title: consoleSummary,
+    content: consoleOutput,
+  });
+};
+const renderConsoleSummary = (consoleRepartition) => {
+  const { debug, info, warning, error } = consoleRepartition;
+  const parts = [];
+  if (error) {
+    parts.push(`${CONSOLE_ICONS.error} ${error}`);
+  }
+  if (warning) {
+    parts.push(`${CONSOLE_ICONS.warning} ${warning}`);
+  }
+  if (info) {
+    parts.push(`${CONSOLE_ICONS.info} ${info}`);
+  }
+  if (debug) {
+    parts.push(`${CONSOLE_ICONS.debug} ${debug}`);
+  }
+  if (parts.length === 0) {
+    return `console`;
+  }
+  return `console (${parts.join(" ")})`;
+};
+const renderConsoleOutput = (consoleCalls) => {
+  // inside Node.js you can do process.stdout.write()
+  // and in that case the consoleCall is not suffixed with "\n"
+  // we want to keep these calls together in the output
+  const regroupedCalls = [];
+  consoleCalls.forEach((consoleCall, index) => {
+    if (index === 0) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+    const previousCall = consoleCalls[index - 1];
+    if (previousCall.type !== consoleCall.type) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+    if (previousCall.text.endsWith("\n")) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+    if (previousCall.text.endsWith("\r")) {
+      regroupedCalls.push(consoleCall);
+      return;
+    }
+    const previousRegroupedCallIndex = regroupedCalls.length - 1;
+    const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
+    previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
+  });
+
+  let consoleOutput = ``;
+  regroupedCalls.forEach((regroupedCall, index) => {
+    const text = regroupedCall.text;
+    const textFormatted = prefixFirstAndIndentRemainingLines({
+      prefix: CONSOLE_ICONS[regroupedCall.type],
+      text,
+      trimLines: true,
+      trimLastLine: index === regroupedCalls.length - 1,
+    });
+    consoleOutput += textFormatted;
+  });
+  return consoleOutput;
+};
+const prefixFirstAndIndentRemainingLines = ({
+  prefix,
+  indentation = "  ",
+  text,
+  trimLines,
+  trimLastLine,
+}) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  let result = `${prefix} ${firstLine}`;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
+  }
   return result;
 };
-
-const ensureGlobalGc = () => {
-  if (!global.gc) {
-    v8.setFlagsFromString("--expose_gc");
-    global.gc = runInNewContext("gc");
-  }
+const CONSOLE_ICONS = {
+  get debug() {
+    return UNICODE.DEBUG;
+  },
+  get info() {
+    return UNICODE.INFO;
+  },
+  get warning() {
+    return UNICODE.WARNING;
+  },
+  get error() {
+    return UNICODE.FAILURE;
+  },
+  log: " ",
 };
+
+const renderErrors = (execution, logOptions) => {
+  const { errors = [] } = execution.result;
+  if (errors.length === 0) {
+    return "";
+  }
+
+  if (errors.length === 1) {
+    return renderSection({
+      dashColor: ANSI.RED,
+      title: "error",
+      content: formatErrorForTerminal(errors[0], {
+        rootDirectoryUrl: execution.rootDirectoryUrl,
+        mainFileRelativeUrl: execution.fileRelativeUrl,
+        mockFluctuatingValues: logOptions.mockFluctuatingValues,
+      }),
+    });
+  }
+
+  let output = [];
+  errors.forEach((error) => {
+    output.push(
+      prefixFirstAndIndentRemainingLines({
+        prefix: `${UNICODE.CIRCLE_CROSS} `,
+        indentation: "   ",
+        text: formatErrorForTerminal(error, {
+          rootDirectoryUrl: execution.rootDirectoryUrl,
+          mainFileRelativeUrl: execution.fileRelativeUrl,
+          mockFluctuatingValues: logOptions.mockFluctuatingValues,
+        }),
+      }),
+    );
+  });
+  return renderSection({
+    dashColor: ANSI.RED,
+    title: `errors (${errors.length})`,
+    content: output.join(`\n`),
+  });
+};
+
+const renderOutro = (testPlanInfo, logOptions) => {
+  let finalSummary = "";
+  const { counters } = testPlanInfo;
+  const { planified } = counters;
+
+  if (planified === 1) {
+    finalSummary += `1 execution: `;
+  } else {
+    finalSummary += `${planified} executions: `;
+  }
+  finalSummary += renderStatusRepartition(counters);
+
+  const { duration } = testPlanInfo;
+  const durationFormatted = logOptions.mockFluctuatingValues
+    ? "<mock>"
+    : inspectDuration(duration);
+  finalSummary += `\nduration: ${durationFormatted}`;
+
+  return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
+};
+const renderStatusRepartition = (counters, { showExecuting } = {}) => {
+  if (counters.aborted === counters.planified) {
+    return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
+  }
+  if (counters.timedout === counters.planified) {
+    return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
+  }
+  if (counters.failed === counters.planified) {
+    return `all ${ANSI.color(`failed`, COLOR_FAILED)}`;
+  }
+  if (counters.completed === counters.planified) {
+    return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
+  }
+  if (counters.cancelled === counters.planified) {
+    return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
+  }
+  const parts = [];
+  if (counters.timedout) {
+    parts.push(
+      `${counters.timedout} ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`,
+    );
+  }
+  if (counters.failed) {
+    parts.push(`${counters.failed} ${ANSI.color(`failed`, COLOR_FAILED)}`);
+  }
+  if (counters.completed) {
+    parts.push(
+      `${counters.completed} ${ANSI.color(`completed`, COLOR_COMPLETED)}`,
+    );
+  }
+  if (counters.aborted) {
+    parts.push(`${counters.aborted} ${ANSI.color(`aborted`, COLOR_ABORTED)}`);
+  }
+  if (counters.cancelled) {
+    parts.push(
+      `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
+    );
+  }
+  if (counters.remaining) {
+    parts.push(`${counters.remaining} remaining`);
+  }
+  if (showExecuting) {
+    parts.push(`${counters.executing} executing`);
+  }
+  return `${parts.join(", ")}`;
+};
+
+const renderBigSection = (params) => {
+  return renderSection({
+    width: 45,
+    ...params,
+  });
+};
+
+const renderSection = ({
+  title,
+  content,
+  dashColor = ANSI.GREY,
+  width = 38,
+}) => {
+  let section = "";
+
+  const titleWidth = stripAnsi(title).length;
+  const minWidthRequired = `--- … ---`.length;
+  const needsTruncate = titleWidth + minWidthRequired >= width;
+  if (needsTruncate) {
+    const titleTruncated = title.slice(0, width - minWidthRequired);
+    const leftDashes = ANSI.color("---", dashColor);
+    const rightDashes = ANSI.color("---", dashColor);
+    section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+  } else {
+    const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+    const dashLeftCount = Math.floor(remainingWidth / 2);
+    const dashRightCount = remainingWidth - dashLeftCount;
+    const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
+    const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
+    section += `${leftDashes} ${title} ${rightDashes}`;
+  }
+  section += `\n${content}\n`;
+  const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
+  section += bottomDashes;
+  return section;
+};
+
+const reporterFile = ({ url }) => {
+  return {
+    reporter: "file",
+    beforeAll: () => {
+      let rawOutput = "";
+      const { write } = process.stdout;
+      process.stdout.write = (...args) => {
+        for (const arg of args) {
+          rawOutput += stripAnsi(arg);
+          writeFileSync(url, rawOutput);
+        }
+        return write.apply(process.stdout, args);
+      };
+      return {
+        afterAll: () => {
+          process.stdout.write = write;
+        },
+      };
+    },
+  };
+};
+
+/*
+ *
+ */
+
 
 /**
  * Execute a list of files and log how it goes.
@@ -4646,58 +5508,27 @@ const ensureGlobalGc = () => {
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
- * @param {boolean} [testPlanParameters.logShortForCompletedExecutions=false] Abbreviate completed execution information to shorten terminal output
- * @param {boolean} [testPlanParameters.logMergeForCompletedExecutions=false] Merge completed execution logs to shorten terminal output
- * @param {boolean|number} [testPlanParameters.concurrency=false] Maximum amount of execution running at the same time
+ * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
- * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
- * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
- * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
- * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
+ * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
  * @return {Object} An object containing the result of all file executions
  */
-const executeTestPlan = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel = "info",
-  logRefresh = true,
-  logRuntime = true,
-  logEachDuration = true,
-  logSummary = true,
-  logTimeUsage = false,
-  logMemoryHeapUsage = false,
-  logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
-  logShortForCompletedExecutions = false,
-  logMergeForCompletedExecutions = false,
-
-  rootDirectoryUrl,
-  webServer,
-  testPlan,
-  updateProcessExitCode = true,
-  concurrency = false,
-  defaultMsAllocatedPerExecution = 30_000,
-  failFast = false,
-  // keepRunning: false to ensure runtime is stopped once executed
-  // because we have what we wants: execution is completed and
-  // we have associated coverage and console output
-  // passsing true means all node process and browsers launched stays opened
-  // (can eventually be used for debug)
-  keepRunning = false,
-  cooldownBetweenExecutions = 0,
-  gcBetweenExecutions = logMemoryHeapUsage,
-
-  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
-  githubCheckLogLevel,
-  githubCheckName = "Jsenv tests",
-  githubCheckTitle = "Tests executions",
-  githubCheckToken,
-  githubCheckRepositoryOwner,
-  githubCheckRepositoryName,
-  githubCheckCommitSha,
-
-  coverageEnabled = process.argv.includes("--coverage"),
-  coverageConfig = {
+const logsDefault = {
+  level: "info",
+  dynamic: true,
+};
+const githubCheckDefault = {
+  logLevel: "info",
+  name: "Jsenv tests",
+  title: "Tests execution",
+  token: undefined,
+  repositoryOwner: undefined,
+  repositoryName: undefined,
+  commitSha: undefined,
+};
+const coverageDefault = {
+  include: {
     "file:///**/node_modules/": false,
     "./**/.*": false,
     "./**/.*/": false,
@@ -4711,9 +5542,9 @@ const executeTestPlan = async ({
     "./**/*.test.js": false,
     "./**/*.test.mjs": false,
   },
-  coverageIncludeMissing = true,
-  coverageAndExecutionAllowed = false,
-  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE
+  includeMissing: true,
+  coverageAndExecutionAllowed: false,
+  methodForNodeJs: process.env.NODE_V8_COVERAGE
     ? "NODE_V8_COVERAGE"
     : "Profiler",
   // - When chromium only -> coverage generated by v8
@@ -4723,163 +5554,352 @@ const executeTestPlan = async ({
   //   -> by default only coverage from chromium is used
   //   and a warning is logged according to coverageV8ConflictWarning
   //   -> to collect coverage from both browsers, pass coverageMethodForBrowsers: "istanbul"
-  coverageMethodForBrowsers, // undefined | "playwright" | "istanbul"
-  coverageV8ConflictWarning = true,
-  coverageTempDirectoryUrl,
-  // skip empty means empty files won't appear in the coverage reports (json and html)
-  coverageReportSkipEmpty = false,
-  // skip full means file with 100% coverage won't appear in coverage reports (json and html)
-  coverageReportSkipFull = false,
-  coverageReportTextLog = true,
-  coverageReportJson = process.env.CI,
-  coverageReportJsonFileUrl,
-  coverageReportHtml = !process.env.CI,
-  coverageReportHtmlDirectoryUrl,
+  methodForBrowsers: undefined, // undefined | "playwright" | "istanbul"
+  v8ConflictWarning: true,
+  tempDirectoryUrl: undefined,
+};
+const parallelDefault = {
+  max: "80%", // percentage resolved against the available cpus
+  maxCpu: "90%",
+  maxMemory: "90%",
+};
 
-  beforeExecutionCallback = () => {},
-  afterExecutionCallback = () => {},
-  afterAllExecutionCallback = () => {},
+const executeTestPlan = async ({
+  logs = logsDefault,
+
+  rootDirectoryUrl,
+  webServer,
+  testPlan,
+
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  handleSIGUP = true,
+  handleSIGTERM = true,
+  updateProcessExitCode = true,
+  parallel = parallelDefault,
+  defaultMsAllocatedPerExecution = 30_000,
+  failFast = false,
+  // keepRunning: false to ensure runtime is stopped once executed
+  // because we have what we wants: execution is completed and
+  // we have associated coverage and console output
+  // passsing true means all node process and browsers launched stays opened
+  // (can eventually be used for debug)
+  keepRunning = false,
+
+  githubCheck = process.env.GITHUB_WORKFLOW ? githubCheckDefault : null,
+  coverage = process.argv.includes("--coverage") ? coverageDefault : null,
+
+  reporters = [],
+  listReporter = {},
+  fileReporter = {},
   ...rest
 }) => {
-  const teardown = createTeardown();
-
-  const beforeExecutionCallbackSet = new Set();
-  const afterExecutionCallbackSet = new Set();
-  const afterAllExecutionCallbackSet = new Set();
-  beforeExecutionCallbackSet.add(beforeExecutionCallback);
-  afterExecutionCallbackSet.add(afterExecutionCallback);
-  afterAllExecutionCallbackSet.add(afterAllExecutionCallback);
+  const teardownCallbackSet = new Set();
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
-  if (handleSIGINT) {
+  if (handleSIGINT || handleSIGUP || handleSIGTERM) {
     operation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
-          SIGINT: true,
+          SIGINT: handleSIGINT,
+          SIGHUP: handleSIGUP,
+          SIGTERM: handleSIGTERM,
         },
-        () => {
-          logger.debug(`SIGINT abort`);
+        ({ name }) => {
+          logger.debug(`${name} -> abort`);
           abort();
         },
       );
     });
   }
 
+  const cpuUsage = startMeasuringCpuUsage();
+  operation.addEndCallback(cpuUsage.stop);
+
   let logger;
-  let someNeedsServer = false;
-  let someHasCoverageV8 = false;
-  let someNodeRuntime = false;
-  const runtimes = {};
-  // param validation
+  const runtimeInfo = {
+    someNeedsServer: false,
+    someHasCoverageV8: false,
+    someNodeRuntime: false,
+  };
+  // param validation and normalization
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
-      throw new TypeError(
-        `${unexpectedParamNames.join(",")}: there is no such param`,
+      throw new TypeError(`${unexpectedParamNames.join(",")}: no such param`);
+    }
+    // logs
+    {
+      if (typeof logs !== "object") {
+        throw new TypeError(`logs must be an object, got ${logs}`);
+      }
+      const unexpectedLogsKeys = Object.keys(logs).filter(
+        (key) => !Object.hasOwn(logsDefault, key),
       );
-    }
-    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      rootDirectoryUrl,
-      "rootDirectoryUrl",
-    );
-    if (!existsSync(new URL(rootDirectoryUrl))) {
-      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
-    }
-    if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`);
-    }
+      if (unexpectedLogsKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+        );
+      }
+      logs = { ...logsDefault, ...logs };
+      logger = createLogger({ logLevel: logs.level });
 
-    logger = createLogger({ logLevel });
+      if (fileReporter && logger.levels.info) {
+        if (typeof fileReporter === "string") {
+          fileReporter = { url: fileReporter };
+        }
+        if (fileReporter.url === undefined) {
+          fileReporter.url = new URL(
+            "./.jsenv/jsenv_tests_output.txt",
+            rootDirectoryUrl,
+          );
+        }
+        reporters.push(
+          typeof fileReporter.reporter === "string"
+            ? fileReporter
+            : reporterFile(fileReporter),
+        );
+      }
+      if (listReporter && logger.levels.info) {
+        if (logger.levels.debug) {
+          listReporter.dynamic = false;
+        }
+        reporters.push(
+          typeof listReporter.reporter === "string"
+            ? listReporter
+            : reporterList(listReporter),
+        );
+      }
+    }
+    // rootDirectoryUrl
+    {
+      rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        rootDirectoryUrl,
+        "rootDirectoryUrl",
+      );
+      if (!existsSync(new URL(rootDirectoryUrl))) {
+        throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
+      }
+    }
+    // parallel
+    {
+      if (parallel === false) {
+        parallel = { max: 1 };
+      }
+      if (typeof parallel !== "object") {
+        throw new TypeError(`parallel must be an object, got ${parallel}`);
+      }
+      const unexpectedParallelKeys = Object.keys(parallel).filter(
+        (key) => !Object.hasOwn(parallelDefault, key),
+      );
+      if (unexpectedParallelKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedParallelKeys.join(",")}: no such key on parallel`,
+        );
+      }
+      parallel = { ...parallelDefault, ...parallel };
+      const assertPercentageAndConvertToRatio = (string) => {
+        const lastChar = string[string.length - 1];
+        if (lastChar !== "%") {
+          throw new TypeError(`string is not a percentage, got ${string}`);
+        }
+        const percentageString = max.slice(0, -1);
+        const percentageNumber = parseInt(percentageString);
+        if (percentageNumber <= 0) {
+          return 0;
+        }
+        if (percentageNumber >= 100) {
+          return 1;
+        }
+        const ratio = percentageNumber / 100;
+        return ratio;
+      };
+      const max = parallel.max;
+      if (typeof max === "string") {
+        const maxAsRatio = assertPercentageAndConvertToRatio(max);
+        const availableCpus = countAvailableCpus();
+        parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
+      } else if (typeof max === "number") {
+        if (max < 1) {
+          parallel.max = 1;
+        }
+      } else {
+        throw new TypeError(
+          `parallel.max must be a number or a percentage, got ${max}`,
+        );
+      }
 
-    Object.keys(testPlan).forEach((filePattern) => {
-      const filePlan = testPlan[filePattern];
-      if (!filePlan) return;
-      Object.keys(filePlan).forEach((executionName) => {
-        const executionConfig = filePlan[executionName];
-        const { runtime } = executionConfig;
-        if (runtime) {
-          runtimes[runtime.name] = runtime.version;
+      const maxMemory = parallel.maxMemory;
+      if (typeof maxMemory === "string") {
+        const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
+        parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
+      } else if (typeof maxMemory !== "number") {
+        throw new TypeError(
+          `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
+        );
+      }
+    }
+    // testPlan
+    {
+      if (typeof testPlan !== "object") {
+        throw new Error(`testPlan must be an object, got ${testPlan}`);
+      }
+      for (const filePattern of Object.keys(testPlan)) {
+        const filePlan = testPlan[filePattern];
+        if (!filePlan) continue;
+        for (const executionName of Object.keys(filePlan)) {
+          const executionConfig = filePlan[executionName];
+          if (executionConfig === null) {
+            continue;
+          }
+          const { runtime } = executionConfig;
+          if (!runtime || runtime.disabled) {
+            continue;
+          }
           if (runtime.type === "browser") {
             if (runtime.capabilities && runtime.capabilities.coverageV8) {
-              someHasCoverageV8 = true;
+              runtimeInfo.someHasCoverageV8 = true;
             }
-            someNeedsServer = true;
+            runtimeInfo.someNeedsServer = true;
           }
           if (runtime.type === "node") {
-            someNodeRuntime = true;
+            runtimeInfo.someNodeRuntime = true;
           }
         }
-      });
-    });
-
-    if (someNeedsServer) {
+      }
+      testPlan = {
+        "file:///**/node_modules/": null,
+        "**/*./": null,
+        ...testPlan,
+        "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
+      };
+    }
+    // webServer
+    if (runtimeInfo.someNeedsServer) {
       await assertAndNormalizeWebServer(webServer, {
         signal: operation.signal,
-        teardown,
+        teardownCallbackSet,
         logger,
       });
     }
-
-    if (githubCheckEnabled && !process.env.GITHUB_TOKEN) {
-      githubCheckEnabled = false;
-      const suggestions = [];
-      if (process.env.GITHUB_WORKFLOW_REF) {
-        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
-        const refsIndex = workflowFileRef.indexOf("@refs/");
-        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-        const workflowFilePath =
-          refsIndex === -1
-            ? workflowFileRef
-            : workflowFileRef.slice(0, refsIndex);
-        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+    // githubCheck
+    {
+      if (githubCheck && !process.env.GITHUB_TOKEN) {
+        githubCheck = false;
+        const suggestions = [];
+        if (process.env.GITHUB_WORKFLOW_REF) {
+          const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+          const refsIndex = workflowFileRef.indexOf("@refs/");
+          // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+          const workflowFilePath =
+            refsIndex === -1
+              ? workflowFileRef
+              : workflowFileRef.slice(0, refsIndex);
+          suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
 \`\`\`yml
 env:
   GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 \`\`\``);
-      }
-      suggestions.push(`Disable github check with githubCheckEnabled: false`);
-      logger.warn(
-        `${
-          UNICODE.WARNING
-        } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
+        }
+        suggestions.push(`Disable github check with githubCheck: false`);
+        logger.warn(
+          `${UNICODE.WARNING} githubCheck requires process.env.GITHUB_TOKEN.
 Integration with Github check API is disabled
 To fix this warning:
 - ${suggestions.join("\n- ")}
 `,
-      );
-    }
-    if (githubCheckEnabled) {
-      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
-        ? readGitHubWorkflowEnv()
-        : {};
-      githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
-      githubCheckRepositoryOwner =
-        githubCheckRepositoryOwner || githubCheckInfoFromEnv.repositoryOwner;
-      githubCheckRepositoryName =
-        githubCheckRepositoryName || githubCheckInfoFromEnv.repositoryName;
-      githubCheckCommitSha =
-        githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
-    }
+        );
+      }
+      if (githubCheck) {
+        if (typeof githubCheck !== "object") {
+          throw new TypeError(
+            `githubCheck must be an object, got ${githubCheck}`,
+          );
+        }
+        const unexpectedKeys = Object.keys(githubCheck).filter(
+          (key) => !Object.hasOwn(githubCheckDefault, key),
+        );
+        if (unexpectedKeys.length > 0) {
+          throw new TypeError(
+            `${unexpectedKeys.join(",")}: no such key on githubCheck`,
+          );
+        }
 
-    if (coverageEnabled) {
-      if (coverageMethodForBrowsers === undefined) {
-        coverageMethodForBrowsers = someHasCoverageV8
+        const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+          ? readGitHubWorkflowEnv()
+          : {};
+        githubCheck = { ...githubCheckDefault, githubCheck };
+        if (githubCheck.token === undefined) {
+          githubCheck.token = githubCheckInfoFromEnv.githubToken;
+        }
+        if (githubCheck.repositoryOwner === undefined) {
+          githubCheck.repositoryOwner = githubCheckInfoFromEnv.repositoryOwner;
+        }
+        if (githubCheck.repositoryName === undefined) {
+          githubCheck.repositoryName = githubCheckInfoFromEnv.repositoryName;
+        }
+        if (githubCheck.commitSha === undefined) {
+          githubCheck.commitSha = githubCheckInfoFromEnv.commitSha;
+        }
+      }
+    }
+    // coverage
+    if (coverage) {
+      if (typeof coverage !== "object") {
+        throw new TypeError(`coverage must be an object, got ${coverage}`);
+      }
+      const unexpectedKeys = Object.keys(coverage).filter(
+        (key) => !Object.hasOwn(coverageDefault, key),
+      );
+      if (unexpectedKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedKeys.join(",")}: no such key on coverage`,
+        );
+      }
+      coverage = { ...coverageDefault, ...coverage };
+      if (typeof coverage.include !== "object") {
+        throw new TypeError(
+          `coverage.include must be an object, got ${coverage.include}`,
+        );
+      }
+      if (Object.keys(coverage.include).length === 0) {
+        logger.warn(
+          `coverage.include is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+        );
+      }
+      if (coverage.methodForBrowsers === undefined) {
+        coverage.methodForBrowsers = runtimeInfo.someHasCoverageV8
           ? "playwright"
           : "istanbul";
       }
-      if (typeof coverageConfig !== "object") {
-        throw new TypeError(
-          `coverageConfig must be an object, got ${coverageConfig}`,
-        );
+      if (
+        runtimeInfo.someNodeRuntime &&
+        coverage.methodForNodeJs === "NODE_V8_COVERAGE"
+      ) {
+        if (process.env.NODE_V8_COVERAGE) {
+          // when runned multiple times, we don't want to keep previous files in this directory
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
+        } else {
+          coverage.methodForNodeJs = "Profiler";
+          logger.warn(
+            createDetailedMessage(
+              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              {
+                "suggestion": `set process.env.NODE_V8_COVERAGE`,
+                "suggestion 2": `use coverage.methodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+              },
+            ),
+          );
+        }
       }
-      if (!coverageAndExecutionAllowed) {
+      if (!coverage.coverageAndExecutionAllowed) {
         const associationsForExecute = URL_META.resolveAssociations(
           { execute: testPlan },
           "file:///",
         );
         const associationsForCover = URL_META.resolveAssociations(
-          { cover: coverageConfig },
+          { cover: coverage.include },
           "file:///",
         );
         const patternsMatchingCoverAndExecute = Object.keys(
@@ -4903,587 +5923,518 @@ To fix this warning:
           );
         }
       }
-
-      if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL(
+      if (coverage.tempDirectoryUrl === undefined) {
+        coverage.tempDirectoryUrl = new URL(
           "./.coverage/tmp/",
           rootDirectoryUrl,
         );
       } else {
-        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(
-          coverageTempDirectoryUrl,
+        coverage.tempDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          coverage.tempDirectoryUrl,
           "coverageTempDirectoryUrl",
         );
       }
-      if (coverageReportJson) {
-        if (coverageReportJsonFileUrl === undefined) {
-          coverageReportJsonFileUrl = new URL(
-            "./.coverage/coverage.json",
-            rootDirectoryUrl,
-          );
-        } else {
-          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(
-            coverageReportJsonFileUrl,
-            "coverageReportJsonFileUrl",
-          );
-        }
-      }
-      if (coverageReportHtml) {
-        if (coverageReportHtmlDirectoryUrl === undefined) {
-          coverageReportHtmlDirectoryUrl = new URL(
-            "./.coverage/",
-            rootDirectoryUrl,
-          );
-        } else {
-          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(
-            coverageReportHtmlDirectoryUrl,
-            "coverageReportHtmlDirectoryUrl",
-          );
-        }
-      }
-    }
-
-    if (typeof concurrency !== "boolean" && typeof concurrency !== "number") {
-      throw new TypeError(`concurrency must be a boolean or a number`);
     }
   }
 
-  logger.debug(
-    createDetailedMessage(`Prepare executing plan`, {
-      runtimes: JSON.stringify(runtimes, null, "  "),
-    }),
-  );
+  const testPlanInfo = {
+    rootDirectoryUrl: String(rootDirectoryUrl),
+    groups: {},
+    counters: {
+      planified: 0,
+      remaining: 0,
+      executing: 0,
+      executed: 0,
 
-  // param normalization
+      aborted: 0,
+      cancelled: 0,
+      timedout: 0,
+      failed: 0,
+      completed: 0,
+    },
+    aborted: false,
+    failed: false,
+    duration: 0,
+    coverage: null,
+    results: {},
+  };
+  const groups = testPlanInfo.groups;
+  const counters = testPlanInfo.counters;
+  const countersInOrder = { ...counters };
+  const results = testPlanInfo.results;
+
+  const executionPlanifiedSet = new Set();
+
+  // collect files to execute + fill executionPlanifiedSet
   {
-    if (coverageEnabled) {
-      if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(
-          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        );
+    let fileResultArray;
+    try {
+      fileResultArray = await collectFiles({
+        signal,
+        directoryUrl: rootDirectoryUrl,
+        associations: { testPlan },
+        predicate: ({ testPlan }) => testPlan,
+      });
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        testPlanInfo.aborted = true;
+        return testPlanInfo;
       }
-      if (
-        someNodeRuntime &&
-        coverageEnabled &&
-        coverageMethodForNodeJs === "NODE_V8_COVERAGE"
-      ) {
-        if (process.env.NODE_V8_COVERAGE) {
-          // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
-        } else {
-          coverageMethodForNodeJs = "Profiler";
-          logger.warn(
+      throw e;
+    }
+    let index = 0;
+    let lastExecution;
+    const fileExecutionCountMap = new Map();
+    for (const { relativeUrl, meta } of fileResultArray) {
+      const filePlan = meta.testPlan;
+      for (const groupName of Object.keys(filePlan)) {
+        const stepConfig = filePlan[groupName];
+        if (stepConfig === null || stepConfig === undefined) {
+          continue;
+        }
+        if (typeof stepConfig !== "object") {
+          throw new TypeError(
             createDetailedMessage(
-              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              `found unexpected value in plan, they must be object`,
               {
-                "suggestion": `set process.env.NODE_V8_COVERAGE`,
-                "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+                ["file relative path"]: relativeUrl,
+                ["group"]: groupName,
+                ["value"]: stepConfig,
               },
             ),
           );
         }
+        if (stepConfig.runtime?.disabled) {
+          continue;
+        }
+
+        const {
+          runtime,
+          runtimeParams,
+          allocatedMs = defaultMsAllocatedPerExecution,
+        } = stepConfig;
+        const params = {
+          measureMemoryUsage: true,
+          measurePerformance: false,
+          collectPerformance: false,
+          collectConsole: true,
+          allocatedMs,
+          runtime,
+          runtimeParams: {
+            rootDirectoryUrl,
+            webServer,
+            teardownCallbackSet,
+
+            coverageEnabled: Boolean(coverage),
+            coverageInclude: coverage?.include,
+            coverageMethodForBrowsers: coverage?.methodForBrowsers,
+            coverageMethodForNodeJs: coverage?.methodForNodeJs,
+            isTestPlan: true,
+            fileRelativeUrl: relativeUrl,
+            ...runtimeParams,
+          },
+        };
+        const runtimeType = runtime.type;
+        const runtimeName = runtime.name;
+        const runtimeVersion = runtime.version;
+
+        let fileExecutionCount;
+        if (fileExecutionCountMap.has(relativeUrl)) {
+          fileExecutionCount = fileExecutionCountMap.get(relativeUrl) + 1;
+          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+        } else {
+          fileExecutionCount = 1;
+          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+        }
+
+        const execution = {
+          counters,
+          countersInOrder,
+          index,
+          isLast: false,
+          group: groupName,
+          rootDirectoryUrl: String(rootDirectoryUrl),
+          fileRelativeUrl: relativeUrl,
+          fileExecutionIndex: fileExecutionCount - 1,
+          fileExecutionCount: null,
+          runtimeType,
+          runtimeName,
+          runtimeVersion,
+          params,
+
+          // will be set by run()
+          status: "planified",
+          result: {},
+        };
+        if (typeof params.allocatedMs === "function") {
+          params.allocatedMs = params.allocatedMs(execution);
+        }
+
+        lastExecution = execution;
+        executionPlanifiedSet.add(execution);
+        const existingResults = results[relativeUrl];
+        if (existingResults) {
+          existingResults[groupName] = execution.result;
+        } else {
+          results[relativeUrl] = {
+            [groupName]: execution.result,
+          };
+        }
+        const existingGroup = groups[groupName];
+        if (existingGroup) {
+          groups[groupName].count++;
+        } else {
+          groups[groupName] = {
+            count: 1,
+            runtimeType,
+            runtimeName,
+            runtimeVersion,
+          };
+        }
+        index++;
       }
     }
-    if (cooldownBetweenExecutions) {
-      if (cooldownBetweenExecutions < 0) {
-        cooldownBetweenExecutions = 0;
-      }
-      if (cooldownBetweenExecutions === Infinity) {
-        cooldownBetweenExecutions = 0;
-      }
-    }
-    if (concurrency === true) {
-      const availableCpus = os.cpus().length;
-      concurrency =
-        availableCpus > 2
-          ? // One CPU is used to run this code so we do availableCpus - 1
-            availableCpus - 1
-          : 1;
-    }
-    if (concurrency === false) {
-      concurrency = 1;
+    fileResultArray.length = 0;
+    fileExecutionCountMap.clear();
+    if (lastExecution) {
+      lastExecution.isLast = true;
     }
   }
 
-  testPlan = {
-    "file:///**/node_modules/": null,
-    "**/*./": null,
-    ...testPlan,
-    "**/.jsenv/": null,
-  };
-  logger.debug(`Generate executions`);
-  let executionSteps = await executionStepsFromTestPlan({
-    signal,
-    testPlan,
-    rootDirectoryUrl,
-  });
-  logger.debug(`${executionSteps.length} executions planned`);
-  if (githubCheckEnabled) {
+  counters.planified = counters.remaining = executionPlanifiedSet.size;
+  countersInOrder.planified = countersInOrder.remaining =
+    executionPlanifiedSet.size;
+  if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
-      logLevel: githubCheckLogLevel,
-      githubToken: githubCheckToken,
-      repositoryOwner: githubCheckRepositoryOwner,
-      repositoryName: githubCheckRepositoryName,
-      commitSha: githubCheckCommitSha,
-      checkName: githubCheckName,
-      checkTitle: githubCheckTitle,
-      checkSummary: `${executionSteps.length} files will be executed`,
+      logLevel: githubCheck.logLevel,
+      githubToken: githubCheck.token,
+      repositoryOwner: githubCheck.repositoryOwner,
+      repositoryName: githubCheck.repositoryName,
+      commitSha: githubCheck.commitSha,
+      checkName: githubCheck.name,
+      checkTitle: githubCheck.title,
+      checkSummary: `${executionPlanifiedSet.size} files will be executed`,
     });
     const annotations = [];
-    afterExecutionCallbackSet.add((afterExecutionInfo) => {
-      const { executionResult } = afterExecutionInfo;
-      const { errors = [] } = executionResult;
-      for (const error of errors) {
-        const annotation = githubAnnotationFromError(error, {
-          rootDirectoryUrl,
-          executionInfo: afterExecutionInfo,
-        });
-        annotations.push(annotation);
-      }
-    });
-    afterAllExecutionCallbackSet.add(async (returnValue) => {
-      const { summary } = returnValue;
-      const title = "Jsenv test results";
-      const summaryText = stripAnsi(formatSummary(summary));
-      if (summary.counters.total !== summary.counters.completed) {
-        await githubCheckRun.fail({
-          title,
-          summary: summaryText,
-          annotations,
-        });
-        return;
-      }
-      await githubCheckRun.pass({
-        title,
-        summary: summaryText,
-        annotations,
-      });
+    reporters.push({
+      beforeAll: (testPlanInfo) => {
+        return {
+          afterEach: (execution) => {
+            const { result } = execution;
+            const { errors = [] } = result;
+            for (const error of errors) {
+              const annotation = githubAnnotationFromError(error, {
+                rootDirectoryUrl,
+                execution,
+              });
+              annotations.push(annotation);
+            }
+          },
+          afterAll: async () => {
+            const title = "Jsenv test results";
+            const summaryText = stripAnsi(renderOutro(testPlanInfo));
+            if (testPlanInfo.failed) {
+              await githubCheckRun.fail({
+                title,
+                summary: summaryText,
+                annotations,
+              });
+              return;
+            }
+            await githubCheckRun.pass({
+              title,
+              summary: summaryText,
+              annotations,
+            });
+          },
+        };
+      },
     });
   }
 
-  executionSteps = executionSteps.filter(
-    (executionStep) => !executionStep.runtime?.disabled,
-  );
-
-  const returnValue = {
-    aborted: false,
-    summary: null,
-    report: null,
-    coverage: null,
-  };
-  const report = {};
-  const callbacks = [];
-
-  const multipleExecutionsOperation = Abort.startOperation();
-  multipleExecutionsOperation.addAbortSignal(signal);
-  const failFastAbortController = new AbortController();
-  if (failFast) {
-    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
-  }
-
-  try {
-    if (gcBetweenExecutions) {
-      ensureGlobalGc();
+  const beforeEachCallbackSet = new Set();
+  const beforeEachInOrderCallbackSet = new Set();
+  const afterEachCallbackSet = new Set();
+  const afterEachInOrderCallbackSet = new Set();
+  const afterAllCallbackSet = new Set();
+  // execute all
+  {
+    const multipleExecutionsOperation = Abort.startOperation();
+    multipleExecutionsOperation.addAbortSignal(signal);
+    const failFastAbortController = new AbortController();
+    if (failFast) {
+      multipleExecutionsOperation.addAbortSignal(
+        failFastAbortController.signal,
+      );
     }
-
-    if (coverageEnabled) {
+    let finalizeCoverage;
+    if (coverage) {
       // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverageTempDirectoryUrl);
-      callbacks.push(async () => {
+      await ensureEmptyDirectory(coverage.tempDirectoryUrl);
+      finalizeCoverage = async () => {
         if (multipleExecutionsOperation.signal.aborted) {
           // don't try to do the coverage stuff
           return;
         }
         try {
-          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+          if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
             takeCoverage();
             // conceptually we don't need coverage anymore so it would be
             // good to call v8.stopCoverage()
             // but it logs a strange message about "result is not an object"
           }
-          const coverage = await reportToCoverage(report, {
+          const testPlanCoverage = await generateCoverage(testPlanInfo, {
             signal: multipleExecutionsOperation.signal,
             logger,
             rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageMethodForNodeJs,
-            coverageV8ConflictWarning,
+            coverage,
           });
-          returnValue.coverage = coverage;
+          testPlanInfo.coverage = testPlanCoverage;
         } catch (e) {
           if (Abort.isAbortError(e)) {
             return;
           }
           throw e;
         }
-      });
+      };
     }
-
-    const runtimeParams = {
-      rootDirectoryUrl,
-      webServer,
-
-      coverageEnabled,
-      coverageConfig,
-      coverageMethodForBrowsers,
-      coverageMethodForNodeJs,
-      isTestPlan: true,
-      teardown,
-    };
-
-    if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
-      logMergeForCompletedExecutions = false;
-      logger.debug(
-        `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
-      );
-    }
-    const debugLogsEnabled = logger.levels.debug;
-    const executionLogsEnabled = logger.levels.info;
-    const executionSpinner =
-      logRefresh &&
-      concurrency === 1 &&
-      !debugLogsEnabled &&
-      executionLogsEnabled &&
-      process.stdout.isTTY &&
-      // if there is an error during execution npm will mess up the output
-      // (happens when npm runs several command in a workspace)
-      // so we enable spinner only when !process.exitCode (no error so far)
-      process.exitCode !== 1;
-
-    const startMs = Date.now();
-    let rawOutput = "";
-    let executionLog = createLog({ newLine: "" });
-    const counters = {
-      total: executionSteps.length,
-      aborted: 0,
-      timedout: 0,
-      failed: 0,
-      completed: 0,
-      done: 0,
-    };
 
     const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-    await executeConcurrently({
-      multipleExecutionsOperation,
-      concurrency,
-      cooldownBetweenExecutions,
-      executionSteps,
-      start: async (paramsFromStep) => {
-        const executionIndex = executionSteps.indexOf(paramsFromStep);
-        const { executionName, fileRelativeUrl, runtime } = paramsFromStep;
-        const runtimeType = runtime.type;
-        const runtimeName = runtime.name;
-        const runtimeVersion = runtime.version;
-        const executionParams = {
-          measurePerformance: false,
-          collectPerformance: false,
-          collectConsole: true,
-          allocatedMs: defaultMsAllocatedPerExecution,
-          ...paramsFromStep,
-          runtimeParams: {
-            fileRelativeUrl,
-            ...paramsFromStep.runtimeParams,
-          },
-        };
-        const beforeExecutionInfo = {
-          fileRelativeUrl,
-          runtimeType,
-          runtimeName,
-          runtimeVersion,
-          executionIndex,
-          executionParams,
-          startMs: Date.now(),
-          executionResult: {
-            status: "executing",
-          },
-          counters,
-          timeEllapsed: Date.now() - startMs,
-          memoryHeap: memoryUsage().heapUsed,
-        };
-        if (typeof executionParams.allocatedMs === "function") {
-          executionParams.allocatedMs =
-            executionParams.allocatedMs(beforeExecutionInfo);
-        }
-        let spinner;
-        if (executionSpinner) {
-          spinner = startSpinner({
-            log: executionLog,
-            render: () => {
-              return createExecutionLog(beforeExecutionInfo, {
-                logRuntime,
-                logEachDuration,
-                logTimeUsage,
-                logMemoryHeapUsage,
-              });
-            },
-          });
-        }
-        for (const beforeExecutionCallback of beforeExecutionCallbackSet) {
-          beforeExecutionCallback(beforeExecutionInfo);
-        }
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
-        let executionResult;
-        if (existsSync(new URL(fileUrl))) {
-          executionResult = await run({
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            allocatedMs: executionParams.allocatedMs,
-            keepRunning,
-            mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-            collectConsole: executionParams.collectConsole,
-            coverageEnabled,
-            coverageTempDirectoryUrl,
-            runtime: executionParams.runtime,
-            runtimeParams: {
-              ...runtimeParams,
-              ...executionParams.runtimeParams,
-            },
-          });
-        } else {
-          executionResult = {
-            status: "failed",
-            errors: [
-              new Error(
-                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
-              ),
-            ],
+    const executionRemainingSet = new Set(executionPlanifiedSet);
+    const executionExecutingSet = new Set();
+    const start = async (execution) => {
+      execution.fileExecutionCount = Object.keys(
+        testPlanInfo.results[execution.fileRelativeUrl],
+      ).length;
+      mutateCountersBeforeExecutionStarts(counters);
+      mutateCountersBeforeExecutionStarts(countersInOrder);
+
+      execution.status = "executing";
+      executionRemainingSet.delete(execution);
+      executionExecutingSet.add(execution);
+      for (const beforeEachCallback of beforeEachCallbackSet) {
+        const returnValue = beforeEachCallback(execution, testPlanInfo);
+        if (typeof returnValue === "function") {
+          const callback = (...args) => {
+            afterEachCallbackSet.delete(callback);
+            return returnValue(...args);
           };
+          afterEachCallbackSet.add(callback);
         }
-        const fileReport = report[fileRelativeUrl];
-        if (fileReport) {
-          fileReport[executionName] = executionResult;
-        } else {
-          report[fileRelativeUrl] = {
-            [executionName]: executionResult,
+      }
+
+      for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
+        const returnValue = beforeEachInOrderCallback(execution, testPlanInfo);
+        if (typeof returnValue === "function") {
+          const callback = (...args) => {
+            afterEachInOrderCallbackSet.delete(callback);
+            return returnValue(...args);
           };
+          afterEachInOrderCallbackSet.add(callback);
         }
-
-        const afterExecutionInfo = {
-          ...beforeExecutionInfo,
-          runtimeVersion: runtime.version,
-          endMs: Date.now(),
-          executionResult,
-        };
-
-        if (gcBetweenExecutions) {
-          global.gc();
-        }
-
-        const timeEllapsed = Date.now() - startMs;
-        const memoryHeap = memoryUsage().heapUsed;
-        callWhenPreviousExecutionAreDone(executionIndex, () => {
-          counters.done++;
-          if (executionResult.status === "aborted") {
-            counters.aborted++;
-          } else if (executionResult.status === "timedout") {
-            counters.timedout++;
-          } else if (executionResult.status === "failed") {
-            counters.failed++;
-          } else if (executionResult.status === "completed") {
-            counters.completed++;
-          }
-
-          if (executionLogsEnabled) {
-            // replace spinner with this execution result
-            if (spinner) {
-              spinner.stop();
-              spinner = null;
-            }
-
-            const log = createExecutionLog(afterExecutionInfo, {
-              logShortForCompletedExecutions,
-              logRuntime,
-              logEachDuration,
-              ...(logTimeUsage ? { timeEllapsed } : {}),
-              ...(logMemoryHeapUsage ? { memoryHeap } : {}),
-            });
-
-            executionLog.write(log);
-            rawOutput += stripAnsi(log);
-            const canOverwriteLog = canOverwriteLogGetter({
-              logMergeForCompletedExecutions,
-              executionResult,
-            });
-            if (canOverwriteLog) {
-              // nothing to do, we reuse the current executionLog object
-            } else {
-              executionLog.destroy();
-              executionLog = createLog({ newLine: "" });
-            }
-            const isLastExecutionLog =
-              executionIndex === executionSteps.length - 1;
-            if (isLastExecutionLog && logger.levels.info) {
-              executionLog.write("\n");
-            }
-          }
-        });
-        for (const afterExecutionCallback of afterExecutionCallbackSet) {
-          afterExecutionCallback(afterExecutionInfo);
-        }
-        const cancelRemaining =
-          failFast &&
-          executionResult.status !== "completed" &&
-          counters.done < counters.total;
-        if (cancelRemaining) {
-          logger.info(`"failFast" enabled -> cancel remaining executions`);
-          failFastAbortController.abort();
-        }
-      },
-    });
-    if (!keepRunning) {
-      logger.debug("trigger test plan teardown");
-      await teardown.trigger();
-    }
-
-    counters.cancelled = counters.total - counters.done;
-    const summary = {
-      counters,
-      // when execution is aborted, the remaining executions are "cancelled"
-      duration: Date.now() - startMs,
-    };
-    if (logSummary) {
-      const summaryLog = formatSummaryLog(summary);
-      rawOutput += stripAnsi(summaryLog);
-      logger.info(summaryLog);
-    }
-    if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
-      writeFileSync(logFileUrl, rawOutput);
-      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
-    }
-    returnValue.aborted = multipleExecutionsOperation.signal.aborted;
-    returnValue.summary = summary;
-    returnValue.report = report;
-    for (const callback of callbacks) {
-      await callback();
-    }
-  } finally {
-    await multipleExecutionsOperation.end();
-  }
-
-  const hasFailed =
-    returnValue.summary.counters.total !==
-    returnValue.summary.counters.completed;
-  if (updateProcessExitCode && hasFailed) {
-    process.exitCode = 1;
-  }
-  const coverage = returnValue.coverage;
-  // planCoverage can be null when execution is aborted
-  if (coverage) {
-    const promises = [];
-    // keep this one first because it does ensureEmptyDirectory
-    // and in case coverage json file gets written in the same directory
-    // it must be done before
-    if (coverageEnabled && coverageReportHtml) {
-      await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
-      const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
-      logger.info(
-        `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
-      );
-      promises.push(
-        generateCoverageHtmlDirectory(coverage, {
-          rootDirectoryUrl,
-          coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
-            coverageReportHtmlDirectoryUrl,
-            rootDirectoryUrl,
-          ),
-          coverageReportSkipEmpty,
-          coverageReportSkipFull,
-        }),
-      );
-    }
-    if (coverageEnabled && coverageReportJson) {
-      promises.push(
-        generateCoverageJsonFile({
-          coverage,
-          coverageJsonFileUrl: coverageReportJsonFileUrl,
-          logger,
-        }),
-      );
-    }
-    if (coverageEnabled && coverageReportTextLog) {
-      promises.push(
-        generateCoverageTextLog(coverage, {
-          coverageReportSkipEmpty,
-          coverageReportSkipFull,
-        }),
-      );
-    }
-    await Promise.all(promises);
-  }
-
-  for (const afterAllExecutionCallback of afterAllExecutionCallbackSet) {
-    await afterAllExecutionCallback(returnValue);
-  }
-  return returnValue;
-};
-
-const canOverwriteLogGetter = ({
-  logMergeForCompletedExecutions,
-  executionResult,
-}) => {
-  if (!logMergeForCompletedExecutions) {
-    return false;
-  }
-  if (executionResult.status === "aborted") {
-    return true;
-  }
-  if (executionResult.status !== "completed") {
-    return false;
-  }
-  const { consoleCalls = [] } = executionResult;
-  if (consoleCalls.length > 0) {
-    return false;
-  }
-  return true;
-};
-
-const executeConcurrently = async ({
-  multipleExecutionsOperation,
-  concurrency,
-  cooldownBetweenExecutions,
-  executionSteps,
-  start,
-}) => {
-  let progressionIndex = 0;
-  let remainingExecutionToStart = executionSteps.length;
-
-  const startNext = async () => {
-    if (remainingExecutionToStart === 0) {
-      return;
-    }
-    remainingExecutionToStart--;
-    const input = executionSteps[progressionIndex];
-    progressionIndex++;
-    await start(input);
-    if (multipleExecutionsOperation.signal.aborted) {
-      return;
-    }
-    if (cooldownBetweenExecutions) {
-      await new Promise((resolve) => {
-        const timeoutId = setTimeout(() => {
-          removeClearTimeoutOnAbort();
-          resolve();
-        }, cooldownBetweenExecutions);
-        const removeClearTimeoutOnAbort =
-          multipleExecutionsOperation.signal.addAbortCallback(() => {
-            clearTimeout(timeoutId);
-          });
+      }
+      const executionResult = await run({
+        ...execution.params,
+        signal: multipleExecutionsOperation.signal,
+        logger,
+        keepRunning,
+        mirrorConsole: false, // might be executed in parallel: log would be a mess to read
+        coverageEnabled: Boolean(coverage),
+        coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
       });
-      if (multipleExecutionsOperation.signal.aborted) {
+      Object.assign(execution.result, executionResult);
+      execution.status = "executed";
+      executionExecutingSet.delete(execution);
+      mutateCountersAfterExecutionEnds(counters, execution);
+      if (execution.result.status !== "completed") {
+        testPlanInfo.failed = true;
+        if (updateProcessExitCode) {
+          process.exitCode = 1;
+        }
+      }
+
+      for (const afterEachCallback of afterEachCallbackSet) {
+        afterEachCallback(execution, testPlanInfo);
+      }
+      callWhenPreviousExecutionAreDone(execution.index, () => {
+        mutateCountersAfterExecutionEnds(countersInOrder, execution);
+        for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
+          afterEachInOrderCallback(execution, testPlanInfo);
+        }
+      });
+
+      if (testPlanInfo.failed && failFast && counters.remaining) {
+        logger.info(`"failFast" enabled -> cancel remaining executions`);
+        failFastAbortController.abort();
         return;
       }
-    }
-    await startNext();
-  };
+      await startAsMuchAsPossible();
+    };
+    const startAsMuchAsPossible = async () => {
+      const promises = [];
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        multipleExecutionsOperation.throwIfAborted();
+        if (executionRemainingSet.size === 0) {
+          break;
+        }
+        if (executionExecutingSet.size >= parallel.max) {
+          break;
+        }
 
-  const promises = [];
-  while (concurrency--) {
-    promises.push(startNext());
+        if (
+          // starting execution in parallel is limited by
+          // cpu and memory only when trying to parallelize
+          // if nothing is executing these limitations don't apply
+          executionExecutingSet.size > 0
+        ) {
+          const availableMemory = freemem();
+          const totalMemory = totalmem();
+          const usedMemory = totalMemory - availableMemory;
+          if (usedMemory > parallel.maxMemory) {
+            // retry after Xms in case memory usage decreases
+            const promise = (async () => {
+              await multipleExecutionsOperation.wait(200);
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
+          }
+
+          if (cpuUsage.overall.active > parallel.maxCpu) {
+            // retry after Xms in case cpu usage decreases
+            const promise = (async () => {
+              await multipleExecutionsOperation.wait(200);
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
+            break;
+          }
+        }
+
+        let execution;
+        for (const executionCandidate of executionRemainingSet) {
+          // TODO: this is where we'll check if it can be executed
+          // according to upcoming "using" execution param
+          execution = executionCandidate;
+          break;
+        }
+        if (execution) {
+          promises.push(start(execution));
+        }
+      }
+      if (promises.length) {
+        await Promise.all(promises);
+        promises.length = 0;
+      }
+    };
+
+    try {
+      const startMs = Date.now();
+      for (const reporter of reporters) {
+        const {
+          beforeAll,
+          // TODO: if defined add them too
+          // beforeEach,
+          // afterEach,
+          // beforeEachInOrder,
+          // afterEachInOrder,
+          // afterAll,
+        } = reporter;
+        if (beforeAll) {
+          const returnValue = await beforeAll(testPlanInfo);
+          if (returnValue) {
+            const {
+              beforeEach,
+              beforeEachInOrder,
+              afterEach,
+              afterEachInOrder,
+              afterAll,
+            } = returnValue;
+            if (beforeEach) {
+              beforeEachCallbackSet.add(beforeEach);
+            }
+            if (beforeEachInOrder) {
+              beforeEachInOrderCallbackSet.add(beforeEachInOrder);
+            }
+            if (afterEach) {
+              afterEachCallbackSet.add(afterEach);
+            }
+            if (afterEachInOrder) {
+              afterEachInOrderCallbackSet.add(afterEachInOrder);
+            }
+            if (afterAll) {
+              afterAllCallbackSet.add(afterAll);
+            }
+          }
+        }
+      }
+      await startAsMuchAsPossible();
+      if (!keepRunning) {
+        logger.debug("trigger test plan teardown");
+        for (const teardownCallback of teardownCallbackSet) {
+          await teardownCallback();
+        }
+        teardownCallbackSet.clear();
+      }
+      testPlanInfo.aborted = multipleExecutionsOperation.signal.aborted;
+      testPlanInfo.duration = Date.now() - startMs;
+      mutateCountersAfterAllExecution(counters, testPlanInfo);
+      mutateCountersAfterAllExecution(countersInOrder, testPlanInfo);
+      if (finalizeCoverage) {
+        await finalizeCoverage();
+      }
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        testPlanInfo.aborted = true;
+      } else {
+        throw e;
+      }
+    } finally {
+      await multipleExecutionsOperation.end();
+    }
   }
-  await Promise.all(promises);
+
+  afterEachCallbackSet.clear();
+  afterEachInOrderCallbackSet.clear();
+  for (const afterAllCallback of afterAllCallbackSet) {
+    await afterAllCallback(testPlanInfo);
+  }
+  afterAllCallbackSet.clear();
+  return testPlanInfo;
+};
+
+const countAvailableCpus = () => {
+  if (typeof availableParallelism === "function") {
+    return availableParallelism();
+  }
+  const cpuArray = cpus();
+  return cpuArray.length || 1;
+};
+
+const mutateCountersBeforeExecutionStarts = (counters) => {
+  counters.executing++;
+};
+const mutateCountersAfterExecutionEnds = (counters, execution) => {
+  counters.executing--;
+  counters.executed++;
+  counters.remaining--;
+  if (execution.result.status === "aborted") {
+    counters.aborted++;
+  } else if (execution.result.status === "timedout") {
+    counters.timedout++;
+  } else if (execution.result.status === "failed") {
+    counters.failed++;
+  } else if (execution.result.status === "completed") {
+    counters.completed++;
+  }
+};
+const mutateCountersAfterAllExecution = (counters, testPlanResult) => {
+  if (testPlanResult.aborted) {
+    // when execution is aborted, the remaining executions are "cancelled"
+    counters.cancelled = counters.planified - counters.executed;
+    counters.remaining = 0;
+  }
 };
 
 const memoize = (compute) => {
@@ -5631,10 +6582,10 @@ const initJsSupervisorMiddleware = async (
 
 const initIstanbulMiddleware = async (
   page,
-  { webServer, rootDirectoryUrl, coverageConfig },
+  { webServer, rootDirectoryUrl, coverageInclude },
 ) => {
   const associations = URL_META.resolveAssociations(
-    { cover: coverageConfig },
+    { cover: coverageInclude },
     rootDirectoryUrl,
   );
   await page.route("**", async (route) => {
@@ -5690,8 +6641,8 @@ const browserPromiseCache = new Map();
 
 const createRuntimeUsingPlaywright = ({
   browserName,
-  browserVersion,
   coveragePlaywrightAPIAvailable = false,
+  memoryUsageAPIAvailable = false,
   shouldIgnoreError = () => false,
   transformErrorHook = (error) => error,
   isolatedTab = false,
@@ -5699,6 +6650,7 @@ const createRuntimeUsingPlaywright = ({
   playwrightLaunchOptions = {},
   ignoreHTTPSErrors = true,
 }) => {
+  const browserVersion = getBrowserVersion(browserName);
   const label = `${browserName}${browserVersion}`;
   const runtime = {
     type: "browser",
@@ -5716,31 +6668,39 @@ const createRuntimeUsingPlaywright = ({
     webServer,
     fileRelativeUrl,
 
-    // measurePerformance,
+    keepRunning,
+    stopSignal,
+    onConsole,
+    onRuntimeStarted,
+    onRuntimeStopped,
+    teardownCallbackSet,
+    isTestPlan,
+
+    measureMemoryUsage,
+    onMeasureMemoryAvailable,
     collectPerformance,
     coverageEnabled = false,
-    coverageConfig,
+    coverageInclude,
     coverageMethodForBrowsers,
     coverageFileUrl,
-
-    teardown,
-    isTestPlan,
-    stopSignal,
-    keepRunning,
-    onConsole,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
-  --- file --- 
-  ${fileUrl}
-  --- web server root directory url ---
-  ${webServer.rootDirectoryUrl}`);
+--- file --- 
+${fileUrl}
+--- web server root directory url ---
+${webServer.rootDirectoryUrl}`);
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
-    const cleanupCallbackList = createCallbackListNotifiedOnce();
+    const cleanupCallbackSet = new Set();
     const cleanup = memoize(async (reason) => {
-      await cleanupCallbackList.notify({ reason });
+      const promises = [];
+      for (const cleanupCallback of cleanupCallbackSet) {
+        promises.push(cleanupCallback({ reason }));
+      }
+      cleanupCallbackSet.clear();
+      await Promise.all(promises);
     });
 
     const isBrowserDedicatedToExecution = isolatedTab || !isTestPlan;
@@ -5749,24 +6709,41 @@ const createRuntimeUsingPlaywright = ({
       : browserPromiseCache.get(label);
     if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
+        const options = {
+          ...playwrightLaunchOptions,
+          headless: headful === undefined ? !keepRunning : !headful,
+        };
+        if (memoryUsageAPIAvailable && measureMemoryUsage) {
+          const { ignoreDefaultArgs, args } = options;
+          if (ignoreDefaultArgs) {
+            if (!ignoreDefaultArgs.includes("--headless")) {
+              ignoreDefaultArgs.push("--headless");
+            }
+          } else {
+            options.ignoreDefaultArgs = ["--headless"];
+          }
+          if (args) {
+            if (!args.includes("--headless=new")) {
+              args.push("--headless=new");
+            }
+          } else {
+            options.args = ["--headless=new"];
+          }
+        }
         const browser = await launchBrowserUsingPlaywright({
           signal,
           browserName,
-          stopOnExit: true,
-          playwrightLaunchOptions: {
-            ...playwrightLaunchOptions,
-            headless: headful === undefined ? !keepRunning : !headful,
-          },
+          playwrightLaunchOptions: options,
         });
-        if (browser._initializer.version) {
-          runtime.version = browser._initializer.version;
-        }
+        // if (browser._initializer.version) {
+        //   runtime.version = browser._initializer.version;
+        // }
         const browserContext = await browser.newContext({ ignoreHTTPSErrors });
         return { browser, browserContext };
       })();
       if (!isBrowserDedicatedToExecution) {
         browserPromiseCache.set(label, browserAndContextPromise);
-        cleanupCallbackList.add(() => {
+        cleanupCallbackSet.add(() => {
           browserPromiseCache.delete(label);
         });
       }
@@ -5795,8 +6772,44 @@ const createRuntimeUsingPlaywright = ({
       }
       await disconnected;
     };
+    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+    if (isBrowserDedicatedToExecution) {
+      cleanupCallbackSet.add(closeBrowser);
+      browser.on("disconnected", async () => {
+        onRuntimeStopped();
+      });
+    } else {
+      const disconnectedCallback = async () => {
+        throw new Error("browser disconnected during execution");
+      };
+      browser.on("disconnected", disconnectedCallback);
+      cleanupCallbackSet.add(() => {
+        browser.removeListener("disconnected", disconnectedCallback);
+      });
+      teardownCallbackSet.add(async () => {
+        browser.removeListener("disconnected", disconnectedCallback);
+        logger.debug(`testPlan teardown -> closing ${browserName}`);
+        await closeBrowser();
+      });
+    }
 
     const page = await browserContext.newPage();
+    if (!isBrowserDedicatedToExecution) {
+      page.on("close", () => {
+        onRuntimeStopped();
+      });
+    }
+    onRuntimeStarted();
+    cleanupCallbackSet.add(async () => {
+      try {
+        await page.close();
+      } catch (e) {
+        if (isTargetClosedError(e)) {
+          return;
+        }
+        throw e;
+      }
+    });
 
     const istanbulInstrumentationEnabled =
       coverageEnabled &&
@@ -5806,7 +6819,7 @@ const createRuntimeUsingPlaywright = ({
       await initIstanbulMiddleware(page, {
         webServer,
         rootDirectoryUrl,
-        coverageConfig,
+        coverageInclude,
       });
     }
     if (!webServer.isJsenvDevServer) {
@@ -5816,23 +6829,16 @@ const createRuntimeUsingPlaywright = ({
         fileServerUrl,
       });
     }
-    const closePage = async () => {
-      try {
-        await page.close();
-      } catch (e) {
-        if (isTargetClosedError(e)) {
-          return;
-        }
-        throw e;
-      }
-    };
 
     const result = {
       status: "pending",
-      namespace: null,
       errors: [],
+      namespace: null,
+      timings: {},
+      memoryUsage: null,
+      performance: null,
     };
-    const callbacks = [];
+    const callbackSet = new Set();
     if (coverageEnabled) {
       if (
         runtime.capabilities.coverageV8 &&
@@ -5841,7 +6847,7 @@ const createRuntimeUsingPlaywright = ({
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         });
-        callbacks.push(async () => {
+        callbackSet.add(async () => {
           const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage();
           // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
@@ -5861,7 +6867,7 @@ const createRuntimeUsingPlaywright = ({
             { result: v8CoveragesWithFsUrls },
             {
               rootDirectoryUrl,
-              coverageConfig,
+              coverageInclude,
             },
           );
           writeFileSync$1(
@@ -5870,7 +6876,7 @@ const createRuntimeUsingPlaywright = ({
           );
         });
       } else {
-        callbacks.push(() => {
+        callbackSet.add(() => {
           const scriptExecutionResults = result.namespace;
           if (scriptExecutionResults) {
             const coverage =
@@ -5883,7 +6889,7 @@ const createRuntimeUsingPlaywright = ({
         });
       }
     } else {
-      callbacks.push(() => {
+      callbackSet.add(() => {
         const scriptExecutionResults = result.namespace;
         if (scriptExecutionResults) {
           Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
@@ -5893,8 +6899,50 @@ const createRuntimeUsingPlaywright = ({
       });
     }
 
+    if (memoryUsageAPIAvailable) {
+      const getMemoryUsage = async () => {
+        const memoryUsage = await page.evaluate(
+          /* eslint-disable no-undef */
+          /* istanbul ignore next */
+          async () => {
+            const { performance } = window;
+            if (!performance) {
+              return null;
+            }
+            // performance.memory is less accurate but way faster
+            // https://web.dev/articles/monitor-total-page-memory-usage#legacy-api
+            if (performance.memory) {
+              return performance.memory.totalJSHeapSize;
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/Performance/measureUserAgentSpecificMemory
+            if (
+              performance.measureUserAgentSpecificMemory &&
+              crossOriginIsolated
+            ) {
+              const memorySample =
+                await performance.measureUserAgentSpecificMemory();
+              return memorySample;
+            }
+            return null;
+          },
+          /* eslint-enable no-undef */
+        );
+        return memoryUsage;
+      };
+
+      if (onMeasureMemoryAvailable) {
+        onMeasureMemoryAvailable(getMemoryUsage);
+      }
+      if (memoryUsageAPIAvailable && measureMemoryUsage) {
+        callbackSet.add(async () => {
+          const memoryUsage = await getMemoryUsage();
+          result.memoryUsage = memoryUsage;
+        });
+      }
+    }
+
     if (collectPerformance) {
-      callbacks.push(async () => {
+      callbackSet.add(async () => {
         const performance = await page.evaluate(
           /* eslint-disable no-undef */
           /* istanbul ignore next */
@@ -5933,175 +6981,171 @@ const createRuntimeUsingPlaywright = ({
         });
       },
     });
-    cleanupCallbackList.add(removeConsoleListener);
+    cleanupCallbackSet.add(removeConsoleListener);
     const actionOperation = Abort.startOperation();
     actionOperation.addAbortSignal(signal);
 
-    const winnerPromise = new Promise((resolve, reject) => {
-      raceCallbacks(
-        {
-          aborted: (cb) => {
-            return actionOperation.addAbortCallback(cb);
-          },
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-          error: (cb) => {
-            return registerEvent({
-              object: page,
-              eventType: "error",
-              callback: (error) => {
-                if (shouldIgnoreError(error, "error")) {
-                  return;
-                }
-                cb(transformErrorHook(error));
-              },
-            });
-          },
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          // pageerror: () => {
-          //   return registerEvent({
-          //     object: page,
-          //     eventType: "pageerror",
-          //     callback: (error) => {
-          //       if (
-          //         webServer.isJsenvDevServer ||
-          //         shouldIgnoreError(error, "pageerror")
-          //       ) {
-          //         return
-          //       }
-          //       result.errors.push(transformErrorHook(error))
-          //     },
-          //   })
-          // },
-          closed: (cb) => {
-            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-            if (isBrowserDedicatedToExecution) {
-              browser.on("disconnected", async () => {
-                cb({ reason: "browser disconnected" });
-              });
-              cleanupCallbackList.add(closePage);
-              cleanupCallbackList.add(closeBrowser);
-            } else {
-              const disconnectedCallback = async () => {
-                throw new Error("browser disconnected during execution");
-              };
-              browser.on("disconnected", disconnectedCallback);
-              page.on("close", () => {
-                cb({ reason: "page closed" });
-              });
-              cleanupCallbackList.add(closePage);
-              cleanupCallbackList.add(() => {
-                browser.removeListener("disconnected", disconnectedCallback);
-              });
-              teardown.addCallback(async () => {
-                browser.removeListener("disconnected", disconnectedCallback);
-                logger.debug(`testPlan teardown -> closing ${browserName}`);
-                await closeBrowser();
-              });
-            }
-          },
-          response: async (cb) => {
-            try {
-              await page.goto(fileServerUrl, { timeout: 0 });
-              const returnValue = await page.evaluate(
-                /* eslint-disable no-undef */
-                /* istanbul ignore next */
-                async () => {
-                  let startTime;
-                  try {
-                    startTime = window.performance.timing.navigationStart;
-                  } catch (e) {
-                    startTime = Date.now();
-                  }
-                  if (!window.__supervisor__) {
-                    throw new Error("window.__supervisor__ is undefined");
-                  }
-                  const executionResultFromJsenvSupervisor =
-                    await window.__supervisor__.getDocumentExecutionResult();
-                  return {
-                    type: "window_supervisor",
-                    startTime,
-                    endTime: Date.now(),
-                    executionResults:
-                      executionResultFromJsenvSupervisor.executionResults,
-                  };
-                },
-                /* eslint-enable no-undef */
-              );
-              cb(returnValue);
-            } catch (e) {
-              reject(e);
-            }
-          },
-        },
-        resolve,
-      );
-    });
-
-    const writeResult = async () => {
-      const winner = await winnerPromise;
-      if (winner.name === "aborted") {
-        result.status = "aborted";
-        return;
-      }
-      if (winner.name === "error") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "pageerror") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "closed") {
-        result.status = "failed";
-        result.errors.push(
-          isBrowserDedicatedToExecution
-            ? new Error(`browser disconnected during execution`)
-            : new Error(`page closed during execution`),
-        );
-        return;
-      }
-      // winner.name === "response"
-      const { executionResults } = winner.data;
-      result.status = "completed";
-      result.namespace = executionResults;
-      Object.keys(executionResults).forEach((key) => {
-        const executionResult = executionResults[key];
-        if (executionResult.status === "failed") {
-          result.status = "failed";
-          if (executionResult.exception) {
-            result.errors.push(executionResult.exception);
-          } else {
-            result.errors.push(executionResult.error);
-          }
-        }
-      });
-    };
-
     try {
-      await writeResult();
-      if (collectPerformance) {
-        result.performance = performance;
-      }
-      await callbacks.reduce(async (previous, callback) => {
-        await previous;
+      const winnerPromise = new Promise((resolve, reject) => {
+        raceCallbacks(
+          {
+            aborted: (cb) => {
+              return actionOperation.addAbortCallback(cb);
+            },
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+            error: (cb) => {
+              return registerEvent({
+                object: page,
+                eventType: "error",
+                callback: (error) => {
+                  if (shouldIgnoreError(error, "error")) {
+                    return;
+                  }
+                  cb(transformErrorHook(error));
+                },
+              });
+            },
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+            // pageerror: () => {
+            //   return registerEvent({
+            //     object: page,
+            //     eventType: "pageerror",
+            //     callback: (error) => {
+            //       if (
+            //         webServer.isJsenvDevServer ||
+            //         shouldIgnoreError(error, "pageerror")
+            //       ) {
+            //         return
+            //       }
+            //       result.errors.push(transformErrorHook(error))
+            //     },
+            //   })
+            // },
+            closed: (cb) => {
+              if (isBrowserDedicatedToExecution) {
+                browser.on("disconnected", async () => {
+                  cb({ reason: "browser disconnected" });
+                });
+              } else {
+                page.on("close", () => {
+                  cb({ reason: "page closed" });
+                });
+              }
+            },
+            response: async (cb) => {
+              try {
+                await page.goto(fileServerUrl, { timeout: 0 });
+                const returnValue = await page.evaluate(
+                  /* eslint-disable no-undef */
+                  /* istanbul ignore next */
+                  async () => {
+                    let startTime;
+                    try {
+                      startTime = window.performance.timing.navigationStart;
+                    } catch (e) {
+                      startTime = Date.now();
+                    }
+                    if (!window.__supervisor__) {
+                      throw new Error("window.__supervisor__ is undefined");
+                    }
+                    const executionResultFromJsenvSupervisor =
+                      await window.__supervisor__.getDocumentExecutionResult();
+                    return {
+                      type: "window_supervisor",
+                      timings: {
+                        start: startTime,
+                        end: Date.now(),
+                      },
+                      executionResults:
+                        executionResultFromJsenvSupervisor.executionResults,
+                    };
+                  },
+                  /* eslint-enable no-undef */
+                );
+                cb(returnValue);
+              } catch (e) {
+                reject(e);
+              }
+            },
+          },
+          resolve,
+        );
+      });
+      const raceHandlers = {
+        aborted: () => {
+          result.status = "aborted";
+        },
+        error: (error) => {
+          result.status = "failed";
+          result.errors.push(error);
+        },
+        // pageerror: (error) => {
+        //   result.status = "failed";
+        //   result.errors.push(error);
+        // },
+        closed: () => {
+          result.status = "failed";
+          result.errors.push(
+            isBrowserDedicatedToExecution
+              ? new Error(`browser disconnected during execution`)
+              : new Error(`page closed during execution`),
+          );
+        },
+        response: ({ executionResults, timings }) => {
+          result.status = "completed";
+          result.namespace = executionResults;
+          result.timings = timings;
+          Object.keys(executionResults).forEach((key) => {
+            const executionResult = executionResults[key];
+            if (executionResult.status === "failed") {
+              result.status = "failed";
+              if (executionResult.exception) {
+                result.errors.push(executionResult.exception);
+              } else {
+                result.errors.push(executionResult.error);
+              }
+            }
+          });
+        },
+      };
+      const winner = await winnerPromise;
+      raceHandlers[winner.name](winner.data);
+      for (const callback of callbackSet) {
         await callback();
-      }, Promise.resolve());
+      }
+      callbackSet.clear();
     } catch (e) {
       result.status = "failed";
       result.errors = [e];
+    } finally {
+      if (keepRunning) {
+        stopSignal.notify = cleanup;
+      } else {
+        await cleanup("execution done");
+      }
+      return result;
     }
-    if (keepRunning) {
-      stopSignal.notify = cleanup;
-    } else {
-      await cleanup("execution done");
-    }
-    return result;
   };
   return runtime;
+};
+
+// see also https://github.com/microsoft/playwright/releases
+const getBrowserVersion = (browserName) => {
+  const playwrightPackageJsonFileUrl = new URL("playwright-core/package.json", import.meta.url).href;
+  const playwrightBrowsersJsonFileUrl = new URL(
+    "./browsers.json",
+    playwrightPackageJsonFileUrl,
+  );
+  const browsersJson = JSON.parse(
+    readFileSync(playwrightBrowsersJsonFileUrl, "utf8"),
+  );
+  const { browsers } = browsersJson;
+  for (const browser of browsers) {
+    if (browser.name === browserName) {
+      return browser.browserVersion;
+    }
+  }
+  return "unkown";
 };
 
 const generateCoverageForPage = (scriptExecutionResults) => {
@@ -6121,26 +7165,11 @@ const generateCoverageForPage = (scriptExecutionResults) => {
 const launchBrowserUsingPlaywright = async ({
   signal,
   browserName,
-  stopOnExit,
   playwrightLaunchOptions,
 }) => {
   const launchBrowserOperation = Abort.startOperation();
   launchBrowserOperation.addAbortSignal(signal);
   const playwright = await importPlaywright({ browserName });
-  if (stopOnExit) {
-    launchBrowserOperation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGHUP: true,
-          SIGTERM: true,
-          SIGINT: true,
-          beforeExit: true,
-          exit: true,
-        },
-        abort,
-      );
-    });
-  }
   const browserClass = playwright[browserName];
   try {
     const browser = await browserClass.launch({
@@ -6248,10 +7277,8 @@ const chromiumIsolatedTab = (params) => {
 const createChromiumRuntine = (params) => {
   return createRuntimeUsingPlaywright({
     browserName: "chromium",
-    // browserVersion will be set by "browser._initializer.version"
-    // see also https://github.com/microsoft/playwright/releases
-    browserVersion: "unset",
     coveragePlaywrightAPIAvailable: true,
+    memoryUsageAPIAvailable: true,
     ...params,
   });
 };
@@ -6290,9 +7317,6 @@ To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
 
   return createRuntimeUsingPlaywright({
     browserName: "firefox",
-    // browserVersion will be set by "browser._initializer.version"
-    // see also https://github.com/microsoft/playwright/releases
-    browserVersion: "unset",
     isolatedTab: true,
     ...params,
   });
@@ -6312,9 +7336,6 @@ const webkitIsolatedTab = (params) => {
 const createWekbitRuntime = (params) => {
   return createRuntimeUsingPlaywright({
     browserName: "webkit",
-    // browserVersion will be set by "browser._initializer.version"
-    // see also https://github.com/microsoft/playwright/releases
-    browserVersion: "unset",
     shouldIgnoreError: (error) => {
       // we catch error during execution but safari throw unhandled rejection
       // in a non-deterministic way.
@@ -6692,12 +7713,17 @@ const nodeChildProcess = ({
       keepRunning,
       stopSignal,
       onConsole,
+      onRuntimeStarted,
+      onRuntimeStopped,
 
+      measureMemoryUsage,
+      onMeasureMemoryAvailable,
+      collectConsole = false,
+      collectPerformance,
       coverageEnabled = false,
-      coverageConfig,
+      coverageInclude,
       coverageMethodForNodeJs,
       coverageFileUrl,
-      collectPerformance,
     }) => {
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
@@ -6706,7 +7732,14 @@ const nodeChildProcess = ({
         "--experimental-import-meta-resolve",
         ...commandLineOptions,
       ];
-
+      if (onMeasureMemoryAvailable) {
+        env.MEASURE_MEMORY_AT_START = "1";
+      }
+      if (measureMemoryUsage || onMeasureMemoryAvailable) {
+        if (!commandLineOptions.includes("--expose-gc")) {
+          commandLineOptions.push("--expose-gc");
+        }
+      }
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
@@ -6718,9 +7751,14 @@ const nodeChildProcess = ({
         );
       }
 
-      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanupCallbackSet = new Set();
       const cleanup = async (reason) => {
-        await cleanupCallbackList.notify({ reason });
+        const promises = [];
+        for (const cleanupCallback of cleanupCallbackSet) {
+          promises.push(cleanupCallback({ reason }));
+        }
+        cleanupCallbackSet.clear();
+        await Promise.all(promises);
       };
 
       const childExecOptions = await createChildExecOptions({
@@ -6742,9 +7780,11 @@ const nodeChildProcess = ({
           CONTROLLED_CHILD_PROCESS_URL,
         )}`,
       );
+      const actionOperation = Abort.startOperation();
+      actionOperation.addAbortSignal(signal);
       const childProcess = fork(fileURLToPath(CONTROLLED_CHILD_PROCESS_URL), {
         execArgv,
-        // silent: true
+        // silent: true,
         stdio: ["pipe", "pipe", "pipe", "ipc"],
         env: envForChildProcess,
       });
@@ -6767,15 +7807,48 @@ const nodeChildProcess = ({
         childProcess.stderr.pipe(stderr);
       }
       const childProcessReadyPromise = new Promise((resolve) => {
-        onceChildProcessMessage(childProcess, "ready", resolve);
+        const removeReadyListener = onChildProcessMessage(
+          childProcess,
+          "ready",
+          () => {
+            removeReadyListener();
+            onRuntimeStarted();
+            resolve();
+          },
+        );
       });
+      cleanupCallbackSet.add(
+        onceChildProcessEvent(childProcess, "exit", () => {
+          onRuntimeStopped();
+        }),
+      );
+
       const removeOutputListener = installChildProcessOutputListener(
         childProcess,
         ({ type, text }) => {
+          if (type === "error" && text.startsWith("Debugger attached.")) {
+            return;
+          }
+          if (
+            type === "error" &&
+            text.startsWith("Waiting for the debugger to disconnect...")
+          ) {
+            return;
+          }
+
           onConsole({ type, text });
         },
       );
       const stop = memoize(async ({ gracefulStopAllocatedMs } = {}) => {
+        // read all stdout before terminating
+        // (no need for stderr because it's sync)
+        if (collectConsole || onConsole) {
+          while (childProcess.stdout.read() !== null) {}
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50);
+          });
+        }
+
         // all libraries are facing problem on windows when trying
         // to kill a process spawning other processes.
         // "killProcessTree" is theorically correct but sometimes keep process handing forever.
@@ -6810,159 +7883,213 @@ const nodeChildProcess = ({
         return;
       });
 
-      const actionOperation = Abort.startOperation();
-      actionOperation.addAbortSignal(signal);
-      const winnerPromise = new Promise((resolve) => {
-        raceCallbacks(
-          {
-            aborted: (cb) => {
-              return actionOperation.addAbortCallback(cb);
-            },
-            // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-            // disconnect: (cb) => {
-            //   return onceProcessEvent(childProcess, "disconnect", cb)
-            // },
-            // https://nodejs.org/api/child_process.html#child_process_event_error
-            error: (cb) => {
-              return onceChildProcessEvent(childProcess, "error", cb);
-            },
-            exit: (cb) => {
-              return onceChildProcessEvent(
-                childProcess,
-                "exit",
-                (code, signal) => {
-                  cb({ code, signal });
-                },
-              );
-            },
-            response: (cb) => {
-              return onceChildProcessMessage(childProcess, "action-result", cb);
-            },
-          },
-          resolve,
-        );
-      });
       const result = {
         status: "executing",
         errors: [],
         namespace: null,
+        timings: {},
+        memoryUsage: null,
+        performance: null,
       };
 
-      const writeResult = async () => {
+      try {
+        let executionInternalErrorCallback;
+        let executionCompletedCallback;
+        const winnerPromise = new Promise((resolve) => {
+          raceCallbacks(
+            {
+              aborted: (cb) => {
+                return actionOperation.addAbortCallback(cb);
+              },
+              // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+              // disconnect: (cb) => {
+              //   return onceProcessEvent(childProcess, "disconnect", cb)
+              // },
+              // https://nodejs.org/api/child_process.html#child_process_event_error
+              error: (cb) => {
+                return onceChildProcessEvent(childProcess, "error", cb);
+              },
+              exit: (cb) => {
+                return onceChildProcessEvent(
+                  childProcess,
+                  "exit",
+                  (code, signal) => {
+                    cb({ code, signal });
+                  },
+                );
+              },
+              execution_internal_error: (cb) => {
+                executionInternalErrorCallback = cb;
+              },
+              execution_completed: (cb) => {
+                executionCompletedCallback = cb;
+              },
+            },
+            resolve,
+          );
+        });
+        const raceHandlers = {
+          aborted: () => {
+            result.status = "aborted";
+          },
+          error: (error) => {
+            removeOutputListener();
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          exit: ({ code }) => {
+            onRuntimeStopped();
+            if (code === 12) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(
+                  `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                ),
+              );
+              return;
+            }
+            if (code === null || code === 0) {
+              result.status = "completed";
+              result.namespace = {};
+              return;
+            }
+            if (
+              code === EXIT_CODES.SIGINT ||
+              code === EXIT_CODES.SIGTERM ||
+              code === EXIT_CODES.SIGABORT
+            ) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(`node process exited during execution`),
+              );
+              return;
+            }
+            // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+            // means there was an error even if we don't know exactly what.
+            result.status = "failed";
+            result.errors.push(
+              new Error(
+                `node process exited with code ${code} during execution`,
+              ),
+            );
+          },
+          execution_internal_error: (error) => {
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          execution_completed: ({
+            status,
+            errors,
+            namespace,
+            timings,
+            memoryUsage,
+            performance,
+            coverage,
+          }) => {
+            result.status = status;
+            result.errors = errors;
+            result.namespace = namespace;
+            result.timings = timings;
+            result.memoryUsage = memoryUsage;
+            result.performance = performance;
+            result.coverage = coverage;
+          },
+        };
         actionOperation.throwIfAborted();
         await childProcessReadyPromise;
         actionOperation.throwIfAborted();
-        await sendToChildProcess(childProcess, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
+        if (onMeasureMemoryAvailable) {
+          onMeasureMemoryAvailable(async () => {
+            let _resolve;
+            const memoryUsagePromise = new Promise((resolve) => {
+              _resolve = resolve;
+            });
+            await requestActionOnChildProcess(
+              childProcess,
+              {
+                type: "measure-memory-usage",
+              },
+              ({ value }) => {
+                _resolve(value);
+              },
+            );
+            return memoryUsagePromise;
+          });
+        }
+        await requestActionOnChildProcess(
+          childProcess,
+          {
+            type: "execute-using-dynamic-import",
+            params: {
               rootDirectoryUrl,
               fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              measureMemoryUsage,
               collectPerformance,
               coverageEnabled,
-              coverageConfig,
+              coverageInclude,
               coverageMethodForNodeJs,
               coverageFileUrl,
               exitAfterAction: true,
             },
           },
-        });
+          ({ status, value }) => {
+            if (status === "error") {
+              executionInternalErrorCallback(value);
+            } else {
+              executionCompletedCallback(value);
+            }
+          },
+        );
         const winner = await winnerPromise;
-        if (winner.name === "aborted") {
-          result.status = "aborted";
-          return;
-        }
-        if (winner.name === "error") {
-          const error = winner.data;
-          removeOutputListener();
-          result.status = "failed";
-          result.errors.push(error);
-          return;
-        }
-        if (winner.name === "exit") {
-          const { code } = winner.data;
-          await cleanup("process exit");
-          if (code === 12) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(
-                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
-              ),
-            );
-            return;
-          }
-          if (code === null || code === 0) {
-            result.status = "completed";
-            result.namespace = {};
-            return;
-          }
-          if (
-            code === EXIT_CODES.SIGINT ||
-            code === EXIT_CODES.SIGTERM ||
-            code === EXIT_CODES.SIGABORT
-          ) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(`node process exited during execution`),
-            );
-            return;
-          }
-          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-          // means there was an error even if we don't know exactly what.
-          result.status = "failed";
-          result.errors.push(
-            new Error(`node process exited with code ${code} during execution`),
-          );
-          return;
-        }
-        const { status, value } = winner.data;
-        if (status === "action-failed") {
-          result.status = "failed";
-          result.errors.push(value);
-          return;
-        }
-        const { namespace, performance, coverage } = value;
-        result.status = "completed";
-        result.namespace = namespace;
-        result.performance = performance;
-        result.coverage = coverage;
-      };
-
-      try {
-        await writeResult();
+        raceHandlers[winner.name](winner.data);
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);
+      } finally {
+        if (keepRunning) {
+          stopSignal.notify = stop;
+        } else {
+          await stop({
+            gracefulStopAllocatedMs,
+          });
+        }
+        await actionOperation.end();
+        await cleanup();
+        return result;
       }
-      if (keepRunning) {
-        stopSignal.notify = stop;
-      } else {
-        await stop({
-          gracefulStopAllocatedMs,
-        });
-      }
-      await actionOperation.end();
-      return result;
     },
   };
 };
 
-// http://man7.org/linux/man-pages/man7/signal.7.html
-// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
-const GRACEFUL_STOP_SIGNAL = "SIGTERM";
-const STOP_SIGNAL = "SIGKILL";
-// it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
-// but I'm not sure and it changes nothing so just use SIGKILL
-const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
+let previousId$1 = 0;
+const requestActionOnChildProcess = async (
+  childProcess,
+  { type, params },
+  onResponse,
+) => {
+  const actionId = previousId$1 + 1;
+  previousId$1 = actionId;
 
-const sendToChildProcess = async (childProcess, { type, data }) => {
-  return new Promise((resolve, reject) => {
+  const removeMessageListener = onChildProcessMessage(
+    childProcess,
+    "action-result",
+    ({ id, ...payload }) => {
+      if (id === actionId) {
+        removeMessageListener();
+        onResponse(payload);
+      }
+    },
+  );
+
+  const sendPromise = new Promise((resolve, reject) => {
     childProcess.send(
       {
-        jsenv: true,
-        type,
-        data,
+        __jsenv__: "action",
+        data: {
+          id: actionId,
+          type,
+          params,
+        },
       },
       (error) => {
         if (error) {
@@ -6973,7 +8100,16 @@ const sendToChildProcess = async (childProcess, { type, data }) => {
       },
     );
   });
+  await sendPromise;
 };
+
+// http://man7.org/linux/man-pages/man7/signal.7.html
+// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+const GRACEFUL_STOP_SIGNAL = "SIGTERM";
+const STOP_SIGNAL = "SIGKILL";
+// it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
+// but I'm not sure and it changes nothing so just use SIGKILL
+const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
 
 const installChildProcessOutputListener = (childProcess, callback) => {
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
@@ -6987,14 +8123,13 @@ const installChildProcessOutputListener = (childProcess, callback) => {
   childProcess.stderr.on("data", stdErrorDataCallback);
   return () => {
     childProcess.stdout.removeListener("data", stdoutDataCallback);
-    childProcess.stderr.removeListener("data", stdoutDataCallback);
+    childProcess.stderr.removeListener("data", stdErrorDataCallback);
   };
 };
 
-const onceChildProcessMessage = (childProcess, type, callback) => {
+const onChildProcessMessage = (childProcess, type, callback) => {
   const onmessage = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      childProcess.removeListener("message", onmessage);
+    if (message && message.__jsenv__ === type) {
       callback(message.data ? JSON.parse(message.data) : "");
     }
   };
@@ -7050,16 +8185,23 @@ const nodeWorkerThread = ({
       keepRunning,
       stopSignal,
       onConsole,
+      onRuntimeStarted,
+      onRuntimeStopped,
 
+      measureMemoryUsage,
+      onMeasureMemoryAvailable,
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
-      coverageConfig,
+      coverageInclude,
       coverageMethodForNodeJs,
       coverageFileUrl,
     }) => {
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
+      }
+      if (onMeasureMemoryAvailable) {
+        env.MEASURE_MEMORY_AT_START = "1";
       }
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
@@ -7085,10 +8227,16 @@ const nodeWorkerThread = ({
         ...env,
       };
 
-      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanupCallbackSet = new Set();
       const cleanup = async (reason) => {
-        await cleanupCallbackList.notify({ reason });
+        const promises = [];
+        for (const cleanupCallback of cleanupCallbackSet) {
+          promises.push(cleanupCallback({ reason }));
+        }
+        cleanupCallbackSet.clear();
+        await Promise.all(promises);
       };
+
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
@@ -7110,13 +8258,26 @@ const nodeWorkerThread = ({
         },
       );
       const workerThreadReadyPromise = new Promise((resolve) => {
-        onceWorkerThreadMessage(workerThread, "ready", resolve);
+        const removeReadyListener = onWorkerThreadMessage(
+          workerThread,
+          "ready",
+          () => {
+            removeReadyListener();
+            onRuntimeStarted();
+            resolve();
+          },
+        );
       });
+      cleanupCallbackSet.add(
+        onceWorkerThreadEvent(workerThread, "exit", () => {
+          onRuntimeStopped();
+        }),
+      );
 
       const stop = memoize(async () => {
         // read all stdout before terminating
         // (no need for stderr because it's sync)
-        if (collectConsole) {
+        if (collectConsole || onConsole) {
           while (workerThread.stdout.read() !== null) {}
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
@@ -7125,134 +8286,173 @@ const nodeWorkerThread = ({
         await workerThread.terminate();
       });
 
-      const winnerPromise = new Promise((resolve) => {
-        raceCallbacks(
-          {
-            aborted: (cb) => {
-              return actionOperation.addAbortCallback(cb);
-            },
-            error: (cb) => {
-              return onceWorkerThreadEvent(workerThread, "error", cb);
-            },
-            exit: (cb) => {
-              return onceWorkerThreadEvent(
-                workerThread,
-                "exit",
-                (code, signal) => {
-                  cb({ code, signal });
-                },
-              );
-            },
-            response: (cb) => {
-              return onceWorkerThreadMessage(workerThread, "action-result", cb);
-            },
-          },
-          resolve,
-        );
-      });
-
       const result = {
         status: "executing",
         errors: [],
         namespace: null,
+        timings: {},
+        memoryUsage: null,
+        performance: null,
       };
 
-      const writeResult = async () => {
+      try {
+        let executionInternalErrorCallback;
+        let executionCompletedCallback;
+        const winnerPromise = new Promise((resolve) => {
+          raceCallbacks(
+            {
+              aborted: (cb) => {
+                return actionOperation.addAbortCallback(cb);
+              },
+              error: (cb) => {
+                return onceWorkerThreadEvent(workerThread, "error", cb);
+              },
+              exit: (cb) => {
+                return onceWorkerThreadEvent(
+                  workerThread,
+                  "exit",
+                  (code, signal) => {
+                    cb({ code, signal });
+                  },
+                );
+              },
+              execution_internal_error: (cb) => {
+                executionInternalErrorCallback = cb;
+              },
+              execution_completed: (cb) => {
+                executionCompletedCallback = cb;
+              },
+            },
+            resolve,
+          );
+        });
+        const raceHandlers = {
+          aborted: () => {
+            result.status = "aborted";
+          },
+          error: (error) => {
+            removeOutputListener();
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          exit: ({ code }) => {
+            if (code === 12) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(
+                  `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                ),
+              );
+              return;
+            }
+            if (code === null || code === 0) {
+              result.status = "completed";
+              result.namespace = {};
+              return;
+            }
+            if (
+              code === EXIT_CODES.SIGINT ||
+              code === EXIT_CODES.SIGTERM ||
+              code === EXIT_CODES.SIGABORT
+            ) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(`node worker thread exited during execution`),
+              );
+              return;
+            }
+            // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+            // means there was an error even if we don't know exactly what.
+            result.status = "failed";
+            result.errors.push(
+              new Error(
+                `node worker thread exited with code ${code} during execution`,
+              ),
+            );
+          },
+          execution_internal_error: (error) => {
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          execution_completed: ({
+            status,
+            errors,
+            namespace,
+            timings,
+            memoryUsage,
+            performance,
+            coverage,
+          }) => {
+            result.status = status;
+            result.errors = errors;
+            result.namespace = namespace;
+            result.timings = timings;
+            result.memoryUsage = memoryUsage;
+            result.performance = performance;
+            result.coverage = coverage;
+          },
+        };
+
         actionOperation.throwIfAborted();
         await workerThreadReadyPromise;
         actionOperation.throwIfAborted();
-        await sendToWorkerThread(workerThread, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
+        if (onMeasureMemoryAvailable) {
+          onMeasureMemoryAvailable(async () => {
+            let _resolve;
+            const memoryUsagePromise = new Promise((resolve) => {
+              _resolve = resolve;
+            });
+            await requestActionOnWorkerThread(
+              workerThread,
+              {
+                type: "measure-memory-usage",
+              },
+              ({ value }) => {
+                _resolve(value);
+              },
+            );
+            return memoryUsagePromise;
+          });
+        }
+        await requestActionOnWorkerThread(
+          workerThread,
+          {
+            type: "execute-using-dynamic-import",
+            params: {
               rootDirectoryUrl,
               fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              measureMemoryUsage,
               collectPerformance,
               coverageEnabled,
-              coverageConfig,
+              coverageInclude,
               coverageMethodForNodeJs,
               coverageFileUrl,
               exitAfterAction: true,
             },
           },
-        });
+          ({ status, value }) => {
+            if (status === "error") {
+              executionInternalErrorCallback(value);
+            } else {
+              executionCompletedCallback(value);
+            }
+          },
+        );
         const winner = await winnerPromise;
-        if (winner.name === "aborted") {
-          result.status = "aborted";
-          return;
-        }
-        if (winner.name === "error") {
-          const error = winner.data;
-          removeOutputListener();
-          result.status = "failed";
-          result.errors.push(error);
-          return;
-        }
-        if (winner.name === "exit") {
-          const { code } = winner.data;
-          await cleanup("process exit");
-          if (code === 12) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(
-                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
-              ),
-            );
-            return;
-          }
-          if (code === null || code === 0) {
-            result.status = "completed";
-            result.namespace = {};
-            return;
-          }
-          if (
-            code === EXIT_CODES.SIGINT ||
-            code === EXIT_CODES.SIGTERM ||
-            code === EXIT_CODES.SIGABORT
-          ) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(`node worker thread exited during execution`),
-            );
-            return;
-          }
-          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-          // means there was an error even if we don't know exactly what.
-          result.status = "failed";
-          result.errors.push(
-            new Error(
-              `node worker thread exited with code ${code} during execution`,
-            ),
-          );
-        }
-        const { status, value } = winner.data;
-        if (status === "action-failed") {
-          result.status = "failed";
-          result.errors.push(value);
-          return;
-        }
-        const { namespace, performance, coverage } = value;
-        result.status = "completed";
-        result.namespace = namespace;
-        result.performance = performance;
-        result.coverage = coverage;
-      };
-
-      try {
-        await writeResult();
+        raceHandlers[winner.name](winner.data);
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);
+      } finally {
+        if (keepRunning) {
+          stopSignal.notify = stop;
+        } else {
+          await stop();
+        }
+        await actionOperation.end();
+        await cleanup();
+        return result;
       }
-
-      if (keepRunning) {
-        stopSignal.notify = stop;
-      } else {
-        await stop();
-      }
-      await actionOperation.end();
-      return result;
     },
   };
 };
@@ -7275,14 +8475,37 @@ const installWorkerThreadOutputListener = (workerThread, callback) => {
   };
 };
 
-const sendToWorkerThread = (worker, { type, data }) => {
-  worker.postMessage({ jsenv: true, type, data });
+let previousId = 0;
+const requestActionOnWorkerThread = (
+  workerThread,
+  { type, params },
+  onResponse,
+) => {
+  const actionId = previousId + 1;
+  previousId = actionId;
+  const removeResultListener = onWorkerThreadMessage(
+    workerThread,
+    "action-result",
+    ({ id, ...payload }) => {
+      if (id === actionId) {
+        removeResultListener();
+        onResponse(payload);
+      }
+    },
+  );
+  workerThread.postMessage({
+    __jsenv__: "action",
+    data: {
+      id: actionId,
+      type,
+      params,
+    },
+  });
 };
 
-const onceWorkerThreadMessage = (workerThread, type, callback) => {
+const onWorkerThreadMessage = (workerThread, type, callback) => {
   const onmessage = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      workerThread.removeListener("message", onmessage);
+    if (message && message.__jsenv__ === type) {
       callback(message.data ? JSON.parse(message.data) : undefined);
     }
   };
@@ -7297,6 +8520,90 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
   return () => {
     worker.removeListener(type, callback);
   };
+};
+
+const istanbulCoverageMapFromCoverage = (coverage) => {
+  const { createCoverageMap } = importWithRequire("istanbul-lib-coverage");
+
+  const coverageAdjusted = {};
+  Object.keys(coverage).forEach((key) => {
+    coverageAdjusted[key.slice(2)] = {
+      ...coverage[key],
+      path: key.slice(2),
+    };
+  });
+
+  const coverageMap = createCoverageMap(coverageAdjusted);
+  return coverageMap;
+};
+
+const reportCoverageInConsole = (
+  testPlanResult,
+  { skipEmpty, skipFull } = {},
+) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
+  const testPlanCoverage = testPlanResult.coverage;
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
+  const context = libReport.createContext({
+    coverageMap: istanbulCoverageMapFromCoverage(testPlanCoverage),
+  });
+  const report = reports.create("text", {
+    skipEmpty,
+    skipFull,
+  });
+  report.execute(context);
+};
+
+const reportCoverageAsJson = (testPlanResult, fileUrl) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
+  const testPlanCoverage = testPlanResult.coverage;
+  const coverageAsText = JSON.stringify(testPlanCoverage, null, "  ");
+  writeFileSync(fileUrl, coverageAsText);
+  console.log(
+    `-> ${urlToFileSystemPath(fileUrl)} (${inspectFileSize(
+      Buffer.byteLength(coverageAsText),
+    )})`,
+  );
+};
+
+const reportCoverageAsHtml = (
+  testPlanResult,
+  directoryUrl,
+  { skipEmpty, skipFull } = {},
+) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
+  const testPlanCoverage = testPlanResult.coverage;
+
+  const { rootDirectoryUrl } = testPlanResult;
+  ensureEmptyDirectorySync(directoryUrl);
+  const coverageHtmlDirectoryRelativeUrl = urlToRelativeUrl(
+    directoryUrl,
+    rootDirectoryUrl,
+  );
+
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
+  const context = libReport.createContext({
+    dir: fileURLToPath(rootDirectoryUrl),
+    coverageMap: istanbulCoverageMapFromCoverage(testPlanCoverage),
+    sourceFinder: (path) =>
+      readFileSync(new URL(path, rootDirectoryUrl), "utf8"),
+  });
+  const report = reports.create("html", {
+    skipEmpty,
+    skipFull,
+    subdir: coverageHtmlDirectoryRelativeUrl,
+  });
+  report.execute(context);
+  // const htmlCoverageDirectoryIndexFileUrl = `${directoryUrl}index.html`;
+  // console.log(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
 };
 
 /*
@@ -7315,6 +8622,8 @@ const onceWorkerThreadEvent = (worker, type, callback) => {
 const execute = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
+  handleSIGUP = true,
+  handleSIGTERM = true,
   logLevel,
   rootDirectoryUrl,
   webServer,
@@ -7325,10 +8634,12 @@ const execute = async ({
   mirrorConsole = true,
   keepRunning = false,
 
-  collectConsole,
-  collectCoverage,
-  coverageTempDirectoryUrl,
+  collectConsole = false,
+  measureMemoryUsage = false,
+  onMeasureMemoryAvailable,
   collectPerformance = false,
+  collectCoverage = false,
+  coverageTempDirectoryUrl,
   runtime,
   runtimeParams,
 
@@ -7339,14 +8650,16 @@ const execute = async ({
     rootDirectoryUrl,
     "rootDirectoryUrl",
   );
-  const teardown = createTeardown();
+  const teardownCallbackSet = new Set();
   const executeOperation = Abort.startOperation();
   executeOperation.addAbortSignal(signal);
-  if (handleSIGINT) {
+  if (handleSIGINT || handleSIGUP || handleSIGTERM) {
     executeOperation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
-          SIGINT: true,
+          SIGINT: handleSIGINT,
+          SIGHUP: handleSIGUP,
+          SIGTERM: handleSIGTERM,
         },
         abort,
       );
@@ -7354,7 +8667,11 @@ const execute = async ({
   }
 
   if (runtime.type === "browser") {
-    await assertAndNormalizeWebServer(webServer, { signal, teardown, logger });
+    await assertAndNormalizeWebServer(webServer, {
+      signal,
+      teardownCallbackSet,
+      logger,
+    });
   }
 
   let resultTransformer = (result) => result;
@@ -7363,7 +8680,7 @@ const execute = async ({
     webServer,
     fileRelativeUrl,
     importMap,
-    teardown,
+    teardownCallbackSet,
     ...runtimeParams,
   };
 
@@ -7374,9 +8691,11 @@ const execute = async ({
     keepRunning,
     mirrorConsole,
     collectConsole,
+    measureMemoryUsage,
+    onMeasureMemoryAvailable,
+    collectPerformance,
     collectCoverage,
     coverageTempDirectoryUrl,
-    collectPerformance,
     runtime,
     runtimeParams,
   });
@@ -7403,9 +8722,11 @@ const execute = async ({
     }
     return result;
   } finally {
-    await teardown.trigger();
+    for (const teardownCallback of teardownCallbackSet) {
+      await teardownCallback();
+    }
     await executeOperation.end();
   }
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, webkit, webkitIsolatedTab };
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterFile, reporterList, webkit, webkitIsolatedTab };
