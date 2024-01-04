@@ -42,7 +42,52 @@
       link.href = cssUrl;
       document.head.appendChild(link);
 
-      window.initTerminal = ({ cols = 80 } = {}) => {
+      const drawRectangle = (
+        canvas,
+        { x, y, width, height, radius, fill, stroke, strokeWidth },
+      ) => {
+        const context = canvas.getContext("2d");
+        if (radius) {
+          context.beginPath();
+          context.roundRect(x, y, width, height, [radius]);
+          if (fill) {
+            context.fillStyle = fill;
+            context.fill();
+          }
+          if (stroke) {
+            context.strokeWidth = strokeWidth;
+            context.strokeStyle = stroke;
+            context.stroke();
+          }
+        }
+      };
+      const drawCircle = (
+        canvas,
+        { x, y, radius, fill, stroke, borderWidth },
+      ) => {
+        const context = canvas.getContext("2d");
+        context.beginPath();
+        context.arc(x, y, radius, 0, 2 * Math.PI, false);
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        if (borderWidth) {
+          context.lineWidth = 5;
+        }
+        if (stroke) {
+          context.strokeStyle = stroke;
+          context.stroke();
+        }
+      };
+
+      window.initTerminal = ({
+        cols = 80,
+        paddingLeft = 15,
+        paddingRight = 15,
+        fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
+        fontSize = 12,
+      } = {}) => {
         const term = new Terminal({
           convertEol: true,
           disableStdin: true,
@@ -50,8 +95,8 @@
           cursorInactiveStyle: "none",
           cols,
           rows: 20,
-          fontFamily: "SauceCodePro Nerd Font, Source Code Pro, Courier",
-          fontSize: 14,
+          fontFamily,
+          fontSize,
           // lineHeight: 18,
           theme: {
             background: "#282c34",
@@ -68,28 +113,68 @@
 
         const canvas = document.querySelector("#canvas");
         const context = canvas.getContext("2d");
-
         const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
-        canvas.width = xtermCanvas.width;
-        canvas.height = xtermCanvas.height;
+        canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
+        canvas.height = 40 + xtermCanvas.height;
+
+        draw_header: {
+          drawRectangle(canvas, {
+            x: 0,
+            y: 0,
+            width: canvas.width,
+            height: canvas.height,
+            fill: "#282c34",
+            stroke: "rgba(255,255,255,0.35)",
+            strokeWidth: 10,
+            radius: 8,
+          });
+          drawCircle(canvas, {
+            x: 20,
+            y: 20,
+            radius: 6,
+            fill: "#ff5f57",
+          });
+          drawCircle(canvas, {
+            x: 40,
+            y: 20,
+            radius: 6,
+            fill: "#febc2e",
+          });
+          drawCircle(canvas, {
+            x: 60,
+            y: 20,
+            radius: 6,
+            fill: "#28c840",
+          });
+
+          // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_text
+          const text = "Terminal";
+          context.font = `${fontSize}px ${fontFamily}`;
+          context.textBaseline = "middle";
+          context.textAlign = "center";
+          // const textSize = context.measureText(text);
+          context.fillStyle = "#abb2bf";
+          context.fillText(text, canvas.width / 2, 20);
+        }
+
+        const replicateXterm = () => {
+          context.drawImage(
+            xtermCanvas,
+            0,
+            0,
+            xtermCanvas.width,
+            xtermCanvas.height,
+            paddingLeft,
+            40,
+            xtermCanvas.width,
+            xtermCanvas.height,
+          );
+        };
 
         window.startRecording = async ({
           mimeType = "video/webm;codecs=h264",
         } = {}) => {
-          const replicateOnCanvas = () => {
-            context.drawImage(
-              xtermCanvas,
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-          };
-          setInterval(replicateOnCanvas, 25);
+          setInterval(replicateXterm, 25);
 
           const stream = canvas.captureStream();
           const mediaRecorder = new MediaRecorder(stream, {
@@ -110,10 +195,10 @@
 
           window.writeIntoTerminal = (data) => {
             term.write(data);
-            replicateOnCanvas();
+            replicateXterm();
           };
           window.stopRecording = async () => {
-            replicateOnCanvas();
+            replicateXterm();
             await new Promise((resolve) => {
               setTimeout(resolve, 50);
             });
