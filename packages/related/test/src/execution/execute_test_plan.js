@@ -25,7 +25,8 @@ import { generateCoverage } from "../coverage/generate_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
-import { listReporter, renderOutro } from "./reporters/reporter_list.js";
+import { reporterList, renderOutro } from "./reporters/reporter_list.js";
+import { reporterFile } from "./reporters/reporter_file.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -42,10 +43,6 @@ import { listReporter, renderOutro } from "./reporters/reporter_list.js";
 const logsDefault = {
   level: "info",
   dynamic: true,
-  memoryUsage: true,
-  mockFluctuatingValues: false, // used for snapshot testing logs
-  fileUrl: undefined,
-  fileAnsi: false,
 };
 const githubCheckDefault = {
   logLevel: "info",
@@ -119,6 +116,8 @@ export const executeTestPlan = async ({
   coverage = process.argv.includes("--coverage") ? coverageDefault : null,
 
   reporters = [],
+  listReporter = {},
+  fileReporter = {},
   ...rest
 }) => {
   const teardownCallbackSet = new Set();
@@ -170,13 +169,34 @@ export const executeTestPlan = async ({
         );
       }
       logs = { ...logsDefault, ...logs };
-      if (logs.fileUrl === undefined) {
-        logs.fileUrl = new URL(
-          "./.jsenv/jsenv_tests_output.txt",
-          rootDirectoryUrl,
+      logger = createLogger({ logLevel: logs.level });
+
+      if (fileReporter && logger.levels.info) {
+        if (typeof fileReporter === "string") {
+          fileReporter = { url: fileReporter };
+        }
+        if (fileReporter.url === undefined) {
+          fileReporter.url = new URL(
+            "./.jsenv/jsenv_tests_output.txt",
+            rootDirectoryUrl,
+          );
+        }
+        reporters.push(
+          typeof fileReporter.reporter === "string"
+            ? fileReporter
+            : reporterFile(fileReporter),
         );
       }
-      logger = createLogger({ logLevel: logs.level });
+      if (listReporter && logger.levels.info) {
+        if (logger.levels.debug) {
+          listReporter.dynamic = false;
+        }
+        reporters.push(
+          typeof listReporter.reporter === "string"
+            ? listReporter
+            : reporterList(listReporter),
+        );
+      }
     }
     // rootDirectoryUrl
     {
@@ -443,12 +463,6 @@ To fix this warning:
     }
   }
 
-  reporters.push(
-    listReporter({
-      logger,
-      logs,
-    }),
-  );
   const testPlanInfo = {
     rootDirectoryUrl: String(rootDirectoryUrl),
     groups: {},
@@ -526,7 +540,7 @@ To fix this warning:
           allocatedMs = defaultMsAllocatedPerExecution,
         } = stepConfig;
         const params = {
-          measureMemoryUsage: logs.memoryUsage,
+          measureMemoryUsage: true,
           measurePerformance: false,
           collectPerformance: false,
           collectConsole: true,
@@ -629,42 +643,46 @@ To fix this warning:
     });
     const annotations = [];
     reporters.push({
-      beforeAllExecution: (testPlanInfo) => {
-        return async () => {
-          const title = "Jsenv test results";
-          const summaryText = stripAnsi(renderOutro(testPlanInfo));
-          if (testPlanInfo.failed) {
-            await githubCheckRun.fail({
+      beforeAll: (testPlanInfo) => {
+        return {
+          afterEach: (execution) => {
+            const { result } = execution;
+            const { errors = [] } = result;
+            for (const error of errors) {
+              const annotation = githubAnnotationFromError(error, {
+                rootDirectoryUrl,
+                execution,
+              });
+              annotations.push(annotation);
+            }
+          },
+          afterAll: async () => {
+            const title = "Jsenv test results";
+            const summaryText = stripAnsi(renderOutro(testPlanInfo));
+            if (testPlanInfo.failed) {
+              await githubCheckRun.fail({
+                title,
+                summary: summaryText,
+                annotations,
+              });
+              return;
+            }
+            await githubCheckRun.pass({
               title,
               summary: summaryText,
               annotations,
             });
-            return;
-          }
-          await githubCheckRun.pass({
-            title,
-            summary: summaryText,
-            annotations,
-          });
-        };
-      },
-      beforeExecution: (executionInfo) => {
-        return () => {
-          const { result } = executionInfo;
-          const { errors = [] } = result;
-          for (const error of errors) {
-            const annotation = githubAnnotationFromError(error, {
-              rootDirectoryUrl,
-              executionInfo,
-            });
-            annotations.push(annotation);
-          }
+          },
         };
       },
     });
   }
 
-  const afterAllExecutionCallbackSet = new Set();
+  const beforeEachCallbackSet = new Set();
+  const beforeEachInOrderCallbackSet = new Set();
+  const afterEachCallbackSet = new Set();
+  const afterEachInOrderCallbackSet = new Set();
+  const afterAllCallbackSet = new Set();
   // execute all
   {
     const multipleExecutionsOperation = Abort.startOperation();
@@ -721,22 +739,25 @@ To fix this warning:
       execution.status = "executing";
       executionRemainingSet.delete(execution);
       executionExecutingSet.add(execution);
-      const afterExecutionCallbackSet = new Set();
-      const afterExecutionInOrderCallbackSet = new Set();
-      for (const reporter of reporters) {
-        const { beforeExecution } = reporter;
-        if (beforeExecution) {
-          const returnValue = beforeExecution(execution, testPlanInfo);
-          if (typeof returnValue === "function") {
-            afterExecutionCallbackSet.add(returnValue);
-          }
+      for (const beforeEachCallback of beforeEachCallbackSet) {
+        const returnValue = beforeEachCallback(execution, testPlanInfo);
+        if (typeof returnValue === "function") {
+          const callback = (...args) => {
+            afterEachCallbackSet.delete(callback);
+            return returnValue(...args);
+          };
+          afterEachCallbackSet.add(callback);
         }
-        const { beforeExecutionInOrder } = reporter;
-        if (beforeExecutionInOrder) {
-          const returnValue = beforeExecutionInOrder(execution, testPlanInfo);
-          if (typeof returnValue === "function") {
-            afterExecutionInOrderCallbackSet.add(returnValue);
-          }
+      }
+
+      for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
+        const returnValue = beforeEachInOrderCallback(execution, testPlanInfo);
+        if (typeof returnValue === "function") {
+          const callback = (...args) => {
+            afterEachInOrderCallbackSet.delete(callback);
+            return returnValue(...args);
+          };
+          afterEachInOrderCallbackSet.add(callback);
         }
       }
       const executionResult = await run({
@@ -759,16 +780,14 @@ To fix this warning:
         }
       }
 
-      for (const afterExecutionCallback of afterExecutionCallbackSet) {
-        afterExecutionCallback();
+      for (const afterEachCallback of afterEachCallbackSet) {
+        afterEachCallback(execution, testPlanInfo);
       }
-      afterExecutionCallbackSet.clear();
       callWhenPreviousExecutionAreDone(execution.index, () => {
         mutateCountersAfterExecutionEnds(countersInOrder, execution);
-        for (const afterExecutionInOrderCallback of afterExecutionInOrderCallbackSet) {
-          afterExecutionInOrderCallback();
+        for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
+          afterEachInOrderCallback(execution, testPlanInfo);
         }
-        afterExecutionInOrderCallbackSet.clear();
       });
 
       if (testPlanInfo.failed && failFast && counters.remaining) {
@@ -839,11 +858,40 @@ To fix this warning:
     try {
       const startMs = Date.now();
       for (const reporter of reporters) {
-        const beforeAllExecution = reporter.beforeAllExecution;
-        if (beforeAllExecution) {
-          const returnValue = beforeAllExecution(testPlanInfo);
-          if (typeof returnValue === "function") {
-            afterAllExecutionCallbackSet.add(returnValue);
+        const {
+          beforeAll,
+          // TODO: if defined add them too
+          // beforeEach,
+          // afterEach,
+          // beforeEachInOrder,
+          // afterEachInOrder,
+          // afterAll,
+        } = reporter;
+        if (beforeAll) {
+          const returnValue = await beforeAll(testPlanInfo);
+          if (returnValue) {
+            const {
+              beforeEach,
+              beforeEachInOrder,
+              afterEach,
+              afterEachInOrder,
+              afterAll,
+            } = returnValue;
+            if (beforeEach) {
+              beforeEachCallbackSet.add(beforeEach);
+            }
+            if (beforeEachInOrder) {
+              beforeEachInOrderCallbackSet.add(beforeEachInOrder);
+            }
+            if (afterEach) {
+              afterEachCallbackSet.add(afterEach);
+            }
+            if (afterEachInOrder) {
+              afterEachInOrderCallbackSet.add(afterEachInOrder);
+            }
+            if (afterAll) {
+              afterAllCallbackSet.add(afterAll);
+            }
           }
         }
       }
@@ -873,10 +921,12 @@ To fix this warning:
     }
   }
 
-  for (const afterAllExecutionCallback of afterAllExecutionCallbackSet) {
-    await afterAllExecutionCallback(testPlanInfo);
+  afterEachCallbackSet.clear();
+  afterEachInOrderCallbackSet.clear();
+  for (const afterAllCallback of afterAllCallbackSet) {
+    await afterAllCallback(testPlanInfo);
   }
-  afterAllExecutionCallbackSet.clear();
+  afterAllCallbackSet.clear();
   return testPlanInfo;
 };
 

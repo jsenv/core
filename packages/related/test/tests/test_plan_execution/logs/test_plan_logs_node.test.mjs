@@ -1,13 +1,20 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
+import {
+  renderTerminalSvg,
+  startTerminalVideoRecording,
+} from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
+
 import { UNICODE, ANSI } from "@jsenv/log";
 
 import {
   executeTestPlan,
   nodeWorkerThread,
   nodeChildProcess,
+  reporterList,
 } from "@jsenv/test";
+
+const isDev = process.execArgv.includes("--conditions=development");
 
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
@@ -15,44 +22,83 @@ UNICODE.supported = true;
 ANSI.supported = true;
 
 const test = async (filename, params) => {
-  const terminalSnapshotFileUrl = new URL(
-    `./snapshots/node/${filename}.svg`,
-    import.meta.url,
-  );
-  const terminalFileSnapshot = takeFileSnapshot(terminalSnapshotFileUrl);
-  {
-    let stdout = "";
-    const { write } = process.stdout;
-    process.stdout.write = (...args) => {
-      stdout += args;
-    };
-    await executeTestPlan({
-      logs: {
+  await executeTestPlan({
+    listReporter: false,
+    fileReporter: false,
+    reporters: [
+      reporterList({
         dynamic: false,
         mockFluctuatingValues: true,
-      },
-      rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-      testPlan: {
-        [filename]: {
-          worker_thread: {
-            runtime: nodeWorkerThread(),
-          },
-          child_process:
-            // console output order in not predictible on child_process
-            filename === "console.spec.js"
-              ? null
-              : {
-                  runtime: nodeChildProcess(),
-                },
+        spy: () => {
+          const terminalSnapshotFileUrl = new URL(
+            `./snapshots/node/${filename}.svg`,
+            import.meta.url,
+          );
+          const terminalFileSnapshot = takeFileSnapshot(
+            terminalSnapshotFileUrl,
+          );
+          let stdout = "";
+          return {
+            write: (log) => {
+              stdout += log;
+            },
+            end: async () => {
+              const svg = await renderTerminalSvg(stdout);
+              writeFileSync(terminalSnapshotFileUrl, svg);
+              terminalFileSnapshot.compare();
+            },
+          };
         },
+      }),
+      ...(isDev
+        ? [
+            reporterList({
+              dynamic: true,
+              spy: async () => {
+                const terminalVideoRecorder = await startTerminalVideoRecording(
+                  {
+                    rows: 30,
+                  },
+                );
+                return {
+                  write: (log) => {
+                    terminalVideoRecorder.write(log);
+                  },
+                  end: async () => {
+                    const terminalVideo = await terminalVideoRecorder.stop();
+                    const terminalVideoMp4 = await terminalVideo.mp4();
+                    writeFileSync(
+                      new URL(
+                        `./snapshots/node/${filename}.mp4`,
+                        import.meta.url,
+                      ),
+                      terminalVideoMp4,
+                    );
+                  },
+                };
+              },
+            }),
+          ]
+        : []),
+    ],
+    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+    testPlan: {
+      [filename]: {
+        worker_thread: {
+          runtime: nodeWorkerThread(),
+        },
+        child_process:
+          // console output order in not predictible on child_process
+          filename === "console.spec.js"
+            ? null
+            : {
+                runtime: nodeChildProcess(),
+              },
       },
-      githubCheck: false,
-      ...params,
-    });
-    process.stdout.write = write;
-    writeFileSync(terminalSnapshotFileUrl, await renderTerminalSvg(stdout));
-  }
-  terminalFileSnapshot.compare();
+    },
+    githubCheck: false,
+    ...params,
+  });
 };
 
 await test("console.spec.js");

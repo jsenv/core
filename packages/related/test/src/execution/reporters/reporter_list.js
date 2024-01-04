@@ -1,61 +1,72 @@
 import { memoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
 // import wrapAnsi from "wrap-ansi";
-import { writeFileSync } from "@jsenv/filesystem";
 import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
 import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
 
 import { formatErrorForTerminal } from "./format_error_for_terminal.js";
 
-export const listReporter = ({ logger, logs }) => {
-  if (!logger.levels.info) {
-    return {};
-  }
-
+export const reporterList = ({
+  dynamic,
+  mockFluctuatingValues, // used for snapshot testing logs
+  showMemoryUsage = true,
+  spy = () => {
+    return {
+      write: (log) => {
+        process.stdout.write(log);
+      },
+      end: () => {},
+    };
+  },
+}) => {
   const dynamicLogEnabled =
-    logs.dynamic &&
+    dynamic &&
     // canEraseProcessStdout
     process.stdout.isTTY &&
-    !logger.levels.debug &&
     // if there is an error during execution npm will mess up the output
     // (happens when npm runs several command in a workspace)
     // so we enable hot replace only when !process.exitCode (no error so far)
     process.exitCode !== 1;
 
-  let rawOutput = "";
-  const writeOutput = (log) => {
-    if (logger.levels.info) {
-      process.stdout.write(log);
-    }
-    rawOutput += stripAnsi(log);
-    // ansiOutput += log;
-    if (logs.fileUrl) {
-      writeFileSync(logs.fileUrl, rawOutput);
-    }
-  };
-
   const logOptions = {
-    ...logs,
+    showMemoryUsage,
+    mockFluctuatingValues,
     group: false,
     intermediateSummary: !dynamicLogEnabled,
   };
 
   let startMs = Date.now();
-  let dynamicLog = createDynamicLog();
-  const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-  let frameIndex = 0;
 
   return {
-    beforeAllExecution: (testPlanInfo) => {
-      logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
+    reporter: "list",
+    beforeAll: async (testPlanInfo) => {
+      let spyReturnValue = await spy();
+      let write = spyReturnValue.write;
+      let end = spyReturnValue.end;
+      spyReturnValue = undefined;
 
-      writeOutput(renderIntro(testPlanInfo, logOptions));
+      logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
+      write(renderIntro(testPlanInfo, logOptions));
       if (!dynamicLogEnabled) {
-        return () => {
-          writeOutput(renderOutro(testPlanInfo, logOptions));
+        return {
+          afterEachInOrder: (execution) => {
+            const log = renderExecutionLog(execution, logOptions);
+            write(log);
+          },
+          afterAll: async () => {
+            write(renderOutro(testPlanInfo, logOptions));
+            write = undefined;
+            await end();
+            end = undefined;
+          },
         };
       }
 
+      let dynamicLog = createDynamicLog({
+        stream: { write },
+      });
+      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+      let frameIndex = 0;
       const renderDynamicLog = (testPlanInfo) => {
         frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
         let dynamicLogContent = "";
@@ -87,26 +98,28 @@ export const listReporter = ({ logger, logs }) => {
         dynamicLogContent = `\n${dynamicLogContent}\n`;
         return dynamicLogContent;
       };
-
       dynamicLog.update(renderDynamicLog(testPlanInfo));
       const interval = setInterval(() => {
         dynamicLog.update(renderDynamicLog(testPlanInfo));
       }, 150);
 
-      return () => {
-        dynamicLog.update("");
-        dynamicLog.destroy();
-        dynamicLog = null;
-        clearInterval(interval);
-        writeOutput(renderOutro(testPlanInfo, logOptions));
-      };
-    },
-    beforeExecutionInOrder: (execution) => {
-      return () => {
-        dynamicLog.clearDuringFunctionCall(() => {
-          const log = renderExecutionLog(execution, logOptions);
-          writeOutput(log);
-        });
+      return {
+        afterEachInOrder: (execution) => {
+          dynamicLog.clearDuringFunctionCall(() => {
+            const log = renderExecutionLog(execution, logOptions);
+            write(log);
+          });
+        },
+        afterAll: async () => {
+          dynamicLog.update("");
+          dynamicLog.destroy();
+          dynamicLog = null;
+          clearInterval(interval);
+          write(renderOutro(testPlanInfo, logOptions));
+          write = undefined;
+          await end();
+          end = undefined;
+        },
       };
     },
   };
@@ -310,7 +323,7 @@ const renderRuntimeInfo = (execution, logOptions) => {
       : inspectDuration(duration, { short: true });
     infos.push(ANSI.color(durationFormatted, ANSI.GREY));
   }
-  if (logOptions.memoryUsage && typeof memoryUsage === "number") {
+  if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
     const memoryUsageFormatted = logOptions.mockFluctuatingValues
       ? `<mock>`
       : inspectMemoryUsage(memoryUsage);

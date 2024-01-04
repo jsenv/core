@@ -49,7 +49,11 @@ const startLocalServer = async () => {
   return server;
 };
 
-export const startTerminalVideoRecording = async ({ mimeType } = {}) => {
+export const startTerminalVideoRecording = async ({
+  cols,
+  rows,
+  mimeType,
+} = {}) => {
   const server = await startLocalServer();
   const browser = await chromium.launch({
     channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
@@ -66,10 +70,11 @@ export const startTerminalVideoRecording = async ({ mimeType } = {}) => {
   await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
     /* eslint-env browser */
-    async () => {
+    async ({ cols, rows }) => {
       await window.xtreamReadyPromise;
-      await window.initTerminal();
+      await window.initTerminal({ cols, rows });
     },
+    { cols, rows },
     /* eslint-env node */
   );
   await page.evaluate(
