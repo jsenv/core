@@ -57,12 +57,13 @@ const test = async (filename, params) => {
               spy: async () => {
                 const terminalVideoRecorder = await startTerminalVideoRecording(
                   {
+                    columns: 120,
                     rows: 30,
                   },
                 );
                 return {
-                  write: (log) => {
-                    terminalVideoRecorder.write(log);
+                  write: async (log) => {
+                    await terminalVideoRecorder.write(log);
                   },
                   end: async () => {
                     const terminalVideo = await terminalVideoRecorder.stop();

@@ -54,7 +54,7 @@ export const reporterList = ({
             write(log);
           },
           afterAll: async () => {
-            write(renderOutro(testPlanInfo, logOptions));
+            await write(renderOutro(testPlanInfo, logOptions));
             write = undefined;
             await end();
             end = undefined;
@@ -115,7 +115,7 @@ export const reporterList = ({
           dynamicLog.destroy();
           dynamicLog = null;
           clearInterval(interval);
-          write(renderOutro(testPlanInfo, logOptions));
+          await write(renderOutro(testPlanInfo, logOptions));
           write = undefined;
           await end();
           end = undefined;
