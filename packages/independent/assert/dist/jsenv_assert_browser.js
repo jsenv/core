@@ -107,71 +107,6 @@ const groupDigits = (digits, {
 //   return parts.join("_");
 // };
 
-// https://github.com/mgenware/string-to-template-literal/blob/main/src/main.ts#L1
-
-const escapeTemplateStringSpecialCharacters = string => {
-  string = String(string);
-  let i = 0;
-  let escapedString = "";
-  while (i < string.length) {
-    const char = string[i];
-    i++;
-    escapedString += isTemplateStringSpecialChar(char) ? "\\".concat(char) : char;
-  }
-  return escapedString;
-};
-const isTemplateStringSpecialChar = char => templateStringSpecialChars.indexOf(char) > -1;
-const templateStringSpecialChars = ["\\", "`", "$"];
-const preNewLineAndIndentation = (value, {
-  depth,
-  indentUsingTab,
-  indentSize
-}) => {
-  return "".concat(newLineAndIndent({
-    count: depth + 1,
-    useTabs: indentUsingTab,
-    size: indentSize
-  })).concat(value);
-};
-const postNewLineAndIndentation = ({
-  depth,
-  indentUsingTab,
-  indentSize
-}) => {
-  return newLineAndIndent({
-    count: depth,
-    useTabs: indentUsingTab,
-    size: indentSize
-  });
-};
-const newLineAndIndent = ({
-  count,
-  useTabs,
-  size
-}) => {
-  if (useTabs) {
-    // eslint-disable-next-line prefer-template
-    return "\n" + "\t".repeat(count);
-  }
-  // eslint-disable-next-line prefer-template
-  return "\n" + " ".repeat(count * size);
-};
-const wrapNewLineAndIndentation = (value, {
-  depth,
-  indentUsingTab,
-  indentSize
-}) => {
-  return "".concat(preNewLineAndIndentation(value, {
-    depth,
-    indentUsingTab,
-    indentSize
-  })).concat(postNewLineAndIndentation({
-    depth,
-    indentUsingTab,
-    indentSize
-  }));
-};
-
 const DOUBLE_QUOTE = "\"";
 const SINGLE_QUOTE = "'";
 const BACKTICK = "`";
@@ -193,6 +128,21 @@ const inspectString = (value, {
     preserveLineBreaks
   });
 };
+
+// https://github.com/mgenware/string-to-template-literal/blob/main/src/main.ts#L1
+const escapeTemplateStringSpecialCharacters = string => {
+  string = String(string);
+  let i = 0;
+  let escapedString = "";
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+    escapedString += isTemplateStringSpecialChar(char) ? "\\".concat(char) : char;
+  }
+  return escapedString;
+};
+const isTemplateStringSpecialChar = char => templateStringSpecialChars.indexOf(char) > -1;
+const templateStringSpecialChars = ["\\", "`", "$"];
 const determineQuote = (string, {
   canUseTemplateString,
   quoteDefault = DOUBLE_QUOTE
@@ -324,6 +274,56 @@ const inspectUndefined = () => "undefined";
 
 const inspectBigInt = value => {
   return "".concat(value, "n");
+};
+
+const preNewLineAndIndentation = (value, {
+  depth,
+  indentUsingTab,
+  indentSize
+}) => {
+  return "".concat(newLineAndIndent({
+    count: depth + 1,
+    useTabs: indentUsingTab,
+    size: indentSize
+  })).concat(value);
+};
+const postNewLineAndIndentation = ({
+  depth,
+  indentUsingTab,
+  indentSize
+}) => {
+  return newLineAndIndent({
+    count: depth,
+    useTabs: indentUsingTab,
+    size: indentSize
+  });
+};
+const newLineAndIndent = ({
+  count,
+  useTabs,
+  size
+}) => {
+  if (useTabs) {
+    // eslint-disable-next-line prefer-template
+    return "\n" + "\t".repeat(count);
+  }
+  // eslint-disable-next-line prefer-template
+  return "\n" + " ".repeat(count * size);
+};
+const wrapNewLineAndIndentation = (value, {
+  depth,
+  indentUsingTab,
+  indentSize
+}) => {
+  return "".concat(preNewLineAndIndentation(value, {
+    depth,
+    indentUsingTab,
+    indentSize
+  })).concat(postNewLineAndIndentation({
+    depth,
+    indentUsingTab,
+    indentSize
+  }));
 };
 
 const inspectConstructor = (value, {
@@ -2082,7 +2082,9 @@ const MAX_HEIGHT = 10;
 let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 30;
-const stringsComparisonToErrorMessage = comparison => {
+const stringsComparisonToErrorMessage = (comparison, {
+  format
+}) => {
   const isStartsWithComparison = comparison.type === "starts_with";
   if (comparison.type !== "identity" && !isStartsWithComparison) {
     return undefined;
@@ -2103,14 +2105,16 @@ const stringsComparisonToErrorMessage = comparison => {
     actual,
     expected,
     path,
-    name
+    name,
+    format
   });
 };
 const formatStringAssertionErrorMessage = ({
   actual,
   expected,
   path = "",
-  name = "string"
+  name = "string",
+  format
 }) => {
   const actualQuote = determineQuote(actual);
   const formatActualChar = char => {
@@ -2166,6 +2170,7 @@ const formatStringAssertionErrorMessage = ({
       const lineSource = lineStrings[index];
       if (lineNumbersOnTheLeft) {
         let asideSource = "".concat(fillRight(index + 1, lineAfterEnd), " |");
+        asideSource = format(asideSource, "line_number_aside");
         details += "".concat(asideSource, " ");
       }
       details += truncateLine(lineSource, {
@@ -2205,7 +2210,8 @@ const formatStringAssertionErrorMessage = ({
         annotationIndentation += " ".repeat(spacesFromLineNumbers);
       }
       annotationIndentation += " ".repeat(annotationColumn);
-      details += "\n".concat(annotationIndentation).concat(COLUMN_MARKER_CHAR);
+      details += "\n".concat(annotationIndentation);
+      details += format(COLUMN_MARKER_CHAR, "column_marker_char");
       details += "\n".concat(annotationLabel);
       if (expectedOverview) {
         details += " ".concat(expectedQuote);
@@ -2460,9 +2466,13 @@ const betweenComparisonToMessage = comparison => {
   });
 };
 
-const errorMessageFromComparison = comparison => {
+const errorMessageFromComparison = (comparison, {
+  format
+}) => {
   const failedComparison = deepestComparison(comparison);
-  const errorMessageFromCandidates = firstFunctionReturningSomething([anyComparisonToErrorMessage, mapEntryComparisonToErrorMessage, notComparisonToErrorMessage, matchesRegExpToErrorMessage, prototypeComparisonToErrorMessage, referenceComparisonToErrorMessage, propertiesComparisonToErrorMessage, propertiesOrderComparisonToErrorMessage, symbolsComparisonToErrorMessage, symbolsOrderComparisonToErrorMessage, setSizeComparisonToMessage, arrayLengthComparisonToMessage, stringsComparisonToErrorMessage, betweenComparisonToMessage], failedComparison);
+  const errorMessageFromCandidates = firstFunctionReturningSomething([anyComparisonToErrorMessage, mapEntryComparisonToErrorMessage, notComparisonToErrorMessage, matchesRegExpToErrorMessage, prototypeComparisonToErrorMessage, referenceComparisonToErrorMessage, propertiesComparisonToErrorMessage, propertiesOrderComparisonToErrorMessage, symbolsComparisonToErrorMessage, symbolsOrderComparisonToErrorMessage, setSizeComparisonToMessage, arrayLengthComparisonToMessage, stringsComparisonToErrorMessage, betweenComparisonToMessage], failedComparison, {
+    format
+  });
   return errorMessageFromCandidates || defaultComparisonToErrorMessage(failedComparison);
 };
 const deepestComparison = comparison => {
@@ -2476,11 +2486,11 @@ const deepestComparison = comparison => {
   }
   return current;
 };
-const firstFunctionReturningSomething = (fnCandidates, failedComparison) => {
+const firstFunctionReturningSomething = (fnCandidates, ...args) => {
   let i = 0;
   while (i < fnCandidates.length) {
     const fnCandidate = fnCandidates[i];
-    const returnValue = fnCandidate(failedComparison);
+    const returnValue = fnCandidate(...args);
     if (returnValue !== null && returnValue !== undefined) {
       return returnValue;
     }
@@ -2496,7 +2506,9 @@ const createAssertionError = message => {
   return error;
 };
 
-const createAssert = () => {
+const createAssert = ({
+  format = v => v
+} = {}) => {
   const assert = (...args) => {
     if (args.length === 0) {
       throw new Error("assert must be called with { actual, expected }, missing first argument");
@@ -2533,7 +2545,9 @@ const createAssert = () => {
       checkPropertiesOrder
     });
     if (comparison.failed) {
-      let errorMessage = message || errorMessageFromComparison(comparison);
+      let errorMessage = message || errorMessageFromComparison(comparison, {
+        format
+      });
       errorMessage = appendDetails(errorMessage, details);
       const error = createAssertionError(errorMessage);
       if (Error.captureStackTrace) {
@@ -2581,6 +2595,7 @@ const createAssert = () => {
     Object.assign(objectWithoutPrototype, object);
     return objectWithoutPrototype;
   };
+  assert.format = format;
   assert.isAssertionError = isAssertionError;
   assert.createAssertionError = createAssertionError;
   return assert;

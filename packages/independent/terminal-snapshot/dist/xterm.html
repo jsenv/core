@@ -83,6 +83,7 @@
 
       window.initTerminal = ({
         cols = 80,
+        rows = 25,
         paddingLeft = 15,
         paddingRight = 15,
         fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
@@ -94,7 +95,7 @@
           // cursorBlink: false,
           cursorInactiveStyle: "none",
           cols,
-          rows: 20,
+          rows,
           fontFamily,
           fontSize,
           // lineHeight: 18,
