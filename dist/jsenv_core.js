@@ -13,7 +13,7 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
@@ -10886,34 +10886,32 @@ const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        const jsUrls = await parseJsUrls({
+          js: urlInfo.content,
+          url: urlInfo.url,
+          isJsModule: true,
+        });
         const magicSource = createMagicSource(urlInfo.content);
-        for (const referenceToOther of urlInfo.referenceToOthersSet) {
-          if (referenceToOther.subtype === "import_meta_resolve") {
-            const originalSpecifierLength = Buffer.byteLength(
-              referenceToOther.specifier,
-            );
-            const specifierLength = Buffer.byteLength(
-              referenceToOther.generatedSpecifier.slice(1, -1), // remove `"` around
-            );
-            const specifierLengthDiff =
-              specifierLength - originalSpecifierLength;
-            const { node } = referenceToOther.astInfo;
-            const end = node.end + specifierLengthDiff;
-            magicSource.replace({
-              start: node.start,
-              end,
-              replacement: `new URL(${referenceToOther.generatedSpecifier}, import.meta.url).href`,
-            });
-            const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
-            const newLengthBeforeSpecifier = "new URL(".length;
-            const lengthDiff =
-              currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
-            referenceToOther.specifierColumn -= lengthDiff;
-            referenceToOther.specifierStart -= lengthDiff;
-            referenceToOther.specifierEnd =
-              referenceToOther.specifierStart +
-              Buffer.byteLength(referenceToOther.generatedSpecifier);
+        for (const jsUrl of jsUrls) {
+          if (jsUrl.subtype !== "import_meta_resolve") {
+            continue;
           }
+          const { node } = jsUrl.astInfo;
+          let reference;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            if (
+              referenceToOther.generatedSpecifier.slice(1, -1) ===
+              jsUrl.specifier
+            ) {
+              reference = referenceToOther;
+              break;
+            }
+          }
+          magicSource.replace({
+            start: node.start,
+            end: node.end,
+            replacement: `new URL(${reference.generatedSpecifier}, import.meta.url).href`,
+          });
         }
         return magicSource.toContentAndSourcemap();
       },

@@ -1,4 +1,6 @@
-const resolvePackageName = new URL("./", import.meta.url).href;
-const resolvePackageSubpath = new URL("./json/package.json", import.meta.url).href;
+const resolvePackageName = import.meta.resolve("./");
+const resolvePackageSubpath = import.meta.resolve("./json/package.json");
+const resolveFoo = import.meta.resolve("./js/foo.js");
+const resolveBar = import.meta.resolve("bar/package.json");
 
-export { resolvePackageName, resolvePackageSubpath };
+export { resolveBar, resolveFoo, resolvePackageName, resolvePackageSubpath };

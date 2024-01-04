@@ -10,6 +10,9 @@ const test = async (filename, { runtimeCompat }) => {
   const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logLevel: "warn",
+    ignore: {
+      "./node_modules/bar/": true,
+    },
     sourceDirectoryUrl: new URL("./node_client/", import.meta.url),
     buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
@@ -21,8 +24,8 @@ const test = async (filename, { runtimeCompat }) => {
 };
 
 await test("node_not_supported", {
-  runtimeCompat: { node: "20" },
+  runtimeCompat: { node: "19" },
 });
 await test("node_supported", {
-  runtimeCompat: { node: "19" },
+  runtimeCompat: { node: "20" },
 });
