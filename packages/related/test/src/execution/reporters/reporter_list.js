@@ -7,7 +7,7 @@ import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
 import { formatErrorForTerminal } from "./format_error_for_terminal.js";
 
 export const reporterList = ({
-  dynamic,
+  dynamic = true,
   mockFluctuatingValues, // used for snapshot testing logs
   showMemoryUsage = true,
   spy = () => {
