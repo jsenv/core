@@ -1,11 +1,7 @@
 import { isIP } from "node:net";
 import cluster from "node:cluster";
 import { createDetailedMessage, createLogger } from "@jsenv/log";
-import {
-  Abort,
-  raceProcessTeardownEvents,
-  createCallbackListNotifiedOnce,
-} from "@jsenv/abort";
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createServiceController } from "./service_controller.js";
@@ -156,7 +152,7 @@ export const startServer = async ({
   let status = "starting";
   let nodeServer;
   const startServerOperation = Abort.startOperation();
-  const stopCallbackList = createCallbackListNotifiedOnce();
+  const stopCallbackSet = new Set();
   const serverOrigins = {
     local: "", // favors hostname when possible
   };
@@ -280,10 +276,10 @@ export const startServer = async ({
   // (otherwise an AbortError is thrown to the code calling "startServer")
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
-  stopCallbackList.add(({ reason }) => {
+  stopCallbackSet.add(({ reason }) => {
     logger.info(`${serverName} stopping server (reason: ${reason})`);
   });
-  stopCallbackList.add(async () => {
+  stopCallbackSet.add(async () => {
     await stopListening(nodeServer);
   });
   let stoppedResolve;
@@ -292,7 +288,12 @@ export const startServer = async ({
   });
   const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "stopping";
-    await Promise.all(stopCallbackList.notify({ reason }));
+    const promises = [];
+    for (const stopCallback of stopCallbackSet) {
+      promises.push(stopCallback({ reason }));
+    }
+    stopCallbackSet.clear();
+    await Promise.all(promises);
     serviceController.callHooks("serverStopped", { reason });
     status = "stopped";
     stoppedResolve(reason);
@@ -304,7 +305,7 @@ export const startServer = async ({
       stop(PROCESS_TEARDOWN_EVENTS_MAP[winner.name]);
     },
   );
-  stopCallbackList.add(cancelProcessTeardownRace);
+  stopCallbackSet.add(cancelProcessTeardownRace);
 
   const onError = (error) => {
     if (status === "stopping" && error.code === "ECONNRESET") {
@@ -319,19 +320,19 @@ export const startServer = async ({
     nodeServer,
     onError,
   );
-  stopCallbackList.add(removeConnectionErrorListener);
+  stopCallbackSet.add(removeConnectionErrorListener);
 
   const connectionsTracker = trackServerPendingConnections(nodeServer, {
     http2,
   });
   // opened connection must be shutdown before the close event is emitted
-  stopCallbackList.add(connectionsTracker.stop);
+  stopCallbackSet.add(connectionsTracker.stop);
 
   const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
     http2,
   });
   // ensure pending requests got a response from the server
-  stopCallbackList.add((reason) => {
+  stopCallbackSet.add((reason) => {
     pendingRequestsTracker.stop({
       status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
       reason,
@@ -371,13 +372,13 @@ export const startServer = async ({
         };
       });
       receiveRequestOperation.addAbortSource((abort) => {
-        return stopCallbackList.add(abort);
+        return stopCallbackSet.add(abort);
       });
 
       const sendResponseOperation = Abort.startOperation();
       sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
       sendResponseOperation.addAbortSource((abort) => {
-        return stopCallbackList.add(abort);
+        return stopCallbackSet.add(abort);
       });
 
       const request = fromNodeRequest(nodeRequest, {
@@ -930,7 +931,7 @@ export const startServer = async ({
     };
     const removeRequestListener = listenRequest(nodeServer, requestCallback);
     // ensure we don't try to handle new requests while server is stopping
-    stopCallbackList.add(removeRequestListener);
+    stopCallbackSet.add(removeRequestListener);
   }
 
   websocket: {
@@ -983,8 +984,8 @@ export const startServer = async ({
         "upgrade",
         upgradeCallback,
       );
-      stopCallbackList.add(removeUpgradeCallback);
-      stopCallbackList.add(() => {
+      stopCallbackSet.add(removeUpgradeCallback);
+      stopCallbackSet.add(() => {
         websocketClients.forEach((websocketClient) => {
           websocketClient.close();
         });
@@ -1017,7 +1018,7 @@ export const startServer = async ({
     addEffect: (callback) => {
       const cleanup = callback();
       if (typeof cleanup === "function") {
-        stopCallbackList.add(cleanup);
+        stopCallbackSet.add(cleanup);
       }
     },
   });
