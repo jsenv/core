@@ -1,4 +1,5 @@
 import { createMagicSource } from "@jsenv/sourcemap";
+import { parseJsUrls } from "@jsenv/ast";
 
 export const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
   return {
@@ -16,34 +17,32 @@ export const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        const jsUrls = await parseJsUrls({
+          js: urlInfo.content,
+          url: urlInfo.url,
+          isJsModule: true,
+        });
         const magicSource = createMagicSource(urlInfo.content);
-        for (const referenceToOther of urlInfo.referenceToOthersSet) {
-          if (referenceToOther.subtype !== "import_meta_resolve") {
+        for (const jsUrl of jsUrls) {
+          if (jsUrl.subtype !== "import_meta_resolve") {
             continue;
           }
-          const originalSpecifierLength = Buffer.byteLength(
-            referenceToOther.specifier,
-          );
-          const specifierLength = Buffer.byteLength(
-            referenceToOther.generatedSpecifier.slice(1, -1), // remove `"` around
-          );
-          const specifierLengthDiff = specifierLength - originalSpecifierLength;
-          const { node } = referenceToOther.astInfo;
-          const end = node.end + specifierLengthDiff;
+          const { node } = jsUrl.astInfo;
+          let reference;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            if (
+              referenceToOther.generatedSpecifier.slice(1, -1) ===
+              jsUrl.specifier
+            ) {
+              reference = referenceToOther;
+              break;
+            }
+          }
           magicSource.replace({
             start: node.start,
-            end,
-            replacement: `new URL(${referenceToOther.generatedSpecifier}, import.meta.url).href`,
+            end: node.end,
+            replacement: `new URL(${reference.generatedSpecifier}, import.meta.url).href`,
           });
-          const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
-          const newLengthBeforeSpecifier = "new URL(".length;
-          const lengthDiff =
-            currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
-          referenceToOther.specifierColumn -= lengthDiff;
-          referenceToOther.specifierStart -= lengthDiff;
-          referenceToOther.specifierEnd =
-            referenceToOther.specifierStart +
-            Buffer.byteLength(referenceToOther.generatedSpecifier);
         }
         return magicSource.toContentAndSourcemap();
       },

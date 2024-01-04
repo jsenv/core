@@ -1,0 +1,8 @@
+{
+  "name": "test",
+  "private": true,
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  }
+}

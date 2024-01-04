@@ -12,9 +12,9 @@ const test = async ({ runtimeCompat }) => {
   });
 };
 
-// await test('node_not_supported', {
-//   runtimeCompat: { node: "20" },
-// });
+await test("node_not_supported", {
+  runtimeCompat: { node: "20" },
+});
 await test("node_supported", {
   runtimeCompat: { node: "19" },
 });
