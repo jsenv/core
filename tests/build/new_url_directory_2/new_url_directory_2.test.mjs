@@ -26,7 +26,7 @@ const test = async (params) => {
 };
 
 await test({
-  directoryReferenceAllowed: true,
+  directoryReferenceEffect: "copy",
   runtimeCompat: { node: "19" },
   bundling: false,
   minification: false,

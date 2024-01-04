@@ -18180,7 +18180,7 @@ const jsenvPluginProtocolFile = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
-  directoryReferenceAllowed = false,
+  directoryReferenceEffect = "error",
 }) => {
   return [
     {
@@ -18261,16 +18261,26 @@ const jsenvPluginProtocolFile = ({
         }
         reference.leadsToADirectory = stat && stat.isDirectory();
         if (reference.leadsToADirectory) {
-          const directoryAllowed =
+          let actionForDirectory;
+          if (
             reference.type === "http_request" ||
-            reference.type === "filesystem" ||
-            (typeof directoryReferenceAllowed === "function" &&
-              directoryReferenceAllowed(reference)) ||
-            directoryReferenceAllowed;
-          if (!directoryAllowed) {
+            reference.type === "filesystem"
+          ) {
+            actionForDirectory = "copy";
+          } else if (typeof directoryReferenceEffect === "string") {
+            actionForDirectory = directoryReferenceEffect;
+          } else if (typeof directoryReferenceEffect === "function") {
+            actionForDirectory = directoryReferenceEffect(reference);
+          } else {
+            actionForDirectory = "error";
+          }
+          if (actionForDirectory === "error") {
             const error = new Error("Reference leads to a directory");
             error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
             throw error;
+          }
+          if (actionForDirectory === "preserve") {
+            return `ignore:${url}${search}${hash}`;
           }
         }
         const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
@@ -20027,7 +20037,7 @@ const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
-  directoryReferenceAllowed,
+  directoryReferenceEffect,
   supervisor,
   injections,
   transpilation = true,
@@ -20062,7 +20072,7 @@ const getCorePlugins = ({
        - All the rest uses web standard url resolution
      */
     jsenvPluginProtocolFile({
-      directoryReferenceAllowed,
+      directoryReferenceEffect,
       magicExtensions,
       magicDirectoryIndex,
     }),
@@ -21662,7 +21672,7 @@ const build = async ({
   nodeEsmResolution,
   magicExtensions,
   magicDirectoryIndex,
-  directoryReferenceAllowed,
+  directoryReferenceEffect,
   scenarioPlaceholders,
   injections,
   transpilation = {},
@@ -21848,7 +21858,7 @@ build ${entryPointKeys.length} entry points`);
           nodeEsmResolution,
           magicExtensions,
           magicDirectoryIndex,
-          directoryReferenceAllowed,
+          directoryReferenceEffect,
           injections,
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleConversion,

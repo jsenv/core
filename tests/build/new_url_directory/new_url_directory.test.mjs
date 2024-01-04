@@ -66,5 +66,5 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
 }
 
 // but it can be allowed explicitely and it will copy the directory content
-// in the build directory and update the url accorindgly
-await test({ directoryReferenceAllowed: true });
+// in the build directory and update the url accoringly
+await test({ directoryReferenceEffect: "copy" });

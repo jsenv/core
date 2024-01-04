@@ -32,8 +32,8 @@ await build({
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
   },
-  directoryReferenceAllowed: (reference) => {
-    return reference.url.includes("/babel_helpers/");
+  directoryReferenceEffect: (reference) => {
+    return reference.url.includes("/babel_helpers/") ? "copy" : "error";
   },
   runtimeCompat: {
     node: "16.14",
