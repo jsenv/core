@@ -542,7 +542,6 @@ window.__supervisor__ = (() => {
                   stackFrame.evalSite = getPropertiesFromEvalOrigin(evalOrigin);
                 }
               }
-
               stackFrames.push(stackFrame);
             }
             return "";

@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="651.45"
+  height="670.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="649.45"
+      height="668.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="611.45"
+    height="630.45"
     overflow="hidden"
   >
     <svg
       width="725.71"
-      height="611.45"
+      height="630.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#abb2bf"
@@ -72,64 +72,67 @@
         <text x="43.61" y="166.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="94.01" y="185.55" fill="#B22222">^</text>
         <text x="10" y="204.55">Error: here</text>
-        <text x="10" y="223.55" fill="#B22222"
-          >--------------------------------------</text
+        <text x="26.8" y="223.55">
+          &#x3C;mock&#x3E;/error_in_js_module.spec.js:1:7</text
         >
         <text x="10" y="242.55" fill="#B22222"
+          >--------------------------------------</text
+        >
+        <text x="10" y="261.55" fill="#B22222"
           >&#x2716; 2/3 error_in_js_classic.spec.html</text
         >
-        <text x="312.45" y="242.55" fill="#A9A9A9">[</text>
-        <text x="320.85" y="242.55" fill="#A9A9A9">firefox</text>
-        <text x="379.66" y="242.55" fill="#A9A9A9">/</text>
-        <text x="388.06" y="242.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="438.47" y="242.55" fill="#A9A9A9">]</text>
-        <text x="455.27" y="242.55"> (2 </text>
-        <text x="480.48" y="242.55" fill="#B22222">failed</text>
-        <text x="530.88" y="242.55">, 1 remaining)</text>
-        <text x="10" y="261.55" fill="#B22222">---------------</text>
-        <text x="144.42" y="261.55"> error </text>
-        <text x="194.83" y="261.55" fill="#B22222">----------------</text>
-        <text x="10" y="280.55" fill="#A9A9A9">1 |</text>
-        <text x="43.61" y="280.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="94.01" y="299.55" fill="#B22222">^</text>
-        <text x="10" y="318.55">Error: here</text>
-        <text x="10" y="337.55"
+        <text x="312.45" y="261.55" fill="#A9A9A9">[</text>
+        <text x="320.85" y="261.55" fill="#A9A9A9">firefox</text>
+        <text x="379.66" y="261.55" fill="#A9A9A9">/</text>
+        <text x="388.06" y="261.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+        <text x="438.47" y="261.55" fill="#A9A9A9">]</text>
+        <text x="455.27" y="261.55"> (2 </text>
+        <text x="480.48" y="261.55" fill="#B22222">failed</text>
+        <text x="530.88" y="261.55">, 1 remaining)</text>
+        <text x="10" y="280.55" fill="#B22222">---------------</text>
+        <text x="144.42" y="280.55"> error </text>
+        <text x="194.83" y="280.55" fill="#B22222">----------------</text>
+        <text x="10" y="299.55" fill="#A9A9A9">1 |</text>
+        <text x="43.61" y="299.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="94.01" y="318.55" fill="#B22222">^</text>
+        <text x="10" y="337.55">Error: here</text>
+        <text x="10" y="356.55"
           >@&#x3C;mock&#x3E;/error_in_js_module.spec.js:1:7</text
         >
-        <text x="10" y="356.55" fill="#B22222"
+        <text x="10" y="375.55" fill="#B22222"
           >--------------------------------------</text
         >
-        <text x="10" y="375.55" fill="#B22222"
+        <text x="10" y="394.55" fill="#B22222"
           >&#x2716; 3/3 error_in_js_classic.spec.html</text
         >
-        <text x="312.45" y="375.55" fill="#A9A9A9">[</text>
-        <text x="320.85" y="375.55" fill="#A9A9A9">webkit</text>
-        <text x="371.26" y="375.55" fill="#A9A9A9">/</text>
-        <text x="379.66" y="375.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="430.07" y="375.55" fill="#A9A9A9">]</text>
-        <text x="446.87" y="375.55"> (all </text>
-        <text x="488.88" y="375.55" fill="#B22222">failed</text>
-        <text x="539.29" y="375.55">)</text>
-        <text x="10" y="394.55" fill="#B22222">---------------</text>
-        <text x="144.42" y="394.55"> error </text>
-        <text x="194.83" y="394.55" fill="#B22222">----------------</text>
-        <text x="10" y="413.55" fill="#A9A9A9">1 |</text>
-        <text x="43.61" y="413.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="169.63" y="432.55" fill="#B22222">^</text>
-        <text x="10" y="451.55">Error: here</text>
-        <text x="10" y="470.55"
+        <text x="312.45" y="394.55" fill="#A9A9A9">[</text>
+        <text x="320.85" y="394.55" fill="#A9A9A9">webkit</text>
+        <text x="371.26" y="394.55" fill="#A9A9A9">/</text>
+        <text x="379.66" y="394.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+        <text x="430.07" y="394.55" fill="#A9A9A9">]</text>
+        <text x="446.87" y="394.55"> (all </text>
+        <text x="488.88" y="394.55" fill="#B22222">failed</text>
+        <text x="539.29" y="394.55">)</text>
+        <text x="10" y="413.55" fill="#B22222">---------------</text>
+        <text x="144.42" y="413.55"> error </text>
+        <text x="194.83" y="413.55" fill="#B22222">----------------</text>
+        <text x="10" y="432.55" fill="#A9A9A9">1 |</text>
+        <text x="43.61" y="432.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="169.63" y="451.55" fill="#B22222">^</text>
+        <text x="10" y="470.55">Error: here</text>
+        <text x="10" y="489.55"
           >module code@&#x3C;mock&#x3E;/error_in_js_module.spec.js:1:16</text
         >
-        <text x="10" y="489.55" fill="#B22222"
+        <text x="10" y="508.55" fill="#B22222"
           >--------------------------------------</text
         >
-        <text x="10" y="527.55" fill="#A9A9A9">------------------</text>
-        <text x="169.63" y="527.55"> summary </text>
-        <text x="236.84" y="527.55" fill="#A9A9A9">------------------</text>
-        <text x="10" y="546.55">3 executions: all </text>
-        <text x="161.22" y="546.55" fill="#B22222">failed</text>
-        <text x="10" y="565.55">duration: &#x3C;mock&#x3E;</text>
-        <text x="10" y="584.55" fill="#A9A9A9"
+        <text x="10" y="546.55" fill="#A9A9A9">------------------</text>
+        <text x="169.63" y="546.55"> summary </text>
+        <text x="236.84" y="546.55" fill="#A9A9A9">------------------</text>
+        <text x="10" y="565.55">3 executions: all </text>
+        <text x="161.22" y="565.55" fill="#B22222">failed</text>
+        <text x="10" y="584.55">duration: &#x3C;mock&#x3E;</text>
+        <text x="10" y="603.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >
       </g>

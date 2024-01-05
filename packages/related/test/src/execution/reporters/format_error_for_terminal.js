@@ -43,9 +43,27 @@ export const formatErrorForTerminal = (
   }
   text += `${error.name}: ${error.message}`;
   write_stack: {
+    const stringifyUrlSite = ({ url, line, column, urlIsMain }) => {
+      let urlAsPath = urlToFileSystemPath(url);
+      if (mockFluctuatingValues) {
+        const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+      }
+      if (urlIsMain) {
+        urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
+      }
+      if (typeof line === "number" && typeof column === "number") {
+        return `${urlAsPath}:${line}:${column}`;
+      }
+      if (typeof line === "number") {
+        return `${urlAsPath}:${line}`;
+      }
+      return urlAsPath;
+    };
+
     let stackTrace = "";
     const stackFrames = error.stackFrames;
-    if (stackFrames) {
+    if (stackFrames && stackFrames.length) {
       let atLeastOneNonNative = false;
       let lastStackFrameForMain;
       const mainFileUrl = new URL(mainFileRelativeUrl, rootDirectoryUrl).href;
@@ -66,16 +84,9 @@ export const formatErrorForTerminal = (
         stackFrameString = replaceUrls(
           stackFrameString,
           ({ url, line, column }) => {
-            let urlAsPath = urlToFileSystemPath(url);
-            if (mockFluctuatingValues) {
-              const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-              urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
-            }
-            if (stackFrame === lastStackFrameForMain) {
-              urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
-            }
             const replacement = stringifyUrlSite({
-              url: urlAsPath,
+              url,
+              urlIsMain: stackFrame === lastStackFrameForMain,
               line,
               column,
             });
@@ -87,18 +98,19 @@ export const formatErrorForTerminal = (
       }
     } else if (error.stackTrace) {
       stackTrace = replaceUrls(error.stackTrace, ({ url, line, column }) => {
-        let urlAsPath = urlToFileSystemPath(url);
-        if (mockFluctuatingValues) {
-          const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-          urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
-        }
         const replacement = stringifyUrlSite({
-          url: urlAsPath,
+          url,
           line,
           column,
         });
         return replacement;
       });
+    } else if (error.site) {
+      stackTrace += `  ${stringifyUrlSite({
+        url: error.site.url,
+        line: error.site.line,
+        column: error.site.column,
+      })}`;
     }
 
     if (stackTrace) {
@@ -106,16 +118,6 @@ export const formatErrorForTerminal = (
     }
   }
   return text;
-};
-
-const stringifyUrlSite = ({ url, line, column }) => {
-  if (typeof line === "number" && typeof column === "number") {
-    return `${url}:${line}:${column}`;
-  }
-  if (typeof line === "number") {
-    return `${url}:${line}`;
-  }
-  return url;
 };
 
 // `Error: yo

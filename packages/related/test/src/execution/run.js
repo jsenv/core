@@ -210,7 +210,6 @@ const normalizeRuntimeError = (runtimeError) => {
   // otherwise they would pollute the error displayed by Node.js
   const errorProxy = new Error(runtimeError.message);
   const exception = createException(runtimeError);
-  errorProxy.stack = exception.stack;
   for (const key of Object.keys(exception)) {
     Object.defineProperty(errorProxy, key, {
       writable: true,
