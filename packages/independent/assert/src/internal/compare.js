@@ -126,6 +126,29 @@ export const createCloseToExpectation = (number, precision = 2) => {
   return closeToExpectation;
 };
 
+export const createBetweenExpectation = (min, max) => {
+  const betweenExpectation = createExpectation({
+    type: "between",
+    expected: { min, max },
+    comparer: ({ actual }) => {
+      if (typeof actual !== "number") {
+        return false;
+      }
+      if (actual < min) {
+        return false;
+      }
+      if (actual > max) {
+        return false;
+      }
+      return true;
+    },
+  });
+  betweenExpectation[inspectMethodSymbol] = () => {
+    return `around(${inspect(min)}, ${inspect(max)})`;
+  };
+  return betweenExpectation;
+};
+
 const createComparison = ({ parent = null, children = [], ...rest }) => {
   const comparison = {
     parent,

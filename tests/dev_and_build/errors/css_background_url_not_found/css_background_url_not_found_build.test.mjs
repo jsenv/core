@@ -21,10 +21,9 @@ no entry on filesystem
 ${new URL("./client/img.png", import.meta.url).href}
 --- url reference trace ---
 ${new URL("./client/style.css", import.meta.url).href}:2:25
-  1 | body {
-> 2 |   background-image: url("./img.png");
-                              ^
-  3 | }
+1 | body {
+2 |   background-image: url("./img.png");
+                            ^
 --- plugin name ---
 "jsenv:file_url_fetching"`;
   assert({ actual, expected });

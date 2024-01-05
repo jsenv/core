@@ -6,13 +6,13 @@ import { relativeUrlToEmptyCoverage } from "./empty_coverage_factory.js";
 export const getMissingFileByFileCoverage = async ({
   signal,
   rootDirectoryUrl,
-  coverageConfig,
+  coverageInclude,
   fileByFileCoverage,
 }) => {
   const relativeUrlsToCover = await listRelativeFileUrlToCover({
     signal,
     rootDirectoryUrl,
-    coverageConfig,
+    coverageInclude,
   });
   const relativeUrlsMissing = relativeUrlsToCover.filter((relativeUrlToCover) =>
     Object.keys(fileByFileCoverage).every((key) => {

@@ -2,13 +2,12 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text">SyntaxError: ambiguous indirect export: answerr
-
-<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_export_not_found%2Fmain.js%3A3%3A10')">file:///js_module_export_not_found/main.js:3:10</a>
-  2 | // eslint-disable-next-line import/named
-> 3 | import { answerr } from "./foo.js";
-               ^
-  4 | </pre>
+  <pre class="text">1 | // there is a deliberate typo: "answerr" with 2 r instead of "answer"
+2 | // eslint-disable-next-line import/named
+3 | import { answerr } from "./foo.js";
+             ^
+SyntaxError: ambiguous indirect export: answerr
+  at <a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_export_not_found%2Fmain.js%3A3%3A10')">file:///js_module_export_not_found/main.js:3:10</a></pre>
   <div class="tip">
     Click outside to close.
   </div>

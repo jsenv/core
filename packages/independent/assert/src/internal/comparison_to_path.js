@@ -73,7 +73,8 @@ export const comparisonToPath = (comparison, name = "actual") => {
       type === "any" ||
       type === "matches_reg_exp" ||
       type === "starts_with" ||
-      type === "close_to"
+      type === "close_to" ||
+      type === "between"
     ) {
       return previous;
     }

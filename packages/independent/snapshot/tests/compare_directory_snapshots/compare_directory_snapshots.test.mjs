@@ -1,3 +1,4 @@
+import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import {
   ensureEmptyDirectorySync,
@@ -71,7 +72,7 @@ test(() => {
     directorySnapshot.compare();
     throw new Error("should throw");
   } catch (e) {
-    const actual = e.message;
+    const actual = stripAnsi(e.message);
     const expected = `snapshot comparison failed for "snapshots/"
 --- reason ---
 "file.txt" is missing
@@ -98,7 +99,7 @@ test(() => {
     directorySnapshot.compare();
     throw new Error("should throw");
   } catch (e) {
-    const actual = e.message;
+    const actual = stripAnsi(e.message);
     const expected = `snapshot comparison failed for "snapshots/"
 --- reason ---
 "hello.js" is unexpected
@@ -125,15 +126,15 @@ test(() => {
     directorySnapshot.compare();
     throw new Error("should throw");
   } catch (e) {
-    const actual = e.message;
+    const actual = stripAnsi(e.message);
     const expected = `snapshot comparison failed for "b.js"
 --- reason ---
 unexpected character in file content
 --- details ---
-console.log("c");
-             ^ unexpected "c", expected to continue with 'b");'…
---- path ---
-[13]
+1 | console.log("c");
+                 ^
+unexpected "c", expected to continue with 'b");'…
+2 | 
 --- file ---
 ${snapshotsDirectoryUrl}b.js`;
     assert({ actual, expected });

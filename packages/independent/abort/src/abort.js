@@ -211,6 +211,18 @@ const createOperation = () => {
     });
   };
 
+  const wait = (ms) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        removeAbortCallback();
+        resolve();
+      }, ms);
+      const removeAbortCallback = addAbortCallback(() => {
+        clearTimeout(timeoutId);
+      });
+    });
+  };
+
   const withSignal = async (asyncCallback) => {
     const abortController = new AbortController();
     const signal = abortController.signal;
@@ -259,6 +271,7 @@ const createOperation = () => {
     addAbortSignal,
     addAbortSource,
     timeout,
+    wait,
     withSignal,
     withSignalSync,
     addEndCallback,

@@ -1,0 +1,69 @@
+[
+  {
+    "type": "text",
+    "value": "🤖",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "red",
+      "ansi": "\u001b[31m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 2,
+      "y": 0,
+      "n": 2,
+      "raw": 2
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "text",
+    "value": " DANGER",
+    "position": {
+      "x": 2,
+      "y": 0,
+      "n": 2,
+      "raw": 7
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "reset",
+      "ansi": "\u001b[0m",
+      "decorator": "reset"
+    },
+    "position": {
+      "x": 9,
+      "y": 0,
+      "n": 9,
+      "raw": 14
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": " Will Robbinson",
+    "position": {
+      "x": 9,
+      "y": 0,
+      "n": 9,
+      "raw": 18
+    },
+    "style": {}
+  }
+]

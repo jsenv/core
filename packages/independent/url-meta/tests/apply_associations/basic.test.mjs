@@ -2,6 +2,41 @@ import { assert } from "@jsenv/assert";
 
 import { URL_META } from "@jsenv/url-meta";
 
+// composition
+{
+  const actual = URL_META.applyAssociations({
+    url: "file:///foo.js",
+    associations: {
+      node: {
+        "file:///**/*.js": {
+          foo: true,
+        },
+        "file:///foo.js": {
+          bar: true,
+        },
+      },
+    },
+  });
+  const expected = {
+    node: {
+      foo: true,
+      bar: true,
+    },
+  };
+  assert({ actual, expected });
+}
+
+try {
+  URL_META.applyAssociations({
+    url: ["*$^="],
+  });
+  throw new Error("shoud crash");
+} catch (error) {
+  const actual = error;
+  const expected = new TypeError(`url must be a url string, got *$^=`);
+  assert({ actual, expected });
+}
+
 // associate "foo.js" to { a: true }
 {
   const test = (url) =>

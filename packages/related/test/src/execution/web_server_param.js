@@ -7,7 +7,7 @@ import { basicFetch } from "../helpers/basic_fetch.js";
 
 export const assertAndNormalizeWebServer = async (
   webServer,
-  { signal, logger, teardown },
+  { signal, logger, teardownCallbackSet },
 ) => {
   if (!webServer) {
     throw new TypeError(
@@ -35,7 +35,7 @@ export const assertAndNormalizeWebServer = async (
   }
   await ensureWebServerIsStarted(webServer, {
     signal,
-    teardown,
+    teardownCallbackSet,
     logger,
   });
   const { headers } = await basicFetch(webServer.origin, {
@@ -69,7 +69,7 @@ export const assertAndNormalizeWebServer = async (
 
 export const ensureWebServerIsStarted = async (
   webServer,
-  { signal, teardown, logger, allocatedMs = 5_000 },
+  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
 ) => {
   const aServerIsListening = await pingServer(webServer.origin);
   if (aServerIsListening) {
@@ -79,7 +79,7 @@ export const ensureWebServerIsStarted = async (
     await startServerUsingModuleUrl(webServer, {
       signal,
       allocatedMs,
-      teardown,
+      teardownCallbackSet,
       logger,
     });
     return;
@@ -88,7 +88,7 @@ export const ensureWebServerIsStarted = async (
     await startServerUsingCommand(webServer, {
       signal,
       allocatedMs,
-      teardown,
+      teardownCallbackSet,
       logger,
     });
     return;

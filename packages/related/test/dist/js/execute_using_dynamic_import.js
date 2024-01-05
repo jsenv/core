@@ -1,144 +1,8 @@
 import { writeFileSync } from "node:fs";
+import { memoryUsage } from "node:process";
 import { Session } from "node:inspector";
 import { PerformanceObserver, performance } from "node:perf_hooks";
-
-/*
- * Exception are objects used to wrap a value that is thrown
- * Usually they wrap error but the value can be anything as
- * throw "toto" can be used in JS
- *
- * - provide a common API to interact with value that can be thrown
- * - enrich usual errors with a bit more information (line, column)
- * - normalize error properties
- *   - exception.stackTrace: only the stack trace as string (no error.name or error.message)
- *   - error.stack: error.name + error.message + error.stackTrace
- *
- * It is used mostly internally by jsenv but can also be found
- * value returned by "executeTestPlan" public export (for failed executions)
- * and value returned by "execute" public export (when execution fails)
- *
- * This file is responsible to wrap error hapenning in Node.js runtime
- * The browser part can be found in "supervisor.js"
- */
-
-const createException = (reason) => {
-  const exception = {
-    isException: true,
-    isError: false,
-    name: "",
-    message: "",
-    stack: "",
-    stackTrace: "",
-    site: null,
-  };
-
-  if (reason === undefined) {
-    exception.message = "undefined";
-    return exception;
-  }
-  if (reason === undefined) {
-    exception.message = "undefined";
-    return exception;
-  }
-  if (typeof reason === "string") {
-    exception.message = reason;
-    return exception;
-  }
-  if (reason instanceof Error) {
-    exception.isError = true;
-    exception.name = reason.name;
-    exception.message = reason.message;
-    const stackInfo = getStackInfo(reason);
-    if (stackInfo) {
-      const { stackTrace, stackObject } = stackInfo;
-      exception.stackTrace = stackTrace;
-      const [firstCallSite] = stackObject;
-      writePropertiesFromCallSite(exception, firstCallSite);
-    }
-    exception.stack = reason.stack;
-    return exception;
-  }
-  if (typeof reason === "object") {
-    exception.code = reason.code;
-    exception.message = reason.message;
-    exception.stack = reason.stack;
-    return exception;
-  }
-  exception.message = JSON.stringify(reason);
-  return exception;
-};
-
-const getStackInfo = (reason) => {
-  if (reason instanceof Error) {
-    const { prepareStackTrace } = Error;
-    let stackTrace;
-    let stackObject;
-    Error.prepareStackTrace = (e, secondArg) => {
-      Error.prepareStackTrace = prepareStackTrace;
-      stackObject = secondArg;
-      stackTrace = secondArg.map((callSite) => `  at ${callSite}`).join("\n");
-      const name = e.name || "Error";
-      const message = e.message || "";
-      let stack = `${name}: ${message}`;
-      if (stackTrace) {
-        stack += `\n${stackTrace}`;
-      }
-      return stack;
-    };
-    // eslint-disable-next-line no-unused-expressions
-    reason.stack;
-    if (stackTrace === undefined) {
-      return null;
-    }
-    return {
-      stackTrace,
-      stackObject,
-    };
-  }
-  return null;
-};
-const writePropertiesFromCallSite = (exception, callSite) => {
-  const source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-  if (source) {
-    const line = callSite.getLineNumber();
-    const column = callSite.getColumnNumber() - 1;
-    exception.site = {
-      url: source,
-      line,
-      column,
-    };
-    return;
-  }
-  // Code called using eval() needs special handling
-  if (callSite.isEval()) {
-    const origin = callSite.getEvalOrigin();
-    if (origin) {
-      writePropertiesFromEvalOrigin(exception, origin);
-    }
-  }
-};
-const writePropertiesFromEvalOrigin = (exception, origin) => {
-  // Most eval() calls are in this format
-  const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(
-    origin,
-  );
-  if (topLevelEvalMatch) {
-    const source = topLevelEvalMatch[2];
-    const line = Number(topLevelEvalMatch[3]);
-    const column = topLevelEvalMatch[4] - 1;
-    exception.site = {
-      url: source,
-      line,
-      column,
-    };
-    return;
-  }
-  // Parse nested eval() calls using recursion
-  const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
-  if (nestedEvalMatch) {
-    writePropertiesFromEvalOrigin(exception, nestedEvalMatch[2]);
-  }
-};
+import { createException } from "./exception.js";
 
 /*
  * Calling Profiler.startPreciseCoverage DO NOT propagate to
@@ -265,50 +129,95 @@ const measuresFromMeasureEntries = (measureEntries) => {
 const executeUsingDynamicImport = async ({
   rootDirectoryUrl,
   fileUrl,
+  measureMemoryUsage,
   collectPerformance,
   coverageEnabled,
-  coverageConfig,
+  coverageInclude,
   coverageMethodForNodeJs,
   coverageFileUrl,
 }) => {
-  const result = {};
-  const afterImportCallbacks = [];
+  const result = {
+    timings: {
+      start: null,
+      end: null,
+    },
+    errors: [],
+    namespace: null,
+    memoryUsage: null,
+    performance: null,
+  };
+
+  let finalizePerformance;
+  if (collectPerformance) {
+    const getPerformance = startObservingPerformances();
+    finalizePerformance = async () => {
+      const performance = await getPerformance();
+      result.performance = performance;
+    };
+  }
+
+  let finalizeCoverage;
   if (coverageEnabled && coverageMethodForNodeJs === "Profiler") {
-    const { filterV8Coverage } = await import("./v8_coverage.js").then(n => n.v8_coverage);
     const { stopJsCoverage } = await startJsCoverage();
-    afterImportCallbacks.push(async () => {
-      const coverage = await stopJsCoverage();
+    finalizeCoverage = async () => {
+      const [coverage, { filterV8Coverage }] = await Promise.all([
+        stopJsCoverage(),
+        import("./v8_coverage.js"),
+      ]);
       const coverageLight = await filterV8Coverage(coverage, {
         rootDirectoryUrl,
-        coverageConfig,
+        coverageInclude,
       });
       writeFileSync(
         new URL(coverageFileUrl),
         JSON.stringify(coverageLight, null, "  "),
       );
-    });
+    };
   }
-  if (collectPerformance) {
-    const getPerformance = startObservingPerformances();
-    afterImportCallbacks.push(async () => {
-      const performance = await getPerformance();
-      result.performance = performance;
-    });
+
+  let finalizeMemoryUsage;
+  if (measureMemoryUsage) {
+    global.gc();
+    const memoryHeapUsedBeforeExecution = memoryUsage().heapUsed;
+    finalizeMemoryUsage = () => {
+      global.gc();
+      const memoryHeapUsedAfterExecution = memoryUsage().heapUsed;
+      result.memoryUsage =
+        memoryHeapUsedAfterExecution - memoryHeapUsedBeforeExecution;
+    };
   }
-  const namespace = await import(fileUrl);
-  const namespaceResolved = {};
-  await Promise.all(
-    Object.keys(namespace).map(async (key) => {
-      const value = await namespace[key];
-      namespaceResolved[key] = value;
-    }),
-  );
-  result.namespace = namespaceResolved;
-  await afterImportCallbacks.reduce(async (previous, afterImportCallback) => {
-    await previous;
-    await afterImportCallback();
-  }, Promise.resolve());
-  return result;
+
+  result.timings.start = Date.now();
+  try {
+    const namespace = await import(fileUrl);
+    const namespaceResolved = {};
+    await Promise.all(
+      Object.keys(namespace).map(async (key) => {
+        const value = await namespace[key];
+        namespaceResolved[key] = value;
+      }),
+    );
+    result.status = "completed";
+    result.namespace = namespaceResolved;
+  } catch (e) {
+    result.status = "failed";
+    result.errors.push(createException(e, { rootDirectoryUrl }));
+  } finally {
+    result.timings.end = Date.now();
+    if (finalizeCoverage) {
+      await finalizeCoverage();
+      finalizeCoverage = null;
+    }
+    if (finalizePerformance) {
+      await finalizePerformance();
+      finalizePerformance = null;
+    }
+    if (finalizeMemoryUsage) {
+      finalizeMemoryUsage();
+      finalizeMemoryUsage = null;
+    }
+    return result;
+  }
 };
 
-export { createException, executeUsingDynamicImport };
+export { executeUsingDynamicImport };

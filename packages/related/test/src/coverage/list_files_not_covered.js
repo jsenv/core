@@ -3,12 +3,12 @@ import { collectFiles } from "@jsenv/filesystem";
 export const listRelativeFileUrlToCover = async ({
   signal,
   rootDirectoryUrl,
-  coverageConfig,
+  coverageInclude,
 }) => {
   const matchingFileResultArray = await collectFiles({
     signal,
     directoryUrl: rootDirectoryUrl,
-    associations: { cover: coverageConfig },
+    associations: { cover: coverageInclude },
     predicate: ({ cover }) => cover,
   });
   return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);

@@ -9,6 +9,5 @@ await executeTestPlan({
       },
     },
   },
-  logShortForCompletedExecutions: true,
-  githubCheckEnabled: false,
+  githubCheck: false,
 });

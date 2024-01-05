@@ -7,9 +7,9 @@ import { isRegExp, isError } from "../object_subtype.js";
 const MAX_HEIGHT = 10;
 let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
-const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 15;
+const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 30;
 
-export const stringsComparisonToErrorMessage = (comparison) => {
+export const stringsComparisonToErrorMessage = (comparison, { format }) => {
   const isStartsWithComparison = comparison.type === "starts_with";
 
   if (comparison.type !== "identity" && !isStartsWithComparison) {
@@ -30,6 +30,7 @@ export const stringsComparisonToErrorMessage = (comparison) => {
     expected,
     path,
     name,
+    format,
   });
 };
 
@@ -38,13 +39,8 @@ export const formatStringAssertionErrorMessage = ({
   expected,
   path = "",
   name = "string",
+  format,
 }) => {
-  const enrichPath = (path, index, line, column) => {
-    if (line === 0 && column < 100) {
-      return `${path}[${index}]`;
-    }
-    return `${path}[${index}]#L${line + 1}C${column + 1}`;
-  };
   const actualQuote = determineQuote(actual);
   const formatActualChar = (char) => {
     return inspectChar(char, { quote: actualQuote, preserveLineBreaks: true });
@@ -63,6 +59,7 @@ export const formatStringAssertionErrorMessage = ({
   let lineIndex = 0;
   let columnIndex = 0;
   const lineStrings = actual.split(/\r?\n/);
+  const lineNumbersOnTheLeft = lineStrings.length > 1;
 
   const formatDetails = ({ annotationLabel, expectedOverview = true }) => {
     if (actual.includes(`${COLUMN_MARKER_CHAR} unexpected character`)) {
@@ -82,20 +79,34 @@ export const formatStringAssertionErrorMessage = ({
     }
     let columnEnd = columnStart + MAX_WIDTH;
 
-    const writeLine = (lineSource) => {
-      const lastCharIndex = lineSource.length;
-      let charIndex = columnStart;
-      if (columnStart > 0) {
-        details += "…";
+    const lastLineIndex = lineStrings.length - 1;
+    const idealNumberOfLineAfter = MAX_HEIGHT - lineDisplayed;
+    let lineAfterStart = lineIndex + 1;
+    let lineAfterEnd = lineAfterStart + idealNumberOfLineAfter;
+    if (lineAfterEnd > lineStrings.length) {
+      lineAfterEnd = lineStrings.length;
+    }
+
+    const writeLine = (index) => {
+      const lineSource = lineStrings[index];
+      if (lineNumbersOnTheLeft) {
+        let asideSource = `${fillRight(index + 1, lineAfterEnd)} |`;
+        asideSource = format(asideSource, "line_number_aside");
+        details += `${asideSource} `;
       }
-      while (charIndex < columnEnd && charIndex < lastCharIndex) {
-        const char = lineSource[charIndex];
-        charIndex++;
-        details += formatActualChar(char);
-      }
-      if (lastCharIndex > columnEnd) {
-        details += "…";
-      }
+
+      details += truncateLine(lineSource, {
+        start: columnStart,
+        end: columnEnd,
+        prefix: "…",
+        suffix: "…",
+        format: (char, type) => {
+          if (type === "char") {
+            return formatActualChar(char);
+          }
+          return char;
+        },
+      });
     };
 
     write_chars_before_annotation: {
@@ -107,20 +118,28 @@ export const formatStringAssertionErrorMessage = ({
       const beforeLineEnd = lineIndex + 1;
       let beforeLineIndex = beforeLineStart;
       while (beforeLineIndex < beforeLineEnd) {
-        const lineBefore = lineStrings[beforeLineIndex];
+        writeLine(beforeLineIndex);
         beforeLineIndex++;
-        writeLine(lineBefore);
         details += `\n`;
         lineDisplayed++;
       }
       details = details.slice(0, -1);
     }
     write_annotation: {
-      const annotationColumn =
-        columnStart === 0 ? columnIndex : columnIndex - columnStart + 1;
-      const annotationIndentation = " ".repeat(annotationColumn);
+      let annotationColumn =
+        columnStart === 0 ? columnIndex : columnIndex - columnStart;
+
+      let annotationIndentation = "";
+      if (lineNumbersOnTheLeft) {
+        const spacesFromLineNumbers = `${fillRight(lineIndex, lineAfterEnd)} | `
+          .length;
+        annotationIndentation += " ".repeat(spacesFromLineNumbers);
+      }
+      annotationIndentation += " ".repeat(annotationColumn);
+
       details += `\n${annotationIndentation}`;
-      details += `${annotationLabel}`;
+      details += format(COLUMN_MARKER_CHAR, "column_marker_char");
+      details += `\n${annotationLabel}`;
       if (expectedOverview) {
         details += ` ${expectedQuote}`;
         // put expected chars
@@ -145,15 +164,8 @@ export const formatStringAssertionErrorMessage = ({
       }
     }
     write_chars_after_annotation: {
-      const lastLineIndex = lineStrings.length - 1;
-      const idealNumberOfLineAfter = MAX_HEIGHT - lineDisplayed;
-      let lineAfterStart = lineIndex + 1;
-      if (lineAfterStart >= lastLineIndex) {
+      if (lineAfterStart > lastLineIndex) {
         break write_chars_after_annotation;
-      }
-      let lineAfterEnd = lineAfterStart + idealNumberOfLineAfter;
-      if (lineAfterEnd > lastLineIndex) {
-        lineAfterEnd = lastLineIndex;
       }
       if (lineAfterStart === lineAfterEnd) {
         break write_chars_after_annotation;
@@ -161,9 +173,8 @@ export const formatStringAssertionErrorMessage = ({
       details += `\n`;
       let lineAfterIndex = lineAfterStart;
       while (lineAfterIndex < lineAfterEnd) {
-        const afterLineSource = lineStrings[lineAfterIndex];
+        writeLine(lineAfterIndex);
         lineAfterIndex++;
-        writeLine(afterLineSource);
         details += `\n`;
         lineDisplayed++;
       }
@@ -183,11 +194,11 @@ export const formatStringAssertionErrorMessage = ({
         let message = `unexpected character in ${name}`;
         return createDetailedMessage(message, {
           ...formatDetails({
-            annotationLabel: `${COLUMN_MARKER_CHAR} unexpected ${inspect(
+            annotationLabel: `unexpected ${inspect(
               actualChar,
             )}, expected to continue with`,
           }),
-          path: enrichPath(path, i, lineIndex, columnIndex),
+          ...(path ? { path } : {}),
         });
       }
       if (isLineBreak(actualChar)) {
@@ -210,9 +221,9 @@ export const formatStringAssertionErrorMessage = ({
       }
       return createDetailedMessage(message, {
         ...formatDetails({
-          annotationLabel: `${COLUMN_MARKER_CHAR} expected to continue with`,
+          annotationLabel: `expected to continue with`,
         }),
-        path,
+        ...(path ? { path } : {}),
       });
     }
   }
@@ -225,23 +236,81 @@ export const formatStringAssertionErrorMessage = ({
     } else {
       message += `, it contains ${extraCharacterCount} extra characters`;
     }
-    if (expectedLength > 0) {
-      columnIndex--;
+    let annotationLabel;
+    if (expectedLength === 0) {
+      annotationLabel = `an empty string was expected`;
+    } else {
+      if (columnIndex === 0) {
+        lineIndex--;
+        columnIndex = lineStrings[lineIndex].length;
+      } else {
+        columnIndex--;
+      }
+      annotationLabel = `expected to end here, on ${inspect(
+        expected[expectedLength - 1],
+      )}`;
     }
+
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
     return createDetailedMessage(message, {
       ...formatDetails({
-        annotationLabel:
-          expectedLength === 0
-            ? `${COLUMN_MARKER_CHAR} an empty string was expected`
-            : `${COLUMN_MARKER_CHAR} expected to end here, on ${inspect(
-                expected[expectedLength - 1],
-              )}`,
+        annotationLabel,
         expectedOverview: false,
       }),
-      path,
+      ...(path ? { path } : {}),
     });
   }
+};
+
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+  let result = "";
+  while (from < to) {
+    result += format(line[from], "char");
+    from++;
+  }
+  if (result.length === 0) {
+    return "";
+  }
+  if (startTruncated && endTruncated) {
+    return `${format(prefix, "prefix")}${result}${format(suffix, "suffix")}`;
+  }
+  if (startTruncated) {
+    return `${format(prefix, "prefix")}${result}`;
+  }
+  if (endTruncated) {
+    return `${result}${format(suffix, "suffix")}`;
+  }
+  return result;
+};
+
+const fillRight = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  padded += value;
+  while (missingWidth--) {
+    padded += char;
+  }
+  return padded;
 };
 
 const isLineBreak = (char) => {

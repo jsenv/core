@@ -1,0 +1,3 @@
+  2 | const b = true;
+> 3 | const c = true;
+  4 | const d = true;

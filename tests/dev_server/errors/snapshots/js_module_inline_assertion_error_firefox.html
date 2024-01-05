@@ -2,22 +2,22 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text">AssertionError: unexpected character in string
+  <pre class="text">2 |   value && typeof value === "object" && value.name === "AssertionError";
+3 | 
+4 | export const createAssertionError = (message) => {
+5 |   const error = new Error(message);
+                    ^
+AssertionError: unexpected character in string
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual[0]
+actual
 createAssertionError@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A5%3A17')">file:///mocked_for_snapshots:5:17</a>
-assert@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A58%3A39')">file:///mocked_for_snapshots:58:39</a>
+assert@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A61%3A41')">file:///mocked_for_snapshots:61:41</a>
 @<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A18')">file:///js_module_inline_assertion_error/main.html:13:18</a>
-
-
-<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A5%3A17')">file:///mocked_for_snapshots:5:17</a>
-  4 | export const createAssertionError = (message) => {
-> 5 |   const error = new Error(message);
-                      ^
-  6 |   error.name = "AssertionError";</pre>
+</pre>
   <div class="tip">
     Click outside to close.
   </div>

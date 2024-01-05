@@ -1,11 +1,11 @@
-import { createLog, startSpinner } from "@jsenv/log";
+import { createDynamicLog, startSpinner } from "@jsenv/log";
 
-const log = createLog();
+const dynamicLog = createDynamicLog();
 const startMs = Date.now();
 let msDuration = 0;
 let text = "Doing something";
 const spinner = startSpinner({
-  log,
+  dynamicLog,
   render: () => text,
   effect: () => {
     const intervalId = setInterval(() => {

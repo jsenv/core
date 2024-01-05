@@ -1,7 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { assert } from "@jsenv/assert";
 import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_param.js";
-import { createTeardown } from "@jsenv/test/src/helpers/teardown.js";
 import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 
 // the command does not exists
@@ -11,11 +10,10 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     command: `abryiryiu`,
   };
   try {
-    const teardown = createTeardown();
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown,
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
@@ -35,11 +33,10 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     command: `node ${fileURLToPath(new URL("./error.mjs", import.meta.url))}`,
   };
   try {
-    const teardown = createTeardown();
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown,
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
@@ -61,11 +58,10 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     )}`,
   };
   try {
-    const teardown = createTeardown();
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
       logger: { debug: () => {}, info: () => {} },
-      teardown,
+      teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
     throw new Error("should throw");
@@ -80,7 +76,7 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 
 // the command starts a server
 {
-  const teardown = createTeardown();
+  const teardownCallbackSet = new Set();
   const webServer = {
     origin: "http://localhost:3459",
     command: `node ${fileURLToPath(
@@ -90,10 +86,12 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
   await ensureWebServerIsStarted(webServer, {
     signal: new AbortController().signal,
     logger: { debug: () => {}, info: () => {} },
-    teardown,
+    teardownCallbackSet,
   });
   const serverUp = await pingServer(webServer.origin);
-  await teardown.trigger();
+  for (const teardownCallback of teardownCallbackSet) {
+    await teardownCallback();
+  }
   await new Promise((resolve) => setTimeout(resolve, 1_000));
   const serverUpAfterTeardown = await pingServer(webServer.origin);
   const actual = {

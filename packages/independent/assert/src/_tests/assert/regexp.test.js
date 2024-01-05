@@ -25,9 +25,10 @@ import { executeInNewContext } from "../executeInNewContext.js";
       `unexpected character in regexp
 --- details ---
 /a/
- ^ unexpected "a", expected to continue with "b/"
+ ^
+unexpected "a", expected to continue with "b/"
 --- path ---
-actual.toString()[1]`,
+actual.toString()`,
     );
   }
 }
@@ -43,9 +44,10 @@ actual.toString()[1]`,
       `unexpected character in regexp
 --- details ---
 /a/
- ^ unexpected "a", expected to continue with "b/"
+ ^
+unexpected "a", expected to continue with "b/"
 --- path ---
-actual.toString()[1]`,
+actual.toString()`,
     );
   }
 }

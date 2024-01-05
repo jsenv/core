@@ -1,8 +1,8 @@
-import { isAssertionError, createAssertionError } from "@jsenv/assert";
+import { assert } from "@jsenv/assert";
 
 {
   const assertionErrorCandidate = false;
-  if (isAssertionError(assertionErrorCandidate)) {
+  if (assert.isAssertionError(assertionErrorCandidate)) {
     throw new Error(
       `isAssertionError should return false for ${assertionErrorCandidate}`,
     );
@@ -11,7 +11,7 @@ import { isAssertionError, createAssertionError } from "@jsenv/assert";
 
 {
   const assertionErrorCandidate = true;
-  if (isAssertionError(assertionErrorCandidate)) {
+  if (assert.isAssertionError(assertionErrorCandidate)) {
     throw new Error(
       `isAssertionError should return false for ${assertionErrorCandidate}`,
     );
@@ -22,7 +22,7 @@ import { isAssertionError, createAssertionError } from "@jsenv/assert";
   const assertionErrorCandidate = {
     name: "AssertionError",
   };
-  if (!isAssertionError(assertionErrorCandidate)) {
+  if (!assert.isAssertionError(assertionErrorCandidate)) {
     throw new Error(
       `isAssertionError should return true for ${assertionErrorCandidate}`,
     );
@@ -30,8 +30,8 @@ import { isAssertionError, createAssertionError } from "@jsenv/assert";
 }
 
 {
-  const assertionErrorCandidate = createAssertionError();
-  if (!isAssertionError(assertionErrorCandidate)) {
+  const assertionErrorCandidate = assert.createAssertionError();
+  if (!assert.isAssertionError(assertionErrorCandidate)) {
     throw new Error(
       `isAssertionError should return true for ${assertionErrorCandidate}`,
     );

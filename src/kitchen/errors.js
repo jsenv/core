@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { createDetailedMessage } from "@jsenv/log";
 import { stringifyUrlSite } from "@jsenv/urls";
+import { inspectFileContent } from "@jsenv/inspect";
 
 export const createResolveUrlError = ({
   pluginController,
@@ -68,15 +69,9 @@ export const createFetchUrlContentError = ({
     fetchError.reason = reason;
     fetchError.url = urlInfo.url;
     if (code === "PARSE_ERROR") {
-      fetchError.traceUrl = error.traceUrl;
-      fetchError.traceLine = error.traceLine;
-      fetchError.traceColumn = error.traceColumn;
-      fetchError.traceMessage = error.traceMessage;
+      fetchError.trace = error.trace;
     } else {
-      fetchError.traceUrl = urlInfo.firstReference.trace.url;
-      fetchError.traceLine = urlInfo.firstReference.trace.line;
-      fetchError.traceColumn = urlInfo.firstReference.trace.column;
-      fetchError.traceMessage = urlInfo.firstReference.trace.message;
+      fetchError.trace = urlInfo.firstReference.trace;
     }
     fetchError.asResponse = error.asResponse;
     return fetchError;
@@ -111,7 +106,7 @@ export const createFetchUrlContentError = ({
       "code": "PARSE_ERROR",
       "reason": error.reasonCode,
       ...(error.cause ? { "parse error message": error.cause.message } : {}),
-      "parse error trace": error.traceMessage,
+      "parse error trace": error.trace?.message,
     });
   }
   return createFailedToFetchUrlContentError({
@@ -150,33 +145,43 @@ export const createTransformUrlContentError = ({
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
-    transformError.traceUrl = urlInfo.firstReference.trace.url;
-    transformError.traceLine = urlInfo.firstReference.trace.line;
-    transformError.traceColumn = urlInfo.firstReference.trace.column;
-    transformError.traceMessage = urlInfo.firstReference.trace.message;
+    transformError.trace = urlInfo.firstReference.trace;
     if (code === "PARSE_ERROR") {
       transformError.reason = `parse error on ${urlInfo.type}`;
       transformError.cause = error;
       if (urlInfo.isInline) {
-        transformError.traceLine =
+        transformError.trace.line =
           urlInfo.firstReference.trace.line + error.line - 1;
-        transformError.traceColumn =
+        transformError.trace.column =
           urlInfo.firstReference.trace.column + error.column;
-        transformError.traceMessage = stringifyUrlSite({
+        transformError.trace.codeFrame = inspectFileContent({
+          line: transformError.trace.line,
+          column: transformError.trace.column,
+          content: urlInfo.inlineUrlSite.content,
+        });
+        transformError.trace.message = stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
-          line: transformError.traceLine,
-          column: transformError.traceColumn,
+          line: transformError.trace.line,
+          column: transformError.trace.column,
           content: urlInfo.inlineUrlSite.content,
         });
       } else {
-        transformError.traceLine = error.line;
-        transformError.traceColumn = error.column;
-        transformError.traceMessage = stringifyUrlSite({
+        transformError.trace = {
           url: urlInfo.url,
-          line: error.line - 1,
+          line: error.line,
           column: error.column,
-          content: urlInfo.content,
-        });
+          codeFrame: inspectFileContent({
+            line: error.line - 1,
+            column: error.column,
+            content: urlInfo.content,
+          }),
+          message: stringifyUrlSite({
+            url: urlInfo.url,
+            line: error.line - 1,
+            column: error.column,
+            content: urlInfo.content,
+          }),
+        };
       }
     }
     transformError.asResponse = error.asResponse;

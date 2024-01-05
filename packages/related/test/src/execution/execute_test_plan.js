@@ -1,45 +1,31 @@
-import os from "node:os";
+/*
+ *
+ */
+
+import { cpus, availableParallelism, freemem, totalmem } from "node:os";
 import { existsSync } from "node:fs";
-import { memoryUsage } from "node:process";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { URL_META } from "@jsenv/url-meta";
-import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
 import {
   ensureEmptyDirectory,
   assertAndNormalizeDirectoryUrl,
-  assertAndNormalizeFileUrl,
-  writeFileSync,
+  collectFiles,
 } from "@jsenv/filesystem";
-import {
-  createLogger,
-  createDetailedMessage,
-  UNICODE,
-  createLog,
-  startSpinner,
-} from "@jsenv/log";
+import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/log";
 import {
   startGithubCheckRun,
   readGitHubWorkflowEnv,
 } from "@jsenv/github-check-run";
 
-import { createTeardown } from "../helpers/teardown.js";
+import { startMeasuringCpuUsage } from "../helpers/cpu_usage.js";
 import { createCallOrderer } from "../helpers/call_orderer.js";
-import { reportToCoverage } from "../coverage/report_to_coverage.js";
-import { generateCoverageJsonFile } from "../coverage/coverage_reporter_json_file.js";
-import { generateCoverageHtmlDirectory } from "../coverage/coverage_reporter_html_directory.js";
-import { generateCoverageTextLog } from "../coverage/coverage_reporter_text_log.js";
+import { generateCoverage } from "../coverage/generate_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
-import { executionStepsFromTestPlan } from "./execution_steps.js";
-import {
-  createExecutionLog,
-  formatSummaryLog,
-  formatSummary,
-} from "./logs_file_execution.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
-import { ensureGlobalGc } from "./gc.js";
+import { reporterList, renderOutro } from "./reporters/reporter_list.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -47,58 +33,27 @@ import { ensureGlobalGc } from "./gc.js";
  * @param {string|url} testPlanParameters.rootDirectoryUrl Directory containing test files;
  * @param {Object} [testPlanParameters.webServer] Web server info; required when executing test on browsers
  * @param {Object} testPlanParameters.testPlan Object associating files with runtimes where they will be executed
- * @param {boolean} [testPlanParameters.logShortForCompletedExecutions=false] Abbreviate completed execution information to shorten terminal output
- * @param {boolean} [testPlanParameters.logMergeForCompletedExecutions=false] Merge completed execution logs to shorten terminal output
- * @param {boolean|number} [testPlanParameters.concurrency=false] Maximum amount of execution running at the same time
+ * @param {Object|false} [testPlanParameters.parallel] Maximum amount of execution running at the same time
  * @param {number} [testPlanParameters.defaultMsAllocatedPerExecution=30000] Milliseconds after which execution is aborted and considered as failed by timeout
  * @param {boolean} [testPlanParameters.failFast=false] Fails immediatly when a test execution fails
- * @param {number} [testPlanParameters.cooldownBetweenExecutions=0] Millisecond to wait between each execution
- * @param {boolean} [testPlanParameters.logMemoryHeapUsage=false] Add memory heap usage during logs
- * @param {boolean} [testPlanParameters.coverageEnabled=false] Controls if coverage is collected during files executions
- * @param {boolean} [testPlanParameters.coverageV8ConflictWarning=true] Warn when coverage from 2 executions cannot be merged
+ * @param {Object|false} [testPlanParameters.coverage=false] Controls if coverage is collected during files executions
  * @return {Object} An object containing the result of all file executions
  */
-export const executeTestPlan = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logLevel = "info",
-  logRefresh = true,
-  logRuntime = true,
-  logEachDuration = true,
-  logSummary = true,
-  logTimeUsage = false,
-  logMemoryHeapUsage = false,
-  logFileRelativeUrl = ".jsenv/test_plan_debug.txt",
-  logShortForCompletedExecutions = false,
-  logMergeForCompletedExecutions = false,
-
-  rootDirectoryUrl,
-  webServer,
-  testPlan,
-  updateProcessExitCode = true,
-  concurrency = false,
-  defaultMsAllocatedPerExecution = 30_000,
-  failFast = false,
-  // keepRunning: false to ensure runtime is stopped once executed
-  // because we have what we wants: execution is completed and
-  // we have associated coverage and console output
-  // passsing true means all node process and browsers launched stays opened
-  // (can eventually be used for debug)
-  keepRunning = false,
-  cooldownBetweenExecutions = 0,
-  gcBetweenExecutions = logMemoryHeapUsage,
-
-  githubCheckEnabled = Boolean(process.env.GITHUB_WORKFLOW),
-  githubCheckLogLevel,
-  githubCheckName = "Jsenv tests",
-  githubCheckTitle = "Tests executions",
-  githubCheckToken,
-  githubCheckRepositoryOwner,
-  githubCheckRepositoryName,
-  githubCheckCommitSha,
-
-  coverageEnabled = process.argv.includes("--coverage"),
-  coverageConfig = {
+const logsDefault = {
+  level: "info",
+  dynamic: true,
+};
+const githubCheckDefault = {
+  logLevel: "info",
+  name: "Jsenv tests",
+  title: "Tests execution",
+  token: undefined,
+  repositoryOwner: undefined,
+  repositoryName: undefined,
+  commitSha: undefined,
+};
+const coverageDefault = {
+  include: {
     "file:///**/node_modules/": false,
     "./**/.*": false,
     "./**/.*/": false,
@@ -112,9 +67,9 @@ export const executeTestPlan = async ({
     "./**/*.test.js": false,
     "./**/*.test.mjs": false,
   },
-  coverageIncludeMissing = true,
-  coverageAndExecutionAllowed = false,
-  coverageMethodForNodeJs = process.env.NODE_V8_COVERAGE
+  includeMissing: true,
+  coverageAndExecutionAllowed: false,
+  methodForNodeJs: process.env.NODE_V8_COVERAGE
     ? "NODE_V8_COVERAGE"
     : "Profiler",
   // - When chromium only -> coverage generated by v8
@@ -124,163 +79,350 @@ export const executeTestPlan = async ({
   //   -> by default only coverage from chromium is used
   //   and a warning is logged according to coverageV8ConflictWarning
   //   -> to collect coverage from both browsers, pass coverageMethodForBrowsers: "istanbul"
-  coverageMethodForBrowsers, // undefined | "playwright" | "istanbul"
-  coverageV8ConflictWarning = true,
-  coverageTempDirectoryUrl,
-  // skip empty means empty files won't appear in the coverage reports (json and html)
-  coverageReportSkipEmpty = false,
-  // skip full means file with 100% coverage won't appear in coverage reports (json and html)
-  coverageReportSkipFull = false,
-  coverageReportTextLog = true,
-  coverageReportJson = process.env.CI,
-  coverageReportJsonFileUrl,
-  coverageReportHtml = !process.env.CI,
-  coverageReportHtmlDirectoryUrl,
+  methodForBrowsers: undefined, // undefined | "playwright" | "istanbul"
+  v8ConflictWarning: true,
+  tempDirectoryUrl: undefined,
+};
+const parallelDefault = {
+  max: "80%", // percentage resolved against the available cpus
+  maxCpu: "90%",
+  maxMemory: "90%",
+};
 
-  beforeExecutionCallback = () => {},
-  afterExecutionCallback = () => {},
-  afterAllExecutionCallback = () => {},
+export const executeTestPlan = async ({
+  logs = logsDefault,
+
+  rootDirectoryUrl,
+  webServer,
+  testPlan,
+
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+  handleSIGUP = true,
+  handleSIGTERM = true,
+  updateProcessExitCode = true,
+  parallel = parallelDefault,
+  defaultMsAllocatedPerExecution = 30_000,
+  failFast = false,
+  // keepRunning: false to ensure runtime is stopped once executed
+  // because we have what we wants: execution is completed and
+  // we have associated coverage and console output
+  // passsing true means all node process and browsers launched stays opened
+  // (can eventually be used for debug)
+  keepRunning = false,
+
+  githubCheck = process.env.GITHUB_WORKFLOW ? githubCheckDefault : null,
+  coverage = process.argv.includes("--coverage") ? coverageDefault : null,
+
+  reporters = [],
+  listReporter = {},
   ...rest
 }) => {
-  const teardown = createTeardown();
-
-  const beforeExecutionCallbackSet = new Set();
-  const afterExecutionCallbackSet = new Set();
-  const afterAllExecutionCallbackSet = new Set();
-  beforeExecutionCallbackSet.add(beforeExecutionCallback);
-  afterExecutionCallbackSet.add(afterExecutionCallback);
-  afterAllExecutionCallbackSet.add(afterAllExecutionCallback);
+  const teardownCallbackSet = new Set();
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
-  if (handleSIGINT) {
+  if (handleSIGINT || handleSIGUP || handleSIGTERM) {
     operation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
-          SIGINT: true,
+          SIGINT: handleSIGINT,
+          SIGHUP: handleSIGUP,
+          SIGTERM: handleSIGTERM,
         },
-        () => {
-          logger.debug(`SIGINT abort`);
+        ({ name }) => {
+          logger.debug(`${name} -> abort`);
           abort();
         },
       );
     });
   }
 
+  const cpuUsage = startMeasuringCpuUsage();
+  operation.addEndCallback(cpuUsage.stop);
+
   let logger;
-  let someNeedsServer = false;
-  let someHasCoverageV8 = false;
-  let someNodeRuntime = false;
-  const runtimes = {};
-  // param validation
+  const runtimeInfo = {
+    someNeedsServer: false,
+    someHasCoverageV8: false,
+    someNodeRuntime: false,
+  };
+  // param validation and normalization
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
-      throw new TypeError(
-        `${unexpectedParamNames.join(",")}: there is no such param`,
+      throw new TypeError(`${unexpectedParamNames.join(",")}: no such param`);
+    }
+    // logs
+    {
+      if (typeof logs !== "object") {
+        throw new TypeError(`logs must be an object, got ${logs}`);
+      }
+      const unexpectedLogsKeys = Object.keys(logs).filter(
+        (key) => !Object.hasOwn(logsDefault, key),
       );
-    }
-    rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      rootDirectoryUrl,
-      "rootDirectoryUrl",
-    );
-    if (!existsSync(new URL(rootDirectoryUrl))) {
-      throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
-    }
-    if (typeof testPlan !== "object") {
-      throw new Error(`testPlan must be an object, got ${testPlan}`);
-    }
+      if (unexpectedLogsKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+        );
+      }
+      logs = { ...logsDefault, ...logs };
+      logger = createLogger({ logLevel: logs.level });
 
-    logger = createLogger({ logLevel });
+      if (listReporter && logger.levels.info) {
+        if (logger.levels.debug) {
+          listReporter.dynamic = false;
+        }
+        if (listReporter.fileUrl === undefined) {
+          listReporter.fileUrl = new URL(
+            "./.jsenv/jsenv_tests_output.txt",
+            rootDirectoryUrl,
+          );
+        }
+        reporters.push(
+          typeof listReporter.reporter === "string"
+            ? listReporter
+            : reporterList(listReporter),
+        );
+      }
+    }
+    // rootDirectoryUrl
+    {
+      rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        rootDirectoryUrl,
+        "rootDirectoryUrl",
+      );
+      if (!existsSync(new URL(rootDirectoryUrl))) {
+        throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
+      }
+    }
+    // parallel
+    {
+      if (parallel === true) {
+        parallel = {};
+      }
+      if (parallel === false) {
+        parallel = { max: 1 };
+      }
+      if (typeof parallel !== "object") {
+        throw new TypeError(`parallel must be an object, got ${parallel}`);
+      }
+      const unexpectedParallelKeys = Object.keys(parallel).filter(
+        (key) => !Object.hasOwn(parallelDefault, key),
+      );
+      if (unexpectedParallelKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedParallelKeys.join(",")}: no such key on parallel`,
+        );
+      }
+      parallel = { ...parallelDefault, ...parallel };
+      const assertPercentageAndConvertToRatio = (string) => {
+        const lastChar = string[string.length - 1];
+        if (lastChar !== "%") {
+          throw new TypeError(`string is not a percentage, got ${string}`);
+        }
+        const percentageString = string.slice(0, -1);
+        const percentageNumber = parseInt(percentageString);
+        if (percentageNumber <= 0) {
+          return 0;
+        }
+        if (percentageNumber >= 100) {
+          return 1;
+        }
+        const ratio = percentageNumber / 100;
+        return ratio;
+      };
+      const max = parallel.max;
+      if (typeof max === "string") {
+        const maxAsRatio = assertPercentageAndConvertToRatio(max);
+        const availableCpus = countAvailableCpus();
+        parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
+      } else if (typeof max === "number") {
+        if (max < 1) {
+          parallel.max = 1;
+        }
+      } else {
+        throw new TypeError(
+          `parallel.max must be a number or a percentage, got ${max}`,
+        );
+      }
 
-    Object.keys(testPlan).forEach((filePattern) => {
-      const filePlan = testPlan[filePattern];
-      if (!filePlan) return;
-      Object.keys(filePlan).forEach((executionName) => {
-        const executionConfig = filePlan[executionName];
-        const { runtime } = executionConfig;
-        if (runtime) {
-          runtimes[runtime.name] = runtime.version;
+      const maxMemory = parallel.maxMemory;
+      if (typeof maxMemory === "string") {
+        const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
+        parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
+      } else if (typeof maxMemory !== "number") {
+        throw new TypeError(
+          `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
+        );
+      }
+    }
+    // testPlan
+    {
+      if (typeof testPlan !== "object") {
+        throw new Error(`testPlan must be an object, got ${testPlan}`);
+      }
+      for (const filePattern of Object.keys(testPlan)) {
+        const filePlan = testPlan[filePattern];
+        if (!filePlan) continue;
+        for (const executionName of Object.keys(filePlan)) {
+          const executionConfig = filePlan[executionName];
+          if (executionConfig === null) {
+            continue;
+          }
+          const { runtime } = executionConfig;
+          if (!runtime || runtime.disabled) {
+            continue;
+          }
           if (runtime.type === "browser") {
             if (runtime.capabilities && runtime.capabilities.coverageV8) {
-              someHasCoverageV8 = true;
+              runtimeInfo.someHasCoverageV8 = true;
             }
-            someNeedsServer = true;
+            runtimeInfo.someNeedsServer = true;
           }
           if (runtime.type === "node") {
-            someNodeRuntime = true;
+            runtimeInfo.someNodeRuntime = true;
           }
         }
-      });
-    });
-
-    if (someNeedsServer) {
+      }
+      testPlan = {
+        "file:///**/node_modules/": null,
+        "**/*./": null,
+        ...testPlan,
+        "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
+      };
+    }
+    // webServer
+    if (runtimeInfo.someNeedsServer) {
       await assertAndNormalizeWebServer(webServer, {
         signal: operation.signal,
-        teardown,
+        teardownCallbackSet,
         logger,
       });
     }
-
-    if (githubCheckEnabled && !process.env.GITHUB_TOKEN) {
-      githubCheckEnabled = false;
-      const suggestions = [];
-      if (process.env.GITHUB_WORKFLOW_REF) {
-        const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
-        const refsIndex = workflowFileRef.indexOf("@refs/");
-        // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-        const workflowFilePath =
-          refsIndex === -1
-            ? workflowFileRef
-            : workflowFileRef.slice(0, refsIndex);
-        suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+    // githubCheck
+    {
+      if (githubCheck && !process.env.GITHUB_TOKEN) {
+        githubCheck = false;
+        const suggestions = [];
+        if (process.env.GITHUB_WORKFLOW_REF) {
+          const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+          const refsIndex = workflowFileRef.indexOf("@refs/");
+          // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+          const workflowFilePath =
+            refsIndex === -1
+              ? workflowFileRef
+              : workflowFileRef.slice(0, refsIndex);
+          suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
 \`\`\`yml
 env:
   GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 \`\`\``);
-      }
-      suggestions.push(`Disable github check with githubCheckEnabled: false`);
-      logger.warn(
-        `${
-          UNICODE.WARNING
-        } githubCheckEnabled but process.env.GITHUB_TOKEN is missing.
+        }
+        suggestions.push(`Disable github check with githubCheck: false`);
+        logger.warn(
+          `${UNICODE.WARNING} githubCheck requires process.env.GITHUB_TOKEN.
 Integration with Github check API is disabled
 To fix this warning:
 - ${suggestions.join("\n- ")}
 `,
-      );
-    }
-    if (githubCheckEnabled) {
-      const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
-        ? readGitHubWorkflowEnv()
-        : {};
-      githubCheckToken = githubCheckToken || githubCheckInfoFromEnv.githubToken;
-      githubCheckRepositoryOwner =
-        githubCheckRepositoryOwner || githubCheckInfoFromEnv.repositoryOwner;
-      githubCheckRepositoryName =
-        githubCheckRepositoryName || githubCheckInfoFromEnv.repositoryName;
-      githubCheckCommitSha =
-        githubCheckCommitSha || githubCheckInfoFromEnv.commitSha;
-    }
+        );
+      }
+      if (githubCheck) {
+        if (githubCheck === true) {
+          githubCheck = {};
+        }
+        if (typeof githubCheck !== "object") {
+          throw new TypeError(
+            `githubCheck must be an object, got ${githubCheck}`,
+          );
+        }
+        const unexpectedKeys = Object.keys(githubCheck).filter(
+          (key) => !Object.hasOwn(githubCheckDefault, key),
+        );
+        if (unexpectedKeys.length > 0) {
+          throw new TypeError(
+            `${unexpectedKeys.join(",")}: no such key on githubCheck`,
+          );
+        }
 
-    if (coverageEnabled) {
-      if (coverageMethodForBrowsers === undefined) {
-        coverageMethodForBrowsers = someHasCoverageV8
+        const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+          ? readGitHubWorkflowEnv()
+          : {};
+        githubCheck = { ...githubCheckDefault, githubCheck };
+        if (githubCheck.token === undefined) {
+          githubCheck.token = githubCheckInfoFromEnv.githubToken;
+        }
+        if (githubCheck.repositoryOwner === undefined) {
+          githubCheck.repositoryOwner = githubCheckInfoFromEnv.repositoryOwner;
+        }
+        if (githubCheck.repositoryName === undefined) {
+          githubCheck.repositoryName = githubCheckInfoFromEnv.repositoryName;
+        }
+        if (githubCheck.commitSha === undefined) {
+          githubCheck.commitSha = githubCheckInfoFromEnv.commitSha;
+        }
+      }
+    }
+    // coverage
+    if (coverage) {
+      if (coverage === true) {
+        coverage = {};
+      }
+      if (typeof coverage !== "object") {
+        throw new TypeError(`coverage must be an object, got ${coverage}`);
+      }
+      const unexpectedKeys = Object.keys(coverage).filter(
+        (key) => !Object.hasOwn(coverageDefault, key),
+      );
+      if (unexpectedKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedKeys.join(",")}: no such key on coverage`,
+        );
+      }
+      coverage = { ...coverageDefault, ...coverage };
+      if (typeof coverage.include !== "object") {
+        throw new TypeError(
+          `coverage.include must be an object, got ${coverage.include}`,
+        );
+      }
+      if (Object.keys(coverage.include).length === 0) {
+        logger.warn(
+          `coverage.include is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+        );
+      }
+      if (coverage.methodForBrowsers === undefined) {
+        coverage.methodForBrowsers = runtimeInfo.someHasCoverageV8
           ? "playwright"
           : "istanbul";
       }
-      if (typeof coverageConfig !== "object") {
-        throw new TypeError(
-          `coverageConfig must be an object, got ${coverageConfig}`,
-        );
+      if (
+        runtimeInfo.someNodeRuntime &&
+        coverage.methodForNodeJs === "NODE_V8_COVERAGE"
+      ) {
+        if (process.env.NODE_V8_COVERAGE) {
+          // when runned multiple times, we don't want to keep previous files in this directory
+          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
+        } else {
+          coverage.methodForNodeJs = "Profiler";
+          logger.warn(
+            createDetailedMessage(
+              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              {
+                "suggestion": `set process.env.NODE_V8_COVERAGE`,
+                "suggestion 2": `use coverage.methodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+              },
+            ),
+          );
+        }
       }
-      if (!coverageAndExecutionAllowed) {
+      if (!coverage.coverageAndExecutionAllowed) {
         const associationsForExecute = URL_META.resolveAssociations(
           { execute: testPlan },
           "file:///",
         );
         const associationsForCover = URL_META.resolveAssociations(
-          { cover: coverageConfig },
+          { cover: coverage.include },
           "file:///",
         );
         const patternsMatchingCoverAndExecute = Object.keys(
@@ -304,585 +446,524 @@ To fix this warning:
           );
         }
       }
-
-      if (coverageTempDirectoryUrl === undefined) {
-        coverageTempDirectoryUrl = new URL(
+      if (coverage.tempDirectoryUrl === undefined) {
+        coverage.tempDirectoryUrl = new URL(
           "./.coverage/tmp/",
           rootDirectoryUrl,
         );
       } else {
-        coverageTempDirectoryUrl = assertAndNormalizeDirectoryUrl(
-          coverageTempDirectoryUrl,
+        coverage.tempDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          coverage.tempDirectoryUrl,
           "coverageTempDirectoryUrl",
         );
       }
-      if (coverageReportJson) {
-        if (coverageReportJsonFileUrl === undefined) {
-          coverageReportJsonFileUrl = new URL(
-            "./.coverage/coverage.json",
-            rootDirectoryUrl,
-          );
-        } else {
-          coverageReportJsonFileUrl = assertAndNormalizeFileUrl(
-            coverageReportJsonFileUrl,
-            "coverageReportJsonFileUrl",
-          );
-        }
-      }
-      if (coverageReportHtml) {
-        if (coverageReportHtmlDirectoryUrl === undefined) {
-          coverageReportHtmlDirectoryUrl = new URL(
-            "./.coverage/",
-            rootDirectoryUrl,
-          );
-        } else {
-          coverageReportHtmlDirectoryUrl = assertAndNormalizeDirectoryUrl(
-            coverageReportHtmlDirectoryUrl,
-            "coverageReportHtmlDirectoryUrl",
-          );
-        }
-      }
-    }
-
-    if (typeof concurrency !== "boolean" && typeof concurrency !== "number") {
-      throw new TypeError(`concurrency must be a boolean or a number`);
     }
   }
 
-  logger.debug(
-    createDetailedMessage(`Prepare executing plan`, {
-      runtimes: JSON.stringify(runtimes, null, "  "),
-    }),
-  );
+  const testPlanInfo = {
+    rootDirectoryUrl: String(rootDirectoryUrl),
+    groups: {},
+    counters: {
+      planified: 0,
+      remaining: 0,
+      waiting: 0,
+      executing: 0,
+      executed: 0,
 
-  // param normalization
+      aborted: 0,
+      cancelled: 0,
+      timedout: 0,
+      failed: 0,
+      completed: 0,
+    },
+    aborted: false,
+    failed: false,
+    duration: 0,
+    coverage: null,
+    results: {},
+  };
+  const groups = testPlanInfo.groups;
+  const counters = testPlanInfo.counters;
+  const countersInOrder = { ...counters };
+  const results = testPlanInfo.results;
+
+  const executionPlanifiedSet = new Set();
+
+  // collect files to execute + fill executionPlanifiedSet
   {
-    if (coverageEnabled) {
-      if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(
-          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        );
+    let fileResultArray;
+    try {
+      fileResultArray = await collectFiles({
+        signal,
+        directoryUrl: rootDirectoryUrl,
+        associations: { testPlan },
+        predicate: ({ testPlan }) => testPlan,
+      });
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        testPlanInfo.aborted = true;
+        return testPlanInfo;
       }
-      if (
-        someNodeRuntime &&
-        coverageEnabled &&
-        coverageMethodForNodeJs === "NODE_V8_COVERAGE"
-      ) {
-        if (process.env.NODE_V8_COVERAGE) {
-          // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
-        } else {
-          coverageMethodForNodeJs = "Profiler";
-          logger.warn(
+      throw e;
+    }
+    let index = 0;
+    let lastExecution;
+    const fileExecutionCountMap = new Map();
+    for (const { relativeUrl, meta } of fileResultArray) {
+      const filePlan = meta.testPlan;
+      for (const groupName of Object.keys(filePlan)) {
+        const stepConfig = filePlan[groupName];
+        if (stepConfig === null || stepConfig === undefined) {
+          continue;
+        }
+        if (typeof stepConfig !== "object") {
+          throw new TypeError(
             createDetailedMessage(
-              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+              `found unexpected value in plan, they must be object`,
               {
-                "suggestion": `set process.env.NODE_V8_COVERAGE`,
-                "suggestion 2": `use coverageMethodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+                ["file relative path"]: relativeUrl,
+                ["group"]: groupName,
+                ["value"]: stepConfig,
               },
             ),
           );
         }
+        if (stepConfig.runtime?.disabled) {
+          continue;
+        }
+
+        const {
+          runtime,
+          runtimeParams,
+          allocatedMs = defaultMsAllocatedPerExecution,
+        } = stepConfig;
+        const params = {
+          measureMemoryUsage: true,
+          measurePerformance: false,
+          collectPerformance: false,
+          collectConsole: true,
+          allocatedMs,
+          runtime,
+          runtimeParams: {
+            rootDirectoryUrl,
+            webServer,
+            teardownCallbackSet,
+
+            coverageEnabled: Boolean(coverage),
+            coverageInclude: coverage?.include,
+            coverageMethodForBrowsers: coverage?.methodForBrowsers,
+            coverageMethodForNodeJs: coverage?.methodForNodeJs,
+            isTestPlan: true,
+            fileRelativeUrl: relativeUrl,
+            ...runtimeParams,
+          },
+        };
+        const runtimeType = runtime.type;
+        const runtimeName = runtime.name;
+        const runtimeVersion = runtime.version;
+
+        let fileExecutionCount;
+        if (fileExecutionCountMap.has(relativeUrl)) {
+          fileExecutionCount = fileExecutionCountMap.get(relativeUrl) + 1;
+          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+        } else {
+          fileExecutionCount = 1;
+          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+        }
+
+        const execution = {
+          counters,
+          countersInOrder,
+          index,
+          isLast: false,
+          group: groupName,
+          rootDirectoryUrl: String(rootDirectoryUrl),
+          fileRelativeUrl: relativeUrl,
+          fileExecutionIndex: fileExecutionCount - 1,
+          fileExecutionCount: null,
+          runtimeType,
+          runtimeName,
+          runtimeVersion,
+          params,
+
+          // will be set by run()
+          status: "planified",
+          result: {},
+        };
+        if (typeof params.allocatedMs === "function") {
+          params.allocatedMs = params.allocatedMs(execution);
+        }
+
+        lastExecution = execution;
+        executionPlanifiedSet.add(execution);
+        const existingResults = results[relativeUrl];
+        if (existingResults) {
+          existingResults[groupName] = execution.result;
+        } else {
+          results[relativeUrl] = {
+            [groupName]: execution.result,
+          };
+        }
+        const existingGroup = groups[groupName];
+        if (existingGroup) {
+          groups[groupName].count++;
+        } else {
+          groups[groupName] = {
+            count: 1,
+            runtimeType,
+            runtimeName,
+            runtimeVersion,
+          };
+        }
+        index++;
       }
     }
-    if (cooldownBetweenExecutions) {
-      if (cooldownBetweenExecutions < 0) {
-        cooldownBetweenExecutions = 0;
-      }
-      if (cooldownBetweenExecutions === Infinity) {
-        cooldownBetweenExecutions = 0;
-      }
-    }
-    if (concurrency === true) {
-      const availableCpus = os.cpus().length;
-      concurrency =
-        availableCpus > 2
-          ? // One CPU is used to run this code so we do availableCpus - 1
-            availableCpus - 1
-          : 1;
-    }
-    if (concurrency === false) {
-      concurrency = 1;
+    fileResultArray.length = 0;
+    fileExecutionCountMap.clear();
+    if (lastExecution) {
+      lastExecution.isLast = true;
     }
   }
 
-  testPlan = {
-    "file:///**/node_modules/": null,
-    "**/*./": null,
-    ...testPlan,
-    "**/.jsenv/": null,
-  };
-  logger.debug(`Generate executions`);
-  let executionSteps = await executionStepsFromTestPlan({
-    signal,
-    testPlan,
-    rootDirectoryUrl,
-  });
-  logger.debug(`${executionSteps.length} executions planned`);
-  if (githubCheckEnabled) {
+  counters.planified =
+    counters.remaining =
+    counters.waiting =
+      executionPlanifiedSet.size;
+  countersInOrder.planified =
+    countersInOrder.remaining =
+    countersInOrder.waiting =
+      executionPlanifiedSet.size;
+  if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
-      logLevel: githubCheckLogLevel,
-      githubToken: githubCheckToken,
-      repositoryOwner: githubCheckRepositoryOwner,
-      repositoryName: githubCheckRepositoryName,
-      commitSha: githubCheckCommitSha,
-      checkName: githubCheckName,
-      checkTitle: githubCheckTitle,
-      checkSummary: `${executionSteps.length} files will be executed`,
+      logLevel: githubCheck.logLevel,
+      githubToken: githubCheck.token,
+      repositoryOwner: githubCheck.repositoryOwner,
+      repositoryName: githubCheck.repositoryName,
+      commitSha: githubCheck.commitSha,
+      checkName: githubCheck.name,
+      checkTitle: githubCheck.title,
+      checkSummary: `${executionPlanifiedSet.size} files will be executed`,
     });
     const annotations = [];
-    afterExecutionCallbackSet.add((afterExecutionInfo) => {
-      const { executionResult } = afterExecutionInfo;
-      const { errors = [] } = executionResult;
-      for (const error of errors) {
-        const annotation = githubAnnotationFromError(error, {
-          rootDirectoryUrl,
-          executionInfo: afterExecutionInfo,
-        });
-        annotations.push(annotation);
-      }
-    });
-    afterAllExecutionCallbackSet.add(async (returnValue) => {
-      const { summary } = returnValue;
-      const title = "Jsenv test results";
-      const summaryText = stripAnsi(formatSummary(summary));
-      if (summary.counters.total !== summary.counters.completed) {
-        await githubCheckRun.fail({
-          title,
-          summary: summaryText,
-          annotations,
-        });
-        return;
-      }
-      await githubCheckRun.pass({
-        title,
-        summary: summaryText,
-        annotations,
-      });
+    reporters.push({
+      beforeAll: (testPlanInfo) => {
+        return {
+          afterEach: (execution) => {
+            const { result } = execution;
+            const { errors = [] } = result;
+            for (const error of errors) {
+              const annotation = githubAnnotationFromError(error, {
+                rootDirectoryUrl,
+                execution,
+              });
+              annotations.push(annotation);
+            }
+          },
+          afterAll: async () => {
+            const title = "Jsenv test results";
+            const summaryText = stripAnsi(renderOutro(testPlanInfo));
+            if (testPlanInfo.failed) {
+              await githubCheckRun.fail({
+                title,
+                summary: summaryText,
+                annotations,
+              });
+              return;
+            }
+            await githubCheckRun.pass({
+              title,
+              summary: summaryText,
+              annotations,
+            });
+          },
+        };
+      },
     });
   }
 
-  executionSteps = executionSteps.filter(
-    (executionStep) => !executionStep.runtime?.disabled,
-  );
-
-  const returnValue = {
-    aborted: false,
-    summary: null,
-    report: null,
-    coverage: null,
-  };
-  const report = {};
-  const callbacks = [];
-
-  const multipleExecutionsOperation = Abort.startOperation();
-  multipleExecutionsOperation.addAbortSignal(signal);
-  const failFastAbortController = new AbortController();
-  if (failFast) {
-    multipleExecutionsOperation.addAbortSignal(failFastAbortController.signal);
-  }
-
-  try {
-    if (gcBetweenExecutions) {
-      ensureGlobalGc();
+  const beforeEachCallbackSet = new Set();
+  const beforeEachInOrderCallbackSet = new Set();
+  const afterEachCallbackSet = new Set();
+  const afterEachInOrderCallbackSet = new Set();
+  const afterAllCallbackSet = new Set();
+  // execute all
+  {
+    const multipleExecutionsOperation = Abort.startOperation();
+    multipleExecutionsOperation.addAbortSignal(signal);
+    const failFastAbortController = new AbortController();
+    if (failFast) {
+      multipleExecutionsOperation.addAbortSignal(
+        failFastAbortController.signal,
+      );
     }
-
-    if (coverageEnabled) {
+    let finalizeCoverage;
+    if (coverage) {
       // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverageTempDirectoryUrl);
-      callbacks.push(async () => {
+      await ensureEmptyDirectory(coverage.tempDirectoryUrl);
+      finalizeCoverage = async () => {
         if (multipleExecutionsOperation.signal.aborted) {
           // don't try to do the coverage stuff
           return;
         }
         try {
-          if (coverageMethodForNodeJs === "NODE_V8_COVERAGE") {
+          if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
             takeCoverage();
             // conceptually we don't need coverage anymore so it would be
             // good to call v8.stopCoverage()
             // but it logs a strange message about "result is not an object"
           }
-          const coverage = await reportToCoverage(report, {
+          const testPlanCoverage = await generateCoverage(testPlanInfo, {
             signal: multipleExecutionsOperation.signal,
             logger,
             rootDirectoryUrl,
-            coverageConfig,
-            coverageIncludeMissing,
-            coverageMethodForNodeJs,
-            coverageV8ConflictWarning,
+            coverage,
           });
-          returnValue.coverage = coverage;
+          testPlanInfo.coverage = testPlanCoverage;
         } catch (e) {
           if (Abort.isAbortError(e)) {
             return;
           }
           throw e;
         }
-      });
+      };
     }
-
-    const runtimeParams = {
-      rootDirectoryUrl,
-      webServer,
-
-      coverageEnabled,
-      coverageConfig,
-      coverageMethodForBrowsers,
-      coverageMethodForNodeJs,
-      isTestPlan: true,
-      teardown,
-    };
-
-    if (logMergeForCompletedExecutions && !process.stdout.isTTY) {
-      logMergeForCompletedExecutions = false;
-      logger.debug(
-        `Force logMergeForCompletedExecutions to false because process.stdout.isTTY is false`,
-      );
-    }
-    const debugLogsEnabled = logger.levels.debug;
-    const executionLogsEnabled = logger.levels.info;
-    const executionSpinner =
-      logRefresh &&
-      concurrency === 1 &&
-      !debugLogsEnabled &&
-      executionLogsEnabled &&
-      process.stdout.isTTY &&
-      // if there is an error during execution npm will mess up the output
-      // (happens when npm runs several command in a workspace)
-      // so we enable spinner only when !process.exitCode (no error so far)
-      process.exitCode !== 1;
-
-    const startMs = Date.now();
-    let rawOutput = "";
-    let executionLog = createLog({ newLine: "" });
-    const counters = {
-      total: executionSteps.length,
-      aborted: 0,
-      timedout: 0,
-      failed: 0,
-      completed: 0,
-      done: 0,
-    };
 
     const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-    await executeConcurrently({
-      multipleExecutionsOperation,
-      concurrency,
-      cooldownBetweenExecutions,
-      executionSteps,
-      start: async (paramsFromStep) => {
-        const executionIndex = executionSteps.indexOf(paramsFromStep);
-        const { executionName, fileRelativeUrl, runtime } = paramsFromStep;
-        const runtimeType = runtime.type;
-        const runtimeName = runtime.name;
-        const runtimeVersion = runtime.version;
-        const executionParams = {
-          measurePerformance: false,
-          collectPerformance: false,
-          collectConsole: true,
-          allocatedMs: defaultMsAllocatedPerExecution,
-          ...paramsFromStep,
-          runtimeParams: {
-            fileRelativeUrl,
-            ...paramsFromStep.runtimeParams,
-          },
-        };
-        const beforeExecutionInfo = {
-          fileRelativeUrl,
-          runtimeType,
-          runtimeName,
-          runtimeVersion,
-          executionIndex,
-          executionParams,
-          startMs: Date.now(),
-          executionResult: {
-            status: "executing",
-          },
-          counters,
-          timeEllapsed: Date.now() - startMs,
-          memoryHeap: memoryUsage().heapUsed,
-        };
-        if (typeof executionParams.allocatedMs === "function") {
-          executionParams.allocatedMs =
-            executionParams.allocatedMs(beforeExecutionInfo);
-        }
-        let spinner;
-        if (executionSpinner) {
-          spinner = startSpinner({
-            log: executionLog,
-            render: () => {
-              return createExecutionLog(beforeExecutionInfo, {
-                logRuntime,
-                logEachDuration,
-                logTimeUsage,
-                logMemoryHeapUsage,
-              });
-            },
-          });
-        }
-        for (const beforeExecutionCallback of beforeExecutionCallbackSet) {
-          beforeExecutionCallback(beforeExecutionInfo);
-        }
-        const fileUrl = `${rootDirectoryUrl}${fileRelativeUrl}`;
-        let executionResult;
-        if (existsSync(new URL(fileUrl))) {
-          executionResult = await run({
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            allocatedMs: executionParams.allocatedMs,
-            keepRunning,
-            mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-            collectConsole: executionParams.collectConsole,
-            coverageEnabled,
-            coverageTempDirectoryUrl,
-            runtime: executionParams.runtime,
-            runtimeParams: {
-              ...runtimeParams,
-              ...executionParams.runtimeParams,
-            },
-          });
-        } else {
-          executionResult = {
-            status: "failed",
-            errors: [
-              new Error(
-                `No file at ${fileRelativeUrl} for execution "${executionName}"`,
-              ),
-            ],
+    const executionRemainingSet = new Set(executionPlanifiedSet);
+    const executionExecutingSet = new Set();
+    const start = async (execution) => {
+      execution.fileExecutionCount = Object.keys(
+        testPlanInfo.results[execution.fileRelativeUrl],
+      ).length;
+      mutateCountersBeforeExecutionStarts(counters, execution);
+      mutateCountersBeforeExecutionStarts(countersInOrder, execution);
+
+      execution.status = "executing";
+      executionRemainingSet.delete(execution);
+      executionExecutingSet.add(execution);
+      for (const beforeEachCallback of beforeEachCallbackSet) {
+        const returnValue = beforeEachCallback(execution, testPlanInfo);
+        if (typeof returnValue === "function") {
+          const callback = (...args) => {
+            afterEachCallbackSet.delete(callback);
+            return returnValue(...args);
           };
+          afterEachCallbackSet.add(callback);
         }
-        const fileReport = report[fileRelativeUrl];
-        if (fileReport) {
-          fileReport[executionName] = executionResult;
-        } else {
-          report[fileRelativeUrl] = {
-            [executionName]: executionResult,
+      }
+
+      for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
+        const returnValue = beforeEachInOrderCallback(execution, testPlanInfo);
+        if (typeof returnValue === "function") {
+          const callback = (...args) => {
+            afterEachInOrderCallbackSet.delete(callback);
+            return returnValue(...args);
           };
+          afterEachInOrderCallbackSet.add(callback);
         }
-
-        const afterExecutionInfo = {
-          ...beforeExecutionInfo,
-          runtimeVersion: runtime.version,
-          endMs: Date.now(),
-          executionResult,
-        };
-
-        if (gcBetweenExecutions) {
-          global.gc();
-        }
-
-        const timeEllapsed = Date.now() - startMs;
-        const memoryHeap = memoryUsage().heapUsed;
-        callWhenPreviousExecutionAreDone(executionIndex, () => {
-          counters.done++;
-          if (executionResult.status === "aborted") {
-            counters.aborted++;
-          } else if (executionResult.status === "timedout") {
-            counters.timedout++;
-          } else if (executionResult.status === "failed") {
-            counters.failed++;
-          } else if (executionResult.status === "completed") {
-            counters.completed++;
-          }
-
-          if (executionLogsEnabled) {
-            // replace spinner with this execution result
-            if (spinner) {
-              spinner.stop();
-              spinner = null;
-            }
-
-            const log = createExecutionLog(afterExecutionInfo, {
-              logShortForCompletedExecutions,
-              logRuntime,
-              logEachDuration,
-              ...(logTimeUsage ? { timeEllapsed } : {}),
-              ...(logMemoryHeapUsage ? { memoryHeap } : {}),
-            });
-
-            executionLog.write(log);
-            rawOutput += stripAnsi(log);
-            const canOverwriteLog = canOverwriteLogGetter({
-              logMergeForCompletedExecutions,
-              executionResult,
-            });
-            if (canOverwriteLog) {
-              // nothing to do, we reuse the current executionLog object
-            } else {
-              executionLog.destroy();
-              executionLog = createLog({ newLine: "" });
-            }
-            const isLastExecutionLog =
-              executionIndex === executionSteps.length - 1;
-            if (isLastExecutionLog && logger.levels.info) {
-              executionLog.write("\n");
-            }
-          }
-        });
-        for (const afterExecutionCallback of afterExecutionCallbackSet) {
-          afterExecutionCallback(afterExecutionInfo);
-        }
-        const cancelRemaining =
-          failFast &&
-          executionResult.status !== "completed" &&
-          counters.done < counters.total;
-        if (cancelRemaining) {
-          logger.info(`"failFast" enabled -> cancel remaining executions`);
-          failFastAbortController.abort();
-        }
-      },
-    });
-    if (!keepRunning) {
-      logger.debug("trigger test plan teardown");
-      await teardown.trigger();
-    }
-
-    counters.cancelled = counters.total - counters.done;
-    const summary = {
-      counters,
-      // when execution is aborted, the remaining executions are "cancelled"
-      duration: Date.now() - startMs,
-    };
-    if (logSummary) {
-      const summaryLog = formatSummaryLog(summary);
-      rawOutput += stripAnsi(summaryLog);
-      logger.info(summaryLog);
-    }
-    if (summary.counters.total !== summary.counters.completed) {
-      const logFileUrl = new URL(logFileRelativeUrl, rootDirectoryUrl).href;
-      writeFileSync(logFileUrl, rawOutput);
-      logger.info(`-> ${urlToFileSystemPath(logFileUrl)}`);
-    }
-    returnValue.aborted = multipleExecutionsOperation.signal.aborted;
-    returnValue.summary = summary;
-    returnValue.report = report;
-    for (const callback of callbacks) {
-      await callback();
-    }
-  } finally {
-    await multipleExecutionsOperation.end();
-  }
-
-  const hasFailed =
-    returnValue.summary.counters.total !==
-    returnValue.summary.counters.completed;
-  if (updateProcessExitCode && hasFailed) {
-    process.exitCode = 1;
-  }
-  const coverage = returnValue.coverage;
-  // planCoverage can be null when execution is aborted
-  if (coverage) {
-    const promises = [];
-    // keep this one first because it does ensureEmptyDirectory
-    // and in case coverage json file gets written in the same directory
-    // it must be done before
-    if (coverageEnabled && coverageReportHtml) {
-      await ensureEmptyDirectory(coverageReportHtmlDirectoryUrl);
-      const htmlCoverageDirectoryIndexFileUrl = `${coverageReportHtmlDirectoryUrl}index.html`;
-      logger.info(
-        `-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`,
-      );
-      promises.push(
-        generateCoverageHtmlDirectory(coverage, {
-          rootDirectoryUrl,
-          coverageHtmlDirectoryRelativeUrl: urlToRelativeUrl(
-            coverageReportHtmlDirectoryUrl,
-            rootDirectoryUrl,
-          ),
-          coverageReportSkipEmpty,
-          coverageReportSkipFull,
-        }),
-      );
-    }
-    if (coverageEnabled && coverageReportJson) {
-      promises.push(
-        generateCoverageJsonFile({
-          coverage,
-          coverageJsonFileUrl: coverageReportJsonFileUrl,
-          logger,
-        }),
-      );
-    }
-    if (coverageEnabled && coverageReportTextLog) {
-      promises.push(
-        generateCoverageTextLog(coverage, {
-          coverageReportSkipEmpty,
-          coverageReportSkipFull,
-        }),
-      );
-    }
-    await Promise.all(promises);
-  }
-
-  for (const afterAllExecutionCallback of afterAllExecutionCallbackSet) {
-    await afterAllExecutionCallback(returnValue);
-  }
-  return returnValue;
-};
-
-const canOverwriteLogGetter = ({
-  logMergeForCompletedExecutions,
-  executionResult,
-}) => {
-  if (!logMergeForCompletedExecutions) {
-    return false;
-  }
-  if (executionResult.status === "aborted") {
-    return true;
-  }
-  if (executionResult.status !== "completed") {
-    return false;
-  }
-  const { consoleCalls = [] } = executionResult;
-  if (consoleCalls.length > 0) {
-    return false;
-  }
-  return true;
-};
-
-const executeConcurrently = async ({
-  multipleExecutionsOperation,
-  concurrency,
-  cooldownBetweenExecutions,
-  executionSteps,
-  start,
-}) => {
-  let progressionIndex = 0;
-  let remainingExecutionToStart = executionSteps.length;
-
-  const startNext = async () => {
-    if (remainingExecutionToStart === 0) {
-      return;
-    }
-    remainingExecutionToStart--;
-    const input = executionSteps[progressionIndex];
-    progressionIndex++;
-    await start(input);
-    if (multipleExecutionsOperation.signal.aborted) {
-      return;
-    }
-    if (cooldownBetweenExecutions) {
-      await new Promise((resolve) => {
-        const timeoutId = setTimeout(() => {
-          removeClearTimeoutOnAbort();
-          resolve();
-        }, cooldownBetweenExecutions);
-        const removeClearTimeoutOnAbort =
-          multipleExecutionsOperation.signal.addAbortCallback(() => {
-            clearTimeout(timeoutId);
-          });
+      }
+      const executionResult = await run({
+        ...execution.params,
+        signal: multipleExecutionsOperation.signal,
+        logger,
+        keepRunning,
+        mirrorConsole: false, // might be executed in parallel: log would be a mess to read
+        coverageEnabled: Boolean(coverage),
+        coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
       });
-      if (multipleExecutionsOperation.signal.aborted) {
+      Object.assign(execution.result, executionResult);
+      execution.status = "executed";
+      executionExecutingSet.delete(execution);
+      mutateCountersAfterExecutionEnds(counters, execution);
+      if (execution.result.status !== "completed") {
+        testPlanInfo.failed = true;
+        if (updateProcessExitCode) {
+          process.exitCode = 1;
+        }
+      }
+
+      for (const afterEachCallback of afterEachCallbackSet) {
+        afterEachCallback(execution, testPlanInfo);
+      }
+      callWhenPreviousExecutionAreDone(execution.index, () => {
+        mutateCountersAfterExecutionEnds(countersInOrder, execution);
+        for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
+          afterEachInOrderCallback(execution, testPlanInfo);
+        }
+      });
+
+      if (testPlanInfo.failed && failFast && counters.remaining) {
+        logger.info(`"failFast" enabled -> cancel remaining executions`);
+        failFastAbortController.abort();
         return;
       }
-    }
-    await startNext();
-  };
+      await startAsMuchAsPossible();
+    };
+    const startAsMuchAsPossible = async () => {
+      const promises = [];
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        multipleExecutionsOperation.throwIfAborted();
+        if (executionRemainingSet.size === 0) {
+          break;
+        }
+        if (executionExecutingSet.size >= parallel.max) {
+          break;
+        }
 
-  const promises = [];
-  while (concurrency--) {
-    promises.push(startNext());
+        if (
+          // starting execution in parallel is limited by
+          // cpu and memory only when trying to parallelize
+          // if nothing is executing these limitations don't apply
+          executionExecutingSet.size > 0
+        ) {
+          const availableMemory = freemem();
+          const totalMemory = totalmem();
+          const usedMemory = totalMemory - availableMemory;
+          if (usedMemory > parallel.maxMemory) {
+            // retry after Xms in case memory usage decreases
+            const promise = (async () => {
+              await multipleExecutionsOperation.wait(200);
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
+          }
+
+          if (cpuUsage.overall.active > parallel.maxCpu) {
+            // retry after Xms in case cpu usage decreases
+            const promise = (async () => {
+              await multipleExecutionsOperation.wait(200);
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
+            break;
+          }
+        }
+
+        let execution;
+        for (const executionCandidate of executionRemainingSet) {
+          // TODO: this is where we'll check if it can be executed
+          // according to upcoming "using" execution param
+          execution = executionCandidate;
+          break;
+        }
+        if (execution) {
+          promises.push(start(execution));
+        }
+      }
+      if (promises.length) {
+        await Promise.all(promises);
+        promises.length = 0;
+      }
+    };
+
+    try {
+      const startMs = Date.now();
+      reporters = reporters.flat(10);
+      for (const reporter of reporters) {
+        const {
+          beforeAll,
+          // TODO: if defined add them too
+          // beforeEach,
+          // afterEach,
+          // beforeEachInOrder,
+          // afterEachInOrder,
+          // afterAll,
+        } = reporter;
+        if (beforeAll) {
+          const returnValue = await beforeAll(testPlanInfo);
+          if (returnValue) {
+            const {
+              beforeEach,
+              beforeEachInOrder,
+              afterEach,
+              afterEachInOrder,
+              afterAll,
+            } = returnValue;
+            if (beforeEach) {
+              beforeEachCallbackSet.add(beforeEach);
+            }
+            if (beforeEachInOrder) {
+              beforeEachInOrderCallbackSet.add(beforeEachInOrder);
+            }
+            if (afterEach) {
+              afterEachCallbackSet.add(afterEach);
+            }
+            if (afterEachInOrder) {
+              afterEachInOrderCallbackSet.add(afterEachInOrder);
+            }
+            if (afterAll) {
+              afterAllCallbackSet.add(afterAll);
+            }
+          }
+        }
+      }
+      await startAsMuchAsPossible();
+      if (!keepRunning) {
+        logger.debug("trigger test plan teardown");
+        for (const teardownCallback of teardownCallbackSet) {
+          await teardownCallback();
+        }
+        teardownCallbackSet.clear();
+      }
+      testPlanInfo.aborted = multipleExecutionsOperation.signal.aborted;
+      testPlanInfo.duration = Date.now() - startMs;
+      mutateCountersAfterAllExecution(counters, testPlanInfo);
+      mutateCountersAfterAllExecution(countersInOrder, testPlanInfo);
+      if (finalizeCoverage) {
+        await finalizeCoverage();
+      }
+    } catch (e) {
+      if (Abort.isAbortError(e)) {
+        testPlanInfo.aborted = true;
+      } else {
+        throw e;
+      }
+    } finally {
+      await multipleExecutionsOperation.end();
+    }
   }
-  await Promise.all(promises);
+
+  afterEachCallbackSet.clear();
+  afterEachInOrderCallbackSet.clear();
+  for (const afterAllCallback of afterAllCallbackSet) {
+    await afterAllCallback(testPlanInfo);
+  }
+  afterAllCallbackSet.clear();
+  return testPlanInfo;
+};
+
+const countAvailableCpus = () => {
+  if (typeof availableParallelism === "function") {
+    return availableParallelism();
+  }
+  const cpuArray = cpus();
+  return cpuArray.length || 1;
+};
+
+const mutateCountersBeforeExecutionStarts = (counters) => {
+  counters.executing++;
+  counters.waiting--;
+};
+const mutateCountersAfterExecutionEnds = (counters, execution) => {
+  counters.executing--;
+  counters.executed++;
+  counters.remaining--;
+  if (execution.result.status === "aborted") {
+    counters.aborted++;
+  } else if (execution.result.status === "timedout") {
+    counters.timedout++;
+  } else if (execution.result.status === "failed") {
+    counters.failed++;
+  } else if (execution.result.status === "completed") {
+    counters.completed++;
+  }
+};
+const mutateCountersAfterAllExecution = (counters, testPlanResult) => {
+  if (testPlanResult.aborted) {
+    // when execution is aborted, the remaining executions are "cancelled"
+    counters.cancelled = counters.planified - counters.executed;
+    counters.remaining = 0;
+  }
 };

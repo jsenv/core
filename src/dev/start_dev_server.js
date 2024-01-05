@@ -4,7 +4,6 @@ import {
   assertAndNormalizeDirectoryUrl,
   bufferToEtag,
 } from "@jsenv/filesystem";
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/log";
 import {
   jsenvAccessControlAllowedHeaders,
@@ -123,25 +122,13 @@ export const startDevServer = async ({
   }
 
   const logger = createLogger({ logLevel });
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    operation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGINT: true,
-        },
-        abort,
-      );
-    });
-  }
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !logger.levels.info,
   });
 
-  const serverStopCallbacks = [];
+  const serverStopCallbackSet = new Set();
   const serverEventsDispatcher = createServerEventsDispatcher();
-  serverStopCallbacks.push(() => {
+  serverStopCallbackSet.add(() => {
     serverEventsDispatcher.destroy();
   });
   const kitchenCache = new Map();
@@ -216,7 +203,7 @@ export const startDevServer = async ({
         cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
       },
     );
-    serverStopCallbacks.push(stopWatchingSourceFiles);
+    serverStopCallbackSet.add(stopWatchingSourceFiles);
 
     const getOrCreateKitchen = (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
@@ -341,7 +328,7 @@ export const startDevServer = async ({
         },
       );
 
-      serverStopCallbacks.push(() => {
+      serverStopCallbackSet.add(() => {
         kitchen.pluginController.callHooks("destroy", kitchen.context);
       });
       server_events: {
@@ -505,7 +492,7 @@ export const startDevServer = async ({
             if (urlInfo.content !== undefined) {
               kitchen.context.logger.error(`Error while handling ${request.url}:
 ${originalError.reasonCode || originalError.code}
-${e.traceMessage}`);
+${e.trace?.message}`);
               return {
                 url: reference.url,
                 status: 200,
@@ -638,10 +625,10 @@ ${e.traceMessage}`);
   });
   server.stoppedPromise.then((reason) => {
     onStop();
-    serverStopCallbacks.forEach((serverStopCallback) => {
+    for (const serverStopCallback of serverStopCallbackSet) {
       serverStopCallback(reason);
-    });
-    serverStopCallbacks.length = 0;
+    }
+    serverStopCallbackSet.clear();
   });
   startDevServerTask.done();
   if (hostname) {

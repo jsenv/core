@@ -45,17 +45,18 @@ await executeTestPlan({
       },
     },
   },
-  concurrency: Boolean(process.env.CONCURRENCY),
-  logLevel: "warn",
-  coverageEnabled: true,
-  coverageConfig: {
-    "./animals.js": true,
+  parallel: !process.env.SERIE,
+  logs: {
+    level: "warn",
   },
-  coverageMethodForNodeJs: "Profiler",
-  coverageV8ConflictWarning: false,
-  coverageReportTextLog: false,
-  coverageReportHtml: false,
-  githubCheckEnabled: false,
+  coverage: {
+    include: {
+      "./animals.js": true,
+    },
+    methodForNodeJs: "Profiler",
+    v8ConflictWarning: false,
+  },
+  githubCheck: false,
 });
 
 const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =

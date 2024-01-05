@@ -16,7 +16,10 @@ await executeTestPlan({
       },
     },
   },
-  coverageEnabled: process.argv.includes("--coverage"),
-  coverageMethodForNodeJs: "Profiler",
-  githubCheckEnabled: false,
+  coverage: process.argv.includes("--coverage")
+    ? {
+        methodForNodeJs: "Profiler",
+      }
+    : false,
+  githubCheck: false,
 });

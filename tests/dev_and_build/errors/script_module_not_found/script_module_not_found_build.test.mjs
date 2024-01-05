@@ -21,10 +21,11 @@ no entry on filesystem
 ${new URL("./client/404.js", import.meta.url).href}
 --- url reference trace ---
 ${new URL("./client/main.html", import.meta.url).href}:10:27
-  9  |   <body>
-> 10 |     <script type="module" src="./404.js"></script>
-                                 ^
-  11 |   </body>
+ 7 |   </head>
+ 8 | 
+ 9 |   <body>
+10 |     <script type="module" src="./404.js"></script>
+                               ^
 --- plugin name ---
 "jsenv:file_url_fetching"`;
   assert({ actual, expected });

@@ -14,6 +14,8 @@ import crypto from "node:crypto";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { ensureParentDirectories } from "@jsenv/filesystem";
 
+import { createException } from "./exception.js";
+
 export const run = async ({
   signal = new AbortController().signal,
   logger,
@@ -21,19 +23,42 @@ export const run = async ({
   keepRunning = false,
   mirrorConsole = false,
   collectConsole = false,
+  measureMemoryUsage = false,
+  onMeasureMemoryAvailable,
+  collectPerformance = false,
   coverageEnabled = false,
   coverageTempDirectoryUrl,
-  collectPerformance = false,
   runtime,
   runtimeParams,
 }) => {
+  if (keepRunning) {
+    allocatedMs = Infinity;
+  }
+  if (allocatedMs === Infinity) {
+    allocatedMs = 0;
+  }
+
+  const timingOrigin = Date.now();
+  const relativeToTimingOrigin = (ms) => ms - timingOrigin;
+
   const result = {
     status: "pending",
     errors: [],
     namespace: null,
+    consoleCalls: null,
+    timings: {
+      origin: timingOrigin,
+      start: 0,
+      runtimeStart: null,
+      executionStart: null,
+      executionEnd: null,
+      runtimeEnd: null,
+      end: null,
+    },
+    memoryUsage: null,
+    performance: null,
+    coverageFileUrl: null,
   };
-  const callbacks = [];
-
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
   const runtimeLabel = `${runtime.name}/${runtime.version}`;
@@ -41,13 +66,7 @@ export const run = async ({
   const runOperation = Abort.startOperation();
   runOperation.addAbortSignal(signal);
   let timeoutAbortSource;
-  if (
-    // ideally we would rather log than the timeout is ignored
-    // when keepRunning is true
-    !keepRunning &&
-    typeof allocatedMs === "number" &&
-    allocatedMs !== Infinity
-  ) {
+  if (allocatedMs) {
     timeoutAbortSource = runOperation.timeout(allocatedMs);
   }
   const consoleCalls = [];
@@ -77,18 +96,11 @@ export const run = async ({
       coverageTempDirectoryUrl,
     ).href;
     await ensureParentDirectories(coverageFileUrl);
-    if (coverageEnabled) {
-      result.coverageFileUrl = coverageFileUrl;
-      // written within the child_process/worker_thread or during runtime.run()
-      // for browsers
-      // (because it takes time to serialize and transfer the coverage object)
-    }
+    result.coverageFileUrl = coverageFileUrl;
+    // written within the child_process/worker_thread or during runtime.run()
+    // for browsers
+    // (because it takes time to serialize and transfer the coverage object)
   }
-
-  const startMs = Date.now();
-  callbacks.push(() => {
-    result.duration = Date.now() - startMs;
-  });
 
   try {
     logger.debug(`run() ${runtimeLabel}`);
@@ -109,11 +121,23 @@ export const run = async ({
                 logger,
                 ...runtimeParams,
                 collectConsole,
+                measureMemoryUsage,
+                onMeasureMemoryAvailable,
                 collectPerformance,
                 coverageFileUrl,
                 keepRunning,
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
+                onRuntimeStarted: () => {
+                  result.timings.runtimeStart = relativeToTimingOrigin(
+                    Date.now(),
+                  );
+                },
+                onRuntimeStopped: () => {
+                  result.timings.runtimeEnd = relativeToTimingOrigin(
+                    Date.now(),
+                  );
+                },
               });
               cb(runResult);
             } catch (e) {
@@ -131,13 +155,35 @@ export const run = async ({
     if (winner.name === "aborted") {
       runOperation.throwIfAborted();
     }
-    const { status, namespace, errors, performance } = winner.data;
+    const {
+      status,
+      errors,
+      namespace,
+      timings = {},
+      memoryUsage,
+      performance,
+    } = winner.data;
     result.status = status;
-    result.errors.push(...errors);
-    result.namespace = namespace;
-    if (collectPerformance) {
-      result.performance = performance;
+    for (let error of errors) {
+      const errorProxy = normalizeRuntimeError(error);
+      result.errors.push(errorProxy);
     }
+    result.namespace = namespace;
+    if (timings) {
+      if (timings.start) {
+        result.timings.executionStart = relativeToTimingOrigin(timings.start);
+      }
+      if (timings.end) {
+        result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+      }
+    }
+    result.memoryUsage =
+      typeof memoryUsage === "number"
+        ? memoryUsage < 0
+          ? 0
+          : memoryUsage
+        : memoryUsage;
+    result.performance = performance;
   } catch (e) {
     if (Abort.isAbortError(e)) {
       if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
@@ -151,10 +197,25 @@ export const run = async ({
     }
   } finally {
     await runOperation.end();
+    result.timings.end = relativeToTimingOrigin(Date.now());
+    return result;
   }
-
-  callbacks.forEach((callback) => {
-    callback();
-  });
-  return result;
+};
+const normalizeRuntimeError = (runtimeError) => {
+  // the goal here is to obtain a "regular error"
+  // that can be thrown using "throw" keyword
+  // so we wrap the error hapenning inside the runtime
+  // into "errorProxy" and put .stack property on it
+  // the other properties are set by defineProperty so they are not enumerable
+  // otherwise they would pollute the error displayed by Node.js
+  const errorProxy = new Error(runtimeError.message);
+  const exception = createException(runtimeError);
+  for (const ownPropertyName of Object.getOwnPropertyNames(exception)) {
+    Object.defineProperty(errorProxy, ownPropertyName, {
+      writable: true,
+      configurable: true,
+      value: runtimeError[ownPropertyName],
+    });
+  }
+  return errorProxy;
 };

@@ -57,13 +57,14 @@ try {
   const expected = `Reference leads to a directory
 --- reference trace ---
 ${new URL("./client/main.html", import.meta.url)}:15:40
-  14 |     <script type="module">
-> 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
-                                              ^
-  16 | `;
+12 |       });
+13 |     </script>
+14 |     <script type="module">
+15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
+                                            ^`;
   assert({ actual, expected });
 }
 
 // but it can be allowed explicitely and it will copy the directory content
-// in the build directory and update the url accorindgly
-await test({ directoryReferenceAllowed: true });
+// in the build directory and update the url accoringly
+await test({ directoryReferenceEffect: "copy" });

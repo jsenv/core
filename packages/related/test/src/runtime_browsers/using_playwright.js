@@ -1,11 +1,6 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import { createDetailedMessage } from "@jsenv/log";
-import {
-  Abort,
-  createCallbackListNotifiedOnce,
-  raceProcessTeardownEvents,
-  raceCallbacks,
-} from "@jsenv/abort";
+import { Abort, raceCallbacks } from "@jsenv/abort";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
@@ -19,8 +14,8 @@ const browserPromiseCache = new Map();
 
 export const createRuntimeUsingPlaywright = ({
   browserName,
-  browserVersion,
   coveragePlaywrightAPIAvailable = false,
+  memoryUsageAPIAvailable = false,
   shouldIgnoreError = () => false,
   transformErrorHook = (error) => error,
   isolatedTab = false,
@@ -28,6 +23,7 @@ export const createRuntimeUsingPlaywright = ({
   playwrightLaunchOptions = {},
   ignoreHTTPSErrors = true,
 }) => {
+  const browserVersion = getBrowserVersion(browserName);
   const label = `${browserName}${browserVersion}`;
   const runtime = {
     type: "browser",
@@ -45,31 +41,39 @@ export const createRuntimeUsingPlaywright = ({
     webServer,
     fileRelativeUrl,
 
-    // measurePerformance,
+    keepRunning,
+    stopSignal,
+    onConsole,
+    onRuntimeStarted,
+    onRuntimeStopped,
+    teardownCallbackSet,
+    isTestPlan,
+
+    measureMemoryUsage,
+    onMeasureMemoryAvailable,
     collectPerformance,
     coverageEnabled = false,
-    coverageConfig,
+    coverageInclude,
     coverageMethodForBrowsers,
     coverageFileUrl,
-
-    teardown,
-    isTestPlan,
-    stopSignal,
-    keepRunning,
-    onConsole,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
     if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
-  --- file --- 
-  ${fileUrl}
-  --- web server root directory url ---
-  ${webServer.rootDirectoryUrl}`);
+--- file --- 
+${fileUrl}
+--- web server root directory url ---
+${webServer.rootDirectoryUrl}`);
     }
     const fileServerUrl = WEB_URL_CONVERTER.asWebUrl(fileUrl, webServer);
-    const cleanupCallbackList = createCallbackListNotifiedOnce();
+    const cleanupCallbackSet = new Set();
     const cleanup = memoize(async (reason) => {
-      await cleanupCallbackList.notify({ reason });
+      const promises = [];
+      for (const cleanupCallback of cleanupCallbackSet) {
+        promises.push(cleanupCallback({ reason }));
+      }
+      cleanupCallbackSet.clear();
+      await Promise.all(promises);
     });
 
     const isBrowserDedicatedToExecution = isolatedTab || !isTestPlan;
@@ -78,24 +82,41 @@ export const createRuntimeUsingPlaywright = ({
       : browserPromiseCache.get(label);
     if (!browserAndContextPromise) {
       browserAndContextPromise = (async () => {
+        const options = {
+          ...playwrightLaunchOptions,
+          headless: headful === undefined ? !keepRunning : !headful,
+        };
+        if (memoryUsageAPIAvailable && measureMemoryUsage) {
+          const { ignoreDefaultArgs, args } = options;
+          if (ignoreDefaultArgs) {
+            if (!ignoreDefaultArgs.includes("--headless")) {
+              ignoreDefaultArgs.push("--headless");
+            }
+          } else {
+            options.ignoreDefaultArgs = ["--headless"];
+          }
+          if (args) {
+            if (!args.includes("--headless=new")) {
+              args.push("--headless=new");
+            }
+          } else {
+            options.args = ["--headless=new"];
+          }
+        }
         const browser = await launchBrowserUsingPlaywright({
           signal,
           browserName,
-          stopOnExit: true,
-          playwrightLaunchOptions: {
-            ...playwrightLaunchOptions,
-            headless: headful === undefined ? !keepRunning : !headful,
-          },
+          playwrightLaunchOptions: options,
         });
-        if (browser._initializer.version) {
-          runtime.version = browser._initializer.version;
-        }
+        // if (browser._initializer.version) {
+        //   runtime.version = browser._initializer.version;
+        // }
         const browserContext = await browser.newContext({ ignoreHTTPSErrors });
         return { browser, browserContext };
       })();
       if (!isBrowserDedicatedToExecution) {
         browserPromiseCache.set(label, browserAndContextPromise);
-        cleanupCallbackList.add(() => {
+        cleanupCallbackSet.add(() => {
           browserPromiseCache.delete(label);
         });
       }
@@ -124,8 +145,44 @@ export const createRuntimeUsingPlaywright = ({
       }
       await disconnected;
     };
+    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+    if (isBrowserDedicatedToExecution) {
+      cleanupCallbackSet.add(closeBrowser);
+      browser.on("disconnected", async () => {
+        onRuntimeStopped();
+      });
+    } else {
+      const disconnectedCallback = async () => {
+        throw new Error("browser disconnected during execution");
+      };
+      browser.on("disconnected", disconnectedCallback);
+      cleanupCallbackSet.add(() => {
+        browser.removeListener("disconnected", disconnectedCallback);
+      });
+      teardownCallbackSet.add(async () => {
+        browser.removeListener("disconnected", disconnectedCallback);
+        logger.debug(`testPlan teardown -> closing ${browserName}`);
+        await closeBrowser();
+      });
+    }
 
     const page = await browserContext.newPage();
+    if (!isBrowserDedicatedToExecution) {
+      page.on("close", () => {
+        onRuntimeStopped();
+      });
+    }
+    onRuntimeStarted();
+    cleanupCallbackSet.add(async () => {
+      try {
+        await page.close();
+      } catch (e) {
+        if (isTargetClosedError(e)) {
+          return;
+        }
+        throw e;
+      }
+    });
 
     const istanbulInstrumentationEnabled =
       coverageEnabled &&
@@ -135,7 +192,7 @@ export const createRuntimeUsingPlaywright = ({
       await initIstanbulMiddleware(page, {
         webServer,
         rootDirectoryUrl,
-        coverageConfig,
+        coverageInclude,
       });
     }
     if (!webServer.isJsenvDevServer) {
@@ -145,23 +202,16 @@ export const createRuntimeUsingPlaywright = ({
         fileServerUrl,
       });
     }
-    const closePage = async () => {
-      try {
-        await page.close();
-      } catch (e) {
-        if (isTargetClosedError(e)) {
-          return;
-        }
-        throw e;
-      }
-    };
 
     const result = {
       status: "pending",
-      namespace: null,
       errors: [],
+      namespace: null,
+      timings: {},
+      memoryUsage: null,
+      performance: null,
     };
-    const callbacks = [];
+    const callbackSet = new Set();
     if (coverageEnabled) {
       if (
         runtime.capabilities.coverageV8 &&
@@ -170,7 +220,7 @@ export const createRuntimeUsingPlaywright = ({
         await page.coverage.startJSCoverage({
           // reportAnonymousScripts: true,
         });
-        callbacks.push(async () => {
+        callbackSet.add(async () => {
           const v8CoveragesWithWebUrls = await page.coverage.stopJSCoverage();
           // we convert urls starting with http:// to file:// because we later
           // convert the url to filesystem path in istanbulCoverageFromV8Coverage function
@@ -190,7 +240,7 @@ export const createRuntimeUsingPlaywright = ({
             { result: v8CoveragesWithFsUrls },
             {
               rootDirectoryUrl,
-              coverageConfig,
+              coverageInclude,
             },
           );
           writeFileSync(
@@ -199,7 +249,7 @@ export const createRuntimeUsingPlaywright = ({
           );
         });
       } else {
-        callbacks.push(() => {
+        callbackSet.add(() => {
           const scriptExecutionResults = result.namespace;
           if (scriptExecutionResults) {
             const coverage =
@@ -212,7 +262,7 @@ export const createRuntimeUsingPlaywright = ({
         });
       }
     } else {
-      callbacks.push(() => {
+      callbackSet.add(() => {
         const scriptExecutionResults = result.namespace;
         if (scriptExecutionResults) {
           Object.keys(scriptExecutionResults).forEach((fileRelativeUrl) => {
@@ -222,8 +272,50 @@ export const createRuntimeUsingPlaywright = ({
       });
     }
 
+    if (memoryUsageAPIAvailable) {
+      const getMemoryUsage = async () => {
+        const memoryUsage = await page.evaluate(
+          /* eslint-disable no-undef */
+          /* istanbul ignore next */
+          async () => {
+            const { performance } = window;
+            if (!performance) {
+              return null;
+            }
+            // performance.memory is less accurate but way faster
+            // https://web.dev/articles/monitor-total-page-memory-usage#legacy-api
+            if (performance.memory) {
+              return performance.memory.totalJSHeapSize;
+            }
+            // https://developer.mozilla.org/en-US/docs/Web/API/Performance/measureUserAgentSpecificMemory
+            if (
+              performance.measureUserAgentSpecificMemory &&
+              crossOriginIsolated
+            ) {
+              const memorySample =
+                await performance.measureUserAgentSpecificMemory();
+              return memorySample;
+            }
+            return null;
+          },
+          /* eslint-enable no-undef */
+        );
+        return memoryUsage;
+      };
+
+      if (onMeasureMemoryAvailable) {
+        onMeasureMemoryAvailable(getMemoryUsage);
+      }
+      if (memoryUsageAPIAvailable && measureMemoryUsage) {
+        callbackSet.add(async () => {
+          const memoryUsage = await getMemoryUsage();
+          result.memoryUsage = memoryUsage;
+        });
+      }
+    }
+
     if (collectPerformance) {
-      callbacks.push(async () => {
+      callbackSet.add(async () => {
         const performance = await page.evaluate(
           /* eslint-disable no-undef */
           /* istanbul ignore next */
@@ -262,175 +354,173 @@ export const createRuntimeUsingPlaywright = ({
         });
       },
     });
-    cleanupCallbackList.add(removeConsoleListener);
+    cleanupCallbackSet.add(removeConsoleListener);
     const actionOperation = Abort.startOperation();
     actionOperation.addAbortSignal(signal);
 
-    const winnerPromise = new Promise((resolve, reject) => {
-      raceCallbacks(
-        {
-          aborted: (cb) => {
-            return actionOperation.addAbortCallback(cb);
-          },
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-          error: (cb) => {
-            return registerEvent({
-              object: page,
-              eventType: "error",
-              callback: (error) => {
-                if (shouldIgnoreError(error, "error")) {
-                  return;
-                }
-                cb(transformErrorHook(error));
-              },
-            });
-          },
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          // pageerror: () => {
-          //   return registerEvent({
-          //     object: page,
-          //     eventType: "pageerror",
-          //     callback: (error) => {
-          //       if (
-          //         webServer.isJsenvDevServer ||
-          //         shouldIgnoreError(error, "pageerror")
-          //       ) {
-          //         return
-          //       }
-          //       result.errors.push(transformErrorHook(error))
-          //     },
-          //   })
-          // },
-          closed: (cb) => {
-            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-            if (isBrowserDedicatedToExecution) {
-              browser.on("disconnected", async () => {
-                cb({ reason: "browser disconnected" });
-              });
-              cleanupCallbackList.add(closePage);
-              cleanupCallbackList.add(closeBrowser);
-            } else {
-              const disconnectedCallback = async () => {
-                throw new Error("browser disconnected during execution");
-              };
-              browser.on("disconnected", disconnectedCallback);
-              page.on("close", () => {
-                cb({ reason: "page closed" });
-              });
-              cleanupCallbackList.add(closePage);
-              cleanupCallbackList.add(() => {
-                browser.removeListener("disconnected", disconnectedCallback);
-              });
-              teardown.addCallback(async () => {
-                browser.removeListener("disconnected", disconnectedCallback);
-                logger.debug(`testPlan teardown -> closing ${browserName}`);
-                await closeBrowser();
-              });
-            }
-          },
-          response: async (cb) => {
-            try {
-              await page.goto(fileServerUrl, { timeout: 0 });
-              const returnValue = await page.evaluate(
-                /* eslint-disable no-undef */
-                /* istanbul ignore next */
-                async () => {
-                  let startTime;
-                  try {
-                    startTime = window.performance.timing.navigationStart;
-                  } catch (e) {
-                    startTime = Date.now();
-                  }
-                  if (!window.__supervisor__) {
-                    throw new Error("window.__supervisor__ is undefined");
-                  }
-                  const executionResultFromJsenvSupervisor =
-                    await window.__supervisor__.getDocumentExecutionResult();
-                  return {
-                    type: "window_supervisor",
-                    startTime,
-                    endTime: Date.now(),
-                    executionResults:
-                      executionResultFromJsenvSupervisor.executionResults,
-                  };
-                },
-                /* eslint-enable no-undef */
-              );
-              cb(returnValue);
-            } catch (e) {
-              reject(e);
-            }
-          },
-        },
-        resolve,
-      );
-    });
-
-    const writeResult = async () => {
-      const winner = await winnerPromise;
-      if (winner.name === "aborted") {
-        result.status = "aborted";
-        return;
-      }
-      if (winner.name === "error") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "pageerror") {
-        let error = winner.data;
-        result.status = "failed";
-        result.errors.push(error);
-        return;
-      }
-      if (winner.name === "closed") {
-        result.status = "failed";
-        result.errors.push(
-          isBrowserDedicatedToExecution
-            ? new Error(`browser disconnected during execution`)
-            : new Error(`page closed during execution`),
-        );
-        return;
-      }
-      // winner.name === "response"
-      const { executionResults } = winner.data;
-      result.status = "completed";
-      result.namespace = executionResults;
-      Object.keys(executionResults).forEach((key) => {
-        const executionResult = executionResults[key];
-        if (executionResult.status === "failed") {
-          result.status = "failed";
-          if (executionResult.exception) {
-            result.errors.push(executionResult.exception);
-          } else {
-            result.errors.push(executionResult.error);
-          }
-        }
-      });
-    };
-
     try {
-      await writeResult();
-      if (collectPerformance) {
-        result.performance = performance;
-      }
-      await callbacks.reduce(async (previous, callback) => {
-        await previous;
+      const winnerPromise = new Promise((resolve, reject) => {
+        raceCallbacks(
+          {
+            aborted: (cb) => {
+              return actionOperation.addAbortCallback(cb);
+            },
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+            error: (cb) => {
+              return registerEvent({
+                object: page,
+                eventType: "error",
+                callback: (error) => {
+                  if (shouldIgnoreError(error, "error")) {
+                    return;
+                  }
+                  cb(transformErrorHook(error));
+                },
+              });
+            },
+            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+            // pageerror: () => {
+            //   return registerEvent({
+            //     object: page,
+            //     eventType: "pageerror",
+            //     callback: (error) => {
+            //       if (
+            //         webServer.isJsenvDevServer ||
+            //         shouldIgnoreError(error, "pageerror")
+            //       ) {
+            //         return
+            //       }
+            //       result.errors.push(transformErrorHook(error))
+            //     },
+            //   })
+            // },
+            closed: (cb) => {
+              if (isBrowserDedicatedToExecution) {
+                browser.on("disconnected", async () => {
+                  cb({ reason: "browser disconnected" });
+                });
+              } else {
+                page.on("close", () => {
+                  cb({ reason: "page closed" });
+                });
+              }
+            },
+            response: async (cb) => {
+              try {
+                await page.goto(fileServerUrl, { timeout: 0 });
+                const returnValue = await page.evaluate(
+                  /* eslint-disable no-undef */
+                  /* istanbul ignore next */
+                  async () => {
+                    let startTime;
+                    try {
+                      startTime = window.performance.timing.navigationStart;
+                    } catch (e) {
+                      startTime = Date.now();
+                    }
+                    if (!window.__supervisor__) {
+                      throw new Error("window.__supervisor__ is undefined");
+                    }
+                    const executionResultFromJsenvSupervisor =
+                      await window.__supervisor__.getDocumentExecutionResult();
+                    return {
+                      type: "window_supervisor",
+                      timings: {
+                        start: startTime,
+                        end: Date.now(),
+                      },
+                      executionResults:
+                        executionResultFromJsenvSupervisor.executionResults,
+                    };
+                  },
+                  /* eslint-enable no-undef */
+                );
+                cb(returnValue);
+              } catch (e) {
+                reject(e);
+              }
+            },
+          },
+          resolve,
+        );
+      });
+      const raceHandlers = {
+        aborted: () => {
+          result.status = "aborted";
+        },
+        error: (error) => {
+          result.status = "failed";
+          result.errors.push(error);
+        },
+        // pageerror: (error) => {
+        //   result.status = "failed";
+        //   result.errors.push(error);
+        // },
+        closed: () => {
+          result.status = "failed";
+          result.errors.push(
+            isBrowserDedicatedToExecution
+              ? new Error(`browser disconnected during execution`)
+              : new Error(`page closed during execution`),
+          );
+        },
+        response: ({ executionResults, timings }) => {
+          result.status = "completed";
+          result.namespace = executionResults;
+          result.timings = timings;
+          Object.keys(executionResults).forEach((key) => {
+            const executionResult = executionResults[key];
+            if (executionResult.status === "failed") {
+              result.status = "failed";
+              if (executionResult.exception) {
+                result.errors.push(executionResult.exception);
+              } else {
+                result.errors.push(executionResult.error);
+              }
+            }
+          });
+        },
+      };
+      const winner = await winnerPromise;
+      raceHandlers[winner.name](winner.data);
+      for (const callback of callbackSet) {
         await callback();
-      }, Promise.resolve());
+      }
+      callbackSet.clear();
     } catch (e) {
       result.status = "failed";
       result.errors = [e];
+    } finally {
+      if (keepRunning) {
+        stopSignal.notify = cleanup;
+      } else {
+        await cleanup("execution done");
+      }
+      return result;
     }
-    if (keepRunning) {
-      stopSignal.notify = cleanup;
-    } else {
-      await cleanup("execution done");
-    }
-    return result;
   };
   return runtime;
+};
+
+// see also https://github.com/microsoft/playwright/releases
+const getBrowserVersion = (browserName) => {
+  const playwrightPackageJsonFileUrl = import.meta.resolve(
+    "playwright-core/package.json",
+  );
+  const playwrightBrowsersJsonFileUrl = new URL(
+    "./browsers.json",
+    playwrightPackageJsonFileUrl,
+  );
+  const browsersJson = JSON.parse(
+    readFileSync(playwrightBrowsersJsonFileUrl, "utf8"),
+  );
+  const { browsers } = browsersJson;
+  for (const browser of browsers) {
+    if (browser.name === browserName) {
+      return browser.browserVersion;
+    }
+  }
+  return "unkown";
 };
 
 const generateCoverageForPage = (scriptExecutionResults) => {
@@ -450,26 +540,11 @@ const generateCoverageForPage = (scriptExecutionResults) => {
 const launchBrowserUsingPlaywright = async ({
   signal,
   browserName,
-  stopOnExit,
   playwrightLaunchOptions,
 }) => {
   const launchBrowserOperation = Abort.startOperation();
   launchBrowserOperation.addAbortSignal(signal);
   const playwright = await importPlaywright({ browserName });
-  if (stopOnExit) {
-    launchBrowserOperation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGHUP: true,
-          SIGTERM: true,
-          SIGINT: true,
-          beforeExit: true,
-          exit: true,
-        },
-        abort,
-      );
-    });
-  }
   const browserClass = playwright[browserName];
   try {
     const browser = await browserClass.launch({

@@ -2,31 +2,33 @@ import { assert } from "@jsenv/assert";
 
 import { raceProcessTeardownEvents } from "@jsenv/abort";
 
-const testTeardownEvent = (eventName) => {
-  const listenersBeforeRace = process.listeners(eventName).length;
+const test = (eventName) => {
+  const numberOfListenersAtStart = process.listeners(eventName).length;
+  const countListeners = () => {
+    return process.listeners(eventName).length - numberOfListenersAtStart;
+  };
+
   const cancel = raceProcessTeardownEvents(
     {
       [eventName]: true,
     },
     () => {},
   );
-  const listenersDiffDuringRace =
-    process.listeners(eventName).length - listenersBeforeRace;
+  const numberOfListenersAddedDuringRace = countListeners();
   cancel();
-  const listenersDiffAfterRaceCancel =
-    process.listeners(eventName).length - listenersBeforeRace;
+  const numberOfListenersAfterRaceCleanup = countListeners();
 
   const actual = {
-    listenersDiffDuringRace,
-    listenersDiffAfterRaceCancel,
+    numberOfListenersAddedDuringRace,
+    numberOfListenersAfterRaceCleanup,
   };
   const expected = {
-    listenersDiffDuringRace: 1,
-    listenersDiffAfterRaceCancel: 0,
+    numberOfListenersAddedDuringRace: 1,
+    numberOfListenersAfterRaceCleanup: 0,
   };
   assert({ actual, expected });
 };
 
-testTeardownEvent("SIGINT");
-testTeardownEvent("beforeExit");
-testTeardownEvent("exit");
+test("SIGINT");
+test("beforeExit");
+test("exit");

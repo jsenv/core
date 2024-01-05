@@ -1,39 +1,29 @@
 import { parentPort } from "node:worker_threads";
+import { memoryUsage } from "node:process";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 
 import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
+setFlagsFromString("--expose_gc");
+global.gc = runInNewContext("gc");
+
+let memoryHeapUsedAtStart;
+if (process.env.MEASURE_MEMORY_AT_START) {
+  global.gc();
+  memoryHeapUsedAtStart = memoryUsage().heapUsed;
+}
+
 const ACTIONS_AVAILABLE = {
-  "execute-using-dynamic-import": executeUsingDynamicImport,
-};
-const ACTION_REQUEST_EVENT_NAME = "action";
-const ACTION_RESPONSE_EVENT_NAME = "action-result";
-const ACTION_RESPONSE_STATUS_FAILED = "action-failed";
-const ACTION_RESPONSE_STATUS_COMPLETED = "action-completed";
-
-const sendActionFailed = (error) => {
-  const exception = createException(error);
-  sendToParent(
-    ACTION_RESPONSE_EVENT_NAME,
-    JSON.stringify({
-      status: ACTION_RESPONSE_STATUS_FAILED,
-      value: exception,
-    }),
-  );
-};
-
-const sendActionCompleted = (value) => {
-  sendToParent(
-    ACTION_RESPONSE_EVENT_NAME,
-    // here we use JSON.stringify because we should not
-    // have non enumerable value (unlike there is on Error objects)
-    // otherwise uneval is quite slow to turn a giant object
-    // into a string (and value can be giant when using coverage)
-    JSON.stringify({
-      status: ACTION_RESPONSE_STATUS_COMPLETED,
-      value,
-    }),
-  );
+  "execute-using-dynamic-import": (params) => {
+    return executeUsingDynamicImport(params);
+  },
+  "measure-memory-usage": () => {
+    // we compare usage - usageAtstart to prevent
+    // node or os specificities to have too much influences on the measures
+    return memoryUsage().heapUsed - memoryHeapUsedAtStart;
+  },
 };
 
 const sendToParent = (type, data) => {
@@ -42,16 +32,14 @@ const sendToParent = (type, data) => {
   // It means node process may stay alive longer than expected
   // the time to send the data to the parent.
   parentPort.postMessage({
-    jsenv: true,
-    type,
+    __jsenv__: type,
     data,
   });
 };
 
-const onceParentMessage = (type, callback) => {
+const onActionRequestedByParent = (callback) => {
   const listener = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      removeListener(); // commenting this line keep this worker alive
+    if (message && message.__jsenv__ === "action") {
       callback(message.data);
     }
   };
@@ -62,31 +50,60 @@ const onceParentMessage = (type, callback) => {
   return removeListener;
 };
 
-const removeActionRequestListener = onceParentMessage(
-  ACTION_REQUEST_EVENT_NAME,
-  async ({ actionType, actionParams }) => {
-    const action = ACTIONS_AVAILABLE[actionType];
+const removeActionRequestListener = onActionRequestedByParent(
+  async ({ id, type, params = {} }) => {
+    const sendActionInternalError = (id, error) => {
+      const exception = createException(error);
+      sendToParent(
+        "action-result",
+        JSON.stringify({
+          id,
+          status: "error",
+          value: exception,
+        }),
+      );
+    };
+    const sendActionCompleted = (id, value) => {
+      sendToParent(
+        "action-result",
+        // here we use JSON.stringify because we should not
+        // have non enumerable value (unlike there is on Error objects)
+        // otherwise uneval is quite slow to turn a giant object
+        // into a string (and value can be giant when using coverage)
+        JSON.stringify({
+          id,
+          status: "completed",
+          value,
+        }),
+      );
+    };
+
+    const action = ACTIONS_AVAILABLE[type];
     if (!action) {
-      sendActionFailed(new Error(`unknown action ${actionType}`));
+      sendActionInternalError(id, new Error(`unknown action ${type}`));
       return;
     }
 
-    let value;
-    let failed = false;
-    try {
-      value = await action(actionParams);
-    } catch (e) {
-      failed = true;
-      value = e;
-    }
+    let gotInternalError = false;
+    const onUncaughtException = (err) => {
+      gotInternalError = true;
+      sendActionInternalError(id, err);
+      process.exit(1);
+    };
+    process.on("uncaughtException", onUncaughtException);
 
-    if (failed) {
-      sendActionFailed(value);
-    } else {
-      sendActionCompleted(value);
-    }
-    if (actionParams.exitAfterAction) {
-      removeActionRequestListener();
+    try {
+      const value = await action(params);
+      if (!gotInternalError) {
+        sendActionCompleted(id, value);
+      }
+    } catch (e) {
+      sendActionInternalError(id, e);
+    } finally {
+      process.removeListener("uncaughtException", onUncaughtException);
+      if (params.exitAfterAction) {
+        removeActionRequestListener();
+      }
     }
   },
 );

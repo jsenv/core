@@ -5,6 +5,7 @@ import {
   urlToExtension,
 } from "@jsenv/urls";
 import { generateUrlForInlineContent } from "@jsenv/ast";
+import { inspectFileContent } from "@jsenv/inspect";
 
 import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
@@ -619,6 +620,13 @@ const applyDependencyRemovalEffects = (reference) => {
 
 const traceFromUrlSite = (urlSite) => {
   return {
+    codeFrame: urlSite.content
+      ? inspectFileContent({
+          content: urlSite.content,
+          line: urlSite.line,
+          column: urlSite.column,
+        })
+      : "",
     message: stringifyUrlSite(urlSite),
     url: urlSite.url,
     line: urlSite.line,

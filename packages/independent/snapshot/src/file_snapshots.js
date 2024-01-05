@@ -12,10 +12,8 @@ import {
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
-import {
-  createAssertionError,
-  formatStringAssertionErrorMessage,
-} from "@jsenv/assert";
+import { assert } from "@jsenv/assert";
+import { formatStringAssertionErrorMessage } from "@jsenv/assert/src/internal/error_message/strings.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
@@ -85,7 +83,7 @@ const compareFileSnapshots = (actualFileSnapshot, expectedFileSnapshot) => {
   const failureMessage = `snapshot comparison failed for "${filename}"`;
 
   if (!actualFileSnapshot.stat) {
-    throw createAssertionError(`${failureMessage}
+    throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 file not found
 --- file ---
@@ -100,7 +98,7 @@ ${fileUrl}`);
     if (actualFileContent.equals(expectedFileContent)) {
       return;
     }
-    throw createAssertionError(`${failureMessage}
+    throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 content has changed
 --- file ---
@@ -113,8 +111,9 @@ ${fileUrl}`);
     actual: actualFileContent,
     expected: expectedFileContent,
     name: `file content`,
+    format: assert.format,
   });
-  throw createAssertionError(`${failureMessage}
+  throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 ${message}
 --- file ---
@@ -160,13 +159,13 @@ export const takeDirectorySnapshot = (directoryUrl) => {
             (relativeUrl) => new URL(relativeUrl, directoryUrl).href,
           );
           if (missingFileCount === 1) {
-            throw createAssertionError(`${failureMessage}
+            throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 "${missingRelativeUrls[0]}" is missing
 --- file missing ---
 ${missingUrls[0]}`);
           }
-          throw createAssertionError(`${failureMessage}
+          throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 ${missingFileCount} files are missing
 --- files missing ---
@@ -186,13 +185,13 @@ ${missingUrls.join("\n")}`);
             (relativeUrl) => new URL(relativeUrl, directoryUrl).href,
           );
           if (extraFileCount === 1) {
-            throw createAssertionError(`${failureMessage}
+            throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 "${extraRelativeUrls[0]}" is unexpected
 --- file unexpected ---
 ${extraUrls[0]}`);
           }
-          throw createAssertionError(`${failureMessage}
+          throw assert.createAssertionError(`${failureMessage}
 --- reason ---
 ${extraFileCount} files are unexpected
 --- files unexpected ---

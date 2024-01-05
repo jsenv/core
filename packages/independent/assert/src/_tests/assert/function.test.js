@@ -35,9 +35,10 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
       `unexpected character in function name
 --- details ---
 actual
-^ unexpected "a", expected to continue with "expected"
+^
+unexpected "a", expected to continue with "expected"
 --- path ---
-actual.name[0]`,
+actual.name`,
     );
   }
 }

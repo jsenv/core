@@ -1,0 +1,272 @@
+[
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "red",
+      "ansi": "\u001b[31m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "text",
+    "value": "red ",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 5
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 4,
+      "y": 0,
+      "n": 4,
+      "raw": 9
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "yellow",
+      "ansi": "\u001b[33m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 4,
+      "y": 0,
+      "n": 4,
+      "raw": 14
+    },
+    "style": {
+      "foregroundColor": "yellow"
+    }
+  },
+  {
+    "type": "text",
+    "value": "yellow ",
+    "position": {
+      "x": 4,
+      "y": 0,
+      "n": 4,
+      "raw": 19
+    },
+    "style": {
+      "foregroundColor": "yellow"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 11,
+      "y": 0,
+      "n": 11,
+      "raw": 26
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "green",
+      "ansi": "\u001b[32m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 11,
+      "y": 0,
+      "n": 11,
+      "raw": 31
+    },
+    "style": {
+      "foregroundColor": "green"
+    }
+  },
+  {
+    "type": "text",
+    "value": "green ",
+    "position": {
+      "x": 11,
+      "y": 0,
+      "n": 11,
+      "raw": 36
+    },
+    "style": {
+      "foregroundColor": "green"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 17,
+      "y": 0,
+      "n": 17,
+      "raw": 42
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "cyan",
+      "ansi": "\u001b[36m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 17,
+      "y": 0,
+      "n": 17,
+      "raw": 47
+    },
+    "style": {
+      "foregroundColor": "cyan"
+    }
+  },
+  {
+    "type": "text",
+    "value": "cyan ",
+    "position": {
+      "x": 17,
+      "y": 0,
+      "n": 17,
+      "raw": 52
+    },
+    "style": {
+      "foregroundColor": "cyan"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 22,
+      "y": 0,
+      "n": 22,
+      "raw": 57
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "blue",
+      "ansi": "\u001b[34m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 22,
+      "y": 0,
+      "n": 22,
+      "raw": 62
+    },
+    "style": {
+      "foregroundColor": "blue"
+    }
+  },
+  {
+    "type": "text",
+    "value": "blue ",
+    "position": {
+      "x": 22,
+      "y": 0,
+      "n": 22,
+      "raw": 67
+    },
+    "style": {
+      "foregroundColor": "blue"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 27,
+      "y": 0,
+      "n": 27,
+      "raw": 72
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "magenta",
+      "ansi": "\u001b[35m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 27,
+      "y": 0,
+      "n": 27,
+      "raw": 77
+    },
+    "style": {
+      "foregroundColor": "magenta"
+    }
+  },
+  {
+    "type": "text",
+    "value": "magenta",
+    "position": {
+      "x": 27,
+      "y": 0,
+      "n": 27,
+      "raw": 82
+    },
+    "style": {
+      "foregroundColor": "magenta"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 34,
+      "y": 0,
+      "n": 34,
+      "raw": 89
+    },
+    "style": {}
+  }
+]

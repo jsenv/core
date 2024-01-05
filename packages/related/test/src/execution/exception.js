@@ -17,7 +17,15 @@
  * The browser part can be found in "supervisor.js"
  */
 
-export const createException = (reason) => {
+// https://github.com/marvinhagemeister/errorstacks/tree/main
+// https://cdn.jsdelivr.net/npm/errorstacks@latest/dist/esm/index.mjs
+import { parseStackTrace } from "errorstacks";
+import { URL_META } from "@jsenv/url-meta";
+
+const isDev = process.execArgv.includes("--conditions=development");
+const jsenvCoreDirectoryUrl = new URL("../../../../../", import.meta.url);
+
+export const createException = (reason, { rootDirectoryUrl } = {}) => {
   const exception = {
     isException: true,
     isError: false,
@@ -25,6 +33,7 @@ export const createException = (reason) => {
     message: "",
     stack: "",
     stackTrace: "",
+    stackFrames: undefined,
     site: null,
   };
 
@@ -32,88 +41,162 @@ export const createException = (reason) => {
     exception.message = "undefined";
     return exception;
   }
-  if (reason === undefined) {
-    exception.message = "undefined";
+  if (reason === null) {
+    exception.message = "null";
     return exception;
   }
   if (typeof reason === "string") {
     exception.message = reason;
     return exception;
   }
-  if (reason instanceof Error) {
-    exception.isError = true;
+  if (typeof reason !== "object") {
+    exception.message = JSON.stringify(reason);
+    return exception;
+  }
+  if (reason.stackFrames === undefined && "stack" in reason) {
+    let stackFrames;
+
+    const { prepareStackTrace } = Error;
+    Error.prepareStackTrace = (e, callSites) => {
+      Error.prepareStackTrace = prepareStackTrace;
+
+      stackFrames = [];
+      for (const callSite of callSites) {
+        const stackFrame = {
+          raw: `  at ${String(callSite)}`,
+          url: callSite.getFileName() || callSite.getScriptNameOrSourceURL(),
+          line: callSite.getLineNumber(),
+          column: callSite.getColumnNumber(),
+          functionName: callSite.getFunctionName(),
+          isNative: callSite.isNative(),
+          isEval: callSite.isEval(),
+          isConstructor: callSite.isConstructor(),
+          isAsync: callSite.isAsync(),
+          evalSite: null,
+        };
+        if (stackFrame.isEval) {
+          const evalOrigin = stackFrame.getEvalOrigin();
+          if (evalOrigin) {
+            stackFrame.evalSite = getPropertiesFromEvalOrigin(evalOrigin);
+          }
+        }
+        stackFrames.push(stackFrame);
+      }
+      return "";
+    };
+    exception.stack = reason.stack;
+    if (stackFrames === undefined) {
+      // Error.prepareStackTrace not trigerred
+      // - reason is not an error
+      // - reason.stack already get
+      Error.prepareStackTrace = prepareStackTrace;
+
+      const calls = parseStackTrace(reason.stack);
+      stackFrames = [];
+      for (const call of calls) {
+        if (call.fileName === "") {
+          continue;
+        }
+        stackFrames.push({
+          raw: call.raw,
+          functionName: call.name,
+          url: call.fileName,
+          line: call.line,
+          column: call.column,
+          native: call.type === "native",
+        });
+      }
+    }
+
+    const stackFramesNonNative = [];
+    for (const stackFrame of stackFrames) {
+      if (stackFrame.url.startsWith("node:")) {
+        stackFrame.native = "node";
+        continue;
+      }
+      if (stackFrame.url.startsWith("file:")) {
+        if (rootDirectoryUrl && stackFrame.url.startsWith(rootDirectoryUrl)) {
+          stackFramesNonNative.push(stackFrame);
+          continue;
+        }
+
+        if (isDev) {
+          // while developing jsenv itself we want to exclude any
+          // - src/*
+          // - packages/**/src/
+          // for the users of jsenv it's easier, we want to exclude
+          // - **/node_modules/@jsenv/**
+          if (
+            URL_META.matches(stackFrame.url, {
+              [`${jsenvCoreDirectoryUrl}src/`]: true,
+              [`${jsenvCoreDirectoryUrl}packages/**/src/`]: true,
+            })
+          ) {
+            stackFrame.native = "jsenv";
+            continue;
+          }
+        } else if (
+          URL_META.matches(stackFrame.url, {
+            "file:///**/node_modules/@jsenv/core/": true,
+          })
+        ) {
+          stackFrame.native = "jsenv";
+          continue;
+        }
+      }
+      stackFramesNonNative.push(stackFrame);
+    }
+    if (stackFramesNonNative.length) {
+      stackFrames = stackFramesNonNative;
+    }
+
+    reason.stackFrames = stackFrames;
+
+    let stackTrace = "";
+    for (const stackFrame of stackFrames) {
+      if (stackTrace) stackTrace += "\n";
+      stackTrace += stackFrame.raw;
+    }
+    reason.stackTrace = stackTrace;
+    let stack = "";
+    const name = reason.name || "Error";
+    const message = reason.message || "";
+    stack += `${name}: ${message}`;
+    if (stackTrace) {
+      stack += `\n${stackTrace}`;
+    }
+    reason.stack = stack;
+
+    const [firstCallFrame] = stackFrames;
+    if (firstCallFrame && (!reason.site || !reason.site.isInline)) {
+      reason.site = firstCallFrame.url
+        ? {
+            url: firstCallFrame.url,
+            line: firstCallFrame.line,
+            column: firstCallFrame.column,
+          }
+        : firstCallFrame.evalSite;
+    }
+  }
+  // getOwnPropertyNames to catch non enumerable properties on reason
+  // (happens mostly when reason is instanceof Error)
+  // like .stack, .message
+  // some properties are even on the prototype like .name
+  for (const ownPropertyName of Object.getOwnPropertyNames(reason)) {
+    exception[ownPropertyName] = reason[ownPropertyName];
+  }
+  const isError = reason instanceof Error;
+  exception.isError = isError;
+  if (isError) {
+    // getOwnPropertyNames is not enough to copy .name and .message
+    // on error instances
     exception.name = reason.name;
     exception.message = reason.message;
-    const stackInfo = getStackInfo(reason);
-    if (stackInfo) {
-      const { stackTrace, stackObject } = stackInfo;
-      exception.stackTrace = stackTrace;
-      const [firstCallSite] = stackObject;
-      writePropertiesFromCallSite(exception, firstCallSite);
-    }
-    exception.stack = reason.stack;
-    return exception;
   }
-  if (typeof reason === "object") {
-    exception.code = reason.code;
-    exception.message = reason.message;
-    exception.stack = reason.stack;
-    return exception;
-  }
-  exception.message = JSON.stringify(reason);
   return exception;
 };
 
-const getStackInfo = (reason) => {
-  if (reason instanceof Error) {
-    const { prepareStackTrace } = Error;
-    let stackTrace;
-    let stackObject;
-    Error.prepareStackTrace = (e, secondArg) => {
-      Error.prepareStackTrace = prepareStackTrace;
-      stackObject = secondArg;
-      stackTrace = secondArg.map((callSite) => `  at ${callSite}`).join("\n");
-      const name = e.name || "Error";
-      const message = e.message || "";
-      let stack = `${name}: ${message}`;
-      if (stackTrace) {
-        stack += `\n${stackTrace}`;
-      }
-      return stack;
-    };
-    // eslint-disable-next-line no-unused-expressions
-    reason.stack;
-    if (stackTrace === undefined) {
-      return null;
-    }
-    return {
-      stackTrace,
-      stackObject,
-    };
-  }
-  return null;
-};
-const writePropertiesFromCallSite = (exception, callSite) => {
-  const source = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
-  if (source) {
-    const line = callSite.getLineNumber();
-    const column = callSite.getColumnNumber() - 1;
-    exception.site = {
-      url: source,
-      line,
-      column,
-    };
-    return;
-  }
-  // Code called using eval() needs special handling
-  if (callSite.isEval()) {
-    const origin = callSite.getEvalOrigin();
-    if (origin) {
-      writePropertiesFromEvalOrigin(exception, origin);
-    }
-  }
-};
-const writePropertiesFromEvalOrigin = (exception, origin) => {
+const getPropertiesFromEvalOrigin = (origin) => {
   // Most eval() calls are in this format
   const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(
     origin,
@@ -122,16 +205,16 @@ const writePropertiesFromEvalOrigin = (exception, origin) => {
     const source = topLevelEvalMatch[2];
     const line = Number(topLevelEvalMatch[3]);
     const column = topLevelEvalMatch[4] - 1;
-    exception.site = {
+    return {
       url: source,
       line,
       column,
     };
-    return;
   }
   // Parse nested eval() calls using recursion
   const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
   if (nestedEvalMatch) {
-    writePropertiesFromEvalOrigin(exception, nestedEvalMatch[2]);
+    return getPropertiesFromEvalOrigin(nestedEvalMatch[2]);
   }
+  return null;
 };

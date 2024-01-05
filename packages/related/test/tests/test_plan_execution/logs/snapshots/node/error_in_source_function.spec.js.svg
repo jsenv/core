@@ -1,0 +1,144 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
+  font-size="14"
+  width="640"
+  height="594.45"
+  backgroundColor="#282c34"
+>
+  <g id="background">
+    <rect
+      x="1"
+      y="1"
+      width="638"
+      height="592.45"
+      fill="#282c34"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="1"
+      rx="8"
+    />
+  </g>
+  <g id="header">
+    <g transform="translate(20,20)">
+      <circle cx="0" cy="0" r="6" fill="#ff5f57" />
+      <circle cx="20" cy="0" r="6" fill="#febc2e" />
+      <circle cx="40" cy="0" r="6" fill="#28c840" />
+    </g>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
+      ansi to terminal
+    </text>
+  </g>
+  <foreignObject
+    id="body"
+    y="40"
+    width="100%"
+    height="554.45"
+    overflow="hidden"
+  >
+    <svg
+      width="792.93"
+      height="554.45"
+      font-family="monospace"
+      font-variant-east-asian="full-width"
+      fill="#abb2bf"
+    >
+      <g>
+        <text x="10" y="14.55" fill="#A9A9A9">------------</text>
+        <text x="119.22" y="14.55"> 2 executions to run </text>
+        <text x="287.25" y="14.55" fill="#A9A9A9">------------</text>
+        <text x="10" y="33.55"
+          >1 with worker_thread (node_worker_thread@&#x3C;mock&#x3E;)</text
+        >
+        <text x="10" y="52.55"
+          >1 with child_process (node_child_process@&#x3C;mock&#x3E;)</text
+        >
+        <text x="10" y="71.55" fill="#A9A9A9"
+          >---------------------------------------------</text
+        >
+        <text x="10" y="109.55" fill="#B22222"
+          >&#x2716; 1/2 error_in_source_function.spec.js</text
+        >
+        <text x="337.65" y="109.55" fill="#A9A9A9">[</text>
+        <text x="346.05" y="109.55" fill="#A9A9A9">worker_thread</text>
+        <text x="455.27" y="109.55" fill="#A9A9A9">/</text>
+        <text x="463.67" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+        <text x="514.08" y="109.55" fill="#A9A9A9">/</text>
+        <text x="522.48" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+        <text x="572.89" y="109.55" fill="#A9A9A9">]</text>
+        <text x="589.69" y="109.55"> (1 </text>
+        <text x="614.9" y="109.55" fill="#B22222">failed</text>
+        <text x="665.31" y="109.55">, 1 executing)</text>
+        <text x="10" y="128.55" fill="#B22222">---------------</text>
+        <text x="144.42" y="128.55"> error </text>
+        <text x="194.83" y="128.55" fill="#B22222">----------------</text>
+        <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
+        <text x="43.61" y="147.55">
+          export const doSomething = () =&#x3E; {</text
+        >
+        <text x="10" y="166.55" fill="#A9A9A9">2 |</text>
+        <text x="60.41" y="166.55">
+          throw new Error(&#x22;something&#x22;);</text
+        >
+        <text x="110.82" y="185.55" fill="#B22222">^</text>
+        <text x="10" y="204.55">Error: something</text>
+        <text x="26.8" y="223.55">
+          at doSomething (&#x3C;mock&#x3E;/something.js:2:9)</text
+        >
+        <text x="26.8" y="242.55"> at </text>
+        <text x="52.01" y="242.55" font-weight="bold"
+          >&#x3C;mock&#x3E;/error_in_source_function.spec.js</text
+        >
+        <text x="379.66" y="242.55">:3:1</text>
+        <text x="10" y="261.55" fill="#B22222"
+          >--------------------------------------</text
+        >
+        <text x="10" y="280.55" fill="#B22222"
+          >&#x2716; 2/2 error_in_source_function.spec.js</text
+        >
+        <text x="337.65" y="280.55" fill="#A9A9A9">[</text>
+        <text x="346.05" y="280.55" fill="#A9A9A9">child_process</text>
+        <text x="455.27" y="280.55" fill="#A9A9A9">/</text>
+        <text x="463.67" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+        <text x="514.08" y="280.55" fill="#A9A9A9">/</text>
+        <text x="522.48" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
+        <text x="572.89" y="280.55" fill="#A9A9A9">]</text>
+        <text x="589.69" y="280.55"> (all </text>
+        <text x="631.7" y="280.55" fill="#B22222">failed</text>
+        <text x="682.11" y="280.55">)</text>
+        <text x="10" y="299.55" fill="#B22222">---------------</text>
+        <text x="144.42" y="299.55"> error </text>
+        <text x="194.83" y="299.55" fill="#B22222">----------------</text>
+        <text x="10" y="318.55" fill="#A9A9A9">1 |</text>
+        <text x="43.61" y="318.55">
+          export const doSomething = () =&#x3E; {</text
+        >
+        <text x="10" y="337.55" fill="#A9A9A9">2 |</text>
+        <text x="60.41" y="337.55">
+          throw new Error(&#x22;something&#x22;);</text
+        >
+        <text x="110.82" y="356.55" fill="#B22222">^</text>
+        <text x="10" y="375.55">Error: something</text>
+        <text x="26.8" y="394.55">
+          at doSomething (&#x3C;mock&#x3E;/something.js:2:9)</text
+        >
+        <text x="26.8" y="413.55"> at </text>
+        <text x="52.01" y="413.55" font-weight="bold"
+          >&#x3C;mock&#x3E;/error_in_source_function.spec.js</text
+        >
+        <text x="379.66" y="413.55">:3:1</text>
+        <text x="10" y="432.55" fill="#B22222"
+          >--------------------------------------</text
+        >
+        <text x="10" y="470.55" fill="#A9A9A9">------------------</text>
+        <text x="169.63" y="470.55"> summary </text>
+        <text x="236.84" y="470.55" fill="#A9A9A9">------------------</text>
+        <text x="10" y="489.55">2 executions: all </text>
+        <text x="161.22" y="489.55" fill="#B22222">failed</text>
+        <text x="10" y="508.55">duration: &#x3C;mock&#x3E;</text>
+        <text x="10" y="527.55" fill="#A9A9A9"
+          >---------------------------------------------</text
+        >
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

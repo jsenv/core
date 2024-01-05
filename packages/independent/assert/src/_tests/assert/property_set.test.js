@@ -63,9 +63,10 @@ actual.foo[[Set]]`,
       `unexpected character in function name
 --- details ---
 actualSetter
-^ unexpected "a", expected to continue with "expectedSetter"
+^
+unexpected "a", expected to continue with "expectedSetter"
 --- path ---
-actual.foo[[Set]].name[0]`,
+actual.foo[[Set]].name`,
     );
   }
 }

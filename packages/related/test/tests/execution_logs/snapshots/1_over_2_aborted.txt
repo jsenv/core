@@ -1,5 +1,0 @@
-✖ execution 1 of 2 aborted
-file: file.js
-runtime: chrome/10.0.0
-duration: 0.01 second
-

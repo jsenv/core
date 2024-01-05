@@ -3,11 +3,7 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 import { Worker } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
-import {
-  Abort,
-  createCallbackListNotifiedOnce,
-  raceCallbacks,
-} from "@jsenv/abort";
+import { Abort, raceCallbacks } from "@jsenv/abort";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createChildExecOptions } from "./child_exec_options.js";
@@ -51,16 +47,23 @@ export const nodeWorkerThread = ({
       keepRunning,
       stopSignal,
       onConsole,
+      onRuntimeStarted,
+      onRuntimeStopped,
 
+      measureMemoryUsage,
+      onMeasureMemoryAvailable,
       collectConsole = false,
       collectPerformance,
       coverageEnabled = false,
-      coverageConfig,
+      coverageInclude,
       coverageMethodForNodeJs,
       coverageFileUrl,
     }) => {
       if (coverageMethodForNodeJs !== "NODE_V8_COVERAGE") {
         env.NODE_V8_COVERAGE = "";
+      }
+      if (onMeasureMemoryAvailable) {
+        env.MEASURE_MEMORY_AT_START = "1";
       }
       if (importMap) {
         env.IMPORT_MAP = JSON.stringify(importMap);
@@ -86,10 +89,16 @@ export const nodeWorkerThread = ({
         ...env,
       };
 
-      const cleanupCallbackList = createCallbackListNotifiedOnce();
+      const cleanupCallbackSet = new Set();
       const cleanup = async (reason) => {
-        await cleanupCallbackList.notify({ reason });
+        const promises = [];
+        for (const cleanupCallback of cleanupCallbackSet) {
+          promises.push(cleanupCallback({ reason }));
+        }
+        cleanupCallbackSet.clear();
+        await Promise.all(promises);
       };
+
       const actionOperation = Abort.startOperation();
       actionOperation.addAbortSignal(signal);
       // https://nodejs.org/api/worker_threads.html#new-workerfilename-options
@@ -111,13 +120,26 @@ export const nodeWorkerThread = ({
         },
       );
       const workerThreadReadyPromise = new Promise((resolve) => {
-        onceWorkerThreadMessage(workerThread, "ready", resolve);
+        const removeReadyListener = onWorkerThreadMessage(
+          workerThread,
+          "ready",
+          () => {
+            removeReadyListener();
+            onRuntimeStarted();
+            resolve();
+          },
+        );
       });
+      cleanupCallbackSet.add(
+        onceWorkerThreadEvent(workerThread, "exit", () => {
+          onRuntimeStopped();
+        }),
+      );
 
       const stop = memoize(async () => {
         // read all stdout before terminating
         // (no need for stderr because it's sync)
-        if (collectConsole) {
+        if (collectConsole || onConsole) {
           while (workerThread.stdout.read() !== null) {}
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
@@ -126,134 +148,173 @@ export const nodeWorkerThread = ({
         await workerThread.terminate();
       });
 
-      const winnerPromise = new Promise((resolve) => {
-        raceCallbacks(
-          {
-            aborted: (cb) => {
-              return actionOperation.addAbortCallback(cb);
-            },
-            error: (cb) => {
-              return onceWorkerThreadEvent(workerThread, "error", cb);
-            },
-            exit: (cb) => {
-              return onceWorkerThreadEvent(
-                workerThread,
-                "exit",
-                (code, signal) => {
-                  cb({ code, signal });
-                },
-              );
-            },
-            response: (cb) => {
-              return onceWorkerThreadMessage(workerThread, "action-result", cb);
-            },
-          },
-          resolve,
-        );
-      });
-
       const result = {
         status: "executing",
         errors: [],
         namespace: null,
+        timings: {},
+        memoryUsage: null,
+        performance: null,
       };
 
-      const writeResult = async () => {
+      try {
+        let executionInternalErrorCallback;
+        let executionCompletedCallback;
+        const winnerPromise = new Promise((resolve) => {
+          raceCallbacks(
+            {
+              aborted: (cb) => {
+                return actionOperation.addAbortCallback(cb);
+              },
+              error: (cb) => {
+                return onceWorkerThreadEvent(workerThread, "error", cb);
+              },
+              exit: (cb) => {
+                return onceWorkerThreadEvent(
+                  workerThread,
+                  "exit",
+                  (code, signal) => {
+                    cb({ code, signal });
+                  },
+                );
+              },
+              execution_internal_error: (cb) => {
+                executionInternalErrorCallback = cb;
+              },
+              execution_completed: (cb) => {
+                executionCompletedCallback = cb;
+              },
+            },
+            resolve,
+          );
+        });
+        const raceHandlers = {
+          aborted: () => {
+            result.status = "aborted";
+          },
+          error: (error) => {
+            removeOutputListener();
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          exit: ({ code }) => {
+            if (code === 12) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(
+                  `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
+                ),
+              );
+              return;
+            }
+            if (code === null || code === 0) {
+              result.status = "completed";
+              result.namespace = {};
+              return;
+            }
+            if (
+              code === EXIT_CODES.SIGINT ||
+              code === EXIT_CODES.SIGTERM ||
+              code === EXIT_CODES.SIGABORT
+            ) {
+              result.status = "failed";
+              result.errors.push(
+                new Error(`node worker thread exited during execution`),
+              );
+              return;
+            }
+            // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+            // means there was an error even if we don't know exactly what.
+            result.status = "failed";
+            result.errors.push(
+              new Error(
+                `node worker thread exited with code ${code} during execution`,
+              ),
+            );
+          },
+          execution_internal_error: (error) => {
+            result.status = "failed";
+            result.errors.push(error);
+          },
+          execution_completed: ({
+            status,
+            errors,
+            namespace,
+            timings,
+            memoryUsage,
+            performance,
+            coverage,
+          }) => {
+            result.status = status;
+            result.errors = errors;
+            result.namespace = namespace;
+            result.timings = timings;
+            result.memoryUsage = memoryUsage;
+            result.performance = performance;
+            result.coverage = coverage;
+          },
+        };
+
         actionOperation.throwIfAborted();
         await workerThreadReadyPromise;
         actionOperation.throwIfAborted();
-        await sendToWorkerThread(workerThread, {
-          type: "action",
-          data: {
-            actionType: "execute-using-dynamic-import",
-            actionParams: {
+        if (onMeasureMemoryAvailable) {
+          onMeasureMemoryAvailable(async () => {
+            let _resolve;
+            const memoryUsagePromise = new Promise((resolve) => {
+              _resolve = resolve;
+            });
+            await requestActionOnWorkerThread(
+              workerThread,
+              {
+                type: "measure-memory-usage",
+              },
+              ({ value }) => {
+                _resolve(value);
+              },
+            );
+            return memoryUsagePromise;
+          });
+        }
+        await requestActionOnWorkerThread(
+          workerThread,
+          {
+            type: "execute-using-dynamic-import",
+            params: {
               rootDirectoryUrl,
               fileUrl: new URL(fileRelativeUrl, rootDirectoryUrl).href,
+              measureMemoryUsage,
               collectPerformance,
               coverageEnabled,
-              coverageConfig,
+              coverageInclude,
               coverageMethodForNodeJs,
               coverageFileUrl,
               exitAfterAction: true,
             },
           },
-        });
+          ({ status, value }) => {
+            if (status === "error") {
+              executionInternalErrorCallback(value);
+            } else {
+              executionCompletedCallback(value);
+            }
+          },
+        );
         const winner = await winnerPromise;
-        if (winner.name === "aborted") {
-          result.status = "aborted";
-          return;
-        }
-        if (winner.name === "error") {
-          const error = winner.data;
-          removeOutputListener();
-          result.status = "failed";
-          result.errors.push(error);
-          return;
-        }
-        if (winner.name === "exit") {
-          const { code } = winner.data;
-          await cleanup("process exit");
-          if (code === 12) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(
-                `node process exited with 12 (the forked child process wanted to use a non-available port for debug)`,
-              ),
-            );
-            return;
-          }
-          if (code === null || code === 0) {
-            result.status = "completed";
-            result.namespace = {};
-            return;
-          }
-          if (
-            code === EXIT_CODES.SIGINT ||
-            code === EXIT_CODES.SIGTERM ||
-            code === EXIT_CODES.SIGABORT
-          ) {
-            result.status = "failed";
-            result.errors.push(
-              new Error(`node worker thread exited during execution`),
-            );
-            return;
-          }
-          // process.exit(1) in child process or process.exitCode = 1 + process.exit()
-          // means there was an error even if we don't know exactly what.
-          result.status = "failed";
-          result.errors.push(
-            new Error(
-              `node worker thread exited with code ${code} during execution`,
-            ),
-          );
-        }
-        const { status, value } = winner.data;
-        if (status === "action-failed") {
-          result.status = "failed";
-          result.errors.push(value);
-          return;
-        }
-        const { namespace, performance, coverage } = value;
-        result.status = "completed";
-        result.namespace = namespace;
-        result.performance = performance;
-        result.coverage = coverage;
-      };
-
-      try {
-        await writeResult();
+        raceHandlers[winner.name](winner.data);
       } catch (e) {
         result.status = "failed";
         result.errors.push(e);
+      } finally {
+        if (keepRunning) {
+          stopSignal.notify = stop;
+        } else {
+          await stop();
+        }
+        await actionOperation.end();
+        await cleanup();
+        return result;
       }
-
-      if (keepRunning) {
-        stopSignal.notify = stop;
-      } else {
-        await stop();
-      }
-      await actionOperation.end();
-      return result;
     },
   };
 };
@@ -276,14 +337,37 @@ const installWorkerThreadOutputListener = (workerThread, callback) => {
   };
 };
 
-const sendToWorkerThread = (worker, { type, data }) => {
-  worker.postMessage({ jsenv: true, type, data });
+let previousId = 0;
+const requestActionOnWorkerThread = (
+  workerThread,
+  { type, params },
+  onResponse,
+) => {
+  const actionId = previousId + 1;
+  previousId = actionId;
+  const removeResultListener = onWorkerThreadMessage(
+    workerThread,
+    "action-result",
+    ({ id, ...payload }) => {
+      if (id === actionId) {
+        removeResultListener();
+        onResponse(payload);
+      }
+    },
+  );
+  workerThread.postMessage({
+    __jsenv__: "action",
+    data: {
+      id: actionId,
+      type,
+      params,
+    },
+  });
 };
 
-const onceWorkerThreadMessage = (workerThread, type, callback) => {
+const onWorkerThreadMessage = (workerThread, type, callback) => {
   const onmessage = (message) => {
-    if (message && message.jsenv && message.type === type) {
-      workerThread.removeListener("message", onmessage);
+    if (message && message.__jsenv__ === type) {
       callback(message.data ? JSON.parse(message.data) : undefined);
     }
   };

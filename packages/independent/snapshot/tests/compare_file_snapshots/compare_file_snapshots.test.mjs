@@ -1,3 +1,4 @@
+import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import {
   removeEntrySync,
@@ -75,15 +76,14 @@ test(() => {
     fileSnapshot.compare();
     throw new Error("should throw");
   } catch (e) {
-    const actual = e.message;
+    const actual = stripAnsi(e.message);
     const expected = `snapshot comparison failed for "file.txt"
 --- reason ---
 unexpected character in file content
 --- details ---
 coucou
-^ unexpected "c", expected to continue with "hello"
---- path ---
-[0]
+^
+unexpected "c", expected to continue with "hello"
 --- file ---
 ${fileUrl}`;
     assert({ actual, expected });

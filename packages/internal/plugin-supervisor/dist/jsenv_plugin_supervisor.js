@@ -44,114 +44,110 @@ const getOriginalPosition = ({
   return originalPosition;
 };
 
-// consider switching to https://babeljs.io/docs/en/babel-code-frame
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/css-syntax-error.js#L43
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
-// https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
-
-const stringifyUrlSite = ({
-  url,
-  line,
-  column,
-  content
-}, {
-  showCodeFrame = true,
-  numberOfSurroundingLinesToShow,
-  lineMaxLength,
-  color
-} = {}) => {
-  let string = url;
-  if (typeof line === "number") {
-    string += ":".concat(line);
-    if (typeof column === "number") {
-      string += ":".concat(column);
-    }
-  }
-  if (!showCodeFrame || typeof line !== "number" || !content) {
-    return string;
-  }
-  const sourceLoc = showSourceLocation({
-    content,
-    line,
-    column,
-    numberOfSurroundingLinesToShow,
-    lineMaxLength,
-    color
-  });
-  return "".concat(string, "\n").concat(sourceLoc);
-};
-const showSourceLocation = ({
+const formatDefault = v => v;
+const inspectFileContent = ({
   content,
   line,
   column,
-  numberOfSurroundingLinesToShow = 1,
-  lineMaxLength = 120
+  linesAbove = 3,
+  linesBelow = 0,
+  lineMaxWidth = 120,
+  lineNumbersOnTheLeft = true,
+  lineMarker = true,
+  columnMarker = true,
+  format = formatDefault
 } = {}) => {
-  let mark = string => string;
-  let aside = string => string;
-  // if (color) {
-  //   mark = (string) => ANSI.color(string, ANSI.RED)
-  //   aside = (string) => ANSI.color(string, ANSI.GREY)
-  // }
-
-  const lines = content.split(/\r?\n/);
+  const lineStrings = content.split(/\r?\n/);
   if (line === 0) line = 1;
-  let lineRange = {
-    start: line - 1,
-    end: line
-  };
-  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = lineRangeWithinLines(lineRange, lines);
-  const linesToShow = lines.slice(lineRange.start, lineRange.end);
-  const endLineNumber = lineRange.end;
-  const lineNumberMaxWidth = String(endLineNumber).length;
-  if (column === 0) column = 1;
-  const columnRange = {};
   if (column === undefined) {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  } else if (column > lineMaxLength) {
-    columnRange.start = column - Math.floor(lineMaxLength / 2);
-    columnRange.end = column + Math.ceil(lineMaxLength / 2);
+    columnMarker = false;
+    column = 1;
+  }
+  if (column === 0) column = 1;
+  let lineStartIndex = line - 1 - linesAbove;
+  if (lineStartIndex < 0) {
+    lineStartIndex = 0;
+  }
+  let lineEndIndex = line - 1 + linesBelow;
+  if (lineEndIndex > lineStrings.length - 1) {
+    lineEndIndex = lineStrings.length - 1;
+  }
+  if (columnMarker) {
+    // human reader deduce the line when there is a column marker
+    lineMarker = false;
+  }
+  if (line - 1 === lineEndIndex) {
+    lineMarker = false; // useless because last line
+  }
+
+  let lineIndex = lineStartIndex;
+  let columnsBefore;
+  let columnsAfter;
+  if (column > lineMaxWidth) {
+    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
+    columnsAfter = column + Math.floor(lineMaxWidth / 2);
   } else {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
+    columnsBefore = 0;
+    columnsAfter = lineMaxWidth;
   }
-  return linesToShow.map((lineSource, index) => {
-    const lineNumber = lineRange.start + index + 1;
+  let columnMarkerIndex = column - 1 - columnsBefore;
+  let source = "";
+  while (lineIndex <= lineEndIndex) {
+    const lineString = lineStrings[lineIndex];
+    const lineNumber = lineIndex + 1;
+    const isLastLine = lineIndex === lineEndIndex;
     const isMainLine = lineNumber === line;
-    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
-    const lineNumberWidth = String(lineNumber).length;
-    // ensure if line moves from 7,8,9 to 10 the display is still great
-    const lineNumberRightSpacing = " ".repeat(lineNumberMaxWidth - lineNumberWidth);
-    const asideSource = "".concat(lineNumber).concat(lineNumberRightSpacing, " |");
-    const lineFormatted = "".concat(aside(asideSource), " ").concat(lineSourceTruncated);
-    if (isMainLine) {
-      if (column === undefined) {
-        return "".concat(mark(">"), " ").concat(lineFormatted);
+    lineIndex++;
+    {
+      if (lineMarker) {
+        if (isMainLine) {
+          source += "".concat(format(">", "marker_line"), " ");
+        } else {
+          source += "  ";
+        }
       }
-      const spacing = stringToSpaces("".concat(asideSource, " ").concat(lineSourceTruncated.slice(0, column - columnRange.start - 1)));
-      return "".concat(mark(">"), " ").concat(lineFormatted, "\n  ").concat(spacing).concat(mark("^"));
+      if (lineNumbersOnTheLeft) {
+        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " |");
+        source += "".concat(format(asideSource, "line_number_aside"), " ");
+      }
     }
-    return "  ".concat(lineFormatted);
-  }).join("\n");
+    {
+      source += truncateLine(lineString, {
+        start: columnsBefore,
+        end: columnsAfter,
+        prefix: "…",
+        suffix: "…",
+        format
+      });
+    }
+    {
+      if (columnMarker && isMainLine) {
+        source += "\n";
+        if (lineMarker) {
+          source += "  ";
+        }
+        if (lineNumbersOnTheLeft) {
+          const asideSpaces = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " | ").length;
+          source += " ".repeat(asideSpaces);
+        }
+        source += " ".repeat(columnMarkerIndex);
+        source += format("^", "marker_column");
+      }
+    }
+    if (!isLastLine) {
+      source += "\n";
+    }
+  }
+  return source;
 };
-const applyColumnRange = ({
+const truncateLine = (line, {
   start,
-  end
-}, line) => {
-  if (typeof start !== "number") {
-    throw new TypeError("start must be a number, received ".concat(start));
-  }
-  if (typeof end !== "number") {
-    throw new TypeError("end must be a number, received ".concat(end));
-  }
-  if (end < start) {
-    throw new Error("end must be greater than start, but ".concat(end, " is smaller than ").concat(start));
-  }
-  const prefix = "…";
-  const suffix = "…";
+  end,
+  prefix,
+  suffix,
+  format
+}) => {
   const lastIndex = line.length;
   if (line.length === 0) {
     // don't show any ellipsis if the line is empty
@@ -168,53 +164,33 @@ const applyColumnRange = ({
   }
   let result = "";
   while (from < to) {
-    result += line[from];
+    result += format(line[from], "char");
     from++;
   }
   if (result.length === 0) {
     return "";
   }
   if (startTruncated && endTruncated) {
-    return "".concat(prefix).concat(result).concat(suffix);
+    return "".concat(format(prefix, "marker_overflow_left")).concat(result).concat(format(suffix, "marker_overflow_right"));
   }
   if (startTruncated) {
-    return "".concat(prefix).concat(result);
+    return "".concat(format(prefix, "marker_overflow_left")).concat(result);
   }
   if (endTruncated) {
-    return "".concat(result).concat(suffix);
+    return "".concat(result).concat(format(suffix, "marker_overflow_right"));
   }
   return result;
 };
-const stringToSpaces = string => string.replace(/[^\t]/g, " ");
-
-// const getLineRangeLength = ({ start, end }) => end - start
-
-const moveLineRangeUp = ({
-  start,
-  end
-}, number) => {
-  return {
-    start: start - number,
-    end
-  };
-};
-const moveLineRangeDown = ({
-  start,
-  end
-}, number) => {
-  return {
-    start,
-    end: end + number
-  };
-};
-const lineRangeWithinLines = ({
-  start,
-  end
-}, lines) => {
-  return {
-    start: start < 0 ? 0 : start,
-    end: end > lines.length ? lines.length : end
-  };
+const fillLeft = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  while (missingWidth--) {
+    padded += char;
+  }
+  padded += value;
+  return padded;
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
@@ -933,12 +909,12 @@ const jsenvPluginSupervisor = ({
     name: "jsenv:supervisor",
     appliesDuring: "dev",
     serve: async serveInfo => {
-      if (serveInfo.request.pathname.startsWith("/__get_code_frame__/")) {
+      if (serveInfo.request.pathname.startsWith("/__get_cause_trace__/")) {
         const {
           pathname,
           searchParams
         } = new URL(serveInfo.request.url);
-        let urlWithLineAndColumn = pathname.slice("/__get_code_frame__/".length);
+        let urlWithLineAndColumn = pathname.slice("/__get_cause_trace__/".length);
         urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
         const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
         if (!match) {
@@ -977,20 +953,25 @@ const jsenvPluginSupervisor = ({
             }
           }
         }
-        const codeFrame = stringifyUrlSite({
+        const causeTrace = {
           url: file,
           line,
           column,
-          content: urlInfo.originalContent
-        });
+          codeFrame: inspectFileContent({
+            line,
+            column,
+            content: urlInfo.originalContent
+          })
+        };
+        const causeTraceJson = JSON.stringify(causeTrace, null, "  ");
         return {
           status: 200,
           headers: {
             "cache-control": "no-store",
-            "content-type": "text/plain",
-            "content-length": Buffer.byteLength(codeFrame)
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(causeTraceJson)
           },
-          body: codeFrame
+          body: causeTraceJson
         };
       }
       if (serveInfo.request.pathname.startsWith("/__get_error_cause__/")) {
@@ -1029,7 +1010,7 @@ const jsenvPluginSupervisor = ({
           message: causeInfo.message,
           reason: causeInfo.reason,
           stack: errorBaseUrl ? "stack mocked for snapshot" : causeInfo.stack,
-          codeFrame: causeInfo.traceMessage
+          trace: causeInfo.trace
         } : null, null, "  ");
         return {
           status: 200,

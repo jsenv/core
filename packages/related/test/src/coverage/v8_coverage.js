@@ -2,10 +2,10 @@ import { URL_META } from "@jsenv/url-meta";
 
 export const filterV8Coverage = async (
   v8Coverage,
-  { rootDirectoryUrl, coverageConfig },
+  { rootDirectoryUrl, coverageInclude },
 ) => {
   const associations = URL_META.resolveAssociations(
-    { cover: coverageConfig },
+    { cover: coverageInclude },
     rootDirectoryUrl,
   );
   const urlShouldBeCovered = (url) => {

@@ -13,118 +13,18 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(
-      `${name} must be a url but looks like a windows pathname, got ${value}`,
-    );
-  }
-  if (!hasScheme$1(value)) {
-    throw new TypeError(
-      `${name} must be a url and no scheme found, got ${value}`,
-    );
-  }
-};
-
-const isPlainObject = (value) => {
-  if (value === null) {
-    return false;
-  }
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-    return true;
-  }
-  return false;
-};
-
-const isWindowsPathnameSpecifier = (specifier) => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-
-const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
-
-const resolveAssociations = (associations, baseUrl) => {
-  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
-  assertUrlLike(baseUrl, "baseUrl");
-  const associationsResolved = {};
-  Object.keys(associations).forEach((key) => {
-    const value = associations[key];
-    if (typeof value === "object" && value !== null) {
-      const valueMapResolved = {};
-      Object.keys(value).forEach((pattern) => {
-        const valueAssociated = value[pattern];
-        const patternResolved = normalizeUrlPattern(pattern, baseUrl);
-        valueMapResolved[patternResolved] = valueAssociated;
-      });
-      associationsResolved[key] = valueMapResolved;
-    } else {
-      associationsResolved[key] = value;
-    }
-  });
-  return associationsResolved;
-};
-
-const normalizeUrlPattern = (urlPattern, baseUrl) => {
-  try {
-    return String(new URL(urlPattern, baseUrl));
-  } catch (e) {
-    // it's not really an url, no need to perform url resolution nor encoding
-    return urlPattern;
-  }
-};
-
-const asFlatAssociations = (associations) => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(
-      `associations must be a plain object, got ${associations}`,
-    );
-  }
-  const flatAssociations = {};
-  Object.keys(associations).forEach((associationName) => {
-    const associationValue = associations[associationName];
-    if (isPlainObject(associationValue)) {
-      Object.keys(associationValue).forEach((pattern) => {
-        const patternValue = associationValue[pattern];
-        const previousValue = flatAssociations[pattern];
-        if (isPlainObject(previousValue)) {
-          flatAssociations[pattern] = {
-            ...previousValue,
-            [associationName]: patternValue,
-          };
-        } else {
-          flatAssociations[pattern] = {
-            [associationName]: patternValue,
-          };
-        }
-      });
-    }
-  });
-  return flatAssociations;
-};
-
 /*
  * Link to things doing pattern matching:
  * https://git-scm.com/docs/gitignore
  * https://github.com/kaelzhang/node-ignore
  */
-
 
 /** @module jsenv_url_meta **/
 /**
@@ -143,21 +43,18 @@ const asFlatAssociations = (associations) => {
  * @param {string} applyPatternMatchingParams.url a string representing an url
  * @return {MatchResult}
  */
-const applyPatternMatching = ({ url, pattern }) => {
-  assertUrlLike(pattern, "pattern");
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
+const applyPattern = ({ url, pattern }) => {
   const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
   const matchGroups = [];
   let groupIndex = 0;
-  groups.forEach((group) => {
+  for (const group of groups) {
     if (group.name) {
       matchGroups[group.name] = group.string;
     } else {
       matchGroups[groupIndex] = group.string;
       groupIndex++;
     }
-  });
+  }
   return {
     matched,
     patternIndex,
@@ -392,27 +289,145 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
   return tryToMatch();
 };
 
+const applyPatternMatching = ({ url, pattern }) => {
+  assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  return applyPattern({ url, pattern });
+};
+
+const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
+  assertUrlLike(baseUrl, "baseUrl");
+
+  const associationsResolved = {};
+  for (const key of Object.keys(associations)) {
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      for (const pattern of Object.keys(value)) {
+        const valueAssociated = value[pattern];
+        let patternResolved;
+        try {
+          patternResolved = String(new URL(pattern, baseUrl));
+        } catch (e) {
+          // it's not really an url, no need to perform url resolution nor encoding
+          patternResolved = pattern;
+        }
+
+        valueMapResolved[patternResolved] = valueAssociated;
+      }
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
+  }
+  return associationsResolved;
+};
+
+const asFlatAssociations = (associations) => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(
+      `associations must be a plain object, got ${associations}`,
+    );
+  }
+  const flatAssociations = {};
+  for (const associationName of Object.keys(associations)) {
+    const associationValue = associations[associationName];
+    if (!isPlainObject(associationValue)) {
+      continue;
+    }
+    for (const pattern of Object.keys(associationValue)) {
+      const patternValue = associationValue[pattern];
+      const previousValue = flatAssociations[pattern];
+      if (isPlainObject(previousValue)) {
+        flatAssociations[pattern] = {
+          ...previousValue,
+          [associationName]: patternValue,
+        };
+      } else {
+        flatAssociations[pattern] = {
+          [associationName]: patternValue,
+        };
+      }
+    }
+  }
+  return flatAssociations;
+};
+
 const applyAssociations = ({ url, associations }) => {
   if (url && typeof url.href === "string") url = url.href;
   assertUrlLike(url);
   const flatAssociations = asFlatAssociations(associations);
-  return Object.keys(flatAssociations).reduce((previousValue, pattern) => {
+  let associatedValue = {};
+  for (const pattern of Object.keys(flatAssociations)) {
     const { matched } = applyPatternMatching({
       pattern,
       url,
     });
     if (matched) {
       const value = flatAssociations[pattern];
-      if (isPlainObject(previousValue) && isPlainObject(value)) {
-        return {
-          ...previousValue,
+      associatedValue = deepAssign(associatedValue, value);
+    }
+  }
+  return associatedValue;
+};
+
+const deepAssign = (firstValue, secondValue) => {
+  if (!isPlainObject(firstValue) || !isPlainObject(secondValue)) {
+    return secondValue;
+  }
+  for (const key of Object.keys(secondValue)) {
+    const leftValue = firstValue[key];
+    const rightValue = secondValue[key];
+    firstValue[key] = deepAssign(leftValue, rightValue);
+  }
+  return firstValue;
+};
+
+const urlChildMayMatch = ({ url, associations, predicate }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  // the function was meants to be used on url ending with '/'
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  const flatAssociations = asFlatAssociations(associations);
+  // for full match we must create an object to allow pattern to override previous ones
+  let fullMatchMeta = {};
+  let someFullMatch = false;
+  // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+  const partialMatchMetaArray = [];
+  for (const pattern of Object.keys(flatAssociations)) {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matchResult.matched) {
+      someFullMatch = true;
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = {
+          ...fullMatchMeta,
           ...value,
         };
+      } else {
+        fullMatchMeta = value;
       }
-      return value;
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
     }
-    return previousValue;
-  }, {});
+  }
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+  return partialMatchMetaArray.some((partialMatchMeta) =>
+    predicate(partialMatchMeta),
+  );
 };
 
 const applyAliases = ({ url, aliases }) => {
@@ -434,65 +449,92 @@ const applyAliases = ({ url, aliases }) => {
   const { matchGroups } = aliasFullMatchResult;
   const alias = aliases[aliasMatchingKey];
   const parts = alias.split("*");
-  const newUrl = parts.reduce((previous, value, index) => {
-    return `${previous}${value}${
-      index === parts.length - 1 ? "" : matchGroups[index]
-    }`;
-  }, "");
+  let newUrl = "";
+  let index = 0;
+  for (const part of parts) {
+    newUrl += `${part}`;
+    if (index < parts.length - 1) {
+      newUrl += matchGroups[index];
+    }
+    index++;
+  }
   return newUrl;
 };
 
-const urlChildMayMatch = ({ url, associations, predicate }) => {
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
-  // the function was meants to be used on url ending with '/'
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-  const flatAssociations = asFlatAssociations(associations);
-  // for full match we must create an object to allow pattern to override previous ones
-  let fullMatchMeta = {};
-  let someFullMatch = false;
-  // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-  const partialMatchMetaArray = [];
-  Object.keys(flatAssociations).forEach((pattern) => {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
+const matches = (url, patterns) => {
+  return Boolean(
+    applyAssociations({
       url,
-    });
-    if (matchResult.matched) {
-      someFullMatch = true;
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = {
-          ...fullMatchMeta,
-          ...value,
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  });
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-  return partialMatchMetaArray.some((partialMatchMeta) =>
-    predicate(partialMatchMeta),
+      associations: {
+        yes: patterns,
+      },
+    }).yes,
   );
 };
+
+// const assertSpecifierMetaMap = (value, checkComposition = true) => {
+//   if (!isPlainObject(value)) {
+//     throw new TypeError(
+//       `specifierMetaMap must be a plain object, got ${value}`,
+//     );
+//   }
+//   if (checkComposition) {
+//     const plainObject = value;
+//     Object.keys(plainObject).forEach((key) => {
+//       assertUrlLike(key, "specifierMetaMap key");
+//       const value = plainObject[key];
+//       if (value !== null && !isPlainObject(value)) {
+//         throw new TypeError(
+//           `specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`,
+//         );
+//       }
+//     });
+//   }
+// };
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(
+      `${name} must be a url but looks like a windows pathname, got ${value}`,
+    );
+  }
+  if (!hasScheme$1(value)) {
+    throw new TypeError(
+      `${name} must be a url and no scheme found, got ${value}`,
+    );
+  }
+};
+const isPlainObject = (value) => {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+const isWindowsPathnameSpecifier = (specifier) => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
 const URL_META = {
   resolveAssociations,
   applyAssociations,
-  urlChildMayMatch,
-  applyPatternMatching,
   applyAliases,
+  applyPatternMatching,
+  urlChildMayMatch,
+  matches,
 };
 
 /*
@@ -546,132 +588,111 @@ const DATA_URL = {
   },
 };
 
-// consider switching to https://babeljs.io/docs/en/babel-code-frame
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/css-syntax-error.js#L43
-// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
-// https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
+const formatDefault = (v) => v;
 
-
-const stringifyUrlSite = (
-  { url, line, column, content },
-  {
-    showCodeFrame = true,
-    numberOfSurroundingLinesToShow,
-    lineMaxLength,
-    color,
-  } = {},
-) => {
-  let string = url;
-
-  if (typeof line === "number") {
-    string += `:${line}`;
-    if (typeof column === "number") {
-      string += `:${column}`;
-    }
-  }
-
-  if (!showCodeFrame || typeof line !== "number" || !content) {
-    return string;
-  }
-
-  const sourceLoc = showSourceLocation({
-    content,
-    line,
-    column,
-    numberOfSurroundingLinesToShow,
-    lineMaxLength,
-    color,
-  });
-
-  return `${string}
-${sourceLoc}`;
-};
-
-const showSourceLocation = ({
+const inspectFileContent = ({
   content,
   line,
   column,
-  numberOfSurroundingLinesToShow = 1,
-  lineMaxLength = 120,
+
+  linesAbove = 3,
+  linesBelow = 0,
+  lineMaxWidth = 120,
+  lineNumbersOnTheLeft = true,
+  lineMarker = true,
+  columnMarker = true,
+  format = formatDefault,
 } = {}) => {
-  let mark = (string) => string;
-  let aside = (string) => string;
-  // if (color) {
-  //   mark = (string) => ANSI.color(string, ANSI.RED)
-  //   aside = (string) => ANSI.color(string, ANSI.GREY)
-  // }
-
-  const lines = content.split(/\r?\n/);
+  const lineStrings = content.split(/\r?\n/);
   if (line === 0) line = 1;
-  let lineRange = {
-    start: line - 1,
-    end: line,
-  };
-  lineRange = moveLineRangeUp(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = moveLineRangeDown(lineRange, numberOfSurroundingLinesToShow);
-  lineRange = lineRangeWithinLines(lineRange, lines);
-  const linesToShow = lines.slice(lineRange.start, lineRange.end);
-  const endLineNumber = lineRange.end;
-  const lineNumberMaxWidth = String(endLineNumber).length;
-
+  if (column === undefined) {
+    columnMarker = false;
+    column = 1;
+  }
   if (column === 0) column = 1;
 
-  const columnRange = {};
-  if (column === undefined) {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
-  } else if (column > lineMaxLength) {
-    columnRange.start = column - Math.floor(lineMaxLength / 2);
-    columnRange.end = column + Math.ceil(lineMaxLength / 2);
-  } else {
-    columnRange.start = 0;
-    columnRange.end = lineMaxLength;
+  let lineStartIndex = line - 1 - linesAbove;
+  if (lineStartIndex < 0) {
+    lineStartIndex = 0;
   }
+  let lineEndIndex = line - 1 + linesBelow;
+  if (lineEndIndex > lineStrings.length - 1) {
+    lineEndIndex = lineStrings.length - 1;
+  }
+  if (columnMarker) {
+    // human reader deduce the line when there is a column marker
+    lineMarker = false;
+  }
+  if (line - 1 === lineEndIndex) {
+    lineMarker = false; // useless because last line
+  }
+  let lineIndex = lineStartIndex;
 
-  return linesToShow.map((lineSource, index) => {
-    const lineNumber = lineRange.start + index + 1;
+  let columnsBefore;
+  let columnsAfter;
+  if (column > lineMaxWidth) {
+    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
+    columnsAfter = column + Math.floor(lineMaxWidth / 2);
+  } else {
+    columnsBefore = 0;
+    columnsAfter = lineMaxWidth;
+  }
+  let columnMarkerIndex = column - 1 - columnsBefore;
+
+  let source = "";
+  while (lineIndex <= lineEndIndex) {
+    const lineString = lineStrings[lineIndex];
+    const lineNumber = lineIndex + 1;
+    const isLastLine = lineIndex === lineEndIndex;
     const isMainLine = lineNumber === line;
-    const lineSourceTruncated = applyColumnRange(columnRange, lineSource);
-    const lineNumberWidth = String(lineNumber).length;
-    // ensure if line moves from 7,8,9 to 10 the display is still great
-    const lineNumberRightSpacing = " ".repeat(
-      lineNumberMaxWidth - lineNumberWidth,
-    );
-    const asideSource = `${lineNumber}${lineNumberRightSpacing} |`;
-    const lineFormatted = `${aside(asideSource)} ${lineSourceTruncated}`;
-    if (isMainLine) {
-      if (column === undefined) {
-        return `${mark(">")} ${lineFormatted}`;
+    lineIndex++;
+
+    {
+      if (lineMarker) {
+        if (isMainLine) {
+          source += `${format(">", "marker_line")} `;
+        } else {
+          source += "  ";
+        }
       }
-      const spacing = stringToSpaces(
-        `${asideSource} ${lineSourceTruncated.slice(
-          0,
-          column - columnRange.start - 1,
-        )}`,
-      );
-      return `${mark(">")} ${lineFormatted}
-  ${spacing}${mark("^")}`;
+      if (lineNumbersOnTheLeft) {
+        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = `${fillLeft(lineNumber, lineEndIndex + 1)} |`;
+        source += `${format(asideSource, "line_number_aside")} `;
+      }
     }
-    return `  ${lineFormatted}`;
-  }).join(`
-`);
+    {
+      source += truncateLine(lineString, {
+        start: columnsBefore,
+        end: columnsAfter,
+        prefix: "…",
+        suffix: "…",
+        format,
+      });
+    }
+    {
+      if (columnMarker && isMainLine) {
+        source += `\n`;
+        if (lineMarker) {
+          source += "  ";
+        }
+        if (lineNumbersOnTheLeft) {
+          const asideSpaces = `${fillLeft(lineNumber, lineEndIndex + 1)} | `
+            .length;
+          source += " ".repeat(asideSpaces);
+        }
+        source += " ".repeat(columnMarkerIndex);
+        source += format("^", "marker_column");
+      }
+    }
+    if (!isLastLine) {
+      source += "\n";
+    }
+  }
+  return source;
 };
 
-const applyColumnRange = ({ start, end }, line) => {
-  if (typeof start !== "number") {
-    throw new TypeError(`start must be a number, received ${start}`);
-  }
-  if (typeof end !== "number") {
-    throw new TypeError(`end must be a number, received ${end}`);
-  }
-  if (end < start) {
-    throw new Error(
-      `end must be greater than start, but ${end} is smaller than ${start}`,
-    );
-  }
-
-  const prefix = "…";
-  const suffix = "…";
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
   const lastIndex = line.length;
 
   if (line.length === 0) {
@@ -690,51 +711,352 @@ const applyColumnRange = ({ start, end }, line) => {
   if (start >= lastIndex || from === to) {
     return "";
   }
-
   let result = "";
   while (from < to) {
-    result += line[from];
+    result += format(line[from], "char");
     from++;
   }
-
   if (result.length === 0) {
     return "";
   }
   if (startTruncated && endTruncated) {
-    return `${prefix}${result}${suffix}`;
+    return `${format(prefix, "marker_overflow_left")}${result}${format(
+      suffix,
+      "marker_overflow_right",
+    )}`;
   }
   if (startTruncated) {
-    return `${prefix}${result}`;
+    return `${format(prefix, "marker_overflow_left")}${result}`;
   }
   if (endTruncated) {
-    return `${result}${suffix}`;
+    return `${result}${format(suffix, "marker_overflow_right")}`;
   }
   return result;
 };
 
-const stringToSpaces = (string) => string.replace(/[^\t]/g, " ");
+const fillLeft = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  while (missingWidth--) {
+    padded += char;
+  }
+  padded += value;
+  return padded;
+};
 
-// const getLineRangeLength = ({ start, end }) => end - start
+const getPrecision = (number) => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
 
-const moveLineRangeUp = ({ start, end }, number) => {
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round,
+  });
+};
+
+const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt,
+  });
+};
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
+  if (number === 0) {
+    return 0;
+  }
+  let numberCandidate = Math.abs(number);
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s",
+};
+
+const inspectDuration = (
+  ms,
+  { short, rounded = true, decimals } = {},
+) => {
+  // ignore ms below meaningfulMs so that:
+  // inspectDuration(0.5) -> "0 second"
+  // inspectDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return short ? "0s" : "0 second";
+  }
+  const { primary, remaining } = parseMs(ms);
+  if (!remaining) {
+    return inspectDurationUnit(primary, {
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      short,
+      rounded,
+    });
+  }
+  return `${inspectDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })} and ${inspectDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })}`;
+};
+const inspectDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    return `${count}${name}`;
+  }
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+};
+
+const parseMs = (ms) => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+    return false;
+  });
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  // - 1 year and 1 month is great
   return {
-    start: start - number,
-    end,
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount,
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount,
+    },
   };
 };
 
-const moveLineRangeDown = ({ start, end }, number) => {
-  return {
-    start,
-    end: end + number,
-  };
+const inspectFileSize = (numberOfBytes) => {
+  return inspectBytes(numberOfBytes);
 };
 
-const lineRangeWithinLines = ({ start, end }, lines) => {
-  return {
-    start: start < 0 ? 0 : start,
-    end: end > lines.length ? lines.length : end,
-  };
+const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+  const exponent = Math.min(
+    Math.floor(Math.log10(number) / 3),
+    BYTE_UNITS.length - 1,
+  );
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  if (decimals === undefined) {
+    if (unitNumber < 100) {
+      decimals = 1;
+    } else {
+      decimals = 0;
+    }
+  }
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals,
+    decimalsWhenSmall: 1,
+  });
+  if (fixedDecimals) {
+    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  }
+  return `${unitNumberRounded} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const distributePercentages = (
+  namedNumbers,
+  { maxPrecisionHint = 2 } = {},
+) => {
+  const numberNames = Object.keys(namedNumbers);
+  if (numberNames.length === 0) {
+    return {};
+  }
+  if (numberNames.length === 1) {
+    const firstNumberName = numberNames[0];
+    return { [firstNumberName]: "100 %" };
+  }
+  const numbers = numberNames.map((name) => namedNumbers[name]);
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const ratios = numbers.map((number) => number / total);
+  const percentages = {};
+  ratios.pop();
+  ratios.forEach((ratio, index) => {
+    const percentage = ratio * 100;
+    percentages[numberNames[index]] = percentage;
+  });
+  const lowestPercentage = (1 / Math.pow(10, maxPrecisionHint)) * 100;
+  let precision = 0;
+  Object.keys(percentages).forEach((name) => {
+    const percentage = percentages[name];
+    if (percentage < lowestPercentage) {
+      // check the amout of meaningful decimals
+      // and that what we will use
+      const percentageRounded = setRoundedPrecision(percentage);
+      const percentagePrecision = getPrecision(percentageRounded);
+      if (percentagePrecision > precision) {
+        precision = percentagePrecision;
+      }
+    }
+  });
+  let remainingPercentage = 100;
+
+  Object.keys(percentages).forEach((name) => {
+    const percentage = percentages[name];
+    const percentageAllocated = setRoundedPrecision(percentage, {
+      decimals: precision,
+    });
+    remainingPercentage -= percentageAllocated;
+    percentages[name] = percentageAllocated;
+  });
+  const lastName = numberNames[numberNames.length - 1];
+  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
+    decimals: precision,
+  });
+  return percentages;
+};
+
+// consider switching to https://babeljs.io/docs/en/babel-code-frame
+// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/css-syntax-error.js#L43
+// https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
+// https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
+
+
+const stringifyUrlSite = (
+  { url, line, column, content },
+  { showCodeFrame = true, ...params } = {},
+) => {
+  let string = url;
+
+  if (typeof line === "number") {
+    string += `:${line}`;
+    if (typeof column === "number") {
+      string += `:${column}`;
+    }
+  }
+
+  if (!showCodeFrame || typeof line !== "number" || !content) {
+    return string;
+  }
+
+  const sourceLoc = inspectFileContent({
+    content,
+    line,
+    column,
+    params,
+  });
+  return `${string}
+${sourceLoc}`;
 };
 
 const urlToScheme$1 = (url) => {
@@ -1761,6 +2083,18 @@ const createOperation = () => {
     });
   };
 
+  const wait = (ms) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        removeAbortCallback();
+        resolve();
+      }, ms);
+      const removeAbortCallback = addAbortCallback(() => {
+        clearTimeout(timeoutId);
+      });
+    });
+  };
+
   const withSignal = async (asyncCallback) => {
     const abortController = new AbortController();
     const signal = abortController.signal;
@@ -1809,6 +2143,7 @@ const createOperation = () => {
     addAbortSignal,
     addAbortSource,
     timeout,
+    wait,
     withSignal,
     withSignalSync,
     addEndCallback,
@@ -2448,6 +2783,192 @@ process.platform === "win32";
 process.platform === "win32";
 
 process.platform === "win32";
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+  },
+  "text/html": {
+    extensions: ["html"],
+  },
+  "text/css": {
+    extensions: ["css"],
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return (
+        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
+      );
+    });
+    return mediaTypeFound || "application/octet-stream";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
+};
 
 const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
@@ -3216,45 +3737,40 @@ function createSupportsColor(stream, options = {}) {
 });
 
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
-let canUseColors = processSupportsBasicColor;
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+
+const ANSI = {
+  supported: processSupportsBasicColor,
+
+  RED: "\x1b[31m",
+  GREEN: "\x1b[32m",
+  YELLOW: "\x1b[33m",
+  BLUE: "\x1b[34m",
+  MAGENTA: "\x1b[35m",
+  GREY: "\x1b[90m",
+  color: (text, ANSI_COLOR) => {
+    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
+  },
+
+  BOLD: "\x1b[1m",
+  effect: (text, ANSI_EFFECT) => {
+    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
+  },
+};
 
 // GitHub workflow does support ANSI but "supports-color" returns false
 // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (process.env.GITHUB_WORKFLOW) {
+if (
+  process.env.GITHUB_WORKFLOW &&
   // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  if (process.env.FORCE_COLOR !== "false") {
-    // in unit test we use process.env.FORCE_COLOR = 'false' to fake
-    // that colors are not supported. Let it have priority
-    canUseColors = true;
-  }
+  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+  // that colors are not supported. Let it have priority
+  process.env.FORCE_COLOR !== "false"
+) {
+  ANSI.supported = true;
 }
-
-// https://github.com/Marak/colors.js/blob/master/lib/styles.js
-const RED = "\x1b[31m";
-const GREEN = "\x1b[32m";
-const YELLOW = "\x1b[33m";
-const BLUE = "\x1b[34m";
-const MAGENTA = "\x1b[35m";
-const GREY = "\x1b[90m";
-const RESET = "\x1b[0m";
-
-const setANSIColor = canUseColors
-  ? (text, ANSI_COLOR) => `${ANSI_COLOR}${text}${RESET}`
-  : (text) => text;
-
-const ANSI = {
-  supported: canUseColors,
-
-  RED,
-  GREEN,
-  YELLOW,
-  BLUE,
-  MAGENTA,
-  GREY,
-  RESET,
-
-  color: setANSIColor,
-};
 
 function isUnicodeSupported() {
 	if (process$1.platform !== 'win32') {
@@ -3274,42 +3790,51 @@ function isUnicodeSupported() {
 // see also https://github.com/sindresorhus/figures
 
 
-const canUseUnicode = isUnicodeSupported();
-
-const COMMAND_RAW = canUseUnicode ? `❯` : `>`;
-const OK_RAW = canUseUnicode ? `✔` : `√`;
-const FAILURE_RAW = canUseUnicode ? `✖` : `×`;
-const DEBUG_RAW = canUseUnicode ? `◆` : `♦`;
-const INFO_RAW = canUseUnicode ? `ℹ` : `i`;
-const WARNING_RAW = canUseUnicode ? `⚠` : `‼`;
-const CIRCLE_CROSS_RAW = canUseUnicode ? `ⓧ` : `(×)`;
-
-const COMMAND = ANSI.color(COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-const OK = ANSI.color(OK_RAW, ANSI.GREEN);
-const FAILURE = ANSI.color(FAILURE_RAW, ANSI.RED);
-const DEBUG = ANSI.color(DEBUG_RAW, ANSI.GREY);
-const INFO = ANSI.color(INFO_RAW, ANSI.BLUE);
-const WARNING = ANSI.color(WARNING_RAW, ANSI.YELLOW);
-const CIRCLE_CROSS = ANSI.color(CIRCLE_CROSS_RAW, ANSI.RED);
-
 const UNICODE = {
-  COMMAND,
-  OK,
-  FAILURE,
-  DEBUG,
-  INFO,
-  WARNING,
-  CIRCLE_CROSS,
+  supported: isUnicodeSupported(),
 
-  COMMAND_RAW,
-  OK_RAW,
-  FAILURE_RAW,
-  DEBUG_RAW,
-  INFO_RAW,
-  WARNING_RAW,
-  CIRCLE_CROSS_RAW,
-
-  supported: canUseUnicode,
+  get COMMAND_RAW() {
+    return UNICODE.supported ? `❯` : `>`;
+  },
+  get OK_RAW() {
+    return UNICODE.supported ? `✔` : `√`;
+  },
+  get FAILURE_RAW() {
+    return UNICODE.supported ? `✖` : `×`;
+  },
+  get DEBUG_RAW() {
+    return UNICODE.supported ? `◆` : `♦`;
+  },
+  get INFO_RAW() {
+    return UNICODE.supported ? `ℹ` : `i`;
+  },
+  get WARNING_RAW() {
+    return UNICODE.supported ? `⚠` : `‼`;
+  },
+  get CIRCLE_CROSS_RAW() {
+    return UNICODE.supported ? `ⓧ` : `(×)`;
+  },
+  get COMMAND() {
+    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+  },
+  get OK() {
+    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+  },
+  get FAILURE() {
+    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+  },
+  get DEBUG() {
+    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+  },
+  get INFO() {
+    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+  },
+  get WARNING() {
+    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+  },
+  get CIRCLE_CROSS() {
+    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
 };
 
 const createDetailedMessage$1 = (message, details = {}) => {
@@ -3328,243 +3853,6 @@ ${
   });
 
   return string;
-};
-
-const getPrecision = (number) => {
-  if (Math.floor(number) === number) return 0;
-  const [, decimals] = number.toString().split(".");
-  return decimals.length || 0;
-};
-
-const setRoundedPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round,
-  });
-};
-
-const setDecimalsPrecision = (
-  number,
-  {
-    transform,
-    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
-    decimalsWhenSmall, // max decimals for number in [-1,1]
-  } = {},
-) => {
-  if (number === 0) {
-    return 0;
-  }
-  let numberCandidate = Math.abs(number);
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-};
-
-// https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const msAsDuration = (ms) => {
-  // ignore ms below meaningfulMs so that:
-  // msAsDuration(0.5) -> "0 second"
-  // msAsDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return formatDurationUnit(primary, primary.name === "second" ? 1 : 0);
-  }
-  return `${formatDurationUnit(primary, 0)} and ${formatDurationUnit(
-    remaining,
-    0,
-  )}`;
-};
-
-const formatDurationUnit = (unit, decimals) => {
-  const count = setRoundedPrecision(unit.count, {
-    decimals,
-  });
-  if (count <= 1) {
-    return `${count} ${unit.name}`;
-  }
-  return `${count} ${unit.name}s`;
-};
-
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000,
-};
-
-const parseMs = (ms) => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex((unitName) => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-    return false;
-  });
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
-  // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  // - 1 year and 1 month is great
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount,
-    },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount,
-    },
-  };
-};
-
-const byteAsFileSize = (numberOfBytes) => {
-  return formatBytes(numberOfBytes);
-};
-
-const formatBytes = (number, { fixedDecimals = false } = {}) => {
-  if (number === 0) {
-    return `0 B`;
-  }
-  const exponent = Math.min(
-    Math.floor(Math.log10(number) / 3),
-    BYTE_UNITS.length - 1,
-  );
-  const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
-  const maxDecimals = unitNumber < 100 ? 1 : 0;
-  const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals: maxDecimals,
-    decimalsWhenSmall: 1,
-  });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(maxDecimals)} ${unitName}`;
-  }
-  return `${unitNumberRounded} ${unitName}`;
-};
-
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-const distributePercentages = (
-  namedNumbers,
-  { maxPrecisionHint = 2 } = {},
-) => {
-  const numberNames = Object.keys(namedNumbers);
-  if (numberNames.length === 0) {
-    return {};
-  }
-  if (numberNames.length === 1) {
-    const firstNumberName = numberNames[0];
-    return { [firstNumberName]: "100 %" };
-  }
-  const numbers = numberNames.map((name) => namedNumbers[name]);
-  const total = numbers.reduce((sum, value) => sum + value, 0);
-  const ratios = numbers.map((number) => number / total);
-  const percentages = {};
-  ratios.pop();
-  ratios.forEach((ratio, index) => {
-    const percentage = ratio * 100;
-    percentages[numberNames[index]] = percentage;
-  });
-  const lowestPercentage = (1 / Math.pow(10, maxPrecisionHint)) * 100;
-  let precision = 0;
-  Object.keys(percentages).forEach((name) => {
-    const percentage = percentages[name];
-    if (percentage < lowestPercentage) {
-      // check the amout of meaningful decimals
-      // and that what we will use
-      const percentageRounded = setRoundedPrecision(percentage);
-      const percentagePrecision = getPrecision(percentageRounded);
-      if (percentagePrecision > precision) {
-        precision = percentagePrecision;
-      }
-    }
-  });
-  let remainingPercentage = 100;
-
-  Object.keys(percentages).forEach((name) => {
-    const percentage = percentages[name];
-    const percentageAllocated = setRoundedPrecision(percentage, {
-      decimals: precision,
-    });
-    remainingPercentage -= percentageAllocated;
-    percentages[name] = percentageAllocated;
-  });
-  const lastName = numberNames[numberNames.length - 1];
-  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
-    decimals: precision,
-  });
-  return percentages;
 };
 
 const ESC = '\u001B[';
@@ -3733,14 +4021,163 @@ ansiEscapes.iTerm = {
 };
 
 /*
- *
+ * see also https://github.com/vadimdemedes/ink
  */
+
+
+const createDynamicLog = ({
+  stream = process.stdout,
+  clearTerminalAllowed,
+  onVerticalOverflow = () => {},
+  onWriteFromOutside = () => {},
+} = {}) => {
+  const { columns = 80, rows = 24 } = stream;
+  const dynamicLog = {
+    destroyed: false,
+    onVerticalOverflow,
+    onWriteFromOutside,
+  };
+
+  let lastOutput = "";
+  let lastOutputFromOutside = "";
+  let clearAttemptResult;
+  let writing = false;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    for (const logLine of logLines) {
+      const width = stringWidth(logLine);
+      if (width === 0) {
+        visualLineCount++;
+      } else {
+        visualLineCount += Math.ceil(width / columns);
+      }
+    }
+
+    if (visualLineCount > rows) {
+      if (clearTerminalAllowed) {
+        clearAttemptResult = true;
+        return ansiEscapes.clearTerminal;
+      }
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      dynamicLog.onVerticalOverflow();
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return ansiEscapes.eraseLines(visualLineCount);
+  };
+
+  const update = (string) => {
+    if (dynamicLog.destroyed) {
+      throw new Error("Cannot write log after destroy");
+    }
+    let stringToWrite = string;
+    if (lastOutput) {
+      if (lastOutputFromOutside) {
+        // We don't want to clear logs written by other code,
+        // it makes output unreadable and might erase precious information
+        // To detect this we put a spy on the stream.
+        // The spy is required only if we actually wrote something in the stream
+        // something else than this code has written in the stream
+        // so we just write without clearing (append instead of replacing)
+        lastOutputFromOutside = "";
+      } else {
+        stringToWrite = `${getErasePreviousOutput()}${string}`;
+      }
+    }
+    writing = true;
+    stream.write(stringToWrite);
+    lastOutput = string;
+    writing = false;
+    clearAttemptResult = undefined;
+  };
+
+  const clearDuringFunctionCall = (callback) => {
+    // 1. Erase the current log
+    // 2. Call callback (expected to write something on stdout)
+    // 3. Restore the current log
+    // During step 2. we expect a "write from outside" so we uninstall
+    // the stream spy during function call
+    const currentOutput = lastOutput;
+    update("");
+
+    writing = true;
+    callback();
+    writing = false;
+
+    update(currentOutput);
+  };
+
+  const writeFromOutsideEffect = (value) => {
+    if (!lastOutput) {
+      // we don't care if the log never wrote anything
+      // or if last update() wrote an empty string
+      return;
+    }
+    if (writing) {
+      return;
+    }
+    lastOutputFromOutside = value;
+    dynamicLog.onWriteFromOutside(value);
+  };
+
+  let removeStreamSpy;
+  if (stream === process.stdout) {
+    const removeStdoutSpy = spyStreamOutput(
+      process.stdout,
+      writeFromOutsideEffect,
+    );
+    const removeStderrSpy = spyStreamOutput(
+      process.stderr,
+      writeFromOutsideEffect,
+    );
+    removeStreamSpy = () => {
+      removeStdoutSpy();
+      removeStderrSpy();
+    };
+  } else {
+    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
+  }
+
+  const destroy = () => {
+    dynamicLog.destroyed = true;
+    if (removeStreamSpy) {
+      removeStreamSpy();
+      removeStreamSpy = null;
+      lastOutput = "";
+      lastOutputFromOutside = "";
+    }
+  };
+
+  Object.assign(dynamicLog, {
+    update,
+    destroy,
+    stream,
+    clearDuringFunctionCall,
+  });
+  return dynamicLog;
+};
 
 // maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
 // the problem with listening data on stdout
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
-const spyStreamOutput = (stream) => {
+const spyStreamOutput = (stream, callback) => {
   const originalWrite = stream.write;
 
   let output = "";
@@ -3748,6 +4185,7 @@ const spyStreamOutput = (stream) => {
 
   stream.write = function (...args /* chunk, encoding, callback */) {
     output += args;
+    callback(output);
     return originalWrite.call(stream, ...args);
   };
 
@@ -3765,146 +4203,8 @@ const spyStreamOutput = (stream) => {
   };
 };
 
-/*
- * see also https://github.com/vadimdemedes/ink
- */
-
-
-const createLog = ({
-  stream = process.stdout,
-  newLine = "after",
-} = {}) => {
-  const { columns = 80, rows = 24 } = stream;
-
-  const log = {
-    destroyed: false,
-    onVerticalOverflow: () => {},
-  };
-
-  let lastOutput = "";
-  let clearAttemptResult;
-  let streamOutputSpy = noopStreamSpy;
-
-  const getErasePreviousOutput = () => {
-    // nothing to clear
-    if (!lastOutput) {
-      return "";
-    }
-    if (clearAttemptResult !== undefined) {
-      return "";
-    }
-
-    const logLines = lastOutput.split(/\r\n|\r|\n/);
-    let visualLineCount = 0;
-    logLines.forEach((logLine) => {
-      const width = stringWidth(logLine);
-      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
-    });
-
-    if (visualLineCount > rows) {
-      // the whole log cannot be cleared because it's vertically to long
-      // (longer than terminal height)
-      // readline.moveCursor cannot move cursor higher than screen height
-      // it means we would only clear the visible part of the log
-      // better keep the log untouched
-      clearAttemptResult = false;
-      log.onVerticalOverflow();
-      return "";
-    }
-
-    clearAttemptResult = true;
-    return ansiEscapes.eraseLines(visualLineCount);
-  };
-
-  const spyStream = () => {
-    if (stream === process.stdout) {
-      const stdoutSpy = spyStreamOutput(process.stdout);
-      const stderrSpy = spyStreamOutput(process.stderr);
-      return () => {
-        return stdoutSpy() + stderrSpy();
-      };
-    }
-    return spyStreamOutput(stream);
-  };
-
-  const doWrite = (string) => {
-    string = addNewLines(string, newLine);
-    stream.write(string);
-    lastOutput = string;
-    clearAttemptResult = undefined;
-
-    // We don't want to clear logs written by other code,
-    // it makes output unreadable and might erase precious information
-    // To detect this we put a spy on the stream.
-    // The spy is required only if we actually wrote something in the stream
-    // otherwise tryToClear() won't do a thing so spy is useless
-    streamOutputSpy = string ? spyStream() : noopStreamSpy;
-  };
-
-  const write = (string, outputFromOutside = streamOutputSpy()) => {
-    if (log.destroyed) {
-      throw new Error("Cannot write log after destroy");
-    }
-    if (!lastOutput) {
-      doWrite(string);
-      return;
-    }
-    if (outputFromOutside) {
-      // something else than this code has written in the stream
-      // so we just write without clearing (append instead of replacing)
-      doWrite(string);
-    } else {
-      doWrite(`${getErasePreviousOutput()}${string}`);
-    }
-  };
-
-  const dynamicWrite = (callback) => {
-    const outputFromOutside = streamOutputSpy();
-    const string = callback({ outputFromOutside });
-    return write(string, outputFromOutside);
-  };
-
-  const destroy = () => {
-    log.destroyed = true;
-    if (streamOutputSpy) {
-      streamOutputSpy(); // this uninstalls the spy
-      streamOutputSpy = null;
-      lastOutput = "";
-    }
-  };
-
-  Object.assign(log, {
-    write,
-    dynamicWrite,
-    destroy,
-    stream,
-  });
-  return log;
-};
-
-const noopStreamSpy = () => "";
-
-// could be inlined but vscode do not correctly
-// expand/collapse template strings, so I put it at the bottom
-const addNewLines = (string, newLine) => {
-  if (newLine === "before") {
-    return `
-${string}`;
-  }
-  if (newLine === "after") {
-    return `${string}
-`;
-  }
-  if (newLine === "around") {
-    return `
-${string}
-`;
-  }
-  return string;
-};
-
 const startSpinner = ({
-  log,
+  dynamicLog,
   frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   fps = 20,
   keepProcessAlive = false,
@@ -3912,7 +4212,7 @@ const startSpinner = ({
   stopOnVerticalOverflow = true,
   render = () => "",
   effect = () => {},
-  animated = log.stream.isTTY,
+  animated = dynamicLog.stream.isTTY,
 }) => {
   let frameIndex = 0;
   let interval;
@@ -3923,7 +4223,9 @@ const startSpinner = ({
   };
 
   const update = (message) => {
-    spinner.message = running ? `${frames[frameIndex]} ${message}` : message;
+    spinner.message = running
+      ? `${frames[frameIndex]} ${message}\n`
+      : `${message}\n`;
     return spinner.message;
   };
   spinner.update = update;
@@ -3932,23 +4234,17 @@ const startSpinner = ({
   if (animated && ANSI.supported) {
     running = true;
     cleanup = effect();
-    log.write(update(render()));
+    dynamicLog.update(update(render()));
 
     interval = setInterval(() => {
       frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      log.dynamicWrite(({ outputFromOutside }) => {
-        if (outputFromOutside && stopOnWriteFromOutside) {
-          stop();
-          return "";
-        }
-        return update(render());
-      });
+      dynamicLog.update(update(render()));
     }, 1000 / fps);
     if (!keepProcessAlive) {
       interval.unref();
     }
   } else {
-    log.write(update(render()));
+    dynamicLog.update(update(render()));
   }
 
   const stop = (message) => {
@@ -3961,15 +4257,18 @@ const startSpinner = ({
       cleanup();
       cleanup = null;
     }
-    if (log && message) {
-      log.write(update(message));
-      log = null;
+    if (dynamicLog && message) {
+      dynamicLog.update(update(message));
+      dynamicLog = null;
     }
   };
   spinner.stop = stop;
 
   if (stopOnVerticalOverflow) {
-    log.onVerticalOverflow = stop;
+    dynamicLog.onVerticalOverflow = stop;
+  }
+  if (stopOnWriteFromOutside) {
+    dynamicLog.onWriteFromOutside = stop;
   }
 
   return spinner;
@@ -3988,10 +4287,10 @@ const createTaskLog = (
     };
   }
   const startMs = Date.now();
-  const log = createLog();
+  const dynamicLog = createDynamicLog();
   let message = label;
   const taskSpinner = startSpinner({
-    log,
+    dynamicLog,
     render: () => message,
     stopOnWriteFromOutside,
     animated,
@@ -4003,7 +4302,7 @@ const createTaskLog = (
     done: () => {
       const msEllapsed = Date.now() - startMs;
       taskSpinner.stop(
-        `${UNICODE.OK} ${label} (done in ${msAsDuration(msEllapsed)})`,
+        `${UNICODE.OK} ${label} (done in ${inspectDuration(msEllapsed)})`,
       );
     },
     happen: (message) => {
@@ -6004,7 +6303,7 @@ const startServer = async ({
   let status = "starting";
   let nodeServer;
   const startServerOperation = Abort.startOperation();
-  const stopCallbackList = createCallbackListNotifiedOnce();
+  const stopCallbackSet = new Set();
   const serverOrigins = {
     local: "", // favors hostname when possible
   };
@@ -6128,10 +6427,10 @@ const startServer = async ({
   // (otherwise an AbortError is thrown to the code calling "startServer")
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
-  stopCallbackList.add(({ reason }) => {
+  stopCallbackSet.add(({ reason }) => {
     logger.info(`${serverName} stopping server (reason: ${reason})`);
   });
-  stopCallbackList.add(async () => {
+  stopCallbackSet.add(async () => {
     await stopListening(nodeServer);
   });
   let stoppedResolve;
@@ -6140,7 +6439,12 @@ const startServer = async ({
   });
   const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "stopping";
-    await Promise.all(stopCallbackList.notify({ reason }));
+    const promises = [];
+    for (const stopCallback of stopCallbackSet) {
+      promises.push(stopCallback({ reason }));
+    }
+    stopCallbackSet.clear();
+    await Promise.all(promises);
     serviceController.callHooks("serverStopped", { reason });
     status = "stopped";
     stoppedResolve(reason);
@@ -6152,7 +6456,7 @@ const startServer = async ({
       stop(PROCESS_TEARDOWN_EVENTS_MAP[winner.name]);
     },
   );
-  stopCallbackList.add(cancelProcessTeardownRace);
+  stopCallbackSet.add(cancelProcessTeardownRace);
 
   const onError = (error) => {
     if (status === "stopping" && error.code === "ECONNRESET") {
@@ -6167,19 +6471,19 @@ const startServer = async ({
     nodeServer,
     onError,
   );
-  stopCallbackList.add(removeConnectionErrorListener);
+  stopCallbackSet.add(removeConnectionErrorListener);
 
   const connectionsTracker = trackServerPendingConnections(nodeServer, {
     http2,
   });
   // opened connection must be shutdown before the close event is emitted
-  stopCallbackList.add(connectionsTracker.stop);
+  stopCallbackSet.add(connectionsTracker.stop);
 
   const pendingRequestsTracker = trackServerPendingRequests(nodeServer, {
     http2,
   });
   // ensure pending requests got a response from the server
-  stopCallbackList.add((reason) => {
+  stopCallbackSet.add((reason) => {
     pendingRequestsTracker.stop({
       status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
       reason,
@@ -6219,13 +6523,13 @@ const startServer = async ({
         };
       });
       receiveRequestOperation.addAbortSource((abort) => {
-        return stopCallbackList.add(abort);
+        return stopCallbackSet.add(abort);
       });
 
       const sendResponseOperation = Abort.startOperation();
       sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
       sendResponseOperation.addAbortSource((abort) => {
-        return stopCallbackList.add(abort);
+        return stopCallbackSet.add(abort);
       });
 
       const request = fromNodeRequest(nodeRequest, {
@@ -6778,7 +7082,7 @@ const startServer = async ({
     };
     const removeRequestListener = listenRequest(nodeServer, requestCallback);
     // ensure we don't try to handle new requests while server is stopping
-    stopCallbackList.add(removeRequestListener);
+    stopCallbackSet.add(removeRequestListener);
   }
 
   {
@@ -6831,8 +7135,8 @@ const startServer = async ({
         "upgrade",
         upgradeCallback,
       );
-      stopCallbackList.add(removeUpgradeCallback);
-      stopCallbackList.add(() => {
+      stopCallbackSet.add(removeUpgradeCallback);
+      stopCallbackSet.add(() => {
         websocketClients.forEach((websocketClient) => {
           websocketClient.close();
         });
@@ -6865,7 +7169,7 @@ const startServer = async ({
     addEffect: (callback) => {
       const cleanup = callback();
       if (typeof cleanup === "function") {
-        stopCallbackList.add(cleanup);
+        stopCallbackSet.add(cleanup);
       }
     },
   });
@@ -6928,192 +7232,6 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   SIGINT: STOP_REASON_PROCESS_SIGINT,
   beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
   exit: STOP_REASON_PROCESS_EXIT,
-};
-
-const mediaTypeInfos = {
-  "application/json": {
-    extensions: ["json", "map"],
-    isTextual: true,
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"],
-    isTextual: true,
-  },
-  "application/manifest+json": {
-    extensions: ["webmanifest"],
-    isTextual: true,
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"],
-  },
-  "application/xml": {
-    extensions: ["xml"],
-  },
-  "application/x-gzip": {
-    extensions: ["gz"],
-  },
-  "application/wasm": {
-    extensions: ["wasm"],
-  },
-  "application/zip": {
-    extensions: ["zip"],
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"],
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"],
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"],
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"],
-  },
-  "audio/webm": {
-    extensions: ["weba"],
-  },
-  "audio/x-wav": {
-    extensions: ["wav"],
-  },
-  "font/ttf": {
-    extensions: ["ttf"],
-  },
-  "font/woff": {
-    extensions: ["woff"],
-  },
-  "font/woff2": {
-    extensions: ["woff2"],
-  },
-  "image/png": {
-    extensions: ["png"],
-  },
-  "image/gif": {
-    extensions: ["gif"],
-  },
-  "image/jpeg": {
-    extensions: ["jpg"],
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"],
-    isTextual: true,
-  },
-  "text/plain": {
-    extensions: ["txt"],
-  },
-  "text/html": {
-    extensions: ["html"],
-  },
-  "text/css": {
-    extensions: ["css"],
-  },
-  "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
-  },
-  "text/x-sass": {
-    extensions: ["sass"],
-  },
-  "text/x-scss": {
-    extensions: ["scss"],
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"],
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"],
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
-  },
-  "video/ogg": {
-    extensions: ["ogv"],
-  },
-  "video/webm": {
-    extensions: ["webm"],
-  },
-};
-
-const CONTENT_TYPE = {
-  parse: (string) => {
-    const [mediaType, charset] = string.split(";");
-    return { mediaType: normalizeMediaType(mediaType), charset };
-  },
-
-  stringify: ({ mediaType, charset }) => {
-    if (charset) {
-      return `${mediaType};${charset}`;
-    }
-    return mediaType;
-  },
-
-  asMediaType: (value) => {
-    if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
-    }
-    if (typeof value === "object") {
-      return value.mediaType;
-    }
-    return null;
-  },
-
-  isJson: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    return (
-      mediaType === "application/json" ||
-      /^application\/\w+\+json$/.test(mediaType)
-    );
-  },
-
-  isTextual: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    if (mediaType.startsWith("text/")) {
-      return true;
-    }
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
-      return true;
-    }
-    // catch things like application/manifest+json, application/importmap+json
-    if (/^application\/\w+\+json$/.test(mediaType)) {
-      return true;
-    }
-    return false;
-  },
-
-  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
-
-  asFileExtension: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
-  },
-
-  fromUrlExtension: (url) => {
-    const { pathname } = new URL(url);
-    const extensionWithDot = extname(pathname);
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-    const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
-  },
-};
-
-const normalizeMediaType = (value) => {
-  if (value === "application/javascript") {
-    return "text/javascript";
-  }
-  return value;
 };
 
 const isFileSystemPath = (value) => {
@@ -8701,7 +8819,10 @@ const rollupPluginJsenv = ({
                   // rollup generate specifiers only for static and dynamic imports
                   // other references (like new URL()) are ignored
                   // there is no need to remap them back
-                  if (reference.type === "js_import") {
+                  if (
+                    reference.type === "js_import" &&
+                    reference.subtype !== "import_meta_resolve"
+                  ) {
                     return specifierToUrlMap.get(reference.specifier);
                   }
                   return reference.specifier;
@@ -10768,34 +10889,32 @@ const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
     },
     transformUrlContent: {
       js_module: async (urlInfo) => {
+        const jsUrls = parseJsUrls({
+          js: urlInfo.content,
+          url: urlInfo.url,
+          isJsModule: true,
+        });
         const magicSource = createMagicSource(urlInfo.content);
-        for (const referenceToOther of urlInfo.referenceToOthersSet) {
-          if (referenceToOther.subtype === "import_meta_resolve") {
-            const originalSpecifierLength = Buffer.byteLength(
-              referenceToOther.specifier,
-            );
-            const specifierLength = Buffer.byteLength(
-              referenceToOther.generatedSpecifier.slice(1, -1), // remove `"` around
-            );
-            const specifierLengthDiff =
-              specifierLength - originalSpecifierLength;
-            const { node } = referenceToOther.astInfo;
-            const end = node.end + specifierLengthDiff;
-            magicSource.replace({
-              start: node.start,
-              end,
-              replacement: `new URL(${referenceToOther.generatedSpecifier}, import.meta.url).href`,
-            });
-            const currentLengthBeforeSpecifier = "import.meta.resolve(".length;
-            const newLengthBeforeSpecifier = "new URL(".length;
-            const lengthDiff =
-              currentLengthBeforeSpecifier - newLengthBeforeSpecifier;
-            referenceToOther.specifierColumn -= lengthDiff;
-            referenceToOther.specifierStart -= lengthDiff;
-            referenceToOther.specifierEnd =
-              referenceToOther.specifierStart +
-              Buffer.byteLength(referenceToOther.generatedSpecifier);
+        for (const jsUrl of jsUrls) {
+          if (jsUrl.subtype !== "import_meta_resolve") {
+            continue;
           }
+          const { node } = jsUrl.astInfo;
+          let reference;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            if (
+              referenceToOther.generatedSpecifier.slice(1, -1) ===
+              jsUrl.specifier
+            ) {
+              reference = referenceToOther;
+              break;
+            }
+          }
+          magicSource.replace({
+            start: node.start,
+            end: node.end,
+            replacement: `new URL(${reference.generatedSpecifier}, import.meta.url).href`,
+          });
         }
         return magicSource.toContentAndSourcemap();
       },
@@ -12096,6 +12215,13 @@ const applyDependencyRemovalEffects = (reference) => {
 
 const traceFromUrlSite = (urlSite) => {
   return {
+    codeFrame: urlSite.content
+      ? inspectFileContent({
+          content: urlSite.content,
+          line: urlSite.line,
+          column: urlSite.column,
+        })
+      : "",
     message: stringifyUrlSite(urlSite),
     url: urlSite.url,
     line: urlSite.line,
@@ -13680,15 +13806,9 @@ const createFetchUrlContentError = ({
     fetchError.reason = reason;
     fetchError.url = urlInfo.url;
     if (code === "PARSE_ERROR") {
-      fetchError.traceUrl = error.traceUrl;
-      fetchError.traceLine = error.traceLine;
-      fetchError.traceColumn = error.traceColumn;
-      fetchError.traceMessage = error.traceMessage;
+      fetchError.trace = error.trace;
     } else {
-      fetchError.traceUrl = urlInfo.firstReference.trace.url;
-      fetchError.traceLine = urlInfo.firstReference.trace.line;
-      fetchError.traceColumn = urlInfo.firstReference.trace.column;
-      fetchError.traceMessage = urlInfo.firstReference.trace.message;
+      fetchError.trace = urlInfo.firstReference.trace;
     }
     fetchError.asResponse = error.asResponse;
     return fetchError;
@@ -13723,7 +13843,7 @@ const createFetchUrlContentError = ({
       "code": "PARSE_ERROR",
       "reason": error.reasonCode,
       ...(error.cause ? { "parse error message": error.cause.message } : {}),
-      "parse error trace": error.traceMessage,
+      "parse error trace": error.trace?.message,
     });
   }
   return createFailedToFetchUrlContentError({
@@ -13762,33 +13882,43 @@ const createTransformUrlContentError = ({
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
-    transformError.traceUrl = urlInfo.firstReference.trace.url;
-    transformError.traceLine = urlInfo.firstReference.trace.line;
-    transformError.traceColumn = urlInfo.firstReference.trace.column;
-    transformError.traceMessage = urlInfo.firstReference.trace.message;
+    transformError.trace = urlInfo.firstReference.trace;
     if (code === "PARSE_ERROR") {
       transformError.reason = `parse error on ${urlInfo.type}`;
       transformError.cause = error;
       if (urlInfo.isInline) {
-        transformError.traceLine =
+        transformError.trace.line =
           urlInfo.firstReference.trace.line + error.line - 1;
-        transformError.traceColumn =
+        transformError.trace.column =
           urlInfo.firstReference.trace.column + error.column;
-        transformError.traceMessage = stringifyUrlSite({
+        transformError.trace.codeFrame = inspectFileContent({
+          line: transformError.trace.line,
+          column: transformError.trace.column,
+          content: urlInfo.inlineUrlSite.content,
+        });
+        transformError.trace.message = stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
-          line: transformError.traceLine,
-          column: transformError.traceColumn,
+          line: transformError.trace.line,
+          column: transformError.trace.column,
           content: urlInfo.inlineUrlSite.content,
         });
       } else {
-        transformError.traceLine = error.line;
-        transformError.traceColumn = error.column;
-        transformError.traceMessage = stringifyUrlSite({
+        transformError.trace = {
           url: urlInfo.url,
-          line: error.line - 1,
+          line: error.line,
           column: error.column,
-          content: urlInfo.content,
-        });
+          codeFrame: inspectFileContent({
+            line: error.line - 1,
+            column: error.column,
+            content: urlInfo.content,
+          }),
+          message: stringifyUrlSite({
+            url: urlInfo.url,
+            line: error.line - 1,
+            column: error.column,
+            content: urlInfo.content,
+          }),
+        };
       }
     }
     transformError.asResponse = error.asResponse;
@@ -14453,7 +14583,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         ) {
           const errorInfo =
             e.code === "PARSE_ERROR" && e.cause
-              ? `${e.cause.reasonCode}\n${e.traceMessage}`
+              ? `${e.cause.reasonCode}\n${e.trace?.message}`
               : e.stack;
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
@@ -14859,7 +14989,7 @@ const determineCategory = (urlInfo) => {
 const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   const addPart = (name, { count, size, percentage }) => {
     parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${byteAsFileSize(
+      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${inspectFileSize(
         size,
       )} / ${percentage} %)`,
     );
@@ -14870,7 +15000,7 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   //   parts.push(
   //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
   //       sourcemaps.count
-  //     } (${byteAsFileSize(sourcemaps.size)})`,
+  //     } (${inspectFileSize(sourcemaps.size)})`,
   //   )
   // }
   if (html.count) {
@@ -16462,18 +16592,20 @@ const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
       name: "jsenv:js_reference_analysis",
       appliesDuring: "*",
       transformUrlContent: {
-        js_classic: (urlInfo) =>
-          parseAndTransformJsReferences(urlInfo, {
+        js_classic: (urlInfo) => {
+          return parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
               urlInfo.context.isSupportedOnCurrentClients("template_literals"),
-          }),
-        js_module: (urlInfo) =>
-          parseAndTransformJsReferences(urlInfo, {
+          });
+        },
+        js_module: (urlInfo) => {
+          return parseAndTransformJsReferences(urlInfo, {
             inlineContent,
             canUseTemplateLiterals:
               urlInfo.context.isSupportedOnCurrentClients("template_literals"),
-          }),
+          });
+        },
       },
     },
   ];
@@ -16602,13 +16734,9 @@ const parseAndTransformJsReferences = async (
   if (parallelActions.length > 0) {
     await Promise.all(parallelActions.map((action) => action()));
   }
-  if (sequentialActions.length > 0) {
-    await sequentialActions.reduce(async (previous, action) => {
-      await previous;
-      await action();
-    }, Promise.resolve());
+  for (const sequentialAction of sequentialActions) {
+    await sequentialAction();
   }
-
   const { content, sourcemap } = magicSource.toContentAndSourcemap();
   return { content, sourcemap };
 };
@@ -18051,7 +18179,7 @@ const jsenvPluginProtocolFile = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
-  directoryReferenceAllowed = false,
+  directoryReferenceEffect = "error",
 }) => {
   return [
     {
@@ -18132,16 +18260,26 @@ const jsenvPluginProtocolFile = ({
         }
         reference.leadsToADirectory = stat && stat.isDirectory();
         if (reference.leadsToADirectory) {
-          const directoryAllowed =
+          let actionForDirectory;
+          if (
             reference.type === "http_request" ||
-            reference.type === "filesystem" ||
-            (typeof directoryReferenceAllowed === "function" &&
-              directoryReferenceAllowed(reference)) ||
-            directoryReferenceAllowed;
-          if (!directoryAllowed) {
+            reference.type === "filesystem"
+          ) {
+            actionForDirectory = "copy";
+          } else if (typeof directoryReferenceEffect === "string") {
+            actionForDirectory = directoryReferenceEffect;
+          } else if (typeof directoryReferenceEffect === "function") {
+            actionForDirectory = directoryReferenceEffect(reference);
+          } else {
+            actionForDirectory = "error";
+          }
+          if (actionForDirectory === "error") {
             const error = new Error("Reference leads to a directory");
             error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
             throw error;
+          }
+          if (actionForDirectory === "preserve") {
+            return `ignore:${url}${search}${hash}`;
           }
         }
         const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
@@ -19898,7 +20036,7 @@ const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
-  directoryReferenceAllowed,
+  directoryReferenceEffect,
   supervisor,
   injections,
   transpilation = true,
@@ -19933,7 +20071,7 @@ const getCorePlugins = ({
        - All the rest uses web standard url resolution
      */
     jsenvPluginProtocolFile({
-      directoryReferenceAllowed,
+      directoryReferenceEffect,
       magicExtensions,
       magicDirectoryIndex,
     }),
@@ -21533,7 +21671,7 @@ const build = async ({
   nodeEsmResolution,
   magicExtensions,
   magicDirectoryIndex,
-  directoryReferenceAllowed,
+  directoryReferenceEffect,
   scenarioPlaceholders,
   injections,
   transpilation = {},
@@ -21623,6 +21761,17 @@ const build = async ({
     }
   }
 
+  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+    assetsDirectory = `${assetsDirectory}/`;
+  }
+  if (directoryToClean === undefined) {
+    if (assetsDirectory === undefined) {
+      directoryToClean = buildDirectoryUrl;
+    } else {
+      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
+    }
+  }
+
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
@@ -21634,17 +21783,6 @@ const build = async ({
         abort,
       );
     });
-  }
-
-  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
-    assetsDirectory = `${assetsDirectory}/`;
-  }
-  if (directoryToClean === undefined) {
-    if (assetsDirectory === undefined) {
-      directoryToClean = buildDirectoryUrl;
-    } else {
-      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
-    }
   }
 
   const runBuild = async ({ signal, logLevel }) => {
@@ -21719,7 +21857,7 @@ build ${entryPointKeys.length} entry points`);
           nodeEsmResolution,
           magicExtensions,
           magicDirectoryIndex,
-          directoryReferenceAllowed,
+          directoryReferenceEffect,
           injections,
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleConversion,
@@ -22087,7 +22225,15 @@ build ${entryPointKeys.length} entry points`);
   };
 
   if (!watch) {
-    return runBuild({ signal: operation.signal, logLevel });
+    try {
+      const result = await runBuild({
+        signal: operation.signal,
+        logLevel,
+      });
+      return result;
+    } finally {
+      await operation.end();
+    }
   }
 
   let resolveFirstBuild;
@@ -22326,25 +22472,13 @@ const startDevServer = async ({
   }
 
   const logger = createLogger({ logLevel });
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    operation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGINT: true,
-        },
-        abort,
-      );
-    });
-  }
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !logger.levels.info,
   });
 
-  const serverStopCallbacks = [];
+  const serverStopCallbackSet = new Set();
   const serverEventsDispatcher = createServerEventsDispatcher();
-  serverStopCallbacks.push(() => {
+  serverStopCallbackSet.add(() => {
     serverEventsDispatcher.destroy();
   });
   const kitchenCache = new Map();
@@ -22419,7 +22553,7 @@ const startDevServer = async ({
         cooldownBetweenFileEvents: clientAutoreload.cooldownBetweenFileEvents,
       },
     );
-    serverStopCallbacks.push(stopWatchingSourceFiles);
+    serverStopCallbackSet.add(stopWatchingSourceFiles);
 
     const getOrCreateKitchen = (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
@@ -22544,7 +22678,7 @@ const startDevServer = async ({
         },
       );
 
-      serverStopCallbacks.push(() => {
+      serverStopCallbackSet.add(() => {
         kitchen.pluginController.callHooks("destroy", kitchen.context);
       });
       {
@@ -22708,7 +22842,7 @@ const startDevServer = async ({
             if (urlInfo.content !== undefined) {
               kitchen.context.logger.error(`Error while handling ${request.url}:
 ${originalError.reasonCode || originalError.code}
-${e.traceMessage}`);
+${e.trace?.message}`);
               return {
                 url: reference.url,
                 status: 200,
@@ -22841,10 +22975,10 @@ ${e.traceMessage}`);
   });
   server.stoppedPromise.then((reason) => {
     onStop();
-    serverStopCallbacks.forEach((serverStopCallback) => {
+    for (const serverStopCallback of serverStopCallbackSet) {
       serverStopCallback(reason);
-    });
-    serverStopCallbacks.length = 0;
+    }
+    serverStopCallbackSet.clear();
   });
   startDevServerTask.done();
   if (hostname) {

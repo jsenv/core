@@ -18,9 +18,10 @@ import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMess
       `unexpected character in string
 --- details ---
 AABB
- ^ unexpected "A", expected to continue with "B"
+ ^
+unexpected "A", expected to continue with "B"
 --- path ---
-actual[1]`,
+actual`,
     );
   }
 }
