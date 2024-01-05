@@ -68,9 +68,10 @@ actual.foo[[Get]]`,
       `unexpected character in function name
 --- details ---
 actualGetter
-^ unexpected "a", expected to continue with "expectedGetter"
+^
+unexpected "a", expected to continue with "expectedGetter"
 --- path ---
-actual.foo[[Get]].name[0]`,
+actual.foo[[Get]].name`,
     );
   }
 }

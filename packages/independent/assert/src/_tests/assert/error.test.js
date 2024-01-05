@@ -37,9 +37,10 @@ import { executeInNewContext } from "../executeInNewContext.js";
       `unexpected character in error message
 --- details ---
 foo
-^ unexpected "f", expected to continue with "bar"
+^
+unexpected "f", expected to continue with "bar"
 --- path ---
-actual.message[0]`,
+actual.message`,
     );
   }
 }

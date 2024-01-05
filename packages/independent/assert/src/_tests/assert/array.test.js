@@ -108,9 +108,10 @@ actual.length`,
       `unexpected character in string
 --- details ---
 a
-^ unexpected "a", expected to continue with "b"
+^
+unexpected "a", expected to continue with "b"
 --- path ---
-actual[0][0]`,
+actual[0]`,
     );
   }
 }
