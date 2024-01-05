@@ -198,6 +198,9 @@ export const executeTestPlan = async ({
     }
     // parallel
     {
+      if (parallel === true) {
+        parallel = {};
+      }
       if (parallel === false) {
         parallel = { max: 1 };
       }
@@ -326,6 +329,9 @@ To fix this warning:
         );
       }
       if (githubCheck) {
+        if (githubCheck === true) {
+          githubCheck = {};
+        }
         if (typeof githubCheck !== "object") {
           throw new TypeError(
             `githubCheck must be an object, got ${githubCheck}`,
@@ -360,6 +366,9 @@ To fix this warning:
     }
     // coverage
     if (coverage) {
+      if (coverage === true) {
+        coverage = {};
+      }
       if (typeof coverage !== "object") {
         throw new TypeError(`coverage must be an object, got ${coverage}`);
       }

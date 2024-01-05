@@ -54,6 +54,7 @@ const expected = {
   counters: {
     planified: 2,
     remaining: 0,
+    waiting: 0,
     executing: 0,
     executed: 2,
     aborted: 0,

@@ -23,6 +23,6 @@ await executeTestPlan({
     origin: "http://localhost:3400",
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
-  coverageEnabled: process.argv.includes("--coverage"),
-  githubCheckEnabled: false,
+  coverage: process.argv.includes("--coverage"),
+  githubCheck: false,
 });

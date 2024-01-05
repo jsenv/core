@@ -1,3 +1,4 @@
+import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
@@ -18,8 +19,8 @@ const test = async (params) => {
     isException: error.isException,
     isError: error.isError,
     name: error.name,
-    message: error.message,
-    stack: error.stack,
+    message: stripAnsi(error.message),
+    stack: stripAnsi(error.stack),
     site: error.site,
   };
   const expected = {
