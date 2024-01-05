@@ -178,8 +178,21 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
         : firstCallFrame.evalSite;
     }
   }
-  Object.assign(exception, reason);
-  exception.isError = reason instanceof Error;
+  // getOwnPropertyNames to catch non enumerable properties on reason
+  // (happens mostly when reason is instanceof Error)
+  // like .stack, .message
+  // some properties are even on the prototype like .name
+  for (const ownPropertyName of Object.getOwnPropertyNames(reason)) {
+    exception[ownPropertyName] = reason[ownPropertyName];
+  }
+  const isError = reason instanceof Error;
+  exception.isError = isError;
+  if (isError) {
+    // getOwnPropertyNames is not enough to copy .name and .message
+    // on error instances
+    exception.name = reason.name;
+    exception.message = reason.message;
+  }
   return exception;
 };
 
