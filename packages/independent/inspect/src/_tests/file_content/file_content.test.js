@@ -11,8 +11,10 @@ const test = (name, params) => {
   );
   number++;
   const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
-  writeFileSync(snapshotFileUrl, inspectFileContent(params));
+  const inspectContentResult = inspectFileContent(params);
+  writeFileSync(snapshotFileUrl, inspectContentResult);
   fileSnapshot.compare();
+  return inspectContentResult;
 };
 
 test("basic.txt", {
