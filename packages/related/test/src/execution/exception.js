@@ -53,14 +53,7 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
     exception.message = JSON.stringify(reason);
     return exception;
   }
-  if (reason.isException && reason.stackFrames) {
-    return reason;
-  }
-  exception.isError = reason instanceof Error;
-  exception.code = reason.code;
-  exception.name = reason.name;
-  exception.message = reason.message;
-  if ("stack" in reason) {
+  if (reason.stackFrames === undefined && "stack" in reason) {
     let stackFrames;
 
     const { prepareStackTrace } = Error;
@@ -157,12 +150,26 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
       stackFrames = stackFramesNonNative;
     }
 
-    exception.stackFrames = stackFrames;
-    exception.stackTrace = formatStackTrace(stackFrames);
-    exception.stack = formatStack(exception);
+    reason.stackFrames = stackFrames;
+
+    let stackTrace = "";
+    for (const stackFrame of stackFrames) {
+      if (stackTrace) stackTrace += "\n";
+      stackTrace += stackFrame.raw;
+    }
+    reason.stackTrace = stackTrace;
+    let stack = "";
+    const name = reason.name || "Error";
+    const message = reason.message || "";
+    stack += `${name}: ${message}`;
+    if (stackTrace) {
+      stack += `\n${stackTrace}`;
+    }
+    reason.stack = stack;
+
     const [firstCallFrame] = stackFrames;
     if (firstCallFrame) {
-      exception.site = firstCallFrame.url
+      reason.site = firstCallFrame.url
         ? {
             url: firstCallFrame.url,
             line: firstCallFrame.line,
@@ -171,27 +178,9 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
         : firstCallFrame.evalSite;
     }
   }
+  Object.assign(exception, reason);
+  exception.isError = reason instanceof Error;
   return exception;
-};
-
-const formatStackTrace = (stackFrames) => {
-  let stackTrace = "";
-  for (const stackFrame of stackFrames) {
-    if (stackTrace) stackTrace += "\n";
-    stackTrace += stackFrame.raw;
-  }
-  return stackTrace;
-};
-
-const formatStack = (exception) => {
-  const name = exception.name || "Error";
-  const message = exception.message || "";
-  let stack = ``;
-  stack += `${name}: ${message}`;
-  if (exception.stackTrace) {
-    stack += `\n${exception.stackTrace}`;
-  }
-  return stack;
 };
 
 const getPropertiesFromEvalOrigin = (origin) => {

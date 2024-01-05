@@ -3,30 +3,27 @@ import { inspectFileContent } from "@jsenv/inspect";
 import { urlToFileSystemPath } from "@jsenv/urls";
 import { ANSI } from "@jsenv/log";
 
-import { createException } from "../exception.js";
-
 export const formatErrorForTerminal = (
   error,
   { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
 ) => {
-  const exception = createException(error);
-  if (!exception.stack) {
-    return exception.message;
+  if (!error.stack) {
+    return error.message;
   }
 
   let text = "";
   write_code_frame: {
     if (
-      exception.site &&
-      exception.site.url &&
-      exception.site.url.startsWith("file:") &&
-      typeof exception.site.line === "number"
+      error.site &&
+      error.site.url &&
+      error.site.url.startsWith("file:") &&
+      typeof error.site.line === "number"
     ) {
-      const content = readFileSync(new URL(exception.site.url), "utf8");
+      const content = readFileSync(new URL(error.site.url), "utf8");
       text += inspectFileContent({
         content,
-        line: exception.site.line,
-        column: exception.site.column,
+        line: error.site.line,
+        column: error.site.column,
         linesAbove: 2,
         linesBelow: 0,
         lineMaxWidth: process.stdout.columns,
@@ -44,10 +41,10 @@ export const formatErrorForTerminal = (
       text += `\n`;
     }
   }
-  text += `${exception.name}: ${exception.message}`;
+  text += `${error.name}: ${error.message}`;
   write_stack: {
     let stackTrace = "";
-    const stackFrames = exception.stackFrames;
+    const stackFrames = error.stackFrames;
     if (stackFrames) {
       let atLeastOneNonNative = false;
       let lastStackFrameForMain;
@@ -88,23 +85,20 @@ export const formatErrorForTerminal = (
         if (stackTrace) stackTrace += "\n";
         stackTrace += stackFrameString;
       }
-    } else {
-      stackTrace = replaceUrls(
-        exception.stackTrace,
-        ({ url, line, column }) => {
-          let urlAsPath = urlToFileSystemPath(url);
-          if (mockFluctuatingValues) {
-            const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-            urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
-          }
-          const replacement = stringifyUrlSite({
-            url: urlAsPath,
-            line,
-            column,
-          });
-          return replacement;
-        },
-      );
+    } else if (error.stackTrace) {
+      stackTrace = replaceUrls(error.stackTrace, ({ url, line, column }) => {
+        let urlAsPath = urlToFileSystemPath(url);
+        if (mockFluctuatingValues) {
+          const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+          urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+        }
+        const replacement = stringifyUrlSite({
+          url: urlAsPath,
+          line,
+          column,
+        });
+        return replacement;
+      });
     }
 
     if (stackTrace) {

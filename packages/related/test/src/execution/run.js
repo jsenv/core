@@ -14,6 +14,8 @@ import crypto from "node:crypto";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { ensureParentDirectories } from "@jsenv/filesystem";
 
+import { createException } from "./exception.js";
+
 export const run = async ({
   signal = new AbortController().signal,
   logger,
@@ -163,19 +165,7 @@ export const run = async ({
     } = winner.data;
     result.status = status;
     for (let error of errors) {
-      // the goal here is to obtain a "regular error"
-      // that can be thrown using "throw" keyword
-      // so we wrap the error hapenning inside the runtime
-      // into "errorProxy" and put .stack property on it
-      // the other properties are set by defineProperty so they are not enumerable
-      // otherwise they would pollute the error displayed by Node.js
-      const errorProxy = new Error(error.message);
-      errorProxy.stack = error.stack;
-      for (const key of Object.keys(error)) {
-        Object.defineProperty(errorProxy, key, {
-          value: error[key],
-        });
-      }
+      const errorProxy = normalizeRuntimeError(error);
       result.errors.push(errorProxy);
     }
     result.namespace = namespace;
@@ -210,4 +200,23 @@ export const run = async ({
     result.timings.end = relativeToTimingOrigin(Date.now());
     return result;
   }
+};
+const normalizeRuntimeError = (runtimeError) => {
+  // the goal here is to obtain a "regular error"
+  // that can be thrown using "throw" keyword
+  // so we wrap the error hapenning inside the runtime
+  // into "errorProxy" and put .stack property on it
+  // the other properties are set by defineProperty so they are not enumerable
+  // otherwise they would pollute the error displayed by Node.js
+  const errorProxy = new Error(runtimeError.message);
+  const exception = createException(runtimeError);
+  errorProxy.stack = exception.stack;
+  for (const key of Object.keys(exception)) {
+    Object.defineProperty(errorProxy, key, {
+      writable: true,
+      configurable: true,
+      value: runtimeError[key],
+    });
+  }
+  return errorProxy;
 };

@@ -117,7 +117,6 @@ const test = async (filename, params) => {
 await test("console.spec.html");
 await test("empty.spec.html");
 await test("error_in_script.spec.html");
-await test("error_in_script.spec.html");
 await test("error_in_script_module.spec.html");
 await test("error_in_js_module.spec.html");
 await test("error_in_js_classic.spec.html");
