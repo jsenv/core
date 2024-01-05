@@ -484,10 +484,10 @@ window.__supervisor__ = (() => {
 
         let stackFrames;
         if (
+          exception.isError &&
           Error.captureStackTrace &&
           // captureStackTrace exists on webkit but error.stack is not v8
-          !isWebkitOrSafari &&
-          "stack" in reason
+          !isWebkitOrSafari
         ) {
           // stackTrace formatted by V8
           const { prepareStackTrace } = Error;
@@ -570,6 +570,7 @@ window.__supervisor__ = (() => {
               stack += `\n${stackTrace}`;
             }
             exception.stack = stack;
+            reason.stack = stack;
 
             const [firstCallFrame] = stackFrames;
             if (
