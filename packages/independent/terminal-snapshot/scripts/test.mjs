@@ -9,4 +9,5 @@ await executeTestPlan({
       },
     },
   },
+  githubCheck: false,
 });

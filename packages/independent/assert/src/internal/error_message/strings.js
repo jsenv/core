@@ -198,7 +198,7 @@ export const formatStringAssertionErrorMessage = ({
               actualChar,
             )}, expected to continue with`,
           }),
-          path,
+          ...(path ? { path } : {}),
         });
       }
       if (isLineBreak(actualChar)) {
@@ -223,7 +223,7 @@ export const formatStringAssertionErrorMessage = ({
         ...formatDetails({
           annotationLabel: `expected to continue with`,
         }),
-        path,
+        ...(path ? { path } : {}),
       });
     }
   }
@@ -257,7 +257,7 @@ export const formatStringAssertionErrorMessage = ({
         annotationLabel,
         expectedOverview: false,
       }),
-      path,
+      ...(path ? { path } : {}),
     });
   }
 };

@@ -40,5 +40,8 @@
     "@jsenv/utils": "2.1.0",
     "@jsenv/assert": "3.0.0",
     "prettier": "3.1.0"
+  },
+  "devDependencies": {
+    "strip-ansi": "7.1.0"
   }
 }

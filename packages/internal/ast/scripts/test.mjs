@@ -16,8 +16,5 @@ await executeTestPlan({
       },
     },
   },
-  failFast: process.argv.includes("--workspace"),
-  logShortForCompletedExecutions: true,
-  logMergeForCompletedExecutions: process.argv.includes("--workspace"),
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
