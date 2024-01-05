@@ -483,6 +483,7 @@ window.__supervisor__ = (() => {
         exception.message = reason.message || message || "";
         exception.reportedBy = reason.reportedBy;
 
+        let stackFrames;
         if (
           Error.captureStackTrace &&
           // captureStackTrace exists on webkit but error.stack is not v8
@@ -516,11 +517,8 @@ window.__supervisor__ = (() => {
               return null;
             };
 
-            const stackFrames = [];
-            let stackTrace = "";
+            stackFrames = [];
             for (const callSite of callSites) {
-              if (stackTrace) stackTrace += "\n";
-
               const url =
                 callSite.getFileName() || callSite.getScriptNameOrSourceURL();
               const line = callSite.getLineNumber();
@@ -544,33 +542,37 @@ window.__supervisor__ = (() => {
                   stackFrame.evalSite = getPropertiesFromEvalOrigin(evalOrigin);
                 }
               }
-
               stackFrames.push(stackFrame);
-              stackTrace += stackFrame.raw;
             }
-            exception.stackFrames = stackFrames;
-            exception.stackTrace = stackTrace;
-
-            const name = e.name || "Error";
-            const message = e.message || "";
-            let stack = ``;
-            stack += `${name}: ${message}`;
-            if (stackTrace) {
-              stack += `\n${stackTrace}`;
-            }
-            return stack;
+            return "";
           };
           exception.stackSourcemapped = true;
           exception.stack = reason.stack;
-          if (exception.stackFrames === undefined) {
+          if (stackFrames === undefined) {
             // Error.prepareStackTrace not trigerred
             // - reason is not an error
             // - reason.stack already get
             Error.prepareStackTrace = prepareStackTrace;
             exception.stackTrace = getErrorStackTrace(reason);
           }
-          if (exception.stackFrames) {
-            const [firstCallFrame] = exception.stackFrames;
+          if (stackFrames) {
+            exception.stackFrames = stackFrames;
+            let stackTrace = "";
+            for (const stackFrame of stackFrames) {
+              if (stackTrace) stackTrace += "\n";
+              stackTrace += stackFrame.raw;
+            }
+            exception.stackTrace = stackTrace;
+            let stack = "";
+            const name = reason.name || "Error";
+            const message = reason.message || "";
+            stack += `${name}: ${message}`;
+            if (stackTrace) {
+              stack += `\n${stackTrace}`;
+            }
+            exception.stack = stack;
+
+            const [firstCallFrame] = stackFrames;
             if (
               exception.site.url === null &&
               firstCallFrame &&
@@ -1031,7 +1033,7 @@ window.__supervisor__ = (() => {
         { createLink = ({ url }) => url },
       ) => {
         // normalize line breaks
-        string = string.replace(/\n/g, "\n");
+        string = string.replace(/\r\n/g, "\n");
         string = escapeHtml(string);
         // render links
         string = replaceUrls(string, ({ url, line, column }) => {
