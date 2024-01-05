@@ -168,7 +168,7 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
     reason.stack = stack;
 
     const [firstCallFrame] = stackFrames;
-    if (firstCallFrame) {
+    if (firstCallFrame && (!reason.site || !reason.site.isInline)) {
       reason.site = firstCallFrame.url
         ? {
             url: firstCallFrame.url,

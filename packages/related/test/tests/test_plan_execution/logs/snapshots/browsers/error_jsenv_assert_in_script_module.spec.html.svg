@@ -85,9 +85,11 @@
         <text x="10" y="318.55">&#x22;1&#x22;</text>
         <text x="10" y="337.55">--- path ---</text>
         <text x="10" y="356.55">actual</text>
-        <text x="26.8" y="375.55">
-          &#x3C;mock&#x3E;/error_jsenv_assert_in_script_module.spec.html:13:12</text
+        <text x="26.8" y="375.55"> at </text>
+        <text x="52.01" y="375.55" font-weight="bold"
+          >&#x3C;mock&#x3E;/error_jsenv_assert_in_script_module.spec.html</text
         >
+        <text x="488.88" y="375.55">:13:12</text>
         <text x="10" y="394.55" fill="#B22222"
           >--------------------------------------</text
         >
@@ -105,16 +107,12 @@
         <text x="10" y="432.55" fill="#B22222">---------------</text>
         <text x="144.42" y="432.55"> error </text>
         <text x="194.83" y="432.55" fill="#B22222">----------------</text>
-        <text x="10" y="451.55" fill="#A9A9A9">11 |</text>
-        <text x="102.42" y="451.55">
-          import { assert } from &#x22;@jsenv/assert&#x22;;</text
-        >
-        <text x="10" y="470.55" fill="#A9A9A9">12 |</text>
-        <text x="10" y="489.55" fill="#A9A9A9">13 |</text>
-        <text x="102.42" y="489.55">
-          assert({ actual: 1, expected: &#x22;1&#x22; });</text
-        >
-        <text x="194.83" y="508.55" fill="#B22222">^</text>
+        <text x="10" y="451.55" fill="#A9A9A9">7 |</text>
+        <text x="60.41" y="451.55"> &#x3C;/head&#x3E;</text>
+        <text x="10" y="470.55" fill="#A9A9A9">8 |</text>
+        <text x="10" y="489.55" fill="#A9A9A9">9 |</text>
+        <text x="60.41" y="489.55"> &#x3C;body&#x3E;</text>
+        <text x="77.21" y="508.55" fill="#B22222">^</text>
         <text x="10" y="527.55">AssertionError: unequal values</text>
         <text x="10" y="546.55">--- found ---</text>
         <text x="10" y="565.55">1</text>
@@ -144,16 +142,12 @@
         <text x="10" y="717.55" fill="#B22222">---------------</text>
         <text x="144.42" y="717.55"> error </text>
         <text x="194.83" y="717.55" fill="#B22222">----------------</text>
-        <text x="10" y="736.55" fill="#A9A9A9">11 |</text>
-        <text x="102.42" y="736.55">
-          import { assert } from &#x22;@jsenv/assert&#x22;;</text
-        >
-        <text x="10" y="755.55" fill="#A9A9A9">12 |</text>
-        <text x="10" y="774.55" fill="#A9A9A9">13 |</text>
-        <text x="102.42" y="774.55">
-          assert({ actual: 1, expected: &#x22;1&#x22; });</text
-        >
-        <text x="194.83" y="793.55" fill="#B22222">^</text>
+        <text x="10" y="736.55" fill="#A9A9A9">7 |</text>
+        <text x="60.41" y="736.55"> &#x3C;/head&#x3E;</text>
+        <text x="10" y="755.55" fill="#A9A9A9">8 |</text>
+        <text x="10" y="774.55" fill="#A9A9A9">9 |</text>
+        <text x="60.41" y="774.55"> &#x3C;body&#x3E;</text>
+        <text x="77.21" y="793.55" fill="#B22222">^</text>
         <text x="10" y="812.55">AssertionError: unequal values</text>
         <text x="10" y="831.55">--- found ---</text>
         <text x="10" y="850.55">1</text>

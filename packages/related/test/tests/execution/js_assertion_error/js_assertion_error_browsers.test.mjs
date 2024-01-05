@@ -38,33 +38,31 @@ const test = async (params) => {
   const actual = {
     status,
     consoleCalls,
-    errorStack: error.stack,
+    errorMessage: error.message,
     site: error.site,
   };
-  const expectedErrorStack = {
-    chromium: assert.startsWith(`AssertionError: unexpected character in string
+  const expectedErrorMessage = {
+    chromium: assert.startsWith(`unexpected character in string
 --- details ---
 foo
 ^
 unexpected "f", expected to continue with "bar"
 --- path ---
 actual`),
-    firefox: assert.startsWith(`AssertionError: unexpected character in string
+    firefox: assert.startsWith(`unexpected character in string
 --- details ---
 foo
 ^
 unexpected "f", expected to continue with "bar"
 --- path ---
-actual
-createAssertionError@`),
-    webkit: assert.startsWith(`AssertionError: unexpected character in string
+actual`),
+    webkit: assert.startsWith(`unexpected character in string
 --- details ---
 foo
 ^
 unexpected "f", expected to continue with "bar"
 --- path ---
-actual
-createAssertionError@`),
+actual`),
   }[params.runtime.name];
   const expectedLine = {
     chromium: 13,
@@ -80,7 +78,7 @@ createAssertionError@`),
   const expected = {
     status: "failed",
     consoleCalls: [],
-    errorStack: expectedErrorStack,
+    errorMessage: expectedErrorMessage,
     site: {
       isInline: true,
       url: `${clientDirectoryUrl}/main.html`,

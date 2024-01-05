@@ -73,7 +73,7 @@
         <text x="94.01" y="185.55" fill="#B22222">^</text>
         <text x="10" y="204.55">Error: here</text>
         <text x="26.8" y="223.55">
-          &#x3C;mock&#x3E;/error_in_js_module.spec.js:1:7</text
+          at &#x3C;mock&#x3E;/error_in_js_module.spec.js:1:7</text
         >
         <text x="10" y="242.55" fill="#B22222"
           >--------------------------------------</text

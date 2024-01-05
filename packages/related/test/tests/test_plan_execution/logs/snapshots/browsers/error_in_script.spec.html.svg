@@ -76,9 +76,11 @@
         <text x="102.42" y="204.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="194.83" y="223.55" fill="#B22222">^</text>
         <text x="10" y="242.55">Error: here</text>
-        <text x="26.8" y="261.55">
-          &#x3C;mock&#x3E;/error_in_script.spec.html:11:18</text
+        <text x="26.8" y="261.55"> at </text>
+        <text x="52.01" y="261.55" font-weight="bold"
+          >&#x3C;mock&#x3E;/error_in_script.spec.html</text
         >
+        <text x="320.85" y="261.55">:11:18</text>
         <text x="10" y="280.55" fill="#B22222"
           >--------------------------------------</text
         >
@@ -132,7 +134,7 @@
         <text x="85.61" y="527.55"> &#x3C;script&#x3E;</text>
         <text x="10" y="546.55" fill="#A9A9A9">11 |</text>
         <text x="102.42" y="546.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="270.44" y="565.55" fill="#B22222">^</text>
+        <text x="337.65" y="565.55" fill="#B22222">^</text>
         <text x="10" y="584.55">Error: here</text>
         <text x="10" y="603.55">global code@</text>
         <text x="110.82" y="603.55" font-weight="bold"

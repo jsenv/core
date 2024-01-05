@@ -7,7 +7,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
 // the module does not exists
 {
   const webServer = {
-    origin: "http://localhost:3460",
+    origin: "http://localhost:9960",
     moduleUrl: new URL("./404.mjs", import.meta.url),
   };
   try {
@@ -30,7 +30,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
 // the module execution fails
 {
   const webServer = {
-    origin: "http://localhost:3460",
+    origin: "http://localhost:9961",
     moduleUrl: new URL("./error.mjs", import.meta.url).href,
   };
   try {
@@ -53,7 +53,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
 // the module does not start a server (or not fast enough)
 {
   const webServer = {
-    origin: "http://localhost:3460",
+    origin: "http://localhost:9962",
     moduleUrl: new URL("./do_nothing.mjs", import.meta.url),
   };
   try {
@@ -79,7 +79,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
 {
   const teardownCallbackSet = new Set();
   const webServer = {
-    origin: "http://localhost:3460",
+    origin: "http://localhost:9963",
     moduleUrl: new URL("./start_server.mjs", import.meta.url),
   };
   await ensureWebServerIsStarted(webServer, {
