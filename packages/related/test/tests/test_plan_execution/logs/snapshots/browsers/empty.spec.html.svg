@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="524.08"
+      width="633.3"
       height="288.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -64,7 +64,7 @@
         <text x="388.06" y="128.55" fill="#A9A9A9">]</text>
         <text x="404.86" y="128.55"> (1 </text>
         <text x="430.07" y="128.55" fill="#32CD32">completed</text>
-        <text x="505.68" y="128.55">)</text>
+        <text x="505.68" y="128.55">, 2 executing)</text>
         <text x="10" y="147.55" fill="#32CD32"
           >&#x2714; 2/3 empty.spec.html</text
         >
@@ -75,7 +75,7 @@
         <text x="320.85" y="147.55" fill="#A9A9A9">]</text>
         <text x="337.65" y="147.55"> (2 </text>
         <text x="362.86" y="147.55" fill="#32CD32">completed</text>
-        <text x="438.47" y="147.55">)</text>
+        <text x="438.47" y="147.55">, 1 executing)</text>
         <text x="10" y="166.55" fill="#32CD32"
           >&#x2714; 3/3 empty.spec.html</text
         >

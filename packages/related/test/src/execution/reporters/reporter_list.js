@@ -75,9 +75,7 @@ export const reporterList = ({
           frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
           let dynamicLogContent = "";
           dynamicLogContent += `${frames[frameIndex]} `;
-          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-            showExecuting: true,
-          });
+          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters);
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
@@ -567,7 +565,7 @@ export const renderOutro = (testPlanInfo, logOptions) => {
 
   return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
 };
-const renderStatusRepartition = (counters, { showExecuting } = {}) => {
+const renderStatusRepartition = (counters) => {
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
@@ -605,7 +603,7 @@ const renderStatusRepartition = (counters, { showExecuting } = {}) => {
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
   }
-  if (showExecuting) {
+  if (counters.executing) {
     parts.push(`${counters.executing} executing`);
   }
   if (counters.waiting) {

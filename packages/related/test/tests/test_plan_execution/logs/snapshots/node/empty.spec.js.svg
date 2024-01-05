@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="566.09"
+      width="658.5"
       height="250.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -65,7 +65,7 @@
         <text x="413.27" y="109.55" fill="#A9A9A9">]</text>
         <text x="430.07" y="109.55"> (1 </text>
         <text x="455.27" y="109.55" fill="#32CD32">completed</text>
-        <text x="530.88" y="109.55">)</text>
+        <text x="530.88" y="109.55">, 1 executing)</text>
         <text x="10" y="128.55" fill="#32CD32">&#x2714; 2/2 empty.spec.js</text>
         <text x="178.03" y="128.55" fill="#A9A9A9">[</text>
         <text x="186.43" y="128.55" fill="#A9A9A9">child_process</text>
