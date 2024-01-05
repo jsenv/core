@@ -201,7 +201,7 @@ const executeUsingDynamicImport = async ({
     result.namespace = namespaceResolved;
   } catch (e) {
     result.status = "failed";
-    result.errors.push(createException(e));
+    result.errors.push(createException(e, { rootDirectoryUrl }));
   } finally {
     result.timings.end = Date.now();
     if (finalizeCoverage) {

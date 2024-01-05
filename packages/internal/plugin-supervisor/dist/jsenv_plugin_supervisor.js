@@ -107,8 +107,8 @@ const inspectFileContent = ({
         }
       }
       if (lineNumbersOnTheLeft) {
-        // fillRight to ensure if line moves from 7,8,9 to 10 the display is still great
-        const asideSource = "".concat(fillRight(lineNumber, lineEndIndex + 1), " |");
+        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " |");
         source += "".concat(format(asideSource, "line_number_aside"), " ");
       }
     }
@@ -128,7 +128,7 @@ const inspectFileContent = ({
           source += "  ";
         }
         if (lineNumbersOnTheLeft) {
-          const asideSpaces = "".concat(fillRight(lineNumber, lineEndIndex + 1), " | ").length;
+          const asideSpaces = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " | ").length;
           source += " ".repeat(asideSpaces);
         }
         source += " ".repeat(columnMarkerIndex);
@@ -181,15 +181,15 @@ const truncateLine = (line, {
   }
   return result;
 };
-const fillRight = (value, biggestValue, char = " ") => {
+const fillLeft = (value, biggestValue, char = " ") => {
   const width = String(value).length;
   const biggestWidth = String(biggestValue).length;
   let missingWidth = biggestWidth - width;
   let padded = "";
-  padded += value;
   while (missingWidth--) {
     padded += char;
   }
+  padded += value;
   return padded;
 };
 

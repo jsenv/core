@@ -711,7 +711,7 @@ function parseStackTrace(stack) {
 const isDev = process.execArgv.includes("--conditions=development");
 const jsenvCoreDirectoryUrl = new URL("file:///Users/d.maillard/dev/jsenv/jsenv-core/", import.meta.url);
 
-const createException = (reason) => {
+const createException = (reason, { rootDirectoryUrl } = {}) => {
   const exception = {
     isException: true,
     isError: false,
@@ -739,22 +739,15 @@ const createException = (reason) => {
     exception.message = JSON.stringify(reason);
     return exception;
   }
-  if (reason.isException && reason.stackFrames) {
-    return reason;
-  }
-  exception.isError = reason instanceof Error;
-  exception.code = reason.code;
-  exception.name = reason.name;
-  exception.message = reason.message;
-  if ("stack" in reason) {
+  if (reason.stackFrames === undefined && "stack" in reason) {
+    let stackFrames;
+
     const { prepareStackTrace } = Error;
     Error.prepareStackTrace = (e, callSites) => {
       Error.prepareStackTrace = prepareStackTrace;
 
-      const stackFrames = [];
-      let stackTrace = "";
+      stackFrames = [];
       for (const callSite of callSites) {
-        if (stackTrace) stackTrace += "\n";
         const stackFrame = {
           raw: `  at ${String(callSite)}`,
           url: callSite.getFileName() || callSite.getScriptNameOrSourceURL(),
@@ -773,31 +766,19 @@ const createException = (reason) => {
             stackFrame.evalSite = getPropertiesFromEvalOrigin(evalOrigin);
           }
         }
-
         stackFrames.push(stackFrame);
-        stackTrace += stackFrame.raw;
       }
-      exception.stackFrames = stackFrames;
-      exception.stackTrace = stackTrace;
-
-      const name = e.name || "Error";
-      const message = e.message || "";
-      let stack = ``;
-      stack += `${name}: ${message}`;
-      if (stackTrace) {
-        stack += `\n${stackTrace}`;
-      }
-      return stack;
+      return "";
     };
     exception.stack = reason.stack;
-    if (exception.stackFrames === undefined) {
+    if (stackFrames === undefined) {
       // Error.prepareStackTrace not trigerred
       // - reason is not an error
       // - reason.stack already get
       Error.prepareStackTrace = prepareStackTrace;
 
       const calls = parseStackTrace(reason.stack);
-      const stackFrames = [];
+      stackFrames = [];
       for (const call of calls) {
         if (call.fileName === "") {
           continue;
@@ -811,22 +792,26 @@ const createException = (reason) => {
           native: call.type === "native",
         });
       }
-      exception.stackFrames = stackFrames;
     }
 
     const stackFramesNonNative = [];
-    for (const stackFrame of exception.stackFrames) {
+    for (const stackFrame of stackFrames) {
       if (stackFrame.url.startsWith("node:")) {
         stackFrame.native = "node";
         continue;
       }
       if (stackFrame.url.startsWith("file:")) {
-        // while developing jsenv itself we want to exclude any
-        // - src/*
-        // - packages/**/src/
-        // for the users of jsenv it's easier, we want to exclude
-        // - **/node_modules/@jsenv/**
+        if (rootDirectoryUrl && stackFrame.url.startsWith(rootDirectoryUrl)) {
+          stackFramesNonNative.push(stackFrame);
+          continue;
+        }
+
         if (isDev) {
+          // while developing jsenv itself we want to exclude any
+          // - src/*
+          // - packages/**/src/
+          // for the users of jsenv it's easier, we want to exclude
+          // - **/node_modules/@jsenv/**
           if (
             URL_META.matches(stackFrame.url, {
               [`${jsenvCoreDirectoryUrl}src/`]: true,
@@ -848,12 +833,29 @@ const createException = (reason) => {
       stackFramesNonNative.push(stackFrame);
     }
     if (stackFramesNonNative.length) {
-      exception.stackFrames = stackFramesNonNative;
+      stackFrames = stackFramesNonNative;
     }
 
-    const [firstCallFrame] = exception.stackFrames;
+    reason.stackFrames = stackFrames;
+
+    let stackTrace = "";
+    for (const stackFrame of stackFrames) {
+      if (stackTrace) stackTrace += "\n";
+      stackTrace += stackFrame.raw;
+    }
+    reason.stackTrace = stackTrace;
+    let stack = "";
+    const name = reason.name || "Error";
+    const message = reason.message || "";
+    stack += `${name}: ${message}`;
+    if (stackTrace) {
+      stack += `\n${stackTrace}`;
+    }
+    reason.stack = stack;
+
+    const [firstCallFrame] = stackFrames;
     if (firstCallFrame) {
-      exception.site = firstCallFrame.url
+      reason.site = firstCallFrame.url
         ? {
             url: firstCallFrame.url,
             line: firstCallFrame.line,
@@ -861,6 +863,21 @@ const createException = (reason) => {
           }
         : firstCallFrame.evalSite;
     }
+  }
+  // getOwnPropertyNames to catch non enumerable properties on reason
+  // (happens mostly when reason is instanceof Error)
+  // like .stack, .message
+  // some properties are even on the prototype like .name
+  for (const ownPropertyName of Object.getOwnPropertyNames(reason)) {
+    exception[ownPropertyName] = reason[ownPropertyName];
+  }
+  const isError = reason instanceof Error;
+  exception.isError = isError;
+  if (isError) {
+    // getOwnPropertyNames is not enough to copy .name and .message
+    // on error instances
+    exception.name = reason.name;
+    exception.message = reason.message;
   }
   return exception;
 };

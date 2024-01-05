@@ -527,10 +527,10 @@ window.__supervisor__ = (() => {
         exception.isError = reason instanceof Error;
         exception.name = reason.name || "Error";
         exception.message = reason.message || message || "";
-        exception.reportedBy = reason.reportedBy;
-        if (Error.captureStackTrace &&
+        let stackFrames;
+        if (exception.isError && Error.captureStackTrace &&
         // captureStackTrace exists on webkit but error.stack is not v8
-        !isWebkitOrSafari && "stack" in reason) {
+        !isWebkitOrSafari) {
           // stackTrace formatted by V8
           const {
             prepareStackTrace
@@ -557,10 +557,8 @@ window.__supervisor__ = (() => {
               }
               return null;
             };
-            const stackFrames = [];
-            let stackTrace = "";
+            stackFrames = [];
             for (const callSite of callSites) {
-              if (stackTrace) stackTrace += "\n";
               const url = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
               const line = callSite.getLineNumber();
               const column = callSite.getColumnNumber();
@@ -588,13 +586,16 @@ window.__supervisor__ = (() => {
                 }
               }
               stackFrames.push(stackFrame);
+            }
+            let stackTrace = "";
+            for (const stackFrame of stackFrames) {
+              if (stackTrace) stackTrace += "\n";
               stackTrace += stackFrame.raw;
             }
-            exception.stackFrames = stackFrames;
             exception.stackTrace = stackTrace;
-            const name = e.name || "Error";
-            const message = e.message || "";
             let stack = "";
+            const name = reason.name || "Error";
+            const message = reason.message || "";
             stack += "".concat(name, ": ").concat(message);
             if (stackTrace) {
               stack += "\n".concat(stackTrace);
@@ -603,15 +604,15 @@ window.__supervisor__ = (() => {
           };
           exception.stackSourcemapped = true;
           exception.stack = reason.stack;
-          if (exception.stackFrames === undefined) {
+          if (stackFrames === undefined) {
             // Error.prepareStackTrace not trigerred
             // - reason is not an error
             // - reason.stack already get
             Error.prepareStackTrace = prepareStackTrace;
             exception.stackTrace = getErrorStackTrace(reason);
-          }
-          if (exception.stackFrames) {
-            const [firstCallFrame] = exception.stackFrames;
+          } else {
+            exception.stackFrames = stackFrames;
+            const [firstCallFrame] = stackFrames;
             if (exception.site.url === null && firstCallFrame && firstCallFrame.url) {
               Object.assign(exception.site, {
                 url: firstCallFrame.url,

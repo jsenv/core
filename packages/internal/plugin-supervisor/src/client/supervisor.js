@@ -543,8 +543,23 @@ window.__supervisor__ = (() => {
               }
               stackFrames.push(stackFrame);
             }
-            return "";
+            let stackTrace = "";
+            for (const stackFrame of stackFrames) {
+              if (stackTrace) stackTrace += "\n";
+              stackTrace += stackFrame.raw;
+            }
+            exception.stackTrace = stackTrace;
+
+            let stack = "";
+            const name = reason.name || "Error";
+            const message = reason.message || "";
+            stack += `${name}: ${message}`;
+            if (stackTrace) {
+              stack += `\n${stackTrace}`;
+            }
+            return stack;
           };
+
           exception.stackSourcemapped = true;
           exception.stack = reason.stack;
           if (stackFrames === undefined) {
@@ -553,25 +568,8 @@ window.__supervisor__ = (() => {
             // - reason.stack already get
             Error.prepareStackTrace = prepareStackTrace;
             exception.stackTrace = getErrorStackTrace(reason);
-          }
-          if (stackFrames) {
+          } else {
             exception.stackFrames = stackFrames;
-            let stackTrace = "";
-            for (const stackFrame of stackFrames) {
-              if (stackTrace) stackTrace += "\n";
-              stackTrace += stackFrame.raw;
-            }
-            exception.stackTrace = stackTrace;
-            let stack = "";
-            const name = reason.name || "Error";
-            const message = reason.message || "";
-            stack += `${name}: ${message}`;
-            if (stackTrace) {
-              stack += `\n${stackTrace}`;
-            }
-            exception.stack = stack;
-            reason.stack = stack;
-
             const [firstCallFrame] = stackFrames;
             if (
               exception.site.url === null &&

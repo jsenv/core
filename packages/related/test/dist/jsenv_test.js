@@ -590,8 +590,8 @@ const inspectFileContent = ({
         }
       }
       if (lineNumbersOnTheLeft) {
-        // fillRight to ensure if line moves from 7,8,9 to 10 the display is still great
-        const asideSource = `${fillRight(lineNumber, lineEndIndex + 1)} |`;
+        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = `${fillLeft$1(lineNumber, lineEndIndex + 1)} |`;
         source += `${format(asideSource, "line_number_aside")} `;
       }
     }
@@ -611,7 +611,7 @@ const inspectFileContent = ({
           source += "  ";
         }
         if (lineNumbersOnTheLeft) {
-          const asideSpaces = `${fillRight(lineNumber, lineEndIndex + 1)} | `
+          const asideSpaces = `${fillLeft$1(lineNumber, lineEndIndex + 1)} | `
             .length;
           source += " ".repeat(asideSpaces);
         }
@@ -668,15 +668,15 @@ const truncateLine = (line, { start, end, prefix, suffix, format }) => {
   return result;
 };
 
-const fillRight = (value, biggestValue, char = " ") => {
+const fillLeft$1 = (value, biggestValue, char = " ") => {
   const width = String(value).length;
   const biggestWidth = String(biggestValue).length;
   let missingWidth = biggestWidth - width;
   let padded = "";
-  padded += value;
   while (missingWidth--) {
     padded += char;
   }
+  padded += value;
   return padded;
 };
 
@@ -4403,7 +4403,7 @@ const asException = (error, { rootDirectoryUrl }) => {
         ({ match, url, line = 1, column = 1 }) => {
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-            match = stringifyUrlSite$1({ url: relativeUrl, line, column });
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
           }
           return match;
         },
@@ -4415,7 +4415,7 @@ const asException = (error, { rootDirectoryUrl }) => {
         ({ match, url, line = 1, column = 1 }) => {
           if (urlIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-            match = stringifyUrlSite$1({ url: relativeUrl, line, column });
+            match = stringifyUrlSite({ url: relativeUrl, line, column });
           }
           if (firstSite) {
             firstSite = false;
@@ -4434,7 +4434,7 @@ const asException = (error, { rootDirectoryUrl }) => {
   return exception;
 };
 
-const stringifyUrlSite$1 = ({ url, line, column }) => {
+const stringifyUrlSite = ({ url, line, column }) => {
   let string = url;
   if (typeof line === "number") {
     string += `:${line}`;
@@ -4653,7 +4653,10 @@ const run = async ({
       performance,
     } = winner.data;
     result.status = status;
-    result.errors.push(...errors);
+    for (let error of errors) {
+      const errorProxy = normalizeRuntimeError(error);
+      result.errors.push(errorProxy);
+    }
     result.namespace = namespace;
     if (timings) {
       if (timings.start) {
@@ -4687,29 +4690,46 @@ const run = async ({
     return result;
   }
 };
+const normalizeRuntimeError = (runtimeError) => {
+  // the goal here is to obtain a "regular error"
+  // that can be thrown using "throw" keyword
+  // so we wrap the error hapenning inside the runtime
+  // into "errorProxy" and put .stack property on it
+  // the other properties are set by defineProperty so they are not enumerable
+  // otherwise they would pollute the error displayed by Node.js
+  const errorProxy = new Error(runtimeError.message);
+  const exception = createException(runtimeError);
+  for (const ownPropertyName of Object.getOwnPropertyNames(exception)) {
+    Object.defineProperty(errorProxy, ownPropertyName, {
+      writable: true,
+      configurable: true,
+      value: runtimeError[ownPropertyName],
+    });
+  }
+  return errorProxy;
+};
 
 const formatErrorForTerminal = (
   error,
   { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
 ) => {
-  const exception = createException(error);
-  if (!exception.stack) {
-    return exception.message;
+  if (!error.stack) {
+    return error.message;
   }
 
   let text = "";
   {
     if (
-      exception.site &&
-      exception.site.url &&
-      exception.site.url.startsWith("file:") &&
-      typeof exception.site.line === "number"
+      error.site &&
+      error.site.url &&
+      error.site.url.startsWith("file:") &&
+      typeof error.site.line === "number"
     ) {
-      const content = readFileSync(new URL(exception.site.url), "utf8");
+      const content = readFileSync(new URL(error.site.url), "utf8");
       text += inspectFileContent({
         content,
-        line: exception.site.line,
-        column: exception.site.column,
+        line: error.site.line,
+        column: error.site.column,
         linesAbove: 2,
         linesBelow: 0,
         lineMaxWidth: process.stdout.columns,
@@ -4727,11 +4747,29 @@ const formatErrorForTerminal = (
       text += `\n`;
     }
   }
-  text += `${exception.name}: ${exception.message}`;
+  text += `${error.name}: ${error.message}`;
   {
+    const stringifyUrlSite = ({ url, line, column, urlIsMain }) => {
+      let urlAsPath = urlToFileSystemPath(url);
+      if (mockFluctuatingValues) {
+        const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+      }
+      if (urlIsMain) {
+        urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
+      }
+      if (typeof line === "number" && typeof column === "number") {
+        return `${urlAsPath}:${line}:${column}`;
+      }
+      if (typeof line === "number") {
+        return `${urlAsPath}:${line}`;
+      }
+      return urlAsPath;
+    };
+
     let stackTrace = "";
-    const stackFrames = exception.stackFrames;
-    if (stackFrames) {
+    const stackFrames = error.stackFrames;
+    if (stackFrames && stackFrames.length) {
       let atLeastOneNonNative = false;
       let lastStackFrameForMain;
       const mainFileUrl = new URL(mainFileRelativeUrl, rootDirectoryUrl).href;
@@ -4752,16 +4790,9 @@ const formatErrorForTerminal = (
         stackFrameString = replaceUrls(
           stackFrameString,
           ({ url, line, column }) => {
-            let urlAsPath = urlToFileSystemPath(url);
-            if (mockFluctuatingValues) {
-              const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-              urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
-            }
-            if (stackFrame === lastStackFrameForMain) {
-              urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
-            }
             const replacement = stringifyUrlSite({
-              url: urlAsPath,
+              url,
+              urlIsMain: stackFrame === lastStackFrameForMain,
               line,
               column,
             });
@@ -4771,23 +4802,21 @@ const formatErrorForTerminal = (
         if (stackTrace) stackTrace += "\n";
         stackTrace += stackFrameString;
       }
-    } else {
-      stackTrace = replaceUrls(
-        exception.stackTrace,
-        ({ url, line, column }) => {
-          let urlAsPath = urlToFileSystemPath(url);
-          if (mockFluctuatingValues) {
-            const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-            urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
-          }
-          const replacement = stringifyUrlSite({
-            url: urlAsPath,
-            line,
-            column,
-          });
-          return replacement;
-        },
-      );
+    } else if (error.stackTrace) {
+      stackTrace = replaceUrls(error.stackTrace, ({ url, line, column }) => {
+        const replacement = stringifyUrlSite({
+          url,
+          line,
+          column,
+        });
+        return replacement;
+      });
+    } else if (error.site) {
+      stackTrace += `  ${stringifyUrlSite({
+        url: error.site.url,
+        line: error.site.line,
+        column: error.site.column,
+      })}`;
     }
 
     if (stackTrace) {
@@ -4795,16 +4824,6 @@ const formatErrorForTerminal = (
     }
   }
   return text;
-};
-
-const stringifyUrlSite = ({ url, line, column }) => {
-  if (typeof line === "number" && typeof column === "number") {
-    return `${url}:${line}:${column}`;
-  }
-  if (typeof line === "number") {
-    return `${url}:${line}`;
-  }
-  return url;
 };
 
 // `Error: yo
