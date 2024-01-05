@@ -481,7 +481,6 @@ window.__supervisor__ = (() => {
         exception.isError = reason instanceof Error;
         exception.name = reason.name || "Error";
         exception.message = reason.message || message || "";
-        exception.reportedBy = reason.reportedBy;
 
         let stackFrames;
         if (
