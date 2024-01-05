@@ -1,3 +1,45 @@
+# 3.0.0 (draft)
+
+#### Test execution in parallel by default
+
+- can limit max number of exec in parallel
+- can be limited by CPU/memory usage
+
+#### Test logs format updated
+
+TODO (error stack trace, file path in logs, ...)
+
+#### coverage params update
+
+**before**
+
+```js
+import { executeTestPlan } from "@jsenv/test";
+
+await executeTestPlan({
+  coverageEnabled: true,
+  coverageConfig: {
+    "./file.js": true,
+  },
+  coverageReportHtml: true,
+});
+```
+
+**after**
+
+```js
+import { executeTestPlan, reportCoverageAsHtml } from "@jsenv/test";
+
+const result = await executeTestPlan({
+  coverage: {
+    include: {
+      "./file.js": true,
+    },
+  },
+});
+await reportCoverageAsHtml(result);
+```
+
 # 2.1.0
 
 - `process.exit(0)` is fine on Node.js
