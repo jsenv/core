@@ -44,7 +44,9 @@ export const formatErrorForTerminal = (
   text += `${error.name}: ${error.message}`;
   write_stack: {
     const stringifyUrlSite = ({ url, line, column, urlIsMain }) => {
-      let urlAsPath = urlToFileSystemPath(url);
+      let urlAsPath = String(url).startsWith("file:")
+        ? urlToFileSystemPath(url)
+        : url;
       if (mockFluctuatingValues) {
         const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
         urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
