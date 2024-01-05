@@ -230,7 +230,7 @@ export const executeTestPlan = async ({
         if (lastChar !== "%") {
           throw new TypeError(`string is not a percentage, got ${string}`);
         }
-        const percentageString = max.slice(0, -1);
+        const percentageString = string.slice(0, -1);
         const percentageNumber = parseInt(percentageString);
         if (percentageNumber <= 0) {
           return 0;

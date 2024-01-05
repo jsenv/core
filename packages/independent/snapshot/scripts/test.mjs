@@ -9,8 +9,5 @@ await executeTestPlan({
       },
     },
   },
-  concurrency: true,
-  logShortForCompletedExecutions: true,
-  logMergeForCompletedExecutions: process.argv.includes("--workspace"),
-  githubCheckEnabled: false,
+  githubCheck: false,
 });
