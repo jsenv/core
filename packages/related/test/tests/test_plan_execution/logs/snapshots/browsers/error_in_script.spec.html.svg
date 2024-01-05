@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="692.11"
+      width="582.89"
       height="744.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -64,7 +64,7 @@
         <text x="472.08" y="128.55" fill="#A9A9A9">]</text>
         <text x="488.88" y="128.55"> (1 </text>
         <text x="514.08" y="128.55" fill="#B22222">failed</text>
-        <text x="564.49" y="128.55">, 2 remaining)</text>
+        <text x="564.49" y="128.55">)</text>
         <text x="10" y="147.55" fill="#B22222">---------------</text>
         <text x="144.42" y="147.55"> error </text>
         <text x="194.83" y="147.55" fill="#B22222">----------------</text>
@@ -94,7 +94,7 @@
         <text x="404.86" y="299.55" fill="#A9A9A9">]</text>
         <text x="421.67" y="299.55"> (2 </text>
         <text x="446.87" y="299.55" fill="#B22222">failed</text>
-        <text x="497.28" y="299.55">, 1 remaining)</text>
+        <text x="497.28" y="299.55">)</text>
         <text x="10" y="318.55" fill="#B22222">---------------</text>
         <text x="144.42" y="318.55"> error </text>
         <text x="194.83" y="318.55" fill="#B22222">----------------</text>

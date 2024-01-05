@@ -1,6 +1,6 @@
 import { memoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
-// import wrapAnsi from "wrap-ansi";
+import { writeFileSync } from "@jsenv/filesystem";
 import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
 import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
 
@@ -18,6 +18,7 @@ export const reporterList = ({
       end: () => {},
     };
   },
+  fileUrl,
 }) => {
   const dynamicLogEnabled =
     dynamic &&
@@ -37,92 +38,119 @@ export const reporterList = ({
 
   let startMs = Date.now();
 
-  return {
-    reporter: "list",
-    beforeAll: async (testPlanInfo) => {
-      let spyReturnValue = await spy();
-      let write = spyReturnValue.write;
-      let end = spyReturnValue.end;
-      spyReturnValue = undefined;
+  const reporters = [
+    {
+      reporter: "list",
+      beforeAll: async (testPlanInfo) => {
+        let spyReturnValue = await spy();
+        let write = spyReturnValue.write;
+        let end = spyReturnValue.end;
+        spyReturnValue = undefined;
 
-      logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
-      write(renderIntro(testPlanInfo, logOptions));
-      if (!dynamicLogEnabled) {
+        logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
+        write(renderIntro(testPlanInfo, logOptions));
+        if (!dynamicLogEnabled) {
+          return {
+            afterEachInOrder: (execution) => {
+              const log = renderExecutionLog(execution, logOptions);
+              write(log);
+            },
+            afterAll: async () => {
+              await write(renderOutro(testPlanInfo, logOptions));
+              write = undefined;
+              if (end) {
+                await end();
+                end = undefined;
+              }
+            },
+          };
+        }
+
+        let dynamicLog = createDynamicLog({
+          stream: { write },
+        });
+        const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let frameIndex = 0;
+        const renderDynamicLog = (testPlanInfo) => {
+          frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+          let dynamicLogContent = "";
+          dynamicLogContent += `${frames[frameIndex]} `;
+          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
+            showExecuting: true,
+          });
+
+          const msEllapsed = Date.now() - startMs;
+          const infos = [];
+          const duration = inspectDuration(msEllapsed, {
+            short: true,
+            decimals: 0,
+            rounded: false,
+          });
+          infos.push(ANSI.color(duration, ANSI.GREY));
+          const memoryHeapUsed = memoryUsage().heapUsed;
+          const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+            decimals: 0,
+          });
+          infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
+
+          const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+          dynamicLogContent += ` ${ANSI.color(
+            "[",
+            ANSI.GREY,
+          )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+          dynamicLogContent = `\n${dynamicLogContent}\n`;
+          return dynamicLogContent;
+        };
+        dynamicLog.update(renderDynamicLog(testPlanInfo));
+        const interval = setInterval(() => {
+          dynamicLog.update(renderDynamicLog(testPlanInfo));
+        }, 150);
+
         return {
           afterEachInOrder: (execution) => {
-            const log = renderExecutionLog(execution, logOptions);
-            write(log);
+            dynamicLog.clearDuringFunctionCall(() => {
+              const log = renderExecutionLog(execution, logOptions);
+              write(log);
+            });
           },
           afterAll: async () => {
+            dynamicLog.update("");
+            dynamicLog.destroy();
+            dynamicLog = null;
+            clearInterval(interval);
             await write(renderOutro(testPlanInfo, logOptions));
             write = undefined;
             await end();
             end = undefined;
           },
         };
-      }
-
-      let dynamicLog = createDynamicLog({
-        stream: { write },
-      });
-      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-      let frameIndex = 0;
-      const renderDynamicLog = (testPlanInfo) => {
-        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-        let dynamicLogContent = "";
-        dynamicLogContent += `${frames[frameIndex]} `;
-        dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-          showExecuting: true,
-        });
-
-        const msEllapsed = Date.now() - startMs;
-        const infos = [];
-        const duration = inspectDuration(msEllapsed, {
-          short: true,
-          decimals: 0,
-          rounded: false,
-        });
-        infos.push(ANSI.color(duration, ANSI.GREY));
-        const memoryHeapUsed = memoryUsage().heapUsed;
-        const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
-          decimals: 0,
-        });
-        infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
-
-        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
-        dynamicLogContent += ` ${ANSI.color(
-          "[",
-          ANSI.GREY,
-        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
-
-        dynamicLogContent = `\n${dynamicLogContent}\n`;
-        return dynamicLogContent;
-      };
-      dynamicLog.update(renderDynamicLog(testPlanInfo));
-      const interval = setInterval(() => {
-        dynamicLog.update(renderDynamicLog(testPlanInfo));
-      }, 150);
-
-      return {
-        afterEachInOrder: (execution) => {
-          dynamicLog.clearDuringFunctionCall(() => {
-            const log = renderExecutionLog(execution, logOptions);
-            write(log);
-          });
-        },
-        afterAll: async () => {
-          dynamicLog.update("");
-          dynamicLog.destroy();
-          dynamicLog = null;
-          clearInterval(interval);
-          await write(renderOutro(testPlanInfo, logOptions));
-          write = undefined;
-          await end();
-          end = undefined;
-        },
-      };
+      },
     },
-  };
+  ];
+
+  if (dynamic && fileUrl) {
+    reporters.push(
+      reporterList({
+        dynamic: false,
+        mockFluctuatingValues, // used for snapshot testing logs
+        showMemoryUsage,
+        spy: () => {
+          let rawOutput = "";
+
+          return {
+            write: (log) => {
+              rawOutput += stripAnsi(log);
+              writeFileSync(fileUrl, rawOutput);
+            },
+            afterAll: () => {},
+          };
+        },
+      }),
+    );
+  }
+
+  return reporters;
 };
 
 const renderIntro = (testPlanInfo, logOptions) => {
@@ -577,11 +605,11 @@ const renderStatusRepartition = (counters, { showExecuting } = {}) => {
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
   }
-  if (counters.remaining) {
-    parts.push(`${counters.remaining} remaining`);
-  }
   if (showExecuting) {
     parts.push(`${counters.executing} executing`);
+  }
+  if (counters.waiting) {
+    parts.push(`${counters.waiting} waiting`);
   }
   return `${parts.join(", ")}`;
 };

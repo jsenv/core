@@ -4889,6 +4889,7 @@ const reporterList = ({
       end: () => {},
     };
   },
+  fileUrl,
 }) => {
   const dynamicLogEnabled =
     dynamic &&
@@ -4908,92 +4909,119 @@ const reporterList = ({
 
   let startMs = Date.now();
 
-  return {
-    reporter: "list",
-    beforeAll: async (testPlanInfo) => {
-      let spyReturnValue = await spy();
-      let write = spyReturnValue.write;
-      let end = spyReturnValue.end;
-      spyReturnValue = undefined;
+  const reporters = [
+    {
+      reporter: "list",
+      beforeAll: async (testPlanInfo) => {
+        let spyReturnValue = await spy();
+        let write = spyReturnValue.write;
+        let end = spyReturnValue.end;
+        spyReturnValue = undefined;
 
-      logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
-      write(renderIntro(testPlanInfo, logOptions));
-      if (!dynamicLogEnabled) {
+        logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
+        write(renderIntro(testPlanInfo, logOptions));
+        if (!dynamicLogEnabled) {
+          return {
+            afterEachInOrder: (execution) => {
+              const log = renderExecutionLog(execution, logOptions);
+              write(log);
+            },
+            afterAll: async () => {
+              await write(renderOutro(testPlanInfo, logOptions));
+              write = undefined;
+              if (end) {
+                await end();
+                end = undefined;
+              }
+            },
+          };
+        }
+
+        let dynamicLog = createDynamicLog({
+          stream: { write },
+        });
+        const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let frameIndex = 0;
+        const renderDynamicLog = (testPlanInfo) => {
+          frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+          let dynamicLogContent = "";
+          dynamicLogContent += `${frames[frameIndex]} `;
+          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
+            showExecuting: true,
+          });
+
+          const msEllapsed = Date.now() - startMs;
+          const infos = [];
+          const duration = inspectDuration(msEllapsed, {
+            short: true,
+            decimals: 0,
+            rounded: false,
+          });
+          infos.push(ANSI.color(duration, ANSI.GREY));
+          const memoryHeapUsed = memoryUsage().heapUsed;
+          const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+            decimals: 0,
+          });
+          infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
+
+          const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+          dynamicLogContent += ` ${ANSI.color(
+            "[",
+            ANSI.GREY,
+          )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+          dynamicLogContent = `\n${dynamicLogContent}\n`;
+          return dynamicLogContent;
+        };
+        dynamicLog.update(renderDynamicLog(testPlanInfo));
+        const interval = setInterval(() => {
+          dynamicLog.update(renderDynamicLog(testPlanInfo));
+        }, 150);
+
         return {
           afterEachInOrder: (execution) => {
-            const log = renderExecutionLog(execution, logOptions);
-            write(log);
+            dynamicLog.clearDuringFunctionCall(() => {
+              const log = renderExecutionLog(execution, logOptions);
+              write(log);
+            });
           },
           afterAll: async () => {
+            dynamicLog.update("");
+            dynamicLog.destroy();
+            dynamicLog = null;
+            clearInterval(interval);
             await write(renderOutro(testPlanInfo, logOptions));
             write = undefined;
             await end();
             end = undefined;
           },
         };
-      }
-
-      let dynamicLog = createDynamicLog({
-        stream: { write },
-      });
-      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-      let frameIndex = 0;
-      const renderDynamicLog = (testPlanInfo) => {
-        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-        let dynamicLogContent = "";
-        dynamicLogContent += `${frames[frameIndex]} `;
-        dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-          showExecuting: true,
-        });
-
-        const msEllapsed = Date.now() - startMs;
-        const infos = [];
-        const duration = inspectDuration(msEllapsed, {
-          short: true,
-          decimals: 0,
-          rounded: false,
-        });
-        infos.push(ANSI.color(duration, ANSI.GREY));
-        const memoryHeapUsed = memoryUsage().heapUsed;
-        const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
-          decimals: 0,
-        });
-        infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
-
-        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
-        dynamicLogContent += ` ${ANSI.color(
-          "[",
-          ANSI.GREY,
-        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
-
-        dynamicLogContent = `\n${dynamicLogContent}\n`;
-        return dynamicLogContent;
-      };
-      dynamicLog.update(renderDynamicLog(testPlanInfo));
-      const interval = setInterval(() => {
-        dynamicLog.update(renderDynamicLog(testPlanInfo));
-      }, 150);
-
-      return {
-        afterEachInOrder: (execution) => {
-          dynamicLog.clearDuringFunctionCall(() => {
-            const log = renderExecutionLog(execution, logOptions);
-            write(log);
-          });
-        },
-        afterAll: async () => {
-          dynamicLog.update("");
-          dynamicLog.destroy();
-          dynamicLog = null;
-          clearInterval(interval);
-          await write(renderOutro(testPlanInfo, logOptions));
-          write = undefined;
-          await end();
-          end = undefined;
-        },
-      };
+      },
     },
-  };
+  ];
+
+  if (dynamic && fileUrl) {
+    reporters.push(
+      reporterList({
+        dynamic: false,
+        mockFluctuatingValues, // used for snapshot testing logs
+        showMemoryUsage,
+        spy: () => {
+          let rawOutput = "";
+
+          return {
+            write: (log) => {
+              rawOutput += stripAnsi(log);
+              writeFileSync(fileUrl, rawOutput);
+            },
+            afterAll: () => {},
+          };
+        },
+      }),
+    );
+  }
+
+  return reporters;
 };
 
 const renderIntro = (testPlanInfo, logOptions) => {
@@ -5448,11 +5476,11 @@ const renderStatusRepartition = (counters, { showExecuting } = {}) => {
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
   }
-  if (counters.remaining) {
-    parts.push(`${counters.remaining} remaining`);
-  }
   if (showExecuting) {
     parts.push(`${counters.executing} executing`);
+  }
+  if (counters.waiting) {
+    parts.push(`${counters.waiting} waiting`);
   }
   return `${parts.join(", ")}`;
 };
@@ -5492,28 +5520,6 @@ const renderSection = ({
   const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
   section += bottomDashes;
   return section;
-};
-
-const reporterFile = ({ url }) => {
-  return {
-    reporter: "file",
-    beforeAll: () => {
-      let rawOutput = "";
-      const { write } = process.stdout;
-      process.stdout.write = (...args) => {
-        for (const arg of args) {
-          rawOutput += stripAnsi(arg);
-          writeFileSync(url, rawOutput);
-        }
-        return write.apply(process.stdout, args);
-      };
-      return {
-        afterAll: () => {
-          process.stdout.write = write;
-        },
-      };
-    },
-  };
 };
 
 /*
@@ -5610,7 +5616,6 @@ const executeTestPlan = async ({
 
   reporters = [],
   listReporter = {},
-  fileReporter = {},
   ...rest
 }) => {
   const teardownCallbackSet = new Set();
@@ -5664,25 +5669,15 @@ const executeTestPlan = async ({
       logs = { ...logsDefault, ...logs };
       logger = createLogger({ logLevel: logs.level });
 
-      if (fileReporter && logger.levels.info) {
-        if (typeof fileReporter === "string") {
-          fileReporter = { url: fileReporter };
-        }
-        if (fileReporter.url === undefined) {
-          fileReporter.url = new URL(
-            "./.jsenv/jsenv_tests_output.txt",
-            rootDirectoryUrl,
-          );
-        }
-        reporters.push(
-          typeof fileReporter.reporter === "string"
-            ? fileReporter
-            : reporterFile(fileReporter),
-        );
-      }
       if (listReporter && logger.levels.info) {
         if (logger.levels.debug) {
           listReporter.dynamic = false;
+        }
+        if (listReporter.fileUrl === undefined) {
+          listReporter.fileUrl = new URL(
+            "./.jsenv/jsenv_tests_output.txt",
+            rootDirectoryUrl,
+          );
         }
         reporters.push(
           typeof listReporter.reporter === "string"
@@ -5723,7 +5718,7 @@ const executeTestPlan = async ({
         if (lastChar !== "%") {
           throw new TypeError(`string is not a percentage, got ${string}`);
         }
-        const percentageString = max.slice(0, -1);
+        const percentageString = string.slice(0, -1);
         const percentageNumber = parseInt(percentageString);
         if (percentageNumber <= 0) {
           return 0;
@@ -5962,6 +5957,7 @@ To fix this warning:
     counters: {
       planified: 0,
       remaining: 0,
+      waiting: 0,
       executing: 0,
       executed: 0,
 
@@ -6120,9 +6116,14 @@ To fix this warning:
     }
   }
 
-  counters.planified = counters.remaining = executionPlanifiedSet.size;
-  countersInOrder.planified = countersInOrder.remaining =
-    executionPlanifiedSet.size;
+  counters.planified =
+    counters.remaining =
+    counters.waiting =
+      executionPlanifiedSet.size;
+  countersInOrder.planified =
+    countersInOrder.remaining =
+    countersInOrder.waiting =
+      executionPlanifiedSet.size;
   if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheck.logLevel,
@@ -6350,6 +6351,7 @@ To fix this warning:
 
     try {
       const startMs = Date.now();
+      reporters = reporters.flat(10);
       for (const reporter of reporters) {
         const {
           beforeAll,
@@ -6433,6 +6435,7 @@ const countAvailableCpus = () => {
 
 const mutateCountersBeforeExecutionStarts = (counters) => {
   counters.executing++;
+  counters.waiting--;
 };
 const mutateCountersAfterExecutionEnds = (counters, execution) => {
   counters.executing--;
@@ -8750,4 +8753,4 @@ const execute = async ({
   }
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterFile, reporterList, webkit, webkitIsolatedTab };
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };

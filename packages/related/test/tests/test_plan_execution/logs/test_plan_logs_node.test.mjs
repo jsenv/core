@@ -24,9 +24,11 @@ UNICODE.supported = true;
 ANSI.supported = true;
 
 const test = async (filename, params) => {
+  if (terminalVideoRecording) {
+    console.log(`snapshoting ${filename}`);
+  }
   await executeTestPlan({
     listReporter: false,
-    fileReporter: false,
     reporters: [
       reporterList({
         dynamic: false,

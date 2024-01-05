@@ -32,9 +32,11 @@ const devServer = await startDevServer({
 });
 
 const test = async (filename, params) => {
+  if (terminalVideoRecording) {
+    console.log(`snapshoting ${filename}`);
+  }
   await executeTestPlan({
     listReporter: false,
-    fileReporter: false,
     reporters: [
       reporterList({
         dynamic: false,

@@ -12,6 +12,5 @@ export { reportCoverageAsJson } from "./coverage/report_coverage_as_json.js";
 export { reportCoverageAsHtml } from "./coverage/report_coverage_as_html.js";
 // reporters
 export { reporterList } from "./execution/reporters/reporter_list.js";
-export { reporterFile } from "./execution/reporters/reporter_file.js";
 // advanced
 export { execute } from "./execution/execute.js";

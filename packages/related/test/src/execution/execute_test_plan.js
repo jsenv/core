@@ -26,7 +26,6 @@ import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
 import { reporterList, renderOutro } from "./reporters/reporter_list.js";
-import { reporterFile } from "./reporters/reporter_file.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -117,7 +116,6 @@ export const executeTestPlan = async ({
 
   reporters = [],
   listReporter = {},
-  fileReporter = {},
   ...rest
 }) => {
   const teardownCallbackSet = new Set();
@@ -171,25 +169,15 @@ export const executeTestPlan = async ({
       logs = { ...logsDefault, ...logs };
       logger = createLogger({ logLevel: logs.level });
 
-      if (fileReporter && logger.levels.info) {
-        if (typeof fileReporter === "string") {
-          fileReporter = { url: fileReporter };
-        }
-        if (fileReporter.url === undefined) {
-          fileReporter.url = new URL(
-            "./.jsenv/jsenv_tests_output.txt",
-            rootDirectoryUrl,
-          );
-        }
-        reporters.push(
-          typeof fileReporter.reporter === "string"
-            ? fileReporter
-            : reporterFile(fileReporter),
-        );
-      }
       if (listReporter && logger.levels.info) {
         if (logger.levels.debug) {
           listReporter.dynamic = false;
+        }
+        if (listReporter.fileUrl === undefined) {
+          listReporter.fileUrl = new URL(
+            "./.jsenv/jsenv_tests_output.txt",
+            rootDirectoryUrl,
+          );
         }
         reporters.push(
           typeof listReporter.reporter === "string"
@@ -469,6 +457,7 @@ To fix this warning:
     counters: {
       planified: 0,
       remaining: 0,
+      waiting: 0,
       executing: 0,
       executed: 0,
 
@@ -627,9 +616,14 @@ To fix this warning:
     }
   }
 
-  counters.planified = counters.remaining = executionPlanifiedSet.size;
-  countersInOrder.planified = countersInOrder.remaining =
-    executionPlanifiedSet.size;
+  counters.planified =
+    counters.remaining =
+    counters.waiting =
+      executionPlanifiedSet.size;
+  countersInOrder.planified =
+    countersInOrder.remaining =
+    countersInOrder.waiting =
+      executionPlanifiedSet.size;
   if (githubCheck) {
     const githubCheckRun = await startGithubCheckRun({
       logLevel: githubCheck.logLevel,
@@ -857,6 +851,7 @@ To fix this warning:
 
     try {
       const startMs = Date.now();
+      reporters = reporters.flat(10);
       for (const reporter of reporters) {
         const {
           beforeAll,
@@ -940,6 +935,7 @@ const countAvailableCpus = () => {
 
 const mutateCountersBeforeExecutionStarts = (counters) => {
   counters.executing++;
+  counters.waiting--;
 };
 const mutateCountersAfterExecutionEnds = (counters, execution) => {
   counters.executing--;
