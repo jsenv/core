@@ -28,8 +28,10 @@ try {
   });
   const htmlFileUrl = new URL("./client/main.noeslint.html", import.meta.url)
     .href;
-  const expected = `Error while cooking js_module declared in ${htmlFileUrl}:14:5`;
-  const actual = consoleErrorCalls[0].slice(0, expected.length);
+  const actual = consoleErrorCalls[0];
+  const expected = assert.startsWith(
+    `Error while cooking js_module declared in ${htmlFileUrl}:22:2`,
+  );
   assert({ actual, expected });
 } finally {
   console.error = error;

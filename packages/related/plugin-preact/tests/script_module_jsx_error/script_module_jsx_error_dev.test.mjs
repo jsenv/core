@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 const devServer = await startDevServer({
-  logLevel: "warn",
+  logLevel: "off",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
