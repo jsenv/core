@@ -25,7 +25,7 @@ import { URL_META } from "@jsenv/url-meta";
 const isDev = process.execArgv.includes("--conditions=development");
 const jsenvCoreDirectoryUrl = new URL("../../../../../", import.meta.url);
 
-export const createException = (reason) => {
+export const createException = (reason, { rootDirectoryUrl } = {}) => {
   const exception = {
     isException: true,
     isError: false,
@@ -61,14 +61,14 @@ export const createException = (reason) => {
   exception.name = reason.name;
   exception.message = reason.message;
   if ("stack" in reason) {
+    let stackFrames;
+
     const { prepareStackTrace } = Error;
     Error.prepareStackTrace = (e, callSites) => {
       Error.prepareStackTrace = prepareStackTrace;
 
-      const stackFrames = [];
-      let stackTrace = "";
+      stackFrames = [];
       for (const callSite of callSites) {
-        if (stackTrace) stackTrace += "\n";
         const stackFrame = {
           raw: `  at ${String(callSite)}`,
           url: callSite.getFileName() || callSite.getScriptNameOrSourceURL(),
@@ -87,31 +87,19 @@ export const createException = (reason) => {
             stackFrame.evalSite = getPropertiesFromEvalOrigin(evalOrigin);
           }
         }
-
         stackFrames.push(stackFrame);
-        stackTrace += stackFrame.raw;
       }
-      exception.stackFrames = stackFrames;
-      exception.stackTrace = stackTrace;
-
-      const name = e.name || "Error";
-      const message = e.message || "";
-      let stack = ``;
-      stack += `${name}: ${message}`;
-      if (stackTrace) {
-        stack += `\n${stackTrace}`;
-      }
-      return stack;
+      return "";
     };
     exception.stack = reason.stack;
-    if (exception.stackFrames === undefined) {
+    if (stackFrames === undefined) {
       // Error.prepareStackTrace not trigerred
       // - reason is not an error
       // - reason.stack already get
       Error.prepareStackTrace = prepareStackTrace;
 
       const calls = parseStackTrace(reason.stack);
-      const stackFrames = [];
+      stackFrames = [];
       for (const call of calls) {
         if (call.fileName === "") {
           continue;
@@ -125,22 +113,26 @@ export const createException = (reason) => {
           native: call.type === "native",
         });
       }
-      exception.stackFrames = stackFrames;
     }
 
     const stackFramesNonNative = [];
-    for (const stackFrame of exception.stackFrames) {
+    for (const stackFrame of stackFrames) {
       if (stackFrame.url.startsWith("node:")) {
         stackFrame.native = "node";
         continue;
       }
       if (stackFrame.url.startsWith("file:")) {
-        // while developing jsenv itself we want to exclude any
-        // - src/*
-        // - packages/**/src/
-        // for the users of jsenv it's easier, we want to exclude
-        // - **/node_modules/@jsenv/**
+        if (rootDirectoryUrl && stackFrame.url.startsWith(rootDirectoryUrl)) {
+          stackFramesNonNative.push(stackFrame);
+          continue;
+        }
+
         if (isDev) {
+          // while developing jsenv itself we want to exclude any
+          // - src/*
+          // - packages/**/src/
+          // for the users of jsenv it's easier, we want to exclude
+          // - **/node_modules/@jsenv/**
           if (
             URL_META.matches(stackFrame.url, {
               [`${jsenvCoreDirectoryUrl}src/`]: true,
@@ -162,10 +154,13 @@ export const createException = (reason) => {
       stackFramesNonNative.push(stackFrame);
     }
     if (stackFramesNonNative.length) {
-      exception.stackFrames = stackFramesNonNative;
+      stackFrames = stackFramesNonNative;
     }
 
-    const [firstCallFrame] = exception.stackFrames;
+    exception.stackFrames = stackFrames;
+    exception.stackTrace = formatStackTrace(stackFrames);
+    exception.stack = formatStack(exception);
+    const [firstCallFrame] = stackFrames;
     if (firstCallFrame) {
       exception.site = firstCallFrame.url
         ? {
@@ -177,6 +172,26 @@ export const createException = (reason) => {
     }
   }
   return exception;
+};
+
+const formatStackTrace = (stackFrames) => {
+  let stackTrace = "";
+  for (const stackFrame of stackFrames) {
+    if (stackTrace) stackTrace += "\n";
+    stackTrace += stackFrame.raw;
+  }
+  return stackTrace;
+};
+
+const formatStack = (exception) => {
+  const name = exception.name || "Error";
+  const message = exception.message || "";
+  let stack = ``;
+  stack += `${name}: ${message}`;
+  if (exception.stackTrace) {
+    stack += `\n${exception.stackTrace}`;
+  }
+  return stack;
 };
 
 const getPropertiesFromEvalOrigin = (origin) => {

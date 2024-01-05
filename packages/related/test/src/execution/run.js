@@ -162,7 +162,22 @@ export const run = async ({
       performance,
     } = winner.data;
     result.status = status;
-    result.errors.push(...errors);
+    for (let error of errors) {
+      // the goal here is to obtain a "regular error"
+      // that can be thrown using "throw" keyword
+      // so we wrap the error hapenning inside the runtime
+      // into "errorProxy" and put .stack property on it
+      // the other properties are set by defineProperty so they are not enumerable
+      // otherwise they would pollute the error displayed by Node.js
+      const errorProxy = new Error(error.message);
+      errorProxy.stack = error.stack;
+      for (const key of Object.keys(error)) {
+        Object.defineProperty(errorProxy, key, {
+          value: error[key],
+        });
+      }
+      result.errors.push(errorProxy);
+    }
     result.namespace = namespace;
     if (timings) {
       if (timings.start) {
