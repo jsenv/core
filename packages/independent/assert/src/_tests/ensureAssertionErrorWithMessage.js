@@ -1,14 +1,16 @@
 import { assert } from "@jsenv/assert";
+import stripAnsi from "strip-ansi";
 
-export const ensureAssertionErrorWithMessage = (value, message) => {
+export const ensureAssertionErrorWithMessage = (value, expectedMessage) => {
   if (!assert.isAssertionError(value)) {
     throw new Error(`assertionError expected, got ${value.stack}`);
   }
-  if (value.message !== message) {
+  const actualMessage = stripAnsi(value.message);
+  if (actualMessage !== expectedMessage) {
     throw new Error(`unequal assertion error messages
 ___________________ MESSAGE FOUND ___________________
-${value.message}
+${actualMessage}
 ___________________ MESSAGE EXPECTED ___________________
-${message}`);
+${expectedMessage}`);
   }
 };
