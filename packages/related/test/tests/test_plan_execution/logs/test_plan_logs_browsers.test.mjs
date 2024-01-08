@@ -15,6 +15,11 @@ import {
   reporterList,
 } from "@jsenv/test";
 
+if (process.platform === "win32") {
+  // to fix once got a windows OS to reproduce
+  process.exit(1);
+}
+
 const terminalVideoRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&

@@ -3,6 +3,11 @@ import { startDevServer } from "@jsenv/core";
 import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
+if (process.platform === "win32") {
+  // to fix once got a windows OS to reproduce
+  process.exit(1);
+}
+
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./", import.meta.url),
