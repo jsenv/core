@@ -7,7 +7,48 @@
 
 #### Test logs format updated
 
-TODO (error stack trace, file path in logs, ...)
+**before**
+
+```console
+✖ execution 1 of 1 completed (all failed)
+file: error_in_test_function.spec.js
+runtime: node_worker_thread/20.0.0
+duration: 0.7 second
+--- error ---
+Error: circle
+  at getCircle (<mock>/error_in_test_function.spec.js:2:9)
+  at <mock>/error_in_test_function.spec.js:5:1
+  at node:internal/worker.js:415:10
+-------------
+
+-------------- summary -----------------
+1 execution: all failed
+total duration: 2 seconds
+----------------------------------------
+```
+
+**after**
+
+```console
+------------ 1 execution to run ------------
+1 with worker_thread (node_worker_thread@20.0.0)
+---------------------------------------------
+
+✖ 1/1 error_in_test_function.spec.js [worker_thread/0.7s/10MB] (all failed)
+--------------- error ----------------
+1 | const getCircle = () => {
+2 | throw new Error("circle");
+    ^
+Error: circle
+  at getCircle (<mock>/error_in_test_function.spec.js:2:9)
+  at <mock>/error_in_test_function.spec.js:5:1
+--------------------------------------
+
+------------------ summary ------------------
+1 execution: all failed
+duration: 2s
+---------------------------------------------
+```
 
 #### coverage params update
 
