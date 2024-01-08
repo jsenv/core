@@ -71,11 +71,15 @@ export const startTerminalVideoRecording = async ({
   await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
     /* eslint-env browser */
-    async ({ cols, rows }) => {
+    async ({ cols, rows, convertEol }) => {
       await window.xtreamReadyPromise;
-      await window.initTerminal({ cols, rows });
+      await window.initTerminal({ cols, rows, convertEol });
     },
-    { cols, rows },
+    {
+      cols,
+      rows,
+      convertEol: process.platform !== "win32",
+    },
     /* eslint-env node */
   );
   await page.evaluate(
