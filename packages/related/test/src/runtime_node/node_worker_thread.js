@@ -198,6 +198,7 @@ export const nodeWorkerThread = ({
             result.errors.push(error);
           },
           exit: ({ code }) => {
+            onRuntimeStopped();
             if (code === 12) {
               result.status = "failed";
               result.errors.push(

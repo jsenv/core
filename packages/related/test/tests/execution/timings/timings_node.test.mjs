@@ -3,22 +3,28 @@ import { assert } from "@jsenv/assert";
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
 const test = async (params) => {
-  const { timings } = await execute({
+  const { status, timings } = await execute({
     // logLevel: "debug",
     rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     fileRelativeUrl: `./main.js`,
     ...params,
   });
   {
-    const actual = timings;
+    const actual = {
+      status,
+      timings,
+    };
     const expected = {
-      origin: assert.any(Number),
-      start: assert.any(Number),
-      runtimeStart: assert.any(Number),
-      executionStart: assert.any(Number),
-      executionEnd: assert.any(Number),
-      runtimeEnd: assert.any(Number),
-      end: assert.any(Number),
+      status: "completed",
+      timings: {
+        origin: assert.any(Number),
+        start: assert.any(Number),
+        runtimeStart: assert.any(Number),
+        executionStart: assert.any(Number),
+        executionEnd: assert.any(Number),
+        runtimeEnd: assert.any(Number),
+        end: assert.any(Number),
+      },
     };
     assert({ actual, expected });
   }
