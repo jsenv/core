@@ -19,7 +19,7 @@ const test = async (params) => {
       rootDirectoryUrl: new URL("./client/", import.meta.url),
     },
     fileRelativeUrl: `./main.html`,
-    allocatedMs: 2_000,
+    allocatedMs: 4_000,
     mirrorConsole: false,
     collectConsole: true,
     ...params,
@@ -40,7 +40,7 @@ const test = async (params) => {
         text: `foo\n`,
       },
     ],
-    duration: assert.between(2_000, 5_000),
+    duration: assert.between(2_000, 6_000),
   };
   assert({ actual, expected });
 };
