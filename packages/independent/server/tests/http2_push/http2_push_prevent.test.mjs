@@ -8,7 +8,7 @@ import { applyDnsResolution } from "@jsenv/server/src/internal/dns_resolution.js
 
 if (process.platform !== "linux") {
   // certificates only generated on linux
-  process.exit(1);
+  process.exit();
 }
 
 const localhostDns = await applyDnsResolution("localhost");

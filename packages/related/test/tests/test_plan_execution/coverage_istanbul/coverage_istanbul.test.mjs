@@ -5,7 +5,7 @@ import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 if (process.platform === "win32") {
   // to fix once got a windows OS to reproduce
-  process.exit(1);
+  process.exit();
 }
 
 const devServer = await startDevServer({

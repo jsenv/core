@@ -13,7 +13,7 @@ import {
 
 if (process.platform !== "linux") {
   // certificates only generated on linux
-  process.exit(1);
+  process.exit();
 }
 
 const { certificate, privateKey } = requestCertificate();

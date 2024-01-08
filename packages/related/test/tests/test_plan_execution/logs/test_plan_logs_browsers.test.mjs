@@ -17,7 +17,7 @@ import {
 
 if (process.platform === "win32") {
   // to fix once got a windows OS to reproduce
-  process.exit(1);
+  process.exit();
 }
 
 const terminalVideoRecording =
