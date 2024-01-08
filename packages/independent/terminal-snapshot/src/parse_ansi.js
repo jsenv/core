@@ -4,8 +4,10 @@ import ansiRegex from "ansi-regex";
 import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
+  ansi = ansi.replace(/\r\n/g, "\n"); // normalize windows line endings
+
   const plainText = stripAnsi(ansi);
-  const lines = plainText.split(/\r\n|\n/);
+  const lines = plainText.split("\n");
   const rows = lines.length;
   let columns = 0;
   lines.forEach((line) => {
@@ -32,7 +34,7 @@ export const parseAnsi = (ansi) => {
         delimiters.push(match);
       }
     }
-    delimiters.push("\r\n", "\n");
+    delimiters.push("\n");
 
     const splitString = (str, delimiter) => {
       const result = [];
@@ -214,7 +216,7 @@ export const parseAnsi = (ansi) => {
 
   for (const word of words) {
     // Newline character
-    if (word === "\n" || word === "\r\n") {
+    if (word === "\n") {
       const chunk = bundle("newline", "\n");
       result.chunks.push(chunk);
 
