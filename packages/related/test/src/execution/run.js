@@ -183,7 +183,10 @@ export const run = async ({
         );
       }
       if (timings.end) {
-        result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+        result.timings.executionEnd = Math.max(
+          relativeToTimingOrigin(timings.end),
+          0,
+        );
       }
     }
     result.memoryUsage =
