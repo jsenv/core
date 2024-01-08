@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="692.11"
+      width="574.49"
       height="915.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -60,11 +60,11 @@
         <text x="287.25" y="128.55" fill="#A9A9A9">/</text>
         <text x="295.65" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
         <text x="362.86" y="128.55" fill="#A9A9A9">/</text>
-        <text x="371.26" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
-        <text x="446.87" y="128.55" fill="#A9A9A9">]</text>
-        <text x="463.67" y="128.55"> (1 </text>
-        <text x="488.88" y="128.55" fill="#32CD32">completed</text>
-        <text x="564.49" y="128.55">, 2 executing)</text>
+        <text x="371.26" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
+        <text x="438.47" y="128.55" fill="#A9A9A9">]</text>
+        <text x="455.27" y="128.55"> (1 </text>
+        <text x="480.48" y="128.55" fill="#32CD32">completed</text>
+        <text x="556.09" y="128.55">)</text>
         <text x="10" y="147.55" fill="#A9A9A9">-----</text>
         <text x="60.41" y="147.55"> console (</text>
         <text x="136.02" y="147.55" fill="#B22222">&#x2716;</text>
@@ -104,7 +104,7 @@
         <text x="354.46" y="356.55" fill="#A9A9A9">]</text>
         <text x="371.26" y="356.55"> (2 </text>
         <text x="396.46" y="356.55" fill="#32CD32">completed</text>
-        <text x="472.08" y="356.55">, 1 executing)</text>
+        <text x="472.08" y="356.55">)</text>
         <text x="10" y="375.55" fill="#A9A9A9">-----</text>
         <text x="60.41" y="375.55"> console (</text>
         <text x="136.02" y="375.55" fill="#B22222">&#x2716;</text>
@@ -179,7 +179,7 @@
         <text x="236.84" y="831.55" fill="#A9A9A9">------------------</text>
         <text x="10" y="850.55">3 executions: all </text>
         <text x="161.22" y="850.55" fill="#32CD32">completed</text>
-        <text x="10" y="869.55">duration: &#x3C;mock&#x3E;</text>
+        <text x="10" y="869.55">duration: &#x3C;mock&#x3E;s</text>
         <text x="10" y="888.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >

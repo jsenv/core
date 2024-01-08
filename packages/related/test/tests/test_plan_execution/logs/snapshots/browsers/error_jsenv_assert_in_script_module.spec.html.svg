@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="902.14"
+      width="784.52"
       height="1086.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -60,11 +60,11 @@
         <text x="522.48" y="128.55" fill="#A9A9A9">/</text>
         <text x="530.88" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
         <text x="598.1" y="128.55" fill="#A9A9A9">/</text>
-        <text x="606.5" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
-        <text x="682.11" y="128.55" fill="#A9A9A9">]</text>
-        <text x="698.91" y="128.55"> (1 </text>
-        <text x="724.12" y="128.55" fill="#B22222">failed</text>
-        <text x="774.52" y="128.55">, 2 executing)</text>
+        <text x="606.5" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
+        <text x="673.71" y="128.55" fill="#A9A9A9">]</text>
+        <text x="690.51" y="128.55"> (1 </text>
+        <text x="715.71" y="128.55" fill="#B22222">failed</text>
+        <text x="766.12" y="128.55">)</text>
         <text x="10" y="147.55" fill="#B22222">---------------</text>
         <text x="144.42" y="147.55"> error </text>
         <text x="194.83" y="147.55" fill="#B22222">----------------</text>
@@ -103,7 +103,7 @@
         <text x="589.69" y="413.55" fill="#A9A9A9">]</text>
         <text x="606.5" y="413.55"> (2 </text>
         <text x="631.7" y="413.55" fill="#B22222">failed</text>
-        <text x="682.11" y="413.55">, 1 executing)</text>
+        <text x="682.11" y="413.55">)</text>
         <text x="10" y="432.55" fill="#B22222">---------------</text>
         <text x="144.42" y="432.55"> error </text>
         <text x="194.83" y="432.55" fill="#B22222">----------------</text>
@@ -168,7 +168,7 @@
         <text x="236.84" y="1002.55" fill="#A9A9A9">------------------</text>
         <text x="10" y="1021.55">3 executions: all </text>
         <text x="161.22" y="1021.55" fill="#B22222">failed</text>
-        <text x="10" y="1040.55">duration: &#x3C;mock&#x3E;</text>
+        <text x="10" y="1040.55">duration: &#x3C;mock&#x3E;s</text>
         <text x="10" y="1059.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >

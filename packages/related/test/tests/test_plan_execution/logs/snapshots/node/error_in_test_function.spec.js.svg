@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="818.13"
+      width="717.31"
       height="554.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -63,11 +63,11 @@
         <text x="438.47" y="109.55" fill="#A9A9A9">/</text>
         <text x="446.87" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
         <text x="514.08" y="109.55" fill="#A9A9A9">/</text>
-        <text x="522.48" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
-        <text x="598.1" y="109.55" fill="#A9A9A9">]</text>
-        <text x="614.9" y="109.55"> (1 </text>
-        <text x="640.1" y="109.55" fill="#B22222">failed</text>
-        <text x="690.51" y="109.55">, 1 executing)</text>
+        <text x="522.48" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
+        <text x="589.69" y="109.55" fill="#A9A9A9">]</text>
+        <text x="606.5" y="109.55"> (1 </text>
+        <text x="631.7" y="109.55" fill="#B22222">failed</text>
+        <text x="682.11" y="109.55">)</text>
         <text x="10" y="128.55" fill="#B22222">---------------</text>
         <text x="144.42" y="128.55"> error </text>
         <text x="194.83" y="128.55" fill="#B22222">----------------</text>
@@ -97,11 +97,11 @@
         <text x="438.47" y="280.55" fill="#A9A9A9">/</text>
         <text x="446.87" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
         <text x="514.08" y="280.55" fill="#A9A9A9">/</text>
-        <text x="522.48" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
-        <text x="598.1" y="280.55" fill="#A9A9A9">]</text>
-        <text x="614.9" y="280.55"> (all </text>
-        <text x="656.91" y="280.55" fill="#B22222">failed</text>
-        <text x="707.31" y="280.55">)</text>
+        <text x="522.48" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
+        <text x="589.69" y="280.55" fill="#A9A9A9">]</text>
+        <text x="606.5" y="280.55"> (all </text>
+        <text x="648.5" y="280.55" fill="#B22222">failed</text>
+        <text x="698.91" y="280.55">)</text>
         <text x="10" y="299.55" fill="#B22222">---------------</text>
         <text x="144.42" y="299.55"> error </text>
         <text x="194.83" y="299.55" fill="#B22222">----------------</text>
@@ -128,7 +128,7 @@
         <text x="236.84" y="470.55" fill="#A9A9A9">------------------</text>
         <text x="10" y="489.55">2 executions: all </text>
         <text x="161.22" y="489.55" fill="#B22222">failed</text>
-        <text x="10" y="508.55">duration: &#x3C;mock&#x3E;</text>
+        <text x="10" y="508.55">duration: &#x3C;mock&#x3E;s</text>
         <text x="10" y="527.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >

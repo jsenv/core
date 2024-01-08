@@ -1,14 +1,17 @@
 import { setRoundedPrecision } from "../internal/decimals.js";
 
-export const inspectFileSize = (numberOfBytes) => {
-  return inspectBytes(numberOfBytes);
+export const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-export const inspectMemoryUsage = (metricValue, { decimals } = {}) => {
-  return inspectBytes(metricValue, { decimals, fixedDecimals: true });
+export const inspectMemoryUsage = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 
-const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
   if (number === 0) {
     return `0 B`;
   }
@@ -29,10 +32,13 @@ const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
     decimals,
     decimalsWhenSmall: 1,
   });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
   }
-  return `${unitNumberRounded} ${unitName}`;
+  return `${value} ${unitName}`;
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];

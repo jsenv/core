@@ -75,7 +75,9 @@ export const reporterList = ({
           frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
           let dynamicLogContent = "";
           dynamicLogContent += `${frames[frameIndex]} `;
-          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters);
+          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
+            showProgression: true,
+          });
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
@@ -87,6 +89,7 @@ export const reporterList = ({
           infos.push(ANSI.color(duration, ANSI.GREY));
           const memoryHeapUsed = memoryUsage().heapUsed;
           const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+            short: true,
             decimals: 0,
           });
           infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
@@ -351,8 +354,8 @@ const renderRuntimeInfo = (execution, logOptions) => {
   }
   if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
     const memoryUsageFormatted = logOptions.mockFluctuatingValues
-      ? `<mock> MB`
-      : inspectMemoryUsage(memoryUsage);
+      ? `<mock>MB`
+      : inspectMemoryUsage(memoryUsage, { short: true });
     infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
   }
   return infos.join(ANSI.color(`/`, ANSI.GREY));
@@ -559,13 +562,16 @@ export const renderOutro = (testPlanInfo, logOptions) => {
 
   const { duration } = testPlanInfo;
   const durationFormatted = logOptions.mockFluctuatingValues
-    ? "<mock>"
-    : inspectDuration(duration);
+    ? "<mock>s"
+    : inspectDuration(duration, { short: true });
   finalSummary += `\nduration: ${durationFormatted}`;
 
   return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
 };
-const renderStatusRepartition = (counters) => {
+const renderStatusRepartition = (counters, { showProgression } = {}) => {
+  if (counters.planified === 0) {
+    return `nothing to run`;
+  }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
@@ -603,11 +609,13 @@ const renderStatusRepartition = (counters) => {
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
   }
-  if (counters.executing) {
-    parts.push(`${counters.executing} executing`);
-  }
-  if (counters.waiting) {
-    parts.push(`${counters.waiting} waiting`);
+  if (showProgression) {
+    if (counters.executing) {
+      parts.push(`${counters.executing} executing`);
+    }
+    if (counters.waiting) {
+      parts.push(`${counters.waiting} waiting`);
+    }
   }
   return `${parts.join(", ")}`;
 };

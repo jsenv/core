@@ -39,7 +39,9 @@ export const run = async ({
   }
 
   const timingOrigin = Date.now();
-  const relativeToTimingOrigin = (ms) => ms - timingOrigin;
+  const relativeToTimingOrigin = (ms) => {
+    return ms - timingOrigin;
+  };
 
   const result = {
     status: "pending",
@@ -171,7 +173,10 @@ export const run = async ({
     result.namespace = namespace;
     if (timings) {
       if (timings.start) {
-        result.timings.executionStart = relativeToTimingOrigin(timings.start);
+        result.timings.executionStart = Math.max(
+          relativeToTimingOrigin(timings.start),
+          0,
+        );
       }
       if (timings.end) {
         result.timings.executionEnd = relativeToTimingOrigin(timings.end);
