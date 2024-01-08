@@ -1,9 +1,11 @@
+// inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
+
 import ansiRegex from "ansi-regex";
 import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
   const plainText = stripAnsi(ansi);
-  const lines = plainText.split("\n");
+  const lines = plainText.split(/\r\n|\r|\n/);
   const rows = lines.length;
   let columns = 0;
   lines.forEach((line) => {
