@@ -345,13 +345,13 @@ const renderRuntimeInfo = (execution, logOptions) => {
   if (timings) {
     const duration = timings.executionEnd - timings.executionStart;
     const durationFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>`
+      ? `<mock>ms`
       : inspectDuration(duration, { short: true });
     infos.push(ANSI.color(durationFormatted, ANSI.GREY));
   }
   if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
     const memoryUsageFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>`
+      ? `<mock> MB`
       : inspectMemoryUsage(memoryUsage);
     infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
   }

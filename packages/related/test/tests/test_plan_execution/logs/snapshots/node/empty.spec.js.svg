@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="658.5"
+      width="700.51"
       height="250.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -59,24 +59,24 @@
         <text x="178.03" y="109.55" fill="#A9A9A9">[</text>
         <text x="186.43" y="109.55" fill="#A9A9A9">worker_thread</text>
         <text x="295.65" y="109.55" fill="#A9A9A9">/</text>
-        <text x="304.05" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="354.46" y="109.55" fill="#A9A9A9">/</text>
-        <text x="362.86" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="413.27" y="109.55" fill="#A9A9A9">]</text>
-        <text x="430.07" y="109.55"> (1 </text>
-        <text x="455.27" y="109.55" fill="#32CD32">completed</text>
-        <text x="530.88" y="109.55">, 1 executing)</text>
+        <text x="304.05" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="371.26" y="109.55" fill="#A9A9A9">/</text>
+        <text x="379.66" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
+        <text x="455.27" y="109.55" fill="#A9A9A9">]</text>
+        <text x="472.08" y="109.55"> (1 </text>
+        <text x="497.28" y="109.55" fill="#32CD32">completed</text>
+        <text x="572.89" y="109.55">, 1 executing)</text>
         <text x="10" y="128.55" fill="#32CD32">&#x2714; 2/2 empty.spec.js</text>
         <text x="178.03" y="128.55" fill="#A9A9A9">[</text>
         <text x="186.43" y="128.55" fill="#A9A9A9">child_process</text>
         <text x="295.65" y="128.55" fill="#A9A9A9">/</text>
-        <text x="304.05" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="354.46" y="128.55" fill="#A9A9A9">/</text>
-        <text x="362.86" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="413.27" y="128.55" fill="#A9A9A9">]</text>
-        <text x="430.07" y="128.55"> (all </text>
-        <text x="472.08" y="128.55" fill="#32CD32">completed</text>
-        <text x="547.69" y="128.55">)</text>
+        <text x="304.05" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="371.26" y="128.55" fill="#A9A9A9">/</text>
+        <text x="379.66" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
+        <text x="455.27" y="128.55" fill="#A9A9A9">]</text>
+        <text x="472.08" y="128.55"> (all </text>
+        <text x="514.08" y="128.55" fill="#32CD32">completed</text>
+        <text x="589.69" y="128.55">)</text>
         <text x="10" y="166.55" fill="#A9A9A9">------------------</text>
         <text x="169.63" y="166.55"> summary </text>
         <text x="236.84" y="166.55" fill="#A9A9A9">------------------</text>

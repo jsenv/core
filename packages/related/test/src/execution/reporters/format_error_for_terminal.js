@@ -50,6 +50,9 @@ export const formatErrorForTerminal = (
       if (mockFluctuatingValues) {
         const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
         urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+        if (process.platform === "win32") {
+          urlAsPath = urlAsPath.replace(/\\/g, "/");
+        }
       }
       if (urlIsMain) {
         urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);

@@ -101,7 +101,9 @@ const test = async (filename, params) => {
           runtime: chromium(),
         },
         firefox: {
-          runtime: firefox(),
+          runtime: firefox({
+            disableOnWindowsBecauseFlaky: false,
+          }),
         },
         webkit: {
           runtime: webkit(),

@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="465.27"
+      width="507.28"
       height="421.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -56,13 +56,13 @@
           >&#x2714; 1/1 console.spec.js</text
         >
         <text x="194.83" y="90.55" fill="#A9A9A9">[</text>
-        <text x="203.23" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="253.64" y="90.55" fill="#A9A9A9">/</text>
-        <text x="262.04" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="312.45" y="90.55" fill="#A9A9A9">]</text>
-        <text x="329.25" y="90.55"> (all </text>
-        <text x="371.26" y="90.55" fill="#32CD32">completed</text>
-        <text x="446.87" y="90.55">)</text>
+        <text x="203.23" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="270.44" y="90.55" fill="#A9A9A9">/</text>
+        <text x="278.84" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E; MB</text>
+        <text x="354.46" y="90.55" fill="#A9A9A9">]</text>
+        <text x="371.26" y="90.55"> (all </text>
+        <text x="413.27" y="90.55" fill="#32CD32">completed</text>
+        <text x="488.88" y="90.55">)</text>
         <text x="10" y="109.55" fill="#A9A9A9">-----------</text>
         <text x="110.82" y="109.55"> console (</text>
         <text x="186.43" y="109.55" fill="#B22222">&#x2716;</text>
