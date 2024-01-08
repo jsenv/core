@@ -311,6 +311,7 @@ export const nodeWorkerThread = ({
           stopSignal.notify = stop;
         } else {
           await stop();
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();

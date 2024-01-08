@@ -391,6 +391,7 @@ export const nodeChildProcess = ({
           await stop({
             gracefulStopAllocatedMs,
           });
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();

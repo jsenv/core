@@ -117,6 +117,7 @@ export const run = async ({
             };
           },
           runned: async (cb) => {
+            let runtimeStatus = "starting";
             try {
               const runResult = await runtime.run({
                 signal: runOperation.signal,
@@ -131,11 +132,14 @@ export const run = async ({
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
+                  runtimeStatus = "started";
                   result.timings.runtimeStart = relativeToTimingOrigin(
                     Date.now(),
                   );
                 },
                 onRuntimeStopped: () => {
+                  if (runtimeStatus === "stopped") return; // ignore double calls
+                  runtimeStatus = "stopped";
                   result.timings.runtimeEnd = relativeToTimingOrigin(
                     Date.now(),
                   );
