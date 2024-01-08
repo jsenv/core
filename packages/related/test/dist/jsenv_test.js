@@ -869,15 +869,18 @@ const parseMs = (ms) => {
   };
 };
 
-const inspectFileSize = (numberOfBytes) => {
-  return inspectBytes(numberOfBytes);
+const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-const inspectMemoryUsage = (metricValue, { decimals } = {}) => {
-  return inspectBytes(metricValue, { decimals, fixedDecimals: true });
+const inspectMemoryUsage = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 
-const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
   if (number === 0) {
     return `0 B`;
   }
@@ -898,10 +901,13 @@ const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
     decimals,
     decimalsWhenSmall: 1,
   });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
   }
-  return `${unitNumberRounded} ${unitName}`;
+  return `${value} ${unitName}`;
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
@@ -4363,14 +4369,14 @@ const ensureWebServerIsStarted = async (
 
 const githubAnnotationFromError = (
   error,
-  { rootDirectoryUrl, executionInfo },
+  { rootDirectoryUrl, execution },
 ) => {
   const annotation = {
     annotation_level: "failure",
-    path: executionInfo.fileRelativeUrl,
+    path: execution.fileRelativeUrl,
     start_line: 1,
     end_line: 1,
-    title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
+    title: `Error while executing ${execution.fileRelativeUrl} on ${execution.runtimeName}@${execution.runtimeVersion}`,
   };
   const exception = asException(error, { rootDirectoryUrl });
   if (exception.site && typeof exception.site.line === "number") {
@@ -4528,7 +4534,9 @@ const run = async ({
   }
 
   const timingOrigin = Date.now();
-  const relativeToTimingOrigin = (ms) => ms - timingOrigin;
+  const relativeToTimingOrigin = (ms) => {
+    return ms - timingOrigin;
+  };
 
   const result = {
     status: "pending",
@@ -4660,7 +4668,10 @@ const run = async ({
     result.namespace = namespace;
     if (timings) {
       if (timings.start) {
-        result.timings.executionStart = relativeToTimingOrigin(timings.start);
+        result.timings.executionStart = Math.max(
+          relativeToTimingOrigin(timings.start),
+          0,
+        );
       }
       if (timings.end) {
         result.timings.executionEnd = relativeToTimingOrigin(timings.end);
@@ -4756,6 +4767,9 @@ const formatErrorForTerminal = (
       if (mockFluctuatingValues) {
         const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
         urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+        if (process.platform === "win32") {
+          urlAsPath = urlAsPath.replace(/\\/g, "/");
+        }
       }
       if (urlIsMain) {
         urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
@@ -4949,7 +4963,7 @@ const reporterList = ({
           let dynamicLogContent = "";
           dynamicLogContent += `${frames[frameIndex]} `;
           dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-            showExecuting: true,
+            showProgression: true,
           });
 
           const msEllapsed = Date.now() - startMs;
@@ -4962,6 +4976,7 @@ const reporterList = ({
           infos.push(ANSI.color(duration, ANSI.GREY));
           const memoryHeapUsed = memoryUsage().heapUsed;
           const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+            short: true,
             decimals: 0,
           });
           infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
@@ -5220,14 +5235,14 @@ const renderRuntimeInfo = (execution, logOptions) => {
   if (timings) {
     const duration = timings.executionEnd - timings.executionStart;
     const durationFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>`
+      ? `<mock>ms`
       : inspectDuration(duration, { short: true });
     infos.push(ANSI.color(durationFormatted, ANSI.GREY));
   }
   if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
     const memoryUsageFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>`
-      : inspectMemoryUsage(memoryUsage);
+      ? `<mock>MB`
+      : inspectMemoryUsage(memoryUsage, { short: true });
     infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
   }
   return infos.join(ANSI.color(`/`, ANSI.GREY));
@@ -5434,13 +5449,16 @@ const renderOutro = (testPlanInfo, logOptions) => {
 
   const { duration } = testPlanInfo;
   const durationFormatted = logOptions.mockFluctuatingValues
-    ? "<mock>"
-    : inspectDuration(duration);
+    ? "<mock>s"
+    : inspectDuration(duration, { short: true });
   finalSummary += `\nduration: ${durationFormatted}`;
 
   return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
 };
-const renderStatusRepartition = (counters, { showExecuting } = {}) => {
+const renderStatusRepartition = (counters, { showProgression } = {}) => {
+  if (counters.planified === 0) {
+    return `nothing to run`;
+  }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
@@ -5478,11 +5496,13 @@ const renderStatusRepartition = (counters, { showExecuting } = {}) => {
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
   }
-  if (showExecuting) {
-    parts.push(`${counters.executing} executing`);
-  }
-  if (counters.waiting) {
-    parts.push(`${counters.waiting} waiting`);
+  if (showProgression) {
+    if (counters.executing) {
+      parts.push(`${counters.executing} executing`);
+    }
+    if (counters.waiting) {
+      parts.push(`${counters.waiting} waiting`);
+    }
   }
   return `${parts.join(", ")}`;
 };
@@ -8371,6 +8391,7 @@ const nodeWorkerThread = ({
             result.errors.push(error);
           },
           exit: ({ code }) => {
+            onRuntimeStopped();
             if (code === 12) {
               result.status = "failed";
               result.errors.push(

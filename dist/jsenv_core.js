@@ -941,11 +941,14 @@ const parseMs = (ms) => {
   };
 };
 
-const inspectFileSize = (numberOfBytes) => {
-  return inspectBytes(numberOfBytes);
+const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
   if (number === 0) {
     return `0 B`;
   }
@@ -966,10 +969,13 @@ const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
     decimals,
     decimalsWhenSmall: 1,
   });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
   }
-  return `${unitNumberRounded} ${unitName}`;
+  return `${value} ${unitName}`;
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];

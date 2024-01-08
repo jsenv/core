@@ -88,9 +88,10 @@
         paddingRight = 15,
         fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
         fontSize = 12,
+        convertEol = true,
       } = {}) => {
         const term = new Terminal({
-          convertEol: true,
+          convertEol,
           disableStdin: true,
           // cursorBlink: false,
           cursorInactiveStyle: "none",

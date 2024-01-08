@@ -2263,7 +2263,9 @@ const formatStringAssertionErrorMessage = ({
           ...formatDetails({
             annotationLabel: "unexpected ".concat(inspect(actualChar), ", expected to continue with")
           }),
-          path
+          ...(path ? {
+            path
+          } : {})
         });
       }
       if (isLineBreak(actualChar)) {
@@ -2288,7 +2290,9 @@ const formatStringAssertionErrorMessage = ({
         ...formatDetails({
           annotationLabel: "expected to continue with"
         }),
-        path
+        ...(path ? {
+          path
+        } : {})
       });
     }
   }
@@ -2320,7 +2324,9 @@ const formatStringAssertionErrorMessage = ({
         annotationLabel,
         expectedOverview: false
       }),
-      path
+      ...(path ? {
+        path
+      } : {})
     });
   }
 };
