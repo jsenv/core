@@ -1,3 +1,7 @@
+# 15.1.1
+
+- Simplify stop callback list
+
 # 15.1.0
 
 - Add `request.searchParams`

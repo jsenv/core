@@ -1,3 +1,7 @@
+# 8.4.0
+
+### Add `URL_META.matches(url, patterns)`
+
 # 8.3.0
 
 - Object composition in associated values
