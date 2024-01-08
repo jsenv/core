@@ -5,7 +5,7 @@ import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
   const plainText = stripAnsi(ansi);
-  const lines = plainText.split(/\r\n|\r|\n/);
+  const lines = plainText.split(/\r\n|\n/);
   const rows = lines.length;
   let columns = 0;
   lines.forEach((line) => {
@@ -32,7 +32,7 @@ export const parseAnsi = (ansi) => {
         delimiters.push(match);
       }
     }
-    delimiters.push("\n");
+    delimiters.push("\r\n", "\n");
 
     const splitString = (str, delimiter) => {
       const result = [];
@@ -214,7 +214,7 @@ export const parseAnsi = (ansi) => {
 
   for (const word of words) {
     // Newline character
-    if (word === "\n") {
+    if (word === "\n" || word === "\r\n") {
       const chunk = bundle("newline", "\n");
       result.chunks.push(chunk);
 
