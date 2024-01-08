@@ -53,6 +53,7 @@
     "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
     "monorepo:sync_packages_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
     "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
+    "monorepo:node_modules_clear": "npm @jsenv/snapshot clear **/node_modules/",
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "prettier": "prettier --write .",
     "playwright:install": "npx playwright install-deps && npx playwright install",

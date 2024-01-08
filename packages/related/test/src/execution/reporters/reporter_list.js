@@ -548,7 +548,7 @@ const renderErrors = (execution, logOptions) => {
   });
 };
 
-export const renderOutro = (testPlanInfo, logOptions) => {
+export const renderOutro = (testPlanInfo, logOptions = {}) => {
   let finalSummary = "";
   const { counters } = testPlanInfo;
   const { planified } = counters;

@@ -5,6 +5,7 @@ System.register([__v__("/js/defineProperty.nomodule.js")], function (_export, _c
   // This function is different to "Reflect.ownKeys". The enumerableOnly
   // filters on symbol properties only. Returned string properties are always
   // enumerable. It is good to use in objectSpread.
+
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
     if (Object.getOwnPropertySymbols) {

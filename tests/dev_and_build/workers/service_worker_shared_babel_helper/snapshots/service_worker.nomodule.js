@@ -11,8 +11,8 @@ self.resourcesFromJsenvBuild = {
     "versionedUrl": "/js/app.nomodule.js?v=a43d9bac"
   },
   "/js/objectSpread2.nomodule.js": {
-    "version": "abdb6109",
-    "versionedUrl": "/js/objectSpread2.nomodule.js?v=abdb6109"
+    "version": "7c06dac0",
+    "versionedUrl": "/js/objectSpread2.nomodule.js?v=7c06dac0"
   },
   "/js/defineProperty.nomodule.js": {
     "version": "5743374f",
@@ -56,7 +56,7 @@ self.resourcesFromJsenvBuild = {
 ;(function() {
   var __versionMappings__ = {
     "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=96bb4e80",
-    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=abdb6109",
+    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=7c06dac0",
     "/js/slicedToArray.nomodule.js": "/js/slicedToArray.nomodule.js?v=77f40001",
     "/js/app.nomodule.js": "/js/app.nomodule.js?v=a43d9bac",
     "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=5743374f",
