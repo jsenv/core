@@ -2,14 +2,14 @@ import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const githubAnnotationFromError = (
   error,
-  { rootDirectoryUrl, executionInfo },
+  { rootDirectoryUrl, execution },
 ) => {
   const annotation = {
     annotation_level: "failure",
-    path: executionInfo.fileRelativeUrl,
+    path: execution.fileRelativeUrl,
     start_line: 1,
     end_line: 1,
-    title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
+    title: `Error while executing ${execution.fileRelativeUrl} on ${execution.runtimeName}@${execution.runtimeVersion}`,
   };
   const exception = asException(error, { rootDirectoryUrl });
   if (exception.site && typeof exception.site.line === "number") {
