@@ -1,4 +1,4 @@
-import { isComposite } from "./is_composite.js";
+import { isComposite } from "../../utils/is_composite.js";
 import { propertyToAccessorString } from "./property_to_accessor_string.js";
 
 export const valueToWellKnown = (value) => {

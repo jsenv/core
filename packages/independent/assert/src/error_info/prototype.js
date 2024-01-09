@@ -1,16 +1,17 @@
 import { inspect } from "@jsenv/inspect";
 
-import { comparisonToPath } from "../comparison_to_path.js";
-import { valueToWellKnown } from "../well_known_value.js";
-import { comparisonToRootComparison } from "../comparison_to_root_comparison.js";
-import { findSelfOrAncestorComparison } from "../find_self_or_ancestor_comparison.js";
+import { comparisonToPath } from "./utils/comparison_to_path.js";
+import { valueToWellKnown } from "./utils/well_known_value.js";
+import { findSelfOrAncestorComparison } from "./utils/find_self_or_ancestor_comparison.js";
 
-export const prototypeComparisonToErrorMessage = (comparison) => {
+export const getPrototypeErrorInfo = (comparison) => {
   const prototypeComparison = findSelfOrAncestorComparison(
     comparison,
     ({ type }) => type === "prototype",
   );
-  if (!prototypeComparison) return null;
+  if (!prototypeComparison) {
+    return null;
+  }
 
   const rootComparison = comparisonToRootComparison(comparison);
   const path = comparisonToPath(prototypeComparison);
@@ -29,21 +30,26 @@ export const prototypeComparisonToErrorMessage = (comparison) => {
   const expectedPrototype = prototypeComparison.expected;
   const actualPrototype = prototypeComparison.actual;
 
-  return createUnequalPrototypesMessage({
-    path,
-    expectedPrototype: prototypeToString(expectedPrototype),
-    actualPrototype: prototypeToString(actualPrototype),
-  });
+  return {
+    type: "PrototypeAssertionError",
+    message: `unequal prototypes
+--- prototype found ---
+${prototypeToString(actualPrototype)}
+--- prototype expected ---
+${prototypeToString(expectedPrototype)}
+--- path ---
+${path}`,
+  };
 };
 
-const createUnequalPrototypesMessage = ({
-  path,
-  expectedPrototype,
-  actualPrototype,
-}) => `unequal prototypes
---- prototype found ---
-${actualPrototype}
---- prototype expected ---
-${expectedPrototype}
---- path ---
-${path}`;
+const comparisonToRootComparison = (comparison) => {
+  let current = comparison;
+  while (current) {
+    if (current.parent) {
+      current = current.parent;
+    } else {
+      break;
+    }
+  }
+  return current;
+};

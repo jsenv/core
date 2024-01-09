@@ -1,7 +1,5 @@
 import { inspect } from "@jsenv/inspect";
 
-import { propertyNameToDotNotationAllowed } from "./property_name_to_dot_notation_allowed.js";
-
 export const propertyToAccessorString = (property) => {
   if (typeof property === "number") {
     return `[${inspect(property)}]`;
@@ -16,6 +14,13 @@ export const propertyToAccessorString = (property) => {
   }
 
   return `[${symbolToWellKnownSymbol(property)}]`;
+};
+
+const propertyNameToDotNotationAllowed = (propertyName) => {
+  return (
+    /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) ||
+    /^[a-z_$]$/i.test(propertyName)
+  );
 };
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol#Well-known_symbols

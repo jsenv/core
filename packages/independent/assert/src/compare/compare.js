@@ -1,6 +1,6 @@
 import { inspect, inspectMethodSymbol } from "@jsenv/inspect";
 
-import { isPrimitive } from "./is_composite.js";
+import { isPrimitive } from "../utils/is_composite.js";
 import { findPreviousComparison } from "./find_previous_comparison.js";
 import {
   isSet,

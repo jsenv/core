@@ -1,4 +1,3 @@
-/* eslint-disable no-use-before-define */
 // https://github.com/dmail/dom/blob/e55a8c7b4cda6be2f7a4b1222f96d028a379b67f/src/visit.js#L89
 
 export const findPreviousComparison = (comparison, predicate) => {

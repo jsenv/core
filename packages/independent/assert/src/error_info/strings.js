@@ -1,31 +1,31 @@
 import { inspect, determineQuote, inspectChar } from "@jsenv/inspect";
 
-import { createDetailedMessage } from "../detailed_message.js";
-import { comparisonToPath } from "../comparison_to_path.js";
-import { isRegExp, isError } from "../object_subtype.js";
+import { isRegExp, isError } from "../utils/object_subtype.js";
+import { createDetailedMessage } from "./utils/detailed_message.js";
+import { comparisonToPath } from "./utils/comparison_to_path.js";
 
 const MAX_HEIGHT = 10;
 let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 30;
 
-export const stringsComparisonToErrorMessage = (comparison, { format }) => {
+export const getStringsErrorInfo = (comparison, { format }) => {
   const isStartsWithComparison = comparison.type === "starts_with";
 
   if (comparison.type !== "identity" && !isStartsWithComparison) {
-    return undefined;
+    return null;
   }
   const { actual, expected } = comparison;
   if (typeof actual !== "string") {
-    return undefined;
+    return null;
   }
   if (typeof expected !== "string") {
-    return undefined;
+    return null;
   }
 
   const name = stringNameFromComparison(comparison);
   const path = comparisonToPath(comparison);
-  return formatStringAssertionErrorMessage({
+  return getStringComparisonErrorInfo({
     actual,
     expected,
     path,
@@ -34,7 +34,7 @@ export const stringsComparisonToErrorMessage = (comparison, { format }) => {
   });
 };
 
-export const formatStringAssertionErrorMessage = ({
+const getStringComparisonErrorInfo = ({
   actual,
   expected,
   path = "",
@@ -192,14 +192,17 @@ export const formatStringAssertionErrorMessage = ({
       const expectedChar = expected[i];
       if (actualChar !== expectedChar) {
         let message = `unexpected character in ${name}`;
-        return createDetailedMessage(message, {
-          ...formatDetails({
-            annotationLabel: `unexpected ${inspect(
-              actualChar,
-            )}, expected to continue with`,
+        return {
+          type: "CharacterAssertionError",
+          message: createDetailedMessage(message, {
+            ...formatDetails({
+              annotationLabel: `unexpected ${inspect(
+                actualChar,
+              )}, expected to continue with`,
+            }),
+            ...(path ? { path } : {}),
           }),
-          ...(path ? { path } : {}),
-        });
+        };
       }
       if (isLineBreak(actualChar)) {
         lineIndex++;
@@ -219,12 +222,15 @@ export const formatStringAssertionErrorMessage = ({
       } else {
         message += `, ${missingCharacterCount} characters are missing`;
       }
-      return createDetailedMessage(message, {
-        ...formatDetails({
-          annotationLabel: `expected to continue with`,
+      return {
+        type: "MissingCharacterAssertionError",
+        message: createDetailedMessage(message, {
+          ...formatDetails({
+            annotationLabel: `expected to continue with`,
+          }),
+          ...(path ? { path } : {}),
         }),
-        ...(path ? { path } : {}),
-      });
+      };
     }
   }
   too_long: {
@@ -252,14 +258,33 @@ export const formatStringAssertionErrorMessage = ({
     }
 
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
-    return createDetailedMessage(message, {
-      ...formatDetails({
-        annotationLabel,
-        expectedOverview: false,
+    return {
+      type: "ExtraCharacterAssertionError",
+      message: createDetailedMessage(message, {
+        ...formatDetails({
+          annotationLabel,
+          expectedOverview: false,
+        }),
+        ...(path ? { path } : {}),
       }),
-      ...(path ? { path } : {}),
-    });
+    };
   }
+};
+
+export const formatStringAssertionErrorMessage = ({
+  actual,
+  expected,
+  path = "",
+  name = "string",
+  format,
+}) => {
+  return getStringComparisonErrorInfo({
+    actual,
+    expected,
+    path,
+    name,
+    format,
+  }).message;
 };
 
 const truncateLine = (line, { start, end, prefix, suffix, format }) => {

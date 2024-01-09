@@ -6,8 +6,8 @@ import {
   createMatchesRegExpExpectation,
   createCloseToExpectation,
   createBetweenExpectation,
-} from "./internal/compare.js";
-import { errorMessageFromComparison } from "./internal/error_message_from_comparison.js";
+} from "./compare/compare.js";
+import { getErrorInfo } from "./error_info/error_info.js";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
 export const createAssert = ({ format = (v) => v } = {}) => {
@@ -55,10 +55,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const comparison = compare(expectation, { checkPropertiesOrder });
     if (comparison.failed) {
-      let errorMessage =
-        message || errorMessageFromComparison(comparison, { format });
+      const errorInfo = message
+        ? { message }
+        : getErrorInfo(comparison, { format });
+      let errorMessage = errorInfo.message;
       errorMessage = appendDetails(errorMessage, details);
       const error = createAssertionError(errorMessage);
+      if (errorInfo.type) {
+        error.type = errorInfo.type;
+      }
       if (Error.captureStackTrace) {
         Error.captureStackTrace(error, assert);
       }
