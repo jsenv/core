@@ -49,6 +49,8 @@ jobs:
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
+      - name: Install playwright
+        run: npx playwright install-deps
       - name: Install certificate # needed for @jsenv/service-worker tests
         if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
         run: node ./scripts/test/certificate_install.mjs
