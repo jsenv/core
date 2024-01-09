@@ -41,14 +41,14 @@ export const reporterList = ({
   const reporters = [
     {
       reporter: "list",
-      beforeAll: async (testPlanInfo) => {
+      beforeAll: async (testPlanResult) => {
         let spyReturnValue = await spy();
         let write = spyReturnValue.write;
         let end = spyReturnValue.end;
         spyReturnValue = undefined;
 
-        logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
-        write(renderIntro(testPlanInfo, logOptions));
+        logOptions.group = Object.keys(testPlanResult.groups).length > 1;
+        write(renderIntro(testPlanResult, logOptions));
         if (!dynamicLogEnabled) {
           return {
             afterEachInOrder: (execution) => {
@@ -56,7 +56,7 @@ export const reporterList = ({
               write(log);
             },
             afterAll: async () => {
-              await write(renderOutro(testPlanInfo, logOptions));
+              await write(renderOutro(testPlanResult, logOptions));
               write = undefined;
               if (end) {
                 await end();
@@ -71,13 +71,16 @@ export const reporterList = ({
         });
         const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let frameIndex = 0;
-        const renderDynamicLog = (testPlanInfo) => {
+        const renderDynamicLog = (testPlanResult) => {
           frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
           let dynamicLogContent = "";
           dynamicLogContent += `${frames[frameIndex]} `;
-          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-            showProgression: true,
-          });
+          dynamicLogContent += renderStatusRepartition(
+            testPlanResult.counters,
+            {
+              showProgression: true,
+            },
+          );
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
@@ -103,9 +106,9 @@ export const reporterList = ({
           dynamicLogContent = `\n${dynamicLogContent}\n`;
           return dynamicLogContent;
         };
-        dynamicLog.update(renderDynamicLog(testPlanInfo));
+        dynamicLog.update(renderDynamicLog(testPlanResult));
         const interval = setInterval(() => {
-          dynamicLog.update(renderDynamicLog(testPlanInfo));
+          dynamicLog.update(renderDynamicLog(testPlanResult));
         }, 150);
 
         return {
@@ -120,7 +123,7 @@ export const reporterList = ({
             dynamicLog.destroy();
             dynamicLog = null;
             clearInterval(interval);
-            await write(renderOutro(testPlanInfo, logOptions));
+            await write(renderOutro(testPlanResult, logOptions));
             write = undefined;
             await end();
             end = undefined;
@@ -154,10 +157,10 @@ export const reporterList = ({
   return reporters;
 };
 
-const renderIntro = (testPlanInfo, logOptions) => {
-  const { counters } = testPlanInfo;
+const renderIntro = (testPlanResult, logOptions) => {
+  const { counters } = testPlanResult;
   const planified = counters.planified;
-  const { groups } = testPlanInfo;
+  const { groups } = testPlanResult;
   const groupNames = Object.keys(groups);
 
   if (planified === 0) {
@@ -548,9 +551,9 @@ const renderErrors = (execution, logOptions) => {
   });
 };
 
-export const renderOutro = (testPlanInfo, logOptions = {}) => {
+export const renderOutro = (testPlanResult, logOptions = {}) => {
   let finalSummary = "";
-  const { counters } = testPlanInfo;
+  const { counters } = testPlanResult;
   const { planified } = counters;
 
   if (planified === 1) {
@@ -560,13 +563,40 @@ export const renderOutro = (testPlanInfo, logOptions = {}) => {
   }
   finalSummary += renderStatusRepartition(counters);
 
-  const { duration } = testPlanInfo;
-  const durationFormatted = logOptions.mockFluctuatingValues
-    ? "<mock>s"
-    : inspectDuration(duration, { short: true });
-  finalSummary += `\nduration: ${durationFormatted}`;
+  finalSummary += `\nduration: ${renderTimings(testPlanResult, logOptions)}`;
 
   return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
+};
+const renderTimings = (testPlanResult, logOptions) => {
+  let durationLog = ``;
+  const { timings } = testPlanResult;
+  if (logOptions.mockFluctuatingValues) {
+    durationLog += "<mock>s";
+  } else {
+    durationLog += inspectDuration(timings.end, { short: true });
+    const namedTimings = {
+      setup: timings.executionStart,
+      execution: timings.executionEnd,
+      teardown: timings.teardownEnd - timings.executionEnd,
+      ...(testPlanResult.coverage
+        ? { coverage: timings.coverageTeardownEnd - timings.teardownEnd }
+        : {}),
+    };
+    const timingDetails = [];
+    for (const key of Object.keys(namedTimings)) {
+      const value = namedTimings[key];
+
+      timingDetails.push(
+        `${key}: ${inspectDuration(value, {
+          short: true,
+        })}`,
+      );
+    }
+    if (timingDetails.length) {
+      durationLog += ` (${timingDetails.join(", ")})`;
+    }
+  }
+  return durationLog;
 };
 const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {

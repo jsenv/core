@@ -39,10 +39,6 @@ export const run = async ({
   }
 
   const timingOrigin = Date.now();
-  const relativeToTimingOrigin = (ms) => {
-    return ms - timingOrigin;
-  };
-
   const result = {
     status: "pending",
     errors: [],
@@ -60,6 +56,9 @@ export const run = async ({
     memoryUsage: null,
     performance: null,
     coverageFileUrl: null,
+  };
+  const takeTiming = (ms = Date.now()) => {
+    return ms - timingOrigin;
   };
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
@@ -133,16 +132,12 @@ export const run = async ({
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
                   runtimeStatus = "started";
-                  result.timings.runtimeStart = relativeToTimingOrigin(
-                    Date.now(),
-                  );
+                  result.timings.runtimeStart = takeTiming();
                 },
                 onRuntimeStopped: () => {
                   if (runtimeStatus === "stopped") return; // ignore double calls
                   runtimeStatus = "stopped";
-                  result.timings.runtimeEnd = relativeToTimingOrigin(
-                    Date.now(),
-                  );
+                  result.timings.runtimeEnd = takeTiming();
                 },
               });
               cb(runResult);
@@ -177,16 +172,10 @@ export const run = async ({
     result.namespace = namespace;
     if (timings) {
       if (timings.start) {
-        result.timings.executionStart = Math.max(
-          relativeToTimingOrigin(timings.start),
-          0,
-        );
+        result.timings.executionStart = Math.max(takeTiming(timings.start), 0);
       }
       if (timings.end) {
-        result.timings.executionEnd = Math.max(
-          relativeToTimingOrigin(timings.end),
-          0,
-        );
+        result.timings.executionEnd = Math.max(takeTiming(timings.end), 0);
       }
     }
     result.memoryUsage =
@@ -209,7 +198,7 @@ export const run = async ({
     }
   } finally {
     await runOperation.end();
-    result.timings.end = relativeToTimingOrigin(Date.now());
+    result.timings.end = takeTiming();
     return result;
   }
 };
