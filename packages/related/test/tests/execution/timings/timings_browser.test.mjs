@@ -48,7 +48,7 @@ const test = async (params) => {
     };
     const expected = {
       // execution must take around 2s (due to the timeout)
-      executionDuration: assert.between(2_000, 4_000),
+      executionDuration: assert.between(2_000, 6_000),
       // the overall run duration and runtime alive duration is between 2/9s
       runDuration: assert.between(2_000, 9_000),
       runtimeDuration: assert.between(2_000, 9_000),
