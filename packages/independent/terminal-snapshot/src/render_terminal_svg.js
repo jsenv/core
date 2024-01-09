@@ -286,10 +286,8 @@ export const renderTerminalSvg = async (
   }
 
   const svgString = svg.renderAsString();
-  const options = await prettier.resolveConfig(import.meta.url);
   const formatted = await prettier.format(svgString, {
     parser: "html",
-    ...options,
   });
   return formatted;
 };

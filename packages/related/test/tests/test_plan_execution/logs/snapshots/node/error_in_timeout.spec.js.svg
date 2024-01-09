@@ -79,7 +79,7 @@
         <text x="10" y="223.55">Error: here</text>
         <text x="26.8" y="242.55"> at Timeout._onTimeout (</text>
         <text x="220.03" y="242.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_timeout.spec.js</text
+          >[mock]/error_in_timeout.spec.js</text
         >
         <text x="480.48" y="242.55">:3:11)</text>
         <text x="10" y="261.55" fill="#B22222"
@@ -109,7 +109,7 @@
         <text x="10" y="394.55">Error: here</text>
         <text x="26.8" y="413.55"> at Timeout._onTimeout (</text>
         <text x="220.03" y="413.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_timeout.spec.js</text
+          >[mock]/error_in_timeout.spec.js</text
         >
         <text x="480.48" y="413.55">:3:11)</text>
         <text x="10" y="432.55" fill="#B22222"

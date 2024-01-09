@@ -4,7 +4,7 @@ import { writeFileSync } from "@jsenv/filesystem";
 import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
 import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
 
-import { formatErrorForTerminal } from "./format_error_for_terminal.js";
+import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 
 export const reporterList = ({
   dynamic = true,
@@ -526,6 +526,7 @@ const renderErrors = (execution, logOptions) => {
         rootDirectoryUrl: execution.rootDirectoryUrl,
         mainFileRelativeUrl: execution.fileRelativeUrl,
         mockFluctuatingValues: logOptions.mockFluctuatingValues,
+        tryColors: true,
       }),
     });
   }
@@ -540,6 +541,7 @@ const renderErrors = (execution, logOptions) => {
           rootDirectoryUrl: execution.rootDirectoryUrl,
           mainFileRelativeUrl: execution.fileRelativeUrl,
           mockFluctuatingValues: logOptions.mockFluctuatingValues,
+          tryColors: true,
         }),
       }),
     );

@@ -87,7 +87,7 @@
         <text x="10" y="356.55">actual</text>
         <text x="26.8" y="375.55"> at </text>
         <text x="52.01" y="375.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_jsenv_assert_in_script_module.spec.html</text
+          >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
         <text x="488.88" y="375.55">:13:12</text>
         <text x="10" y="394.55" fill="#B22222"
@@ -122,7 +122,7 @@
         <text x="10" y="641.55">actual</text>
         <text x="10" y="660.55">@</text>
         <text x="18.4" y="660.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_jsenv_assert_in_script_module.spec.html</text
+          >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
         <text x="455.27" y="660.55">:13:18</text>
         <text x="10" y="679.55" fill="#B22222"
@@ -157,7 +157,7 @@
         <text x="10" y="926.55">actual</text>
         <text x="10" y="945.55">module code@</text>
         <text x="110.82" y="945.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_jsenv_assert_in_script_module.spec.html</text
+          >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
         <text x="547.69" y="945.55">:13:18</text>
         <text x="10" y="964.55" fill="#B22222"

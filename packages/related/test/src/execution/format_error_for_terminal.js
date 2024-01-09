@@ -5,10 +5,15 @@ import { ANSI } from "@jsenv/log";
 
 export const formatErrorForTerminal = (
   error,
-  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
+  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues, tryColors },
 ) => {
   if (!error.stack) {
     return error.message;
+  }
+
+  let ansiSupported = ANSI.supported;
+  if (!tryColors) {
+    ANSI.supported = false;
   }
 
   let text = "";
@@ -49,7 +54,7 @@ export const formatErrorForTerminal = (
         : url;
       if (mockFluctuatingValues) {
         const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+        urlAsPath = urlAsPath.replace(rootDirectoryPath, "[mock]");
         if (process.platform === "win32") {
           urlAsPath = urlAsPath.replace(/\\/g, "/");
         }
@@ -122,6 +127,11 @@ export const formatErrorForTerminal = (
       text += `\n${stackTrace}`;
     }
   }
+
+  if (!tryColors) {
+    ANSI.supported = ansiSupported;
+  }
+
   return text;
 };
 

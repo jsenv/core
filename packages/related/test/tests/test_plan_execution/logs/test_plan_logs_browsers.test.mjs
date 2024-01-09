@@ -13,6 +13,7 @@ import {
   firefox,
   webkit,
   reporterList,
+  reportAsJunitXml,
 } from "@jsenv/test";
 
 if (process.platform === "win32") {
@@ -40,7 +41,7 @@ const test = async (filename, params) => {
   if (terminalVideoRecording) {
     console.log(`snapshoting ${filename}`);
   }
-  await executeTestPlan({
+  const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
     },
@@ -123,6 +124,15 @@ const test = async (filename, params) => {
     },
     ...params,
   });
+  const junitXmlFileUrl = new URL(
+    `./snapshots/browsers/${filename}.xml`,
+    import.meta.url,
+  );
+  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
+    mockFluctuatingValues: true,
+  });
+  junitXmlFileSnapshot.compare();
 };
 
 await test("console.spec.html");

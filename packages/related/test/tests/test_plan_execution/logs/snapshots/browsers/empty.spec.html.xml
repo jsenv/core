@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="3" skipped="0" failures="0">
+  <testcase file="empty.spec.html" name="chromium" time="[mock]" timestamp="[mock]" tests="1">
+    <properties>
+      <property name="runtimeName" value="chromium"></property>
+      <property name="runtimeVersion" value="120.0.6099.28"></property>
+    </properties>
+  </testcase>
+  <testcase file="empty.spec.html" name="firefox" time="[mock]" timestamp="[mock]" tests="1">
+    <properties>
+      <property name="runtimeName" value="firefox"></property>
+      <property name="runtimeVersion" value="119.0"></property>
+    </properties>
+  </testcase>
+  <testcase file="empty.spec.html" name="webkit" time="[mock]" timestamp="[mock]" tests="1">
+    <properties>
+      <property name="runtimeName" value="webkit"></property>
+      <property name="runtimeVersion" value="17.4"></property>
+    </properties>
+  </testcase>
+</testsuite>

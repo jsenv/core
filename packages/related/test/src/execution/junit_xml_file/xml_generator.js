@@ -73,16 +73,8 @@ export const createXmlGenerator = ({
 
           let innerHTML = "";
           if (node.content) {
-            if (node.name !== "text") {
-              innerHTML += "\n  ";
-              innerHTML += "  ".repeat(depth);
-            }
             const contentEncoded = he.encode(node.content, { decimal: false });
             innerHTML += contentEncoded;
-            if (node.name !== "text") {
-              innerHTML += "\n";
-              innerHTML += "  ".repeat(depth);
-            }
           }
           write_children: {
             if (node.children.length > 0) {

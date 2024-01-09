@@ -78,12 +78,11 @@
         <text x="110.82" y="185.55" fill="#B22222">^</text>
         <text x="10" y="204.55">Error: circle</text>
         <text x="26.8" y="223.55">
-          at getCircle
-          (&#x3C;mock&#x3E;/error_in_test_function.spec.js:2:9)</text
+          at getCircle ([mock]/error_in_test_function.spec.js:2:9)</text
         >
         <text x="26.8" y="242.55"> at </text>
         <text x="52.01" y="242.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_test_function.spec.js</text
+          >[mock]/error_in_test_function.spec.js</text
         >
         <text x="362.86" y="242.55">:5:1</text>
         <text x="10" y="261.55" fill="#B22222"
@@ -112,12 +111,11 @@
         <text x="110.82" y="356.55" fill="#B22222">^</text>
         <text x="10" y="375.55">Error: circle</text>
         <text x="26.8" y="394.55">
-          at getCircle
-          (&#x3C;mock&#x3E;/error_in_test_function.spec.js:2:9)</text
+          at getCircle ([mock]/error_in_test_function.spec.js:2:9)</text
         >
         <text x="26.8" y="413.55"> at </text>
         <text x="52.01" y="413.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_test_function.spec.js</text
+          >[mock]/error_in_test_function.spec.js</text
         >
         <text x="362.86" y="413.55">:5:1</text>
         <text x="10" y="432.55" fill="#B22222"

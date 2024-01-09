@@ -73,7 +73,7 @@
         <text x="94.01" y="185.55" fill="#B22222">^</text>
         <text x="10" y="204.55">Error: here</text>
         <text x="26.8" y="223.55">
-          at &#x3C;mock&#x3E;/error_in_js_module.spec.js:1:7</text
+          at [mock]/error_in_js_module.spec.js:1:7</text
         >
         <text x="10" y="242.55" fill="#B22222"
           >--------------------------------------</text
@@ -96,9 +96,7 @@
         <text x="43.61" y="299.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="94.01" y="318.55" fill="#B22222">^</text>
         <text x="10" y="337.55">Error: here</text>
-        <text x="10" y="356.55"
-          >@&#x3C;mock&#x3E;/error_in_js_module.spec.js:1:7</text
-        >
+        <text x="10" y="356.55">@[mock]/error_in_js_module.spec.js:1:7</text>
         <text x="10" y="375.55" fill="#B22222"
           >--------------------------------------</text
         >
@@ -121,7 +119,7 @@
         <text x="169.63" y="451.55" fill="#B22222">^</text>
         <text x="10" y="470.55">Error: here</text>
         <text x="10" y="489.55"
-          >module code@&#x3C;mock&#x3E;/error_in_js_module.spec.js:1:16</text
+          >module code@[mock]/error_in_js_module.spec.js:1:16</text
         >
         <text x="10" y="508.55" fill="#B22222"
           >--------------------------------------</text

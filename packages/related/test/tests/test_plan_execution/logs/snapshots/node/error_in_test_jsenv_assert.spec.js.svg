@@ -88,7 +88,7 @@
         <text x="10" y="337.55">actual</text>
         <text x="26.8" y="356.55"> at </text>
         <text x="52.01" y="356.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_test_jsenv_assert.spec.js</text
+          >[mock]/error_in_test_jsenv_assert.spec.js</text
         >
         <text x="396.46" y="356.55">:3:1</text>
         <text x="10" y="375.55" fill="#B22222"
@@ -127,7 +127,7 @@
         <text x="10" y="622.55">actual</text>
         <text x="26.8" y="641.55"> at </text>
         <text x="52.01" y="641.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_test_jsenv_assert.spec.js</text
+          >[mock]/error_in_test_jsenv_assert.spec.js</text
         >
         <text x="396.46" y="641.55">:3:1</text>
         <text x="10" y="660.55" fill="#B22222"

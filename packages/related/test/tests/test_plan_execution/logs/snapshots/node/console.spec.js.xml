@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="1" skipped="0" failures="0">
+  <testcase file="console.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="20.8.0"></property>
+    </properties>
+    <system-out>toto
+hey
+hey
+test
+multiline
+</system-out>
+    <system-err>ho
+info
+verbose log
+la
+</system-err>
+  </testcase>
+</testsuite>

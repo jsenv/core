@@ -15,6 +15,7 @@ import {
   firefox,
   webkit,
   reporterList,
+  reportAsJunitXml,
 } from "@jsenv/test";
 
 const terminalVideoRecording =
@@ -33,7 +34,7 @@ const devServer = await startDevServer({
   port: 0,
 });
 const test = async (filename, params) => {
-  await executeTestPlan({
+  const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
     },
@@ -101,6 +102,15 @@ const test = async (filename, params) => {
     githubCheck: false,
     ...params,
   });
+  const junitXmlFileUrl = new URL(
+    `./snapshots/mixed/${filename}.xml`,
+    import.meta.url,
+  );
+  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
+    mockFluctuatingValues: true,
+  });
+  junitXmlFileSnapshot.compare();
 };
 
 await test("empty.txt", {

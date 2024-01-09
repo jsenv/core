@@ -78,7 +78,7 @@
         <text x="10" y="242.55">Error: here</text>
         <text x="26.8" y="261.55"> at </text>
         <text x="52.01" y="261.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_script.spec.html</text
+          >[mock]/error_in_script.spec.html</text
         >
         <text x="320.85" y="261.55">:11:18</text>
         <text x="10" y="280.55" fill="#B22222"
@@ -108,7 +108,7 @@
         <text x="10" y="413.55">Error: here</text>
         <text x="10" y="432.55">@</text>
         <text x="18.4" y="432.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_script.spec.html</text
+          >[mock]/error_in_script.spec.html</text
         >
         <text x="287.25" y="432.55">:11:18</text>
         <text x="10" y="451.55" fill="#B22222"
@@ -138,7 +138,7 @@
         <text x="10" y="584.55">Error: here</text>
         <text x="10" y="603.55">global code@</text>
         <text x="110.82" y="603.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_script.spec.html</text
+          >[mock]/error_in_script.spec.html</text
         >
         <text x="379.66" y="603.55">:11:27</text>
         <text x="10" y="622.55" fill="#B22222"

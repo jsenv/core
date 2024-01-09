@@ -17,6 +17,7 @@ export const mediaTypeInfos = {
   },
   "application/xml": {
     extensions: ["xml"],
+    isTextual: true,
   },
   "application/x-gzip": {
     extensions: ["gz"],
@@ -72,21 +73,27 @@ export const mediaTypeInfos = {
   },
   "text/plain": {
     extensions: ["txt"],
+    isTextual: true,
   },
   "text/html": {
     extensions: ["html"],
+    isTextual: true,
   },
   "text/css": {
     extensions: ["css"],
+    isTextual: true,
   },
   "text/javascript": {
     extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
   },
   "text/x-sass": {
     extensions: ["sass"],
+    isTextual: true,
   },
   "text/x-scss": {
     extensions: ["scss"],
+    isTextual: true,
   },
   "text/cache-manifest": {
     extensions: ["appcache"],

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="2" skipped="0" failures="2">
+  <testcase
+    file="error_in_timeout.spec.js"
+    name="worker_thread"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="20.8.0"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | await new Promise(() =&#x3E; {
+2 |   setTimeout(() =&#x3E; {
+3 |     throw new Error(&#x22;here&#x22;);
+              ^
+Error: here
+  at Timeout._onTimeout ([mock]/error_in_timeout.spec.js:3:11)</error>
+  <testcase
+    file="error_in_timeout.spec.js"
+    name="child_process"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="node_child_process"></property>
+      <property name="runtimeVersion" value="20.8.0"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | await new Promise(() =&#x3E; {
+2 |   setTimeout(() =&#x3E; {
+3 |     throw new Error(&#x22;here&#x22;);
+              ^
+Error: here
+  at Timeout._onTimeout ([mock]/error_in_timeout.spec.js:3:11)</error>
+</testsuite>

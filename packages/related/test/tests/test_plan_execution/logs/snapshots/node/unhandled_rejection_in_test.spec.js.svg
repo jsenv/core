@@ -77,7 +77,7 @@
         <text x="10" y="185.55">Error: toto</text>
         <text x="26.8" y="204.55"> at </text>
         <text x="52.01" y="204.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/unhandled_rejection_in_test.spec.js</text
+          >[mock]/unhandled_rejection_in_test.spec.js</text
         >
         <text x="404.86" y="204.55">:1:16</text>
         <text x="10" y="223.55" fill="#B22222"
@@ -105,7 +105,7 @@
         <text x="10" y="318.55">Error: toto</text>
         <text x="26.8" y="337.55"> at </text>
         <text x="52.01" y="337.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/unhandled_rejection_in_test.spec.js</text
+          >[mock]/unhandled_rejection_in_test.spec.js</text
         >
         <text x="404.86" y="337.55">:1:16</text>
         <text x="10" y="356.55" fill="#B22222"

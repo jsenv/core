@@ -12,6 +12,7 @@ import {
   nodeWorkerThread,
   nodeChildProcess,
   reporterList,
+  reportAsJunitXml,
 } from "@jsenv/test";
 
 const terminalVideoRecording =
@@ -27,7 +28,7 @@ const test = async (filename, params) => {
   if (terminalVideoRecording) {
     console.log(`snapshoting ${filename}`);
   }
-  await executeTestPlan({
+  const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
     },
@@ -106,6 +107,15 @@ const test = async (filename, params) => {
     githubCheck: false,
     ...params,
   });
+  const junitXmlFileUrl = new URL(
+    `./snapshots/node/${filename}.xml`,
+    import.meta.url,
+  );
+  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
+    mockFluctuatingValues: true,
+  });
+  junitXmlFileSnapshot.compare();
 };
 
 await test("console.spec.js");
