@@ -14,9 +14,9 @@ export const getPropertiesOrderErrorInfo = (comparison) => {
     type: "PropertiesOrderAssertionError",
     message: `unexpected properties order
 --- properties order found ---
-${propertyNameArrayToString(expected).join("\n")}
---- properties order expected ---
 ${propertyNameArrayToString(actual).join("\n")}
+--- properties order expected ---
+${propertyNameArrayToString(expected).join("\n")}
 --- path ---
 ${path}`,
   };

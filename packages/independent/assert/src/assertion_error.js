@@ -1,5 +1,10 @@
-export const isAssertionError = (value) =>
-  value && typeof value === "object" && value.name === "AssertionError";
+export const isAssertionError = (value) => {
+  if (!value) return false;
+  if (typeof value !== "object") return false;
+  if (value.name === "AssertionError") return true;
+  if (value.name.includes("AssertionError")) return true;
+  return false;
+};
 
 export const createAssertionError = (message) => {
   const error = new Error(message);

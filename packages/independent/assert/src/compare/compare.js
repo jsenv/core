@@ -9,7 +9,7 @@ import {
   isError,
   isArray,
   somePrototypeMatch,
-} from "./object_subtype.js";
+} from "../utils/object_subtype.js";
 
 export const compare = ({ actual, expected }, { checkPropertiesOrder }) => {
   const comparison = createComparison({

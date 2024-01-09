@@ -62,7 +62,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       errorMessage = appendDetails(errorMessage, details);
       const error = createAssertionError(errorMessage);
       if (errorInfo.type) {
-        error.type = errorInfo.type;
+        error.name = errorInfo.type;
       }
       if (Error.captureStackTrace) {
         Error.captureStackTrace(error, assert);
