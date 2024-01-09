@@ -65,7 +65,7 @@ const expected = {
   },
   aborted: false,
   failed: false,
-  duration: assert.any(Number),
+  timings: assert.any(Object),
   coverage: null,
   results: {
     "client/main.html": {

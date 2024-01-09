@@ -9,7 +9,6 @@ import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 await executeTestPlan({
   logs: {
     level: "info",
-    dynamic: false,
   },
   rootDirectoryUrl: new URL("../../", import.meta.url),
   testPlan: {
