@@ -4612,6 +4612,7 @@ const run = async ({
             };
           },
           runned: async (cb) => {
+            let runtimeStatus = "starting";
             try {
               const runResult = await runtime.run({
                 signal: runOperation.signal,
@@ -4626,11 +4627,14 @@ const run = async ({
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
+                  runtimeStatus = "started";
                   result.timings.runtimeStart = relativeToTimingOrigin(
                     Date.now(),
                   );
                 },
                 onRuntimeStopped: () => {
+                  if (runtimeStatus === "stopped") return; // ignore double calls
+                  runtimeStatus = "stopped";
                   result.timings.runtimeEnd = relativeToTimingOrigin(
                     Date.now(),
                   );
@@ -4674,7 +4678,10 @@ const run = async ({
         );
       }
       if (timings.end) {
-        result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+        result.timings.executionEnd = Math.max(
+          relativeToTimingOrigin(timings.end),
+          0,
+        );
       }
     }
     result.memoryUsage =
@@ -5435,7 +5442,7 @@ const renderErrors = (execution, logOptions) => {
   });
 };
 
-const renderOutro = (testPlanInfo, logOptions) => {
+const renderOutro = (testPlanInfo, logOptions = {}) => {
   let finalSummary = "";
   const { counters } = testPlanInfo;
   const { planified } = counters;
@@ -5563,7 +5570,9 @@ const renderSection = ({
  */
 const logsDefault = {
   level: "info",
+  type: "list",
   dynamic: true,
+  fileUrl: undefined,
 };
 const githubCheckDefault = {
   logLevel: "info",
@@ -5637,7 +5646,6 @@ const executeTestPlan = async ({
   coverage = process.argv.includes("--coverage") ? coverageDefault : null,
 
   reporters = [],
-  listReporter = {},
   ...rest
 }) => {
   const teardownCallbackSet = new Set();
@@ -5691,21 +5699,15 @@ const executeTestPlan = async ({
       logs = { ...logsDefault, ...logs };
       logger = createLogger({ logLevel: logs.level });
 
-      if (listReporter && logger.levels.info) {
-        if (logger.levels.debug) {
-          listReporter.dynamic = false;
-        }
-        if (listReporter.fileUrl === undefined) {
-          listReporter.fileUrl = new URL(
-            "./.jsenv/jsenv_tests_output.txt",
-            rootDirectoryUrl,
-          );
-        }
-        reporters.push(
-          typeof listReporter.reporter === "string"
-            ? listReporter
-            : reporterList(listReporter),
-        );
+      if (logs.type === "list" && logger.levels.info) {
+        const listReporterOptions = {
+          dynamic: logger.levels.debug ? false : logs.dynamic,
+          fileUrl:
+            logs.fileUrl === undefined
+              ? new URL("./.jsenv/jsenv_tests_output.txt", rootDirectoryUrl)
+              : logs.fileUrl,
+        };
+        reporters.push(reporterList(listReporterOptions));
       }
     }
     // rootDirectoryUrl
@@ -8107,6 +8109,7 @@ const nodeChildProcess = ({
           await stop({
             gracefulStopAllocatedMs,
           });
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();
@@ -8504,6 +8507,7 @@ const nodeWorkerThread = ({
           stopSignal.notify = stop;
         } else {
           await stop();
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();

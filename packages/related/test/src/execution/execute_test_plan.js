@@ -41,7 +41,9 @@ import { reporterList, renderOutro } from "./reporters/reporter_list.js";
  */
 const logsDefault = {
   level: "info",
+  type: "list",
   dynamic: true,
+  fileUrl: undefined,
 };
 const githubCheckDefault = {
   logLevel: "info",
@@ -115,7 +117,6 @@ export const executeTestPlan = async ({
   coverage = process.argv.includes("--coverage") ? coverageDefault : null,
 
   reporters = [],
-  listReporter = {},
   ...rest
 }) => {
   const teardownCallbackSet = new Set();
@@ -169,21 +170,15 @@ export const executeTestPlan = async ({
       logs = { ...logsDefault, ...logs };
       logger = createLogger({ logLevel: logs.level });
 
-      if (listReporter && logger.levels.info) {
-        if (logger.levels.debug) {
-          listReporter.dynamic = false;
-        }
-        if (listReporter.fileUrl === undefined) {
-          listReporter.fileUrl = new URL(
-            "./.jsenv/jsenv_tests_output.txt",
-            rootDirectoryUrl,
-          );
-        }
-        reporters.push(
-          typeof listReporter.reporter === "string"
-            ? listReporter
-            : reporterList(listReporter),
-        );
+      if (logs.type === "list" && logger.levels.info) {
+        const listReporterOptions = {
+          dynamic: logger.levels.debug ? false : logs.dynamic,
+          fileUrl:
+            logs.fileUrl === undefined
+              ? new URL("./.jsenv/jsenv_tests_output.txt", rootDirectoryUrl)
+              : logs.fileUrl,
+        };
+        reporters.push(reporterList(listReporterOptions));
       }
     }
     // rootDirectoryUrl

@@ -28,7 +28,9 @@ const test = async (filename, params) => {
     console.log(`snapshoting ${filename}`);
   }
   await executeTestPlan({
-    listReporter: false,
+    logs: {
+      type: null,
+    },
     reporters: [
       reporterList({
         dynamic: false,

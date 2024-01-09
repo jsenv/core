@@ -34,7 +34,9 @@ const devServer = await startDevServer({
 });
 const test = async (filename, params) => {
   await executeTestPlan({
-    listReporter: false,
+    logs: {
+      type: null,
+    },
     reporters: [
       reporterList({
         dynamic: false,
