@@ -455,6 +455,7 @@ To fix this warning:
     }
   }
 
+  const timingOrigin = Date.now();
   const testPlanInfo = {
     rootDirectoryUrl: String(rootDirectoryUrl),
     groups: {},
@@ -473,10 +474,21 @@ To fix this warning:
     },
     aborted: false,
     failed: false,
-    duration: 0,
+    timings: {
+      origin: timingOrigin,
+      executionStart: null,
+      executionEnd: null,
+      end: 0,
+    },
     coverage: null,
     results: {},
   };
+
+  const timings = testPlanInfo.timings;
+  const takeTiming = () => {
+    return Date.now() - timingOrigin;
+  };
+
   const groups = testPlanInfo.groups;
   const counters = testPlanInfo.counters;
   const countersInOrder = { ...counters };
@@ -681,22 +693,20 @@ To fix this warning:
   const afterEachCallbackSet = new Set();
   const afterEachInOrderCallbackSet = new Set();
   const afterAllCallbackSet = new Set();
+
+  timings.executionStart = takeTiming();
   // execute all
   {
-    const multipleExecutionsOperation = Abort.startOperation();
-    multipleExecutionsOperation.addAbortSignal(signal);
     const failFastAbortController = new AbortController();
     if (failFast) {
-      multipleExecutionsOperation.addAbortSignal(
-        failFastAbortController.signal,
-      );
+      operation.addAbortSignal(failFastAbortController.signal);
     }
     let finalizeCoverage;
     if (coverage) {
       // when runned multiple times, we don't want to keep previous files in this directory
       await ensureEmptyDirectory(coverage.tempDirectoryUrl);
       finalizeCoverage = async () => {
-        if (multipleExecutionsOperation.signal.aborted) {
+        if (operation.signal.aborted) {
           // don't try to do the coverage stuff
           return;
         }
@@ -708,7 +718,7 @@ To fix this warning:
             // but it logs a strange message about "result is not an object"
           }
           const testPlanCoverage = await generateCoverage(testPlanInfo, {
-            signal: multipleExecutionsOperation.signal,
+            signal: operation.signal,
             logger,
             rootDirectoryUrl,
             coverage,
@@ -760,7 +770,7 @@ To fix this warning:
       }
       const executionResult = await run({
         ...execution.params,
-        signal: multipleExecutionsOperation.signal,
+        signal: operation.signal,
         logger,
         keepRunning,
         mirrorConsole: false, // might be executed in parallel: log would be a mess to read
@@ -799,7 +809,7 @@ To fix this warning:
       const promises = [];
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        multipleExecutionsOperation.throwIfAborted();
+        operation.throwIfAborted();
         if (executionRemainingSet.size === 0) {
           break;
         }
@@ -819,7 +829,7 @@ To fix this warning:
           if (usedMemory > parallel.maxMemory) {
             // retry after Xms in case memory usage decreases
             const promise = (async () => {
-              await multipleExecutionsOperation.wait(200);
+              await operation.wait(200);
               await startAsMuchAsPossible();
             })();
             promises.push(promise);
@@ -828,7 +838,7 @@ To fix this warning:
           if (cpuUsage.overall.active > parallel.maxCpu) {
             // retry after Xms in case cpu usage decreases
             const promise = (async () => {
-              await multipleExecutionsOperation.wait(200);
+              await operation.wait(200);
               await startAsMuchAsPossible();
             })();
             promises.push(promise);
@@ -854,8 +864,7 @@ To fix this warning:
     };
 
     try {
-      const startMs = Date.now();
-      reporters = reporters.flat(10);
+      reporters = reporters.flat(Infinity);
       for (const reporter of reporters) {
         const {
           beforeAll,
@@ -902,23 +911,18 @@ To fix this warning:
         }
         teardownCallbackSet.clear();
       }
-      testPlanInfo.aborted = multipleExecutionsOperation.signal.aborted;
-      testPlanInfo.duration = Date.now() - startMs;
-      mutateCountersAfterAllExecution(counters, testPlanInfo);
-      mutateCountersAfterAllExecution(countersInOrder, testPlanInfo);
       if (finalizeCoverage) {
         await finalizeCoverage();
       }
     } catch (e) {
-      if (Abort.isAbortError(e)) {
-        testPlanInfo.aborted = true;
-      } else {
+      if (!Abort.isAbortError(e)) {
         throw e;
       }
     } finally {
-      await multipleExecutionsOperation.end();
+      await operation.end();
     }
   }
+  timings.executionEnd = takeTiming();
 
   afterEachCallbackSet.clear();
   afterEachInOrderCallbackSet.clear();
@@ -926,6 +930,12 @@ To fix this warning:
     await afterAllCallback(testPlanInfo);
   }
   afterAllCallbackSet.clear();
+
+  testPlanInfo.aborted = operation.signal.aborted;
+  mutateCountersAfterAllExecution(counters, testPlanInfo);
+  mutateCountersAfterAllExecution(countersInOrder, testPlanInfo);
+  timings.end = takeTiming();
+
   return testPlanInfo;
 };
 
