@@ -574,11 +574,12 @@ const importPlaywright = async ({ browserName }) => {
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
+      const dependencyName = `@playwright/browser-${browserName}`;
       throw new Error(
         createDetailedMessage(
-          `"playwright" not found. You need playwright in your dependencies to use "${browserName}"`,
+          `"playwright" not found. You need ${dependencyName} in your dependencies to use "${browserName}"`,
           {
-            suggestion: `npm install --save-dev playwright`,
+            suggestion: `npm install --save-dev ${dependencyName}`,
           },
         ),
         { cause: e },
