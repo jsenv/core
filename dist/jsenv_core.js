@@ -2137,6 +2137,12 @@ const createOperation = () => {
     }
   };
 
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
   return {
     // We could almost hide the operationSignal
     // But it can be handy for 2 things:
@@ -2148,6 +2154,7 @@ const createOperation = () => {
     addAbortCallback,
     addAbortSignal,
     addAbortSource,
+    fork,
     timeout,
     wait,
     withSignal,
@@ -2809,6 +2816,7 @@ const mediaTypeInfos = {
   },
   "application/xml": {
     extensions: ["xml"],
+    isTextual: true,
   },
   "application/x-gzip": {
     extensions: ["gz"],
@@ -2864,21 +2872,27 @@ const mediaTypeInfos = {
   },
   "text/plain": {
     extensions: ["txt"],
+    isTextual: true,
   },
   "text/html": {
     extensions: ["html"],
+    isTextual: true,
   },
   "text/css": {
     extensions: ["css"],
+    isTextual: true,
   },
   "text/javascript": {
     extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
   },
   "text/x-sass": {
     extensions: ["sass"],
+    isTextual: true,
   },
   "text/x-scss": {
     extensions: ["scss"],
+    isTextual: true,
   },
   "text/cache-manifest": {
     extensions: ["appcache"],

@@ -26,7 +26,7 @@ const test = async (params) => {
   const expected = {
     isException: true,
     isError: true,
-    name: "AssertionError",
+    name: "CharacterAssertionError",
     message: `unexpected character in string
 --- details ---
 foo
@@ -34,7 +34,8 @@ foo
 unexpected "f", expected to continue with "bar"
 --- path ---
 actual`,
-    stack: assert.startsWith(`AssertionError: unexpected character in string
+    stack:
+      assert.startsWith(`CharacterAssertionError: unexpected character in string
 --- details ---
 foo
 ^

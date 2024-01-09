@@ -997,7 +997,6 @@ const showToolbar = () => {
     // same here we should add 40px
     "padding-bottom": "40px" // if there is already one we should add 40px
   });
-
   restoreToolbarIframeStyles = setStyles(toolbarIframe, {
     height: "40px",
     visibility: "visible"

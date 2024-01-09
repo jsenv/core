@@ -19,6 +19,7 @@ import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-super
 import { generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
+import he from "he";
 
 /*
  * See callback_race.md
@@ -4725,10 +4726,15 @@ const normalizeRuntimeError = (runtimeError) => {
 
 const formatErrorForTerminal = (
   error,
-  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
+  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues, tryColors },
 ) => {
   if (!error.stack) {
     return error.message;
+  }
+
+  let ansiSupported = ANSI.supported;
+  if (!tryColors) {
+    ANSI.supported = false;
   }
 
   let text = "";
@@ -4769,7 +4775,7 @@ const formatErrorForTerminal = (
         : url;
       if (mockFluctuatingValues) {
         const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+        urlAsPath = urlAsPath.replace(rootDirectoryPath, "[mock]");
         if (process.platform === "win32") {
           urlAsPath = urlAsPath.replace(/\\/g, "/");
         }
@@ -4842,6 +4848,11 @@ const formatErrorForTerminal = (
       text += `\n${stackTrace}`;
     }
   }
+
+  if (!tryColors) {
+    ANSI.supported = ansiSupported;
+  }
+
   return text;
 };
 
@@ -5416,6 +5427,7 @@ const renderErrors = (execution, logOptions) => {
         rootDirectoryUrl: execution.rootDirectoryUrl,
         mainFileRelativeUrl: execution.fileRelativeUrl,
         mockFluctuatingValues: logOptions.mockFluctuatingValues,
+        tryColors: true,
       }),
     });
   }
@@ -5430,6 +5442,7 @@ const renderErrors = (execution, logOptions) => {
           rootDirectoryUrl: execution.rootDirectoryUrl,
           mainFileRelativeUrl: execution.fileRelativeUrl,
           mockFluctuatingValues: logOptions.mockFluctuatingValues,
+          tryColors: true,
         }),
       }),
     );
@@ -7289,11 +7302,12 @@ const importPlaywright = async ({ browserName }) => {
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
+      const dependencyName = `@playwright/browser-${browserName}`;
       throw new Error(
         createDetailedMessage(
-          `"playwright" not found. You need playwright in your dependencies to use "${browserName}"`,
+          `"playwright" not found. You need ${dependencyName} in your dependencies to use "${browserName}"`,
           {
-            suggestion: `npm install --save-dev playwright`,
+            suggestion: `npm install --save-dev ${dependencyName}`,
           },
         ),
         { cause: e },
@@ -8699,6 +8713,270 @@ const reportCoverageAsHtml = (
   // console.log(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
 };
 
+const createXmlGenerator = ({
+  rootNodeName,
+  canSelfCloseNames = [],
+  canReceiveChildNames = [],
+  canReceiveContentNames = [],
+}) => {
+  const createNode = (name, attributes = {}) => {
+    const canSelfClose = canSelfCloseNames.includes(name);
+    const canReceiveChild = canReceiveChildNames.includes(name);
+    const canReceiveContent = canReceiveContentNames.includes(name);
+
+    const children = [];
+
+    const node = {
+      name,
+      content: "",
+      children,
+      attributes,
+      canSelfClose,
+      createNode,
+      appendChild: (childNode) => {
+        if (!canReceiveChild) {
+          throw new Error(`cannot appendChild into ${name}`);
+        }
+        children.push(childNode);
+        return childNode;
+      },
+      setContent: (value) => {
+        if (!canReceiveContent) {
+          throw new Error(`cannot setContent on ${name}`);
+        }
+        node.content = value;
+      },
+      renderAsString: () => {
+        const renderNode = (node, { depth }) => {
+          let nodeString = "";
+          nodeString += `<${node.name}`;
+
+          {
+            const attributeNames = Object.keys(node.attributes);
+            if (attributeNames.length) {
+              let attributesSingleLine = "";
+              let attributesMultiLine = "";
+
+              for (const attributeName of attributeNames) {
+                let attributeValue = node.attributes[attributeName];
+                if (typeof attributeValue === "number") {
+                  attributeValue = round(attributeValue);
+                }
+                if (attributeName === "viewBox") {
+                  attributeValue = attributeValue
+                    .split(",")
+                    .map((v) => round(parseFloat(v.trim())))
+                    .join(", ");
+                }
+                attributesSingleLine += ` ${attributeName}="${attributeValue}"`;
+                attributesMultiLine += `\n  `;
+                attributesMultiLine += "  ".repeat(depth);
+                attributesMultiLine += `${attributeName}="${attributeValue}"`;
+              }
+              attributesMultiLine += "\n";
+              attributesMultiLine += "  ".repeat(depth);
+
+              if (attributesSingleLine.length < 100) {
+                nodeString += attributesSingleLine;
+              } else {
+                nodeString += attributesMultiLine;
+              }
+            }
+          }
+
+          let innerHTML = "";
+          if (node.content) {
+            const contentEncoded = he.encode(node.content, { decimal: false });
+            innerHTML += contentEncoded;
+          }
+          {
+            if (node.children.length > 0) {
+              for (const child of node.children) {
+                innerHTML += "\n  ";
+                innerHTML += "  ".repeat(depth);
+                innerHTML += renderNode(child, {
+                  depth: depth + 1,
+                });
+              }
+              innerHTML += "\n";
+              innerHTML += "  ".repeat(depth);
+            }
+          }
+          if (innerHTML === "") {
+            if (node.canSelfClose) {
+              nodeString += `/>`;
+            } else {
+              nodeString += `></${node.name}>`;
+            }
+          } else {
+            nodeString += `>`;
+            nodeString += innerHTML;
+            nodeString += `</${node.name}>`;
+          }
+          return nodeString;
+        };
+
+        return renderNode(node, {
+          depth: 0,
+        });
+      },
+    };
+
+    return node;
+  };
+
+  return (rootNodeAttributes) => createNode(rootNodeName, rootNodeAttributes);
+};
+
+// Round: Make number values smaller in output
+// Eg: 14.23734 becomes 14.24
+// Credit @Chris Martin: https://stackoverflow.com/a/43012696/2816869
+const round = (x) => {
+  const rounded = Number(`${Math.round(`${x}e2`)}e-2`);
+  return rounded;
+};
+
+// run prettier on it
+
+
+const reportAsJunitXml = async (
+  testPlanResult,
+  fileUrl,
+  { mockFluctuatingValues } = {},
+) => {
+  fileUrl = assertAndNormalizeFileUrl(fileUrl);
+
+  const createRootNode = createXmlGenerator({
+    rootNodeName: "testsuite",
+    canReceiveChildNames: ["testsuite", "testcase", "properties"],
+    canReceiveContentNames: ["failure", "error", "system-out", "system-err"],
+  });
+  const testSuite = createRootNode({
+    time: mockFluctuatingValues ? "[mock]" : testPlanResult.timings.end,
+    timestamp: mockFluctuatingValues
+      ? "[mock]"
+      : new Date(testPlanResult.timings.origin).toISOString().slice(0, -5), //  Date and time of when the test run was executed
+    tests: testPlanResult.counters.planified,
+    skipped:
+      testPlanResult.counters.aborted + testPlanResult.counters.cancelled,
+    failures: testPlanResult.counters.timedout + testPlanResult.counters.failed, // Total number of failed tests
+  });
+
+  for (const fileRelativeUrl of Object.keys(testPlanResult.results)) {
+    const fileResults = testPlanResult.results[fileRelativeUrl];
+    for (const group of Object.keys(fileResults)) {
+      const executionResult = fileResults[group];
+      const testCase = testSuite.createNode("testcase", {
+        file: fileRelativeUrl,
+        name: group,
+        time: mockFluctuatingValues ? "[mock]" : executionResult.timings.end, // duration of this execution
+        timestamp: mockFluctuatingValues
+          ? "[mock]"
+          : new Date(executionResult.timings.origin).toISOString().slice(0, -5), //  Date and time of when the test run was executed
+        tests: 1, // Total number of tests for this execution
+      });
+      testSuite.appendChild(testCase);
+
+      if (executionResult.status === "aborted") {
+        testCase.attributes.skipped = 1;
+        const skipped = testCase.createNode("skipped", {
+          message: "Execution was aborted",
+        });
+        testSuite.appendChild(skipped);
+      }
+      if (executionResult.status === "timedout") {
+        testCase.attributes.failures = 1;
+        const failure = testCase.createNode("failure", {
+          message: `Execution timeout after ${executionResult.params.allocatedMs}ms"`,
+          type: "timeout",
+        });
+        testSuite.appendChild(failure);
+      }
+      if (executionResult.status === "failed") {
+        const [error] = executionResult.errors;
+        if (
+          error &&
+          typeof error.name === "string" &&
+          error.name.includes("AssertionError")
+        ) {
+          testCase.attributes.failures = 1;
+          const failure = testCase.createNode("failure", {
+            type: error.name,
+          });
+          testSuite.appendChild(failure);
+          failure.setContent(
+            formatErrorForTerminal(error, {
+              rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+              mainFileRelativeUrl: fileRelativeUrl,
+              mockFluctuatingValues,
+              tryColors: false,
+            }),
+          );
+        } else {
+          testCase.attributes.errors = 1;
+          const errorNode = testCase.createNode("error", {
+            type: error.name,
+          });
+          testSuite.appendChild(errorNode);
+          errorNode.setContent(
+            formatErrorForTerminal(error, {
+              rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+              mainFileRelativeUrl: fileRelativeUrl,
+              mockFluctuatingValues,
+              tryColors: false,
+            }),
+          );
+        }
+      }
+
+      const groupInfo = testPlanResult.groups[group];
+      const properties = {
+        runtimeName: groupInfo.runtimeName,
+        runtimeVersion: groupInfo.runtimeVersion,
+      };
+      const propertiesNode = testCase.createNode("properties");
+      testCase.appendChild(propertiesNode);
+      for (const propertyName of Object.keys(properties)) {
+        const propertyNode = propertiesNode.createNode("property", {
+          name: propertyName,
+          value: properties[propertyName],
+        });
+        propertiesNode.appendChild(propertyNode);
+      }
+
+      const { consoleCalls } = executionResult;
+      let stdout = "";
+      let stderr = "";
+      for (const consoleCall of consoleCalls) {
+        if (groupInfo.runtimeType === "node") {
+          if (consoleCall.type === "error") {
+            stdout += consoleCall.text;
+          } else {
+            stderr += consoleCall.text;
+          }
+        } else {
+          stdout += consoleCall.text;
+        }
+      }
+      if (stdout.length) {
+        const systemOut = testSuite.createNode("system-out");
+        testCase.appendChild(systemOut);
+        systemOut.setContent(stdout);
+      }
+      if (stderr.length) {
+        const systemErr = testSuite.createNode("system-err");
+        testCase.appendChild(systemErr);
+        systemErr.setContent(stderr);
+      }
+    }
+  }
+
+  let junitXmlFileContent = `<?xml version="1.0" encoding="UTF-8"?>
+${testSuite.renderAsString()}`;
+
+  writeFileSync(new URL(fileUrl), junitXmlFileContent);
+};
+
 /*
  * Export a function capable to execute a file on a runtime (browser or node) and return how it goes.
  *
@@ -8822,4 +9100,4 @@ const execute = async ({
   }
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };
