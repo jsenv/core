@@ -4,7 +4,7 @@
 import { createNeuQuant } from "./neuquant.js";
 import { createLzwEncoder } from "./lzw_encoder.js";
 
-export const createGifEncoder = () => {
+export const createGifEncoder = ({ width, height }) => {
   let i = 0;
   const chr = {};
   while (i < 256) {
@@ -31,8 +31,6 @@ export const createGifEncoder = () => {
     }
   };
 
-  let width; // image size
-  let height;
   let transparent = null; // transparent color if given
   let transIndex; // transparent index in color table
   let repeat = -1; // no repeat
@@ -269,9 +267,6 @@ export const createGifEncoder = () => {
           }
         }
 
-        /**
-         * Writes color table
-         */
         const writePalette = () => {
           writeBytes(colorTab);
           var n = 3 * 256 - colorTab.length;
@@ -386,7 +381,7 @@ export const createGifEncoder = () => {
           const lzwEncoder = createLzwEncoder({
             width,
             height,
-            indexedPixels,
+            pixels: indexedPixels,
             colorDepth,
           });
           lzwEncoder.encode({

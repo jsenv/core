@@ -1,4 +1,4 @@
-export const createLzwEncoder = ({ width, height, pixels, color_depth }) => {
+export const createLzwEncoder = ({ width, height, pixels, colorDepth }) => {
   var EOF = -1;
   var imgW;
   var imgH;
@@ -84,7 +84,7 @@ export const createLzwEncoder = ({ width, height, pixels, color_depth }) => {
   imgW = width;
   imgH = height;
   pixAry = pixels;
-  initCodeSize = Math.max(2, color_depth);
+  initCodeSize = Math.max(2, colorDepth);
 
   // Add a character to the end of the current packet, and if it is 254
   // characters, flush the packet to disk.

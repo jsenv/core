@@ -192,7 +192,7 @@
               `<img src=${frameB64Str} width="150" />`;
           };
 
-          const interval = setInterval(replicateXterm, 25);
+          const interval = setInterval(() => {}, 10); // setInterval(replicateXterm, 250);
           const stream = canvas.captureStream();
           const mediaRecorder = new MediaRecorder(stream, {
             videoBitsPerSecond: 2_500_000,
