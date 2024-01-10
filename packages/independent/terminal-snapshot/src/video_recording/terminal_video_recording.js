@@ -15,7 +15,7 @@ const isDev = process.execArgv.includes("--conditions=development");
 
 const startLocalServer = async () => {
   if (isDev) {
-    const serverDirectoryUrl = new URL("./", import.meta.url);
+    const serverDirectoryUrl = new URL("./client/", import.meta.url);
     const { startDevServer } = await import("@jsenv/core");
     const devServer = await startDevServer({
       logLevel: "warn",
@@ -73,7 +73,12 @@ export const startTerminalVideoRecording = async ({
     /* eslint-env browser */
     async ({ cols, rows, convertEol }) => {
       await window.xtreamReadyPromise;
-      await window.initTerminal({ cols, rows, convertEol });
+      const startRecording = await window.initTerminal({
+        cols,
+        rows,
+        convertEol,
+      });
+      window.startRecording = startRecording;
     },
     {
       cols,
@@ -85,9 +90,10 @@ export const startTerminalVideoRecording = async ({
   await page.evaluate(
     /* eslint-env browser */
     async ({ mimeType }) => {
-      await window.startRecording({
+      const { writeIntoTerminal, stopRecording } = await window.startRecording({
         mimeType,
       });
+      window.recording = { writeIntoTerminal, stopRecording };
     },
     { mimeType },
     /* eslint-env node */
@@ -97,7 +103,7 @@ export const startTerminalVideoRecording = async ({
       await page.evaluate(
         /* eslint-env browser */
         (data) => {
-          window.writeIntoTerminal(data);
+          window.recording.writeIntoTerminal(data);
         },
         data,
         /* eslint-env node */
@@ -107,7 +113,7 @@ export const startTerminalVideoRecording = async ({
       const videoWebmAsBinayString = await page.evaluate(
         /* eslint-env browser */
         () => {
-          return window.stopRecording();
+          return window.recording.stopRecording();
         },
         /* eslint-env node */
       );
