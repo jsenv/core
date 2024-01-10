@@ -33,6 +33,7 @@
 
       import "xterm";
       import "xterm-addon-canvas";
+      import { createGifEncoder } from "./gif_encoder.js";
 
       const { Terminal } = window;
       const { CanvasAddon } = window.CanvasAddon;
@@ -159,23 +160,35 @@
           context.fillText(text, canvas.width / 2, 20);
         }
 
-        const replicateXterm = () => {
-          context.drawImage(
-            xtermCanvas,
-            0,
-            0,
-            xtermCanvas.width,
-            xtermCanvas.height,
-            paddingLeft,
-            40,
-            xtermCanvas.width,
-            xtermCanvas.height,
-          );
-        };
-
         window.startRecording = async ({
           mimeType = "video/webm;codecs=h264",
         } = {}) => {
+          const gifEncoder = createGifEncoder({
+            width: canvas.width,
+            height: canvas.height,
+          });
+          gifEncoder.setRepeat(0); // 0 for repeat, -1 for no-repeat
+          gifEncoder.setDelay(0); // frame delay in ms // 500
+          gifEncoder.setQuality(16); // [1,30] | Best=1 | >20 not much speed improvement. 10 is default.
+          gifEncoder.start();
+
+          const replicateXterm = () => {
+            context.drawImage(
+              xtermCanvas,
+              0,
+              0,
+              xtermCanvas.width,
+              xtermCanvas.height,
+              paddingLeft,
+              40,
+              xtermCanvas.width,
+              xtermCanvas.height,
+            );
+
+            gifEncoder.addFrame(context);
+            gifEncoder.setDelay(0.02);
+          };
+
           setInterval(replicateXterm, 25);
 
           const stream = canvas.captureStream();
@@ -217,7 +230,12 @@
             const blob = new Blob(chunks, {
               type: mediaRecorder.mimeType,
             });
-            return blobToBinaryString(blob);
+            gifEncoder.finish();
+            const gifBinaryString = gifEncoder.asBinaryString();
+            return {
+              videoBinaryString: blobToBinaryString(blob),
+              gifBinaryString,
+            };
           };
         };
       };
