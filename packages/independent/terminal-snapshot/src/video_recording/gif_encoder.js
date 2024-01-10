@@ -38,7 +38,6 @@ export const createGifEncoder = () => {
   let repeat = -1; // no repeat
   let delay = 0; // frame delay (hundredths)
   let started = false; // ready to output frames
-  let indexedPixels; // converted frame indexed to palette
   let colorDepth; // number of bit planes
   let usedEntry = []; // active palette entries
   let palSize = 7; // color table size (bits-1)
@@ -165,7 +164,6 @@ export const createGifEncoder = () => {
     start: () => {
       // reset for subsequent use
       transIndex = 0;
-      indexedPixels = null;
       firstFrame = true;
 
       try {
@@ -182,12 +180,12 @@ export const createGifEncoder = () => {
      * @param
      * BitmapData object to be treated as a GIF's frame
      */
-    addFrame: (canvas) => {
+    addFrame: (context) => {
       if (!started) {
         throw new Error("Please call start method before calling addFrame");
       }
 
-      const context = canvas.getContext("2d");
+      const canvas = context.canvas;
       try {
         const imageData = context.getImageData(
           0,
@@ -214,11 +212,11 @@ export const createGifEncoder = () => {
           }
         }
         let colorTab;
+        let indexedPixels = [];
         // analyze pixels ( build color table & map pixels)
         {
           var len = pixels.length;
           var nPix = len / 3;
-          indexedPixels = [];
           const neuQuant = createNeuQuant(pixels, len, sample);
 
           // initialize quantizer
@@ -397,6 +395,7 @@ export const createGifEncoder = () => {
           });
         }
         firstFrame = false;
+        indexedPixels.length = 0;
         return true;
       } catch (e) {
         return false;
@@ -422,7 +421,44 @@ export const createGifEncoder = () => {
     asBinaryString: () => {
       return byteArray.join("");
     },
+
+    asDataUrl: () => {
+      const binaryString = encoder.asBinaryString();
+      return `data:image/gif;base64,${encode64(binaryString)}`;
+    },
   };
 
   return encoder;
+};
+
+const encode64 = (input) => {
+  let output = "";
+  let i = 0;
+  let l = input.length;
+  let key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  let chr1;
+  let chr2;
+  let chr3;
+  let enc1;
+  let enc2;
+  let enc3;
+  let enc4;
+  while (i < l) {
+    chr1 = input.charCodeAt(i++);
+    chr2 = input.charCodeAt(i++);
+    chr3 = input.charCodeAt(i++);
+    enc1 = chr1 >> 2;
+    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+    enc4 = chr3 & 63;
+    if (isNaN(chr2)) enc3 = enc4 = 64;
+    else if (isNaN(chr3)) enc4 = 64;
+    output =
+      output +
+      key.charAt(enc1) +
+      key.charAt(enc2) +
+      key.charAt(enc3) +
+      key.charAt(enc4);
+  }
+  return output;
 };

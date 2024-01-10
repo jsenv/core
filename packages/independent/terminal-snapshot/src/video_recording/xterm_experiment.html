@@ -44,10 +44,9 @@
       document.head.appendChild(link);
 
       const drawRectangle = (
-        canvas,
+        context,
         { x, y, width, height, radius, fill, stroke, strokeWidth },
       ) => {
-        const context = canvas.getContext("2d");
         if (radius) {
           context.beginPath();
           context.roundRect(x, y, width, height, [radius]);
@@ -63,10 +62,9 @@
         }
       };
       const drawCircle = (
-        canvas,
+        context,
         { x, y, radius, fill, stroke, borderWidth },
       ) => {
-        const context = canvas.getContext("2d");
         context.beginPath();
         context.arc(x, y, radius, 0, 2 * Math.PI, false);
         if (fill) {
@@ -115,13 +113,14 @@
         term.open(terminalElement);
 
         const canvas = document.querySelector("#canvas");
-        const context = canvas.getContext("2d");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.imageSmoothingEnabled = true;
         const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
         canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
         canvas.height = 40 + xtermCanvas.height;
 
         draw_header: {
-          drawRectangle(canvas, {
+          drawRectangle(context, {
             x: 0,
             y: 0,
             width: canvas.width,
@@ -131,19 +130,19 @@
             strokeWidth: 10,
             radius: 8,
           });
-          drawCircle(canvas, {
+          drawCircle(context, {
             x: 20,
             y: 20,
             radius: 6,
             fill: "#ff5f57",
           });
-          drawCircle(canvas, {
+          drawCircle(context, {
             x: 40,
             y: 20,
             radius: 6,
             fill: "#febc2e",
           });
-          drawCircle(canvas, {
+          drawCircle(context, {
             x: 60,
             y: 20,
             radius: 6,
@@ -187,10 +186,13 @@
 
             gifEncoder.addFrame(context);
             gifEncoder.setDelay(0.02);
+
+            const frameB64Str = canvas.toDataURL();
+            document.querySelector("#gif_frames").innerHTML +=
+              `<img src=${frameB64Str} width="150" />`;
           };
 
-          setInterval(replicateXterm, 25);
-
+          const interval = setInterval(replicateXterm, 25);
           const stream = canvas.captureStream();
           const mediaRecorder = new MediaRecorder(stream, {
             videoBitsPerSecond: 2_500_000,
@@ -213,6 +215,7 @@
             replicateXterm();
           };
           window.stopRecording = async () => {
+            window.clearInterval(interval);
             replicateXterm();
             await new Promise((resolve) => {
               setTimeout(resolve, 50);
@@ -232,9 +235,12 @@
             });
             gifEncoder.finish();
             const gifBinaryString = gifEncoder.asBinaryString();
+            const gifDataUrl = gifEncoder.asDataUrl();
+            const videoBinaryString = await blobToBinaryString(blob);
             return {
-              videoBinaryString: blobToBinaryString(blob),
+              gifDataUrl,
               gifBinaryString,
+              videoBinaryString,
             };
           };
         };
@@ -257,9 +263,16 @@
       await new Promise((resolve) => setTimeout(resolve, 500));
       window.writeIntoTerminal("world");
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      const { videoBinaryString, gifBinaryString } =
+      const { gifDataUrl, videoBinaryString, gifBinaryString } =
         await window.stopRecording();
+
+      document.querySelector("#gif").src = gifDataUrl;
       console.log({ videoBinaryString, gifBinaryString });
     </script>
+    <div id="gif_conversion">
+      <div id="gif_frames"></div>
+      The final GIF:
+      <img id="gif" src="data:," />
+    </div>
   </body>
 </html>
