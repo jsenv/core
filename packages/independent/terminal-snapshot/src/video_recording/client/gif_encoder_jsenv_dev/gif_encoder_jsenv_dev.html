@@ -24,10 +24,9 @@
       const encoder = createGifEncoder({
         width: canvas.width,
         height: canvas.height,
+        repeat: 0,
+        quality: 16, // [1,30] | Best=1 | >20 not much speed improvement. 10 is default.
       });
-      encoder.setRepeat(0); // 0 for repeat, -1 for no-repeat
-      encoder.setDelay(0); // frame delay in ms // 500
-      encoder.setQuality(16); // [1,30] | Best=1 | >20 not much speed improvement. 10 is default.
       encoder.start();
 
       const updateCanvasColor = (color) => {
@@ -41,8 +40,9 @@
       };
 
       const addFrame = (delayBeforeDisplayingNextFrameInMs) => {
-        encoder.setDelay(delayBeforeDisplayingNextFrameInMs);
-        encoder.addFrame(context);
+        encoder.addFrame(context, {
+          delay: delayBeforeDisplayingNextFrameInMs,
+        });
       };
 
       const drawRectangle = (
@@ -76,16 +76,17 @@
         }
       };
 
+      const startTime = Date.now();
       updateCanvasColor("red");
       await new Promise((resolve) => {
-        setTimeout(resolve, 1_000);
+        setTimeout(resolve, 700);
       });
-      addFrame(1000);
+      addFrame(Date.now() - startTime);
       updateCanvasColor("blue");
       await new Promise((resolve) => {
-        setTimeout(resolve, 1_000);
+        setTimeout(resolve, 1_500);
       });
-      addFrame(2000);
+      addFrame(Date.now() - startTime);
       encoder.finish();
       const gifDataUrl = encoder.asDataUrl();
       document.querySelector("img").src = gifDataUrl;
