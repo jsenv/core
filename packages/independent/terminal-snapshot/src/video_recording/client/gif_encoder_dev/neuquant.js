@@ -27,7 +27,8 @@
  * @version 0.1 AS3 implementation
  */
 
-export const createNeuQuant = ({ pixels, len, sample }) => {
+NeuQuant = function () {
+  var exports = {};
   var netsize = 256; /* number of colours used */
 
   /* four primes near 500 - assume no image has a length so large */
@@ -59,6 +60,7 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
   var intbiasshift = 16; /* bias for fractions */
   var intbias = 1 << intbiasshift;
   var gammashift = 10; /* gamma = 1024 */
+  var gamma = 1 << gammashift;
   var betashift = 10;
   var beta = intbias >> betashift; /* beta = 1/1024 */
   var betagamma = intbias << (gammashift - betashift);
@@ -100,22 +102,26 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
   var freq = [];
   var radpower = [];
 
-  var i;
-  var p;
-  thepicture = pixels;
-  lengthcount = len;
-  samplefac = sample;
-  network = new Array(netsize);
+  var NeuQuant = (exports.NeuQuant = function NeuQuant(thepic, len, sample) {
+    var i;
+    var p;
 
-  for (i = 0; i < netsize; i++) {
-    network[i] = new Array(4);
-    p = network[i];
-    p[0] = p[1] = p[2] = (i << (netbiasshift + 8)) / netsize;
-    freq[i] = intbias / netsize; /* 1/netsize */
-    bias[i] = 0;
-  }
+    thepicture = thepic;
+    lengthcount = len;
+    samplefac = sample;
 
-  const colorMap = () => {
+    network = new Array(netsize);
+
+    for (i = 0; i < netsize; i++) {
+      network[i] = new Array(4);
+      p = network[i];
+      p[0] = p[1] = p[2] = (i << (netbiasshift + 8)) / netsize;
+      freq[i] = intbias / netsize; /* 1/netsize */
+      bias[i] = 0;
+    }
+  });
+
+  var colorMap = function colorMap() {
     var map = [];
     var index = new Array(netsize);
 
@@ -138,7 +144,7 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
    * -------------------------------------------------------------------------------
    */
 
-  const inxbuild = () => {
+  var inxbuild = function inxbuild() {
     var i;
     var j;
     var smallpos;
@@ -167,7 +173,7 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
       q = network[smallpos];
 
       /* swap p (i) and q (smallpos) entries */
-      if (i !== smallpos) {
+      if (i != smallpos) {
         j = q[0];
         q[0] = p[0];
         p[0] = j;
@@ -184,7 +190,7 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
 
       /* smallval entry is now in position i */
 
-      if (smallval !== previouscol) {
+      if (smallval != previouscol) {
         netindex[previouscol] = (startpos + i) >> 1;
 
         for (j = previouscol + 1; j < smallval; j++) netindex[j] = i;
@@ -202,7 +208,8 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
   /*
    * Main Learning Loop ------------------
    */
-  const learn = () => {
+
+  var learn = function learn() {
     var i;
     var j;
     var b;
@@ -235,18 +242,14 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
     for (i = 0; i < rad; i++)
       radpower[i] = alpha * (((rad * rad - i * i) * radbias) / (rad * rad));
 
-    if (lengthcount < minpicturebytes) {
-      step = 3;
-    } else if (lengthcount % prime1 !== 0) {
-      step = 3 * prime1;
-    } else if (lengthcount % prime2 === 0) {
-      if (lengthcount % prime3 === 0) {
-        step = 3 * prime4;
-      } else {
-        step = 3 * prime3;
+    if (lengthcount < minpicturebytes) step = 3;
+    else if (lengthcount % prime1 !== 0) step = 3 * prime1;
+    else {
+      if (lengthcount % prime2 !== 0) step = 3 * prime2;
+      else {
+        if (lengthcount % prime3 !== 0) step = 3 * prime3;
+        else step = 3 * prime4;
       }
-    } else {
-      step = 3 * prime2;
     }
 
     i = 0;
@@ -280,18 +283,101 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
   };
 
   /*
+   ** Search for BGR values 0..255 (after net is unbiased) and return colour
+   * index
+   * ----------------------------------------------------------------------------
+   */
+
+  var map = (exports.map = function map(b, g, r) {
+    var i;
+    var j;
+    var dist;
+    var a;
+    var bestd;
+    var p;
+    var best;
+
+    bestd = 1000; /* biggest possible dist is 256*3 */
+    best = -1;
+    i = netindex[g]; /* index on g */
+    j = i - 1; /* start at netindex[g] and work outwards */
+
+    while (i < netsize || j >= 0) {
+      if (i < netsize) {
+        p = network[i];
+        dist = p[1] - g; /* inx key */
+
+        if (dist >= bestd) i = netsize; /* stop iter */
+        else {
+          i++;
+          if (dist < 0) dist = -dist;
+          a = p[0] - b;
+          if (a < 0) a = -a;
+          dist += a;
+
+          if (dist < bestd) {
+            a = p[2] - r;
+            if (a < 0) a = -a;
+            dist += a;
+
+            if (dist < bestd) {
+              bestd = dist;
+              best = p[3];
+            }
+          }
+        }
+      }
+
+      if (j >= 0) {
+        p = network[j];
+        dist = g - p[1]; /* inx key - reverse dif */
+
+        if (dist >= bestd) j = -1; /* stop iter */
+        else {
+          j--;
+          if (dist < 0) dist = -dist;
+          a = p[0] - b;
+          if (a < 0) a = -a;
+          dist += a;
+
+          if (dist < bestd) {
+            a = p[2] - r;
+            if (a < 0) a = -a;
+            dist += a;
+            if (dist < bestd) {
+              bestd = dist;
+              best = p[3];
+            }
+          }
+        }
+      }
+    }
+
+    return best;
+  });
+
+  var process = (exports.process = function process() {
+    learn();
+    unbiasnet();
+    inxbuild();
+    return colorMap();
+  });
+
+  /*
    * Unbias network to give byte values 0..255 and record position i to prepare
    * for sort
    * -----------------------------------------------------------------------------------
    */
-  const unbiasnet = () => {
-    let i = 0;
-    while (i < netsize) {
+
+  var unbiasnet = function unbiasnet() {
+    var i;
+    var j;
+
+    for (i = 0; i < netsize; i++) {
       network[i][0] >>= netbiasshift;
       network[i][1] >>= netbiasshift;
       network[i][2] >>= netbiasshift;
       network[i][3] = i; /* record colour no */
-      i++;
     }
   };
 
@@ -300,7 +386,8 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
    * radpower[|i-j|]
    * ---------------------------------------------------------------------------------
    */
-  const alterneigh = (rad, i, b, g, r) => {
+
+  var alterneigh = function alterneigh(rad, i, b, g, r) {
     var j;
     var k;
     var lo;
@@ -348,7 +435,8 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
    * Move neuron i towards biased (b,g,r) by factor alpha
    * ----------------------------------------------------
    */
-  const altersingle = (alpha, i, b, g, r) => {
+
+  var altersingle = function altersingle(alpha, i, b, g, r) {
     /* alter hit neuron */
     var n = network[i];
     n[0] -= (alpha * (n[0] - b)) / initalpha;
@@ -359,7 +447,8 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
   /*
    * Search for biased BGR values ----------------------------
    */
-  const contest = (b, g, r) => {
+
+  var contest = function contest(b, g, r) {
     /* finds closest neuron (min dist) and updates freq */
     /* finds best neuron (min dist-bias) and returns position */
     /* for frequently chosen neurons, freq[i] is high and bias[i] is negative */
@@ -414,85 +503,6 @@ export const createNeuQuant = ({ pixels, len, sample }) => {
     return bestbiaspos;
   };
 
-  const neuquant = {
-    /*
-     ** Search for BGR values 0..255 (after net is unbiased) and return colour
-     * index
-     * ----------------------------------------------------------------------------
-     */
-    map: (b, g, r) => {
-      var i;
-      var j;
-      var dist;
-      var a;
-      var bestd;
-      var p;
-      var best;
-
-      bestd = 1000; /* biggest possible dist is 256*3 */
-      best = -1;
-      i = netindex[g]; /* index on g */
-      j = i - 1; /* start at netindex[g] and work outwards */
-
-      while (i < netsize || j >= 0) {
-        if (i < netsize) {
-          p = network[i];
-          dist = p[1] - g; /* inx key */
-
-          if (dist >= bestd) i = netsize; /* stop iter */
-          else {
-            i++;
-            if (dist < 0) dist = -dist;
-            a = p[0] - b;
-            if (a < 0) a = -a;
-            dist += a;
-
-            if (dist < bestd) {
-              a = p[2] - r;
-              if (a < 0) a = -a;
-              dist += a;
-
-              if (dist < bestd) {
-                bestd = dist;
-                best = p[3];
-              }
-            }
-          }
-        }
-
-        if (j >= 0) {
-          p = network[j];
-          dist = g - p[1]; /* inx key - reverse dif */
-
-          if (dist >= bestd) j = -1; /* stop iter */
-          else {
-            j--;
-            if (dist < 0) dist = -dist;
-            a = p[0] - b;
-            if (a < 0) a = -a;
-            dist += a;
-
-            if (dist < bestd) {
-              a = p[2] - r;
-              if (a < 0) a = -a;
-              dist += a;
-              if (dist < bestd) {
-                bestd = dist;
-                best = p[3];
-              }
-            }
-          }
-        }
-      }
-
-      return best;
-    },
-    process: () => {
-      learn();
-      unbiasnet();
-      inxbuild();
-      return colorMap();
-    },
-  };
-  return neuquant;
+  NeuQuant.apply(this, arguments);
+  return exports;
 };

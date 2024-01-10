@@ -10,4 +10,6 @@ const server = await startDevServer({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
 });
 
-console.log(`open ${server.origin}/video_recording/xterm_experiment.html`);
+console.log(
+  `open ${server.origin}/video_recording/client/gif_encoder_dev/gif_encoder_dev.html`,
+);
