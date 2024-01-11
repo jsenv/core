@@ -29,6 +29,7 @@ export const initTerminal = ({
   convertEol = true,
   gif,
   video,
+  msAddedAtTheEnd,
   logs,
 }) => {
   if (video === true) video = {};
@@ -157,6 +158,12 @@ export const initTerminal = ({
         log("media recorder started");
 
         stopCallbackSet.add(async () => {
+          if (msAddedAtTheEnd) {
+            await new Promise((resolve) => {
+              setTimeout(resolve, msAddedAtTheEnd);
+            });
+            replicateXterm();
+          }
           await new Promise((resolve) => {
             setTimeout(resolve, 150);
           });
@@ -188,16 +195,15 @@ export const initTerminal = ({
           repeat: repeat === true ? 0 : repeat === false ? -1 : repeat,
           quality,
         });
-        const startTime = Date.now();
-        let previousTime = startTime;
-        frameCallbackSet.add(() => {
-          const now = Date.now();
-          const delay = now - previousTime;
-          previousTime = now;
-          log(`add frame to gif at ${now - startTime}ms`);
-          gifEncoder.addFrame(context, { delay });
+
+        frameCallbackSet.add((msSincePreviousFrame) => {
+          log(`add frame to gif with delay of ${msSincePreviousFrame}ms`);
+          gifEncoder.addFrame(context, { delay: msSincePreviousFrame });
         });
         stopCallbackSet.add(() => {
+          if (msAddedAtTheEnd) {
+            replicateXterm(msAddedAtTheEnd);
+          }
           gifEncoder.finish();
           log("gif recording stopped");
           const gifBinaryString = gifEncoder.readAsBinaryString();
@@ -206,7 +212,11 @@ export const initTerminal = ({
         log("gif recorder started");
       }
 
-      const replicateXterm = () => {
+      const startTime = Date.now();
+      let previousTime = startTime;
+      const replicateXterm = (
+        msSincePreviousFrame = Date.now() - previousTime,
+      ) => {
         context.drawImage(
           xtermCanvas,
           0,
@@ -218,8 +228,9 @@ export const initTerminal = ({
           xtermCanvas.width,
           xtermCanvas.height,
         );
+        previousTime = Date.now();
         for (const frameCallback of frameCallbackSet) {
-          frameCallback();
+          frameCallback(msSincePreviousFrame);
         }
       };
 

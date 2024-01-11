@@ -71,7 +71,10 @@ const test = async (filename, params) => {
                 const terminalRecorder = await startTerminalRecording({
                   columns: 120,
                   rows: 30,
-                  gif: true,
+                  gif: {
+                    repeat: true,
+                  },
+                  msAddedAtTheEnd: 1_500,
                 });
                 return {
                   write: async (log) => {
