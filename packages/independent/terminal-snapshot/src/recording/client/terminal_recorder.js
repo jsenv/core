@@ -185,13 +185,17 @@ export const initTerminal = ({
           quality,
         });
         const startTime = Date.now();
+        let previousTime = startTime;
         frameCallbackSet.add(() => {
-          gifEncoder.addFrame(context, {
-            delay: Date.now() - startTime,
-          });
+          const now = Date.now();
+          const delay = now - previousTime;
+          previousTime = now;
+          log(`add frame to gif at ${now - startTime}ms`);
+          gifEncoder.addFrame(context, { delay });
         });
         stopCallbackSet.add(() => {
           gifEncoder.finish();
+          log("gif recording stopped");
           const gifBinaryString = gifEncoder.readAsBinaryString();
           records.gif = gifBinaryString;
         });
