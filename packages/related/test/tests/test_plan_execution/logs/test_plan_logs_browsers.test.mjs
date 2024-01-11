@@ -21,7 +21,7 @@ if (process.platform === "win32") {
   process.exit();
 }
 
-const terminalVideoRecording =
+const terminalRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
   !process.env.JSENV;
@@ -38,7 +38,7 @@ const devServer = await startDevServer({
 });
 
 const test = async (filename, params) => {
-  if (terminalVideoRecording) {
+  if (terminalRecording) {
     console.log(`snapshoting ${filename}`);
   }
   const testPlanResult = await executeTestPlan({
@@ -70,7 +70,7 @@ const test = async (filename, params) => {
           };
         },
       }),
-      ...(terminalVideoRecording
+      ...(terminalRecording
         ? [
             reporterList({
               dynamic: true,

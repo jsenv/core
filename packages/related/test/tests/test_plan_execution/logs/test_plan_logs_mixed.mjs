@@ -18,7 +18,7 @@ import {
   reportAsJunitXml,
 } from "@jsenv/test";
 
-const terminalVideoRecording =
+const terminalRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
   !process.env.JSENV;
@@ -63,7 +63,7 @@ const test = async (filename, params) => {
           };
         },
       }),
-      ...(terminalVideoRecording
+      ...(terminalRecording
         ? [
             reporterList({
               dynamic: true,
