@@ -143,9 +143,13 @@ export const initTerminal = ({
           }
         };
         log("starting media recorder");
-        const startPromise = new Promise((resolve) => {
+        const startPromise = new Promise((resolve, reject) => {
           mediaRecorder.onstart = () => {
             resolve();
+          };
+          mediaRecorder.onerror = (e) => {
+            log("media recorder error");
+            reject(e);
           };
           mediaRecorder.start();
         });
