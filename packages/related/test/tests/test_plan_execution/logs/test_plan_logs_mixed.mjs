@@ -73,8 +73,8 @@ const test = async (filename, params) => {
                   rows: 30,
                   gif: {
                     repeat: true,
+                    msAddedAtTheEnd: 3_500,
                   },
-                  msAddedAtTheEnd: 1_500,
                 });
                 return {
                   write: async (log) => {

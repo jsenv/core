@@ -29,7 +29,6 @@ export const initTerminal = ({
   convertEol = true,
   gif,
   video,
-  msAddedAtTheEnd,
   logs,
 }) => {
   if (video === true) video = {};
@@ -128,7 +127,7 @@ export const initTerminal = ({
       const stopCallbackSet = new Set();
       if (video) {
         log("start recording video");
-        const { mimeType = "video/webm;codecs=h264" } = video;
+        const { mimeType = "video/webm;codecs=h264", msAddedAtTheEnd } = video;
         if (!MediaRecorder.isTypeSupported(mimeType)) {
           throw new Error(`MediaRecorder does not support "${mimeType}"`);
         }
@@ -163,6 +162,8 @@ export const initTerminal = ({
               setTimeout(resolve, msAddedAtTheEnd);
             });
             replicateXterm();
+          } else {
+            replicateXterm();
           }
           await new Promise((resolve) => {
             setTimeout(resolve, 150);
@@ -188,7 +189,7 @@ export const initTerminal = ({
       }
       if (gif) {
         log("start recording gif");
-        const { repeat = -1, quality } = gif;
+        const { repeat = -1, quality, msAddedAtTheEnd } = gif;
         const gifEncoder = createGifEncoder({
           width: canvas.width,
           height: canvas.height,
@@ -196,13 +197,23 @@ export const initTerminal = ({
           quality,
         });
 
-        frameCallbackSet.add((msSincePreviousFrame) => {
+        const startTime = Date.now();
+        let previousTime = startTime;
+
+        frameCallbackSet.add(() => {
+          const now = Date.now();
+          const msSincePreviousFrame = now - previousTime;
+          previousTime = now;
           log(`add frame to gif with delay of ${msSincePreviousFrame}ms`);
           gifEncoder.addFrame(context, { delay: msSincePreviousFrame });
         });
         stopCallbackSet.add(() => {
           if (msAddedAtTheEnd) {
-            replicateXterm(msAddedAtTheEnd);
+            replicateXterm();
+            previousTime = Date.now() - msAddedAtTheEnd;
+            replicateXterm();
+          } else {
+            replicateXterm();
           }
           gifEncoder.finish();
           log("gif recording stopped");
@@ -212,11 +223,7 @@ export const initTerminal = ({
         log("gif recorder started");
       }
 
-      const startTime = Date.now();
-      let previousTime = startTime;
-      const replicateXterm = (
-        msSincePreviousFrame = Date.now() - previousTime,
-      ) => {
+      const replicateXterm = () => {
         context.drawImage(
           xtermCanvas,
           0,
@@ -228,9 +235,8 @@ export const initTerminal = ({
           xtermCanvas.width,
           xtermCanvas.height,
         );
-        previousTime = Date.now();
         for (const frameCallback of frameCallbackSet) {
-          frameCallback(msSincePreviousFrame);
+          frameCallback();
         }
       };
 
@@ -241,7 +247,6 @@ export const initTerminal = ({
           replicateXterm();
         },
         stopRecording: async () => {
-          replicateXterm();
           const promises = [];
           for (const stopCallback of stopCallbackSet) {
             promises.push(stopCallback());

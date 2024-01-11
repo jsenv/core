@@ -15,7 +15,7 @@ import {
   reportAsJunitXml,
 } from "@jsenv/test";
 
-const terminalVideoRecording =
+const terminalRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
   !process.env.JSENV;
@@ -25,7 +25,7 @@ UNICODE.supported = true;
 ANSI.supported = true;
 
 const test = async (filename, params) => {
-  if (terminalVideoRecording) {
+  if (terminalRecording) {
     console.log(`snapshoting ${filename}`);
   }
   const testPlanResult = await executeTestPlan({
@@ -57,18 +57,19 @@ const test = async (filename, params) => {
           };
         },
       }),
-      ...(terminalVideoRecording
+      ...(terminalRecording
         ? [
             reporterList({
               dynamic: true,
               spy: async () => {
                 const terminalRecorder = await startTerminalRecording({
+                  // logs: true,
                   columns: 120,
                   rows: 30,
                   gif: {
                     repeat: true,
+                    msAddedAtTheEnd: 3_500,
                   },
-                  msAddedAtTheEnd: 1_500,
                 });
                 return {
                   write: async (log) => {

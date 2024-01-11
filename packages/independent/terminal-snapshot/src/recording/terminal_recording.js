@@ -56,7 +56,6 @@ export const startTerminalRecording = async ({
   rows,
   gif,
   video,
-  msAddedAtTheEnd,
 } = {}) => {
   const server = await startLocalServer();
   const browser = await chromium.launch({
@@ -77,7 +76,7 @@ export const startTerminalRecording = async ({
   await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
     /* eslint-env browser */
-    async ({ cols, rows, convertEol, gif, video, logs, msAddedAtTheEnd }) => {
+    async ({ cols, rows, convertEol, gif, video, logs }) => {
       await window.xtreamReadyPromise;
       const __term__ = await window.initTerminal({
         cols,
@@ -86,7 +85,6 @@ export const startTerminalRecording = async ({
         gif,
         video,
         logs,
-        msAddedAtTheEnd,
       });
       window.__term__ = __term__;
     },
@@ -97,7 +95,6 @@ export const startTerminalRecording = async ({
       gif,
       video,
       logs,
-      msAddedAtTheEnd,
     },
     /* eslint-env node */
   );
