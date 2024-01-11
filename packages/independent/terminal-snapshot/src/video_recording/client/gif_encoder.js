@@ -43,19 +43,18 @@ export const createGifEncoder = ({
       i++;
     }
   };
-
-  const charCodeMap = new Map();
+  let charCodeMap;
   const fillCharCodes = () => {
-    if (charCodeMap.size) {
+    if (charCodeMap) {
       return;
     }
+    charCodeMap = new Map();
     let i = 0;
     while (i < 256) {
       charCodeMap.set(i, String.fromCharCode(i));
       i++;
     }
   };
-
   const readAsBinaryString = () => {
     fillCharCodes();
     let binaryString = "";
@@ -66,13 +65,13 @@ export const createGifEncoder = ({
   };
 
   let transparent = null; // transparent color if given
-  let transIndex; // transparent index in color table
-  let started = false; // ready to output frames
+  let transIndex = 0; // transparent index in color table
   let colorDepth; // number of bit planes
   let usedEntry = []; // active palette entries
   let palSize = 7; // color table size (bits-1)
   let dispose = -1; // disposal code (-1 = use default
   let firstFrame = true;
+  let finished = false;
 
   const writeShort = (pValue) => {
     writeByte(pValue & 0xff);
@@ -82,7 +81,6 @@ export const createGifEncoder = ({
   const encoder = {
     /**
      * Sets the GIF frame disposal code for the last added frame and any
-     *
      * subsequent frames. Default is 0 if no transparent color has been set,
      * otherwise 2.
      * @param code
@@ -105,31 +103,6 @@ export const createGifEncoder = ({
       transparent = c;
     },
 
-    setProperties: ({ has_start, is_first }) => {
-      started = has_start;
-      firstFrame = is_first;
-    },
-
-    /**
-     * Initiates GIF file creation on the given stream.
-     * @param os
-     * OutputStream on which GIF images are written.
-     * @return false if initial write failed.
-     */
-    start: () => {
-      // reset for subsequent use
-      transIndex = 0;
-      firstFrame = true;
-
-      try {
-        writeUTFBytes("GIF89a"); // header
-        started = true;
-      } catch (e) {
-        started = false;
-      }
-      return started;
-    },
-
     /**
      * The addFrame method takes an incoming BitmapData object to create each frames
      * @param
@@ -144,10 +117,6 @@ export const createGifEncoder = ({
         if (options.delay) {
           delay = Math.round(options.delay / 10);
         }
-      }
-
-      if (!started) {
-        throw new Error("Please call start method before calling addFrame");
       }
 
       const canvas = context.canvas;
@@ -370,11 +339,11 @@ export const createGifEncoder = ({
 
     /**
      * Adds final trailer to the GIF stream, if you don't call the finish method
-     * the GIF stream will not be valid.
+     * the GIF asDataUrl will not be valid.
      */
     finish: () => {
-      if (!started) return false;
-      started = false;
+      if (finished) return false;
+      finished = true;
 
       try {
         writeByte(0x3b); // gif trailer
@@ -384,11 +353,14 @@ export const createGifEncoder = ({
       }
     },
 
+    readAsBinaryString,
     asDataUrl: () => {
       const gifAsBinaryString = readAsBinaryString();
       return `data:image/gif;base64,${encode64(gifAsBinaryString)}`;
     },
   };
+
+  writeUTFBytes("GIF89a"); // header
 
   return encoder;
 };
