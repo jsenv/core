@@ -50,10 +50,11 @@ const startLocalServer = async () => {
   return server;
 };
 
-export const startTerminalVideoRecording = async ({
+export const startTerminalRecording = async ({
   cols,
   rows,
-  mimeType,
+  gif,
+  video,
 } = {}) => {
   const server = await startLocalServer();
   const browser = await chromium.launch({
@@ -89,13 +90,14 @@ export const startTerminalVideoRecording = async ({
   );
   await page.evaluate(
     /* eslint-env browser */
-    async ({ mimeType }) => {
+    async ({ gif, video }) => {
       const { writeIntoTerminal, stopRecording } = await window.startRecording({
-        mimeType,
+        gif,
+        video,
       });
       window.recording = { writeIntoTerminal, stopRecording };
     },
-    { mimeType },
+    { gif, video },
     /* eslint-env node */
   );
   return {
@@ -110,7 +112,7 @@ export const startTerminalVideoRecording = async ({
       );
     },
     stop: async () => {
-      const videoWebmAsBinayString = await page.evaluate(
+      const terminalRecords = await page.evaluate(
         /* eslint-env browser */
         () => {
           return window.recording.stopRecording();
@@ -119,16 +121,38 @@ export const startTerminalVideoRecording = async ({
       );
       server.stop();
       browser.close();
-      const videoWebmBuffer = Buffer.from(videoWebmAsBinayString, "binary");
+
       return {
+        gif: () => {
+          if (!gif) {
+            throw new Error("gif not recorded");
+          }
+          const terminalGifBuffer = Buffer.from(terminalRecords.gif, "binary");
+          return terminalGifBuffer;
+        },
         webm: () => {
-          return videoWebmBuffer;
+          if (!video) {
+            throw new Error("video not recorded");
+          }
+          const terminalWebmBuffer = Buffer.from(
+            terminalRecords.video,
+            "binary",
+          );
+          return terminalWebmBuffer;
         },
         mp4: async () => {
+          if (!video) {
+            throw new Error("video not recorded");
+          }
+
+          const terminalWebmBuffer = Buffer.from(
+            terminalRecords.video,
+            "binary",
+          );
           const webmToMp4Namespace = await import("webm-to-mp4");
           const webmToMp4 = webmToMp4Namespace.default;
-          const videoMp4Buffer = Buffer.from(webmToMp4(videoWebmBuffer));
-          return videoMp4Buffer;
+          const terminalMp4Buffer = Buffer.from(webmToMp4(terminalWebmBuffer));
+          return terminalMp4Buffer;
         },
       };
     },
