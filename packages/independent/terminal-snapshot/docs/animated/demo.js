@@ -3,7 +3,9 @@ import { writeFileSync } from "node:fs";
 import { startTerminalRecording } from "@jsenv/terminal-snapshot";
 
 const terminalRecorder = await startTerminalRecording({
-  video: true,
+  logs: true,
+  // video: true,
+  gif: true,
 });
 const datas = [
   `[31mred[39m `,
@@ -18,5 +20,9 @@ for (const data of datas) {
   await new Promise((resolve) => setTimeout(resolve, 200));
 }
 const result = await terminalRecorder.stop();
-const mp4 = await result.mp4();
-writeFileSync(new URL("./terminal.mp4", import.meta.url), mp4);
+const gif = await result.gif();
+writeFileSync(new URL("./terminal.gif", import.meta.url), gif);
+// const webm = await result.webm();
+// writeFileSync(new URL("./terminal.webm", import.meta.url), webm);
+// const mp4 = await result.mp4();
+// writeFileSync(new URL("./terminal.mp4", import.meta.url), mp4);
