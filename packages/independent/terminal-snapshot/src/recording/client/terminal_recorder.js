@@ -24,6 +24,8 @@ export const initTerminal = ({
   fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
   fontSize = 12,
   convertEol = true,
+  gif,
+  video,
 }) => {
   const { Terminal } = window;
   const { CanvasAddon } = window.CanvasAddon;
@@ -104,11 +106,12 @@ export const initTerminal = ({
   }
 
   return {
-    startRecording: async ({ gif, video } = {}) => {
+    startRecording: async () => {
       const records = {};
       const frameCallbackSet = new Set();
       const stopCallbackSet = new Set();
       if (video) {
+        if (video === true) video = {};
         const { mimeType = "video/webm;codecs=h264" } = video;
         const stream = canvas.captureStream();
         const mediaRecorder = new MediaRecorder(stream, {
@@ -152,6 +155,7 @@ export const initTerminal = ({
         });
       }
       if (gif) {
+        if (gif === true) gif = {};
         const { repeat = -1, quality } = gif;
         const gifEncoder = createGifEncoder({
           width: canvas.width,
