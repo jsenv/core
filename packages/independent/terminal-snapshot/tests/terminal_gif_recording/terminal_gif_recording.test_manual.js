@@ -7,7 +7,7 @@ const outputLines = readFileSync(
 ).split(/\n/g);
 
 const terminalRecorder = await startTerminalRecording({
-  video: true,
+  gif: true,
 });
 for (const line of outputLines) {
   terminalRecorder.write(`${line}\n`);
@@ -16,5 +16,5 @@ for (const line of outputLines) {
   });
 }
 const terminalRecords = await terminalRecorder.stop();
-const terminalMp4 = await terminalRecords.mp4();
-writeFileSync(new URL("./terminal.mp4", import.meta.url), terminalMp4);
+const terminalGif = await terminalRecords.gif();
+writeFileSync(new URL("./terminal.gif", import.meta.url), terminalGif);

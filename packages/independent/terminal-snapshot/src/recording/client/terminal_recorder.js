@@ -16,6 +16,9 @@ import "xterm";
 import "xterm-addon-canvas";
 import { createGifEncoder } from "./gif_encoder.js";
 
+const { Terminal } = window;
+const { CanvasAddon } = window.CanvasAddon;
+
 export const initTerminal = ({
   cols = 80,
   rows = 25,
@@ -26,9 +29,20 @@ export const initTerminal = ({
   convertEol = true,
   gif,
   video,
+  logs,
 }) => {
-  const { Terminal } = window;
-  const { CanvasAddon } = window.CanvasAddon;
+  if (video === true) video = {};
+  if (gif === true) gif = {};
+  if (!video && !gif) {
+    throw new Error("video or gif must be enabled");
+  }
+
+  const log = (...args) => {
+    if (logs) {
+      console.log(...args);
+    }
+  };
+
   const cssUrl = new URL("xterm/css/xterm.css", import.meta.url);
   const link = document.createElement("link");
   link.rel = "stylesheet";
@@ -62,8 +76,9 @@ export const initTerminal = ({
   const context = canvas.getContext("2d", { willReadFrequently: true });
   context.imageSmoothingEnabled = true;
   const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
+  const headerHeight = 40;
   canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
-  canvas.height = 40 + xtermCanvas.height;
+  canvas.height = headerHeight + xtermCanvas.height;
 
   draw_header: {
     drawRectangle(context, {
@@ -78,19 +93,19 @@ export const initTerminal = ({
     });
     drawCircle(context, {
       x: 20,
-      y: 20,
+      y: headerHeight / 2,
       radius: 6,
       fill: "#ff5f57",
     });
     drawCircle(context, {
       x: 40,
-      y: 20,
+      y: headerHeight / 2,
       radius: 6,
       fill: "#febc2e",
     });
     drawCircle(context, {
       x: 60,
-      y: 20,
+      y: headerHeight / 2,
       radius: 6,
       fill: "#28c840",
     });
@@ -102,7 +117,7 @@ export const initTerminal = ({
     context.textAlign = "center";
     // const textSize = context.measureText(text);
     context.fillStyle = "#abb2bf";
-    context.fillText(text, canvas.width / 2, 20);
+    context.fillText(text, canvas.width / 2, headerHeight / 2);
   }
 
   return {
@@ -111,8 +126,11 @@ export const initTerminal = ({
       const frameCallbackSet = new Set();
       const stopCallbackSet = new Set();
       if (video) {
-        if (video === true) video = {};
+        log("start recording video");
         const { mimeType = "video/webm;codecs=h264" } = video;
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          throw new Error(`MediaRecorder does not support "${mimeType}"`);
+        }
         const stream = canvas.captureStream();
         const mediaRecorder = new MediaRecorder(stream, {
           videoBitsPerSecond: 2_500_000,
@@ -124,26 +142,29 @@ export const initTerminal = ({
             chunks.push(e.data);
           }
         };
+        log("starting media recorder");
         const startPromise = new Promise((resolve) => {
-          mediaRecorder.onstart = resolve;
+          mediaRecorder.onstart = () => {
+            resolve();
+          };
+          mediaRecorder.start();
         });
-        mediaRecorder.start();
         await startPromise;
+        log("media recorder started");
 
         stopCallbackSet.add(async () => {
           await new Promise((resolve) => {
-            setTimeout(resolve, 50);
+            setTimeout(resolve, 150);
           });
-          const stopPromise = new Promise((resolve, reject) => {
+          await new Promise((resolve, reject) => {
             mediaRecorder.onstop = () => {
               resolve();
             };
             mediaRecorder.onerror = (e) => {
               reject(e);
             };
+            mediaRecorder.stop();
           });
-          mediaRecorder.stop();
-          await stopPromise;
           const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
           const videoBinaryString = await new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -155,7 +176,7 @@ export const initTerminal = ({
         });
       }
       if (gif) {
-        if (gif === true) gif = {};
+        log("start recording gif");
         const { repeat = -1, quality } = gif;
         const gifEncoder = createGifEncoder({
           width: canvas.width,
@@ -174,6 +195,7 @@ export const initTerminal = ({
           const gifBinaryString = gifEncoder.readAsBinaryString();
           records.gif = gifBinaryString;
         });
+        log("gif recorder started");
       }
 
       const replicateXterm = () => {
@@ -184,7 +206,7 @@ export const initTerminal = ({
           xtermCanvas.width,
           xtermCanvas.height,
           paddingLeft,
-          40,
+          headerHeight,
           xtermCanvas.width,
           xtermCanvas.height,
         );
@@ -193,6 +215,7 @@ export const initTerminal = ({
         }
       };
 
+      replicateXterm();
       return {
         writeIntoTerminal: (data) => {
           term.write(data);

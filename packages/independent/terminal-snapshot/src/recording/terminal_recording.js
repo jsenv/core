@@ -51,6 +51,7 @@ const startLocalServer = async () => {
 };
 
 export const startTerminalRecording = async ({
+  logs,
   cols,
   rows,
   gif,
@@ -69,35 +70,41 @@ export const startTerminalRecording = async ({
   page.on("pageerror", (error) => {
     throw error;
   });
+  page.on("console", (consoleMessage) => {
+    console.log(`chrome> ${consoleMessage.text()}`);
+  });
   await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
     /* eslint-env browser */
-    async ({ cols, rows, convertEol }) => {
+    async ({ cols, rows, convertEol, gif, video, logs }) => {
       await window.xtreamReadyPromise;
-      const startRecording = await window.initTerminal({
+      const __term__ = await window.initTerminal({
         cols,
         rows,
         convertEol,
+        gif,
+        video,
+        logs,
       });
-      window.startRecording = startRecording;
+      window.__term__ = __term__;
     },
     {
       cols,
       rows,
       convertEol: process.platform !== "win32",
+      gif,
+      video,
+      logs,
     },
     /* eslint-env node */
   );
   await page.evaluate(
     /* eslint-env browser */
-    async ({ gif, video }) => {
-      const { writeIntoTerminal, stopRecording } = await window.startRecording({
-        gif,
-        video,
-      });
-      window.recording = { writeIntoTerminal, stopRecording };
+    async () => {
+      const { writeIntoTerminal, stopRecording } =
+        await window.__term__.startRecording();
+      window.terminalRecording = { writeIntoTerminal, stopRecording };
     },
-    { gif, video },
     /* eslint-env node */
   );
   return {
@@ -105,7 +112,7 @@ export const startTerminalRecording = async ({
       await page.evaluate(
         /* eslint-env browser */
         (data) => {
-          window.recording.writeIntoTerminal(data);
+          window.terminalRecording.writeIntoTerminal(data);
         },
         data,
         /* eslint-env node */
@@ -115,7 +122,7 @@ export const startTerminalRecording = async ({
       const terminalRecords = await page.evaluate(
         /* eslint-env browser */
         () => {
-          return window.recording.stopRecording();
+          return window.terminalRecording.stopRecording();
         },
         /* eslint-env node */
       );
