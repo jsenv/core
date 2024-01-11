@@ -1,18 +1,20 @@
 import { writeFileSync, readFileSync } from "node:fs";
-import { startTerminalVideoRecording } from "@jsenv/terminal-snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-snapshot";
 
 const outputLines = readFileSync(
   new URL("./output.txt", import.meta.url),
   "utf8",
 ).split(/\n/g);
 
-const terminalVideoRecorder = await startTerminalVideoRecording();
+const terminalRecorder = await startTerminalRecording({
+  video: true,
+});
 for (const line of outputLines) {
-  terminalVideoRecorder.write(`${line}\n`);
+  terminalRecorder.write(`${line}\n`);
   await new Promise((resolve) => {
     setTimeout(resolve, 100);
   });
 }
-const terminalVideo = await terminalVideoRecorder.stop();
-const terminalVideoMp4 = await terminalVideo.mp4();
-writeFileSync(new URL("./video.mp4", import.meta.url), terminalVideoMp4);
+const terminalRecords = await terminalRecorder.stop();
+const terminalMp4 = await terminalRecords.mp4();
+writeFileSync(new URL("./video.mp4", import.meta.url), terminalMp4);

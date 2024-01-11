@@ -104,63 +104,30 @@ export const initTerminal = ({
   }
 
   return {
-    startRecording: async ({ mimeType = "video/webm;codecs=h264" } = {}) => {
-      const gifEncoder = createGifEncoder({
-        width: canvas.width,
-        height: canvas.height,
-      });
-      gifEncoder.setRepeat(0); // 0 for repeat, -1 for no-repeat
-      gifEncoder.setDelay(0); // frame delay in ms // 500
-      gifEncoder.setQuality(16); // [1,30] | Best=1 | >20 not much speed improvement. 10 is default.
-      gifEncoder.start();
+    startRecording: async ({ gif, video } = {}) => {
+      const records = {};
+      const frameCallbackSet = new Set();
+      const stopCallbackSet = new Set();
+      if (video) {
+        const { mimeType = "video/webm;codecs=h264" } = video;
+        const stream = canvas.captureStream();
+        const mediaRecorder = new MediaRecorder(stream, {
+          videoBitsPerSecond: 2_500_000,
+          mimeType,
+        });
+        const chunks = [];
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size) {
+            chunks.push(e.data);
+          }
+        };
+        const startPromise = new Promise((resolve) => {
+          mediaRecorder.onstart = resolve;
+        });
+        mediaRecorder.start();
+        await startPromise;
 
-      const replicateXterm = () => {
-        context.drawImage(
-          xtermCanvas,
-          0,
-          0,
-          xtermCanvas.width,
-          xtermCanvas.height,
-          paddingLeft,
-          40,
-          xtermCanvas.width,
-          xtermCanvas.height,
-        );
-
-        gifEncoder.addFrame(context);
-        gifEncoder.setDelay(0.02);
-
-        const frameB64Str = canvas.toDataURL();
-        document.querySelector("#gif_frames").innerHTML +=
-          `<img src=${frameB64Str} width="150" />`;
-      };
-
-      const interval = setInterval(() => {}, 10); // setInterval(replicateXterm, 250);
-      const stream = canvas.captureStream();
-      const mediaRecorder = new MediaRecorder(stream, {
-        videoBitsPerSecond: 2_500_000,
-        mimeType,
-      });
-      const chunks = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size) {
-          chunks.push(e.data);
-        }
-      };
-      const startPromise = new Promise((resolve) => {
-        mediaRecorder.onstart = resolve;
-      });
-      mediaRecorder.start();
-      await startPromise;
-
-      return {
-        writeIntoTerminal: (data) => {
-          term.write(data);
-          replicateXterm();
-        },
-        stopRecording: async () => {
-          window.clearInterval(interval);
-          replicateXterm();
+        stopCallbackSet.add(async () => {
           await new Promise((resolve) => {
             setTimeout(resolve, 50);
           });
@@ -174,18 +141,67 @@ export const initTerminal = ({
           });
           mediaRecorder.stop();
           await stopPromise;
-          const blob = new Blob(chunks, {
-            type: mediaRecorder.mimeType,
+          const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+          const videoBinaryString = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsBinaryString(blob);
           });
+          records.video = videoBinaryString;
+        });
+      }
+      if (gif) {
+        const { repeat = -1, quality } = gif;
+        const gifEncoder = createGifEncoder({
+          width: canvas.width,
+          height: canvas.height,
+          repeat: repeat === true ? 0 : repeat === false ? -1 : repeat,
+          quality,
+        });
+        const startTime = Date.now();
+        frameCallbackSet.add(() => {
+          gifEncoder.addFrame(context, {
+            delay: Date.now() - startTime,
+          });
+        });
+        stopCallbackSet.add(() => {
           gifEncoder.finish();
-          const gifBinaryString = gifEncoder.asBinaryString();
-          const gifDataUrl = gifEncoder.asDataUrl();
-          const videoBinaryString = await blobToBinaryString(blob);
-          return {
-            gifDataUrl,
-            gifBinaryString,
-            videoBinaryString,
-          };
+          const gifBinaryString = gifEncoder.readAsBinaryString();
+          records.gif = gifBinaryString;
+        });
+      }
+
+      const replicateXterm = () => {
+        context.drawImage(
+          xtermCanvas,
+          0,
+          0,
+          xtermCanvas.width,
+          xtermCanvas.height,
+          paddingLeft,
+          40,
+          xtermCanvas.width,
+          xtermCanvas.height,
+        );
+        for (const frameCallback of frameCallbackSet) {
+          frameCallback();
+        }
+      };
+
+      return {
+        writeIntoTerminal: (data) => {
+          term.write(data);
+          replicateXterm();
+        },
+        stopRecording: async () => {
+          replicateXterm();
+          const promises = [];
+          for (const stopCallback of stopCallbackSet) {
+            promises.push(stopCallback());
+          }
+          await Promise.all(promises);
+          return records;
         },
       };
     },
@@ -196,18 +212,20 @@ const drawRectangle = (
   context,
   { x, y, width, height, radius, fill, stroke, strokeWidth },
 ) => {
+  context.beginPath();
   if (radius) {
-    context.beginPath();
     context.roundRect(x, y, width, height, [radius]);
-    if (fill) {
-      context.fillStyle = fill;
-      context.fill();
-    }
-    if (stroke) {
-      context.strokeWidth = strokeWidth;
-      context.strokeStyle = stroke;
-      context.stroke();
-    }
+  } else {
+    context.rect(x, y, width, height);
+  }
+  if (fill) {
+    context.fillStyle = fill;
+    context.fill();
+  }
+  if (stroke) {
+    context.strokeWidth = strokeWidth;
+    context.strokeStyle = stroke;
+    context.stroke();
   }
 };
 const drawCircle = (context, { x, y, radius, fill, stroke, borderWidth }) => {
@@ -224,13 +242,4 @@ const drawCircle = (context, { x, y, radius, fill, stroke, borderWidth }) => {
     context.strokeStyle = stroke;
     context.stroke();
   }
-};
-
-const blobToBinaryString = (blob) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsBinaryString(blob);
-  });
 };

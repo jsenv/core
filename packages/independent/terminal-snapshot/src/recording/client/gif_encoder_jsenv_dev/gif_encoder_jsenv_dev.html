@@ -87,7 +87,7 @@
       });
       addFrame(Date.now() - startTime);
       encoder.finish();
-      const gifDataUrl = encoder.asDataUrl();
+      const gifDataUrl = encoder.toDataUrl();
       document.querySelector("img").src = gifDataUrl;
     </script>
   </body>

@@ -354,7 +354,7 @@ export const createGifEncoder = ({
     },
 
     readAsBinaryString,
-    asDataUrl: () => {
+    toDataUrl: () => {
       const gifAsBinaryString = readAsBinaryString();
       return `data:image/gif;base64,${encode64(gifAsBinaryString)}`;
     },

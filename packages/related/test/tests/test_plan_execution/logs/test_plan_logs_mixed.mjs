@@ -1,7 +1,7 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import {
   renderTerminalSvg,
-  startTerminalVideoRecording,
+  startTerminalRecording,
 } from "@jsenv/terminal-snapshot";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { UNICODE, ANSI } from "@jsenv/log";
@@ -68,25 +68,24 @@ const test = async (filename, params) => {
             reporterList({
               dynamic: true,
               spy: async () => {
-                const terminalVideoRecorder = await startTerminalVideoRecording(
-                  {
-                    columns: 120,
-                    rows: 30,
-                  },
-                );
+                const terminalRecorder = await startTerminalRecording({
+                  columns: 120,
+                  rows: 30,
+                  gif: true,
+                });
                 return {
                   write: async (log) => {
-                    await terminalVideoRecorder.write(log);
+                    await terminalRecorder.write(log);
                   },
                   end: async () => {
-                    const terminalVideo = await terminalVideoRecorder.stop();
-                    const terminalVideoMp4 = await terminalVideo.mp4();
+                    const terminalRecords = await terminalRecorder.stop();
+                    const terminalGif = await terminalRecords.gif();
                     writeFileSync(
                       new URL(
-                        `./snapshots/node/${filename}.mp4`,
+                        `./snapshots/node/${filename}.gif`,
                         import.meta.url,
                       ),
-                      terminalVideoMp4,
+                      terminalGif,
                     );
                   },
                 };

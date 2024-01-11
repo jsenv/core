@@ -31,7 +31,9 @@ import { writeFileSync } from "node:fs";
 
 import { startTerminalVideoRecording } from "@jsenv/terminal-snapshot";
 
-const terminalRecorder = await startTerminalVideoRecording();
+const terminalRecorder = await startTerminalRecording({
+  video: true,
+});
 const datas = [
   `[31mred[39m `,
   `[33myellow[39m `,
