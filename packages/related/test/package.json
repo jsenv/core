@@ -8,7 +8,7 @@
     "directory": "packages/related/test"
   },
   "engines": {
-    "node": ">=20.8.0"
+    "node": ">=20.11.0"
   },
   "publishConfig": {
     "access": "public"
