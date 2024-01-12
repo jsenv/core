@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { renderTerminalSvg } from "@jsenv/terminal-recorder";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
@@ -11,13 +11,18 @@ const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   );
 
   const svgFileSnapshot = takeFileSnapshot(svgSnapshotFileUrl);
+  const terminalRecorder = await startTerminalRecording({
+    svg: options,
+  });
   const ansi = readFileSync(ansiFixtureFileUrl, "utf8");
-  const svgString = await renderTerminalSvg(ansi, options);
-  writeFileSync(svgSnapshotFileUrl, svgString);
+  terminalRecorder.write(ansi);
+  const result = await terminalRecorder.stop();
+  const svg = await result.svg();
+  writeFileSync(svgSnapshotFileUrl, svg);
   svgFileSnapshot.compare();
 };
 
-await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg");
+await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg", {});
 await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
   width: "auto",
 });

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { parseAnsi } from "@jsenv/terminal-recorder/src/parse_ansi.js";
+import { parseAnsi } from "@jsenv/terminal-recorder/src/svg/parse_ansi.js";
 
 const test = (file) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
