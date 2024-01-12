@@ -39,7 +39,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/eslint-import-resolver": "8.1.0"
+    "@jsenv/eslint-import-resolver": "8.1.1"
   },
   "devDependencies": {
     "@babel/core": "7.23.7",

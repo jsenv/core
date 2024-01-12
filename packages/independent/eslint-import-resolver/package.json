@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-import-resolver",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -37,6 +37,6 @@
     "rollup": "4.9.5",
     "@jsenv/filesystem": "../filesystem/",
     "@jsenv/importmap": "1.2.1",
-    "@jsenv/node-esm-resolution": "1.0.1"
+    "@jsenv/node-esm-resolution": "1.0.2"
   }
 }

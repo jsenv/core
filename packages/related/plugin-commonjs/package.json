@@ -24,10 +24,10 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.6.2",
-    "@jsenv/log": "3.5.0",
-    "@jsenv/url-meta": "8.3.0",
-    "@jsenv/urls": "2.2.1",
+    "@jsenv/filesystem": "4.6.3",
+    "@jsenv/log": "3.5.1",
+    "@jsenv/url-meta": "8.4.0",
+    "@jsenv/urls": "2.2.2",
     "@rollup/plugin-commonjs": "25.0.7",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "15.2.3",

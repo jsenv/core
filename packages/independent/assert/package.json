@@ -43,8 +43,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/inspect": "1.9.1",
-    "@jsenv/log": "3.4.3"
+    "@jsenv/inspect": "2.0.0",
+    "@jsenv/log": "3.5.1"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"

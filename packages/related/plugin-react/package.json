@@ -26,10 +26,10 @@
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.23.4",
     "@babel/plugin-transform-react-jsx-development": "7.22.5",
-    "@jsenv/ast": "6.0.1",
+    "@jsenv/ast": "6.0.2",
     "@jsenv/plugin-commonjs": "2.7.5",
-    "@jsenv/sourcemap": "1.2.4",
-    "@jsenv/url-meta": "8.3.0",
+    "@jsenv/sourcemap": "1.2.5",
+    "@jsenv/url-meta": "8.4.0",
     "react-refresh": "0.14.0"
   },
   "peerDependencies": {

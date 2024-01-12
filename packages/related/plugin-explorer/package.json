@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.6.2"
+    "@jsenv/filesystem": "4.6.3"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

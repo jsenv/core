@@ -36,8 +36,8 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/urls": "2.2.1",
-    "@jsenv/server": "15.1.9",
+    "@jsenv/urls": "2.2.2",
+    "@jsenv/server": "15.2.0",
     "node-fetch": "2.6.7"
   }
 }
