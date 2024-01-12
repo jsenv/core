@@ -8929,7 +8929,9 @@ const reportAsJunitXml = async (
       const groupInfo = testPlanResult.groups[group];
       const properties = {
         runtimeName: groupInfo.runtimeName,
-        runtimeVersion: groupInfo.runtimeVersion,
+        runtimeVersion: mockFluctuatingValues
+          ? "[mock]"
+          : groupInfo.runtimeVersion,
       };
       const propertiesNode = testCase.createNode("properties");
       testCase.appendChild(propertiesNode);
