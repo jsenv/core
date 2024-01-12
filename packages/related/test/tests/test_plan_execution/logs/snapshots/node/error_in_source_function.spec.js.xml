@@ -10,7 +10,7 @@
   >
     <properties>
       <property name="runtimeName" value="node_worker_thread"></property>
-      <property name="runtimeVersion" value="20.8.0"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
   <error type="Error">1 | export const doSomething = () =&#x3E; {
@@ -29,7 +29,7 @@ Error: something
   >
     <properties>
       <property name="runtimeName" value="node_child_process"></property>
-      <property name="runtimeVersion" value="20.8.0"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
   <error type="Error">1 | export const doSomething = () =&#x3E; {

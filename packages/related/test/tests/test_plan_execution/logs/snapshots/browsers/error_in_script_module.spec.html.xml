@@ -10,7 +10,7 @@
   >
     <properties>
       <property name="runtimeName" value="chromium"></property>
-      <property name="runtimeVersion" value="120.0.6099.28"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
   <error type="Error"> 9 |   &#x3C;body&#x3E;
@@ -29,7 +29,7 @@ Error: here
   >
     <properties>
       <property name="runtimeName" value="firefox"></property>
-      <property name="runtimeVersion" value="119.0"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
   <error type="Error"> 9 |   &#x3C;body&#x3E;
@@ -48,7 +48,7 @@ Error: here
   >
     <properties>
       <property name="runtimeName" value="webkit"></property>
-      <property name="runtimeVersion" value="17.4"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
   <error type="Error">7 |   &#x3C;/head&#x3E;

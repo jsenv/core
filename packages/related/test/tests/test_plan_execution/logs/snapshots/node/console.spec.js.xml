@@ -3,7 +3,7 @@
   <testcase file="console.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1">
     <properties>
       <property name="runtimeName" value="node_worker_thread"></property>
-      <property name="runtimeVersion" value="20.8.0"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
     </properties>
     <system-out>toto
 hey
