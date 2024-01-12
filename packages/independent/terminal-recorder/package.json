@@ -42,6 +42,6 @@
   },
   "devDependencies": {
     "xterm": "5.3.0",
-    "xterm-addon-canvas": "0.5.0"
+    "xterm-addon-webgl": "0.16.0"
   }
 }

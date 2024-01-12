@@ -11,7 +11,7 @@ const server = await startDevServer({
 });
 
 console.log(
-  `${server.origin}/recording/client/gif_encoder_dev/gif_encoder_dev.html
-${server.origin}/recording/client/gif_encoder_jsenv_dev/gif_encoder_jsenv_dev.html
-${server.origin}/recording/client/xterm_dev.html`,
+  `${server.origin}/client/gif_encoder_dev/gif_encoder_dev.html
+${server.origin}/client/gif_encoder_jsenv_dev/gif_encoder_jsenv_dev.html
+${server.origin}/client/xterm_dev.html`,
 );

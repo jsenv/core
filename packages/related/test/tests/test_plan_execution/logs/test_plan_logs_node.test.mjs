@@ -1,8 +1,5 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import {
-  renderTerminalSvg,
-  startTerminalRecording,
-} from "@jsenv/terminal-recorder";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { UNICODE, ANSI } from "@jsenv/log";
@@ -15,7 +12,7 @@ import {
   reportAsJunitXml,
 } from "@jsenv/test";
 
-const terminalRecording =
+const terminalAnimatedRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
   !process.env.JSENV;
@@ -25,7 +22,7 @@ UNICODE.supported = true;
 ANSI.supported = true;
 
 const test = async (filename, params) => {
-  if (terminalRecording) {
+  if (terminalAnimatedRecording) {
     console.log(`snapshoting ${filename}`);
   }
   const testPlanResult = await executeTestPlan({
@@ -36,28 +33,32 @@ const test = async (filename, params) => {
       reporterList({
         dynamic: false,
         mockFluctuatingValues: true,
-        spy: () => {
+        spy: async () => {
           const terminalSnapshotFileUrl = new URL(
             `./snapshots/node/${filename}.svg`,
             import.meta.url,
           );
+          const terminalRecorder = await startTerminalRecording({
+            // logs: true,
+            svg: true,
+          });
           const terminalFileSnapshot = takeFileSnapshot(
             terminalSnapshotFileUrl,
           );
-          let stdout = "";
           return {
             write: (log) => {
-              stdout += log;
+              terminalRecorder.write(log);
             },
             end: async () => {
-              const svg = await renderTerminalSvg(stdout);
-              writeFileSync(terminalSnapshotFileUrl, svg);
+              const terminalRecords = await terminalRecorder.stop();
+              const terminalSvg = await terminalRecords.svg();
+              writeFileSync(terminalSnapshotFileUrl, terminalSvg);
               terminalFileSnapshot.compare();
             },
           };
         },
       }),
-      ...(terminalRecording
+      ...(terminalAnimatedRecording
         ? [
             reporterList({
               dynamic: true,
@@ -70,6 +71,7 @@ const test = async (filename, params) => {
                     repeat: true,
                     msAddedAtTheEnd: 3_500,
                   },
+                  // debug: true,
                 });
                 return {
                   write: async (log) => {

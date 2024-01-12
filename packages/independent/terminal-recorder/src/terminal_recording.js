@@ -145,8 +145,8 @@ export const startTerminalRecording = async ({
     writeCallbackSet.add(async (data) => {
       await page.evaluate(
         /* eslint-env browser */
-        (data) => {
-          window.terminalRecording.writeIntoTerminal(data);
+        async (data) => {
+          await window.terminalRecording.writeIntoTerminal(data);
         },
         data,
         /* eslint-env node */

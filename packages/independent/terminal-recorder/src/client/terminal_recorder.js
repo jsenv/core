@@ -13,11 +13,11 @@ https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 */
 
 import "xterm";
-import "xterm-addon-canvas";
+import "xterm-addon-webgl";
 import { createGifEncoder } from "./gif_encoder.js";
 
 const { Terminal } = window;
-const { CanvasAddon } = window.CanvasAddon;
+const { WebglAddon } = window.WebglAddon;
 
 export const initTerminal = ({
   cols = 80,
@@ -68,14 +68,24 @@ export const initTerminal = ({
       brightBlue: "#87CEEB",
     },
   });
-  term.loadAddon(new CanvasAddon());
+  term.loadAddon(
+    new WebglAddon(
+      // we pass true to enable preserveDrawingBuffer
+      // it's not actually useful thanks to term.write callback +
+      // call on _innerRefresh() before context.drawImage
+      // but let's keep it nevertheless
+      true,
+    ),
+  );
   const terminalElement = document.getElementById("terminal");
   term.open(terminalElement);
 
   const canvas = document.querySelector("#canvas");
   const context = canvas.getContext("2d", { willReadFrequently: true });
   context.imageSmoothingEnabled = true;
-  const xtermCanvas = document.querySelector("canvas.xterm-text-layer");
+  const xtermCanvas = document.querySelector(
+    "#terminal canvas.xterm-link-layer + canvas",
+  );
   const headerHeight = 40;
   canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
   canvas.height = headerHeight + xtermCanvas.height;
@@ -207,13 +217,13 @@ export const initTerminal = ({
           log(`add frame to gif with delay of ${msSincePreviousFrame}ms`);
           gifEncoder.addFrame(context, { delay: msSincePreviousFrame });
         });
-        stopCallbackSet.add(() => {
+        stopCallbackSet.add(async () => {
           if (msAddedAtTheEnd) {
-            replicateXterm();
+            drawFrame();
             previousTime = Date.now() - msAddedAtTheEnd;
-            replicateXterm();
+            drawFrame();
           } else {
-            replicateXterm();
+            drawFrame();
           }
           gifEncoder.finish();
           log("gif recording stopped");
@@ -222,6 +232,12 @@ export const initTerminal = ({
         });
         log("gif recorder started");
       }
+
+      const drawFrame = () => {
+        for (const frameCallback of frameCallbackSet) {
+          frameCallback();
+        }
+      };
 
       const replicateXterm = () => {
         context.drawImage(
@@ -235,16 +251,21 @@ export const initTerminal = ({
           xtermCanvas.width,
           xtermCanvas.height,
         );
-        for (const frameCallback of frameCallbackSet) {
-          frameCallback();
-        }
       };
 
       replicateXterm();
+      drawFrame();
+
       return {
-        writeIntoTerminal: (data) => {
-          term.write(data);
-          replicateXterm();
+        writeIntoTerminal: async (data) => {
+          await new Promise((resolve) => {
+            term.write(data, () => {
+              term._core._renderService._renderDebouncer._innerRefresh();
+              replicateXterm();
+              drawFrame();
+              resolve();
+            });
+          });
         },
         stopRecording: async () => {
           const promises = [];
