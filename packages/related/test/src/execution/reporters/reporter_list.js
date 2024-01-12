@@ -7,7 +7,7 @@ import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
 import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 
 export const reporterList = ({
-  dynamic = true,
+  animated = true,
   mockFluctuatingValues, // used for snapshot testing logs
   showMemoryUsage = true,
   spy = () => {
@@ -20,8 +20,8 @@ export const reporterList = ({
   },
   fileUrl,
 }) => {
-  const dynamicLogEnabled =
-    dynamic &&
+  const animatedLogEnabled =
+    animated &&
     // canEraseProcessStdout
     process.stdout.isTTY &&
     // if there is an error during execution npm will mess up the output
@@ -33,7 +33,7 @@ export const reporterList = ({
     showMemoryUsage,
     mockFluctuatingValues,
     group: false,
-    intermediateSummary: !dynamicLogEnabled,
+    intermediateSummary: !animatedLogEnabled,
   };
 
   let startMs = Date.now();
@@ -49,7 +49,7 @@ export const reporterList = ({
 
         logOptions.group = Object.keys(testPlanResult.groups).length > 1;
         write(renderIntro(testPlanResult, logOptions));
-        if (!dynamicLogEnabled) {
+        if (!animatedLogEnabled) {
           return {
             afterEachInOrder: (execution) => {
               const log = renderExecutionLog(execution, logOptions);
@@ -133,10 +133,10 @@ export const reporterList = ({
     },
   ];
 
-  if (dynamic && fileUrl) {
+  if (animated && fileUrl) {
     reporters.push(
       reporterList({
-        dynamic: false,
+        animated: false,
         mockFluctuatingValues, // used for snapshot testing logs
         showMemoryUsage,
         spy: () => {

@@ -42,7 +42,7 @@ import { reporterList, renderOutro } from "./reporters/reporter_list.js";
 const logsDefault = {
   level: "info",
   type: "list",
-  dynamic: true,
+  animated: true,
   fileUrl: undefined,
 };
 const githubCheckDefault = {
@@ -219,7 +219,7 @@ export const executeTestPlan = async ({
 
         if (logs.type === "list" && logger.levels.info) {
           const listReporterOptions = {
-            dynamic: logger.levels.debug ? false : logs.dynamic,
+            animated: logger.levels.debug ? false : logs.animated,
             fileUrl:
               logs.fileUrl === undefined
                 ? new URL("./.jsenv/jsenv_tests_output.txt", rootDirectoryUrl)

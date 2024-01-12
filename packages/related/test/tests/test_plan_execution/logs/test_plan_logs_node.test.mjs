@@ -31,7 +31,7 @@ const test = async (filename, params) => {
     },
     reporters: [
       reporterList({
-        dynamic: false,
+        animated: false,
         mockFluctuatingValues: true,
         spy: async () => {
           const terminalSnapshotFileUrl = new URL(
@@ -60,7 +60,7 @@ const test = async (filename, params) => {
       ...(terminalAnimatedRecording
         ? [
             reporterList({
-              dynamic: true,
+              animated: true,
               spy: async () => {
                 const terminalRecorder = await startTerminalRecording({
                   // logs: true,
