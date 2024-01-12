@@ -29,7 +29,7 @@
     "@jsenv/urls": "2.2.1",
     "@jsenv/sourcemap": "1.2.4",
     "lightningcss": "1.22.1",
-    "rollup": "4.5.2"
+    "rollup": "4.9.5"
   },
   "peerDependencies": {
     "@jsenv/core": "*"

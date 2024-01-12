@@ -1,8 +1,5 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import {
-  renderTerminalSvg,
-  startTerminalVideoRecording,
-} from "@jsenv/terminal-snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { UNICODE, ANSI } from "@jsenv/log";
 import { startDevServer } from "@jsenv/core";
@@ -15,9 +12,10 @@ import {
   firefox,
   webkit,
   reporterList,
+  reportAsJunitXml,
 } from "@jsenv/test";
 
-const terminalVideoRecording =
+const terminalAnimatedRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
   !process.env.JSENV;
@@ -33,57 +31,64 @@ const devServer = await startDevServer({
   port: 0,
 });
 const test = async (filename, params) => {
-  await executeTestPlan({
-    listReporter: false,
+  const testPlanResult = await executeTestPlan({
+    logs: {
+      type: null,
+    },
     reporters: [
       reporterList({
-        dynamic: false,
+        animated: false,
         mockFluctuatingValues: true,
-        spy: () => {
+        spy: async () => {
           const terminalSnapshotFileUrl = new URL(
             `./snapshots/mixed/${filename}.svg`,
             import.meta.url,
           );
+          const terminalRecorder = await startTerminalRecording({
+            svg: true,
+          });
           const terminalFileSnapshot = takeFileSnapshot(
             terminalSnapshotFileUrl,
           );
-          let stdout = "";
           return {
             write: (log) => {
-              stdout += log;
+              terminalRecorder.write(log);
             },
             end: async () => {
-              const svg = await renderTerminalSvg(stdout);
-              writeFileSync(terminalSnapshotFileUrl, svg);
+              const terminalRecords = await terminalRecorder.stop();
+              const terminalSvg = await terminalRecords.svg();
+              writeFileSync(terminalSnapshotFileUrl, terminalSvg);
               terminalFileSnapshot.compare();
             },
           };
         },
       }),
-      ...(terminalVideoRecording
+      ...(terminalAnimatedRecording
         ? [
             reporterList({
-              dynamic: true,
+              animated: true,
               spy: async () => {
-                const terminalVideoRecorder = await startTerminalVideoRecording(
-                  {
-                    columns: 120,
-                    rows: 30,
+                const terminalRecorder = await startTerminalRecording({
+                  columns: 120,
+                  rows: 30,
+                  gif: {
+                    repeat: true,
+                    msAddedAtTheEnd: 3_500,
                   },
-                );
+                });
                 return {
                   write: async (log) => {
-                    await terminalVideoRecorder.write(log);
+                    await terminalRecorder.write(log);
                   },
                   end: async () => {
-                    const terminalVideo = await terminalVideoRecorder.stop();
-                    const terminalVideoMp4 = await terminalVideo.mp4();
+                    const terminalRecords = await terminalRecorder.stop();
+                    const terminalGif = await terminalRecords.gif();
                     writeFileSync(
                       new URL(
-                        `./snapshots/node/${filename}.mp4`,
+                        `./snapshots/node/${filename}.gif`,
                         import.meta.url,
                       ),
-                      terminalVideoMp4,
+                      terminalGif,
                     );
                   },
                 };
@@ -99,6 +104,15 @@ const test = async (filename, params) => {
     githubCheck: false,
     ...params,
   });
+  const junitXmlFileUrl = new URL(
+    `./snapshots/mixed/${filename}.xml`,
+    import.meta.url,
+  );
+  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
+    mockFluctuatingValues: true,
+  });
+  junitXmlFileSnapshot.compare();
 };
 
 await test("empty.txt", {

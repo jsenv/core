@@ -1,4 +1,4 @@
-import superPropBase from "../superPropBase/superPropBase.js"
+import superPropBase from "../superPropBase/superPropBase.js";
 
 export default function _get() {
   if (typeof Reflect !== "undefined" && Reflect.get) {

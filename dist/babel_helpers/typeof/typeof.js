@@ -1,4 +1,4 @@
-const nativeTypeOf = (obj) => typeof obj
+const nativeTypeOf = (obj) => typeof obj;
 
 const customTypeOf = (obj) => {
   return obj &&
@@ -6,9 +6,10 @@ const customTypeOf = (obj) => {
     obj.constructor === Symbol &&
     obj !== Symbol.prototype
     ? "symbol"
-    : typeof obj
-}
+    : typeof obj;
+};
 
-export default typeof Symbol === "function" && typeof Symbol.iterator === "symbol"
+export default typeof Symbol === "function" &&
+typeof Symbol.iterator === "symbol"
   ? nativeTypeOf
-  : customTypeOf
+  : customTypeOf;

@@ -8,7 +8,7 @@
     "directory": "packages/related/test"
   },
   "engines": {
-    "node": ">=20.8.0"
+    "node": ">=20.11.0"
   },
   "publishConfig": {
     "access": "public"
@@ -51,13 +51,14 @@
     "istanbul-lib-instrument": "6.0.1",
     "istanbul-lib-report": "3.0.1",
     "istanbul-reports": "3.1.6",
+    "he": "1.2.0",
     "pidtree": "0.6.0",
     "strip-ansi": "7.1.0",
     "v8-to-istanbul": "9.2.0",
     "wrap-ansi": "9.0.0"
   },
   "devDependencies": {
-    "@jsenv/terminal-snapshot": "../independent/terminal-snapshot/",
+    "@jsenv/terminal-recorder": "../independent/terminal-recorder/",
     "errorstacks": "2.4.1"
   }
 }

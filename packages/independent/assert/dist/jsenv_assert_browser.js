@@ -678,7 +678,6 @@ const isComposite = value => {
 };
 const isPrimitive$1 = value => !isComposite(value);
 
-/* eslint-disable no-use-before-define */
 // https://github.com/dmail/dom/blob/e55a8c7b4cda6be2f7a4b1222f96d028a379b67f/src/visit.js#L89
 
 const findPreviousComparison = (comparison, predicate) => {
@@ -1525,10 +1524,6 @@ const compareToStringReturnValue = (comparison, options) => {
   });
 };
 
-const propertyNameToDotNotationAllowed = propertyName => {
-  return /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) || /^[a-z_$]$/i.test(propertyName);
-};
-
 const propertyToAccessorString = property => {
   if (typeof property === "number") {
     return "[".concat(inspect(property), "]");
@@ -1541,6 +1536,9 @@ const propertyToAccessorString = property => {
     return "[".concat(inspect(property), "]");
   }
   return "[".concat(symbolToWellKnownSymbol(property), "]");
+};
+const propertyNameToDotNotationAllowed = propertyName => {
+  return /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) || /^[a-z_$]$/i.test(propertyName);
 };
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol#Well-known_symbols
@@ -1703,16 +1701,21 @@ const valueToString = value => {
   return valueToWellKnown(value) || inspect(value);
 };
 
-const anyComparisonToErrorMessage = comparison => {
-  if (comparison.type !== "any") return undefined;
+const getAnyErrorInfo = comparison => {
+  if (comparison.type !== "any") {
+    return null;
+  }
   const path = comparisonToPath(comparison);
   const actualValue = valueToString(comparison.actual);
   const expectedConstructor = comparison.expected;
-  return createAnyMessage({
-    path,
-    expectedConstructor,
-    actualValue
-  });
+  return {
+    type: "AnyAssertionError",
+    message: createAnyMessage({
+      path,
+      expectedConstructor,
+      actualValue
+    })
+  };
 };
 const createAnyMessage = ({
   path,
@@ -1729,7 +1732,7 @@ const createDetailedMessage = (message, details = {}) => {
   return string;
 };
 
-const defaultComparisonToErrorMessage = comparison => {
+const getErrorInfoDefault = comparison => {
   const path = comparisonToPath(comparison);
   const {
     expected,
@@ -1737,15 +1740,19 @@ const defaultComparisonToErrorMessage = comparison => {
   } = comparison;
   const expectedValue = valueToString(expected);
   const actualValue = valueToString(actual);
-  return createDetailedMessage("unequal values", {
-    found: actualValue,
-    expected: expectedValue,
-    path
-  });
+  return {
+    message: createDetailedMessage("unequal values", {
+      found: actualValue,
+      expected: expectedValue,
+      path
+    })
+  };
 };
 
-const referenceComparisonToErrorMessage = comparison => {
-  if (comparison.type !== "reference") return undefined;
+const getReferenceErrorInfo = comparison => {
+  if (comparison.type !== "reference") {
+    return null;
+  }
   const {
     actual,
     expected
@@ -1754,51 +1761,21 @@ const referenceComparisonToErrorMessage = comparison => {
   const isExtra = !expected && actual;
   const path = comparisonToPath(comparison);
   if (isExtra) {
-    return createUnexpectedReferenceMessage({
-      path,
-      expectedValue: valueToString(comparison.parent.expected),
-      unexpectedReferencePath: comparisonToPath(actual, "actual")
-    });
+    return {
+      type: "ExtraReferenceAssertionError",
+      message: "found a reference instead of a value\n--- reference found to ---\n".concat(comparisonToPath(actual, "actual"), "\n--- value expected ---\n").concat(valueToString(comparison.parent.expected), "\n--- path ---\n").concat(path)
+    };
   }
   if (isMissing) {
-    return createMissingReferenceMessage({
-      path,
-      expectedReferencePath: comparisonToPath(expected, "expected"),
-      actualValue: valueToString(comparison.parent.actual)
-    });
+    return {
+      type: "MissingReferenceAssertionError",
+      message: "found a value instead of a reference\n--- value found ---\n".concat(valueToString(comparison.parent.actual), "\n--- reference expected to ---\n").concat(comparisonToPath(expected, "expected"), "\n--- path ---\n").concat(path)
+    };
   }
-  return createUnequalRefencesMessage({
-    path,
-    expectedReferencePath: comparisonToPath(expected, "expected"),
-    actualReferencePath: comparisonToPath(actual, "actual")
-  });
-};
-const createUnexpectedReferenceMessage = ({
-  path,
-  expectedValue,
-  unexpectedReferencePath
-}) => "found a reference instead of a value\n--- reference found to ---\n".concat(unexpectedReferencePath, "\n--- value expected ---\n").concat(expectedValue, "\n--- path ---\n").concat(path);
-const createMissingReferenceMessage = ({
-  path,
-  expectedReferencePath,
-  actualValue
-}) => "found a value instead of a reference\n--- value found ---\n".concat(actualValue, "\n--- reference expected to ---\n").concat(expectedReferencePath, "\n--- path ---\n").concat(path);
-const createUnequalRefencesMessage = ({
-  path,
-  expectedReferencePath,
-  actualReferencePath
-}) => "unequal references\n--- reference found to ---\n".concat(actualReferencePath, "\n--- reference expected to ---\n").concat(expectedReferencePath, "\n--- path ---\n").concat(path);
-
-const comparisonToRootComparison = comparison => {
-  let current = comparison;
-  while (current) {
-    if (current.parent) {
-      current = current.parent;
-    } else {
-      break;
-    }
-  }
-  return current;
+  return {
+    type: "ReferenceAssertionError",
+    message: "unequal references\n--- reference found to ---\n".concat(comparisonToPath(actual, "actual"), "\n--- reference expected to ---\n").concat(comparisonToPath(expected, "expected"), "\n--- path ---\n").concat(path)
+  };
 };
 
 const findSelfOrAncestorComparison = (comparison, predicate) => {
@@ -1819,11 +1796,13 @@ const findSelfOrAncestorComparison = (comparison, predicate) => {
   return null;
 };
 
-const prototypeComparisonToErrorMessage = comparison => {
+const getPrototypeErrorInfo = comparison => {
   const prototypeComparison = findSelfOrAncestorComparison(comparison, ({
     type
   }) => type === "prototype");
-  if (!prototypeComparison) return null;
+  if (!prototypeComparison) {
+    return null;
+  }
   const rootComparison = comparisonToRootComparison(comparison);
   const path = comparisonToPath(prototypeComparison);
   const prototypeToString = prototype => {
@@ -1840,21 +1819,26 @@ const prototypeComparisonToErrorMessage = comparison => {
   };
   const expectedPrototype = prototypeComparison.expected;
   const actualPrototype = prototypeComparison.actual;
-  return createUnequalPrototypesMessage({
-    path,
-    expectedPrototype: prototypeToString(expectedPrototype),
-    actualPrototype: prototypeToString(actualPrototype)
-  });
+  return {
+    type: "PrototypeAssertionError",
+    message: "unequal prototypes\n--- prototype found ---\n".concat(prototypeToString(actualPrototype), "\n--- prototype expected ---\n").concat(prototypeToString(expectedPrototype), "\n--- path ---\n").concat(path)
+  };
 };
-const createUnequalPrototypesMessage = ({
-  path,
-  expectedPrototype,
-  actualPrototype
-}) => "unequal prototypes\n--- prototype found ---\n".concat(actualPrototype, "\n--- prototype expected ---\n").concat(expectedPrototype, "\n--- path ---\n").concat(path);
+const comparisonToRootComparison = comparison => {
+  let current = comparison;
+  while (current) {
+    if (current.parent) {
+      current = current.parent;
+    } else {
+      break;
+    }
+  }
+  return current;
+};
 
-const propertiesComparisonToErrorMessage = comparison => {
+const getPropertiesErrorInfo = comparison => {
   if (comparison.type !== "properties") {
-    return undefined;
+    return null;
   }
   const path = comparisonToPath(comparison.parent);
   const missing = comparison.actual.missing;
@@ -1870,28 +1854,40 @@ const propertiesComparisonToErrorMessage = comparison => {
     missingProperties[propertyName] = comparison.parent.expected[propertyName];
   });
   if (missingCount === 1 && extraCount === 0) {
-    return createDetailedMessage("1 missing property", {
-      "missing property": inspect(missingProperties),
-      path
-    });
+    return {
+      type: "MissingPropertyAssertionError",
+      message: createDetailedMessage("1 missing property", {
+        "missing property": inspect(missingProperties),
+        path
+      })
+    };
   }
   if (missingCount > 1 && extraCount === 0) {
-    return createDetailedMessage("".concat(missingCount, " missing properties"), {
-      "missing properties": inspect(missingProperties),
-      path
-    });
+    return {
+      type: "MissingPropertyAssertionError",
+      message: createDetailedMessage("".concat(missingCount, " missing properties"), {
+        "missing properties": inspect(missingProperties),
+        path
+      })
+    };
   }
   if (missingCount === 0 && extraCount === 1) {
-    return createDetailedMessage("1 unexpected property", {
-      "unexpected property": inspect(unexpectedProperties),
-      path
-    });
+    return {
+      type: "ExtraPropertyAssertionError",
+      message: createDetailedMessage("1 unexpected property", {
+        "unexpected property": inspect(unexpectedProperties),
+        path
+      })
+    };
   }
   if (missingCount === 0 && extraCount > 1) {
-    return createDetailedMessage("".concat(extraCount, " unexpected properties"), {
-      "unexpected properties": inspect(unexpectedProperties),
-      path
-    });
+    return {
+      type: "ExtraPropertyAssertionError",
+      message: createDetailedMessage("".concat(extraCount, " unexpected properties"), {
+        "unexpected properties": inspect(unexpectedProperties),
+        path
+      })
+    };
   }
   let message = "";
   if (extraCount === 1) {
@@ -1904,157 +1900,161 @@ const propertiesComparisonToErrorMessage = comparison => {
   } else {
     message += " and ".concat(missingCount, " missing properties");
   }
-  return createDetailedMessage(message, {
-    [extraCount === 1 ? "unexpected property" : "unexpected properties"]: inspect(unexpectedProperties),
-    [missingCount === 1 ? "missing property" : "missing properties"]: inspect(missingProperties),
-    path
-  });
+  return {
+    type: "PropertiesAssertionError",
+    message: createDetailedMessage(message, {
+      [extraCount === 1 ? "unexpected property" : "unexpected properties"]: inspect(unexpectedProperties),
+      [missingCount === 1 ? "missing property" : "missing properties"]: inspect(missingProperties),
+      path
+    })
+  };
 };
 
-const propertiesOrderComparisonToErrorMessage = comparison => {
-  if (comparison.type !== "properties-order") return undefined;
+const getPropertiesOrderErrorInfo = comparison => {
+  if (comparison.type !== "properties-order") {
+    return null;
+  }
   const path = comparisonToPath(comparison);
   const expected = comparison.expected;
   const actual = comparison.actual;
-  return createUnexpectedPropertiesOrderMessage({
-    path,
-    expectedPropertiesOrder: propertyNameArrayToString(expected),
-    actualPropertiesOrder: propertyNameArrayToString(actual)
-  });
+  return {
+    type: "PropertiesOrderAssertionError",
+    message: "unexpected properties order\n--- properties order found ---\n".concat(propertyNameArrayToString(actual).join("\n"), "\n--- properties order expected ---\n").concat(propertyNameArrayToString(expected).join("\n"), "\n--- path ---\n").concat(path)
+  };
 };
-const createUnexpectedPropertiesOrderMessage = ({
-  path,
-  expectedPropertiesOrder,
-  actualPropertiesOrder
-}) => "unexpected properties order\n--- properties order found ---\n".concat(actualPropertiesOrder.join("\n"), "\n--- properties order expected ---\n").concat(expectedPropertiesOrder.join("\n"), "\n--- path ---\n").concat(path);
 const propertyNameArrayToString = propertyNameArray => {
   return propertyNameArray.map(propertyName => inspect(propertyName));
 };
 
-const symbolsComparisonToErrorMessage = comparison => {
-  if (comparison.type !== "symbols") return undefined;
+const getSymbolsErrorInfo = comparison => {
+  if (comparison.type !== "symbols") {
+    return null;
+  }
   const path = comparisonToPath(comparison);
   const extra = comparison.actual.extra;
   const missing = comparison.actual.missing;
   const hasExtra = extra.length > 0;
   const hasMissing = missing.length > 0;
   if (hasExtra && !hasMissing) {
-    return createUnexpectedSymbolsMessage({
-      path,
-      unexpectedSymbols: symbolArrayToString$1(extra)
-    });
+    return {
+      type: "ExtraSymbolAssertionError",
+      message: "unexpected symbols\n--- unexpected symbol list ---\n".concat(symbolArrayToString$1(extra).join("\n"), "\n--- path ---\n").concat(path)
+    };
   }
   if (!hasExtra && hasMissing) {
-    return createMissingSymbolsMessage({
-      path,
-      missingSymbols: symbolArrayToString$1(missing)
-    });
+    return {
+      type: "MissingSymbolAssertionError",
+      message: "missing symbols\n--- missing symbol list ---\n".concat(symbolArrayToString$1(missing).join("\n"), "\n--- path ---\n").concat(path)
+    };
   }
-  return createUnexpectedAndMissingSymbolsMessage({
-    path,
-    unexpectedSymbols: symbolArrayToString$1(extra),
-    missingSymbols: symbolArrayToString$1(missing)
-  });
+  return {
+    type: "SymbolAssertionError",
+    message: "unexpected and missing symbols\n--- unexpected symbol list ---\n".concat(symbolArrayToString$1(extra).join("\n"), "\n--- missing symbol list ---\n").concat(symbolArrayToString$1(missing).join("\n"), "\n--- path ---\n").concat(path)
+  };
 };
-const createUnexpectedSymbolsMessage = ({
-  path,
-  unexpectedSymbols
-}) => "unexpected symbols\n--- unexpected symbol list ---\n".concat(unexpectedSymbols.join("\n"), "\n--- path ---\n").concat(path);
-const createMissingSymbolsMessage = ({
-  path,
-  missingSymbols
-}) => "missing symbols\n--- missing symbol list ---\n".concat(missingSymbols.join("\n"), "\n--- path ---\n").concat(path);
-const createUnexpectedAndMissingSymbolsMessage = ({
-  path,
-  unexpectedSymbols,
-  missingSymbols
-}) => "unexpected and missing symbols\n--- unexpected symbol list ---\n".concat(unexpectedSymbols.join("\n"), "\n--- missing symbol list ---\n").concat(missingSymbols.join("\n"), "\n--- path ---\n").concat(path);
 const symbolArrayToString$1 = symbolArray => {
   return symbolArray.map(symbol => inspect(symbol));
 };
 
-const symbolsOrderComparisonToErrorMessage = comparison => {
-  if (comparison.type !== "symbols-order") return undefined;
+const getSymbolsOrderErrorInfo = comparison => {
+  if (comparison.type !== "symbols-order") {
+    return null;
+  }
   const path = comparisonToPath(comparison);
   const expected = comparison.expected;
   const actual = comparison.actual;
-  return createUnexpectedSymbolsOrderMessage({
-    path,
-    expectedSymbolsOrder: symbolArrayToString(expected),
-    actualSymbolsOrder: symbolArrayToString(actual)
-  });
+  return {
+    type: "SymbolsOrderAssertionError",
+    message: "unexpected symbols order\n--- symbols order found ---\n".concat(symbolArrayToString(actual).join("\n"), "\n--- symbols order expected ---\n").concat(symbolArrayToString(expected).join("\n"), "\n--- path ---\n").concat(path)
+  };
 };
-const createUnexpectedSymbolsOrderMessage = ({
-  path,
-  expectedSymbolsOrder,
-  actualSymbolsOrder
-}) => "unexpected symbols order\n--- symbols order found ---\n".concat(actualSymbolsOrder.join("\n"), "\n--- symbols order expected ---\n").concat(expectedSymbolsOrder.join("\n"), "\n--- path ---\n").concat(path);
 const symbolArrayToString = symbolArray => {
   return symbolArray.map(symbol => inspect(symbol));
 };
 
-const setSizeComparisonToMessage = comparison => {
-  if (comparison.type !== "set-size") return undefined;
-  if (comparison.actual > comparison.expected) return createBiggerThanExpectedMessage(comparison);
-  return createSmallerThanExpectedMessage(comparison);
+const getSetSizeErrorInfo = comparison => {
+  if (comparison.type !== "set-size") {
+    return null;
+  }
+  if (comparison.actual < comparison.expected) {
+    return {
+      type: "MissingSetEntryAssertionError",
+      message: "a set is smaller than expected\n--- set size found ---\n".concat(comparison.actual, "\n--- set size expected ---\n").concat(comparison.expected, "\n--- path ---\n").concat(comparisonToPath(comparison.parent))
+    };
+  }
+  if (comparison.actual > comparison.expected) {
+    return {
+      type: "ExtraSetEntryAssertionError",
+      message: "a set is bigger than expected\n--- set size found ---\n".concat(comparison.actual, "\n--- set size expected ---\n").concat(comparison.expected, "\n--- path ---\n").concat(comparisonToPath(comparison.parent))
+    };
+  }
+  return null;
 };
-const createBiggerThanExpectedMessage = comparison => "a set is bigger than expected\n--- set size found ---\n".concat(comparison.actual, "\n--- set size expected ---\n").concat(comparison.expected, "\n--- path ---\n").concat(comparisonToPath(comparison.parent));
-const createSmallerThanExpectedMessage = comparison => "a set is smaller than expected\n--- set size found ---\n".concat(comparison.actual, "\n--- set size expected ---\n").concat(comparison.expected, "\n--- path ---\n").concat(comparisonToPath(comparison.parent));
 
-const mapEntryComparisonToErrorMessage = comparison => {
+const getMapEntryErrorInfo = comparison => {
   const mapEntryComparison = findSelfOrAncestorComparison(comparison, ({
     type
   }) => type === "map-entry");
-  if (!mapEntryComparison) return null;
-  const isUnexpected = !mapEntryComparison.expected && mapEntryComparison.actual;
-  if (isUnexpected) return createUnexpectedMapEntryErrorMessage(mapEntryComparison);
+  if (!mapEntryComparison) {
+    return null;
+  }
   const isMissing = mapEntryComparison.expected && !mapEntryComparison.actual;
-  if (isMissing) return createMissingMapEntryErrorMessage(mapEntryComparison);
+  if (isMissing) {
+    return {
+      type: "MissingMapEntryAssertionError",
+      message: "an entry is missing\n--- missing entry key ---\n".concat(valueToString(mapEntryComparison.expected.key), "\n--- missing entry value ---\n").concat(valueToString(mapEntryComparison.expected.value), "\n--- path ---\n").concat(comparisonToPath(mapEntryComparison.parent))
+    };
+  }
+  const isUnexpected = !mapEntryComparison.expected && mapEntryComparison.actual;
+  if (isUnexpected) {
+    return {
+      type: "ExtraMapEntryAssertionError",
+      message: "an entry is unexpected\n--- unexpected entry key ---\n".concat(valueToString(mapEntryComparison.actual.key), "\n--- unexpected entry value ---\n").concat(valueToString(mapEntryComparison.actual.value), "\n--- path ---\n").concat(comparisonToPath(mapEntryComparison.parent))
+    };
+  }
   return null;
 };
-const createUnexpectedMapEntryErrorMessage = comparison => "an entry is unexpected\n--- unexpected entry key ---\n".concat(valueToString(comparison.actual.key), "\n--- unexpected entry value ---\n").concat(valueToString(comparison.actual.value), "\n--- path ---\n").concat(comparisonToPath(comparison.parent));
-const createMissingMapEntryErrorMessage = comparison => "an entry is missing\n--- missing entry key ---\n".concat(valueToString(comparison.expected.key), "\n--- missing entry value ---\n").concat(valueToString(comparison.expected.value), "\n--- path ---\n").concat(comparisonToPath(comparison.parent));
 
-const matchesRegExpToErrorMessage = comparison => {
+const getMatchesRegExpErrorInfo = comparison => {
   if (comparison.type !== "matches_reg_exp") {
-    return undefined;
+    return null;
   }
   const path = comparisonToPath(comparison);
   const actualValue = valueToString(comparison.actual);
   const expectedRegexp = valueToString(comparison.expected);
-  return createMatchesRegExpMessage({
-    path,
-    actualValue,
-    expectedRegexp
-  });
+  return {
+    type: "RegexpMismatchAssertionError",
+    message: "unexpected value\n--- found ---\n".concat(actualValue, "\n--- expected ---\nmatchesRegExp(").concat(expectedRegexp, ")\n--- path ---\n").concat(path)
+  };
 };
-const createMatchesRegExpMessage = ({
-  path,
-  expectedRegexp,
-  actualValue
-}) => "unexpected value\n--- found ---\n".concat(actualValue, "\n--- expected ---\nmatchesRegExp(").concat(expectedRegexp, ")\n--- path ---\n").concat(path);
 
-const notComparisonToErrorMessage = comparison => {
-  if (comparison.type !== "not") return undefined;
+const getNotErroInfo = comparison => {
+  if (comparison.type !== "not") {
+    return null;
+  }
   const path = comparisonToPath(comparison);
   const actualValue = valueToString(comparison.actual);
-  return createNotMessage({
-    path,
-    actualValue
-  });
+  return {
+    type: "NotAssertionError",
+    message: "unexpected value\n--- found ---\n".concat(actualValue, "\n--- expected ---\nan other value\n--- path ---\n").concat(path)
+  };
 };
-const createNotMessage = ({
-  path,
-  actualValue
-}) => "unexpected value\n--- found ---\n".concat(actualValue, "\n--- expected ---\nan other value\n--- path ---\n").concat(path);
 
-const arrayLengthComparisonToMessage = comparison => {
-  if (comparison.type !== "identity") return undefined;
+const getArrayLengthErrorInfo = comparison => {
+  if (comparison.type !== "identity") {
+    return null;
+  }
   const parentComparison = comparison.parent;
-  if (parentComparison.type !== "property-value") return undefined;
-  if (parentComparison.data !== "length") return undefined;
+  if (parentComparison.type !== "property-value") {
+    return null;
+  }
+  if (parentComparison.data !== "length") {
+    return null;
+  }
   const grandParentComparison = parentComparison.parent;
-  if (!isArray(grandParentComparison.actual)) return undefined;
+  if (!isArray(grandParentComparison.actual)) {
+    return null;
+  }
   const actualArray = grandParentComparison.actual;
   const expectedArray = grandParentComparison.expected;
   const actualLength = comparison.actual;
@@ -2062,46 +2062,52 @@ const arrayLengthComparisonToMessage = comparison => {
   const path = comparisonToPath(grandParentComparison);
   if (actualLength < expectedLength) {
     const missingValues = expectedArray.slice(actualLength);
-    return createDetailedMessage("an array is smaller than expected", {
-      "array length found": actualLength,
-      "array length expected": expectedLength,
-      "missing values": inspect(missingValues),
-      path
-    });
+    return {
+      type: "MissingArrayEntryAssertionError",
+      message: createDetailedMessage("an array is smaller than expected", {
+        "array length found": actualLength,
+        "array length expected": expectedLength,
+        "missing values": inspect(missingValues),
+        path
+      })
+    };
   }
   const extraValues = actualArray.slice(expectedLength);
-  return createDetailedMessage("an array is bigger than expected", {
-    "array length found": actualLength,
-    "array length expected": expectedLength,
-    "extra values": inspect(extraValues),
-    path
-  });
+  return {
+    type: "ExtraArrayEntryAssertionError",
+    message: createDetailedMessage("an array is bigger than expected", {
+      "array length found": actualLength,
+      "array length expected": expectedLength,
+      "extra values": inspect(extraValues),
+      path
+    })
+  };
 };
 
 const MAX_HEIGHT = 10;
 let MAX_WIDTH = 80;
 const COLUMN_MARKER_CHAR = "^";
 const EXPECTED_CONTINUES_WITH_MAX_LENGTH = 30;
-const stringsComparisonToErrorMessage = (comparison, {
+const getStringsErrorInfo = (comparison, {
   format
 }) => {
   const isStartsWithComparison = comparison.type === "starts_with";
   if (comparison.type !== "identity" && !isStartsWithComparison) {
-    return undefined;
+    return null;
   }
   const {
     actual,
     expected
   } = comparison;
   if (typeof actual !== "string") {
-    return undefined;
+    return null;
   }
   if (typeof expected !== "string") {
-    return undefined;
+    return null;
   }
   const name = stringNameFromComparison(comparison);
   const path = comparisonToPath(comparison);
-  return formatStringAssertionErrorMessage({
+  return getStringComparisonErrorInfo({
     actual,
     expected,
     path,
@@ -2109,7 +2115,7 @@ const stringsComparisonToErrorMessage = (comparison, {
     format
   });
 };
-const formatStringAssertionErrorMessage = ({
+const getStringComparisonErrorInfo = ({
   actual,
   expected,
   path = "",
@@ -2259,12 +2265,17 @@ const formatStringAssertionErrorMessage = ({
       const expectedChar = expected[i];
       if (actualChar !== expectedChar) {
         let message = "unexpected character in ".concat(name);
-        return createDetailedMessage(message, {
-          ...formatDetails({
-            annotationLabel: "unexpected ".concat(inspect(actualChar), ", expected to continue with")
-          }),
-          path
-        });
+        return {
+          type: "CharacterAssertionError",
+          message: createDetailedMessage(message, {
+            ...formatDetails({
+              annotationLabel: "unexpected ".concat(inspect(actualChar), ", expected to continue with")
+            }),
+            ...(path ? {
+              path
+            } : {})
+          })
+        };
       }
       if (isLineBreak(actualChar)) {
         lineIndex++;
@@ -2284,12 +2295,17 @@ const formatStringAssertionErrorMessage = ({
       } else {
         message += ", ".concat(missingCharacterCount, " characters are missing");
       }
-      return createDetailedMessage(message, {
-        ...formatDetails({
-          annotationLabel: "expected to continue with"
-        }),
-        path
-      });
+      return {
+        type: "MissingCharacterAssertionError",
+        message: createDetailedMessage(message, {
+          ...formatDetails({
+            annotationLabel: "expected to continue with"
+          }),
+          ...(path ? {
+            path
+          } : {})
+        })
+      };
     }
   }
   {
@@ -2315,13 +2331,18 @@ const formatStringAssertionErrorMessage = ({
     }
 
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
-    return createDetailedMessage(message, {
-      ...formatDetails({
-        annotationLabel,
-        expectedOverview: false
-      }),
-      path
-    });
+    return {
+      type: "ExtraCharacterAssertionError",
+      message: createDetailedMessage(message, {
+        ...formatDetails({
+          annotationLabel,
+          expectedOverview: false
+        }),
+        ...(path ? {
+          path
+        } : {})
+      })
+    };
   }
 };
 const truncateLine = (line, {
@@ -2430,8 +2451,10 @@ const detectFunctionNameComparison = comparison => {
   return true;
 };
 
-const betweenComparisonToMessage = comparison => {
-  if (comparison.type !== "between") return undefined;
+const getBetweenErrorInfo = comparison => {
+  if (comparison.type !== "between") {
+    return null;
+  }
   const {
     actual,
     expected
@@ -2444,36 +2467,45 @@ const betweenComparisonToMessage = comparison => {
 
   // not a number
   if (typeof actual !== "number") {
-    return createDetailedMessage("not a number", {
-      found: inspect(actual),
-      expected: "a number between ".concat(inspect(min), " and ").concat(inspect(max)),
-      path
-    });
+    return {
+      type: "NotANumberAssertionError",
+      message: createDetailedMessage("not a number", {
+        found: inspect(actual),
+        expected: "a number between ".concat(inspect(min), " and ").concat(inspect(max)),
+        path
+      })
+    };
   }
   // too small
   if (actual < min) {
-    return createDetailedMessage("too small", {
+    return {
+      type: "TooSmallAssertionError",
+      message: createDetailedMessage("too small", {
+        found: inspect(actual),
+        expected: "between ".concat(inspect(min), " and ").concat(inspect(max)),
+        path
+      })
+    };
+  }
+  // too big
+  return {
+    type: "TooBigAssertionError",
+    message: createDetailedMessage("too big", {
       found: inspect(actual),
       expected: "between ".concat(inspect(min), " and ").concat(inspect(max)),
       path
-    });
-  }
-  // too big
-  return createDetailedMessage("too big", {
-    found: inspect(actual),
-    expected: "between ".concat(inspect(min), " and ").concat(inspect(max)),
-    path
-  });
+    })
+  };
 };
 
-const errorMessageFromComparison = (comparison, {
+const getErrorInfo = (comparison, {
   format
 }) => {
   const failedComparison = deepestComparison(comparison);
-  const errorMessageFromCandidates = firstFunctionReturningSomething([anyComparisonToErrorMessage, mapEntryComparisonToErrorMessage, notComparisonToErrorMessage, matchesRegExpToErrorMessage, prototypeComparisonToErrorMessage, referenceComparisonToErrorMessage, propertiesComparisonToErrorMessage, propertiesOrderComparisonToErrorMessage, symbolsComparisonToErrorMessage, symbolsOrderComparisonToErrorMessage, setSizeComparisonToMessage, arrayLengthComparisonToMessage, stringsComparisonToErrorMessage, betweenComparisonToMessage], failedComparison, {
+  const errorInfoFromCandidates = firstFunctionReturningSomething([getAnyErrorInfo, getMapEntryErrorInfo, getNotErroInfo, getMatchesRegExpErrorInfo, getPrototypeErrorInfo, getReferenceErrorInfo, getPropertiesErrorInfo, getPropertiesOrderErrorInfo, getSymbolsErrorInfo, getSymbolsOrderErrorInfo, getSetSizeErrorInfo, getArrayLengthErrorInfo, getStringsErrorInfo, getBetweenErrorInfo], failedComparison, {
     format
   });
-  return errorMessageFromCandidates || defaultComparisonToErrorMessage(failedComparison);
+  return errorInfoFromCandidates || getErrorInfoDefault(failedComparison);
 };
 const deepestComparison = comparison => {
   let current = comparison;
@@ -2499,7 +2531,13 @@ const firstFunctionReturningSomething = (fnCandidates, ...args) => {
   return undefined;
 };
 
-const isAssertionError = value => value && typeof value === "object" && value.name === "AssertionError";
+const isAssertionError = value => {
+  if (!value) return false;
+  if (typeof value !== "object") return false;
+  if (value.name === "AssertionError") return true;
+  if (value.name.includes("AssertionError")) return true;
+  return false;
+};
 const createAssertionError = message => {
   const error = new Error(message);
   error.name = "AssertionError";
@@ -2545,11 +2583,17 @@ const createAssert = ({
       checkPropertiesOrder
     });
     if (comparison.failed) {
-      let errorMessage = message || errorMessageFromComparison(comparison, {
+      const errorInfo = message ? {
+        message
+      } : getErrorInfo(comparison, {
         format
       });
+      let errorMessage = errorInfo.message;
       errorMessage = appendDetails(errorMessage, details);
       const error = createAssertionError(errorMessage);
+      if (errorInfo.type) {
+        error.name = errorInfo.type;
+      }
       if (Error.captureStackTrace) {
         Error.captureStackTrace(error, assert);
       }

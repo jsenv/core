@@ -1,8 +1,5 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import {
-  renderTerminalSvg,
-  startTerminalVideoRecording,
-} from "@jsenv/terminal-snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { UNICODE, ANSI } from "@jsenv/log";
@@ -12,9 +9,10 @@ import {
   nodeWorkerThread,
   nodeChildProcess,
   reporterList,
+  reportAsJunitXml,
 } from "@jsenv/test";
 
-const terminalVideoRecording =
+const terminalAnimatedRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
   !process.env.JSENV;
@@ -24,60 +22,69 @@ UNICODE.supported = true;
 ANSI.supported = true;
 
 const test = async (filename, params) => {
-  if (terminalVideoRecording) {
+  if (terminalAnimatedRecording) {
     console.log(`snapshoting ${filename}`);
   }
-  await executeTestPlan({
-    listReporter: false,
+  const testPlanResult = await executeTestPlan({
+    logs: {
+      type: null,
+    },
     reporters: [
       reporterList({
-        dynamic: false,
+        animated: false,
         mockFluctuatingValues: true,
-        spy: () => {
+        spy: async () => {
           const terminalSnapshotFileUrl = new URL(
             `./snapshots/node/${filename}.svg`,
             import.meta.url,
           );
+          const terminalRecorder = await startTerminalRecording({
+            svg: true,
+          });
           const terminalFileSnapshot = takeFileSnapshot(
             terminalSnapshotFileUrl,
           );
-          let stdout = "";
           return {
             write: (log) => {
-              stdout += log;
+              terminalRecorder.write(log);
             },
             end: async () => {
-              const svg = await renderTerminalSvg(stdout);
-              writeFileSync(terminalSnapshotFileUrl, svg);
+              const terminalRecords = await terminalRecorder.stop();
+              const terminalSvg = await terminalRecords.svg();
+              writeFileSync(terminalSnapshotFileUrl, terminalSvg);
               terminalFileSnapshot.compare();
             },
           };
         },
       }),
-      ...(terminalVideoRecording
+      ...(terminalAnimatedRecording
         ? [
             reporterList({
-              dynamic: true,
+              animated: true,
               spy: async () => {
-                const terminalVideoRecorder = await startTerminalVideoRecording(
-                  {
-                    columns: 120,
-                    rows: 30,
+                const terminalRecorder = await startTerminalRecording({
+                  // logs: true,
+                  columns: 120,
+                  rows: 30,
+                  gif: {
+                    repeat: true,
+                    msAddedAtTheEnd: 3_500,
                   },
-                );
+                  // debug: true,
+                });
                 return {
                   write: async (log) => {
-                    await terminalVideoRecorder.write(log);
+                    await terminalRecorder.write(log);
                   },
                   end: async () => {
-                    const terminalVideo = await terminalVideoRecorder.stop();
-                    const terminalVideoMp4 = await terminalVideo.mp4();
+                    const terminalRecords = await terminalRecorder.stop();
+                    const terminalGif = await terminalRecords.gif();
                     writeFileSync(
                       new URL(
-                        `./snapshots/node/${filename}.mp4`,
+                        `./snapshots/node/${filename}.gif`,
                         import.meta.url,
                       ),
-                      terminalVideoMp4,
+                      terminalGif,
                     );
                   },
                 };
@@ -104,6 +111,15 @@ const test = async (filename, params) => {
     githubCheck: false,
     ...params,
   });
+  const junitXmlFileUrl = new URL(
+    `./snapshots/node/${filename}.xml`,
+    import.meta.url,
+  );
+  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
+    mockFluctuatingValues: true,
+  });
+  junitXmlFileSnapshot.compare();
 };
 
 await test("console.spec.js");

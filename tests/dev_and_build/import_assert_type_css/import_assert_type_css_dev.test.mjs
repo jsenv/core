@@ -33,10 +33,8 @@ const test = async ({ browserLauncher }) => {
 };
 
 await test({ browserLauncher: chromium });
-if (
+if (process.platform !== "win32") {
   // page.goto: NS_ERROR_CONNECTION_REFUSED happens a lot with windows here
-  process.platform !== "win32"
-) {
   await test({ browserLauncher: firefox });
 }
 await test({ browserLauncher: webkit });

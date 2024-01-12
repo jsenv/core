@@ -53,9 +53,9 @@
     "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
     "monorepo:sync_packages_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
     "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
+    "monorepo:node_modules_clear": "npm @jsenv/snapshot clear **/node_modules/",
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "prettier": "prettier --write .",
-    "playwright:install": "npx playwright install-deps && npx playwright install",
     "certificate:install": "node ./scripts/dev/install_certificate_authority.mjs",
     "prepublishOnly": "npm run build"
   },
@@ -95,12 +95,15 @@
     "@jsenv/snapshot": "./packages/independent/snapshot/",
     "@jsenv/test": "./packages/related/test/",
     "babel-plugin-transform-async-to-promises": "0.8.18",
-    "eslint": "8.54.0",
+    "eslint": "8.56.0",
     "eslint-plugin-html": "7.1.0",
-    "eslint-plugin-import": "2.29.0",
+    "eslint-plugin-import": "2.29.1",
     "eslint-plugin-react": "7.33.2",
-    "open": "9.1.0",
-    "playwright": "1.40.0",
-    "prettier": "3.1.0"
+    "open": "10.0.3",
+    "playwright": "1.40.1",
+    "@playwright/browser-chromium": "1.40.1",
+    "@playwright/browser-firefox": "1.40.1",
+    "@playwright/browser-webkit": "1.40.1",
+    "prettier": "3.1.1"
   }
 }

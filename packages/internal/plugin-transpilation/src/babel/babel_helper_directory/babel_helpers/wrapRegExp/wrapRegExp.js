@@ -1,5 +1,7 @@
-import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js"
-import inherits from "../inherits/inherits.js"
+/* @minVersion 7.19.0 */
+
+import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js";
+import inherits from "../inherits/inherits.js";
 
 export default function _wrapRegExp() {
   _wrapRegExp = function (re, groups) {
@@ -35,7 +37,7 @@ export default function _wrapRegExp() {
         substitution.replace(/\$<([^>]+)>/g, function (_, name) {
           var group = groups[name];
           return "$" + (Array.isArray(group) ? group.join("$") : group);
-        })
+        }),
       );
     } else if (typeof substitution === "function") {
       var _this = this;

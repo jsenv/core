@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="3" skipped="0" failures="3">
+  <testcase
+    file="error_in_script.spec.html"
+    name="chromium"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="chromium"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <error type="Error"> 9 |   &#x3C;body&#x3E;
+10 |     &#x3C;script&#x3E;
+11 |       throw new Error(&#x22;here&#x22;);
+                      ^
+Error: here
+  at [mock]/error_in_script.spec.html:11:18</error>
+  <testcase
+    file="error_in_script.spec.html"
+    name="firefox"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="firefox"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <error type="Error"> 9 |   &#x3C;body&#x3E;
+10 |     &#x3C;script&#x3E;
+11 |       throw new Error(&#x22;here&#x22;);
+                      ^
+Error: here
+@[mock]/error_in_script.spec.html:11:18</error>
+  <testcase
+    file="error_in_script.spec.html"
+    name="webkit"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="webkit"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <error type="Error"> 9 |   &#x3C;body&#x3E;
+10 |     &#x3C;script&#x3E;
+11 |       throw new Error(&#x22;here&#x22;);
+                                       ^
+Error: here
+global code@[mock]/error_in_script.spec.html:11:27</error>
+</testsuite>

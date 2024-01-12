@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div style="display: flex">
+      <div id="terminal"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+    <script type="module">
+      import { initTerminal } from "./terminal_recorder.js";
+
+      const { startRecording } = initTerminal({
+        gif: {
+          repeat: true,
+          msAddedAtTheEnd: 3_000,
+        },
+        video: true,
+      });
+      const { writeIntoTerminal, stopRecording } = await startRecording();
+      writeIntoTerminal("hello\n");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      writeIntoTerminal("world");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const terminalRecords = await stopRecording();
+      const video = terminalRecords.video;
+      const gif = terminalRecords.gif;
+
+      const webmDataUrl = `data:video/webm;codecs=h264;base64,${window.btoa(
+        video,
+      )}`;
+      const gifDataUrl = `data:image/gif;base64,${window.btoa(gif)}`;
+
+      document.querySelector("#video").src = webmDataUrl;
+      document.querySelector("#gif").src = gifDataUrl;
+    </script>
+    <div id="records">
+      Video:
+      <video id="video" src="data:," controls></video>
+      GIF:
+      <img id="gif" src="data:," />
+    </div>
+  </body>
+</html>

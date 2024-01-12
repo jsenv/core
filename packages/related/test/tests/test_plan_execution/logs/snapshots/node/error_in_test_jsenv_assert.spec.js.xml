@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="2" skipped="0" failures="2">
+  <testcase
+    file="error_in_test_jsenv_assert.spec.js"
+    name="worker_thread"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    failures="1"
+  >
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <failure type="AssertionError">1 | import { assert } from &#x22;@jsenv/assert&#x22;;
+2 | 
+3 | assert({
+    ^
+AssertionError: unequal values
+--- found ---
+true
+--- expected ---
+false
+--- path ---
+actual
+  at [mock]/error_in_test_jsenv_assert.spec.js:3:1</failure>
+  <testcase
+    file="error_in_test_jsenv_assert.spec.js"
+    name="child_process"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    failures="1"
+  >
+    <properties>
+      <property name="runtimeName" value="node_child_process"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <failure type="AssertionError">1 | import { assert } from &#x22;@jsenv/assert&#x22;;
+2 | 
+3 | assert({
+    ^
+AssertionError: unequal values
+--- found ---
+true
+--- expected ---
+false
+--- path ---
+actual
+  at [mock]/error_in_test_jsenv_assert.spec.js:3:1</failure>
+</testsuite>

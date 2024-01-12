@@ -1,4 +1,4 @@
-import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js"
+import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js";
 
 export default function _inherits(subClass, superClass) {
   if (typeof superClass !== "function" && superClass !== null) {
@@ -11,8 +11,8 @@ export default function _inherits(subClass, superClass) {
     constructor: {
       value: subClass,
       writable: true,
-      configurable: true
-    }
+      configurable: true,
+    },
   });
   Object.defineProperty(subClass, "prototype", { writable: false });
   if (superClass) setPrototypeOf(subClass, superClass);

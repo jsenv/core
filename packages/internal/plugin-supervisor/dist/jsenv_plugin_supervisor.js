@@ -79,7 +79,6 @@ const inspectFileContent = ({
   if (line - 1 === lineEndIndex) {
     lineMarker = false; // useless because last line
   }
-
   let lineIndex = lineStartIndex;
   let columnsBefore;
   let columnsAfter;
@@ -572,7 +571,6 @@ const convertStaticImportIntoDynamicImport = (staticImportNode, t) => {
     true // shorthand
     );
   }));
-
   const variableDeclarator = t.variableDeclarator(objectPattern, awaitExpression);
   const variableDeclaration = t.variableDeclaration("const", [variableDeclarator]);
   return variableDeclaration;

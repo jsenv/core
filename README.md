@@ -1,16 +1,16 @@
 # @jsenv/core [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
 Jsenv is a tool to develop test and build projects using JavaScript.
-It favors standards and simplicity.  
+It favors standards and simplicity.
 
 As a result it can be enjoyed by people without much experience in tooling or seeking for a simple tool without hidden complexities.
 
 The core tools provided by jsenv:
 
-1. **dev server**; a server for source files  
-2. **build**; generate an optimized version of source files into a directory 
-3. **build server**; a server for build files  
-4. **test runner**; execute all test files at once  
+1. **dev server**; a server for source files
+2. **build**; generate an optimized version of source files into a directory
+3. **build server**; a server for build files
+4. **test runner**; execute all test files at once
 
 [Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
@@ -29,8 +29,7 @@ The core tools provided by jsenv:
 
 # Demos
 
-A demo is a project pre-configured with jsenv.
-
+A demo is a project pre-configured with jsenv.  
 The following command can be used to install and try a demo:
 
 ```console
@@ -65,7 +64,7 @@ After running the suggested commands the demo is ready.
 The demo contains preconfigured scripts:
 
 - `npm run dev`: starts a server for source files; Documented in [B) Dev](<https://github.com/jsenv/core/wiki/B)-Dev>).
-- `npm run build`: generate build  files; Documented in [C) Build](<https://github.com/jsenv/core/wiki/C)-Build>).
+- `npm run build`: generate build files; Documented in [C) Build](<https://github.com/jsenv/core/wiki/C)-Build>).
 - `npm run build:serve`: start a server for build files; Documented in [C) Build#how-to-serve-build-files](<https://github.com/jsenv/core/wiki/C)-Build#3-how-to-serve-build-files>).
 - `npm run test`: execute test files; Documented in [D) Test](<https://github.com/jsenv/core/wiki/D)-Test>).
 

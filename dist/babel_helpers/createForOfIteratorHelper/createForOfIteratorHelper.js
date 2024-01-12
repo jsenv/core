@@ -1,12 +1,13 @@
 /* eslint-disable eqeqeq, no-eq-null */
-import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupportedIterableToArray.js"
+import unsupportedIterableToArray from "../unsupportedIterableToArray/unsupportedIterableToArray.js";
 
 // s: start (create the iterator)
 // n: next
 // e: error (called whenever something throws)
 // f: finish (always called at the end)
 export default function _createForOfIteratorHelper(o, allowArrayLike) {
-  var it = (typeof Symbol !== "undefined" && o[Symbol.iterator]) || o["@@iterator"]
+  var it =
+    (typeof Symbol !== "undefined" && o[Symbol.iterator]) || o["@@iterator"];
   if (!it) {
     // Fallback for engines without symbol support
     if (
@@ -14,47 +15,47 @@ export default function _createForOfIteratorHelper(o, allowArrayLike) {
       (it = unsupportedIterableToArray(o)) ||
       (allowArrayLike && o && typeof o.length === "number")
     ) {
-      if (it) o = it
-      var i = 0
-      var F = function () {}
+      if (it) o = it;
+      var i = 0;
+      var F = function () {};
       return {
         s: F,
         n: function () {
-          if (i >= o.length) return { done: true }
-          return { done: false, value: o[i++] }
+          if (i >= o.length) return { done: true };
+          return { done: false, value: o[i++] };
         },
         e: function (e) {
-          throw e
+          throw e;
         },
         f: F,
-      }
+      };
     }
     throw new TypeError(
       "Invalid attempt to iterate non-iterable instance.\\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.",
-    )
+    );
   }
   var normalCompletion = true,
     didErr = false,
-    err
+    err;
   return {
     s: function () {
-      it = it.call(o)
+      it = it.call(o);
     },
     n: function () {
-      var step = it.next()
-      normalCompletion = step.done
-      return step
+      var step = it.next();
+      normalCompletion = step.done;
+      return step;
     },
     e: function (e) {
-      didErr = true
-      err = e
+      didErr = true;
+      err = e;
     },
     f: function () {
       try {
-        if (!normalCompletion && it.return != null) it.return()
+        if (!normalCompletion && it.return != null) it.return();
       } finally {
-        if (didErr) throw err
+        if (didErr) throw err;
       }
     },
-  }
+  };
 }

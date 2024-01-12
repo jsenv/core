@@ -1,6 +1,6 @@
 /* @minVersion 7.0.0-beta.0 */
 
-import OverloadYield from "../overloadYield/overloadYield.js";
+import OverloadYield from "../OverloadYield/OverloadYield.js";
 
 export default function AsyncGenerator(gen) {
   var front, back;
@@ -59,7 +59,7 @@ export default function AsyncGenerator(gen) {
         },
         function (err) {
           resume("throw", err);
-        }
+        },
       );
     } catch (err) {
       settle("throw", err);

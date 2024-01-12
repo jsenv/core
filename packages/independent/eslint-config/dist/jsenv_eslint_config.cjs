@@ -316,7 +316,7 @@ const jsenvEslintRules = {
   "no-constant-binary-expression": ["error"],
   "no-constructor-return": ["error"],
   "no-control-regex": ["error"],
-  "no-debugger": ["error"],
+  "no-debugger": process.env.CI ? ["error"] : ["off"],
   "no-delete-var": ["error"],
   "no-div-regex": ["error"],
   "no-dupe-args": ["error"],

@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div style="display: flex">
+      <canvas id="canvas"></canvas>
+      <img src="data:," />
+    </div>
+    <script type="module">
+      import { createGifEncoder } from "../gif_encoder.js";
+
+      const width = 100;
+      const height = 200;
+      const canvas = document.querySelector("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = width;
+      canvas.height = height;
+
+      const encoder = createGifEncoder({
+        width: canvas.width,
+        height: canvas.height,
+        repeat: 0,
+        quality: 16, // [1,30] | Best=1 | >20 not much speed improvement. 10 is default.
+      });
+
+      const updateCanvasColor = (color) => {
+        drawRectangle(context, {
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+          fill: color,
+        });
+      };
+
+      const addFrame = (delayBeforeDisplayingNextFrameInMs) => {
+        encoder.addFrame(context, {
+          delay: delayBeforeDisplayingNextFrameInMs,
+        });
+      };
+
+      const drawRectangle = (
+        context,
+        { x, y, width, height, radius, fill, stroke, strokeWidth },
+      ) => {
+        if (radius) {
+          context.beginPath();
+          context.roundRect(x, y, width, height, [radius]);
+          if (fill) {
+            context.fillStyle = fill;
+            context.fill();
+          }
+          if (stroke) {
+            context.strokeWidth = strokeWidth;
+            context.strokeStyle = stroke;
+            context.stroke();
+          }
+          return;
+        }
+        context.beginPath();
+        context.rect(x, y, width, height);
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        if (stroke) {
+          context.strokeWidth = strokeWidth;
+          context.strokeStyle = stroke;
+          context.stroke();
+        }
+      };
+
+      const startTime = Date.now();
+      updateCanvasColor("red");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 700);
+      });
+      addFrame(Date.now() - startTime);
+      updateCanvasColor("blue");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1_500);
+      });
+      addFrame(Date.now() - startTime);
+      encoder.finish();
+      const gifDataUrl = encoder.toDataUrl();
+      document.querySelector("img").src = gifDataUrl;
+    </script>
+  </body>
+</html>

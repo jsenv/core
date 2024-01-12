@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="3" skipped="0" failures="3">
+  <testcase
+    file="error_in_js_module.spec.html"
+    name="chromium"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="chromium"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | throw new Error(&#x22;here&#x22;);
+          ^
+Error: here
+  at [mock]/error_in_js_module.spec.js:1:7</error>
+  <testcase
+    file="error_in_js_module.spec.html"
+    name="firefox"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="firefox"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | throw new Error(&#x22;here&#x22;);
+          ^
+Error: here
+@[mock]/error_in_js_module.spec.js:1:7</error>
+  <testcase
+    file="error_in_js_module.spec.html"
+    name="webkit"
+    time="[mock]"
+    timestamp="[mock]"
+    tests="1"
+    errors="1"
+  >
+    <properties>
+      <property name="runtimeName" value="webkit"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <error type="Error">1 | throw new Error(&#x22;here&#x22;);
+                   ^
+Error: here
+module code@[mock]/error_in_js_module.spec.js:1:16</error>
+</testsuite>

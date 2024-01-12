@@ -1,3 +1,86 @@
+# 3.0.0 (draft)
+
+#### Test execution in parallel by default
+
+- can limit max number of exec in parallel
+- can be limited by CPU/memory usage
+
+#### Test logs format updated
+
+**before**
+
+```console
+✖ execution 1 of 1 completed (all failed)
+file: error_in_test_function.spec.js
+runtime: node_worker_thread/20.0.0
+duration: 0.7 second
+--- error ---
+Error: circle
+  at getCircle (<mock>/error_in_test_function.spec.js:2:9)
+  at <mock>/error_in_test_function.spec.js:5:1
+  at node:internal/worker.js:415:10
+-------------
+
+-------------- summary -----------------
+1 execution: all failed
+total duration: 2 seconds
+----------------------------------------
+```
+
+**after**
+
+```console
+------------ 1 execution to run ------------
+1 with worker_thread (node_worker_thread@20.0.0)
+---------------------------------------------
+
+✖ 1/1 error_in_test_function.spec.js [worker_thread/0.7s/10MB] (all failed)
+--------------- error ----------------
+1 | const getCircle = () => {
+2 | throw new Error("circle");
+    ^
+Error: circle
+  at getCircle (<mock>/error_in_test_function.spec.js:2:9)
+  at <mock>/error_in_test_function.spec.js:5:1
+--------------------------------------
+
+------------------ summary ------------------
+1 execution: all failed
+duration: 2s
+---------------------------------------------
+```
+
+#### coverage params update
+
+**before**
+
+```js
+import { executeTestPlan } from "@jsenv/test";
+
+await executeTestPlan({
+  coverageEnabled: true,
+  coverageConfig: {
+    "./file.js": true,
+  },
+  coverageReportHtml: true,
+});
+```
+
+**after**
+
+```js
+import { executeTestPlan, reportCoverageAsHtml } from "@jsenv/test";
+
+const result = await executeTestPlan({
+  coverage: {
+    include: {
+      "./file.js": true,
+    },
+  },
+});
+await reportCoverageAsHtml(result);
+```
+
 # 2.1.0
 
 - `process.exit(0)` is fine on Node.js

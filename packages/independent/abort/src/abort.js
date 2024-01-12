@@ -259,6 +259,12 @@ const createOperation = () => {
     }
   };
 
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
   return {
     // We could almost hide the operationSignal
     // But it can be handy for 2 things:
@@ -270,6 +276,7 @@ const createOperation = () => {
     addAbortCallback,
     addAbortSignal,
     addAbortSource,
+    fork,
     timeout,
     wait,
     withSignal,

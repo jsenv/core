@@ -1,0 +1,130 @@
+<!--
+TODO: a canvas to gif encoding using video to gif source code
+https://github.com/incubated-geek-cc/video-to-GIF/tree/main?tab=readme-ov-fil
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div style="display: flex">
+      <canvas id="canvas"></canvas>
+      <img src="data:," />
+    </div>
+    <script type="text/javascript" src="./lzwencoder.js"></script>
+    <script type="text/javascript" src="./neuquant.js"></script>
+    <script type="text/javascript" src="./gif_encoder.js"></script>
+    <script type="module">
+      /* globals GIFEncoder  */
+      const width = 100;
+      const height = 200;
+      const canvas = document.querySelector("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = width;
+      canvas.height = height;
+
+      const encoder = new GIFEncoder(canvas.width, canvas.height);
+      encoder.setRepeat(0); // 0 for repeat, -1 for no-repeat
+      encoder.setDelay(0); // frame delay in ms // 500
+      encoder.setQuality(16); // [1,30] | Best=1 | >20 not much speed improvement. 10 is default.
+      encoder.start();
+
+      let previousMs = Date.now();
+
+      const updateCanvasColor = (color) => {
+        drawRectangle(context, {
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+          fill: color,
+        });
+        const delay = Date.now() - previousMs;
+        encoder.setDelay(delay);
+        encoder.addFrame(context);
+      };
+
+      const drawRectangle = (
+        context,
+        { x, y, width, height, radius, fill, stroke, strokeWidth },
+      ) => {
+        if (radius) {
+          context.beginPath();
+          context.roundRect(x, y, width, height, [radius]);
+          if (fill) {
+            context.fillStyle = fill;
+            context.fill();
+          }
+          if (stroke) {
+            context.strokeWidth = strokeWidth;
+            context.strokeStyle = stroke;
+            context.stroke();
+          }
+          return;
+        }
+        context.beginPath();
+        context.rect(x, y, width, height);
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        if (stroke) {
+          context.strokeWidth = strokeWidth;
+          context.strokeStyle = stroke;
+          context.stroke();
+        }
+      };
+
+      function encode64(input) {
+        var output = "";
+        var i = 0;
+        var l = input.length;
+        var key =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+        var chr1;
+        var chr2;
+        var chr3;
+        var enc1;
+        var enc2;
+        var enc3;
+        var enc4;
+        while (i < l) {
+          chr1 = input.charCodeAt(i++);
+          chr2 = input.charCodeAt(i++);
+          chr3 = input.charCodeAt(i++);
+          enc1 = chr1 >> 2;
+          enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+          enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+          enc4 = chr3 & 63;
+          if (isNaN(chr2)) enc3 = enc4 = 64;
+          else if (isNaN(chr3)) enc4 = 64;
+          output =
+            output +
+            key.charAt(enc1) +
+            key.charAt(enc2) +
+            key.charAt(enc3) +
+            key.charAt(enc4);
+        }
+        return output;
+      }
+
+      updateCanvasColor("red");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 400);
+      });
+      updateCanvasColor("blue");
+      encoder.finish();
+
+      const readableStream = encoder.stream();
+      const binary_gif = readableStream.getData();
+      console.log(binary_gif);
+      const b64Str = `data:image/gif;base64,${encode64(binary_gif)}`;
+      document.querySelector("img").src = b64Str;
+    </script>
+  </body>
+</html>

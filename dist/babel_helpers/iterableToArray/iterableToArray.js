@@ -3,5 +3,5 @@ export default function _iterableToArray(iter) {
     (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null) ||
     iter["@@iterator"] != null
   )
-    return Array.from(iter)
+    return Array.from(iter);
 }

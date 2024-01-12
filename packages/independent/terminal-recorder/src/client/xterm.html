@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div style="display: flex">
+      <div id="terminal"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+    <script>
+      window.xtreamReadyPromise = new Promise((resolve) => {
+        window.resolveXtermReadyPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      import { initTerminal } from "./terminal_recorder.js";
+
+      window.initTerminal = initTerminal;
+      window.resolveXtermReadyPromise();
+    </script>
+  </body>
+</html>

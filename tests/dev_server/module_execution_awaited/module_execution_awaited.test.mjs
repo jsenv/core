@@ -23,17 +23,10 @@ const test = async ({ browserLauncher }) => {
     );
     const moduleExecutionResult =
       result.executionResults["/main.html@L10C5-L12C14.js"];
-    const duration = moduleExecutionResult.duration;
-    const durationAroundSetTimeout = duration > 3_000 && duration < 8_000;
-    const actual = {
-      durationAroundSetTimeout,
-    };
-    const expected = {
-      durationAroundSetTimeout: true,
-    };
+    const actual = moduleExecutionResult.duration;
     assert({
       actual,
-      expected,
+      expected: assert.between(3_000, 8_000),
       details: {
         browser: `${browserLauncher.name()}`,
       },
@@ -44,8 +37,8 @@ const test = async ({ browserLauncher }) => {
 };
 
 // firefox super slow sometimes on windows/mac
-if (process.env.CI) {
+if (!process.env.CI) {
   await test({ browserLauncher: firefox });
+  await test({ browserLauncher: webkit });
 }
-await test({ browserLauncher: webkit });
 await test({ browserLauncher: chromium });

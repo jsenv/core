@@ -941,11 +941,14 @@ const parseMs = (ms) => {
   };
 };
 
-const inspectFileSize = (numberOfBytes) => {
-  return inspectBytes(numberOfBytes);
+const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
   if (number === 0) {
     return `0 B`;
   }
@@ -966,10 +969,13 @@ const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
     decimals,
     decimalsWhenSmall: 1,
   });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
   }
-  return `${unitNumberRounded} ${unitName}`;
+  return `${value} ${unitName}`;
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
@@ -2131,6 +2137,12 @@ const createOperation = () => {
     }
   };
 
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
   return {
     // We could almost hide the operationSignal
     // But it can be handy for 2 things:
@@ -2142,6 +2154,7 @@ const createOperation = () => {
     addAbortCallback,
     addAbortSignal,
     addAbortSource,
+    fork,
     timeout,
     wait,
     withSignal,
@@ -2803,6 +2816,7 @@ const mediaTypeInfos = {
   },
   "application/xml": {
     extensions: ["xml"],
+    isTextual: true,
   },
   "application/x-gzip": {
     extensions: ["gz"],
@@ -2858,21 +2872,27 @@ const mediaTypeInfos = {
   },
   "text/plain": {
     extensions: ["txt"],
+    isTextual: true,
   },
   "text/html": {
     extensions: ["html"],
+    isTextual: true,
   },
   "text/css": {
     extensions: ["css"],
+    isTextual: true,
   },
   "text/javascript": {
     extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
   },
   "text/x-sass": {
     extensions: ["sass"],
+    isTextual: true,
   },
   "text/x-scss": {
     extensions: ["scss"],
+    isTextual: true,
   },
   "text/cache-manifest": {
     extensions: ["appcache"],

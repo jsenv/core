@@ -198,6 +198,7 @@ export const nodeWorkerThread = ({
             result.errors.push(error);
           },
           exit: ({ code }) => {
+            onRuntimeStopped();
             if (code === 12) {
               result.status = "failed";
               result.errors.push(
@@ -310,6 +311,7 @@ export const nodeWorkerThread = ({
           stopSignal.notify = stop;
         } else {
           await stop();
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();

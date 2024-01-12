@@ -36,7 +36,7 @@
     overflow="hidden"
   >
     <svg
-      width="776.12"
+      width="717.31"
       height="554.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -61,16 +61,16 @@
         <text x="320.85" y="109.55" fill="#A9A9A9">[</text>
         <text x="329.25" y="109.55" fill="#A9A9A9">worker_thread</text>
         <text x="438.47" y="109.55" fill="#A9A9A9">/</text>
-        <text x="446.87" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="497.28" y="109.55" fill="#A9A9A9">/</text>
-        <text x="505.68" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="556.09" y="109.55" fill="#A9A9A9">]</text>
-        <text x="572.89" y="109.55"> (1 </text>
-        <text x="598.1" y="109.55" fill="#B22222">failed</text>
-        <text x="648.5" y="109.55">, 1 executing)</text>
-        <text x="10" y="128.55" fill="#B22222">---------------</text>
+        <text x="446.87" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="514.08" y="109.55" fill="#A9A9A9">/</text>
+        <text x="522.48" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
+        <text x="589.69" y="109.55" fill="#A9A9A9">]</text>
+        <text x="606.5" y="109.55"> (1 </text>
+        <text x="631.7" y="109.55" fill="#B22222">failed</text>
+        <text x="682.11" y="109.55">)</text>
+        <text x="10" y="128.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="128.55"> error </text>
-        <text x="194.83" y="128.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="128.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="147.55"> const getCircle = () =&#x3E; {</text>
         <text x="10" y="166.55" fill="#A9A9A9">2 |</text>
@@ -78,15 +78,14 @@
         <text x="110.82" y="185.55" fill="#B22222">^</text>
         <text x="10" y="204.55">Error: circle</text>
         <text x="26.8" y="223.55">
-          at getCircle
-          (&#x3C;mock&#x3E;/error_in_test_function.spec.js:2:9)</text
+          at getCircle ([mock]/error_in_test_function.spec.js:2:9)</text
         >
         <text x="26.8" y="242.55"> at </text>
         <text x="52.01" y="242.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_test_function.spec.js</text
+          >[mock]/error_in_test_function.spec.js</text
         >
         <text x="362.86" y="242.55">:5:1</text>
-        <text x="10" y="261.55" fill="#B22222"
+        <text x="10" y="261.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="280.55" fill="#B22222"
@@ -95,16 +94,16 @@
         <text x="320.85" y="280.55" fill="#A9A9A9">[</text>
         <text x="329.25" y="280.55" fill="#A9A9A9">child_process</text>
         <text x="438.47" y="280.55" fill="#A9A9A9">/</text>
-        <text x="446.87" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="497.28" y="280.55" fill="#A9A9A9">/</text>
-        <text x="505.68" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;</text>
-        <text x="556.09" y="280.55" fill="#A9A9A9">]</text>
-        <text x="572.89" y="280.55"> (all </text>
-        <text x="614.9" y="280.55" fill="#B22222">failed</text>
-        <text x="665.31" y="280.55">)</text>
-        <text x="10" y="299.55" fill="#B22222">---------------</text>
+        <text x="446.87" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="514.08" y="280.55" fill="#A9A9A9">/</text>
+        <text x="522.48" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
+        <text x="589.69" y="280.55" fill="#A9A9A9">]</text>
+        <text x="606.5" y="280.55"> (all </text>
+        <text x="648.5" y="280.55" fill="#B22222">failed</text>
+        <text x="698.91" y="280.55">)</text>
+        <text x="10" y="299.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="299.55"> error </text>
-        <text x="194.83" y="299.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="299.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="318.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="318.55"> const getCircle = () =&#x3E; {</text>
         <text x="10" y="337.55" fill="#A9A9A9">2 |</text>
@@ -112,15 +111,14 @@
         <text x="110.82" y="356.55" fill="#B22222">^</text>
         <text x="10" y="375.55">Error: circle</text>
         <text x="26.8" y="394.55">
-          at getCircle
-          (&#x3C;mock&#x3E;/error_in_test_function.spec.js:2:9)</text
+          at getCircle ([mock]/error_in_test_function.spec.js:2:9)</text
         >
         <text x="26.8" y="413.55"> at </text>
         <text x="52.01" y="413.55" font-weight="bold"
-          >&#x3C;mock&#x3E;/error_in_test_function.spec.js</text
+          >[mock]/error_in_test_function.spec.js</text
         >
         <text x="362.86" y="413.55">:5:1</text>
-        <text x="10" y="432.55" fill="#B22222"
+        <text x="10" y="432.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="470.55" fill="#A9A9A9">------------------</text>
@@ -128,7 +126,7 @@
         <text x="236.84" y="470.55" fill="#A9A9A9">------------------</text>
         <text x="10" y="489.55">2 executions: all </text>
         <text x="161.22" y="489.55" fill="#B22222">failed</text>
-        <text x="10" y="508.55">duration: &#x3C;mock&#x3E;</text>
+        <text x="10" y="508.55">duration: &#x3C;mock&#x3E;s</text>
         <text x="10" y="527.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >

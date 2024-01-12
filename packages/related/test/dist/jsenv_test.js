@@ -1,4 +1,4 @@
-import os, { cpus, totalmem, availableParallelism, freemem } from "node:os";
+import os, { cpus, totalmem, freemem, availableParallelism } from "node:os";
 import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, chmodSync, statSync, lstatSync, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -19,6 +19,7 @@ import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-super
 import { generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
+import he from "he";
 
 /*
  * See callback_race.md
@@ -435,6 +436,12 @@ const createOperation = () => {
     }
   };
 
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
   return {
     // We could almost hide the operationSignal
     // But it can be handy for 2 things:
@@ -446,6 +453,7 @@ const createOperation = () => {
     addAbortCallback,
     addAbortSignal,
     addAbortSource,
+    fork,
     timeout,
     wait,
     withSignal,
@@ -869,15 +877,18 @@ const parseMs = (ms) => {
   };
 };
 
-const inspectFileSize = (numberOfBytes) => {
-  return inspectBytes(numberOfBytes);
+const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-const inspectMemoryUsage = (metricValue, { decimals } = {}) => {
-  return inspectBytes(metricValue, { decimals, fixedDecimals: true });
+const inspectMemoryUsage = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 
-const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
   if (number === 0) {
     return `0 B`;
   }
@@ -898,10 +909,13 @@ const inspectBytes = (number, { fixedDecimals = false, decimals } = {}) => {
     decimals,
     decimalsWhenSmall: 1,
   });
-  if (fixedDecimals) {
-    return `${unitNumberRounded.toFixed(decimals)} ${unitName}`;
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
   }
-  return `${unitNumberRounded} ${unitName}`;
+  return `${value} ${unitName}`;
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
@@ -4363,14 +4377,14 @@ const ensureWebServerIsStarted = async (
 
 const githubAnnotationFromError = (
   error,
-  { rootDirectoryUrl, executionInfo },
+  { rootDirectoryUrl, execution },
 ) => {
   const annotation = {
     annotation_level: "failure",
-    path: executionInfo.fileRelativeUrl,
+    path: execution.fileRelativeUrl,
     start_line: 1,
     end_line: 1,
-    title: `Error while executing ${executionInfo.fileRelativeUrl} on ${executionInfo.runtimeName}@${executionInfo.runtimeVersion}`,
+    title: `Error while executing ${execution.fileRelativeUrl} on ${execution.runtimeName}@${execution.runtimeVersion}`,
   };
   const exception = asException(error, { rootDirectoryUrl });
   if (exception.site && typeof exception.site.line === "number") {
@@ -4528,8 +4542,6 @@ const run = async ({
   }
 
   const timingOrigin = Date.now();
-  const relativeToTimingOrigin = (ms) => ms - timingOrigin;
-
   const result = {
     status: "pending",
     errors: [],
@@ -4547,6 +4559,9 @@ const run = async ({
     memoryUsage: null,
     performance: null,
     coverageFileUrl: null,
+  };
+  const takeTiming = (ms = Date.now()) => {
+    return ms - timingOrigin;
   };
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
@@ -4604,6 +4619,7 @@ const run = async ({
             };
           },
           runned: async (cb) => {
+            let runtimeStatus = "starting";
             try {
               const runResult = await runtime.run({
                 signal: runOperation.signal,
@@ -4618,14 +4634,13 @@ const run = async ({
                 stopSignal,
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
-                  result.timings.runtimeStart = relativeToTimingOrigin(
-                    Date.now(),
-                  );
+                  runtimeStatus = "started";
+                  result.timings.runtimeStart = takeTiming();
                 },
                 onRuntimeStopped: () => {
-                  result.timings.runtimeEnd = relativeToTimingOrigin(
-                    Date.now(),
-                  );
+                  if (runtimeStatus === "stopped") return; // ignore double calls
+                  runtimeStatus = "stopped";
+                  result.timings.runtimeEnd = takeTiming();
                 },
               });
               cb(runResult);
@@ -4660,10 +4675,10 @@ const run = async ({
     result.namespace = namespace;
     if (timings) {
       if (timings.start) {
-        result.timings.executionStart = relativeToTimingOrigin(timings.start);
+        result.timings.executionStart = Math.max(takeTiming(timings.start), 0);
       }
       if (timings.end) {
-        result.timings.executionEnd = relativeToTimingOrigin(timings.end);
+        result.timings.executionEnd = Math.max(takeTiming(timings.end), 0);
       }
     }
     result.memoryUsage =
@@ -4686,7 +4701,7 @@ const run = async ({
     }
   } finally {
     await runOperation.end();
-    result.timings.end = relativeToTimingOrigin(Date.now());
+    result.timings.end = takeTiming();
     return result;
   }
 };
@@ -4711,10 +4726,15 @@ const normalizeRuntimeError = (runtimeError) => {
 
 const formatErrorForTerminal = (
   error,
-  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues },
+  { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues, tryColors },
 ) => {
   if (!error.stack) {
     return error.message;
+  }
+
+  let ansiSupported = ANSI.supported;
+  if (!tryColors) {
+    ANSI.supported = false;
   }
 
   let text = "";
@@ -4755,7 +4775,10 @@ const formatErrorForTerminal = (
         : url;
       if (mockFluctuatingValues) {
         const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-        urlAsPath = urlAsPath.replace(rootDirectoryPath, "<mock>");
+        urlAsPath = urlAsPath.replace(rootDirectoryPath, "[mock]");
+        if (process.platform === "win32") {
+          urlAsPath = urlAsPath.replace(/\\/g, "/");
+        }
       }
       if (urlIsMain) {
         urlAsPath = ANSI.effect(urlAsPath, ANSI.BOLD);
@@ -4825,6 +4848,11 @@ const formatErrorForTerminal = (
       text += `\n${stackTrace}`;
     }
   }
+
+  if (!tryColors) {
+    ANSI.supported = ansiSupported;
+  }
+
   return text;
 };
 
@@ -4879,8 +4907,30 @@ const replaceUrls = (source, replace) => {
   });
 };
 
+/*
+ *                                 label
+ *           ┌───────────────────────┴────────────────────────────────┐
+ *           │                               │                        │
+ *       description                     runtime info                 │
+ *  ┌────────┴─────────┐               ┌─────┴───────┐                │
+ *  │                  │               │       │     │                │
+ * icon number        file            group duration memory intermediate summary
+ * ┌┴┐┌───┴─┐ ┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
+ *  ✔ 001/100 tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
+ *  ------- console (i1 ✖1) -------
+ *  i info
+ *  ✖ error
+ *  -------------------------------
+ *  ---------- error -------
+ *  1 | throw new Error("test");
+ *      ^
+ *  Error: test
+ *    at file://demo/file.test.js:1:1
+ *  ------------------------
+ */
+
 const reporterList = ({
-  dynamic = true,
+  animated = true,
   mockFluctuatingValues, // used for snapshot testing logs
   showMemoryUsage = true,
   spy = () => {
@@ -4893,8 +4943,8 @@ const reporterList = ({
   },
   fileUrl,
 }) => {
-  const dynamicLogEnabled =
-    dynamic &&
+  const animatedLogEnabled =
+    animated &&
     // canEraseProcessStdout
     process.stdout.isTTY &&
     // if there is an error during execution npm will mess up the output
@@ -4906,7 +4956,7 @@ const reporterList = ({
     showMemoryUsage,
     mockFluctuatingValues,
     group: false,
-    intermediateSummary: !dynamicLogEnabled,
+    intermediateSummary: !animatedLogEnabled,
   };
 
   let startMs = Date.now();
@@ -4914,22 +4964,22 @@ const reporterList = ({
   const reporters = [
     {
       reporter: "list",
-      beforeAll: async (testPlanInfo) => {
+      beforeAll: async (testPlanResult) => {
         let spyReturnValue = await spy();
         let write = spyReturnValue.write;
         let end = spyReturnValue.end;
         spyReturnValue = undefined;
 
-        logOptions.group = Object.keys(testPlanInfo.groups).length > 1;
-        write(renderIntro(testPlanInfo, logOptions));
-        if (!dynamicLogEnabled) {
+        logOptions.group = Object.keys(testPlanResult.groups).length > 1;
+        write(renderIntro(testPlanResult, logOptions));
+        if (!animatedLogEnabled) {
           return {
             afterEachInOrder: (execution) => {
               const log = renderExecutionLog(execution, logOptions);
               write(log);
             },
             afterAll: async () => {
-              await write(renderOutro(testPlanInfo, logOptions));
+              await write(renderOutro(testPlanResult, logOptions));
               write = undefined;
               if (end) {
                 await end();
@@ -4944,13 +4994,16 @@ const reporterList = ({
         });
         const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let frameIndex = 0;
-        const renderDynamicLog = (testPlanInfo) => {
+        const renderDynamicLog = (testPlanResult) => {
           frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
           let dynamicLogContent = "";
           dynamicLogContent += `${frames[frameIndex]} `;
-          dynamicLogContent += renderStatusRepartition(testPlanInfo.counters, {
-            showExecuting: true,
-          });
+          dynamicLogContent += renderStatusRepartition(
+            testPlanResult.counters,
+            {
+              showProgression: true,
+            },
+          );
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
@@ -4962,6 +5015,7 @@ const reporterList = ({
           infos.push(ANSI.color(duration, ANSI.GREY));
           const memoryHeapUsed = memoryUsage().heapUsed;
           const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+            short: true,
             decimals: 0,
           });
           infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
@@ -4975,9 +5029,9 @@ const reporterList = ({
           dynamicLogContent = `\n${dynamicLogContent}\n`;
           return dynamicLogContent;
         };
-        dynamicLog.update(renderDynamicLog(testPlanInfo));
+        dynamicLog.update(renderDynamicLog(testPlanResult));
         const interval = setInterval(() => {
-          dynamicLog.update(renderDynamicLog(testPlanInfo));
+          dynamicLog.update(renderDynamicLog(testPlanResult));
         }, 150);
 
         return {
@@ -4992,7 +5046,7 @@ const reporterList = ({
             dynamicLog.destroy();
             dynamicLog = null;
             clearInterval(interval);
-            await write(renderOutro(testPlanInfo, logOptions));
+            await write(renderOutro(testPlanResult, logOptions));
             write = undefined;
             await end();
             end = undefined;
@@ -5002,10 +5056,10 @@ const reporterList = ({
     },
   ];
 
-  if (dynamic && fileUrl) {
+  if (animated && fileUrl) {
     reporters.push(
       reporterList({
-        dynamic: false,
+        animated: false,
         mockFluctuatingValues, // used for snapshot testing logs
         showMemoryUsage,
         spy: () => {
@@ -5026,10 +5080,10 @@ const reporterList = ({
   return reporters;
 };
 
-const renderIntro = (testPlanInfo, logOptions) => {
-  const { counters } = testPlanInfo;
+const renderIntro = (testPlanResult, logOptions) => {
+  const { counters } = testPlanResult;
   const planified = counters.planified;
-  const { groups } = testPlanInfo;
+  const { groups } = testPlanResult;
   const groupNames = Object.keys(groups);
 
   if (planified === 0) {
@@ -5079,27 +5133,6 @@ const getGroupRenderedName = (groupInfo, logOptions) => {
   return `${runtimeName}@${runtimeVersion}`;
 };
 
-/*
- *                                 label
- *           ┌───────────────────────┴────────────────────────────────┐
- *           │                               │                        │
- *       description                     runtime info                 │
- *  ┌────────┴─────────┐               ┌─────┴───────┐                │
- *  │                  │               │       │     │                │
- * icon number        file            group duration memory intermediate summary
- * ┌┴┐┌───┴─┐ ┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
- *  ✔ 001/100 tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
- *  ------- console (i1 ✖1) -------
- *  i info
- *  ✖ error
- *  -------------------------------
- *  ---------- error -------
- *  1 | throw new Error("test");
- *      ^
- *  Error: test
- *    at file://demo/file.test.js:1:1
- *  ------------------------
- */
 const renderExecutionLog = (execution, logOptions) => {
   let log = "";
   // label
@@ -5136,13 +5169,32 @@ const renderExecutionLabel = (execution, logOptions) => {
 
   // description
   {
-    const description = renderDescription(execution);
+    const description =
+      descriptionFormatters[execution.result.status](execution);
     label += description;
   }
   // runtimeInfo
   {
-    const runtimeInfo = renderRuntimeInfo(execution, logOptions);
-    if (runtimeInfo) {
+    const infos = [];
+    if (logOptions.group) {
+      infos.push(ANSI.color(execution.group, ANSI.GREY));
+    }
+    const { timings, memoryUsage } = execution.result;
+    if (timings) {
+      const duration = timings.executionEnd - timings.executionStart;
+      const durationFormatted = logOptions.mockFluctuatingValues
+        ? `<mock>ms`
+        : inspectDuration(duration, { short: true });
+      infos.push(ANSI.color(durationFormatted, ANSI.GREY));
+    }
+    if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
+      const memoryUsageFormatted = logOptions.mockFluctuatingValues
+        ? `<mock>MB`
+        : inspectMemoryUsage(memoryUsage, { short: true });
+      infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
+    }
+    if (infos.length) {
+      const runtimeInfo = infos.join(ANSI.color(`/`, ANSI.GREY));
       label += ` ${ANSI.color("[", ANSI.GREY)}${runtimeInfo}${ANSI.color(
         "]",
         ANSI.GREY,
@@ -5157,9 +5209,6 @@ const renderExecutionLabel = (execution, logOptions) => {
   }
 
   return label;
-};
-const renderDescription = (execution) => {
-  return descriptionFormatters[execution.result.status](execution);
 };
 const descriptionFormatters = {
   executing: ({ fileRelativeUrl }) => {
@@ -5211,27 +5260,7 @@ const descriptionFormatters = {
     );
   },
 };
-const renderRuntimeInfo = (execution, logOptions) => {
-  const infos = [];
-  if (logOptions.group) {
-    infos.push(ANSI.color(execution.group, ANSI.GREY));
-  }
-  const { timings, memoryUsage } = execution.result;
-  if (timings) {
-    const duration = timings.executionEnd - timings.executionStart;
-    const durationFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>`
-      : inspectDuration(duration, { short: true });
-    infos.push(ANSI.color(durationFormatted, ANSI.GREY));
-  }
-  if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
-    const memoryUsageFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>`
-      : inspectMemoryUsage(memoryUsage);
-    infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
-  }
-  return infos.join(ANSI.color(`/`, ANSI.GREY));
-};
+
 const COLOR_EXECUTING = ANSI.BLUE;
 const COLOR_ABORTED = ANSI.MAGENTA;
 const COLOR_TIMEOUT = ANSI.MAGENTA;
@@ -5389,12 +5418,13 @@ const renderErrors = (execution, logOptions) => {
 
   if (errors.length === 1) {
     return renderSection({
-      dashColor: ANSI.RED,
+      dashColor: ANSI.GREY,
       title: "error",
       content: formatErrorForTerminal(errors[0], {
         rootDirectoryUrl: execution.rootDirectoryUrl,
         mainFileRelativeUrl: execution.fileRelativeUrl,
         mockFluctuatingValues: logOptions.mockFluctuatingValues,
+        tryColors: true,
       }),
     });
   }
@@ -5409,20 +5439,21 @@ const renderErrors = (execution, logOptions) => {
           rootDirectoryUrl: execution.rootDirectoryUrl,
           mainFileRelativeUrl: execution.fileRelativeUrl,
           mockFluctuatingValues: logOptions.mockFluctuatingValues,
+          tryColors: true,
         }),
       }),
     );
   });
   return renderSection({
-    dashColor: ANSI.RED,
+    dashColor: ANSI.GREY,
     title: `errors (${errors.length})`,
     content: output.join(`\n`),
   });
 };
 
-const renderOutro = (testPlanInfo, logOptions) => {
+const renderOutro = (testPlanResult, logOptions = {}) => {
   let finalSummary = "";
-  const { counters } = testPlanInfo;
+  const { counters } = testPlanResult;
   const { planified } = counters;
 
   if (planified === 1) {
@@ -5432,15 +5463,45 @@ const renderOutro = (testPlanInfo, logOptions) => {
   }
   finalSummary += renderStatusRepartition(counters);
 
-  const { duration } = testPlanInfo;
-  const durationFormatted = logOptions.mockFluctuatingValues
-    ? "<mock>"
-    : inspectDuration(duration);
-  finalSummary += `\nduration: ${durationFormatted}`;
+  let durationLog = ``;
+  const { timings } = testPlanResult;
+  if (logOptions.mockFluctuatingValues) {
+    durationLog += "<mock>s";
+  } else {
+    durationLog += inspectDuration(timings.end, { short: true });
+    const namedTimings = {
+      setup: timings.executionStart,
+      execution: timings.executionEnd,
+      teardown: timings.teardownEnd - timings.executionEnd,
+      ...(testPlanResult.coverage
+        ? { coverage: timings.coverageTeardownEnd - timings.teardownEnd }
+        : {}),
+    };
+    const timingDetails = [];
+    for (const key of Object.keys(namedTimings)) {
+      const value = namedTimings[key];
+      const timingDuration = inspectDuration(value, { short: true });
+      const timingString = `${ANSI.color(`${key}:`, ANSI.GREY)} ${ANSI.color(
+        timingDuration,
+        ANSI.GREY,
+      )}`;
+      timingDetails.push(ANSI.color(timingString, ANSI.GREY));
+    }
+    if (timingDetails.length) {
+      durationLog += ` ${ANSI.color("(", ANSI.GREY)}${timingDetails.join(
+        ANSI.color(", ", ANSI.GREY),
+      )}${ANSI.color(")", ANSI.GREY)}`;
+    }
+  }
+  finalSummary += `\nduration: ${durationLog}`;
 
   return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
 };
-const renderStatusRepartition = (counters, { showExecuting } = {}) => {
+
+const renderStatusRepartition = (counters, { showProgression } = {}) => {
+  if (counters.planified === 0) {
+    return `nothing to run`;
+  }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
@@ -5478,11 +5539,13 @@ const renderStatusRepartition = (counters, { showExecuting } = {}) => {
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
   }
-  if (showExecuting) {
-    parts.push(`${counters.executing} executing`);
-  }
-  if (counters.waiting) {
-    parts.push(`${counters.waiting} waiting`);
+  if (showProgression) {
+    if (counters.executing) {
+      parts.push(`${counters.executing} executing`);
+    }
+    if (counters.waiting) {
+      parts.push(`${counters.waiting} waiting`);
+    }
   }
   return `${parts.join(", ")}`;
 };
@@ -5543,7 +5606,9 @@ const renderSection = ({
  */
 const logsDefault = {
   level: "info",
-  dynamic: true,
+  type: "list",
+  animated: true,
+  fileUrl: undefined,
 };
 const githubCheckDefault = {
   logLevel: "info",
@@ -5617,7 +5682,6 @@ const executeTestPlan = async ({
   coverage = process.argv.includes("--coverage") ? coverageDefault : null,
 
   reporters = [],
-  listReporter = {},
   ...rest
 }) => {
   const teardownCallbackSet = new Set();
@@ -5633,336 +5697,18 @@ const executeTestPlan = async ({
           SIGTERM: handleSIGTERM,
         },
         ({ name }) => {
-          logger.debug(`${name} -> abort`);
+          console.log(`${name} -> abort`);
           abort();
         },
       );
     });
   }
 
-  const cpuUsage = startMeasuringCpuUsage();
-  operation.addEndCallback(cpuUsage.stop);
-
-  let logger;
-  const runtimeInfo = {
-    someNeedsServer: false,
-    someHasCoverageV8: false,
-    someNodeRuntime: false,
+  const timingOrigin = Date.now();
+  const takeTiming = () => {
+    return Date.now() - timingOrigin;
   };
-  // param validation and normalization
-  {
-    const unexpectedParamNames = Object.keys(rest);
-    if (unexpectedParamNames.length > 0) {
-      throw new TypeError(`${unexpectedParamNames.join(",")}: no such param`);
-    }
-    // logs
-    {
-      if (typeof logs !== "object") {
-        throw new TypeError(`logs must be an object, got ${logs}`);
-      }
-      const unexpectedLogsKeys = Object.keys(logs).filter(
-        (key) => !Object.hasOwn(logsDefault, key),
-      );
-      if (unexpectedLogsKeys.length > 0) {
-        throw new TypeError(
-          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
-        );
-      }
-      logs = { ...logsDefault, ...logs };
-      logger = createLogger({ logLevel: logs.level });
-
-      if (listReporter && logger.levels.info) {
-        if (logger.levels.debug) {
-          listReporter.dynamic = false;
-        }
-        if (listReporter.fileUrl === undefined) {
-          listReporter.fileUrl = new URL(
-            "./.jsenv/jsenv_tests_output.txt",
-            rootDirectoryUrl,
-          );
-        }
-        reporters.push(
-          typeof listReporter.reporter === "string"
-            ? listReporter
-            : reporterList(listReporter),
-        );
-      }
-    }
-    // rootDirectoryUrl
-    {
-      rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-        rootDirectoryUrl,
-        "rootDirectoryUrl",
-      );
-      if (!existsSync(new URL(rootDirectoryUrl))) {
-        throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
-      }
-    }
-    // parallel
-    {
-      if (parallel === true) {
-        parallel = {};
-      }
-      if (parallel === false) {
-        parallel = { max: 1 };
-      }
-      if (typeof parallel !== "object") {
-        throw new TypeError(`parallel must be an object, got ${parallel}`);
-      }
-      const unexpectedParallelKeys = Object.keys(parallel).filter(
-        (key) => !Object.hasOwn(parallelDefault, key),
-      );
-      if (unexpectedParallelKeys.length > 0) {
-        throw new TypeError(
-          `${unexpectedParallelKeys.join(",")}: no such key on parallel`,
-        );
-      }
-      parallel = { ...parallelDefault, ...parallel };
-      const assertPercentageAndConvertToRatio = (string) => {
-        const lastChar = string[string.length - 1];
-        if (lastChar !== "%") {
-          throw new TypeError(`string is not a percentage, got ${string}`);
-        }
-        const percentageString = string.slice(0, -1);
-        const percentageNumber = parseInt(percentageString);
-        if (percentageNumber <= 0) {
-          return 0;
-        }
-        if (percentageNumber >= 100) {
-          return 1;
-        }
-        const ratio = percentageNumber / 100;
-        return ratio;
-      };
-      const max = parallel.max;
-      if (typeof max === "string") {
-        const maxAsRatio = assertPercentageAndConvertToRatio(max);
-        const availableCpus = countAvailableCpus();
-        parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
-      } else if (typeof max === "number") {
-        if (max < 1) {
-          parallel.max = 1;
-        }
-      } else {
-        throw new TypeError(
-          `parallel.max must be a number or a percentage, got ${max}`,
-        );
-      }
-
-      const maxMemory = parallel.maxMemory;
-      if (typeof maxMemory === "string") {
-        const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
-        parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
-      } else if (typeof maxMemory !== "number") {
-        throw new TypeError(
-          `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
-        );
-      }
-    }
-    // testPlan
-    {
-      if (typeof testPlan !== "object") {
-        throw new Error(`testPlan must be an object, got ${testPlan}`);
-      }
-      for (const filePattern of Object.keys(testPlan)) {
-        const filePlan = testPlan[filePattern];
-        if (!filePlan) continue;
-        for (const executionName of Object.keys(filePlan)) {
-          const executionConfig = filePlan[executionName];
-          if (executionConfig === null) {
-            continue;
-          }
-          const { runtime } = executionConfig;
-          if (!runtime || runtime.disabled) {
-            continue;
-          }
-          if (runtime.type === "browser") {
-            if (runtime.capabilities && runtime.capabilities.coverageV8) {
-              runtimeInfo.someHasCoverageV8 = true;
-            }
-            runtimeInfo.someNeedsServer = true;
-          }
-          if (runtime.type === "node") {
-            runtimeInfo.someNodeRuntime = true;
-          }
-        }
-      }
-      testPlan = {
-        "file:///**/node_modules/": null,
-        "**/*./": null,
-        ...testPlan,
-        "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
-      };
-    }
-    // webServer
-    if (runtimeInfo.someNeedsServer) {
-      await assertAndNormalizeWebServer(webServer, {
-        signal: operation.signal,
-        teardownCallbackSet,
-        logger,
-      });
-    }
-    // githubCheck
-    {
-      if (githubCheck && !process.env.GITHUB_TOKEN) {
-        githubCheck = false;
-        const suggestions = [];
-        if (process.env.GITHUB_WORKFLOW_REF) {
-          const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
-          const refsIndex = workflowFileRef.indexOf("@refs/");
-          // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-          const workflowFilePath =
-            refsIndex === -1
-              ? workflowFileRef
-              : workflowFileRef.slice(0, refsIndex);
-          suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
-\`\`\`yml
-env:
-  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-\`\`\``);
-        }
-        suggestions.push(`Disable github check with githubCheck: false`);
-        logger.warn(
-          `${UNICODE.WARNING} githubCheck requires process.env.GITHUB_TOKEN.
-Integration with Github check API is disabled
-To fix this warning:
-- ${suggestions.join("\n- ")}
-`,
-        );
-      }
-      if (githubCheck) {
-        if (githubCheck === true) {
-          githubCheck = {};
-        }
-        if (typeof githubCheck !== "object") {
-          throw new TypeError(
-            `githubCheck must be an object, got ${githubCheck}`,
-          );
-        }
-        const unexpectedKeys = Object.keys(githubCheck).filter(
-          (key) => !Object.hasOwn(githubCheckDefault, key),
-        );
-        if (unexpectedKeys.length > 0) {
-          throw new TypeError(
-            `${unexpectedKeys.join(",")}: no such key on githubCheck`,
-          );
-        }
-
-        const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
-          ? readGitHubWorkflowEnv()
-          : {};
-        githubCheck = { ...githubCheckDefault, githubCheck };
-        if (githubCheck.token === undefined) {
-          githubCheck.token = githubCheckInfoFromEnv.githubToken;
-        }
-        if (githubCheck.repositoryOwner === undefined) {
-          githubCheck.repositoryOwner = githubCheckInfoFromEnv.repositoryOwner;
-        }
-        if (githubCheck.repositoryName === undefined) {
-          githubCheck.repositoryName = githubCheckInfoFromEnv.repositoryName;
-        }
-        if (githubCheck.commitSha === undefined) {
-          githubCheck.commitSha = githubCheckInfoFromEnv.commitSha;
-        }
-      }
-    }
-    // coverage
-    if (coverage) {
-      if (coverage === true) {
-        coverage = {};
-      }
-      if (typeof coverage !== "object") {
-        throw new TypeError(`coverage must be an object, got ${coverage}`);
-      }
-      const unexpectedKeys = Object.keys(coverage).filter(
-        (key) => !Object.hasOwn(coverageDefault, key),
-      );
-      if (unexpectedKeys.length > 0) {
-        throw new TypeError(
-          `${unexpectedKeys.join(",")}: no such key on coverage`,
-        );
-      }
-      coverage = { ...coverageDefault, ...coverage };
-      if (typeof coverage.include !== "object") {
-        throw new TypeError(
-          `coverage.include must be an object, got ${coverage.include}`,
-        );
-      }
-      if (Object.keys(coverage.include).length === 0) {
-        logger.warn(
-          `coverage.include is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-        );
-      }
-      if (coverage.methodForBrowsers === undefined) {
-        coverage.methodForBrowsers = runtimeInfo.someHasCoverageV8
-          ? "playwright"
-          : "istanbul";
-      }
-      if (
-        runtimeInfo.someNodeRuntime &&
-        coverage.methodForNodeJs === "NODE_V8_COVERAGE"
-      ) {
-        if (process.env.NODE_V8_COVERAGE) {
-          // when runned multiple times, we don't want to keep previous files in this directory
-          await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
-        } else {
-          coverage.methodForNodeJs = "Profiler";
-          logger.warn(
-            createDetailedMessage(
-              `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
-              {
-                "suggestion": `set process.env.NODE_V8_COVERAGE`,
-                "suggestion 2": `use coverage.methodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
-              },
-            ),
-          );
-        }
-      }
-      if (!coverage.coverageAndExecutionAllowed) {
-        const associationsForExecute = URL_META.resolveAssociations(
-          { execute: testPlan },
-          "file:///",
-        );
-        const associationsForCover = URL_META.resolveAssociations(
-          { cover: coverage.include },
-          "file:///",
-        );
-        const patternsMatchingCoverAndExecute = Object.keys(
-          associationsForExecute.execute,
-        ).filter((testPlanPattern) => {
-          const { cover } = URL_META.applyAssociations({
-            url: testPlanPattern,
-            associations: associationsForCover,
-          });
-          return cover;
-        });
-        if (patternsMatchingCoverAndExecute.length) {
-          // It would be strange, for a given file to be both covered and executed
-          throw new Error(
-            createDetailedMessage(
-              `some file will be both covered and executed`,
-              {
-                patterns: patternsMatchingCoverAndExecute,
-              },
-            ),
-          );
-        }
-      }
-      if (coverage.tempDirectoryUrl === undefined) {
-        coverage.tempDirectoryUrl = new URL(
-          "./.coverage/tmp/",
-          rootDirectoryUrl,
-        );
-      } else {
-        coverage.tempDirectoryUrl = assertAndNormalizeDirectoryUrl(
-          coverage.tempDirectoryUrl,
-          "coverageTempDirectoryUrl",
-        );
-      }
-    }
-  }
-
-  const testPlanInfo = {
+  const testPlanResult = {
     rootDirectoryUrl: String(rootDirectoryUrl),
     groups: {},
     counters: {
@@ -5980,389 +5726,706 @@ To fix this warning:
     },
     aborted: false,
     failed: false,
-    duration: 0,
+    timings: {
+      origin: timingOrigin,
+      executionStart: null,
+      executionEnd: null,
+      teardownEnd: null,
+      coverageTeardownEnd: null,
+      end: null,
+    },
     coverage: null,
     results: {},
   };
-  const groups = testPlanInfo.groups;
-  const counters = testPlanInfo.counters;
+  const timings = testPlanResult.timings;
+  const groups = testPlanResult.groups;
+  const counters = testPlanResult.counters;
   const countersInOrder = { ...counters };
-  const results = testPlanInfo.results;
-
-  const executionPlanifiedSet = new Set();
-
-  // collect files to execute + fill executionPlanifiedSet
-  {
-    let fileResultArray;
-    try {
-      fileResultArray = await collectFiles({
-        signal,
-        directoryUrl: rootDirectoryUrl,
-        associations: { testPlan },
-        predicate: ({ testPlan }) => testPlan,
-      });
-    } catch (e) {
-      if (Abort.isAbortError(e)) {
-        testPlanInfo.aborted = true;
-        return testPlanInfo;
-      }
-      throw e;
-    }
-    let index = 0;
-    let lastExecution;
-    const fileExecutionCountMap = new Map();
-    for (const { relativeUrl, meta } of fileResultArray) {
-      const filePlan = meta.testPlan;
-      for (const groupName of Object.keys(filePlan)) {
-        const stepConfig = filePlan[groupName];
-        if (stepConfig === null || stepConfig === undefined) {
-          continue;
-        }
-        if (typeof stepConfig !== "object") {
-          throw new TypeError(
-            createDetailedMessage(
-              `found unexpected value in plan, they must be object`,
-              {
-                ["file relative path"]: relativeUrl,
-                ["group"]: groupName,
-                ["value"]: stepConfig,
-              },
-            ),
-          );
-        }
-        if (stepConfig.runtime?.disabled) {
-          continue;
-        }
-
-        const {
-          runtime,
-          runtimeParams,
-          allocatedMs = defaultMsAllocatedPerExecution,
-        } = stepConfig;
-        const params = {
-          measureMemoryUsage: true,
-          measurePerformance: false,
-          collectPerformance: false,
-          collectConsole: true,
-          allocatedMs,
-          runtime,
-          runtimeParams: {
-            rootDirectoryUrl,
-            webServer,
-            teardownCallbackSet,
-
-            coverageEnabled: Boolean(coverage),
-            coverageInclude: coverage?.include,
-            coverageMethodForBrowsers: coverage?.methodForBrowsers,
-            coverageMethodForNodeJs: coverage?.methodForNodeJs,
-            isTestPlan: true,
-            fileRelativeUrl: relativeUrl,
-            ...runtimeParams,
-          },
-        };
-        const runtimeType = runtime.type;
-        const runtimeName = runtime.name;
-        const runtimeVersion = runtime.version;
-
-        let fileExecutionCount;
-        if (fileExecutionCountMap.has(relativeUrl)) {
-          fileExecutionCount = fileExecutionCountMap.get(relativeUrl) + 1;
-          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
-        } else {
-          fileExecutionCount = 1;
-          fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
-        }
-
-        const execution = {
-          counters,
-          countersInOrder,
-          index,
-          isLast: false,
-          group: groupName,
-          rootDirectoryUrl: String(rootDirectoryUrl),
-          fileRelativeUrl: relativeUrl,
-          fileExecutionIndex: fileExecutionCount - 1,
-          fileExecutionCount: null,
-          runtimeType,
-          runtimeName,
-          runtimeVersion,
-          params,
-
-          // will be set by run()
-          status: "planified",
-          result: {},
-        };
-        if (typeof params.allocatedMs === "function") {
-          params.allocatedMs = params.allocatedMs(execution);
-        }
-
-        lastExecution = execution;
-        executionPlanifiedSet.add(execution);
-        const existingResults = results[relativeUrl];
-        if (existingResults) {
-          existingResults[groupName] = execution.result;
-        } else {
-          results[relativeUrl] = {
-            [groupName]: execution.result,
-          };
-        }
-        const existingGroup = groups[groupName];
-        if (existingGroup) {
-          groups[groupName].count++;
-        } else {
-          groups[groupName] = {
-            count: 1,
-            runtimeType,
-            runtimeName,
-            runtimeVersion,
-          };
-        }
-        index++;
-      }
-    }
-    fileResultArray.length = 0;
-    fileExecutionCountMap.clear();
-    if (lastExecution) {
-      lastExecution.isLast = true;
-    }
-  }
-
-  counters.planified =
-    counters.remaining =
-    counters.waiting =
-      executionPlanifiedSet.size;
-  countersInOrder.planified =
-    countersInOrder.remaining =
-    countersInOrder.waiting =
-      executionPlanifiedSet.size;
-  if (githubCheck) {
-    const githubCheckRun = await startGithubCheckRun({
-      logLevel: githubCheck.logLevel,
-      githubToken: githubCheck.token,
-      repositoryOwner: githubCheck.repositoryOwner,
-      repositoryName: githubCheck.repositoryName,
-      commitSha: githubCheck.commitSha,
-      checkName: githubCheck.name,
-      checkTitle: githubCheck.title,
-      checkSummary: `${executionPlanifiedSet.size} files will be executed`,
-    });
-    const annotations = [];
-    reporters.push({
-      beforeAll: (testPlanInfo) => {
-        return {
-          afterEach: (execution) => {
-            const { result } = execution;
-            const { errors = [] } = result;
-            for (const error of errors) {
-              const annotation = githubAnnotationFromError(error, {
-                rootDirectoryUrl,
-                execution,
-              });
-              annotations.push(annotation);
-            }
-          },
-          afterAll: async () => {
-            const title = "Jsenv test results";
-            const summaryText = stripAnsi(renderOutro(testPlanInfo));
-            if (testPlanInfo.failed) {
-              await githubCheckRun.fail({
-                title,
-                summary: summaryText,
-                annotations,
-              });
-              return;
-            }
-            await githubCheckRun.pass({
-              title,
-              summary: summaryText,
-              annotations,
-            });
-          },
-        };
-      },
-    });
-  }
+  const results = testPlanResult.results;
 
   const beforeEachCallbackSet = new Set();
   const beforeEachInOrderCallbackSet = new Set();
   const afterEachCallbackSet = new Set();
   const afterEachInOrderCallbackSet = new Set();
   const afterAllCallbackSet = new Set();
-  // execute all
-  {
-    const multipleExecutionsOperation = Abort.startOperation();
-    multipleExecutionsOperation.addAbortSignal(signal);
-    const failFastAbortController = new AbortController();
-    if (failFast) {
-      multipleExecutionsOperation.addAbortSignal(
-        failFastAbortController.signal,
-      );
-    }
-    let finalizeCoverage;
-    if (coverage) {
-      // when runned multiple times, we don't want to keep previous files in this directory
-      await ensureEmptyDirectory(coverage.tempDirectoryUrl);
-      finalizeCoverage = async () => {
-        if (multipleExecutionsOperation.signal.aborted) {
-          // don't try to do the coverage stuff
-          return;
+  let finalizeCoverage;
+
+  try {
+    const cpuUsage = startMeasuringCpuUsage();
+    operation.addEndCallback(cpuUsage.stop);
+
+    let logger;
+    const runtimeInfo = {
+      someNeedsServer: false,
+      someHasCoverageV8: false,
+      someNodeRuntime: false,
+    };
+    // param validation and normalization
+    {
+      const unexpectedParamNames = Object.keys(rest);
+      if (unexpectedParamNames.length > 0) {
+        throw new TypeError(`${unexpectedParamNames.join(",")}: no such param`);
+      }
+      // logs
+      {
+        if (typeof logs !== "object") {
+          throw new TypeError(`logs must be an object, got ${logs}`);
         }
-        try {
-          if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
-            takeCoverage();
-            // conceptually we don't need coverage anymore so it would be
-            // good to call v8.stopCoverage()
-            // but it logs a strange message about "result is not an object"
+        const unexpectedLogsKeys = Object.keys(logs).filter(
+          (key) => !Object.hasOwn(logsDefault, key),
+        );
+        if (unexpectedLogsKeys.length > 0) {
+          throw new TypeError(
+            `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+          );
+        }
+        logs = { ...logsDefault, ...logs };
+        logger = createLogger({ logLevel: logs.level });
+
+        if (logs.type === "list" && logger.levels.info) {
+          const listReporterOptions = {
+            animated: logger.levels.debug ? false : logs.animated,
+            fileUrl:
+              logs.fileUrl === undefined
+                ? new URL("./.jsenv/jsenv_tests_output.txt", rootDirectoryUrl)
+                : logs.fileUrl,
+          };
+          reporters.push(reporterList(listReporterOptions));
+        }
+      }
+      // rootDirectoryUrl
+      {
+        rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          rootDirectoryUrl,
+          "rootDirectoryUrl",
+        );
+        if (!existsSync(new URL(rootDirectoryUrl))) {
+          throw new Error(`ENOENT on rootDirectoryUrl at ${rootDirectoryUrl}`);
+        }
+      }
+      // parallel
+      {
+        if (parallel === true) {
+          parallel = {};
+        }
+        if (parallel === false) {
+          parallel = { max: 1 };
+        }
+        if (typeof parallel !== "object") {
+          throw new TypeError(`parallel must be an object, got ${parallel}`);
+        }
+        const unexpectedParallelKeys = Object.keys(parallel).filter(
+          (key) => !Object.hasOwn(parallelDefault, key),
+        );
+        if (unexpectedParallelKeys.length > 0) {
+          throw new TypeError(
+            `${unexpectedParallelKeys.join(",")}: no such key on parallel`,
+          );
+        }
+        parallel = { ...parallelDefault, ...parallel };
+        const assertPercentageAndConvertToRatio = (string) => {
+          const lastChar = string[string.length - 1];
+          if (lastChar !== "%") {
+            throw new TypeError(`string is not a percentage, got ${string}`);
           }
-          const testPlanCoverage = await generateCoverage(testPlanInfo, {
-            signal: multipleExecutionsOperation.signal,
-            logger,
-            rootDirectoryUrl,
-            coverage,
+          const percentageString = string.slice(0, -1);
+          const percentageNumber = parseInt(percentageString);
+          if (percentageNumber <= 0) {
+            return 0;
+          }
+          if (percentageNumber >= 100) {
+            return 1;
+          }
+          const ratio = percentageNumber / 100;
+          return ratio;
+        };
+        const max = parallel.max;
+        if (typeof max === "string") {
+          const maxAsRatio = assertPercentageAndConvertToRatio(max);
+          const availableCpus = countAvailableCpus();
+          parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
+        } else if (typeof max === "number") {
+          if (max < 1) {
+            parallel.max = 1;
+          }
+        } else {
+          throw new TypeError(
+            `parallel.max must be a number or a percentage, got ${max}`,
+          );
+        }
+
+        const maxMemory = parallel.maxMemory;
+        if (typeof maxMemory === "string") {
+          const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
+          parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
+        } else if (typeof maxMemory !== "number") {
+          throw new TypeError(
+            `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
+          );
+        }
+      }
+      // testPlan
+      {
+        if (typeof testPlan !== "object") {
+          throw new Error(`testPlan must be an object, got ${testPlan}`);
+        }
+        for (const filePattern of Object.keys(testPlan)) {
+          const filePlan = testPlan[filePattern];
+          if (!filePlan) continue;
+          for (const executionName of Object.keys(filePlan)) {
+            const executionConfig = filePlan[executionName];
+            if (executionConfig === null) {
+              continue;
+            }
+            const { runtime } = executionConfig;
+            if (!runtime || runtime.disabled) {
+              continue;
+            }
+            if (runtime.type === "browser") {
+              if (runtime.capabilities && runtime.capabilities.coverageV8) {
+                runtimeInfo.someHasCoverageV8 = true;
+              }
+              runtimeInfo.someNeedsServer = true;
+            }
+            if (runtime.type === "node") {
+              runtimeInfo.someNodeRuntime = true;
+            }
+          }
+        }
+        testPlan = {
+          "file:///**/node_modules/": null,
+          "**/*./": null,
+          ...testPlan,
+          "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
+        };
+      }
+      // webServer
+      if (runtimeInfo.someNeedsServer) {
+        await assertAndNormalizeWebServer(webServer, {
+          signal: operation.signal,
+          teardownCallbackSet,
+          logger,
+        });
+      }
+      // githubCheck
+      {
+        if (githubCheck && !process.env.GITHUB_TOKEN) {
+          githubCheck = false;
+          const suggestions = [];
+          if (process.env.GITHUB_WORKFLOW_REF) {
+            const workflowFileRef = process.env.GITHUB_WORKFLOW_REF;
+            const refsIndex = workflowFileRef.indexOf("@refs/");
+            // see "GITHUB_WORKFLOW_REF" in https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+            const workflowFilePath =
+              refsIndex === -1
+                ? workflowFileRef
+                : workflowFileRef.slice(0, refsIndex);
+            suggestions.push(`Pass github token in ${workflowFilePath} during job "${process.env.GITHUB_JOB}"
+\`\`\`yml
+env:
+  GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+\`\`\``);
+          }
+          suggestions.push(`Disable github check with githubCheck: false`);
+          logger.warn(
+            `${UNICODE.WARNING} githubCheck requires process.env.GITHUB_TOKEN.
+Integration with Github check API is disabled
+To fix this warning:
+- ${suggestions.join("\n- ")}
+`,
+          );
+        }
+        if (githubCheck) {
+          if (githubCheck === true) {
+            githubCheck = {};
+          }
+          if (typeof githubCheck !== "object") {
+            throw new TypeError(
+              `githubCheck must be an object, got ${githubCheck}`,
+            );
+          }
+          const unexpectedKeys = Object.keys(githubCheck).filter(
+            (key) => !Object.hasOwn(githubCheckDefault, key),
+          );
+          if (unexpectedKeys.length > 0) {
+            throw new TypeError(
+              `${unexpectedKeys.join(",")}: no such key on githubCheck`,
+            );
+          }
+
+          const githubCheckInfoFromEnv = process.env.GITHUB_WORKFLOW
+            ? readGitHubWorkflowEnv()
+            : {};
+          githubCheck = { ...githubCheckDefault, githubCheck };
+          if (githubCheck.token === undefined) {
+            githubCheck.token = githubCheckInfoFromEnv.githubToken;
+          }
+          if (githubCheck.repositoryOwner === undefined) {
+            githubCheck.repositoryOwner =
+              githubCheckInfoFromEnv.repositoryOwner;
+          }
+          if (githubCheck.repositoryName === undefined) {
+            githubCheck.repositoryName = githubCheckInfoFromEnv.repositoryName;
+          }
+          if (githubCheck.commitSha === undefined) {
+            githubCheck.commitSha = githubCheckInfoFromEnv.commitSha;
+          }
+        }
+      }
+      // coverage
+      if (coverage) {
+        if (coverage === true) {
+          coverage = {};
+        }
+        if (typeof coverage !== "object") {
+          throw new TypeError(`coverage must be an object, got ${coverage}`);
+        }
+        const unexpectedKeys = Object.keys(coverage).filter(
+          (key) => !Object.hasOwn(coverageDefault, key),
+        );
+        if (unexpectedKeys.length > 0) {
+          throw new TypeError(
+            `${unexpectedKeys.join(",")}: no such key on coverage`,
+          );
+        }
+        coverage = { ...coverageDefault, ...coverage };
+        if (typeof coverage.include !== "object") {
+          throw new TypeError(
+            `coverage.include must be an object, got ${coverage.include}`,
+          );
+        }
+        if (Object.keys(coverage.include).length === 0) {
+          logger.warn(
+            `coverage.include is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+          );
+        }
+        if (coverage.methodForBrowsers === undefined) {
+          coverage.methodForBrowsers = runtimeInfo.someHasCoverageV8
+            ? "playwright"
+            : "istanbul";
+        }
+        if (
+          runtimeInfo.someNodeRuntime &&
+          coverage.methodForNodeJs === "NODE_V8_COVERAGE"
+        ) {
+          if (process.env.NODE_V8_COVERAGE) {
+            // when runned multiple times, we don't want to keep previous files in this directory
+            await ensureEmptyDirectory(process.env.NODE_V8_COVERAGE);
+          } else {
+            coverage.methodForNodeJs = "Profiler";
+            logger.warn(
+              createDetailedMessage(
+                `process.env.NODE_V8_COVERAGE is required to generate coverage for Node.js subprocesses`,
+                {
+                  "suggestion": `set process.env.NODE_V8_COVERAGE`,
+                  "suggestion 2": `use coverage.methodForNodeJs: "Profiler". But it means coverage for child_process and worker_thread cannot be collected`,
+                },
+              ),
+            );
+          }
+        }
+        if (!coverage.coverageAndExecutionAllowed) {
+          const associationsForExecute = URL_META.resolveAssociations(
+            { execute: testPlan },
+            "file:///",
+          );
+          const associationsForCover = URL_META.resolveAssociations(
+            { cover: coverage.include },
+            "file:///",
+          );
+          const patternsMatchingCoverAndExecute = Object.keys(
+            associationsForExecute.execute,
+          ).filter((testPlanPattern) => {
+            const { cover } = URL_META.applyAssociations({
+              url: testPlanPattern,
+              associations: associationsForCover,
+            });
+            return cover;
           });
-          testPlanInfo.coverage = testPlanCoverage;
-        } catch (e) {
-          if (Abort.isAbortError(e)) {
+          if (patternsMatchingCoverAndExecute.length) {
+            // It would be strange, for a given file to be both covered and executed
+            throw new Error(
+              createDetailedMessage(
+                `some file will be both covered and executed`,
+                {
+                  patterns: patternsMatchingCoverAndExecute,
+                },
+              ),
+            );
+          }
+        }
+        if (coverage.tempDirectoryUrl === undefined) {
+          coverage.tempDirectoryUrl = new URL(
+            "./.coverage/tmp/",
+            rootDirectoryUrl,
+          );
+        } else {
+          coverage.tempDirectoryUrl = assertAndNormalizeDirectoryUrl(
+            coverage.tempDirectoryUrl,
+            "coverageTempDirectoryUrl",
+          );
+        }
+      }
+    }
+
+    const executionPlanifiedSet = new Set();
+
+    // collect files to execute + fill executionPlanifiedSet
+    {
+      const fileResultArray = await collectFiles({
+        signal,
+        directoryUrl: rootDirectoryUrl,
+        associations: { testPlan },
+        predicate: ({ testPlan }) => testPlan,
+      });
+      let index = 0;
+      let lastExecution;
+      const fileExecutionCountMap = new Map();
+      for (const { relativeUrl, meta } of fileResultArray) {
+        const filePlan = meta.testPlan;
+        for (const groupName of Object.keys(filePlan)) {
+          const stepConfig = filePlan[groupName];
+          if (stepConfig === null || stepConfig === undefined) {
+            continue;
+          }
+          if (typeof stepConfig !== "object") {
+            throw new TypeError(
+              createDetailedMessage(
+                `found unexpected value in plan, they must be object`,
+                {
+                  ["file relative path"]: relativeUrl,
+                  ["group"]: groupName,
+                  ["value"]: stepConfig,
+                },
+              ),
+            );
+          }
+          if (stepConfig.runtime?.disabled) {
+            continue;
+          }
+
+          const {
+            runtime,
+            runtimeParams,
+            allocatedMs = defaultMsAllocatedPerExecution,
+          } = stepConfig;
+          const params = {
+            measureMemoryUsage: true,
+            measurePerformance: false,
+            collectPerformance: false,
+            collectConsole: true,
+            allocatedMs,
+            runtime,
+            runtimeParams: {
+              rootDirectoryUrl,
+              webServer,
+              teardownCallbackSet,
+
+              coverageEnabled: Boolean(coverage),
+              coverageInclude: coverage?.include,
+              coverageMethodForBrowsers: coverage?.methodForBrowsers,
+              coverageMethodForNodeJs: coverage?.methodForNodeJs,
+              isTestPlan: true,
+              fileRelativeUrl: relativeUrl,
+              ...runtimeParams,
+            },
+          };
+          const runtimeType = runtime.type;
+          const runtimeName = runtime.name;
+          const runtimeVersion = runtime.version;
+
+          let fileExecutionCount;
+          if (fileExecutionCountMap.has(relativeUrl)) {
+            fileExecutionCount = fileExecutionCountMap.get(relativeUrl) + 1;
+            fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+          } else {
+            fileExecutionCount = 1;
+            fileExecutionCountMap.set(relativeUrl, fileExecutionCount);
+          }
+
+          const execution = {
+            counters,
+            countersInOrder,
+            index,
+            isLast: false,
+            group: groupName,
+            rootDirectoryUrl: String(rootDirectoryUrl),
+            fileRelativeUrl: relativeUrl,
+            fileExecutionIndex: fileExecutionCount - 1,
+            fileExecutionCount: null,
+            runtimeType,
+            runtimeName,
+            runtimeVersion,
+            params,
+
+            // will be set by run()
+            status: "planified",
+            result: {},
+          };
+          if (typeof params.allocatedMs === "function") {
+            params.allocatedMs = params.allocatedMs(execution);
+          }
+
+          lastExecution = execution;
+          executionPlanifiedSet.add(execution);
+          const existingResults = results[relativeUrl];
+          if (existingResults) {
+            existingResults[groupName] = execution.result;
+          } else {
+            results[relativeUrl] = {
+              [groupName]: execution.result,
+            };
+          }
+          const existingGroup = groups[groupName];
+          if (existingGroup) {
+            groups[groupName].count++;
+          } else {
+            groups[groupName] = {
+              count: 1,
+              runtimeType,
+              runtimeName,
+              runtimeVersion,
+            };
+          }
+          index++;
+        }
+      }
+      fileResultArray.length = 0;
+      fileExecutionCountMap.clear();
+      if (lastExecution) {
+        lastExecution.isLast = true;
+      }
+    }
+
+    counters.planified =
+      counters.remaining =
+      counters.waiting =
+        executionPlanifiedSet.size;
+    countersInOrder.planified =
+      countersInOrder.remaining =
+      countersInOrder.waiting =
+        executionPlanifiedSet.size;
+    if (githubCheck) {
+      const githubCheckRun = await startGithubCheckRun({
+        logLevel: githubCheck.logLevel,
+        githubToken: githubCheck.token,
+        repositoryOwner: githubCheck.repositoryOwner,
+        repositoryName: githubCheck.repositoryName,
+        commitSha: githubCheck.commitSha,
+        checkName: githubCheck.name,
+        checkTitle: githubCheck.title,
+        checkSummary: `${executionPlanifiedSet.size} files will be executed`,
+      });
+      const annotations = [];
+      reporters.push({
+        beforeAll: (testPlanResult) => {
+          return {
+            afterEach: (execution) => {
+              const { result } = execution;
+              const { errors = [] } = result;
+              for (const error of errors) {
+                const annotation = githubAnnotationFromError(error, {
+                  rootDirectoryUrl,
+                  execution,
+                });
+                annotations.push(annotation);
+              }
+            },
+            afterAll: async () => {
+              const title = "Jsenv test results";
+              const summaryText = stripAnsi(renderOutro(testPlanResult));
+              if (testPlanResult.failed) {
+                await githubCheckRun.fail({
+                  title,
+                  summary: summaryText,
+                  annotations,
+                });
+                return;
+              }
+              await githubCheckRun.pass({
+                title,
+                summary: summaryText,
+                annotations,
+              });
+            },
+          };
+        },
+      });
+    }
+
+    timings.executionStart = takeTiming();
+    // execute all
+    {
+      const failFastAbortController = new AbortController();
+      if (failFast) {
+        operation.addAbortSignal(failFastAbortController.signal);
+      }
+
+      if (coverage) {
+        // when runned multiple times, we don't want to keep previous files in this directory
+        await ensureEmptyDirectory(coverage.tempDirectoryUrl);
+        finalizeCoverage = async () => {
+          if (operation.signal.aborted) {
+            // don't try to do the coverage stuff
             return;
           }
-          throw e;
-        }
-      };
-    }
-
-    const callWhenPreviousExecutionAreDone = createCallOrderer();
-
-    const executionRemainingSet = new Set(executionPlanifiedSet);
-    const executionExecutingSet = new Set();
-    const start = async (execution) => {
-      execution.fileExecutionCount = Object.keys(
-        testPlanInfo.results[execution.fileRelativeUrl],
-      ).length;
-      mutateCountersBeforeExecutionStarts(counters);
-      mutateCountersBeforeExecutionStarts(countersInOrder);
-
-      execution.status = "executing";
-      executionRemainingSet.delete(execution);
-      executionExecutingSet.add(execution);
-      for (const beforeEachCallback of beforeEachCallbackSet) {
-        const returnValue = beforeEachCallback(execution, testPlanInfo);
-        if (typeof returnValue === "function") {
-          const callback = (...args) => {
-            afterEachCallbackSet.delete(callback);
-            return returnValue(...args);
-          };
-          afterEachCallbackSet.add(callback);
-        }
-      }
-
-      for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
-        const returnValue = beforeEachInOrderCallback(execution, testPlanInfo);
-        if (typeof returnValue === "function") {
-          const callback = (...args) => {
-            afterEachInOrderCallbackSet.delete(callback);
-            return returnValue(...args);
-          };
-          afterEachInOrderCallbackSet.add(callback);
-        }
-      }
-      const executionResult = await run({
-        ...execution.params,
-        signal: multipleExecutionsOperation.signal,
-        logger,
-        keepRunning,
-        mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-        coverageEnabled: Boolean(coverage),
-        coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
-      });
-      Object.assign(execution.result, executionResult);
-      execution.status = "executed";
-      executionExecutingSet.delete(execution);
-      mutateCountersAfterExecutionEnds(counters, execution);
-      if (execution.result.status !== "completed") {
-        testPlanInfo.failed = true;
-        if (updateProcessExitCode) {
-          process.exitCode = 1;
-        }
-      }
-
-      for (const afterEachCallback of afterEachCallbackSet) {
-        afterEachCallback(execution, testPlanInfo);
-      }
-      callWhenPreviousExecutionAreDone(execution.index, () => {
-        mutateCountersAfterExecutionEnds(countersInOrder, execution);
-        for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
-          afterEachInOrderCallback(execution, testPlanInfo);
-        }
-      });
-
-      if (testPlanInfo.failed && failFast && counters.remaining) {
-        logger.info(`"failFast" enabled -> cancel remaining executions`);
-        failFastAbortController.abort();
-        return;
-      }
-      await startAsMuchAsPossible();
-    };
-    const startAsMuchAsPossible = async () => {
-      const promises = [];
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        multipleExecutionsOperation.throwIfAborted();
-        if (executionRemainingSet.size === 0) {
-          break;
-        }
-        if (executionExecutingSet.size >= parallel.max) {
-          break;
-        }
-
-        if (
-          // starting execution in parallel is limited by
-          // cpu and memory only when trying to parallelize
-          // if nothing is executing these limitations don't apply
-          executionExecutingSet.size > 0
-        ) {
-          const availableMemory = freemem();
-          const totalMemory = totalmem();
-          const usedMemory = totalMemory - availableMemory;
-          if (usedMemory > parallel.maxMemory) {
-            // retry after Xms in case memory usage decreases
-            const promise = (async () => {
-              await multipleExecutionsOperation.wait(200);
-              await startAsMuchAsPossible();
-            })();
-            promises.push(promise);
+          try {
+            if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
+              takeCoverage();
+              // conceptually we don't need coverage anymore so it would be
+              // good to call v8.stopCoverage()
+              // but it logs a strange message about "result is not an object"
+            }
+            const testPlanCoverage = await generateCoverage(testPlanResult, {
+              signal: operation.signal,
+              logger,
+              rootDirectoryUrl,
+              coverage,
+            });
+            testPlanResult.coverage = testPlanCoverage;
+          } catch (e) {
+            if (Abort.isAbortError(e)) {
+              return;
+            }
+            throw e;
           }
+        };
+      }
 
-          if (cpuUsage.overall.active > parallel.maxCpu) {
-            // retry after Xms in case cpu usage decreases
-            const promise = (async () => {
-              await multipleExecutionsOperation.wait(200);
-              await startAsMuchAsPossible();
-            })();
-            promises.push(promise);
+      const callWhenPreviousExecutionAreDone = createCallOrderer();
+
+      const executionRemainingSet = new Set(executionPlanifiedSet);
+      const executionExecutingSet = new Set();
+      const start = async (execution) => {
+        execution.fileExecutionCount = Object.keys(
+          testPlanResult.results[execution.fileRelativeUrl],
+        ).length;
+        mutateCountersBeforeExecutionStarts(counters, execution);
+        mutateCountersBeforeExecutionStarts(countersInOrder, execution);
+
+        execution.status = "executing";
+        executionRemainingSet.delete(execution);
+        executionExecutingSet.add(execution);
+        for (const beforeEachCallback of beforeEachCallbackSet) {
+          const returnValue = beforeEachCallback(execution, testPlanResult);
+          if (typeof returnValue === "function") {
+            const callback = (...args) => {
+              afterEachCallbackSet.delete(callback);
+              return returnValue(...args);
+            };
+            afterEachCallbackSet.add(callback);
+          }
+        }
+
+        for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
+          const returnValue = beforeEachInOrderCallback(
+            execution,
+            testPlanResult,
+          );
+          if (typeof returnValue === "function") {
+            const callback = (...args) => {
+              afterEachInOrderCallbackSet.delete(callback);
+              return returnValue(...args);
+            };
+            afterEachInOrderCallbackSet.add(callback);
+          }
+        }
+        const executionResult = await run({
+          ...execution.params,
+          signal: operation.signal,
+          logger,
+          keepRunning,
+          mirrorConsole: false, // might be executed in parallel: log would be a mess to read
+          coverageEnabled: Boolean(coverage),
+          coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
+        });
+        Object.assign(execution.result, executionResult);
+        execution.status = "executed";
+        executionExecutingSet.delete(execution);
+        mutateCountersAfterExecutionEnds(counters, execution);
+        if (execution.result.status !== "completed") {
+          testPlanResult.failed = true;
+          if (updateProcessExitCode) {
+            process.exitCode = 1;
+          }
+        }
+
+        for (const afterEachCallback of afterEachCallbackSet) {
+          afterEachCallback(execution, testPlanResult);
+        }
+        callWhenPreviousExecutionAreDone(execution.index, () => {
+          mutateCountersAfterExecutionEnds(countersInOrder, execution);
+          for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
+            afterEachInOrderCallback(execution, testPlanResult);
+          }
+        });
+
+        if (testPlanResult.failed && failFast && counters.remaining) {
+          logger.info(`"failFast" enabled -> cancel remaining executions`);
+          failFastAbortController.abort();
+          return;
+        }
+        await startAsMuchAsPossible();
+      };
+      const startAsMuchAsPossible = async () => {
+        const promises = [];
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          operation.throwIfAborted();
+          if (executionRemainingSet.size === 0) {
             break;
           }
-        }
+          if (executionExecutingSet.size >= parallel.max) {
+            break;
+          }
 
-        let execution;
-        for (const executionCandidate of executionRemainingSet) {
-          // TODO: this is where we'll check if it can be executed
-          // according to upcoming "using" execution param
-          execution = executionCandidate;
-          break;
-        }
-        if (execution) {
-          promises.push(start(execution));
-        }
-      }
-      if (promises.length) {
-        await Promise.all(promises);
-        promises.length = 0;
-      }
-    };
+          if (
+            // starting execution in parallel is limited by
+            // cpu and memory only when trying to parallelize
+            // if nothing is executing these limitations don't apply
+            executionExecutingSet.size > 0
+          ) {
+            const availableMemory = freemem();
+            const totalMemory = totalmem();
+            const usedMemory = totalMemory - availableMemory;
+            if (usedMemory > parallel.maxMemory) {
+              // retry after Xms in case memory usage decreases
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
+              promises.push(promise);
+            }
 
-    try {
-      const startMs = Date.now();
-      reporters = reporters.flat(10);
+            if (cpuUsage.overall.active > parallel.maxCpu) {
+              // retry after Xms in case cpu usage decreases
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
+              promises.push(promise);
+              break;
+            }
+          }
+
+          let execution;
+          for (const executionCandidate of executionRemainingSet) {
+            // TODO: this is where we'll check if it can be executed
+            // according to upcoming "using" execution param
+            execution = executionCandidate;
+            break;
+          }
+          if (execution) {
+            promises.push(start(execution));
+          }
+        }
+        if (promises.length) {
+          await Promise.all(promises);
+          promises.length = 0;
+        }
+      };
+
+      reporters = reporters.flat(Infinity);
       for (const reporter of reporters) {
         const {
           beforeAll,
@@ -6374,7 +6437,7 @@ To fix this warning:
           // afterAll,
         } = reporter;
         if (beforeAll) {
-          const returnValue = await beforeAll(testPlanInfo);
+          const returnValue = await beforeAll(testPlanResult);
           if (returnValue) {
             const {
               beforeEach,
@@ -6402,38 +6465,47 @@ To fix this warning:
         }
       }
       await startAsMuchAsPossible();
-      if (!keepRunning) {
-        logger.debug("trigger test plan teardown");
-        for (const teardownCallback of teardownCallbackSet) {
-          await teardownCallback();
-        }
-        teardownCallbackSet.clear();
-      }
-      testPlanInfo.aborted = multipleExecutionsOperation.signal.aborted;
-      testPlanInfo.duration = Date.now() - startMs;
-      mutateCountersAfterAllExecution(counters, testPlanInfo);
-      mutateCountersAfterAllExecution(countersInOrder, testPlanInfo);
-      if (finalizeCoverage) {
-        await finalizeCoverage();
-      }
-    } catch (e) {
-      if (Abort.isAbortError(e)) {
-        testPlanInfo.aborted = true;
-      } else {
-        throw e;
-      }
-    } finally {
-      await multipleExecutionsOperation.end();
     }
+    timings.executionEnd = takeTiming();
+  } catch (e) {
+    if (Abort.isAbortError(e)) ; else {
+      throw e;
+    }
+  } finally {
+    testPlanResult.aborted = operation.signal.aborted;
+    if (testPlanResult.aborted) {
+      // when execution is aborted, the remaining executions are "cancelled"
+      counters.cancelled = counters.planified - counters.executed;
+      counters.remaining = 0;
+      countersInOrder.cancelled =
+        countersInOrder.planified - countersInOrder.executed;
+      countersInOrder.remaining = 0;
+    }
+
+    if (!keepRunning) {
+      for (const teardownCallback of teardownCallbackSet) {
+        await teardownCallback();
+      }
+      teardownCallbackSet.clear();
+    }
+    timings.teardownEnd = takeTiming();
+
+    if (finalizeCoverage) {
+      await finalizeCoverage();
+    }
+    timings.coverageTeardownEnd = takeTiming();
+    timings.end = takeTiming();
+
+    afterEachCallbackSet.clear();
+    afterEachInOrderCallbackSet.clear();
+    for (const afterAllCallback of afterAllCallbackSet) {
+      await afterAllCallback(testPlanResult);
+    }
+    afterAllCallbackSet.clear();
+    await operation.end();
   }
 
-  afterEachCallbackSet.clear();
-  afterEachInOrderCallbackSet.clear();
-  for (const afterAllCallback of afterAllCallbackSet) {
-    await afterAllCallback(testPlanInfo);
-  }
-  afterAllCallbackSet.clear();
-  return testPlanInfo;
+  return testPlanResult;
 };
 
 const countAvailableCpus = () => {
@@ -6460,13 +6532,6 @@ const mutateCountersAfterExecutionEnds = (counters, execution) => {
     counters.failed++;
   } else if (execution.result.status === "completed") {
     counters.completed++;
-  }
-};
-const mutateCountersAfterAllExecution = (counters, testPlanResult) => {
-  if (testPlanResult.aborted) {
-    // when execution is aborted, the remaining executions are "cancelled"
-    counters.cancelled = counters.planified - counters.executed;
-    counters.remaining = 0;
   }
 };
 
@@ -7234,11 +7299,12 @@ const importPlaywright = async ({ browserName }) => {
     return namespace;
   } catch (e) {
     if (e.code === "ERR_MODULE_NOT_FOUND") {
+      const dependencyName = `@playwright/browser-${browserName}`;
       throw new Error(
         createDetailedMessage(
-          `"playwright" not found. You need playwright in your dependencies to use "${browserName}"`,
+          `"playwright" not found. You need ${dependencyName} in your dependencies to use "${browserName}"`,
           {
-            suggestion: `npm install --save-dev playwright`,
+            suggestion: `npm install --save-dev ${dependencyName}`,
           },
         ),
         { cause: e },
@@ -8087,6 +8153,7 @@ const nodeChildProcess = ({
           await stop({
             gracefulStopAllocatedMs,
           });
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();
@@ -8371,6 +8438,7 @@ const nodeWorkerThread = ({
             result.errors.push(error);
           },
           exit: ({ code }) => {
+            onRuntimeStopped();
             if (code === 12) {
               result.status = "failed";
               result.errors.push(
@@ -8483,6 +8551,7 @@ const nodeWorkerThread = ({
           stopSignal.notify = stop;
         } else {
           await stop();
+          onRuntimeStopped();
         }
         await actionOperation.end();
         await cleanup();
@@ -8641,6 +8710,272 @@ const reportCoverageAsHtml = (
   // console.log(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
 };
 
+const createXmlGenerator = ({
+  rootNodeName,
+  canSelfCloseNames = [],
+  canReceiveChildNames = [],
+  canReceiveContentNames = [],
+}) => {
+  const createNode = (name, attributes = {}) => {
+    const canSelfClose = canSelfCloseNames.includes(name);
+    const canReceiveChild = canReceiveChildNames.includes(name);
+    const canReceiveContent = canReceiveContentNames.includes(name);
+
+    const children = [];
+
+    const node = {
+      name,
+      content: "",
+      children,
+      attributes,
+      canSelfClose,
+      createNode,
+      appendChild: (childNode) => {
+        if (!canReceiveChild) {
+          throw new Error(`cannot appendChild into ${name}`);
+        }
+        children.push(childNode);
+        return childNode;
+      },
+      setContent: (value) => {
+        if (!canReceiveContent) {
+          throw new Error(`cannot setContent on ${name}`);
+        }
+        node.content = value;
+      },
+      renderAsString: () => {
+        const renderNode = (node, { depth }) => {
+          let nodeString = "";
+          nodeString += `<${node.name}`;
+
+          {
+            const attributeNames = Object.keys(node.attributes);
+            if (attributeNames.length) {
+              let attributesSingleLine = "";
+              let attributesMultiLine = "";
+
+              for (const attributeName of attributeNames) {
+                let attributeValue = node.attributes[attributeName];
+                if (typeof attributeValue === "number") {
+                  attributeValue = round(attributeValue);
+                }
+                if (attributeName === "viewBox") {
+                  attributeValue = attributeValue
+                    .split(",")
+                    .map((v) => round(parseFloat(v.trim())))
+                    .join(", ");
+                }
+                attributesSingleLine += ` ${attributeName}="${attributeValue}"`;
+                attributesMultiLine += `\n  `;
+                attributesMultiLine += "  ".repeat(depth);
+                attributesMultiLine += `${attributeName}="${attributeValue}"`;
+              }
+              attributesMultiLine += "\n";
+              attributesMultiLine += "  ".repeat(depth);
+
+              if (attributesSingleLine.length < 100) {
+                nodeString += attributesSingleLine;
+              } else {
+                nodeString += attributesMultiLine;
+              }
+            }
+          }
+
+          let innerHTML = "";
+          if (node.content) {
+            const contentEncoded = he.encode(node.content, { decimal: false });
+            innerHTML += contentEncoded;
+          }
+          {
+            if (node.children.length > 0) {
+              for (const child of node.children) {
+                innerHTML += "\n  ";
+                innerHTML += "  ".repeat(depth);
+                innerHTML += renderNode(child, {
+                  depth: depth + 1,
+                });
+              }
+              innerHTML += "\n";
+              innerHTML += "  ".repeat(depth);
+            }
+          }
+          if (innerHTML === "") {
+            if (node.canSelfClose) {
+              nodeString += `/>`;
+            } else {
+              nodeString += `></${node.name}>`;
+            }
+          } else {
+            nodeString += `>`;
+            nodeString += innerHTML;
+            nodeString += `</${node.name}>`;
+          }
+          return nodeString;
+        };
+
+        return renderNode(node, {
+          depth: 0,
+        });
+      },
+    };
+
+    return node;
+  };
+
+  return (rootNodeAttributes) => createNode(rootNodeName, rootNodeAttributes);
+};
+
+// Round: Make number values smaller in output
+// Eg: 14.23734 becomes 14.24
+// Credit @Chris Martin: https://stackoverflow.com/a/43012696/2816869
+const round = (x) => {
+  const rounded = Number(`${Math.round(`${x}e2`)}e-2`);
+  return rounded;
+};
+
+// run prettier on it
+
+
+const reportAsJunitXml = async (
+  testPlanResult,
+  fileUrl,
+  { mockFluctuatingValues } = {},
+) => {
+  fileUrl = assertAndNormalizeFileUrl(fileUrl);
+
+  const createRootNode = createXmlGenerator({
+    rootNodeName: "testsuite",
+    canReceiveChildNames: ["testsuite", "testcase", "properties"],
+    canReceiveContentNames: ["failure", "error", "system-out", "system-err"],
+  });
+  const testSuite = createRootNode({
+    time: mockFluctuatingValues ? "[mock]" : testPlanResult.timings.end,
+    timestamp: mockFluctuatingValues
+      ? "[mock]"
+      : new Date(testPlanResult.timings.origin).toISOString().slice(0, -5), //  Date and time of when the test run was executed
+    tests: testPlanResult.counters.planified,
+    skipped:
+      testPlanResult.counters.aborted + testPlanResult.counters.cancelled,
+    failures: testPlanResult.counters.timedout + testPlanResult.counters.failed, // Total number of failed tests
+  });
+
+  for (const fileRelativeUrl of Object.keys(testPlanResult.results)) {
+    const fileResults = testPlanResult.results[fileRelativeUrl];
+    for (const group of Object.keys(fileResults)) {
+      const executionResult = fileResults[group];
+      const testCase = testSuite.createNode("testcase", {
+        file: fileRelativeUrl,
+        name: group,
+        time: mockFluctuatingValues ? "[mock]" : executionResult.timings.end, // duration of this execution
+        timestamp: mockFluctuatingValues
+          ? "[mock]"
+          : new Date(executionResult.timings.origin).toISOString().slice(0, -5), //  Date and time of when the test run was executed
+        tests: 1, // Total number of tests for this execution
+      });
+      testSuite.appendChild(testCase);
+
+      if (executionResult.status === "aborted") {
+        testCase.attributes.skipped = 1;
+        const skipped = testCase.createNode("skipped", {
+          message: "Execution was aborted",
+        });
+        testSuite.appendChild(skipped);
+      }
+      if (executionResult.status === "timedout") {
+        testCase.attributes.failures = 1;
+        const failure = testCase.createNode("failure", {
+          message: `Execution timeout after ${executionResult.params.allocatedMs}ms"`,
+          type: "timeout",
+        });
+        testSuite.appendChild(failure);
+      }
+      if (executionResult.status === "failed") {
+        const [error] = executionResult.errors;
+        if (
+          error &&
+          typeof error.name === "string" &&
+          error.name.includes("AssertionError")
+        ) {
+          testCase.attributes.failures = 1;
+          const failure = testCase.createNode("failure", {
+            type: error.name,
+          });
+          testSuite.appendChild(failure);
+          failure.setContent(
+            formatErrorForTerminal(error, {
+              rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+              mainFileRelativeUrl: fileRelativeUrl,
+              mockFluctuatingValues,
+              tryColors: false,
+            }),
+          );
+        } else {
+          testCase.attributes.errors = 1;
+          const errorNode = testCase.createNode("error", {
+            type: error.name,
+          });
+          testSuite.appendChild(errorNode);
+          errorNode.setContent(
+            formatErrorForTerminal(error, {
+              rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+              mainFileRelativeUrl: fileRelativeUrl,
+              mockFluctuatingValues,
+              tryColors: false,
+            }),
+          );
+        }
+      }
+
+      const groupInfo = testPlanResult.groups[group];
+      const properties = {
+        runtimeName: groupInfo.runtimeName,
+        runtimeVersion: mockFluctuatingValues
+          ? "[mock]"
+          : groupInfo.runtimeVersion,
+      };
+      const propertiesNode = testCase.createNode("properties");
+      testCase.appendChild(propertiesNode);
+      for (const propertyName of Object.keys(properties)) {
+        const propertyNode = propertiesNode.createNode("property", {
+          name: propertyName,
+          value: properties[propertyName],
+        });
+        propertiesNode.appendChild(propertyNode);
+      }
+
+      const { consoleCalls } = executionResult;
+      let stdout = "";
+      let stderr = "";
+      for (const consoleCall of consoleCalls) {
+        if (groupInfo.runtimeType === "node") {
+          if (consoleCall.type === "error") {
+            stdout += consoleCall.text;
+          } else {
+            stderr += consoleCall.text;
+          }
+        } else {
+          stdout += consoleCall.text;
+        }
+      }
+      if (stdout.length) {
+        const systemOut = testSuite.createNode("system-out");
+        testCase.appendChild(systemOut);
+        systemOut.setContent(stdout);
+      }
+      if (stderr.length) {
+        const systemErr = testSuite.createNode("system-err");
+        testCase.appendChild(systemErr);
+        systemErr.setContent(stderr);
+      }
+    }
+  }
+
+  let junitXmlFileContent = `<?xml version="1.0" encoding="UTF-8"?>
+${testSuite.renderAsString()}`;
+
+  writeFileSync(new URL(fileUrl), junitXmlFileContent);
+};
+
 /*
  * Export a function capable to execute a file on a runtime (browser or node) and return how it goes.
  *
@@ -8764,4 +9099,4 @@ const execute = async ({
   }
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };

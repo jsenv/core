@@ -481,14 +481,13 @@ window.__supervisor__ = (() => {
         exception.isError = reason instanceof Error;
         exception.name = reason.name || "Error";
         exception.message = reason.message || message || "";
-        exception.reportedBy = reason.reportedBy;
 
         let stackFrames;
         if (
+          exception.isError &&
           Error.captureStackTrace &&
           // captureStackTrace exists on webkit but error.stack is not v8
-          !isWebkitOrSafari &&
-          "stack" in reason
+          !isWebkitOrSafari
         ) {
           // stackTrace formatted by V8
           const { prepareStackTrace } = Error;
@@ -544,8 +543,23 @@ window.__supervisor__ = (() => {
               }
               stackFrames.push(stackFrame);
             }
-            return "";
+            let stackTrace = "";
+            for (const stackFrame of stackFrames) {
+              if (stackTrace) stackTrace += "\n";
+              stackTrace += stackFrame.raw;
+            }
+            exception.stackTrace = stackTrace;
+
+            let stack = "";
+            const name = reason.name || "Error";
+            const message = reason.message || "";
+            stack += `${name}: ${message}`;
+            if (stackTrace) {
+              stack += `\n${stackTrace}`;
+            }
+            return stack;
           };
+
           exception.stackSourcemapped = true;
           exception.stack = reason.stack;
           if (stackFrames === undefined) {
@@ -554,24 +568,8 @@ window.__supervisor__ = (() => {
             // - reason.stack already get
             Error.prepareStackTrace = prepareStackTrace;
             exception.stackTrace = getErrorStackTrace(reason);
-          }
-          if (stackFrames) {
+          } else {
             exception.stackFrames = stackFrames;
-            let stackTrace = "";
-            for (const stackFrame of stackFrames) {
-              if (stackTrace) stackTrace += "\n";
-              stackTrace += stackFrame.raw;
-            }
-            exception.stackTrace = stackTrace;
-            let stack = "";
-            const name = reason.name || "Error";
-            const message = reason.message || "";
-            stack += `${name}: ${message}`;
-            if (stackTrace) {
-              stack += `\n${stackTrace}`;
-            }
-            exception.stack = stack;
-
             const [firstCallFrame] = stackFrames;
             if (
               exception.site.url === null &&
@@ -932,12 +930,13 @@ window.__supervisor__ = (() => {
               }
             }
             if (
-              exception.reportedBy === "script_error_event" ||
-              exception.reportedBy === "window_error_event" ||
-              exception.name === "SyntaxError" ||
-              exception.code === DYNAMIC_IMPORT_FETCH_ERROR ||
-              exception.code === DYNAMIC_IMPORT_EXPORT_MISSING ||
-              exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
+              !exception.stackTrace &&
+              (exception.reportedBy === "script_error_event" ||
+                exception.reportedBy === "window_error_event" ||
+                exception.name === "SyntaxError" ||
+                exception.code === DYNAMIC_IMPORT_FETCH_ERROR ||
+                exception.code === DYNAMIC_IMPORT_EXPORT_MISSING ||
+                exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR)
             ) {
               let traceSite = stringifyUrlSite(trace);
               if (traceSite) {

@@ -13,7 +13,7 @@ import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { assert } from "@jsenv/assert";
-import { formatStringAssertionErrorMessage } from "@jsenv/assert/src/internal/error_message/strings.js";
+import { formatStringAssertionErrorMessage } from "@jsenv/assert/src/error_info/strings.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);

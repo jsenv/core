@@ -1,3 +1,75 @@
+# 3.0.0
+
+### introduce color in message for Node.js
+
+The columns marker in the error message is now in red (color is achieved using ansi escape sequence)
+
+### Introduce newline after column marker
+
+Also remove the column number from path
+
+````md
+<!-- @jsenv/assert 2.11.0 -->
+
+```console
+unexpected character in string
+--- details ---
+file:///@jsenv/assert/src/internal/something.js
+                                   ^ unexpected "s", expected to continue with "/something.js"
+--- path ---
+actual[35]
+```
+
+<!-- @jsenv/assert 3.0.0 -->
+
+```console
+unexpected character in string
+--- details ---
+file:///@jsenv/assert/src/internal/something.js
+                                   ^
+unexpected "s", expected to continue with "/something.js"
+--- path ---
+actual
+```
+````
+
+### Add `assert.between(min, max)`
+
+```js
+import { assert } from "@jsenv/assert";
+
+assert({
+  actual: 10,
+  expected: assert.between(5, 12),
+});
+```
+
+### Always add line number on string error messages
+
+**before**
+
+```console
+unexpected character in string
+--- details ---
+"Hello,
+my name is Damien"
+           ^ unexpected "D", expected string continues with "Flore"
+--- path ---
+actual[18]
+```
+
+**after**
+
+```console
+unexpected character in string
+--- details ---
+1 | Hello,
+2 | my name is Damien
+               ^ unexpected "D", expected string continues with "Flore"
+--- path ---
+actual
+```
+
 # 2.11.0
 
 ### improve string failure message

@@ -1,6 +1,6 @@
 ;(function() {
   var __versionMappings__ = {
-    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=7db8f250"
+    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=a1d95964"
   };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier

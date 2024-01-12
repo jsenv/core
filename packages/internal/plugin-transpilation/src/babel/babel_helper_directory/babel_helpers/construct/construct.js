@@ -1,16 +1,20 @@
-import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js"
-import isNativeReflectConstruct from "../isNativeReflectConstruct/isNativeReflectConstruct.js"
+/* @minVersion 7.0.0-beta.0 */
 
-// NOTE: If Parent !== Class, the correct __proto__ is set *after*
-// calling the constructor.
-function reflectConstruct(Parent, args, Class) {
-  var a = [null]
-  // eslint-disable-next-line prefer-spread
-  a.push.apply(a, args)
-  var Constructor = Function.bind.apply(Parent, a)
-  var instance = new Constructor()
-  if (Class) setPrototypeOf(instance, Class.prototype)
-  return instance
+// @ts-expect-error helper
+import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js";
+import isNativeReflectConstruct from "../isNativeReflectConstruct/isNativeReflectConstruct.js";
+
+export default function _construct(Parent, args, Class) {
+  if (isNativeReflectConstruct()) {
+    // Avoid issues with Class being present but undefined when it wasn't
+    // present in the original call.
+    return Reflect.construct.apply(null, arguments);
+  }
+  // NOTE: If Parent !== Class, the correct __proto__ is set *after*
+  //       calling the constructor.
+  var a = [null];
+  a.push.apply(a, args);
+  var instance = new (Parent.bind.apply(Parent, a))();
+  if (Class) setPrototypeOf(instance, Class.prototype);
+  return instance;
 }
-
-export default isNativeReflectConstruct() ? Reflect.construct.bind() : reflectConstruct
