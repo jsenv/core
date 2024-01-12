@@ -5,10 +5,6 @@ import checkInRHS from "../checkInRHS/checkInRHS.js";
 import setFunctionName from "../setFunctionName/setFunctionName.js";
 import toPropertyKey from "../toPropertyKey/toPropertyKey.js";
 
-
-
-
-
 /**
   Basic usage:
 
@@ -179,12 +175,7 @@ export default /* @no-mangle */ function applyDecs2305(
     return value;
   }
 
-  function assertCallable(
-    fn,
-    hint1,
-    hint2,
-    throwUndefined,
-  ) {
+  function assertCallable(fn, hint1, hint2, throwUndefined) {
     if (typeof fn !== "function") {
       if (throwUndefined || fn !== void 0) {
         throw new TypeError(
@@ -246,14 +237,14 @@ export default /* @no-mangle */ function applyDecs2305(
         if (isField || isAccessor) {
           desc = {
             get: setFunctionName(
-              function (this) {
-                return decVal(this);
+              function (_this) {
+                return decVal(_this);
               },
               name,
               "get",
             ),
-            set: function (this, value) {
-              decInfo[4](this, value);
+            set: function (_this, value) {
+              decInfo[4](_this, value);
             },
           };
         } else {
@@ -275,8 +266,8 @@ export default /* @no-mangle */ function applyDecs2305(
     var newValue = Class;
 
     for (var i = decs.length - 1; i >= 0; i -= decoratorsHaveThis ? 2 : 1) {
-      var dec = (decs)[i],
-        decThis = decoratorsHaveThis ? (decs)[i - 1] : void 0;
+      var dec = decs[i],
+        decThis = decoratorsHaveThis ? decs[i - 1] : void 0;
 
       var decoratorFinishedRef = {};
       var ctx = {
@@ -286,10 +277,7 @@ export default /* @no-mangle */ function applyDecs2305(
 
         name: name,
         metadata: metadata,
-        addInitializer: function (
-          decoratorFinishedRef,
-          initializer,
-        ) {
+        addInitializer: function (decoratorFinishedRef, initializer) {
           if (decoratorFinishedRef.v) {
             throw new Error(
               "attempted to call addInitializer after decoration was finished",
@@ -424,12 +412,7 @@ export default /* @no-mangle */ function applyDecs2305(
   }
 
   /* @no-mangle */
-  function applyMemberDecs(
-    Class,
-    decInfos,
-    instanceBrand,
-    metadata,
-  ) {
+  function applyMemberDecs(Class, decInfos, instanceBrand, metadata) {
     var ret = [];
     var protoInitializers;
     var staticInitializers;
@@ -484,7 +467,7 @@ export default /* @no-mangle */ function applyDecs2305(
         isStatic ? Class : Class.prototype,
         decInfo,
         decoratorsHaveThis,
-        isPrivate ? "#" + name : (toPropertyKey(name)),
+        isPrivate ? "#" + name : toPropertyKey(name),
         kind,
         metadata,
         isStatic
