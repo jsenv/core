@@ -1,14 +1,14 @@
 function assign(target) {
   for (var i = 1; i < arguments.length; i++) {
     // eslint-disable-next-line prefer-rest-params
-    var source = arguments[i]
+    var source = arguments[i];
     for (var key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
-        target[key] = source[key]
+        target[key] = source[key];
       }
     }
   }
-  return target
+  return target;
 }
 
-export default Object.assign ? Object.assign.bind() : assign
+export default Object.assign ? Object.assign.bind() : assign;

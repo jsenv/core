@@ -1,4 +1,6 @@
-import defineProperty from "../defineProperty/defineProperty.js"
+/* @minVersion 7.5.0 */
+
+import defineProperty from "../defineProperty/defineProperty.js";
 
 // This function is different to "Reflect.ownKeys". The enumerableOnly
 // filters on symbol properties only. Returned string properties are always
@@ -32,7 +34,7 @@ export default function _objectSpread2(target) {
         Object.defineProperty(
           target,
           key,
-          Object.getOwnPropertyDescriptor(source, key)
+          Object.getOwnPropertyDescriptor(source, key),
         );
       });
     }
