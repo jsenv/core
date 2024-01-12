@@ -1,8 +1,9 @@
 System.register([], function (_export, _context) {
   "use strict";
 
-  _export("default", function (input, hint /* : "default" | "string" | "number" | void */) {
-    if (typeof input !== "object" || input === null) return input;
+  function toPrimitive(input, hint) {
+    if (typeof input !== "object" || !input) return input;
+    // @ts-expect-error Symbol.toPrimitive might not index {}
     var prim = input[Symbol.toPrimitive];
     if (prim !== undefined) {
       var res = prim.call(input, hint || "default");
@@ -10,7 +11,8 @@ System.register([], function (_export, _context) {
       throw new TypeError("@@toPrimitive must return a primitive value.");
     }
     return (hint === "string" ? String : Number)(input);
-  });
+  }
+  _export("default", toPrimitive);
   return {
     setters: [],
     execute: function () {}
