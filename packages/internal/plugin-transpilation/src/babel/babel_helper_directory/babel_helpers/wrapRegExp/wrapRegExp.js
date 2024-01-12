@@ -1,7 +1,7 @@
 /* @minVersion 7.19.0 */
 
-import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js"
-import inherits from "../inherits/inherits.js"
+import setPrototypeOf from "../setPrototypeOf/setPrototypeOf.js";
+import inherits from "../inherits/inherits.js";
 
 export default function _wrapRegExp() {
   _wrapRegExp = function (re, groups) {

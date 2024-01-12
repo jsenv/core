@@ -1,3 +1,5 @@
+/* @minVersion 7.14.0 */
+
 function _getRequireWildcardCache(nodeInterop) {
   if (typeof WeakMap !== "function") return null;
 

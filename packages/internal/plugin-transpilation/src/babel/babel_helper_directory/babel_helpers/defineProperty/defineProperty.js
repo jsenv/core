@@ -13,9 +13,9 @@ export default (obj, key, value) => {
       enumerable: true,
       configurable: true,
       writable: true,
-    })
+    });
   } else {
-    obj[key] = value
+    obj[key] = value;
   }
-  return obj
-}
+  return obj;
+};
