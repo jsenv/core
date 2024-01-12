@@ -2,29 +2,15 @@
 
 Help to generate beautiful terminal snapshots:
 
-- Record terminal as svg
-- Record terminal as video (mp4 or webm)
-
-## Recording as SVG
+## svg
 
 ![toto](./docs/svg/terminal.svg)
 
-```js
-import { writeFileSync } from "node:fs";
-import { renderTerminalSvg } from "@jsenv/terminal-recorder";
-
-const terminalSvg = await renderTerminalSvg(
-  `[31mred [39m[33myellow [39m[32mgreen [39m[36mcyan [39m[34mblue [39m[35mmagenta[39m`,
-  {
-    title: "Terminal",
-  },
-);
-writeFileSync(new URL("./terminal.svg", import.meta.url), terminalSvg);
-```
-
-## Recording a video/gif
+## gif
 
 ![toto](./docs/animated/terminal.gif)
+
+## Example
 
 ```js
 import { writeFileSync } from "node:fs";
@@ -32,6 +18,9 @@ import { writeFileSync } from "node:fs";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 const terminalRecorder = await startTerminalRecording({
+  svg: {
+    title: "Terminal",
+  },
   video: true,
   gif: true,
 });
@@ -48,6 +37,8 @@ for (const data of datas) {
   await new Promise((resolve) => setTimeout(resolve, 200));
 }
 const result = await terminalRecorder.stop();
+const svg = await result.svg();
+writeFileSync(new URL("./terminal.svg", import.meta.url), svg);
 const gif = await result.gif();
 writeFileSync(new URL("./terminal.gif", import.meta.url), gif);
 const webm = await result.webm();
@@ -56,5 +47,5 @@ const mp4 = await result.mp4();
 writeFileSync(new URL("./terminal.mp4", import.meta.url), mp4);
 ```
 
-The terminal video recording uses xterm and chrome via playwright.  
-xterm is used by VsCode terminal so it behaves like VsCode terminal. It supports ansi, unicode and so on.
+The animated formats (.gif, .webm, .mp4) are rendered by xterm in chrome headless using playwright.
+Xterm is used by VsCode integrated terminal, it supports ansi, unicode and so on.
