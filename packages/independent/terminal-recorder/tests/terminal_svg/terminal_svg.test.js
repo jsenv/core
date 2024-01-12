@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { renderTerminalSvg } from "@jsenv/terminal-snapshot";
+import { renderTerminalSvg } from "@jsenv/terminal-recorder";
 
 const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);

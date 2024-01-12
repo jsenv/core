@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 
-import { startTerminalRecording } from "@jsenv/terminal-snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 const terminalRecorder = await startTerminalRecording({
   logs: true,

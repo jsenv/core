@@ -58,7 +58,7 @@
     "wrap-ansi": "9.0.0"
   },
   "devDependencies": {
-    "@jsenv/terminal-snapshot": "../independent/terminal-snapshot/",
+    "@jsenv/terminal-recorder": "../independent/terminal-recorder/",
     "errorstacks": "2.4.1"
   }
 }

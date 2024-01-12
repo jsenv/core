@@ -2,7 +2,7 @@ import { writeFileSync } from "@jsenv/filesystem";
 import {
   renderTerminalSvg,
   startTerminalRecording,
-} from "@jsenv/terminal-snapshot";
+} from "@jsenv/terminal-recorder";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { UNICODE, ANSI } from "@jsenv/log";
 import { startDevServer } from "@jsenv/core";

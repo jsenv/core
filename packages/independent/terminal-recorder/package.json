@@ -1,12 +1,12 @@
 {
-  "name": "@jsenv/terminal-snapshot",
+  "name": "@jsenv/terminal-recorder",
   "version": "1.0.0",
-  "description": "Convert terminal output to nice svg",
+  "description": "Record terminal output as .svg, .gif, .webm, .mp4",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/terminal-snapshot"
+    "directory": "packages/independent/terminal-recorder"
   },
   "author": {
     "name": "dmail",
@@ -18,7 +18,7 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/terminal_snapshot.js",
+    ".": "./src/main.js",
     "./*": "./*"
   },
   "files": [
