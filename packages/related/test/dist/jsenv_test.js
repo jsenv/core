@@ -4907,8 +4907,30 @@ const replaceUrls = (source, replace) => {
   });
 };
 
+/*
+ *                                 label
+ *           ┌───────────────────────┴────────────────────────────────┐
+ *           │                               │                        │
+ *       description                     runtime info                 │
+ *  ┌────────┴─────────┐               ┌─────┴───────┐                │
+ *  │                  │               │       │     │                │
+ * icon number        file            group duration memory intermediate summary
+ * ┌┴┐┌───┴─┐ ┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
+ *  ✔ 001/100 tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
+ *  ------- console (i1 ✖1) -------
+ *  i info
+ *  ✖ error
+ *  -------------------------------
+ *  ---------- error -------
+ *  1 | throw new Error("test");
+ *      ^
+ *  Error: test
+ *    at file://demo/file.test.js:1:1
+ *  ------------------------
+ */
+
 const reporterList = ({
-  dynamic = true,
+  animated = true,
   mockFluctuatingValues, // used for snapshot testing logs
   showMemoryUsage = true,
   spy = () => {
@@ -4921,8 +4943,8 @@ const reporterList = ({
   },
   fileUrl,
 }) => {
-  const dynamicLogEnabled =
-    dynamic &&
+  const animatedLogEnabled =
+    animated &&
     // canEraseProcessStdout
     process.stdout.isTTY &&
     // if there is an error during execution npm will mess up the output
@@ -4934,7 +4956,7 @@ const reporterList = ({
     showMemoryUsage,
     mockFluctuatingValues,
     group: false,
-    intermediateSummary: !dynamicLogEnabled,
+    intermediateSummary: !animatedLogEnabled,
   };
 
   let startMs = Date.now();
@@ -4950,7 +4972,7 @@ const reporterList = ({
 
         logOptions.group = Object.keys(testPlanResult.groups).length > 1;
         write(renderIntro(testPlanResult, logOptions));
-        if (!dynamicLogEnabled) {
+        if (!animatedLogEnabled) {
           return {
             afterEachInOrder: (execution) => {
               const log = renderExecutionLog(execution, logOptions);
@@ -5034,10 +5056,10 @@ const reporterList = ({
     },
   ];
 
-  if (dynamic && fileUrl) {
+  if (animated && fileUrl) {
     reporters.push(
       reporterList({
-        dynamic: false,
+        animated: false,
         mockFluctuatingValues, // used for snapshot testing logs
         showMemoryUsage,
         spy: () => {
@@ -5111,27 +5133,6 @@ const getGroupRenderedName = (groupInfo, logOptions) => {
   return `${runtimeName}@${runtimeVersion}`;
 };
 
-/*
- *                                 label
- *           ┌───────────────────────┴────────────────────────────────┐
- *           │                               │                        │
- *       description                     runtime info                 │
- *  ┌────────┴─────────┐               ┌─────┴───────┐                │
- *  │                  │               │       │     │                │
- * icon number        file            group duration memory intermediate summary
- * ┌┴┐┌───┴─┐ ┌────────┴─────────┐ ┌───┴────┐┌─┴─┐ ┌─┴──┐  ┌──────────┴──────────┐
- *  ✔ 001/100 tests/file.test.html [chromium/10.4s/14.5MB] (2 completed, 1 failed)
- *  ------- console (i1 ✖1) -------
- *  i info
- *  ✖ error
- *  -------------------------------
- *  ---------- error -------
- *  1 | throw new Error("test");
- *      ^
- *  Error: test
- *    at file://demo/file.test.js:1:1
- *  ------------------------
- */
 const renderExecutionLog = (execution, logOptions) => {
   let log = "";
   // label
@@ -5168,13 +5169,32 @@ const renderExecutionLabel = (execution, logOptions) => {
 
   // description
   {
-    const description = renderDescription(execution);
+    const description =
+      descriptionFormatters[execution.result.status](execution);
     label += description;
   }
   // runtimeInfo
   {
-    const runtimeInfo = renderRuntimeInfo(execution, logOptions);
-    if (runtimeInfo) {
+    const infos = [];
+    if (logOptions.group) {
+      infos.push(ANSI.color(execution.group, ANSI.GREY));
+    }
+    const { timings, memoryUsage } = execution.result;
+    if (timings) {
+      const duration = timings.executionEnd - timings.executionStart;
+      const durationFormatted = logOptions.mockFluctuatingValues
+        ? `<mock>ms`
+        : inspectDuration(duration, { short: true });
+      infos.push(ANSI.color(durationFormatted, ANSI.GREY));
+    }
+    if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
+      const memoryUsageFormatted = logOptions.mockFluctuatingValues
+        ? `<mock>MB`
+        : inspectMemoryUsage(memoryUsage, { short: true });
+      infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
+    }
+    if (infos.length) {
+      const runtimeInfo = infos.join(ANSI.color(`/`, ANSI.GREY));
       label += ` ${ANSI.color("[", ANSI.GREY)}${runtimeInfo}${ANSI.color(
         "]",
         ANSI.GREY,
@@ -5189,9 +5209,6 @@ const renderExecutionLabel = (execution, logOptions) => {
   }
 
   return label;
-};
-const renderDescription = (execution) => {
-  return descriptionFormatters[execution.result.status](execution);
 };
 const descriptionFormatters = {
   executing: ({ fileRelativeUrl }) => {
@@ -5243,27 +5260,7 @@ const descriptionFormatters = {
     );
   },
 };
-const renderRuntimeInfo = (execution, logOptions) => {
-  const infos = [];
-  if (logOptions.group) {
-    infos.push(ANSI.color(execution.group, ANSI.GREY));
-  }
-  const { timings, memoryUsage } = execution.result;
-  if (timings) {
-    const duration = timings.executionEnd - timings.executionStart;
-    const durationFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>ms`
-      : inspectDuration(duration, { short: true });
-    infos.push(ANSI.color(durationFormatted, ANSI.GREY));
-  }
-  if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
-    const memoryUsageFormatted = logOptions.mockFluctuatingValues
-      ? `<mock>MB`
-      : inspectMemoryUsage(memoryUsage, { short: true });
-    infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
-  }
-  return infos.join(ANSI.color(`/`, ANSI.GREY));
-};
+
 const COLOR_EXECUTING = ANSI.BLUE;
 const COLOR_ABORTED = ANSI.MAGENTA;
 const COLOR_TIMEOUT = ANSI.MAGENTA;
@@ -5421,7 +5418,7 @@ const renderErrors = (execution, logOptions) => {
 
   if (errors.length === 1) {
     return renderSection({
-      dashColor: ANSI.RED,
+      dashColor: ANSI.GREY,
       title: "error",
       content: formatErrorForTerminal(errors[0], {
         rootDirectoryUrl: execution.rootDirectoryUrl,
@@ -5448,7 +5445,7 @@ const renderErrors = (execution, logOptions) => {
     );
   });
   return renderSection({
-    dashColor: ANSI.RED,
+    dashColor: ANSI.GREY,
     title: `errors (${errors.length})`,
     content: output.join(`\n`),
   });
@@ -5466,11 +5463,6 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
   }
   finalSummary += renderStatusRepartition(counters);
 
-  finalSummary += `\nduration: ${renderTimings(testPlanResult, logOptions)}`;
-
-  return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
-};
-const renderTimings = (testPlanResult, logOptions) => {
   let durationLog = ``;
   const { timings } = testPlanResult;
   if (logOptions.mockFluctuatingValues) {
@@ -5488,19 +5480,24 @@ const renderTimings = (testPlanResult, logOptions) => {
     const timingDetails = [];
     for (const key of Object.keys(namedTimings)) {
       const value = namedTimings[key];
-
-      timingDetails.push(
-        `${key}: ${inspectDuration(value, {
-          short: true,
-        })}`,
-      );
+      const timingDuration = inspectDuration(value, { short: true });
+      const timingString = `${ANSI.color(`${key}:`, ANSI.GREY)} ${ANSI.color(
+        timingDuration,
+        ANSI.GREY,
+      )}`;
+      timingDetails.push(ANSI.color(timingString, ANSI.GREY));
     }
     if (timingDetails.length) {
-      durationLog += ` (${timingDetails.join(", ")})`;
+      durationLog += ` ${ANSI.color("(", ANSI.GREY)}${timingDetails.join(
+        ANSI.color(", ", ANSI.GREY),
+      )}${ANSI.color(")", ANSI.GREY)}`;
     }
   }
-  return durationLog;
+  finalSummary += `\nduration: ${durationLog}`;
+
+  return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
 };
+
 const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
     return `nothing to run`;
@@ -5610,7 +5607,7 @@ const renderSection = ({
 const logsDefault = {
   level: "info",
   type: "list",
-  dynamic: true,
+  animated: true,
   fileUrl: undefined,
 };
 const githubCheckDefault = {
@@ -5787,7 +5784,7 @@ const executeTestPlan = async ({
 
         if (logs.type === "list" && logger.levels.info) {
           const listReporterOptions = {
-            dynamic: logger.levels.debug ? false : logs.dynamic,
+            animated: logger.levels.debug ? false : logs.animated,
             fileUrl:
               logs.fileUrl === undefined
                 ? new URL("./.jsenv/jsenv_tests_output.txt", rootDirectoryUrl)
