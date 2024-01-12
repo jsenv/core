@@ -33,13 +33,13 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@babel/parser": "7.23.4",
+    "@babel/parser": "7.23.6",
     "@jsenv/urls": "2.2.1",
-    "acorn": "8.11.2",
+    "acorn": "8.11.3",
     "acorn-import-assertions": "1.9.0",
-    "acorn-walk": "8.3.0",
+    "acorn-walk": "8.3.2",
     "parse5": "7.1.2",
-    "postcss": "8.4.31",
+    "postcss": "8.4.33",
     "postcss-value-parser": "4.2.0"
   }
 }
