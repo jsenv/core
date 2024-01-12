@@ -13,8 +13,12 @@
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  function toPrimitive(input, hint /* : "default" | "string" | "number" | void */) {
-    if (typeof input !== "object" || input === null) return input;
+  /* @minVersion 7.1.5 */
+
+  // https://tc39.es/ecma262/#sec-toprimitive
+  function toPrimitive(input, hint) {
+    if (typeof input !== "object" || !input) return input;
+    // @ts-expect-error Symbol.toPrimitive might not index {}
     var prim = input[Symbol.toPrimitive];
     if (prim !== undefined) {
       var res = prim.call(input, hint || "default");
@@ -23,6 +27,9 @@
     }
     return (hint === "string" ? String : Number)(input);
   }
+
+  /* @minVersion 7.1.5 */
+
   function toPropertyKey(arg) {
     var key = toPrimitive(arg, "string");
     return typeof key === "symbol" ? key : String(key);
@@ -46,6 +53,8 @@
     }
     return obj;
   };
+
+  /* @minVersion 7.5.0 */
 
   // This function is different to "Reflect.ownKeys". The enumerableOnly
   // filters on symbol properties only. Returned string properties are always
