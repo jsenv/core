@@ -65,9 +65,9 @@
         <text x="690.51" y="128.55"> (1 </text>
         <text x="715.71" y="128.55" fill="#B22222">failed</text>
         <text x="766.12" y="128.55">)</text>
-        <text x="10" y="147.55" fill="#B22222">---------------</text>
+        <text x="10" y="147.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="147.55"> error </text>
-        <text x="194.83" y="147.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="147.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="166.55" fill="#A9A9A9">11 |</text>
         <text x="102.42" y="166.55">
           import { assert } from &#x22;@jsenv/assert&#x22;;</text
@@ -90,7 +90,7 @@
           >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
         <text x="488.88" y="375.55">:13:12</text>
-        <text x="10" y="394.55" fill="#B22222"
+        <text x="10" y="394.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="413.55" fill="#B22222"
@@ -104,9 +104,9 @@
         <text x="606.5" y="413.55"> (2 </text>
         <text x="631.7" y="413.55" fill="#B22222">failed</text>
         <text x="682.11" y="413.55">)</text>
-        <text x="10" y="432.55" fill="#B22222">---------------</text>
+        <text x="10" y="432.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="432.55"> error </text>
-        <text x="194.83" y="432.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="432.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="451.55" fill="#A9A9A9">7 |</text>
         <text x="60.41" y="451.55"> &#x3C;/head&#x3E;</text>
         <text x="10" y="470.55" fill="#A9A9A9">8 |</text>
@@ -125,7 +125,7 @@
           >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
         <text x="455.27" y="660.55">:13:18</text>
-        <text x="10" y="679.55" fill="#B22222"
+        <text x="10" y="679.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="698.55" fill="#B22222"
@@ -139,9 +139,9 @@
         <text x="598.1" y="698.55"> (all </text>
         <text x="640.1" y="698.55" fill="#B22222">failed</text>
         <text x="690.51" y="698.55">)</text>
-        <text x="10" y="717.55" fill="#B22222">---------------</text>
+        <text x="10" y="717.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="717.55"> error </text>
-        <text x="194.83" y="717.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="717.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="736.55" fill="#A9A9A9">7 |</text>
         <text x="60.41" y="736.55"> &#x3C;/head&#x3E;</text>
         <text x="10" y="755.55" fill="#A9A9A9">8 |</text>
@@ -160,7 +160,7 @@
           >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
         <text x="547.69" y="945.55">:13:18</text>
-        <text x="10" y="964.55" fill="#B22222"
+        <text x="10" y="964.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="1002.55" fill="#A9A9A9">------------------</text>

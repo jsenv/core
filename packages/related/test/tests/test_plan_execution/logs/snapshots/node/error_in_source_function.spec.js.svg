@@ -68,9 +68,9 @@
         <text x="623.3" y="109.55"> (1 </text>
         <text x="648.5" y="109.55" fill="#B22222">failed</text>
         <text x="698.91" y="109.55">)</text>
-        <text x="10" y="128.55" fill="#B22222">---------------</text>
+        <text x="10" y="128.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="128.55"> error </text>
-        <text x="194.83" y="128.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="128.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="147.55">
           export const doSomething = () =&#x3E; {</text
@@ -89,7 +89,7 @@
           >[mock]/error_in_source_function.spec.js</text
         >
         <text x="379.66" y="242.55">:3:1</text>
-        <text x="10" y="261.55" fill="#B22222"
+        <text x="10" y="261.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="280.55" fill="#B22222"
@@ -105,9 +105,9 @@
         <text x="623.3" y="280.55"> (all </text>
         <text x="665.31" y="280.55" fill="#B22222">failed</text>
         <text x="715.71" y="280.55">)</text>
-        <text x="10" y="299.55" fill="#B22222">---------------</text>
+        <text x="10" y="299.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="299.55"> error </text>
-        <text x="194.83" y="299.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="299.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="318.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="318.55">
           export const doSomething = () =&#x3E; {</text
@@ -126,7 +126,7 @@
           >[mock]/error_in_source_function.spec.js</text
         >
         <text x="379.66" y="413.55">:3:1</text>
-        <text x="10" y="432.55" fill="#B22222"
+        <text x="10" y="432.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="470.55" fill="#A9A9A9">------------------</text>

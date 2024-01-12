@@ -68,9 +68,9 @@
         <text x="640.1" y="109.55"> (1 </text>
         <text x="665.31" y="109.55" fill="#B22222">failed</text>
         <text x="715.71" y="109.55">)</text>
-        <text x="10" y="128.55" fill="#B22222">---------------</text>
+        <text x="10" y="128.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="128.55"> error </text>
-        <text x="194.83" y="128.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="128.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="147.55">
           import { assert } from &#x22;@jsenv/assert&#x22;;</text
@@ -91,7 +91,7 @@
           >[mock]/error_in_test_jsenv_assert.spec.js</text
         >
         <text x="396.46" y="356.55">:3:1</text>
-        <text x="10" y="375.55" fill="#B22222"
+        <text x="10" y="375.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="394.55" fill="#B22222"
@@ -107,9 +107,9 @@
         <text x="640.1" y="394.55"> (all </text>
         <text x="682.11" y="394.55" fill="#B22222">failed</text>
         <text x="732.52" y="394.55">)</text>
-        <text x="10" y="413.55" fill="#B22222">---------------</text>
+        <text x="10" y="413.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="413.55"> error </text>
-        <text x="194.83" y="413.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="413.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="432.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="432.55">
           import { assert } from &#x22;@jsenv/assert&#x22;;</text
@@ -130,7 +130,7 @@
           >[mock]/error_in_test_jsenv_assert.spec.js</text
         >
         <text x="396.46" y="641.55">:3:1</text>
-        <text x="10" y="660.55" fill="#B22222"
+        <text x="10" y="660.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="698.55" fill="#A9A9A9">------------------</text>

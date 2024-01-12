@@ -66,9 +66,9 @@
         <text x="572.89" y="109.55"> (1 </text>
         <text x="598.1" y="109.55" fill="#B22222">failed</text>
         <text x="648.5" y="109.55">)</text>
-        <text x="10" y="128.55" fill="#B22222">---------------</text>
+        <text x="10" y="128.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="128.55"> error </text>
-        <text x="194.83" y="128.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="128.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="147.55">
           Promise.reject(new Error(&#x22;toto&#x22;));</text
@@ -80,7 +80,7 @@
           >[mock]/unhandled_rejection_in_test.spec.js</text
         >
         <text x="404.86" y="204.55">:1:16</text>
-        <text x="10" y="223.55" fill="#B22222"
+        <text x="10" y="223.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="242.55" fill="#B22222"
@@ -94,9 +94,9 @@
         <text x="572.89" y="242.55"> (all </text>
         <text x="614.9" y="242.55" fill="#B22222">failed</text>
         <text x="665.31" y="242.55">)</text>
-        <text x="10" y="261.55" fill="#B22222">---------------</text>
+        <text x="10" y="261.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="261.55"> error </text>
-        <text x="194.83" y="261.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="261.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="280.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="280.55">
           Promise.reject(new Error(&#x22;toto&#x22;));</text
@@ -108,7 +108,7 @@
           >[mock]/unhandled_rejection_in_test.spec.js</text
         >
         <text x="404.86" y="337.55">:1:16</text>
-        <text x="10" y="356.55" fill="#B22222"
+        <text x="10" y="356.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="394.55" fill="#A9A9A9">------------------</text>

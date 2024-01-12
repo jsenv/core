@@ -65,9 +65,9 @@
         <text x="547.69" y="128.55"> (1 </text>
         <text x="572.89" y="128.55" fill="#B22222">failed</text>
         <text x="623.3" y="128.55">)</text>
-        <text x="10" y="147.55" fill="#B22222">---------------</text>
+        <text x="10" y="147.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="147.55"> error </text>
-        <text x="194.83" y="147.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="147.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="166.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="166.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="94.01" y="185.55" fill="#B22222">^</text>
@@ -75,7 +75,7 @@
         <text x="26.8" y="223.55">
           at [mock]/error_in_js_module.spec.js:1:7</text
         >
-        <text x="10" y="242.55" fill="#B22222"
+        <text x="10" y="242.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="261.55" fill="#B22222"
@@ -89,15 +89,15 @@
         <text x="463.67" y="261.55"> (2 </text>
         <text x="488.88" y="261.55" fill="#B22222">failed</text>
         <text x="539.29" y="261.55">)</text>
-        <text x="10" y="280.55" fill="#B22222">---------------</text>
+        <text x="10" y="280.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="280.55"> error </text>
-        <text x="194.83" y="280.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="280.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="299.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="299.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="94.01" y="318.55" fill="#B22222">^</text>
         <text x="10" y="337.55">Error: here</text>
         <text x="10" y="356.55">@[mock]/error_in_js_module.spec.js:1:7</text>
-        <text x="10" y="375.55" fill="#B22222"
+        <text x="10" y="375.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="394.55" fill="#B22222"
@@ -111,9 +111,9 @@
         <text x="455.27" y="394.55"> (all </text>
         <text x="497.28" y="394.55" fill="#B22222">failed</text>
         <text x="547.69" y="394.55">)</text>
-        <text x="10" y="413.55" fill="#B22222">---------------</text>
+        <text x="10" y="413.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="413.55"> error </text>
-        <text x="194.83" y="413.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="413.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="432.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="432.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="169.63" y="451.55" fill="#B22222">^</text>
@@ -121,7 +121,7 @@
         <text x="10" y="489.55"
           >module code@[mock]/error_in_js_module.spec.js:1:16</text
         >
-        <text x="10" y="508.55" fill="#B22222"
+        <text x="10" y="508.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="546.55" fill="#A9A9A9">------------------</text>

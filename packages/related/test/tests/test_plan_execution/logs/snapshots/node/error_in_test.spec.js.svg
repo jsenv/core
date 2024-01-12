@@ -68,9 +68,9 @@
         <text x="530.88" y="109.55"> (1 </text>
         <text x="556.09" y="109.55" fill="#B22222">failed</text>
         <text x="606.5" y="109.55">)</text>
-        <text x="10" y="128.55" fill="#B22222">---------------</text>
+        <text x="10" y="128.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="128.55"> error </text>
-        <text x="194.83" y="128.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="128.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="147.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="94.01" y="166.55" fill="#B22222">^</text>
@@ -80,7 +80,7 @@
           >[mock]/error_in_test.spec.js</text
         >
         <text x="287.25" y="204.55">:1:7</text>
-        <text x="10" y="223.55" fill="#B22222"
+        <text x="10" y="223.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="242.55" fill="#B22222"
@@ -96,9 +96,9 @@
         <text x="530.88" y="242.55"> (all </text>
         <text x="572.89" y="242.55" fill="#B22222">failed</text>
         <text x="623.3" y="242.55">)</text>
-        <text x="10" y="261.55" fill="#B22222">---------------</text>
+        <text x="10" y="261.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="261.55"> error </text>
-        <text x="194.83" y="261.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="261.55" fill="#A9A9A9">----------------</text>
         <text x="10" y="280.55" fill="#A9A9A9">1 |</text>
         <text x="43.61" y="280.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="94.01" y="299.55" fill="#B22222">^</text>
@@ -108,7 +108,7 @@
           >[mock]/error_in_test.spec.js</text
         >
         <text x="287.25" y="337.55">:1:7</text>
-        <text x="10" y="356.55" fill="#B22222"
+        <text x="10" y="356.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="394.55" fill="#A9A9A9">------------------</text>

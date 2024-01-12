@@ -65,9 +65,9 @@
         <text x="522.48" y="128.55"> (1 </text>
         <text x="547.69" y="128.55" fill="#B22222">failed</text>
         <text x="598.1" y="128.55">)</text>
-        <text x="10" y="147.55" fill="#B22222">---------------</text>
+        <text x="10" y="147.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="147.55"> error </text>
-        <text x="194.83" y="147.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="147.55" fill="#A9A9A9">----------------</text>
         <text x="18.4" y="166.55" fill="#A9A9A9"> 9 |</text>
         <text x="68.81" y="166.55"> &#x3C;body&#x3E;</text>
         <text x="10" y="185.55" fill="#A9A9A9">10 |</text>
@@ -81,7 +81,7 @@
           >[mock]/error_in_script.spec.html</text
         >
         <text x="320.85" y="261.55">:11:18</text>
-        <text x="10" y="280.55" fill="#B22222"
+        <text x="10" y="280.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="299.55" fill="#B22222"
@@ -95,9 +95,9 @@
         <text x="438.47" y="299.55"> (2 </text>
         <text x="463.67" y="299.55" fill="#B22222">failed</text>
         <text x="514.08" y="299.55">)</text>
-        <text x="10" y="318.55" fill="#B22222">---------------</text>
+        <text x="10" y="318.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="318.55"> error </text>
-        <text x="194.83" y="318.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="318.55" fill="#A9A9A9">----------------</text>
         <text x="18.4" y="337.55" fill="#A9A9A9"> 9 |</text>
         <text x="68.81" y="337.55"> &#x3C;body&#x3E;</text>
         <text x="10" y="356.55" fill="#A9A9A9">10 |</text>
@@ -111,7 +111,7 @@
           >[mock]/error_in_script.spec.html</text
         >
         <text x="287.25" y="432.55">:11:18</text>
-        <text x="10" y="451.55" fill="#B22222"
+        <text x="10" y="451.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="470.55" fill="#B22222"
@@ -125,9 +125,9 @@
         <text x="430.07" y="470.55"> (all </text>
         <text x="472.08" y="470.55" fill="#B22222">failed</text>
         <text x="522.48" y="470.55">)</text>
-        <text x="10" y="489.55" fill="#B22222">---------------</text>
+        <text x="10" y="489.55" fill="#A9A9A9">---------------</text>
         <text x="144.42" y="489.55"> error </text>
-        <text x="194.83" y="489.55" fill="#B22222">----------------</text>
+        <text x="194.83" y="489.55" fill="#A9A9A9">----------------</text>
         <text x="18.4" y="508.55" fill="#A9A9A9"> 9 |</text>
         <text x="68.81" y="508.55"> &#x3C;body&#x3E;</text>
         <text x="10" y="527.55" fill="#A9A9A9">10 |</text>
@@ -141,7 +141,7 @@
           >[mock]/error_in_script.spec.html</text
         >
         <text x="379.66" y="603.55">:11:27</text>
-        <text x="10" y="622.55" fill="#B22222"
+        <text x="10" y="622.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
         <text x="10" y="660.55" fill="#A9A9A9">------------------</text>
