@@ -39,7 +39,6 @@ const test = async (filename, params) => {
             import.meta.url,
           );
           const terminalRecorder = await startTerminalRecording({
-            // logs: true,
             svg: true,
           });
           const terminalFileSnapshot = takeFileSnapshot(
