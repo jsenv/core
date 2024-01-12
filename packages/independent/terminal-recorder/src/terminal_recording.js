@@ -57,6 +57,7 @@ export const startTerminalRecording = async ({
   svg,
   gif,
   video,
+  debug,
 } = {}) => {
   const writeCallbackSet = new Set();
   const stopCallbackSet = new Set();
@@ -93,7 +94,7 @@ export const startTerminalRecording = async ({
     const server = await startLocalServer();
     const browser = await chromium.launch({
       channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
-      headless: true,
+      headless: !debug,
       // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
       args: ["--ignore-certificate-errors"],
     });
@@ -160,8 +161,10 @@ export const startTerminalRecording = async ({
         },
         /* eslint-env node */
       );
-      server.stop();
-      browser.close();
+      if (!debug) {
+        server.stop();
+        browser.close();
+      }
 
       terminalRecords.gif = () => {
         const terminalGifBuffer = Buffer.from(recordedFormats.gif, "binary");

@@ -9,6 +9,7 @@ const outputLines = readFileSync(
 const terminalRecorder = await startTerminalRecording({
   gif: true,
   logs: true,
+  // debug: true,
 });
 for (const line of outputLines) {
   terminalRecorder.write(`${line}\n`);
