@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "@jsenv/inspect": "2.0.0",
-    "@jsenv/log": "3.5.1"
+    "@jsenv/log": "3.5.2"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"
