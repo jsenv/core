@@ -178,6 +178,16 @@ export const executeTestPlan = async ({
   const countersInOrder = { ...counters };
   const results = testPlanResult.results;
 
+  const warnCallbackSet = new Set();
+  const warn = (warning) => {
+    if (warnCallbackSet.size === 0) {
+      console.warn(warning.message);
+    } else {
+      for (const warnCallback of warnCallbackSet) {
+        warnCallback(warning);
+      }
+    }
+  };
   const beforeEachCallbackSet = new Set();
   const beforeEachInOrderCallbackSet = new Set();
   const afterEachCallbackSet = new Set();
@@ -716,6 +726,7 @@ To fix this warning:
               logger,
               rootDirectoryUrl,
               coverage,
+              warn,
             });
             testPlanResult.coverage = testPlanCoverage;
           } catch (e) {
@@ -875,12 +886,16 @@ To fix this warning:
           const returnValue = await beforeAll(testPlanResult);
           if (returnValue) {
             const {
+              warn,
               beforeEach,
               beforeEachInOrder,
               afterEach,
               afterEachInOrder,
               afterAll,
             } = returnValue;
+            if (warn) {
+              warnCallbackSet.add(warn);
+            }
             if (beforeEach) {
               beforeEachCallbackSet.add(beforeEach);
             }

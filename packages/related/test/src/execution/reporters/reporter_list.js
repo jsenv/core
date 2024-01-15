@@ -134,6 +134,11 @@ export const reporterList = ({
         }, 150);
 
         return {
+          warn: (warning) => {
+            dynamicLog.clearDuringFunctionCall(() => {
+              console.warn(warning.message);
+            });
+          },
           afterEachInOrder: (execution) => {
             dynamicLog.clearDuringFunctionCall(() => {
               const log = renderExecutionLog(execution, logOptions);

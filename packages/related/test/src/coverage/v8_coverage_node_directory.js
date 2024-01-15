@@ -5,6 +5,7 @@ import { Abort } from "@jsenv/abort";
 
 export const readNodeV8CoverageDirectory = async ({
   logger,
+  warn,
   signal,
   onV8Coverage,
   maxMsWaitingForNodeToWriteCoverageFile = 2000,
@@ -25,7 +26,10 @@ export const readNodeV8CoverageDirectory = async ({
       logger.debug("retry to read coverage directory");
       return tryReadDirectory();
     }
-    logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`);
+    warn({
+      code: "V8_COVERAGE_EMPTY",
+      message: `v8 coverage directory is empty at ${NODE_V8_COVERAGE}`,
+    });
     return dirContent;
   };
 

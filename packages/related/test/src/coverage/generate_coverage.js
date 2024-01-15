@@ -12,7 +12,7 @@ import { getMissingFileByFileCoverage } from "./missing_coverage.js";
 
 export const generateCoverage = async (
   testPlanResult,
-  { signal, logger, rootDirectoryUrl, coverage },
+  { signal, logger, warn, rootDirectoryUrl, coverage },
 ) => {
   // collect v8 and istanbul coverage from executions
   let { v8Coverage, fileByFileIstanbulCoverage } =
@@ -41,9 +41,10 @@ export const generateCoverage = async (
           executionResult.type === "node" &&
           coverage.methodForNodeJs !== "NODE_V8_COVERAGE"
         ) {
-          logger.warn(
-            `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
-          );
+          warn({
+            code: "EXECUTION_COVERAGE_FILE_NOT_FOUND",
+            message: `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
+          });
         }
       },
     });
@@ -51,6 +52,7 @@ export const generateCoverage = async (
   if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
     await readNodeV8CoverageDirectory({
       logger,
+      warn,
       signal,
       onV8Coverage: async (nodeV8Coverage) => {
         const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
@@ -84,7 +86,10 @@ export const generateCoverage = async (
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
         fileByFileIstanbulCoverage,
-        { v8ConflictWarning: coverage.v8ConflictWarning },
+        {
+          warn,
+          v8ConflictWarning: coverage.v8ConflictWarning,
+        },
       );
     } else {
       fileByFileCoverage = v8FileByFileCoverage;

@@ -28,7 +28,9 @@ const testPlanResult = await executeTestPlan({
     rootDirectoryUrl: new URL("../client/", import.meta.url),
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
-  coverage: true,
+  coverage: {
+    methodForBrowsers: "istanbul",
+  },
 });
 
 await reportCoverageAsHtml(
@@ -42,7 +44,7 @@ await reportCoverageAsJson(
 await takeCoverageScreenshots(
   new URL("../.coverage/", import.meta.url),
   {
-    "many.js": new URL("./many.js.png", import.meta.url),
+    "many.js": new URL("./many_istanbul.js.png", import.meta.url),
   },
   {
     width: 640,
