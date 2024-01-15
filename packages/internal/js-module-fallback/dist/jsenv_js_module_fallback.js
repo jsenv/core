@@ -3985,9 +3985,9 @@ const convertJsModuleToJsClassic = async ({
     babelPlugins: [
       ...(outputFormat === "system"
         ? [
-            // proposal-dynamic-import required with systemjs for babel8:
+            // transform-dynamic-import required with systemjs for babel8:
             // https://github.com/babel/babel/issues/10746
-            require("@babel/plugin-proposal-dynamic-import"),
+            require("@babel/plugin-transform-dynamic-import"),
             [
               babelPluginTransformImportSpecifiers,
               { transformImportSpecifier },
