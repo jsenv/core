@@ -3180,6 +3180,7 @@ const createDynamicLog = ({
         // The spy is required only if we actually wrote something in the stream
         // something else than this code has written in the stream
         // so we just write without clearing (append instead of replacing)
+        lastOutput = "";
         lastOutputFromOutside = "";
       } else {
         stringToWrite = `${getErasePreviousOutput()}${string}`;
@@ -3455,6 +3456,7 @@ const createCallOrderer = () => {
 
 const readNodeV8CoverageDirectory = async ({
   logger,
+  warn,
   signal,
   onV8Coverage,
   maxMsWaitingForNodeToWriteCoverageFile = 2000,
@@ -3475,7 +3477,10 @@ const readNodeV8CoverageDirectory = async ({
       logger.debug("retry to read coverage directory");
       return tryReadDirectory();
     }
-    logger.warn(`v8 coverage directory is empty at ${NODE_V8_COVERAGE}`);
+    warn({
+      code: "V8_COVERAGE_EMPTY",
+      message: `v8 coverage directory is empty at ${NODE_V8_COVERAGE}`,
+    });
     return dirContent;
   };
 
@@ -3683,7 +3688,7 @@ const sourcesFromLineLengths = (lineLengths) => {
 const composeV8AndIstanbul = (
   v8FileByFileCoverage,
   istanbulFileByFileCoverage,
-  { v8ConflictWarning },
+  { warn, v8ConflictWarning },
 ) => {
   const fileByFileCoverage = {};
   const v8Files = Object.keys(v8FileByFileCoverage);
@@ -3696,8 +3701,9 @@ const composeV8AndIstanbul = (
     const v8Coverage = v8FileByFileCoverage[key];
     if (v8Coverage) {
       if (v8ConflictWarning) {
-        console.warn(
-          createDetailedMessage(
+        warn({
+          code: "V8_COVERAGE_CONFLICT",
+          message: createDetailedMessage(
             `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
             {
               "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
@@ -3706,7 +3712,7 @@ const composeV8AndIstanbul = (
               "suggestion 2": `force coverage using istanbul with coverage.methodForBrowsers: "istanbul"`,
             },
           ),
-        );
+        });
       }
       fileByFileCoverage[key] = v8Coverage;
     } else {
@@ -3883,7 +3889,7 @@ const getMissingFileByFileCoverage = async ({
 
 const generateCoverage = async (
   testPlanResult,
-  { signal, logger, rootDirectoryUrl, coverage },
+  { signal, logger, warn, rootDirectoryUrl, coverage },
 ) => {
   // collect v8 and istanbul coverage from executions
   let { v8Coverage, fileByFileIstanbulCoverage } =
@@ -3912,9 +3918,10 @@ const generateCoverage = async (
           executionResult.type === "node" &&
           coverage.methodForNodeJs !== "NODE_V8_COVERAGE"
         ) {
-          logger.warn(
-            `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
-          );
+          warn({
+            code: "EXECUTION_COVERAGE_FILE_NOT_FOUND",
+            message: `"${executionName}" execution of ${file} did not properly write coverage into ${executionResult.coverageFileUrl}`,
+          });
         }
       },
     });
@@ -3922,6 +3929,7 @@ const generateCoverage = async (
   if (coverage.methodForNodeJs === "NODE_V8_COVERAGE") {
     await readNodeV8CoverageDirectory({
       logger,
+      warn,
       signal,
       onV8Coverage: async (nodeV8Coverage) => {
         const nodeV8CoverageLight = await filterV8Coverage(nodeV8Coverage, {
@@ -3955,7 +3963,10 @@ const generateCoverage = async (
       fileByFileCoverage = composeV8AndIstanbul(
         v8FileByFileCoverage,
         fileByFileIstanbulCoverage,
-        { v8ConflictWarning: coverage.v8ConflictWarning },
+        {
+          warn,
+          v8ConflictWarning: coverage.v8ConflictWarning,
+        },
       );
     } else {
       fileByFileCoverage = v8FileByFileCoverage;
@@ -5035,6 +5046,11 @@ const reporterList = ({
         }, 150);
 
         return {
+          warn: (warning) => {
+            dynamicLog.clearDuringFunctionCall(() => {
+              console.warn(warning.message);
+            });
+          },
           afterEachInOrder: (execution) => {
             dynamicLog.clearDuringFunctionCall(() => {
               const log = renderExecutionLog(execution, logOptions);
@@ -5621,13 +5637,13 @@ const githubCheckDefault = {
 };
 const coverageDefault = {
   include: {
+    "./**/*.js": true,
+    "./**/*.ts": true,
+    "./**/*.jsx": true,
+    "./**/*.tsx": true,
     "file:///**/node_modules/": false,
     "./**/.*": false,
     "./**/.*/": false,
-    "./**/src/**/*.js": true,
-    "./**/src/**/*.ts": true,
-    "./**/src/**/*.jsx": true,
-    "./**/src/**/*.tsx": true,
     "./**/tests/": false,
     "./**/*.test.html": false,
     "./**/*.test.html@*.js": false,
@@ -5743,6 +5759,16 @@ const executeTestPlan = async ({
   const countersInOrder = { ...counters };
   const results = testPlanResult.results;
 
+  const warnCallbackSet = new Set();
+  const warn = (warning) => {
+    if (warnCallbackSet.size === 0) {
+      console.warn(warning.message);
+    } else {
+      for (const warnCallback of warnCallbackSet) {
+        warnCallback(warning);
+      }
+    }
+  };
   const beforeEachCallbackSet = new Set();
   const beforeEachInOrderCallbackSet = new Set();
   const afterEachCallbackSet = new Set();
@@ -6281,6 +6307,7 @@ To fix this warning:
               logger,
               rootDirectoryUrl,
               coverage,
+              warn,
             });
             testPlanResult.coverage = testPlanCoverage;
           } catch (e) {
@@ -6440,12 +6467,16 @@ To fix this warning:
           const returnValue = await beforeAll(testPlanResult);
           if (returnValue) {
             const {
+              warn,
               beforeEach,
               beforeEachInOrder,
               afterEach,
               afterEachInOrder,
               afterAll,
             } = returnValue;
+            if (warn) {
+              warnCallbackSet.add(warn);
+            }
             if (beforeEach) {
               beforeEachCallbackSet.add(beforeEach);
             }
@@ -8661,18 +8692,24 @@ const reportCoverageInConsole = (
   report.execute(context);
 };
 
-const reportCoverageAsJson = (testPlanResult, fileUrl) => {
+const reportCoverageAsJson = (
+  testPlanResult,
+  fileUrl,
+  { logs } = {},
+) => {
   if (testPlanResult.aborted) {
     return;
   }
   const testPlanCoverage = testPlanResult.coverage;
   const coverageAsText = JSON.stringify(testPlanCoverage, null, "  ");
   writeFileSync(fileUrl, coverageAsText);
-  console.log(
-    `-> ${urlToFileSystemPath(fileUrl)} (${inspectFileSize(
-      Buffer.byteLength(coverageAsText),
-    )})`,
-  );
+  if (logs) {
+    console.log(
+      `-> ${urlToFileSystemPath(fileUrl)} (${inspectFileSize(
+        Buffer.byteLength(coverageAsText),
+      )})`,
+    );
+  }
 };
 
 const reportCoverageAsHtml = (
