@@ -9542,7 +9542,7 @@ const babelHelperNameFromUrl = (url) => {
 // Ideally it would be documented or a separate module
 
 const babelPluginCompatMap = {
-  "proposal-numeric-separator": {
+  "transform-numeric-separator": {
     chrome: "75",
     opera: "62",
     edge: "79",
@@ -9573,7 +9573,7 @@ const babelPluginCompatMap = {
     node: "14",
     electron: "8.1",
   },
-  "proposal-optional-chaining": {
+  "transform-optional-chaining": {
     chrome: "80",
     opera: "67",
     edge: "80",
@@ -9582,7 +9582,7 @@ const babelPluginCompatMap = {
     node: "14",
     electron: "8.1",
   },
-  "proposal-json-strings": {
+  "transform-json-strings": {
     chrome: "66",
     opera: "53",
     edge: "79",
@@ -9593,7 +9593,7 @@ const babelPluginCompatMap = {
     samsung: "9",
     electron: "3",
   },
-  "proposal-optional-catch-binding": {
+  "transform-optional-catch-binding": {
     chrome: "66",
     opera: "53",
     edge: "79",
@@ -9627,7 +9627,7 @@ const babelPluginCompatMap = {
     samsung: "8",
     electron: "3",
   },
-  "proposal-object-rest-spread": {
+  "transform-object-rest-spread": {
     chrome: "60",
     opera: "47",
     edge: "79",
@@ -9649,7 +9649,7 @@ const babelPluginCompatMap = {
     samsung: "8",
     electron: "3",
   },
-  "proposal-unicode-property-regex": {
+  "transform-unicode-property-regex": {
     chrome: "64",
     opera: "51",
     edge: "79",
@@ -9978,28 +9978,28 @@ const getBaseBabelPluginStructure = ({
   };
 
   const babelPluginStructure = {};
-  if (isBabelPluginNeeded("proposal-numeric-separator")) {
-    babelPluginStructure["proposal-numeric-separator"] = requireBabelPlugin(
-      "@babel/plugin-proposal-numeric-separator",
+  if (isBabelPluginNeeded("transform-numeric-separator")) {
+    babelPluginStructure["transform-numeric-separator"] = requireBabelPlugin(
+      "@babel/plugin-transform-numeric-separator",
     );
   }
-  if (isBabelPluginNeeded("proposal-json-strings")) {
-    babelPluginStructure["proposal-json-strings"] = requireBabelPlugin(
-      "@babel/plugin-proposal-json-strings",
+  if (isBabelPluginNeeded("transform-json-strings")) {
+    babelPluginStructure["transform-json-strings"] = requireBabelPlugin(
+      "@babel/plugin-transform-json-strings",
     );
   }
-  if (isBabelPluginNeeded("proposal-object-rest-spread")) {
-    babelPluginStructure["proposal-object-rest-spread"] = requireBabelPlugin(
-      "@babel/plugin-proposal-object-rest-spread",
+  if (isBabelPluginNeeded("transform-object-rest-spread")) {
+    babelPluginStructure["transform-object-rest-spread"] = requireBabelPlugin(
+      "@babel/plugin-transform-object-rest-spread",
     );
   }
-  if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
-    babelPluginStructure["proposal-optional-catch-binding"] =
-      requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding");
+  if (isBabelPluginNeeded("transform-optional-catch-binding")) {
+    babelPluginStructure["transform-optional-catch-binding"] =
+      requireBabelPlugin("@babel/plugin-transform-optional-catch-binding");
   }
-  if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
-    babelPluginStructure["proposal-unicode-property-regex"] =
-      requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
+  if (isBabelPluginNeeded("transform-unicode-property-regex")) {
+    babelPluginStructure["transform-unicode-property-regex"] =
+      requireBabelPlugin("@babel/plugin-transform-unicode-property-regex");
   }
   // if (isBabelPluginNeeded("proposal-decorators") && content.includes("@")) {
   //   babelPluginStructure["proposal-decorators"] = [

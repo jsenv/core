@@ -16,28 +16,28 @@ export const getBaseBabelPluginStructure = ({
   };
 
   const babelPluginStructure = {};
-  if (isBabelPluginNeeded("proposal-numeric-separator")) {
-    babelPluginStructure["proposal-numeric-separator"] = requireBabelPlugin(
-      "@babel/plugin-proposal-numeric-separator",
+  if (isBabelPluginNeeded("transform-numeric-separator")) {
+    babelPluginStructure["transform-numeric-separator"] = requireBabelPlugin(
+      "@babel/plugin-transform-numeric-separator",
     );
   }
-  if (isBabelPluginNeeded("proposal-json-strings")) {
-    babelPluginStructure["proposal-json-strings"] = requireBabelPlugin(
-      "@babel/plugin-proposal-json-strings",
+  if (isBabelPluginNeeded("transform-json-strings")) {
+    babelPluginStructure["transform-json-strings"] = requireBabelPlugin(
+      "@babel/plugin-transform-json-strings",
     );
   }
-  if (isBabelPluginNeeded("proposal-object-rest-spread")) {
-    babelPluginStructure["proposal-object-rest-spread"] = requireBabelPlugin(
-      "@babel/plugin-proposal-object-rest-spread",
+  if (isBabelPluginNeeded("transform-object-rest-spread")) {
+    babelPluginStructure["transform-object-rest-spread"] = requireBabelPlugin(
+      "@babel/plugin-transform-object-rest-spread",
     );
   }
-  if (isBabelPluginNeeded("proposal-optional-catch-binding")) {
-    babelPluginStructure["proposal-optional-catch-binding"] =
-      requireBabelPlugin("@babel/plugin-proposal-optional-catch-binding");
+  if (isBabelPluginNeeded("transform-optional-catch-binding")) {
+    babelPluginStructure["transform-optional-catch-binding"] =
+      requireBabelPlugin("@babel/plugin-transform-optional-catch-binding");
   }
-  if (isBabelPluginNeeded("proposal-unicode-property-regex")) {
-    babelPluginStructure["proposal-unicode-property-regex"] =
-      requireBabelPlugin("@babel/plugin-proposal-unicode-property-regex");
+  if (isBabelPluginNeeded("transform-unicode-property-regex")) {
+    babelPluginStructure["transform-unicode-property-regex"] =
+      requireBabelPlugin("@babel/plugin-transform-unicode-property-regex");
   }
   // if (isBabelPluginNeeded("proposal-decorators") && content.includes("@")) {
   //   babelPluginStructure["proposal-decorators"] = [

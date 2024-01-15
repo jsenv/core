@@ -9,7 +9,7 @@
 // Ideally it would be documented or a separate module
 
 export const babelPluginCompatMap = {
-  "proposal-numeric-separator": {
+  "transform-numeric-separator": {
     chrome: "75",
     opera: "62",
     edge: "79",
@@ -40,7 +40,7 @@ export const babelPluginCompatMap = {
     node: "14",
     electron: "8.1",
   },
-  "proposal-optional-chaining": {
+  "transform-optional-chaining": {
     chrome: "80",
     opera: "67",
     edge: "80",
@@ -49,7 +49,7 @@ export const babelPluginCompatMap = {
     node: "14",
     electron: "8.1",
   },
-  "proposal-json-strings": {
+  "transform-json-strings": {
     chrome: "66",
     opera: "53",
     edge: "79",
@@ -60,7 +60,7 @@ export const babelPluginCompatMap = {
     samsung: "9",
     electron: "3",
   },
-  "proposal-optional-catch-binding": {
+  "transform-optional-catch-binding": {
     chrome: "66",
     opera: "53",
     edge: "79",
@@ -94,7 +94,7 @@ export const babelPluginCompatMap = {
     samsung: "8",
     electron: "3",
   },
-  "proposal-object-rest-spread": {
+  "transform-object-rest-spread": {
     chrome: "60",
     opera: "47",
     edge: "79",
@@ -116,7 +116,7 @@ export const babelPluginCompatMap = {
     samsung: "8",
     electron: "3",
   },
-  "proposal-unicode-property-regex": {
+  "transform-unicode-property-regex": {
     chrome: "64",
     opera: "51",
     edge: "79",

@@ -19,7 +19,7 @@
     "@babel/plugin-syntax-import-assertions": "7.23.3",
     "@jsenv/custom-elements-redefine": "0.0.1",
     "@jsenv/assert": "3.0.1",
-    "@jsenv/core": "38.4.1",
+    "@jsenv/core": "38.4.2",
     "@jsenv/plugin-bundling": "2.6.4",
     "@jsenv/plugin-minification": "1.5.4",
     "@jsenv/eslint-config": "16.5.0",
