@@ -132,7 +132,7 @@ export const run = async ({
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
                   runtimeStatus = "started";
-                  result.timings.runtimeStart = takeTiming();
+                  result.timings.runtimeStart = Math.max(takeTiming(), 0);
                 },
                 onRuntimeStopped: () => {
                   if (runtimeStatus === "stopped") return; // ignore double calls
