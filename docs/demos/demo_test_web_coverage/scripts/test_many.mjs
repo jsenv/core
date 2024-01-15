@@ -9,7 +9,7 @@ import { takeCoverageScreenshots } from "../../take_coverage_screenshots.js";
 const testPlanResult = await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "./client/**/file.test.html": {
+    "./client/**/many.test.html": {
       chromium: {
         runtime: chromium(),
       },
@@ -34,7 +34,7 @@ await reportCoverageAsJson(
 await takeCoverageScreenshots(
   new URL("../.coverage/", import.meta.url),
   {
-    "file.js": new URL("./file.js.png", import.meta.url),
+    "many.js": new URL("./many.js.png", import.meta.url),
   },
   {
     width: 640,

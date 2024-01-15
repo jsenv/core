@@ -56,13 +56,13 @@ const githubCheckDefault = {
 };
 const coverageDefault = {
   include: {
+    "./**/*.js": true,
+    "./**/*.ts": true,
+    "./**/*.jsx": true,
+    "./**/*.tsx": true,
     "file:///**/node_modules/": false,
     "./**/.*": false,
     "./**/.*/": false,
-    "./**/src/**/*.js": true,
-    "./**/src/**/*.ts": true,
-    "./**/src/**/*.jsx": true,
-    "./**/src/**/*.tsx": true,
     "./**/tests/": false,
     "./**/*.test.html": false,
     "./**/*.test.html@*.js": false,
