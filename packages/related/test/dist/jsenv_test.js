@@ -4553,8 +4553,8 @@ const run = async ({
   }
 
   const timingsOrigin = Date.now();
-  const takeTiming = (ms = Date.now()) => {
-    return ms - timingsOrigin;
+  const takeTiming = () => {
+    return Date.now() - timingsOrigin;
   };
   const result = {
     status: "pending",
@@ -4646,7 +4646,7 @@ const run = async ({
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
                   runtimeStatus = "started";
-                  result.timings.runtimeStart = Math.max(takeTiming(), 0);
+                  result.timings.runtimeStart = takeTiming();
                 },
                 onRuntimeStopped: () => {
                   if (runtimeStatus === "stopped") return; // ignore double calls
@@ -4688,6 +4688,12 @@ const run = async ({
       const diff = timings.origin - result.timings.origin;
       result.timings.executionStart = timings.start + diff;
       result.timings.executionEnd = timings.end + diff;
+
+      if (result.timings.executionStart < result.timings.runtimeStart) {
+        // can happen for browsers where navigationStart can be earlier
+        // than when node.js calls runtimeStarted()
+        result.timings.runtimeStart = result.timings.executionStart;
+      }
     }
     result.memoryUsage =
       typeof memoryUsage === "number"
