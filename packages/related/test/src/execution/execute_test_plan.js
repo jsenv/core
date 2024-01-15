@@ -308,6 +308,16 @@ export const executeTestPlan = async ({
             `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
           );
         }
+
+        const maxCpu = parallel.maxCpu;
+        if (typeof maxCpu === "string") {
+          const maxCpuAsRatio = assertPercentageAndConvertToRatio(maxCpu);
+          parallel.maxCpu = maxCpuAsRatio;
+        } else if (typeof maxCpu !== "number") {
+          throw new TypeError(
+            `parallel.maxCpu must be a number or a percentage, got ${maxCpu}`,
+          );
+        }
       }
       // testPlan
       {
@@ -843,6 +853,7 @@ To fix this warning:
               promises.push(promise);
             }
 
+            console.log(cpuUsage.overall.active, parallel.maxCpu);
             if (cpuUsage.overall.active > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
               const promise = (async () => {
