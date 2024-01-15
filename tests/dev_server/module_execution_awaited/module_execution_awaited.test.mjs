@@ -23,7 +23,7 @@ const test = async ({ browserLauncher }) => {
     );
     const moduleExecutionResult =
       result.executionResults["/main.html@L10C5-L12C14.js"];
-    const actual = moduleExecutionResult.duration;
+    const actual = moduleExecutionResult.timings.end;
     assert({
       actual,
       expected: assert.between(3_000, 8_000),

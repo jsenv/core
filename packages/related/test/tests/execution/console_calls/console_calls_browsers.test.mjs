@@ -39,9 +39,12 @@ const test = async (params) => {
     namespace: {
       "/main.js": {
         status: "completed",
-        duration: assert.any(Number),
         exception: null,
         value: null,
+        timings: {
+          start: assert.any(Number),
+          end: assert.any(Number),
+        },
       },
     },
     consoleCalls: [

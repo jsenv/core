@@ -13,13 +13,18 @@ window.__supervisor__ = (() => {
     typeof window.webkitConvertPointFromNodeToPage === "function";
 
   const executionResults = {};
-  let documentExecutionStartTime;
+  let documentTimingsOrigin;
   try {
-    documentExecutionStartTime = window.performance.timing.navigationStart;
+    documentTimingsOrigin = window.performance.timing.navigationStart;
   } catch (e) {
-    documentExecutionStartTime = Date.now();
+    documentTimingsOrigin = Date.now();
   }
-  let documentExecutionEndTime;
+  const documentTimings = {
+    origin: documentTimingsOrigin,
+    start: Date.now() - documentTimingsOrigin,
+    end: null,
+  };
+
   supervisor.setup = ({
     rootDirectoryUrl,
     scriptInfos,
@@ -80,10 +85,13 @@ window.__supervisor__ = (() => {
     const createExecutionController = (src, type) => {
       const result = {
         status: "pending",
-        duration: null,
         coverage: null,
         exception: null,
         value: null,
+        timings: {
+          start: null,
+          end: null,
+        },
       };
 
       let resolve;
@@ -94,7 +102,7 @@ window.__supervisor__ = (() => {
       executionResults[src] = result;
 
       const start = () => {
-        result.duration = null;
+        result.timings.start = Date.now() - documentTimingsOrigin;
         result.coverage = null;
         result.status = "started";
         result.exception = null;
@@ -103,16 +111,15 @@ window.__supervisor__ = (() => {
         }
       };
       const end = () => {
-        const now = Date.now();
         remainingScriptCount--;
-        result.duration = now - documentExecutionStartTime;
+        result.timings.end = Date.now() - documentTimingsOrigin;
         result.coverage = window.__coverage__;
         if (logs) {
           console.log(`execution ${result.status}`);
           console.groupEnd();
         }
         if (remainingScriptCount === 0) {
-          documentExecutionEndTime = now;
+          documentTimings.end = Date.now() - documentTimingsOrigin;
         }
         resolve();
       };
@@ -400,8 +407,7 @@ window.__supervisor__ = (() => {
     supervisor.getDocumentExecutionResult = async () => {
       await Promise.all(promises);
       return {
-        startTime: documentExecutionStartTime,
-        endTime: documentExecutionEndTime,
+        timings: documentTimings,
         status: "completed",
         executionResults,
       };
