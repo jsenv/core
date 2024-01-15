@@ -275,7 +275,7 @@ ${webServer.rootDirectoryUrl}`);
     if (memoryUsageAPIAvailable) {
       const getMemoryUsage = async () => {
         const memoryUsage = await page.evaluate(
-          /* eslint-disable no-undef */
+          /* eslint-env browser */
           /* istanbul ignore next */
           async () => {
             const { performance } = window;
@@ -290,7 +290,7 @@ ${webServer.rootDirectoryUrl}`);
             // https://developer.mozilla.org/en-US/docs/Web/API/Performance/measureUserAgentSpecificMemory
             if (
               performance.measureUserAgentSpecificMemory &&
-              crossOriginIsolated
+              window.crossOriginIsolated
             ) {
               const memorySample =
                 await performance.measureUserAgentSpecificMemory();
@@ -298,7 +298,7 @@ ${webServer.rootDirectoryUrl}`);
             }
             return null;
           },
-          /* eslint-enable no-undef */
+          /* eslint-env node */
         );
         return memoryUsage;
       };
@@ -317,7 +317,7 @@ ${webServer.rootDirectoryUrl}`);
     if (collectPerformance) {
       callbackSet.add(async () => {
         const performance = await page.evaluate(
-          /* eslint-disable no-undef */
+          /* eslint-env browser */
           /* istanbul ignore next */
           () => {
             const { performance } = window;
@@ -336,7 +336,7 @@ ${webServer.rootDirectoryUrl}`);
               measures,
             };
           },
-          /* eslint-enable no-undef */
+          /* eslint-env node */
         );
         result.performance = performance;
       });
@@ -409,15 +409,9 @@ ${webServer.rootDirectoryUrl}`);
               try {
                 await page.goto(fileServerUrl, { timeout: 0 });
                 const returnValue = await page.evaluate(
-                  /* eslint-disable no-undef */
+                  /* eslint-env browser */
                   /* istanbul ignore next */
                   async () => {
-                    let startTime;
-                    try {
-                      startTime = window.performance.timing.navigationStart;
-                    } catch (e) {
-                      startTime = Date.now();
-                    }
                     if (!window.__supervisor__) {
                       throw new Error("window.__supervisor__ is undefined");
                     }
@@ -425,15 +419,12 @@ ${webServer.rootDirectoryUrl}`);
                       await window.__supervisor__.getDocumentExecutionResult();
                     return {
                       type: "window_supervisor",
-                      timings: {
-                        start: startTime,
-                        end: Date.now(),
-                      },
+                      timings: executionResultFromJsenvSupervisor.timings,
                       executionResults:
                         executionResultFromJsenvSupervisor.executionResults,
                     };
                   },
-                  /* eslint-enable no-undef */
+                  /* eslint-env node */
                 );
                 cb(returnValue);
               } catch (e) {

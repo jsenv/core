@@ -38,14 +38,17 @@ export const run = async ({
     allocatedMs = 0;
   }
 
-  const timingOrigin = Date.now();
+  const timingsOrigin = Date.now();
+  const takeTiming = (ms = Date.now()) => {
+    return ms - timingsOrigin;
+  };
   const result = {
     status: "pending",
     errors: [],
     namespace: null,
     consoleCalls: null,
     timings: {
-      origin: timingOrigin,
+      origin: timingsOrigin,
       start: 0,
       runtimeStart: null,
       executionStart: null,
@@ -56,9 +59,6 @@ export const run = async ({
     memoryUsage: null,
     performance: null,
     coverageFileUrl: null,
-  };
-  const takeTiming = (ms = Date.now()) => {
-    return ms - timingOrigin;
   };
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
@@ -170,13 +170,10 @@ export const run = async ({
       result.errors.push(errorProxy);
     }
     result.namespace = namespace;
-    if (timings) {
-      if (timings.start) {
-        result.timings.executionStart = Math.max(takeTiming(timings.start), 0);
-      }
-      if (timings.end) {
-        result.timings.executionEnd = Math.max(takeTiming(timings.end), 0);
-      }
+    if (timings && typeof timings.start === "number") {
+      const diff = timings.origin - result.timings.origin;
+      result.timings.executionStart = timings.start + diff;
+      result.timings.executionEnd = timings.end + diff;
     }
     result.memoryUsage =
       typeof memoryUsage === "number"

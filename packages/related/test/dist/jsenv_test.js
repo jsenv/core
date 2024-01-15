@@ -4552,14 +4552,17 @@ const run = async ({
     allocatedMs = 0;
   }
 
-  const timingOrigin = Date.now();
+  const timingsOrigin = Date.now();
+  const takeTiming = (ms = Date.now()) => {
+    return ms - timingsOrigin;
+  };
   const result = {
     status: "pending",
     errors: [],
     namespace: null,
     consoleCalls: null,
     timings: {
-      origin: timingOrigin,
+      origin: timingsOrigin,
       start: 0,
       runtimeStart: null,
       executionStart: null,
@@ -4570,9 +4573,6 @@ const run = async ({
     memoryUsage: null,
     performance: null,
     coverageFileUrl: null,
-  };
-  const takeTiming = (ms = Date.now()) => {
-    return ms - timingOrigin;
   };
   const onConsoleRef = { current: () => {} };
   const stopSignal = { notify: () => {} };
@@ -4646,7 +4646,7 @@ const run = async ({
                 onConsole: (log) => onConsoleRef.current(log),
                 onRuntimeStarted: () => {
                   runtimeStatus = "started";
-                  result.timings.runtimeStart = takeTiming();
+                  result.timings.runtimeStart = Math.max(takeTiming(), 0);
                 },
                 onRuntimeStopped: () => {
                   if (runtimeStatus === "stopped") return; // ignore double calls
@@ -4684,13 +4684,10 @@ const run = async ({
       result.errors.push(errorProxy);
     }
     result.namespace = namespace;
-    if (timings) {
-      if (timings.start) {
-        result.timings.executionStart = Math.max(takeTiming(timings.start), 0);
-      }
-      if (timings.end) {
-        result.timings.executionEnd = Math.max(takeTiming(timings.end), 0);
-      }
+    if (timings && typeof timings.start === "number") {
+      const diff = timings.origin - result.timings.origin;
+      result.timings.executionStart = timings.start + diff;
+      result.timings.executionEnd = timings.end + diff;
     }
     result.memoryUsage =
       typeof memoryUsage === "number"
@@ -6434,7 +6431,6 @@ To fix this warning:
               promises.push(promise);
             }
 
-            console.log(cpuUsage.overall.active, parallel.maxCpu);
             if (cpuUsage.overall.active > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
               const promise = (async () => {
@@ -7042,7 +7038,7 @@ ${webServer.rootDirectoryUrl}`);
     if (memoryUsageAPIAvailable) {
       const getMemoryUsage = async () => {
         const memoryUsage = await page.evaluate(
-          /* eslint-disable no-undef */
+          /* eslint-env browser */
           /* istanbul ignore next */
           async () => {
             const { performance } = window;
@@ -7057,7 +7053,7 @@ ${webServer.rootDirectoryUrl}`);
             // https://developer.mozilla.org/en-US/docs/Web/API/Performance/measureUserAgentSpecificMemory
             if (
               performance.measureUserAgentSpecificMemory &&
-              crossOriginIsolated
+              window.crossOriginIsolated
             ) {
               const memorySample =
                 await performance.measureUserAgentSpecificMemory();
@@ -7065,7 +7061,7 @@ ${webServer.rootDirectoryUrl}`);
             }
             return null;
           },
-          /* eslint-enable no-undef */
+          /* eslint-env node */
         );
         return memoryUsage;
       };
@@ -7084,7 +7080,7 @@ ${webServer.rootDirectoryUrl}`);
     if (collectPerformance) {
       callbackSet.add(async () => {
         const performance = await page.evaluate(
-          /* eslint-disable no-undef */
+          /* eslint-env browser */
           /* istanbul ignore next */
           () => {
             const { performance } = window;
@@ -7103,7 +7099,7 @@ ${webServer.rootDirectoryUrl}`);
               measures,
             };
           },
-          /* eslint-enable no-undef */
+          /* eslint-env node */
         );
         result.performance = performance;
       });
@@ -7176,15 +7172,9 @@ ${webServer.rootDirectoryUrl}`);
               try {
                 await page.goto(fileServerUrl, { timeout: 0 });
                 const returnValue = await page.evaluate(
-                  /* eslint-disable no-undef */
+                  /* eslint-env browser */
                   /* istanbul ignore next */
                   async () => {
-                    let startTime;
-                    try {
-                      startTime = window.performance.timing.navigationStart;
-                    } catch (e) {
-                      startTime = Date.now();
-                    }
                     if (!window.__supervisor__) {
                       throw new Error("window.__supervisor__ is undefined");
                     }
@@ -7192,15 +7182,12 @@ ${webServer.rootDirectoryUrl}`);
                       await window.__supervisor__.getDocumentExecutionResult();
                     return {
                       type: "window_supervisor",
-                      timings: {
-                        start: startTime,
-                        end: Date.now(),
-                      },
+                      timings: executionResultFromJsenvSupervisor.timings,
                       executionResults:
                         executionResultFromJsenvSupervisor.executionResults,
                     };
                   },
-                  /* eslint-enable no-undef */
+                  /* eslint-env node */
                 );
                 cb(returnValue);
               } catch (e) {

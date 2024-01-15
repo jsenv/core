@@ -4115,6 +4115,7 @@ const createDynamicLog = ({
         // The spy is required only if we actually wrote something in the stream
         // something else than this code has written in the stream
         // so we just write without clearing (append instead of replacing)
+        lastOutput = "";
         lastOutputFromOutside = "";
       } else {
         stringToWrite = `${getErasePreviousOutput()}${string}`;

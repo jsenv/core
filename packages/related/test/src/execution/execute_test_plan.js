@@ -853,7 +853,6 @@ To fix this warning:
               promises.push(promise);
             }
 
-            console.log(cpuUsage.overall.active, parallel.maxCpu);
             if (cpuUsage.overall.active > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
               const promise = (async () => {

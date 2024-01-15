@@ -17,6 +17,7 @@ export const executeUsingDynamicImport = async ({
 }) => {
   const result = {
     timings: {
+      origin: Date.now(),
       start: null,
       end: null,
     },
@@ -66,7 +67,7 @@ export const executeUsingDynamicImport = async ({
     };
   }
 
-  result.timings.start = Date.now();
+  result.timings.start = Date.now() - result.timings.origin;
   try {
     const namespace = await import(fileUrl);
     const namespaceResolved = {};
@@ -82,7 +83,7 @@ export const executeUsingDynamicImport = async ({
     result.status = "failed";
     result.errors.push(createException(e, { rootDirectoryUrl }));
   } finally {
-    result.timings.end = Date.now();
+    result.timings.end = Date.now() - result.timings.origin;
     if (finalizeCoverage) {
       await finalizeCoverage();
       finalizeCoverage = null;
