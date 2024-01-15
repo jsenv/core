@@ -24,10 +24,7 @@ export const takeCoverageScreenshots = async (
     const wrapperLocator = await page.locator(".wrapper");
 
     // screenshot
-    const screenshotFileUrl = new URL(
-      `${fileRelativeUrl}.png`,
-      fileUrls[fileRelativeUrl],
-    );
+    const screenshotFileUrl = fileUrls[fileRelativeUrl];
     const screenshotBuffer = await wrapperLocator.screenshot();
     writeFileSync(screenshotFileUrl, screenshotBuffer);
   }

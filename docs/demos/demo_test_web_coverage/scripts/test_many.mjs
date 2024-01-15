@@ -4,7 +4,6 @@ import {
   firefox,
   webkit,
   reportCoverageAsHtml,
-  reportCoverageAsJson,
 } from "@jsenv/test";
 import { takeCoverageScreenshots } from "../../take_coverage_screenshots.js";
 
@@ -34,10 +33,6 @@ const testPlanResult = await executeTestPlan({
 await reportCoverageAsHtml(
   testPlanResult,
   new URL("../.coverage/", import.meta.url),
-);
-await reportCoverageAsJson(
-  testPlanResult,
-  new URL("../.coverage/coverage.json", import.meta.url),
 );
 await takeCoverageScreenshots(
   new URL("../.coverage/", import.meta.url),
