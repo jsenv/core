@@ -3,12 +3,12 @@ import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFil
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, createException } from "./js/exception.js";
+import stringWidth from "string-width";
+import process$1, { memoryUsage } from "node:process";
+import tty from "node:tty";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import crypto from "node:crypto";
-import process$1, { memoryUsage } from "node:process";
-import tty from "node:tty";
-import stringWidth from "string-width";
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import { filterV8Coverage } from "./js/v8_coverage.js";
 import { createRequire } from "node:module";
@@ -530,9 +530,974 @@ const SIGINT_CALLBACK = {
   },
 };
 
+const LOG_LEVEL_OFF = "off";
+
+const LOG_LEVEL_DEBUG = "debug";
+
+const LOG_LEVEL_INFO = "info";
+
+const LOG_LEVEL_WARN = "warn";
+
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
+      debug,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    };
+  }
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+const ESC = '\u001B[';
+const OSC = '\u001B]';
+const BEL = '\u0007';
+const SEP = ';';
+
+/* global window */
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+
+const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+const isWindows$3 = !isBrowser && process$1.platform === 'win32';
+const cwdFunction = isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
+const ansiEscapes = {};
+
+ansiEscapes.cursorTo = (x, y) => {
+	if (typeof x !== 'number') {
+		throw new TypeError('The `x` argument is required');
+	}
+
+	if (typeof y !== 'number') {
+		return ESC + (x + 1) + 'G';
+	}
+
+	return ESC + (y + 1) + SEP + (x + 1) + 'H';
+};
+
+ansiEscapes.cursorMove = (x, y) => {
+	if (typeof x !== 'number') {
+		throw new TypeError('The `x` argument is required');
+	}
+
+	let returnValue = '';
+
+	if (x < 0) {
+		returnValue += ESC + (-x) + 'D';
+	} else if (x > 0) {
+		returnValue += ESC + x + 'C';
+	}
+
+	if (y < 0) {
+		returnValue += ESC + (-y) + 'A';
+	} else if (y > 0) {
+		returnValue += ESC + y + 'B';
+	}
+
+	return returnValue;
+};
+
+ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
+ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
+ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
+ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
+
+ansiEscapes.cursorLeft = ESC + 'G';
+ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
+ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
+ansiEscapes.cursorGetPosition = ESC + '6n';
+ansiEscapes.cursorNextLine = ESC + 'E';
+ansiEscapes.cursorPrevLine = ESC + 'F';
+ansiEscapes.cursorHide = ESC + '?25l';
+ansiEscapes.cursorShow = ESC + '?25h';
+
+ansiEscapes.eraseLines = count => {
+	let clear = '';
+
+	for (let i = 0; i < count; i++) {
+		clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+	}
+
+	if (count) {
+		clear += ansiEscapes.cursorLeft;
+	}
+
+	return clear;
+};
+
+ansiEscapes.eraseEndLine = ESC + 'K';
+ansiEscapes.eraseStartLine = ESC + '1K';
+ansiEscapes.eraseLine = ESC + '2K';
+ansiEscapes.eraseDown = ESC + 'J';
+ansiEscapes.eraseUp = ESC + '1J';
+ansiEscapes.eraseScreen = ESC + '2J';
+ansiEscapes.scrollUp = ESC + 'S';
+ansiEscapes.scrollDown = ESC + 'T';
+
+ansiEscapes.clearScreen = '\u001Bc';
+
+ansiEscapes.clearTerminal = isWindows$3
+	? `${ansiEscapes.eraseScreen}${ESC}0f`
+	// 1. Erases the screen (Only done in case `2` is not supported)
+	// 2. Erases the whole screen including scrollback buffer
+	// 3. Moves cursor to the top-left position
+	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+	: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+
+ansiEscapes.enterAlternativeScreen = ESC + '?1049h';
+ansiEscapes.exitAlternativeScreen = ESC + '?1049l';
+
+ansiEscapes.beep = BEL;
+
+ansiEscapes.link = (text, url) => [
+	OSC,
+	'8',
+	SEP,
+	SEP,
+	url,
+	BEL,
+	text,
+	OSC,
+	'8',
+	SEP,
+	SEP,
+	BEL,
+].join('');
+
+ansiEscapes.image = (buffer, options = {}) => {
+	let returnValue = `${OSC}1337;File=inline=1`;
+
+	if (options.width) {
+		returnValue += `;width=${options.width}`;
+	}
+
+	if (options.height) {
+		returnValue += `;height=${options.height}`;
+	}
+
+	if (options.preserveAspectRatio === false) {
+		returnValue += ';preserveAspectRatio=0';
+	}
+
+	return returnValue + ':' + buffer.toString('base64') + BEL;
+};
+
+ansiEscapes.iTerm = {
+	setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
+
+	annotation(message, options = {}) {
+		let returnValue = `${OSC}1337;`;
+
+		const hasX = typeof options.x !== 'undefined';
+		const hasY = typeof options.y !== 'undefined';
+		if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
+			throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
+		}
+
+		message = message.replace(/\|/g, '');
+
+		returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
+
+		if (options.length > 0) {
+			returnValue += (
+				hasX
+					? [message, options.length, options.x, options.y]
+					: [options.length, message]
+			).join('|');
+		} else {
+			returnValue += message;
+		}
+
+		return returnValue + BEL;
+	},
+};
+
+/*
+ * see also https://github.com/vadimdemedes/ink
+ */
+
+
+const createDynamicLog = ({
+  stream = process.stdout,
+  clearTerminalAllowed,
+  onVerticalOverflow = () => {},
+  onWriteFromOutside = () => {},
+} = {}) => {
+  const { columns = 80, rows = 24 } = stream;
+  const dynamicLog = {
+    destroyed: false,
+    onVerticalOverflow,
+    onWriteFromOutside,
+  };
+
+  let lastOutput = "";
+  let lastOutputFromOutside = "";
+  let clearAttemptResult;
+  let writing = false;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    for (const logLine of logLines) {
+      const width = stringWidth(logLine);
+      if (width === 0) {
+        visualLineCount++;
+      } else {
+        visualLineCount += Math.ceil(width / columns);
+      }
+    }
+
+    if (visualLineCount > rows) {
+      if (clearTerminalAllowed) {
+        clearAttemptResult = true;
+        return ansiEscapes.clearTerminal;
+      }
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      dynamicLog.onVerticalOverflow();
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return ansiEscapes.eraseLines(visualLineCount);
+  };
+
+  const update = (string) => {
+    if (dynamicLog.destroyed) {
+      throw new Error("Cannot write log after destroy");
+    }
+    let stringToWrite = string;
+    if (lastOutput) {
+      if (lastOutputFromOutside) {
+        // We don't want to clear logs written by other code,
+        // it makes output unreadable and might erase precious information
+        // To detect this we put a spy on the stream.
+        // The spy is required only if we actually wrote something in the stream
+        // something else than this code has written in the stream
+        // so we just write without clearing (append instead of replacing)
+        lastOutput = "";
+        lastOutputFromOutside = "";
+      } else {
+        stringToWrite = `${getErasePreviousOutput()}${string}`;
+      }
+    }
+    writing = true;
+    stream.write(stringToWrite);
+    lastOutput = string;
+    writing = false;
+    clearAttemptResult = undefined;
+  };
+
+  const clearDuringFunctionCall = (callback) => {
+    // 1. Erase the current log
+    // 2. Call callback (expected to write something on stdout)
+    // 3. Restore the current log
+    // During step 2. we expect a "write from outside" so we uninstall
+    // the stream spy during function call
+    const currentOutput = lastOutput;
+    update("");
+
+    writing = true;
+    callback();
+    writing = false;
+
+    update(currentOutput);
+  };
+
+  const writeFromOutsideEffect = (value) => {
+    if (!lastOutput) {
+      // we don't care if the log never wrote anything
+      // or if last update() wrote an empty string
+      return;
+    }
+    if (writing) {
+      return;
+    }
+    lastOutputFromOutside = value;
+    dynamicLog.onWriteFromOutside(value);
+  };
+
+  let removeStreamSpy;
+  if (stream === process.stdout) {
+    const removeStdoutSpy = spyStreamOutput(
+      process.stdout,
+      writeFromOutsideEffect,
+    );
+    const removeStderrSpy = spyStreamOutput(
+      process.stderr,
+      writeFromOutsideEffect,
+    );
+    removeStreamSpy = () => {
+      removeStdoutSpy();
+      removeStderrSpy();
+    };
+  } else {
+    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
+  }
+
+  const destroy = () => {
+    dynamicLog.destroyed = true;
+    if (removeStreamSpy) {
+      removeStreamSpy();
+      removeStreamSpy = null;
+      lastOutput = "";
+      lastOutputFromOutside = "";
+    }
+  };
+
+  Object.assign(dynamicLog, {
+    update,
+    destroy,
+    stream,
+    clearDuringFunctionCall,
+  });
+  return dynamicLog;
+};
+
+// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
+const spyStreamOutput = (stream, callback) => {
+  const originalWrite = stream.write;
+
+  let output = "";
+  let installed = true;
+
+  stream.write = function (...args /* chunk, encoding, callback */) {
+    output += args;
+    callback(output);
+    return originalWrite.call(stream, ...args);
+  };
+
+  const uninstall = () => {
+    if (!installed) {
+      return;
+    }
+    stream.write = originalWrite;
+    installed = false;
+  };
+
+  return () => {
+    uninstall();
+    return output;
+  };
+};
+
+// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
+/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
+	const position = argv.indexOf(prefix + flag);
+	const terminatorPosition = argv.indexOf('--');
+	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+
+const {env} = process$1;
+
+let flagForceColor;
+if (
+	hasFlag('no-color')
+	|| hasFlag('no-colors')
+	|| hasFlag('color=false')
+	|| hasFlag('color=never')
+) {
+	flagForceColor = 0;
+} else if (
+	hasFlag('color')
+	|| hasFlag('colors')
+	|| hasFlag('color=true')
+	|| hasFlag('color=always')
+) {
+	flagForceColor = 1;
+}
+
+function envForceColor() {
+	if ('FORCE_COLOR' in env) {
+		if (env.FORCE_COLOR === 'true') {
+			return 1;
+		}
+
+		if (env.FORCE_COLOR === 'false') {
+			return 0;
+		}
+
+		return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+	}
+}
+
+function translateLevel(level) {
+	if (level === 0) {
+		return false;
+	}
+
+	return {
+		level,
+		hasBasic: true,
+		has256: level >= 2,
+		has16m: level >= 3,
+	};
+}
+
+function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
+	const noFlagForceColor = envForceColor();
+	if (noFlagForceColor !== undefined) {
+		flagForceColor = noFlagForceColor;
+	}
+
+	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+	if (forceColor === 0) {
+		return 0;
+	}
+
+	if (sniffFlags) {
+		if (hasFlag('color=16m')
+			|| hasFlag('color=full')
+			|| hasFlag('color=truecolor')) {
+			return 3;
+		}
+
+		if (hasFlag('color=256')) {
+			return 2;
+		}
+	}
+
+	// Check for Azure DevOps pipelines.
+	// Has to be above the `!streamIsTTY` check.
+	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+		return 1;
+	}
+
+	if (haveStream && !streamIsTTY && forceColor === undefined) {
+		return 0;
+	}
+
+	const min = forceColor || 0;
+
+	if (env.TERM === 'dumb') {
+		return min;
+	}
+
+	if (process$1.platform === 'win32') {
+		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
+		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		const osRelease = os.release().split('.');
+		if (
+			Number(osRelease[0]) >= 10
+			&& Number(osRelease[2]) >= 10_586
+		) {
+			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+		}
+
+		return 1;
+	}
+
+	if ('CI' in env) {
+		if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
+			return 3;
+		}
+
+		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+			return 1;
+		}
+
+		return min;
+	}
+
+	if ('TEAMCITY_VERSION' in env) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+	}
+
+	if (env.COLORTERM === 'truecolor') {
+		return 3;
+	}
+
+	if (env.TERM === 'xterm-kitty') {
+		return 3;
+	}
+
+	if ('TERM_PROGRAM' in env) {
+		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+		switch (env.TERM_PROGRAM) {
+			case 'iTerm.app': {
+				return version >= 3 ? 3 : 2;
+			}
+
+			case 'Apple_Terminal': {
+				return 2;
+			}
+			// No default
+		}
+	}
+
+	if (/-256(color)?$/i.test(env.TERM)) {
+		return 2;
+	}
+
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+		return 1;
+	}
+
+	if ('COLORTERM' in env) {
+		return 1;
+	}
+
+	return min;
+}
+
+function createSupportsColor(stream, options = {}) {
+	const level = _supportsColor(stream, {
+		streamIsTTY: stream && stream.isTTY,
+		...options,
+	});
+
+	return translateLevel(level);
+}
+
+({
+	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
+	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
+});
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+
+const ANSI = {
+  supported: processSupportsBasicColor,
+
+  RED: "\x1b[31m",
+  GREEN: "\x1b[32m",
+  YELLOW: "\x1b[33m",
+  BLUE: "\x1b[34m",
+  MAGENTA: "\x1b[35m",
+  GREY: "\x1b[90m",
+  color: (text, ANSI_COLOR) => {
+    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
+  },
+
+  BOLD: "\x1b[1m",
+  effect: (text, ANSI_EFFECT) => {
+    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
+  },
+};
+
+// GitHub workflow does support ANSI but "supports-color" returns false
+// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+if (
+  process.env.GITHUB_WORKFLOW &&
+  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+  // that colors are not supported. Let it have priority
+  process.env.FORCE_COLOR !== "false"
+) {
+  ANSI.supported = true;
+}
+
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round,
+  });
+};
+
+const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt,
+  });
+};
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
+  if (number === 0) {
+    return 0;
+  }
+  let numberCandidate = Math.abs(number);
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s",
+};
+
+const humanizeDuration = (
+  ms,
+  { short, rounded = true, decimals } = {},
+) => {
+  // ignore ms below meaningfulMs so that:
+  // humanizeDuration(0.5) -> "0 second"
+  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return short ? "0s" : "0 second";
+  }
+  const { primary, remaining } = parseMs(ms);
+  if (!remaining) {
+    return humanizeDurationUnit(primary, {
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      short,
+      rounded,
+    });
+  }
+  return `${humanizeDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })} and ${humanizeDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })}`;
+};
+const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    return `${count}${name}`;
+  }
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+};
+
+const parseMs = (ms) => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+    return false;
+  });
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  // - 1 year and 1 month is great
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount,
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount,
+    },
+  };
+};
+
+function isUnicodeSupported() {
+	if (process$1.platform !== 'win32') {
+		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(process$1.env.WT_SESSION) // Windows Terminal
+		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
+		|| process$1.env.TERM_PROGRAM === 'vscode'
+		|| process$1.env.TERM === 'xterm-256color'
+		|| process$1.env.TERM === 'alacritty'
+		|| process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+// see also https://github.com/sindresorhus/figures
+
+
+const UNICODE = {
+  supported: isUnicodeSupported(),
+
+  get COMMAND_RAW() {
+    return UNICODE.supported ? `❯` : `>`;
+  },
+  get OK_RAW() {
+    return UNICODE.supported ? `✔` : `√`;
+  },
+  get FAILURE_RAW() {
+    return UNICODE.supported ? `✖` : `×`;
+  },
+  get DEBUG_RAW() {
+    return UNICODE.supported ? `◆` : `♦`;
+  },
+  get INFO_RAW() {
+    return UNICODE.supported ? `ℹ` : `i`;
+  },
+  get WARNING_RAW() {
+    return UNICODE.supported ? `⚠` : `‼`;
+  },
+  get CIRCLE_CROSS_RAW() {
+    return UNICODE.supported ? `ⓧ` : `(×)`;
+  },
+  get COMMAND() {
+    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+  },
+  get OK() {
+    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+  },
+  get FAILURE() {
+    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+  },
+  get DEBUG() {
+    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+  },
+  get INFO() {
+    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+  },
+  get WARNING() {
+    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+  },
+  get CIRCLE_CROSS() {
+    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
+};
+
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string;
+};
+
+const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
+};
+
+const humanizeMemoryUsage = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
+};
+
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+  const exponent = Math.min(
+    Math.floor(Math.log10(number) / 3),
+    BYTE_UNITS.length - 1,
+  );
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  if (decimals === undefined) {
+    if (unitNumber < 100) {
+      decimals = 1;
+    } else {
+      decimals = 0;
+    }
+  }
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals,
+    decimalsWhenSmall: 1,
+  });
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
+  }
+  return `${value} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
 const formatDefault = (v) => v;
 
-const inspectFileContent = ({
+const generateContentFrame = ({
   content,
   line,
   column,
@@ -687,238 +1652,6 @@ const fillLeft$1 = (value, biggestValue, char = " ") => {
   padded += value;
   return padded;
 };
-
-const setRoundedPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round,
-  });
-};
-
-const setPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: parseInt,
-  });
-};
-
-const setDecimalsPrecision = (
-  number,
-  {
-    transform,
-    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
-    decimalsWhenSmall, // max decimals for number in [-1,1]
-  } = {},
-) => {
-  if (number === 0) {
-    return 0;
-  }
-  let numberCandidate = Math.abs(number);
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-};
-
-// https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const unitShort = {
-  year: "y",
-  month: "m",
-  week: "w",
-  day: "d",
-  hour: "h",
-  minute: "m",
-  second: "s",
-};
-
-const inspectDuration = (
-  ms,
-  { short, rounded = true, decimals } = {},
-) => {
-  // ignore ms below meaningfulMs so that:
-  // inspectDuration(0.5) -> "0 second"
-  // inspectDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return short ? "0s" : "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return inspectDurationUnit(primary, {
-      decimals:
-        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
-      short,
-      rounded,
-    });
-  }
-  return `${inspectDurationUnit(primary, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded,
-  })} and ${inspectDurationUnit(remaining, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded,
-  })}`;
-};
-const inspectDurationUnit = (unit, { decimals, short, rounded }) => {
-  const count = rounded
-    ? setRoundedPrecision(unit.count, { decimals })
-    : setPrecision(unit.count, { decimals });
-  let name = unit.name;
-  if (short) {
-    name = unitShort[name];
-    return `${count}${name}`;
-  }
-  if (count <= 1) {
-    return `${count} ${name}`;
-  }
-  return `${count} ${name}s`;
-};
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000,
-};
-
-const parseMs = (ms) => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex((unitName) => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-    return false;
-  });
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
-  // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  // - 1 year and 1 month is great
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount,
-    },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount,
-    },
-  };
-};
-
-const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
-  return inspectBytes(numberOfBytes, { decimals, short });
-};
-
-const inspectMemoryUsage = (metricValue, { decimals, short } = {}) => {
-  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
-};
-
-const inspectBytes = (
-  number,
-  { fixedDecimals = false, decimals, short } = {},
-) => {
-  if (number === 0) {
-    return `0 B`;
-  }
-  const exponent = Math.min(
-    Math.floor(Math.log10(number) / 3),
-    BYTE_UNITS.length - 1,
-  );
-  const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
-  if (decimals === undefined) {
-    if (unitNumber < 100) {
-      decimals = 1;
-    } else {
-      decimals = 0;
-    }
-  }
-  const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals,
-    decimalsWhenSmall: 1,
-  });
-  const value = fixedDecimals
-    ? unitNumberRounded.toFixed(decimals)
-    : unitNumberRounded;
-  if (short) {
-    return `${value}${unitName}`;
-  }
-  return `${value} ${unitName}`;
-};
-
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
 const urlToScheme = (url) => {
   const urlString = String(url);
@@ -1325,7 +2058,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
   return 0;
 };
 
-const isWindows$3 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
@@ -1348,7 +2081,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expected but got ${url}`);
   }
 
-  if (!isWindows$3) {
+  if (!isWindows$2) {
     return url;
   }
 
@@ -1549,7 +2282,7 @@ const getPermissionOrComputeDefault$1 = (action, subject, permissions) => {
  */
 
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 
 const readEntryStat = async (
   source,
@@ -1569,7 +2302,7 @@ const readEntryStat = async (
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2
+    ...(isWindows$1
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: async (error) => {
@@ -2154,7 +2887,7 @@ const getPermissionOrComputeDefault = (action, subject, permissions) => {
  */
 
 
-const isWindows$1 = process.platform === "win32";
+const isWindows = process.platform === "win32";
 
 const readEntryStatSync = (
   source,
@@ -2174,7 +2907,7 @@ const readEntryStatSync = (
   return statSyncNaive(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$1
+    ...(isWindows
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: (error) => {
@@ -2555,739 +3288,6 @@ const ensureEmptyDirectory = async (source) => {
 process.platform === "win32";
 
 process.platform === "linux";
-
-const LOG_LEVEL_OFF = "off";
-
-const LOG_LEVEL_DEBUG = "debug";
-
-const LOG_LEVEL_INFO = "info";
-
-const LOG_LEVEL_WARN = "warn";
-
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      level: "debug",
-      levels: { debug: true, info: true, warn: true, error: true },
-      debug,
-      info,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      level: "info",
-      levels: { debug: false, info: true, warn: true, error: true },
-      debug: debugDisabled,
-      info,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      level: "warn",
-      levels: { debug: false, info: false, warn: true, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      level: "error",
-      levels: { debug: false, info: false, warn: false, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      level: "off",
-      levels: { debug: false, info: false, warn: false, error: false },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled,
-    };
-  }
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
-};
-
-const debug = (...args) => console.debug(...args);
-
-const debugDisabled = () => {};
-
-const info = (...args) => console.info(...args);
-
-const infoDisabled = () => {};
-
-const warn = (...args) => console.warn(...args);
-
-const warnDisabled = () => {};
-
-const error = (...args) => console.error(...args);
-
-const errorDisabled = () => {};
-
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env} = process$1;
-
-let flagForceColor;
-if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
-) {
-	flagForceColor = 0;
-} else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
-) {
-	flagForceColor = 1;
-}
-
-function envForceColor() {
-	if ('FORCE_COLOR' in env) {
-		if (env.FORCE_COLOR === 'true') {
-			return 1;
-		}
-
-		if (env.FORCE_COLOR === 'false') {
-			return 0;
-		}
-
-		return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-	}
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel(level);
-}
-
-({
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-});
-
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
-// https://github.com/Marak/colors.js/blob/master/lib/styles.js
-// https://stackoverflow.com/a/75985833/2634179
-const RESET = "\x1b[0m";
-
-const ANSI = {
-  supported: processSupportsBasicColor,
-
-  RED: "\x1b[31m",
-  GREEN: "\x1b[32m",
-  YELLOW: "\x1b[33m",
-  BLUE: "\x1b[34m",
-  MAGENTA: "\x1b[35m",
-  GREY: "\x1b[90m",
-  color: (text, ANSI_COLOR) => {
-    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
-  },
-
-  BOLD: "\x1b[1m",
-  effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
-  },
-};
-
-// GitHub workflow does support ANSI but "supports-color" returns false
-// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (
-  process.env.GITHUB_WORKFLOW &&
-  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
-  // that colors are not supported. Let it have priority
-  process.env.FORCE_COLOR !== "false"
-) {
-  ANSI.supported = true;
-}
-
-function isUnicodeSupported() {
-	if (process$1.platform !== 'win32') {
-		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(process$1.env.WT_SESSION) // Windows Terminal
-		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
-		|| process$1.env.TERM_PROGRAM === 'vscode'
-		|| process$1.env.TERM === 'xterm-256color'
-		|| process$1.env.TERM === 'alacritty'
-		|| process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-// see also https://github.com/sindresorhus/figures
-
-
-const UNICODE = {
-  supported: isUnicodeSupported(),
-
-  get COMMAND_RAW() {
-    return UNICODE.supported ? `❯` : `>`;
-  },
-  get OK_RAW() {
-    return UNICODE.supported ? `✔` : `√`;
-  },
-  get FAILURE_RAW() {
-    return UNICODE.supported ? `✖` : `×`;
-  },
-  get DEBUG_RAW() {
-    return UNICODE.supported ? `◆` : `♦`;
-  },
-  get INFO_RAW() {
-    return UNICODE.supported ? `ℹ` : `i`;
-  },
-  get WARNING_RAW() {
-    return UNICODE.supported ? `⚠` : `‼`;
-  },
-  get CIRCLE_CROSS_RAW() {
-    return UNICODE.supported ? `ⓧ` : `(×)`;
-  },
-  get COMMAND() {
-    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-  },
-  get OK() {
-    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
-  },
-  get FAILURE() {
-    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
-  },
-  get DEBUG() {
-    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
-  },
-  get INFO() {
-    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
-  },
-  get WARNING() {
-    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
-  },
-  get CIRCLE_CROSS() {
-    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
-  },
-};
-
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
-  });
-
-  return string;
-};
-
-const ESC = '\u001B[';
-const OSC = '\u001B]';
-const BEL = '\u0007';
-const SEP = ';';
-
-/* global window */
-const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-
-const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows = !isBrowser && process$1.platform === 'win32';
-const cwdFunction = isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const ansiEscapes = {};
-
-ansiEscapes.cursorTo = (x, y) => {
-	if (typeof x !== 'number') {
-		throw new TypeError('The `x` argument is required');
-	}
-
-	if (typeof y !== 'number') {
-		return ESC + (x + 1) + 'G';
-	}
-
-	return ESC + (y + 1) + SEP + (x + 1) + 'H';
-};
-
-ansiEscapes.cursorMove = (x, y) => {
-	if (typeof x !== 'number') {
-		throw new TypeError('The `x` argument is required');
-	}
-
-	let returnValue = '';
-
-	if (x < 0) {
-		returnValue += ESC + (-x) + 'D';
-	} else if (x > 0) {
-		returnValue += ESC + x + 'C';
-	}
-
-	if (y < 0) {
-		returnValue += ESC + (-y) + 'A';
-	} else if (y > 0) {
-		returnValue += ESC + y + 'B';
-	}
-
-	return returnValue;
-};
-
-ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
-ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
-ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
-ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
-
-ansiEscapes.cursorLeft = ESC + 'G';
-ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
-ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
-ansiEscapes.cursorGetPosition = ESC + '6n';
-ansiEscapes.cursorNextLine = ESC + 'E';
-ansiEscapes.cursorPrevLine = ESC + 'F';
-ansiEscapes.cursorHide = ESC + '?25l';
-ansiEscapes.cursorShow = ESC + '?25h';
-
-ansiEscapes.eraseLines = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
-	}
-
-	if (count) {
-		clear += ansiEscapes.cursorLeft;
-	}
-
-	return clear;
-};
-
-ansiEscapes.eraseEndLine = ESC + 'K';
-ansiEscapes.eraseStartLine = ESC + '1K';
-ansiEscapes.eraseLine = ESC + '2K';
-ansiEscapes.eraseDown = ESC + 'J';
-ansiEscapes.eraseUp = ESC + '1J';
-ansiEscapes.eraseScreen = ESC + '2J';
-ansiEscapes.scrollUp = ESC + 'S';
-ansiEscapes.scrollDown = ESC + 'T';
-
-ansiEscapes.clearScreen = '\u001Bc';
-
-ansiEscapes.clearTerminal = isWindows
-	? `${ansiEscapes.eraseScreen}${ESC}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
-
-ansiEscapes.enterAlternativeScreen = ESC + '?1049h';
-ansiEscapes.exitAlternativeScreen = ESC + '?1049l';
-
-ansiEscapes.beep = BEL;
-
-ansiEscapes.link = (text, url) => [
-	OSC,
-	'8',
-	SEP,
-	SEP,
-	url,
-	BEL,
-	text,
-	OSC,
-	'8',
-	SEP,
-	SEP,
-	BEL,
-].join('');
-
-ansiEscapes.image = (buffer, options = {}) => {
-	let returnValue = `${OSC}1337;File=inline=1`;
-
-	if (options.width) {
-		returnValue += `;width=${options.width}`;
-	}
-
-	if (options.height) {
-		returnValue += `;height=${options.height}`;
-	}
-
-	if (options.preserveAspectRatio === false) {
-		returnValue += ';preserveAspectRatio=0';
-	}
-
-	return returnValue + ':' + buffer.toString('base64') + BEL;
-};
-
-ansiEscapes.iTerm = {
-	setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
-
-	annotation(message, options = {}) {
-		let returnValue = `${OSC}1337;`;
-
-		const hasX = typeof options.x !== 'undefined';
-		const hasY = typeof options.y !== 'undefined';
-		if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
-			throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
-		}
-
-		message = message.replace(/\|/g, '');
-
-		returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
-
-		if (options.length > 0) {
-			returnValue += (
-				hasX
-					? [message, options.length, options.x, options.y]
-					: [options.length, message]
-			).join('|');
-		} else {
-			returnValue += message;
-		}
-
-		return returnValue + BEL;
-	},
-};
-
-/*
- * see also https://github.com/vadimdemedes/ink
- */
-
-
-const createDynamicLog = ({
-  stream = process.stdout,
-  clearTerminalAllowed,
-  onVerticalOverflow = () => {},
-  onWriteFromOutside = () => {},
-} = {}) => {
-  const { columns = 80, rows = 24 } = stream;
-  const dynamicLog = {
-    destroyed: false,
-    onVerticalOverflow,
-    onWriteFromOutside,
-  };
-
-  let lastOutput = "";
-  let lastOutputFromOutside = "";
-  let clearAttemptResult;
-  let writing = false;
-
-  const getErasePreviousOutput = () => {
-    // nothing to clear
-    if (!lastOutput) {
-      return "";
-    }
-    if (clearAttemptResult !== undefined) {
-      return "";
-    }
-
-    const logLines = lastOutput.split(/\r\n|\r|\n/);
-    let visualLineCount = 0;
-    for (const logLine of logLines) {
-      const width = stringWidth(logLine);
-      if (width === 0) {
-        visualLineCount++;
-      } else {
-        visualLineCount += Math.ceil(width / columns);
-      }
-    }
-
-    if (visualLineCount > rows) {
-      if (clearTerminalAllowed) {
-        clearAttemptResult = true;
-        return ansiEscapes.clearTerminal;
-      }
-      // the whole log cannot be cleared because it's vertically to long
-      // (longer than terminal height)
-      // readline.moveCursor cannot move cursor higher than screen height
-      // it means we would only clear the visible part of the log
-      // better keep the log untouched
-      clearAttemptResult = false;
-      dynamicLog.onVerticalOverflow();
-      return "";
-    }
-
-    clearAttemptResult = true;
-    return ansiEscapes.eraseLines(visualLineCount);
-  };
-
-  const update = (string) => {
-    if (dynamicLog.destroyed) {
-      throw new Error("Cannot write log after destroy");
-    }
-    let stringToWrite = string;
-    if (lastOutput) {
-      if (lastOutputFromOutside) {
-        // We don't want to clear logs written by other code,
-        // it makes output unreadable and might erase precious information
-        // To detect this we put a spy on the stream.
-        // The spy is required only if we actually wrote something in the stream
-        // something else than this code has written in the stream
-        // so we just write without clearing (append instead of replacing)
-        lastOutput = "";
-        lastOutputFromOutside = "";
-      } else {
-        stringToWrite = `${getErasePreviousOutput()}${string}`;
-      }
-    }
-    writing = true;
-    stream.write(stringToWrite);
-    lastOutput = string;
-    writing = false;
-    clearAttemptResult = undefined;
-  };
-
-  const clearDuringFunctionCall = (callback) => {
-    // 1. Erase the current log
-    // 2. Call callback (expected to write something on stdout)
-    // 3. Restore the current log
-    // During step 2. we expect a "write from outside" so we uninstall
-    // the stream spy during function call
-    const currentOutput = lastOutput;
-    update("");
-
-    writing = true;
-    callback();
-    writing = false;
-
-    update(currentOutput);
-  };
-
-  const writeFromOutsideEffect = (value) => {
-    if (!lastOutput) {
-      // we don't care if the log never wrote anything
-      // or if last update() wrote an empty string
-      return;
-    }
-    if (writing) {
-      return;
-    }
-    lastOutputFromOutside = value;
-    dynamicLog.onWriteFromOutside(value);
-  };
-
-  let removeStreamSpy;
-  if (stream === process.stdout) {
-    const removeStdoutSpy = spyStreamOutput(
-      process.stdout,
-      writeFromOutsideEffect,
-    );
-    const removeStderrSpy = spyStreamOutput(
-      process.stderr,
-      writeFromOutsideEffect,
-    );
-    removeStreamSpy = () => {
-      removeStdoutSpy();
-      removeStderrSpy();
-    };
-  } else {
-    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
-  }
-
-  const destroy = () => {
-    dynamicLog.destroyed = true;
-    if (removeStreamSpy) {
-      removeStreamSpy();
-      removeStreamSpy = null;
-      lastOutput = "";
-      lastOutputFromOutside = "";
-    }
-  };
-
-  Object.assign(dynamicLog, {
-    update,
-    destroy,
-    stream,
-    clearDuringFunctionCall,
-  });
-  return dynamicLog;
-};
-
-// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
-// the problem with listening data on stdout
-// is that node.js will later throw error if stream gets closed
-// while something listening data on it
-const spyStreamOutput = (stream, callback) => {
-  const originalWrite = stream.write;
-
-  let output = "";
-  let installed = true;
-
-  stream.write = function (...args /* chunk, encoding, callback */) {
-    output += args;
-    callback(output);
-    return originalWrite.call(stream, ...args);
-  };
-
-  const uninstall = () => {
-    if (!installed) {
-      return;
-    }
-    stream.write = originalWrite;
-    installed = false;
-  };
-
-  return () => {
-    uninstall();
-    return output;
-  };
-};
 
 // https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
 
@@ -4760,7 +4760,7 @@ const formatErrorForTerminal = (
       typeof error.site.line === "number"
     ) {
       const content = readFileSync(new URL(error.site.url), "utf8");
-      text += inspectFileContent({
+      text += generateContentFrame({
         content,
         line: error.site.line,
         column: error.site.column,
@@ -5021,14 +5021,14 @@ const reporterList = ({
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
-          const duration = inspectDuration(msEllapsed, {
+          const duration = humanizeDuration(msEllapsed, {
             short: true,
             decimals: 0,
             rounded: false,
           });
           infos.push(ANSI.color(duration, ANSI.GREY));
           const memoryHeapUsed = memoryUsage().heapUsed;
-          const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+          const memoryHeapUsedFormatted = humanizeMemoryUsage(memoryHeapUsed, {
             short: true,
             decimals: 0,
           });
@@ -5203,13 +5203,13 @@ const renderExecutionLabel = (execution, logOptions) => {
       const duration = timings.executionEnd - timings.executionStart;
       const durationFormatted = logOptions.mockFluctuatingValues
         ? `<mock>ms`
-        : inspectDuration(duration, { short: true });
+        : humanizeDuration(duration, { short: true });
       infos.push(ANSI.color(durationFormatted, ANSI.GREY));
     }
     if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
       const memoryUsageFormatted = logOptions.mockFluctuatingValues
         ? `<mock>MB`
-        : inspectMemoryUsage(memoryUsage, { short: true });
+        : humanizeMemoryUsage(memoryUsage, { short: true });
       infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
     }
     if (infos.length) {
@@ -5487,7 +5487,7 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
   if (logOptions.mockFluctuatingValues) {
     durationLog += "<mock>s";
   } else {
-    durationLog += inspectDuration(timings.end, { short: true });
+    durationLog += humanizeDuration(timings.end, { short: true });
     const namedTimings = {
       setup: timings.executionStart,
       execution: timings.executionEnd,
@@ -5499,7 +5499,7 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
     const timingDetails = [];
     for (const key of Object.keys(namedTimings)) {
       const value = namedTimings[key];
-      const timingDuration = inspectDuration(value, { short: true });
+      const timingDuration = humanizeDuration(value, { short: true });
       const timingString = `${ANSI.color(`${key}:`, ANSI.GREY)} ${ANSI.color(
         timingDuration,
         ANSI.GREY,
@@ -8709,7 +8709,7 @@ const reportCoverageAsJson = (
   writeFileSync(fileUrl, coverageAsText);
   if (logs) {
     console.log(
-      `-> ${urlToFileSystemPath(fileUrl)} (${inspectFileSize(
+      `-> ${urlToFileSystemPath(fileUrl)} (${humanizeFileSize(
         Buffer.byteLength(coverageAsText),
       )})`,
     );
