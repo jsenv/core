@@ -1,13 +1,21 @@
 // https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
 
 import { cpus } from "node:os";
+import { cpuUsage } from "node:process";
 
-export const startMeasuringCpuUsage = () => {
+export const startMeasuringTotalCpuUsage = () => {
   let previousCpuArray = cpus();
   let previousMs = Date.now();
+  let previousCpuUsage = cpuUsage();
 
   const overall = {
     inactive: 100,
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+
+  const thisProcess = {
     active: 0,
     system: 0,
     user: 0,
@@ -68,6 +76,19 @@ export const startMeasuringCpuUsage = () => {
       overallUsageSample,
     });
 
+    const processCpuUsage = cpuUsage();
+    const thisProcessSystemMs = Math.round(
+      (processCpuUsage.system - previousCpuUsage.system) / 1000,
+    );
+    const thisProcessUserMs = Math.round(
+      (processCpuUsage.user - previousCpuUsage.user) / 1000,
+    );
+    previousCpuUsage = processCpuUsage;
+    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
+    thisProcess.active = thisProcessActiveMs / overallActiveMs;
+    thisProcess.system = thisProcessSystemMs / overallSystemMs;
+    thisProcess.user = thisProcessUserMs / overallUserMs;
+
     if (samples.length === 10) {
       let index = 0;
       for (const detail of details) {
@@ -117,6 +138,7 @@ export const startMeasuringCpuUsage = () => {
 
   return {
     overall,
+    thisProcess,
     details,
     stop: () => {
       clearInterval(interval);
@@ -139,4 +161,36 @@ export const ratioAsPercentage = (ratio) => {
   const percentageAsNumberRounded = Math.round(percentageAsNumber);
   const percentage = `${percentageAsNumberRounded}%`;
   return percentage;
+};
+
+export const startMeasuringCpuUsage = () => {
+  let previousHrtime = process.hrtime();
+  let previousCpuUsage = process.cpuUsage();
+
+  const info = {
+    used: 0,
+  };
+
+  const interval = setInterval(() => {
+    const hrtime = process.hrtime(previousHrtime);
+    previousHrtime = hrtime;
+    const cpuUsage = process.cpuUsage(previousCpuUsage);
+    previousCpuUsage = cpuUsage;
+
+    const ellapsedMs = hrtime[0] * 1000 + hrtime[1] / 1000000;
+    const userMs = Math.round(cpuUsage.user / 1000);
+    const systemMs = Math.round(cpuUsage.system / 1000);
+    const activeMs = userMs + systemMs;
+    const usedRatio = activeMs / ellapsedMs;
+    const used = Math.round(usedRatio * 100) / 100;
+    info.used = used;
+  }, 15);
+  interval.unref();
+
+  return {
+    info,
+    stop: () => {
+      clearInterval(interval);
+    },
+  };
 };

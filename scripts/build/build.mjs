@@ -16,7 +16,7 @@ await build({
     "file://**/node_modules/@jsenv/filesystem/": false,
     "file://**/node_modules/@jsenv/importmap/": false,
     "file://**/node_modules/@jsenv/integrity/": false,
-    "file://**/node_modules/@jsenv/humanize/": true, // string-width
+    "file://**/node_modules/@jsenv/humanize/": false,
     "file://**/node_modules/@jsenv/node-esm-resolution/": false,
     "file://**/node_modules/@jsenv/server/": false,
     "file://**/node_modules/@jsenv/plugin-transpilation/": false,

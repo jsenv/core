@@ -1,10 +1,10 @@
-import os, { cpus, totalmem, freemem, availableParallelism } from "node:os";
+import os, { cpus, totalmem, availableParallelism } from "node:os";
+import process$1, { cpuUsage, memoryUsage } from "node:process";
 import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, chmodSync, statSync, lstatSync, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, createException } from "./js/exception.js";
 import stringWidth from "string-width";
-import process$1, { memoryUsage } from "node:process";
 import tty from "node:tty";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { dirname } from "node:path";
@@ -3292,12 +3292,19 @@ process.platform === "linux";
 // https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
 
 
-const startMeasuringCpuUsage = () => {
+const startMeasuringTotalCpuUsage = () => {
   let previousCpuArray = cpus();
   let previousMs = Date.now();
+  let previousCpuUsage = cpuUsage();
 
   const overall = {
     inactive: 100,
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+
+  const thisProcess = {
     active: 0,
     system: 0,
     user: 0,
@@ -3358,6 +3365,19 @@ const startMeasuringCpuUsage = () => {
       overallUsageSample,
     });
 
+    const processCpuUsage = cpuUsage();
+    const thisProcessSystemMs = Math.round(
+      (processCpuUsage.system - previousCpuUsage.system) / 1000,
+    );
+    const thisProcessUserMs = Math.round(
+      (processCpuUsage.user - previousCpuUsage.user) / 1000,
+    );
+    previousCpuUsage = processCpuUsage;
+    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
+    thisProcess.active = thisProcessActiveMs / overallActiveMs;
+    thisProcess.system = thisProcessSystemMs / overallSystemMs;
+    thisProcess.user = thisProcessUserMs / overallUserMs;
+
     if (samples.length === 10) {
       let index = 0;
       for (const detail of details) {
@@ -3407,6 +3427,7 @@ const startMeasuringCpuUsage = () => {
 
   return {
     overall,
+    thisProcess,
     details,
     stop: () => {
       clearInterval(interval);
@@ -5671,8 +5692,8 @@ const coverageDefault = {
 };
 const parallelDefault = {
   max: "80%", // percentage resolved against the available cpus
-  maxCpu: "90%",
-  maxMemory: "90%",
+  maxCpu: "80%",
+  maxMemory: "50%",
 };
 
 const executeTestPlan = async ({
@@ -5780,7 +5801,7 @@ const executeTestPlan = async ({
   let finalizeCoverage;
 
   try {
-    const cpuUsage = startMeasuringCpuUsage();
+    const cpuUsage = startMeasuringTotalCpuUsage();
     operation.addEndCallback(cpuUsage.stop);
 
     let logger;
@@ -5886,7 +5907,8 @@ const executeTestPlan = async ({
         const maxMemory = parallel.maxMemory;
         if (typeof maxMemory === "string") {
           const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
-          parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
+          const totalMemory = totalmem();
+          parallel.maxMemory = Math.round(maxMemoryAsRatio * totalMemory);
         } else if (typeof maxMemory !== "number") {
           throw new TypeError(
             `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
@@ -6405,7 +6427,6 @@ To fix this warning:
           failFastAbortController.abort();
           return;
         }
-        await startAsMuchAsPossible();
       };
       const startAsMuchAsPossible = async () => {
         const promises = [];
@@ -6425,24 +6446,17 @@ To fix this warning:
             // if nothing is executing these limitations don't apply
             executionExecutingSet.size > 0
           ) {
-            const availableMemory = freemem();
-            const totalMemory = totalmem();
-            const usedMemory = totalMemory - availableMemory;
-            if (usedMemory > parallel.maxMemory) {
+            const memoryUsedByThisProcess = memoryUsage().rss;
+            if (memoryUsedByThisProcess > parallel.maxMemory) {
               // retry after Xms in case memory usage decreases
-              const promise = (async () => {
-                await operation.wait(200);
-                await startAsMuchAsPossible();
-              })();
+              const promise = operation.wait(200);
               promises.push(promise);
+              break;
             }
 
-            if (cpuUsage.overall.active > parallel.maxCpu) {
+            if (cpuUsage.thisProcess.active > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
-              const promise = (async () => {
-                await operation.wait(200);
-                await startAsMuchAsPossible();
-              })();
+              const promise = operation.wait(200);
               promises.push(promise);
               break;
             }
@@ -6456,12 +6470,17 @@ To fix this warning:
             break;
           }
           if (execution) {
-            promises.push(start(execution));
+            const promise = (async () => {
+              await start(execution);
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
           }
         }
         if (promises.length) {
           await Promise.all(promises);
           promises.length = 0;
+          await startAsMuchAsPossible();
         }
       };
 
