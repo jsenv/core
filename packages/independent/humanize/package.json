@@ -19,11 +19,11 @@
     ".": {
       "browser": {
         "development": "./src/main_browser.js",
-        "default": "./dist/browser/jsenv_humanize.js"
+        "default": "./dist/browser/jsenv_humanize_browser.js"
       },
       "node": {
         "development": "./src/main_node.js",
-        "default": "./dist/node/jsenv_hmanize.js"
+        "default": "./dist/node/jsenv_humanize_node.js"
       }
     },
     "./*": "./*"
