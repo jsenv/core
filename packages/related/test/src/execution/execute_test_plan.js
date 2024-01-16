@@ -845,14 +845,20 @@ To fix this warning:
             const memoryUsedByThisProcess = memoryUsage().rss;
             if (memoryUsedByThisProcess > parallel.maxMemory) {
               // retry after Xms in case memory usage decreases
-              const promise = operation.wait(200);
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
               promises.push(promise);
               break;
             }
 
             if (cpuUsage.thisProcess.active > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
-              const promise = operation.wait(200);
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
               promises.push(promise);
               break;
             }
@@ -876,7 +882,6 @@ To fix this warning:
         if (promises.length) {
           await Promise.all(promises);
           promises.length = 0;
-          await startAsMuchAsPossible();
         }
       };
 
