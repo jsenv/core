@@ -22,6 +22,9 @@ await build({
   entryPoints: {
     "./main_node.js": "jsenv_humanize_node.js",
   },
+  ignore: {
+    "/**/node_modules/string-width/": true,
+  },
   runtimeCompat: {
     node: "20",
   },

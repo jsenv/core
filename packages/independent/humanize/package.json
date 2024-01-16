@@ -36,8 +36,11 @@
     "build": "node ./scripts/build.mjs",
     "test": "node ./scripts/test.mjs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "string-width": "7.0.0"
+  },
   "devDependencies": {
+    "ansi-escapes": "6.2.0",
     "is-unicode-supported": "2.0.0",
     "supports-color": "9.4.0"
   }

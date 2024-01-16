@@ -1,3 +1,12 @@
+const createDetailedMessage = (message, details = {}) => {
+  let string = "".concat(message);
+  Object.keys(details).forEach(key => {
+    const value = details[key];
+    string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+  });
+  return string;
+};
+
 const inspectBoolean = value => value.toString();
 
 const inspectNull = () => "null";
@@ -253,11 +262,11 @@ const meta = ['\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\
 ];
 
 const inspectSymbol = (value, {
-  nestedInspect,
+  nestedHumanize,
   parenthesis
 }) => {
   const symbolDescription = symbolToDescription(value);
-  const symbolDescriptionSource = symbolDescription ? nestedInspect(symbolDescription) : "";
+  const symbolDescriptionSource = symbolDescription ? nestedHumanize(symbolDescription) : "";
   const symbolSource = "Symbol(".concat(symbolDescriptionSource, ")");
   if (parenthesis) return "".concat(symbolSource);
   return symbolSource;
@@ -342,7 +351,7 @@ const inspectConstructor = (value, {
 
 const inspectArray = (value, {
   seen = [],
-  nestedInspect,
+  nestedHumanize,
   depth,
   indentUsingTab,
   indentSize,
@@ -357,7 +366,7 @@ const inspectArray = (value, {
   let i = 0;
   const j = value.length;
   while (i < j) {
-    const valueSource = value.hasOwnProperty(i) ? nestedInspect(value[i], {
+    const valueSource = value.hasOwnProperty(i) ? nestedHumanize(value[i], {
       seen
     }) : "";
     if (i === 0) {
@@ -389,18 +398,18 @@ const inspectArray = (value, {
 };
 
 const inspectBigIntObject = (value, {
-  nestedInspect
+  nestedHumanize
 }) => {
-  const bigIntSource = nestedInspect(value.valueOf());
+  const bigIntSource = nestedHumanize(value.valueOf());
   return "BigInt(".concat(bigIntSource, ")");
 };
 
 const inspectBooleanObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const booleanSource = nestedInspect(value.valueOf());
+  const booleanSource = nestedHumanize(value.valueOf());
   return inspectConstructor("Boolean(".concat(booleanSource, ")"), {
     useNew,
     parenthesis
@@ -408,11 +417,11 @@ const inspectBooleanObject = (value, {
 };
 
 const inspectError = (error, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const messageSource = nestedInspect(error.message);
+  const messageSource = nestedHumanize(error.message);
   const errorSource = inspectConstructor("".concat(errorToConstructorName(error), "(").concat(messageSource, ")"), {
     useNew,
     parenthesis
@@ -432,11 +441,11 @@ const errorToConstructorName = ({
 const derivedErrorNameArray = ["EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError"];
 
 const inspectDate = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const dateSource = nestedInspect(value.valueOf(), {
+  const dateSource = nestedHumanize(value.valueOf(), {
     numericSeparator: false
   });
   return inspectConstructor("Date(".concat(dateSource, ")"), {
@@ -465,11 +474,11 @@ const inspectFunction = (value, {
 };
 
 const inspectNumberObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const numberSource = nestedInspect(value.valueOf());
+  const numberSource = nestedHumanize(value.valueOf());
   return inspectConstructor("Number(".concat(numberSource, ")"), {
     useNew,
     parenthesis
@@ -477,7 +486,7 @@ const inspectNumberObject = (value, {
 };
 
 const inspectObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   seen = [],
   depth,
   indentUsingTab,
@@ -491,18 +500,18 @@ const inspectObject = (value, {
   const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach(propertyName => {
     const propertyNameAsNumber = parseInt(propertyName, 10);
-    const propertyNameSource = nestedInspect(Number.isInteger(propertyNameAsNumber) ? propertyNameAsNumber : propertyName);
+    const propertyNameSource = nestedHumanize(Number.isInteger(propertyNameAsNumber) ? propertyNameAsNumber : propertyName);
     propertySourceArray.push({
       nameOrSymbolSource: propertyNameSource,
-      valueSource: nestedInspect(value[propertyName], {
+      valueSource: nestedHumanize(value[propertyName], {
         seen
       })
     });
   });
   Object.getOwnPropertySymbols(value).forEach(symbol => {
     propertySourceArray.push({
-      nameOrSymbolSource: "[".concat(nestedInspect(symbol), "]"),
-      valueSource: nestedInspect(value[symbol], {
+      nameOrSymbolSource: "[".concat(nestedHumanize(symbol), "]"),
+      valueSource: nestedHumanize(value[symbol], {
         seen
       })
     });
@@ -546,11 +555,11 @@ const inspectObject = (value, {
 const inspectRegExp = value => value.toString();
 
 const inspectStringObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const stringSource = nestedInspect(value.valueOf());
+  const stringSource = nestedHumanize(value.valueOf());
   return inspectConstructor("String(".concat(stringSource, ")"), {
     useNew,
     parenthesis
@@ -558,11 +567,50 @@ const inspectStringObject = (value, {
 };
 
 // primitives
-const inspectMethodSymbol = Symbol.for("inspect");
-const inspectValue = (value, options) => {
-  const customInspect = value && value[inspectMethodSymbol];
-  if (customInspect) {
-    return customInspect(options);
+const humanize = (value, {
+  parenthesis = false,
+  quote = "auto",
+  canUseTemplateString = true,
+  useNew = false,
+  objectConstructor = false,
+  showFunctionBody = false,
+  indentUsingTab = false,
+  indentSize = 2,
+  numericSeparator = true,
+  preserveLineBreaks = false
+} = {}) => {
+  const scopedHumanize = (scopedValue, scopedOptions) => {
+    const options = {
+      ...scopedOptions,
+      nestedHumanize: (nestedValue, nestedOptions = {}) => {
+        return scopedHumanize(nestedValue, {
+          ...scopedOptions,
+          depth: scopedOptions.depth + 1,
+          ...nestedOptions
+        });
+      }
+    };
+    return humanizeValue(scopedValue, options);
+  };
+  return scopedHumanize(value, {
+    parenthesis,
+    quote,
+    canUseTemplateString,
+    useNew,
+    objectConstructor,
+    showFunctionBody,
+    indentUsingTab,
+    indentSize,
+    numericSeparator,
+    preserveLineBreaks,
+    depth: 0
+  });
+};
+const humanizeMethodSymbol = Symbol.for("inspect");
+const humanizeValue = (value, options) => {
+  const customHumanize = value && value[humanizeMethodSymbol];
+  if (customHumanize) {
+    return customHumanize(options);
   }
   const primitiveType = primitiveTypeFromValue(value);
   const primitiveStringifier = primitiveStringifiers[primitiveType];
@@ -630,48 +678,336 @@ const compositeStringifiers = {
   String: inspectStringObject
 };
 
-const inspect = (value, {
-  parenthesis = false,
-  quote = "auto",
-  canUseTemplateString = true,
-  useNew = false,
-  objectConstructor = false,
-  showFunctionBody = false,
-  indentUsingTab = false,
-  indentSize = 2,
-  numericSeparator = true,
-  preserveLineBreaks = false
+const getPrecision = number => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
+const setRoundedPrecision = (number, {
+  decimals = 1,
+  decimalsWhenSmall = decimals
 } = {}) => {
-  const scopedInspect = (scopedValue, scopedOptions) => {
-    const options = {
-      ...scopedOptions,
-      nestedInspect: (nestedValue, nestedOptions = {}) => {
-        return scopedInspect(nestedValue, {
-          ...scopedOptions,
-          depth: scopedOptions.depth + 1,
-          ...nestedOptions
-        });
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round
+  });
+};
+const setPrecision = (number, {
+  decimals = 1,
+  decimalsWhenSmall = decimals
+} = {}) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt
+  });
+};
+const setDecimalsPrecision = (number, {
+  transform,
+  decimals,
+  // max decimals for number in [-Infinity, -1[]1, Infinity]
+  decimalsWhenSmall // max decimals for number in [-1,1]
+} = {}) => {
+  if (number === 0) {
+    return 0;
+  }
+  let numberCandidate = Math.abs(number);
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const humanizeEllapsedTime = (ms, {
+  short
+} = {}) => {
+  if (ms < 1000) {
+    return short ? "0s" : "0 second";
+  }
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+  if (!remaining) {
+    return inspectEllapsedUnit(primary, short);
+  }
+  return "".concat(inspectEllapsedUnit(primary, short), " and ").concat(inspectEllapsedUnit(remaining, short));
+};
+const inspectEllapsedUnit = (unit, short) => {
+  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    if (count <= 1) {
+      return "".concat(count).concat(name);
+    }
+    return "".concat(count).concat(name, "s");
+  }
+  if (count <= 1) {
+    return "".concat(count, " ").concat(name);
+  }
+  return "".concat(count, " ").concat(name, "s");
+};
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s"
+};
+const humanizeDuration = (ms, {
+  short,
+  rounded = true,
+  decimals
+} = {}) => {
+  // ignore ms below meaningfulMs so that:
+  // humanizeDuration(0.5) -> "0 second"
+  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return short ? "0s" : "0 second";
+  }
+  const {
+    primary,
+    remaining
+  } = parseMs(ms);
+  if (!remaining) {
+    return humanizeDurationUnit(primary, {
+      decimals: decimals === undefined ? primary.name === "second" ? 1 : 0 : decimals,
+      short,
+      rounded
+    });
+  }
+  return "".concat(humanizeDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded
+  }), " and ").concat(humanizeDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded
+  }));
+};
+const humanizeDurationUnit = (unit, {
+  decimals,
+  short,
+  rounded
+}) => {
+  const count = rounded ? setRoundedPrecision(unit.count, {
+    decimals
+  }) : setPrecision(unit.count, {
+    decimals
+  });
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    return "".concat(count).concat(name);
+  }
+  if (count <= 1) {
+    return "".concat(count, " ").concat(name);
+  }
+  return "".concat(count, " ").concat(name, "s");
+};
+const MS_PER_UNITS = {
+  year: 31557600000,
+  month: 2629000000,
+  week: 604800000,
+  day: 86400000,
+  hour: 3600000,
+  minute: 60000,
+  second: 1000
+};
+const parseMs = ms => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex(unitName => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+    return false;
+  });
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
       }
     };
-    return inspectValue(scopedValue, options);
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount
+      }
+    };
+  }
+  // - 1 year and 1 month is great
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount
+    }
   };
-  return scopedInspect(value, {
-    parenthesis,
-    quote,
-    canUseTemplateString,
-    useNew,
-    objectConstructor,
-    showFunctionBody,
-    indentUsingTab,
-    indentSize,
-    numericSeparator,
-    preserveLineBreaks,
-    depth: 0
+};
+
+const humanizeFileSize = (numberOfBytes, {
+  decimals,
+  short
+} = {}) => {
+  return inspectBytes(numberOfBytes, {
+    decimals,
+    short
   });
+};
+const humanizeMemoryUsage = (metricValue, {
+  decimals,
+  short
+} = {}) => {
+  return inspectBytes(metricValue, {
+    decimals,
+    fixedDecimals: true,
+    short
+  });
+};
+const inspectBytes = (number, {
+  fixedDecimals = false,
+  decimals,
+  short
+} = {}) => {
+  if (number === 0) {
+    return "0 B";
+  }
+  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  if (decimals === undefined) {
+    if (unitNumber < 100) {
+      decimals = 1;
+    } else {
+      decimals = 0;
+    }
+  }
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals,
+    decimalsWhenSmall: 1
+  });
+  const value = fixedDecimals ? unitNumberRounded.toFixed(decimals) : unitNumberRounded;
+  if (short) {
+    return "".concat(value).concat(unitName);
+  }
+  return "".concat(value, " ").concat(unitName);
+};
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const distributePercentages = (namedNumbers, {
+  maxPrecisionHint = 2
+} = {}) => {
+  const numberNames = Object.keys(namedNumbers);
+  if (numberNames.length === 0) {
+    return {};
+  }
+  if (numberNames.length === 1) {
+    const firstNumberName = numberNames[0];
+    return {
+      [firstNumberName]: "100 %"
+    };
+  }
+  const numbers = numberNames.map(name => namedNumbers[name]);
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const ratios = numbers.map(number => number / total);
+  const percentages = {};
+  ratios.pop();
+  ratios.forEach((ratio, index) => {
+    const percentage = ratio * 100;
+    percentages[numberNames[index]] = percentage;
+  });
+  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
+  let precision = 0;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+    if (percentage < lowestPercentage) {
+      // check the amout of meaningful decimals
+      // and that what we will use
+      const percentageRounded = setRoundedPrecision(percentage);
+      const percentagePrecision = getPrecision(percentageRounded);
+      if (percentagePrecision > precision) {
+        precision = percentagePrecision;
+      }
+    }
+  });
+  let remainingPercentage = 100;
+  Object.keys(percentages).forEach(name => {
+    const percentage = percentages[name];
+    const percentageAllocated = setRoundedPrecision(percentage, {
+      decimals: precision
+    });
+    remainingPercentage -= percentageAllocated;
+    percentages[name] = percentageAllocated;
+  });
+  const lastName = numberNames[numberNames.length - 1];
+  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
+    decimals: precision
+  });
+  return percentages;
 };
 
 const formatDefault = v => v;
-const inspectFileContent = ({
+const generateContentFrame = ({
   content,
   line,
   column,
@@ -818,332 +1154,4 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-const getPrecision = number => {
-  if (Math.floor(number) === number) return 0;
-  const [, decimals] = number.toString().split(".");
-  return decimals.length || 0;
-};
-const setRoundedPrecision = (number, {
-  decimals = 1,
-  decimalsWhenSmall = decimals
-} = {}) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round
-  });
-};
-const setPrecision = (number, {
-  decimals = 1,
-  decimalsWhenSmall = decimals
-} = {}) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: parseInt
-  });
-};
-const setDecimalsPrecision = (number, {
-  transform,
-  decimals,
-  // max decimals for number in [-Infinity, -1[]1, Infinity]
-  decimalsWhenSmall // max decimals for number in [-1,1]
-} = {}) => {
-  if (number === 0) {
-    return 0;
-  }
-  let numberCandidate = Math.abs(number);
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-};
-
-// https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const inspectEllapsedTime = (ms, {
-  short
-} = {}) => {
-  if (ms < 1000) {
-    return short ? "0s" : "0 second";
-  }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
-  if (!remaining) {
-    return inspectEllapsedUnit(primary, short);
-  }
-  return "".concat(inspectEllapsedUnit(primary, short), " and ").concat(inspectEllapsedUnit(remaining, short));
-};
-const inspectEllapsedUnit = (unit, short) => {
-  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-  let name = unit.name;
-  if (short) {
-    name = unitShort[name];
-    if (count <= 1) {
-      return "".concat(count).concat(name);
-    }
-    return "".concat(count).concat(name, "s");
-  }
-  if (count <= 1) {
-    return "".concat(count, " ").concat(name);
-  }
-  return "".concat(count, " ").concat(name, "s");
-};
-const unitShort = {
-  year: "y",
-  month: "m",
-  week: "w",
-  day: "d",
-  hour: "h",
-  minute: "m",
-  second: "s"
-};
-const inspectDuration = (ms, {
-  short,
-  rounded = true,
-  decimals
-} = {}) => {
-  // ignore ms below meaningfulMs so that:
-  // inspectDuration(0.5) -> "0 second"
-  // inspectDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return short ? "0s" : "0 second";
-  }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
-  if (!remaining) {
-    return inspectDurationUnit(primary, {
-      decimals: decimals === undefined ? primary.name === "second" ? 1 : 0 : decimals,
-      short,
-      rounded
-    });
-  }
-  return "".concat(inspectDurationUnit(primary, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded
-  }), " and ").concat(inspectDurationUnit(remaining, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded
-  }));
-};
-const inspectDurationUnit = (unit, {
-  decimals,
-  short,
-  rounded
-}) => {
-  const count = rounded ? setRoundedPrecision(unit.count, {
-    decimals
-  }) : setPrecision(unit.count, {
-    decimals
-  });
-  let name = unit.name;
-  if (short) {
-    name = unitShort[name];
-    return "".concat(count).concat(name);
-  }
-  if (count <= 1) {
-    return "".concat(count, " ").concat(name);
-  }
-  return "".concat(count, " ").concat(name, "s");
-};
-const MS_PER_UNITS = {
-  year: 31557600000,
-  month: 2629000000,
-  week: 604800000,
-  day: 86400000,
-  hour: 3600000,
-  minute: 60000,
-  second: 1000
-};
-const parseMs = ms => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex(unitName => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-    return false;
-  });
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount
-      }
-    };
-  }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
-  // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount
-      }
-    };
-  }
-  // - 1 year and 1 month is great
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount
-    },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount
-    }
-  };
-};
-
-const inspectFileSize = (numberOfBytes, {
-  decimals,
-  short
-} = {}) => {
-  return inspectBytes(numberOfBytes, {
-    decimals,
-    short
-  });
-};
-const inspectMemoryUsage = (metricValue, {
-  decimals,
-  short
-} = {}) => {
-  return inspectBytes(metricValue, {
-    decimals,
-    fixedDecimals: true,
-    short
-  });
-};
-const inspectBytes = (number, {
-  fixedDecimals = false,
-  decimals,
-  short
-} = {}) => {
-  if (number === 0) {
-    return "0 B";
-  }
-  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
-  const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
-  if (decimals === undefined) {
-    if (unitNumber < 100) {
-      decimals = 1;
-    } else {
-      decimals = 0;
-    }
-  }
-  const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals,
-    decimalsWhenSmall: 1
-  });
-  const value = fixedDecimals ? unitNumberRounded.toFixed(decimals) : unitNumberRounded;
-  if (short) {
-    return "".concat(value).concat(unitName);
-  }
-  return "".concat(value, " ").concat(unitName);
-};
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-const distributePercentages = (namedNumbers, {
-  maxPrecisionHint = 2
-} = {}) => {
-  const numberNames = Object.keys(namedNumbers);
-  if (numberNames.length === 0) {
-    return {};
-  }
-  if (numberNames.length === 1) {
-    const firstNumberName = numberNames[0];
-    return {
-      [firstNumberName]: "100 %"
-    };
-  }
-  const numbers = numberNames.map(name => namedNumbers[name]);
-  const total = numbers.reduce((sum, value) => sum + value, 0);
-  const ratios = numbers.map(number => number / total);
-  const percentages = {};
-  ratios.pop();
-  ratios.forEach((ratio, index) => {
-    const percentage = ratio * 100;
-    percentages[numberNames[index]] = percentage;
-  });
-  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
-  let precision = 0;
-  Object.keys(percentages).forEach(name => {
-    const percentage = percentages[name];
-    if (percentage < lowestPercentage) {
-      // check the amout of meaningful decimals
-      // and that what we will use
-      const percentageRounded = setRoundedPrecision(percentage);
-      const percentagePrecision = getPrecision(percentageRounded);
-      if (percentagePrecision > precision) {
-        precision = percentagePrecision;
-      }
-    }
-  });
-  let remainingPercentage = 100;
-  Object.keys(percentages).forEach(name => {
-    const percentage = percentages[name];
-    const percentageAllocated = setRoundedPrecision(percentage, {
-      decimals: precision
-    });
-    remainingPercentage -= percentageAllocated;
-    percentages[name] = percentageAllocated;
-  });
-  const lastName = numberNames[numberNames.length - 1];
-  percentages[lastName] = setRoundedPrecision(remainingPercentage, {
-    decimals: precision
-  });
-  return percentages;
-};
-
-export { determineQuote, distributePercentages, inspect, inspectChar, inspectDuration, inspectEllapsedTime, inspectFileContent, inspectFileSize, inspectMemoryUsage, inspectMethodSymbol };
+export { createDetailedMessage, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemoryUsage, humanizeMethodSymbol, inspectChar };
