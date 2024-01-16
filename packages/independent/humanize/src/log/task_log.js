@@ -1,6 +1,6 @@
-import { inspectDuration, UNICODE } from "@jsenv/inspect";
-
-import { createDynamicLog } from "./dynamic_log.js";
+import { inspectDuration } from "../time/time.js";
+import { UNICODE } from "./unicode.js";
+import { createDynamicLog } from "./animated_log.js";
 import { startSpinner } from "./spinner.js";
 
 export const createTaskLog = (

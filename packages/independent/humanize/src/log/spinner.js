@@ -1,4 +1,4 @@
-import { ANSI } from "@jsenv/inspect";
+import { ANSI } from "./ansi.js";
 
 export const startSpinner = ({
   dynamicLog,

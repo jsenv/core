@@ -3,9 +3,9 @@
 // either the whole log can be rewritten (updated)
 // or it will be kept and second log appended at the bottom
 
-import { createDynamicLog } from "@jsenv/log";
+import { createAnimatedLog } from "@jsenv/inspect";
 
-const log = createDynamicLog();
+const animatedLog = createAnimatedLog();
 log.update(`
 1
 2

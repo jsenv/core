@@ -1,12 +1,12 @@
 {
-  "name": "@jsenv/inspect",
-  "version": "2.1.0",
-  "description": "Convert a value into a readable string",
+  "name": "@jsenv/humanize",
+  "version": "1.0.0",
+  "description": "Generate messages meant to read by humans",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/inspect"
+    "directory": "packages/independent/humanize"
   },
   "publishConfig": {
     "access": "public"
@@ -19,11 +19,11 @@
     ".": {
       "browser": {
         "development": "./src/main_browser.js",
-        "default": "./dist/browser/jsenv_inspect.js"
+        "default": "./dist/browser/jsenv_humanize.js"
       },
       "node": {
         "development": "./src/main_node.js",
-        "default": "./dist/node/jsenv_inspect.js"
+        "default": "./dist/node/jsenv_hmanize.js"
       }
     },
     "./*": "./*"
