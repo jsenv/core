@@ -19,11 +19,11 @@
     ".": {
       "browser": {
         "development": "./src/main_browser.js",
-        "default": "./dist/jsenv_inspect_browser.js"
+        "default": "./dist/browser/jsenv_inspect.js"
       },
       "node": {
         "development": "./src/main_node.js",
-        "default": "./dist/jsenv_inspect_node.js"
+        "default": "./dist/node/jsenv_inspect.js"
       }
     },
     "./*": "./*"

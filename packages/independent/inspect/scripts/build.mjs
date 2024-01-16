@@ -2,9 +2,9 @@ import { build } from "@jsenv/core";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  buildDirectoryUrl: new URL("../dist/browser/", import.meta.url),
   entryPoints: {
-    "./browser_main.js": "jsenv_inspect_browser.js",
+    "./main_browser.js": "jsenv_inspect_browser.js",
   },
   runtimeCompat: {
     chrome: "64",
@@ -18,9 +18,9 @@ await build({
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  buildDirectoryUrl: new URL("../dist/node/", import.meta.url),
   entryPoints: {
-    "./node_main.js": "jsenv_inspect_node.js",
+    "./main_node.js": "jsenv_inspect_node.js",
   },
   runtimeCompat: {
     node: "20",
