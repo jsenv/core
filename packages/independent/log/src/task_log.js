@@ -1,6 +1,5 @@
-import { inspectDuration } from "@jsenv/inspect";
+import { inspectDuration, UNICODE } from "@jsenv/inspect";
 
-import { UNICODE } from "./unicode.js";
 import { createDynamicLog } from "./dynamic_log.js";
 import { startSpinner } from "./spinner.js";
 

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/inspect",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Convert a value into a readable string",
   "license": "MIT",
   "repository": {
@@ -17,7 +17,14 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/main.js"
+      "browser": {
+        "development": "./src/browser_main.js",
+        "default": "./dist/jsenv_inspect_browser.js"
+      },
+      "node": {
+        "development": "./src/node_main.js",
+        "default": "./dist/jsenv_inspect_node.js"
+      }
     },
     "./*": "./*"
   },
@@ -26,8 +33,12 @@
   ],
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
+    "build": "node ./scripts/build.mjs",
     "test": "node ./scripts/test.mjs"
   },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "is-unicode-supported": "2.0.0",
+    "supports-color": "9.4.0"
+  }
 }

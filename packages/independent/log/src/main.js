@@ -7,10 +7,6 @@
 
 export { createLogger } from "./logger.js";
 
-// color and symbols
-export { ANSI } from "./ansi.js";
-export { UNICODE } from "./unicode.js";
-
 // formatting messages
 export { createDetailedMessage } from "./detailed_message.js";
 // dynamic logs (log that can update themselves in the terminal)
