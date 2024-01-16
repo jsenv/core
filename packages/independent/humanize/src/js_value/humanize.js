@@ -65,7 +65,7 @@ export const humanize = (
 
 export const humanizeMethodSymbol = Symbol.for("inspect");
 
-export const humanizeValue = (value, options) => {
+const humanizeValue = (value, options) => {
   const customHumanize = value && value[humanizeMethodSymbol];
   if (customHumanize) {
     return customHumanize(options);
