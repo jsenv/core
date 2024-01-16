@@ -25,7 +25,7 @@ The core tools provided by jsenv:
 - Versioning during build is robust and <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">avoids cascading hash changes</a><sup>↗</sup>
 - Advanced support of top level await, allowing to use it everywhere
 - Advanced support of web workers including worker type module
-- Unlock js module features on a regular `<script>` when needed. If you need the behaviour of `<script>` which is to block execution of following `<script>` in the page, you'll be happy to [still have the power of js modules](<https://github.com/jsenv/core/wiki/G)-Plugins#22-asjsclassic>), like imports, at your disposal.
+- Unlock [js module features on a classic `<script>`](<https://github.com/jsenv/core/wiki/G)-Plugins#22-asjsclassic>).
 
 # Demos
 
