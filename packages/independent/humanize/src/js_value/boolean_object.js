@@ -2,9 +2,9 @@ import { inspectConstructor } from "./constructor.js";
 
 export const inspectBooleanObject = (
   value,
-  { nestedInspect, useNew, parenthesis },
+  { nestedHumanize, useNew, parenthesis },
 ) => {
-  const booleanSource = nestedhumanize(value.valueOf());
+  const booleanSource = nestedHumanize(value.valueOf());
   return inspectConstructor(`Boolean(${booleanSource})`, {
     useNew,
     parenthesis,

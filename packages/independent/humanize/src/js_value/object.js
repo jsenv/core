@@ -1,13 +1,13 @@
 import {
   preNewLineAndIndentation,
   wrapNewLineAndIndentation,
-} from "../internal/indentation.js";
+} from "../utils/indentation.js";
 import { inspectConstructor } from "./constructor.js";
 
 export const inspectObject = (
   value,
   {
-    nestedInspect,
+    nestedHumanize,
     seen = [],
     depth,
     indentUsingTab,
@@ -24,20 +24,20 @@ export const inspectObject = (
   const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach((propertyName) => {
     const propertyNameAsNumber = parseInt(propertyName, 10);
-    const propertyNameSource = nestedhumanize(
+    const propertyNameSource = nestedHumanize(
       Number.isInteger(propertyNameAsNumber)
         ? propertyNameAsNumber
         : propertyName,
     );
     propertySourceArray.push({
       nameOrSymbolSource: propertyNameSource,
-      valueSource: nestedhumanize(value[propertyName], { seen }),
+      valueSource: nestedHumanize(value[propertyName], { seen }),
     });
   });
   Object.getOwnPropertySymbols(value).forEach((symbol) => {
     propertySourceArray.push({
-      nameOrSymbolSource: `[${nestedhumanize(symbol)}]`,
-      valueSource: nestedhumanize(value[symbol], { seen }),
+      nameOrSymbolSource: `[${nestedHumanize(symbol)}]`,
+      valueSource: nestedHumanize(value[symbol], { seen }),
     });
   });
 

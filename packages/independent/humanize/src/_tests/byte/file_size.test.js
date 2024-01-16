@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert";
 
-import { inspectFileSize } from "@jsenv/humanize";
+import { humanizeFileSize } from "@jsenv/humanize";
 
 const test = (fileSize, expected) => {
-  const actual = inspectFileSize(fileSize);
+  const actual = humanizeFileSize(fileSize);
   assert({ actual, expected });
 };
 

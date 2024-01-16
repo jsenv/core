@@ -2,8 +2,8 @@ import { inspectConstructor } from "./constructor.js";
 
 export const inspectNumberObject = (
   value,
-  { nestedInspect, useNew, parenthesis },
+  { nestedHumanize, useNew, parenthesis },
 ) => {
-  const numberSource = nestedhumanize(value.valueOf());
+  const numberSource = nestedHumanize(value.valueOf());
   return inspectConstructor(`Number(${numberSource})`, { useNew, parenthesis });
 };

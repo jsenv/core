@@ -34,11 +34,11 @@ export const humanize = (
     preserveLineBreaks = false,
   } = {},
 ) => {
-  const scopedInspect = (scopedValue, scopedOptions) => {
+  const scopedHumanize = (scopedValue, scopedOptions) => {
     const options = {
       ...scopedOptions,
-      nestedInspect: (nestedValue, nestedOptions = {}) => {
-        return scopedInspect(nestedValue, {
+      nestedHumanize: (nestedValue, nestedOptions = {}) => {
+        return scopedHumanize(nestedValue, {
           ...scopedOptions,
           depth: scopedOptions.depth + 1,
           ...nestedOptions,
@@ -48,7 +48,7 @@ export const humanize = (
     return humanizeValue(scopedValue, options);
   };
 
-  return scopedInspect(value, {
+  return scopedHumanize(value, {
     parenthesis,
     quote,
     canUseTemplateString,

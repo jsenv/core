@@ -1,7 +1,10 @@
 import { inspectConstructor } from "./constructor.js";
 
-export const inspectError = (error, { nestedInspect, useNew, parenthesis }) => {
-  const messageSource = nestedhumanize(error.message);
+export const inspectError = (
+  error,
+  { nestedHumanize, useNew, parenthesis },
+) => {
+  const messageSource = nestedHumanize(error.message);
 
   const errorSource = inspectConstructor(
     `${errorToConstructorName(error)}(${messageSource})`,

@@ -1,14 +1,14 @@
 import {
   preNewLineAndIndentation,
   wrapNewLineAndIndentation,
-} from "../internal/indentation.js";
+} from "../utils/indentation.js";
 import { inspectConstructor } from "./constructor.js";
 
 export const inspectArray = (
   value,
   {
     seen = [],
-    nestedInspect,
+    nestedHumanize,
     depth,
     indentUsingTab,
     indentSize,
@@ -27,7 +27,7 @@ export const inspectArray = (
 
   while (i < j) {
     const valueSource = value.hasOwnProperty(i)
-      ? nestedhumanize(value[i], { seen })
+      ? nestedHumanize(value[i], { seen })
       : "";
     if (i === 0) {
       valuesSource += valueSource;

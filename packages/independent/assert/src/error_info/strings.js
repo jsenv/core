@@ -1,4 +1,4 @@
-import { inspect, determineQuote, inspectChar } from "@jsenv/humanize";
+import { humanize, determineQuote, inspectChar } from "@jsenv/humanize";
 
 import { isRegExp, isError } from "../utils/object_subtype.js";
 import { createDetailedMessage } from "./utils/detailed_message.js";

@@ -2,9 +2,9 @@ import { inspectConstructor } from "./constructor.js";
 
 export const inspectStringObject = (
   value,
-  { nestedInspect, useNew, parenthesis },
+  { nestedHumanize, useNew, parenthesis },
 ) => {
-  const stringSource = nestedhumanize(value.valueOf());
+  const stringSource = nestedHumanize(value.valueOf());
 
   return inspectConstructor(`String(${stringSource})`, { useNew, parenthesis });
 };

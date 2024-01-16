@@ -1,4 +1,4 @@
-import { inspectFileSize, distributePercentages, ANSI } from "@jsenv/humanize";
+import { humanizeFileSize, distributePercentages, ANSI } from "@jsenv/humanize";
 
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 
@@ -167,7 +167,7 @@ const determineCategory = (urlInfo) => {
 const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   const addPart = (name, { count, size, percentage }) => {
     parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${inspectFileSize(
+      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${humanizeFileSize(
         size,
       )} / ${percentage} %)`,
     );
@@ -178,7 +178,7 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   //   parts.push(
   //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
   //       sourcemaps.count
-  //     } (${inspectFileSize(sourcemaps.size)})`,
+  //     } (${humanizeFileSize(sourcemaps.size)})`,
   //   )
   // }
   if (html.count) {

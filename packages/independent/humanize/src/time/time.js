@@ -44,8 +44,8 @@ export const humanizeDuration = (
   { short, rounded = true, decimals } = {},
 ) => {
   // ignore ms below meaningfulMs so that:
-  // inspectDuration(0.5) -> "0 second"
-  // inspectDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // humanizeDuration(0.5) -> "0 second"
+  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
   // This tool is meant to be read by humans and it would be barely readable to see
   // "0.0001 second" (stands for 0.1 millisecond)
   // yes we could return "0.1 millisecond" but we choosed consistency over precision
@@ -55,24 +55,24 @@ export const humanizeDuration = (
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
-    return inspectDurationUnit(primary, {
+    return humanizeDurationUnit(primary, {
       decimals:
         decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
       short,
       rounded,
     });
   }
-  return `${inspectDurationUnit(primary, {
+  return `${humanizeDurationUnit(primary, {
     decimals: decimals === undefined ? 0 : decimals,
     short,
     rounded,
-  })} and ${inspectDurationUnit(remaining, {
+  })} and ${humanizeDurationUnit(remaining, {
     decimals: decimals === undefined ? 0 : decimals,
     short,
     rounded,
   })}`;
 };
-const inspectDurationUnit = (unit, { decimals, short, rounded }) => {
+const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
   const count = rounded
     ? setRoundedPrecision(unit.count, { decimals })
     : setPrecision(unit.count, { decimals });

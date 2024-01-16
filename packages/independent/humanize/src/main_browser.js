@@ -1,4 +1,6 @@
-export { formatJsValue, humanizeMethodSymbol } from "./js_value/js_value.js";
+export { createDetailedMessage } from "./log/detailed_message.js";
+
+export { humanize, humanizeMethodSymbol } from "./js_value/humanize.js";
 export { determineQuote, inspectChar } from "./js_value/string.js";
 
 export { humanizeDuration, humanizeEllapsedTime } from "./time/time.js";

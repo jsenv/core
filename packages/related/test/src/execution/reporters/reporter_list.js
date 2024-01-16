@@ -3,8 +3,8 @@ import stripAnsi from "strip-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
 import {
   createDynamicLog,
-  inspectDuration,
-  inspectMemoryUsage,
+  humanizeDuration,
+  humanizeMemoryUsage,
   ANSI,
   UNICODE,
 } from "@jsenv/humanize";
@@ -111,14 +111,14 @@ export const reporterList = ({
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
-          const duration = inspectDuration(msEllapsed, {
+          const duration = humanizeDuration(msEllapsed, {
             short: true,
             decimals: 0,
             rounded: false,
           });
           infos.push(ANSI.color(duration, ANSI.GREY));
           const memoryHeapUsed = memoryUsage().heapUsed;
-          const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+          const memoryHeapUsedFormatted = humanizeMemoryUsage(memoryHeapUsed, {
             short: true,
             decimals: 0,
           });
@@ -293,13 +293,13 @@ const renderExecutionLabel = (execution, logOptions) => {
       const duration = timings.executionEnd - timings.executionStart;
       const durationFormatted = logOptions.mockFluctuatingValues
         ? `<mock>ms`
-        : inspectDuration(duration, { short: true });
+        : humanizeDuration(duration, { short: true });
       infos.push(ANSI.color(durationFormatted, ANSI.GREY));
     }
     if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
       const memoryUsageFormatted = logOptions.mockFluctuatingValues
         ? `<mock>MB`
-        : inspectMemoryUsage(memoryUsage, { short: true });
+        : humanizeMemoryUsage(memoryUsage, { short: true });
       infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
     }
     if (infos.length) {
@@ -577,7 +577,7 @@ export const renderOutro = (testPlanResult, logOptions = {}) => {
   if (logOptions.mockFluctuatingValues) {
     durationLog += "<mock>s";
   } else {
-    durationLog += inspectDuration(timings.end, { short: true });
+    durationLog += humanizeDuration(timings.end, { short: true });
     const namedTimings = {
       setup: timings.executionStart,
       execution: timings.executionEnd,
@@ -589,7 +589,7 @@ export const renderOutro = (testPlanResult, logOptions = {}) => {
     const timingDetails = [];
     for (const key of Object.keys(namedTimings)) {
       const value = namedTimings[key];
-      const timingDuration = inspectDuration(value, { short: true });
+      const timingDuration = humanizeDuration(value, { short: true });
       const timingString = `${ANSI.color(`${key}:`, ANSI.GREY)} ${ANSI.color(
         timingDuration,
         ANSI.GREY,
