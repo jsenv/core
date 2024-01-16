@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@jsenv/filesystem": "4.6.3",
+    "@jsenv/inspect": "2.1.0",
     "@jsenv/log": "4.0.0",
     "@jsenv/url-meta": "8.4.0",
     "@jsenv/urls": "2.2.2",

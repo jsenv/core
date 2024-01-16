@@ -1,4 +1,4 @@
-import { UNICODE } from "@jsenv/log";
+import { UNICODE } from "@jsenv/inspect";
 
 console.log(`${UNICODE.COMMAND} cd dir/`);
 console.log(`${UNICODE.DEBUG} debug`);

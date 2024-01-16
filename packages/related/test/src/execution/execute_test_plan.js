@@ -13,7 +13,8 @@ import {
   assertAndNormalizeDirectoryUrl,
   collectFiles,
 } from "@jsenv/filesystem";
-import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/log";
+import { UNICODE } from "@jsenv/inspect";
+import { createLogger, createDetailedMessage } from "@jsenv/log";
 import {
   startGithubCheckRun,
   readGitHubWorkflowEnv,

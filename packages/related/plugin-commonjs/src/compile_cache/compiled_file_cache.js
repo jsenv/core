@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { createLogger, UNICODE } from "@jsenv/log";
+import { UNICODE } from "@jsenv/inspect";
+import { createLogger } from "@jsenv/log";
 import {
   assertAndNormalizeFileUrl,
   ensureEmptyDirectory,

@@ -1,8 +1,13 @@
 import { memoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
-import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
-import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
+import {
+  inspectDuration,
+  inspectMemoryUsage,
+  ANSI,
+  UNICODE,
+} from "@jsenv/inspect";
+import { createDynamicLog } from "@jsenv/log";
 
 import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 

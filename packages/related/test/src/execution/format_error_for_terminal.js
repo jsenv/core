@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { inspectFileContent } from "@jsenv/inspect";
+import { inspectFileContent, ANSI } from "@jsenv/inspect";
 import { urlToFileSystemPath } from "@jsenv/urls";
-import { ANSI } from "@jsenv/log";
 
 export const formatErrorForTerminal = (
   error,

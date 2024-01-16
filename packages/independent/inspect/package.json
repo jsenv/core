@@ -18,11 +18,11 @@
   "exports": {
     ".": {
       "browser": {
-        "development": "./src/browser_main.js",
+        "development": "./src/main_browser.js",
         "default": "./dist/jsenv_inspect_browser.js"
       },
       "node": {
-        "development": "./src/node_main.js",
+        "development": "./src/main_node.js",
         "default": "./dist/jsenv_inspect_node.js"
       }
     },

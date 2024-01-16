@@ -12,7 +12,8 @@ import {
 import { relative } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import prompts from "prompts";
-import { UNICODE, createTaskLog } from "@jsenv/log";
+import { UNICODE } from "@jsenv/inspect";
+import { createTaskLog } from "@jsenv/log";
 
 const copy = (fromUrl, toUrl) => {
   const stat = statSync(fromUrl);
