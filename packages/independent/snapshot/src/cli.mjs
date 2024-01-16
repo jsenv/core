@@ -28,7 +28,8 @@ pattern: files matching this pattern will be removed; can use "*" and "**"
 
 const commandHandlers = {
   clear: async (pattern) => {
-    const currentDirectoryUrl = pathToFileURL(`${process.cwd()}/`);
+    const currentDirectoryPath = process.cwd();
+    const currentDirectoryUrl = pathToFileURL(`${currentDirectoryPath}/`);
     clearDirectorySync(currentDirectoryUrl, pattern);
   },
 };
@@ -41,4 +42,4 @@ if (!commandHandler) {
   process.exit(1);
 }
 
-await commandHandler(positionals.slice(1));
+await commandHandler(...positionals.slice(1));

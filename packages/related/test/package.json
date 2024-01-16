@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -39,7 +39,7 @@
     "@c88/v8-coverage": "0.1.1",
     "@jsenv/abort": "4.3.0",
     "@jsenv/ast": "6.0.2",
-    "@jsenv/filesystem": "4.6.3",
+    "@jsenv/filesystem": "4.6.4",
     "@jsenv/github-check-run": "0.1.9",
     "@jsenv/humanize": "1.0.0",
     "@jsenv/plugin-supervisor": "1.4.2",
