@@ -1,6 +1,6 @@
 import { isIP } from "node:net";
 import cluster from "node:cluster";
-import { createDetailedMessage, createLogger } from "@jsenv/log";
+import { createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 

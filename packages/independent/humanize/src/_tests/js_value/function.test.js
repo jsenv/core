@@ -1,16 +1,16 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 // const arrowFunctionSupported = (() => {}).prototype === null
 
 {
-  const actual = inspect(function () {});
+  const actual = humanize(function () {});
   const expected = `function () {/* hidden */}`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(function () {}, { showFunctionBody: true });
+  const actual = humanize(function () {}, { showFunctionBody: true });
   const expected = "function () {}";
   assert({ actual, expected });
 }
@@ -19,7 +19,7 @@ import { inspect } from "@jsenv/inspect";
   const value = function () {
     return true;
   };
-  const actual = inspect(value, { showFunctionBody: true });
+  const actual = humanize(value, { showFunctionBody: true });
   const expected = value.toString();
   assert({ actual, expected });
 }
@@ -28,12 +28,12 @@ function named(a) {
   return a;
 }
 {
-  const actual = inspect(named);
+  const actual = humanize(named);
   const expected = `function named() {/* hidden */}`;
   assert({ actual, expected });
 }
 {
-  const actual = inspect(named, { showFunctionBody: true });
+  const actual = humanize(named, { showFunctionBody: true });
   const expected = named.toString();
   assert({ actual, expected });
 }
@@ -43,7 +43,7 @@ function named(a) {
     // eslint-disable-next-line object-shorthand
     function: function () {},
   };
-  const actual = inspect(nested);
+  const actual = humanize(nested);
   const expected = `{
   "function": function () {/* hidden */}
 }`;

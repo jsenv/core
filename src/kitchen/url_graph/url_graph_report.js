@@ -1,4 +1,4 @@
-import { inspectFileSize, distributePercentages, ANSI } from "@jsenv/inspect";
+import { inspectFileSize, distributePercentages, ANSI } from "@jsenv/humanize";
 
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 

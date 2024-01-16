@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert";
 
-import { inspectEllapsedTime } from "@jsenv/inspect";
+import { humanizeEllapsedTime } from "@jsenv/humanize";
 
 const test = (durationInMs, expected) => {
-  const actual = inspectEllapsedTime(durationInMs);
+  const actual = humanizeEllapsedTime(durationInMs);
   assert({ actual, expected });
 };
 

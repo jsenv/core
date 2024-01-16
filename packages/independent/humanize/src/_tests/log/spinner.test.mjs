@@ -1,7 +1,7 @@
 // import { assert } from "@jsenv/assert"
 
-// import { startSpinner } from "@jsenv/log"
-// import { spyStreamOutput } from "@jsenv/log/src/internal/spy_stream_output.js"
+// import { startSpinner } from "@jsenv/humanize"
+// import { spyStreamOutput } from "@jsenv/humanize/src/internal/spy_stream_output.js"
 
 // let getOutput = spyStreamOutput(process.stdout)
 // startSpinner({

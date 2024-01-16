@@ -27,7 +27,7 @@ export const inspectArray = (
 
   while (i < j) {
     const valueSource = value.hasOwnProperty(i)
-      ? nestedInspect(value[i], { seen })
+      ? nestedhumanize(value[i], { seen })
       : "";
     if (i === 0) {
       valuesSource += valueSource;

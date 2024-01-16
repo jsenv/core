@@ -24,20 +24,20 @@ export const inspectObject = (
   const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach((propertyName) => {
     const propertyNameAsNumber = parseInt(propertyName, 10);
-    const propertyNameSource = nestedInspect(
+    const propertyNameSource = nestedhumanize(
       Number.isInteger(propertyNameAsNumber)
         ? propertyNameAsNumber
         : propertyName,
     );
     propertySourceArray.push({
       nameOrSymbolSource: propertyNameSource,
-      valueSource: nestedInspect(value[propertyName], { seen }),
+      valueSource: nestedhumanize(value[propertyName], { seen }),
     });
   });
   Object.getOwnPropertySymbols(value).forEach((symbol) => {
     propertySourceArray.push({
-      nameOrSymbolSource: `[${nestedInspect(symbol)}]`,
-      valueSource: nestedInspect(value[symbol], { seen }),
+      nameOrSymbolSource: `[${nestedhumanize(symbol)}]`,
+      valueSource: nestedhumanize(value[symbol], { seen }),
     });
   });
 

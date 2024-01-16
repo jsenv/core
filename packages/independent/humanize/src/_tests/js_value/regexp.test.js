@@ -1,14 +1,14 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect(/ok/g);
+  const actual = humanize(/ok/g);
   const expected = "/ok/g";
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(new RegExp("foo", "g"));
+  const actual = humanize(new RegExp("foo", "g"));
   const expected = "/foo/g";
   assert({ actual, expected });
 }

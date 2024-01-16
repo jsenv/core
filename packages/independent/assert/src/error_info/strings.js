@@ -1,4 +1,4 @@
-import { inspect, determineQuote, inspectChar } from "@jsenv/inspect";
+import { inspect, determineQuote, inspectChar } from "@jsenv/humanize";
 
 import { isRegExp, isError } from "../utils/object_subtype.js";
 import { createDetailedMessage } from "./utils/detailed_message.js";
@@ -64,8 +64,8 @@ const getStringComparisonErrorInfo = ({
   const formatDetails = ({ annotationLabel, expectedOverview = true }) => {
     if (actual.includes(`${COLUMN_MARKER_CHAR} unexpected character`)) {
       return {
-        actual: inspect(actual, { preserveLineBreaks: true }),
-        expected: inspect(expected, { preserveLineBreaks: true }),
+        actual: humanize(actual, { preserveLineBreaks: true }),
+        expected: humanize(expected, { preserveLineBreaks: true }),
       };
     }
 
@@ -196,7 +196,7 @@ const getStringComparisonErrorInfo = ({
           type: "CharacterAssertionError",
           message: createDetailedMessage(message, {
             ...formatDetails({
-              annotationLabel: `unexpected ${inspect(
+              annotationLabel: `unexpected ${humanize(
                 actualChar,
               )}, expected to continue with`,
             }),
@@ -252,7 +252,7 @@ const getStringComparisonErrorInfo = ({
       } else {
         columnIndex--;
       }
-      annotationLabel = `expected to end here, on ${inspect(
+      annotationLabel = `expected to end here, on ${humanize(
         expected[expectedLength - 1],
       )}`;
     }

@@ -1,14 +1,14 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect([]);
+  const actual = humanize([]);
   const expected = `[]`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect([[]]);
+  const actual = humanize([[]]);
   const expected = `[
   []
 ]`;
@@ -16,7 +16,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect(Array(3));
+  const actual = humanize(Array(3));
   // prettier-ignore
   const expected = `[
   ,
@@ -27,7 +27,7 @@ ${"  "}
 }
 
 {
-  const actual = inspect([Symbol()]);
+  const actual = humanize([Symbol()]);
   const expected = `[
   Symbol()
 ]`;
@@ -39,7 +39,7 @@ ${"  "}
   const newArray = new Array("foo", 1);
 
   {
-    const actual = inspect(newArray);
+    const actual = humanize(newArray);
     const expected = `[
   "foo",
   1
@@ -51,7 +51,7 @@ ${"  "}
   }
 
   {
-    const actual = inspect(newArray);
+    const actual = humanize(newArray);
     const expected = `[
   "foo",
   1
@@ -63,7 +63,7 @@ ${"  "}
 {
   const circularArray = [0];
   circularArray.push(circularArray);
-  const actual = inspect(circularArray);
+  const actual = humanize(circularArray);
   const expected = `[
   0,
   Symbol.for('circular')

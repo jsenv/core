@@ -1,4 +1,4 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 import { isArray } from "../utils/object_subtype.js";
 import { createDetailedMessage } from "./utils/detailed_message.js";
@@ -33,7 +33,7 @@ export const getArrayLengthErrorInfo = (comparison) => {
       message: createDetailedMessage(`an array is smaller than expected`, {
         "array length found": actualLength,
         "array length expected": expectedLength,
-        "missing values": inspect(missingValues),
+        "missing values": humanize(missingValues),
         path,
       }),
     };
@@ -45,7 +45,7 @@ export const getArrayLengthErrorInfo = (comparison) => {
     message: createDetailedMessage(`an array is bigger than expected`, {
       "array length found": actualLength,
       "array length expected": expectedLength,
-      "extra values": inspect(extraValues),
+      "extra values": humanize(extraValues),
       path,
     }),
   };

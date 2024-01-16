@@ -1,10 +1,10 @@
-import { setRoundedPrecision } from "../internal/decimals.js";
+import { setRoundedPrecision } from "../utils/decimals.js";
 
-export const inspectFileSize = (numberOfBytes, { decimals, short } = {}) => {
+export const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
   return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-export const inspectMemoryUsage = (metricValue, { decimals, short } = {}) => {
+export const humanizeMemoryUsage = (metricValue, { decimals, short } = {}) => {
   return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 

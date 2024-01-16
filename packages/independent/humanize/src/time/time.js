@@ -1,6 +1,6 @@
-import { setPrecision, setRoundedPrecision } from "../internal/decimals.js";
+import { setPrecision, setRoundedPrecision } from "../utils/decimals.js";
 
-export const inspectEllapsedTime = (ms, { short } = {}) => {
+export const humanizeEllapsedTime = (ms, { short } = {}) => {
   if (ms < 1000) {
     return short ? "0s" : "0 second";
   }
@@ -39,7 +39,7 @@ const unitShort = {
   second: "s",
 };
 
-export const inspectDuration = (
+export const humanizeDuration = (
   ms,
   { short, rounded = true, decimals } = {},
 ) => {

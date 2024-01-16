@@ -1,12 +1,8 @@
-// js value
-export { inspect } from "./js_value/inspect.js";
-export { inspectMethodSymbol } from "./js_value/inspect_value.js";
+export { formatJsValue, humanizeMethodSymbol } from "./js_value/js_value.js";
 export { determineQuote, inspectChar } from "./js_value/string.js";
-// file content
-export { inspectFileContent } from "./file_content/file_content.js";
-// time
-export { inspectDuration, inspectEllapsedTime } from "./time/time.js";
-// byte
-export { inspectFileSize, inspectMemoryUsage } from "./byte/byte.js";
-// percentages
+
+export { humanizeDuration, humanizeEllapsedTime } from "./time/time.js";
+export { humanizeFileSize, humanizeMemoryUsage } from "./byte/byte.js";
 export { distributePercentages } from "./percentage/distribute_percentages.js";
+
+export { generateContentFrame } from "./content_frame/content_frame.js";

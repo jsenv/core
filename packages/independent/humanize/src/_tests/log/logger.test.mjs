@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { createLogger } from "@jsenv/log";
+import { createLogger } from "@jsenv/humanize";
 
 try {
   createLogger({ logLevel: "foo" });

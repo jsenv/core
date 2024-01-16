@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
-const actual = inspect(null);
+const actual = humanize(null);
 const expected = "null";
 assert({ actual, expected });

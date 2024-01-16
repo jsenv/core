@@ -1,20 +1,20 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect(Symbol());
+  const actual = humanize(Symbol());
   const expected = "Symbol()";
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(Symbol("foo"));
+  const actual = humanize(Symbol("foo"));
   const expected = `Symbol("foo")`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(Symbol(42));
+  const actual = humanize(Symbol(42));
   const expected = `Symbol("42")`;
   assert({ actual, expected });
 }

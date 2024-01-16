@@ -1,7 +1,7 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { takeFileSnapshot } from "@jsenv/snapshot";
-import { UNICODE, ANSI } from "@jsenv/inspect";
+import { UNICODE, ANSI } from "@jsenv/humanize";
 import { startDevServer } from "@jsenv/core";
 
 import {

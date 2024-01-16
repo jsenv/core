@@ -1,4 +1,4 @@
-import { inspect, inspectMethodSymbol } from "@jsenv/inspect";
+import { humanize, humanizeMethodSymbol } from "@jsenv/humanize";
 
 import { isPrimitive } from "../utils/is_composite.js";
 import { findPreviousComparison } from "./find_previous_comparison.js";
@@ -44,7 +44,7 @@ export const createNotExpectation = (value) => {
       return actual !== value;
     },
   });
-  notExpectation[inspectMethodSymbol] = () => {
+  notExpectation[humanizeMethodSymbol] = () => {
     return `an other value`;
   };
   return notExpectation;
@@ -64,7 +64,7 @@ export const createAnyExpectation = (expectedConstructor) => {
       );
     },
   });
-  anyExpectation[inspectMethodSymbol] = () => {
+  anyExpectation[humanizeMethodSymbol] = () => {
     return `any(${expectedConstructor.name})`;
   };
   return anyExpectation;
@@ -81,7 +81,7 @@ export const createMatchesRegExpExpectation = (regexp) => {
       return regexp.test(actual);
     },
   });
-  matchesRegexpExpectation[inspectMethodSymbol] = () => {
+  matchesRegexpExpectation[humanizeMethodSymbol] = () => {
     return `matchesRegExp(${regexp})`;
   };
   return matchesRegexpExpectation;
@@ -98,8 +98,8 @@ export const createStartsWithExpectation = (string) => {
       return actual.startsWith(string);
     },
   });
-  startsWithExpectation[inspectMethodSymbol] = () => {
-    return `startsWith(${inspect(string)})`;
+  startsWithExpectation[humanizeMethodSymbol] = () => {
+    return `startsWith(${humanize(string)})`;
   };
   return startsWithExpectation;
 };
@@ -120,8 +120,8 @@ export const createCloseToExpectation = (number, precision = 2) => {
       return receivedDiff < expectedDiff;
     },
   });
-  closeToExpectation[inspectMethodSymbol] = () => {
-    return `closeTo(${inspect(number)})`;
+  closeToExpectation[humanizeMethodSymbol] = () => {
+    return `closeTo(${humanize(number)})`;
   };
   return closeToExpectation;
 };
@@ -143,8 +143,8 @@ export const createBetweenExpectation = (min, max) => {
       return true;
     },
   });
-  betweenExpectation[inspectMethodSymbol] = () => {
-    return `around(${inspect(min)}, ${inspect(max)})`;
+  betweenExpectation[humanizeMethodSymbol] = () => {
+    return `around(${humanize(min)}, ${humanize(max)})`;
   };
   return betweenExpectation;
 };

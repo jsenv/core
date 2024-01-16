@@ -24,7 +24,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/log": "4.0.0",
+    "@jsenv/humanize": "1.0.0",
     "@jsenv/url-meta": "8.4.0",
     "@jsenv/urls": "2.2.2",
     "@jsenv/sourcemap": "1.2.5",

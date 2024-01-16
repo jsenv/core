@@ -5,7 +5,7 @@ import {
   setCeiledPrecision,
   setFlooredPrecision,
   setPrecision,
-} from "@jsenv/inspect/src/internal/decimals.js";
+} from "@jsenv/humanize/src/utils/decimals.js";
 
 /* numbers between -1 and 1 */
 // rounds last decimal

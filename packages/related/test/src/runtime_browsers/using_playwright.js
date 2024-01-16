@@ -1,5 +1,5 @@
 import { writeFileSync, readFileSync } from "node:fs";
-import { createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage } from "@jsenv/humanize";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";

@@ -1,15 +1,15 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect(new Date(10));
+  const actual = humanize(new Date(10));
   const expected = `Date(10)`;
   assert({ actual, expected });
 }
 
 {
   const nowMs = Date.now();
-  const actual = inspect(new Date(nowMs));
+  const actual = humanize(new Date(nowMs));
   const expected = `Date(${nowMs})`;
   assert({ actual, expected });
 }

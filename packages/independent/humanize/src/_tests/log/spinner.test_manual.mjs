@@ -1,4 +1,4 @@
-import { createDynamicLog, startSpinner } from "@jsenv/log";
+import { createDynamicLog, startSpinner } from "@jsenv/humanize";
 
 const dynamicLog = createDynamicLog();
 const spinner = startSpinner({

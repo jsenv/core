@@ -22,7 +22,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import { createLogger, createTaskLog } from "@jsenv/log";
+import { createLogger, createTaskLog } from "@jsenv/humanize";
 import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";

@@ -1,75 +1,75 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect(String.fromCharCode(127));
+  const actual = humanize(String.fromCharCode(127));
   const expected = `"\\x7F"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("");
+  const actual = humanize("");
   const expected = `""`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("dam");
+  const actual = humanize("dam");
   const expected = `"dam"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("don't");
+  const actual = humanize("don't");
   const expected = `"don't"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("don't", { quote: "'" });
+  const actual = humanize("don't", { quote: "'" });
   const expected = `'don\\\'t'`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(`his name is "dam"`);
+  const actual = humanize(`his name is "dam"`);
   const expected = `'his name is "dam"'`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(`his name is "dam"`, { quote: "'" });
+  const actual = humanize(`his name is "dam"`, { quote: "'" });
   const expected = `'his name is "dam"'`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("a\nb");
+  const actual = humanize("a\nb");
   const expected = `"a\\nb"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("a\rb");
+  const actual = humanize("a\rb");
   const expected = `"a\\rb"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("a\u2028b");
+  const actual = humanize("a\u2028b");
   const expected = `"a\\u2028b"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect("a\u2029b");
+  const actual = humanize("a\u2029b");
   const expected = `"a\\u2029b"`;
   assert({ actual, expected });
 }
 
 {
   // eslint-disable-next-line no-new-wrappers
-  const actual = inspect(new String(""));
+  const actual = humanize(new String(""));
   const expected = `String("")`;
   assert({
     actual,
@@ -79,7 +79,7 @@ import { inspect } from "@jsenv/inspect";
 
 {
   // eslint-disable-next-line no-new-wrappers
-  const actual = inspect(new String("dam"));
+  const actual = humanize(new String("dam"));
   const expected = `String("dam")`;
   assert({
     actual,
@@ -88,19 +88,19 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect("dam", { quote: "'" });
+  const actual = humanize("dam", { quote: "'" });
   const expected = `'dam'`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(`\`"'`);
+  const actual = humanize(`\`"'`);
   const expected = `"\`\\\"'"`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(`""''`);
+  const actual = humanize(`""''`);
   const expected = `\`""''\``;
   assert({ actual, expected });
 }

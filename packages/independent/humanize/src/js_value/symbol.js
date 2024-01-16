@@ -1,7 +1,7 @@
 export const inspectSymbol = (value, { nestedInspect, parenthesis }) => {
   const symbolDescription = symbolToDescription(value);
   const symbolDescriptionSource = symbolDescription
-    ? nestedInspect(symbolDescription)
+    ? nestedhumanize(symbolDescription)
     : "";
   const symbolSource = `Symbol(${symbolDescriptionSource})`;
 

@@ -1,4 +1,4 @@
-import { createTaskLog } from "@jsenv/log";
+import { createTaskLog } from "@jsenv/humanize";
 
 const task = createTaskLog("Doing something");
 setTimeout(() => {

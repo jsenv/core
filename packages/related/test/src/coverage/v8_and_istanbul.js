@@ -1,4 +1,4 @@
-import { createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage } from "@jsenv/humanize";
 
 export const composeV8AndIstanbul = (
   v8FileByFileCoverage,

@@ -1,6 +1,6 @@
 const formatDefault = (v) => v;
 
-export const inspectFileContent = ({
+export const generateContentFrame = ({
   content,
   line,
   column,

@@ -4,6 +4,6 @@ export const inspectNumberObject = (
   value,
   { nestedInspect, useNew, parenthesis },
 ) => {
-  const numberSource = nestedInspect(value.valueOf());
+  const numberSource = nestedhumanize(value.valueOf());
   return inspectConstructor(`Number(${numberSource})`, { useNew, parenthesis });
 };

@@ -19,12 +19,56 @@ import { inspectRegExp } from "./regexp.js";
 import { inspectStringObject } from "./string_object.js";
 import { inspectConstructor } from "./constructor.js";
 
-export const inspectMethodSymbol = Symbol.for("inspect");
+export const humanize = (
+  value,
+  {
+    parenthesis = false,
+    quote = "auto",
+    canUseTemplateString = true,
+    useNew = false,
+    objectConstructor = false,
+    showFunctionBody = false,
+    indentUsingTab = false,
+    indentSize = 2,
+    numericSeparator = true,
+    preserveLineBreaks = false,
+  } = {},
+) => {
+  const scopedInspect = (scopedValue, scopedOptions) => {
+    const options = {
+      ...scopedOptions,
+      nestedInspect: (nestedValue, nestedOptions = {}) => {
+        return scopedInspect(nestedValue, {
+          ...scopedOptions,
+          depth: scopedOptions.depth + 1,
+          ...nestedOptions,
+        });
+      },
+    };
+    return humanizeValue(scopedValue, options);
+  };
 
-export const inspectValue = (value, options) => {
-  const customInspect = value && value[inspectMethodSymbol];
-  if (customInspect) {
-    return customInspect(options);
+  return scopedInspect(value, {
+    parenthesis,
+    quote,
+    canUseTemplateString,
+    useNew,
+    objectConstructor,
+    showFunctionBody,
+    indentUsingTab,
+    indentSize,
+    numericSeparator,
+    preserveLineBreaks,
+    depth: 0,
+  });
+};
+
+export const humanizeMethodSymbol = Symbol.for("inspect");
+
+export const humanizeValue = (value, options) => {
+  const customHumanize = value && value[humanizeMethodSymbol];
+  if (customHumanize) {
+    return customHumanize(options);
   }
   const primitiveType = primitiveTypeFromValue(value);
   const primitiveStringifier = primitiveStringifiers[primitiveType];

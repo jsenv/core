@@ -1,6 +1,6 @@
-import { inspectDuration } from "../time/time.js";
+import { humanizeDuration } from "../time/time.js";
 import { UNICODE } from "./unicode.js";
-import { createDynamicLog } from "./animated_log.js";
+import { createDynamicLog } from "./dynamic_log.js";
 import { startSpinner } from "./spinner.js";
 
 export const createTaskLog = (
@@ -31,7 +31,7 @@ export const createTaskLog = (
     done: () => {
       const msEllapsed = Date.now() - startMs;
       taskSpinner.stop(
-        `${UNICODE.OK} ${label} (done in ${inspectDuration(msEllapsed)})`,
+        `${UNICODE.OK} ${label} (done in ${humanizeDuration(msEllapsed)})`,
       );
     },
     happen: (message) => {

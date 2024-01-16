@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { createLogger } from "@jsenv/log";
+import { createLogger } from "@jsenv/humanize";
 
 import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js";
 

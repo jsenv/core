@@ -1,4 +1,4 @@
-import { createDynamicLog } from "@jsenv/log";
+import { createDynamicLog } from "@jsenv/humanize";
 
 const dynamicLog = createDynamicLog();
 dynamicLog.update("hello");

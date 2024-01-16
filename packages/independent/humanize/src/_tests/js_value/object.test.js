@@ -1,27 +1,27 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect({});
+  const actual = humanize({});
   const expected = "{}";
   assert({ actual, expected });
 }
 
 {
   // eslint-disable-next-line no-new-object
-  const actual = inspect(new Object({}));
+  const actual = humanize(new Object({}));
   const expected = "{}";
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect({}, { objectConstructor: true });
+  const actual = humanize({}, { objectConstructor: true });
   const expected = "Object({})";
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(
+  const actual = humanize(
     { foo: true },
     { objectConstructor: true, useNew: true },
   );
@@ -35,7 +35,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect({ 0: "foo" });
+  const actual = humanize({ 0: "foo" });
   const expected = `{
   0: "foo"
 }`;
@@ -43,7 +43,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect({ Infinity: "foo" });
+  const actual = humanize({ Infinity: "foo" });
   const expected = `{
   "Infinity": "foo"
 }`;
@@ -51,7 +51,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect({ name: "dam" }, { quote: "'" });
+  const actual = humanize({ name: "dam" }, { quote: "'" });
   const expected = `{
   'name': 'dam'
 }`;
@@ -59,7 +59,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect(
+  const actual = humanize(
     { foo: true, nested: { bar: true } },
     { parenthesis: true },
   );
@@ -75,7 +75,7 @@ import { inspect } from "@jsenv/inspect";
 {
   const foo = { foo: true, bar: false };
 
-  const actual = inspect(foo);
+  const actual = humanize(foo);
   const expected = `{
   "foo": true,
   "bar": false
@@ -84,7 +84,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect(
+  const actual = humanize(
     Object.create({
       foo: true,
     }),
@@ -95,7 +95,7 @@ import { inspect } from "@jsenv/inspect";
 
 {
   const nested = { foo: { name: "dam" } };
-  const actual = inspect(nested);
+  const actual = humanize(nested);
   const expected = `{
   "foo": {
     "name": "dam"
@@ -109,7 +109,7 @@ import { inspect } from "@jsenv/inspect";
     foo: true,
   };
   circularObject.self = circularObject;
-  const actual = inspect(circularObject);
+  const actual = humanize(circularObject);
   const expected = `{
   "foo": true,
   "self": Symbol.for('circular')
@@ -125,7 +125,7 @@ import { inspect } from "@jsenv/inspect";
     bar: true,
     parent: nestedCircularObject,
   };
-  const actual = inspect(nestedCircularObject);
+  const actual = humanize(nestedCircularObject);
   const expected = `{
   "foo": true,
   "nested": {
@@ -137,7 +137,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect(Object.create(null));
+  const actual = humanize(Object.create(null));
   const expected = "{}";
   assert({ actual, expected });
 }
@@ -145,7 +145,7 @@ import { inspect } from "@jsenv/inspect";
 {
   const object = Object.create(null);
   object[Symbol.toStringTag] = "stuff";
-  const actual = inspect(object);
+  const actual = humanize(object);
   const expected = `{
   [Symbol("Symbol.toStringTag")]: "stuff"
 }`;
@@ -156,7 +156,7 @@ import { inspect } from "@jsenv/inspect";
   const object = Object.create(null);
   object[Symbol.toStringTag] = "stuff";
   object.foo = true;
-  const actual = inspect(object);
+  const actual = humanize(object);
   const expected = `{
   "foo": true,
   [Symbol("Symbol.toStringTag")]: "stuff"
@@ -165,7 +165,7 @@ import { inspect } from "@jsenv/inspect";
 }
 
 {
-  const actual = inspect({ [Symbol()]: true });
+  const actual = humanize({ [Symbol()]: true });
   const expected = `{
   [Symbol()]: true
 }`;

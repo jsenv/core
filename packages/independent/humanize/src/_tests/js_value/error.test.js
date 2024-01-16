@@ -1,14 +1,14 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 {
-  const actual = inspect(new Error("here"));
+  const actual = humanize(new Error("here"));
   const expected = `Error("here")`;
   assert({ actual, expected });
 }
 
 {
-  const actual = inspect(new RangeError("here"));
+  const actual = humanize(new RangeError("here"));
   const expected = `RangeError("here")`;
   assert({ actual, expected });
 }
@@ -19,7 +19,7 @@ import { inspect } from "@jsenv/inspect";
     enumerable: false,
     value: "bar",
   });
-  const actual = inspect(actualError);
+  const actual = humanize(actualError);
   const expected = `Error("hello")`;
   assert({ actual, expected });
 }
@@ -27,7 +27,7 @@ import { inspect } from "@jsenv/inspect";
 {
   const error = new Error();
   error.name = "AssertionError";
-  const actual = inspect(error);
+  const actual = humanize(error);
   const expected = `Error("")`;
   assert({ actual, expected });
 }

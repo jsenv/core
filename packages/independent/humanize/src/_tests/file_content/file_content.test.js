@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { inspectFileContent } from "@jsenv/inspect";
+import { generateContentFrame } from "@jsenv/humanize";
 
 let number = 1;
 const test = (name, params) => {
@@ -11,7 +11,7 @@ const test = (name, params) => {
   );
   number++;
   const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
-  const inspectContentResult = inspectFileContent(params);
+  const inspectContentResult = generateContentFrame(params);
   writeFileSync(snapshotFileUrl, inspectContentResult);
   fileSnapshot.compare();
   return inspectContentResult;

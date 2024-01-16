@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert";
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 const CustomConstructor = function () {
   this.foo = true;
 };
 const customInstance = new CustomConstructor();
-const actual = inspect(customInstance);
+const actual = humanize(customInstance);
 const expected = `CustomConstructor({
   "foo": true
 })`;

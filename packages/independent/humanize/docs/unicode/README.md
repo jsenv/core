@@ -1,4 +1,4 @@
-# Log [![npm package](https://img.shields.io/npm/v/@jsenv/log.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/log)
+# Log [![npm package](https://img.shields.io/npm/v/@jsenv/humanize.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/humanize)
 
 This packages is used by jsenv to create beautiful logs in the console. It is available as a standalone package to be used in other contexts.
 
@@ -17,7 +17,7 @@ This package helps to:
 Code used to produce these logs:
 
 ```js
-import { createTaskLog } from "@jsenv/log";
+import { createTaskLog } from "@jsenv/humanize";
 
 const task = createTaskLog("Doing something");
 setTimeout(() => {
@@ -32,7 +32,7 @@ setTimeout(() => {
 Code used to produce these logs:
 
 ```js
-import { UNICODE } from "@jsenv/log";
+import { UNICODE } from "@jsenv/humanize";
 
 console.log(`${UNICODE.COMMAND} cd dir/`);
 console.log(`${UNICODE.DEBUG} debug`);
@@ -45,5 +45,5 @@ console.log(`${UNICODE.OK} ok`);
 # Installation
 
 ```console
-npm install @jsenv/log
+npm install @jsenv/humanize
 ```

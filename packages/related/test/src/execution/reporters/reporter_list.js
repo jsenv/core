@@ -2,12 +2,12 @@ import { memoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
 import {
+  createDynamicLog,
   inspectDuration,
   inspectMemoryUsage,
   ANSI,
   UNICODE,
-} from "@jsenv/inspect";
-import { createDynamicLog } from "@jsenv/log";
+} from "@jsenv/humanize";
 
 import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 

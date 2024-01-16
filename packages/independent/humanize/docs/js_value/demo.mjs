@@ -1,7 +1,7 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 console.log(
-  inspect({
+  humanize({
     boolean: true,
     number: 10,
     string: "hello world",

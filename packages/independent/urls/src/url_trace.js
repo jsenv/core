@@ -3,7 +3,7 @@
 // https://github.com/postcss/postcss/blob/fd30d3df5abc0954a0ec642a3cdc644ab2aacf9c/lib/terminal-highlight.js#L50
 // https://github.com/babel/babel/blob/eea156b2cb8deecfcf82d52aa1b71ba4995c7d68/packages/babel-code-frame/src/index.js#L1
 
-import { inspectFileContent } from "@jsenv/inspect";
+import { generateContentFrame } from "@jsenv/humanize";
 
 export const stringifyUrlSite = (
   { url, line, column, content },
@@ -22,7 +22,7 @@ export const stringifyUrlSite = (
     return string;
   }
 
-  const sourceLoc = inspectFileContent({
+  const sourceLoc = generateContentFrame({
     content,
     line,
     column,

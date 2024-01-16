@@ -1,4 +1,4 @@
-export const createDetailedMessage = (message, details = {}) => {
+export const formatDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
 
   Object.keys(details).forEach((key) => {

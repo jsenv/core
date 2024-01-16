@@ -24,8 +24,8 @@
 ## Node example
 
 <div id="runkit-source">
-const { inspect } = require("@jsenv/inspect")
-inspect({
+const { inspect } = require("@jsenv/humanize")
+humanize({
   name: "foo",
   answer: 42,
 })

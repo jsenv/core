@@ -1,12 +1,12 @@
-# inspect [![npm package](https://img.shields.io/npm/v/@jsenv/inspect.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/inspect)
+# inspect [![npm package](https://img.shields.io/npm/v/@jsenv/humanize.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/humanize)
 
-`@jsenv/inspect` turns a JavaScript value into a string meant to be read by a human. It is written in ES6 and compatible with browsers and Node.js.
+`@jsenv/humanize` turns a JavaScript value into a string meant to be read by a human. It is written in ES6 and compatible with browsers and Node.js.
 
 ```js
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 console.log(
-  inspect({
+  humanize({
     boolean: true,
     number: 10,
     string: "hello world",
@@ -25,7 +25,7 @@ console.log(
 
 # Comparison with JSON.stringify
 
-Table comparing `JSON.stringify` and `@jsenv/inspect` to demonstrates how inspect focuses on readability and accuracy.
+Table comparing `JSON.stringify` and `@jsenv/humanize` to demonstrates how inspect focuses on readability and accuracy.
 
 | value     | JSON.stringify | jsenv inspect |
 | --------- | -------------- | ------------- |

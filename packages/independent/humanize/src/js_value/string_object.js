@@ -4,7 +4,7 @@ export const inspectStringObject = (
   value,
   { nestedInspect, useNew, parenthesis },
 ) => {
-  const stringSource = nestedInspect(value.valueOf());
+  const stringSource = nestedhumanize(value.valueOf());
 
   return inspectConstructor(`String(${stringSource})`, { useNew, parenthesis });
 };

@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import { UNICODE } from "@jsenv/inspect";
-import { createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage, UNICODE } from "@jsenv/humanize";
 import { comparePathnames } from "@jsenv/filesystem";
 import { createMagicSource, generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import {

@@ -1,7 +1,7 @@
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Abort, raceCallbacks } from "@jsenv/abort";
-import { createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createChildExecOptions } from "./child_exec_options.js";

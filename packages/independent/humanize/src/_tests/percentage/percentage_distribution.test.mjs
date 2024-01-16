@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { distributePercentages } from "@jsenv/inspect";
+import { distributePercentages } from "@jsenv/humanize";
 
 const test = (namedNumbers, expected) => {
   const actual = distributePercentages(namedNumbers);
