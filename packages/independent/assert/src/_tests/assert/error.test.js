@@ -1,92 +1,52 @@
-import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { executeInNewContext } from "../executeInNewContext.js";
+import { assert } from "@jsenv/assert";
 
-{
-  const actual = new Error();
-  const expected = new Error();
-  assert({ actual, expected });
-}
-
-{
-  const actual = await executeInNewContext("new Error()");
-  const expected = await executeInNewContext("new Error()");
-  assert({ actual, expected });
-}
-
-{
-  const actual = await executeInNewContext("new Error()");
-  const expected = new Error();
-  assert({ actual, expected });
-}
-
-{
-  const actual = new Error();
-  const expected = await executeInNewContext("new Error()");
-  assert({ actual, expected });
-}
-
-{
-  const actual = new Error("foo");
-  const expected = new Error("bar");
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unexpected character in error message
---- details ---
-foo
-^
-unexpected "f", expected to continue with "bar"
---- path ---
-actual.message`,
-    );
-  }
-}
-
-if (typeof global === "object") {
-  const actual = new Error();
-  const expected = new TypeError();
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unequal prototypes
---- prototype found ---
-global.Error.prototype
---- prototype expected ---
-global.TypeError.prototype
---- path ---
-actual[[Prototype]]`,
-    );
-  }
-}
-
-// beware test below because depending on node version
-// Object.keys(Object.getPrototypeOf(new TypeError()))
-// might differ. For instance node 8.5 returns name before constructor
-// and node 8.9.0 returns constructor before name
-if (typeof global === "object") {
-  const actual = new Error();
-  const expected = await executeInNewContext("new TypeError()");
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unequal prototypes
---- prototype found ---
-global.Error.prototype
---- prototype expected ---
-TypeError({
-  "constructor": function () {/* hidden */},
-  "name": "TypeError",
-  "message": ""
-})
---- path ---
-actual[[Prototype]]`,
-    );
-  }
-}
+await startSnapshotTesting("error", {
+  basic: () => {
+    assert({
+      actual: new Error(),
+      expected: new Error(),
+    });
+  },
+  cross_realm: async () => {
+    assert({
+      actual: await executeInNewContext("new Error()"),
+      expected: await executeInNewContext("new Error()"),
+    });
+  },
+  cross_realm_b: async () => {
+    assert({
+      actual: await executeInNewContext("new Error()"),
+      expected: new Error(),
+    });
+  },
+  cross_realm_c: async () => {
+    assert({
+      actual: new Error(),
+      expected: await executeInNewContext("new Error()"),
+    });
+  },
+  fail_error_message: () => {
+    assert({
+      actual: new Error("foo"),
+      expected: new Error("bar"),
+    });
+  },
+  fail_error_prototype: () => {
+    assert({
+      actual: new Error(),
+      expected: new TypeError(),
+    });
+  },
+  // beware test below because depending on node version
+  // Object.keys(Object.getPrototypeOf(new TypeError()))
+  // might differ. For instance node 8.5 returns name before constructor
+  // and node 8.9.0 returns constructor before name
+  fail_error_cross_realm_prototype: async () => {
+    assert({
+      actual: new Error(),
+      expected: await executeInNewContext("new TypeError()"),
+    });
+  },
+});

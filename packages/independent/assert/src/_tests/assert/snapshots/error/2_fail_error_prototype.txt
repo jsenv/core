@@ -1,0 +1,7 @@
+PrototypeAssertionError: unequal prototypes
+--- prototype found ---
+global.Error.prototype
+--- prototype expected ---
+global.TypeError.prototype
+--- path ---
+actual[[Prototype]]

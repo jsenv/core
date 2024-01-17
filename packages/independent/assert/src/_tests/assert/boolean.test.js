@@ -1,50 +1,45 @@
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
 
-const booleanSnapshotTesting = startSnapshotTesting("boolean");
-
-assert({
-  actual: true,
-  expected: true,
+await startSnapshotTesting("boolean", {
+  basic: () => {
+    assert({
+      actual: true,
+      expected: true,
+    });
+  },
+  boolean_objects: () => {
+    assert({
+      // eslint-disable-next-line no-new-wrappers
+      actual: new Boolean(true),
+      // eslint-disable-next-line no-new-wrappers
+      expected: new Boolean(true),
+    });
+  },
+  fail_boolean: () => {
+    assert({
+      actual: true,
+      expected: false,
+    });
+  },
+  fail_boolean_objects: () => {
+    assert({
+      // eslint-disable-next-line no-new-wrappers
+      actual: new Boolean(true),
+      // eslint-disable-next-line no-new-wrappers
+      expected: new Boolean(false),
+    });
+  },
+  fail_0_and_false: () => {
+    assert({
+      actual: 0,
+      expected: false,
+    });
+  },
+  fail_1_and_true: () => {
+    assert({
+      actual: 1,
+      expected: true,
+    });
+  },
 });
-assert({
-  // eslint-disable-next-line no-new-wrappers
-  actual: new Boolean(true),
-  // eslint-disable-next-line no-new-wrappers
-  expected: new Boolean(true),
-});
-
-try {
-  assert({
-    actual: true,
-    expected: false,
-  });
-} catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_fail");
-}
-try {
-  assert({
-    // eslint-disable-next-line no-new-wrappers
-    actual: new Boolean(true),
-    // eslint-disable-next-line no-new-wrappers
-    expected: new Boolean(false),
-  });
-} catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_object_fail");
-}
-try {
-  assert({
-    actual: 0,
-    expected: false,
-  });
-} catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_fail_0_false");
-}
-try {
-  assert({
-    actual: 1,
-    expected: true,
-  });
-} catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_fail_1_true");
-}
