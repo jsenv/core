@@ -1,0 +1,11 @@
+PrototypeAssertionError: unequal prototypes
+--- prototype found ---
+{
+  "ancestor": true
+}
+--- prototype expected ---
+{
+  "direct": true
+}
+--- path ---
+actual[[Prototype]]

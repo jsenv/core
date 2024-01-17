@@ -1,0 +1,7 @@
+ExtraSetEntryAssertionError: a set is bigger than expected
+--- set size found ---
+2
+--- set size expected ---
+0
+--- path ---
+actual

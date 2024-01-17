@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+Symbol("foo")
+--- expected ---
+Symbol("bar")
+--- path ---
+actual

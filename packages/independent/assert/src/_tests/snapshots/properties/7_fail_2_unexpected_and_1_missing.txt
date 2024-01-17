@@ -1,0 +1,12 @@
+PropertiesAssertionError: 2 unexpected properties and 1 missing property
+--- unexpected properties ---
+{
+  "d": true,
+  "e": true
+}
+--- missing property ---
+{
+  "b": true
+}
+--- path ---
+actual

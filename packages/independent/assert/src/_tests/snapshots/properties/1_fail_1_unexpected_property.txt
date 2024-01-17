@@ -1,0 +1,7 @@
+ExtraPropertyAssertionError: 1 unexpected property
+--- unexpected property ---
+{
+  "a": true
+}
+--- path ---
+actual

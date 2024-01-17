@@ -1,0 +1,7 @@
+ExtraReferenceAssertionError: found a reference instead of a value
+--- reference found to ---
+actual
+--- value expected ---
+{}
+--- path ---
+actual.self

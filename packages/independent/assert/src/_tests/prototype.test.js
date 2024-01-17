@@ -1,5 +1,5 @@
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
-import { executeInNewContext } from "../executeInNewContext.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { executeInNewContext } from "./utils/execute_in_new_context.js";
 import { assert } from "@jsenv/assert";
 
 await startSnapshotTesting("prototype", {

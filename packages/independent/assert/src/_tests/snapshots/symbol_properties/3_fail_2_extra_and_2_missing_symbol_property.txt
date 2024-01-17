@@ -1,0 +1,9 @@
+SymbolAssertionError: unexpected and missing symbols
+--- unexpected symbol list ---
+Symbol("d")
+Symbol("e")
+--- missing symbol list ---
+Symbol("b")
+Symbol("c")
+--- path ---
+actual

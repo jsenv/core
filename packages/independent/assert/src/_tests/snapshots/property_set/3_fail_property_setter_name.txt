@@ -1,0 +1,7 @@
+CharacterAssertionError: unexpected character in function name
+--- details ---
+actualSetter
+^
+unexpected "a", expected to continue with "expectedSetter"
+--- path ---
+actual.foo[[Set]].name

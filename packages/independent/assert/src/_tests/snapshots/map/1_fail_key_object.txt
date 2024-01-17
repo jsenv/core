@@ -1,0 +1,9 @@
+ExtraMapEntryAssertionError: an entry is unexpected
+--- unexpected entry key ---
+{
+  "foo": true
+}
+--- unexpected entry value ---
+43
+--- path ---
+actual

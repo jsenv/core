@@ -1,0 +1,7 @@
+CharacterAssertionError: unexpected character in regexp
+--- details ---
+/a/
+ ^
+unexpected "a", expected to continue with "b/"
+--- path ---
+actual.toString()

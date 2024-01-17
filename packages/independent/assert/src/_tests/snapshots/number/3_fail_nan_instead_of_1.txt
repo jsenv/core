@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+NaN
+--- expected ---
+1
+--- path ---
+actual

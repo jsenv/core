@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+"writable"
+--- expected ---
+"non-writable"
+--- path ---
+actual.foo[[Writable]]

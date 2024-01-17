@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
-import { ensureErrorWithMessage } from "../ensureErrorWithMessage.js";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
+import { ensureErrorWithMessage } from "./utils/ensure_error_with_message.js";
+import { ensureAssertionErrorWithMessage } from "./utils/ensure_assertion_error_with_message.js";
 
 try {
   assert();

@@ -1,0 +1,7 @@
+AnyAssertionError: unexpected value
+--- found ---
+{}
+--- expected ---
+any(User)
+--- path ---
+actual

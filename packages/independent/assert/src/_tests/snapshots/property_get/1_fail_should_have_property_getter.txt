@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+undefined
+--- expected ---
+() => {/* hidden */}
+--- path ---
+actual.foo[[Get]]

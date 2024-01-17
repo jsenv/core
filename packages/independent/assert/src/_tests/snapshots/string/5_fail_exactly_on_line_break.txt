@@ -1,0 +1,7 @@
+CharacterAssertionError: unexpected character in string
+--- details ---
+abc
+  ^
+unexpected "c", expected to continue with "\nc"
+--- path ---
+actual

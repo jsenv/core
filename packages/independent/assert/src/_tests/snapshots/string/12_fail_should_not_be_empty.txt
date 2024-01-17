@@ -1,0 +1,7 @@
+MissingCharacterAssertionError: string is too short, 2 characters are missing
+--- details ---
+
+^
+expected to continue with "aa"
+--- path ---
+actual

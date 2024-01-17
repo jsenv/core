@@ -1,4 +1,4 @@
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
 
 await startSnapshotTesting("property_writable", {
