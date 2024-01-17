@@ -36,22 +36,18 @@
     overflow="hidden"
   >
     <svg
-      width="599.69"
+      width="524.08"
       height="250.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#abb2bf"
     >
       <g>
-        <text x="10" y="14.55" fill="#A9A9A9">------------</text>
-        <text x="119.22" y="14.55"> 2 executions to run </text>
-        <text x="287.25" y="14.55" fill="#A9A9A9">------------</text>
-        <text x="10" y="33.55"
-          >1 with worker_thread (node_worker_thread@&#x3C;mock&#x3E;)</text
-        >
-        <text x="10" y="52.55"
-          >1 with child_process (node_child_process@&#x3C;mock&#x3E;)</text
-        >
+        <text x="10" y="14.55" fill="#A9A9A9">--------------</text>
+        <text x="136.02" y="14.55"> execution start </text>
+        <text x="270.44" y="14.55" fill="#A9A9A9">--------------</text>
+        <text x="10" y="33.55">directory: /mock/</text>
+        <text x="10" y="52.55">file to execute: 1</text>
         <text x="10" y="71.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >
@@ -60,23 +56,19 @@
         <text x="186.43" y="109.55" fill="#A9A9A9">worker_thread</text>
         <text x="295.65" y="109.55" fill="#A9A9A9">/</text>
         <text x="304.05" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="371.26" y="109.55" fill="#A9A9A9">/</text>
-        <text x="379.66" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
-        <text x="446.87" y="109.55" fill="#A9A9A9">]</text>
-        <text x="463.67" y="109.55"> (1 </text>
-        <text x="488.88" y="109.55" fill="#32CD32">completed</text>
-        <text x="564.49" y="109.55">)</text>
+        <text x="371.26" y="109.55" fill="#A9A9A9">]</text>
+        <text x="388.06" y="109.55"> (1 </text>
+        <text x="413.27" y="109.55" fill="#32CD32">completed</text>
+        <text x="488.88" y="109.55">)</text>
         <text x="10" y="128.55" fill="#32CD32">&#x2714; 2/2 empty.spec.js</text>
         <text x="178.03" y="128.55" fill="#A9A9A9">[</text>
         <text x="186.43" y="128.55" fill="#A9A9A9">child_process</text>
         <text x="295.65" y="128.55" fill="#A9A9A9">/</text>
         <text x="304.05" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="371.26" y="128.55" fill="#A9A9A9">/</text>
-        <text x="379.66" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
-        <text x="446.87" y="128.55" fill="#A9A9A9">]</text>
-        <text x="463.67" y="128.55"> (all </text>
-        <text x="505.68" y="128.55" fill="#32CD32">completed</text>
-        <text x="581.29" y="128.55">)</text>
+        <text x="371.26" y="128.55" fill="#A9A9A9">]</text>
+        <text x="388.06" y="128.55"> (all </text>
+        <text x="430.07" y="128.55" fill="#32CD32">completed</text>
+        <text x="505.68" y="128.55">)</text>
         <text x="10" y="166.55" fill="#A9A9A9">------------------</text>
         <text x="169.63" y="166.55"> summary </text>
         <text x="236.84" y="166.55" fill="#A9A9A9">------------------</text>
