@@ -4,7 +4,7 @@ export const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
   return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-export const humanizeMemoryUsage = (metricValue, { decimals, short } = {}) => {
+export const humanizeMemory = (metricValue, { decimals, short } = {}) => {
   return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 

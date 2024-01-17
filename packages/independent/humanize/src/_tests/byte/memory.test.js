@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert";
 
-import { humanizeMemoryUsage } from "@jsenv/humanize";
+import { humanizeMemory } from "@jsenv/humanize";
 
 const test = (memoryUsageInBytes, expected) => {
-  const actual = humanizeMemoryUsage(memoryUsageInBytes);
+  const actual = humanizeMemory(memoryUsageInBytes);
   assert({ actual, expected });
 };
 

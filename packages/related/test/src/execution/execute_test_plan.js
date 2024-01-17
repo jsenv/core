@@ -50,8 +50,9 @@ const logsDefault = {
   level: "info",
   type: "list",
   animated: true,
-  osInfo: false,
-  processInfo: false,
+  platformInfo: false,
+  memoryUsage: false,
+  cpuUsage: false,
   fileUrl: undefined,
 };
 const githubCheckDefault = {
@@ -277,6 +278,10 @@ export const executeTestPlan = async ({
 
         if (logs.type === "list" && logger.levels.info) {
           const listReporterOptions = {
+            mockFluctuatingValues: logs.mockFluctuatingValues,
+            platformInfo: logs.platformInfo,
+            memoryUsage: logs.memoryUsage,
+            cpuUsage: logs.cpuUsage,
             animated: logger.levels.debug ? false : logs.animated,
             fileUrl:
               logs.fileUrl === undefined
@@ -1045,7 +1050,7 @@ const startMonitoringMetric = (measure) => {
     measure: takeMeasure,
     end: () => {
       info.end = takeMeasure();
-      metrics.sort();
+      metrics.sort((a, b) => a - b);
       info.min = metrics[0];
       info.max = metrics[metrics.length - 1];
       info.median = medianFromSortedArray(metrics);
@@ -1056,17 +1061,17 @@ const startMonitoringMetric = (measure) => {
 
 const medianFromSortedArray = (array) => {
   const length = array.length;
-  const isEven = length % 2 === 0;
-  if (isEven) {
-    const rightMiddleNumberIndex = length / 2;
-    const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
-    const leftMiddleNumber = array[leftMiddleNumberIndex];
-    const rightMiddleNumber = array[rightMiddleNumberIndex];
-    const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
+  const isOdd = length % 2 === 1;
+  if (isOdd) {
+    const medianNumberIndex = (length - 1) / 2;
+    const medianNumber = array[medianNumberIndex];
     return medianNumber;
   }
-  const medianNumberIndex = (length - 1) / 2;
-  const medianNumber = array[medianNumberIndex];
+  const rightMiddleNumberIndex = length / 2;
+  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
+  const leftMiddleNumber = array[leftMiddleNumberIndex];
+  const rightMiddleNumber = array[rightMiddleNumberIndex];
+  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
   return medianNumber;
 };
 

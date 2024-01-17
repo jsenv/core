@@ -85,9 +85,9 @@ export const startMeasuringTotalCpuUsage = () => {
     );
     previousCpuUsage = processCpuUsage;
     const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
-    thisProcess.active = thisProcessActiveMs / overallActiveMs;
-    thisProcess.system = thisProcessSystemMs / overallSystemMs;
-    thisProcess.user = thisProcessUserMs / overallUserMs;
+    thisProcess.active = thisProcessActiveMs / overallMsEllapsed;
+    thisProcess.system = thisProcessSystemMs / overallMsEllapsed;
+    thisProcess.user = thisProcessUserMs / overallMsEllapsed;
 
     if (samples.length === 10) {
       let index = 0;
