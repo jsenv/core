@@ -1,0 +1,11 @@
+PrototypeAssertionError: unequal prototypes
+--- prototype found ---
+global.Error.prototype
+--- prototype expected ---
+TypeError({
+  "constructor": function () {/* hidden */},
+  "name": "TypeError",
+  "message": ""
+})
+--- path ---
+actual[[Prototype]]

@@ -10,7 +10,7 @@ import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { fetchUrl } from "@jsenv/fetch";
-import { createTaskLog } from "@jsenv/log";
+import { createTaskLog } from "@jsenv/humanize";
 
 if (process.env.CI) {
   // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9

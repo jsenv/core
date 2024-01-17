@@ -8,6 +8,7 @@ await build({
   },
   ignore: {
     "/**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
+    "/**/node_modules/string-width/": true, // emojiRegex is strange
   },
   runtimeCompat: {
     node: "16.2.0",

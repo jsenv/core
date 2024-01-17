@@ -6,7 +6,7 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { getOriginalPosition } from "@jsenv/sourcemap";
-import { inspectFileContent } from "@jsenv/inspect";
+import { generateContentFrame } from "@jsenv/humanize";
 
 import {
   supervisorFileUrl,
@@ -71,7 +71,7 @@ export const jsenvPluginSupervisor = ({
           url: file,
           line,
           column,
-          codeFrame: inspectFileContent({
+          codeFrame: generateContentFrame({
             line,
             column,
             content: urlInfo.originalContent,

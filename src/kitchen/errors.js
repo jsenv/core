@@ -1,7 +1,6 @@
 import { pathToFileURL } from "node:url";
-import { createDetailedMessage } from "@jsenv/log";
+import { createDetailedMessage, generateContentFrame } from "@jsenv/humanize";
 import { stringifyUrlSite } from "@jsenv/urls";
-import { inspectFileContent } from "@jsenv/inspect";
 
 export const createResolveUrlError = ({
   pluginController,
@@ -154,7 +153,7 @@ export const createTransformUrlContentError = ({
           urlInfo.firstReference.trace.line + error.line - 1;
         transformError.trace.column =
           urlInfo.firstReference.trace.column + error.column;
-        transformError.trace.codeFrame = inspectFileContent({
+        transformError.trace.codeFrame = generateContentFrame({
           line: transformError.trace.line,
           column: transformError.trace.column,
           content: urlInfo.inlineUrlSite.content,
@@ -170,7 +169,7 @@ export const createTransformUrlContentError = ({
           url: urlInfo.url,
           line: error.line,
           column: error.column,
-          codeFrame: inspectFileContent({
+          codeFrame: generateContentFrame({
             line: error.line - 1,
             column: error.column,
             content: urlInfo.content,

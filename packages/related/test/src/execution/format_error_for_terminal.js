@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { inspectFileContent } from "@jsenv/inspect";
+import { generateContentFrame, ANSI } from "@jsenv/humanize";
 import { urlToFileSystemPath } from "@jsenv/urls";
-import { ANSI } from "@jsenv/log";
 
 export const formatErrorForTerminal = (
   error,
@@ -25,7 +24,7 @@ export const formatErrorForTerminal = (
       typeof error.site.line === "number"
     ) {
       const content = readFileSync(new URL(error.site.url), "utf8");
-      text += inspectFileContent({
+      text += generateContentFrame({
         content,
         line: error.site.line,
         column: error.site.column,

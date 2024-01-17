@@ -4,7 +4,7 @@
  * https://docs.github.com/fr/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
  */
 
-import { createLogger, UNICODE, createDetailedMessage } from "@jsenv/log";
+import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/humanize";
 
 import { POST, PATCH } from "./internal/github_rest_api.js";
 

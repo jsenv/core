@@ -10,7 +10,9 @@ export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
         [pattern]: true,
         "**/.*": false,
         "**/.*/": false,
-        "**/node_modules/": false,
+        ...(pattern.includes("node_modules")
+          ? {}
+          : { "**/node_modules/": false }),
       },
     },
     initialDirectoryUrl,

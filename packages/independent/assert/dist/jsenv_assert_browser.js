@@ -1,5 +1,4 @@
 const inspectBoolean = value => value.toString();
-
 const inspectNull = () => "null";
 
 // https://github.com/sindresorhus/eslint-plugin-unicorn/blob/main/rules/numeric-separators-style.js
@@ -251,13 +250,12 @@ const meta = ['\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\
 // x97
 '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F' // x9F
 ];
-
 const inspectSymbol = (value, {
-  nestedInspect,
+  nestedHumanize,
   parenthesis
 }) => {
   const symbolDescription = symbolToDescription$1(value);
-  const symbolDescriptionSource = symbolDescription ? nestedInspect(symbolDescription) : "";
+  const symbolDescriptionSource = symbolDescription ? nestedHumanize(symbolDescription) : "";
   const symbolSource = "Symbol(".concat(symbolDescriptionSource, ")");
   if (parenthesis) return "".concat(symbolSource);
   return symbolSource;
@@ -269,13 +267,10 @@ const symbolToDescription$1 = "description" in Symbol.prototype ? symbol => symb
   const symbolDescription = toStringResult.slice(openingParenthesisIndex + 1, closingParenthesisIndex);
   return symbolDescription;
 };
-
 const inspectUndefined = () => "undefined";
-
 const inspectBigInt = value => {
   return "".concat(value, "n");
 };
-
 const preNewLineAndIndentation = (value, {
   depth,
   indentUsingTab,
@@ -325,7 +320,6 @@ const wrapNewLineAndIndentation = (value, {
     indentSize
   }));
 };
-
 const inspectConstructor = (value, {
   parenthesis,
   useNew
@@ -339,10 +333,9 @@ const inspectConstructor = (value, {
   }
   return formattedString;
 };
-
 const inspectArray = (value, {
   seen = [],
-  nestedInspect,
+  nestedHumanize,
   depth,
   indentUsingTab,
   indentSize,
@@ -357,7 +350,7 @@ const inspectArray = (value, {
   let i = 0;
   const j = value.length;
   while (i < j) {
-    const valueSource = value.hasOwnProperty(i) ? nestedInspect(value[i], {
+    const valueSource = value.hasOwnProperty(i) ? nestedHumanize(value[i], {
       seen
     }) : "";
     if (i === 0) {
@@ -387,32 +380,29 @@ const inspectArray = (value, {
     useNew
   });
 };
-
 const inspectBigIntObject = (value, {
-  nestedInspect
+  nestedHumanize
 }) => {
-  const bigIntSource = nestedInspect(value.valueOf());
+  const bigIntSource = nestedHumanize(value.valueOf());
   return "BigInt(".concat(bigIntSource, ")");
 };
-
 const inspectBooleanObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const booleanSource = nestedInspect(value.valueOf());
+  const booleanSource = nestedHumanize(value.valueOf());
   return inspectConstructor("Boolean(".concat(booleanSource, ")"), {
     useNew,
     parenthesis
   });
 };
-
 const inspectError = (error, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const messageSource = nestedInspect(error.message);
+  const messageSource = nestedHumanize(error.message);
   const errorSource = inspectConstructor("".concat(errorToConstructorName(error), "(").concat(messageSource, ")"), {
     useNew,
     parenthesis
@@ -430,13 +420,12 @@ const errorToConstructorName = ({
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#Error_types
 const derivedErrorNameArray = ["EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError"];
-
 const inspectDate = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const dateSource = nestedInspect(value.valueOf(), {
+  const dateSource = nestedHumanize(value.valueOf(), {
     numericSeparator: false
   });
   return inspectConstructor("Date(".concat(dateSource, ")"), {
@@ -444,7 +433,6 @@ const inspectDate = (value, {
     parenthesis
   });
 };
-
 const inspectFunction = (value, {
   showFunctionBody,
   parenthesis,
@@ -463,21 +451,19 @@ const inspectFunction = (value, {
   }
   return functionSource;
 };
-
 const inspectNumberObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const numberSource = nestedInspect(value.valueOf());
+  const numberSource = nestedHumanize(value.valueOf());
   return inspectConstructor("Number(".concat(numberSource, ")"), {
     useNew,
     parenthesis
   });
 };
-
 const inspectObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   seen = [],
   depth,
   indentUsingTab,
@@ -491,18 +477,18 @@ const inspectObject = (value, {
   const propertySourceArray = [];
   Object.getOwnPropertyNames(value).forEach(propertyName => {
     const propertyNameAsNumber = parseInt(propertyName, 10);
-    const propertyNameSource = nestedInspect(Number.isInteger(propertyNameAsNumber) ? propertyNameAsNumber : propertyName);
+    const propertyNameSource = nestedHumanize(Number.isInteger(propertyNameAsNumber) ? propertyNameAsNumber : propertyName);
     propertySourceArray.push({
       nameOrSymbolSource: propertyNameSource,
-      valueSource: nestedInspect(value[propertyName], {
+      valueSource: nestedHumanize(value[propertyName], {
         seen
       })
     });
   });
   Object.getOwnPropertySymbols(value).forEach(symbol => {
     propertySourceArray.push({
-      nameOrSymbolSource: "[".concat(nestedInspect(symbol), "]"),
-      valueSource: nestedInspect(value[symbol], {
+      nameOrSymbolSource: "[".concat(nestedHumanize(symbol), "]"),
+      valueSource: nestedHumanize(value[symbol], {
         seen
       })
     });
@@ -542,15 +528,13 @@ const inspectObject = (value, {
     useNew
   });
 };
-
 const inspectRegExp = value => value.toString();
-
 const inspectStringObject = (value, {
-  nestedInspect,
+  nestedHumanize,
   useNew,
   parenthesis
 }) => {
-  const stringSource = nestedInspect(value.valueOf());
+  const stringSource = nestedHumanize(value.valueOf());
   return inspectConstructor("String(".concat(stringSource, ")"), {
     useNew,
     parenthesis
@@ -558,11 +542,50 @@ const inspectStringObject = (value, {
 };
 
 // primitives
-const inspectMethodSymbol = Symbol.for("inspect");
-const inspectValue = (value, options) => {
-  const customInspect = value && value[inspectMethodSymbol];
-  if (customInspect) {
-    return customInspect(options);
+const humanize = (value, {
+  parenthesis = false,
+  quote = "auto",
+  canUseTemplateString = true,
+  useNew = false,
+  objectConstructor = false,
+  showFunctionBody = false,
+  indentUsingTab = false,
+  indentSize = 2,
+  numericSeparator = true,
+  preserveLineBreaks = false
+} = {}) => {
+  const scopedHumanize = (scopedValue, scopedOptions) => {
+    const options = {
+      ...scopedOptions,
+      nestedHumanize: (nestedValue, nestedOptions = {}) => {
+        return scopedHumanize(nestedValue, {
+          ...scopedOptions,
+          depth: scopedOptions.depth + 1,
+          ...nestedOptions
+        });
+      }
+    };
+    return humanizeValue(scopedValue, options);
+  };
+  return scopedHumanize(value, {
+    parenthesis,
+    quote,
+    canUseTemplateString,
+    useNew,
+    objectConstructor,
+    showFunctionBody,
+    indentUsingTab,
+    indentSize,
+    numericSeparator,
+    preserveLineBreaks,
+    depth: 0
+  });
+};
+const humanizeMethodSymbol = Symbol.for("inspect");
+const humanizeValue = (value, options) => {
+  const customHumanize = value && value[humanizeMethodSymbol];
+  if (customHumanize) {
+    return customHumanize(options);
   }
   const primitiveType = primitiveTypeFromValue(value);
   const primitiveStringifier = primitiveStringifiers[primitiveType];
@@ -628,46 +651,6 @@ const compositeStringifiers = {
   Object: inspectObject,
   RegExp: inspectRegExp,
   String: inspectStringObject
-};
-
-const inspect = (value, {
-  parenthesis = false,
-  quote = "auto",
-  canUseTemplateString = true,
-  useNew = false,
-  objectConstructor = false,
-  showFunctionBody = false,
-  indentUsingTab = false,
-  indentSize = 2,
-  numericSeparator = true,
-  preserveLineBreaks = false
-} = {}) => {
-  const scopedInspect = (scopedValue, scopedOptions) => {
-    const options = {
-      ...scopedOptions,
-      nestedInspect: (nestedValue, nestedOptions = {}) => {
-        return scopedInspect(nestedValue, {
-          ...scopedOptions,
-          depth: scopedOptions.depth + 1,
-          ...nestedOptions
-        });
-      }
-    };
-    return inspectValue(scopedValue, options);
-  };
-  return scopedInspect(value, {
-    parenthesis,
-    quote,
-    canUseTemplateString,
-    useNew,
-    objectConstructor,
-    showFunctionBody,
-    indentUsingTab,
-    indentSize,
-    numericSeparator,
-    preserveLineBreaks,
-    depth: 0
-  });
 };
 
 const isComposite = value => {
@@ -812,7 +795,7 @@ const createNotExpectation = value => {
       return actual !== value;
     }
   });
-  notExpectation[inspectMethodSymbol] = () => {
+  notExpectation[humanizeMethodSymbol] = () => {
     return "an other value";
   };
   return notExpectation;
@@ -829,7 +812,7 @@ const createAnyExpectation = expectedConstructor => {
       }) => constructor && (constructor === expectedConstructor || constructor.name === expectedConstructor.name));
     }
   });
-  anyExpectation[inspectMethodSymbol] = () => {
+  anyExpectation[humanizeMethodSymbol] = () => {
     return "any(".concat(expectedConstructor.name, ")");
   };
   return anyExpectation;
@@ -847,7 +830,7 @@ const createMatchesRegExpExpectation = regexp => {
       return regexp.test(actual);
     }
   });
-  matchesRegexpExpectation[inspectMethodSymbol] = () => {
+  matchesRegexpExpectation[humanizeMethodSymbol] = () => {
     return "matchesRegExp(".concat(regexp, ")");
   };
   return matchesRegexpExpectation;
@@ -865,8 +848,8 @@ const createStartsWithExpectation = string => {
       return actual.startsWith(string);
     }
   });
-  startsWithExpectation[inspectMethodSymbol] = () => {
-    return "startsWith(".concat(inspect(string), ")");
+  startsWithExpectation[humanizeMethodSymbol] = () => {
+    return "startsWith(".concat(humanize(string), ")");
   };
   return startsWithExpectation;
 };
@@ -888,8 +871,8 @@ const createCloseToExpectation = (number, precision = 2) => {
       return receivedDiff < expectedDiff;
     }
   });
-  closeToExpectation[inspectMethodSymbol] = () => {
-    return "closeTo(".concat(inspect(number), ")");
+  closeToExpectation[humanizeMethodSymbol] = () => {
+    return "closeTo(".concat(humanize(number), ")");
   };
   return closeToExpectation;
 };
@@ -915,8 +898,8 @@ const createBetweenExpectation = (min, max) => {
       return true;
     }
   });
-  betweenExpectation[inspectMethodSymbol] = () => {
-    return "around(".concat(inspect(min), ", ").concat(inspect(max), ")");
+  betweenExpectation[humanizeMethodSymbol] = () => {
+    return "around(".concat(humanize(min), ", ").concat(humanize(max), ")");
   };
   return betweenExpectation;
 };
@@ -1526,14 +1509,14 @@ const compareToStringReturnValue = (comparison, options) => {
 
 const propertyToAccessorString = property => {
   if (typeof property === "number") {
-    return "[".concat(inspect(property), "]");
+    return "[".concat(humanize(property), "]");
   }
   if (typeof property === "string") {
     const dotNotationAllowedForProperty = propertyNameToDotNotationAllowed(property);
     if (dotNotationAllowedForProperty) {
       return ".".concat(property);
     }
-    return "[".concat(inspect(property), "]");
+    return "[".concat(humanize(property), "]");
   }
   return "[".concat(symbolToWellKnownSymbol(property), "]");
 };
@@ -1551,9 +1534,9 @@ const symbolToWellKnownSymbol = symbol => {
   if (description) {
     const key = Symbol.keyFor(symbol);
     if (key) {
-      return "Symbol.for(".concat(inspect(description), ")");
+      return "Symbol.for(".concat(humanize(description), ")");
     }
-    return "Symbol(".concat(inspect(description), ")");
+    return "Symbol(".concat(humanize(description), ")");
   }
   return "Symbol()";
 };
@@ -1698,7 +1681,7 @@ if (typeof window === "object") {
 }
 
 const valueToString = value => {
-  return valueToWellKnown(value) || inspect(value);
+  return valueToWellKnown(value) || humanize(value);
 };
 
 const getAnyErrorInfo = comparison => {
@@ -1815,7 +1798,7 @@ const getPrototypeErrorInfo = comparison => {
     // it would be a better name for that object no ?
     if (prototype === rootComparison.expected) return "expected";
     if (prototype === rootComparison.actual) return "actual";
-    return inspect(prototype);
+    return humanize(prototype);
   };
   const expectedPrototype = prototypeComparison.expected;
   const actualPrototype = prototypeComparison.actual;
@@ -1857,7 +1840,7 @@ const getPropertiesErrorInfo = comparison => {
     return {
       type: "MissingPropertyAssertionError",
       message: createDetailedMessage("1 missing property", {
-        "missing property": inspect(missingProperties),
+        "missing property": humanize(missingProperties),
         path
       })
     };
@@ -1866,7 +1849,7 @@ const getPropertiesErrorInfo = comparison => {
     return {
       type: "MissingPropertyAssertionError",
       message: createDetailedMessage("".concat(missingCount, " missing properties"), {
-        "missing properties": inspect(missingProperties),
+        "missing properties": humanize(missingProperties),
         path
       })
     };
@@ -1875,7 +1858,7 @@ const getPropertiesErrorInfo = comparison => {
     return {
       type: "ExtraPropertyAssertionError",
       message: createDetailedMessage("1 unexpected property", {
-        "unexpected property": inspect(unexpectedProperties),
+        "unexpected property": humanize(unexpectedProperties),
         path
       })
     };
@@ -1884,7 +1867,7 @@ const getPropertiesErrorInfo = comparison => {
     return {
       type: "ExtraPropertyAssertionError",
       message: createDetailedMessage("".concat(extraCount, " unexpected properties"), {
-        "unexpected properties": inspect(unexpectedProperties),
+        "unexpected properties": humanize(unexpectedProperties),
         path
       })
     };
@@ -1903,8 +1886,8 @@ const getPropertiesErrorInfo = comparison => {
   return {
     type: "PropertiesAssertionError",
     message: createDetailedMessage(message, {
-      [extraCount === 1 ? "unexpected property" : "unexpected properties"]: inspect(unexpectedProperties),
-      [missingCount === 1 ? "missing property" : "missing properties"]: inspect(missingProperties),
+      [extraCount === 1 ? "unexpected property" : "unexpected properties"]: humanize(unexpectedProperties),
+      [missingCount === 1 ? "missing property" : "missing properties"]: humanize(missingProperties),
       path
     })
   };
@@ -1923,7 +1906,7 @@ const getPropertiesOrderErrorInfo = comparison => {
   };
 };
 const propertyNameArrayToString = propertyNameArray => {
-  return propertyNameArray.map(propertyName => inspect(propertyName));
+  return propertyNameArray.map(propertyName => humanize(propertyName));
 };
 
 const getSymbolsErrorInfo = comparison => {
@@ -1953,7 +1936,7 @@ const getSymbolsErrorInfo = comparison => {
   };
 };
 const symbolArrayToString$1 = symbolArray => {
-  return symbolArray.map(symbol => inspect(symbol));
+  return symbolArray.map(symbol => humanize(symbol));
 };
 
 const getSymbolsOrderErrorInfo = comparison => {
@@ -1969,7 +1952,7 @@ const getSymbolsOrderErrorInfo = comparison => {
   };
 };
 const symbolArrayToString = symbolArray => {
-  return symbolArray.map(symbol => inspect(symbol));
+  return symbolArray.map(symbol => humanize(symbol));
 };
 
 const getSetSizeErrorInfo = comparison => {
@@ -2067,7 +2050,7 @@ const getArrayLengthErrorInfo = comparison => {
       message: createDetailedMessage("an array is smaller than expected", {
         "array length found": actualLength,
         "array length expected": expectedLength,
-        "missing values": inspect(missingValues),
+        "missing values": humanize(missingValues),
         path
       })
     };
@@ -2078,7 +2061,7 @@ const getArrayLengthErrorInfo = comparison => {
     message: createDetailedMessage("an array is bigger than expected", {
       "array length found": actualLength,
       "array length expected": expectedLength,
-      "extra values": inspect(extraValues),
+      "extra values": humanize(extraValues),
       path
     })
   };
@@ -2149,10 +2132,10 @@ const getStringComparisonErrorInfo = ({
   }) => {
     if (actual.includes("".concat(COLUMN_MARKER_CHAR, " unexpected character"))) {
       return {
-        actual: inspect(actual, {
+        actual: humanize(actual, {
           preserveLineBreaks: true
         }),
-        expected: inspect(expected, {
+        expected: humanize(expected, {
           preserveLineBreaks: true
         })
       };
@@ -2269,7 +2252,7 @@ const getStringComparisonErrorInfo = ({
           type: "CharacterAssertionError",
           message: createDetailedMessage(message, {
             ...formatDetails({
-              annotationLabel: "unexpected ".concat(inspect(actualChar), ", expected to continue with")
+              annotationLabel: "unexpected ".concat(humanize(actualChar), ", expected to continue with")
             }),
             ...(path ? {
               path
@@ -2327,7 +2310,7 @@ const getStringComparisonErrorInfo = ({
       } else {
         columnIndex--;
       }
-      annotationLabel = "expected to end here, on ".concat(inspect(expected[expectedLength - 1]));
+      annotationLabel = "expected to end here, on ".concat(humanize(expected[expectedLength - 1]));
     }
 
     // const continuesWithLineBreak = isLineBreak(actual[expectedLength]);
@@ -2470,8 +2453,8 @@ const getBetweenErrorInfo = comparison => {
     return {
       type: "NotANumberAssertionError",
       message: createDetailedMessage("not a number", {
-        found: inspect(actual),
-        expected: "a number between ".concat(inspect(min), " and ").concat(inspect(max)),
+        found: humanize(actual),
+        expected: "a number between ".concat(humanize(min), " and ").concat(humanize(max)),
         path
       })
     };
@@ -2481,8 +2464,8 @@ const getBetweenErrorInfo = comparison => {
     return {
       type: "TooSmallAssertionError",
       message: createDetailedMessage("too small", {
-        found: inspect(actual),
-        expected: "between ".concat(inspect(min), " and ").concat(inspect(max)),
+        found: humanize(actual),
+        expected: "between ".concat(humanize(min), " and ").concat(humanize(max)),
         path
       })
     };
@@ -2491,8 +2474,8 @@ const getBetweenErrorInfo = comparison => {
   return {
     type: "TooBigAssertionError",
     message: createDetailedMessage("too big", {
-      found: inspect(actual),
-      expected: "between ".concat(inspect(min), " and ").concat(inspect(max)),
+      found: humanize(actual),
+      expected: "between ".concat(humanize(min), " and ").concat(humanize(max)),
       path
     })
   };

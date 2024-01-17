@@ -36,7 +36,27 @@ const result = await executeTestPlan({
 });
 const actual = result;
 const expected = {
+  os: {
+    name: assert.any(String),
+    version: assert.any(String),
+    availableCpu: assert.any(Number),
+    availableMemory: assert.any(Number),
+  },
+  process: {
+    name: assert.any(String),
+    version: assert.any(String),
+  },
+  memoryUsage: {
+    os: assert.any(Object),
+    process: assert.any(Object),
+  },
+  cpuUsage: {
+    os: assert.any(Object),
+    process: assert.any(Object),
+  },
+  timings: assert.any(Object),
   rootDirectoryUrl: new URL("./", import.meta.url).href,
+  patterns: ["./client/*.html"],
   groups: {
     a: {
       count: 1,
@@ -65,7 +85,6 @@ const expected = {
   },
   aborted: false,
   failed: false,
-  timings: assert.any(Object),
   coverage: null,
   results: {
     "client/main.html": {

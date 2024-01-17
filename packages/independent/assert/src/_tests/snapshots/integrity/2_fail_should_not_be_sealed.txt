@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+"sealed"
+--- expected ---
+"none"
+--- path ---
+actual[[Integrity]]

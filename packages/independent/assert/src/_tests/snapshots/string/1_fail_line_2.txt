@@ -1,0 +1,8 @@
+CharacterAssertionError: unexpected character in string
+--- details ---
+1 | Hello,
+2 | my name is Damien
+               ^
+unexpected "D", expected to continue with "Flore"
+--- path ---
+actual

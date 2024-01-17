@@ -1,4 +1,4 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 import { createDetailedMessage } from "./utils/detailed_message.js";
 import { comparisonToPath } from "./utils/comparison_to_path.js";
@@ -16,8 +16,8 @@ export const getBetweenErrorInfo = (comparison) => {
     return {
       type: "NotANumberAssertionError",
       message: createDetailedMessage(`not a number`, {
-        found: inspect(actual),
-        expected: `a number between ${inspect(min)} and ${inspect(max)}`,
+        found: humanize(actual),
+        expected: `a number between ${humanize(min)} and ${humanize(max)}`,
         path,
       }),
     };
@@ -27,8 +27,8 @@ export const getBetweenErrorInfo = (comparison) => {
     return {
       type: "TooSmallAssertionError",
       message: createDetailedMessage(`too small`, {
-        found: inspect(actual),
-        expected: `between ${inspect(min)} and ${inspect(max)}`,
+        found: humanize(actual),
+        expected: `between ${humanize(min)} and ${humanize(max)}`,
         path,
       }),
     };
@@ -37,8 +37,8 @@ export const getBetweenErrorInfo = (comparison) => {
   return {
     type: "TooBigAssertionError",
     message: createDetailedMessage(`too big`, {
-      found: inspect(actual),
-      expected: `between ${inspect(min)} and ${inspect(max)}`,
+      found: humanize(actual),
+      expected: `between ${humanize(min)} and ${humanize(max)}`,
       path,
     }),
   };

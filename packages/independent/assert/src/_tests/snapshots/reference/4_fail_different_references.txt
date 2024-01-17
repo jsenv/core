@@ -1,0 +1,7 @@
+ReferenceAssertionError: unequal references
+--- reference found to ---
+actual
+--- reference expected to ---
+expected.object
+--- path ---
+actual.object.self

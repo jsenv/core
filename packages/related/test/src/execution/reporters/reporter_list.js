@@ -1,8 +1,14 @@
-import { memoryUsage } from "node:process";
+import { memoryUsage as processMemoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
-import { inspectDuration, inspectMemoryUsage } from "@jsenv/inspect";
-import { createDynamicLog, ANSI, UNICODE } from "@jsenv/log";
+import {
+  createDynamicLog,
+  humanizeDuration,
+  humanizeMemory,
+  ANSI,
+  UNICODE,
+} from "@jsenv/humanize";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 
@@ -31,7 +37,9 @@ import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 export const reporterList = ({
   animated = true,
   mockFluctuatingValues, // used for snapshot testing logs
-  showMemoryUsage = true,
+  platformInfo,
+  memoryUsage,
+  cpuUsage,
   spy = () => {
     return {
       write: (log) => {
@@ -52,7 +60,9 @@ export const reporterList = ({
     process.exitCode !== 1;
 
   const logOptions = {
-    showMemoryUsage,
+    platformInfo,
+    memoryUsage,
+    cpuUsage,
     mockFluctuatingValues,
     group: false,
     intermediateSummary: !animatedLogEnabled,
@@ -106,14 +116,14 @@ export const reporterList = ({
 
           const msEllapsed = Date.now() - startMs;
           const infos = [];
-          const duration = inspectDuration(msEllapsed, {
+          const duration = humanizeDuration(msEllapsed, {
             short: true,
             decimals: 0,
             rounded: false,
           });
           infos.push(ANSI.color(duration, ANSI.GREY));
-          const memoryHeapUsed = memoryUsage().heapUsed;
-          const memoryHeapUsedFormatted = inspectMemoryUsage(memoryHeapUsed, {
+          const memoryHeapUsed = processMemoryUsage().heapUsed;
+          const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
             short: true,
             decimals: 0,
           });
@@ -164,8 +174,10 @@ export const reporterList = ({
     reporters.push(
       reporterList({
         animated: false,
+        platformInfo,
+        memoryUsage,
+        cpuUsage,
         mockFluctuatingValues, // used for snapshot testing logs
-        showMemoryUsage,
         spy: () => {
           let rawOutput = "";
 
@@ -185,56 +197,57 @@ export const reporterList = ({
 };
 
 const renderIntro = (testPlanResult, logOptions) => {
-  const { counters } = testPlanResult;
-  const planified = counters.planified;
-  const { groups } = testPlanResult;
-  const groupNames = Object.keys(groups);
+  const lines = [];
+  if (logOptions.platformInfo) {
+    os_line: {
+      let osLine = `os: `;
+      if (logOptions.mockFluctuatingValues) {
+        osLine += `os@<mock>`;
+      } else {
+        osLine += `${testPlanResult.os.name}@${testPlanResult.os.version}`;
+      }
+      osLine += renderDetails({
+        cpu: logOptions.mockFluctuatingValues
+          ? "<mock>"
+          : testPlanResult.os.availableCpu,
+        memory: logOptions.mockFluctuatingValues
+          ? "<mock>GB"
+          : humanizeMemory(testPlanResult.os.availableMemory, {
+              short: true,
+              decimals: 0,
+            }),
+      });
+      lines.push(osLine);
+    }
+    process_line: {
+      const process = logOptions.mockFluctuatingValues
+        ? `node@mock`
+        : `${testPlanResult.process.name}@${testPlanResult.process.version}`;
+      let processLine = `process: ${process}`;
+      lines.push(processLine);
+    }
+  }
 
-  if (planified === 0) {
-    return `${renderBigSection({
-      title: "nothing to execute",
-      content: "",
-    })}\n\n`;
-  }
-  if (planified === 1) {
-    const groupName = groupNames[0];
-    const groupInfo = groups[groupName];
-    return `${renderBigSection({
-      title: "1 execution to run",
-      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
-    })}\n\n`;
-  }
-  if (groupNames.length === 1) {
-    const groupName = groupNames[0];
-    const groupInfo = groups[groupName];
-    return `${renderBigSection({
-      title: `${planified} executions to run`,
-      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
-    })}\n\n`;
+  const directory = logOptions.mockFluctuatingValues
+    ? "/mock/"
+    : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
+  const numberOfFiles = Object.keys(testPlanResult.results).length;
+  let fileFoundLine = "";
+  if (numberOfFiles === 0) {
+    fileFoundLine += `no file matching "testPlan" in ${directory}:
+${testPlanResult.patterns.join("\n")}`;
+  } else if (numberOfFiles === 1) {
+    fileFoundLine += `1 file matching "testPlan" in ${directory}`;
+  } else {
+    fileFoundLine += `${numberOfFiles} files matching "testPlan" in ${directory}`;
   }
 
-  let introLines = [];
-  for (const groupName of groupNames) {
-    const groupInfo = groups[groupName];
-    introLines.push(
-      `${groupInfo.count} with ${groupName} (${getGroupRenderedName(
-        groupInfo,
-        logOptions,
-      )})`,
-    );
-  }
+  lines.push(fileFoundLine);
+
   return `${renderBigSection({
-    title: `${planified} executions to run`,
-    content: introLines.join("\n"),
+    title: "execution start",
+    content: lines.join("\n"),
   })}\n\n`;
-};
-
-const getGroupRenderedName = (groupInfo, logOptions) => {
-  let { runtimeName, runtimeVersion } = groupInfo;
-  if (logOptions.mockFluctuatingValues && groupInfo.runtimeType === "node") {
-    runtimeVersion = "<mock>";
-  }
-  return `${runtimeName}@${runtimeVersion}`;
 };
 
 const renderExecutionLog = (execution, logOptions) => {
@@ -288,13 +301,13 @@ const renderExecutionLabel = (execution, logOptions) => {
       const duration = timings.executionEnd - timings.executionStart;
       const durationFormatted = logOptions.mockFluctuatingValues
         ? `<mock>ms`
-        : inspectDuration(duration, { short: true });
+        : humanizeDuration(duration, { short: true });
       infos.push(ANSI.color(durationFormatted, ANSI.GREY));
     }
-    if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
+    if (logOptions.memoryUsage && typeof memoryUsage === "number") {
       const memoryUsageFormatted = logOptions.mockFluctuatingValues
         ? `<mock>MB`
-        : inspectMemoryUsage(memoryUsage, { short: true });
+        : humanizeMemory(memoryUsage, { short: true });
       infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
     }
     if (infos.length) {
@@ -556,55 +569,87 @@ const renderErrors = (execution, logOptions) => {
 };
 
 export const renderOutro = (testPlanResult, logOptions = {}) => {
-  let finalSummary = "";
+  const lines = [];
   const { counters } = testPlanResult;
   const { planified } = counters;
 
-  if (planified === 1) {
-    finalSummary += `1 execution: `;
+  let executionLine = "";
+  if (planified === 0) {
+    executionLine += `no execution`;
+  } else if (planified === 1) {
+    executionLine += `1 execution: `;
   } else {
-    finalSummary += `${planified} executions: `;
+    executionLine += `${planified} executions: `;
   }
-  finalSummary += renderStatusRepartition(counters);
+  executionLine += renderStatusRepartition(counters);
+  lines.push(executionLine);
 
-  let durationLog = ``;
+  let durationLine = `duration: `;
   const { timings } = testPlanResult;
   if (logOptions.mockFluctuatingValues) {
-    durationLog += "<mock>s";
+    durationLine += "<mock>s";
   } else {
-    durationLog += inspectDuration(timings.end, { short: true });
+    durationLine += humanizeDuration(timings.end, { short: true });
     const namedTimings = {
-      setup: timings.executionStart,
-      execution: timings.executionEnd,
-      teardown: timings.teardownEnd - timings.executionEnd,
+      setup: humanizeTiming(timings.executionStart),
+      execution: humanizeTiming(timings.executionEnd),
+      teardown: humanizeTiming(timings.teardownEnd - timings.executionEnd),
       ...(testPlanResult.coverage
-        ? { coverage: timings.coverageTeardownEnd - timings.teardownEnd }
+        ? {
+            coverage: humanizeTiming(
+              timings.coverageTeardownEnd - timings.teardownEnd,
+            ),
+          }
         : {}),
     };
-    const timingDetails = [];
-    for (const key of Object.keys(namedTimings)) {
-      const value = namedTimings[key];
-      const timingDuration = inspectDuration(value, { short: true });
-      const timingString = `${ANSI.color(`${key}:`, ANSI.GREY)} ${ANSI.color(
-        timingDuration,
-        ANSI.GREY,
-      )}`;
-      timingDetails.push(ANSI.color(timingString, ANSI.GREY));
-    }
-    if (timingDetails.length) {
-      durationLog += ` ${ANSI.color("(", ANSI.GREY)}${timingDetails.join(
-        ANSI.color(", ", ANSI.GREY),
-      )}${ANSI.color(")", ANSI.GREY)}`;
-    }
+    durationLine += renderDetails(namedTimings);
   }
-  finalSummary += `\nduration: ${durationLog}`;
+  lines.push(durationLine);
 
-  return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
+  if (logOptions.cpuUsage) {
+    const processCpuUsage = testPlanResult.cpuUsage.process;
+    let cpuUsageLine = "cpu: ";
+    cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+    cpuUsageLine += renderDetails({
+      med: humanizeProcessCpuUsage(processCpuUsage.median),
+      min: humanizeProcessCpuUsage(processCpuUsage.min),
+      max: humanizeProcessCpuUsage(processCpuUsage.max),
+    });
+    lines.push(cpuUsageLine);
+  }
+  if (logOptions.memoryUsage) {
+    const processMemoryUsage = testPlanResult.memoryUsage.process;
+    let memoryUsageLine = "memory: ";
+    memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+    memoryUsageLine += renderDetails({
+      med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+      min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+      max: humanizeProcessMemoryUsage(processMemoryUsage.max),
+    });
+    lines.push(memoryUsageLine);
+  }
+
+  return `\n${renderBigSection({ title: "summary", content: lines.join("\n") })}\n`;
+};
+
+const humanizeTiming = (value) => {
+  return humanizeDuration(value, { short: true });
+};
+
+const humanizeProcessCpuUsage = (ratio) => {
+  const percentageAsNumber = ratio * 100;
+  const percentageAsNumberRounded = Math.round(percentageAsNumber);
+  const percentage = `${percentageAsNumberRounded}%`;
+  return percentage;
+};
+
+const humanizeProcessMemoryUsage = (value) => {
+  return humanizeMemory(value, { short: true, decimals: 0 });
 };
 
 const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
-    return `nothing to run`;
+    return ``;
   }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
@@ -689,4 +734,27 @@ const renderSection = ({
   const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
   section += bottomDashes;
   return section;
+};
+
+const renderDetails = (data) => {
+  const details = [];
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    let valueString = "";
+    valueString += ANSI.color(`${key}:`, ANSI.GREY);
+    const useNonGreyAnsiColor =
+      typeof value === "string" && value.includes("\x1b");
+    valueString += " ";
+    valueString += useNonGreyAnsiColor ? value : ANSI.color(value, ANSI.GREY);
+    details.push(valueString);
+  }
+  if (details.length === 0) {
+    return "";
+  }
+
+  let string = "";
+  string += ` ${ANSI.color("(", ANSI.GREY)}`;
+  string += details.join(ANSI.color(", ", ANSI.GREY));
+  string += ANSI.color(")", ANSI.GREY);
+  return string;
 };

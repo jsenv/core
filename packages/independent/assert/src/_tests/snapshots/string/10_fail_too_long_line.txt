@@ -1,0 +1,8 @@
+ExtraCharacterAssertionError: string is too long, it contains 5 extra characters
+--- details ---
+1 | Hello,
+2 | I am benjamin
+           ^
+expected to end here, on "n"
+--- path ---
+actual

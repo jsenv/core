@@ -23,7 +23,7 @@ import {
 } from "@jsenv/server";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import { createLogger, createTaskLog } from "@jsenv/log";
+import { createLogger, createTaskLog } from "@jsenv/humanize";
 
 /**
  * Start a server for build files.

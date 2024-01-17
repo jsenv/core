@@ -1,4 +1,4 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 import { comparisonToPath } from "./utils/comparison_to_path.js";
 import { valueToWellKnown } from "./utils/well_known_value.js";
@@ -25,7 +25,7 @@ export const getPrototypeErrorInfo = (comparison) => {
     // it would be a better name for that object no ?
     if (prototype === rootComparison.expected) return "expected";
     if (prototype === rootComparison.actual) return "actual";
-    return inspect(prototype);
+    return humanize(prototype);
   };
   const expectedPrototype = prototypeComparison.expected;
   const actualPrototype = prototypeComparison.actual;

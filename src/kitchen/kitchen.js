@@ -6,7 +6,7 @@ import {
 } from "@jsenv/urls";
 import { URL_META } from "@jsenv/url-meta";
 import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
-import { createLogger, createDetailedMessage, ANSI } from "@jsenv/log";
+import { createLogger, createDetailedMessage, ANSI } from "@jsenv/humanize";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 

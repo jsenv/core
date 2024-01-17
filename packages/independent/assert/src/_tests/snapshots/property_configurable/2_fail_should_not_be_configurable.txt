@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+"configurable"
+--- expected ---
+"non-configurable"
+--- path ---
+actual.foo[[Configurable]]

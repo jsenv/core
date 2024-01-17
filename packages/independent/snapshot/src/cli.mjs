@@ -5,14 +5,14 @@ import { pathToFileURL } from "node:url";
 import { clearDirectorySync } from "@jsenv/filesystem";
 
 const options = {
-  "help": {
-    type: "boolean",
-  },
-  "include-dev": {
+  help: {
     type: "boolean",
   },
 };
-const { values, positionals } = parseArgs({ options, allowPositionals: true });
+const { values, positionals } = parseArgs({
+  options,
+  allowPositionals: true,
+});
 
 if (values.help || positionals.length === 0) {
   console.log(`snapshot: Manage snapshot files generated during tests.
@@ -27,8 +27,10 @@ pattern: files matching this pattern will be removed; can use "*" and "**"
 }
 
 const commandHandlers = {
-  clear: async (pattern) => {
-    const currentDirectoryUrl = pathToFileURL(`${process.cwd()}/`);
+  clear: (pattern) => {
+    const currentDirectoryPath = process.cwd();
+    const currentDirectoryUrl = pathToFileURL(`${currentDirectoryPath}/`);
+    console.log(`clear files matching ${pattern} in ${currentDirectoryPath}`);
     clearDirectorySync(currentDirectoryUrl, pattern);
   },
 };
@@ -41,4 +43,12 @@ if (!commandHandler) {
   process.exit(1);
 }
 
-await commandHandler(positionals.slice(1));
+if (commandHandler.length) {
+  const args = positionals.slice(1);
+  if (args.length === 0) {
+    console.error(`Error: "${command}" command expect arguments.`);
+    process.exit(1);
+  }
+}
+
+await commandHandler(...positionals.slice(1));

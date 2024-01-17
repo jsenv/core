@@ -1,4 +1,4 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 import { comparisonToPath } from "./utils/comparison_to_path.js";
 
@@ -48,5 +48,5 @@ ${path}`,
 };
 
 const symbolArrayToString = (symbolArray) => {
-  return symbolArray.map((symbol) => inspect(symbol));
+  return symbolArray.map((symbol) => humanize(symbol));
 };

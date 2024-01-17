@@ -1,4 +1,4 @@
-import { ANSI } from "@jsenv/log";
+import { ANSI } from "@jsenv/humanize";
 
 import { createAssert } from "./assert.js";
 

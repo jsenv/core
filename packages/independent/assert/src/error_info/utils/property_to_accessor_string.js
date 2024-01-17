@@ -1,8 +1,8 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 export const propertyToAccessorString = (property) => {
   if (typeof property === "number") {
-    return `[${inspect(property)}]`;
+    return `[${humanize(property)}]`;
   }
   if (typeof property === "string") {
     const dotNotationAllowedForProperty =
@@ -10,7 +10,7 @@ export const propertyToAccessorString = (property) => {
     if (dotNotationAllowedForProperty) {
       return `.${property}`;
     }
-    return `[${inspect(property)}]`;
+    return `[${humanize(property)}]`;
   }
 
   return `[${symbolToWellKnownSymbol(property)}]`;
@@ -36,9 +36,9 @@ const symbolToWellKnownSymbol = (symbol) => {
   if (description) {
     const key = Symbol.keyFor(symbol);
     if (key) {
-      return `Symbol.for(${inspect(description)})`;
+      return `Symbol.for(${humanize(description)})`;
     }
-    return `Symbol(${inspect(description)})`;
+    return `Symbol(${humanize(description)})`;
   }
   return `Symbol()`;
 };

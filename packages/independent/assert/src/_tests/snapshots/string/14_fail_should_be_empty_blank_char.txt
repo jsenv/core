@@ -1,0 +1,7 @@
+ExtraCharacterAssertionError: string is too long, it contains one extra character
+--- details ---
+\x7F
+^
+an empty string was expected
+--- path ---
+actual

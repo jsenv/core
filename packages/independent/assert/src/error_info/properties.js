@@ -1,4 +1,4 @@
-import { inspect } from "@jsenv/inspect";
+import { humanize } from "@jsenv/humanize";
 
 import { createDetailedMessage } from "./utils/detailed_message.js";
 import { comparisonToPath } from "./utils/comparison_to_path.js";
@@ -26,7 +26,7 @@ export const getPropertiesErrorInfo = (comparison) => {
     return {
       type: "MissingPropertyAssertionError",
       message: createDetailedMessage("1 missing property", {
-        "missing property": inspect(missingProperties),
+        "missing property": humanize(missingProperties),
         path,
       }),
     };
@@ -36,7 +36,7 @@ export const getPropertiesErrorInfo = (comparison) => {
     return {
       type: "MissingPropertyAssertionError",
       message: createDetailedMessage(`${missingCount} missing properties`, {
-        "missing properties": inspect(missingProperties),
+        "missing properties": humanize(missingProperties),
         path,
       }),
     };
@@ -46,7 +46,7 @@ export const getPropertiesErrorInfo = (comparison) => {
     return {
       type: "ExtraPropertyAssertionError",
       message: createDetailedMessage(`1 unexpected property`, {
-        "unexpected property": inspect(unexpectedProperties),
+        "unexpected property": humanize(unexpectedProperties),
         path,
       }),
     };
@@ -56,7 +56,7 @@ export const getPropertiesErrorInfo = (comparison) => {
     return {
       type: "ExtraPropertyAssertionError",
       message: createDetailedMessage(`${extraCount} unexpected properties`, {
-        "unexpected properties": inspect(unexpectedProperties),
+        "unexpected properties": humanize(unexpectedProperties),
         path,
       }),
     };
@@ -77,9 +77,9 @@ export const getPropertiesErrorInfo = (comparison) => {
     type: "PropertiesAssertionError",
     message: createDetailedMessage(message, {
       [extraCount === 1 ? "unexpected property" : "unexpected properties"]:
-        inspect(unexpectedProperties),
+        humanize(unexpectedProperties),
       [missingCount === 1 ? "missing property" : "missing properties"]:
-        inspect(missingProperties),
+        humanize(missingProperties),
       path,
     }),
   };

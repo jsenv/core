@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -38,13 +38,13 @@
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
     "test": "node ./scripts/test.mjs",
+    "test:clear_snapshot": "npx @jsenv/snapshot clear **/_tests/**/snapshots/",
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/inspect": "2.0.0",
-    "@jsenv/log": "3.5.2"
+    "@jsenv/humanize": "1.0.0"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"

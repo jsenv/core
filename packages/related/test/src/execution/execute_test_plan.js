@@ -2,7 +2,14 @@
  *
  */
 
-import { cpus, availableParallelism, freemem, totalmem } from "node:os";
+import {
+  release,
+  cpus,
+  availableParallelism,
+  totalmem,
+  freemem,
+} from "node:os";
+import { memoryUsage } from "node:process";
 import { existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -13,13 +20,13 @@ import {
   assertAndNormalizeDirectoryUrl,
   collectFiles,
 } from "@jsenv/filesystem";
-import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/log";
+import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/humanize";
 import {
   startGithubCheckRun,
   readGitHubWorkflowEnv,
 } from "@jsenv/github-check-run";
 
-import { startMeasuringCpuUsage } from "../helpers/cpu_usage.js";
+import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";
 import { createCallOrderer } from "../helpers/call_orderer.js";
 import { generateCoverage } from "../coverage/generate_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
@@ -43,6 +50,9 @@ const logsDefault = {
   level: "info",
   type: "list",
   animated: true,
+  platformInfo: false,
+  memoryUsage: false,
+  cpuUsage: false,
   fileUrl: undefined,
 };
 const githubCheckDefault = {
@@ -87,8 +97,8 @@ const coverageDefault = {
 };
 const parallelDefault = {
   max: "80%", // percentage resolved against the available cpus
-  maxCpu: "90%",
-  maxMemory: "90%",
+  maxCpu: "80%",
+  maxMemory: "50%",
 };
 
 export const executeTestPlan = async ({
@@ -139,12 +149,63 @@ export const executeTestPlan = async ({
     });
   }
 
-  const timingOrigin = Date.now();
+  const cpuUsage = startMeasuringTotalCpuUsage();
+  operation.addEndCallback(cpuUsage.stop);
+  const processCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.thisProcess.active;
+  });
+  const osCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.overall.active;
+  });
+  const processMemoryUsageMonitoring = startMonitoringMetric(() => {
+    return memoryUsage().rss;
+  });
+  const osMemoryUsageMonitoring = startMonitoringMetric(() => {
+    const total = totalmem();
+    const free = freemem();
+    return total - free;
+  });
+
+  const timingsOrigin = Date.now();
   const takeTiming = () => {
-    return Date.now() - timingOrigin;
+    return Date.now() - timingsOrigin;
   };
   const testPlanResult = {
+    os: {
+      name:
+        process.platform === "darwin"
+          ? "mac"
+          : process.platform === "win32" || process.platform === "win64"
+            ? "windows"
+            : process.platform === "linux"
+              ? "linux"
+              : "other",
+      version: release(),
+      availableCpu: countAvailableCpus(),
+      availableMemory: totalmem(),
+    },
+    process: {
+      name: "node",
+      version: process.version.slice(1),
+    },
+    memoryUsage: {
+      os: osMemoryUsageMonitoring.info,
+      process: processMemoryUsageMonitoring.info,
+    },
+    cpuUsage: {
+      os: osCpuUsageMonitoring.info,
+      process: processCpuUsageMonitoring.info,
+    },
+    timings: {
+      origin: timingsOrigin,
+      executionStart: null,
+      executionEnd: null,
+      teardownEnd: null,
+      coverageTeardownEnd: null,
+      end: null,
+    },
     rootDirectoryUrl: String(rootDirectoryUrl),
+    patterns: Object.keys(testPlan),
     groups: {},
     counters: {
       planified: 0,
@@ -161,14 +222,6 @@ export const executeTestPlan = async ({
     },
     aborted: false,
     failed: false,
-    timings: {
-      origin: timingOrigin,
-      executionStart: null,
-      executionEnd: null,
-      teardownEnd: null,
-      coverageTeardownEnd: null,
-      end: null,
-    },
     coverage: null,
     results: {},
   };
@@ -196,9 +249,6 @@ export const executeTestPlan = async ({
   let finalizeCoverage;
 
   try {
-    const cpuUsage = startMeasuringCpuUsage();
-    operation.addEndCallback(cpuUsage.stop);
-
     let logger;
     const runtimeInfo = {
       someNeedsServer: false,
@@ -229,6 +279,10 @@ export const executeTestPlan = async ({
 
         if (logs.type === "list" && logger.levels.info) {
           const listReporterOptions = {
+            mockFluctuatingValues: logs.mockFluctuatingValues,
+            platformInfo: logs.platformInfo,
+            memoryUsage: logs.memoryUsage,
+            cpuUsage: logs.cpuUsage,
             animated: logger.levels.debug ? false : logs.animated,
             fileUrl:
               logs.fileUrl === undefined
@@ -287,8 +341,8 @@ export const executeTestPlan = async ({
         const max = parallel.max;
         if (typeof max === "string") {
           const maxAsRatio = assertPercentageAndConvertToRatio(max);
-          const availableCpus = countAvailableCpus();
-          parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
+          parallel.max =
+            Math.round(maxAsRatio * testPlanResult.os.availableCpu) || 1;
         } else if (typeof max === "number") {
           if (max < 1) {
             parallel.max = 1;
@@ -302,7 +356,9 @@ export const executeTestPlan = async ({
         const maxMemory = parallel.maxMemory;
         if (typeof maxMemory === "string") {
           const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
-          parallel.maxMemory = Math.round(maxMemoryAsRatio * totalmem());
+          parallel.maxMemory = Math.round(
+            maxMemoryAsRatio * testPlanResult.os.availableMemory,
+          );
         } else if (typeof maxMemory !== "number") {
           throw new TypeError(
             `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
@@ -821,7 +877,6 @@ To fix this warning:
           failFastAbortController.abort();
           return;
         }
-        await startAsMuchAsPossible();
       };
       const startAsMuchAsPossible = async () => {
         const promises = [];
@@ -841,19 +896,17 @@ To fix this warning:
             // if nothing is executing these limitations don't apply
             executionExecutingSet.size > 0
           ) {
-            const availableMemory = freemem();
-            const totalMemory = totalmem();
-            const usedMemory = totalMemory - availableMemory;
-            if (usedMemory > parallel.maxMemory) {
+            if (processMemoryUsageMonitoring.measure() > parallel.maxMemory) {
               // retry after Xms in case memory usage decreases
               const promise = (async () => {
                 await operation.wait(200);
                 await startAsMuchAsPossible();
               })();
               promises.push(promise);
+              break;
             }
 
-            if (cpuUsage.overall.active > parallel.maxCpu) {
+            if (processCpuUsageMonitoring.measure() > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
               const promise = (async () => {
                 await operation.wait(200);
@@ -872,7 +925,11 @@ To fix this warning:
             break;
           }
           if (execution) {
-            promises.push(start(execution));
+            const promise = (async () => {
+              await start(execution);
+              await startAsMuchAsPossible();
+            })();
+            promises.push(promise);
           }
         }
         if (promises.length) {
@@ -957,6 +1014,11 @@ To fix this warning:
     timings.coverageTeardownEnd = takeTiming();
     timings.end = takeTiming();
 
+    osMemoryUsageMonitoring.end();
+    processMemoryUsageMonitoring.end();
+    osCpuUsageMonitoring.end();
+    processCpuUsageMonitoring.end();
+
     afterEachCallbackSet.clear();
     afterEachInOrderCallbackSet.clear();
     for (const afterAllCallback of afterAllCallbackSet) {
@@ -967,6 +1029,51 @@ To fix this warning:
   }
 
   return testPlanResult;
+};
+
+const startMonitoringMetric = (measure) => {
+  const metrics = [];
+  const takeMeasure = () => {
+    const value = measure();
+    metrics.push(value);
+    return value;
+  };
+
+  const info = {
+    start: takeMeasure(),
+    min: null,
+    max: null,
+    median: null,
+    end: null,
+  };
+  return {
+    info,
+    measure: takeMeasure,
+    end: () => {
+      info.end = takeMeasure();
+      metrics.sort((a, b) => a - b);
+      info.min = metrics[0];
+      info.max = metrics[metrics.length - 1];
+      info.median = medianFromSortedArray(metrics);
+      metrics.length = 0;
+    },
+  };
+};
+
+const medianFromSortedArray = (array) => {
+  const length = array.length;
+  const isOdd = length % 2 === 1;
+  if (isOdd) {
+    const medianNumberIndex = (length - 1) / 2;
+    const medianNumber = array[medianNumberIndex];
+    return medianNumber;
+  }
+  const rightMiddleNumberIndex = length / 2;
+  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
+  const leftMiddleNumber = array[leftMiddleNumberIndex];
+  const rightMiddleNumber = array[rightMiddleNumberIndex];
+  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
+  return medianNumber;
 };
 
 const countAvailableCpus = () => {

@@ -12,7 +12,7 @@ import {
 import { relative } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import prompts from "prompts";
-import { UNICODE, createTaskLog } from "@jsenv/log";
+import { createTaskLog, UNICODE } from "@jsenv/humanize";
 
 const copy = (fromUrl, toUrl) => {
   const stat = statSync(fromUrl);

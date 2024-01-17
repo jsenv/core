@@ -1,4 +1,4 @@
-// duplicated from @jsenv/log to avoid the dependency
+// duplicated from @jsenv/humanize to avoid the dependency
 export const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
 

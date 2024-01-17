@@ -1,0 +1,7 @@
+AssertionError: unequal values
+--- found ---
+Infinity
+--- expected ---
+1
+--- path ---
+actual

@@ -1,0 +1,7 @@
+AnyAssertionError: unexpected value
+--- found ---
+true
+--- expected ---
+any(String)
+--- path ---
+actual.token

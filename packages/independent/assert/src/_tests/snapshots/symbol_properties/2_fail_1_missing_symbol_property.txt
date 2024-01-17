@@ -1,0 +1,5 @@
+MissingSymbolAssertionError: missing symbols
+--- missing symbol list ---
+Symbol("a")
+--- path ---
+actual

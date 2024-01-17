@@ -1,0 +1,49 @@
+{
+  "name": "@jsenv/humanize",
+  "version": "1.0.0",
+  "description": "Generate messages meant to read by humans",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/humanize"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=16.8.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "browser": {
+        "development": "./src/main_browser.js",
+        "default": "./dist/browser/jsenv_humanize_browser.js"
+      },
+      "node": {
+        "development": "./src/main_node.js",
+        "default": "./dist/node/jsenv_humanize_node.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "build": "node ./scripts/build.mjs",
+    "test": "node ./scripts/test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "string-width": "7.0.0"
+  },
+  "devDependencies": {
+    "ansi-escapes": "6.2.0",
+    "is-unicode-supported": "2.0.0",
+    "supports-color": "9.4.0"
+  }
+}

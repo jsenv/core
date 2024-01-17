@@ -36,18 +36,18 @@
     overflow="hidden"
   >
     <svg
-      width="498.88"
+      width="423.27"
       height="421.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#abb2bf"
     >
       <g>
-        <text x="10" y="14.55" fill="#A9A9A9">------------</text>
-        <text x="119.22" y="14.55"> 1 execution to run </text>
-        <text x="278.84" y="14.55" fill="#A9A9A9">-------------</text>
+        <text x="10" y="14.55" fill="#A9A9A9">--------------</text>
+        <text x="136.02" y="14.55"> execution start </text>
+        <text x="270.44" y="14.55" fill="#A9A9A9">--------------</text>
         <text x="10" y="33.55"
-          >worker_thread (node_worker_thread@&#x3C;mock&#x3E;)</text
+          >1 file matching &#x22;testPlan&#x22; in /mock/</text
         >
         <text x="10" y="52.55" fill="#A9A9A9"
           >---------------------------------------------</text
@@ -57,12 +57,10 @@
         >
         <text x="194.83" y="90.55" fill="#A9A9A9">[</text>
         <text x="203.23" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="270.44" y="90.55" fill="#A9A9A9">/</text>
-        <text x="278.84" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;MB</text>
-        <text x="346.05" y="90.55" fill="#A9A9A9">]</text>
-        <text x="362.86" y="90.55"> (all </text>
-        <text x="404.86" y="90.55" fill="#32CD32">completed</text>
-        <text x="480.48" y="90.55">)</text>
+        <text x="270.44" y="90.55" fill="#A9A9A9">]</text>
+        <text x="287.25" y="90.55"> (all </text>
+        <text x="329.25" y="90.55" fill="#32CD32">completed</text>
+        <text x="404.86" y="90.55">)</text>
         <text x="10" y="109.55" fill="#A9A9A9">-----------</text>
         <text x="110.82" y="109.55"> console (</text>
         <text x="186.43" y="109.55" fill="#B22222">&#x2716;</text>

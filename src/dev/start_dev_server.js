@@ -4,7 +4,7 @@ import {
   assertAndNormalizeDirectoryUrl,
   bufferToEtag,
 } from "@jsenv/filesystem";
-import { createLogger, createTaskLog } from "@jsenv/log";
+import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
