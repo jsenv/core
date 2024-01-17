@@ -621,7 +621,6 @@ export const renderOutro = (testPlanResult, logOptions = {}) => {
     const processMemoryUsage = testPlanResult.memoryUsage.process;
     let memoryUsageLine = "memory: ";
     memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
-    debugger;
     memoryUsageLine += renderDetails({
       med: humanizeProcessMemoryUsage(processMemoryUsage.median),
       min: humanizeProcessMemoryUsage(processMemoryUsage.min),
