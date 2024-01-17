@@ -14,5 +14,5 @@ try {
     expected: BigInt(2),
   });
 } catch (error) {
-  bigintSnapshotTesting.writeError(error, "bigint_fail.txt");
+  bigintSnapshotTesting.writeError(error, "bigint_fail");
 }

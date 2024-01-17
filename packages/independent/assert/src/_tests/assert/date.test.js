@@ -14,5 +14,5 @@ try {
     expected: new Date(11),
   });
 } catch (e) {
-  dateSnapshotTesting.writeError(e, "date_fail.txt");
+  dateSnapshotTesting.writeError(e, "date_fail");
 }

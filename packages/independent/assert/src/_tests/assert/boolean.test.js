@@ -20,7 +20,7 @@ try {
     expected: false,
   });
 } catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_fail.txt");
+  booleanSnapshotTesting.writeError(e, "boolean_fail");
 }
 try {
   assert({
@@ -30,7 +30,7 @@ try {
     expected: new Boolean(false),
   });
 } catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_object_fail.txt");
+  booleanSnapshotTesting.writeError(e, "boolean_object_fail");
 }
 try {
   assert({
@@ -38,7 +38,7 @@ try {
     expected: false,
   });
 } catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_fail_0_false.txt");
+  booleanSnapshotTesting.writeError(e, "boolean_fail_0_false");
 }
 try {
   assert({
@@ -46,5 +46,5 @@ try {
     expected: true,
   });
 } catch (e) {
-  booleanSnapshotTesting.writeError(e, "boolean_fail_1_true.txt");
+  booleanSnapshotTesting.writeError(e, "boolean_fail_1_true");
 }

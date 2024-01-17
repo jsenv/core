@@ -23,7 +23,7 @@ try {
     expected: [0],
   });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_too_big.txt");
+  arraySnapshotTesting.writeError(e, "array_too_big");
 }
 try {
   assert({
@@ -31,7 +31,7 @@ try {
     expected: [0, 1],
   });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_too_small.txt");
+  arraySnapshotTesting.writeError(e, "array_too_small");
 }
 try {
   assert({
@@ -39,7 +39,7 @@ try {
     expected: ["b"],
   });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_mismatch_at_0.txt");
+  arraySnapshotTesting.writeError(e, "array_mismatch_at_0");
 }
 try {
   assert({
@@ -47,7 +47,7 @@ try {
     expected: [],
   });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_fail_prototype.txt");
+  arraySnapshotTesting.writeError(e, "array_fail_prototype");
 }
 try {
   assert({
@@ -55,7 +55,7 @@ try {
     expected: { length: 1 },
   });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_like_length_mismatch.txt");
+  arraySnapshotTesting.writeError(e, "array_like_length_mismatch");
 }
 try {
   const actual = [];
@@ -64,7 +64,7 @@ try {
   expected.foo = false;
   assert({ actual, expected });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_fail_property.txt");
+  arraySnapshotTesting.writeError(e, "array_fail_property");
 }
 try {
   const symbol = Symbol();
@@ -74,7 +74,7 @@ try {
   expected[symbol] = false;
   assert({ actual, expected });
 } catch (e) {
-  arraySnapshotTesting.writeError(e, "array_fail_symbol.txt");
+  arraySnapshotTesting.writeError(e, "array_fail_symbol");
 }
 
 arraySnapshotTesting.end();

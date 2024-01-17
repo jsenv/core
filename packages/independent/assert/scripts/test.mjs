@@ -9,7 +9,7 @@ import {
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "./src/**/*.test.mjs": {
+    "./src/**/*.test.js": {
       node: {
         runtime: nodeWorkerThread(),
       },
