@@ -1,4 +1,4 @@
-import os, { cpus, totalmem, availableParallelism } from "node:os";
+import os, { cpus, release, totalmem, availableParallelism, freemem } from "node:os";
 import process$1, { cpuUsage, memoryUsage } from "node:process";
 import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, chmodSync, statSync, lstatSync, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
@@ -1456,7 +1456,7 @@ const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
   return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-const humanizeMemoryUsage = (metricValue, { decimals, short } = {}) => {
+const humanizeMemory = (metricValue, { decimals, short } = {}) => {
   return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 
@@ -3374,9 +3374,9 @@ const startMeasuringTotalCpuUsage = () => {
     );
     previousCpuUsage = processCpuUsage;
     const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
-    thisProcess.active = thisProcessActiveMs / overallActiveMs;
-    thisProcess.system = thisProcessSystemMs / overallSystemMs;
-    thisProcess.user = thisProcessUserMs / overallUserMs;
+    thisProcess.active = thisProcessActiveMs / overallMsEllapsed;
+    thisProcess.system = thisProcessSystemMs / overallMsEllapsed;
+    thisProcess.user = thisProcessUserMs / overallMsEllapsed;
 
     if (samples.length === 10) {
       let index = 0;
@@ -4967,7 +4967,9 @@ const replaceUrls = (source, replace) => {
 const reporterList = ({
   animated = true,
   mockFluctuatingValues, // used for snapshot testing logs
-  showMemoryUsage = true,
+  platformInfo,
+  memoryUsage: memoryUsage$1,
+  cpuUsage,
   spy = () => {
     return {
       write: (log) => {
@@ -4988,7 +4990,9 @@ const reporterList = ({
     process.exitCode !== 1;
 
   const logOptions = {
-    showMemoryUsage,
+    platformInfo,
+    memoryUsage: memoryUsage$1,
+    cpuUsage,
     mockFluctuatingValues,
     group: false,
     intermediateSummary: !animatedLogEnabled,
@@ -5049,7 +5053,7 @@ const reporterList = ({
           });
           infos.push(ANSI.color(duration, ANSI.GREY));
           const memoryHeapUsed = memoryUsage().heapUsed;
-          const memoryHeapUsedFormatted = humanizeMemoryUsage(memoryHeapUsed, {
+          const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
             short: true,
             decimals: 0,
           });
@@ -5100,8 +5104,10 @@ const reporterList = ({
     reporters.push(
       reporterList({
         animated: false,
+        platformInfo,
+        memoryUsage: memoryUsage$1,
+        cpuUsage,
         mockFluctuatingValues, // used for snapshot testing logs
-        showMemoryUsage,
         spy: () => {
           let rawOutput = "";
 
@@ -5121,56 +5127,50 @@ const reporterList = ({
 };
 
 const renderIntro = (testPlanResult, logOptions) => {
-  const { counters } = testPlanResult;
-  const planified = counters.planified;
-  const { groups } = testPlanResult;
-  const groupNames = Object.keys(groups);
+  const lines = [];
+  if (logOptions.platformInfo) {
+    {
+      let osLine = `os: `;
+      if (logOptions.mockFluctuatingValues) {
+        osLine += `os@<mock>`;
+      } else {
+        osLine += `${testPlanResult.os.name}@${testPlanResult.os.version}`;
+      }
+      osLine += renderDetails({
+        cpu: logOptions.mockFluctuatingValues
+          ? "<mock>"
+          : testPlanResult.os.availableCpu,
+        memory: logOptions.mockFluctuatingValues
+          ? "<mock>GB"
+          : humanizeMemory(testPlanResult.os.availableMemory, {
+              short: true,
+              decimals: 0,
+            }),
+      });
+      lines.push(osLine);
+    }
+    {
+      const process = logOptions.mockFluctuatingValues
+        ? `node@mock`
+        : `${testPlanResult.process.name}@${testPlanResult.process.version}`;
+      let processLine = `process: ${process}`;
+      lines.push(processLine);
+    }
+  }
 
-  if (planified === 0) {
-    return `${renderBigSection({
-      title: "nothing to execute",
-      content: "",
-    })}\n\n`;
-  }
-  if (planified === 1) {
-    const groupName = groupNames[0];
-    const groupInfo = groups[groupName];
-    return `${renderBigSection({
-      title: "1 execution to run",
-      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
-    })}\n\n`;
-  }
-  if (groupNames.length === 1) {
-    const groupName = groupNames[0];
-    const groupInfo = groups[groupName];
-    return `${renderBigSection({
-      title: `${planified} executions to run`,
-      content: `${groupName} (${getGroupRenderedName(groupInfo, logOptions)})`,
-    })}\n\n`;
-  }
+  const directory = logOptions.mockFluctuatingValues
+    ? "/mock/"
+    : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
+  const directoryLine = `directory: ${directory}`;
+  lines.push(directoryLine);
 
-  let introLines = [];
-  for (const groupName of groupNames) {
-    const groupInfo = groups[groupName];
-    introLines.push(
-      `${groupInfo.count} with ${groupName} (${getGroupRenderedName(
-        groupInfo,
-        logOptions,
-      )})`,
-    );
-  }
+  let fileToExecuteLine = `file to execute: ${Object.keys(testPlanResult.results).length}`;
+  lines.push(fileToExecuteLine);
+
   return `${renderBigSection({
-    title: `${planified} executions to run`,
-    content: introLines.join("\n"),
+    title: "execution start",
+    content: lines.join("\n"),
   })}\n\n`;
-};
-
-const getGroupRenderedName = (groupInfo, logOptions) => {
-  let { runtimeName, runtimeVersion } = groupInfo;
-  if (logOptions.mockFluctuatingValues && groupInfo.runtimeType === "node") {
-    runtimeVersion = "<mock>";
-  }
-  return `${runtimeName}@${runtimeVersion}`;
 };
 
 const renderExecutionLog = (execution, logOptions) => {
@@ -5227,10 +5227,10 @@ const renderExecutionLabel = (execution, logOptions) => {
         : humanizeDuration(duration, { short: true });
       infos.push(ANSI.color(durationFormatted, ANSI.GREY));
     }
-    if (logOptions.showMemoryUsage && typeof memoryUsage === "number") {
+    if (logOptions.memoryUsage && typeof memoryUsage === "number") {
       const memoryUsageFormatted = logOptions.mockFluctuatingValues
         ? `<mock>MB`
-        : humanizeMemoryUsage(memoryUsage, { short: true });
+        : humanizeMemory(memoryUsage, { short: true });
       infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
     }
     if (infos.length) {
@@ -5492,50 +5492,83 @@ const renderErrors = (execution, logOptions) => {
 };
 
 const renderOutro = (testPlanResult, logOptions = {}) => {
-  let finalSummary = "";
+  const lines = [];
   const { counters } = testPlanResult;
   const { planified } = counters;
 
-  if (planified === 1) {
-    finalSummary += `1 execution: `;
+  let executionLine = "";
+  if (planified === 0) {
+    executionLine += `no execution`;
+  } else if (planified === 1) {
+    executionLine += `1 execution: `;
   } else {
-    finalSummary += `${planified} executions: `;
+    executionLine += `${planified} executions: `;
   }
-  finalSummary += renderStatusRepartition(counters);
+  executionLine += renderStatusRepartition(counters);
+  lines.push(executionLine);
 
-  let durationLog = ``;
+  let durationLine = `duration: `;
   const { timings } = testPlanResult;
   if (logOptions.mockFluctuatingValues) {
-    durationLog += "<mock>s";
+    durationLine += "<mock>s";
   } else {
-    durationLog += humanizeDuration(timings.end, { short: true });
+    durationLine += humanizeDuration(timings.end, { short: true });
     const namedTimings = {
-      setup: timings.executionStart,
-      execution: timings.executionEnd,
-      teardown: timings.teardownEnd - timings.executionEnd,
+      setup: humanizeTiming(timings.executionStart),
+      execution: humanizeTiming(timings.executionEnd),
+      teardown: humanizeTiming(timings.teardownEnd - timings.executionEnd),
       ...(testPlanResult.coverage
-        ? { coverage: timings.coverageTeardownEnd - timings.teardownEnd }
+        ? {
+            coverage: humanizeTiming(
+              timings.coverageTeardownEnd - timings.teardownEnd,
+            ),
+          }
         : {}),
     };
-    const timingDetails = [];
-    for (const key of Object.keys(namedTimings)) {
-      const value = namedTimings[key];
-      const timingDuration = humanizeDuration(value, { short: true });
-      const timingString = `${ANSI.color(`${key}:`, ANSI.GREY)} ${ANSI.color(
-        timingDuration,
-        ANSI.GREY,
-      )}`;
-      timingDetails.push(ANSI.color(timingString, ANSI.GREY));
-    }
-    if (timingDetails.length) {
-      durationLog += ` ${ANSI.color("(", ANSI.GREY)}${timingDetails.join(
-        ANSI.color(", ", ANSI.GREY),
-      )}${ANSI.color(")", ANSI.GREY)}`;
-    }
+    durationLine += renderDetails(namedTimings);
   }
-  finalSummary += `\nduration: ${durationLog}`;
+  lines.push(durationLine);
 
-  return `\n${renderBigSection({ title: "summary", content: finalSummary })}\n`;
+  if (logOptions.cpuUsage) {
+    const processCpuUsage = testPlanResult.cpuUsage.process;
+    let cpuUsageLine = "cpu: ";
+    cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+    cpuUsageLine += renderDetails({
+      med: humanizeProcessCpuUsage(processCpuUsage.median),
+      min: humanizeProcessCpuUsage(processCpuUsage.min),
+      max: humanizeProcessCpuUsage(processCpuUsage.max),
+    });
+    lines.push(cpuUsageLine);
+  }
+  if (logOptions.memoryUsage) {
+    const processMemoryUsage = testPlanResult.memoryUsage.process;
+    let memoryUsageLine = "memory: ";
+    memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+    debugger;
+    memoryUsageLine += renderDetails({
+      med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+      min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+      max: humanizeProcessMemoryUsage(processMemoryUsage.max),
+    });
+    lines.push(memoryUsageLine);
+  }
+
+  return `\n${renderBigSection({ title: "summary", content: lines.join("\n") })}\n`;
+};
+
+const humanizeTiming = (value) => {
+  return humanizeDuration(value, { short: true });
+};
+
+const humanizeProcessCpuUsage = (ratio) => {
+  const percentageAsNumber = ratio * 100;
+  const percentageAsNumberRounded = Math.round(percentageAsNumber);
+  const percentage = `${percentageAsNumberRounded}%`;
+  return percentage;
+};
+
+const humanizeProcessMemoryUsage = (value) => {
+  return humanizeMemory(value, { short: true, decimals: 0 });
 };
 
 const renderStatusRepartition = (counters, { showProgression } = {}) => {
@@ -5627,6 +5660,29 @@ const renderSection = ({
   return section;
 };
 
+const renderDetails = (data) => {
+  const details = [];
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    let valueString = "";
+    valueString += ANSI.color(`${key}:`, ANSI.GREY);
+    const useNonGreyAnsiColor =
+      typeof value === "string" && value.includes("\x1b");
+    valueString += " ";
+    valueString += useNonGreyAnsiColor ? value : ANSI.color(value, ANSI.GREY);
+    details.push(valueString);
+  }
+  if (details.length === 0) {
+    return "";
+  }
+
+  let string = "";
+  string += ` ${ANSI.color("(", ANSI.GREY)}`;
+  string += details.join(ANSI.color(", ", ANSI.GREY));
+  string += ANSI.color(")", ANSI.GREY);
+  return string;
+};
+
 /*
  *
  */
@@ -5648,6 +5704,9 @@ const logsDefault = {
   level: "info",
   type: "list",
   animated: true,
+  platformInfo: false,
+  memoryUsage: false,
+  cpuUsage: false,
   fileUrl: undefined,
 };
 const githubCheckDefault = {
@@ -5744,11 +5803,61 @@ const executeTestPlan = async ({
     });
   }
 
-  const timingOrigin = Date.now();
+  const cpuUsage = startMeasuringTotalCpuUsage();
+  operation.addEndCallback(cpuUsage.stop);
+  const processCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.thisProcess.active;
+  });
+  const osCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.overall.active;
+  });
+  const processMemoryUsageMonitoring = startMonitoringMetric(() => {
+    return memoryUsage().rss;
+  });
+  const osMemoryUsageMonitoring = startMonitoringMetric(() => {
+    const total = totalmem();
+    const free = freemem();
+    return total - free;
+  });
+
+  const timingsOrigin = Date.now();
   const takeTiming = () => {
-    return Date.now() - timingOrigin;
+    return Date.now() - timingsOrigin;
   };
   const testPlanResult = {
+    os: {
+      name:
+        process.platform === "darwin"
+          ? "mac"
+          : process.platform === "win32" || process.platform === "win64"
+            ? "windows"
+            : process.platform === "linux"
+              ? "linux"
+              : "other",
+      version: release(),
+      availableCpu: countAvailableCpus(),
+      availableMemory: totalmem(),
+    },
+    process: {
+      name: "node",
+      version: process.version.slice(1),
+    },
+    memoryUsage: {
+      os: osMemoryUsageMonitoring.info,
+      process: processMemoryUsageMonitoring.info,
+    },
+    cpuUsage: {
+      os: osCpuUsageMonitoring.info,
+      process: processCpuUsageMonitoring.info,
+    },
+    timings: {
+      origin: timingsOrigin,
+      executionStart: null,
+      executionEnd: null,
+      teardownEnd: null,
+      coverageTeardownEnd: null,
+      end: null,
+    },
     rootDirectoryUrl: String(rootDirectoryUrl),
     groups: {},
     counters: {
@@ -5766,14 +5875,6 @@ const executeTestPlan = async ({
     },
     aborted: false,
     failed: false,
-    timings: {
-      origin: timingOrigin,
-      executionStart: null,
-      executionEnd: null,
-      teardownEnd: null,
-      coverageTeardownEnd: null,
-      end: null,
-    },
     coverage: null,
     results: {},
   };
@@ -5801,9 +5902,6 @@ const executeTestPlan = async ({
   let finalizeCoverage;
 
   try {
-    const cpuUsage = startMeasuringTotalCpuUsage();
-    operation.addEndCallback(cpuUsage.stop);
-
     let logger;
     const runtimeInfo = {
       someNeedsServer: false,
@@ -5834,6 +5932,10 @@ const executeTestPlan = async ({
 
         if (logs.type === "list" && logger.levels.info) {
           const listReporterOptions = {
+            mockFluctuatingValues: logs.mockFluctuatingValues,
+            platformInfo: logs.platformInfo,
+            memoryUsage: logs.memoryUsage,
+            cpuUsage: logs.cpuUsage,
             animated: logger.levels.debug ? false : logs.animated,
             fileUrl:
               logs.fileUrl === undefined
@@ -5892,8 +5994,8 @@ const executeTestPlan = async ({
         const max = parallel.max;
         if (typeof max === "string") {
           const maxAsRatio = assertPercentageAndConvertToRatio(max);
-          const availableCpus = countAvailableCpus();
-          parallel.max = Math.round(maxAsRatio * availableCpus) || 1;
+          parallel.max =
+            Math.round(maxAsRatio * testPlanResult.os.availableCpu) || 1;
         } else if (typeof max === "number") {
           if (max < 1) {
             parallel.max = 1;
@@ -5907,8 +6009,9 @@ const executeTestPlan = async ({
         const maxMemory = parallel.maxMemory;
         if (typeof maxMemory === "string") {
           const maxMemoryAsRatio = assertPercentageAndConvertToRatio(maxMemory);
-          const totalMemory = totalmem();
-          parallel.maxMemory = Math.round(maxMemoryAsRatio * totalMemory);
+          parallel.maxMemory = Math.round(
+            maxMemoryAsRatio * testPlanResult.os.availableMemory,
+          );
         } else if (typeof maxMemory !== "number") {
           throw new TypeError(
             `parallel.maxMemory must be a number or a percentage, got ${maxMemory}`,
@@ -6446,17 +6549,22 @@ To fix this warning:
             // if nothing is executing these limitations don't apply
             executionExecutingSet.size > 0
           ) {
-            const memoryUsedByThisProcess = memoryUsage().rss;
-            if (memoryUsedByThisProcess > parallel.maxMemory) {
+            if (processMemoryUsageMonitoring.measure() > parallel.maxMemory) {
               // retry after Xms in case memory usage decreases
-              const promise = operation.wait(200);
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
               promises.push(promise);
               break;
             }
 
-            if (cpuUsage.thisProcess.active > parallel.maxCpu) {
+            if (processCpuUsageMonitoring.measure() > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
-              const promise = operation.wait(200);
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
               promises.push(promise);
               break;
             }
@@ -6480,7 +6588,6 @@ To fix this warning:
         if (promises.length) {
           await Promise.all(promises);
           promises.length = 0;
-          await startAsMuchAsPossible();
         }
       };
 
@@ -6559,6 +6666,11 @@ To fix this warning:
     timings.coverageTeardownEnd = takeTiming();
     timings.end = takeTiming();
 
+    osMemoryUsageMonitoring.end();
+    processMemoryUsageMonitoring.end();
+    osCpuUsageMonitoring.end();
+    processCpuUsageMonitoring.end();
+
     afterEachCallbackSet.clear();
     afterEachInOrderCallbackSet.clear();
     for (const afterAllCallback of afterAllCallbackSet) {
@@ -6569,6 +6681,51 @@ To fix this warning:
   }
 
   return testPlanResult;
+};
+
+const startMonitoringMetric = (measure) => {
+  const metrics = [];
+  const takeMeasure = () => {
+    const value = measure();
+    metrics.push(value);
+    return value;
+  };
+
+  const info = {
+    start: takeMeasure(),
+    min: null,
+    max: null,
+    median: null,
+    end: null,
+  };
+  return {
+    info,
+    measure: takeMeasure,
+    end: () => {
+      info.end = takeMeasure();
+      metrics.sort((a, b) => a - b);
+      info.min = metrics[0];
+      info.max = metrics[metrics.length - 1];
+      info.median = medianFromSortedArray(metrics);
+      metrics.length = 0;
+    },
+  };
+};
+
+const medianFromSortedArray = (array) => {
+  const length = array.length;
+  const isOdd = length % 2 === 1;
+  if (isOdd) {
+    const medianNumberIndex = (length - 1) / 2;
+    const medianNumber = array[medianNumberIndex];
+    return medianNumber;
+  }
+  const rightMiddleNumberIndex = length / 2;
+  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
+  const leftMiddleNumber = array[leftMiddleNumberIndex];
+  const rightMiddleNumber = array[rightMiddleNumberIndex];
+  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
+  return medianNumber;
 };
 
 const countAvailableCpus = () => {

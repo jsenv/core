@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="347.45"
+  height="328.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="345.45"
+      height="326.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="307.45"
+    height="288.45"
     overflow="hidden"
   >
     <svg
       width="566.09"
-      height="307.45"
+      height="288.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#abb2bf"
@@ -46,73 +46,74 @@
         <text x="10" y="14.55" fill="#A9A9A9">--------------</text>
         <text x="136.02" y="14.55"> execution start </text>
         <text x="270.44" y="14.55" fill="#A9A9A9">--------------</text>
-        <text x="10" y="33.55">directory: /mock/</text>
-        <text x="10" y="52.55">file to execute: 2</text>
-        <text x="10" y="71.55" fill="#A9A9A9"
+        <text x="10" y="33.55"
+          >2 files matching &#x22;testPlan&#x22; in /mock/</text
+        >
+        <text x="10" y="52.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >
-        <text x="10" y="109.55" fill="#32CD32"
+        <text x="10" y="90.55" fill="#32CD32"
           >&#x2714; 1/5 client/empty.spec.html</text
         >
-        <text x="253.64" y="109.55" fill="#A9A9A9">[</text>
-        <text x="262.04" y="109.55" fill="#A9A9A9">chrome</text>
-        <text x="312.45" y="109.55" fill="#A9A9A9">/</text>
-        <text x="320.85" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="388.06" y="109.55" fill="#A9A9A9">]</text>
-        <text x="404.86" y="109.55"> (1 </text>
-        <text x="430.07" y="109.55" fill="#32CD32">completed</text>
-        <text x="505.68" y="109.55">)</text>
-        <text x="10" y="128.55" fill="#32CD32"
+        <text x="253.64" y="90.55" fill="#A9A9A9">[</text>
+        <text x="262.04" y="90.55" fill="#A9A9A9">chrome</text>
+        <text x="312.45" y="90.55" fill="#A9A9A9">/</text>
+        <text x="320.85" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="388.06" y="90.55" fill="#A9A9A9">]</text>
+        <text x="404.86" y="90.55"> (1 </text>
+        <text x="430.07" y="90.55" fill="#32CD32">completed</text>
+        <text x="505.68" y="90.55">)</text>
+        <text x="10" y="109.55" fill="#32CD32"
           >&#x2714; 2/5 client/empty.spec.html</text
         >
-        <text x="253.64" y="128.55" fill="#A9A9A9">[</text>
-        <text x="262.04" y="128.55" fill="#A9A9A9">firefox</text>
-        <text x="320.85" y="128.55" fill="#A9A9A9">/</text>
-        <text x="329.25" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="396.46" y="128.55" fill="#A9A9A9">]</text>
-        <text x="413.27" y="128.55"> (2 </text>
-        <text x="438.47" y="128.55" fill="#32CD32">completed</text>
-        <text x="514.08" y="128.55">)</text>
-        <text x="10" y="147.55" fill="#32CD32"
+        <text x="253.64" y="109.55" fill="#A9A9A9">[</text>
+        <text x="262.04" y="109.55" fill="#A9A9A9">firefox</text>
+        <text x="320.85" y="109.55" fill="#A9A9A9">/</text>
+        <text x="329.25" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="396.46" y="109.55" fill="#A9A9A9">]</text>
+        <text x="413.27" y="109.55"> (2 </text>
+        <text x="438.47" y="109.55" fill="#32CD32">completed</text>
+        <text x="514.08" y="109.55">)</text>
+        <text x="10" y="128.55" fill="#32CD32"
           >&#x2714; 3/5 client/empty.spec.html</text
         >
-        <text x="253.64" y="147.55" fill="#A9A9A9">[</text>
-        <text x="262.04" y="147.55" fill="#A9A9A9">webkit</text>
-        <text x="312.45" y="147.55" fill="#A9A9A9">/</text>
-        <text x="320.85" y="147.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="388.06" y="147.55" fill="#A9A9A9">]</text>
-        <text x="404.86" y="147.55"> (3 </text>
-        <text x="430.07" y="147.55" fill="#32CD32">completed</text>
-        <text x="505.68" y="147.55">)</text>
-        <text x="10" y="166.55" fill="#32CD32"
+        <text x="253.64" y="128.55" fill="#A9A9A9">[</text>
+        <text x="262.04" y="128.55" fill="#A9A9A9">webkit</text>
+        <text x="312.45" y="128.55" fill="#A9A9A9">/</text>
+        <text x="320.85" y="128.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="388.06" y="128.55" fill="#A9A9A9">]</text>
+        <text x="404.86" y="128.55"> (3 </text>
+        <text x="430.07" y="128.55" fill="#32CD32">completed</text>
+        <text x="505.68" y="128.55">)</text>
+        <text x="10" y="147.55" fill="#32CD32"
           >&#x2714; 4/5 node_client/empty.spec.js</text
         >
-        <text x="278.84" y="166.55" fill="#A9A9A9">[</text>
-        <text x="287.25" y="166.55" fill="#A9A9A9">node</text>
-        <text x="320.85" y="166.55" fill="#A9A9A9">/</text>
-        <text x="329.25" y="166.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="396.46" y="166.55" fill="#A9A9A9">]</text>
-        <text x="413.27" y="166.55"> (4 </text>
-        <text x="438.47" y="166.55" fill="#32CD32">completed</text>
-        <text x="514.08" y="166.55">)</text>
-        <text x="10" y="185.55" fill="#32CD32"
+        <text x="278.84" y="147.55" fill="#A9A9A9">[</text>
+        <text x="287.25" y="147.55" fill="#A9A9A9">node</text>
+        <text x="320.85" y="147.55" fill="#A9A9A9">/</text>
+        <text x="329.25" y="147.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="396.46" y="147.55" fill="#A9A9A9">]</text>
+        <text x="413.27" y="147.55"> (4 </text>
+        <text x="438.47" y="147.55" fill="#32CD32">completed</text>
+        <text x="514.08" y="147.55">)</text>
+        <text x="10" y="166.55" fill="#32CD32"
           >&#x2714; 5/5 node_client/empty.spec.js</text
         >
-        <text x="278.84" y="185.55" fill="#A9A9A9">[</text>
-        <text x="287.25" y="185.55" fill="#A9A9A9">node_2</text>
-        <text x="337.65" y="185.55" fill="#A9A9A9">/</text>
-        <text x="346.05" y="185.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="413.27" y="185.55" fill="#A9A9A9">]</text>
-        <text x="430.07" y="185.55"> (all </text>
-        <text x="472.08" y="185.55" fill="#32CD32">completed</text>
-        <text x="547.69" y="185.55">)</text>
-        <text x="10" y="223.55" fill="#A9A9A9">------------------</text>
-        <text x="169.63" y="223.55"> summary </text>
-        <text x="236.84" y="223.55" fill="#A9A9A9">------------------</text>
-        <text x="10" y="242.55">5 executions: all </text>
-        <text x="161.22" y="242.55" fill="#32CD32">completed</text>
-        <text x="10" y="261.55">duration: &#x3C;mock&#x3E;s</text>
-        <text x="10" y="280.55" fill="#A9A9A9"
+        <text x="278.84" y="166.55" fill="#A9A9A9">[</text>
+        <text x="287.25" y="166.55" fill="#A9A9A9">node_2</text>
+        <text x="337.65" y="166.55" fill="#A9A9A9">/</text>
+        <text x="346.05" y="166.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="413.27" y="166.55" fill="#A9A9A9">]</text>
+        <text x="430.07" y="166.55"> (all </text>
+        <text x="472.08" y="166.55" fill="#32CD32">completed</text>
+        <text x="547.69" y="166.55">)</text>
+        <text x="10" y="204.55" fill="#A9A9A9">------------------</text>
+        <text x="169.63" y="204.55"> summary </text>
+        <text x="236.84" y="204.55" fill="#A9A9A9">------------------</text>
+        <text x="10" y="223.55">5 executions: all </text>
+        <text x="161.22" y="223.55" fill="#32CD32">completed</text>
+        <text x="10" y="242.55">duration: &#x3C;mock&#x3E;s</text>
+        <text x="10" y="261.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >
       </g>

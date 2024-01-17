@@ -231,11 +231,19 @@ const renderIntro = (testPlanResult, logOptions) => {
   const directory = logOptions.mockFluctuatingValues
     ? "/mock/"
     : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
-  const directoryLine = `directory: ${directory}`;
-  lines.push(directoryLine);
+  const numberOfFiles = Object.keys(testPlanResult.results).length;
+  let fileFoundLine = "";
+  if (numberOfFiles === 0) {
+    fileFoundLine += `no file matching "testPlan" in ${directory}.
+--- test plan patterns --- 
+${testPlanResult.patterns.join("\n")}`;
+  } else if (numberOfFiles === 1) {
+    fileFoundLine += `1 file matching "testPlan" in ${directory}`;
+  } else {
+    fileFoundLine += `${numberOfFiles} files matching "testPlan" in ${directory}`;
+  }
 
-  let fileToExecuteLine = `file to execute: ${Object.keys(testPlanResult.results).length}`;
-  lines.push(fileToExecuteLine);
+  lines.push(fileFoundLine);
 
   return `${renderBigSection({
     title: "execution start",

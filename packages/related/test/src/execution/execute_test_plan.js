@@ -205,6 +205,7 @@ export const executeTestPlan = async ({
       end: null,
     },
     rootDirectoryUrl: String(rootDirectoryUrl),
+    patterns: Object.keys(testPlan),
     groups: {},
     counters: {
       planified: 0,

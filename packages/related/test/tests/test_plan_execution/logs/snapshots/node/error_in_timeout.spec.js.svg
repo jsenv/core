@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="594.45"
+  height="575.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="592.45"
+      height="573.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="554.45"
+    height="535.45"
     overflow="hidden"
   >
     <svg
       width="591.29"
-      height="554.45"
+      height="535.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#abb2bf"
@@ -46,78 +46,79 @@
         <text x="10" y="14.55" fill="#A9A9A9">--------------</text>
         <text x="136.02" y="14.55"> execution start </text>
         <text x="270.44" y="14.55" fill="#A9A9A9">--------------</text>
-        <text x="10" y="33.55">directory: /mock/</text>
-        <text x="10" y="52.55">file to execute: 1</text>
-        <text x="10" y="71.55" fill="#A9A9A9"
+        <text x="10" y="33.55"
+          >1 file matching &#x22;testPlan&#x22; in /mock/</text
+        >
+        <text x="10" y="52.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >
-        <text x="10" y="109.55" fill="#B22222"
+        <text x="10" y="90.55" fill="#B22222"
           >&#x2716; 1/2 error_in_timeout.spec.js</text
         >
-        <text x="270.44" y="109.55" fill="#A9A9A9">[</text>
-        <text x="278.84" y="109.55" fill="#A9A9A9">worker_thread</text>
-        <text x="388.06" y="109.55" fill="#A9A9A9">/</text>
-        <text x="396.46" y="109.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="463.67" y="109.55" fill="#A9A9A9">]</text>
-        <text x="480.48" y="109.55"> (1 </text>
-        <text x="505.68" y="109.55" fill="#B22222">failed</text>
-        <text x="556.09" y="109.55">)</text>
-        <text x="10" y="128.55" fill="#A9A9A9">---------------</text>
-        <text x="144.42" y="128.55"> error </text>
-        <text x="194.83" y="128.55" fill="#A9A9A9">----------------</text>
-        <text x="10" y="147.55" fill="#A9A9A9">1 |</text>
-        <text x="43.61" y="147.55"> await new Promise(() =&#x3E; {</text>
-        <text x="10" y="166.55" fill="#A9A9A9">2 |</text>
-        <text x="60.41" y="166.55"> setTimeout(() =&#x3E; {</text>
-        <text x="10" y="185.55" fill="#A9A9A9">3 |</text>
-        <text x="77.21" y="185.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="127.62" y="204.55" fill="#B22222">^</text>
-        <text x="10" y="223.55">Error: here</text>
-        <text x="26.8" y="242.55"> at Timeout._onTimeout (</text>
-        <text x="220.03" y="242.55" font-weight="bold"
+        <text x="270.44" y="90.55" fill="#A9A9A9">[</text>
+        <text x="278.84" y="90.55" fill="#A9A9A9">worker_thread</text>
+        <text x="388.06" y="90.55" fill="#A9A9A9">/</text>
+        <text x="396.46" y="90.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="463.67" y="90.55" fill="#A9A9A9">]</text>
+        <text x="480.48" y="90.55"> (1 </text>
+        <text x="505.68" y="90.55" fill="#B22222">failed</text>
+        <text x="556.09" y="90.55">)</text>
+        <text x="10" y="109.55" fill="#A9A9A9">---------------</text>
+        <text x="144.42" y="109.55"> error </text>
+        <text x="194.83" y="109.55" fill="#A9A9A9">----------------</text>
+        <text x="10" y="128.55" fill="#A9A9A9">1 |</text>
+        <text x="43.61" y="128.55"> await new Promise(() =&#x3E; {</text>
+        <text x="10" y="147.55" fill="#A9A9A9">2 |</text>
+        <text x="60.41" y="147.55"> setTimeout(() =&#x3E; {</text>
+        <text x="10" y="166.55" fill="#A9A9A9">3 |</text>
+        <text x="77.21" y="166.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="127.62" y="185.55" fill="#B22222">^</text>
+        <text x="10" y="204.55">Error: here</text>
+        <text x="26.8" y="223.55"> at Timeout._onTimeout (</text>
+        <text x="220.03" y="223.55" font-weight="bold"
           >[mock]/error_in_timeout.spec.js</text
         >
-        <text x="480.48" y="242.55">:3:11)</text>
-        <text x="10" y="261.55" fill="#A9A9A9"
+        <text x="480.48" y="223.55">:3:11)</text>
+        <text x="10" y="242.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
-        <text x="10" y="280.55" fill="#B22222"
+        <text x="10" y="261.55" fill="#B22222"
           >&#x2716; 2/2 error_in_timeout.spec.js</text
         >
-        <text x="270.44" y="280.55" fill="#A9A9A9">[</text>
-        <text x="278.84" y="280.55" fill="#A9A9A9">child_process</text>
-        <text x="388.06" y="280.55" fill="#A9A9A9">/</text>
-        <text x="396.46" y="280.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
-        <text x="463.67" y="280.55" fill="#A9A9A9">]</text>
-        <text x="480.48" y="280.55"> (all </text>
-        <text x="522.48" y="280.55" fill="#B22222">failed</text>
-        <text x="572.89" y="280.55">)</text>
-        <text x="10" y="299.55" fill="#A9A9A9">---------------</text>
-        <text x="144.42" y="299.55"> error </text>
-        <text x="194.83" y="299.55" fill="#A9A9A9">----------------</text>
-        <text x="10" y="318.55" fill="#A9A9A9">1 |</text>
-        <text x="43.61" y="318.55"> await new Promise(() =&#x3E; {</text>
-        <text x="10" y="337.55" fill="#A9A9A9">2 |</text>
-        <text x="60.41" y="337.55"> setTimeout(() =&#x3E; {</text>
-        <text x="10" y="356.55" fill="#A9A9A9">3 |</text>
-        <text x="77.21" y="356.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="127.62" y="375.55" fill="#B22222">^</text>
-        <text x="10" y="394.55">Error: here</text>
-        <text x="26.8" y="413.55"> at Timeout._onTimeout (</text>
-        <text x="220.03" y="413.55" font-weight="bold"
+        <text x="270.44" y="261.55" fill="#A9A9A9">[</text>
+        <text x="278.84" y="261.55" fill="#A9A9A9">child_process</text>
+        <text x="388.06" y="261.55" fill="#A9A9A9">/</text>
+        <text x="396.46" y="261.55" fill="#A9A9A9">&#x3C;mock&#x3E;ms</text>
+        <text x="463.67" y="261.55" fill="#A9A9A9">]</text>
+        <text x="480.48" y="261.55"> (all </text>
+        <text x="522.48" y="261.55" fill="#B22222">failed</text>
+        <text x="572.89" y="261.55">)</text>
+        <text x="10" y="280.55" fill="#A9A9A9">---------------</text>
+        <text x="144.42" y="280.55"> error </text>
+        <text x="194.83" y="280.55" fill="#A9A9A9">----------------</text>
+        <text x="10" y="299.55" fill="#A9A9A9">1 |</text>
+        <text x="43.61" y="299.55"> await new Promise(() =&#x3E; {</text>
+        <text x="10" y="318.55" fill="#A9A9A9">2 |</text>
+        <text x="60.41" y="318.55"> setTimeout(() =&#x3E; {</text>
+        <text x="10" y="337.55" fill="#A9A9A9">3 |</text>
+        <text x="77.21" y="337.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="127.62" y="356.55" fill="#B22222">^</text>
+        <text x="10" y="375.55">Error: here</text>
+        <text x="26.8" y="394.55"> at Timeout._onTimeout (</text>
+        <text x="220.03" y="394.55" font-weight="bold"
           >[mock]/error_in_timeout.spec.js</text
         >
-        <text x="480.48" y="413.55">:3:11)</text>
-        <text x="10" y="432.55" fill="#A9A9A9"
+        <text x="480.48" y="394.55">:3:11)</text>
+        <text x="10" y="413.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
-        <text x="10" y="470.55" fill="#A9A9A9">------------------</text>
-        <text x="169.63" y="470.55"> summary </text>
-        <text x="236.84" y="470.55" fill="#A9A9A9">------------------</text>
-        <text x="10" y="489.55">2 executions: all </text>
-        <text x="161.22" y="489.55" fill="#B22222">failed</text>
-        <text x="10" y="508.55">duration: &#x3C;mock&#x3E;s</text>
-        <text x="10" y="527.55" fill="#A9A9A9"
+        <text x="10" y="451.55" fill="#A9A9A9">------------------</text>
+        <text x="169.63" y="451.55"> summary </text>
+        <text x="236.84" y="451.55" fill="#A9A9A9">------------------</text>
+        <text x="10" y="470.55">2 executions: all </text>
+        <text x="161.22" y="470.55" fill="#B22222">failed</text>
+        <text x="10" y="489.55">duration: &#x3C;mock&#x3E;s</text>
+        <text x="10" y="508.55" fill="#A9A9A9"
           >---------------------------------------------</text
         >
       </g>
