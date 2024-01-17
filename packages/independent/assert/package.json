@@ -38,6 +38,7 @@
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
     "test": "node ./scripts/test.mjs",
+    "test:clear_snapshot": "npx @jsenv/snapshot clear **/_tests/**/snapshots/",
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
