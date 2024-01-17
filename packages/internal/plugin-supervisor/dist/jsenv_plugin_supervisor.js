@@ -1,5 +1,9 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import "string-width";
+import process$1 from "node:process";
+import os from "node:os";
+import tty from "node:tty";
 import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -44,8 +48,242 @@ const getOriginalPosition = ({
   return originalPosition;
 };
 
+/* global window */
+const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+isBrowser ? () => {
+  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
+// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
+/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+  const prefix = flag.startsWith('-') ? '' : flag.length === 1 ? '-' : '--';
+  const position = argv.indexOf(prefix + flag);
+  const terminatorPosition = argv.indexOf('--');
+  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+const {
+  env
+} = process$1;
+let flagForceColor;
+if (hasFlag('no-color') || hasFlag('no-colors') || hasFlag('color=false') || hasFlag('color=never')) {
+  flagForceColor = 0;
+} else if (hasFlag('color') || hasFlag('colors') || hasFlag('color=true') || hasFlag('color=always')) {
+  flagForceColor = 1;
+}
+function envForceColor() {
+  if ('FORCE_COLOR' in env) {
+    if (env.FORCE_COLOR === 'true') {
+      return 1;
+    }
+    if (env.FORCE_COLOR === 'false') {
+      return 0;
+    }
+    return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+  }
+}
+function translateLevel(level) {
+  if (level === 0) {
+    return false;
+  }
+  return {
+    level,
+    hasBasic: true,
+    has256: level >= 2,
+    has16m: level >= 3
+  };
+}
+function _supportsColor(haveStream, {
+  streamIsTTY,
+  sniffFlags = true
+} = {}) {
+  const noFlagForceColor = envForceColor();
+  if (noFlagForceColor !== undefined) {
+    flagForceColor = noFlagForceColor;
+  }
+  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+  if (forceColor === 0) {
+    return 0;
+  }
+  if (sniffFlags) {
+    if (hasFlag('color=16m') || hasFlag('color=full') || hasFlag('color=truecolor')) {
+      return 3;
+    }
+    if (hasFlag('color=256')) {
+      return 2;
+    }
+  }
+
+  // Check for Azure DevOps pipelines.
+  // Has to be above the `!streamIsTTY` check.
+  if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+    return 1;
+  }
+  if (haveStream && !streamIsTTY && forceColor === undefined) {
+    return 0;
+  }
+  const min = forceColor || 0;
+  if (env.TERM === 'dumb') {
+    return min;
+  }
+  if (process$1.platform === 'win32') {
+    // Windows 10 build 10586 is the first Windows release that supports 256 colors.
+    // Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+    const osRelease = os.release().split('.');
+    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
+      return Number(osRelease[2]) >= 14931 ? 3 : 2;
+    }
+    return 1;
+  }
+  if ('CI' in env) {
+    if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
+      return 3;
+    }
+    if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+      return 1;
+    }
+    return min;
+  }
+  if ('TEAMCITY_VERSION' in env) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+  }
+  if (env.COLORTERM === 'truecolor') {
+    return 3;
+  }
+  if (env.TERM === 'xterm-kitty') {
+    return 3;
+  }
+  if ('TERM_PROGRAM' in env) {
+    const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+    switch (env.TERM_PROGRAM) {
+      case 'iTerm.app':
+        {
+          return version >= 3 ? 3 : 2;
+        }
+      case 'Apple_Terminal':
+        {
+          return 2;
+        }
+      // No default
+    }
+  }
+  if (/-256(color)?$/i.test(env.TERM)) {
+    return 2;
+  }
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+    return 1;
+  }
+  if ('COLORTERM' in env) {
+    return 1;
+  }
+  return min;
+}
+function createSupportsColor(stream, options = {}) {
+  const level = _supportsColor(stream, {
+    streamIsTTY: stream && stream.isTTY,
+    ...options
+  });
+  return translateLevel(level);
+}
+({
+  stdout: createSupportsColor({
+    isTTY: tty.isatty(1)
+  }),
+  stderr: createSupportsColor({
+    isTTY: tty.isatty(2)
+  })
+});
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+const ANSI = {
+  supported: processSupportsBasicColor,
+  RED: "\x1b[31m",
+  GREEN: "\x1b[32m",
+  YELLOW: "\x1b[33m",
+  BLUE: "\x1b[34m",
+  MAGENTA: "\x1b[35m",
+  GREY: "\x1b[90m",
+  color: (text, ANSI_COLOR) => {
+    return ANSI.supported ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+  },
+  BOLD: "\x1b[1m",
+  effect: (text, ANSI_EFFECT) => {
+    return ANSI.supported ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+  }
+};
+
+// GitHub workflow does support ANSI but "supports-color" returns false
+// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+if (process.env.GITHUB_WORKFLOW &&
+// Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+// in unit test we use process.env.FORCE_COLOR = 'false' to fake
+// that colors are not supported. Let it have priority
+process.env.FORCE_COLOR !== "false") {
+  ANSI.supported = true;
+}
+function isUnicodeSupported() {
+  if (process$1.platform !== 'win32') {
+    return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+  }
+  return Boolean(process$1.env.WT_SESSION) // Windows Terminal
+  || Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+  || process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+  || process$1.env.TERM_PROGRAM === 'Terminus-Sublime' || process$1.env.TERM_PROGRAM === 'vscode' || process$1.env.TERM === 'xterm-256color' || process$1.env.TERM === 'alacritty' || process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+// see also https://github.com/sindresorhus/figures
+
+const UNICODE = {
+  supported: isUnicodeSupported(),
+  get COMMAND_RAW() {
+    return UNICODE.supported ? "\u276F" : ">";
+  },
+  get OK_RAW() {
+    return UNICODE.supported ? "\u2714" : "\u221A";
+  },
+  get FAILURE_RAW() {
+    return UNICODE.supported ? "\u2716" : "\xD7";
+  },
+  get DEBUG_RAW() {
+    return UNICODE.supported ? "\u25C6" : "\u2666";
+  },
+  get INFO_RAW() {
+    return UNICODE.supported ? "\u2139" : "i";
+  },
+  get WARNING_RAW() {
+    return UNICODE.supported ? "\u26A0" : "\u203C";
+  },
+  get CIRCLE_CROSS_RAW() {
+    return UNICODE.supported ? "\u24E7" : "(\xD7)";
+  },
+  get COMMAND() {
+    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+  },
+  get OK() {
+    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+  },
+  get FAILURE() {
+    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+  },
+  get DEBUG() {
+    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+  },
+  get INFO() {
+    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+  },
+  get WARNING() {
+    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+  },
+  get CIRCLE_CROSS() {
+    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  }
+};
 const formatDefault = v => v;
-const inspectFileContent = ({
+const generateContentFrame = ({
   content,
   line,
   column,
@@ -955,7 +1193,7 @@ const jsenvPluginSupervisor = ({
           url: file,
           line,
           column,
-          codeFrame: inspectFileContent({
+          codeFrame: generateContentFrame({
             line,
             column,
             content: urlInfo.originalContent
