@@ -5,7 +5,10 @@ import { writeFileSync } from "@jsenv/filesystem";
 
 export const startSnapshotTesting = async (name, scenarios) => {
   let number = 0;
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const snapshotDirectoryUrl = new URL(
+    `../snapshots/${name}/`,
+    import.meta.url,
+  );
   const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   for (const key of Object.keys(scenarios)) {
     try {
