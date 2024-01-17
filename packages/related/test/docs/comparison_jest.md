@@ -20,21 +20,22 @@ Finally the [conclusion](#conclusion) highlights the best parts of the approach 
 
 ##### Jest
 
-Jest execute test file inside:
+Jest execute test files inside:
 
 - a child process (default)
 - a worker thread
 
 ##### @jsenv/test
 
-Jsenv execute test file inside:
+Jsenv can execute test files inside:
 
 - a child process
 - a worker thread
 - a web browser: Chromium, Webkit, Firefox
 
-There is no default runtime: it must be explicitely configured.  
-Test file can be executed on one or many runtime: it's possible to execute tests on chromium and on firefox for example.
+Unlike jest, there is no default runtime: files must be explicitely associated with a runtime.
+
+Test file can be executed on one or many times on one or many runtimes. It's possible to execute tests on chromium and on firefox for example.
 
 ## Executing one test in node
 
@@ -102,12 +103,7 @@ node ./scripts/test.js
 
 ```js
 // scripts/test.js
-import {
-  executeTestPlan,
-  nodeWorkerThread,
-  chromium,
-  firefox,
-} from "@jsenv/test";
+import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
@@ -115,14 +111,6 @@ await executeTestPlan({
     "./tests/**/*.test.js": {
       node: {
         runtime: nodeWorkerThread(),
-      },
-    },
-    "./tests/**/*.test.html": {
-      chromium: {
-        runtime: chromium(),
-      },
-      firefox: {
-        runtime: firefox(),
       },
     },
   },
