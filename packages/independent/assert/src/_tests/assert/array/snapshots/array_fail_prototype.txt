@@ -1,0 +1,7 @@
+unequal prototypes
+--- prototype found ---
+global.Object.prototype
+--- prototype expected ---
+global.Array.prototype
+--- path ---
+actual[[Prototype]]
