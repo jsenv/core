@@ -1,4 +1,4 @@
-unexpected character in string
+CharacterAssertionError: unexpected character in string
 --- details ---
 a
 ^

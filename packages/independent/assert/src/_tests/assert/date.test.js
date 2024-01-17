@@ -1,27 +1,18 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-{
-  const actual = new Date(10);
-  const expected = new Date(10);
-  assert({ actual, expected });
-}
+const dateSnapshotTesting = startSnapshotTesting("date");
 
-{
-  const actual = new Date(10);
-  const expected = new Date(11);
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unequal values
---- found ---
-10
---- expected ---
-11
---- path ---
-actual.valueOf()`,
-    );
-  }
+assert({
+  actual: new Date(10),
+  expected: new Date(10),
+});
+
+try {
+  assert({
+    actual: new Date(10),
+    expected: new Date(11),
+  });
+} catch (e) {
+  dateSnapshotTesting.writeError(e, "date_fail.txt");
 }

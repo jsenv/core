@@ -1,26 +1,18 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-{
-  const actual = BigInt(1);
-  const expected = BigInt(1);
-  assert({ actual, expected });
-}
+const bigintSnapshotTesting = startSnapshotTesting("bigint");
+
+assert({
+  actual: BigInt(1),
+  expected: BigInt(1),
+});
 
 try {
-  const actual = BigInt(1);
-  const expected = BigInt(2);
-  assert({ actual, expected });
-  throw new Error("should throw");
+  assert({
+    actual: BigInt(1),
+    expected: BigInt(2),
+  });
 } catch (error) {
-  ensureAssertionErrorWithMessage(
-    error,
-    `unequal values
---- found ---
-1n
---- expected ---
-2n
---- path ---
-actual`,
-  );
+  bigintSnapshotTesting.writeError(error, "bigint_fail.txt");
 }

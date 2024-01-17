@@ -1,4 +1,4 @@
-an array is smaller than expected
+MissingArrayEntryAssertionError: an array is smaller than expected
 --- array length found ---
 1
 --- array length expected ---

@@ -1,74 +1,50 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-{
-  const actual = true;
-  const expected = true;
-  assert({ actual, expected });
-}
+const booleanSnapshotTesting = startSnapshotTesting("boolean");
+
+assert({
+  actual: true,
+  expected: true,
+});
+assert({
+  // eslint-disable-next-line no-new-wrappers
+  actual: new Boolean(true),
+  // eslint-disable-next-line no-new-wrappers
+  expected: new Boolean(true),
+});
 
 try {
-  // eslint-disable-next-line no-new-wrappers
-  const actual = new Boolean(true);
-  // eslint-disable-next-line no-new-wrappers
-  const expected = new Boolean(true);
-  assert({ actual, expected });
+  assert({
+    actual: true,
+    expected: false,
+  });
 } catch (e) {
-  throw new Error(`should not throw`);
+  booleanSnapshotTesting.writeError(e, "boolean_fail.txt");
 }
-
 try {
-  const actual = true;
-  const expected = false;
-  assert({ actual, expected });
-  throw new Error("should throw");
-} catch (error) {
-  ensureAssertionErrorWithMessage(
-    error,
-    `unequal values
---- found ---
-true
---- expected ---
-false
---- path ---
-actual`,
-  );
+  assert({
+    // eslint-disable-next-line no-new-wrappers
+    actual: new Boolean(true),
+    // eslint-disable-next-line no-new-wrappers
+    expected: new Boolean(false),
+  });
+} catch (e) {
+  booleanSnapshotTesting.writeError(e, "boolean_object_fail.txt");
 }
-
 try {
-  // eslint-disable-next-line no-new-wrappers
-  const actual = new Boolean(true);
-  // eslint-disable-next-line no-new-wrappers
-  const expected = new Boolean(false);
-  assert({ actual, expected });
-  throw new Error("should throw");
-} catch (error) {
-  ensureAssertionErrorWithMessage(
-    error,
-    `unequal values
---- found ---
-true
---- expected ---
-false
---- path ---
-actual.valueOf()`,
-  );
+  assert({
+    actual: 0,
+    expected: false,
+  });
+} catch (e) {
+  booleanSnapshotTesting.writeError(e, "boolean_fail_0_false.txt");
 }
-
 try {
-  const actual = 0;
-  const expected = false;
-  assert({ actual, expected });
-  throw new Error("should throw");
-} catch (error) {
-  ensureAssertionErrorWithMessage(
-    error,
-    `unequal values
---- found ---
-0
---- expected ---
-false
---- path ---
-actual`,
-  );
+  assert({
+    actual: 1,
+    expected: true,
+  });
+} catch (e) {
+  booleanSnapshotTesting.writeError(e, "boolean_fail_1_true.txt");
 }

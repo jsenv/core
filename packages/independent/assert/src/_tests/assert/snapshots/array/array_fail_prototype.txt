@@ -1,4 +1,4 @@
-unequal prototypes
+PrototypeAssertionError: unequal prototypes
 --- prototype found ---
 global.Object.prototype
 --- prototype expected ---

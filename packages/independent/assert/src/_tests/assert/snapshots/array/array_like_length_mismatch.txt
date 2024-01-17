@@ -1,4 +1,4 @@
-unequal values
+AssertionError: unequal values
 --- found ---
 0
 --- expected ---

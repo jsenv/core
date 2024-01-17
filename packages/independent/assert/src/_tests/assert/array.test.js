@@ -1,16 +1,8 @@
-import stripAnsi from "strip-ansi";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { executeInNewContext } from "../executeInNewContext.js";
 import { assert } from "@jsenv/assert";
-import { writeFileSync } from "@jsenv/filesystem";
 
-import { executeInNewContext } from "../../executeInNewContext.js";
-
-const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url);
-const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-const writeErrorSnapshot = (error, filename) => {
-  const snapshotFileUrl = new URL(filename, snapshotDirectoryUrl);
-  writeFileSync(snapshotFileUrl, stripAnsi(error.message));
-};
+const arraySnapshotTesting = startSnapshotTesting("array");
 
 assert({
   actual: [],
@@ -31,7 +23,7 @@ try {
     expected: [0],
   });
 } catch (e) {
-  writeErrorSnapshot(e, "array_too_big.txt");
+  arraySnapshotTesting.writeError(e, "array_too_big.txt");
 }
 try {
   assert({
@@ -39,7 +31,7 @@ try {
     expected: [0, 1],
   });
 } catch (e) {
-  writeErrorSnapshot(e, "array_too_small.txt");
+  arraySnapshotTesting.writeError(e, "array_too_small.txt");
 }
 try {
   assert({
@@ -47,7 +39,7 @@ try {
     expected: ["b"],
   });
 } catch (e) {
-  writeErrorSnapshot(e, "array_mismatch_at_0.txt");
+  arraySnapshotTesting.writeError(e, "array_mismatch_at_0.txt");
 }
 try {
   assert({
@@ -55,7 +47,7 @@ try {
     expected: [],
   });
 } catch (e) {
-  writeErrorSnapshot(e, "array_fail_prototype.txt");
+  arraySnapshotTesting.writeError(e, "array_fail_prototype.txt");
 }
 try {
   assert({
@@ -63,7 +55,7 @@ try {
     expected: { length: 1 },
   });
 } catch (e) {
-  writeErrorSnapshot(e, "array_like_length_mismatch.txt");
+  arraySnapshotTesting.writeError(e, "array_like_length_mismatch.txt");
 }
 try {
   const actual = [];
@@ -72,7 +64,7 @@ try {
   expected.foo = false;
   assert({ actual, expected });
 } catch (e) {
-  writeErrorSnapshot(e, "array_fail_property.txt");
+  arraySnapshotTesting.writeError(e, "array_fail_property.txt");
 }
 try {
   const symbol = Symbol();
@@ -82,7 +74,7 @@ try {
   expected[symbol] = false;
   assert({ actual, expected });
 } catch (e) {
-  writeErrorSnapshot(e, "array_fail_symbol.txt");
+  arraySnapshotTesting.writeError(e, "array_fail_symbol.txt");
 }
 
-directorySnapshot.compare();
+arraySnapshotTesting.end();

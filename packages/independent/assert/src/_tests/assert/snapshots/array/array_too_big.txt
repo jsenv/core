@@ -1,4 +1,4 @@
-an array is bigger than expected
+ExtraArrayEntryAssertionError: an array is bigger than expected
 --- array length found ---
 2
 --- array length expected ---
