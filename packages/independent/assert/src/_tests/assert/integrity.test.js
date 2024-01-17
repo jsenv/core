@@ -1,120 +1,55 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-try {
-  const actual = Object.seal({ foo: true });
-  const expected = Object.seal({ foo: true });
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = Object.freeze({});
-  const expected = Object.freeze({});
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = {};
-  const expected = Object.seal({ foo: true });
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"none"
---- expected ---
-"sealed"
---- path ---
-actual[[Integrity]]`,
-  );
-}
-
-try {
-  const actual = Object.seal({ foo: true });
-  const expected = {};
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"sealed"
---- expected ---
-"none"
---- path ---
-actual[[Integrity]]`,
-  );
-}
-
-try {
-  const actual = {};
-  const expected = Object.freeze({});
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"none"
---- expected ---
-"frozen"
---- path ---
-actual[[Integrity]]`,
-  );
-}
-
-try {
-  const actual = Object.freeze({});
-  const expected = {};
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"frozen"
---- expected ---
-"none"
---- path ---
-actual[[Integrity]]`,
-  );
-}
-
-try {
-  const actual = Object.freeze({});
-  const expected = Object.seal({ foo: true });
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"frozen"
---- expected ---
-"sealed"
---- path ---
-actual[[Integrity]]`,
-  );
-}
-
-try {
-  const actual = Object.seal({ foo: true });
-  const expected = Object.freeze({});
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"sealed"
---- expected ---
-"frozen"
---- path ---
-actual[[Integrity]]`,
-  );
-}
+await startSnapshotTesting("integrity", {
+  seal: () => {
+    assert({
+      actual: Object.seal({ foo: true }),
+      expected: Object.seal({ foo: true }),
+    });
+  },
+  freeze: () => {
+    assert({
+      actual: Object.freeze({}),
+      expected: Object.freeze({}),
+    });
+  },
+  fail_should_be_sealed: () => {
+    assert({
+      actual: {},
+      // the foo property is here to ensure integrity is checked before property
+      expected: Object.seal({ foo: true }),
+    });
+  },
+  fail_should_not_be_sealed: () => {
+    assert({
+      // the foo property is here to ensure integrity is checked before property
+      actual: Object.seal({ foo: true }),
+      expected: {},
+    });
+  },
+  fail_should_be_frozen: () => {
+    assert({
+      actual: {},
+      expected: Object.freeze({}),
+    });
+  },
+  fail_should_not_be_frozen: () => {
+    assert({
+      actual: Object.freeze({}),
+      expected: {},
+    });
+  },
+  fail_should_be_sealed_not_frozen: () => {
+    assert({
+      actual: Object.freeze({}),
+      expected: Object.seal({ foo: true }),
+    });
+  },
+  fail_should_be_frozen_not_sealed: () => {
+    assert({
+      actual: Object.seal({ foo: true }),
+      expected: Object.freeze({}),
+    });
+  },
+});

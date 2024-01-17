@@ -1,78 +1,40 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-try {
-  const actual = Symbol();
-  const expected = actual;
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = Symbol.for("foo");
-  const expected = Symbol.for("foo");
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = Symbol();
-  const expected = Symbol();
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-Symbol()
---- expected ---
-Symbol()
---- path ---
-actual`,
-  );
-}
-
-try {
-  const actual = Symbol("foo");
-  const expected = Symbol("bar");
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-Symbol("foo")
---- expected ---
-Symbol("bar")
---- path ---
-actual`,
-  );
-}
-
-// ensure unequal symbols is checked before unexpected symbol
-// (because it gives more helpful error message)
-try {
-  const symbola = Symbol("a");
-  const symbolb = Symbol("b");
-  const actual = {
-    [symbola]: true,
-  };
-  const expected = {
-    [symbola]: false,
-    [symbolb]: true,
-  };
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-true
---- expected ---
-false
---- path ---
-actual[Symbol("a")]`,
-  );
-}
+await startSnapshotTesting("symbol", {
+  same_symbols: () => {
+    const symbol = Symbol();
+    assert({
+      actual: symbol,
+      expected: symbol,
+    });
+  },
+  same_symbol_registered: () => {
+    assert({
+      actual: Symbol.for("foo"),
+      expected: Symbol.for("foo"),
+    });
+  },
+  fail_symbol: () => {
+    assert({
+      actual: Symbol(),
+      expected: Symbol(),
+    });
+  },
+  fail_symbol_named: () => {
+    assert({
+      actual: Symbol("foo"),
+      expected: Symbol("bar"),
+    });
+  },
+  // ensure failure on symbol value prevails on failure associated to extra symbol
+  // (because it gives more helpful error message)
+  toto: () => {
+    const symbola = Symbol("a");
+    const symbolb = Symbol("b");
+    assert({
+      actual: { [symbola]: true },
+      expected: { [symbola]: false, [symbolb]: true },
+    });
+  },
+});

@@ -1,69 +1,35 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-try {
-  const actual = new Set();
-  const expected = new Set();
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = new Set([0]);
-  const expected = new Set([0]);
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = new Set([{ foo: true }]);
-  const expected = new Set([{ foo: false }]);
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-true
---- expected ---
-false
---- path ---
-actual[[setEntry:0]].foo`,
-  );
-}
-
-try {
-  const actual = new Set();
-  const expected = new Set([1, 2]);
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `a set is smaller than expected
---- set size found ---
-0
---- set size expected ---
-2
---- path ---
-actual`,
-  );
-}
-
-try {
-  const actual = new Set([1, 2]);
-  const expected = new Set();
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `a set is bigger than expected
---- set size found ---
-2
---- set size expected ---
-0
---- path ---
-actual`,
-  );
-}
+await startSnapshotTesting("set", {
+  same_set: () => {
+    assert({
+      actual: new Set(),
+      expected: new Set(),
+    });
+  },
+  same_set_with_one_entry: () => {
+    assert({
+      actual: new Set([0]),
+      expected: new Set([0]),
+    });
+  },
+  fail_set_first_entry: () => {
+    assert({
+      actual: new Set([{ foo: true }]),
+      expected: new Set([{ foo: false }]),
+    });
+  },
+  fail_set_2_missing_entry: () => {
+    assert({
+      actual: new Set(),
+      expected: new Set(["a", "b"]),
+    });
+  },
+  fail_set_2_extra_entry: () => {
+    assert({
+      actual: new Set(["a", "b"]),
+      expected: new Set(),
+    });
+  },
+});

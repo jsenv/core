@@ -1,44 +1,24 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
+
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-try {
-  const actual = Object.preventExtensions({ foo: true });
-  const expected = Object.preventExtensions({ foo: true });
-  assert({ actual, expected });
-} catch (e) {
-  throw new Error(`should not throw`);
-}
-
-try {
-  const actual = { foo: true };
-  const expected = Object.preventExtensions({ foo: true });
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"extensible"
---- expected ---
-"non-extensible"
---- path ---
-actual[[Extensible]]`,
-  );
-}
-
-try {
-  const actual = Object.preventExtensions({ foo: true });
-  const expected = { foo: true };
-  assert({ actual, expected });
-} catch (e) {
-  ensureAssertionErrorWithMessage(
-    e,
-    `unequal values
---- found ---
-"non-extensible"
---- expected ---
-"extensible"
---- path ---
-actual[[Extensible]]`,
-  );
-}
+await startSnapshotTesting("extensibility", {
+  basic: () => {
+    assert({
+      actual: Object.preventExtensions({ foo: true }),
+      expected: Object.preventExtensions({ foo: true }),
+    });
+  },
+  fail_should_be_non_extensible: () => {
+    assert({
+      actual: { foo: true },
+      expected: Object.preventExtensions({ foo: true }),
+    });
+  },
+  fail_should_be_extensible: () => {
+    assert({
+      actual: Object.preventExtensions({ foo: true }),
+      expected: { foo: true },
+    });
+  },
+});

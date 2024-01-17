@@ -1,77 +1,31 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-{
-  const actual = Object.defineProperty({}, "foo", { get: () => 1 });
-  const expected = Object.defineProperty({}, "foo", { get: () => 1 });
-  assert({ actual, expected });
-}
-
-{
-  // eslint-disable-next-line no-inner-declarations
-  function get() {
-    return 1;
-  }
-  const actual = Object.defineProperty({}, "foo", {});
-  const expected = Object.defineProperty({}, "foo", {
-    get,
-  });
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unequal values
---- found ---
-undefined
---- expected ---
-function ${get.name}() {/* hidden */}
---- path ---
-actual.foo[[Get]]`,
-    );
-  }
-}
-
-{
-  // eslint-disable-next-line no-inner-declarations
-  function get() {
-    return 1;
-  }
-  const actual = Object.defineProperty({}, "foo", { get });
-  const expected = Object.defineProperty({}, "foo", {});
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unequal values
---- found ---
-function ${get.name}() {/* hidden */}
---- expected ---
-undefined
---- path ---
-actual.foo[[Get]]`,
-    );
-  }
-}
-
-{
-  const actualGetter = () => 1;
-  const expectedGetter = () => 1;
-  const actual = Object.defineProperty({}, "foo", { get: actualGetter });
-  const expected = Object.defineProperty({}, "foo", { get: expectedGetter });
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unexpected character in function name
---- details ---
-actualGetter
-^
-unexpected "a", expected to continue with "expectedGetter"
---- path ---
-actual.foo[[Get]].name`,
-    );
-  }
-}
+await startSnapshotTesting("property_get", {
+  same_getters: () => {
+    assert({
+      actual: Object.defineProperty({}, "foo", { get: () => 1 }),
+      expected: Object.defineProperty({}, "foo", { get: () => 1 }),
+    });
+  },
+  fail_should_have_property_getter: () => {
+    assert({
+      actual: Object.defineProperty({}, "foo", {}),
+      expected: Object.defineProperty({}, "foo", { get: () => 1 }),
+    });
+  },
+  fail_should_not_have_property_getter: () => {
+    assert({
+      actual: Object.defineProperty({}, "foo", { get: () => 1 }),
+      expected: Object.defineProperty({}, "foo", {}),
+    });
+  },
+  fail_property_getter_name: () => {
+    const actualGetter = () => 1;
+    const expectedGetter = () => 1;
+    assert({
+      actual: Object.defineProperty({}, "foo", { get: actualGetter }),
+      expected: Object.defineProperty({}, "foo", { get: expectedGetter }),
+    });
+  },
+});

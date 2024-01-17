@@ -1,46 +1,27 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-{
-  const symbola = Symbol("a");
-  const symbolb = Symbol("b");
-  const actual = {
-    [symbola]: true,
-    [symbolb]: true,
-  };
-  const expected = {
-    [symbola]: true,
-    [symbolb]: true,
-  };
-  assert({ actual, expected });
-}
-
-{
-  const symbola = Symbol("a");
-  const symbolb = Symbol("b");
-
-  const actual = {
-    [symbolb]: true,
-    [symbola]: true,
-  };
-  const expected = {
-    [symbola]: true,
-    [symbolb]: true,
-  };
-  try {
-    assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unexpected symbols order
---- symbols order found ---
-Symbol("b")
-Symbol("a")
---- symbols order expected ---
-Symbol("a")
-Symbol("b")
---- path ---
-actual`,
-    );
-  }
-}
+await startSnapshotTesting("symbol_order", {
+  same_symbol_order: () => {
+    const symbola = Symbol("a");
+    const symbolb = Symbol("b");
+    assert({
+      actual: { [symbola]: true, [symbolb]: true },
+      expected: { [symbola]: true, [symbolb]: true },
+    });
+  },
+  fail_symbol_order: () => {
+    const symbola = Symbol("a");
+    const symbolb = Symbol("b");
+    assert({
+      actual: {
+        [symbolb]: true,
+        [symbola]: true,
+      },
+      expected: {
+        [symbola]: true,
+        [symbolb]: true,
+      },
+    });
+  },
+});

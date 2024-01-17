@@ -1,44 +1,28 @@
+import { startSnapshotTesting } from "./start_snapshot_testing.js";
 import { assert } from "@jsenv/assert";
-import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
-// anonymous funciton
-{
-  const actual = (function () {
-    return function () {};
-  })();
-  const expected = (function () {
-    return function () {};
-  })();
-  assert({ actual, expected });
-}
-
-// anonymous arrow function
-{
-  const actual = (function () {
-    return () => {};
-  })();
-  const expected = (function () {
-    return () => {};
-  })();
-  assert({ actual, expected });
-}
-
-// named arrow function
-{
-  const actual = () => {};
-  const expected = () => {};
-  try {
+await startSnapshotTesting("function", {
+  anonymous_function: () => {
+    const actual = (function () {
+      return function () {};
+    })();
+    const expected = (function () {
+      return function () {};
+    })();
     assert({ actual, expected });
-  } catch (e) {
-    ensureAssertionErrorWithMessage(
-      e,
-      `unexpected character in function name
---- details ---
-actual
-^
-unexpected "a", expected to continue with "expected"
---- path ---
-actual.name`,
-    );
-  }
-}
+  },
+  anonymous_arrow_function: () => {
+    const actual = (function () {
+      return () => {};
+    })();
+    const expected = (function () {
+      return () => {};
+    })();
+    assert({ actual, expected });
+  },
+  fail_arrow_function_name: () => {
+    const actual = () => {};
+    const expected = () => {};
+    assert({ actual, expected });
+  },
+});

@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert";
 import { ensureErrorWithMessage } from "../ensureErrorWithMessage.js";
+import { ensureAssertionErrorWithMessage } from "../ensureAssertionErrorWithMessage.js";
 
 try {
   assert();
@@ -63,4 +64,12 @@ try {
     e,
     `assert must be called with { actual, expected }, missing expected property on first argument`,
   );
+}
+
+try {
+  const actual = true;
+  const expected = false;
+  assert({ actual, expected, message: "should be true" });
+} catch (e) {
+  ensureAssertionErrorWithMessage(e, `should be true`);
 }
