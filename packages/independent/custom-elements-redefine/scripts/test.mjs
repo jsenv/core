@@ -18,7 +18,7 @@ await executeTestPlan({
     },
   },
   webServer: {
-    origin: "http://localhost:3457",
+    origin: "http://localhost:3459",
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
   githubCheck: false,

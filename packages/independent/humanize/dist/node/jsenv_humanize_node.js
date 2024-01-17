@@ -1751,7 +1751,7 @@ const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
   return inspectBytes(numberOfBytes, { decimals, short });
 };
 
-const humanizeMemoryUsage = (metricValue, { decimals, short } = {}) => {
+const humanizeMemory = (metricValue, { decimals, short } = {}) => {
   return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 
@@ -2000,4 +2000,4 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-export { ANSI, UNICODE, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemoryUsage, humanizeMethodSymbol, inspectChar, startSpinner };
+export { ANSI, UNICODE, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, inspectChar, startSpinner };

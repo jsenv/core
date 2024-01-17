@@ -914,7 +914,7 @@ const humanizeFileSize = (numberOfBytes, {
     short
   });
 };
-const humanizeMemoryUsage = (metricValue, {
+const humanizeMemory = (metricValue, {
   decimals,
   short
 } = {}) => {
@@ -1154,4 +1154,4 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-export { createDetailedMessage, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemoryUsage, humanizeMethodSymbol, inspectChar };
+export { createDetailedMessage, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, inspectChar };

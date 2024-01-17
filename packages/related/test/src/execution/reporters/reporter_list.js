@@ -234,8 +234,7 @@ const renderIntro = (testPlanResult, logOptions) => {
   const numberOfFiles = Object.keys(testPlanResult.results).length;
   let fileFoundLine = "";
   if (numberOfFiles === 0) {
-    fileFoundLine += `no file matching "testPlan" in ${directory}.
---- test plan patterns --- 
+    fileFoundLine += `no file matching "testPlan" in ${directory}:
 ${testPlanResult.patterns.join("\n")}`;
   } else if (numberOfFiles === 1) {
     fileFoundLine += `1 file matching "testPlan" in ${directory}`;
@@ -651,7 +650,7 @@ const humanizeProcessMemoryUsage = (value) => {
 
 const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
-    return `nothing to run`;
+    return ``;
   }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
