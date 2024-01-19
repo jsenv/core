@@ -170,10 +170,10 @@ export const takeDirectorySnapshot = (directoryUrl) => {
           if (missingFileCount === 1) {
             const fileMissingAssertionError =
               assert.createAssertionError(`${failureMessage}
-  --- reason ---
-  "${missingRelativeUrls[0]}" is missing
-  --- file missing ---
-  ${missingUrls[0]}`);
+--- reason ---
+"${missingRelativeUrls[0]}" is missing
+--- file missing ---
+${missingUrls[0]}`);
             fileMissingAssertionError.name = "FileMissingAssertionError";
             throw fileMissingAssertionError;
           }
