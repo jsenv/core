@@ -1,0 +1,11 @@
+# fail_symbol_order
+SymbolsOrderAssertionError: unexpected symbols order
+--- symbols order found ---
+Symbol("b")
+Symbol("a")
+--- symbols order expected ---
+Symbol("a")
+Symbol("b")
+--- path ---
+actual
+

@@ -1,7 +1,0 @@
-ExtraCharacterAssertionError: string is too long, it contains one extra character
---- details ---
-hey/
-  ^
-expected to end here, on "y"
---- path ---
-actual

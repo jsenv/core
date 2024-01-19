@@ -1,7 +1,0 @@
-MissingPropertyAssertionError: 1 missing property
---- missing property ---
-{
-  "a": true
-}
---- path ---
-actual

@@ -1,8 +1,0 @@
-CharacterAssertionError: unexpected character in string
---- details ---
-1 | Hello,
-2 | I am ben
-    ^
-unexpected "I", expected to continue with " I am benjamin"
---- path ---
-actual

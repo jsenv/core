@@ -1,8 +1,0 @@
-ExtraPropertyAssertionError: 2 unexpected properties
---- unexpected properties ---
-{
-  "a": true,
-  "b": true
-}
---- path ---
-actual

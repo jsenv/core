@@ -1,0 +1,18 @@
+# fail_should_be_configurable
+AssertionError: unequal values
+--- found ---
+"non-configurable"
+--- expected ---
+"configurable"
+--- path ---
+actual.foo[[Configurable]]
+
+# fail_should_not_be_configurable
+AssertionError: unequal values
+--- found ---
+"configurable"
+--- expected ---
+"non-configurable"
+--- path ---
+actual.foo[[Configurable]]
+

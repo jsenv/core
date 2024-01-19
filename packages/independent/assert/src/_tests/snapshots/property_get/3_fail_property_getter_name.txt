@@ -1,7 +1,0 @@
-CharacterAssertionError: unexpected character in function name
---- details ---
-actualGetter
-^
-unexpected "a", expected to continue with "expectedGetter"
---- path ---
-actual.foo[[Get]].name

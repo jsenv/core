@@ -1,8 +1,0 @@
-ExtraCharacterAssertionError: string is too long, it contains one extra character
---- details ---
-1 | a
-     ^
-expected to end here, on "\n"
-2 | b
---- path ---
-actual

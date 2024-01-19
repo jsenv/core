@@ -1,0 +1,31 @@
+# fail_error_message
+CharacterAssertionError: unexpected character in error message
+--- details ---
+foo
+^
+unexpected "f", expected to continue with "bar"
+--- path ---
+actual.message
+
+# fail_error_prototype
+PrototypeAssertionError: unequal prototypes
+--- prototype found ---
+global.Error.prototype
+--- prototype expected ---
+global.TypeError.prototype
+--- path ---
+actual[[Prototype]]
+
+# fail_error_cross_realm_prototype
+PrototypeAssertionError: unequal prototypes
+--- prototype found ---
+global.Error.prototype
+--- prototype expected ---
+TypeError({
+  "constructor": function () {/* hidden */},
+  "name": "TypeError",
+  "message": ""
+})
+--- path ---
+actual[[Prototype]]
+

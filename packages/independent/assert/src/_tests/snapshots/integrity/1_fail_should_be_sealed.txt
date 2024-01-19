@@ -1,7 +1,0 @@
-AssertionError: unequal values
---- found ---
-"none"
---- expected ---
-"sealed"
---- path ---
-actual[[Integrity]]

@@ -1,26 +1,20 @@
 import stripAnsi from "strip-ansi";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { writeFileSync } from "@jsenv/filesystem";
 
 export const startSnapshotTesting = async (name, scenarios) => {
-  let number = 0;
-  const snapshotDirectoryUrl = new URL(
-    `../snapshots/${name}/`,
-    import.meta.url,
-  );
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  let fileContent = "";
+  const snapshotFileUrl = new URL(`../snapshots/${name}.txt`, import.meta.url);
+  const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
   for (const key of Object.keys(scenarios)) {
     try {
       await scenarios[key]();
     } catch (e) {
-      number++;
-      const snapshotFileUrl = new URL(
-        `${number}_${key}.txt`,
-        snapshotDirectoryUrl,
-      );
-      writeFileSync(snapshotFileUrl, `${e.name}: ${stripAnsi(e.message)}`);
+      fileContent += `# ${key}\n`;
+      fileContent += `${e.name}: ${stripAnsi(e.message)}\n\n`;
     }
   }
-  directorySnapshot.compare();
+  writeFileSync(snapshotFileUrl, fileContent);
+  fileSnapshot.compare();
 };

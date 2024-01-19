@@ -1,7 +1,0 @@
-CharacterAssertionError: unexpected character in string
---- details ---
-…ode_modules/@jsenv/assert/src/internal/something.js
-                                        ^
-unexpected "s", expected to continue with "/something.js"
---- path ---
-actual

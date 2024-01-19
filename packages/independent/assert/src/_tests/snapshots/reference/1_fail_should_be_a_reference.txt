@@ -1,7 +1,0 @@
-MissingReferenceAssertionError: found a value instead of a reference
---- value found ---
-{}
---- reference expected to ---
-expected
---- path ---
-actual.self

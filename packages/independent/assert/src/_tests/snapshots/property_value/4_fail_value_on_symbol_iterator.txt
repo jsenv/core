@@ -1,7 +1,0 @@
-AssertionError: unequal values
---- found ---
-true
---- expected ---
-false
---- path ---
-actual[Symbol.iterator]

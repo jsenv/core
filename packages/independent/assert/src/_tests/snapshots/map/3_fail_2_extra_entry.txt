@@ -1,7 +1,0 @@
-ExtraMapEntryAssertionError: an entry is unexpected
---- unexpected entry key ---
-"foo"
---- unexpected entry value ---
-true
---- path ---
-actual

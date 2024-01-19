@@ -1,0 +1,9 @@
+# fail_to_start_with
+CharacterAssertionError: unexpected character in string
+--- details ---
+AABB
+ ^
+unexpected "A", expected to continue with "B"
+--- path ---
+actual
+

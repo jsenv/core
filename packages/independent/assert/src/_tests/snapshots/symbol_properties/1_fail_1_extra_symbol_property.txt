@@ -1,5 +1,0 @@
-ExtraSymbolAssertionError: unexpected symbols
---- unexpected symbol list ---
-Symbol("a")
---- path ---
-actual

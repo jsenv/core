@@ -1,7 +1,0 @@
-AssertionError: unequal values
---- found ---
-"extensible"
---- expected ---
-"non-extensible"
---- path ---
-actual[[Extensible]]

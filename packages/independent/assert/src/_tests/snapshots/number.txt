@@ -1,0 +1,54 @@
+# fail_number
+AssertionError: unequal values
+--- found ---
+1
+--- expected ---
+10
+--- path ---
+actual
+
+# fail_infinity_instead_of_1
+AssertionError: unequal values
+--- found ---
+Infinity
+--- expected ---
+1
+--- path ---
+actual
+
+# fail_nan_instead_of_1
+AssertionError: unequal values
+--- found ---
+NaN
+--- expected ---
+1
+--- path ---
+actual
+
+# fail_negative_zero_instead_of_0
+AssertionError: unequal values
+--- found ---
+-0
+--- expected ---
+0
+--- path ---
+actual
+
+# fail_zero_instead_of_negative_0
+AssertionError: unequal values
+--- found ---
+0
+--- expected ---
+-0
+--- path ---
+actual
+
+# fail_negative_number
+AssertionError: unequal values
+--- found ---
+1
+--- expected ---
+-1
+--- path ---
+actual
+

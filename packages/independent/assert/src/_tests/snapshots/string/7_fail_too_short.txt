@@ -1,7 +1,0 @@
-MissingCharacterAssertionError: string is too short, one character is missing
---- details ---
-a
- ^
-expected to continue with "b"
---- path ---
-actual

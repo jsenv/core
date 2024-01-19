@@ -1,7 +1,0 @@
-ExtraCharacterAssertionError: string is too long, it contains 2 extra characters
---- details ---
-aa
-^
-an empty string was expected
---- path ---
-actual

@@ -1,0 +1,54 @@
+# fail_should_be_sealed
+AssertionError: unequal values
+--- found ---
+"none"
+--- expected ---
+"sealed"
+--- path ---
+actual[[Integrity]]
+
+# fail_should_not_be_sealed
+AssertionError: unequal values
+--- found ---
+"sealed"
+--- expected ---
+"none"
+--- path ---
+actual[[Integrity]]
+
+# fail_should_be_frozen
+AssertionError: unequal values
+--- found ---
+"none"
+--- expected ---
+"frozen"
+--- path ---
+actual[[Integrity]]
+
+# fail_should_not_be_frozen
+AssertionError: unequal values
+--- found ---
+"frozen"
+--- expected ---
+"none"
+--- path ---
+actual[[Integrity]]
+
+# fail_should_be_sealed_not_frozen
+AssertionError: unequal values
+--- found ---
+"frozen"
+--- expected ---
+"sealed"
+--- path ---
+actual[[Integrity]]
+
+# fail_should_be_frozen_not_sealed
+AssertionError: unequal values
+--- found ---
+"sealed"
+--- expected ---
+"frozen"
+--- path ---
+actual[[Integrity]]
+

@@ -1,0 +1,27 @@
+# fail_symbol
+AssertionError: unequal values
+--- found ---
+Symbol()
+--- expected ---
+Symbol()
+--- path ---
+actual
+
+# fail_symbol_named
+AssertionError: unequal values
+--- found ---
+Symbol("foo")
+--- expected ---
+Symbol("bar")
+--- path ---
+actual
+
+# toto
+AssertionError: unequal values
+--- found ---
+true
+--- expected ---
+false
+--- path ---
+actual[Symbol("a")]
+

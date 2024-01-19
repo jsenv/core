@@ -1,7 +1,0 @@
-CharacterAssertionError: unexpected character in string
---- details ---
-\t 
-^
-unexpected "\t", expected to continue with "  "
---- path ---
-actual

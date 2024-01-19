@@ -1,7 +1,0 @@
-MissingSetEntryAssertionError: a set is smaller than expected
---- set size found ---
-0
---- set size expected ---
-2
---- path ---
-actual

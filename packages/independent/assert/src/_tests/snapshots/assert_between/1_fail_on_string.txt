@@ -1,7 +1,0 @@
-NotANumberAssertionError: not a number
---- found ---
-"toto"
---- expected ---
-a number between 100 and 200
---- path ---
-actual

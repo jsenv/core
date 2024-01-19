@@ -1,7 +1,0 @@
-AnyAssertionError: unexpected value
---- found ---
-"dam"
---- expected ---
-any(Number)
---- path ---
-actual[0].age

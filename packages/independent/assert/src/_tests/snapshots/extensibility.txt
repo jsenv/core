@@ -1,0 +1,18 @@
+# fail_should_be_non_extensible
+AssertionError: unequal values
+--- found ---
+"extensible"
+--- expected ---
+"non-extensible"
+--- path ---
+actual[[Extensible]]
+
+# fail_should_be_extensible
+AssertionError: unequal values
+--- found ---
+"non-extensible"
+--- expected ---
+"extensible"
+--- path ---
+actual[[Extensible]]
+

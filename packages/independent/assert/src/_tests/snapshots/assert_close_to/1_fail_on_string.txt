@@ -1,7 +1,0 @@
-AssertionError: unequal values
---- found ---
-"toto"
---- expected ---
-0.4
---- path ---
-actual

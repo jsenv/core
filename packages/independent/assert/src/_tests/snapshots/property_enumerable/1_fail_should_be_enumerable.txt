@@ -1,7 +1,0 @@
-AssertionError: unequal values
---- found ---
-"non-enumerable"
---- expected ---
-"enumerable"
---- path ---
-actual.foo[[Enumerable]]

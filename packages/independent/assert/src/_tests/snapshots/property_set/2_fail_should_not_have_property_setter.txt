@@ -1,7 +1,0 @@
-AssertionError: unequal values
---- found ---
-() => {/* hidden */}
---- expected ---
-undefined
---- path ---
-actual.foo[[Set]]

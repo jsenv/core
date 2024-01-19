@@ -1,7 +1,0 @@
-NotAssertionError: unexpected value
---- found ---
--0
---- expected ---
-an other value
---- path ---
-actual

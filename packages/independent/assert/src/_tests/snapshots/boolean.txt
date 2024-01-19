@@ -1,0 +1,36 @@
+# fail_boolean
+AssertionError: unequal values
+--- found ---
+true
+--- expected ---
+false
+--- path ---
+actual
+
+# fail_boolean_objects
+AssertionError: unequal values
+--- found ---
+true
+--- expected ---
+false
+--- path ---
+actual.valueOf()
+
+# fail_0_and_false
+AssertionError: unequal values
+--- found ---
+0
+--- expected ---
+false
+--- path ---
+actual
+
+# fail_1_and_true
+AssertionError: unequal values
+--- found ---
+1
+--- expected ---
+true
+--- path ---
+actual
+

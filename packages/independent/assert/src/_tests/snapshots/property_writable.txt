@@ -1,0 +1,18 @@
+# fail_should_be_writable
+AssertionError: unequal values
+--- found ---
+"non-writable"
+--- expected ---
+"writable"
+--- path ---
+actual.foo[[Writable]]
+
+# fail_should_not_be_writable
+AssertionError: unequal values
+--- found ---
+"writable"
+--- expected ---
+"non-writable"
+--- path ---
+actual.foo[[Writable]]
+

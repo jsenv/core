@@ -1,7 +1,0 @@
-PrototypeAssertionError: unequal prototypes
---- prototype found ---
-expected
---- prototype expected ---
-global.Object.prototype
---- path ---
-actual[[Prototype]]

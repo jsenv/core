@@ -1,0 +1,27 @@
+# fail_should_have_property_getter
+AssertionError: unequal values
+--- found ---
+undefined
+--- expected ---
+() => {/* hidden */}
+--- path ---
+actual.foo[[Get]]
+
+# fail_should_not_have_property_getter
+AssertionError: unequal values
+--- found ---
+() => {/* hidden */}
+--- expected ---
+undefined
+--- path ---
+actual.foo[[Get]]
+
+# fail_property_getter_name
+CharacterAssertionError: unexpected character in function name
+--- details ---
+actualGetter
+^
+unexpected "a", expected to continue with "expectedGetter"
+--- path ---
+actual.foo[[Get]].name
+

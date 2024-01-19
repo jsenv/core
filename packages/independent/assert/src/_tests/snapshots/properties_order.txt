@@ -1,0 +1,11 @@
+# fail_property_order
+PropertiesOrderAssertionError: unexpected properties order
+--- properties order found ---
+"foo"
+"bar"
+--- properties order expected ---
+"bar"
+"foo"
+--- path ---
+actual
+

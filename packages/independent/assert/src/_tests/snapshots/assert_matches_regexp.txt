@@ -1,0 +1,9 @@
+# fail_to_match
+RegexpMismatchAssertionError: unexpected value
+--- found ---
+"expired n seconds ago"
+--- expected ---
+matchesRegExp(/expired \d seconds ago/)
+--- path ---
+actual
+
