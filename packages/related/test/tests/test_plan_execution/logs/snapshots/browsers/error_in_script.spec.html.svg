@@ -142,9 +142,9 @@
         <text x="10" y="584.55" fill="#A9A9A9"
           >--------------------------------------</text
         >
-        <text x="10" y="622.55" fill="#A9A9A9">------------------</text>
-        <text x="169.63" y="622.55"> summary </text>
-        <text x="236.84" y="622.55" fill="#A9A9A9">------------------</text>
+        <text x="10" y="622.55" fill="#A9A9A9">---------------</text>
+        <text x="144.42" y="622.55"> execution end </text>
+        <text x="262.04" y="622.55" fill="#A9A9A9">---------------</text>
         <text x="10" y="641.55">3 executions: all </text>
         <text x="161.22" y="641.55" fill="#B22222">failed</text>
         <text x="10" y="660.55">duration: &#x3C;mock&#x3E;s</text>

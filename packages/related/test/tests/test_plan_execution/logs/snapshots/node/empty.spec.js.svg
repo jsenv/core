@@ -70,9 +70,9 @@
         <text x="388.06" y="109.55"> (all </text>
         <text x="430.07" y="109.55" fill="#32CD32">completed</text>
         <text x="505.68" y="109.55">)</text>
-        <text x="10" y="147.55" fill="#A9A9A9">------------------</text>
-        <text x="169.63" y="147.55"> summary </text>
-        <text x="236.84" y="147.55" fill="#A9A9A9">------------------</text>
+        <text x="10" y="147.55" fill="#A9A9A9">---------------</text>
+        <text x="144.42" y="147.55"> execution end </text>
+        <text x="262.04" y="147.55" fill="#A9A9A9">---------------</text>
         <text x="10" y="166.55">2 executions: all </text>
         <text x="161.22" y="166.55" fill="#32CD32">completed</text>
         <text x="10" y="185.55">duration: &#x3C;mock&#x3E;s</text>
