@@ -271,7 +271,7 @@ const getStringComparisonErrorInfo = ({
   }
 };
 
-export const formatStringAssertionErrorMessage = ({
+export const getStringAssertionErrorInfo = ({
   actual,
   expected,
   path = "",
@@ -284,7 +284,7 @@ export const formatStringAssertionErrorMessage = ({
     path,
     name,
     format,
-  }).message;
+  });
 };
 
 const truncateLine = (line, { start, end, prefix, suffix, format }) => {

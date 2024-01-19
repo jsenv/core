@@ -1,0 +1,125 @@
+{
+  "os": {
+    "name": "<mock>",
+    "version": "<mock>",
+    "availableCpu": "<mock>",
+    "availableMemory": "<mock>Gb"
+  },
+  "process": {
+    "name": "<mock>",
+    "version": "<mock>"
+  },
+  "memoryUsage": {
+    "os": {
+      "start": "<mock>",
+      "min": "<mock>",
+      "max": "<mock>",
+      "median": "<mock>",
+      "end": "<mock>"
+    },
+    "process": {
+      "start": "<mock>",
+      "min": "<mock>",
+      "max": "<mock>",
+      "median": "<mock>",
+      "end": "<mock>"
+    }
+  },
+  "cpuUsage": {
+    "os": {
+      "start": "<mock>",
+      "min": "<mock>",
+      "max": "<mock>",
+      "median": "<mock>",
+      "end": "<mock>"
+    },
+    "process": {
+      "start": "<mock>",
+      "min": "<mock>",
+      "max": "<mock>",
+      "median": "<mock>",
+      "end": "<mock>"
+    }
+  },
+  "timings": {
+    "origin": "<mock>",
+    "executionStart": "<mock>",
+    "executionEnd": "<mock>",
+    "teardownEnd": "<mock>",
+    "coverageTeardownEnd": "<mock>",
+    "end": "<mock>"
+  },
+  "rootDirectoryUrl": "/mock/",
+  "patterns": [
+    "./client/*.html"
+  ],
+  "groups": {
+    "a": {
+      "count": 1,
+      "runtimeType": "browser",
+      "runtimeName": "chromium",
+      "runtimeVersion": "<mock>"
+    },
+    "b": {
+      "count": 1,
+      "runtimeType": "browser",
+      "runtimeName": "chromium",
+      "runtimeVersion": "<mock>"
+    }
+  },
+  "counters": {
+    "planified": 2,
+    "remaining": 0,
+    "waiting": 0,
+    "executing": 0,
+    "executed": 2,
+    "aborted": 0,
+    "cancelled": 0,
+    "timedout": 0,
+    "failed": 0,
+    "completed": 2
+  },
+  "aborted": false,
+  "failed": false,
+  "coverage": null,
+  "results": {
+    "client/main.html": {
+      "a": {
+        "status": "completed",
+        "errors": [],
+        "namespace": {},
+        "consoleCalls": [],
+        "timings": {
+          "origin": "<mock>",
+          "start": "<mock>",
+          "runtimeStart": "<mock>",
+          "executionStart": "<mock>",
+          "executionEnd": "<mock>",
+          "runtimeEnd": "<mock>",
+          "end": "<mock>"
+        },
+        "memoryUsage": "<mock>",
+        "performance": null,
+        "coverageFileUrl": null
+      },
+      "b": {
+        "status": "completed",
+        "errors": [],
+        "namespace": {},
+        "consoleCalls": [],
+        "timings": {
+          "origin": "<mock>",
+          "start": "<mock>",
+          "runtimeStart": "<mock>",
+          "executionStart": "<mock>",
+          "executionEnd": "<mock>",
+          "runtimeEnd": "<mock>",
+          "end": "<mock>"
+        },
+        "memoryUsage": "<mock>",
+        "performance": null,
+        "coverageFileUrl": null
+      }
+    }
+  }
+}

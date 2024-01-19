@@ -5172,6 +5172,8 @@ ${testPlanResult.patterns.join("\n")}`;
     fileFoundLine += `${numberOfFiles} files matching "testPlan" in ${directory}`;
   }
 
+  // TODO: an option to log how many cpu, memory etc we'll use?
+
   lines.push(fileFoundLine);
 
   return `${renderBigSection({
@@ -5559,7 +5561,10 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
     lines.push(memoryUsageLine);
   }
 
-  return `\n${renderBigSection({ title: "summary", content: lines.join("\n") })}\n`;
+  return `\n${renderBigSection({
+    title: "execution end",
+    content: lines.join("\n"),
+  })}\n`;
 };
 
 const humanizeTiming = (value) => {

@@ -13,7 +13,7 @@ import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { assert } from "@jsenv/assert";
-import { formatStringAssertionErrorMessage } from "@jsenv/assert/src/error_info/strings.js";
+import { getStringAssertionErrorInfo } from "@jsenv/assert/src/error_info/strings.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
@@ -83,11 +83,14 @@ const compareFileSnapshots = (actualFileSnapshot, expectedFileSnapshot) => {
   const failureMessage = `snapshot comparison failed for "${filename}"`;
 
   if (!actualFileSnapshot.stat) {
-    throw assert.createAssertionError(`${failureMessage}
+    const fileNotFoundAssertionError =
+      assert.createAssertionError(`${failureMessage}
 --- reason ---
 file not found
 --- file ---
 ${fileUrl}`);
+    fileNotFoundAssertionError.name = "FileNotFoundAssertionError";
+    throw fileNotFoundAssertionError;
   }
   if (!expectedFileSnapshot.stat) {
     return;
@@ -98,26 +101,32 @@ ${fileUrl}`);
     if (actualFileContent.equals(expectedFileContent)) {
       return;
     }
-    throw assert.createAssertionError(`${failureMessage}
+    const fileContentAssertionError =
+      assert.createAssertionError(`${failureMessage}
 --- reason ---
 content has changed
 --- file ---
 ${fileUrl}`);
+    fileContentAssertionError.name = "FileContentAssertionError";
+    throw fileContentAssertionError;
   }
   if (actualFileContent === expectedFileContent) {
     return;
   }
-  const message = formatStringAssertionErrorMessage({
+  const errorInfo = getStringAssertionErrorInfo({
     actual: actualFileContent,
     expected: expectedFileContent,
     name: `file content`,
     format: assert.format,
   });
-  throw assert.createAssertionError(`${failureMessage}
+  const fileContentStringAssertionError =
+    assert.createAssertionError(`${failureMessage}
 --- reason ---
-${message}
+${errorInfo.message}
 --- file ---
 ${fileUrl}`);
+  fileContentStringAssertionError.name = errorInfo.type;
+  throw fileContentStringAssertionError;
 };
 
 export const takeDirectorySnapshot = (directoryUrl) => {
@@ -159,17 +168,23 @@ export const takeDirectorySnapshot = (directoryUrl) => {
             (relativeUrl) => new URL(relativeUrl, directoryUrl).href,
           );
           if (missingFileCount === 1) {
-            throw assert.createAssertionError(`${failureMessage}
---- reason ---
-"${missingRelativeUrls[0]}" is missing
---- file missing ---
-${missingUrls[0]}`);
+            const fileMissingAssertionError =
+              assert.createAssertionError(`${failureMessage}
+  --- reason ---
+  "${missingRelativeUrls[0]}" is missing
+  --- file missing ---
+  ${missingUrls[0]}`);
+            fileMissingAssertionError.name = "FileMissingAssertionError";
+            throw fileMissingAssertionError;
           }
-          throw assert.createAssertionError(`${failureMessage}
+          const fileMissingAssertionError =
+            assert.createAssertionError(`${failureMessage}
 --- reason ---
 ${missingFileCount} files are missing
 --- files missing ---
 ${missingUrls.join("\n")}`);
+          fileMissingAssertionError.name = "FileMissingAssertionError";
+          throw fileMissingAssertionError;
         }
       }
 
@@ -185,17 +200,23 @@ ${missingUrls.join("\n")}`);
             (relativeUrl) => new URL(relativeUrl, directoryUrl).href,
           );
           if (extraFileCount === 1) {
-            throw assert.createAssertionError(`${failureMessage}
+            const extraFileAssertionError =
+              assert.createAssertionError(`${failureMessage}
 --- reason ---
 "${extraRelativeUrls[0]}" is unexpected
 --- file unexpected ---
 ${extraUrls[0]}`);
+            extraFileAssertionError.name = "ExtraFileAssertionError";
+            throw extraFileAssertionError;
           }
-          throw assert.createAssertionError(`${failureMessage}
+          const extraFileAssertionError =
+            assert.createAssertionError(`${failureMessage}
 --- reason ---
 ${extraFileCount} files are unexpected
 --- files unexpected ---
 ${extraUrls.join("\n")}`);
+          extraFileAssertionError.name = "ExtraFileAssertionError";
+          throw extraFileAssertionError;
         }
       }
 

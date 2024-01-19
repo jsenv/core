@@ -2,11 +2,17 @@
  * The goal is to ensure test plan execution in browser tabs works without errors
  */
 
-import { assert } from "@jsenv/assert";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
+import { writeFileSync } from "@jsenv/filesystem";
 
 import { executeTestPlan, chromium } from "@jsenv/test";
 
+const testResultJsonFileUrl = new URL(
+  "./snapshots/test_result.json",
+  import.meta.url,
+);
+const testResultJsonSnapshot = takeFileSnapshot(testResultJsonFileUrl);
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -34,63 +40,43 @@ const result = await executeTestPlan({
   },
   githubCheck: false,
 });
-const actual = result;
-const expected = {
-  os: {
-    name: assert.any(String),
-    version: assert.any(String),
-    availableCpu: assert.any(Number),
-    availableMemory: assert.any(Number),
-  },
-  process: {
-    name: assert.any(String),
-    version: assert.any(String),
-  },
-  memoryUsage: {
-    os: assert.any(Object),
-    process: assert.any(Object),
-  },
-  cpuUsage: {
-    os: assert.any(Object),
-    process: assert.any(Object),
-  },
-  timings: assert.any(Object),
-  rootDirectoryUrl: new URL("./", import.meta.url).href,
-  patterns: ["./client/*.html"],
-  groups: {
-    a: {
-      count: 1,
-      runtimeType: "browser",
-      runtimeName: "chromium",
-      runtimeVersion: assert.any(String),
-    },
-    b: {
-      count: 1,
-      runtimeType: "browser",
-      runtimeName: "chromium",
-      runtimeVersion: assert.any(String),
-    },
-  },
-  counters: {
-    planified: 2,
-    remaining: 0,
-    waiting: 0,
-    executing: 0,
-    executed: 2,
-    aborted: 0,
-    cancelled: 0,
-    timedout: 0,
-    failed: 0,
-    completed: 2,
-  },
-  aborted: false,
-  failed: false,
-  coverage: null,
-  results: {
-    "client/main.html": {
-      a: assert.any(Object),
-      b: assert.any(Object),
-    },
-  },
-};
-assert({ actual, expected });
+result.os.name = "<mock>";
+result.os.version = "<mock>";
+result.os.availableCpu = "<mock>";
+result.os.availableMemory = "<mock>Gb";
+result.process.name = "<mock>";
+result.process.version = "<mock>";
+for (const key of Object.keys(result.memoryUsage.os)) {
+  result.memoryUsage.os[key] = "<mock>";
+}
+for (const key of Object.keys(result.memoryUsage.process)) {
+  result.memoryUsage.process[key] = "<mock>";
+}
+for (const key of Object.keys(result.cpuUsage.os)) {
+  result.cpuUsage.os[key] = "<mock>";
+}
+for (const key of Object.keys(result.cpuUsage.process)) {
+  result.cpuUsage.process[key] = "<mock>";
+}
+for (const key of Object.keys(result.timings)) {
+  result.timings[key] = "<mock>";
+}
+result.rootDirectoryUrl = "/mock/";
+for (const group of Object.keys(result.groups)) {
+  result.groups[group].runtimeVersion = "<mock>";
+}
+for (const relativeUrl of Object.keys(result.results)) {
+  const fileExecutionResults = result.results[relativeUrl];
+  for (const group of Object.keys(fileExecutionResults)) {
+    const executionResult = fileExecutionResults[group];
+    for (const key of Object.keys(executionResult.timings)) {
+      executionResult.timings[key] = "<mock>";
+    }
+    if (executionResult.memoryUsage) {
+      executionResult.memoryUsage = "<mock>";
+    }
+  }
+}
+
+writeFileSync(testResultJsonFileUrl, JSON.stringify(result, null, "  "));
+testResultJsonSnapshot.compare();
