@@ -56,7 +56,7 @@ assert({
 # fail_array_property
 
 ```js
-constactual = [];
+const actual = [];
 actual.foo = true;
 const expected = [];
 expected.foo = false;
@@ -68,7 +68,7 @@ assert({ actual, expected });
 # fail_array_symbol
 
 ```js
-constsymbol = Symbol();
+const symbol = Symbol();
 const actual = [];
 actual[symbol] = true;
 const expected = [];
@@ -77,3 +77,4 @@ assert({ actual, expected });
 ```
 
 ![img](./array/fail_array_symbol.svg)
+

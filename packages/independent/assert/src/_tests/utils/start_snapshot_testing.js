@@ -41,9 +41,9 @@ export const startSnapshotTesting = async (name, scenarios) => {
       );
       writeFileSync(svgFileUrl, svg);
 
-      markdown += `\n`;
+      markdown += `\n\n`;
       markdown += `![img](./${name}/${key}.svg)`;
-      markdown += `\n`;
+      markdown += `\n\n`;
     }
   }
   writeFileSync(snapshotFileUrl, fileContent);
@@ -79,10 +79,11 @@ const removeRootIndentation = (text) => {
     }
     let lineShortened = "";
     let j = 0;
+    let searchIndentChar = true;
     while (j < line.length) {
       const char = line[j];
       j++;
-      if (char === " " || char === "\t") {
+      if (searchIndentChar && (char === " " || char === "\t")) {
         if (isRootLine) {
           charsToRemove++;
           continue;
@@ -91,6 +92,7 @@ const removeRootIndentation = (text) => {
           continue;
         }
       }
+      searchIndentChar = false;
       lineShortened += char;
     }
     if (isLastLine && lineShortened === "") {
