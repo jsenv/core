@@ -1,6 +1,8 @@
-# basic
+# fail_property_value
 Error: assert({ actual, expected })
 
-Actual: true
-Expected: false
+{
+-   foo: true,
++   foo: false,
+}
 

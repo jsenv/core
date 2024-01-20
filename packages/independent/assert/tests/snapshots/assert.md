@@ -1,11 +1,11 @@
-# basic
+# fail_property_value
 
 ```js
 assert({
-  actual: true,
-  expected: false,
+  actual: { foo: true },
+  expected: { foo: false },
 });
 ```
 
-![img](./assert/basic.svg)
+![img](./assert/fail_property_value.svg)
 

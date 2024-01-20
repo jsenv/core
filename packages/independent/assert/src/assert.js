@@ -30,11 +30,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       );
     }
     const { actual, expected } = firstArg;
-    const createNode = ({ type, actual, expected, parent, depth }) => {
+    const createNode = ({
+      type,
+      actual,
+      expected,
+      property,
+      parent,
+      depth,
+    }) => {
       const node = {
         type,
         actual,
         expected,
+        property,
         parent,
         depth,
         failed: false,
@@ -47,11 +55,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             node.parent.failed = true;
           }
         },
-        appendChild: ({ type, actual, expected }) => {
+        appendChild: ({ type, actual, expected, property }) => {
           const childNode = createNode({
             type,
             actual,
             expected,
+            property,
             parent: node,
             depth: depth + 1,
           });
@@ -101,6 +110,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           type: "property_value",
           actual: actualPropertyValue,
           expected: expectedPropertyValue,
+          property: actualPropertyName,
         });
         visit(propertyValueNode);
       }
@@ -126,24 +136,53 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let diff = "";
 
       const prefixActualDiff = (node) => {
-        if (node.failed) {
-          if (node.depth === 0) {
-            return `Actual: ${ANSI.color(node.actual, ANSI.RED)}\n`;
-          }
-          const indent = "  ".repeat(node.depth);
-          return `- ${indent}${ANSI.color(stringifyValue(node.actual), ANSI.RED)}`;
+        let diff = "";
+        const color = node.failed ? ANSI.RED : ANSI.GREY;
+
+        if (node.depth === 0) {
+          diff += `actual  : `;
+          diff += ANSI.color(node.actual, color);
+          diff += "\n";
+          return diff;
         }
-        return ANSI.color(stringifyValue(node.actual), ANSI.GREY);
+        if (node.failed) {
+          diff += ANSI.color("-", color);
+        }
+        const indent = "  ".repeat(node.depth);
+        diff += ` ${indent}`;
+        if (node.property) {
+          diff += ANSI.color(`${node.property}: `, color);
+          diff += ANSI.color(stringifyValue(node.actual), color);
+          diff += ANSI.color(",", color);
+        } else {
+          diff += ANSI.color(stringifyValue(node.actual), color);
+        }
+        diff += "\n";
+        return diff;
       };
       const prefixExpectedDiff = (node) => {
-        if (node.failed) {
-          if (node.depth === 0) {
-            return `Expected: ${ANSI.color(node.expected, ANSI.GREEN)}`;
-          }
-          const indent = "  ".repeat(node.depth);
-          return `+ ${indent}${ANSI.color(stringifyValue(node.expected), ANSI.GREEN)}`;
+        let diff = "";
+        const color = node.failed ? ANSI.GREEN : ANSI.GREY;
+
+        if (node.depth === 0) {
+          diff += `expected: `;
+          diff += ANSI.color(node.expected, color);
+          diff += "\n";
+          return diff;
         }
-        return ANSI.color(stringifyValue(node.expected), ANSI.GREY);
+        if (node.failed) {
+          diff += ANSI.color("+", color);
+        }
+        const indent = "  ".repeat(node.depth);
+        diff += ` ${indent}`;
+        if (node.property) {
+          diff += ANSI.color(`${node.property}: `, color);
+          diff += ANSI.color(stringifyValue(node.expected), color);
+          diff += ANSI.color(",", color);
+        } else {
+          diff += ANSI.color(stringifyValue(node.expected), color);
+        }
+        return diff;
       };
 
       const visitForDiff = (node, indent = "") => {
@@ -237,18 +276,4 @@ const stringifyValue = (value) => {
   return isPrimitive(value)
     ? stringifyPrimitive(value)
     : stringifyComposite(value);
-};
-
-// under some rare and odd circumstances firefox Object.is(-0, -0)
-// returns false making test fail.
-// it is 100% reproductible with big.test.js.
-// However putting debugger or executing Object.is just before the
-// comparison prevent Object.is failure.
-// It makes me thing there is something strange inside firefox internals.
-// All this to say avoid relying on Object.is to test if the value is -0
-const isNegativeZero = (value) => {
-  return typeof value === "number" && 1 / value === -Infinity;
-};
-const isBuffer = (value) => {
-  return typeof Buffer === "function" && Buffer.isBuffer(value);
 };
