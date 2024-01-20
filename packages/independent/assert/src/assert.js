@@ -1,5 +1,5 @@
-import { isPrimitive } from "./utils/is_composite.js";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
+import { ANSI } from "@jsenv/humanize";
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -30,8 +30,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       );
     }
     const { actual, expected } = firstArg;
-
-    let comparisonDiff = "";
     const createNode = ({ type, actual, expected, parent, depth }) => {
       const node = {
         type,
@@ -43,6 +41,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         children: [],
         failures: [],
         addFailure: (message) => {
+          node.failed = true;
           node.failures.push(message);
           if (node.parent) {
             node.parent.failed = true;
@@ -62,7 +61,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
       return node;
     };
-
     const rootNode = createNode({
       type: "root",
       actual,
@@ -73,38 +71,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const visit = (node) => {
       const { actual, expected } = node;
       if (isPrimitive(expected) || isPrimitive(actual)) {
-        if (isBuffer(actual) && isBuffer(expected)) {
-          if (!actual.equals(expected)) {
-            // in theory we should compare the buffers
-            // (it can be very slow + it does not help much to see binary diff so we'll skip)
-            comparisonDiff += `+ Buffer(${actual.length})`;
-            comparisonDiff += `- Buffer(${expected.length})`;
-            node.addFailure();
-          }
-          return;
-        }
-        if (isNegativeZero(expected)) {
-          if (!isNegativeZero(actual)) {
-            comparisonDiff += `+ ${stringify(actual)}`;
-            comparisonDiff += `- -0`;
-            node.addFailure();
-          }
-          return;
-        }
-        if (isNegativeZero(actual)) {
-          if (!isNegativeZero(expected)) {
-            comparisonDiff += `+ -0`;
-            comparisonDiff += `- ${stringify(expected)}`;
-            node.addFailure();
-          }
-          return;
-        }
         if (actual !== expected) {
-          comparisonDiff += `+ ${stringify(actual)}`;
-          comparisonDiff += `- ${stringify(expected)}`;
           node.addFailure();
+          return;
         }
-        comparisonDiff += `${stringify(actual)}`;
         return;
       }
 
@@ -118,7 +88,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           actualPropertyName,
         );
         if (!expectedPropertyNames.includes(actualPropertyName)) {
-          comparisonDiff += `+ ${stringifyProperty(actualPropertyDescriptor, actualPropertyName)}`;
           node.addFailure();
           continue;
         }
@@ -138,11 +107,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       for (const expectedPropertyName of expectedPropertyNames) {
         if (!actualPropertyNames.includes(expectedPropertyName)) {
-          const expectedPropertyDescriptor = Object.getOwnPropertyDescriptor(
-            expected,
-            expectedPropertyName,
-          );
-          comparisonDiff += `+ ${stringifyProperty(expectedPropertyDescriptor, expectedPropertyName)}`;
+          // const expectedPropertyDescriptor = Object.getOwnPropertyDescriptor(
+          //   expected,
+          //   expectedPropertyName,
+          // );
           node.addFailure();
           continue;
         }
@@ -153,7 +121,62 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     if (!rootNode.failed) {
       return;
     }
-    const error = new Error(comparisonDiff);
+
+    const generateDiff = () => {
+      let diff = "";
+
+      const prefixActualDiff = (node) => {
+        if (node.failed) {
+          if (node.depth === 0) {
+            return `Actual: ${ANSI.color(node.actual, ANSI.RED)}\n`;
+          }
+          const indent = "  ".repeat(node.depth);
+          return `- ${indent}${ANSI.color(stringifyValue(node.actual), ANSI.RED)}`;
+        }
+        return ANSI.color(stringifyValue(node.actual), ANSI.GREY);
+      };
+      const prefixExpectedDiff = (node) => {
+        if (node.failed) {
+          if (node.depth === 0) {
+            return `Expected: ${ANSI.color(node.expected, ANSI.GREEN)}`;
+          }
+          const indent = "  ".repeat(node.depth);
+          return `+ ${indent}${ANSI.color(stringifyValue(node.expected), ANSI.GREEN)}`;
+        }
+        return ANSI.color(stringifyValue(node.expected), ANSI.GREY);
+      };
+
+      const visitForDiff = (node, indent = "") => {
+        if (isPrimitive(node.expected)) {
+          if (node.failed) {
+            diff += prefixActualDiff(node);
+            diff += prefixExpectedDiff(node);
+          } else {
+            diff += prefixActualDiff(node);
+          }
+        } else if (isPrimitive(node.actual)) {
+          diff += prefixActualDiff(node);
+          diff += prefixExpectedDiff(node);
+        } else {
+          diff += "{";
+          if (node.children.length) {
+            diff += "\n";
+            for (const child of node.children) {
+              visitForDiff(child, `${indent}  `);
+            }
+            diff += "\n";
+          }
+          diff += "}";
+        }
+      };
+      visitForDiff(rootNode);
+      return diff;
+    };
+
+    let message = `assert({ ${ANSI.color("actual", ANSI.RED)}, ${ANSI.color("expected", ANSI.GREEN)} })`;
+    const diff = generateDiff();
+    message += `\n\n${diff}`;
+    const error = new Error(message);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(error, assert);
     }
@@ -167,6 +190,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   return assert;
 };
 
+const isComposite = (value) => {
+  if (value === null) return false;
+  if (typeof value === "object") return true;
+  if (typeof value === "function") return true;
+  return false;
+};
+
+const isPrimitive = (value) => {
+  return !isComposite(value);
+};
+
 const stringifyProperty = (propertyDescriptor, propertyName) => {
   // TODO: if there is getter, setter, etc we must stringify
   // all gettter, setter, configurability, enumerability etc
@@ -177,7 +211,7 @@ const stringifyProperty = (propertyDescriptor, propertyName) => {
   // + enumerable name: false,
   let propertyString = "";
   propertyString += `+ ${stringifyPropertyName(propertyName)}:`;
-  propertyString += `${stringify(propertyDescriptor.value)}`;
+  propertyString += `${stringifyValue(propertyDescriptor.value)}`;
   return propertyString;
 };
 
@@ -187,10 +221,22 @@ const stringifyPropertyName = (name) => {
   return name;
 };
 
-const stringify = (value) => {
+const stringifyPrimitive = (value) => {
   // TODO: use the same stringification method as the one
   // used while traversing expected
   return JSON.stringify(value);
+};
+
+const stringifyComposite = (value) => {
+  // TODO: use the same stringification method as the one
+  // used while traversing expected
+  return JSON.stringify(value);
+};
+
+const stringifyValue = (value) => {
+  return isPrimitive(value)
+    ? stringifyPrimitive(value)
+    : stringifyComposite(value);
 };
 
 // under some rare and odd circumstances firefox Object.is(-0, -0)
