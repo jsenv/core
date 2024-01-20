@@ -1,13 +1,4 @@
-import {
-  compare,
-  createNotExpectation,
-  createAnyExpectation,
-  createStartsWithExpectation,
-  createMatchesRegExpExpectation,
-  createCloseToExpectation,
-  createBetweenExpectation,
-} from "./compare/compare.js";
-import { getErrorInfo } from "./error_info/error_info.js";
+import { isPrimitive } from "./utils/is_composite.js";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
 export const createAssert = ({ format = (v) => v } = {}) => {
@@ -38,87 +29,135 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         `assert must be called with { actual, expected }, missing expected property on first argument`,
       );
     }
-    const {
-      actual,
-      expected,
-      message,
-      // An other good alternative to "checkPropertiesOrder" could be
-      // to have an helper like sortingProperties
-      // const value = assert.sortProperties(value)
-      // const expected = assert.sortProperties({ foo: true, bar: true })
-      checkPropertiesOrder = true,
-      details,
-    } = firstArg;
-    const expectation = {
-      actual,
-      expected,
-    };
-    const comparison = compare(expectation, { checkPropertiesOrder });
-    if (comparison.failed) {
-      const errorInfo = message
-        ? { message }
-        : getErrorInfo(comparison, { format });
-      let errorMessage = errorInfo.message;
-      errorMessage = appendDetails(errorMessage, details);
-      const error = createAssertionError(errorMessage);
-      if (errorInfo.type) {
-        error.name = errorInfo.type;
-      }
-      if (Error.captureStackTrace) {
-        Error.captureStackTrace(error, assert);
-      }
-      throw error;
-    }
-  };
+    const { actual, expected } = firstArg;
 
-  assert.not = (value) => {
-    return createNotExpectation(value);
-  };
-  assert.any = (Constructor) => {
-    return createAnyExpectation(Constructor);
-  };
-  assert.matchesRegExp = (regexp) => {
-    const isRegExp = regexp instanceof RegExp;
-    if (!isRegExp) {
-      throw new TypeError(
-        `assert.matchesRegExp must be called with a regexp, received ${regexp}`,
-      );
+    let comparisonDiff = "";
+    const createNode = ({ type, actual, expected, parent, depth }) => {
+      const node = {
+        type,
+        actual,
+        expected,
+        parent,
+        depth,
+        failed: false,
+        children: [],
+        failures: [],
+        addFailure: (message) => {
+          node.failures.push(message);
+          if (node.parent) {
+            node.parent.failed = true;
+          }
+        },
+        appendChild: ({ type, actual, expected }) => {
+          const childNode = createNode({
+            type,
+            actual,
+            expected,
+            parent: node,
+            depth: depth + 1,
+          });
+          node.children.push(childNode);
+          return childNode;
+        },
+      };
+      return node;
+    };
+
+    const rootNode = createNode({
+      type: "root",
+      actual,
+      expected,
+      depth: 0,
+    });
+
+    const visit = (node) => {
+      const { actual, expected } = node;
+      if (isPrimitive(expected) || isPrimitive(actual)) {
+        if (isBuffer(actual) && isBuffer(expected)) {
+          if (!actual.equals(expected)) {
+            // in theory we should compare the buffers
+            // (it can be very slow + it does not help much to see binary diff so we'll skip)
+            comparisonDiff += `+ Buffer(${actual.length})`;
+            comparisonDiff += `- Buffer(${expected.length})`;
+            node.addFailure();
+          }
+          return;
+        }
+        if (isNegativeZero(expected)) {
+          if (!isNegativeZero(actual)) {
+            comparisonDiff += `+ ${stringify(actual)}`;
+            comparisonDiff += `- -0`;
+            node.addFailure();
+          }
+          return;
+        }
+        if (isNegativeZero(actual)) {
+          if (!isNegativeZero(expected)) {
+            comparisonDiff += `+ -0`;
+            comparisonDiff += `- ${stringify(expected)}`;
+            node.addFailure();
+          }
+          return;
+        }
+        if (actual !== expected) {
+          comparisonDiff += `+ ${stringify(actual)}`;
+          comparisonDiff += `- ${stringify(expected)}`;
+          node.addFailure();
+        }
+        comparisonDiff += `${stringify(actual)}`;
+        return;
+      }
+
+      // for simplicity now let's assume both are objects
+      // with same prototypes and we'll compare only the property value)
+      const actualPropertyNames = Object.getOwnPropertyNames(actual);
+      const expectedPropertyNames = Object.getOwnPropertyNames(expected);
+      for (const actualPropertyName of actualPropertyNames) {
+        const actualPropertyDescriptor = Object.getOwnPropertyDescriptor(
+          actual,
+          actualPropertyName,
+        );
+        if (!expectedPropertyNames.includes(actualPropertyName)) {
+          comparisonDiff += `+ ${stringifyProperty(actualPropertyDescriptor, actualPropertyName)}`;
+          node.addFailure();
+          continue;
+        }
+        const expectedPropertyDescriptor = Object.getOwnPropertyDescriptor(
+          expected,
+          actualPropertyName,
+        );
+        const expectedPropertyValue = expectedPropertyDescriptor.value;
+        const actualPropertyValue = actualPropertyDescriptor.value;
+        const propertyValueNode = node.appendChild({
+          type: "property_value",
+          actual: actualPropertyValue,
+          expected: expectedPropertyValue,
+        });
+        visit(propertyValueNode);
+      }
+
+      for (const expectedPropertyName of expectedPropertyNames) {
+        if (!actualPropertyNames.includes(expectedPropertyName)) {
+          const expectedPropertyDescriptor = Object.getOwnPropertyDescriptor(
+            expected,
+            expectedPropertyName,
+          );
+          comparisonDiff += `+ ${stringifyProperty(expectedPropertyDescriptor, expectedPropertyName)}`;
+          node.addFailure();
+          continue;
+        }
+      }
+    };
+    visit(rootNode);
+
+    if (!rootNode.failed) {
+      return;
     }
-    return createMatchesRegExpExpectation(regexp);
-  };
-  assert.startsWith = (string) => {
-    return createStartsWithExpectation(string);
-  };
-  assert.closeTo = (value) => {
-    if (typeof value !== "number") {
-      throw new TypeError(
-        `assert.closeTo must be called with a number, received ${value}`,
-      );
+    const error = new Error(comparisonDiff);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(error, assert);
     }
-    return createCloseToExpectation(value);
-  };
-  assert.between = (minValue, maxValue) => {
-    if (typeof minValue !== "number") {
-      throw new TypeError(
-        `assert.between 1st argument must be number, received ${minValue}`,
-      );
-    }
-    if (typeof maxValue !== "number") {
-      throw new TypeError(
-        `assert.between 2nd argument must be number, received ${maxValue}`,
-      );
-    }
-    if (minValue > maxValue) {
-      throw new Error(
-        `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
-      );
-    }
-    return createBetweenExpectation(minValue, maxValue);
-  };
-  assert.asObjectWithoutPrototype = (object) => {
-    const objectWithoutPrototype = Object.create(null);
-    Object.assign(objectWithoutPrototype, object);
-    return objectWithoutPrototype;
+    throw error;
   };
 
   assert.format = format;
@@ -128,19 +167,42 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   return assert;
 };
 
-const appendDetails = (message, details = {}) => {
-  let string = `${message}`;
+const stringifyProperty = (propertyDescriptor, propertyName) => {
+  // TODO: if there is getter, setter, etc we must stringify
+  // all gettter, setter, configurability, enumerability etc
+  // like this:
+  // + get name() {},
+  // + set name() {},
+  // + configurable name: false,
+  // + enumerable name: false,
+  let propertyString = "";
+  propertyString += `+ ${stringifyPropertyName(propertyName)}:`;
+  propertyString += `${stringify(propertyDescriptor.value)}`;
+  return propertyString;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
-  });
-  return string;
+const stringifyPropertyName = (name) => {
+  // todo: handle property that must be between quotes,
+  // handle symbols
+  return name;
+};
+
+const stringify = (value) => {
+  // TODO: use the same stringification method as the one
+  // used while traversing expected
+  return JSON.stringify(value);
+};
+
+// under some rare and odd circumstances firefox Object.is(-0, -0)
+// returns false making test fail.
+// it is 100% reproductible with big.test.js.
+// However putting debugger or executing Object.is just before the
+// comparison prevent Object.is failure.
+// It makes me thing there is something strange inside firefox internals.
+// All this to say avoid relying on Object.is to test if the value is -0
+const isNegativeZero = (value) => {
+  return typeof value === "number" && 1 / value === -Infinity;
+};
+const isBuffer = (value) => {
+  return typeof Buffer === "function" && Buffer.isBuffer(value);
 };
