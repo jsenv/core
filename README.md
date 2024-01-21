@@ -2,7 +2,7 @@
 
 Jsenv is a suite of tools that can be used in projects involving JavaScript.
 
-`jsenv/core` goal is too provide the following tools:
+`@jsenv/core` goal is too provide the following tools:
 
 1. **dev server**; a server for source files
 2. **build**; generate an optimized version of source files into a directory
@@ -10,7 +10,7 @@ Jsenv is a suite of tools that can be used in projects involving JavaScript.
 4. **test runner**; execute all test files at once
 
 It favors standards and simplicity.  
-As a result it can be enjoyed by people without much experience in tooling or seeking for a simple tool without hidden complexities
+As a result it can be enjoyed by people without much experience in tooling or seeking for simple tooling without hidden complexities
 
 [Link to documentation](<https://github.com/jsenv/core/wiki/A)-directory-structure>)
 
