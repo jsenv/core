@@ -131,7 +131,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           const visitPropertyDescriptor = (descriptorName) => {
             const descriptorNode = propertyNode.appendPropertyDescriptor(
-              "value",
+              descriptorName,
               {
                 before: added
                   ? undefined
@@ -210,6 +210,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return true;
       }
       if (descriptorName === "configurable" && descriptorValue === true) {
+        return true;
+      }
+      if (descriptorName === "get" && descriptorValue === undefined) {
+        return true;
+      }
+      if (descriptorName === "set" && descriptorValue === undefined) {
         return true;
       }
       return false;
@@ -313,6 +319,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               propertyNode,
               property,
               descriptorName,
+              descriptorValue: descriptorNode.before,
               colors: {
                 key: ANSI.GREY,
                 delimiters: ANSI.GREY,
@@ -324,6 +331,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               propertyNode,
               property,
               descriptorName,
+              descriptorValue: descriptorNode.after,
               colors: {
                 key: ANSI.GREY,
                 delimiters: ANSI.GREY,
