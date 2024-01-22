@@ -46,12 +46,16 @@
         <text x="203.23" y="14.55"> contains 1 difference with </text>
         <text x="430.07" y="14.55" fill="#32CD32">expected</text>
         <text x="10" y="52.55" fill="#A9A9A9">{</text>
-        <text x="10" y="71.55">- foo: </text>
+        <text x="10" y="71.55" fill="#B22222">-</text>
+        <text x="35.2" y="71.55" fill="#A9A9A9">foo</text>
+        <text x="60.41" y="71.55" fill="#A9A9A9">:</text>
         <text x="77.21" y="71.55" fill="#B22222">false</text>
-        <text x="119.22" y="71.55">,</text>
-        <text x="10" y="90.55">+ foo: </text>
+        <text x="119.22" y="71.55" fill="#A9A9A9">,</text>
+        <text x="10" y="90.55" fill="#32CD32">+</text>
+        <text x="35.2" y="90.55" fill="#A9A9A9">foo</text>
+        <text x="60.41" y="90.55" fill="#A9A9A9">:</text>
         <text x="77.21" y="90.55" fill="#32CD32">true</text>
-        <text x="110.82" y="90.55">,</text>
+        <text x="110.82" y="90.55" fill="#A9A9A9">,</text>
         <text x="10" y="109.55" fill="#A9A9A9">}</text>
       </g>
     </svg>

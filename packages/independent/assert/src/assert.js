@@ -245,46 +245,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let descriptorString = "";
 
       descriptorString += `  `.repeat(propertyNode.depth);
-      if (key === "get") {
-        descriptorString += `get ${stringifyPropertyKey(property)}()`;
-        // TODO: put getter stringification result here
-        descriptorString += ",\n";
-      }
-      if (key === "set") {
-        descriptorString += `set ${stringifyPropertyKey(property)}()`;
-        // TODO: put setter stringification result here
-        descriptorString += ",\n";
-      }
-      if (key === "enumerable") {
-        descriptorString += `enumerable ${stringifyPropertyKey(property)}`;
-        descriptorString += ": ";
-        descriptorString +=
-          colors && colors.value ? ANSI.color(value, colors.value) : value;
-        descriptorString += ",\n";
-      }
-      if (key === "writable") {
-        descriptorString += `writable ${stringifyPropertyKey(property)}`;
-        descriptorString += ": ";
-        descriptorString +=
-          colors && colors.value ? ANSI.color(value, colors.value) : value;
-        descriptorString += ",\n";
-      }
-      if (key === "configurable") {
-        descriptorString += `configurable ${stringifyPropertyKey(property)}`;
-        descriptorString += ": ";
-        descriptorString +=
-          colors && colors.value ? ANSI.color(value, colors.value) : value;
-        descriptorString += ",\n";
-      }
-      if (key === "value") {
-        descriptorString += `${stringifyPropertyKey(property)}`;
-        descriptorString += ": ";
-        descriptorString +=
-          colors && colors.value
-            ? ANSI.color(stringify(value), colors.value)
-            : stringify(value);
-        descriptorString += ",\n";
-      }
+      if (key !== "value") descriptorString += `${key} `;
+      descriptorString +=
+        colors && colors.key
+          ? ANSI.color(stringifyPropertyKey(property), colors.key)
+          : stringifyPropertyKey(property);
+      descriptorString +=
+        colors && colors.delimiters ? ANSI.color(":", colors.delimiters) : ":";
+      descriptorString += " ";
+      descriptorString +=
+        colors && colors.value
+          ? ANSI.color(stringify(value), colors.value)
+          : stringify(value);
+      descriptorString +=
+        colors && colors.delimiters ? ANSI.color(",", colors.delimiters) : ",";
+      descriptorString += "\n";
       return descriptorString;
     };
     const stringifyDescriptor = (descriptor, { propertyNode, property }) => {
@@ -349,7 +324,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             value,
             propertyNode,
             property,
-            colors: { value: ANSI.RED },
+            colors: { key: ANSI.GREY, delimiters: ANSI.GREY, value: ANSI.RED },
           });
           propertyDiffString += ANSI.color("+", ANSI.GREEN);
           propertyDiffString += stringifyOneDescriptor({
@@ -357,7 +332,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             value: propertyNode.after[key],
             propertyNode,
             property,
-            colors: { value: ANSI.GREEN },
+            colors: {
+              key: ANSI.GREY,
+              delimiters: ANSI.GREY,
+              value: ANSI.GREEN,
+            },
           });
         }
         return propertyDiffString;
@@ -372,13 +351,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     let message;
     if (rootNode.diff.identity) {
-      message = `${ANSI.color("actual", ANSI.RED)} and ${ANSI.color("expected", ANSI.GREEN)} are different`;
+      message = `${ANSI.color("actual", ANSI.RED)} and ${ANSI.color("expected", ANSI.GREEN)} are different. See diff:`;
       message += `\n\n`;
       message += stringify(rootNode.before);
       message += `\n`;
       message += stringify(rootNode.after);
     } else {
-      message = `${ANSI.color("actual", ANSI.RED)} contains ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"} with ${ANSI.color("expected", ANSI.GREEN)}`;
+      message = `${ANSI.color("actual", ANSI.RED)} contains ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"} with ${ANSI.color("expected", ANSI.GREEN)}. See diff:`;
       message += `\n\n`;
       const visit = (node) => {
         if (node.diff.identity) {
