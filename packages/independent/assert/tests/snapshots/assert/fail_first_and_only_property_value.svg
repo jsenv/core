@@ -34,29 +34,30 @@
     overflow="hidden"
   >
     <svg
-      width="507.28"
+      width="599.69"
       height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
-      fill="#abb2bf"
+      fill="#cccccc"
     >
       <g>
         <text x="10" y="14.55">AssertionError: </text>
-        <text x="144.42" y="14.55" fill="#B22222">actual</text>
+        <text x="144.42" y="14.55" fill="#cd5555">actual</text>
         <text x="203.23" y="14.55"> contains 1 difference with </text>
-        <text x="430.07" y="14.55" fill="#32CD32">expected</text>
-        <text x="10" y="52.55" fill="#A9A9A9">{</text>
-        <text x="10" y="71.55" fill="#B22222">-</text>
-        <text x="35.2" y="71.55" fill="#A9A9A9">foo</text>
-        <text x="60.41" y="71.55" fill="#A9A9A9">:</text>
-        <text x="77.21" y="71.55" fill="#B22222">false</text>
-        <text x="119.22" y="71.55" fill="#A9A9A9">,</text>
-        <text x="10" y="90.55" fill="#32CD32">+</text>
-        <text x="35.2" y="90.55" fill="#A9A9A9">foo</text>
-        <text x="60.41" y="90.55" fill="#A9A9A9">:</text>
-        <text x="77.21" y="90.55" fill="#32CD32">true</text>
-        <text x="110.82" y="90.55" fill="#A9A9A9">,</text>
-        <text x="10" y="109.55" fill="#A9A9A9">}</text>
+        <text x="430.07" y="14.55" fill="#11bc79">expected</text>
+        <text x="497.28" y="14.55">. See diff:</text>
+        <text x="10" y="52.55" fill="#7f7f7f">{</text>
+        <text x="10" y="71.55" fill="#cd5555">-</text>
+        <text x="35.2" y="71.55" fill="#7f7f7f">foo</text>
+        <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="71.55" fill="#cd5555">false</text>
+        <text x="119.22" y="71.55" fill="#7f7f7f">,</text>
+        <text x="10" y="90.55" fill="#11bc79">+</text>
+        <text x="35.2" y="90.55" fill="#7f7f7f">foo</text>
+        <text x="60.41" y="90.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="90.55" fill="#11bc79">true</text>
+        <text x="110.82" y="90.55" fill="#7f7f7f">,</text>
+        <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>
