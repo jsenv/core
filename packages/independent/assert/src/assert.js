@@ -202,187 +202,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // handle symbols
       return property;
     };
-    const isDefaultDescriptor = (descriptorName, descriptorValue) => {
-      if (descriptorName === "enumerable" && descriptorValue === true) {
-        return true;
-      }
-      if (descriptorName === "writable" && descriptorValue === true) {
-        return true;
-      }
-      if (descriptorName === "configurable" && descriptorValue === true) {
-        return true;
-      }
-      if (descriptorName === "get" && descriptorValue === undefined) {
-        return true;
-      }
-      if (descriptorName === "set" && descriptorValue === undefined) {
-        return true;
-      }
-      return false;
-    };
-
-    const visitPropertyDescriptorForDiff = (
-      node,
-      { property, descriptorName },
-    ) => {
-      const generatePropertyLine = ({ descriptorValue, colors = {} }) => {
-        let propertyLine = "";
-        propertyLine += `  `.repeat(node.parent.depth);
-        if (descriptorName !== "value") {
-          propertyLine += ANSI.color(descriptorName, colors.key);
-          propertyLine += " ";
-        }
-        propertyLine += ANSI.color(stringifyPropertyKey(property), colors.key);
-        propertyLine += ANSI.color(":", colors.delimiters);
-        propertyLine += " ";
-        propertyLine += ANSI.color(stringify(descriptorValue), colors.value);
-        propertyLine += ANSI.color(",", colors.delimiters);
-        propertyLine += "\n";
-        return propertyLine;
-      };
-
-      if (node.diff.identity) {
-        let propertyDiff = "";
-        propertyDiff += ANSI.color("-", ANSI.RED);
-        propertyDiff += generatePropertyLine({
-          descriptorValue: node.before,
-          colors: {
-            key: ANSI.GREY,
-            delimiters: ANSI.GREY,
-            value: ANSI.RED,
-          },
-        }).slice(1);
-        propertyDiff += ANSI.color("+", ANSI.GREEN);
-        propertyDiff += generatePropertyLine({
-          descriptorValue: node.after,
-          colors: {
-            key: ANSI.GREY,
-            delimiters: ANSI.GREY,
-            value: ANSI.GREEN,
-          },
-        }).slice(1);
-        return propertyDiff;
-      }
-      if (node.diff.removed) {
-        if (isDefaultDescriptor(descriptorName, node.before)) {
-          return "";
-        }
-        let propertyRemovedDiff = "";
-        propertyRemovedDiff += "-";
-        propertyRemovedDiff += generatePropertyLine({
-          descriptorValue: node.before,
-        }).slice(1);
-        propertyRemovedDiff = ANSI.color(propertyRemovedDiff, ANSI.RED);
-        return propertyRemovedDiff;
-      }
-      if (node.diff.added) {
-        if (isDefaultDescriptor(descriptorName, node.after)) {
-          return "";
-        }
-        let propertyAddedDiff = "";
-        propertyAddedDiff += "-";
-        propertyAddedDiff += generatePropertyLine({
-          descriptorValue: node.after,
-        }).slice(1);
-        propertyAddedDiff = ANSI.color(propertyAddedDiff, ANSI.GREEN);
-        return propertyAddedDiff;
-      }
-      if (isDefaultDescriptor(descriptorName, node.before)) {
-        return "";
-      }
-      // ici attention, il peut y avoir une diff a l'intérieur
-      // du composite
-      // donc on peut pas juste stringify
-      // il faudra faire un visitComposite
-      // sur node? a priori je dirais que c'est ça ouaip
-      let propertyWithoutDiff = generatePropertyLine({
-        descriptorValue: node.before,
-      });
-      propertyWithoutDiff = ANSI.color(propertyWithoutDiff, ANSI.GREY);
-      return propertyWithoutDiff;
-    };
-
-    const visitCompositeForDiff = (node) => {
-      let compositeDiff = "";
-      compositeDiff += ANSI.color("{", ANSI.GREY);
-      properties_diff: {
-        let propertiesDiff = "";
-        const propertyNames = Object.keys(node.properties);
-        for (const property of propertyNames) {
-          let propertyDiff = "";
-          const propertyNode = node.properties[property];
-          const descriptorNames = Object.keys(propertyNode.descriptors);
-          for (const descriptorName of descriptorNames) {
-            const descriptorNode = propertyNode.descriptors[descriptorName];
-            // if (descriptorNode.diff.count === 0) {
-            //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
-            //     continue;
-            //   }
-            //   let descriptorWithoutDiff = visitOneDescriptorForDiff({
-            //     propertyNode,
-            //     property,
-            //     descriptorName,
-            //     descriptorValue: descriptorNode.before,
-            //   });
-            //   descriptorWithoutDiff = ANSI.color(
-            //     descriptorWithoutDiff,
-            //     ANSI.GREY,
-            //   );
-            //   propertyDiff += descriptorWithoutDiff;
-            //   continue;
-            // }
-            // if (descriptorNode.diff.removed) {
-            //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
-            //     continue;
-            //   }
-            //   let descriptorRemovedDiff = "";
-            //   descriptorRemovedDiff += `-`;
-            //   descriptorRemovedDiff += visitOneDescriptorForDiff({
-            //     propertyNode,
-            //     property,
-            //     descriptorName,
-            //     descriptorValue: descriptorNode.before,
-            //   });
-            //   descriptorRemovedDiff = ANSI.color(
-            //     descriptorRemovedDiff,
-            //     ANSI.RED,
-            //   );
-            //   propertyDiff += descriptorRemovedDiff;
-            //   continue;
-            // }
-            // if (descriptorNode.diff.added) {
-            //   if (isDefaultDescriptor(descriptorName, descriptorNode.after)) {
-            //     return "";
-            //   }
-            //   let descriptorAddedDiff = "";
-            //   descriptorAddedDiff += "+";
-            //   descriptorAddedDiff += visitOneDescriptorForDiff({
-            //     propertyNode,
-            //     property,
-            //     descriptorName,
-            //     descriptorValue: descriptorNode.after,
-            //   });
-            //   descriptorAddedDiff = ANSI.color(descriptorAddedDiff, ANSI.GREEN);
-            //   propertyDiff += descriptorAddedDiff;
-            //   continue;
-            // }
-            let descriptorDiff = "";
-            descriptorDiff += visitPropertyDescriptorForDiff(descriptorNode, {
-              property,
-              descriptorName,
-            });
-            propertyDiff += descriptorDiff;
-          }
-          propertiesDiff += propertyDiff;
-        }
-        if (propertiesDiff.length) {
-          compositeDiff += "\n";
-          compositeDiff += propertiesDiff;
-        }
-      }
-      compositeDiff += ANSI.color("}", ANSI.GREY);
-      return compositeDiff;
-    };
 
     let message;
     if (rootNode.diff.identity) {
@@ -394,7 +213,129 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     } else {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"}:`;
       message += `\n\n`;
-      const diff = visitCompositeForDiff(rootNode);
+      let diff = "";
+
+      const writePropertyDescriptorDiff = (
+        node,
+        { property, descriptorName },
+      ) => {
+        const writePropertyLine = ({ type }) => {
+          let indent = `  `.repeat(node.parent.depth);
+          let value;
+          let keyColor;
+          let delimitersColor;
+          let valueColor;
+          if (type === "removed") {
+            value = node.before;
+            diff += ANSI.color("-", ANSI.RED);
+            indent = indent.slice(1);
+            keyColor = delimitersColor = valueColor = ANSI.RED;
+          }
+          if (type === "added") {
+            value = node.after;
+            diff += ANSI.color("+", ANSI.GREEN);
+            indent = indent.slice(1);
+            keyColor = delimitersColor = valueColor = ANSI.GREEN;
+          }
+          if (type === "value_modified_before") {
+            value = node.before;
+            diff += ANSI.color("-", ANSI.RED);
+            indent = indent.slice(1);
+            keyColor = delimitersColor = ANSI.GREY;
+            valueColor = ANSI.RED;
+          }
+          if (type === "value_modified_after") {
+            value = node.after;
+            diff += ANSI.color("+", ANSI.GREEN);
+            indent = indent.slice(1);
+            keyColor = delimitersColor = ANSI.GREY;
+            valueColor = ANSI.GREEN;
+          }
+          if (type === "same") {
+            value = node.after;
+            keyColor = delimitersColor = ANSI.GREY;
+          }
+
+          diff += indent;
+          if (descriptorName !== "value") {
+            diff += ANSI.color(descriptorName, keyColor);
+            diff += " ";
+          }
+          diff += ANSI.color(stringifyPropertyKey(property), keyColor);
+          diff += ANSI.color(":", delimitersColor);
+          diff += " ";
+          if (type === "same") {
+            writeDiff(node);
+          } else {
+            diff += ANSI.color(JSON.stringify(value), valueColor);
+          }
+          diff += ANSI.color(",", delimitersColor);
+          diff += "\n";
+
+          return;
+        };
+
+        if (node.diff.removed) {
+          if (isDefaultDescriptor(descriptorName, node.before)) {
+            return;
+          }
+          writePropertyLine({
+            type: "removed",
+          });
+          return;
+        }
+        if (node.diff.added) {
+          if (isDefaultDescriptor(descriptorName, node.after)) {
+            return;
+          }
+          writePropertyLine({
+            type: "added",
+          });
+          return;
+        }
+        if (node.diff.identity) {
+          writePropertyLine({
+            type: "value_modified_before",
+          });
+          writePropertyLine({
+            type: "value_modified_after",
+          });
+          return;
+        }
+        if (isDefaultDescriptor(descriptorName, node.before)) {
+          return;
+        }
+        writePropertyLine({
+          type: "same",
+        });
+      };
+      const writeDiff = (node) => {
+        writeCompositeDiff(node);
+      };
+      const writeCompositeDiff = (node) => {
+        diff += ANSI.color("{", ANSI.GREY);
+        properties_diff: {
+          const propertyNames = Object.keys(node.properties);
+          if (propertyNames.length) {
+            diff += "\n";
+            diff += "  ".repeat(node.depth);
+          }
+          for (const property of propertyNames) {
+            const propertyNode = node.properties[property];
+            const descriptorNames = Object.keys(propertyNode.descriptors);
+            for (const descriptorName of descriptorNames) {
+              const descriptorNode = propertyNode.descriptors[descriptorName];
+              writePropertyDescriptorDiff(descriptorNode, {
+                property,
+                descriptorName,
+              });
+            }
+          }
+        }
+        diff += ANSI.color("}", ANSI.GREY);
+      };
+      writeCompositeDiff(rootNode);
+
       message += `${diff}`;
     }
     const error = new Error(message);
@@ -410,6 +351,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   assert.createAssertionError = createAssertionError;
 
   return assert;
+};
+
+const isDefaultDescriptor = (descriptorName, descriptorValue) => {
+  if (descriptorName === "enumerable" && descriptorValue === true) {
+    return true;
+  }
+  if (descriptorName === "writable" && descriptorValue === true) {
+    return true;
+  }
+  if (descriptorName === "configurable" && descriptorValue === true) {
+    return true;
+  }
+  if (descriptorName === "get" && descriptorValue === undefined) {
+    return true;
+  }
+  if (descriptorName === "set" && descriptorValue === undefined) {
+    return true;
+  }
+  return false;
 };
 
 const isComposite = (value) => {
