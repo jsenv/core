@@ -34,22 +34,22 @@
     overflow="hidden"
   >
     <svg
-      width="314.05"
+      width="440.07"
       height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
-      fill="#abb2bf"
+      fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55">Error: assert({ </text>
-        <text x="144.42" y="14.55" fill="#B22222">actual</text>
-        <text x="194.83" y="14.55">, </text>
-        <text x="211.63" y="14.55" fill="#32CD32">expected</text>
-        <text x="287.25" y="14.55"> })</text>
-        <text x="10" y="52.55">Actual: </text>
-        <text x="77.21" y="52.55" fill="#B22222">true</text>
-        <text x="10" y="71.55">Expected: </text>
-        <text x="94.01" y="71.55" fill="#32CD32">false</text>
+        <text x="10" y="14.55">AssertionError: </text>
+        <text x="144.42" y="14.55" fill="#cd5555">expected</text>
+        <text x="220.03" y="14.55"> and </text>
+        <text x="253.64" y="14.55" fill="#11bc79">actual</text>
+        <text x="312.45" y="14.55"> are different:</text>
+        <text x="10" y="52.55" fill="#cd5555">-</text>
+        <text x="26.8" y="52.55" fill="#cd5555">false</text>
+        <text x="10" y="71.55" fill="#11bc79">+</text>
+        <text x="26.8" y="71.55" fill="#11bc79">true</text>
       </g>
     </svg>
   </foreignObject>

@@ -1,8 +1,33 @@
+# fail_boolean
+AssertionError: expected and actual are different:
+
+- false
++ true
+
 # fail_first_and_only_property_value
-AssertionError: actual contains 1 difference with expected. See diff:
+AssertionError: expected and actual have 1 difference:
 
 {
--  foo: false,
-+  foo: true,
+- foo: false,
++ foo: true,
+}
+
+# fail_second_and_last_property_value
+AssertionError: expected and actual have 1 difference:
+
+{
+  foo: true,
+- bar: true,
++ bar: false,
+}
+
+# fail_second_property_value
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: true,
+- b: false,
++ b: true,
+  c: true,
 }
 

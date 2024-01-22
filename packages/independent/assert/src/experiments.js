@@ -40,3 +40,12 @@ console.log(inspect(object));
 
 //     "name": true
 // }
+
+const a = new Array(1000);
+a.fill("toto");
+console.log(inspect(a));
+
+const obj = {};
+const string = [...a].join("\n");
+obj.str = string;
+console.log(inspect(string));

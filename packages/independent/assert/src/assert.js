@@ -325,7 +325,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             propertyNode,
             property,
             colors: { key: ANSI.GREY, delimiters: ANSI.GREY, value: ANSI.RED },
-          });
+          }).slice(1);
           propertyDiffString += ANSI.color("+", ANSI.GREEN);
           propertyDiffString += stringifyOneDescriptor({
             key,
@@ -337,7 +337,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               delimiters: ANSI.GREY,
               value: ANSI.GREEN,
             },
-          });
+          }).slice(1);
         }
         return propertyDiffString;
       }
@@ -351,13 +351,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     let message;
     if (rootNode.diff.identity) {
-      message = `${ANSI.color("actual", ANSI.RED)} and ${ANSI.color("expected", ANSI.GREEN)} are different. See diff:`;
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different:`;
       message += `\n\n`;
-      message += stringify(rootNode.before);
+      message += `${ANSI.color("-", ANSI.RED)}`;
+      message += ` `;
+      message += ANSI.color(stringify(rootNode.before), ANSI.RED);
       message += `\n`;
-      message += stringify(rootNode.after);
+      message += `${ANSI.color("+", ANSI.GREEN)}`;
+      message += ` `;
+      message += ANSI.color(stringify(rootNode.after), ANSI.GREEN);
     } else {
-      message = `${ANSI.color("actual", ANSI.RED)} contains ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"} with ${ANSI.color("expected", ANSI.GREEN)}. See diff:`;
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"}:`;
       message += `\n\n`;
       const visit = (node) => {
         if (node.diff.identity) {
