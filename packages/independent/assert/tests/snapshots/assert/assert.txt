@@ -1,8 +1,8 @@
-# fail_property_value
-Error: assert({ actual, expected })
+# fail_first_and_only_property_value
+AssertionError: actual contains 1 difference with expected
 
 {
--   foo: true,
-+   foo: false,
+-  foo: false,
++  foo: true,
 }
 

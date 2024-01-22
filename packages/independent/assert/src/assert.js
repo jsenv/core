@@ -30,192 +30,385 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       );
     }
     const { actual, expected } = firstArg;
-    const createNode = ({
-      type,
-      actual,
-      expected,
-      property,
-      parent,
-      depth,
-    }) => {
+    const createComparisonNode = ({ type, before, after, parent, depth }) => {
       const node = {
         type,
-        actual,
-        expected,
-        property,
+        before,
+        after,
         parent,
         depth,
-        failed: false,
-        children: [],
-        failures: [],
-        addFailure: (message) => {
-          node.failed = true;
-          node.failures.push(message);
-          if (node.parent) {
-            node.parent.failed = true;
-          }
-        },
-        appendChild: ({ type, actual, expected, property }) => {
-          const childNode = createNode({
-            type,
-            actual,
-            expected,
-            property,
+        properties: {},
+        appendProperty: (property, { before, after }) => {
+          const propertyNode = createComparisonNode({
+            type: "property",
+            before,
+            after,
             parent: node,
             depth: depth + 1,
           });
-          node.children.push(childNode);
-          return childNode;
+          node.properties[property] = propertyNode;
+          return propertyNode;
         },
+        // entries: [],
       };
       return node;
     };
-    const rootNode = createNode({
+    const rootNode = createComparisonNode({
       type: "root",
-      actual,
-      expected,
+      before: expected,
+      after: actual,
       depth: 0,
     });
 
     const visit = (node) => {
-      const { actual, expected } = node;
-      if (isPrimitive(expected) || isPrimitive(actual)) {
-        if (actual !== expected) {
-          node.addFailure();
-          return;
-        }
-        return;
-      }
+      const { before, after } = node;
+      node.diff = {
+        count: 0,
+      };
 
-      // for simplicity now let's assume both are objects
-      // with same prototypes and we'll compare only the property value)
-      const actualPropertyNames = Object.getOwnPropertyNames(actual);
-      const expectedPropertyNames = Object.getOwnPropertyNames(expected);
-      for (const actualPropertyName of actualPropertyNames) {
-        const actualPropertyDescriptor = Object.getOwnPropertyDescriptor(
-          actual,
-          actualPropertyName,
-        );
-        if (!expectedPropertyNames.includes(actualPropertyName)) {
-          node.addFailure();
-          continue;
+      identity: {
+        if (isPrimitive(before) || isPrimitive(after)) {
+          if (before !== after) {
+            node.diff.identity = true;
+            node.diff.count++;
+          }
         }
-        const expectedPropertyDescriptor = Object.getOwnPropertyDescriptor(
-          expected,
-          actualPropertyName,
-        );
-        const expectedPropertyValue = expectedPropertyDescriptor.value;
-        const actualPropertyValue = actualPropertyDescriptor.value;
-        const propertyValueNode = node.appendChild({
-          type: "property_value",
-          actual: actualPropertyValue,
-          expected: expectedPropertyValue,
-          property: actualPropertyName,
-        });
-        visit(propertyValueNode);
       }
+      properties: {
+        if (!isComposite(before) || !isComposite(actual)) {
+          break properties;
+        }
+        node.diff.properties = {};
+        // for simplicity now let's assume both are objects
+        // with same prototypes and we'll compare only the property value)
+        const beforePropertyNames = Object.getOwnPropertyNames(before);
+        for (const beforePropertyName of beforePropertyNames) {
+          const beforePropertyDescriptor = Object.getOwnPropertyDescriptor(
+            before,
+            beforePropertyName,
+          );
+          const afterPropertyDescriptor = Object.getOwnPropertyDescriptor(
+            after,
+            beforePropertyName,
+          );
+          const propertyNode = node.appendProperty(beforePropertyName, {
+            before: beforePropertyDescriptor,
+            after: afterPropertyDescriptor,
+          });
 
-      for (const expectedPropertyName of expectedPropertyNames) {
-        if (!actualPropertyNames.includes(expectedPropertyName)) {
-          // const expectedPropertyDescriptor = Object.getOwnPropertyDescriptor(
-          //   expected,
-          //   expectedPropertyName,
-          // );
-          node.addFailure();
-          continue;
+          if (!afterPropertyDescriptor) {
+            propertyNode.diff = {
+              count: 1,
+              removed: true,
+            };
+            node.diff.properties[beforePropertyName] = propertyNode.diff;
+            node.diff.count += propertyNode.diff.count;
+            continue;
+          }
+
+          propertyNode.diff = {
+            count: 0,
+            value: null,
+            enumerable: null,
+            writable: null,
+            configurable: null,
+            set: null,
+            get: null,
+          };
+          property_value: {
+            const valueNode = propertyNode.appendProperty("value", {
+              before: beforePropertyDescriptor.value,
+              after: afterPropertyDescriptor.value,
+            });
+            visit(valueNode);
+            propertyNode.diff.value = valueNode.diff;
+            propertyNode.diff.count += valueNode.diff.count;
+          }
+          property_enumerable: {
+            const enumerableNode = propertyNode.appendProperty("enumerable", {
+              before: beforePropertyDescriptor.enumerable,
+              after: afterPropertyDescriptor.enumerable,
+            });
+            visit(enumerableNode);
+            propertyNode.diff.enumerable = enumerableNode.diff;
+            propertyNode.diff.count += enumerableNode.diff.count;
+          }
+          property_writable: {
+            const writableNode = propertyNode.appendProperty("writable", {
+              before: beforePropertyDescriptor.writable,
+              after: afterPropertyDescriptor.writable,
+            });
+            visit(writableNode);
+            propertyNode.diff.writable = writableNode.diff;
+            propertyNode.diff.count += writableNode.diff.count;
+          }
+          property_configurable: {
+            const configurableNode = propertyNode.appendProperty(
+              "configurable",
+              {
+                before: beforePropertyDescriptor.configurable,
+                after: afterPropertyDescriptor.configurable,
+              },
+            );
+            visit(configurableNode);
+            propertyNode.diff.configurable = configurableNode.diff;
+            propertyNode.diff.count += configurableNode.diff.count;
+          }
+          property_set: {
+            const setNode = propertyNode.appendProperty("set", {
+              before: beforePropertyDescriptor.set,
+              after: afterPropertyDescriptor.set,
+            });
+            visit(setNode);
+            propertyNode.diff.set = setNode.diff;
+            propertyNode.diff.count += setNode.diff.count;
+          }
+          property_get: {
+            const getNode = propertyNode.appendProperty("get", {
+              before: beforePropertyDescriptor.get,
+              after: afterPropertyDescriptor.get,
+            });
+            visit(getNode);
+            propertyNode.diff.get = getNode.diff;
+            propertyNode.diff.count += getNode.diff.count;
+          }
+          node.diff.properties[beforePropertyName] = propertyNode.diff;
+          node.diff.count += propertyNode.diff.count;
+        }
+        const afterPropertyNames = Object.getOwnPropertyNames(actual);
+        for (const afterPropertyName of afterPropertyNames) {
+          if (!beforePropertyNames.includes(afterPropertyName)) {
+            const afterPropertyDescriptor = Object.getOwnPropertyDescriptor(
+              after,
+              afterPropertyName,
+            );
+            const propertyNode = node.appendProperty(afterPropertyName, {
+              before: null,
+              after: afterPropertyDescriptor,
+            });
+            propertyNode.diff = {
+              count: 1,
+              added: true,
+            };
+            node.diff.properties[afterPropertyName] = propertyNode.diff;
+            node.diff.count += propertyNode.diff.count;
+            continue;
+          }
         }
       }
     };
     visit(rootNode);
 
-    if (!rootNode.failed) {
+    if (rootNode.diff.count === 0) {
       return;
     }
 
-    const generateDiff = () => {
-      let diff = "";
+    const stringifyPrimitive = (value) => {
+      // TODO: use the same stringification method as the one
+      // used while traversing expected
+      return JSON.stringify(value);
+    };
+    const stringifyComposite = (value) => {
+      // TODO: use the same stringification method as the one
+      // used while traversing expected
+      return JSON.stringify(value);
+    };
+    const stringify = (value) => {
+      return isPrimitive(value)
+        ? stringifyPrimitive(value)
+        : stringifyComposite(value);
+    };
+    const stringifyPropertyKey = (property) => {
+      // todo: handle property that must be between quotes,
+      // handle symbols
+      return property;
+    };
+    const isDefaultPropertyDescriptor = (key, value) => {
+      if (key === "enumerable" && value === true) {
+        return true;
+      }
+      if (key === "writable" && value === true) {
+        return true;
+      }
+      if (key === "configurable" && value === true) {
+        return true;
+      }
+      return false;
+    };
+    const stringifyOneDescriptor = ({
+      key,
+      value,
+      propertyNode,
+      property,
+      colors = {},
+    }) => {
+      let descriptorString = "";
 
-      const prefixActualDiff = (node) => {
-        let diff = "";
-        const color = node.failed ? ANSI.RED : ANSI.GREY;
-
-        if (node.depth === 0) {
-          diff += `actual  : `;
-          diff += ANSI.color(node.actual, color);
-          diff += "\n";
-          return diff;
+      descriptorString += `  `.repeat(propertyNode.depth);
+      if (key === "get") {
+        descriptorString += `get ${stringifyPropertyKey(property)}()`;
+        // TODO: put getter stringification result here
+        descriptorString += ",\n";
+      }
+      if (key === "set") {
+        descriptorString += `set ${stringifyPropertyKey(property)}()`;
+        // TODO: put setter stringification result here
+        descriptorString += ",\n";
+      }
+      if (key === "enumerable") {
+        descriptorString += `enumerable ${stringifyPropertyKey(property)}`;
+        descriptorString += ": ";
+        descriptorString +=
+          colors && colors.value ? ANSI.color(value, colors.value) : value;
+        descriptorString += ",\n";
+      }
+      if (key === "writable") {
+        descriptorString += `writable ${stringifyPropertyKey(property)}`;
+        descriptorString += ": ";
+        descriptorString +=
+          colors && colors.value ? ANSI.color(value, colors.value) : value;
+        descriptorString += ",\n";
+      }
+      if (key === "configurable") {
+        descriptorString += `configurable ${stringifyPropertyKey(property)}`;
+        descriptorString += ": ";
+        descriptorString +=
+          colors && colors.value ? ANSI.color(value, colors.value) : value;
+        descriptorString += ",\n";
+      }
+      if (key === "value") {
+        descriptorString += `${stringifyPropertyKey(property)}`;
+        descriptorString += ": ";
+        descriptorString +=
+          colors && colors.value
+            ? ANSI.color(stringify(value), colors.value)
+            : stringify(value);
+        descriptorString += ",\n";
+      }
+      return descriptorString;
+    };
+    const stringifyDescriptor = (descriptor, { propertyNode, property }) => {
+      let propertyString = "";
+      for (const key of Object.keys(descriptor)) {
+        const value = descriptor[key];
+        if (isDefaultPropertyDescriptor(key, value)) {
+          continue;
         }
-        if (node.failed) {
-          diff += ANSI.color("-", color);
+        propertyString += stringifyOneDescriptor({
+          key,
+          value,
+          propertyNode,
+          property,
+        });
+      }
+      return propertyString;
+    };
+    const stringifyProperty = (propertyNode, property) => {
+      if (propertyNode.diff.count) {
+        let propertyDiffString = "";
+        if (propertyNode.diff.removed) {
+          propertyDiffString += "-";
+          propertyDiffString += stringifyDescriptor(propertyNode.before, {
+            propertyNode,
+            property,
+          });
+          propertyDiffString = ANSI.color(propertyDiffString, ANSI.RED);
+          return propertyDiffString;
         }
-        const indent = "  ".repeat(node.depth);
-        diff += ` ${indent}`;
-        if (node.property) {
-          diff += ANSI.color(`${node.property}: `, color);
-          diff += ANSI.color(stringifyValue(node.actual), color);
-          diff += ANSI.color(",", color);
-        } else {
-          diff += ANSI.color(stringifyValue(node.actual), color);
+        if (propertyNode.diff.added) {
+          propertyDiffString += "+";
+          propertyDiffString += stringifyDescriptor(propertyNode.after, {
+            propertyNode,
+            property,
+          });
+          propertyDiffString = ANSI.color(propertyDiffString, ANSI.GREEN);
+          return propertyDiffString;
         }
-        diff += "\n";
-        return diff;
-      };
-      const prefixExpectedDiff = (node) => {
-        let diff = "";
-        const color = node.failed ? ANSI.GREEN : ANSI.GREY;
-
-        if (node.depth === 0) {
-          diff += `expected: `;
-          diff += ANSI.color(node.expected, color);
-          diff += "\n";
-          return diff;
-        }
-        if (node.failed) {
-          diff += ANSI.color("+", color);
-        }
-        const indent = "  ".repeat(node.depth);
-        diff += ` ${indent}`;
-        if (node.property) {
-          diff += ANSI.color(`${node.property}: `, color);
-          diff += ANSI.color(stringifyValue(node.expected), color);
-          diff += ANSI.color(",", color);
-        } else {
-          diff += ANSI.color(stringifyValue(node.expected), color);
-        }
-        return diff;
-      };
-
-      const visitForDiff = (node, indent = "") => {
-        if (isPrimitive(node.expected)) {
-          if (node.failed) {
-            diff += prefixActualDiff(node);
-            diff += prefixExpectedDiff(node);
-          } else {
-            diff += prefixActualDiff(node);
-          }
-        } else if (isPrimitive(node.actual)) {
-          diff += prefixActualDiff(node);
-          diff += prefixExpectedDiff(node);
-        } else {
-          diff += "{";
-          if (node.children.length) {
-            diff += "\n";
-            for (const child of node.children) {
-              visitForDiff(child, `${indent}  `);
+        // there is 1/many diff on property descriptor
+        for (const key of Object.keys(propertyNode.before)) {
+          const value = propertyNode.before[key];
+          const descriptorDiff = propertyNode.diff[key];
+          if (descriptorDiff.count === 0) {
+            if (isDefaultPropertyDescriptor(key, value)) {
+              continue;
             }
-            diff += "\n";
+            propertyDiffString += ANSI.color(
+              stringifyOneDescriptor({
+                key,
+                value,
+                propertyNode,
+                property,
+              }),
+              ANSI.GREY,
+            );
+            continue;
           }
-          diff += "}";
+          propertyDiffString += ANSI.color("-", ANSI.RED);
+          propertyDiffString += stringifyOneDescriptor({
+            key,
+            value,
+            propertyNode,
+            property,
+            colors: { value: ANSI.RED },
+          });
+          propertyDiffString += ANSI.color("+", ANSI.GREEN);
+          propertyDiffString += stringifyOneDescriptor({
+            key,
+            value: propertyNode.after[key],
+            propertyNode,
+            property,
+            colors: { value: ANSI.GREEN },
+          });
         }
-      };
-      visitForDiff(rootNode);
-      return diff;
+        return propertyDiffString;
+      }
+      let propertyString = stringifyDescriptor(propertyNode.before, {
+        propertyNode,
+        property,
+      });
+      propertyString = ANSI.color(propertyString, ANSI.GREY);
+      return propertyString;
     };
 
-    let message = `assert({ ${ANSI.color("actual", ANSI.RED)}, ${ANSI.color("expected", ANSI.GREEN)} })`;
-    const diff = generateDiff();
-    message += `\n\n${diff}`;
+    let message;
+    if (rootNode.diff.identity) {
+      message = `${ANSI.color("actual", ANSI.RED)} and ${ANSI.color("expected", ANSI.GREEN)} are different`;
+      message += `\n\n`;
+      message += stringify(rootNode.before);
+      message += `\n`;
+      message += stringify(rootNode.after);
+    } else {
+      message = `${ANSI.color("actual", ANSI.RED)} contains ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"} with ${ANSI.color("expected", ANSI.GREEN)}`;
+      message += `\n\n`;
+      const visit = (node) => {
+        if (node.diff.identity) {
+          let diff = "";
+          diff += `${ANSI.color("-", ANSI.RED)}`;
+          diff += ` ${stringify(node.before)}`;
+          diff += `\n`;
+          diff += `${ANSI.color("+", ANSI.GREEN)}`;
+          diff += ` ${stringify(node.after)}`;
+          return diff;
+        }
+        // composite but different
+        let diff = ANSI.color("{", ANSI.GREY);
+        const propertyNames = Object.keys(node.properties);
+        if (propertyNames.length) {
+          diff += "\n";
+          for (const property of propertyNames) {
+            const propertyNode = node.properties[property];
+            const propertyDiff = stringifyProperty(propertyNode, property);
+            diff += propertyDiff;
+          }
+        }
+        diff += ANSI.color("}", ANSI.GREY);
+        return diff;
+      };
+      const diff = visit(rootNode);
+      message += `${diff}`;
+    }
     const error = new Error(message);
+    error.name = "AssertionError";
     if (Error.captureStackTrace) {
       Error.captureStackTrace(error, assert);
     }
@@ -238,42 +431,4 @@ const isComposite = (value) => {
 
 const isPrimitive = (value) => {
   return !isComposite(value);
-};
-
-const stringifyProperty = (propertyDescriptor, propertyName) => {
-  // TODO: if there is getter, setter, etc we must stringify
-  // all gettter, setter, configurability, enumerability etc
-  // like this:
-  // + get name() {},
-  // + set name() {},
-  // + configurable name: false,
-  // + enumerable name: false,
-  let propertyString = "";
-  propertyString += `+ ${stringifyPropertyName(propertyName)}:`;
-  propertyString += `${stringifyValue(propertyDescriptor.value)}`;
-  return propertyString;
-};
-
-const stringifyPropertyName = (name) => {
-  // todo: handle property that must be between quotes,
-  // handle symbols
-  return name;
-};
-
-const stringifyPrimitive = (value) => {
-  // TODO: use the same stringification method as the one
-  // used while traversing expected
-  return JSON.stringify(value);
-};
-
-const stringifyComposite = (value) => {
-  // TODO: use the same stringification method as the one
-  // used while traversing expected
-  return JSON.stringify(value);
-};
-
-const stringifyValue = (value) => {
-  return isPrimitive(value)
-    ? stringifyPrimitive(value)
-    : stringifyComposite(value);
 };

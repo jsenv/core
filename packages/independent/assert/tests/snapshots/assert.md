@@ -1,4 +1,4 @@
-# fail_property_value
+# fail_first_and_only_property_value
 
 ```js
 assert({
@@ -7,5 +7,5 @@ assert({
 });
 ```
 
-![img](./assert/fail_property_value.svg)
+![img](./assert/fail_first_and_only_property_value.svg)
 
