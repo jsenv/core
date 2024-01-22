@@ -15,12 +15,14 @@ export const ANSI = {
   MAGENTA: "\x1b[35m",
   GREY: "\x1b[90m",
   color: (text, ANSI_COLOR) => {
-    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
+    return ANSI.supported && ANSI_COLOR ? `${ANSI_COLOR}${text}${RESET}` : text;
   },
 
   BOLD: "\x1b[1m",
   effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
+    return ANSI.supported && ANSI_EFFECT
+      ? `${ANSI_EFFECT}${text}${RESET}`
+      : text;
   },
 };
 

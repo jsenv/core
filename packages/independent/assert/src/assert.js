@@ -91,16 +91,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break properties;
         }
         node.diff.properties = {};
-        const visitProperty = (name) => {
+        const visitProperty = (property) => {
           const beforePropertyDescriptor = Object.getOwnPropertyDescriptor(
             before,
-            name,
+            property,
           );
           const afterPropertyDescriptor = Object.getOwnPropertyDescriptor(
             after,
-            name,
+            property,
           );
-          const propertyNode = node.appendProperty(name, {
+          const propertyNode = node.appendProperty(property, {
             before: beforePropertyDescriptor,
             after: afterPropertyDescriptor,
           });
@@ -115,7 +115,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             set: null,
             get: null,
           };
-          node.diff.properties[name] = propertyNode.diff;
+          node.diff.properties[property] = propertyNode.diff;
 
           const added = !beforePropertyDescriptor;
           const removed = !afterPropertyDescriptor;
@@ -220,135 +220,130 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
       return false;
     };
-    const stringifyOneDescriptor = ({
-      propertyNode,
-      property,
-      descriptorName,
-      descriptorValue,
-      colors = {},
-    }) => {
-      let descriptorString = "";
 
-      descriptorString += `  `.repeat(propertyNode.depth);
-      if (descriptorName !== "value") descriptorString += `${descriptorName} `;
-      descriptorString +=
-        colors && colors.key
-          ? ANSI.color(stringifyPropertyKey(property), colors.key)
-          : stringifyPropertyKey(property);
-      descriptorString +=
-        colors && colors.delimiters ? ANSI.color(":", colors.delimiters) : ":";
-      descriptorString += " ";
-      descriptorString +=
-        colors && colors.value
-          ? ANSI.color(stringify(descriptorValue), colors.value)
-          : stringify(descriptorValue);
-      descriptorString +=
-        colors && colors.delimiters ? ANSI.color(",", colors.delimiters) : ",";
-      descriptorString += "\n";
-      return descriptorString;
-    };
+    const visitForDiff = (node, { property, descriptorName } = {}) => {
+      const generatePropertyLine = ({ descriptorValue, colors = {} }) => {
+        let propertyLine = "";
+        propertyLine += `  `.repeat(node.parent.depth);
+        if (descriptorName !== "value") {
+          propertyLine += ANSI.color(descriptorName, colors.key);
+          propertyLine += " ";
+        }
+        propertyLine += ANSI.color(stringifyPropertyKey(property), colors.key);
+        propertyLine += ANSI.color(":", colors.delimiters);
+        propertyLine += " ";
+        propertyLine += ANSI.color(stringify(descriptorValue), colors.value);
+        propertyLine += ANSI.color(",", colors.delimiters);
+        propertyLine += "\n";
+        return propertyLine;
+      };
 
-    const visitForDiff = (node) => {
+      let diff = "";
       if (node.diff.identity) {
-        let identityDiff = "";
-        identityDiff += `${ANSI.color("-", ANSI.RED)}`;
-        identityDiff += ` ${stringify(node.before)}`;
-        identityDiff += `\n`;
-        identityDiff += `${ANSI.color("+", ANSI.GREEN)}`;
-        identityDiff += ` ${stringify(node.after)}`;
-        return identityDiff;
+        diff += ANSI.color("-", ANSI.RED);
+        diff += generatePropertyLine({
+          descriptorValue: node.before,
+          colors: {
+            key: ANSI.GREY,
+            delimiters: ANSI.GREY,
+            value: ANSI.RED,
+          },
+        }).slice(1);
+        diff += ANSI.color("+", ANSI.GREEN);
+        diff += generatePropertyLine({
+          descriptorValue: node.after,
+          colors: {
+            key: ANSI.GREY,
+            delimiters: ANSI.GREY,
+            value: ANSI.GREEN,
+          },
+        }).slice(1);
+        return diff;
       }
-      let compositeDiff = "";
-      compositeDiff += ANSI.color("{", ANSI.GREY);
-      properties_diff: {
-        let propertiesDiff = "";
-        const propertyNames = Object.keys(node.properties);
-        for (const property of propertyNames) {
-          let propertyDiff = "";
-          const propertyNode = node.properties[property];
-          const descriptorNames = Object.keys(propertyNode.descriptors);
-          for (const descriptorName of descriptorNames) {
-            let descriptorDiff = "";
-            const descriptorNode = propertyNode.descriptors[descriptorName];
-            if (descriptorNode.diff.count === 0) {
-              if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
-                continue;
-              }
-              descriptorDiff += stringifyOneDescriptor({
-                propertyNode,
+
+      if (isComposite(node.before)) {
+        let compositeDiff = "";
+        compositeDiff += ANSI.color("{", ANSI.GREY);
+        properties_diff: {
+          let propertiesDiff = "";
+          const propertyNames = Object.keys(node.properties);
+          for (const property of propertyNames) {
+            let propertyDiff = "";
+            const propertyNode = node.properties[property];
+            const descriptorNames = Object.keys(propertyNode.descriptors);
+            for (const descriptorName of descriptorNames) {
+              const descriptorNode = propertyNode.descriptors[descriptorName];
+              // if (descriptorNode.diff.count === 0) {
+              //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
+              //     continue;
+              //   }
+              //   let descriptorWithoutDiff = visitOneDescriptorForDiff({
+              //     propertyNode,
+              //     property,
+              //     descriptorName,
+              //     descriptorValue: descriptorNode.before,
+              //   });
+              //   descriptorWithoutDiff = ANSI.color(
+              //     descriptorWithoutDiff,
+              //     ANSI.GREY,
+              //   );
+              //   propertyDiff += descriptorWithoutDiff;
+              //   continue;
+              // }
+              // if (descriptorNode.diff.removed) {
+              //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
+              //     continue;
+              //   }
+              //   let descriptorRemovedDiff = "";
+              //   descriptorRemovedDiff += `-`;
+              //   descriptorRemovedDiff += visitOneDescriptorForDiff({
+              //     propertyNode,
+              //     property,
+              //     descriptorName,
+              //     descriptorValue: descriptorNode.before,
+              //   });
+              //   descriptorRemovedDiff = ANSI.color(
+              //     descriptorRemovedDiff,
+              //     ANSI.RED,
+              //   );
+              //   propertyDiff += descriptorRemovedDiff;
+              //   continue;
+              // }
+              // if (descriptorNode.diff.added) {
+              //   if (isDefaultDescriptor(descriptorName, descriptorNode.after)) {
+              //     return "";
+              //   }
+              //   let descriptorAddedDiff = "";
+              //   descriptorAddedDiff += "+";
+              //   descriptorAddedDiff += visitOneDescriptorForDiff({
+              //     propertyNode,
+              //     property,
+              //     descriptorName,
+              //     descriptorValue: descriptorNode.after,
+              //   });
+              //   descriptorAddedDiff = ANSI.color(descriptorAddedDiff, ANSI.GREEN);
+              //   propertyDiff += descriptorAddedDiff;
+              //   continue;
+              // }
+              let descriptorDiff = "";
+              descriptorDiff += visitForDiff(descriptorNode, {
                 property,
                 descriptorName,
-                descriptorValue: descriptorNode.before,
               });
-              descriptorDiff = ANSI.color(descriptorDiff, ANSI.GREY);
               propertyDiff += descriptorDiff;
-              continue;
             }
-            if (descriptorNode.diff.removed) {
-              if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
-                continue;
-              }
-              descriptorDiff += `-`;
-              descriptorDiff += stringifyOneDescriptor({
-                propertyNode,
-                property,
-                descriptorName,
-                descriptorValue: descriptorNode.before,
-              });
-              descriptorDiff = ANSI.color(descriptorDiff, ANSI.RED);
-              propertyDiff += descriptorDiff;
-              continue;
-            }
-            if (descriptorNode.diff.added) {
-              if (isDefaultDescriptor(descriptorName, descriptorNode.after)) {
-                continue;
-              }
-              descriptorDiff += "+";
-              descriptorDiff += stringifyOneDescriptor({
-                propertyNode,
-                property,
-                descriptorName,
-                descriptorValue: descriptorNode.after,
-              });
-              descriptorDiff = ANSI.color(descriptorDiff, ANSI.GREEN);
-              propertyDiff += descriptorDiff;
-              continue;
-            }
-            descriptorDiff += ANSI.color("-", ANSI.RED);
-            descriptorDiff += stringifyOneDescriptor({
-              propertyNode,
-              property,
-              descriptorName,
-              descriptorValue: descriptorNode.before,
-              colors: {
-                key: ANSI.GREY,
-                delimiters: ANSI.GREY,
-                value: ANSI.RED,
-              },
-            }).slice(1);
-            descriptorDiff += ANSI.color("+", ANSI.GREEN);
-            descriptorDiff += stringifyOneDescriptor({
-              propertyNode,
-              property,
-              descriptorName,
-              descriptorValue: descriptorNode.after,
-              colors: {
-                key: ANSI.GREY,
-                delimiters: ANSI.GREY,
-                value: ANSI.GREEN,
-              },
-            }).slice(1);
-            propertyDiff += descriptorDiff;
+            propertiesDiff += propertyDiff;
           }
-          propertiesDiff += propertyDiff;
+          if (propertiesDiff.length) {
+            compositeDiff += "\n";
+            compositeDiff += propertiesDiff;
+          }
         }
-        if (propertiesDiff.length) {
-          compositeDiff += "\n";
-          compositeDiff += propertiesDiff;
-        }
+        compositeDiff += ANSI.color("}", ANSI.GREY);
+        return compositeDiff;
       }
-      compositeDiff += ANSI.color("}", ANSI.GREY);
-      return compositeDiff;
+
+      return "";
     };
 
     let message;
@@ -361,7 +356,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     } else {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"}:`;
       message += `\n\n`;
-
       const diff = visitForDiff(rootNode);
       message += `${diff}`;
     }
