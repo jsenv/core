@@ -221,7 +221,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return false;
     };
 
-    const visitForDiff = (node, { property, descriptorName } = {}) => {
+    const visitPropertyDescriptorForDiff = (
+      node,
+      { property, descriptorName },
+    ) => {
       const generatePropertyLine = ({ descriptorValue, colors = {} }) => {
         let propertyLine = "";
         propertyLine += `  `.repeat(node.parent.depth);
@@ -238,10 +241,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return propertyLine;
       };
 
-      let diff = "";
       if (node.diff.identity) {
-        diff += ANSI.color("-", ANSI.RED);
-        diff += generatePropertyLine({
+        let propertyDiff = "";
+        propertyDiff += ANSI.color("-", ANSI.RED);
+        propertyDiff += generatePropertyLine({
           descriptorValue: node.before,
           colors: {
             key: ANSI.GREY,
@@ -249,8 +252,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             value: ANSI.RED,
           },
         }).slice(1);
-        diff += ANSI.color("+", ANSI.GREEN);
-        diff += generatePropertyLine({
+        propertyDiff += ANSI.color("+", ANSI.GREEN);
+        propertyDiff += generatePropertyLine({
           descriptorValue: node.after,
           colors: {
             key: ANSI.GREY,
@@ -258,92 +261,127 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             value: ANSI.GREEN,
           },
         }).slice(1);
-        return diff;
+        return propertyDiff;
       }
-
-      if (isComposite(node.before)) {
-        let compositeDiff = "";
-        compositeDiff += ANSI.color("{", ANSI.GREY);
-        properties_diff: {
-          let propertiesDiff = "";
-          const propertyNames = Object.keys(node.properties);
-          for (const property of propertyNames) {
-            let propertyDiff = "";
-            const propertyNode = node.properties[property];
-            const descriptorNames = Object.keys(propertyNode.descriptors);
-            for (const descriptorName of descriptorNames) {
-              const descriptorNode = propertyNode.descriptors[descriptorName];
-              // if (descriptorNode.diff.count === 0) {
-              //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
-              //     continue;
-              //   }
-              //   let descriptorWithoutDiff = visitOneDescriptorForDiff({
-              //     propertyNode,
-              //     property,
-              //     descriptorName,
-              //     descriptorValue: descriptorNode.before,
-              //   });
-              //   descriptorWithoutDiff = ANSI.color(
-              //     descriptorWithoutDiff,
-              //     ANSI.GREY,
-              //   );
-              //   propertyDiff += descriptorWithoutDiff;
-              //   continue;
-              // }
-              // if (descriptorNode.diff.removed) {
-              //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
-              //     continue;
-              //   }
-              //   let descriptorRemovedDiff = "";
-              //   descriptorRemovedDiff += `-`;
-              //   descriptorRemovedDiff += visitOneDescriptorForDiff({
-              //     propertyNode,
-              //     property,
-              //     descriptorName,
-              //     descriptorValue: descriptorNode.before,
-              //   });
-              //   descriptorRemovedDiff = ANSI.color(
-              //     descriptorRemovedDiff,
-              //     ANSI.RED,
-              //   );
-              //   propertyDiff += descriptorRemovedDiff;
-              //   continue;
-              // }
-              // if (descriptorNode.diff.added) {
-              //   if (isDefaultDescriptor(descriptorName, descriptorNode.after)) {
-              //     return "";
-              //   }
-              //   let descriptorAddedDiff = "";
-              //   descriptorAddedDiff += "+";
-              //   descriptorAddedDiff += visitOneDescriptorForDiff({
-              //     propertyNode,
-              //     property,
-              //     descriptorName,
-              //     descriptorValue: descriptorNode.after,
-              //   });
-              //   descriptorAddedDiff = ANSI.color(descriptorAddedDiff, ANSI.GREEN);
-              //   propertyDiff += descriptorAddedDiff;
-              //   continue;
-              // }
-              let descriptorDiff = "";
-              descriptorDiff += visitForDiff(descriptorNode, {
-                property,
-                descriptorName,
-              });
-              propertyDiff += descriptorDiff;
-            }
-            propertiesDiff += propertyDiff;
-          }
-          if (propertiesDiff.length) {
-            compositeDiff += "\n";
-            compositeDiff += propertiesDiff;
-          }
+      if (node.diff.removed) {
+        if (isDefaultDescriptor(descriptorName, node.before)) {
+          return "";
         }
-        compositeDiff += ANSI.color("}", ANSI.GREY);
-        return compositeDiff;
+        let propertyRemovedDiff = "";
+        propertyRemovedDiff += "-";
+        propertyRemovedDiff += generatePropertyLine({
+          descriptorValue: node.before,
+        }).slice(1);
+        propertyRemovedDiff = ANSI.color(propertyRemovedDiff, ANSI.RED);
+        return propertyRemovedDiff;
       }
+      if (node.diff.added) {
+        if (isDefaultDescriptor(descriptorName, node.after)) {
+          return "";
+        }
+        let propertyAddedDiff = "";
+        propertyAddedDiff += "-";
+        propertyAddedDiff += generatePropertyLine({
+          descriptorValue: node.after,
+        }).slice(1);
+        propertyAddedDiff = ANSI.color(propertyAddedDiff, ANSI.GREEN);
+        return propertyAddedDiff;
+      }
+      if (isDefaultDescriptor(descriptorName, node.before)) {
+        return "";
+      }
+      // ici attention, il peut y avoir une diff a l'intérieur
+      // du composite
+      // donc on peut pas juste stringify
+      // il faudra faire un visitComposite
+      // sur node? a priori je dirais que c'est ça ouaip
+      let propertyWithoutDiff = generatePropertyLine({
+        descriptorValue: node.before,
+      });
+      propertyWithoutDiff = ANSI.color(propertyWithoutDiff, ANSI.GREY);
+      return propertyWithoutDiff;
+    };
 
-      return "";
+    const visitCompositeForDiff = (node) => {
+      let compositeDiff = "";
+      compositeDiff += ANSI.color("{", ANSI.GREY);
+      properties_diff: {
+        let propertiesDiff = "";
+        const propertyNames = Object.keys(node.properties);
+        for (const property of propertyNames) {
+          let propertyDiff = "";
+          const propertyNode = node.properties[property];
+          const descriptorNames = Object.keys(propertyNode.descriptors);
+          for (const descriptorName of descriptorNames) {
+            const descriptorNode = propertyNode.descriptors[descriptorName];
+            // if (descriptorNode.diff.count === 0) {
+            //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
+            //     continue;
+            //   }
+            //   let descriptorWithoutDiff = visitOneDescriptorForDiff({
+            //     propertyNode,
+            //     property,
+            //     descriptorName,
+            //     descriptorValue: descriptorNode.before,
+            //   });
+            //   descriptorWithoutDiff = ANSI.color(
+            //     descriptorWithoutDiff,
+            //     ANSI.GREY,
+            //   );
+            //   propertyDiff += descriptorWithoutDiff;
+            //   continue;
+            // }
+            // if (descriptorNode.diff.removed) {
+            //   if (isDefaultDescriptor(descriptorName, descriptorNode.before)) {
+            //     continue;
+            //   }
+            //   let descriptorRemovedDiff = "";
+            //   descriptorRemovedDiff += `-`;
+            //   descriptorRemovedDiff += visitOneDescriptorForDiff({
+            //     propertyNode,
+            //     property,
+            //     descriptorName,
+            //     descriptorValue: descriptorNode.before,
+            //   });
+            //   descriptorRemovedDiff = ANSI.color(
+            //     descriptorRemovedDiff,
+            //     ANSI.RED,
+            //   );
+            //   propertyDiff += descriptorRemovedDiff;
+            //   continue;
+            // }
+            // if (descriptorNode.diff.added) {
+            //   if (isDefaultDescriptor(descriptorName, descriptorNode.after)) {
+            //     return "";
+            //   }
+            //   let descriptorAddedDiff = "";
+            //   descriptorAddedDiff += "+";
+            //   descriptorAddedDiff += visitOneDescriptorForDiff({
+            //     propertyNode,
+            //     property,
+            //     descriptorName,
+            //     descriptorValue: descriptorNode.after,
+            //   });
+            //   descriptorAddedDiff = ANSI.color(descriptorAddedDiff, ANSI.GREEN);
+            //   propertyDiff += descriptorAddedDiff;
+            //   continue;
+            // }
+            let descriptorDiff = "";
+            descriptorDiff += visitPropertyDescriptorForDiff(descriptorNode, {
+              property,
+              descriptorName,
+            });
+            propertyDiff += descriptorDiff;
+          }
+          propertiesDiff += propertyDiff;
+        }
+        if (propertiesDiff.length) {
+          compositeDiff += "\n";
+          compositeDiff += propertiesDiff;
+        }
+      }
+      compositeDiff += ANSI.color("}", ANSI.GREY);
+      return compositeDiff;
     };
 
     let message;
@@ -356,7 +394,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     } else {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"}:`;
       message += `\n\n`;
-      const diff = visitForDiff(rootNode);
+      const diff = visitCompositeForDiff(rootNode);
       message += `${diff}`;
     }
     const error = new Error(message);
