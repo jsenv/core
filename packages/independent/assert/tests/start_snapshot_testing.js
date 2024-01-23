@@ -19,7 +19,11 @@ export const startSnapshotTesting = async (name, scenarios) => {
       await scenarioCallback();
     } catch (e) {
       fileContent += `# ${key}\n`;
-      fileContent += `${e.name}: ${stripAnsi(e.message)}\n\n`;
+      if (e.name === "AssertionError") {
+        fileContent += `${e.name}: ${stripAnsi(e.message)}\n\n`;
+      } else {
+        fileContent += e.stack;
+      }
 
       markdown += `# ${key}\n`;
       markdown += "\n";

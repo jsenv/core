@@ -87,19 +87,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
       properties: {
-        if (!isComposite(before) || !isComposite(actual)) {
-          break properties;
-        }
+        // here we want to traverse before and after but if they are not composite
+        // we'll consider everything as removed or added, depending the scenario
+
         node.diff.properties = {};
+
+        const beforeIsComposite = isComposite(before);
+        const afterIsComposite = isComposite(after);
         const visitProperty = (property) => {
-          const beforePropertyDescriptor = Object.getOwnPropertyDescriptor(
-            before,
-            property,
-          );
-          const afterPropertyDescriptor = Object.getOwnPropertyDescriptor(
-            after,
-            property,
-          );
+          const beforePropertyDescriptor = beforeIsComposite
+            ? Object.getOwnPropertyDescriptor(before, property)
+            : null;
+          const afterPropertyDescriptor = afterIsComposite
+            ? Object.getOwnPropertyDescriptor(after, property)
+            : null;
           const propertyNode = node.appendProperty(property, {
             before: beforePropertyDescriptor,
             after: afterPropertyDescriptor,
@@ -162,15 +163,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visitPropertyDescriptor("get");
           node.diff.count += propertyNode.diff.count;
         };
-        // for simplicity now let's assume both are objects
-        // with same prototypes and we'll compare only the property value)
-        const beforePropertyNames = Object.getOwnPropertyNames(before);
-        for (const beforePropertyName of beforePropertyNames) {
-          visitProperty(beforePropertyName);
+
+        if (beforeIsComposite) {
+          const beforePropertyNames = Object.getOwnPropertyNames(before);
+          for (const beforePropertyName of beforePropertyNames) {
+            visitProperty(beforePropertyName);
+          }
         }
-        const afterPropertyNames = Object.getOwnPropertyNames(actual);
-        for (const afterPropertyName of afterPropertyNames) {
-          if (!beforePropertyNames.includes(afterPropertyName)) {
+        if (afterIsComposite) {
+          const afterPropertyNames = Object.getOwnPropertyNames(after);
+          for (const afterPropertyName of afterPropertyNames) {
+            if (node.properties[afterPropertyName]) {
+              // already visited
+              continue;
+            }
             visitProperty(afterPropertyName);
           }
         }
@@ -182,21 +188,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return;
     }
 
-    const stringifyPrimitive = (value) => {
-      // TODO: use the same stringification method as the one
-      // used while traversing expected
-      return JSON.stringify(value);
-    };
-    const stringifyComposite = (value) => {
-      // TODO: use the same stringification method as the one
-      // used while traversing expected
-      return JSON.stringify(value);
-    };
-    const stringify = (value) => {
-      return isPrimitive(value)
-        ? stringifyPrimitive(value)
-        : stringifyComposite(value);
-    };
     const stringifyPropertyKey = (property) => {
       // todo: handle property that must be between quotes,
       // handle symbols
@@ -206,114 +197,116 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let message;
     if (rootNode.diff.identity) {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different:`;
-      message += `\n\n`;
-      message += ANSI.color(stringify(rootNode.before), ANSI.RED);
-      message += `\n`;
-      message += ANSI.color(stringify(rootNode.after), ANSI.GREEN);
     } else {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"}:`;
-      message += `\n\n`;
-      let diff = "";
+    }
 
-      const writePropertyDescriptorDiff = (
-        node,
-        { property, descriptorName },
-      ) => {
-        const writePropertyLine = ({ type }) => {
-          let indent = `  `.repeat(node.parent.depth);
-          let value;
-          let keyColor;
-          let delimitersColor;
-          let valueColor;
-          if (type === "removed") {
-            value = node.before;
+    let diff = "";
+    let signs = true;
+    const writePropertyDescriptorDiff = (
+      node,
+      { property, descriptorName, propertyDiffMode = "" },
+    ) => {
+      const writePropertyDiff = (mode) => {
+        let indent = `  `.repeat(node.parent.depth);
+        let keyColor;
+        let delimitersColor;
+        let diffMode;
+
+        if (mode === "removed") {
+          diffMode = "removed";
+          if (signs) {
             diff += ANSI.color("-", ANSI.RED);
             indent = indent.slice(1);
-            keyColor = delimitersColor = valueColor = ANSI.RED;
           }
-          if (type === "added") {
-            value = node.after;
+          keyColor = delimitersColor = ANSI.RED;
+        }
+        if (mode === "added") {
+          diffMode = "added";
+          if (signs) {
             diff += ANSI.color("+", ANSI.GREEN);
             indent = indent.slice(1);
-            keyColor = delimitersColor = valueColor = ANSI.GREEN;
           }
-          if (type === "value_modified_before") {
-            value = node.before;
-            diff += ANSI.color("-", ANSI.RED);
-            indent = indent.slice(1);
-            keyColor = delimitersColor = ANSI.GREY;
-            valueColor = ANSI.RED;
-          }
-          if (type === "value_modified_after") {
-            value = node.after;
-            diff += ANSI.color("+", ANSI.GREEN);
-            indent = indent.slice(1);
-            keyColor = delimitersColor = ANSI.GREY;
-            valueColor = ANSI.GREEN;
-          }
-          if (type === "same") {
-            value = node.after;
-            keyColor = delimitersColor = ANSI.GREY;
-          }
+          keyColor = delimitersColor = ANSI.GREEN;
+        }
+        if (mode === "value_removed") {
+          diffMode = "removed";
+          diff += ANSI.color("-", ANSI.RED);
+          indent = indent.slice(1);
+          keyColor = delimitersColor = ANSI.GREY;
+        }
+        if (mode === "value_added") {
+          diffMode = "added";
+          diff += ANSI.color("+", ANSI.GREEN);
+          indent = indent.slice(1);
+          keyColor = delimitersColor = ANSI.GREY;
+        }
+        if (mode === "traverse") {
+          diffMode = "traverse";
+          keyColor = delimitersColor = ANSI.GREY;
+        }
 
-          diff += indent;
-          if (descriptorName !== "value") {
-            diff += ANSI.color(descriptorName, keyColor);
-            diff += " ";
-          }
-          diff += ANSI.color(stringifyPropertyKey(property), keyColor);
-          diff += ANSI.color(":", delimitersColor);
+        diff += indent;
+        if (descriptorName !== "value") {
+          diff += ANSI.color(descriptorName, keyColor);
           diff += " ";
-          if (type === "same") {
-            writeDiff(node);
-          } else {
-            diff += ANSI.color(JSON.stringify(value), valueColor);
-          }
-          diff += ANSI.color(",", delimitersColor);
-          diff += "\n";
-
-          return;
-        };
-
-        if (node.diff.removed) {
-          if (isDefaultDescriptor(descriptorName, node.before)) {
-            return;
-          }
-          writePropertyLine({
-            type: "removed",
-          });
-          return;
         }
-        if (node.diff.added) {
-          if (isDefaultDescriptor(descriptorName, node.after)) {
-            return;
-          }
-          writePropertyLine({
-            type: "added",
-          });
-          return;
-        }
-        if (node.diff.identity) {
-          writePropertyLine({
-            type: "value_modified_before",
-          });
-          writePropertyLine({
-            type: "value_modified_after",
-          });
-          return;
-        }
-        if (isDefaultDescriptor(descriptorName, node.before)) {
-          return;
-        }
-        writePropertyLine({
-          type: "same",
-        });
+        diff += ANSI.color(stringifyPropertyKey(property), keyColor);
+        diff += ANSI.color(":", delimitersColor);
+        diff += " ";
+        writeDiff(node, { signs, diffMode });
+        diff += ANSI.color(",", delimitersColor);
+        diff += "\n";
+        return;
       };
-      const writeDiff = (node) => {
-        writeCompositeDiff(node);
-      };
-      const writeCompositeDiff = (node) => {
-        diff += ANSI.color("{", ANSI.GREY);
+
+      if (propertyDiffMode !== "") {
+        writePropertyDiff(propertyDiffMode);
+        return;
+      }
+      if (node.diff.removed) {
+        if (!isDefaultDescriptor(descriptorName, node.before)) {
+          writePropertyDiff("removed");
+        }
+        return;
+      }
+      if (node.diff.added) {
+        if (!isDefaultDescriptor(descriptorName, node.after)) {
+          writePropertyDiff("added");
+        }
+        return;
+      }
+      if (node.diff.identity) {
+        writePropertyDiff("value_removed");
+        writePropertyDiff("value_added");
+        return;
+      }
+      if (!isDefaultDescriptor(descriptorName, node.before)) {
+        writePropertyDiff("traverse");
+      }
+    };
+    const writeDiff = (node, diffMode = "") => {
+      const writeValueDiff = (mode) => {
+        const value = mode === "added" ? node.after : node.before;
+        const valueColor =
+          mode === "removed"
+            ? ANSI.RED
+            : mode === "added"
+              ? ANSI.GREEN
+              : ANSI.GREY;
+        const delimitersColor =
+          mode === "removed"
+            ? ANSI.RED
+            : mode === "added"
+              ? ANSI.GREEN
+              : ANSI.GREY;
+
+        if (isPrimitive(value)) {
+          diff += ANSI.color(JSON.stringify(value), valueColor);
+          return;
+        }
+
+        diff += ANSI.color("{", delimitersColor);
         properties_diff: {
           const propertyNames = Object.keys(node.properties);
           if (propertyNames.length) {
@@ -332,12 +325,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
-        diff += ANSI.color("}", ANSI.GREY);
+        diff += ANSI.color("}", delimitersColor);
       };
-      writeCompositeDiff(rootNode);
 
-      message += `${diff}`;
-    }
+      if (diffMode !== "") {
+        writeValueDiff(diffMode);
+        return;
+      }
+      if (node.diff.removed) {
+        writeValueDiff("removed");
+        return;
+      }
+      if (node.diff.added) {
+        writeValueDiff("added");
+        return;
+      }
+      if (node.diff.identity) {
+        if (node === rootNode) {
+          signs = false;
+        }
+        writeValueDiff("removed");
+        diff += "\n";
+        writeValueDiff("added");
+        return;
+      }
+      writeValueDiff("traverse");
+    };
+    writeDiff(rootNode);
+
+    message += `\n\n`;
+    message += `${diff}`;
     const error = new Error(message);
     error.name = "AssertionError";
     if (Error.captureStackTrace) {
