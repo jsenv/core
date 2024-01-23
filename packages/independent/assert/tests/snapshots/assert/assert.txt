@@ -1,63 +1,11 @@
-# false_becomes_true
+# ref_twice_in_object_becomes_true
 AssertionError: expected and actual are different:
 
-false
+{
+  foo: <ref #1>{
+    id: "a",
+  },
+  bar: <ref #1>,
+}
 true
-
-# object_becomes_false
-AssertionError: expected and actual are different:
-
-{
-  foo: true,
-}
-false
-
-# nested_object_becomes_false
-AssertionError: expected and actual are different:
-
-{
-  a: true,
-  b: {
-    toto: true,
-  },
-  c: true,
-}
-false
-
-# false_becomes_true_at_solo_property_value
-AssertionError: expected and actual have 1 difference:
-
-{
-- foo: false,
-+ foo: true,
-}
-
-# true_becomes_false_at_second_and_last_property_value
-AssertionError: expected and actual have 1 difference:
-
-{
-  foo: true,
-- bar: true,
-+ bar: false,
-}
-
-# false_becomes_true_at_second_property_value
-AssertionError: expected and actual have 1 difference:
-
-{
-  a: true,
-- b: false,
-+ b: true,
-  c: true,
-}
-
-# osc_becomes_dam_at_property_value_nested
-AssertionError: expected and actual have 1 difference:
-
-{
-  user: {
--   name: "osc",
-+   name: "dam",
-  },
-}
 
