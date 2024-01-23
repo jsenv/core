@@ -1,5 +1,17 @@
 import { inspect } from "node:util";
 
+const item = {
+  a: true,
+};
+item.item = item;
+const arr = [item, item, item];
+console.log(inspect(arr));
+process.exit(1);
+
+var ar = new Array(1000000);
+ar.fill("a");
+console.log(ar);
+
 const value = ["a", "b"];
 value.foo = true;
 

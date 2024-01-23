@@ -30,56 +30,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       );
     }
     const { actual, expected } = firstArg;
-    const createComparisonNode = ({ type, before, after, parent, depth }) => {
-      const node = {
-        type,
-        before,
-        after,
-        parent,
-        depth,
-        properties: {},
-        appendProperty: (property, { before, after }) => {
-          const propertyNode = createComparisonNode({
-            type: "property",
-            before,
-            after,
-            parent: node,
-            depth: depth + 1,
-          });
-          propertyNode.descriptors = {};
-          propertyNode.appendPropertyDescriptor = (name, { before, after }) => {
-            const propertyDescriptorNode = createComparisonNode({
-              type: "property_descriptor",
-              before,
-              after,
-              parent: propertyNode,
-              depth: depth + 1,
-            });
-            propertyNode.descriptors[name] = propertyDescriptorNode;
-            return propertyDescriptorNode;
-          };
-          node.properties[property] = propertyNode;
-          return propertyNode;
-        },
-      };
-      return node;
-    };
-    const rootNode = createComparisonNode({
-      type: "root",
-      before: expected,
-      after: actual,
-      depth: 0,
-    });
+
+    const comparisonTree = createComparisonTree(expected, actual);
+    const rootComparison = comparisonTree.root;
 
     const visit = (node) => {
-      const { before, after } = node;
-      node.diff = {
-        count: 0,
-      };
-
       identity: {
-        if (isPrimitive(before) || isPrimitive(after)) {
-          if (before !== after) {
+        if (node.before.isPrimitive || node.after.isPrimitive) {
+          if (node.before.value !== node.after.value) {
             node.diff.identity = true;
             node.diff.count++;
           }
@@ -88,34 +46,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       properties: {
         // here we want to traverse before and after but if they are not composite
         // we'll consider everything as removed or added, depending the scenario
-
-        node.diff.properties = {};
-
-        const beforeIsComposite = isComposite(before);
-        const afterIsComposite = isComposite(after);
         const visitProperty = (property) => {
-          const beforePropertyDescriptor = beforeIsComposite
-            ? Object.getOwnPropertyDescriptor(before, property)
+          const beforePropertyDescriptor = node.before.isComposite
+            ? Object.getOwnPropertyDescriptor(node.before.value, property)
             : null;
-          const afterPropertyDescriptor = afterIsComposite
-            ? Object.getOwnPropertyDescriptor(after, property)
+          const afterPropertyDescriptor = node.after.isComposite
+            ? Object.getOwnPropertyDescriptor(node.after.value, property)
             : null;
           const propertyNode = node.appendProperty(property, {
-            before: beforePropertyDescriptor,
-            after: afterPropertyDescriptor,
+            beforeValue: beforePropertyDescriptor,
+            afterValue: afterPropertyDescriptor,
           });
-          propertyNode.diff = {
-            count: 0,
-            added: false,
-            removed: false,
-            value: null,
-            enumerable: null,
-            writable: null,
-            configurable: null,
-            set: null,
-            get: null,
-          };
-          node.diff.properties[property] = propertyNode.diff;
 
           const added = !beforePropertyDescriptor;
           const removed = !afterPropertyDescriptor;
@@ -133,10 +74,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const descriptorNode = propertyNode.appendPropertyDescriptor(
               descriptorName,
               {
-                before: added
+                beforeValue: added
                   ? undefined
                   : beforePropertyDescriptor[descriptorName],
-                after: removed
+                afterValue: removed
                   ? undefined
                   : afterPropertyDescriptor[descriptorName],
               },
@@ -162,15 +103,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visitPropertyDescriptor("get");
           node.diff.count += propertyNode.diff.count;
         };
-
-        if (beforeIsComposite) {
-          const beforePropertyNames = Object.getOwnPropertyNames(before);
+        if (node.before.isComposite) {
+          const beforePropertyNames = Object.getOwnPropertyNames(
+            node.before.value,
+          );
           for (const beforePropertyName of beforePropertyNames) {
             visitProperty(beforePropertyName);
           }
         }
-        if (afterIsComposite) {
-          const afterPropertyNames = Object.getOwnPropertyNames(after);
+        if (node.after.isComposite) {
+          const afterPropertyNames = Object.getOwnPropertyNames(
+            node.after.value,
+          );
           for (const afterPropertyName of afterPropertyNames) {
             if (node.properties[afterPropertyName]) {
               // already visited
@@ -181,17 +125,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
     };
-    visit(rootNode);
+    visit(rootComparison);
 
-    if (rootNode.diff.count === 0) {
+    if (rootComparison.diff.count === 0) {
       return;
     }
 
     let message;
-    if (rootNode.diff.identity) {
+    if (rootComparison.diff.identity) {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different:`;
     } else {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootNode.diff.count} ${rootNode.diff.count === 1 ? "difference" : "differences"}:`;
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootComparison.diff.count} ${rootComparison.diff.count === 1 ? "difference" : "differences"}:`;
     }
 
     let diff = "";
@@ -263,13 +207,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return;
       }
       if (node.diff.removed) {
-        if (!isDefaultDescriptor(descriptorName, node.before)) {
+        if (!isDefaultDescriptor(descriptorName, node.before.value)) {
           writePropertyDiff("removed");
         }
         return;
       }
       if (node.diff.added) {
-        if (!isDefaultDescriptor(descriptorName, node.after)) {
+        if (!isDefaultDescriptor(descriptorName, node.after.value)) {
           writePropertyDiff("added");
         }
         return;
@@ -279,13 +223,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         writePropertyDiff("value_added");
         return;
       }
-      if (!isDefaultDescriptor(descriptorName, node.before)) {
+      if (!isDefaultDescriptor(descriptorName, node.before.value)) {
         writePropertyDiff("traverse");
       }
     };
     const writeDiff = (node, diffMode = "") => {
       const writeValueDiff = (mode) => {
-        const value = mode === "added" ? node.after : node.before;
+        const value = mode === "added" ? node.after.value : node.before.value;
         const valueColor =
           mode === "removed"
             ? ANSI.RED
@@ -339,7 +283,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return;
       }
       if (node.diff.identity) {
-        if (node === rootNode) {
+        if (node === rootComparison) {
           signs = false;
         }
         writeValueDiff("removed");
@@ -349,7 +293,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
       writeValueDiff("traverse");
     };
-    writeDiff(rootNode);
+    writeDiff(rootComparison);
 
     message += `\n\n`;
     message += `${diff}`;
@@ -385,6 +329,101 @@ const isDefaultDescriptor = (descriptorName, descriptorValue) => {
     return true;
   }
   return false;
+};
+
+const createComparisonTree = (beforeValue, afterValue) => {
+  const createComparisonNode = ({
+    type,
+    beforeValue,
+    afterValue,
+    parent,
+    depth,
+  }) => {
+    const node = {
+      type,
+      parent,
+      depth,
+      before: {
+        value: beforeValue,
+        valueOf: () => {
+          throw new Error("use before.value");
+        },
+        isComposite: isComposite(beforeValue),
+        isPrimitive: isPrimitive(beforeValue),
+        reference: null,
+        referenceFromOthersSet: new Set(),
+      },
+      after: {
+        value: afterValue,
+        valueOf: () => {
+          throw new Error("use after.value");
+        },
+        isComposite: isComposite(afterValue),
+        isPrimitive: isPrimitive(afterValue),
+        reference: null,
+        referenceFromOthersSet: new Set(),
+      },
+      diff: {
+        count: 0,
+        identity: null,
+        properties: {},
+      },
+    };
+    if (node.before.isComposite || node.after.isComposite) {
+      Object.assign(node, {
+        properties: {},
+        appendProperty: (property, { beforeValue, afterValue }) => {
+          const propertyNode = createComparisonNode({
+            type: "property",
+            beforeValue,
+            afterValue,
+            parent: node,
+            depth: depth + 1,
+          });
+          node.properties[property] = propertyNode;
+          propertyNode.diff = {
+            count: 0,
+            added: false,
+            removed: false,
+            value: null,
+            enumerable: null,
+            writable: null,
+            configurable: null,
+            set: null,
+            get: null,
+          };
+          node.diff.properties[property] = propertyNode.diff;
+
+          propertyNode.descriptors = {};
+          propertyNode.appendPropertyDescriptor = (
+            name,
+            { beforeValue, afterValue },
+          ) => {
+            const propertyDescriptorNode = createComparisonNode({
+              type: "property_descriptor",
+              beforeValue,
+              afterValue,
+              parent: propertyNode,
+              depth: depth + 1,
+            });
+            propertyNode.descriptors[name] = propertyDescriptorNode;
+            return propertyDescriptorNode;
+          };
+          return propertyNode;
+        },
+      });
+    }
+    return node;
+  };
+
+  const root = createComparisonNode({
+    type: "root",
+    beforeValue,
+    afterValue,
+    depth: 0,
+  });
+
+  return { root };
 };
 
 const isComposite = (value) => {

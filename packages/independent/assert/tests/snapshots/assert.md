@@ -31,7 +31,7 @@ assert({
 
 ![img](./assert/nested_object_becomes_false.svg)
 
-# diff_solo_property_value
+# false_becomes_true_at_solo_property_value
 
 ```js
 assert({
@@ -40,9 +40,9 @@ assert({
 });
 ```
 
-![img](./assert/diff_solo_property_value.svg)
+![img](./assert/false_becomes_true_at_solo_property_value.svg)
 
-# diff_second_and_last_property_value
+# true_becomes_false_at_second_and_last_property_value
 
 ```js
 assert({
@@ -51,9 +51,9 @@ assert({
 });
 ```
 
-![img](./assert/diff_second_and_last_property_value.svg)
+![img](./assert/true_becomes_false_at_second_and_last_property_value.svg)
 
-# diff_second_property_value
+# false_becomes_true_at_second_property_value
 
 ```js
 assert({
@@ -62,9 +62,9 @@ assert({
 });
 ```
 
-![img](./assert/diff_second_property_value.svg)
+![img](./assert/false_becomes_true_at_second_property_value.svg)
 
-# diff_property_value_nested
+# osc_becomes_dam_at_property_value_nested
 
 ```js
 assert({
@@ -73,5 +73,5 @@ assert({
 });
 ```
 
-![img](./assert/diff_property_value_nested.svg)
+![img](./assert/osc_becomes_dam_at_property_value_nested.svg)
 

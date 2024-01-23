@@ -5,6 +5,13 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("assert", {
+  // ref_twice_in_array_becomes_true: () => {
+  //   const item = {};
+  //   assert({
+  //     actual: [item, item],
+  //     expected: true,
+  //   });
+  // },
   false_becomes_true: () => {
     assert({
       actual: true,
@@ -23,25 +30,25 @@ await startSnapshotTesting("assert", {
       expected: { a: true, b: { toto: true }, c: true },
     });
   },
-  diff_solo_property_value: () => {
+  false_becomes_true_at_solo_property_value: () => {
     assert({
       actual: { foo: true },
       expected: { foo: false },
     });
   },
-  diff_second_and_last_property_value: () => {
+  true_becomes_false_at_second_and_last_property_value: () => {
     assert({
       actual: { foo: true, bar: false },
       expected: { foo: true, bar: true },
     });
   },
-  diff_second_property_value: () => {
+  false_becomes_true_at_second_property_value: () => {
     assert({
       actual: { a: true, b: true, c: true },
       expected: { a: true, b: false, c: true },
     });
   },
-  diff_property_value_nested: () => {
+  osc_becomes_dam_at_property_value_nested: () => {
     assert({
       actual: { user: { name: "dam" } },
       expected: { user: { name: "osc" } },

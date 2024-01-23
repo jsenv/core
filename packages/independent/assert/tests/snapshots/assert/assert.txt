@@ -24,7 +24,7 @@ AssertionError: expected and actual are different:
 }
 false
 
-# diff_solo_property_value
+# false_becomes_true_at_solo_property_value
 AssertionError: expected and actual have 1 difference:
 
 {
@@ -32,7 +32,7 @@ AssertionError: expected and actual have 1 difference:
 + foo: true,
 }
 
-# diff_second_and_last_property_value
+# true_becomes_false_at_second_and_last_property_value
 AssertionError: expected and actual have 1 difference:
 
 {
@@ -41,7 +41,7 @@ AssertionError: expected and actual have 1 difference:
 + bar: false,
 }
 
-# diff_second_property_value
+# false_becomes_true_at_second_property_value
 AssertionError: expected and actual have 1 difference:
 
 {
@@ -51,7 +51,7 @@ AssertionError: expected and actual have 1 difference:
   c: true,
 }
 
-# diff_property_value_nested
+# osc_becomes_dam_at_property_value_nested
 AssertionError: expected and actual have 1 difference:
 
 {
