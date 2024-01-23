@@ -252,7 +252,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         writePropertyKey(property, keyColor);
         diff += ANSI.color(":", delimitersColor);
         diff += " ";
-        writeDiff(node, { signs, diffMode });
+        writeDiff(node, diffMode);
         diff += ANSI.color(",", delimitersColor);
         diff += "\n";
         return;

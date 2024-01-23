@@ -1,8 +1,63 @@
-# diff_first_and_only_property_value
+# false_becomes_true
+AssertionError: expected and actual are different:
+
+false
+true
+
+# object_becomes_false
+AssertionError: expected and actual are different:
+
+{
+  foo: true,
+}
+false
+
+# nested_object_becomes_false
+AssertionError: expected and actual are different:
+
+{
+  a: true,
+  b: {
+    toto: true,
+  },
+  c: true,
+}
+false
+
+# diff_solo_property_value
 AssertionError: expected and actual have 1 difference:
 
 {
 - foo: false,
 + foo: true,
+}
+
+# diff_second_and_last_property_value
+AssertionError: expected and actual have 1 difference:
+
+{
+  foo: true,
+- bar: true,
++ bar: false,
+}
+
+# diff_second_property_value
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: true,
+- b: false,
++ b: true,
+  c: true,
+}
+
+# diff_property_value_nested
+AssertionError: expected and actual have 1 difference:
+
+{
+  user: {
+-   name: "osc",
++   name: "dam",
+  },
 }
 
