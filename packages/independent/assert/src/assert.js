@@ -46,22 +46,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             parent: node,
             depth: depth + 1,
           });
+          propertyNode.descriptors = {};
+          propertyNode.appendPropertyDescriptor = (name, { before, after }) => {
+            const propertyDescriptorNode = createComparisonNode({
+              type: "property_descriptor",
+              before,
+              after,
+              parent: propertyNode,
+              depth: depth + 1,
+            });
+            propertyNode.descriptors[name] = propertyDescriptorNode;
+            return propertyDescriptorNode;
+          };
           node.properties[property] = propertyNode;
           return propertyNode;
         },
-        descriptors: {},
-        appendPropertyDescriptor: (name, { before, after }) => {
-          const propertyDescriptorNode = createComparisonNode({
-            type: "property_descriptor",
-            before,
-            after,
-            parent: node,
-            depth: depth + 1,
-          });
-          node.descriptors[name] = propertyDescriptorNode;
-          return propertyDescriptorNode;
-        },
-        // entries: [],
       };
       return node;
     };
@@ -188,12 +187,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return;
     }
 
-    const stringifyPropertyKey = (property) => {
-      // todo: handle property that must be between quotes,
-      // handle symbols
-      return property;
-    };
-
     let message;
     if (rootNode.diff.identity) {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different:`;
@@ -203,12 +196,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     let diff = "";
     let signs = true;
+    const writePropertyKey = (property, color) => {
+      // todo: handle property that must be between quotes,
+      // handle symbols
+      diff += ANSI.color(property, color);
+    };
     const writePropertyDescriptorDiff = (
       node,
       { property, descriptorName, propertyDiffMode = "" },
     ) => {
       const writePropertyDiff = (mode) => {
-        let indent = `  `.repeat(node.parent.depth);
+        let indent = `  `.repeat(node.depth);
         let keyColor;
         let delimitersColor;
         let diffMode;
@@ -251,7 +249,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           diff += ANSI.color(descriptorName, keyColor);
           diff += " ";
         }
-        diff += ANSI.color(stringifyPropertyKey(property), keyColor);
+        writePropertyKey(property, keyColor);
         diff += ANSI.color(":", delimitersColor);
         diff += " ";
         writeDiff(node, { signs, diffMode });
@@ -311,7 +309,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const propertyNames = Object.keys(node.properties);
           if (propertyNames.length) {
             diff += "\n";
-            diff += "  ".repeat(node.depth);
           }
           for (const property of propertyNames) {
             const propertyNode = node.properties[property];
@@ -325,6 +322,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
+        diff += "  ".repeat(node.depth);
         diff += ANSI.color("}", delimitersColor);
       };
 

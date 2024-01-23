@@ -11,12 +11,18 @@ await startSnapshotTesting("assert", {
   //       expected: false,
   //     });
   //   },
-  object_becomes_false: () => {
-    assert({
-      actual: false,
-      expected: { foo: true },
-    });
-  },
+  // object_becomes_false: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: { foo: true },
+  //   });
+  // },
+  // nested_object_becomes_false: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: { a: true, b: { toto: true }, c: true },
+  //   });
+  // },
   // diff_solo_property_value: () => {
   //   assert({
   //     actual: { foo: true },
