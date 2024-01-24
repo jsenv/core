@@ -1,8 +1,18 @@
-# false should be an object
-AssertionError: expected and actual are different:
+# diff very deep
+AssertionError: expected and actual have 2 differences:
+(1 displayed below and 1 truncated)
 
+the.nesting.is.very:
 {
-  foo: true,
+  deep: {
+    in: {
+      this: {
+        one: {
+-         foo: false,
++         foo: true,
+        },
+      },
+    },
+  },
 }
-false
 

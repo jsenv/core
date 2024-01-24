@@ -5,10 +5,54 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("assert", {
-  ["false should be an object"]: () => {
+  // ["false should be an object"]: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: { foo: true },
+  //   });
+  // },
+  ["diff very deep"]: () => {
     assert({
-      actual: false,
-      expected: { foo: true },
+      actual: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        toto: "actual",
+      },
+      expected: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: false,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        toto: "expected",
+      },
     });
   },
   // nested_object_becomes_false: () => {

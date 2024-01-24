@@ -9,15 +9,15 @@ const generateMarkdown =
 export const startSnapshotTesting = async (name, scenarios) => {
   let fileContent = "";
   let markdown = "";
-  if (generateMarkdown) {
-    clearDirectorySync(new URL(`./snapshots/${name}/`, import.meta.url));
-  }
   const snapshotFileUrl = new URL(
     `./snapshots/${name}/${name}.txt`,
     import.meta.url,
   );
   const markdownFileUrl = new URL(`./snapshots/${name}.md`, import.meta.url);
   const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
+  if (generateMarkdown) {
+    clearDirectorySync(new URL(`./snapshots/${name}/`, import.meta.url));
+  }
   for (const key of Object.keys(scenarios)) {
     const scenarioCallback = scenarios[key];
     try {
@@ -60,7 +60,9 @@ export const startSnapshotTesting = async (name, scenarios) => {
   if (generateMarkdown) {
     writeFileSync(markdownFileUrl, markdown);
   }
-  fileSnapshot.compare();
+  if (!generateMarkdown) {
+    fileSnapshot.compare();
+  }
 };
 
 const getFunctionBody = (fn) => {

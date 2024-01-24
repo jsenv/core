@@ -40,14 +40,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (node.before.isPrimitive || node.after.isPrimitive) {
           if (node.before.value !== node.after.value) {
             node.diff.identity = true;
-            node.diff.count++;
+            node.diff.counters.self++;
+            node.diff.counters.total++;
           }
         }
       }
       reference: {
         if (node.before.reference !== node.after.reference) {
           node.diff.reference = true;
-          node.diff.count++;
+          node.diff.counters.self++;
+          node.diff.counters.total++;
         }
       }
       properties: {
@@ -70,11 +72,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           if (added) {
             propertyNode.diff.added = true;
-            propertyNode.diff.count++;
+            propertyNode.diff.counters.self++;
           }
           if (removed) {
             propertyNode.diff.removed = true;
-            propertyNode.diff.count++;
+            propertyNode.diff.counters.self++;
           }
 
           const visitPropertyDescriptor = (descriptorName) => {
@@ -92,13 +94,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             visit(descriptorNode);
             if (added) {
               descriptorNode.diff.added = true;
-              descriptorNode.diff.count++;
+              descriptorNode.diff.counters.self++;
+              descriptorNode.diff.counters.total++;
             } else if (removed) {
               descriptorNode.diff.removed = true;
-              descriptorNode.diff.count++;
+              descriptorNode.diff.counters.self++;
+              descriptorNode.diff.counters.total++;
             } else {
               propertyNode.diff.value = descriptorNode.diff;
-              propertyNode.diff.count += descriptorNode.diff.count;
+              propertyNode.diff.counters.self +=
+                descriptorNode.diff.counters.self;
+              propertyNode.diff.counters.total +=
+                descriptorNode.diff.counters.total;
             }
           };
 
@@ -108,7 +115,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visitPropertyDescriptor("configurable");
           visitPropertyDescriptor("set");
           visitPropertyDescriptor("get");
-          node.diff.count += propertyNode.diff.count;
+          node.diff.counters.total += propertyNode.diff.counters.total;
         };
         if (
           node.before.isComposite &&
@@ -144,33 +151,74 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
 
-      if (node.diff.count) {
+      if (node.diff.counters.self) {
         nodesWithDiffArray.push(node);
       }
     };
     visit(rootComparison);
 
-    if (rootComparison.diff.count === 0) {
+    if (nodesWithDiffArray.length === 0) {
       return;
-    }
-
-    let message;
-    if (rootComparison.diff.identity) {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different:`;
-    } else {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootComparison.diff.count} ${rootComparison.diff.count === 1 ? "difference" : "differences"}:`;
     }
 
     let diff = "";
     let signs = true;
     let refId = 1;
+    let startNode = rootComparison;
+    // if the first diff is too deep
+    // we'll start, not from the rootComparison, but from a deeper node
+    const [firstNodeWithADiff] = nodesWithDiffArray;
+    const nodeDiffHandledSet = new Set();
+    const maxDepth = 5;
+    if (firstNodeWithADiff.depth > maxDepth) {
+      const nodesFromRootToTarget = [firstNodeWithADiff];
+      let currentNode = firstNodeWithADiff;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const parentNode = currentNode.parent;
+        if (parentNode) {
+          nodesFromRootToTarget.unshift(parentNode);
+          currentNode = parentNode;
+        } else {
+          break;
+        }
+      }
+      let startNodeDepth = firstNodeWithADiff.depth - maxDepth;
+      let path = "";
+      for (const node of nodesFromRootToTarget) {
+        const { type } = node;
+        if (type === "root") {
+        } else if (type === "property") {
+          if (path !== "") path += ".";
+          path += node.property;
+        } else if (type === "property_descriptor") {
+          if (node.descriptor !== "value") {
+            path += `[[${node.descriptor}]]`;
+          }
+        }
+        node.path = path;
+        if (
+          startNode === rootComparison &&
+          node.type === "property_descriptor" &&
+          node.depth === startNodeDepth
+        ) {
+          startNode = node;
+          break;
+        }
+      }
+    }
+
     const writePropertyKey = (property, color) => {
       // todo: handle property that must be between quotes,
       // handle symbols
       diff += ANSI.color(property, color);
     };
     const writePropertyDiff = (node, { property, descriptorName, mode }) => {
-      let indent = `  `.repeat(node.depth);
+      if (mode !== "traverse") {
+        nodeDiffHandledSet.add(node);
+      }
+
+      let indent = `  `.repeat(node.depth - startNode.depth);
       let keyColor;
       let delimitersColor;
       let diffMode;
@@ -267,6 +315,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
     };
     const writeValueDiff = (node, mode) => {
+      if (mode !== "traverse") {
+        nodeDiffHandledSet.add(node);
+      }
       const valueInfo = mode === "added" ? node.after : node.before;
       const valueColor =
         mode === "removed"
@@ -311,7 +362,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
       }
-      diff += "  ".repeat(node.depth);
+      diff += "  ".repeat(node.depth - startNode.depth);
       diff += ANSI.color("}", delimitersColor);
     };
     const writeDiff = (node) => {
@@ -335,50 +386,32 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       writeValueDiff(node, "traverse");
     };
 
-    // if the first diff is too deep
-    // we'll start, not from the rootComparison
-    // but from a deeper node
-    const [firstNodeWithADiff] = nodesWithDiffArray;
-    let startsFromDeeperNode = false;
-
-    if (firstNodeWithADiff.depth > 1) {
-      const nodesFromRootToTarget = [];
-      let ancestorNode = firstNodeWithADiff.parent;
-      while (ancestorNode) {
-        nodesFromRootToTarget.unshift(ancestorNode);
-        ancestorNode = ancestorNode.parent;
-      }
-      nodesFromRootToTarget.push(firstNodeWithADiff);
-      let path = "";
-      for (const node of nodesFromRootToTarget) {
-        const { type } = node;
-        if (type === "root") {
-          continue;
-        }
-        if (type === "property") {
-          if (path !== "") path += ".";
-          path += node.property;
-        } else if (type === "property_descriptor") {
-          if (node.descriptor === "value") {
-            continue;
-          }
-          path += `[[${node.descriptor}]]`;
-        }
-      }
-      if (path.length > 50) {
-        startsFromDeeperNode = true;
-        // first we dislay the path
-        diff += `${path}:`;
-        diff += "\n";
-        writeDiff(nodesFromRootToTarget[nodesFromRootToTarget.length - 2]);
-      }
-    }
-    if (!startsFromDeeperNode) {
-      writeDiff(rootComparison);
+    if (startNode === rootComparison) {
+      writeDiff(startNode);
+    } else {
+      diff += `${startNode.path}:`;
+      diff += "\n";
+      writeDiff(startNode);
     }
 
+    let message;
+    if (rootComparison.diff.identity) {
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different`;
+    } else {
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootComparison.diff.counters.total} ${rootComparison.diff.counters.total === 1 ? "difference" : "differences"}`;
+    }
+    message += ":";
+    const diffNotHandled = nodesWithDiffArray.length - nodeDiffHandledSet.size;
+    if (diffNotHandled > 0) {
+      message += "\n";
+      message += "(";
+      message += `${nodeDiffHandledSet.size} displayed below and `;
+      message += ANSI.color(`${diffNotHandled} truncated`, ANSI.YELLOW);
+      message += ")";
+    }
     message += `\n\n`;
     message += `${diff}`;
+
     const error = new Error(message);
     error.name = "AssertionError";
     if (Error.captureStackTrace) {
@@ -453,7 +486,10 @@ const createComparisonTree = (beforeValue, afterValue) => {
         referenceFromOthersSet: new Set(),
       },
       diff: {
-        count: 0,
+        counters: {
+          self: 0,
+          total: 0,
+        },
         identity: null,
       },
     };
@@ -497,7 +533,10 @@ const createComparisonTree = (beforeValue, afterValue) => {
         propertyNode.property = property;
         node.properties[property] = propertyNode;
         propertyNode.diff = {
-          count: 0,
+          counters: {
+            self: 0,
+            total: 0,
+          },
           added: false,
           removed: false,
           value: null,

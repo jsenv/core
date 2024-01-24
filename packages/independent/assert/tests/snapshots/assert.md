@@ -1,11 +1,49 @@
-# false should be an object
+# diff very deep
 
 ```js
 assert({
-  actual: false,
-  expected: { foo: true },
+  actual: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    toto: "actual",
+  },
+  expected: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: false,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    toto: "expected",
+  },
 });
 ```
 
-![img](<./assert/false should be an object.svg>)
+![img](<./assert/diff very deep.svg>)
 
