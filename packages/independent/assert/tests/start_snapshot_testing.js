@@ -1,12 +1,17 @@
 import stripAnsi from "strip-ansi";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
+import { clearDirectorySync, writeFileSync } from "@jsenv/filesystem";
 
-import { writeFileSync } from "@jsenv/filesystem";
+const generateMarkdown =
+  process.execArgv.includes("--conditions=development") && !process.env.CI;
 
 export const startSnapshotTesting = async (name, scenarios) => {
   let fileContent = "";
   let markdown = "";
+  if (generateMarkdown) {
+    clearDirectorySync(new URL(`./snapshots/${name}/`, import.meta.url));
+  }
   const snapshotFileUrl = new URL(
     `./snapshots/${name}/${name}.txt`,
     import.meta.url,
@@ -25,33 +30,36 @@ export const startSnapshotTesting = async (name, scenarios) => {
         fileContent += e.stack;
       }
 
-      markdown += `# ${key}\n`;
-      markdown += "\n";
-      markdown += "```js\n";
-      markdown += getFunctionBody(scenarioCallback);
-      markdown += "\n```";
+      if (generateMarkdown) {
+        markdown += `# ${key}\n`;
+        markdown += "\n";
+        markdown += "```js\n";
+        markdown += getFunctionBody(scenarioCallback);
+        markdown += "\n```";
+        const terminalRecorder = await startTerminalRecording({
+          svg: {
+            title: "Terminal",
+          },
+        });
+        await terminalRecorder.write(`${e.name}: ${e.message}\n\n`);
+        const result = await terminalRecorder.stop();
+        const svg = await result.svg();
+        const svgFileUrl = new URL(
+          `./snapshots/${name}/${key}.svg`,
+          import.meta.url,
+        );
+        writeFileSync(svgFileUrl, svg);
 
-      const terminalRecorder = await startTerminalRecording({
-        svg: {
-          title: "Terminal",
-        },
-      });
-      await terminalRecorder.write(`${e.name}: ${e.message}\n\n`);
-      const result = await terminalRecorder.stop();
-      const svg = await result.svg();
-      const svgFileUrl = new URL(
-        `./snapshots/${name}/${key}.svg`,
-        import.meta.url,
-      );
-      writeFileSync(svgFileUrl, svg);
-
-      markdown += `\n\n`;
-      markdown += `![img](./${name}/${key}.svg)`;
-      markdown += `\n\n`;
+        markdown += `\n\n`;
+        markdown += `![img](./${name}/${key}.svg)`;
+        markdown += `\n\n`;
+      }
     }
   }
   writeFileSync(snapshotFileUrl, fileContent);
-  writeFileSync(markdownFileUrl, markdown);
+  if (generateMarkdown) {
+    writeFileSync(markdownFileUrl, markdown);
+  }
   fileSnapshot.compare();
 };
 
