@@ -5,25 +5,12 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("assert", {
-  ref_twice_in_object_becomes_true: () => {
-    const item = { id: "a" };
+  ["false should be an object"]: () => {
     assert({
-      actual: true,
-      expected: { foo: item, bar: item },
+      actual: false,
+      expected: { foo: true },
     });
   },
-  // false_becomes_true: () => {
-  //   assert({
-  //     actual: true,
-  //     expected: false,
-  //   });
-  // },
-  // object_becomes_false: () => {
-  //   assert({
-  //     actual: false,
-  //     expected: { foo: true },
-  //   });
-  // },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,
