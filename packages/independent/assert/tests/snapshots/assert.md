@@ -1,12 +1,11 @@
-# ref_twice_in_object_becomes_true
+# false should be an object
 
 ```js
-const item = { id: "a" };
 assert({
-  actual: true,
-  expected: { foo: item, bar: item },
+  actual: false,
+  expected: { foo: true },
 });
 ```
 
-![img](./assert/ref_twice_in_object_becomes_true.svg)
+![img](<./assert/false should be an object.svg>)
 

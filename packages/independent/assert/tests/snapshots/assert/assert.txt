@@ -1,11 +1,8 @@
-# ref_twice_in_object_becomes_true
+# false should be an object
 AssertionError: expected and actual are different:
 
 {
-  foo: <ref #1>{
-    id: "a",
-  },
-  bar: <ref #1>,
+  foo: true,
 }
-true
+false
 

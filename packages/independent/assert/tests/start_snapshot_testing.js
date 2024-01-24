@@ -51,7 +51,7 @@ export const startSnapshotTesting = async (name, scenarios) => {
         writeFileSync(svgFileUrl, svg);
 
         markdown += `\n\n`;
-        markdown += `![img](./${name}/${key}.svg)`;
+        markdown += `![img](<./${name}/${key}.svg>)`;
         markdown += `\n\n`;
       }
     }

@@ -33,6 +33,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
+    const nodesWithDiffArray = [];
 
     const visit = (node) => {
       identity: {
@@ -141,6 +142,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             visitProperty(afterPropertyName);
           }
         }
+      }
+
+      if (node.diff.count) {
+        nodesWithDiffArray.push(node);
       }
     };
     visit(rootComparison);
@@ -329,7 +334,48 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
       writeValueDiff(node, "traverse");
     };
-    writeDiff(rootComparison);
+
+    // if the first diff is too deep
+    // we'll start, not from the rootComparison
+    // but from a deeper node
+    const [firstNodeWithADiff] = nodesWithDiffArray;
+    let startsFromDeeperNode = false;
+
+    if (firstNodeWithADiff.depth > 1) {
+      const nodesFromRootToTarget = [];
+      let ancestorNode = firstNodeWithADiff.parent;
+      while (ancestorNode) {
+        nodesFromRootToTarget.unshift(ancestorNode);
+        ancestorNode = ancestorNode.parent;
+      }
+      nodesFromRootToTarget.push(firstNodeWithADiff);
+      let path = "";
+      for (const node of nodesFromRootToTarget) {
+        const { type } = node;
+        if (type === "root") {
+          continue;
+        }
+        if (type === "property") {
+          if (path !== "") path += ".";
+          path += node.property;
+        } else if (type === "property_descriptor") {
+          if (node.descriptor === "value") {
+            continue;
+          }
+          path += `[[${node.descriptor}]]`;
+        }
+      }
+      if (path.length > 50) {
+        startsFromDeeperNode = true;
+        // first we dislay the path
+        diff += `${path}:`;
+        diff += "\n";
+        writeDiff(nodesFromRootToTarget[nodesFromRootToTarget.length - 2]);
+      }
+    }
+    if (!startsFromDeeperNode) {
+      writeDiff(rootComparison);
+    }
 
     message += `\n\n`;
     message += `${diff}`;
@@ -448,6 +494,7 @@ const createComparisonTree = (beforeValue, afterValue) => {
           parent: node,
           depth: depth + 1,
         });
+        propertyNode.property = property;
         node.properties[property] = propertyNode;
         propertyNode.diff = {
           count: 0,
@@ -474,6 +521,7 @@ const createComparisonTree = (beforeValue, afterValue) => {
             parent: propertyNode,
             depth: depth + 1,
           });
+          propertyDescriptorNode.descriptor = name;
           propertyNode.descriptors[name] = propertyDescriptorNode;
           return propertyDescriptorNode;
         };
