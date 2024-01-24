@@ -401,16 +401,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootComparison.diff.counters.total} ${rootComparison.diff.counters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
+    message += `\n\n`;
+    message += `${diff}`;
     const diffNotHandled = nodesWithDiffArray.length - nodeDiffHandledSet.size;
     if (diffNotHandled > 0) {
       message += "\n";
-      message += "(";
-      message += `${nodeDiffHandledSet.size} displayed below and `;
-      message += ANSI.color(`${diffNotHandled} truncated`, ANSI.YELLOW);
-      message += ")";
+      if (diffNotHandled === 1) {
+        message += `To keep message readable the ${ANSI.color(`remaining diff`, ANSI.YELLOW)} is not displayed`;
+      } else {
+        message += `To keep message readable the ${ANSI.color(`${nodeDiffHandledSet.size} remaining diffs`, ANSI.YELLOW)} are not dispayed`;
+      }
     }
-    message += `\n\n`;
-    message += `${diff}`;
 
     const error = new Error(message);
     error.name = "AssertionError";
