@@ -22,7 +22,9 @@ await startSnapshotTesting("assert", {
                   in: {
                     this: {
                       one: {
-                        foo: true,
+                        foo: {
+                          a: true,
+                        },
                       },
                     },
                   },
@@ -53,6 +55,7 @@ await startSnapshotTesting("assert", {
         },
         toto: "expected",
       },
+      maxDepth: 5,
     });
   },
   // nested_object_becomes_false: () => {
