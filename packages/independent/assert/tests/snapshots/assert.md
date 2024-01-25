@@ -1,49 +1,19 @@
-# diff very deep
+# deep object should be false
 
 ```js
 assert({
   actual: {
     the: {
       nesting: {
-        is: {
-          very: {
-            deep: {
-              in: {
-                this: {
-                  one: {
-                    foo: true,
-                  },
-                },
-              },
-            },
-          },
-        },
+        is: {},
       },
     },
     toto: "actual",
   },
-  expected: {
-    the: {
-      nesting: {
-        is: {
-          very: {
-            deep: {
-              in: {
-                this: {
-                  one: {
-                    foo: false,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    toto: "expected",
-  },
+  expected: false,
+  maxDepth: 1,
 });
 ```
 
-![img](<./assert/diff very deep.svg>)
+![img](<./assert/deep object should be false.svg>)
 

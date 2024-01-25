@@ -1,18 +1,10 @@
-# diff very deep
-AssertionError: expected and actual have 2 differences:
+# deep object should be false
+AssertionError: expected and actual are different:
 
-the.nesting.is.very:
+false
 {
-  deep: {
-    in: {
-      this: {
-        one: {
--         foo: false,
-+         foo: true,
-        },
-      },
-    },
-  },
+  the: { nesting: Object(1) },
+  toto: "actual",
 }
-To keep message readable the remaining diff is not displayed
+To improve readability the rest of the diff is not displayed
 
