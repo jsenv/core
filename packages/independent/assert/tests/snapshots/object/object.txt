@@ -1,0 +1,20 @@
+# object should be false at deep property
+AssertionError: expected and actual have 3 differences:
+
+ℹ to improve readability only 3 diff are displayed
+ℹ diff starts at the.nesting.is.very
+
+very: {
+  deep: {
+    in: {
+      this: {
+        one: {
+-         foo: false,
++         foo: { a: true, toto: Object(1) },
+        },
+      },
+    },
+  },
+},
+
+

@@ -4,74 +4,95 @@ import { createAssert } from "../src/assert.js";
 
 const assert = createAssert();
 
-await startSnapshotTesting("assert", {
-  ["deep object should be false"]: () => {
-    assert({
-      actual: {
-        the: {
-          nesting: {
-            is: {},
-          },
-        },
-        toto: "actual",
-      },
-      expected: false,
-      maxDepth: 1,
-    });
-  },
+await startSnapshotTesting("object", {
   // ["false should be an object"]: () => {
   //   assert({
   //     actual: false,
   //     expected: { foo: true },
   //   });
   // },
-  // ["diff very deep"]: () => {
+  // ["false should be an object at property"]: () => {
+  //   assert({
+  //     actual: {
+  //       foo: false,
+  //     },
+  //     expected: {
+  //       foo: { a: true },
+  //     },
+  //   });
+  // },
+  // ["object should be false at property"]: () => {
+  //   assert({
+  //     actual: {
+  //       foo: { a: true },
+  //     },
+  //     expected: {
+  //       foo: false,
+  //     },
+  //   });
+  // },
+  // ["object should be false at deep property truncated"]: () => {
   //   assert({
   //     actual: {
   //       the: {
   //         nesting: {
-  //           is: {
-  //             very: {
-  //               deep: {
-  //                 in: {
-  //                   this: {
-  //                     one: {
-  //                       foo: {
-  //                         a: true,
-  //                       },
-  //                     },
-  //                   },
-  //                 },
-  //               },
-  //             },
-  //           },
+  //           is: {},
   //         },
   //       },
   //       toto: "actual",
   //     },
-  //     expected: {
-  //       the: {
-  //         nesting: {
-  //           is: {
-  //             very: {
-  //               deep: {
-  //                 in: {
-  //                   this: {
-  //                     one: {
-  //                       foo: false,
-  //                     },
-  //                   },
-  //                 },
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-  //       toto: "expected",
-  //     },
-  //     maxDepth: 5,
+  //     expected: false,
+  //     maxDepth: 0,
   //   });
   // },
+  ["object should be false at deep property"]: () => {
+    assert({
+      actual: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: {
+                          a: true,
+                          toto: { test: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        toto: "actual",
+      },
+      expected: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: false,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        toto: "expected",
+      },
+      maxDepth: 5,
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,
