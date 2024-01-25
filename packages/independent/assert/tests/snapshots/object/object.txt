@@ -1,17 +1,62 @@
+# false should be an object
+AssertionError: expected and actual are different:
+
+{
+  foo: true,
+}
+false
+
+# two properties are different
+AssertionError: expected and actual have 2 differences:
+
+{
+- a: false,
++ a: true,
+- b: false,
++ b: true,
+}
+
+# false should be an object at property
+AssertionError: expected and actual have 1 difference:
+
+{
+- foo: {
+-   a: true,
+- },
++ foo: false,
+}
+
+# object should be false at property
+AssertionError: expected and actual have 1 difference:
+
+{
+- foo: false,
++ foo: {
++   a: true,
++ },
+}
+
+# object should be false at deep property truncated
+AssertionError: expected and actual are different:
+
+false
+{ the: Object(1), toto: "actual" }
+
 # object should be false at deep property
-AssertionError: expected and actual have 3 differences:
+AssertionError: expected and actual have 2 differences:
 
-ℹ to improve readability only 3 diff are displayed
-ℹ diff starts at the.nesting.is.very
+ℹ to improve readability only 1 diff is displayed
+ℹ diff starts at the.nesting.is.very.deep
 
-very: {
-  deep: {
-    in: {
-      this: {
-        one: {
--         foo: false,
-+         foo: { a: true, toto: Object(1) },
-        },
+{
+  in: {
+    this: {
+      one: {
+-       foo: false,
++       foo: {
++         a: true,
++         toto: { test: true, bar: Object(1) },
++       },
       },
     },
   },

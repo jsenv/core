@@ -37,12 +37,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const { actual, expected, maxDepth = 5, maxColumns = 100 } = firstArg;
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
+    const counters = {
+      total: 0,
+      displayed: 0,
+    };
     const nodesWithDiffArray = [];
 
     const visit = (node) => {
       identity: {
         if (node.before.isPrimitive || node.after.isPrimitive) {
           if (node.before.value !== node.after.value) {
+            if (
+              !node.parent ||
+              (!node.parent.diff.added && !node.parent.diff.removed)
+            ) {
+              counters.total++;
+            }
             node.diff.identity = true;
             node.diff.counters.self++;
             node.diff.counters.total++;
@@ -172,7 +182,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     // if the first diff is too deep
     // we'll start, not from the rootComparison, but from a deeper node
     const firstNodeWithADiff = nodesWithDiffArray[0];
-    const nodeDiffHandledSet = new Set();
+
     if (firstNodeWithADiff.depth >= maxDepth && !rootComparison.diff.identity) {
       const nodesFromRootToTarget = [firstNodeWithADiff];
       let currentNode = firstNodeWithADiff;
@@ -192,7 +202,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (
           startNode === rootComparison &&
           node.type === "property_descriptor" &&
-          node.depth === startNodeDepth
+          node.depth > startNodeDepth
         ) {
           node.path = path;
           startNode = node;
@@ -216,11 +226,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // handle symbols
       return ANSI.color(property, color);
     };
-    const writePropertyDescriptorDiff = (node, { mode }) => {
-      if (mode !== "traverse") {
-        nodeDiffHandledSet.add(node);
-      }
-
+    const writePropertyDescriptorDiff = (node, { mode, modified }) => {
       if (
         !node.diff.counters.self &&
         isDefaultDescriptor(node.descriptor, node.before.value)
@@ -241,7 +247,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           propertyDescriptorDiff += ANSI.color("-", ANSI.RED);
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = ANSI.RED;
+        keyColor = delimitersColor = modified ? ANSI.GREY : ANSI.RED;
       }
       if (mode === "added") {
         if (isDefaultDescriptor(node.descriptor, node.after.value)) {
@@ -251,35 +257,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           propertyDescriptorDiff += ANSI.color("+", ANSI.GREEN);
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = ANSI.GREEN;
-      }
-      if (mode === "value_removed") {
-        mode = "removed";
-        propertyDescriptorDiff += ANSI.color("-", ANSI.RED);
-        indent = indent.slice(1);
-        keyColor = delimitersColor = ANSI.GREY;
-      }
-      if (mode === "value_added") {
-        mode = "added";
-        propertyDescriptorDiff += ANSI.color("+", ANSI.GREEN);
-        indent = indent.slice(1);
-        keyColor = delimitersColor = ANSI.GREY;
+        keyColor = delimitersColor = modified ? ANSI.GREY : ANSI.GREEN;
       }
       if (mode === "traverse") {
         keyColor = delimitersColor = ANSI.GREY;
       }
 
       propertyDescriptorDiff += indent;
-      if (node.descriptor !== "value") {
-        propertyDescriptorDiff += ANSI.color(node.descriptor, keyColor);
+      if (node !== startNode) {
+        if (node.descriptor !== "value") {
+          propertyDescriptorDiff += ANSI.color(node.descriptor, keyColor);
+          propertyDescriptorDiff += " ";
+        }
+        const propertyKeyFormatted = writePropertyKey(node.property, keyColor);
+        propertyDescriptorDiff += propertyKeyFormatted;
+        propertyDescriptorDiff += ANSI.color(":", delimitersColor);
         propertyDescriptorDiff += " ";
       }
-      const propertyKeyFormatted = writePropertyKey(node.property, keyColor);
-      propertyDescriptorDiff += propertyKeyFormatted;
-      propertyDescriptorDiff += ANSI.color(":", delimitersColor);
-      propertyDescriptorDiff += " ";
       const valueDiff = writeValueDiff(node, {
         mode,
+        modified,
         maxWidth: maxColumns - stringWidth(propertyDescriptorDiff) - ",".length,
       });
       propertyDescriptorDiff += valueDiff;
@@ -287,9 +284,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       propertyDescriptorDiff += "\n";
       return propertyDescriptorDiff;
     };
-    const writeValueDiff = (node, { mode, maxWidth, collapsed }) => {
-      if (mode !== "traverse") {
-        nodeDiffHandledSet.add(node);
+    const writeValueDiff = (node, { mode, modified, maxWidth, collapsed }) => {
+      if (
+        !node.parent ||
+        (!node.parent.diff.added && !node.parent.diff.removed)
+      ) {
+        if (mode === "removed") {
+          counters.displayed++;
+        }
+        if (mode === "added" && !modified) {
+          counters.displayed++;
+        }
       }
 
       const valueName = mode === "added" ? "after" : "before";
@@ -445,11 +450,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           signs = false;
         }
         let identityDiff = "";
-        identityDiff += method(node, { mode: "removed" });
+        identityDiff += method(node, { mode: "removed", modified: true });
         if (node.type !== "property_descriptor") {
           identityDiff += "\n";
         }
-        identityDiff += method(node, { mode: "added" });
+        identityDiff += method(node, { mode: "added", modified: true });
         return identityDiff;
       }
       return method(node, { mode: "traverse" });
@@ -461,16 +466,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     if (rootComparison.diff.identity) {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different`;
     } else {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${rootComparison.diff.counters.total} ${rootComparison.diff.counters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${counters.total} ${counters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
     const infos = [];
-    const diffNotHandled = nodesWithDiffArray.length - nodeDiffHandledSet.size;
-    if (diffNotHandled > 0) {
-      infos.push(
-        `to improve readability only ${nodeDiffHandledSet.size} diff are displayed`,
-      );
+    const diffNotDisplayed = counters.total - counters.displayed;
+    if (diffNotDisplayed) {
+      if (counters.displayed === 1) {
+        infos.push(
+          `to improve readability only ${counters.displayed} diff is displayed`,
+        );
+      } else {
+        infos.push(
+          `to improve readability only ${counters.displayed} diffs are displayed`,
+        );
+      }
     }
     if (startNode !== rootComparison) {
       infos.push(`diff starts at ${ANSI.color(startNode.path, ANSI.YELLOW)}`);
