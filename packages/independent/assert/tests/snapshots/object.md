@@ -142,3 +142,20 @@ assert({
 
 ![img](<./object/maxDepth on diff.svg>)
 
+# collapsed when no diff
+
+```js
+assert({
+  actual: {
+    a: { foo: true, bar: true, baz: { t: 1 } },
+    b: true,
+  },
+  expected: {
+    a: { foo: true, bar: true, baz: { t: 1 } },
+    b: false,
+  },
+});
+```
+
+![img](<./object/collapsed when no diff.svg>)
+

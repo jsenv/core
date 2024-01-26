@@ -114,6 +114,18 @@ await startSnapshotTesting("object", {
       maxDepth: 5,
     });
   },
+  ["collapsed when no diff"]: () => {
+    assert({
+      actual: {
+        a: { foo: true, bar: true, baz: { t: 1 } },
+        b: true,
+      },
+      expected: {
+        a: { foo: true, bar: true, baz: { t: 1 } },
+        b: false,
+      },
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,

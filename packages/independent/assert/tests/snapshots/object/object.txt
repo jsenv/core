@@ -75,3 +75,12 @@ AssertionError: expected and actual have 1 difference:
   },
 }
 
+# collapsed when no diff
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: { foo: true, bar: true, baz: Object(1) },
+- b: false,
++ b: true,
+}
+
