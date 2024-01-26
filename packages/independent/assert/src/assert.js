@@ -385,9 +385,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (collapsed) {
           if (propertiesOverview) {
             let propertiesDiff = "";
-            let propertyDisplayedCount = 0;
-            let lineWidth = "{  }".length;
-            const remainingEstimatedLength = `...${propertyCount} props`.length;
+            let lineWidth = `{  }`.length;
+            const estimatedCollapsedBoilerplateWidth =
+              `Object(${propertyCount}) , ...`.length;
             for (const property of propertyNames) {
               let propertyDiff = "";
               const propertyNode = node.properties[property];
@@ -417,19 +417,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 });
               }
               lineWidth += stringWidth(propertyDiff);
-              if (lineWidth + remainingEstimatedLength > maxColumns) {
-                const remainingProperties =
-                  propertyCount - propertyDisplayedCount;
-                if (remainingProperties) {
-                  propertiesDiff += ANSI.color(
-                    `...${remainingProperties} props`,
-                    delimitersColor,
-                  );
-                }
+              if (lineWidth + estimatedCollapsedBoilerplateWidth > maxColumns) {
+                compositePrefix = ANSI.color(
+                  `Object(${propertyCount}) {`,
+                  delimitersColor,
+                );
+                compositeSuffix = ANSI.color("}", delimitersColor);
+                propertiesDiff += ANSI.color(",", delimitersColor);
+                propertiesDiff += " ";
+                // here ideally the color should be
+                // red if there is a - in remaining props
+                // green if a + in remaining props
+                // grey otherwise
+                propertiesDiff += ANSI.color(`...`, valueColor);
                 break;
               }
               propertiesDiff += propertyDiff;
-              propertyDisplayedCount++;
             }
             compositeBody += propertiesDiff;
             compositeBody += " ";
