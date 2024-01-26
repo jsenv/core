@@ -99,6 +99,21 @@ await startSnapshotTesting("object", {
       maxDepth: 5,
     });
   },
+  ["maxDepth on diff"]: () => {
+    assert({
+      actual: {
+        foo: {
+          a: { b: { c: { d: { e: { f: {} } } } } },
+        },
+      },
+      expected: {
+        foo: {
+          a: true,
+        },
+      },
+      maxDepth: 5,
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,

@@ -63,3 +63,15 @@ AssertionError: expected and actual have 2 differences:
 },
 
 
+# maxDepth on diff
+AssertionError: expected and actual have 1 difference:
+
+{
+  foo: {
+-   a: true,
++   a: {
++     b: { c: Object(1) },
++   },
+  },
+}
+

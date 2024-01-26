@@ -122,3 +122,23 @@ assert({
 
 ![img](<./object/object should be false at deep property.svg>)
 
+# maxDepth on diff
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: { b: { c: { d: { e: { f: {} } } } } },
+    },
+  },
+  expected: {
+    foo: {
+      a: true,
+    },
+  },
+  maxDepth: 5,
+});
+```
+
+![img](<./object/maxDepth on diff.svg>)
+

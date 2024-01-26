@@ -34,14 +34,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         );
       }
     }
-    const { actual, expected, maxDepth = 5, maxColumns = 100 } = firstArg;
+    const {
+      actual,
+      expected,
+      maxDepth: maxDepthDefault = 5,
+      maxColumns: maxColumnsDefault = 100,
+    } = firstArg;
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
     const counters = {
       total: 0,
       displayed: 0,
     };
-    const nodesWithDiffArray = [];
+    const nodeWithDiffSet = new Set();
 
     const visit = (node) => {
       identity: {
@@ -54,6 +59,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               counters.total++;
             }
             node.diff.identity = true;
+            nodeWithDiffSet.add(node);
             node.diff.counters.self++;
             node.diff.counters.total++;
           }
@@ -87,10 +93,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (added) {
             propertyNode.diff.added = true;
             propertyNode.diff.counters.self++;
+            if (node.before.isComposite) {
+              counters.total++;
+            }
           }
           if (removed) {
             propertyNode.diff.removed = true;
             propertyNode.diff.counters.self++;
+            if (node.after.isComposite) {
+              counters.total++;
+            }
           }
 
           const visitPropertyDescriptor = (descriptorName) => {
@@ -168,24 +180,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
 
       if (node.diff.counters.self) {
-        nodesWithDiffArray.push(node);
+        nodeWithDiffSet.add(node);
       }
     };
     visit(rootComparison);
-    if (nodesWithDiffArray.length === 0) {
+    if (nodeWithDiffSet.size === 0) {
       return;
     }
 
     let signs = true;
     let refId = 1;
     let startNode = rootComparison;
-    // if the first diff is too deep
-    // we'll start, not from the rootComparison, but from a deeper node
-    const firstNodeWithADiff = nodesWithDiffArray[0];
-
-    if (firstNodeWithADiff.depth >= maxDepth && !rootComparison.diff.identity) {
-      const nodesFromRootToTarget = [firstNodeWithADiff];
-      let currentNode = firstNodeWithADiff;
+    const [firstNodeWithDiff] = nodeWithDiffSet;
+    if (
+      firstNodeWithDiff.depth >= maxDepthDefault &&
+      !rootComparison.diff.identity
+    ) {
+      const nodesFromRootToTarget = [firstNodeWithDiff];
+      let currentNode = firstNodeWithDiff;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const parentNode = currentNode.parent;
@@ -196,7 +208,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break;
         }
       }
-      let startNodeDepth = firstNodeWithADiff.depth - maxDepth - 1;
+      let startNodeDepth = firstNodeWithDiff.depth - maxDepthDefault;
       let path = "";
       for (const node of nodesFromRootToTarget) {
         if (
@@ -226,7 +238,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // handle symbols
       return ANSI.color(property, color);
     };
-    const writePropertyDescriptorDiff = (node, { mode, modified }) => {
+    const writePropertyDescriptorDiff = (node, { mode, modified, context }) => {
       if (
         !node.diff.counters.self &&
         isDefaultDescriptor(node.descriptor, node.before.value)
@@ -274,17 +286,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         propertyDescriptorDiff += ANSI.color(":", delimitersColor);
         propertyDescriptorDiff += " ";
       }
+
       const valueDiff = writeValueDiff(node, {
         mode,
         modified,
-        maxWidth: maxColumns - stringWidth(propertyDescriptorDiff) - ",".length,
+        context: {
+          ...context,
+          maxDepth:
+            context.maxDepth === undefined
+              ? mode === "removed" || mode === "added"
+                ? Math.min(node.depth + 1, maxDepthDefault)
+                : undefined
+              : context.maxDepth,
+          maxColumns:
+            maxColumnsDefault -
+            stringWidth(propertyDescriptorDiff) -
+            ",".length,
+        },
       });
       propertyDescriptorDiff += valueDiff;
       propertyDescriptorDiff += ANSI.color(",", delimitersColor);
       propertyDescriptorDiff += "\n";
       return propertyDescriptorDiff;
     };
-    const writeValueDiff = (node, { mode, modified, maxWidth, collapsed }) => {
+    const writeValueDiff = (node, { mode, modified, context }) => {
+      let {
+        maxColumns = maxColumnsDefault,
+        maxDepth = maxDepthDefault,
+        collapsed,
+      } = context;
+
       if (
         !node.parent ||
         (!node.parent.diff.added && !node.parent.diff.removed)
@@ -296,7 +327,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           counters.displayed++;
         }
       }
-
       const valueName = mode === "added" ? "after" : "before";
       const valueInfo = node[valueName];
       const valueColor =
@@ -309,8 +339,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (valueInfo.isPrimitive) {
         const value = valueInfo.value;
         let valueDiff = JSON.stringify(value);
-        if (valueDiff.length > maxWidth) {
-          valueDiff = valueDiff.slice(0, maxWidth);
+        if (valueDiff.length > maxColumns) {
+          valueDiff = valueDiff.slice(0, maxColumns);
           valueDiff += "…";
         }
         return ANSI.color(valueDiff, valueColor);
@@ -345,9 +375,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break properties_diff;
         }
         const propertiesOverview = collapsed !== true;
-        if (collapsed === undefined) {
-          collapsed =
+        if (!collapsed) {
+          const shouldCollapse =
             relativeDepth >= maxDepth || node.diff.counters.total === 0;
+          if (shouldCollapse) {
+            collapsed = context.collapsed = shouldCollapse;
+          }
         }
         if (collapsed) {
           if (propertiesOverview) {
@@ -380,11 +413,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               } else {
                 propertyDiff += writeValueDiff(propertyNode.descriptors.value, {
                   mode,
-                  collapsed: true,
+                  context,
                 });
               }
               lineWidth += stringWidth(propertyDiff);
-              if (lineWidth + remainingEstimatedLength > maxWidth) {
+              if (lineWidth + remainingEstimatedLength > maxColumns) {
                 const remainingProperties =
                   propertyCount - propertyDisplayedCount;
                 if (remainingProperties) {
@@ -412,7 +445,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const descriptorNames = Object.keys(propertyNode.descriptors);
             for (const descriptorName of descriptorNames) {
               const descriptorNode = propertyNode.descriptors[descriptorName];
-              compositeBody += writeDiff(descriptorNode);
+              compositeBody += writeDiff(descriptorNode, context);
             }
           }
           let indent = "  ".repeat(relativeDepth);
@@ -433,34 +466,51 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       compositeDiff += compositeSuffix;
       return compositeDiff;
     };
-    const writeDiff = (node) => {
+    const writeDiff = (node, context) => {
       const method =
         node.type === "property_descriptor"
           ? writePropertyDescriptorDiff
           : writeValueDiff;
 
       if (node.diff.removed) {
-        return method(node, { mode: "removed" });
+        return method(node, {
+          mode: "removed",
+          context,
+        });
       }
       if (node.diff.added) {
-        return method(node, { mode: "added" });
+        return method(node, {
+          mode: "added",
+          context,
+        });
       }
       if (node.diff.identity) {
         if (node === rootComparison) {
           signs = false;
         }
         let identityDiff = "";
-        identityDiff += method(node, { mode: "removed", modified: true });
+        identityDiff += method(node, {
+          mode: "removed",
+          modified: true,
+          context,
+        });
         if (node.type !== "property_descriptor") {
           identityDiff += "\n";
         }
-        identityDiff += method(node, { mode: "added", modified: true });
+        identityDiff += method(node, {
+          mode: "added",
+          modified: true,
+          context,
+        });
         return identityDiff;
       }
-      return method(node, { mode: "traverse" });
+      return method(node, {
+        mode: "traverse",
+        context,
+      });
     };
 
-    let diff = writeDiff(startNode);
+    let diff = writeDiff(startNode, {});
 
     let message;
     if (rootComparison.diff.identity) {
