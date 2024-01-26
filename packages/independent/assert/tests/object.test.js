@@ -126,6 +126,108 @@ await startSnapshotTesting("object", {
       },
     });
   },
+  ["max 2 props above prop diff"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expected: {
+        a: true,
+        b: true,
+        c: true,
+        d: false,
+      },
+    });
+  },
+  ["max 2 props above prop diff and there is exactly 2"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expected: {
+        a: true,
+        b: true,
+        c: false,
+        d: true,
+      },
+    });
+  },
+  ["max 2 props after prop diff"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expected: {
+        a: false,
+        b: true,
+        c: true,
+        d: true,
+      },
+    });
+  },
+  ["max 2 props above after diff and there is exactly 2"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expected: {
+        a: true,
+        b: false,
+        c: true,
+        d: true,
+      },
+    });
+  },
+  ["max 2 props around prop diff"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+        e: true,
+        f: true,
+        g: true,
+        h: true,
+        i: true,
+        j: true,
+        k: true,
+        l: true,
+        m: true,
+        n: true,
+        o: true,
+      },
+      expected: {
+        a: true,
+        b: true,
+        c: true,
+        d: false,
+        e: true,
+        f: true,
+        g: true,
+        h: false,
+        i: true,
+        j: true,
+        k: true,
+        l: false,
+        m: true,
+        n: true,
+        o: true,
+      },
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,

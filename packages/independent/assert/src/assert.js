@@ -442,16 +442,86 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             compositeBody += ANSI.color(`${propertyCount}`, delimitersColor);
           }
         } else {
+          let indent = "  ".repeat(relativeDepth);
           compositeBody += "\n";
-          for (const property of propertyNames) {
+
+          const writePropertyDiff = (property) => {
             const propertyNode = node.properties[property];
             const descriptorNames = Object.keys(propertyNode.descriptors);
             for (const descriptorName of descriptorNames) {
               const descriptorNode = propertyNode.descriptors[descriptorName];
               compositeBody += writeDiff(descriptorNode, context);
             }
+          };
+
+          let index = 0;
+          const maxPropertyAbove = 2;
+          const maxPropertyBelow = 2;
+          const propertySkippedArray = [];
+          let propertyDiffCount = 0;
+          while (index < propertyNames.length) {
+            const property = propertyNames[index];
+            index++;
+            const propertyNode = node.properties[property];
+            if (propertyNode.diff.counters.total) {
+              propertyDiffCount++;
+              // first write property eventually skipped
+              const propertySkippedCount = propertySkippedArray.length;
+              if (propertySkippedCount) {
+                if (propertySkippedCount > maxPropertyAbove) {
+                  const previousPropertyToDisplayArray =
+                    propertySkippedArray.slice(-(maxPropertyAbove - 1));
+                  const propertyAboveCount = propertySkippedCount - 1;
+                  const arrowSign = propertyDiffCount > 1 ? `↕` : `↑`;
+                  compositeBody += `${indent}  `;
+
+                  compositeBody += ANSI.color(
+                    `${arrowSign} ${propertyAboveCount} props ${arrowSign}`,
+                    delimitersColor,
+                  );
+                  compositeBody += "\n";
+                  for (const previousPropertyToDisplay of previousPropertyToDisplayArray) {
+                    writePropertyDiff(previousPropertyToDisplay);
+                  }
+                } else {
+                  for (const previousPropertyToDisplay of propertySkippedArray) {
+                    writePropertyDiff(previousPropertyToDisplay);
+                  }
+                }
+                propertySkippedArray.length = 0;
+              }
+              writePropertyDiff(property);
+              continue;
+            }
+            propertySkippedArray.push(property);
+            // property does not have a diff
+            // maybe it should be skipped
           }
-          let indent = "  ".repeat(relativeDepth);
+          // now display the property below
+          const propertySkippedCount = propertySkippedArray.length;
+          if (propertySkippedCount) {
+            if (propertySkippedCount > maxPropertyBelow) {
+              const nextPropertyToDisplayArray = propertySkippedArray.slice(
+                0,
+                maxPropertyBelow - 1,
+              );
+              for (const nextPropertyToDisplay of nextPropertyToDisplayArray) {
+                writePropertyDiff(nextPropertyToDisplay);
+              }
+              const propertyBelowCount = propertySkippedCount - 1;
+              compositeBody += `${indent}  `;
+              compositeBody += ANSI.color(
+                `↓ ${propertyBelowCount} props ↓`,
+                delimitersColor,
+              );
+              compositeBody += "\n";
+            } else {
+              for (const nextPropertyToDisplay of propertySkippedArray) {
+                writePropertyDiff(nextPropertyToDisplay);
+              }
+            }
+          }
+
           if (signs) {
             if (mode === "added") {
               compositeBody += ANSI.color("+", ANSI.GREEN);

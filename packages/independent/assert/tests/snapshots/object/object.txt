@@ -84,3 +84,65 @@ AssertionError: expected and actual have 1 difference:
 + b: true,
 }
 
+# max 2 props above prop diff
+AssertionError: expected and actual have 1 difference:
+
+{
+  ↑ 2 props ↑
+  c: true,
+- d: false,
++ d: true,
+}
+
+# max 2 props above prop diff and there is exactly 2
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: true,
+  b: true,
+- c: false,
++ c: true,
+  d: true,
+}
+
+# max 2 props after prop diff
+AssertionError: expected and actual have 1 difference:
+
+{
+- a: false,
++ a: true,
+  b: true,
+  ↓ 2 props ↓
+}
+
+# max 2 props above after diff and there is exactly 2
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: true,
+- b: false,
++ b: true,
+  c: true,
+  d: true,
+}
+
+# max 2 props around prop diff
+AssertionError: expected and actual have 3 differences:
+
+{
+  ↑ 2 props ↑
+  c: true,
+- d: false,
++ d: true,
+  ↕ 2 props ↕
+  g: true,
+- h: false,
++ h: true,
+  ↕ 2 props ↕
+  k: true,
+- l: false,
++ l: true,
+  m: true,
+  ↓ 2 props ↓
+}
+
