@@ -13,8 +13,14 @@ assert({
 
 ```js
 assert({
-  actual: { a: true, b: true },
-  expected: { a: false, b: false },
+  actual: {
+    a: true,
+    b: true,
+  },
+  expected: {
+    a: false,
+    b: false,
+  },
 });
 ```
 
@@ -285,4 +291,24 @@ assert({
 ```
 
 ![img](<./object/max 2 props around prop diff.svg>)
+
+# max X diff per object
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+  },
+  expected: {
+    a: false,
+    b: false,
+    c: false,
+  },
+  maxDiffPerObject: 2,
+});
+```
+
+![img](<./object/max X diff per object.svg>)
 

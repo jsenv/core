@@ -62,28 +62,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           (!node.parent.diff.added && !node.parent.diff.removed)
         ) {
           globalDiffCounters.total++;
+          node.diff.counters.self.removal++;
+          node.diff.counters.self.addition++;
         }
-        node.diff.counters.self.removal++;
-        node.diff.counters.self.addition++;
-      };
-      const onPropertyDescriptorDiff = (
-        propertyDescriptorNode,
-        propertyNode,
-      ) => {
-        propertyNode.diff[propertyDescriptorNode.descriptor] =
-          propertyDescriptorNode.diff;
-        appendCounters(
-          propertyNode.diff.counters.self,
-          propertyDescriptorNode.diff.counters.self,
-        );
-        appendCounters(
-          propertyNode.diff.counters.inside,
-          propertyDescriptorNode.diff.counters.inside,
-        );
-        appendCounters(
-          propertyNode.diff.counters.overall,
-          propertyDescriptorNode.diff.counters.overall,
-        );
       };
 
       identity: {
@@ -150,7 +131,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               descriptorNode.diff.removed = true;
             }
             visit(descriptorNode);
-            onPropertyDescriptorDiff(descriptorNode, propertyNode);
+
+            propertyNode.diff[descriptorNode.descriptor] = descriptorNode.diff;
+            appendCounters(
+              propertyNode.diff.counters.self,
+              descriptorNode.diff.counters.self,
+            );
+            appendCounters(
+              propertyNode.diff.counters.inside,
+              descriptorNode.diff.counters.inside,
+            );
+            appendCounters(
+              propertyNode.diff.counters.overall,
+              descriptorNode.diff.counters.overall,
+            );
           };
 
           visitPropertyDescriptor("value");
@@ -499,6 +493,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const propertyNode = node.properties[property];
             if (propertyNode.diff.counters.overall.any) {
               propertyDiffCount++;
+              // too many diff
               if (propertyDiffCount > maxDiffPerObject) {
                 skippedCounters.total++;
                 skippedCounters.removal +=
@@ -520,11 +515,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                     propertyWithoutDiffSkippedCount - 1;
                   const arrowSign = propertyDiffCount > 1 ? `↕` : `↑`;
                   compositeBody += `${indent}  `;
-
                   compositeBody += ANSI.color(
                     `${arrowSign} ${propertyAboveCount} props ${arrowSign}`,
                     delimitersColor,
                   );
+                  skippedCounters.total -= propertyAboveCount;
                   compositeBody += "\n";
                   for (const previousPropertyToDisplay of previousPropertyToDisplayArray) {
                     skippedCounters.total--;
@@ -555,8 +550,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (propertyWithoutDiffSkippedCount > maxPropertyBelow) {
               const nextPropertyToDisplayArray =
                 propertyWithoutDiffSkippedArray.slice(0, maxPropertyBelow - 1);
-              skippedCounters.total--;
-              belowSummary += `${skippedCounters.total} props`;
               for (const nextPropertyToDisplay of nextPropertyToDisplayArray) {
                 skippedCounters.total--;
                 writePropertyDiff(nextPropertyToDisplay);
@@ -568,27 +561,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
             }
           }
+          if (skippedCounters.total) {
+            belowSummary += ANSI.color(
+              skippedCounters.total === 1
+                ? `1 prop`
+                : `${skippedCounters.total} props`,
+              delimitersColor,
+            );
+          }
           if (skippedCounters.removal) {
             if (belowSummary.length) {
               belowSummary += " ";
             }
-            belowSummary += ANSI.color(
-              `- ${skippedCounters.removal}`,
-              ANSI.RED,
-            );
+            belowSummary += ANSI.color(`-${skippedCounters.removal}`, ANSI.RED);
           }
           if (skippedCounters.addition) {
-            if (belowSummary.length) {
-              belowSummary += " ";
-            }
+            // if (belowSummary.length) {
+            //   belowSummary += " ";
+            // }
             belowSummary += ANSI.color(
-              `+ ${skippedCounters.addition}`,
+              `+${skippedCounters.addition}`,
               ANSI.GREEN,
             );
           }
           if (belowSummary) {
             compositeBody += `${indent}  `;
-            compositeBody += ANSI.color(`↓ ${belowSummary} ↓`, delimitersColor);
+            compositeBody += ANSI.color(`↓`, delimitersColor);
+            compositeBody += " ";
+            compositeBody += belowSummary;
+            compositeBody += " ";
+            compositeBody += ANSI.color(`↓`, delimitersColor);
             compositeBody += "\n";
           }
 

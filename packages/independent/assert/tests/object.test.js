@@ -13,8 +13,14 @@ await startSnapshotTesting("object", {
   },
   ["two properties are different"]: () => {
     assert({
-      actual: { a: true, b: true },
-      expected: { a: false, b: false },
+      actual: {
+        a: true,
+        b: true,
+      },
+      expected: {
+        a: false,
+        b: false,
+      },
     });
   },
   ["false should be an object at property"]: () => {
@@ -226,6 +232,21 @@ await startSnapshotTesting("object", {
         n: true,
         o: true,
       },
+    });
+  },
+  ["max X diff per object"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+      },
+      expected: {
+        a: false,
+        b: false,
+        c: false,
+      },
+      maxDiffPerObject: 2,
     });
   },
   // nested_object_becomes_false: () => {

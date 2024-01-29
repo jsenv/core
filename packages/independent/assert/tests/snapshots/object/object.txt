@@ -146,3 +146,16 @@ AssertionError: expected and actual have 3 differences:
   ↓ 2 props ↓
 }
 
+# max X diff per object
+AssertionError: expected and actual have 3 differences:
+
+ℹ to improve readability only 2 diffs are displayed
+
+{
+- a: false,
++ a: true,
+- b: false,
++ b: true,
+  ↓ 1 prop -1+1 ↓
+}
+
