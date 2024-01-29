@@ -162,8 +162,6 @@ AssertionError: expected and actual have 3 differences:
 # property should be there
 AssertionError: expected and actual have 1 difference:
 
-ℹ to improve readability only 0 diffs are displayed
-
 {
   a: true,
 - should_be_there: true,

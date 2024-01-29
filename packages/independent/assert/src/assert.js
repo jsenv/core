@@ -43,11 +43,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     } = firstArg;
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
-    const globalDiffCounters = {
+    const causeCounters = {
       total: 0,
       displayed: 0,
     };
-    const nodeWithDiffSet = new Set();
+    const causeSet = new Set();
+    const addNodeCausingDiff = (node) => {
+      causeCounters.total++;
+      causeSet.add(node);
+    };
 
     const settleCounters = (node) => {
       const { counters } = node.diff;
@@ -72,14 +76,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           node.diff.removed = true;
           if (node.parent.after.isComposite) {
             node.diff.counters.self.removal++;
-            globalDiffCounters.total++;
+            addNodeCausingDiff(node);
           }
         }
         if (added) {
           node.diff.added = true;
           if (node.parent.before.isComposite) {
             node.diff.counters.self.addition++;
-            globalDiffCounters.total++;
+            addNodeCausingDiff(node);
           }
         }
         const visitPropertyDescriptor = (descriptorName) => {
@@ -126,7 +130,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             !node.parent ||
             (!node.parent.diff.added && !node.parent.diff.removed)
           ) {
-            globalDiffCounters.total++;
+            addNodeCausingDiff(node);
             node.diff.counters.self.removal++;
             node.diff.counters.self.addition++;
           }
@@ -202,25 +206,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
 
       settleCounters(node);
-      if (node.diff.counters.self.any) {
-        nodeWithDiffSet.add(node);
-      }
     };
     visit(rootComparison);
-    if (nodeWithDiffSet.size === 0) {
+    if (causeSet.size === 0) {
       return;
     }
 
     let signs = true;
     let refId = 1;
     let startNode = rootComparison;
-    const [firstNodeWithDiff] = nodeWithDiffSet;
+    const [firstNodeCausingDiff] = causeSet;
     if (
-      firstNodeWithDiff.depth >= maxDepthDefault &&
+      firstNodeCausingDiff.depth >= maxDepthDefault &&
       !rootComparison.diff.identity
     ) {
-      const nodesFromRootToTarget = [firstNodeWithDiff];
-      let currentNode = firstNodeWithDiff;
+      const nodesFromRootToTarget = [firstNodeCausingDiff];
+      let currentNode = firstNodeCausingDiff;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const parentNode = currentNode.parent;
@@ -231,7 +232,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break;
         }
       }
-      let startNodeDepth = firstNodeWithDiff.depth - maxDepthDefault;
+      let startNodeDepth = firstNodeCausingDiff.depth - maxDepthDefault;
       let path = "";
       for (const node of nodesFromRootToTarget) {
         if (
@@ -332,24 +333,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       propertyDescriptorDiff += "\n";
       return propertyDescriptorDiff;
     };
-    const writeValueDiff = (node, { mode, modified, context }) => {
+    const writeValueDiff = (node, { mode, context }) => {
       let {
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
       } = context;
 
-      if (
-        !node.parent ||
-        (!node.parent.diff.added && !node.parent.diff.removed)
-      ) {
-        if (mode === "removed") {
-          globalDiffCounters.displayed++;
-        }
-        if (mode === "added" && !modified) {
-          globalDiffCounters.displayed++;
-        }
+      if (causeSet.has(node)) {
+        causeSet.delete(node);
+        causeCounters.displayed++;
+      } else if (causeSet.has(node.parent)) {
+        causeSet.delete(node.parent);
+        causeCounters.displayed++;
       }
+
       const valueName = mode === "added" ? "after" : "before";
       const valueInfo = node[valueName];
       const valueColor =
@@ -661,21 +659,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     if (rootComparison.diff.identity) {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different`;
     } else {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${globalDiffCounters.total} ${globalDiffCounters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
     const infos = [];
-    const diffNotDisplayed =
-      globalDiffCounters.total - globalDiffCounters.displayed;
+    const diffNotDisplayed = causeCounters.total - causeCounters.displayed;
     if (diffNotDisplayed) {
-      if (globalDiffCounters.displayed === 1) {
+      if (causeCounters.displayed === 1) {
         infos.push(
-          `to improve readability only ${globalDiffCounters.displayed} diff is displayed`,
+          `to improve readability only ${causeCounters.displayed} diff is displayed`,
         );
       } else {
         infos.push(
-          `to improve readability only ${globalDiffCounters.displayed} diffs are displayed`,
+          `to improve readability only ${causeCounters.displayed} diffs are displayed`,
         );
       }
     }
