@@ -42,9 +42,9 @@
     >
       <g>
         <text x="10" y="14.55">AssertionError: </text>
-        <text x="144.42" y="14.55" fill="#cd5555">expected</text>
+        <text x="144.42" y="14.55" fill="#11bc79">expected</text>
         <text x="220.03" y="14.55"> and </text>
-        <text x="253.64" y="14.55" fill="#11bc79">actual</text>
+        <text x="253.64" y="14.55" fill="#cd5555">actual</text>
         <text x="312.45" y="14.55"> have 8 differences:</text>
         <text x="10" y="52.55" fill="#4169E1">&#x2139;</text>
         <text x="26.8" y="52.55">
@@ -58,41 +58,41 @@
         <text x="26.8" y="128.55" fill="#7f7f7f">c</text>
         <text x="35.2" y="128.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="128.55" fill="#7f7f7f">{</text>
-        <text x="10" y="147.55" fill="#11bc79">+</text>
-        <text x="43.61" y="147.55" fill="#11bc79">an_object</text>
-        <text x="119.22" y="147.55" fill="#11bc79">:</text>
-        <text x="136.02" y="147.55" fill="#11bc79">true</text>
-        <text x="169.63" y="147.55" fill="#11bc79">,</text>
-        <text x="10" y="166.55" fill="#11bc79">+</text>
-        <text x="43.61" y="166.55" fill="#11bc79">and</text>
-        <text x="68.81" y="166.55" fill="#11bc79">:</text>
-        <text x="85.61" y="166.55" fill="#11bc79">true</text>
-        <text x="119.22" y="166.55" fill="#11bc79">,</text>
+        <text x="10" y="147.55" fill="#cd5555">+</text>
+        <text x="43.61" y="147.55" fill="#cd5555">an_object</text>
+        <text x="119.22" y="147.55" fill="#cd5555">:</text>
+        <text x="136.02" y="147.55" fill="#cd5555">true</text>
+        <text x="169.63" y="147.55" fill="#cd5555">,</text>
+        <text x="10" y="166.55" fill="#cd5555">+</text>
+        <text x="43.61" y="166.55" fill="#cd5555">and</text>
+        <text x="68.81" y="166.55" fill="#cd5555">:</text>
+        <text x="85.61" y="166.55" fill="#cd5555">true</text>
+        <text x="119.22" y="166.55" fill="#cd5555">,</text>
         <text x="26.8" y="185.55" fill="#7f7f7f">}</text>
         <text x="35.2" y="185.55" fill="#7f7f7f">,</text>
-        <text x="10" y="204.55" fill="#11bc79">+</text>
-        <text x="26.8" y="204.55" fill="#11bc79">b</text>
-        <text x="35.2" y="204.55" fill="#11bc79">:</text>
-        <text x="52.01" y="204.55" fill="#11bc79">true</text>
-        <text x="85.61" y="204.55" fill="#11bc79">,</text>
-        <text x="10" y="223.55" fill="#11bc79">+</text>
-        <text x="26.8" y="223.55" fill="#11bc79">d</text>
-        <text x="35.2" y="223.55" fill="#11bc79">:</text>
-        <text x="52.01" y="223.55" fill="#11bc79">true</text>
-        <text x="85.61" y="223.55" fill="#11bc79">,</text>
-        <text x="10" y="242.55" fill="#11bc79">+</text>
-        <text x="26.8" y="242.55" fill="#11bc79">e</text>
-        <text x="35.2" y="242.55" fill="#11bc79">:</text>
-        <text x="52.01" y="242.55" fill="#11bc79">true</text>
-        <text x="85.61" y="242.55" fill="#11bc79">,</text>
-        <text x="10" y="261.55" fill="#11bc79">+</text>
-        <text x="26.8" y="261.55" fill="#11bc79">f</text>
-        <text x="35.2" y="261.55" fill="#11bc79">:</text>
-        <text x="52.01" y="261.55" fill="#11bc79">true</text>
-        <text x="85.61" y="261.55" fill="#11bc79">,</text>
+        <text x="10" y="204.55" fill="#cd5555">+</text>
+        <text x="26.8" y="204.55" fill="#cd5555">b</text>
+        <text x="35.2" y="204.55" fill="#cd5555">:</text>
+        <text x="52.01" y="204.55" fill="#cd5555">true</text>
+        <text x="85.61" y="204.55" fill="#cd5555">,</text>
+        <text x="10" y="223.55" fill="#cd5555">+</text>
+        <text x="26.8" y="223.55" fill="#cd5555">d</text>
+        <text x="35.2" y="223.55" fill="#cd5555">:</text>
+        <text x="52.01" y="223.55" fill="#cd5555">true</text>
+        <text x="85.61" y="223.55" fill="#cd5555">,</text>
+        <text x="10" y="242.55" fill="#cd5555">+</text>
+        <text x="26.8" y="242.55" fill="#cd5555">e</text>
+        <text x="35.2" y="242.55" fill="#cd5555">:</text>
+        <text x="52.01" y="242.55" fill="#cd5555">true</text>
+        <text x="85.61" y="242.55" fill="#cd5555">,</text>
+        <text x="10" y="261.55" fill="#cd5555">+</text>
+        <text x="26.8" y="261.55" fill="#cd5555">f</text>
+        <text x="35.2" y="261.55" fill="#cd5555">:</text>
+        <text x="52.01" y="261.55" fill="#cd5555">true</text>
+        <text x="85.61" y="261.55" fill="#cd5555">,</text>
         <text x="26.8" y="280.55" fill="#7f7f7f">&#x2193;</text>
         <text x="43.61" y="280.55" fill="#7f7f7f">2 props</text>
-        <text x="110.82" y="280.55" fill="#11bc79">+2</text>
+        <text x="110.82" y="280.55" fill="#cd5555">+2</text>
         <text x="136.02" y="280.55" fill="#7f7f7f">&#x2193;</text>
         <text x="10" y="299.55" fill="#7f7f7f">}</text>
       </g>

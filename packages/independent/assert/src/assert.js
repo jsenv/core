@@ -2,6 +2,12 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
+const colorForExpected = ANSI.GREEN;
+const colorForUnexpected = ANSI.RED;
+const colorForSame = ANSI.GREY;
+const removedSign = "-";
+const addedSign = "+";
+
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
     // param validation
@@ -280,23 +286,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return "";
         }
         if (signs) {
-          propertyDescriptorDiff += ANSI.color("-", ANSI.RED);
+          propertyDescriptorDiff += ANSI.color(removedSign, colorForExpected);
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = modified ? ANSI.GREY : ANSI.RED;
+        keyColor = delimitersColor = modified ? colorForSame : colorForExpected;
       }
       if (mode === "added") {
         if (isDefaultDescriptor(node.descriptor, node.after.value)) {
           return "";
         }
         if (signs) {
-          propertyDescriptorDiff += ANSI.color("+", ANSI.GREEN);
+          propertyDescriptorDiff += ANSI.color(addedSign, colorForUnexpected);
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = modified ? ANSI.GREY : ANSI.GREEN;
+        keyColor = delimitersColor = modified
+          ? colorForSame
+          : colorForUnexpected;
       }
       if (mode === "traverse") {
-        keyColor = delimitersColor = ANSI.GREY;
+        keyColor = delimitersColor = colorForSame;
       }
 
       propertyDescriptorDiff += indent;
@@ -313,7 +321,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       const valueDiff = writeValueDiff(node, {
         mode,
-        modified,
         context: {
           ...context,
           maxDepth:
@@ -335,6 +342,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const writeValueDiff = (node, { mode, context }) => {
       let {
+        // modified,
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
@@ -352,10 +360,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const valueInfo = node[valueName];
       const valueColor =
         mode === "removed"
-          ? ANSI.RED
+          ? colorForExpected
           : mode === "added"
-            ? ANSI.GREEN
-            : ANSI.GREY;
+            ? colorForUnexpected
+            : colorForSame;
       // primitive
       if (valueInfo.isPrimitive) {
         const value = valueInfo.value;
@@ -370,10 +378,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // composite
       const delimitersColor =
         mode === "removed"
-          ? ANSI.RED
+          ? colorForExpected
           : mode === "added"
-            ? ANSI.GREEN
-            : ANSI.GREY;
+            ? colorForUnexpected
+            : colorForSame;
       let compositeDiff = "";
       if (valueInfo.reference) {
         compositeDiff += ANSI.color(
@@ -571,15 +579,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (belowSummary.length) {
               belowSummary += " ";
             }
-            belowSummary += ANSI.color(`-${skippedCounters.removal}`, ANSI.RED);
+            belowSummary += ANSI.color(
+              `${removedSign}${skippedCounters.removal}`,
+              colorForExpected,
+            );
           }
           if (skippedCounters.addition) {
             if (belowSummary.length && !skippedCounters.removal) {
               belowSummary += " ";
             }
             belowSummary += ANSI.color(
-              `+${skippedCounters.addition}`,
-              ANSI.GREEN,
+              `${addedSign}${skippedCounters.addition}`,
+              colorForUnexpected,
             );
           }
           if (belowSummary) {
@@ -593,11 +604,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
 
           if (signs) {
-            if (mode === "added") {
-              compositeBody += ANSI.color("+", ANSI.GREEN);
+            if (mode === "removed") {
+              compositeBody += ANSI.color(removedSign, colorForExpected);
               indent = indent.slice(1);
-            } else if (mode === "removed") {
-              compositeBody += ANSI.color("-", ANSI.RED);
+            } else if (mode === "added") {
+              compositeBody += ANSI.color(addedSign, colorForUnexpected);
               indent = indent.slice(1);
             }
           }
@@ -635,7 +646,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         identityDiff += method(node, {
           mode: "removed",
           modified: true,
-          context,
+          context: {
+            ...context,
+          },
         });
         if (node.type !== "property_descriptor") {
           identityDiff += "\n";
@@ -643,7 +656,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         identityDiff += method(node, {
           mode: "added",
           modified: true,
-          context,
+          context: {
+            ...context,
+          },
         });
         return identityDiff;
       }
@@ -657,9 +672,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     let message;
     if (rootComparison.diff.identity) {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different`;
+      message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} are different`;
     } else {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
