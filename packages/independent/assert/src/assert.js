@@ -49,6 +49,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const nodeWithDiffSet = new Set();
 
+    const settleCounters = (node) => {
+      const { counters } = node.diff;
+      const { self, inside, overall } = counters;
+      self.any = self.removal + self.addition;
+      inside.any = inside.removal + inside.addition;
+      overall.removal = self.removal + inside.removal;
+      overall.addition = self.addition + inside.addition;
+      overall.any = self.any + inside.any;
+    };
     const appendCounters = (counter, otherCounter) => {
       counter.any += otherCounter.any;
       counter.removal += otherCounter.removal;
@@ -56,152 +65,143 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
 
     const visit = (node) => {
-      const onSelfDiff = () => {
-        if (
-          !node.parent ||
-          (!node.parent.diff.added && !node.parent.diff.removed)
-        ) {
-          globalDiffCounters.total++;
-          node.diff.counters.self.removal++;
-          node.diff.counters.self.addition++;
+      if (node.type === "property") {
+        const removed = !node.after.value;
+        const added = !node.before.value;
+        if (removed) {
+          node.diff.removed = true;
+          if (node.parent.after.isComposite) {
+            node.diff.counters.self.removal++;
+            globalDiffCounters.total++;
+          }
         }
-      };
+        if (added) {
+          node.diff.added = true;
+          if (node.parent.before.isComposite) {
+            node.diff.counters.self.addition++;
+            globalDiffCounters.total++;
+          }
+        }
+        const visitPropertyDescriptor = (descriptorName) => {
+          const descriptorBeforeValue = added
+            ? undefined
+            : node.before.value[descriptorName];
+          const descriptorAfterValue = removed
+            ? undefined
+            : node.after.value[descriptorName];
+          const descriptorNode = node.appendPropertyDescriptor(descriptorName, {
+            beforeValue: descriptorBeforeValue,
+            afterValue: descriptorAfterValue,
+          });
+          if (added) {
+            descriptorNode.diff.added = true;
+          } else if (removed) {
+            descriptorNode.diff.removed = true;
+          }
+          visit(descriptorNode);
 
-      identity: {
-        if (node.before.isPrimitive || node.after.isPrimitive) {
-          if (node.before.value !== node.after.value) {
-            node.diff.identity = true;
+          node.diff[descriptorNode.descriptor] = descriptorNode.diff;
+          appendCounters(
+            node.diff.counters.self,
+            descriptorNode.diff.counters.self,
+          );
+          appendCounters(
+            node.diff.counters.inside,
+            descriptorNode.diff.counters.inside,
+          );
+          appendCounters(
+            node.diff.counters.overall,
+            descriptorNode.diff.counters.overall,
+          );
+        };
+        visitPropertyDescriptor("value");
+        visitPropertyDescriptor("enumerable");
+        visitPropertyDescriptor("writable");
+        visitPropertyDescriptor("configurable");
+        visitPropertyDescriptor("set");
+        visitPropertyDescriptor("get");
+      } else {
+        const onSelfDiff = () => {
+          if (
+            !node.parent ||
+            (!node.parent.diff.added && !node.parent.diff.removed)
+          ) {
+            globalDiffCounters.total++;
+            node.diff.counters.self.removal++;
+            node.diff.counters.self.addition++;
+          }
+        };
+
+        identity: {
+          if (node.before.isPrimitive || node.after.isPrimitive) {
+            if (node.before.value !== node.after.value) {
+              node.diff.identity = true;
+              onSelfDiff();
+            }
+          }
+        }
+        reference: {
+          if (node.before.reference !== node.after.reference) {
+            node.diff.reference = true;
             onSelfDiff();
           }
         }
-      }
-      reference: {
-        if (node.before.reference !== node.after.reference) {
-          node.diff.reference = true;
-          onSelfDiff();
-        }
-      }
-      properties: {
-        // here we want to traverse before and after but if they are not composite
-        // we'll consider everything as removed or added, depending the scenario
-        const visitProperty = (property) => {
-          const beforePropertyDescriptor = node.before.isComposite
-            ? Object.getOwnPropertyDescriptor(node.before.value, property)
-            : null;
-          const afterPropertyDescriptor = node.after.isComposite
-            ? Object.getOwnPropertyDescriptor(node.after.value, property)
-            : null;
-          const propertyNode = node.appendProperty(property, {
-            beforeValue: beforePropertyDescriptor,
-            afterValue: afterPropertyDescriptor,
-          });
-
-          const removed = !afterPropertyDescriptor;
-          const added = !beforePropertyDescriptor;
-          if (removed) {
-            propertyNode.diff.removed = true;
-            if (node.after.isComposite) {
-              globalDiffCounters.total++;
-            }
-          }
-          if (added) {
-            propertyNode.diff.added = true;
-            if (node.before.isComposite) {
-              globalDiffCounters.total++;
-            }
-          }
-
-          const visitPropertyDescriptor = (descriptorName) => {
-            const descriptorBeforeValue = added
-              ? undefined
-              : beforePropertyDescriptor[descriptorName];
-            const descriptorAfterValue = removed
-              ? undefined
-              : afterPropertyDescriptor[descriptorName];
-            const descriptorNode = propertyNode.appendPropertyDescriptor(
-              descriptorName,
-              {
-                beforeValue: descriptorBeforeValue,
-                afterValue: descriptorAfterValue,
-              },
-            );
-            if (added) {
-              descriptorNode.diff.added = true;
-            } else if (removed) {
-              descriptorNode.diff.removed = true;
-            }
-            visit(descriptorNode);
-
-            propertyNode.diff[descriptorNode.descriptor] = descriptorNode.diff;
+        properties: {
+          // here we want to traverse before and after but if they are not composite
+          // we'll consider everything as removed or added, depending the scenario
+          const visitProperty = (property) => {
+            const beforePropertyDescriptor = node.before.isComposite
+              ? Object.getOwnPropertyDescriptor(node.before.value, property)
+              : null;
+            const afterPropertyDescriptor = node.after.isComposite
+              ? Object.getOwnPropertyDescriptor(node.after.value, property)
+              : null;
+            const propertyNode = node.appendProperty(property, {
+              beforeValue: beforePropertyDescriptor,
+              afterValue: afterPropertyDescriptor,
+            });
+            visit(propertyNode);
             appendCounters(
-              propertyNode.diff.counters.self,
-              descriptorNode.diff.counters.self,
-            );
-            appendCounters(
-              propertyNode.diff.counters.inside,
-              descriptorNode.diff.counters.inside,
-            );
-            appendCounters(
+              node.diff.counters.inside,
               propertyNode.diff.counters.overall,
-              descriptorNode.diff.counters.overall,
             );
           };
-
-          visitPropertyDescriptor("value");
-          visitPropertyDescriptor("enumerable");
-          visitPropertyDescriptor("writable");
-          visitPropertyDescriptor("configurable");
-          visitPropertyDescriptor("set");
-          visitPropertyDescriptor("get");
-          appendCounters(
-            node.diff.counters.inside,
-            propertyNode.diff.counters.overall,
-          );
-        };
-        if (
-          node.before.isComposite &&
-          // node.after.value is a reference: was already traversed
-          // - prevent infinite recursion for circular structure
-          // - prevent traversing a structure already known
-          !node.before.reference
-        ) {
-          const beforePropertyNames = Object.getOwnPropertyNames(
-            node.before.value,
-          );
-          for (const beforePropertyName of beforePropertyNames) {
-            visitProperty(beforePropertyName);
-          }
-        }
-        if (
-          node.after.isComposite &&
-          // node.after.value is a reference: was already traversed
-          // - prevent infinite recursion for circular structure
-          // - prevent traversing a structure already known
-          !node.after.reference
-        ) {
-          const afterPropertyNames = Object.getOwnPropertyNames(
-            node.after.value,
-          );
-          for (const afterPropertyName of afterPropertyNames) {
-            if (node.properties[afterPropertyName]) {
-              // already visited
-              continue;
+          if (
+            node.before.isComposite &&
+            // node.after.value is a reference: was already traversed
+            // - prevent infinite recursion for circular structure
+            // - prevent traversing a structure already known
+            !node.before.reference
+          ) {
+            const beforePropertyNames = Object.getOwnPropertyNames(
+              node.before.value,
+            );
+            for (const beforePropertyName of beforePropertyNames) {
+              visitProperty(beforePropertyName);
             }
-            visitProperty(afterPropertyName);
+          }
+          if (
+            node.after.isComposite &&
+            // node.after.value is a reference: was already traversed
+            // - prevent infinite recursion for circular structure
+            // - prevent traversing a structure already known
+            !node.after.reference
+          ) {
+            const afterPropertyNames = Object.getOwnPropertyNames(
+              node.after.value,
+            );
+            for (const afterPropertyName of afterPropertyNames) {
+              if (node.properties[afterPropertyName]) {
+                // already visited
+                continue;
+              }
+              visitProperty(afterPropertyName);
+            }
           }
         }
       }
 
-      node.diff.counters.self.any =
-        node.diff.counters.self.removal + node.diff.counters.self.addition;
-      node.diff.counters.inside.any =
-        node.diff.counters.inside.removal + node.diff.counters.inside.addition;
-      node.diff.counters.overall.removal =
-        node.diff.counters.self.removal + node.diff.counters.inside.removal;
-      node.diff.counters.overall.addition =
-        node.diff.counters.self.addition + node.diff.counters.inside.addition;
-      node.diff.counters.overall.any =
-        node.diff.counters.self.any + node.diff.counters.inside.any;
+      settleCounters(node);
       if (node.diff.counters.self.any) {
         nodeWithDiffSet.add(node);
       }

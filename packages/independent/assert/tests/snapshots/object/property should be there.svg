@@ -46,24 +46,20 @@
         <text x="220.03" y="14.55"> and </text>
         <text x="253.64" y="14.55" fill="#11bc79">actual</text>
         <text x="312.45" y="14.55"> have 1 difference:</text>
-        <text x="10" y="52.55" fill="#7f7f7f">{</text>
-        <text x="10" y="71.55" fill="#cd5555">-</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="71.55" fill="#7f7f7f">:</text>
-        <text x="52.01" y="71.55" fill="#cd5555">false</text>
-        <text x="94.01" y="71.55" fill="#7f7f7f">,</text>
-        <text x="10" y="90.55" fill="#11bc79">+</text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="90.55" fill="#7f7f7f">:</text>
-        <text x="52.01" y="90.55" fill="#11bc79">true</text>
-        <text x="85.61" y="90.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="109.55" fill="#7f7f7f">b</text>
+        <text x="10" y="52.55" fill="#4169E1">&#x2139;</text>
+        <text x="26.8" y="52.55">
+          to improve readability only 0 diffs are displayed</text
+        >
+        <text x="10" y="90.55" fill="#7f7f7f">{</text>
+        <text x="26.8" y="109.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="109.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="109.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="109.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="43.61" y="128.55" fill="#7f7f7f">2 props</text>
-        <text x="110.82" y="128.55" fill="#7f7f7f">&#x2193;</text>
+        <text x="10" y="128.55" fill="#cd5555">-</text>
+        <text x="26.8" y="128.55" fill="#cd5555">should_be_there</text>
+        <text x="152.82" y="128.55" fill="#cd5555">:</text>
+        <text x="169.63" y="128.55" fill="#cd5555">true</text>
+        <text x="203.23" y="128.55" fill="#cd5555">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

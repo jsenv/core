@@ -249,6 +249,17 @@ await startSnapshotTesting("object", {
       maxDiffPerObject: 2,
     });
   },
+  ["property should be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+      },
+      expected: {
+        a: true,
+        should_be_there: true,
+      },
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,
