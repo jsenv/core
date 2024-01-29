@@ -39,37 +39,65 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       expected,
       maxDepth: maxDepthDefault = 5,
       maxColumns: maxColumnsDefault = 100,
+      maxDiffPerObject = 5,
     } = firstArg;
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
-    const counters = {
+    const globalDiffCounters = {
       total: 0,
       displayed: 0,
     };
     const nodeWithDiffSet = new Set();
 
+    const appendCounters = (counter, otherCounter) => {
+      counter.any += otherCounter.any;
+      counter.removal += otherCounter.removal;
+      counter.addition += otherCounter.addition;
+    };
+
     const visit = (node) => {
+      const onSelfDiff = () => {
+        if (
+          !node.parent ||
+          (!node.parent.diff.added && !node.parent.diff.removed)
+        ) {
+          globalDiffCounters.total++;
+        }
+        node.diff.counters.self.removal++;
+        node.diff.counters.self.addition++;
+      };
+      const onPropertyDescriptorDiff = (
+        propertyDescriptorNode,
+        propertyNode,
+      ) => {
+        propertyNode.diff[propertyDescriptorNode.descriptor] =
+          propertyDescriptorNode.diff;
+        appendCounters(
+          propertyNode.diff.counters.self,
+          propertyDescriptorNode.diff.counters.self,
+        );
+        appendCounters(
+          propertyNode.diff.counters.inside,
+          propertyDescriptorNode.diff.counters.inside,
+        );
+        appendCounters(
+          propertyNode.diff.counters.overall,
+          propertyDescriptorNode.diff.counters.overall,
+        );
+      };
+
       identity: {
         if (node.before.isPrimitive || node.after.isPrimitive) {
           if (node.before.value !== node.after.value) {
-            if (
-              !node.parent ||
-              (!node.parent.diff.added && !node.parent.diff.removed)
-            ) {
-              counters.total++;
-            }
             node.diff.identity = true;
-            nodeWithDiffSet.add(node);
-            node.diff.counters.self++;
-            node.diff.counters.total++;
+            onSelfDiff();
           }
         }
       }
       reference: {
         if (node.before.reference !== node.after.reference) {
           node.diff.reference = true;
-          node.diff.counters.self++;
-          node.diff.counters.total++;
+          onSelfDiff();
         }
       }
       properties: {
@@ -87,21 +115,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             afterValue: afterPropertyDescriptor,
           });
 
-          const added = !beforePropertyDescriptor;
           const removed = !afterPropertyDescriptor;
-
-          if (added) {
-            propertyNode.diff.added = true;
-            propertyNode.diff.counters.self++;
-            if (node.before.isComposite) {
-              counters.total++;
-            }
-          }
+          const added = !beforePropertyDescriptor;
           if (removed) {
             propertyNode.diff.removed = true;
-            propertyNode.diff.counters.self++;
             if (node.after.isComposite) {
-              counters.total++;
+              globalDiffCounters.total++;
+            }
+          }
+          if (added) {
+            propertyNode.diff.added = true;
+            if (node.before.isComposite) {
+              globalDiffCounters.total++;
             }
           }
 
@@ -119,22 +144,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 afterValue: descriptorAfterValue,
               },
             );
-            visit(descriptorNode);
             if (added) {
               descriptorNode.diff.added = true;
-              descriptorNode.diff.counters.self++;
-              descriptorNode.diff.counters.total++;
             } else if (removed) {
               descriptorNode.diff.removed = true;
-              descriptorNode.diff.counters.self++;
-              descriptorNode.diff.counters.total++;
-            } else {
-              propertyNode.diff.value = descriptorNode.diff;
-              propertyNode.diff.counters.self +=
-                descriptorNode.diff.counters.self;
-              propertyNode.diff.counters.total +=
-                descriptorNode.diff.counters.total;
             }
+            visit(descriptorNode);
+            onPropertyDescriptorDiff(descriptorNode, propertyNode);
           };
 
           visitPropertyDescriptor("value");
@@ -143,7 +159,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visitPropertyDescriptor("configurable");
           visitPropertyDescriptor("set");
           visitPropertyDescriptor("get");
-          node.diff.counters.total += propertyNode.diff.counters.total;
+          appendCounters(
+            node.diff.counters.inside,
+            propertyNode.diff.counters.overall,
+          );
         };
         if (
           node.before.isComposite &&
@@ -179,7 +198,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
 
-      if (node.diff.counters.self) {
+      node.diff.counters.self.any =
+        node.diff.counters.self.removal + node.diff.counters.self.addition;
+      node.diff.counters.inside.any =
+        node.diff.counters.inside.removal + node.diff.counters.inside.addition;
+      node.diff.counters.overall.removal =
+        node.diff.counters.self.removal + node.diff.counters.inside.removal;
+      node.diff.counters.overall.addition =
+        node.diff.counters.self.addition + node.diff.counters.inside.addition;
+      node.diff.counters.overall.any =
+        node.diff.counters.self.any + node.diff.counters.inside.any;
+      if (node.diff.counters.self.any) {
         nodeWithDiffSet.add(node);
       }
     };
@@ -240,7 +269,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const writePropertyDescriptorDiff = (node, { mode, modified, context }) => {
       if (
-        !node.diff.counters.self &&
+        !node.diff.counters.self.any &&
         isDefaultDescriptor(node.descriptor, node.before.value)
       ) {
         return "";
@@ -321,10 +350,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         (!node.parent.diff.added && !node.parent.diff.removed)
       ) {
         if (mode === "removed") {
-          counters.displayed++;
+          globalDiffCounters.displayed++;
         }
         if (mode === "added" && !modified) {
-          counters.displayed++;
+          globalDiffCounters.displayed++;
         }
       }
       const valueName = mode === "added" ? "after" : "before";
@@ -377,7 +406,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         const propertiesOverview = collapsed !== true;
         if (!collapsed) {
           const shouldCollapse =
-            relativeDepth >= maxDepth || node.diff.counters.total === 0;
+            relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
           if (shouldCollapse) {
             collapsed = context.collapsed = shouldCollapse;
           }
@@ -457,21 +486,38 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           let index = 0;
           const maxPropertyAbove = 2;
           const maxPropertyBelow = 2;
-          const propertySkippedArray = [];
+          const propertyWithoutDiffSkippedArray = [];
+          const skippedCounters = {
+            total: 0,
+            removal: 0,
+            addition: 0,
+          };
           let propertyDiffCount = 0;
           while (index < propertyNames.length) {
             const property = propertyNames[index];
             index++;
             const propertyNode = node.properties[property];
-            if (propertyNode.diff.counters.total) {
+            if (propertyNode.diff.counters.overall.any) {
               propertyDiffCount++;
+              if (propertyDiffCount > maxDiffPerObject) {
+                skippedCounters.total++;
+                skippedCounters.removal +=
+                  propertyNode.diff.counters.overall.removal;
+                skippedCounters.addition +=
+                  propertyNode.diff.counters.overall.addition;
+                continue;
+              }
               // first write property eventually skipped
-              const propertySkippedCount = propertySkippedArray.length;
-              if (propertySkippedCount) {
-                if (propertySkippedCount > maxPropertyAbove) {
+              const propertyWithoutDiffSkippedCount =
+                propertyWithoutDiffSkippedArray.length;
+              if (propertyWithoutDiffSkippedCount) {
+                if (propertyWithoutDiffSkippedCount > maxPropertyAbove) {
                   const previousPropertyToDisplayArray =
-                    propertySkippedArray.slice(-(maxPropertyAbove - 1));
-                  const propertyAboveCount = propertySkippedCount - 1;
+                    propertyWithoutDiffSkippedArray.slice(
+                      -(maxPropertyAbove - 1),
+                    );
+                  const propertyAboveCount =
+                    propertyWithoutDiffSkippedCount - 1;
                   const arrowSign = propertyDiffCount > 1 ? `↕` : `↑`;
                   compositeBody += `${indent}  `;
 
@@ -481,45 +527,69 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   );
                   compositeBody += "\n";
                   for (const previousPropertyToDisplay of previousPropertyToDisplayArray) {
+                    skippedCounters.total--;
                     writePropertyDiff(previousPropertyToDisplay);
                   }
                 } else {
-                  for (const previousPropertyToDisplay of propertySkippedArray) {
+                  for (const previousPropertyToDisplay of propertyWithoutDiffSkippedArray) {
+                    skippedCounters.total--;
                     writePropertyDiff(previousPropertyToDisplay);
                   }
                 }
-                propertySkippedArray.length = 0;
+                propertyWithoutDiffSkippedArray.length = 0;
               }
               writePropertyDiff(property);
               continue;
             }
-            propertySkippedArray.push(property);
+            skippedCounters.total++;
+            propertyWithoutDiffSkippedArray.push(property);
             // property does not have a diff
             // maybe it should be skipped
           }
+
+          let belowSummary = "";
           // now display the property below
-          const propertySkippedCount = propertySkippedArray.length;
-          if (propertySkippedCount) {
-            if (propertySkippedCount > maxPropertyBelow) {
-              const nextPropertyToDisplayArray = propertySkippedArray.slice(
-                0,
-                maxPropertyBelow - 1,
-              );
+          const propertyWithoutDiffSkippedCount =
+            propertyWithoutDiffSkippedArray.length;
+          if (propertyWithoutDiffSkippedCount) {
+            if (propertyWithoutDiffSkippedCount > maxPropertyBelow) {
+              const nextPropertyToDisplayArray =
+                propertyWithoutDiffSkippedArray.slice(0, maxPropertyBelow - 1);
+              skippedCounters.total--;
+              belowSummary += `${skippedCounters.total} props`;
               for (const nextPropertyToDisplay of nextPropertyToDisplayArray) {
+                skippedCounters.total--;
                 writePropertyDiff(nextPropertyToDisplay);
               }
-              const propertyBelowCount = propertySkippedCount - 1;
-              compositeBody += `${indent}  `;
-              compositeBody += ANSI.color(
-                `↓ ${propertyBelowCount} props ↓`,
-                delimitersColor,
-              );
-              compositeBody += "\n";
             } else {
-              for (const nextPropertyToDisplay of propertySkippedArray) {
+              for (const nextPropertyToDisplay of propertyWithoutDiffSkippedArray) {
+                skippedCounters.total--;
                 writePropertyDiff(nextPropertyToDisplay);
               }
             }
+          }
+          if (skippedCounters.removal) {
+            if (belowSummary.length) {
+              belowSummary += " ";
+            }
+            belowSummary += ANSI.color(
+              `- ${skippedCounters.removal}`,
+              ANSI.RED,
+            );
+          }
+          if (skippedCounters.addition) {
+            if (belowSummary.length) {
+              belowSummary += " ";
+            }
+            belowSummary += ANSI.color(
+              `+ ${skippedCounters.addition}`,
+              ANSI.GREEN,
+            );
+          }
+          if (belowSummary) {
+            compositeBody += `${indent}  `;
+            compositeBody += ANSI.color(`↓ ${belowSummary} ↓`, delimitersColor);
+            compositeBody += "\n";
           }
 
           if (signs) {
@@ -583,26 +653,27 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       });
     };
 
-    let diff = writeDiff(startNode, {});
+    let diffMessage = writeDiff(startNode, {});
 
     let message;
     if (rootComparison.diff.identity) {
       message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} are different`;
     } else {
-      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${counters.total} ${counters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color("expected", ANSI.RED)} and ${ANSI.color("actual", ANSI.GREEN)} have ${globalDiffCounters.total} ${globalDiffCounters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
     const infos = [];
-    const diffNotDisplayed = counters.total - counters.displayed;
+    const diffNotDisplayed =
+      globalDiffCounters.total - globalDiffCounters.displayed;
     if (diffNotDisplayed) {
-      if (counters.displayed === 1) {
+      if (globalDiffCounters.displayed === 1) {
         infos.push(
-          `to improve readability only ${counters.displayed} diff is displayed`,
+          `to improve readability only ${globalDiffCounters.displayed} diff is displayed`,
         );
       } else {
         infos.push(
-          `to improve readability only ${counters.displayed} diffs are displayed`,
+          `to improve readability only ${globalDiffCounters.displayed} diffs are displayed`,
         );
       }
     }
@@ -616,7 +687,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
       message += "\n";
     }
-    message += `${diff}`;
+    message += `${diffMessage}`;
 
     const error = new Error(message);
     error.name = "AssertionError";
@@ -676,7 +747,7 @@ const createComparisonTree = (beforeValue, afterValue) => {
         },
         isComposite: isComposite(beforeValue),
         isPrimitive: isPrimitive(beforeValue),
-        reference: null,
+        reference: undefined,
         referenceId: null,
         referenceFromOthersSet: new Set(),
       },
@@ -687,16 +758,32 @@ const createComparisonTree = (beforeValue, afterValue) => {
         },
         isComposite: isComposite(afterValue),
         isPrimitive: isPrimitive(afterValue),
-        reference: null,
+        reference: undefined,
         referenceId: null,
         referenceFromOthersSet: new Set(),
       },
+      properties: {},
       diff: {
         counters: {
-          self: 0,
-          total: 0,
+          overall: {
+            any: 0,
+            removal: 0,
+            addition: 0,
+          },
+          self: {
+            any: 0,
+            removal: 0,
+            addition: 0,
+          },
+          inside: {
+            any: 0,
+            removal: 0,
+            addition: 0,
+          },
         },
         identity: null,
+        reference: null,
+        properties: {},
       },
     };
 
@@ -724,10 +811,6 @@ const createComparisonTree = (beforeValue, afterValue) => {
     }
 
     if (node.before.isComposite || node.after.isComposite) {
-      node.diff.reference = null;
-
-      node.properties = {};
-      node.diff.properties = {};
       node.appendProperty = (property, { beforeValue, afterValue }) => {
         const propertyNode = createComparisonNode({
           type: "property",
@@ -739,10 +822,7 @@ const createComparisonTree = (beforeValue, afterValue) => {
         propertyNode.property = property;
         node.properties[property] = propertyNode;
         propertyNode.diff = {
-          counters: {
-            self: 0,
-            total: 0,
-          },
+          counters: propertyNode.diff.counters,
           added: false,
           removed: false,
           value: null,
