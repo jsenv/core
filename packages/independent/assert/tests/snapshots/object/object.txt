@@ -167,3 +167,37 @@ AssertionError: expected and actual have 1 difference:
 - should_be_there: true,
 }
 
+# property should be there and is big
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: true,
+- should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
+}
+
+# property should not be there
+AssertionError: expected and actual have 1 difference:
+
+{
+  a: true,
++ should_not_be_there: true,
+}
+
+# many props should not be there
+AssertionError: expected and actual have 8 differences:
+
+ℹ to improve readability only 6 diffs are displayed
+
+{
+  a: true,
+  c: {
++   an_object: true,
++   and: true,
+  },
++ b: true,
++ d: true,
++ e: true,
++ f: true,
+  ↓ 2 props +2 ↓
+}
+

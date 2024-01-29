@@ -260,6 +260,56 @@ await startSnapshotTesting("object", {
       },
     });
   },
+  ["property should be there and is big"]: () => {
+    assert({
+      actual: {
+        a: true,
+      },
+      expected: {
+        a: true,
+        should_be_there: {
+          a: true,
+          b: true,
+          item: { a: 1, b: 1, c: 1 },
+          c: true,
+          d: true,
+          e: true,
+          f: true,
+          g: true,
+        },
+      },
+      maxColumns: 100,
+    });
+  },
+  ["property should not be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+        should_not_be_there: true,
+      },
+      expected: {
+        a: true,
+      },
+    });
+  },
+  ["many props should not be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: { an_object: true, and: true },
+        d: true,
+        e: true,
+        f: true,
+        g: true,
+        h: true,
+      },
+      expected: {
+        a: true,
+        c: {},
+      },
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,

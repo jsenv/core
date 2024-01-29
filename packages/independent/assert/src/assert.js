@@ -574,9 +574,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             belowSummary += ANSI.color(`-${skippedCounters.removal}`, ANSI.RED);
           }
           if (skippedCounters.addition) {
-            // if (belowSummary.length) {
-            //   belowSummary += " ";
-            // }
+            if (belowSummary.length && !skippedCounters.removal) {
+              belowSummary += " ";
+            }
             belowSummary += ANSI.color(
               `+${skippedCounters.addition}`,
               ANSI.GREEN,
