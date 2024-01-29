@@ -51,11 +51,11 @@
         <text x="35.2" y="71.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="71.55" fill="#7f7f7f">,</text>
-        <text x="10" y="90.55" fill="#11bc79">-</text>
-        <text x="26.8" y="90.55" fill="#11bc79">should_be_there</text>
-        <text x="152.82" y="90.55" fill="#11bc79">:</text>
-        <text x="169.63" y="90.55" fill="#11bc79">true</text>
-        <text x="203.23" y="90.55" fill="#11bc79">,</text>
+        <text x="10" y="90.55" fill="#cd5555">-</text>
+        <text x="26.8" y="90.55" fill="#cd5555">should_be_there</text>
+        <text x="152.82" y="90.55" fill="#cd5555">:</text>
+        <text x="169.63" y="90.55" fill="#cd5555">true</text>
+        <text x="203.23" y="90.55" fill="#cd5555">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

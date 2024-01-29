@@ -51,39 +51,39 @@
         <text x="35.2" y="71.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="71.55" fill="#7f7f7f">,</text>
-        <text x="10" y="90.55" fill="#11bc79">-</text>
-        <text x="26.8" y="90.55" fill="#11bc79">should_be_there</text>
-        <text x="152.82" y="90.55" fill="#11bc79">:</text>
-        <text x="169.63" y="90.55" fill="#11bc79">Object(8) {</text>
-        <text x="270.44" y="90.55" fill="#11bc79">a</text>
-        <text x="278.84" y="90.55" fill="#11bc79">:</text>
-        <text x="295.65" y="90.55" fill="#11bc79">true</text>
-        <text x="329.25" y="90.55" fill="#11bc79">,</text>
-        <text x="346.05" y="90.55" fill="#11bc79">b</text>
-        <text x="354.46" y="90.55" fill="#11bc79">:</text>
-        <text x="371.26" y="90.55" fill="#11bc79">true</text>
-        <text x="404.86" y="90.55" fill="#11bc79">,</text>
-        <text x="421.67" y="90.55" fill="#11bc79">item</text>
-        <text x="455.27" y="90.55" fill="#11bc79">:</text>
-        <text x="472.08" y="90.55" fill="#11bc79">Object(</text>
-        <text x="530.88" y="90.55" fill="#11bc79">3</text>
-        <text x="539.29" y="90.55" fill="#11bc79">)</text>
-        <text x="547.69" y="90.55" fill="#11bc79">,</text>
-        <text x="564.49" y="90.55" fill="#11bc79">c</text>
-        <text x="572.89" y="90.55" fill="#11bc79">:</text>
-        <text x="589.69" y="90.55" fill="#11bc79">true</text>
-        <text x="623.3" y="90.55" fill="#11bc79">,</text>
-        <text x="640.1" y="90.55" fill="#11bc79">d</text>
-        <text x="648.5" y="90.55" fill="#11bc79">:</text>
-        <text x="665.31" y="90.55" fill="#11bc79">true</text>
-        <text x="698.91" y="90.55" fill="#11bc79">,</text>
-        <text x="715.71" y="90.55" fill="#11bc79">e</text>
-        <text x="724.12" y="90.55" fill="#11bc79">:</text>
-        <text x="740.92" y="90.55" fill="#11bc79">true</text>
-        <text x="774.52" y="90.55" fill="#11bc79">,</text>
-        <text x="791.33" y="90.55" fill="#11bc79">...</text>
-        <text x="824.93" y="90.55" fill="#11bc79">}</text>
-        <text x="833.33" y="90.55" fill="#11bc79">,</text>
+        <text x="10" y="90.55" fill="#cd5555">-</text>
+        <text x="26.8" y="90.55" fill="#cd5555">should_be_there</text>
+        <text x="152.82" y="90.55" fill="#cd5555">:</text>
+        <text x="169.63" y="90.55" fill="#cd5555">Object(8) {</text>
+        <text x="270.44" y="90.55" fill="#cd5555">a</text>
+        <text x="278.84" y="90.55" fill="#cd5555">:</text>
+        <text x="295.65" y="90.55" fill="#cd5555">true</text>
+        <text x="329.25" y="90.55" fill="#cd5555">,</text>
+        <text x="346.05" y="90.55" fill="#cd5555">b</text>
+        <text x="354.46" y="90.55" fill="#cd5555">:</text>
+        <text x="371.26" y="90.55" fill="#cd5555">true</text>
+        <text x="404.86" y="90.55" fill="#cd5555">,</text>
+        <text x="421.67" y="90.55" fill="#cd5555">item</text>
+        <text x="455.27" y="90.55" fill="#cd5555">:</text>
+        <text x="472.08" y="90.55" fill="#cd5555">Object(</text>
+        <text x="530.88" y="90.55" fill="#cd5555">3</text>
+        <text x="539.29" y="90.55" fill="#cd5555">)</text>
+        <text x="547.69" y="90.55" fill="#cd5555">,</text>
+        <text x="564.49" y="90.55" fill="#cd5555">c</text>
+        <text x="572.89" y="90.55" fill="#cd5555">:</text>
+        <text x="589.69" y="90.55" fill="#cd5555">true</text>
+        <text x="623.3" y="90.55" fill="#cd5555">,</text>
+        <text x="640.1" y="90.55" fill="#cd5555">d</text>
+        <text x="648.5" y="90.55" fill="#cd5555">:</text>
+        <text x="665.31" y="90.55" fill="#cd5555">true</text>
+        <text x="698.91" y="90.55" fill="#cd5555">,</text>
+        <text x="715.71" y="90.55" fill="#cd5555">e</text>
+        <text x="724.12" y="90.55" fill="#cd5555">:</text>
+        <text x="740.92" y="90.55" fill="#cd5555">true</text>
+        <text x="774.52" y="90.55" fill="#cd5555">,</text>
+        <text x="791.33" y="90.55" fill="#cd5555">...</text>
+        <text x="824.93" y="90.55" fill="#cd5555">}</text>
+        <text x="833.33" y="90.55" fill="#cd5555">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

@@ -281,15 +281,30 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let keyColor;
       let delimitersColor;
 
+      if (
+        node.diff.removed &&
+        signs && // indirect way to check we are generating root comparison identity failure
+        !context.forceUnexpected
+      ) {
+        context.forceUnexpected = true;
+      }
+
       if (mode === "removed") {
         if (isDefaultDescriptor(node.descriptor, node.before.value)) {
           return "";
         }
         if (signs) {
-          propertyDescriptorDiff += ANSI.color(removedSign, colorForExpected);
+          propertyDescriptorDiff += ANSI.color(
+            removedSign,
+            context.forceUnexpected ? colorForUnexpected : colorForExpected,
+          );
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = modified ? colorForSame : colorForExpected;
+        keyColor = delimitersColor = modified
+          ? colorForSame
+          : context.forceUnexpected
+            ? colorForUnexpected
+            : colorForExpected;
       }
       if (mode === "added") {
         if (isDefaultDescriptor(node.descriptor, node.after.value)) {
@@ -346,6 +361,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
+        forceUnexpected,
       } = context;
 
       if (causeSet.has(node)) {
@@ -360,7 +376,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const valueInfo = node[valueName];
       const valueColor =
         mode === "removed"
-          ? colorForExpected
+          ? forceUnexpected
+            ? colorForUnexpected
+            : colorForExpected
           : mode === "added"
             ? colorForUnexpected
             : colorForSame;
@@ -378,7 +396,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // composite
       const delimitersColor =
         mode === "removed"
-          ? colorForExpected
+          ? forceUnexpected
+            ? colorForUnexpected
+            : colorForExpected
           : mode === "added"
             ? colorForUnexpected
             : colorForSame;
