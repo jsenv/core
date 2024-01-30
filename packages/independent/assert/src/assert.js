@@ -133,6 +133,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             onSelfDiff();
           }
         }
+        category: {
+          if (ignoreDiff) {
+            break category;
+          }
+          const isCompositeBefore = node.before.isComposite;
+          const isCompositeAfter = node.after.isComposite;
+          if (isCompositeBefore !== isCompositeAfter) {
+            node.diff.category = true;
+            onSelfDiff();
+            break category;
+          }
+          const isArrayBefore = node.before.isArray;
+          const isArrayAfter = node.after.isArray;
+          if (isArrayBefore !== isArrayAfter) {
+            node.diff.category = true;
+            onSelfDiff();
+            break category;
+          }
+        }
         identity: {
           if (ignoreDiff) {
             break identity;
@@ -140,19 +159,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (node.before.isPrimitive || node.after.isPrimitive) {
             if (node.before.value !== node.after.value) {
               node.diff.identity = true;
-              onSelfDiff();
-            }
-          }
-        }
-        category: {
-          const isCompositeBefore = node.before.isComposite;
-          const isCompositeAfter = node.after.isComposite;
-          if (isCompositeBefore && isCompositeAfter) {
-            const isArrayBefore = node.before.isArray;
-            const isArrayAfter = node.after.isArray;
-            if (isArrayBefore !== isArrayAfter) {
-              node.diff.category = true;
-              onSelfDiff();
+              if (!node.diff.category) {
+                onSelfDiff();
+              }
             }
           }
         }
@@ -163,9 +172,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            const shouldIgnoreDiff =
-              node.diff.category || !canHavePropsBefore || !canHavePropsAfter;
-            if (!ignoreDiff && shouldIgnoreDiff) {
+            if (!ignoreDiff && node.diff.category) {
               ignoreDiff = true;
             }
             const propertyDescriptorBefore = canHavePropsBefore
@@ -180,26 +187,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             });
 
             const removed =
-              !shouldIgnoreDiff &&
               propertyDescriptorBefore &&
               canHavePropsAfter &&
               propertyDescriptorAfter === undefined;
             if (removed) {
               ignoreDiff = true;
               propertyNode.diff.removed = true;
-              propertyNode.diff.counters.self.removed++;
-              addNodeCausingDiff(propertyNode);
+              if (!node.diff.category) {
+                propertyNode.diff.counters.self.removed++;
+                addNodeCausingDiff(propertyNode);
+              }
             }
             const added =
-              !shouldIgnoreDiff &&
               canHavePropsBefore &&
               propertyDescriptorBefore === undefined &&
               propertyDescriptorAfter;
             if (added) {
               ignoreDiff = true;
               propertyNode.diff.added = true;
-              propertyNode.diff.counters.self.added++;
-              addNodeCausingDiff(propertyNode);
+              if (!node.diff.category) {
+                propertyNode.diff.counters.self.added++;
+                addNodeCausingDiff(propertyNode);
+              }
             }
             visit(propertyNode, {
               ignoreDiff,
@@ -304,9 +313,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const writePropertyDescriptorDiff = (node, context) => {
       let { mode } = context;
       const valueName =
-        mode === "removed" || mode === "before" || mode === "traverse"
-          ? "before"
-          : "after";
+        mode === "removed" || mode === "before" ? "before" : "after";
       if (isDefaultDescriptor(node.descriptor, node[valueName].value)) {
         return "";
       }
@@ -405,7 +412,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         causeCounters.displayed++;
       }
 
-      const valueName = mode === "after" ? "after" : "before";
+      const valueName = mode === "before" ? "before" : "after";
       const valueInfo = node[valueName];
       const valueColor =
         mode === "before"
@@ -459,17 +466,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       const propertyNames = Object.keys(node.properties);
 
-      const writeInsideDiff = ({ next, write }) => {
+      const writeInsideDiff = ({ next, write, skippedName }) => {
         let insideDiff = "";
         let indent = "  ".repeat(relativeDepth);
-        insideDiff += "\n";
-
         const withoutDiffSkippedArray = [];
         const skippedCounters = {
           total: 0,
           diff: 0,
         };
-
         let diffCount = 0;
         let nodeInsideThisOne;
         while ((nodeInsideThisOne = next())) {
@@ -493,7 +497,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 const arrowSign = diffCount > 1 ? `↕` : `↑`;
                 insideDiff += `${indent}  `;
                 insideDiff += ANSI.color(
-                  `${arrowSign} ${indexAboveCount} values ${arrowSign}`,
+                  `${arrowSign} ${indexAboveCount} ${skippedName}s ${arrowSign}`,
                   delimitersColor,
                 );
                 skippedCounters.total -= indexAboveCount;
@@ -539,12 +543,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
-
         if (skippedCounters.total) {
           belowSummary += ANSI.color(
             skippedCounters.total === 1
-              ? `1 prop`
-              : `${skippedCounters.total} props`,
+              ? `1 ${skippedName}`
+              : `${skippedCounters.total} ${skippedName}s`,
             delimitersColor,
           );
           if (skippedCounters.diff) {
@@ -566,6 +569,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           insideDiff += ANSI.color(`↓`, delimitersColor);
           insideDiff += "\n";
         }
+        if (insideDiff === "") {
+          return "";
+        }
         if (signs) {
           if (mode === "before") {
             insideDiff += ANSI.color(removedSign, removedSignColor);
@@ -576,6 +582,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         insideDiff += indent;
+        insideDiff = `\n${insideDiff}`;
         return insideDiff;
       };
 
@@ -591,10 +598,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             let indexedValuesOverview = "";
             let index = 0;
             for (; index < length; index++) {
-              const isSurrounded = index > 0 && index !== length - 1;
+              const hasPrevious = index > 0;
               const indexedValueNode = node.indexedValues[index];
               let indexedValueOverview = "";
-              if (isSurrounded) {
+              if (hasPrevious) {
                 indexedValueOverview += ANSI.color(",", delimitersColor);
                 indexedValueOverview += " ";
               }
@@ -631,17 +638,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           let propertiesOverview = "";
           const propertyCount = propertyNames.length;
-          const estimatedCollapsedBoilerplate = `Object(${propertyCount}) , ...`;
+          const estimatedCollapsedBoilerplate = `Object(${propertyCount}) { , ... }`;
           const estimatedCollapsedBoilerplateWidth =
             estimatedCollapsedBoilerplate.length;
           let propertyIndex = 0;
           for (const property of propertyNames) {
-            const isSurrounded =
-              propertyIndex > 0 && propertyIndex !== propertyCount - 1;
+            const hasPrevious = propertyIndex > 0;
             propertyIndex++;
             let propertyOverview = "";
             const propertyNode = node.properties[property];
-            if (isSurrounded) {
+            if (hasPrevious) {
               propertyOverview += ANSI.color(",", delimitersColor);
               propertyOverview += " ";
             }
@@ -677,15 +683,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const remainingProps = propertyCount - propertyIndex;
           if (remainingProps) {
             overview += ANSI.color(
-              `Object(${propertyCount}) [`,
+              `Object(${propertyCount}) {`,
               delimitersColor,
             );
+            overview += " ";
             overview += propertiesOverview;
             overview += ANSI.color(",", delimitersColor);
             overview += " ";
             overview += ANSI.color(`...`, valueColor);
+            overview += " ";
             overview += ANSI.color("}", delimitersColor);
-            overviewWidth += `Object(${propertyCount}) {, ...}`;
+            overviewWidth += `Object(${propertyCount}) { , ... }`;
             compositeDiff += overview;
             break inside;
           }
@@ -726,6 +734,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           } else {
             let index = 0;
             let insideDiff = writeInsideDiff({
+              skippedName: "value",
               next: () => {
                 if (index < length) {
                   const indexedValueNode = node.indexedValues[index];
@@ -757,6 +766,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         let index = 0;
         let insideDiff = writeInsideDiff({
+          skippedName: "prop",
           next: () => {
             if (index < propertyCount) {
               const propertyNode = node.properties[propertyNames[index]];
@@ -772,14 +782,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               const descriptorNode = propertyNode.descriptors[descriptorName];
               propertyDiff += writeDiff(descriptorNode, {
                 ...context,
+                mode: context.mode,
               });
             }
             return propertyDiff;
           },
         });
-        compositeDiff += ANSI.color("[", delimitersColor);
+        compositeDiff += ANSI.color("{", delimitersColor);
         compositeDiff += insideDiff;
-        compositeDiff += ANSI.color("]", delimitersColor);
+        compositeDiff += ANSI.color("}", delimitersColor);
       }
 
       return compositeDiff;
@@ -787,12 +798,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const writeDiff = (node, context) => {
       if (node.type === "property_descriptor") {
         if (node.parent.diff.removed) {
+          if (node.parent.parent.diff.category) {
+            return "";
+          }
           return writePropertyDescriptorDiff(node, {
             ...context,
             mode: "removed",
           });
         }
         if (node.parent.diff.added) {
+          if (node.parent.parent.diff.category) {
+            return "";
+          }
           return writePropertyDescriptorDiff(node, {
             ...context,
             mode: "added",
@@ -812,7 +829,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         return writePropertyDescriptorDiff(node, context);
       }
-      if (node.diff.identity) {
+      if (node.diff.identity || node.diff.category) {
         if (node === rootComparison) {
           signs = false;
         }
