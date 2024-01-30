@@ -76,38 +76,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       counter.addition += otherCounter.addition;
     };
 
-    const visit = (node) => {
+    const visit = (node, { ignoreDiff } = {}) => {
       if (node.type === "property") {
-        const descriptorBefore = node.before.value;
-        const descriptorAfter = node.after.value;
-        const canHavePropsBefore = node.parent.before.isComposite;
-        const canHavePropsAfter = node.parent.after.isComposite;
-        const removed =
-          descriptorBefore &&
-          canHavePropsAfter &&
-          descriptorAfter === undefined;
-        const added =
-          canHavePropsBefore &&
-          descriptorBefore === undefined &&
-          descriptorAfter;
-        if (removed) {
-          node.diff.removed = true;
-          if (node.parent.after.isComposite) {
-            node.diff.counters.self.removal++;
-            addNodeCausingDiff(node);
-          }
-        }
-        if (added) {
-          node.diff.added = true;
-          if (node.parent.before.isComposite) {
-            node.diff.counters.self.addition++;
-            addNodeCausingDiff(node);
-          }
-        }
         const visitPropertyDescriptor = (descriptorName) => {
+          const descriptorBefore = node.before.value;
           const descriptorBeforeValue = descriptorBefore
             ? descriptorBefore[descriptorName]
             : undefined;
+          const descriptorAfter = node.after.value;
           const descriptorAfterValue = descriptorAfter
             ? descriptorAfter[descriptorName]
             : undefined;
@@ -115,26 +91,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             beforeValue: descriptorBeforeValue,
             afterValue: descriptorAfterValue,
           });
-          if (added) {
-            descriptorNode.diff.added = true;
-          } else if (removed) {
-            descriptorNode.diff.removed = true;
+          visit(descriptorNode, { ignoreDiff });
+          if (!ignoreDiff) {
+            node.diff[descriptorNode.descriptor] = descriptorNode.diff;
+            appendCounters(
+              node.diff.counters.self,
+              descriptorNode.diff.counters.self,
+            );
+            appendCounters(
+              node.diff.counters.inside,
+              descriptorNode.diff.counters.inside,
+            );
+            appendCounters(
+              node.diff.counters.overall,
+              descriptorNode.diff.counters.overall,
+            );
           }
-          visit(descriptorNode);
-
-          node.diff[descriptorNode.descriptor] = descriptorNode.diff;
-          appendCounters(
-            node.diff.counters.self,
-            descriptorNode.diff.counters.self,
-          );
-          appendCounters(
-            node.diff.counters.inside,
-            descriptorNode.diff.counters.inside,
-          );
-          appendCounters(
-            node.diff.counters.overall,
-            descriptorNode.diff.counters.overall,
-          );
         };
         visitPropertyDescriptor("value");
         visitPropertyDescriptor("enumerable");
@@ -144,52 +116,80 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         visitPropertyDescriptor("get");
       } else {
         const onSelfDiff = () => {
-          if (
-            !node.parent ||
-            (!node.parent.diff.added && !node.parent.diff.removed)
-          ) {
-            addNodeCausingDiff(node);
-            node.diff.counters.self.removal++;
-            node.diff.counters.self.addition++;
-          }
+          addNodeCausingDiff(node);
+          node.diff.counters.self.removal++;
+          node.diff.counters.self.addition++;
         };
 
         identity: {
-          if (node.before.isPrimitive || node.after.isPrimitive) {
-            if (node.before.value !== node.after.value) {
-              node.diff.identity = true;
-              onSelfDiff();
+          if (!ignoreDiff) {
+            if (node.before.isPrimitive || node.after.isPrimitive) {
+              if (node.before.value !== node.after.value) {
+                node.diff.identity = true;
+                onSelfDiff();
+              }
             }
           }
         }
         reference: {
-          if (node.before.reference !== node.after.reference) {
-            node.diff.reference = true;
-            onSelfDiff();
+          if (!ignoreDiff) {
+            if (node.before.reference !== node.after.reference) {
+              node.diff.reference = true;
+              onSelfDiff();
+            }
           }
         }
         properties: {
+          const canHavePropsBefore = node.before.isComposite;
+          const canHavePropsAfter = node.after.isComposite;
+
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            const beforePropertyDescriptor = node.before.isComposite
+            if (!canHavePropsBefore || !canHavePropsAfter) {
+              ignoreDiff = true;
+            }
+            const propertyDescriptorBefore = canHavePropsBefore
               ? Object.getOwnPropertyDescriptor(node.before.value, property)
               : undefined;
-            const afterPropertyDescriptor = node.after.isComposite
+            const propertyDescriptorAfter = canHavePropsAfter
               ? Object.getOwnPropertyDescriptor(node.after.value, property)
               : undefined;
             const propertyNode = node.appendProperty(property, {
-              beforeValue: beforePropertyDescriptor,
-              afterValue: afterPropertyDescriptor,
+              beforeValue: propertyDescriptorBefore,
+              afterValue: propertyDescriptorAfter,
             });
-            visit(propertyNode);
+
+            const removed =
+              !ignoreDiff &&
+              propertyDescriptorBefore &&
+              canHavePropsAfter &&
+              propertyDescriptorAfter === undefined;
+            if (removed) {
+              propertyNode.diff.removed = true;
+              propertyNode.diff.counters.self.removal++;
+              addNodeCausingDiff(propertyNode);
+            }
+            const added =
+              !ignoreDiff &&
+              canHavePropsBefore &&
+              propertyDescriptorBefore === undefined &&
+              propertyDescriptorAfter;
+            if (added) {
+              propertyNode.diff.added = true;
+              propertyNode.diff.counters.self.addition++;
+              addNodeCausingDiff(propertyNode);
+            }
+            visit(propertyNode, {
+              ignoreDiff,
+            });
             appendCounters(
               node.diff.counters.inside,
               propertyNode.diff.counters.overall,
             );
           };
           if (
-            node.before.isComposite &&
+            canHavePropsBefore &&
             // node.after.value is a reference: was already traversed
             // - prevent infinite recursion for circular structure
             // - prevent traversing a structure already known
@@ -203,7 +203,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           if (
-            node.after.isComposite &&
+            canHavePropsAfter &&
             // node.after.value is a reference: was already traversed
             // - prevent infinite recursion for circular structure
             // - prevent traversing a structure already known
@@ -280,13 +280,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // handle symbols
       return ANSI.color(property, color);
     };
-    const writePropertyDescriptorDiff = (node, { mode, modified, context }) => {
+    const writePropertyDescriptorDiff = (node, context) => {
       if (
         !node.diff.counters.self.any &&
         isDefaultDescriptor(node.descriptor, node.before.value)
       ) {
         return "";
       }
+      let { mode, modified } = context;
       let propertyDescriptorDiff = "";
       const relativeDepth = node.depth - startNode.depth;
       let indent = `  `.repeat(relativeDepth);
@@ -306,7 +307,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else {
           // non of the parent must be
           // indirect way to check we are generating root comparison identity failure
-
           keyColor = delimitersColor = colorForExpected;
         }
       }
@@ -359,9 +359,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       propertyDescriptorDiff += "\n";
       return propertyDescriptorDiff;
     };
-    const writeValueDiff = (node, { mode, context }) => {
+    const writeValueDiff = (node, context) => {
       let {
-        // modified,
+        mode,
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
@@ -503,7 +503,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const descriptorNames = Object.keys(propertyNode.descriptors);
             for (const descriptorName of descriptorNames) {
               const descriptorNode = propertyNode.descriptors[descriptorName];
-              compositeBody += writeDiff(descriptorNode, context);
+              compositeBody += writePropertyDescriptorDiff(
+                descriptorNode,
+                context,
+              );
             }
           };
 
@@ -639,14 +642,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       if (node.diff.removed) {
         return method(node, {
+          ...context,
           mode: "removed",
-          context,
         });
       }
       if (node.diff.added) {
         return method(node, {
+          ...context,
           mode: "added",
-          context,
         });
       }
       if (node.diff.identity) {
@@ -655,27 +658,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         let identityDiff = "";
         identityDiff += method(node, {
+          ...context,
           mode: "removed",
-          modified: true,
-          context: {
-            ...context,
-          },
         });
         if (node.type !== "property_descriptor") {
           identityDiff += "\n";
         }
         identityDiff += method(node, {
+          ...context,
           mode: "added",
-          modified: true,
-          context: {
-            ...context,
-          },
         });
         return identityDiff;
       }
       return method(node, {
+        ...context,
         mode: "traverse",
-        context,
       });
     };
 

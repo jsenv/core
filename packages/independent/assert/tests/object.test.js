@@ -5,10 +5,20 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("object", {
-  ["false should be an object"]: () => {
+  // ["false should be an object"]: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: { foo: true },
+  //   });
+  // },
+  ["false should be an object at property"]: () => {
     assert({
-      actual: false,
-      expected: { foo: true },
+      actual: {
+        foo: false,
+      },
+      expected: {
+        foo: { a: true },
+      },
     });
   },
   // ["two properties are different"]: () => {
@@ -20,16 +30,6 @@ await startSnapshotTesting("object", {
   //     expected: {
   //       a: false,
   //       b: false,
-  //     },
-  //   });
-  // },
-  // ["false should be an object at property"]: () => {
-  //   assert({
-  //     actual: {
-  //       foo: false,
-  //     },
-  //     expected: {
-  //       foo: { a: true },
   //     },
   //   });
   // },

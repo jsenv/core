@@ -1,0 +1,8 @@
+# false should be an object
+AssertionError: expected and actual are different:
+
+{
+  foo: true,
+}
+false
+
