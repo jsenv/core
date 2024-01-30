@@ -64,16 +64,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const settleCounters = (node) => {
       const { counters } = node.diff;
       const { self, inside, overall } = counters;
-      self.any = self.removal + self.addition;
-      inside.any = inside.removal + inside.addition;
-      overall.removal = self.removal + inside.removal;
-      overall.addition = self.addition + inside.addition;
+      self.any = self.modified + self.removed + self.added;
+      inside.any = inside.modified + inside.removed + inside.added;
+      overall.modified = self.modified + inside.modified;
+      overall.removed = self.removed + inside.removed;
+      overall.added = self.added + inside.added;
       overall.any = self.any + inside.any;
     };
     const appendCounters = (counter, otherCounter) => {
       counter.any += otherCounter.any;
-      counter.removal += otherCounter.removal;
-      counter.addition += otherCounter.addition;
+      counter.modified += otherCounter.modified;
+      counter.removed += otherCounter.removed;
+      counter.added += otherCounter.added;
     };
 
     const visit = (node, { ignoreDiff } = {}) => {
@@ -117,8 +119,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       } else {
         const onSelfDiff = () => {
           addNodeCausingDiff(node);
-          node.diff.counters.self.removal++;
-          node.diff.counters.self.addition++;
+          node.diff.counters.self.modified++;
         };
 
         identity: {
@@ -167,7 +168,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               propertyDescriptorAfter === undefined;
             if (removed) {
               propertyNode.diff.removed = true;
-              propertyNode.diff.counters.self.removal++;
+              propertyNode.diff.counters.self.removed++;
               addNodeCausingDiff(propertyNode);
             }
             const added =
@@ -177,7 +178,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               propertyDescriptorAfter;
             if (added) {
               propertyNode.diff.added = true;
-              propertyNode.diff.counters.self.addition++;
+              propertyNode.diff.counters.self.added++;
               addNodeCausingDiff(propertyNode);
             }
             visit(propertyNode, {
@@ -459,10 +460,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               } else if (propertyNode.descriptors.set[valueName].value) {
                 propertyDiff += ANSI.color(`[set]`, valueColor);
               } else {
-                propertyDiff += writeValueDiff(propertyNode.descriptors.value, {
-                  mode,
+                propertyDiff += writeValueDiff(
+                  propertyNode.descriptors.value,
                   context,
-                });
+                );
               }
               lineWidth += stringWidth(propertyDiff);
               if (lineWidth + estimatedCollapsedBoilerplateWidth > maxColumns) {
@@ -592,16 +593,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 : `${skippedCounters.total} props`,
               delimitersColor,
             );
-          }
-          if (skippedCounters.diff) {
-            if (belowSummary.length) {
+            if (skippedCounters.diff) {
               belowSummary += " ";
+              belowSummary += ANSI.color("(", delimitersColor);
+              belowSummary += ANSI.color(
+                `${skippedCounters.diff}`,
+                colorForUnexpected,
+              );
+              belowSummary += ANSI.color(" diff)", delimitersColor);
             }
-            belowSummary += ANSI.color(
-              `${removedSign}${skippedCounters.diff}`,
-              colorForUnexpected,
-            );
           }
+
           if (belowSummary) {
             compositeBody += `${indent}  `;
             compositeBody += ANSI.color(`↓`, delimitersColor);
@@ -783,18 +785,21 @@ const createComparisonTree = (beforeValue, afterValue) => {
         counters: {
           overall: {
             any: 0,
-            removal: 0,
-            addition: 0,
+            modified: 0,
+            removed: 0,
+            added: 0,
           },
           self: {
             any: 0,
-            removal: 0,
-            addition: 0,
+            modified: 0,
+            removed: 0,
+            added: 0,
           },
           inside: {
             any: 0,
-            removal: 0,
-            addition: 0,
+            modified: 0,
+            removed: 0,
+            added: 0,
           },
         },
         identity: null,
