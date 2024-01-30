@@ -147,7 +147,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            if (!canHavePropsBefore || !canHavePropsAfter) {
+            const shouldIgnoreDiff = !canHavePropsBefore || !canHavePropsAfter;
+            if (!ignoreDiff && shouldIgnoreDiff) {
               ignoreDiff = true;
             }
             const propertyDescriptorBefore = canHavePropsBefore
@@ -162,21 +163,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             });
 
             const removed =
-              !ignoreDiff &&
+              !shouldIgnoreDiff &&
               propertyDescriptorBefore &&
               canHavePropsAfter &&
               propertyDescriptorAfter === undefined;
             if (removed) {
+              ignoreDiff = true;
               propertyNode.diff.removed = true;
               propertyNode.diff.counters.self.removed++;
               addNodeCausingDiff(propertyNode);
             }
             const added =
-              !ignoreDiff &&
+              !shouldIgnoreDiff &&
               canHavePropsBefore &&
               propertyDescriptorBefore === undefined &&
               propertyDescriptorAfter;
             if (added) {
+              ignoreDiff = true;
               propertyNode.diff.added = true;
               propertyNode.diff.counters.self.added++;
               addNodeCausingDiff(propertyNode);
@@ -282,12 +285,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return ANSI.color(property, color);
     };
     const writePropertyDescriptorDiff = (node, context) => {
-      if (
-        !node.diff.counters.self.any &&
-        isDefaultDescriptor(node.descriptor, node.before.value)
-      ) {
-        return "";
-      }
       let { mode, modified } = context;
       let propertyDescriptorDiff = "";
       const relativeDepth = node.depth - startNode.depth;
@@ -303,12 +300,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           propertyDescriptorDiff += ANSI.color(removedSign, removedSignColor);
           indent = indent.slice(1);
         }
-        if (modified) {
+        if (!signs) {
+          keyColor = delimitersColor = colorForExpected;
+        } else if (modified) {
           keyColor = delimitersColor = colorForSame;
         } else {
-          // non of the parent must be
-          // indirect way to check we are generating root comparison identity failure
-          keyColor = delimitersColor = colorForExpected;
+          keyColor = colorForUnexpected;
+          delimitersColor = colorForExpected;
         }
       }
       if (mode === "added") {
@@ -324,6 +322,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           : colorForUnexpected;
       }
       if (mode === "traverse") {
+        if (isDefaultDescriptor(node.descriptor, node.before.value)) {
+          return "";
+        }
         keyColor = delimitersColor = colorForSame;
       }
 
@@ -335,7 +336,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         const propertyKeyFormatted = writePropertyKey(node.property, keyColor);
         propertyDescriptorDiff += propertyKeyFormatted;
-        propertyDescriptorDiff += ANSI.color(":", delimitersColor);
+        propertyDescriptorDiff += ANSI.color(":", keyColor);
         propertyDescriptorDiff += " ";
       }
 
@@ -632,44 +633,54 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return compositeDiff;
     };
     const writeDiff = (node, context) => {
-      const method =
-        node.type === "property_descriptor"
-          ? writePropertyDescriptorDiff
-          : writeValueDiff;
-
-      if (node.diff.removed) {
-        return method(node, {
-          ...context,
-          mode: "removed",
-        });
-      }
-      if (node.diff.added) {
-        return method(node, {
-          ...context,
-          mode: "added",
-        });
+      if (node.type === "property_descriptor") {
+        if (node.parent.diff.removed) {
+          return writePropertyDescriptorDiff(node, {
+            ...context,
+            mode: "removed",
+          });
+        }
+        if (node.parent.diff.added) {
+          return writePropertyDescriptorDiff(node, {
+            ...context,
+            mode: "added",
+          });
+        }
+        if (node.diff.identity) {
+          let identityDiff = "";
+          identityDiff += writePropertyDescriptorDiff(node, {
+            ...context,
+            mode: "removed",
+            modified: true,
+          });
+          identityDiff += writePropertyDescriptorDiff(node, {
+            ...context,
+            mode: "added",
+            modified: true,
+          });
+          return identityDiff;
+        }
+        return writePropertyDescriptorDiff(node, context);
       }
       if (node.diff.identity) {
         if (node === rootComparison) {
           signs = false;
         }
         let identityDiff = "";
-        identityDiff += method(node, {
+        identityDiff += writeValueDiff(node, {
           ...context,
           mode: "removed",
           modified: true,
         });
-        if (node.type !== "property_descriptor") {
-          identityDiff += "\n";
-        }
-        identityDiff += method(node, {
+        identityDiff += "\n";
+        identityDiff += writeValueDiff(node, {
           ...context,
           mode: "added",
           modified: true,
         });
         return identityDiff;
       }
-      return method(node, context);
+      return writeValueDiff(node, context);
     };
 
     let diffMessage = writeDiff(startNode, { mode: "traverse" });

@@ -312,3 +312,84 @@ assert({
 
 ![img](<./object/max X diff per object.svg>)
 
+# property should be there
+
+```js
+assert({
+  actual: {
+    a: true,
+  },
+  expected: {
+    a: true,
+    should_be_there: true,
+  },
+});
+```
+
+![img](<./object/property should be there.svg>)
+
+# property should be there and is big
+
+```js
+assert({
+  actual: {
+    a: true,
+  },
+  expected: {
+    a: true,
+    should_be_there: {
+      a: true,
+      b: true,
+      item: { a: 1, b: 1, c: 1 },
+      c: true,
+      d: true,
+      e: true,
+      f: true,
+      g: true,
+    },
+  },
+  maxColumns: 100,
+});
+```
+
+![img](<./object/property should be there and is big.svg>)
+
+# property should not be there
+
+```js
+assert({
+  actual: {
+    a: true,
+    should_not_be_there: true,
+  },
+  expected: {
+    a: true,
+  },
+});
+```
+
+![img](<./object/property should not be there.svg>)
+
+# many props should not be there
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: { an_object: true, and: true },
+    d: true,
+    e: true,
+    f: true,
+    g: true,
+    h: true,
+  },
+  expected: {
+    a: true,
+    c: {},
+  },
+});
+```
+
+![img](<./object/many props should not be there.svg>)
+
