@@ -21,18 +21,6 @@ await startSnapshotTesting("object", {
       },
     });
   },
-  ["two properties are different"]: () => {
-    assert({
-      actual: {
-        a: true,
-        b: true,
-      },
-      expected: {
-        a: false,
-        b: false,
-      },
-    });
-  },
   ["object should be false at property"]: () => {
     assert({
       actual: {
@@ -103,6 +91,18 @@ await startSnapshotTesting("object", {
         toto: "expected",
       },
       maxDepth: 5,
+    });
+  },
+  ["two properties are different"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+      },
+      expected: {
+        a: false,
+        b: false,
+      },
     });
   },
   ["maxDepth on diff"]: () => {

@@ -24,23 +24,6 @@ assert({
 
 ![img](<./object/false should be an object at property.svg>)
 
-# two properties are different
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-  },
-  expected: {
-    a: false,
-    b: false,
-  },
-});
-```
-
-![img](<./object/two properties are different.svg>)
-
 # object should be false at property
 
 ```js
@@ -127,6 +110,23 @@ assert({
 ```
 
 ![img](<./object/object should be false at deep property.svg>)
+
+# two properties are different
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+  },
+  expected: {
+    a: false,
+    b: false,
+  },
+});
+```
+
+![img](<./object/two properties are different.svg>)
 
 # maxDepth on diff
 

@@ -16,16 +16,6 @@ AssertionError: expected and actual have 1 difference:
 + foo: false,
 }
 
-# two properties are different
-AssertionError: expected and actual have 2 differences:
-
-{
-- a: false,
-+ a: true,
-- b: false,
-+ b: true,
-}
-
 # object should be false at property
 AssertionError: expected and actual have 1 difference:
 
@@ -62,6 +52,16 @@ AssertionError: expected and actual have 2 differences:
   },
 },
 
+
+# two properties are different
+AssertionError: expected and actual have 2 differences:
+
+{
+- a: false,
++ a: true,
+- b: false,
++ b: true,
+}
 
 # maxDepth on diff
 AssertionError: expected and actual have 1 difference:

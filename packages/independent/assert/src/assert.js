@@ -285,47 +285,57 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return ANSI.color(property, color);
     };
     const writePropertyDescriptorDiff = (node, context) => {
-      let { mode, modified } = context;
+      let { mode } = context;
+      const valueName =
+        mode === "removed" || mode === "before" || mode === "traverse"
+          ? "before"
+          : "after";
+      if (isDefaultDescriptor(node.descriptor, node[valueName].value)) {
+        return "";
+      }
+
       let propertyDescriptorDiff = "";
       const relativeDepth = node.depth - startNode.depth;
       let indent = `  `.repeat(relativeDepth);
       let keyColor;
       let delimitersColor;
 
-      if (mode === "removed") {
-        if (isDefaultDescriptor(node.descriptor, node.before.value)) {
-          return "";
-        }
-        if (signs) {
+      if (mode !== "traverse" && signs) {
+        if (valueName === "before") {
           propertyDescriptorDiff += ANSI.color(removedSign, removedSignColor);
           indent = indent.slice(1);
-        }
-        if (!signs) {
-          keyColor = delimitersColor = colorForExpected;
-        } else if (modified) {
-          keyColor = delimitersColor = colorForSame;
         } else {
-          keyColor = colorForUnexpected;
-          delimitersColor = colorForExpected;
-        }
-      }
-      if (mode === "added") {
-        if (isDefaultDescriptor(node.descriptor, node.after.value)) {
-          return "";
-        }
-        if (signs) {
           propertyDescriptorDiff += ANSI.color(addedSign, addedSignColor);
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = modified
-          ? colorForSame
-          : colorForUnexpected;
       }
       if (mode === "traverse") {
-        if (isDefaultDescriptor(node.descriptor, node.before.value)) {
-          return "";
-        }
         keyColor = delimitersColor = colorForSame;
+      }
+      if (mode === "before") {
+        if (node.diff.counters.overall.any) {
+          keyColor = delimitersColor = colorForSame;
+        } else {
+          keyColor = delimitersColor = colorForExpected;
+        }
+      }
+      if (mode === "after") {
+        if (node.diff.counters.overall.any) {
+          keyColor = delimitersColor = colorForSame;
+        } else {
+          keyColor = delimitersColor = colorForUnexpected;
+        }
+      }
+      if (mode === "removed") {
+        if (signs) {
+          keyColor = colorForUnexpected;
+          delimitersColor = colorForExpected;
+        } else {
+          keyColor = delimitersColor = colorForExpected;
+        }
+      }
+      if (mode === "added") {
+        keyColor = delimitersColor = colorForUnexpected;
       }
 
       propertyDescriptorDiff += indent;
@@ -342,11 +352,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       const valueDiff = writeValueDiff(node, {
         ...context,
+        mode:
+          mode === "removed"
+            ? "before"
+            : mode === "added"
+              ? "after"
+              : context.mode,
         maxDepth:
           context.maxDepth === undefined
-            ? mode === "removed" || mode === "added"
-              ? Math.min(node.depth + 1, maxDepthDefault)
-              : undefined
+            ? mode === "traverse"
+              ? undefined
+              : Math.min(node.depth + 1, maxDepthDefault)
             : context.maxDepth,
         maxColumns:
           maxColumnsDefault - stringWidth(propertyDescriptorDiff) - ",".length,
@@ -372,12 +388,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         causeCounters.displayed++;
       }
 
-      const valueName = mode === "added" ? "after" : "before";
+      const valueName = mode === "after" ? "after" : "before";
       const valueInfo = node[valueName];
       const valueColor =
-        mode === "removed"
+        mode === "before"
           ? colorForExpected
-          : mode === "added"
+          : mode === "after"
             ? colorForUnexpected
             : colorForSame;
       // primitive
@@ -398,9 +414,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       // composite
       const delimitersColor =
-        mode === "removed"
+        mode === "before"
           ? colorForExpected
-          : mode === "added"
+          : mode === "after"
             ? colorForUnexpected
             : colorForSame;
       let compositeDiff = "";
@@ -502,7 +518,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               const descriptorNode = propertyNode.descriptors[descriptorName];
               compositeBody += writeDiff(descriptorNode, {
                 ...context,
-                modified: false,
               });
             }
           };
@@ -616,10 +631,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
 
           if (signs) {
-            if (mode === "removed") {
+            if (mode === "before") {
               compositeBody += ANSI.color(removedSign, removedSignColor);
               indent = indent.slice(1);
-            } else if (mode === "added") {
+            } else if (mode === "after") {
               compositeBody += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
             }
@@ -650,13 +665,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           let identityDiff = "";
           identityDiff += writePropertyDescriptorDiff(node, {
             ...context,
-            mode: "removed",
-            modified: true,
+            mode: "before",
           });
           identityDiff += writePropertyDescriptorDiff(node, {
             ...context,
-            mode: "added",
-            modified: true,
+            mode: "after",
           });
           return identityDiff;
         }
@@ -669,14 +682,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let identityDiff = "";
         identityDiff += writeValueDiff(node, {
           ...context,
-          mode: "removed",
-          modified: true,
+          mode: "before",
         });
         identityDiff += "\n";
         identityDiff += writeValueDiff(node, {
           ...context,
-          mode: "added",
-          modified: true,
+          mode: "after",
         });
         return identityDiff;
       }
