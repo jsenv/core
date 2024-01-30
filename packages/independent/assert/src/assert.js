@@ -48,6 +48,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxDepth: maxDepthDefault = 5,
       maxColumns: maxColumnsDefault = 100,
       maxDiffPerObject = 5,
+      maxPropertyBeforeDiff = 2,
+      maxPropertyAfterDiff = 2,
     } = firstArg;
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
@@ -122,20 +124,34 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           node.diff.counters.self.modified++;
         };
 
+        reference: {
+          if (ignoreDiff) {
+            break reference;
+          }
+          if (node.before.reference !== node.after.reference) {
+            node.diff.reference = true;
+            onSelfDiff();
+          }
+        }
         identity: {
-          if (!ignoreDiff) {
-            if (node.before.isPrimitive || node.after.isPrimitive) {
-              if (node.before.value !== node.after.value) {
-                node.diff.identity = true;
-                onSelfDiff();
-              }
+          if (ignoreDiff) {
+            break identity;
+          }
+          if (node.before.isPrimitive || node.after.isPrimitive) {
+            if (node.before.value !== node.after.value) {
+              node.diff.identity = true;
+              onSelfDiff();
             }
           }
         }
-        reference: {
-          if (!ignoreDiff) {
-            if (node.before.reference !== node.after.reference) {
-              node.diff.reference = true;
+        category: {
+          const isCompositeBefore = node.before.isComposite;
+          const isCompositeAfter = node.after.isComposite;
+          if (isCompositeBefore && isCompositeAfter) {
+            const isArrayBefore = node.before.isArray;
+            const isArrayAfter = node.after.isArray;
+            if (isArrayBefore !== isArrayAfter) {
+              node.diff.category = true;
               onSelfDiff();
             }
           }
@@ -147,7 +163,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            const shouldIgnoreDiff = !canHavePropsBefore || !canHavePropsAfter;
+            const shouldIgnoreDiff =
+              node.diff.category || !canHavePropsBefore || !canHavePropsAfter;
             if (!ignoreDiff && shouldIgnoreDiff) {
               ignoreDiff = true;
             }
@@ -431,220 +448,340 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         compositeDiff += " ";
       }
       const relativeDepth = node.depth - startNode.depth;
-      let compositePrefix = ANSI.color("{", delimitersColor);
-      let compositeBody = "";
-      let compositeSuffix = ANSI.color("}", delimitersColor);
-      properties_diff: {
-        const propertyNames = Object.keys(node.properties);
-        const propertyCount = propertyNames.length;
-        if (propertyCount === 0) {
-          break properties_diff;
+      const insideOverview = collapsed !== true;
+      if (!collapsed) {
+        const shouldCollapse =
+          relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
+        if (shouldCollapse) {
+          collapsed = context.collapsed = shouldCollapse;
         }
-        const propertiesOverview = collapsed !== true;
-        if (!collapsed) {
-          const shouldCollapse =
-            relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
-          if (shouldCollapse) {
-            collapsed = context.collapsed = shouldCollapse;
-          }
-        }
-        if (collapsed) {
-          if (propertiesOverview) {
-            let propertiesDiff = "";
-            let lineWidth = `{  }`.length;
-            const estimatedCollapsedBoilerplateWidth =
-              `Object(${propertyCount}) , ...`.length;
-            for (const property of propertyNames) {
-              let propertyDiff = "";
-              const propertyNode = node.properties[property];
-              if (propertiesDiff.length === 0) {
-                propertyDiff += " ";
-              } else {
-                propertyDiff += ANSI.color(",", delimitersColor);
-                propertyDiff += " ";
-              }
-              propertyDiff += writePropertyKey(property, valueColor);
-              propertyDiff += ANSI.color(":", delimitersColor);
-              propertyDiff += " ";
+      }
 
-              if (
-                propertyNode.descriptors.get[valueName].value &&
-                propertyNode.descriptors.set[valueName].value
-              ) {
-                propertyDiff += ANSI.color(`[get/set]`, valueColor);
-              } else if (propertyNode.descriptors.get[valueName].value) {
-                propertyDiff += ANSI.color(`[get]`, valueColor);
-              } else if (propertyNode.descriptors.set[valueName].value) {
-                propertyDiff += ANSI.color(`[set]`, valueColor);
-              } else {
-                propertyDiff += writeValueDiff(
-                  propertyNode.descriptors.value,
-                  context,
+      const propertyNames = Object.keys(node.properties);
+
+      const writeInsideDiff = ({ next, write }) => {
+        let insideDiff = "";
+        let indent = "  ".repeat(relativeDepth);
+        insideDiff += "\n";
+
+        const withoutDiffSkippedArray = [];
+        const skippedCounters = {
+          total: 0,
+          diff: 0,
+        };
+
+        let diffCount = 0;
+        let nodeInsideThisOne;
+        while ((nodeInsideThisOne = next())) {
+          if (nodeInsideThisOne.diff.counters.overall.any) {
+            diffCount++;
+            // too many diff
+            if (diffCount > maxDiffPerObject) {
+              skippedCounters.total++;
+              skippedCounters.diff +=
+                nodeInsideThisOne.diff.counters.overall.any;
+              continue;
+            }
+            // first write property eventually skipped
+            const withoutDiffSkippedCount = withoutDiffSkippedArray.length;
+            if (withoutDiffSkippedCount) {
+              if (withoutDiffSkippedCount > maxPropertyBeforeDiff) {
+                const previousToDisplayArray = withoutDiffSkippedArray.slice(
+                  -(maxPropertyBeforeDiff - 1),
                 );
-              }
-              lineWidth += stringWidth(propertyDiff);
-              if (lineWidth + estimatedCollapsedBoilerplateWidth > maxColumns) {
-                compositePrefix = ANSI.color(
-                  `Object(${propertyCount}) {`,
+                const indexAboveCount = withoutDiffSkippedCount - 1;
+                const arrowSign = diffCount > 1 ? `↕` : `↑`;
+                insideDiff += `${indent}  `;
+                insideDiff += ANSI.color(
+                  `${arrowSign} ${indexAboveCount} values ${arrowSign}`,
                   delimitersColor,
                 );
-                compositeSuffix = ANSI.color("}", delimitersColor);
-                propertiesDiff += ANSI.color(",", delimitersColor);
-                propertiesDiff += " ";
-                // here ideally the color should be
-                // red if there is a - in remaining props
-                // green if a + in remaining props
-                // grey otherwise
-                propertiesDiff += ANSI.color(`...`, valueColor);
+                skippedCounters.total -= indexAboveCount;
+                insideDiff += "\n";
+                for (const previousToDisplay of previousToDisplayArray) {
+                  skippedCounters.total--;
+                  insideDiff += write(previousToDisplay);
+                }
+              } else {
+                for (const previousToDisplay of withoutDiffSkippedArray) {
+                  skippedCounters.total--;
+                  insideDiff += write(previousToDisplay);
+                }
+              }
+              withoutDiffSkippedArray.length = 0;
+            }
+            insideDiff += write(nodeInsideThisOne);
+            continue;
+          }
+          skippedCounters.total++;
+          withoutDiffSkippedArray.push(nodeInsideThisOne);
+          // does not have a diff
+          // will either be written when we encounter a diff
+          // or be skipped
+        }
+        let belowSummary = "";
+        // now display the values below
+        const withoutDiffSkippedCount = withoutDiffSkippedArray.length;
+        if (withoutDiffSkippedCount) {
+          if (withoutDiffSkippedCount > maxPropertyAfterDiff) {
+            const nextToDisplayArray = withoutDiffSkippedArray.slice(
+              0,
+              maxPropertyAfterDiff - 1,
+            );
+            for (const nextToDisplay of nextToDisplayArray) {
+              skippedCounters.total--;
+              insideDiff += write(nextToDisplay);
+            }
+          } else {
+            for (const nextToDisplay of withoutDiffSkippedArray) {
+              skippedCounters.total--;
+              insideDiff += write(nextToDisplay);
+            }
+          }
+        }
+
+        if (skippedCounters.total) {
+          belowSummary += ANSI.color(
+            skippedCounters.total === 1
+              ? `1 prop`
+              : `${skippedCounters.total} props`,
+            delimitersColor,
+          );
+          if (skippedCounters.diff) {
+            belowSummary += " ";
+            belowSummary += ANSI.color("(", delimitersColor);
+            belowSummary += ANSI.color(
+              `${skippedCounters.diff}`,
+              colorForUnexpected,
+            );
+            belowSummary += ANSI.color(" diff)", delimitersColor);
+          }
+        }
+        if (belowSummary) {
+          insideDiff += `${indent}  `;
+          insideDiff += ANSI.color(`↓`, delimitersColor);
+          insideDiff += " ";
+          insideDiff += belowSummary;
+          insideDiff += " ";
+          insideDiff += ANSI.color(`↓`, delimitersColor);
+          insideDiff += "\n";
+        }
+        if (signs) {
+          if (mode === "before") {
+            insideDiff += ANSI.color(removedSign, removedSignColor);
+            indent = indent.slice(1);
+          } else if (mode === "after") {
+            insideDiff += ANSI.color(addedSign, addedSignColor);
+            indent = indent.slice(1);
+          }
+        }
+        insideDiff += indent;
+        return insideDiff;
+      };
+
+      inside: {
+        if (collapsed && insideOverview) {
+          let overview = "";
+          let overviewWidth = 0;
+          if (valueInfo.isArray) {
+            const length = valueInfo.value.length;
+            const estimatedCollapsedBoilerplate = `Array(${length}) [, ...]`;
+            const estimatedCollapsedBoilerplateWidth =
+              estimatedCollapsedBoilerplate.length;
+            let indexedValuesOverview = "";
+            let index = 0;
+            for (; index < length; index++) {
+              const isSurrounded = index > 0 && index !== length - 1;
+              const indexedValueNode = node.indexedValues[index];
+              let indexedValueOverview = "";
+              if (isSurrounded) {
+                indexedValueOverview += ANSI.color(",", delimitersColor);
+                indexedValueOverview += " ";
+              }
+              indexedValueOverview += writeValueDiff(indexedValueNode, context);
+              overviewWidth += stringWidth(indexedValueOverview);
+              if (
+                overviewWidth + estimatedCollapsedBoilerplateWidth >
+                maxColumns
+              ) {
                 break;
               }
-              propertiesDiff += propertyDiff;
+              indexedValuesOverview += indexedValueOverview;
             }
-            compositeBody += propertiesDiff;
-            compositeBody += " ";
-          } else {
-            compositePrefix = ANSI.color("Object(", delimitersColor);
-            compositeSuffix = ANSI.color(")", delimitersColor);
-            compositeBody += ANSI.color(`${propertyCount}`, delimitersColor);
-          }
-        } else {
-          let indent = "  ".repeat(relativeDepth);
-          compositeBody += "\n";
 
-          const writePropertyDiff = (property) => {
+            const remainingIndexes = length - index;
+            if (remainingIndexes) {
+              overview += ANSI.color(`Array(${length}) [`, delimitersColor);
+              overview += indexedValuesOverview;
+              overview += ANSI.color(",", delimitersColor);
+              overview += " ";
+              overview += ANSI.color(`...`, valueColor);
+              overview += ANSI.color("]", delimitersColor);
+              overviewWidth += `Array(${length}) [, ...]`;
+              compositeDiff += overview;
+              break inside;
+            }
+            overview += ANSI.color("[", delimitersColor);
+            if (indexedValuesOverview) {
+              overview += indexedValuesOverview;
+            }
+            overview += ANSI.color("]", delimitersColor);
+            overviewWidth += "[]".length;
+          }
+
+          let propertiesOverview = "";
+          const propertyCount = propertyNames.length;
+          const estimatedCollapsedBoilerplate = `Object(${propertyCount}) , ...`;
+          const estimatedCollapsedBoilerplateWidth =
+            estimatedCollapsedBoilerplate.length;
+          let propertyIndex = 0;
+          for (const property of propertyNames) {
+            const isSurrounded =
+              propertyIndex > 0 && propertyIndex !== propertyCount - 1;
+            propertyIndex++;
+            let propertyOverview = "";
             const propertyNode = node.properties[property];
+            if (isSurrounded) {
+              propertyOverview += ANSI.color(",", delimitersColor);
+              propertyOverview += " ";
+            }
+            propertyOverview += writePropertyKey(property, valueColor);
+            propertyOverview += ANSI.color(":", delimitersColor);
+            propertyOverview += " ";
+
+            if (
+              propertyNode.descriptors.get[valueName].value &&
+              propertyNode.descriptors.set[valueName].value
+            ) {
+              propertyOverview += ANSI.color(`[get/set]`, valueColor);
+            } else if (propertyNode.descriptors.get[valueName].value) {
+              propertyOverview += ANSI.color(`[get]`, valueColor);
+            } else if (propertyNode.descriptors.set[valueName].value) {
+              propertyOverview += ANSI.color(`[set]`, valueColor);
+            } else {
+              propertyOverview += writeValueDiff(
+                propertyNode.descriptors.value,
+                context,
+              );
+            }
+            overviewWidth += stringWidth(propertyOverview);
+            if (
+              overviewWidth + estimatedCollapsedBoilerplateWidth >
+              maxColumns
+            ) {
+              break;
+            }
+            propertiesOverview += propertyOverview;
+          }
+
+          const remainingProps = propertyCount - propertyIndex;
+          if (remainingProps) {
+            overview += ANSI.color(
+              `Object(${propertyCount}) [`,
+              delimitersColor,
+            );
+            overview += propertiesOverview;
+            overview += ANSI.color(",", delimitersColor);
+            overview += " ";
+            overview += ANSI.color(`...`, valueColor);
+            overview += ANSI.color("}", delimitersColor);
+            overviewWidth += `Object(${propertyCount}) {, ...}`;
+            compositeDiff += overview;
+            break inside;
+          }
+          overview += ANSI.color("{", delimitersColor);
+          if (propertiesOverview) {
+            overview += " ";
+            overview += propertiesOverview;
+            overview += " ";
+          }
+          overview += ANSI.color("}", delimitersColor);
+          overviewWidth += "{  }".length;
+          compositeDiff += overview;
+          break inside;
+        }
+        if (collapsed) {
+          if (valueInfo.isArray) {
+            const length = valueInfo.value.length;
+            compositeDiff += ANSI.color("Array(", delimitersColor);
+            compositeDiff += ANSI.color(`${length}`, delimitersColor);
+            compositeDiff += ANSI.color(")", delimitersColor);
+            break inside;
+          }
+          compositeDiff += ANSI.color("Object(", delimitersColor);
+          compositeDiff += ANSI.color(
+            `${propertyNames.length}`,
+            delimitersColor,
+          );
+          compositeDiff += ANSI.color(")", delimitersColor);
+          break inside;
+        }
+        if (valueInfo.isArray) {
+          const length = valueInfo.value.length;
+          if (length === 0) {
+            compositeDiff += ANSI.color("[", delimitersColor);
+            compositeDiff += ANSI.color("]", delimitersColor);
+            // TODO: should not break, we want to write props if any
+            break inside;
+          } else {
+            let index = 0;
+            let insideDiff = writeInsideDiff({
+              next: () => {
+                if (index < length) {
+                  const indexedValueNode = node.indexedValues[index];
+                  index++;
+                  return indexedValueNode;
+                }
+                return null;
+              },
+              write: (indexedValueNode) => {
+                let indexedValueDiff = "";
+                indexedValueDiff += writeDiff(indexedValueNode, {
+                  ...context,
+                });
+                return indexedValueDiff;
+              },
+            });
+            compositeDiff += ANSI.color("[", delimitersColor);
+            compositeDiff += insideDiff;
+            compositeDiff += ANSI.color("]", delimitersColor);
+            // TODO: should not break, we want to write props if any
+            break inside;
+          }
+        }
+        const propertyCount = propertyNames.length;
+        if (propertyCount === 0) {
+          compositeDiff += ANSI.color("{", delimitersColor);
+          compositeDiff += ANSI.color("}", delimitersColor);
+          break inside;
+        }
+        let index = 0;
+        let insideDiff = writeInsideDiff({
+          next: () => {
+            if (index < propertyCount) {
+              const propertyNode = node.properties[propertyNames[index]];
+              index++;
+              return propertyNode;
+            }
+            return null;
+          },
+          write: (propertyNode) => {
+            let propertyDiff = "";
             const descriptorNames = Object.keys(propertyNode.descriptors);
             for (const descriptorName of descriptorNames) {
               const descriptorNode = propertyNode.descriptors[descriptorName];
-              compositeBody += writeDiff(descriptorNode, {
+              propertyDiff += writeDiff(descriptorNode, {
                 ...context,
               });
             }
-          };
-
-          let index = 0;
-          const maxPropertyAbove = 2;
-          const maxPropertyBelow = 2;
-          const propertyWithoutDiffSkippedArray = [];
-          const skippedCounters = {
-            total: 0,
-            diff: 0,
-          };
-          let propertyDiffCount = 0;
-          while (index < propertyNames.length) {
-            const property = propertyNames[index];
-            index++;
-            const propertyNode = node.properties[property];
-            if (propertyNode.diff.counters.overall.any) {
-              propertyDiffCount++;
-              // too many diff
-              if (propertyDiffCount > maxDiffPerObject) {
-                skippedCounters.total++;
-                skippedCounters.diff += propertyNode.diff.counters.overall.any;
-                continue;
-              }
-              // first write property eventually skipped
-              const propertyWithoutDiffSkippedCount =
-                propertyWithoutDiffSkippedArray.length;
-              if (propertyWithoutDiffSkippedCount) {
-                if (propertyWithoutDiffSkippedCount > maxPropertyAbove) {
-                  const previousPropertyToDisplayArray =
-                    propertyWithoutDiffSkippedArray.slice(
-                      -(maxPropertyAbove - 1),
-                    );
-                  const propertyAboveCount =
-                    propertyWithoutDiffSkippedCount - 1;
-                  const arrowSign = propertyDiffCount > 1 ? `↕` : `↑`;
-                  compositeBody += `${indent}  `;
-                  compositeBody += ANSI.color(
-                    `${arrowSign} ${propertyAboveCount} props ${arrowSign}`,
-                    delimitersColor,
-                  );
-                  skippedCounters.total -= propertyAboveCount;
-                  compositeBody += "\n";
-                  for (const previousPropertyToDisplay of previousPropertyToDisplayArray) {
-                    skippedCounters.total--;
-                    writePropertyDiff(previousPropertyToDisplay);
-                  }
-                } else {
-                  for (const previousPropertyToDisplay of propertyWithoutDiffSkippedArray) {
-                    skippedCounters.total--;
-                    writePropertyDiff(previousPropertyToDisplay);
-                  }
-                }
-                propertyWithoutDiffSkippedArray.length = 0;
-              }
-              writePropertyDiff(property);
-              continue;
-            }
-            skippedCounters.total++;
-            propertyWithoutDiffSkippedArray.push(property);
-            // property does not have a diff
-            // maybe it should be skipped
-          }
-
-          let belowSummary = "";
-          // now display the property below
-          const propertyWithoutDiffSkippedCount =
-            propertyWithoutDiffSkippedArray.length;
-          if (propertyWithoutDiffSkippedCount) {
-            if (propertyWithoutDiffSkippedCount > maxPropertyBelow) {
-              const nextPropertyToDisplayArray =
-                propertyWithoutDiffSkippedArray.slice(0, maxPropertyBelow - 1);
-              for (const nextPropertyToDisplay of nextPropertyToDisplayArray) {
-                skippedCounters.total--;
-                writePropertyDiff(nextPropertyToDisplay);
-              }
-            } else {
-              for (const nextPropertyToDisplay of propertyWithoutDiffSkippedArray) {
-                skippedCounters.total--;
-                writePropertyDiff(nextPropertyToDisplay);
-              }
-            }
-          }
-          if (skippedCounters.total) {
-            belowSummary += ANSI.color(
-              skippedCounters.total === 1
-                ? `1 prop`
-                : `${skippedCounters.total} props`,
-              delimitersColor,
-            );
-            if (skippedCounters.diff) {
-              belowSummary += " ";
-              belowSummary += ANSI.color("(", delimitersColor);
-              belowSummary += ANSI.color(
-                `${skippedCounters.diff}`,
-                colorForUnexpected,
-              );
-              belowSummary += ANSI.color(" diff)", delimitersColor);
-            }
-          }
-
-          if (belowSummary) {
-            compositeBody += `${indent}  `;
-            compositeBody += ANSI.color(`↓`, delimitersColor);
-            compositeBody += " ";
-            compositeBody += belowSummary;
-            compositeBody += " ";
-            compositeBody += ANSI.color(`↓`, delimitersColor);
-            compositeBody += "\n";
-          }
-
-          if (signs) {
-            if (mode === "before") {
-              compositeBody += ANSI.color(removedSign, removedSignColor);
-              indent = indent.slice(1);
-            } else if (mode === "after") {
-              compositeBody += ANSI.color(addedSign, addedSignColor);
-              indent = indent.slice(1);
-            }
-          }
-          compositeBody += indent;
-        }
+            return propertyDiff;
+          },
+        });
+        compositeDiff += ANSI.color("[", delimitersColor);
+        compositeDiff += insideDiff;
+        compositeDiff += ANSI.color("]", delimitersColor);
       }
-      compositeDiff += compositePrefix;
-      compositeDiff += compositeBody;
-      compositeDiff += compositeSuffix;
+
       return compositeDiff;
     };
     const writeDiff = (node, context) => {
@@ -780,29 +917,10 @@ const createComparisonTree = (beforeValue, afterValue) => {
       type,
       parent,
       depth,
-      before: {
-        value: beforeValue,
-        valueOf: () => {
-          throw new Error("use before.value");
-        },
-        isComposite: isComposite(beforeValue),
-        isPrimitive: isPrimitive(beforeValue),
-        reference: undefined,
-        referenceId: null,
-        referenceFromOthersSet: new Set(),
-      },
-      after: {
-        value: afterValue,
-        valueOf: () => {
-          throw new Error("use after.value");
-        },
-        isComposite: isComposite(afterValue),
-        isPrimitive: isPrimitive(afterValue),
-        reference: undefined,
-        referenceId: null,
-        referenceFromOthersSet: new Set(),
-      },
+      before: createValueInfo(beforeValue, "before"),
+      after: createValueInfo(afterValue, "after"),
       properties: {},
+      indexedValues: [],
       diff: {
         counters: {
           overall: {
@@ -825,8 +943,10 @@ const createComparisonTree = (beforeValue, afterValue) => {
           },
         },
         identity: null,
+        category: null,
         reference: null,
         properties: {},
+        indexedValues: [],
       },
     };
 
@@ -904,6 +1024,20 @@ const createComparisonTree = (beforeValue, afterValue) => {
         return propertyNode;
       };
     }
+    if (node.before.isArray || node.after.isArray) {
+      node.appendIndexedValue = (index, { beforeValue, afterValue }) => {
+        const indexedValueNode = createComparisonNode({
+          type: "indexed_value",
+          beforeValue,
+          afterValue,
+          parent: node,
+          depth: depth + 1,
+        });
+        indexedValueNode.index = index;
+        node.indexedValues[index] = indexedValueNode;
+        return indexedValueNode;
+      };
+    }
     return node;
   };
 
@@ -917,13 +1051,26 @@ const createComparisonTree = (beforeValue, afterValue) => {
   return { root };
 };
 
+const createValueInfo = (value, name) => {
+  const composite = isComposite(value);
+  const isArray = composite && Array.isArray(value);
+
+  return {
+    value,
+    valueOf: () => {
+      throw new Error(`use ${name}.value`);
+    },
+    isComposite: composite,
+    isPrimitive: !composite,
+    isArray,
+    reference: undefined,
+    referenceId: null,
+    referenceFromOthersSet: new Set(),
+  };
+};
 const isComposite = (value) => {
   if (value === null) return false;
   if (typeof value === "object") return true;
   if (typeof value === "function") return true;
   return false;
-};
-
-const isPrimitive = (value) => {
-  return !isComposite(value);
 };

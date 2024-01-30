@@ -1,0 +1,9 @@
+# object expected, array received
+AssertionError: expected and actual have 1 difference:
+
+[
+  length: undefined,
+  enumerable length: undefined,
+  configurable length: undefined,
+]
+
