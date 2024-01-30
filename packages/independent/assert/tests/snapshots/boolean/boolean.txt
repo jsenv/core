@@ -1,0 +1,24 @@
+# true should be false
+AssertionError: expected and actual are different:
+
+false
+true
+
+# false should be true
+AssertionError: expected and actual are different:
+
+true
+false
+
+# true should be 1
+AssertionError: expected and actual are different:
+
+1
+true
+
+# false should be 0
+AssertionError: expected and actual are different:
+
+0
+false
+

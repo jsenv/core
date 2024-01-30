@@ -5,6 +5,8 @@ import { isAssertionError, createAssertionError } from "./assertion_error.js";
 const colorForExpected = ANSI.GREEN;
 const colorForUnexpected = ANSI.RED;
 const colorForSame = ANSI.GREY;
+const addedSignColor = ANSI.GREY;
+const removedSignColor = ANSI.GREY;
 const removedSign = "-";
 const addedSign = "+";
 
@@ -76,8 +78,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     const visit = (node) => {
       if (node.type === "property") {
-        const removed = !node.after.value;
-        const added = !node.before.value;
+        const descriptorBefore = node.before.value;
+        const descriptorAfter = node.after.value;
+        const canHavePropsBefore = node.parent.before.isComposite;
+        const canHavePropsAfter = node.parent.after.isComposite;
+        const removed =
+          descriptorBefore &&
+          canHavePropsAfter &&
+          descriptorAfter === undefined;
+        const added =
+          canHavePropsBefore &&
+          descriptorBefore === undefined &&
+          descriptorAfter;
         if (removed) {
           node.diff.removed = true;
           if (node.parent.after.isComposite) {
@@ -93,12 +105,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         const visitPropertyDescriptor = (descriptorName) => {
-          const descriptorBeforeValue = added
-            ? undefined
-            : node.before.value[descriptorName];
-          const descriptorAfterValue = removed
-            ? undefined
-            : node.after.value[descriptorName];
+          const descriptorBeforeValue = descriptorBefore
+            ? descriptorBefore[descriptorName]
+            : undefined;
+          const descriptorAfterValue = descriptorAfter
+            ? descriptorAfter[descriptorName]
+            : undefined;
           const descriptorNode = node.appendPropertyDescriptor(descriptorName, {
             beforeValue: descriptorBeforeValue,
             afterValue: descriptorAfterValue,
@@ -162,10 +174,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const visitProperty = (property) => {
             const beforePropertyDescriptor = node.before.isComposite
               ? Object.getOwnPropertyDescriptor(node.before.value, property)
-              : null;
+              : undefined;
             const afterPropertyDescriptor = node.after.isComposite
               ? Object.getOwnPropertyDescriptor(node.after.value, property)
-              : null;
+              : undefined;
             const propertyNode = node.appendProperty(property, {
               beforeValue: beforePropertyDescriptor,
               afterValue: afterPropertyDescriptor,
@@ -281,37 +293,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let keyColor;
       let delimitersColor;
 
-      if (
-        node.diff.removed &&
-        signs && // indirect way to check we are generating root comparison identity failure
-        !context.forceUnexpected
-      ) {
-        context.forceUnexpected = true;
-      }
-
       if (mode === "removed") {
         if (isDefaultDescriptor(node.descriptor, node.before.value)) {
           return "";
         }
         if (signs) {
-          propertyDescriptorDiff += ANSI.color(
-            removedSign,
-            context.forceUnexpected ? colorForUnexpected : colorForExpected,
-          );
+          propertyDescriptorDiff += ANSI.color(removedSign, removedSignColor);
           indent = indent.slice(1);
         }
-        keyColor = delimitersColor = modified
-          ? colorForSame
-          : context.forceUnexpected
-            ? colorForUnexpected
-            : colorForExpected;
+        if (modified) {
+          keyColor = delimitersColor = colorForSame;
+        } else {
+          // non of the parent must be
+          // indirect way to check we are generating root comparison identity failure
+
+          keyColor = delimitersColor = colorForExpected;
+        }
       }
       if (mode === "added") {
         if (isDefaultDescriptor(node.descriptor, node.after.value)) {
           return "";
         }
         if (signs) {
-          propertyDescriptorDiff += ANSI.color(addedSign, colorForUnexpected);
+          propertyDescriptorDiff += ANSI.color(addedSign, addedSignColor);
           indent = indent.slice(1);
         }
         keyColor = delimitersColor = modified
@@ -361,7 +365,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
-        forceUnexpected,
       } = context;
 
       if (causeSet.has(node)) {
@@ -376,16 +379,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const valueInfo = node[valueName];
       const valueColor =
         mode === "removed"
-          ? forceUnexpected
-            ? colorForUnexpected
-            : colorForExpected
+          ? colorForExpected
           : mode === "added"
             ? colorForUnexpected
             : colorForSame;
       // primitive
       if (valueInfo.isPrimitive) {
         const value = valueInfo.value;
-        let valueDiff = JSON.stringify(value);
+        let valueDiff =
+          value === undefined
+            ? "undefined"
+            : value === null
+              ? "null"
+              : JSON.stringify(value);
         if (valueDiff.length > maxColumns) {
           valueDiff = valueDiff.slice(0, maxColumns);
           valueDiff += "…";
@@ -396,9 +402,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // composite
       const delimitersColor =
         mode === "removed"
-          ? forceUnexpected
-            ? colorForUnexpected
-            : colorForExpected
+          ? colorForExpected
           : mode === "added"
             ? colorForUnexpected
             : colorForSame;
@@ -509,8 +513,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const propertyWithoutDiffSkippedArray = [];
           const skippedCounters = {
             total: 0,
-            removal: 0,
-            addition: 0,
+            diff: 0,
           };
           let propertyDiffCount = 0;
           while (index < propertyNames.length) {
@@ -522,10 +525,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               // too many diff
               if (propertyDiffCount > maxDiffPerObject) {
                 skippedCounters.total++;
-                skippedCounters.removal +=
-                  propertyNode.diff.counters.overall.removal;
-                skippedCounters.addition +=
-                  propertyNode.diff.counters.overall.addition;
+                skippedCounters.diff += propertyNode.diff.counters.overall.any;
                 continue;
               }
               // first write property eventually skipped
@@ -595,21 +595,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               delimitersColor,
             );
           }
-          if (skippedCounters.removal) {
+          if (skippedCounters.diff) {
             if (belowSummary.length) {
               belowSummary += " ";
             }
             belowSummary += ANSI.color(
-              `${removedSign}${skippedCounters.removal}`,
-              colorForExpected,
-            );
-          }
-          if (skippedCounters.addition) {
-            if (belowSummary.length && !skippedCounters.removal) {
-              belowSummary += " ";
-            }
-            belowSummary += ANSI.color(
-              `${addedSign}${skippedCounters.addition}`,
+              `${removedSign}${skippedCounters.diff}`,
               colorForUnexpected,
             );
           }
@@ -625,10 +616,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           if (signs) {
             if (mode === "removed") {
-              compositeBody += ANSI.color(removedSign, colorForExpected);
+              compositeBody += ANSI.color(removedSign, removedSignColor);
               indent = indent.slice(1);
             } else if (mode === "added") {
-              compositeBody += ANSI.color(addedSign, colorForUnexpected);
+              compositeBody += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
             }
           }
