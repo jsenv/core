@@ -1,11 +1,15 @@
-# false should be an object
+# false should be an object at property
 
 ```js
 assert({
-  actual: false,
-  expected: { foo: true },
+  actual: {
+    foo: false,
+  },
+  expected: {
+    foo: { a: true },
+  },
 });
 ```
 
-![img](<./object/false should be an object.svg>)
+![img](<./object/false should be an object at property.svg>)
 

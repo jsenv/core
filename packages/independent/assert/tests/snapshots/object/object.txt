@@ -1,8 +1,10 @@
-# false should be an object
-AssertionError: expected and actual are different:
+# false should be an object at property
+AssertionError: expected and actual have 1 difference:
 
 {
-  foo: true,
+- foo: {
+-   a: true,
+- },
++ foo: false,
 }
-false
 

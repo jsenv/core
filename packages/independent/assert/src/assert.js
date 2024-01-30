@@ -339,20 +339,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
 
       const valueDiff = writeValueDiff(node, {
-        mode,
-        context: {
-          ...context,
-          maxDepth:
-            context.maxDepth === undefined
-              ? mode === "removed" || mode === "added"
-                ? Math.min(node.depth + 1, maxDepthDefault)
-                : undefined
-              : context.maxDepth,
-          maxColumns:
-            maxColumnsDefault -
-            stringWidth(propertyDescriptorDiff) -
-            ",".length,
-        },
+        ...context,
+        maxDepth:
+          context.maxDepth === undefined
+            ? mode === "removed" || mode === "added"
+              ? Math.min(node.depth + 1, maxDepthDefault)
+              : undefined
+            : context.maxDepth,
+        maxColumns:
+          maxColumnsDefault - stringWidth(propertyDescriptorDiff) - ",".length,
       });
       propertyDescriptorDiff += valueDiff;
       propertyDescriptorDiff += ANSI.color(",", delimitersColor);
@@ -503,10 +498,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const descriptorNames = Object.keys(propertyNode.descriptors);
             for (const descriptorName of descriptorNames) {
               const descriptorNode = propertyNode.descriptors[descriptorName];
-              compositeBody += writePropertyDescriptorDiff(
-                descriptorNode,
-                context,
-              );
+              compositeBody += writeDiff(descriptorNode, {
+                ...context,
+                modified: false,
+              });
             }
           };
 
@@ -660,6 +655,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         identityDiff += method(node, {
           ...context,
           mode: "removed",
+          modified: true,
         });
         if (node.type !== "property_descriptor") {
           identityDiff += "\n";
@@ -667,16 +663,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         identityDiff += method(node, {
           ...context,
           mode: "added",
+          modified: true,
         });
         return identityDiff;
       }
-      return method(node, {
-        ...context,
-        mode: "traverse",
-      });
+      return method(node, context);
     };
 
-    let diffMessage = writeDiff(startNode, {});
+    let diffMessage = writeDiff(startNode, { mode: "traverse" });
 
     let message;
     if (rootComparison.diff.identity) {
