@@ -53,15 +53,15 @@
         <text x="52.01" y="90.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="90.55" fill="#7f7f7f">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">-</text>
-        <text x="26.8" y="109.55" fill="#11bc79">d</text>
-        <text x="35.2" y="109.55" fill="#11bc79">:</text>
+        <text x="26.8" y="109.55" fill="#7f7f7f">d</text>
+        <text x="35.2" y="109.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="109.55" fill="#11bc79">false</text>
-        <text x="94.01" y="109.55" fill="#11bc79">,</text>
+        <text x="94.01" y="109.55" fill="#7f7f7f">,</text>
         <text x="10" y="128.55" fill="#7f7f7f">+</text>
-        <text x="26.8" y="128.55" fill="#cd5555">d</text>
-        <text x="35.2" y="128.55" fill="#cd5555">:</text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">d</text>
+        <text x="35.2" y="128.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="128.55" fill="#cd5555">true</text>
-        <text x="85.61" y="128.55" fill="#cd5555">,</text>
+        <text x="85.61" y="128.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="147.55" fill="#7f7f7f"
           >&#x2195; 2 props &#x2195;</text
         >
@@ -70,15 +70,15 @@
         <text x="52.01" y="166.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="166.55" fill="#7f7f7f">,</text>
         <text x="10" y="185.55" fill="#7f7f7f">-</text>
-        <text x="26.8" y="185.55" fill="#11bc79">h</text>
-        <text x="35.2" y="185.55" fill="#11bc79">:</text>
+        <text x="26.8" y="185.55" fill="#7f7f7f">h</text>
+        <text x="35.2" y="185.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="185.55" fill="#11bc79">false</text>
-        <text x="94.01" y="185.55" fill="#11bc79">,</text>
+        <text x="94.01" y="185.55" fill="#7f7f7f">,</text>
         <text x="10" y="204.55" fill="#7f7f7f">+</text>
-        <text x="26.8" y="204.55" fill="#cd5555">h</text>
-        <text x="35.2" y="204.55" fill="#cd5555">:</text>
+        <text x="26.8" y="204.55" fill="#7f7f7f">h</text>
+        <text x="35.2" y="204.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="204.55" fill="#cd5555">true</text>
-        <text x="85.61" y="204.55" fill="#cd5555">,</text>
+        <text x="85.61" y="204.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="223.55" fill="#7f7f7f"
           >&#x2195; 2 props &#x2195;</text
         >
@@ -87,15 +87,15 @@
         <text x="52.01" y="242.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="242.55" fill="#7f7f7f">,</text>
         <text x="10" y="261.55" fill="#7f7f7f">-</text>
-        <text x="26.8" y="261.55" fill="#11bc79">l</text>
-        <text x="35.2" y="261.55" fill="#11bc79">:</text>
+        <text x="26.8" y="261.55" fill="#7f7f7f">l</text>
+        <text x="35.2" y="261.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="261.55" fill="#11bc79">false</text>
-        <text x="94.01" y="261.55" fill="#11bc79">,</text>
+        <text x="94.01" y="261.55" fill="#7f7f7f">,</text>
         <text x="10" y="280.55" fill="#7f7f7f">+</text>
-        <text x="26.8" y="280.55" fill="#cd5555">l</text>
-        <text x="35.2" y="280.55" fill="#cd5555">:</text>
+        <text x="26.8" y="280.55" fill="#7f7f7f">l</text>
+        <text x="35.2" y="280.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="280.55" fill="#cd5555">true</text>
-        <text x="85.61" y="280.55" fill="#cd5555">,</text>
+        <text x="85.61" y="280.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="299.55" fill="#7f7f7f">m</text>
         <text x="35.2" y="299.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="299.55" fill="#7f7f7f">true</text>
