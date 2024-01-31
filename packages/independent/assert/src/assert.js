@@ -137,11 +137,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (ignoreDiff) {
             break category;
           }
+          const isPrimitiveBefore = node.before.isPrimitive;
+          const isPrimitiveAfter = node.after.isPrimitive;
+          if (isPrimitiveBefore !== isPrimitiveAfter) {
+            node.diff.category = true;
+            onSelfDiff();
+            break category;
+          }
+          if (
+            isPrimitiveBefore &&
+            isPrimitiveAfter &&
+            node.before.value !== node.after.value
+          ) {
+            node.diff.category = true;
+            onSelfDiff();
+            break category;
+          }
           const isCompositeBefore = node.before.isComposite;
           const isCompositeAfter = node.after.isComposite;
           if (isCompositeBefore !== isCompositeAfter) {
             node.diff.category = true;
             onSelfDiff();
+            break category;
           }
           const isArrayBefore = node.before.isArray;
           const isArrayAfter = node.after.isArray;
@@ -149,19 +166,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             node.diff.category = true;
             onSelfDiff();
             break category;
-          }
-        }
-        identity: {
-          if (ignoreDiff) {
-            break identity;
-          }
-          if (node.before.isPrimitive || node.after.isPrimitive) {
-            if (node.before.value !== node.after.value) {
-              node.diff.identity = true;
-              if (!node.diff.category) {
-                onSelfDiff();
-              }
-            }
           }
         }
         // prototype: {
@@ -185,9 +189,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            if (!ignoreDiff && node.diff.identity) {
-              ignoreDiff = true;
-            }
             const propertyDescriptorBefore = canHavePropsBefore
               ? Object.getOwnPropertyDescriptor(node.before.value, property)
               : undefined;
@@ -206,7 +207,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (removed) {
               ignoreDiff = true;
               propertyNode.diff.removed = true;
-              if (!node.diff.identity) {
+              if (!node.diff.category) {
                 propertyNode.diff.counters.self.removed++;
                 addNodeCausingDiff(propertyNode);
               }
@@ -218,10 +219,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (added) {
               ignoreDiff = true;
               propertyNode.diff.added = true;
-              if (!node.diff.identity) {
+              if (!node.diff.category) {
                 propertyNode.diff.counters.self.added++;
                 addNodeCausingDiff(propertyNode);
               }
+            }
+            if (node.diff.category) {
+              ignoreDiff = true;
             }
             visit(propertyNode, {
               ignoreDiff,
@@ -285,7 +289,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const [firstNodeCausingDiff] = causeSet;
     if (
       firstNodeCausingDiff.depth >= maxDepthDefault &&
-      !rootComparison.diff.identity
+      !rootComparison.diff.category
     ) {
       const nodesFromRootToTarget = [firstNodeCausingDiff];
       let currentNode = firstNodeCausingDiff;
@@ -867,10 +871,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const writeDiff = (node, context) => {
       if (node.type === "property_descriptor") {
+        if (context.forceDiff) {
+          return writePropertyDescriptorDiff(node, context);
+        }
         if (node.parent.diff.removed) {
-          if (node.parent.parent.diff.category) {
-            return "";
-          }
           return writePropertyDescriptorDiff(node, {
             ...context,
             forceDiff: true,
@@ -878,48 +882,48 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           });
         }
         if (node.parent.diff.added) {
-          if (node.parent.parent.diff.category) {
-            return "";
-          }
           return writePropertyDescriptorDiff(node, {
             ...context,
             forceDiff: true,
             mode: "added",
           });
         }
-        if (node.diff.identity) {
-          let identityDiff = "";
-          identityDiff += writePropertyDescriptorDiff(node, {
+        if (node.diff.category) {
+          let categoryDiff = "";
+          categoryDiff += writePropertyDescriptorDiff(node, {
             ...context,
             forceDiff: true,
             mode: "before",
           });
-          identityDiff += writePropertyDescriptorDiff(node, {
+          categoryDiff += writePropertyDescriptorDiff(node, {
             ...context,
             forceDiff: true,
             mode: "after",
           });
-          return identityDiff;
+          return categoryDiff;
         }
         return writePropertyDescriptorDiff(node, context);
       }
-      if (node.diff.identity || node.diff.category || node.diff.prototype) {
+      if (context.forceDiff) {
+        return writeValueDiff(node, context);
+      }
+      if (node.diff.category || node.diff.prototype) {
         if (node === rootComparison) {
           signs = false;
         }
-        let identityDiff = "";
-        identityDiff += writeValueDiff(node, {
+        let categoryDiff = "";
+        categoryDiff += writeValueDiff(node, {
           ...context,
-          forceDiff: node.diff.identity,
+          forceDiff: true,
           mode: "before",
         });
-        identityDiff += "\n";
-        identityDiff += writeValueDiff(node, {
+        categoryDiff += "\n";
+        categoryDiff += writeValueDiff(node, {
           ...context,
-          forceDiff: node.diff.identity,
+          forceDiff: true,
           mode: "after",
         });
-        return identityDiff;
+        return categoryDiff;
       }
       return writeValueDiff(node, context);
     };
@@ -927,7 +931,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let diffMessage = writeDiff(startNode, { mode: "traverse" });
 
     let message;
-    if (rootComparison.diff.identity) {
+    if (rootComparison.diff.category) {
       message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} are different`;
     } else {
       message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
@@ -1035,7 +1039,6 @@ const createComparisonTree = (beforeValue, afterValue) => {
             added: 0,
           },
         },
-        identity: null,
         reference: null,
         category: null,
         prototype: null,

@@ -1,3 +1,14 @@
+# false should be an array
+
+```js
+assert({
+  actual: false,
+  expected: [],
+});
+```
+
+![img](<./array/false should be an array.svg>)
+
 # associative array expected, object received
 
 ```js
@@ -12,4 +23,19 @@ assert({
 ```
 
 ![img](<./array/associative array expected, object received.svg>)
+
+# diff on associate array.foo and object.foo
+
+```js
+const array = [];
+array.foo = true;
+assert({
+  actual: array,
+  expected: {
+    foo: false,
+  },
+});
+```
+
+![img](<./array/diff on associate array.foo and object.foo.svg>)
 
