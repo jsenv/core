@@ -403,6 +403,75 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // handle symbols
       return ANSI.color(property, color);
     };
+    const writeIndexedValueDiff = (node, context) => {
+      let { mode, forceDiff } = context;
+      const valueName =
+        mode === "removed" || mode === "before" ? "before" : "after";
+      let indexedValueDiff = "";
+      const relativeDepth = node.depth - startNode.depth;
+      let indent = `  `.repeat(relativeDepth);
+      let delimitersColor;
+
+      if (mode !== "traverse" && signs) {
+        if (valueName === "before") {
+          indexedValueDiff += ANSI.color(removedSign, removedSignColor);
+          indent = indent.slice(1);
+        } else {
+          indexedValueDiff += ANSI.color(addedSign, addedSignColor);
+          indent = indent.slice(1);
+        }
+      }
+      if (mode === "traverse") {
+        delimitersColor = colorForSame;
+      }
+      if (mode === "before") {
+        if (forceDiff) {
+          delimitersColor = colorForExpected;
+        } else {
+          delimitersColor = colorForSame;
+        }
+      }
+      if (mode === "after") {
+        if (forceDiff) {
+          delimitersColor = colorForUnexpected;
+        } else {
+          delimitersColor = colorForSame;
+        }
+      }
+      if (mode === "removed") {
+        if (signs) {
+          delimitersColor = colorForExpected;
+        } else {
+          delimitersColor = colorForExpected;
+        }
+      }
+      if (mode === "added") {
+        delimitersColor = colorForUnexpected;
+      }
+
+      indexedValueDiff += indent;
+      const valueDiff = writeValueDiff(node, {
+        ...context,
+        mode:
+          mode === "removed"
+            ? "before"
+            : mode === "added"
+              ? "after"
+              : context.mode,
+        maxDepth:
+          context.maxDepth === undefined
+            ? mode === "traverse"
+              ? undefined
+              : Math.min(node.depth + 1, maxDepthDefault)
+            : context.maxDepth,
+        maxColumns:
+          maxColumnsDefault - stringWidth(indexedValueDiff) - ",".length,
+      });
+      indexedValueDiff += valueDiff;
+      indexedValueDiff += ANSI.color(",", delimitersColor);
+      indexedValueDiff += "\n";
+      return indexedValueDiff;
+    };
     const writePropertyDescriptorDiff = (node, context) => {
       let { mode, forceDiff } = context;
       const valueName =
@@ -940,6 +1009,49 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return compositeDiff;
     };
     const writeDiff = (node, context) => {
+      if (node.type === "indexed_value") {
+        if (node.parent.diff.removed) {
+          return writeIndexedValueDiff(node, {
+            ...context,
+            forceDiff: true,
+            mode: "removed",
+          });
+        }
+        if (node.parent.diff.added) {
+          return writeIndexedValueDiff(node, {
+            ...context,
+            forceDiff: true,
+            mode: "added",
+          });
+        }
+        if (context.forceDiff) {
+          const canDiffIndexedValues = node.parent.parent.canDiffIndexedValues;
+          if (canDiffIndexedValues) {
+            return writeIndexedValueDiff(node, {
+              ...context,
+              forceDiff: false,
+            });
+          }
+          return writeIndexedValueDiff(node, {
+            ...context,
+          });
+        }
+        if (node.diff.category) {
+          let categoryDiff = "";
+          categoryDiff += writeIndexedValueDiff(node, {
+            ...context,
+            forceDiff: !node.canDiffIndexedValues,
+            mode: "before",
+          });
+          categoryDiff += writeIndexedValueDiff(node, {
+            ...context,
+            forceDiff: !node.canDiffIndexedValues,
+            mode: "after",
+          });
+          return categoryDiff;
+        }
+        return writeIndexedValueDiff(node, context);
+      }
       if (node.type === "property_descriptor") {
         if (node.parent.diff.removed) {
           return writePropertyDescriptorDiff(node, {

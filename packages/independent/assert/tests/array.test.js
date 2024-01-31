@@ -23,26 +23,41 @@ await startSnapshotTesting("array", {
   //     expected: [],
   //   });
   // },
-  ["associative array expected, object received"]: () => {
+  // ["associative array expected, object received"]: () => {
+  //   const array = [];
+  //   array.foo = true;
+  //   assert({
+  //     actual: array,
+  //     expected: {
+  //       foo: true,
+  //     },
+  //   });
+  // },
+  // ["diff on associate array.foo and object.foo"]: () => {
+  //   const array = [];
+  //   array.foo = true;
+  //   assert({
+  //     actual: array,
+  //     expected: {
+  //       foo: false,
+  //     },
+  //   });
+  // },
+  ["diff on associate array deep property and object deep property"]: () => {
     const array = [];
-    array.foo = true;
+    array.user = {
+      name: "bob",
+    };
     assert({
       actual: array,
       expected: {
-        foo: true,
+        user: {
+          name: "alice",
+        },
       },
     });
   },
-  ["diff on associate array.foo and object.foo"]: () => {
-    const array = [];
-    array.foo = true;
-    assert({
-      actual: array,
-      expected: {
-        foo: false,
-      },
-    });
-  },
+
   // TODO:
   // - diff on deep property of array vs object
   // - diff on associate when array contains indexed values (now it's just on empty array)

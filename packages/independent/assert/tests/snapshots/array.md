@@ -1,30 +1,19 @@
-# associative array expected, object received
+# diff on associate array deep property and object deep property
 
 ```js
 const array = [];
-array.foo = true;
+array.user = {
+  name: "bob",
+};
 assert({
   actual: array,
   expected: {
-    foo: true,
+    user: {
+      name: "alice",
+    },
   },
 });
 ```
 
-![img](<./array/associative array expected, object received.svg>)
-
-# diff on associate array.foo and object.foo
-
-```js
-const array = [];
-array.foo = true;
-assert({
-  actual: array,
-  expected: {
-    foo: false,
-  },
-});
-```
-
-![img](<./array/diff on associate array.foo and object.foo.svg>)
+![img](<./array/diff on associate array deep property and object deep property.svg>)
 
