@@ -1,3 +1,36 @@
+# object expected, array received
+
+```js
+assert({
+  actual: [],
+  expected: {},
+});
+```
+
+![img](<./array/object expected, array received.svg>)
+
+# array expected, object received
+
+```js
+assert({
+  actual: {},
+  expected: [],
+});
+```
+
+![img](<./array/array expected, object received.svg>)
+
+# false should be an array
+
+```js
+assert({
+  actual: false,
+  expected: [],
+});
+```
+
+![img](<./array/false should be an array.svg>)
+
 # associative array expected, object received
 
 ```js

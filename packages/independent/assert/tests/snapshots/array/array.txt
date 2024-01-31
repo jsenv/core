@@ -1,3 +1,21 @@
+# object expected, array received
+AssertionError: expected and actual are different:
+
+{}
+[]
+
+# array expected, object received
+AssertionError: expected and actual are different:
+
+[]
+{}
+
+# false should be an array
+AssertionError: expected and actual are different:
+
+[]
+false
+
 # associative array expected, object received
 AssertionError: expected and actual are different:
 

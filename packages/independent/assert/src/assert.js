@@ -1036,16 +1036,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               : "canDiffProps"
           ];
         if (canDiff) {
-          if (node.diff.category) {
+          if (node.diff.category && !context.splitDiff) {
             let beforeAndAfterDiff = "";
             beforeAndAfterDiff += method(node, {
               ...context,
               forceDiff: false,
+              splitDiff: true,
               mode: "before",
             });
             beforeAndAfterDiff += method(node, {
               ...context,
               forceDiff: false,
+              splitDiff: true,
               mode: "after",
             });
             return beforeAndAfterDiff;
