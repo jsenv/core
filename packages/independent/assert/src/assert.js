@@ -430,14 +430,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         keyColor = delimitersColor = colorForSame;
       }
       if (mode === "before") {
-        if (forceDiff || node.diff.counters.overall.any) {
+        if (forceDiff) {
           keyColor = delimitersColor = colorForExpected;
         } else {
           keyColor = delimitersColor = colorForSame;
         }
       }
       if (mode === "after") {
-        if (forceDiff || node.diff.counters.overall.any) {
+        if (forceDiff) {
           keyColor = delimitersColor = colorForUnexpected;
         } else {
           keyColor = delimitersColor = colorForSame;
@@ -941,9 +941,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const writeDiff = (node, context) => {
       if (node.type === "property_descriptor") {
-        if (context.forceDiff) {
-          return writePropertyDescriptorDiff(node, context);
-        }
         if (node.parent.diff.removed) {
           return writePropertyDescriptorDiff(node, {
             ...context,
@@ -958,16 +955,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             mode: "added",
           });
         }
+        if (context.forceDiff) {
+          const canDiffProps = node.parent.parent.canDiffProps;
+          if (canDiffProps) {
+            return writePropertyDescriptorDiff(node, {
+              ...context,
+              forceDiff: false,
+            });
+          }
+          return writePropertyDescriptorDiff(node, {
+            ...context,
+          });
+        }
         if (node.diff.category) {
           let categoryDiff = "";
           categoryDiff += writePropertyDescriptorDiff(node, {
             ...context,
-            forceDiff: true,
+            forceDiff: !node.canDiffProps,
             mode: "before",
           });
           categoryDiff += writePropertyDescriptorDiff(node, {
             ...context,
-            forceDiff: true,
+            forceDiff: !node.canDiffProps,
             mode: "after",
           });
           return categoryDiff;
