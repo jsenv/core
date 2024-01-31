@@ -23,26 +23,26 @@ await startSnapshotTesting("array", {
   //     expected: [],
   //   });
   // },
-  // ["associative array expected, object received"]: () => {
-  //   const array = [];
-  //   array.foo = true;
-  //   assert({
-  //     actual: array,
-  //     expected: {
-  //       foo: true,
-  //     },
-  //   });
-  // },
-  // ["diff on associate array.foo and object.foo"]: () => {
-  //   const array = [];
-  //   array.foo = true;
-  //   assert({
-  //     actual: array,
-  //     expected: {
-  //       foo: false,
-  //     },
-  //   });
-  // },
+  ["associative array expected, object received"]: () => {
+    const array = [];
+    array.foo = true;
+    assert({
+      actual: array,
+      expected: {
+        foo: true,
+      },
+    });
+  },
+  ["diff on associate array.foo and object.foo"]: () => {
+    const array = [];
+    array.foo = true;
+    assert({
+      actual: array,
+      expected: {
+        foo: false,
+      },
+    });
+  },
   ["diff on associate array deep property and object deep property"]: () => {
     const array = [];
     array.user = {

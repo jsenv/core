@@ -458,6 +458,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             : mode === "added"
               ? "after"
               : context.mode,
+        forceDiff: context.forceDiff || node.diff.counters.self.any,
         maxDepth:
           context.maxDepth === undefined
             ? mode === "traverse"
@@ -536,6 +537,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         propertyDescriptorDiff += " ";
       }
 
+      const valueMaxColumns =
+        maxColumnsDefault - stringWidth(propertyDescriptorDiff) - ",".length;
       const valueDiff = writeValueDiff(node, {
         ...context,
         mode:
@@ -544,14 +547,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             : mode === "added"
               ? "after"
               : context.mode,
+        forceDiff: context.forceDiff || node.diff.counters.self.any,
         maxDepth:
           context.maxDepth === undefined
             ? mode === "traverse"
               ? undefined
               : Math.min(node.depth + 1, maxDepthDefault)
             : context.maxDepth,
-        maxColumns:
-          maxColumnsDefault - stringWidth(propertyDescriptorDiff) - ",".length,
+        maxColumns: valueMaxColumns,
       });
       propertyDescriptorDiff += valueDiff;
       propertyDescriptorDiff += ANSI.color(",", delimitersColor);
@@ -578,22 +581,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const valueName = mode === "before" ? "before" : "after";
       const valueInfo = node[valueName];
       let valueColor;
+      let delimitersColor;
       if (mode === "before") {
-        if (forceDiff || node.diff.counters.self.any) {
-          valueColor = colorForExpected;
+        if (forceDiff) {
+          delimitersColor = valueColor = colorForExpected;
         } else {
-          valueColor = colorForSame;
+          delimitersColor = valueColor = colorForSame;
         }
       }
       if (mode === "after") {
-        if (forceDiff || node.diff.counters.self.any) {
-          valueColor = colorForUnexpected;
+        if (forceDiff) {
+          delimitersColor = valueColor = colorForUnexpected;
         } else {
-          valueColor = colorForSame;
+          delimitersColor = valueColor = colorForSame;
         }
       }
       if (mode === "traverse") {
-        valueColor = colorForSame;
+        delimitersColor = valueColor = colorForSame;
       }
 
       // primitive
@@ -613,12 +617,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
 
       // composite
-      const delimitersColor =
-        mode === "before"
-          ? colorForExpected
-          : mode === "after"
-            ? colorForUnexpected
-            : colorForSame;
       let compositeDiff = "";
       if (valueInfo.reference) {
         compositeDiff += ANSI.color(
@@ -1009,91 +1007,48 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return compositeDiff;
     };
     const writeDiff = (node, context) => {
-      if (node.type === "indexed_value") {
+      if (
+        node.type === "indexed_value" ||
+        node.type === "property_descriptor"
+      ) {
+        const method =
+          node.type === "indexed_value"
+            ? writeIndexedValueDiff
+            : writePropertyDescriptorDiff;
         if (node.parent.diff.removed) {
-          return writeIndexedValueDiff(node, {
+          return method(node, {
             ...context,
             forceDiff: true,
             mode: "removed",
           });
         }
         if (node.parent.diff.added) {
-          return writeIndexedValueDiff(node, {
+          return method(node, {
             ...context,
             forceDiff: true,
             mode: "added",
           });
         }
-        if (context.forceDiff) {
-          const canDiffIndexedValues = node.parent.parent.canDiffIndexedValues;
-          if (canDiffIndexedValues) {
-            return writeIndexedValueDiff(node, {
-              ...context,
-              forceDiff: false,
-            });
-          }
-          return writeIndexedValueDiff(node, {
+        const canDiff =
+          node.parent.parent[
+            node.type === "indexed_value"
+              ? "canDiffIndexedValues"
+              : "canDiffProps"
+          ];
+        if (canDiff) {
+          return method(node, {
             ...context,
-          });
-        }
-        if (node.diff.category) {
-          let categoryDiff = "";
-          categoryDiff += writeIndexedValueDiff(node, {
-            ...context,
-            forceDiff: !node.canDiffIndexedValues,
-            mode: "before",
-          });
-          categoryDiff += writeIndexedValueDiff(node, {
-            ...context,
-            forceDiff: !node.canDiffIndexedValues,
-            mode: "after",
-          });
-          return categoryDiff;
-        }
-        return writeIndexedValueDiff(node, context);
-      }
-      if (node.type === "property_descriptor") {
-        if (node.parent.diff.removed) {
-          return writePropertyDescriptorDiff(node, {
-            ...context,
-            forceDiff: true,
-            mode: "removed",
-          });
-        }
-        if (node.parent.diff.added) {
-          return writePropertyDescriptorDiff(node, {
-            ...context,
-            forceDiff: true,
-            mode: "added",
+            forceDiff: false,
           });
         }
         if (context.forceDiff) {
-          const canDiffProps = node.parent.parent.canDiffProps;
-          if (canDiffProps) {
-            return writePropertyDescriptorDiff(node, {
-              ...context,
-              forceDiff: false,
-            });
-          }
-          return writePropertyDescriptorDiff(node, {
+          return method(node, {
             ...context,
           });
         }
-        if (node.diff.category) {
-          let categoryDiff = "";
-          categoryDiff += writePropertyDescriptorDiff(node, {
-            ...context,
-            forceDiff: !node.canDiffProps,
-            mode: "before",
-          });
-          categoryDiff += writePropertyDescriptorDiff(node, {
-            ...context,
-            forceDiff: !node.canDiffProps,
-            mode: "after",
-          });
-          return categoryDiff;
-        }
-        return writePropertyDescriptorDiff(node, context);
+        return method(node, {
+          ...context,
+        });
       }
       if (context.forceDiff) {
         return writeValueDiff(node, context);
