@@ -142,7 +142,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (isCompositeBefore !== isCompositeAfter) {
             node.diff.category = true;
             onSelfDiff();
-            break category;
           }
           const isArrayBefore = node.before.isArray;
           const isArrayAfter = node.after.isArray;
@@ -165,6 +164,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
+        // prototype: {
+        //   if (ignoreDiff) {
+        //     break prototype;
+        //   }
+        //   if (node.before.isComposite && node.after.isComposite) {
+        //     if (
+        //       Object.getPrototypeOf(node.before) !==
+        //       Object.getPrototypeOf(node.after)
+        //     ) {
+        //       node.diff.prototype = true;
+        //       onSelfDiff();
+        //     }
+        //   }
+        // }
         properties: {
           const canHavePropsBefore = node.before.isComposite;
           const canHavePropsAfter = node.after.isComposite;
@@ -172,7 +185,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            if (!ignoreDiff && node.diff.category) {
+            if (!ignoreDiff) {
               ignoreDiff = true;
             }
             const propertyDescriptorBefore = canHavePropsBefore
@@ -779,44 +792,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         if (valueInfo.isArray) {
           const length = valueInfo.value.length;
-          if (length === 0) {
-            compositeDiff += ANSI.color("[", delimitersColor);
-            compositeDiff += ANSI.color("]", delimitersColor);
-            // TODO: should not break, we want to write props if any
-            break inside;
-          } else {
-            let index = 0;
-            let insideDiff = writeInsideDiff({
-              skippedName: "value",
-              next: () => {
-                if (index < length) {
-                  const indexedValueNode = node.indexedValues[index];
-                  index++;
-                  return indexedValueNode;
-                }
-                return null;
-              },
-              write: (indexedValueNode) => {
-                let indexedValueDiff = "";
-                indexedValueDiff += writeDiff(indexedValueNode, {
-                  ...context,
-                });
-                return indexedValueDiff;
-              },
-            });
-            compositeDiff += ANSI.color("[", delimitersColor);
-            compositeDiff += insideDiff;
-            compositeDiff += ANSI.color("]", delimitersColor);
-            // TODO: should not break, we want to write props if any
-            break inside;
-          }
+          let index = 0;
+          let insideDiff = writeInsideDiff({
+            skippedName: "value",
+            next: () => {
+              if (index < length) {
+                const indexedValueNode = node.indexedValues[index];
+                index++;
+                return indexedValueNode;
+              }
+              return null;
+            },
+            write: (indexedValueNode) => {
+              let indexedValueDiff = "";
+              indexedValueDiff += writeDiff(indexedValueNode, {
+                ...context,
+              });
+              return indexedValueDiff;
+            },
+          });
+          compositeDiff += ANSI.color("[", delimitersColor);
+          compositeDiff += insideDiff;
         }
         const propertyCount = propertyNames.length;
-        if (propertyCount === 0) {
-          compositeDiff += ANSI.color("{", delimitersColor);
-          compositeDiff += ANSI.color("}", delimitersColor);
-          break inside;
-        }
         let index = 0;
         let insideDiff = writeInsideDiff({
           skippedName: "prop",
@@ -841,11 +839,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             return propertyDiff;
           },
         });
-        compositeDiff += ANSI.color("{", delimitersColor);
+        if (!valueInfo.isArray) {
+          compositeDiff += ANSI.color("{", delimitersColor);
+        }
         compositeDiff += insideDiff;
-        compositeDiff += ANSI.color("}", delimitersColor);
+        if (valueInfo.isArray) {
+          compositeDiff += ANSI.color("]", delimitersColor);
+        } else {
+          compositeDiff += ANSI.color("}", delimitersColor);
+        }
       }
-
       return compositeDiff;
     };
     const writeDiff = (node, context) => {
@@ -882,7 +885,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         return writePropertyDescriptorDiff(node, context);
       }
-      if (node.diff.identity || node.diff.category) {
+      if (node.diff.identity || node.diff.category || node.diff.prototype) {
         if (node === rootComparison) {
           signs = false;
         }
@@ -1013,8 +1016,9 @@ const createComparisonTree = (beforeValue, afterValue) => {
           },
         },
         identity: null,
-        category: null,
         reference: null,
+        category: null,
+        prototype: null,
         properties: {},
         indexedValues: [],
       },

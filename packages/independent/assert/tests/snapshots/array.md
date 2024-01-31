@@ -1,11 +1,15 @@
-# object expected, array received
+# associative array expected, object received
 
 ```js
+const array = [];
+array.foo = true;
 assert({
-  actual: [],
-  expected: {},
+  actual: array,
+  expected: {
+    foo: true,
+  },
 });
 ```
 
-![img](<./array/object expected, array received.svg>)
+![img](<./array/associative array expected, object received.svg>)
 

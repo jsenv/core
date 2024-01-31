@@ -1,6 +1,0 @@
-# object expected, array received
-AssertionError: expected and actual have 1 difference:
-
-{}
-[]
-
