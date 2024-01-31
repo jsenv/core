@@ -1,0 +1,10 @@
+# associative array expected, object received
+AssertionError: expected and actual have 1 difference:
+
+{
+  foo: true,
+}
+[
+  foo: true,
+]
+

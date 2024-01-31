@@ -185,7 +185,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we want to traverse before and after but if they are not composite
           // we'll consider everything as removed or added, depending the scenario
           const visitProperty = (property) => {
-            if (!ignoreDiff) {
+            if (!ignoreDiff && node.diff.identity) {
               ignoreDiff = true;
             }
             const propertyDescriptorBefore = canHavePropsBefore
@@ -206,7 +206,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (removed) {
               ignoreDiff = true;
               propertyNode.diff.removed = true;
-              if (!node.diff.category) {
+              if (!node.diff.identity) {
                 propertyNode.diff.counters.self.removed++;
                 addNodeCausingDiff(propertyNode);
               }
@@ -218,7 +218,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (added) {
               ignoreDiff = true;
               propertyNode.diff.added = true;
-              if (!node.diff.category) {
+              if (!node.diff.identity) {
                 propertyNode.diff.counters.self.added++;
                 addNodeCausingDiff(propertyNode);
               }
@@ -330,7 +330,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return ANSI.color(property, color);
     };
     const writePropertyDescriptorDiff = (node, context) => {
-      let { mode } = context;
+      let { mode, forceDiff } = context;
       const valueName =
         mode === "removed" || mode === "before" ? "before" : "after";
       if (isDefaultDescriptor(node.descriptor, node[valueName].value)) {
@@ -356,17 +356,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         keyColor = delimitersColor = colorForSame;
       }
       if (mode === "before") {
-        if (node.diff.counters.overall.any) {
-          keyColor = delimitersColor = colorForSame;
-        } else {
+        if (forceDiff || node.diff.counters.overall.any) {
           keyColor = delimitersColor = colorForExpected;
+        } else {
+          keyColor = delimitersColor = colorForSame;
         }
       }
       if (mode === "after") {
-        if (node.diff.counters.overall.any) {
-          keyColor = delimitersColor = colorForSame;
-        } else {
+        if (forceDiff || node.diff.counters.overall.any) {
           keyColor = delimitersColor = colorForUnexpected;
+        } else {
+          keyColor = delimitersColor = colorForSame;
         }
       }
       if (mode === "removed") {
@@ -418,6 +418,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const writeValueDiff = (node, context) => {
       let {
         mode,
+        forceDiff,
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
@@ -433,12 +434,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       const valueName = mode === "before" ? "before" : "after";
       const valueInfo = node[valueName];
-      const valueColor =
-        mode === "before"
-          ? colorForExpected
-          : mode === "after"
-            ? colorForUnexpected
-            : colorForSame;
+      let valueColor;
+      if (mode === "before") {
+        if (forceDiff || node.diff.counters.self.any) {
+          valueColor = colorForExpected;
+        } else {
+          valueColor = colorForSame;
+        }
+      }
+      if (mode === "after") {
+        if (forceDiff || node.diff.counters.self.any) {
+          valueColor = colorForUnexpected;
+        } else {
+          valueColor = colorForSame;
+        }
+      }
+      if (mode === "traverse") {
+        valueColor = colorForSame;
+      }
+
       // primitive
       if (valueInfo.isPrimitive) {
         const value = valueInfo.value;
@@ -859,6 +873,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           return writePropertyDescriptorDiff(node, {
             ...context,
+            forceDiff: true,
             mode: "removed",
           });
         }
@@ -868,6 +883,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           return writePropertyDescriptorDiff(node, {
             ...context,
+            forceDiff: true,
             mode: "added",
           });
         }
@@ -875,10 +891,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           let identityDiff = "";
           identityDiff += writePropertyDescriptorDiff(node, {
             ...context,
+            forceDiff: true,
             mode: "before",
           });
           identityDiff += writePropertyDescriptorDiff(node, {
             ...context,
+            forceDiff: true,
             mode: "after",
           });
           return identityDiff;
@@ -892,11 +910,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let identityDiff = "";
         identityDiff += writeValueDiff(node, {
           ...context,
+          forceDiff: node.diff.identity,
           mode: "before",
         });
         identityDiff += "\n";
         identityDiff += writeValueDiff(node, {
           ...context,
+          forceDiff: node.diff.identity,
           mode: "after",
         });
         return identityDiff;
