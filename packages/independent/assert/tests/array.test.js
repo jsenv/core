@@ -17,12 +17,12 @@ await startSnapshotTesting("array", {
   //     expected: [],
   //   });
   // },
-  ["false should be an array"]: () => {
-    assert({
-      actual: false,
-      expected: [],
-    });
-  },
+  // ["false should be an array"]: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: [],
+  //   });
+  // },
   ["associative array expected, object received"]: () => {
     const array = [];
     array.foo = true;

@@ -1,0 +1,26 @@
+# false should be an array
+AssertionError: expected and actual are different:
+
+[]
+false
+
+# associative array expected, object received
+AssertionError: expected and actual are different:
+
+{
+  foo: true,
+}
+[
+  foo: true,
+]
+
+# diff on associate array.foo and object.foo
+AssertionError: expected and actual are different:
+
+{
+  foo: false,
+}
+[
+  foo: true,
+]
+

@@ -182,95 +182,165 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         //     }
         //   }
         // }
-        properties: {
-          const canHavePropsBefore = node.before.isComposite;
-          const canHavePropsAfter = node.after.isComposite;
+        inside: {
+          indexed_values: {
+            const canHaveIndexedValuesBefore = node.before.canHaveIndexedValues;
+            const canHaveIndexedValuesAfter = node.after.canHaveIndexedValues;
+            const canDiffIndexedValues =
+              canHaveIndexedValuesBefore && canHaveIndexedValuesAfter;
+            node.canDiffIndexedValues = canDiffIndexedValues;
 
-          // here we want to traverse before and after but if they are not composite
-          // we'll consider everything as removed or added, depending the scenario
-          const visitProperty = (property) => {
-            const propertyDescriptorBefore = canHavePropsBefore
-              ? Object.getOwnPropertyDescriptor(node.before.value, property)
-              : undefined;
-            const propertyDescriptorAfter = canHavePropsAfter
-              ? Object.getOwnPropertyDescriptor(node.after.value, property)
-              : undefined;
-            const propertyNode = node.appendProperty(property, {
-              beforeValue: propertyDescriptorBefore,
-              afterValue: propertyDescriptorAfter,
-            });
+            const visitIndexedValue = (index) => {
+              const hasOwnBefore = canHaveIndexedValuesBefore
+                ? Object.hasOwn(node.before.value, index)
+                : false;
+              const hasOwnAfter = canHaveIndexedValuesAfter
+                ? Object.hasOwn(node.after.value, index)
+                : false;
+              const valueBefore = hasOwnBefore
+                ? node.before.value[index]
+                : undefined;
+              const valueAfter = hasOwnAfter
+                ? node.after.value[index]
+                : undefined;
+              const indexedValueNode = node.appendIndexedValue(index, {
+                beforeValue: valueBefore,
+                afterValue: valueAfter,
+              });
 
-            const removed =
-              propertyDescriptorBefore &&
-              canHavePropsAfter &&
-              propertyDescriptorAfter === undefined;
-            if (removed) {
-              ignoreDiff = true;
-              propertyNode.diff.removed = true;
-              if (!node.diff.category) {
-                propertyNode.diff.counters.self.removed++;
-                addNodeCausingDiff(propertyNode);
+              const removed =
+                hasOwnBefore && canHaveIndexedValuesAfter && !hasOwnAfter;
+              if (removed) {
+                indexedValueNode.diff.removed = true;
+                if (canDiffIndexedValues) {
+                  indexedValueNode.diff.counters.self.removed++;
+                  addNodeCausingDiff(indexedValueNode);
+                }
+              }
+              const added =
+                canHaveIndexedValuesBefore && !hasOwnBefore && hasOwnAfter;
+              if (added) {
+                indexedValueNode.diff.added = true;
+                if (canDiffIndexedValues) {
+                  indexedValueNode.diff.counters.self.added++;
+                  addNodeCausingDiff(indexedValueNode);
+                }
+              }
+              visit(indexedValueNode, {
+                ignoreDiff:
+                  ignoreDiff || !canDiffIndexedValues || added || removed,
+              });
+              appendCounters(
+                node.diff.counters.inside,
+                indexedValueNode.diff.counters.overall,
+              );
+            };
+            if (canHaveIndexedValuesBefore && !node.before.reference) {
+              let index = 0;
+              while (index < node.before.value.length) {
+                visitIndexedValue(index);
+                index++;
               }
             }
-            const added =
-              canHavePropsBefore &&
-              propertyDescriptorBefore === undefined &&
-              propertyDescriptorAfter;
-            if (added) {
-              ignoreDiff = true;
-              propertyNode.diff.added = true;
-              if (!node.diff.category) {
-                propertyNode.diff.counters.self.added++;
-                addNodeCausingDiff(propertyNode);
+            if (canHaveIndexedValuesAfter && !node.after.reference) {
+              let index = 0;
+              while (index < node.after.value.length) {
+                if (node.indexedValues[index]) {
+                  // already visited
+                  continue;
+                }
+                visitIndexedValue(index);
+                index++;
               }
-            }
-            if (node.diff.category) {
-              ignoreDiff = true;
-            }
-            visit(propertyNode, {
-              ignoreDiff,
-            });
-            appendCounters(
-              node.diff.counters.inside,
-              propertyNode.diff.counters.overall,
-            );
-          };
-          if (
-            canHavePropsBefore &&
-            // node.after.value is a reference: was already traversed
-            // - prevent infinite recursion for circular structure
-            // - prevent traversing a structure already known
-            !node.before.reference
-          ) {
-            const beforePropertyNames = Object.getOwnPropertyNames(
-              node.before.value,
-            );
-            for (const beforePropertyName of beforePropertyNames) {
-              if (node.before.isArray && beforePropertyName === "length") {
-                continue;
-              }
-              visitProperty(beforePropertyName);
             }
           }
-          if (
-            canHavePropsAfter &&
-            // node.after.value is a reference: was already traversed
-            // - prevent infinite recursion for circular structure
-            // - prevent traversing a structure already known
-            !node.after.reference
-          ) {
-            const afterPropertyNames = Object.getOwnPropertyNames(
-              node.after.value,
-            );
-            for (const afterPropertyName of afterPropertyNames) {
-              if (node.after.isArray && afterPropertyName === "length") {
-                continue;
+          properties: {
+            const canHavePropsBefore = node.before.canHaveProps;
+            const canHavePropsAfter = node.after.canHaveProps;
+            const canDiffProps = canHavePropsBefore && canHavePropsAfter;
+            node.canDiffProps = canDiffProps;
+
+            // here we want to traverse before and after but if they are not composite
+            // we'll consider everything as removed or added, depending the scenario
+            const visitProperty = (property) => {
+              const propertyDescriptorBefore = canHavePropsBefore
+                ? Object.getOwnPropertyDescriptor(node.before.value, property)
+                : undefined;
+              const propertyDescriptorAfter = canHavePropsAfter
+                ? Object.getOwnPropertyDescriptor(node.after.value, property)
+                : undefined;
+              const propertyNode = node.appendProperty(property, {
+                beforeValue: propertyDescriptorBefore,
+                afterValue: propertyDescriptorAfter,
+              });
+
+              const removed =
+                propertyDescriptorBefore &&
+                canHavePropsAfter &&
+                propertyDescriptorAfter === undefined;
+              if (removed) {
+                propertyNode.diff.removed = true;
+                if (canDiffProps) {
+                  propertyNode.diff.counters.self.removed++;
+                  addNodeCausingDiff(propertyNode);
+                }
               }
-              if (node.properties[afterPropertyName]) {
-                // already visited
-                continue;
+              const added =
+                canHavePropsBefore &&
+                propertyDescriptorBefore === undefined &&
+                propertyDescriptorAfter;
+              if (added) {
+                propertyNode.diff.added = true;
+                if (canDiffProps) {
+                  propertyNode.diff.counters.self.added++;
+                  addNodeCausingDiff(propertyNode);
+                }
               }
-              visitProperty(afterPropertyName);
+              visit(propertyNode, {
+                ignoreDiff: ignoreDiff || !canDiffProps || added || removed,
+              });
+              appendCounters(
+                node.diff.counters.inside,
+                propertyNode.diff.counters.overall,
+              );
+            };
+            if (
+              canHavePropsBefore &&
+              // node.after.value is a reference: was already traversed
+              // - prevent infinite recursion for circular structure
+              // - prevent traversing a structure already known
+              !node.before.reference
+            ) {
+              const beforePropertyNames = Object.getOwnPropertyNames(
+                node.before.value,
+              );
+              for (const beforePropertyName of beforePropertyNames) {
+                if (node.before.isArray && beforePropertyName === "length") {
+                  continue;
+                }
+                visitProperty(beforePropertyName);
+              }
+            }
+            if (
+              canHavePropsAfter &&
+              // node.after.value is a reference: was already traversed
+              // - prevent infinite recursion for circular structure
+              // - prevent traversing a structure already known
+              !node.after.reference
+            ) {
+              const afterPropertyNames = Object.getOwnPropertyNames(
+                node.after.value,
+              );
+              for (const afterPropertyName of afterPropertyNames) {
+                if (node.after.isArray && afterPropertyName === "length") {
+                  continue;
+                }
+                if (node.properties[afterPropertyName]) {
+                  // already visited
+                  continue;
+                }
+                visitProperty(afterPropertyName);
+              }
             }
           }
         }
@@ -1152,6 +1222,9 @@ const createValueInfo = (value, name) => {
   const composite = isComposite(value);
   const isArray = composite && Array.isArray(value);
 
+  const canHaveIndexedValues = isArray;
+  const canHaveProps = composite;
+
   return {
     value,
     valueOf: () => {
@@ -1160,6 +1233,8 @@ const createValueInfo = (value, name) => {
     isComposite: composite,
     isPrimitive: !composite,
     isArray,
+    canHaveIndexedValues,
+    canHaveProps,
     reference: undefined,
     referenceId: null,
     referenceFromOthersSet: new Set(),
