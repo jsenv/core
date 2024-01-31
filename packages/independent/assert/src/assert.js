@@ -229,6 +229,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               node.before.value,
             );
             for (const beforePropertyName of beforePropertyNames) {
+              if (node.before.isArray && beforePropertyName === "length") {
+                continue;
+              }
               visitProperty(beforePropertyName);
             }
           }
@@ -243,6 +246,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               node.after.value,
             );
             for (const afterPropertyName of afterPropertyNames) {
+              if (node.after.isArray && afterPropertyName === "length") {
+                continue;
+              }
               if (node.properties[afterPropertyName]) {
                 // already visited
                 continue;
@@ -585,6 +591,53 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         insideDiff = `\n${insideDiff}`;
         return insideDiff;
       };
+      const writeInsideOverview = ({
+        next,
+        write,
+        remainingWidth,
+        skippedRef,
+      }) => {
+        let insideOverview = "";
+        let nextNode;
+        let isFirst = true;
+        let width = 0;
+        while ((nextNode = next())) {
+          let valueOverview = "";
+          if (isFirst) {
+            isFirst = false;
+          } else {
+            valueOverview += ANSI.color(",", delimitersColor);
+            valueOverview += " ";
+          }
+
+          valueOverview += write(nextNode, context);
+          const valueWidth = stringWidth(valueOverview);
+          if (width + valueWidth > remainingWidth) {
+            skippedRef.current = true;
+            break;
+          }
+          width += valueWidth;
+          insideOverview += valueOverview;
+        }
+        return insideOverview;
+      };
+      const wrapInsideOverview = (
+        insideOverview,
+        { prefix, openBracket, closeBracket },
+      ) => {
+        let insideOverviewWrapped = "";
+        insideOverviewWrapped += ANSI.color(prefix, delimitersColor);
+        insideOverviewWrapped += " ";
+        insideOverviewWrapped += ANSI.color(openBracket, delimitersColor);
+        if (insideOverview) {
+          insideOverviewWrapped += insideOverview;
+          insideOverviewWrapped += ANSI.color(",", delimitersColor);
+          insideOverviewWrapped += " ";
+        }
+        insideOverviewWrapped += ANSI.color(`...`, valueColor);
+        insideOverviewWrapped += ANSI.color(closeBracket, delimitersColor);
+        return insideOverviewWrapped;
+      };
 
       inside: {
         if (collapsed && insideOverview) {
@@ -595,116 +648,116 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const estimatedCollapsedBoilerplate = `Array(${length}) [, ...]`;
             const estimatedCollapsedBoilerplateWidth =
               estimatedCollapsedBoilerplate.length;
-            let indexedValuesOverview = "";
             let index = 0;
-            for (; index < length; index++) {
-              const hasPrevious = index > 0;
-              const indexedValueNode = node.indexedValues[index];
-              let indexedValueOverview = "";
-              if (hasPrevious) {
-                indexedValueOverview += ANSI.color(",", delimitersColor);
-                indexedValueOverview += " ";
-              }
-              indexedValueOverview += writeValueDiff(indexedValueNode, context);
-              overviewWidth += stringWidth(indexedValueOverview);
-              if (
-                overviewWidth + estimatedCollapsedBoilerplateWidth >
-                maxColumns
-              ) {
-                break;
-              }
-              indexedValuesOverview += indexedValueOverview;
-            }
+            const indexedValueSkippedRef = { current: false };
+            const indexedValuesOverview = writeInsideOverview({
+              next: () => {
+                if (index < length) {
+                  const indexedValueNode = node.indexedValues[index];
+                  index++;
+                  return indexedValueNode;
+                }
+                return null;
+              },
+              write: writeValueDiff,
+              skippedRef: indexedValueSkippedRef,
+              remainingWidth: maxColumns - estimatedCollapsedBoilerplateWidth,
+            });
 
-            const remainingIndexes = length - index;
-            if (remainingIndexes) {
-              overview += ANSI.color(`Array(${length}) [`, delimitersColor);
-              overview += indexedValuesOverview;
-              overview += ANSI.color(",", delimitersColor);
-              overview += " ";
-              overview += ANSI.color(`...`, valueColor);
-              overview += ANSI.color("]", delimitersColor);
-              overviewWidth += `Array(${length}) [, ...]`;
+            if (indexedValueSkippedRef.current) {
+              overview += wrapInsideOverview(indexedValuesOverview, {
+                prefix: `Array(${length})`,
+                openBracket: "[",
+                closeBracket: "]",
+              });
               compositeDiff += overview;
               break inside;
             }
             overview += ANSI.color("[", delimitersColor);
-            if (indexedValuesOverview) {
-              overview += indexedValuesOverview;
+            overview += "[".length;
+            if (insideOverview) {
+              overview += insideOverview;
+              overviewWidth += stringWidth(insideOverview);
             }
-            overview += ANSI.color("]", delimitersColor);
-            overviewWidth += "[]".length;
           }
 
-          let propertiesOverview = "";
           const propertyCount = propertyNames.length;
           const estimatedCollapsedBoilerplate = `Object(${propertyCount}) { , ... }`;
           const estimatedCollapsedBoilerplateWidth =
             estimatedCollapsedBoilerplate.length;
           let propertyIndex = 0;
-          for (const property of propertyNames) {
-            const hasPrevious = propertyIndex > 0;
-            propertyIndex++;
-            let propertyOverview = "";
-            const propertyNode = node.properties[property];
-            if (hasPrevious) {
-              propertyOverview += ANSI.color(",", delimitersColor);
+          const propertiesSkippedRef = { current: false };
+          const propertiesOverview = writeInsideOverview({
+            next: () => {
+              if (propertyIndex < propertyCount) {
+                const propertyNode =
+                  node.properties[propertyNames[propertyIndex]];
+                propertyIndex++;
+                return propertyNode;
+              }
+              return null;
+            },
+            write: (propertyNode) => {
+              let propertyOverview = "";
+              propertyOverview += writePropertyKey(
+                propertyNode.property,
+                valueColor,
+              );
+              propertyOverview += ANSI.color(":", delimitersColor);
               propertyOverview += " ";
-            }
-            propertyOverview += writePropertyKey(property, valueColor);
-            propertyOverview += ANSI.color(":", delimitersColor);
-            propertyOverview += " ";
-
-            if (
-              propertyNode.descriptors.get[valueName].value &&
-              propertyNode.descriptors.set[valueName].value
-            ) {
-              propertyOverview += ANSI.color(`[get/set]`, valueColor);
-            } else if (propertyNode.descriptors.get[valueName].value) {
-              propertyOverview += ANSI.color(`[get]`, valueColor);
-            } else if (propertyNode.descriptors.set[valueName].value) {
-              propertyOverview += ANSI.color(`[set]`, valueColor);
-            } else {
+              if (
+                propertyNode.descriptors.get[valueName].value &&
+                propertyNode.descriptors.set[valueName].value
+              ) {
+                propertyOverview += ANSI.color(`[get/set]`, valueColor);
+                return propertyOverview;
+              }
+              if (propertyNode.descriptors.get[valueName].value) {
+                propertyOverview += ANSI.color(`[get]`, valueColor);
+                return propertyOverview;
+              }
+              if (propertyNode.descriptors.set[valueName].value) {
+                propertyOverview += ANSI.color(`[set]`, valueColor);
+                return propertyOverview;
+              }
               propertyOverview += writeValueDiff(
                 propertyNode.descriptors.value,
                 context,
               );
+              return propertyOverview;
+            },
+            skippedRef: propertiesSkippedRef,
+            remainingWidth:
+              maxColumns - overviewWidth - estimatedCollapsedBoilerplateWidth,
+          });
+          if (propertiesSkippedRef.current) {
+            if (valueInfo.isArray) {
+              overview += wrapInsideOverview(propertiesOverview);
+              overview += ANSI.color("]", delimitersColor);
+            } else {
+              overview += wrapInsideOverview(propertiesOverview, {
+                prefix: `Object(${propertyCount})`,
+                openBracket: "{ ",
+                closeBracket: " }",
+                spaces: true,
+              });
             }
-            overviewWidth += stringWidth(propertyOverview);
-            if (
-              overviewWidth + estimatedCollapsedBoilerplateWidth >
-              maxColumns
-            ) {
-              break;
-            }
-            propertiesOverview += propertyOverview;
-          }
-
-          const remainingProps = propertyCount - propertyIndex;
-          if (remainingProps) {
-            overview += ANSI.color(
-              `Object(${propertyCount}) {`,
-              delimitersColor,
-            );
-            overview += " ";
-            overview += propertiesOverview;
-            overview += ANSI.color(",", delimitersColor);
-            overview += " ";
-            overview += ANSI.color(`...`, valueColor);
-            overview += " ";
-            overview += ANSI.color("}", delimitersColor);
-            overviewWidth += `Object(${propertyCount}) { , ... }`;
             compositeDiff += overview;
             break inside;
           }
-          overview += ANSI.color("{", delimitersColor);
+          if (!valueInfo.isArray) {
+            overview += ANSI.color("{", delimitersColor);
+          }
           if (propertiesOverview) {
             overview += " ";
             overview += propertiesOverview;
             overview += " ";
+            overviewWidth += stringWidth(` ${propertiesOverview} `);
           }
-          overview += ANSI.color("}", delimitersColor);
-          overviewWidth += "{  }".length;
+          if (!valueInfo.isArray) {
+            overview += ANSI.color("}", delimitersColor);
+            overviewWidth += "{}".length;
+          }
           compositeDiff += overview;
           break inside;
         }

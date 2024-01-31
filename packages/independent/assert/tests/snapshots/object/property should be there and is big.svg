@@ -54,7 +54,8 @@
         <text x="10" y="90.55" fill="#7f7f7f">-</text>
         <text x="26.8" y="90.55" fill="#cd5555">should_be_there</text>
         <text x="152.82" y="90.55" fill="#cd5555">:</text>
-        <text x="169.63" y="90.55" fill="#11bc79">Object(8) {</text>
+        <text x="169.63" y="90.55" fill="#11bc79">Object(8)</text>
+        <text x="253.64" y="90.55" fill="#11bc79">{ </text>
         <text x="270.44" y="90.55" fill="#11bc79">a</text>
         <text x="278.84" y="90.55" fill="#11bc79">:</text>
         <text x="295.65" y="90.55" fill="#11bc79">true</text>
@@ -82,7 +83,7 @@
         <text x="740.92" y="90.55" fill="#11bc79">true</text>
         <text x="774.52" y="90.55" fill="#11bc79">,</text>
         <text x="791.33" y="90.55" fill="#11bc79">...</text>
-        <text x="824.93" y="90.55" fill="#11bc79">}</text>
+        <text x="824.93" y="90.55" fill="#11bc79"> }</text>
         <text x="833.33" y="90.55" fill="#11bc79">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
