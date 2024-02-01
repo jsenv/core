@@ -3,13 +3,11 @@ AssertionError: expected and actual have 1 difference:
 
 {
   __proto__: {
-    __proto__: Object.prototype,
     toto: false,
   },
 }
 {
   __proto__: {
-    __proto__: Object.prototype,
     toto: true,
   },
 }

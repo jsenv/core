@@ -997,7 +997,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           next: () => {
             if (
               !prototypeDisplayed &&
-              node.diff.prototype.counters.self.any &&
+              node.diff.prototype.counters.overall.any &&
               !node.prototypeAreDifferentAndWellKnown
             ) {
               prototypeDisplayed = true;
