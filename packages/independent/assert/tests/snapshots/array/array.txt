@@ -37,9 +37,7 @@ AssertionError: expected and actual have 2 differences:
 ]
 
 # diff on associate array deep property and object deep property
-AssertionError: expected and actual have 3 differences:
-
-ℹ to improve readability 1 diff is completely hidden
+AssertionError: expected and actual have 2 differences:
 
 {
   user: {

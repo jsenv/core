@@ -186,7 +186,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const canHavePrototypeAfter = node.after.isComposite;
             const canDiffPrototypes =
               canHavePrototypeBefore && canHavePrototypeAfter;
+            const prototypeAreDifferentAndWellKnown =
+              (node.before.isArray && !node.after.isArray) ||
+              (!node.before.isArray && node.after.isArray);
             node.canDiffPrototypes = canDiffPrototypes;
+            node.prototypeAreDifferentAndWellKnown =
+              prototypeAreDifferentAndWellKnown;
 
             const prototypeBefore = node.before.isComposite
               ? Object.getPrototypeOf(node.before.value)
@@ -200,7 +205,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             });
             visit(prototypeNode, {
               ignoreDiff:
-                ignoreDiff || !canDiffPrototypes || node.diff.category,
+                ignoreDiff ||
+                !canDiffPrototypes ||
+                node.diff.category ||
+                prototypeAreDifferentAndWellKnown,
             });
             if (prototypeNode.diff.counters.overall.any) {
               appendCounters(
@@ -989,7 +997,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           next: () => {
             if (
               !prototypeDisplayed &&
-              node.diff.prototype.counters.overall.any
+              node.diff.prototype.counters.self.any &&
+              !node.prototypeAreDifferentAndWellKnown
             ) {
               prototypeDisplayed = true;
               return {
@@ -1176,8 +1185,7 @@ const isDefaultDescriptor = (descriptorName, descriptorValue) => {
 const createComparisonTree = (beforeValue, afterValue) => {
   let beforeRefId = 1;
   let afterRefId = 1;
-  const beforeCompositeReferenceMap = new Map();
-  const afterCompositeReferenceMap = new Map();
+  const compositeReferenceMap = new Map();
 
   const createComparisonNode = ({
     type,
@@ -1224,26 +1232,30 @@ const createComparisonTree = (beforeValue, afterValue) => {
       },
     };
 
+    const beforeReference = node.before.isComposite
+      ? compositeReferenceMap.get(beforeValue)
+      : undefined;
+    const afterReference = node.after.isComposite
+      ? compositeReferenceMap.get(afterValue)
+      : undefined;
+    node.before.reference = beforeReference;
+    node.after.reference = afterReference;
     if (node.before.isComposite) {
-      const beforeReference = beforeCompositeReferenceMap.get(beforeValue);
-      node.before.reference = beforeReference;
       if (beforeReference) {
         beforeReference.before.referenceFromOthersSet.add(node);
         node.before.referenceId = beforeRefId;
         beforeRefId++;
       } else {
-        beforeCompositeReferenceMap.set(beforeValue, node);
+        compositeReferenceMap.set(beforeValue, node);
       }
     }
     if (node.after.isComposite) {
-      const afterReference = afterCompositeReferenceMap.get(afterValue);
-      node.after.reference = afterReference;
       if (afterReference) {
         afterReference.after.referenceFromOthersSet.add(node);
         node.after.referenceId = afterRefId;
         afterRefId++;
       } else {
-        afterCompositeReferenceMap.set(afterValue, node);
+        compositeReferenceMap.set(afterValue, node);
       }
     }
 
