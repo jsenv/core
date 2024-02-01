@@ -8,8 +8,8 @@
 // display them (we'll see about Symbol.toStringTag at some point but later)
 // so we must display the entire object
 assert({
-  actual: Object.create({ actual: true }),
-  expected: Object.create({ expected: true }),
+  actual: Object.create({ toto: true }),
+  expected: Object.create({ toto: false }),
 });
 ```
 

@@ -1,8 +1,16 @@
 # object with different prototypes
-AssertionError: expected and actual have 2 differences:
+AssertionError: expected and actual have 1 difference:
 
-ℹ to improve readability 2 diffs are completely hidden
-
-{}
-{}
+{
+  __proto__: {
+    __proto__: Object.prototype,
+    toto: false,
+  },
+}
+{
+  __proto__: {
+    __proto__: Object.prototype,
+    toto: true,
+  },
+}
 
