@@ -48,7 +48,7 @@
         <text x="312.45" y="14.55"> have 2 differences:</text>
         <text x="10" y="52.55" fill="#4169E1">&#x2139;</text>
         <text x="26.8" y="52.55">
-          to improve readability only 1 diff is displayed</text
+          to improve readability 1 diff is completely hidden</text
         >
         <text x="10" y="71.55" fill="#4169E1">&#x2139;</text>
         <text x="26.8" y="71.55"> diff starts at </text>

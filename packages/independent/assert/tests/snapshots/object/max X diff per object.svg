@@ -48,7 +48,7 @@
         <text x="312.45" y="14.55"> have 3 differences:</text>
         <text x="10" y="52.55" fill="#4169E1">&#x2139;</text>
         <text x="26.8" y="52.55">
-          to improve readability only 2 diffs are displayed</text
+          to improve readability 1 diff is completely hidden</text
         >
         <text x="10" y="90.55" fill="#7f7f7f">{</text>
         <text x="10" y="109.55" fill="#7f7f7f">-</text>
@@ -74,9 +74,9 @@
         <text x="26.8" y="185.55" fill="#7f7f7f">&#x2193;</text>
         <text x="43.61" y="185.55" fill="#7f7f7f">1 prop</text>
         <text x="102.42" y="185.55" fill="#7f7f7f">(</text>
-        <text x="110.82" y="185.55" fill="#cd5555">1</text>
-        <text x="127.62" y="185.55" fill="#7f7f7f"> diff)</text>
-        <text x="178.03" y="185.55" fill="#7f7f7f">&#x2193;</text>
+        <text x="110.82" y="185.55" fill="#cd5555">1 modified</text>
+        <text x="194.83" y="185.55" fill="#7f7f7f">)</text>
+        <text x="211.63" y="185.55" fill="#7f7f7f">&#x2193;</text>
         <text x="10" y="204.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

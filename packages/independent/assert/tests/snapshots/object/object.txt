@@ -35,7 +35,7 @@ false
 # object should be false at deep property
 AssertionError: expected and actual have 2 differences:
 
-ℹ to improve readability only 1 diff is displayed
+ℹ to improve readability 1 diff is completely hidden
 ℹ diff starts at the.nesting.is.very.deep
 
 {
@@ -149,14 +149,14 @@ AssertionError: expected and actual have 3 differences:
 # max X diff per object
 AssertionError: expected and actual have 3 differences:
 
-ℹ to improve readability only 2 diffs are displayed
+ℹ to improve readability 1 diff is completely hidden
 
 {
 - a: false,
 + a: true,
 - b: false,
 + b: true,
-  ↓ 1 prop (1 diff) ↓
+  ↓ 1 prop (1 modified) ↓
 }
 
 # property should be there
@@ -186,8 +186,6 @@ AssertionError: expected and actual have 1 difference:
 # many props should not be there
 AssertionError: expected and actual have 8 differences:
 
-ℹ to improve readability only 6 diffs are displayed
-
 {
   a: true,
   c: {
@@ -198,6 +196,6 @@ AssertionError: expected and actual have 8 differences:
 + d: true,
 + e: true,
 + f: true,
-  ↓ 2 props (2 diff) ↓
+  ↓ 2 props (2 added) ↓
 }
 

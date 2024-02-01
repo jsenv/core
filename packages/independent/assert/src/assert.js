@@ -62,6 +62,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       causeCounters.total++;
       causeSet.add(node);
     };
+    const onDiffDisplayed = (node) => {
+      if (causeSet.has(node)) {
+        causeSet.delete(node);
+        causeCounters.displayed++;
+      } else if (causeSet.has(node.parent)) {
+        causeSet.delete(node.parent);
+        causeCounters.displayed++;
+      }
+    };
 
     const settleCounters = (node) => {
       const { counters } = node.diff;
@@ -569,14 +578,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         maxDepth = maxDepthDefault,
         collapsed,
       } = context;
-
-      if (causeSet.has(node)) {
-        causeSet.delete(node);
-        causeCounters.displayed++;
-      } else if (causeSet.has(node.parent)) {
-        causeSet.delete(node.parent);
-        causeCounters.displayed++;
-      }
+      onDiffDisplayed(node);
 
       const valueName = mode === "before" ? "before" : "after";
       const valueInfo = node[valueName];
@@ -646,7 +648,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         const withoutDiffSkippedArray = [];
         const skippedCounters = {
           total: 0,
-          diff: 0,
+          added: 0,
+          removed: 0,
+          modified: 0,
         };
         let diffCount = 0;
         let nodeInsideThisOne;
@@ -655,9 +659,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             diffCount++;
             // too many diff
             if (diffCount > maxDiffPerObject) {
+              onDiffDisplayed(nodeInsideThisOne);
               skippedCounters.total++;
-              skippedCounters.diff +=
-                nodeInsideThisOne.diff.counters.overall.any;
+              if (nodeInsideThisOne.diff.removed) {
+                skippedCounters.removed++;
+              } else if (nodeInsideThisOne.diff.added) {
+                skippedCounters.added++;
+              } else {
+                skippedCounters.modified++;
+              }
               continue;
             }
             // first write property eventually skipped
@@ -724,14 +734,33 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               : `${skippedCounters.total} ${skippedName}s`,
             delimitersColor,
           );
-          if (skippedCounters.diff) {
-            belowSummary += " ";
-            belowSummary += ANSI.color("(", delimitersColor);
-            belowSummary += ANSI.color(
-              `${skippedCounters.diff}`,
-              colorForUnexpected,
+          const parts = [];
+          if (skippedCounters.removed) {
+            parts.push(
+              ANSI.color(
+                `${skippedCounters.removed} removed`,
+                colorForUnexpected,
+              ),
             );
-            belowSummary += ANSI.color(" diff)", delimitersColor);
+          }
+          if (skippedCounters.added) {
+            parts.push(
+              ANSI.color(`${skippedCounters.added} added`, colorForUnexpected),
+            );
+          }
+          if (skippedCounters.modified) {
+            parts.push(
+              ANSI.color(
+                `${skippedCounters.modified} modified`,
+                colorForUnexpected,
+              ),
+            );
+          }
+          if (parts.length) {
+            belowSummary += ` `;
+            belowSummary += ANSI.color(`(`, delimitersColor);
+            belowSummary += parts.join(" ");
+            belowSummary += ANSI.color(`)`, delimitersColor);
           }
         }
         if (belowSummary) {
@@ -1093,7 +1122,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let diffMessage = writeDiff(startNode, { mode: "traverse" });
 
     let message;
-    if (rootComparison.diff.category) {
+    if (rootComparison.diff.category && causeCounters.total === 1) {
       message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} are different`;
     } else {
       message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
@@ -1103,13 +1132,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const infos = [];
     const diffNotDisplayed = causeCounters.total - causeCounters.displayed;
     if (diffNotDisplayed) {
-      if (causeCounters.displayed === 1) {
-        infos.push(
-          `to improve readability only ${causeCounters.displayed} diff is displayed`,
-        );
+      if (diffNotDisplayed === 1) {
+        infos.push(`to improve readability 1 diff is completely hidden`);
       } else {
         infos.push(
-          `to improve readability only ${causeCounters.displayed} diffs are displayed`,
+          `to improve readability ${causeCounters.displayed} diffs are completely hidden`,
         );
       }
     }
