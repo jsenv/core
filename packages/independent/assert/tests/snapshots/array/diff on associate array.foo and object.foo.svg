@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="440.07"
+      width="482.08"
       height="193.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -45,7 +45,7 @@
         <text x="144.42" y="14.55" fill="#11bc79">expected</text>
         <text x="220.03" y="14.55"> and </text>
         <text x="253.64" y="14.55" fill="#cd5555">actual</text>
-        <text x="312.45" y="14.55"> are different:</text>
+        <text x="312.45" y="14.55"> have 2 differences:</text>
         <text x="10" y="52.55" fill="#11bc79">{</text>
         <text x="26.8" y="71.55" fill="#7f7f7f">foo</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">:</text>

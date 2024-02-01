@@ -1106,12 +1106,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         categoryDiff += writeValueDiff(node, {
           ...context,
           forceDiff: true,
+          splitDiff: true,
           mode: "before",
         });
         categoryDiff += "\n";
         categoryDiff += writeValueDiff(node, {
           ...context,
           forceDiff: true,
+          splitDiff: true,
           mode: "after",
         });
         return categoryDiff;

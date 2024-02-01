@@ -27,7 +27,7 @@ AssertionError: expected and actual are different:
 ]
 
 # diff on associate array.foo and object.foo
-AssertionError: expected and actual are different:
+AssertionError: expected and actual have 2 differences:
 
 {
   foo: false,
@@ -37,7 +37,7 @@ AssertionError: expected and actual are different:
 ]
 
 # diff on associate array deep property and object deep property
-AssertionError: expected and actual are different:
+AssertionError: expected and actual have 2 differences:
 
 {
   user: {
