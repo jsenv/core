@@ -1,0 +1,8 @@
+# object with different prototypes
+AssertionError: expected and actual have 2 differences:
+
+ℹ to improve readability 2 diffs are completely hidden
+
+{}
+{}
+
