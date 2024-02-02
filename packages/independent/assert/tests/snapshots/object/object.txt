@@ -113,10 +113,14 @@ AssertionError: actual and expected have 1 difference:
 
 {
   actual: {
-    foo: { a: Object(1) },
+    foo: {
+      a: { b: Object(1) },
+    },
   },
   expected: {
-    foo: { a: true },
+    foo: {
+      a: true,
+    },
   }
 }
 
@@ -180,7 +184,6 @@ AssertionError: actual and expected have 1 difference:
   expected: {
     a: false,
     b: true,
-    ↓ 2 props ↓
   }
 }
 
@@ -230,7 +233,6 @@ AssertionError: actual and expected have 3 differences:
     k: true,
     l: false,
     m: true,
-    ↓ 2 props ↓
   }
 }
 
@@ -248,7 +250,6 @@ AssertionError: actual and expected have 3 differences:
   expected: {
     a: false,
     b: false,
-    ↓ 1 prop (1 modified) ↓
   }
 }
 
@@ -262,7 +263,7 @@ AssertionError: actual and expected have 1 difference:
   },
   expected: {
     a: true,
-    should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, ... },
+    should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
   }
 }
 
@@ -272,7 +273,10 @@ AssertionError: actual and expected have 8 differences:
 {
   actual: {
     a: true,
-    c: { an_object: true, and: true },
+    c: {
++     an_object: true,
++     and: true,
+    },
 +   b: true,
 +   d: true,
 +   e: true,
@@ -281,8 +285,7 @@ AssertionError: actual and expected have 8 differences:
   },
   expected: {
     a: true,
-    c: { an_object: undefined, and: undefined },
-    ↓ 2 props (2 added) ↓
+    c: {},
   }
 }
 

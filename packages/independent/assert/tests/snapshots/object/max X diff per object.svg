@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="385.45"
+  height="366.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="383.45"
+      height="364.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="345.45"
+    height="326.45"
     overflow="hidden"
   >
     <svg
       width="482.08"
-      height="345.45"
+      height="326.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -81,14 +81,8 @@
         <text x="52.01" y="242.55" fill="#7f7f7f">:</text>
         <text x="68.81" y="242.55" fill="#11bc79">false</text>
         <text x="110.82" y="242.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="261.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="60.41" y="261.55" fill="#7f7f7f">1 prop</text>
-        <text x="119.22" y="261.55" fill="#7f7f7f">(</text>
-        <text x="127.62" y="261.55" fill="#cd5555">1 modified</text>
-        <text x="211.63" y="261.55" fill="#7f7f7f">)</text>
-        <text x="228.44" y="261.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="26.8" y="280.55" fill="#7f7f7f">}</text>
-        <text x="10" y="299.55" fill="#7f7f7f">}</text>
+        <text x="26.8" y="261.55" fill="#7f7f7f">}</text>
+        <text x="10" y="280.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

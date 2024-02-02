@@ -546,7 +546,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (displayValue) {
         const valueMaxColumns =
           maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
-        maxDepth = Math.min(node.depth + 1, maxDepth);
+        if (forceDiff || node.diff.counters.self.any) {
+          maxDepth = Math.min(node.depth + 1, maxDepth);
+        }
         const valueDiff = writeValueDiff(node, {
           ...context,
           maxDepth,
