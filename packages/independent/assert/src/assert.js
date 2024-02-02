@@ -14,6 +14,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
     // param validation
     let firstArg;
+    let actualIsFirst;
     {
       if (args.length === 0) {
         throw new Error(
@@ -51,6 +52,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxPropertyBeforeDiff = 2,
       maxPropertyAfterDiff = 2,
     } = firstArg;
+    actualIsFirst =
+      Object.keys(firstArg).indexOf("actual") <
+      Object.keys(firstArg).indexOf("expected");
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
     const causeCounters = {
@@ -440,7 +444,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const valueName =
         mode === "removed" || mode === "before" ? "before" : "after";
       let nestedValueDiff = "";
-      const relativeDepth = node.depth - startNode.depth;
+      const relativeDepth = node.depth + context.initialDepth;
       let indent = `  `.repeat(relativeDepth);
       let keyColor;
       let delimitersColor;
@@ -618,7 +622,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         compositeDiff += ANSI.color(`<ref #${refId}>`, delimitersColor);
         compositeDiff += " ";
       }
-      const relativeDepth = node.depth - startNode.depth;
+      const relativeDepth = node.depth + context.initialDepth;
       const insideOverview = collapsed !== true;
       if (!collapsed) {
         const shouldCollapse =
@@ -765,7 +769,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (insideDiff === "") {
           return "";
         }
-        if (signs) {
+        if (signs && context.forceDiff) {
           if (mode === "before") {
             insideDiff += ANSI.color(removedSign, removedSignColor);
             indent = indent.slice(1);
@@ -1026,12 +1030,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       property: writePropertyDiff,
       property_descriptor: writePropertyDescriptorDiff,
     };
-    const canDiffMethods = {
-      prototype: (node) => node.parent.canDiffPrototypes,
-      indexed_value: (node) => node.parent.canDiffIndexedValues,
-      // property_descriptor: () => false
-      property_descriptor: (node) => node.parent.parent.canDiffProps,
-    };
     const writeDiff = (node, context) => {
       const method = methods[node.type];
       if (method) {
@@ -1049,71 +1047,53 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             mode: "added",
           });
         }
-        const canDiff = canDiffMethods[node.type](node);
-        if (canDiff) {
-          if (node.diff.category && !context.splitDiff) {
-            let beforeAndAfterDiff = "";
-            beforeAndAfterDiff += method(node, {
-              ...context,
-              forceDiff: false,
-              splitDiff: true,
-              mode: "before",
-            });
-            beforeAndAfterDiff += method(node, {
-              ...context,
-              forceDiff: false,
-              splitDiff: true,
-              mode: "after",
-            });
-            return beforeAndAfterDiff;
-          }
-          return method(node, {
-            ...context,
-            forceDiff: false,
-          });
-        }
-        if (context.forceDiff) {
-          return method(node, {
-            ...context,
-          });
-        }
-        return method(node, {
-          ...context,
-        });
-      }
-      if (context.forceDiff) {
-        return writeValueDiff(node, context);
-      }
-      if (node.diff.category || node.diff.prototype.counters.overall.any) {
-        if (node === rootComparison) {
-          signs = false;
-        }
-        let categoryDiff = "";
-        categoryDiff += writeValueDiff(node, {
-          ...context,
-          forceDiff: true,
-          splitDiff: true,
-          mode: "before",
-        });
-        categoryDiff += "\n";
-        categoryDiff += writeValueDiff(node, {
-          ...context,
-          forceDiff: true,
-          splitDiff: true,
-          mode: "after",
-        });
-        return categoryDiff;
+        return method(node, context);
       }
       return writeValueDiff(node, context);
     };
 
-    let diffMessage = writeDiff(startNode, { mode: "traverse" });
+    const actualValueMeta = {
+      name: "actual",
+      color: colorForUnexpected,
+      mode: "after",
+    };
+    const expectedValueMeta = {
+      name: "expected",
+      color: colorForExpected,
+      mode: "before",
+    };
+    const firstValueMeta = actualIsFirst ? actualValueMeta : expectedValueMeta;
+    const secondValueMeta = actualIsFirst ? expectedValueMeta : actualValueMeta;
+
+    let diffMessage = "";
+    diffMessage += ANSI.color(`{`, colorForSame);
+    diffMessage += "\n  ";
+    diffMessage += ANSI.color(firstValueMeta.name, colorForSame);
+    diffMessage += ANSI.color(":", colorForSame);
+    diffMessage += " ";
+    const firstValueDiff = writeDiff(startNode, {
+      initialDepth: 1 - startNode.depth,
+      mode: firstValueMeta.mode,
+    });
+    diffMessage += firstValueDiff;
+    diffMessage += ANSI.color(`,`, colorForSame);
+    diffMessage += "\n  ";
+    diffMessage += ANSI.color(secondValueMeta.name, colorForSame);
+    diffMessage += ANSI.color(":", colorForSame);
+    diffMessage += " ";
+    const secondValueDiff = writeDiff(startNode, {
+      initialDepth: 1 - startNode.depth,
+      mode: secondValueMeta.mode,
+    });
+    diffMessage += secondValueDiff;
+    diffMessage += "\n";
+    diffMessage += ANSI.color(`}`, colorForSame);
 
     let message;
     if (rootComparison.diff.category && causeCounters.total === 1) {
-      message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} are different`;
+      message = `${ANSI.color(firstValueMeta.name, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.name, secondValueMeta.color)} are different`;
     } else {
-      message = `${ANSI.color("expected", colorForExpected)} and ${ANSI.color("actual", colorForUnexpected)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color(firstValueMeta.name, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.name, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
