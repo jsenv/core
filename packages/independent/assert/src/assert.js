@@ -431,11 +431,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
     }
 
-    const writePropertyKey = (property, color) => {
-      // todo: handle property that must be between quotes,
-      // handle symbols
-      return ANSI.color(property, color);
-    };
     const writeNestedValueDiff = (
       node,
       context,
@@ -494,8 +489,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           nestedValueDiff += ANSI.color(propertyPrefix, keyColor);
           nestedValueDiff += " ";
         }
-        const propertyKeyFormatted = writePropertyKey(property, keyColor);
-        nestedValueDiff += propertyKeyFormatted;
+        const propertyKeyFormatted = humanizePropertyKey(property);
+        nestedValueDiff += ANSI.color(propertyKeyFormatted, keyColor);
         nestedValueDiff += ANSI.color(":", keyColor);
         nestedValueDiff += " ";
       }
@@ -883,8 +878,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   node: propertyNode,
                   write: () => {
                     let propertyOverview = "";
-                    propertyOverview += writePropertyKey(
-                      propertyNode.property,
+                    propertyOverview += ANSI.color(
+                      humanizePropertyKey(propertyNode.property),
                       valueColor,
                     );
                     propertyOverview += ANSI.color(":", delimitersColor);
@@ -1034,6 +1029,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const canDiffMethods = {
       prototype: (node) => node.parent.canDiffPrototypes,
       indexed_value: (node) => node.parent.canDiffIndexedValues,
+      // property_descriptor: () => false
       property_descriptor: (node) => node.parent.parent.canDiffProps,
     };
     const writeDiff = (node, context) => {
@@ -1377,29 +1373,81 @@ const isComposite = (value) => {
   return false;
 };
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
-const wellKnownMap = new WeakMap();
-const getWellKnownId = (value) => {
-  if (!wellKnownMap.size) {
-    addWellKnownComposite(global, "global");
+const humanizePropertyKey = (property) => {
+  if (typeof property === "symbol") {
+    return humanizeSymbol(property);
   }
-  return wellKnownMap.get(value);
+  if (typeof property === "string") {
+    return humanizePropertyName(property);
+  }
+  return property;
+};
+const humanizePropertyName = (propertyName) => {
+  if (isDotNotationAllowed(propertyName)) {
+    return propertyName;
+  }
+  return `"${propertyName}"`; // TODO: proper quote escaping
+};
+const humanizeSymbol = (symbol) => {
+  const symbolWellKnownId = getWellKnownId(symbol);
+  if (symbolWellKnownId) {
+    return symbolWellKnownId;
+  }
+  const description = symbolToDescription(symbol);
+  if (description) {
+    const key = Symbol.keyFor(symbol);
+    if (key) {
+      return `Symbol.for(${description})`;
+    }
+    return `Symbol(${description})`;
+  }
+  return `Symbol()`;
+};
+const isDotNotationAllowed = (propertyName) => {
+  return (
+    /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) ||
+    /^[a-z_$]$/i.test(propertyName)
+  );
+};
+
+const symbolToDescription = (symbol) => {
+  const toStringResult = symbol.toString();
+  const openingParenthesisIndex = toStringResult.indexOf("(");
+  const closingParenthesisIndex = toStringResult.indexOf(")");
+  return toStringResult.slice(
+    openingParenthesisIndex + 1,
+    closingParenthesisIndex,
+  );
+  // return symbol.description // does not work on node
+};
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
+const wellKnownWeakMap = new WeakMap();
+const symbolWellKnownMap = new Map();
+const getWellKnownId = (value) => {
+  if (!wellKnownWeakMap.size) {
+    addWellKnownComposite(global);
+  }
+  if (typeof value === "symbol") {
+    return symbolWellKnownMap.get(value);
+  }
+  return wellKnownWeakMap.get(value);
 };
 const addWellKnownComposite = (value) => {
-  const visitValue = (value, path) => {
+  const visitValue = (value, pathString) => {
     if (typeof value === "symbol") {
-      wellKnownMap.set(value, path.join("."));
+      symbolWellKnownMap.set(value, pathString);
       return;
     }
     if (!isComposite(value)) {
       return;
     }
 
-    if (wellKnownMap.has(value)) {
+    if (wellKnownWeakMap.has(value)) {
       // prevent infinite recursion on circular structures
       return;
     }
-    wellKnownMap.set(value, path.join("."));
+    wellKnownWeakMap.set(value, pathString);
 
     const visitProperty = (property) => {
       let descriptor;
@@ -1418,7 +1466,32 @@ const addWellKnownComposite = (value) => {
       // do not trigger getter/setter
       if ("value" in descriptor) {
         const propertyValue = descriptor.value;
-        visitValue(propertyValue, [...path, property]);
+        let propertyKey = "";
+        let propertyKeyCanUseDot = false;
+        if (typeof property === "symbol") {
+          propertyKey = humanizeSymbol(property);
+        } else if (typeof property === "string") {
+          if (isDotNotationAllowed(property)) {
+            propertyKey = property;
+            propertyKeyCanUseDot = true;
+          } else {
+            propertyKey = `"${property}"`;
+          }
+        } else {
+          propertyKey = String(property);
+          propertyKeyCanUseDot = true;
+        }
+        let propertyPathString;
+        if (pathString) {
+          if (propertyKeyCanUseDot) {
+            propertyPathString = `${pathString}.${propertyKey}`;
+          } else {
+            propertyPathString += `${pathString}[${propertyKey}]`;
+          }
+        } else {
+          propertyPathString = propertyKey;
+        }
+        visitValue(propertyValue, propertyPathString);
       }
     };
     for (const property of Object.getOwnPropertyNames(value)) {
@@ -1428,5 +1501,5 @@ const addWellKnownComposite = (value) => {
       visitProperty(symbol);
     }
   };
-  visitValue(value, []);
+  visitValue(value);
 };
