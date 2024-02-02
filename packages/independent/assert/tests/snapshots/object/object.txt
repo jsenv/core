@@ -3,7 +3,7 @@ AssertionError: actual and expected have 1 difference:
 
 {
   actual: {
-+   a: true,
+    a: true,
   },
   expected: {
     a: false,
@@ -38,12 +38,251 @@ AssertionError: actual and expected have 1 difference:
 }
 
 # false should be an object
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
 {
+  actual: false,
   expected: {
     foo: true,
+  }
+}
+
+# false should be an object at property
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    foo: false,
   },
-  actual: false
+  expected: {
+    foo: { a: true },
+  }
+}
+
+# object should be false at property
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    foo: { a: true },
+  },
+  expected: {
+    foo: false,
+  }
+}
+
+# object should be false at deep property truncated
+AssertionError: actual and expected are different:
+
+{
+  actual: { the: Object(1), toto: "actual" },
+  expected: false
+}
+
+# object should be false at deep property
+AssertionError: actual and expected have 2 differences:
+
+ℹ to improve readability 1 diff is completely hidden
+ℹ diff starts at the.nesting.is.very.deep
+
+{
+  actual:   {
+    in: {
+      this: {
+        one: {
+          foo: { a: true, toto: Object(2) },
+        },
+      },
+    },
+  },
+,
+  expected:   {
+    in: {
+      this: {
+        one: {
+          foo: false,
+        },
+      },
+    },
+  },
+
+}
+
+# maxDepth on diff
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    foo: { a: Object(1) },
+  },
+  expected: {
+    foo: { a: true },
+  }
+}
+
+# collapsed when no diff
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: { foo: true, bar: true, baz: Object(1) },
+    b: true,
+  },
+  expected: {
+    a: { foo: true, bar: true, baz: Object(1) },
+    b: false,
+  }
+}
+
+# max 2 props above prop diff
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    ↑ 2 props ↑
+    c: true,
+    d: true,
+  },
+  expected: {
+    ↑ 2 props ↑
+    c: true,
+    d: false,
+  }
+}
+
+# max 2 props above prop diff and there is exactly 2
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expected: {
+    a: true,
+    b: true,
+    c: false,
+    d: true,
+  }
+}
+
+# max 2 props after prop diff
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: true,
+    b: true,
+    ↓ 2 props ↓
+  },
+  expected: {
+    a: false,
+    b: true,
+    ↓ 2 props ↓
+  }
+}
+
+# max 2 props above after diff and there is exactly 2
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expected: {
+    a: true,
+    b: false,
+    c: true,
+    d: true,
+  }
+}
+
+# max 2 props around prop diff
+AssertionError: actual and expected have 3 differences:
+
+{
+  actual: {
+    ↑ 2 props ↑
+    c: true,
+    d: true,
+    ↕ 2 props ↕
+    g: true,
+    h: true,
+    ↕ 2 props ↕
+    k: true,
+    l: true,
+    m: true,
+    ↓ 2 props ↓
+  },
+  expected: {
+    ↑ 2 props ↑
+    c: true,
+    d: false,
+    ↕ 2 props ↕
+    g: true,
+    h: false,
+    ↕ 2 props ↕
+    k: true,
+    l: false,
+    m: true,
+    ↓ 2 props ↓
+  }
+}
+
+# max X diff per object
+AssertionError: actual and expected have 3 differences:
+
+ℹ to improve readability 1 diff is completely hidden
+
+{
+  actual: {
+    a: true,
+    b: true,
+    ↓ 1 prop (1 modified) ↓
+  },
+  expected: {
+    a: false,
+    b: false,
+    ↓ 1 prop (1 modified) ↓
+  }
+}
+
+# property should be there and is big
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: true,
+-   should_be_there,
+  },
+  expected: {
+    a: true,
+    should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, ... },
+  }
+}
+
+# many props should not be there
+AssertionError: actual and expected have 8 differences:
+
+{
+  actual: {
+    a: true,
+    c: { an_object: true, and: true },
++   b: true,
++   d: true,
++   e: true,
++   f: true,
+    ↓ 2 props (2 added) ↓
+  },
+  expected: {
+    a: true,
+    c: { an_object: undefined, and: undefined },
+    ↓ 2 props (2 added) ↓
+  }
 }
 
