@@ -10,9 +10,6 @@ const removedSignColor = ANSI.GREY;
 const removedSign = "-";
 const addedSign = "+";
 
-const wellKnownValueMap = new Map();
-wellKnownValueMap.set(Object.prototype, "Object.prototype");
-
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
     // param validation
@@ -594,9 +591,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         delimitersColor = valueColor = colorForSame;
       }
 
-      if (wellKnownValueMap.has(valueInfo.value)) {
-        const wellKnown = wellKnownValueMap.get(valueInfo.value);
-        return ANSI.color(wellKnown, valueColor);
+      if (valueInfo.wellKnownId) {
+        return ANSI.color(valueInfo.wellKnownId, valueColor);
       }
 
       // primitive
@@ -1351,6 +1347,7 @@ const createComparisonTree = (beforeValue, afterValue) => {
 
 const createValueInfo = (value, name) => {
   const composite = isComposite(value);
+  const wellKnownId = getWellKnownId(value);
   const isArray =
     composite && Array.isArray(value) && value !== Array.prototype;
 
@@ -1367,6 +1364,7 @@ const createValueInfo = (value, name) => {
     isArray,
     canHaveIndexedValues,
     canHaveProps,
+    wellKnownId,
     reference: undefined,
     referenceId: null,
     referenceFromOthersSet: new Set(),
@@ -1377,4 +1375,58 @@ const isComposite = (value) => {
   if (typeof value === "object") return true;
   if (typeof value === "function") return true;
   return false;
+};
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
+const wellKnownMap = new WeakMap();
+const getWellKnownId = (value) => {
+  if (!wellKnownMap.size) {
+    addWellKnownComposite(global, "global");
+  }
+  return wellKnownMap.get(value);
+};
+const addWellKnownComposite = (value) => {
+  const visitValue = (value, path) => {
+    if (typeof value === "symbol") {
+      wellKnownMap.set(value, path.join("."));
+      return;
+    }
+    if (!isComposite(value)) {
+      return;
+    }
+
+    if (wellKnownMap.has(value)) {
+      // prevent infinite recursion on circular structures
+      return;
+    }
+    wellKnownMap.set(value, path.join("."));
+
+    const visitProperty = (property) => {
+      let descriptor;
+      try {
+        descriptor = Object.getOwnPropertyDescriptor(value, property);
+      } catch (e) {
+        // may happen if you try to access some iframe properties or stuff like that
+        if (e.name === "SecurityError") {
+          return;
+        }
+        throw e;
+      }
+      if (!descriptor) {
+        return;
+      }
+      // do not trigger getter/setter
+      if ("value" in descriptor) {
+        const propertyValue = descriptor.value;
+        visitValue(propertyValue, [...path, property]);
+      }
+    };
+    for (const property of Object.getOwnPropertyNames(value)) {
+      visitProperty(property);
+    }
+    for (const symbol of Object.getOwnPropertySymbols(value)) {
+      visitProperty(symbol);
+    }
+  };
+  visitValue(value, []);
 };
