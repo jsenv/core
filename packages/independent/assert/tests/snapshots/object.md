@@ -1,15 +1,11 @@
-# property are different
+# false should be an object
 
 ```js
 assert({
-  actual: {
-    a: true,
-  },
-  expected: {
-    a: false,
-  },
+  expected: { foo: true },
+  actual: false,
 });
 ```
 
-![img](<./object/property are different.svg>)
+![img](<./object/false should be an object.svg>)
 

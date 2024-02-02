@@ -5,8 +5,8 @@ import { isAssertionError, createAssertionError } from "./assertion_error.js";
 const colorForExpected = ANSI.GREEN;
 const colorForUnexpected = ANSI.RED;
 const colorForSame = ANSI.GREY;
-const addedSignColor = ANSI.GREY;
-const removedSignColor = ANSI.GREY;
+const addedSignColor = colorForUnexpected;
+const removedSignColor = colorForUnexpected;
 const removedSign = "-";
 const addedSign = "+";
 
@@ -411,26 +411,35 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
       let startNodeDepth = firstNodeCausingDiff.depth - maxDepthDefault;
-      let path = "";
+      let valuePath = createValuePath();
       for (const node of nodesFromRootToTarget) {
         if (
           startNode === rootComparison &&
           node.type === "property_descriptor" &&
           node.depth > startNodeDepth
         ) {
-          node.path = path;
+          node.path = String(valuePath);
           startNode = node;
           break;
         }
         const { type } = node;
-        if (type === "root") {
-        } else if (type === "property") {
-          if (path !== "") path += ".";
-          path += node.property;
-        } else if (type === "property_descriptor") {
-          if (node.descriptor !== "value") {
-            path += `[[${node.descriptor}]]`;
+        if (node === rootComparison) {
+          continue;
+        }
+        if (type === "property") {
+          valuePath = valuePath.append(node.property);
+          continue;
+        }
+        if (type === "property_descriptor") {
+          if (node.descriptor === "value") {
+            continue;
           }
+          valuePath = valuePath.append(node.descriptor, { special: true });
+          continue;
+        }
+        if (type === "indexed_value") {
+          valuePath = valuePath.append(node.index);
+          continue;
         }
       }
     }
@@ -441,26 +450,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       { property, propertyPrefix },
     ) => {
       let { mode, forceDiff } = context;
-      const valueName =
-        mode === "removed" || mode === "before" ? "before" : "after";
       let nestedValueDiff = "";
       const relativeDepth = node.depth + context.initialDepth;
       let indent = `  `.repeat(relativeDepth);
       let keyColor;
       let delimitersColor;
+      let displayValue = true;
 
-      if (mode !== "traverse" && signs) {
-        if (valueName === "before") {
-          nestedValueDiff += ANSI.color(removedSign, removedSignColor);
-          indent = indent.slice(1);
-        } else {
-          nestedValueDiff += ANSI.color(addedSign, addedSignColor);
-          indent = indent.slice(1);
-        }
-      }
-      if (mode === "traverse") {
-        keyColor = delimitersColor = colorForSame;
-      }
       if (mode === "before") {
         if (forceDiff) {
           keyColor = delimitersColor = colorForExpected;
@@ -474,17 +470,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else {
           keyColor = delimitersColor = colorForSame;
         }
-      }
-      if (mode === "removed") {
-        if (signs) {
-          keyColor = colorForUnexpected;
-          delimitersColor = colorForExpected;
-        } else {
-          keyColor = delimitersColor = colorForExpected;
+        if (context.added) {
+          keyColor = delimitersColor = colorForUnexpected;
         }
-      }
-      if (mode === "added") {
-        keyColor = delimitersColor = colorForUnexpected;
+        if (context.removed) {
+          delimitersColor = colorForUnexpected;
+          if (signs) {
+            keyColor = colorForUnexpected;
+          } else {
+            keyColor = colorForExpected;
+          }
+          displayValue = false;
+        }
+        if (signs && (forceDiff || node.diff.counters.self.any)) {
+          nestedValueDiff += context.removed
+            ? ANSI.color(removedSign, removedSignColor)
+            : ANSI.color(addedSign, addedSignColor);
+          indent = indent.slice(1);
+        }
       }
 
       nestedValueDiff += indent;
@@ -495,37 +498,56 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         const propertyKeyFormatted = humanizePropertyKey(property);
         nestedValueDiff += ANSI.color(propertyKeyFormatted, keyColor);
-        nestedValueDiff += ANSI.color(":", keyColor);
-        nestedValueDiff += " ";
+        if (displayValue) {
+          nestedValueDiff += ANSI.color(":", keyColor);
+          nestedValueDiff += " ";
+        }
+      }
+      if (displayValue) {
+        const valueMaxColumns =
+          maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
+        const valueDiff = writeValueDiff(node, {
+          ...context,
+          mode,
+          forceDiff: context.forceDiff || node.diff.counters.self.any,
+          maxDepth:
+            context.maxDepth === undefined
+              ? Math.min(node.depth + 1, maxDepthDefault)
+              : context.maxDepth,
+          maxColumns: valueMaxColumns,
+        });
+        nestedValueDiff += valueDiff;
       }
 
-      const valueMaxColumns =
-        maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
-      const valueDiff = writeValueDiff(node, {
-        ...context,
-        mode:
-          mode === "removed"
-            ? "before"
-            : mode === "added"
-              ? "after"
-              : context.mode,
-        forceDiff: context.forceDiff || node.diff.counters.self.any,
-        maxDepth:
-          context.maxDepth === undefined
-            ? mode === "traverse"
-              ? undefined
-              : Math.min(node.depth + 1, maxDepthDefault)
-            : context.maxDepth,
-        maxColumns: valueMaxColumns,
-      });
-      nestedValueDiff += valueDiff;
       nestedValueDiff += ANSI.color(",", delimitersColor);
       nestedValueDiff += "\n";
       return nestedValueDiff;
     };
 
     const writeIndexedValueDiff = (node, context) => {
-      return writeNestedValueDiff(node, context, {});
+      let { mode, forceDiff, removed, added } = context;
+
+      if (node.parent.diff.removed) {
+        removed = true;
+        forceDiff = true;
+      }
+      if (node.parent.diff.added) {
+        if (mode === "before") {
+          return "";
+        }
+        added = true;
+        forceDiff = true;
+      }
+      return writeNestedValueDiff(
+        node,
+        {
+          ...context,
+          forceDiff,
+          removed,
+          added,
+        },
+        {},
+      );
     };
     const writePrototypeDiff = (node, context) => {
       return writeNestedValueDiff(node, context, {
@@ -534,17 +556,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       });
     };
     const writePropertyDescriptorDiff = (node, context) => {
-      const valueName =
-        context.mode === "removed" || context.mode === "before"
-          ? "before"
-          : "after";
+      let { mode, forceDiff, removed, added } = context;
+
+      if (node.parent.diff.removed) {
+        removed = true;
+        forceDiff = true;
+      }
+      if (node.parent.diff.added) {
+        if (mode === "before") {
+          return "";
+        }
+        added = true;
+        forceDiff = true;
+      }
+      const valueName = mode === "before" || removed ? "before" : "after";
       if (isDefaultDescriptor(node.descriptor, node[valueName].value)) {
         return "";
       }
-      return writeNestedValueDiff(node, context, {
-        property: node === startNode ? null : node.property,
-        propertyPrefix: node.descriptor === "value" ? null : node.descriptor,
-      });
+      return writeNestedValueDiff(
+        node,
+        {
+          ...context,
+          forceDiff,
+          removed,
+          added,
+        },
+        {
+          property: node === startNode ? null : node.property,
+          propertyPrefix: node.descriptor === "value" ? null : node.descriptor,
+        },
+      );
     };
     const writePropertyDiff = (node, context) => {
       let propertyDiff = "";
@@ -585,9 +626,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else {
           delimitersColor = valueColor = colorForSame;
         }
-      }
-      if (mode === "traverse") {
-        delimitersColor = valueColor = colorForSame;
       }
 
       if (valueInfo.wellKnownId) {
@@ -1025,6 +1063,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return compositeDiff;
     };
     const methods = {
+      value: writeValueDiff,
       prototype: writePrototypeDiff,
       indexed_value: writeIndexedValueDiff,
       property: writePropertyDiff,
@@ -1032,24 +1071,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const writeDiff = (node, context) => {
       const method = methods[node.type];
-      if (method) {
-        if (node.parent.diff.removed) {
-          return method(node, {
-            ...context,
-            forceDiff: true,
-            mode: "removed",
-          });
-        }
-        if (node.parent.diff.added) {
-          return method(node, {
-            ...context,
-            forceDiff: true,
-            mode: "added",
-          });
-        }
-        return method(node, context);
-      }
-      return writeValueDiff(node, context);
+      return method(node, context);
     };
 
     const actualValueMeta = {
@@ -1312,7 +1334,7 @@ const createComparisonTree = (beforeValue, afterValue) => {
   };
 
   const root = createComparisonNode({
-    type: "root",
+    type: "value",
     beforeValue,
     afterValue,
     depth: 0,
@@ -1401,6 +1423,43 @@ const symbolToDescription = (symbol) => {
   // return symbol.description // does not work on node
 };
 
+const createValuePath = (path = "") => {
+  return {
+    toString: () => path,
+    valueOf: () => path,
+    append: (property, { special } = {}) => {
+      let propertyKey = "";
+      let propertyKeyCanUseDot = false;
+      if (typeof property === "symbol") {
+        propertyKey = humanizeSymbol(property);
+      } else if (typeof property === "string") {
+        if (isDotNotationAllowed(property)) {
+          propertyKey = property;
+          propertyKeyCanUseDot = true;
+        } else {
+          propertyKey = `"${property}"`;
+        }
+      } else {
+        propertyKey = String(property);
+        propertyKeyCanUseDot = true;
+      }
+      let propertyPathString;
+      if (path) {
+        if (special) {
+          propertyPathString += `${path}[[${propertyKey}]]`;
+        } else if (propertyKeyCanUseDot) {
+          propertyPathString = `${path}.${propertyKey}`;
+        } else {
+          propertyPathString += `${path}[${propertyKey}]`;
+        }
+      } else {
+        propertyPathString = propertyKey;
+      }
+      return createValuePath(propertyPathString);
+    },
+  };
+};
+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
 const wellKnownWeakMap = new WeakMap();
 const symbolWellKnownMap = new Map();
@@ -1414,9 +1473,9 @@ const getWellKnownId = (value) => {
   return wellKnownWeakMap.get(value);
 };
 const addWellKnownComposite = (value) => {
-  const visitValue = (value, pathString) => {
+  const visitValue = (value, valuePath) => {
     if (typeof value === "symbol") {
-      symbolWellKnownMap.set(value, pathString);
+      symbolWellKnownMap.set(value, String(valuePath));
       return;
     }
     if (!isComposite(value)) {
@@ -1427,7 +1486,7 @@ const addWellKnownComposite = (value) => {
       // prevent infinite recursion on circular structures
       return;
     }
-    wellKnownWeakMap.set(value, pathString);
+    wellKnownWeakMap.set(value, String(valuePath));
 
     const visitProperty = (property) => {
       let descriptor;
@@ -1446,32 +1505,7 @@ const addWellKnownComposite = (value) => {
       // do not trigger getter/setter
       if ("value" in descriptor) {
         const propertyValue = descriptor.value;
-        let propertyKey = "";
-        let propertyKeyCanUseDot = false;
-        if (typeof property === "symbol") {
-          propertyKey = humanizeSymbol(property);
-        } else if (typeof property === "string") {
-          if (isDotNotationAllowed(property)) {
-            propertyKey = property;
-            propertyKeyCanUseDot = true;
-          } else {
-            propertyKey = `"${property}"`;
-          }
-        } else {
-          propertyKey = String(property);
-          propertyKeyCanUseDot = true;
-        }
-        let propertyPathString;
-        if (pathString) {
-          if (propertyKeyCanUseDot) {
-            propertyPathString = `${pathString}.${propertyKey}`;
-          } else {
-            propertyPathString += `${pathString}[${propertyKey}]`;
-          }
-        } else {
-          propertyPathString = propertyKey;
-        }
-        visitValue(propertyValue, propertyPathString);
+        visitValue(propertyValue, valuePath.append(property));
       }
     };
     for (const property of Object.getOwnPropertyNames(value)) {
@@ -1481,5 +1515,5 @@ const addWellKnownComposite = (value) => {
       visitProperty(symbol);
     }
   };
-  visitValue(value);
+  visitValue(value, createValuePath());
 };

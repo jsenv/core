@@ -5,22 +5,44 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("object", {
-  ["property are different"]: () => {
-    assert({
-      actual: {
-        a: true,
-      },
-      expected: {
-        a: false,
-      },
-    });
-  },
-  // ["false should be an object"]: () => {
+  // ["property are different"]: () => {
   //   assert({
-  //     actual: false,
-  //     expected: { foo: true },
+  //     actual: {
+  //       a: true,
+  //     },
+  //     expected: {
+  //       a: false,
+  //     },
   //   });
   // },
+  // ["property should be there"]: () => {
+  //   assert({
+  //     actual: {
+  //       a: true,
+  //     },
+  //     expected: {
+  //       a: true,
+  //       should_be_there: true,
+  //     },
+  //   });
+  // },
+  // ["property should not be there"]: () => {
+  //   assert({
+  //     actual: {
+  //       a: true,
+  //       should_not_be_there: true,
+  //     },
+  //     expected: {
+  //       a: true,
+  //     },
+  //   });
+  // },
+  ["false should be an object"]: () => {
+    assert({
+      expected: { foo: true },
+      actual: false,
+    });
+  },
   // ["false should be an object at property"]: () => {
   //   assert({
   //     actual: {
@@ -247,17 +269,6 @@ await startSnapshotTesting("object", {
   //     maxDiffPerObject: 2,
   //   });
   // },
-  // ["property should be there"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //     },
-  //     expected: {
-  //       a: true,
-  //       should_be_there: true,
-  //     },
-  //   });
-  // },
   // ["property should be there and is big"]: () => {
   //   assert({
   //     actual: {
@@ -277,17 +288,6 @@ await startSnapshotTesting("object", {
   //       },
   //     },
   //     maxColumns: 100,
-  //   });
-  // },
-  // ["property should not be there"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //       should_not_be_there: true,
-  //     },
-  //     expected: {
-  //       a: true,
-  //     },
   //   });
   // },
   // ["many props should not be there"]: () => {

@@ -1,12 +1,10 @@
-# property are different
-AssertionError: actual and expected have 1 difference:
+# false should be an object
+AssertionError: expected and actual are different:
 
 {
-  actual: {
-+   a: true,
-  },
   expected: {
--   a: false,
-  }
+    foo: true,
+  },
+  actual: false
 }
 
