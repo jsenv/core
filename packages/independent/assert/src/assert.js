@@ -509,7 +509,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         const valueDiff = writeValueDiff(node, {
           ...context,
           mode,
-          forceDiff: context.forceDiff || node.diff.counters.self.any,
+          forceDiff: context.forceDiff,
           maxDepth:
             context.maxDepth === undefined
               ? Math.min(node.depth + 1, maxDepthDefault)
@@ -558,6 +558,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const writePropertyDescriptorDiff = (node, context) => {
       let { mode, forceDiff, removed, added } = context;
 
+      if (node.parent.parent.diff.category) {
+        forceDiff = true;
+      }
       if (node.parent.diff.removed) {
         removed = true;
         forceDiff = true;
@@ -602,12 +605,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let {
         mode,
         forceDiff,
-        // showProto,
         maxColumns = maxColumnsDefault,
         maxDepth = maxDepthDefault,
         collapsed,
       } = context;
       onDiffDisplayed(node);
+
+      forceDiff = forceDiff || node.diff.counters.self.any;
 
       const valueName = mode === "before" ? "before" : "after";
       const valueInfo = node[valueName];

@@ -1,3 +1,42 @@
+# property are different
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
++   a: true,
+  },
+  expected: {
+    a: false,
+  }
+}
+
+# property should be there
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: true,
+-   should_be_there,
+  },
+  expected: {
+    a: true,
+    should_be_there: true,
+  }
+}
+
+# property should not be there
+AssertionError: actual and expected have 1 difference:
+
+{
+  actual: {
+    a: true,
++   should_not_be_there: true,
+  },
+  expected: {
+    a: true,
+  }
+}
+
 # false should be an object
 AssertionError: expected and actual are different:
 
