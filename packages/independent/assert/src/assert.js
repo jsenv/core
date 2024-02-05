@@ -808,24 +808,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             delimitersColor,
           );
           const parts = [];
-          if (skippedCounters.removed) {
+          if (resultType === "actual") {
+            if (skippedCounters.added) {
+              parts.push(
+                ANSI.color(`${skippedCounters.added} added`, addedColor),
+              );
+            }
+            if (skippedCounters.modified) {
+              parts.push(
+                ANSI.color(
+                  `${skippedCounters.modified} modified`,
+                  unexpectedColor,
+                ),
+              );
+            }
+          } else if (skippedCounters.removed) {
             parts.push(
               ANSI.color(`${skippedCounters.removed} removed`, removedColor),
             );
           }
-          if (skippedCounters.added) {
-            parts.push(
-              ANSI.color(`${skippedCounters.added} added`, addedColor),
-            );
-          }
-          if (skippedCounters.modified) {
-            parts.push(
-              ANSI.color(
-                `${skippedCounters.modified} modified`,
-                unexpectedColor,
-              ),
-            );
-          }
+
           if (parts.length) {
             belowSummary += ` `;
             belowSummary += ANSI.color(`(`, delimitersColor);
