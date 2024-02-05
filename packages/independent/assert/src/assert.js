@@ -2,13 +2,14 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
-const colorForExpected = ANSI.GREEN;
-const colorForUnexpected = ANSI.RED;
+const removedSign = UNICODE.FAILURE;
+const addedSign = UNICODE.FAILURE;
+const unexpectedSign = UNICODE.FAILURE;
 const colorForSame = ANSI.GREY;
-const addedSignColor = colorForUnexpected;
-const removedSignColor = colorForUnexpected;
-const removedSign = "-";
-const addedSign = "+";
+const removedColor = ANSI.YELLOW;
+const addedColor = ANSI.RED;
+const unexpectedColor = ANSI.RED;
+const expectedColor = ANSI.GREEN;
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -52,9 +53,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxPropertyBeforeDiff = 2,
       maxPropertyAfterDiff = 2,
     } = firstArg;
-    actualIsFirst =
-      Object.keys(firstArg).indexOf("actual") <
-      Object.keys(firstArg).indexOf("expected");
+    actualIsFirst = true;
+    // actualIsFirst =
+    //   Object.keys(firstArg).indexOf("actual") <
+    //   Object.keys(firstArg).indexOf("expected");
     const comparisonTree = createComparisonTree(expected, actual);
     const rootComparison = comparisonTree.root;
     const causeCounters = {
@@ -493,37 +495,30 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let displayValue = true;
 
       if (mode === "before") {
-        if (forceDiff) {
-          keyColor = delimitersColor = colorForExpected;
+        if (removed) {
+          keyColor = delimitersColor = removedColor;
+        } else if (forceDiff) {
+          keyColor = delimitersColor = expectedColor;
         } else {
           keyColor = delimitersColor = colorForSame;
-        }
-        if (added) {
-          displayValue = false;
         }
       }
       if (mode === "after") {
-        if (forceDiff) {
-          keyColor = delimitersColor = colorForUnexpected;
+        if (added) {
+          keyColor = delimitersColor = addedColor;
+        } else if (forceDiff) {
+          keyColor = delimitersColor = unexpectedColor;
         } else {
           keyColor = delimitersColor = colorForSame;
         }
-        if (added) {
-          keyColor = delimitersColor = colorForUnexpected;
-        }
-        if (removed) {
-          delimitersColor = colorForUnexpected;
-          keyColor = colorForUnexpected;
-          displayValue = false;
-        }
         if (
           !context.collapsed &&
-          (signs || removed || added) &&
+          (signs || added) &&
           (forceDiff || node.diff.counters.self.any)
         ) {
-          nestedValueDiff += context.removed
-            ? ANSI.color(removedSign, removedSignColor)
-            : ANSI.color(addedSign, addedSignColor);
+          nestedValueDiff += added
+            ? ANSI.color(addedSign, addedColor)
+            : ANSI.color(unexpectedSign, unexpectedColor);
           indent = indent.slice(1);
         }
       }
@@ -627,15 +622,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let valueColor;
       let delimitersColor;
       if (mode === "before") {
-        if (forceDiff) {
-          delimitersColor = valueColor = colorForExpected;
+        if (removed) {
+          delimitersColor = valueColor = removedColor;
+        } else if (forceDiff) {
+          delimitersColor = valueColor = expectedColor;
         } else {
           delimitersColor = valueColor = colorForSame;
         }
       }
       if (mode === "after") {
-        if (forceDiff) {
-          delimitersColor = valueColor = colorForUnexpected;
+        if (added) {
+          delimitersColor = valueColor = addedColor;
+        } else if (forceDiff) {
+          delimitersColor = valueColor = unexpectedColor;
         } else {
           delimitersColor = valueColor = colorForSame;
         }
@@ -689,7 +688,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
       }
 
-      const propertyNames = Object.keys(node.properties);
+      const propertyNames = Object.keys(valueInfo.value);
 
       const writeInsideDiff = ({ next, skippedName }) => {
         let insideDiff = "";
@@ -788,22 +787,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const parts = [];
           if (skippedCounters.removed) {
             parts.push(
-              ANSI.color(
-                `${skippedCounters.removed} removed`,
-                colorForUnexpected,
-              ),
+              ANSI.color(`${skippedCounters.removed} removed`, removedColor),
             );
           }
           if (skippedCounters.added) {
             parts.push(
-              ANSI.color(`${skippedCounters.added} added`, colorForUnexpected),
+              ANSI.color(`${skippedCounters.added} added`, addedColor),
             );
           }
           if (skippedCounters.modified) {
             parts.push(
               ANSI.color(
                 `${skippedCounters.modified} modified`,
-                colorForUnexpected,
+                unexpectedColor,
               ),
             );
           }
@@ -826,13 +822,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (insideDiff === "") {
           return "";
         }
-        if ((signs || added || removed) && context.forceDiff) {
+        if (signs) {
           if (mode === "before") {
-            insideDiff += ANSI.color(removedSign, removedSignColor);
-            indent = indent.slice(1);
-          } else if (mode === "after") {
-            insideDiff += ANSI.color(addedSign, addedSignColor);
-            indent = indent.slice(1);
+            if (removed) {
+              insideDiff += ANSI.color(removedSign, removedColor);
+              indent = indent.slice(1);
+            } else if (context.forceDiff) {
+              insideDiff += ANSI.color(unexpectedSign, unexpectedColor);
+              indent = indent.slice(1);
+            }
+          }
+          if (mode === "after") {
+            if (added) {
+              insideDiff += ANSI.color(addedSign, addedColor);
+              indent = indent.slice(1);
+            }
           }
         }
         insideDiff += indent;
@@ -1110,65 +1114,40 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     const actualValueMeta = {
       name: "actual",
-      color: colorForUnexpected,
+      color: unexpectedColor,
       mode: "after",
     };
     const expectedValueMeta = {
       name: "expected",
-      color: colorForExpected,
+      color: expectedColor,
       mode: "before",
     };
     const firstValueMeta = actualIsFirst ? actualValueMeta : expectedValueMeta;
     const secondValueMeta = actualIsFirst ? expectedValueMeta : actualValueMeta;
 
     let diffMessage = "";
-    diffMessage += ANSI.color(`{`, colorForSame);
-    diffMessage += "\n";
-    if (
-      signs &&
-      firstValueMeta.name === "actual" &&
-      startNode.diff.counters.self.any
-    ) {
-      diffMessage += ANSI.color(addedSign, addedSignColor);
-      diffMessage += " ";
-    } else {
-      diffMessage += "  ";
-    }
     diffMessage += ANSI.color(firstValueMeta.name, colorForSame);
     diffMessage += ANSI.color(":", colorForSame);
     diffMessage += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
     const firstValueDiff = writeDiff(startNode, {
-      initialDepth: 1 - startNode.depth,
+      initialDepth: startNode.depth,
       maxColumns: maxColumnsDefault,
       maxDepth: maxDepthDefault,
       mode: firstValueMeta.mode,
     });
     diffMessage += firstValueDiff;
-    diffMessage += ANSI.color(`,`, colorForSame);
     diffMessage += "\n";
-    if (
-      signs &&
-      secondValueMeta.name === "actual" &&
-      startNode.diff.counters.self.any
-    ) {
-      diffMessage += ANSI.color(addedSign, addedSignColor);
-      diffMessage += " ";
-    } else {
-      diffMessage += "  ";
-    }
     diffMessage += ANSI.color(secondValueMeta.name, colorForSame);
     diffMessage += ANSI.color(":", colorForSame);
     diffMessage += " ";
     const secondValueDiff = writeDiff(startNode, {
-      initialDepth: 1 - startNode.depth,
+      initialDepth: startNode.depth,
       maxColumns: maxColumnsDefault,
       maxDepth: maxDepthDefault,
       mode: secondValueMeta.mode,
     });
     diffMessage += secondValueDiff;
-    diffMessage += "\n";
-    diffMessage += ANSI.color(`}`, colorForSame);
 
     let message;
     if (rootComparison.diff.category && causeCounters.total === 1) {

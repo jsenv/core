@@ -13,6 +13,7 @@ export const ANSI = {
   YELLOW: "\x1b[33m",
   BLUE: "\x1b[34m",
   MAGENTA: "\x1b[35m",
+  CYAN: "\x1b[36m",
   GREY: "\x1b[90m",
   color: (text, ANSI_COLOR) => {
     return ANSI.supported && ANSI_COLOR ? `${ANSI_COLOR}${text}${RESET}` : text;
