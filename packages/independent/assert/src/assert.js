@@ -746,14 +746,31 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 beforeDiff += appendNestedValueDiff(previousToDisplay.write());
                 displayedBefore++;
               }
-              const aboveCount = skippedArray.length;
-              if (aboveCount) {
-                const skippedName =
-                  skippedArray[0].type === "property" ? "props" : "values";
-                const arrowSign = diffCount > 1 ? `↕` : `↑`;
+              let skippedValues = 0;
+              let skippedProps = 0;
+              for (const skipped of skippedArray) {
+                if (skipped.node.type === "indexed_value") {
+                  skippedValues++;
+                }
+                if (skipped.node.type === "property") {
+                  skippedProps++;
+                }
+              }
+              if (skippedValues || skippedProps) {
+                let aboveSummary = "";
+                if (skippedValues) {
+                  aboveSummary += `${skippedValues} values`;
+                }
+                if (skippedProps) {
+                  if (aboveSummary) {
+                    aboveSummary += " ";
+                  }
+                  aboveSummary += `${skippedProps} props`;
+                }
                 insideDiff += `${indent}  `;
+                const arrowSign = diffCount > 1 ? `↕` : `↑`;
                 insideDiff += ANSI.color(
-                  `${arrowSign} ${aboveCount} ${skippedName}s ${arrowSign}`,
+                  `${arrowSign} ${aboveSummary} ${arrowSign}`,
                   delimitersColor,
                 );
                 insideDiff += "\n";
