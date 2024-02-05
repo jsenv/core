@@ -308,6 +308,23 @@ await startSnapshotTesting("object", {
       },
     });
   },
+  ["max prop in diff"]: () => {
+    assert({
+      actual: {
+        foo: {
+          a: true,
+          b: true,
+          c: true,
+          d: true,
+          e: true,
+        },
+      },
+      expected: {
+        foo: false,
+      },
+      maxValueInsideDiff: 2,
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,

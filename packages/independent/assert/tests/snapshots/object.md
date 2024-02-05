@@ -391,3 +391,25 @@ assert({
 
 ![img](<./object/many props should not be there.svg>)
 
+# max prop in diff
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: true,
+      b: true,
+      c: true,
+      d: true,
+      e: true,
+    },
+  },
+  expected: {
+    foo: false,
+  },
+  maxValueInsideDiff: 2,
+});
+```
+
+![img](<./object/max prop in diff.svg>)
+

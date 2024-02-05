@@ -54,7 +54,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxColumns: maxColumnsDefault = 100,
       maxDiffPerObject = 5,
       maxValueAroundDiff = 2,
-      // maxValueInsideDiff = 2,
+      maxValueInsideDiff = 4,
+      maxDepthInsideDiff = 1,
     } = firstArg;
     const maxValueBeforeDiff = maxValueAroundDiff;
     const maxValueAfterDiff = maxValueAroundDiff;
@@ -559,7 +560,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         const valueMaxColumns =
           maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
         if (forceDiff || node.diff.counters.self.any) {
-          maxDepth = Math.min(node.depth + 1, maxDepth);
+          maxDepth = Math.min(node.depth + maxDepthInsideDiff, maxDepth);
         }
         const valueDiff = writeValueDiff(node, {
           ...context,
@@ -695,7 +696,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
       }
 
-      const writeInsideDiff = ({ next }) => {
+      const writeInsideDiff = ({ next, forceDiff }) => {
         let insideDiff = "";
         let indent = "  ".repeat(relativeDepth);
         const skippedArray = [];
@@ -792,8 +793,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // I can display only the non modified props
           // and I can display only a subset
           // if there is any
+          // is there a diff before?
+          // if yes then it's maxValueAfterDiff
+          // otherwise it's maxper diff
+          const maxValueAfter = forceDiff
+            ? maxValueInsideDiff - 1
+            : maxValueAfterDiff - 1;
           let displayedAfter = 0;
-          while (displayedAfter !== maxValueAfterDiff - 1) {
+          while (displayedAfter !== maxValueAfter) {
             const nextToDisplay = skippedArray[0];
             if (!nextToDisplay) {
               break;
@@ -1170,6 +1177,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let prototypeDisplayed = false;
         let propertyIndex = 0;
         let insideDiff = writeInsideDiff({
+          forceDiff,
           next: () => {
             if (
               valueInfo.canHaveIndexedValues &&

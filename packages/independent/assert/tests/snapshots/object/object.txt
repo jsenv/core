@@ -80,7 +80,7 @@ actual: {
       one: {
         foo: {
           a: true,
-          ↓ 1 prop ↓
+          toto: { test: true, bar: Object(1) },
         },
       },
     },
@@ -131,27 +131,33 @@ actual: {
   ↑ 2 props ↑
   c: true,
   d: true,
+  a: true,
+  ↓ 1 prop ↓
 }
 expected: {
   ↑ 2 props ↑
   c: true,
   d: false,
+  a: true,
+  ↓ 1 prop ↓
 }
 
 # max 2 props above prop diff and there is exactly 2
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  a: true,
+  ↑ 1 props ↑
   b: true,
   c: true,
-  d: true,
+  a: true,
+  ↓ 1 prop ↓
 }
 expected: {
-  a: true,
+  ↑ 1 props ↑
   b: true,
   c: false,
-  d: true,
+  a: true,
+  ↓ 1 prop ↓
 }
 
 # max 2 props after prop diff
@@ -191,27 +197,27 @@ actual: {
   ↑ 2 props ↑
   c: true,
   d: true,
-  ↕ 2 props ↕
+  ↕ 4 props ↕
   g: true,
   h: true,
-  ↕ 2 props ↕
+  ↕ 6 props ↕
   k: true,
   l: true,
-  m: true,
-  ↓ 2 props ↓
+  a: true,
+  ↓ 8 props ↓
 }
 expected: {
   ↑ 2 props ↑
   c: true,
   d: false,
-  ↕ 2 props ↕
+  ↕ 4 props ↕
   g: true,
   h: false,
-  ↕ 2 props ↕
+  ↕ 6 props ↕
   k: true,
   l: false,
-  m: true,
-  ↓ 2 props ↓
+  a: true,
+  ↓ 8 props ↓
 }
 
 # max X diff per object
@@ -257,5 +263,18 @@ actual: {
 expected: {
   a: true,
   c: {},
+}
+
+# max prop in diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  foo: {
+    a: true,
+    ↓ 4 props ↓
+  },
+}
+expected: {
+  foo: false,
 }
 

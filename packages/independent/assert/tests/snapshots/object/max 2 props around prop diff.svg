@@ -59,7 +59,7 @@
         <text x="52.01" y="109.55" fill="#cd5555">true</text>
         <text x="85.61" y="109.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="128.55" fill="#7f7f7f"
-          >&#x2195; 2 props &#x2195;</text
+          >&#x2195; 4 props &#x2195;</text
         >
         <text x="26.8" y="147.55" fill="#7f7f7f">g</text>
         <text x="35.2" y="147.55" fill="#7f7f7f">:</text>
@@ -70,7 +70,7 @@
         <text x="52.01" y="166.55" fill="#cd5555">true</text>
         <text x="85.61" y="166.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="185.55" fill="#7f7f7f"
-          >&#x2195; 2 props &#x2195;</text
+          >&#x2195; 6 props &#x2195;</text
         >
         <text x="26.8" y="204.55" fill="#7f7f7f">k</text>
         <text x="35.2" y="204.55" fill="#7f7f7f">:</text>
@@ -80,12 +80,12 @@
         <text x="35.2" y="223.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="223.55" fill="#cd5555">true</text>
         <text x="85.61" y="223.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="242.55" fill="#7f7f7f">m</text>
+        <text x="26.8" y="242.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="242.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="242.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="242.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="261.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="43.61" y="261.55" fill="#7f7f7f">2 props</text>
+        <text x="43.61" y="261.55" fill="#7f7f7f">8 props</text>
         <text x="110.82" y="261.55" fill="#7f7f7f">&#x2193;</text>
         <text x="10" y="280.55" fill="#7f7f7f">}</text>
         <text x="10" y="299.55" fill="#7f7f7f">expected</text>
@@ -103,7 +103,7 @@
         <text x="52.01" y="356.55" fill="#11bc79">false</text>
         <text x="94.01" y="356.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="375.55" fill="#7f7f7f"
-          >&#x2195; 2 props &#x2195;</text
+          >&#x2195; 4 props &#x2195;</text
         >
         <text x="26.8" y="394.55" fill="#7f7f7f">g</text>
         <text x="35.2" y="394.55" fill="#7f7f7f">:</text>
@@ -114,7 +114,7 @@
         <text x="52.01" y="413.55" fill="#11bc79">false</text>
         <text x="94.01" y="413.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="432.55" fill="#7f7f7f"
-          >&#x2195; 2 props &#x2195;</text
+          >&#x2195; 6 props &#x2195;</text
         >
         <text x="26.8" y="451.55" fill="#7f7f7f">k</text>
         <text x="35.2" y="451.55" fill="#7f7f7f">:</text>
@@ -124,12 +124,12 @@
         <text x="35.2" y="470.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="470.55" fill="#11bc79">false</text>
         <text x="94.01" y="470.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="489.55" fill="#7f7f7f">m</text>
+        <text x="26.8" y="489.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="489.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="489.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="489.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="508.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="43.61" y="508.55" fill="#7f7f7f">2 props</text>
+        <text x="43.61" y="508.55" fill="#7f7f7f">8 props</text>
         <text x="110.82" y="508.55" fill="#7f7f7f">&#x2193;</text>
         <text x="10" y="527.55" fill="#7f7f7f">}</text>
       </g>
