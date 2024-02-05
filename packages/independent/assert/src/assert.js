@@ -10,6 +10,9 @@ const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.RED;
 const unexpectedColor = ANSI.RED;
 const expectedColor = ANSI.GREEN;
+const unexpectedSignColor = ANSI.GREY;
+const removedSignColor = ANSI.GREY;
+const addedSignColor = ANSI.GREY;
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -98,17 +101,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const visit = (node, { ignoreDiff } = {}) => {
       if (node.type === "property") {
         const visitPropertyDescriptor = (descriptorName) => {
-          const descriptorBefore = node.before.value;
-          const descriptorBeforeValue = descriptorBefore
-            ? descriptorBefore[descriptorName]
+          const actualDescriptor = node.actual.value;
+          const actualDescriptorValue = actualDescriptor
+            ? actualDescriptor[descriptorName]
             : undefined;
-          const descriptorAfter = node.after.value;
-          const descriptorAfterValue = descriptorAfter
-            ? descriptorAfter[descriptorName]
+          const expectedDescriptor = node.expected.value;
+          const expectedDescriptorValue = expectedDescriptor
+            ? expectedDescriptor[descriptorName]
             : undefined;
           const descriptorNode = node.appendPropertyDescriptor(descriptorName, {
-            beforeValue: descriptorBeforeValue,
-            afterValue: descriptorAfterValue,
+            actualValue: actualDescriptorValue,
+            expectedValue: expectedDescriptorValue,
           });
           visit(descriptorNode, { ignoreDiff });
           if (!ignoreDiff) {
@@ -143,7 +146,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (ignoreDiff) {
             break reference;
           }
-          if (node.before.reference !== node.after.reference) {
+          if (node.actual.reference !== node.expected.reference) {
             node.diff.reference = true;
             onSelfDiff();
           }
@@ -152,59 +155,59 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (ignoreDiff) {
             break category;
           }
-          const isPrimitiveBefore = node.before.isPrimitive;
-          const isPrimitiveAfter = node.after.isPrimitive;
-          if (isPrimitiveBefore !== isPrimitiveAfter) {
+          const actualIsPrimitive = node.actual.isPrimitive;
+          const expectedIsPrimitive = node.expected.isPrimitive;
+          if (actualIsPrimitive !== expectedIsPrimitive) {
             node.diff.category = true;
             onSelfDiff();
             break category;
           }
           if (
-            isPrimitiveBefore &&
-            isPrimitiveAfter &&
-            node.before.value !== node.after.value
+            actualIsPrimitive &&
+            expectedIsPrimitive &&
+            node.actual.value !== node.expected.value
           ) {
             node.diff.category = true;
             onSelfDiff();
             break category;
           }
-          const isCompositeBefore = node.before.isComposite;
-          const isCompositeAfter = node.after.isComposite;
-          if (isCompositeBefore !== isCompositeAfter) {
+          const actualIsComposite = node.actual.isComposite;
+          const expectedIsComposite = node.expected.isComposite;
+          if (actualIsComposite !== expectedIsComposite) {
             node.diff.category = true;
             onSelfDiff();
             break category;
           }
-          const isArrayBefore = node.before.isArray;
-          const isArrayAfter = node.after.isArray;
-          if (isArrayBefore !== isArrayAfter) {
+          const actualIsArray = node.actual.isArray;
+          const expectedIsArray = node.expected.isArray;
+          if (actualIsArray !== expectedIsArray) {
             node.diff.category = true;
             onSelfDiff();
             break category;
           }
         }
         prototype: {
-          if (node.before.isComposite || node.after.isComposite) {
-            const canHavePrototypeBefore = node.before.isComposite;
-            const canHavePrototypeAfter = node.after.isComposite;
+          if (node.actual.isComposite || node.expected.isComposite) {
+            const actualCanHavePrototype = node.actual.isComposite;
+            const expectedCanHavePrototype = node.expected.isComposite;
             const canDiffPrototypes =
-              canHavePrototypeBefore && canHavePrototypeAfter;
+              actualCanHavePrototype && expectedCanHavePrototype;
             const prototypeAreDifferentAndWellKnown =
-              (node.before.isArray && !node.after.isArray) ||
-              (!node.before.isArray && node.after.isArray);
+              (node.actual.isArray && !node.expected.isArray) ||
+              (!node.actual.isArray && node.expected.isArray);
             node.canDiffPrototypes = canDiffPrototypes;
             node.prototypeAreDifferentAndWellKnown =
               prototypeAreDifferentAndWellKnown;
 
-            const prototypeBefore = node.before.isComposite
-              ? Object.getPrototypeOf(node.before.value)
+            const actualPrototype = node.actual.isComposite
+              ? Object.getPrototypeOf(node.actual.value)
               : null;
-            const prototypeAfter = node.after.isComposite
-              ? Object.getPrototypeOf(node.after.value)
+            const expectedPrototype = node.expected.isComposite
+              ? Object.getPrototypeOf(node.expected.value)
               : null;
             const prototypeNode = node.appendPrototype({
-              beforeValue: prototypeBefore,
-              afterValue: prototypeAfter,
+              actualPrototype,
+              expectedPrototype,
             });
             visit(prototypeNode, {
               ignoreDiff:
@@ -223,32 +226,33 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         inside: {
           indexed_values: {
-            const canHaveIndexedValuesBefore = node.before.canHaveIndexedValues;
-            const canHaveIndexedValuesAfter = node.after.canHaveIndexedValues;
+            const actualCanHaveIndexedValues = node.actual.canHaveIndexedValues;
+            const expectedCanHaveIndexedValues =
+              node.expected.canHaveIndexedValues;
             const canDiffIndexedValues =
-              canHaveIndexedValuesBefore && canHaveIndexedValuesAfter;
+              actualCanHaveIndexedValues && expectedCanHaveIndexedValues;
             node.canDiffIndexedValues = canDiffIndexedValues;
 
             const visitIndexedValue = (index) => {
-              const hasOwnBefore = canHaveIndexedValuesBefore
-                ? Object.hasOwn(node.before.value, index)
+              const actualHasOwn = actualCanHaveIndexedValues
+                ? Object.hasOwn(node.actual.value, index)
                 : false;
-              const hasOwnAfter = canHaveIndexedValuesAfter
-                ? Object.hasOwn(node.after.value, index)
+              const expectedHasOwn = expectedCanHaveIndexedValues
+                ? Object.hasOwn(node.expected.value, index)
                 : false;
-              const valueBefore = hasOwnBefore
-                ? node.before.value[index]
+              const actualValue = actualHasOwn
+                ? node.actual.value[index]
                 : undefined;
-              const valueAfter = hasOwnAfter
-                ? node.after.value[index]
+              const expectedValue = expectedHasOwn
+                ? node.expected.value[index]
                 : undefined;
               const indexedValueNode = node.appendIndexedValue(index, {
-                beforeValue: valueBefore,
-                afterValue: valueAfter,
+                actualValue,
+                expectedValue,
               });
 
               const removed =
-                hasOwnBefore && canHaveIndexedValuesAfter && !hasOwnAfter;
+                expectedHasOwn && actualCanHaveIndexedValues && !actualHasOwn;
               if (removed) {
                 indexedValueNode.diff.removed = true;
                 if (canDiffIndexedValues && !ignoreDiff) {
@@ -257,7 +261,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 }
               }
               const added =
-                canHaveIndexedValuesBefore && !hasOwnBefore && hasOwnAfter;
+                expectedCanHaveIndexedValues && !expectedHasOwn && actualHasOwn;
               if (added) {
                 indexedValueNode.diff.added = true;
                 if (canDiffIndexedValues && !ignoreDiff) {
@@ -274,16 +278,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 indexedValueNode.diff.counters.overall,
               );
             };
-            if (canHaveIndexedValuesBefore && !node.before.reference) {
+            if (expectedCanHaveIndexedValues && !node.expected.reference) {
               let index = 0;
-              while (index < node.before.value.length) {
+              while (index < node.expected.value.length) {
                 visitIndexedValue(index);
                 index++;
               }
             }
-            if (canHaveIndexedValuesAfter && !node.after.reference) {
+            if (actualCanHaveIndexedValues && !node.actual.reference) {
               let index = 0;
-              while (index < node.after.value.length) {
+              while (index < node.actual.value.length) {
                 if (node.indexedValues[index]) {
                   // already visited
                   continue;
@@ -294,29 +298,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           properties: {
-            const canHavePropsBefore = node.before.canHaveProps;
-            const canHavePropsAfter = node.after.canHaveProps;
-            const canDiffProps = canHavePropsBefore && canHavePropsAfter;
+            const actualCanHaveProps = node.actual.canHaveProps;
+            const expectedCanHaveProps = node.expected.canHaveProps;
+            const canDiffProps = actualCanHaveProps && expectedCanHaveProps;
             node.canDiffProps = canDiffProps;
 
             // here we want to traverse before and after but if they are not composite
             // we'll consider everything as removed or added, depending the scenario
             const visitProperty = (property) => {
-              const propertyDescriptorBefore = canHavePropsBefore
-                ? Object.getOwnPropertyDescriptor(node.before.value, property)
+              const actualPropertyDescriptor = actualCanHaveProps
+                ? Object.getOwnPropertyDescriptor(node.actual.value, property)
                 : undefined;
-              const propertyDescriptorAfter = canHavePropsAfter
-                ? Object.getOwnPropertyDescriptor(node.after.value, property)
+              const expectedPropertyDescriptor = expectedCanHaveProps
+                ? Object.getOwnPropertyDescriptor(node.expected.value, property)
                 : undefined;
               const propertyNode = node.appendProperty(property, {
-                beforeValue: propertyDescriptorBefore,
-                afterValue: propertyDescriptorAfter,
+                actualPropertyDescriptor,
+                expectedPropertyDescriptor,
               });
 
               const removed =
-                propertyDescriptorBefore &&
-                canHavePropsAfter &&
-                propertyDescriptorAfter === undefined;
+                expectedPropertyDescriptor &&
+                actualCanHaveProps &&
+                !actualPropertyDescriptor;
               if (removed) {
                 propertyNode.diff.removed = true;
                 if (canDiffProps && !ignoreDiff) {
@@ -325,9 +329,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 }
               }
               const added =
-                canHavePropsBefore &&
-                propertyDescriptorBefore === undefined &&
-                propertyDescriptorAfter;
+                expectedCanHaveProps &&
+                !expectedPropertyDescriptor &&
+                actualPropertyDescriptor;
               if (added) {
                 propertyNode.diff.added = true;
                 if (canDiffProps && !ignoreDiff) {
@@ -344,41 +348,44 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               );
             };
             if (
-              canHavePropsBefore &&
+              expectedCanHaveProps &&
               // node.after.value is a reference: was already traversed
               // - prevent infinite recursion for circular structure
               // - prevent traversing a structure already known
-              !node.before.reference
+              !node.expected.reference
             ) {
-              const beforePropertyNames = Object.getOwnPropertyNames(
-                node.before.value,
+              const expectedPropertyNames = Object.getOwnPropertyNames(
+                node.expected.value,
               );
-              for (const beforePropertyName of beforePropertyNames) {
-                if (node.before.isArray && beforePropertyName === "length") {
+              for (const expectedPropertyName of expectedPropertyNames) {
+                if (
+                  node.expected.isArray &&
+                  expectedPropertyName === "length"
+                ) {
                   continue;
                 }
-                visitProperty(beforePropertyName);
+                visitProperty(expectedPropertyName);
               }
             }
             if (
-              canHavePropsAfter &&
+              actualCanHaveProps &&
               // node.after.value is a reference: was already traversed
               // - prevent infinite recursion for circular structure
               // - prevent traversing a structure already known
-              !node.after.reference
+              !node.actual.reference
             ) {
-              const afterPropertyNames = Object.getOwnPropertyNames(
-                node.after.value,
+              const actualPropertyNames = Object.getOwnPropertyNames(
+                node.actual.value,
               );
-              for (const afterPropertyName of afterPropertyNames) {
-                if (node.after.isArray && afterPropertyName === "length") {
+              for (const actualPropertyName of actualPropertyNames) {
+                if (node.actual.isArray && actualPropertyName === "length") {
                   continue;
                 }
-                if (node.properties[afterPropertyName]) {
+                if (node.properties[actualPropertyName]) {
                   // already visited
                   continue;
                 }
-                visitProperty(afterPropertyName);
+                visitProperty(actualPropertyName);
               }
             }
           }
@@ -392,7 +399,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return;
     }
 
-    let signs = false;
+    let signs = true;
     let refId = 1;
     let startNode = rootComparison;
     const [firstNodeCausingDiff] = causeSet;
@@ -447,7 +454,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     }
 
     const getContextForNestedValue = (node, context) => {
-      let { mode, forceDiff, added, removed } = context;
+      let { resultType, forceDiff, added, removed } = context;
       if (
         node.type === "indexed_value" ||
         node.type === "property_descriptor"
@@ -457,9 +464,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           forceDiff = true;
         }
         if (node.parent.diff.added) {
-          if (mode === "before") {
-            return null;
-          }
           added = true;
           forceDiff = true;
         }
@@ -468,13 +472,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (node.parent.parent.diff.category) {
           forceDiff = true;
         }
-        const valueName = mode === "before" || removed ? "before" : "after";
-        if (isDefaultDescriptor(node.descriptor, node[valueName].value)) {
+        if (isDefaultDescriptor(node.descriptor, node[resultType].value)) {
           return null;
         }
       }
 
-      return { ...context, mode, forceDiff, removed, added };
+      return { ...context, forceDiff, removed, added };
     };
 
     const writeNestedValueDiff = (
@@ -486,7 +489,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (!context) {
         return "";
       }
-      let { mode, forceDiff, added, removed, maxDepth, initialDepth } = context;
+      let { resultType, forceDiff, added, removed, maxDepth, initialDepth } =
+        context;
       let nestedValueDiff = "";
       const relativeDepth = node.depth + initialDepth;
       let indent = `  `.repeat(relativeDepth);
@@ -494,16 +498,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let delimitersColor;
       let displayValue = true;
 
-      if (mode === "before") {
-        if (removed) {
-          keyColor = delimitersColor = removedColor;
-        } else if (forceDiff) {
-          keyColor = delimitersColor = expectedColor;
-        } else {
-          keyColor = delimitersColor = colorForSame;
-        }
-      }
-      if (mode === "after") {
+      if (resultType === "actual") {
         if (added) {
           keyColor = delimitersColor = addedColor;
         } else if (forceDiff) {
@@ -517,10 +512,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           (forceDiff || node.diff.counters.self.any)
         ) {
           nestedValueDiff += added
-            ? ANSI.color(addedSign, addedColor)
-            : ANSI.color(unexpectedSign, unexpectedColor);
+            ? ANSI.color(addedSign, addedSignColor)
+            : ANSI.color(unexpectedSign, unexpectedSignColor);
           indent = indent.slice(1);
         }
+      } else if (removed) {
+        keyColor = delimitersColor = removedColor;
+      } else if (forceDiff) {
+        keyColor = delimitersColor = expectedColor;
+      } else {
+        keyColor = delimitersColor = colorForSame;
       }
 
       if (!context.collapsed) {
@@ -579,15 +580,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const writePropertyDiff = (node, context) => {
       if (context.collapsed) {
         if (
-          node.descriptors.get[context.mode].value &&
-          node.descriptors.set[context.mode].value
+          node.descriptors.get[context.resultType].value &&
+          node.descriptors.set[context.resultType].value
         ) {
           return writePropertyDescriptorDiff(node.descriptors.get, context);
         }
-        if (node.descriptors.get[context.mode].value) {
+        if (node.descriptors.get[context.resultType].value) {
           return writePropertyDescriptorDiff(node.descriptors.get, context);
         }
-        if (node.descriptors.set[context.mode].value) {
+        if (node.descriptors.set[context.resultType].value) {
           return writePropertyDescriptorDiff(node.descriptors.set, context);
         }
         return writePropertyDescriptorDiff(node.descriptors.value, context);
@@ -604,7 +605,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const writeValueDiff = (node, context) => {
       let {
-        mode,
+        resultType,
         forceDiff,
         added,
         removed,
@@ -617,20 +618,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       forceDiff = forceDiff || node.diff.counters.self.any > 0;
 
-      const valueName = mode === "before" ? "before" : "after";
-      const valueInfo = node[valueName];
+      const valueInfo = node[resultType];
       let valueColor;
       let delimitersColor;
-      if (mode === "before") {
-        if (removed) {
-          delimitersColor = valueColor = removedColor;
-        } else if (forceDiff) {
-          delimitersColor = valueColor = expectedColor;
-        } else {
-          delimitersColor = valueColor = colorForSame;
-        }
-      }
-      if (mode === "after") {
+      if (resultType === "actual") {
         if (added) {
           delimitersColor = valueColor = addedColor;
         } else if (forceDiff) {
@@ -638,6 +629,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else {
           delimitersColor = valueColor = colorForSame;
         }
+      } else if (removed) {
+        delimitersColor = valueColor = removedColor;
+      } else if (forceDiff) {
+        delimitersColor = valueColor = expectedColor;
+      } else {
+        delimitersColor = valueColor = colorForSame;
       }
 
       if (valueInfo.wellKnownId) {
@@ -687,8 +684,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         collapsed =
           relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
       }
-
-      const propertyNames = Object.keys(valueInfo.value);
 
       const writeInsideDiff = ({ next, skippedName }) => {
         let insideDiff = "";
@@ -777,7 +772,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
-        if (mode === "after" && skippedCounters.total) {
+        if (skippedCounters.total) {
           belowSummary += ANSI.color(
             skippedCounters.total === 1
               ? `1 ${skippedName}`
@@ -823,20 +818,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return "";
         }
         if (signs) {
-          if (mode === "before") {
-            if (removed) {
-              insideDiff += ANSI.color(removedSign, removedColor);
+          if (resultType === "actual") {
+            if (added) {
+              insideDiff += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
             } else if (context.forceDiff) {
-              insideDiff += ANSI.color(unexpectedSign, unexpectedColor);
+              insideDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
               indent = indent.slice(1);
             }
-          }
-          if (mode === "after") {
-            if (added) {
-              insideDiff += ANSI.color(addedSign, addedColor);
-              indent = indent.slice(1);
-            }
+          } else if (removed) {
+            insideDiff += ANSI.color(removedSign, removedSignColor);
+            indent = indent.slice(1);
           }
         }
         insideDiff += indent;
@@ -888,6 +880,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       inside: {
+        const propertyNames = Object.keys(valueInfo.value);
+
         if (collapsed && insideOverview) {
           let overview = "";
           let overviewWidth = 0;
@@ -949,9 +943,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
             const propertyNode = node.properties[propertyNames[propertyIndex]];
             propertyIndex++;
-            if (mode === "before" && propertyNode.diff.added) {
-              return getNext();
-            }
+            // if (resultType === "expected" && propertyNode.diff.added) {
+            //   return getNext();
+            // }
             return propertyNode;
           };
           const propertiesOverview = writeInsideOverview({
@@ -1113,20 +1107,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
 
     const actualValueMeta = {
-      name: "actual",
+      resultType: "actual",
       color: unexpectedColor,
-      mode: "after",
     };
     const expectedValueMeta = {
-      name: "expected",
+      resultType: "expected",
       color: expectedColor,
-      mode: "before",
     };
     const firstValueMeta = actualIsFirst ? actualValueMeta : expectedValueMeta;
     const secondValueMeta = actualIsFirst ? expectedValueMeta : actualValueMeta;
 
     let diffMessage = "";
-    diffMessage += ANSI.color(firstValueMeta.name, colorForSame);
+    diffMessage += ANSI.color(firstValueMeta.resultType, colorForSame);
     diffMessage += ANSI.color(":", colorForSame);
     diffMessage += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
@@ -1134,26 +1126,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       initialDepth: startNode.depth,
       maxColumns: maxColumnsDefault,
       maxDepth: maxDepthDefault,
-      mode: firstValueMeta.mode,
+      resultType: firstValueMeta.resultType,
     });
     diffMessage += firstValueDiff;
     diffMessage += "\n";
-    diffMessage += ANSI.color(secondValueMeta.name, colorForSame);
+    diffMessage += ANSI.color(secondValueMeta.resultType, colorForSame);
     diffMessage += ANSI.color(":", colorForSame);
     diffMessage += " ";
     const secondValueDiff = writeDiff(startNode, {
       initialDepth: startNode.depth,
       maxColumns: maxColumnsDefault,
       maxDepth: maxDepthDefault,
-      mode: secondValueMeta.mode,
+      resultType: secondValueMeta.resultType,
     });
     diffMessage += secondValueDiff;
 
     let message;
     if (rootComparison.diff.category && causeCounters.total === 1) {
-      message = `${ANSI.color(firstValueMeta.name, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.name, secondValueMeta.color)} are different`;
+      message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} are different`;
     } else {
-      message = `${ANSI.color(firstValueMeta.name, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.name, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
@@ -1214,15 +1206,15 @@ const isDefaultDescriptor = (descriptorName, descriptorValue) => {
   return false;
 };
 
-const createComparisonTree = (beforeValue, afterValue) => {
-  let beforeRefId = 1;
-  let afterRefId = 1;
+const createComparisonTree = (actualValue, expectedValue) => {
+  let expectedRefId = 1;
+  let actualRefId = 1;
   const compositeReferenceMap = new Map();
 
   const createComparisonNode = ({
     type,
-    beforeValue,
-    afterValue,
+    actualValue,
+    expectedValue,
     parent,
     depth,
   }) => {
@@ -1230,8 +1222,8 @@ const createComparisonTree = (beforeValue, afterValue) => {
       type,
       parent,
       depth,
-      before: createValueInfo(beforeValue, "before"),
-      after: createValueInfo(afterValue, "after"),
+      actual: createValueInfo(actualValue, "actual"),
+      expected: createValueInfo(expectedValue, "expected"),
       prototype: null,
       properties: {},
       indexedValues: [],
@@ -1264,39 +1256,39 @@ const createComparisonTree = (beforeValue, afterValue) => {
       },
     };
 
-    const beforeReference = node.before.isComposite
-      ? compositeReferenceMap.get(beforeValue)
+    const expectedReference = node.expected.isComposite
+      ? compositeReferenceMap.get(expectedValue)
       : undefined;
-    const afterReference = node.after.isComposite
-      ? compositeReferenceMap.get(afterValue)
+    const actualReference = node.actual.isComposite
+      ? compositeReferenceMap.get(actualValue)
       : undefined;
-    node.before.reference = beforeReference;
-    node.after.reference = afterReference;
-    if (node.before.isComposite) {
-      if (beforeReference) {
-        beforeReference.before.referenceFromOthersSet.add(node);
-        node.before.referenceId = beforeRefId;
-        beforeRefId++;
+    node.expected.reference = expectedReference;
+    node.actual.reference = actualReference;
+    if (node.expected.isComposite) {
+      if (expectedReference) {
+        expectedReference.expected.referenceFromOthersSet.add(node);
+        node.expected.referenceId = expectedRefId;
+        expectedRefId++;
       } else {
-        compositeReferenceMap.set(beforeValue, node);
+        compositeReferenceMap.set(expectedValue, node);
       }
     }
-    if (node.after.isComposite) {
-      if (afterReference) {
-        afterReference.after.referenceFromOthersSet.add(node);
-        node.after.referenceId = afterRefId;
-        afterRefId++;
+    if (node.actual.isComposite) {
+      if (actualReference) {
+        actualReference.actual.referenceFromOthersSet.add(node);
+        node.actual.referenceId = actualRefId;
+        actualRefId++;
       } else {
-        compositeReferenceMap.set(afterValue, node);
+        compositeReferenceMap.set(actualValue, node);
       }
     }
 
-    if (node.before.isComposite || node.after.isComposite) {
-      node.appendPrototype = ({ beforeValue, afterValue }) => {
+    if (node.actual.isComposite || node.expected.isComposite) {
+      node.appendPrototype = ({ actualPrototype, expectedPrototype }) => {
         const prototypeNode = createComparisonNode({
           type: "prototype",
-          beforeValue,
-          afterValue,
+          actualValue: actualPrototype,
+          expectedValue: expectedPrototype,
           parent: node,
           depth: depth + 1,
         });
@@ -1304,11 +1296,14 @@ const createComparisonTree = (beforeValue, afterValue) => {
         node.diff.prototype = prototypeNode.diff;
         return prototypeNode;
       };
-      node.appendProperty = (property, { beforeValue, afterValue }) => {
+      node.appendProperty = (
+        property,
+        { actualPropertyDescriptor, expectedPropertyDescriptor },
+      ) => {
         const propertyNode = createComparisonNode({
           type: "property",
-          beforeValue,
-          afterValue,
+          actualValue: actualPropertyDescriptor,
+          expectedValue: expectedPropertyDescriptor,
           parent: node,
           depth: depth + 1,
         });
@@ -1337,12 +1332,12 @@ const createComparisonTree = (beforeValue, afterValue) => {
         };
         propertyNode.appendPropertyDescriptor = (
           name,
-          { beforeValue, afterValue },
+          { actualValue, expectedValue },
         ) => {
           const propertyDescriptorNode = createComparisonNode({
             type: "property_descriptor",
-            beforeValue,
-            afterValue,
+            actualValue,
+            expectedValue,
             parent: propertyNode,
             depth: depth + 1,
           });
@@ -1354,12 +1349,12 @@ const createComparisonTree = (beforeValue, afterValue) => {
         return propertyNode;
       };
     }
-    if (node.before.isArray || node.after.isArray) {
-      node.appendIndexedValue = (index, { beforeValue, afterValue }) => {
+    if (node.actual.isArray || node.expected.isArray) {
+      node.appendIndexedValue = (index, { actualValue, expectedValue }) => {
         const indexedValueNode = createComparisonNode({
           type: "indexed_value",
-          beforeValue,
-          afterValue,
+          actualValue,
+          expectedValue,
           parent: node,
           depth: depth + 1,
         });
@@ -1373,8 +1368,8 @@ const createComparisonTree = (beforeValue, afterValue) => {
 
   const root = createComparisonNode({
     type: "value",
-    beforeValue,
-    afterValue,
+    actualValue,
+    expectedValue,
     depth: 0,
   });
 
