@@ -53,7 +53,7 @@
         <text x="35.2" y="71.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="71.55" fill="#7f7f7f">,</text>
-        <text x="10" y="90.55" fill="#cd5555">&#x2716;</text>
+        <text x="10" y="90.55" fill="#7f7f7f">&#x2716;</text>
         <text x="26.8" y="90.55" fill="#cd5555">should_not_be_there</text>
         <text x="186.43" y="90.55" fill="#cd5555">:</text>
         <text x="203.23" y="90.55" fill="#cd5555">true</text>

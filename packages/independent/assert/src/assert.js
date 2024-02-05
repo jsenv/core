@@ -2,9 +2,9 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
-const removedSign = UNICODE.FAILURE;
-const addedSign = UNICODE.FAILURE;
-const unexpectedSign = UNICODE.FAILURE;
+const removedSign = UNICODE.FAILURE_RAW;
+const addedSign = UNICODE.FAILURE_RAW;
+const unexpectedSign = UNICODE.FAILURE_RAW;
 const colorForSame = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.RED;
@@ -60,7 +60,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     // actualIsFirst =
     //   Object.keys(firstArg).indexOf("actual") <
     //   Object.keys(firstArg).indexOf("expected");
-    const comparisonTree = createComparisonTree(expected, actual);
+    const comparisonTree = createComparisonTree(actual, expected);
     const rootComparison = comparisonTree.root;
     const causeCounters = {
       total: 0,
@@ -352,7 +352,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               // node.after.value is a reference: was already traversed
               // - prevent infinite recursion for circular structure
               // - prevent traversing a structure already known
-              !node.expected.reference
+              !node.expected.reference &&
+              !node.expected.wellKnownId
             ) {
               const expectedPropertyNames = Object.getOwnPropertyNames(
                 node.expected.value,
@@ -372,7 +373,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               // node.after.value is a reference: was already traversed
               // - prevent infinite recursion for circular structure
               // - prevent traversing a structure already known
-              !node.actual.reference
+              !node.actual.reference &&
+              !node.actual.wellKnownId
             ) {
               const actualPropertyNames = Object.getOwnPropertyNames(
                 node.actual.value,
@@ -506,22 +508,31 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else {
           keyColor = delimitersColor = colorForSame;
         }
-        if (
-          !context.collapsed &&
-          (signs || added) &&
-          (forceDiff || node.diff.counters.self.any)
-        ) {
-          nestedValueDiff += added
-            ? ANSI.color(addedSign, addedSignColor)
-            : ANSI.color(unexpectedSign, unexpectedSignColor);
-          indent = indent.slice(1);
-        }
       } else if (removed) {
         keyColor = delimitersColor = removedColor;
       } else if (forceDiff) {
         keyColor = delimitersColor = expectedColor;
       } else {
         keyColor = delimitersColor = colorForSame;
+      }
+
+      if (signs && !context.collapsed) {
+        if (removed) {
+          if (resultType === "expected") {
+            nestedValueDiff += ANSI.color(removedSign, removedSignColor);
+            indent = indent.slice(1);
+          }
+        } else if (added) {
+          if (resultType === "actual") {
+            nestedValueDiff += ANSI.color(addedSign, addedSignColor);
+            indent = indent.slice(1);
+          }
+        } else if (forceDiff || node.diff.counters.self.any) {
+          if (resultType === "actual") {
+            nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
+            indent = indent.slice(1);
+          }
+        }
       }
 
       if (!context.collapsed) {
@@ -700,6 +711,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
         while ((nextEntry = next())) {
           const { node: nodeInsideThisOne, write } = nextEntry;
+          if (resultType === "actual" && nodeInsideThisOne.diff.removed) {
+            continue;
+          }
+          if (resultType === "expected" && nodeInsideThisOne.diff.added) {
+            continue;
+          }
+
           if (nodeInsideThisOne.diff.counters.overall.any) {
             diffCount++;
             // too many diff
@@ -841,8 +859,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let width = 0;
         let nextEntry;
         while ((nextEntry = next())) {
+          const { node: nodeInsideThisOne, write } = nextEntry;
+          if (resultType === "actual" && nodeInsideThisOne.diff.removed) {
+            continue;
+          }
+          if (resultType === "expected" && nodeInsideThisOne.diff.added) {
+            continue;
+          }
+
           let valueOverview = "";
-          valueOverview += nextEntry.write();
+          valueOverview += write();
           const valueWidth = stringWidth(valueOverview);
           if (width + valueWidth > remainingWidth) {
             skippedRef.current = true;
@@ -943,9 +969,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
             const propertyNode = node.properties[propertyNames[propertyIndex]];
             propertyIndex++;
-            // if (resultType === "expected" && propertyNode.diff.added) {
-            //   return getNext();
-            // }
             return propertyNode;
           };
           const propertiesOverview = writeInsideOverview({

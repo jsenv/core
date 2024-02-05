@@ -2,7 +2,7 @@
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  a: true,
+✖ a: true,
 }
 expected: {
   a: false,
@@ -16,7 +16,7 @@ actual: {
 }
 expected: {
   a: true,
-  should_be_there: true,
+✖ should_be_there: true,
 }
 
 # property should not be there
@@ -42,7 +42,7 @@ expected: {
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  foo: false,
+✖ foo: false,
 }
 expected: {
   foo: {
@@ -54,8 +54,8 @@ expected: {
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  foo: {
-    a: true,
+✖ foo: {
+✖   a: true,
   },
 }
 expected: {
@@ -84,8 +84,8 @@ AssertionError: actual and expected have 1 difference:
 
 actual: {
   foo: {
-    a: {
-      b: { c: Object(1) },
+✖   a: {
+✖     b: { c: Object(1) },
     },
   },
 }
@@ -100,7 +100,7 @@ AssertionError: actual and expected have 1 difference:
 
 actual: {
   a: { foo: true, bar: true, baz: Object(1) },
-  b: true,
+✖ b: true,
 }
 expected: {
   a: { foo: true, bar: true, baz: Object(1) },
@@ -113,7 +113,7 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   ↑ 2 props ↑
   c: true,
-  d: true,
+✖ d: true,
 }
 expected: {
   ↑ 2 props ↑
@@ -127,7 +127,7 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   a: true,
   b: true,
-  c: true,
+✖ c: true,
   d: true,
 }
 expected: {
@@ -141,13 +141,14 @@ expected: {
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  a: true,
+✖ a: true,
   b: true,
   ↓ 2 props ↓
 }
 expected: {
   a: false,
   b: true,
+  ↓ 2 props ↓
 }
 
 # max 2 props above after diff and there is exactly 2
@@ -155,7 +156,7 @@ AssertionError: actual and expected have 1 difference:
 
 actual: {
   a: true,
-  b: true,
+✖ b: true,
   c: true,
   d: true,
 }
@@ -172,13 +173,13 @@ AssertionError: actual and expected have 3 differences:
 actual: {
   ↑ 2 props ↑
   c: true,
-  d: true,
+✖ d: true,
   ↕ 2 props ↕
   g: true,
-  h: true,
+✖ h: true,
   ↕ 2 props ↕
   k: true,
-  l: true,
+✖ l: true,
   m: true,
   ↓ 2 props ↓
 }
@@ -193,6 +194,7 @@ expected: {
   k: true,
   l: false,
   m: true,
+  ↓ 2 props ↓
 }
 
 # max X diff per object
@@ -201,13 +203,14 @@ AssertionError: actual and expected have 3 differences:
 ℹ to improve readability 1 diff is completely hidden
 
 actual: {
-  a: true,
-  b: true,
+✖ a: true,
+✖ b: true,
   ↓ 1 prop (1 modified) ↓
 }
 expected: {
   a: false,
   b: false,
+  ↓ 1 prop (1 modified) ↓
 }
 
 # property should be there and is big
@@ -218,7 +221,7 @@ actual: {
 }
 expected: {
   a: true,
-  should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
+✖ should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
 }
 
 # many props should not be there
