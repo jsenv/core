@@ -1145,36 +1145,33 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           compositeDiff += ANSI.color(")", delimitersColor);
           break inside;
         }
-        if (valueInfo.isArray) {
-          const length = valueInfo.value.length;
-          let index = 0;
-          let insideDiff = writeInsideDiff({
-            next: () => {
-              if (index < length) {
-                const indexedValueNode = node.indexedValues[index];
-                index++;
-                return {
-                  node: indexedValueNode,
-                  write: () => {
-                    return writeDiff(indexedValueNode, {
-                      ...context,
-                      forceDiff,
-                      collapsed,
-                    });
-                  },
-                };
-              }
-              return null;
-            },
-          });
-          compositeDiff += ANSI.color("[", delimitersColor);
-          compositeDiff += insideDiff;
-        }
+        compositeDiff += valueInfo.isArray
+          ? ANSI.color("[", delimitersColor)
+          : ANSI.color("{", delimitersColor);
         const propertyCount = propertyNames.length;
-        let index = 0;
+        let valueIndex = 0;
         let prototypeDisplayed = false;
+        let propertyIndex = 0;
         let insideDiff = writeInsideDiff({
           next: () => {
+            if (
+              valueInfo.canHaveIndexedValues &&
+              valueIndex < valueInfo.value.length
+            ) {
+              const indexedValueNode = node.indexedValues[valueIndex];
+              valueIndex++;
+              return {
+                node: indexedValueNode,
+                write: () => {
+                  return writeDiff(indexedValueNode, {
+                    ...context,
+                    forceDiff,
+                    collapsed,
+                  });
+                },
+              };
+            }
+
             if (
               !prototypeDisplayed &&
               node.diff.prototype.counters.overall.any &&
@@ -1192,32 +1189,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 },
               };
             }
-            if (index >= propertyCount) {
-              return null;
+
+            if (valueInfo.canHaveProps && propertyIndex < propertyCount) {
+              const propertyNode =
+                node.properties[propertyNames[propertyIndex]];
+              propertyIndex++;
+              return {
+                node: propertyNode,
+                write: () => {
+                  return writeDiff(propertyNode, {
+                    ...context,
+                    forceDiff,
+                    collapsed,
+                  });
+                },
+              };
             }
-            const propertyNode = node.properties[propertyNames[index]];
-            index++;
-            return {
-              node: propertyNode,
-              write: () => {
-                return writeDiff(propertyNode, {
-                  ...context,
-                  forceDiff,
-                  collapsed,
-                });
-              },
-            };
+            return null;
           },
         });
-        if (!valueInfo.isArray) {
-          compositeDiff += ANSI.color("{", delimitersColor);
-        }
         compositeDiff += insideDiff;
-        if (valueInfo.isArray) {
-          compositeDiff += ANSI.color("]", delimitersColor);
-        } else {
-          compositeDiff += ANSI.color("}", delimitersColor);
-        }
+        compositeDiff += valueInfo.isArray
+          ? ANSI.color("]", delimitersColor)
+          : ANSI.color("}", delimitersColor);
       }
       return compositeDiff;
     };
