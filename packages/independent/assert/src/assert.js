@@ -53,9 +53,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxDepth: maxDepthDefault = 5,
       maxColumns: maxColumnsDefault = 100,
       maxDiffPerObject = 5,
-      maxPropertyBeforeDiff = 2,
-      maxPropertyAfterDiff = 2,
+      maxValueAroundDiff = 2,
+      // maxValueInsideDiff = 2,
     } = firstArg;
+    const maxValueBeforeDiff = maxValueAroundDiff;
+    const maxValueAfterDiff = maxValueAroundDiff;
+
     actualIsFirst = true;
     // actualIsFirst =
     //   Object.keys(firstArg).indexOf("actual") <
@@ -692,7 +695,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
       }
 
-      const writeInsideDiff = ({ next, skippedName }) => {
+      const writeInsideDiff = ({ next }) => {
         let insideDiff = "";
         let indent = "  ".repeat(relativeDepth);
         const skippedArray = [];
@@ -701,17 +704,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let isFirstNestedValue = true;
         const appendNestedValueDiff = (diff) => {
           if (context.collapsed) {
-            insideDiff += diff;
-            return;
+            return diff;
           }
           if (isFirstNestedValue) {
             isFirstNestedValue = false;
-            insideDiff += diff;
-            return;
+
+            return diff;
           }
           // insideDiff += ANSI.color(",", delimitersColor);
           // insideDiff += "\n";
-          insideDiff += diff;
+          return diff;
         };
 
         while ((nextEntry = next())) {
@@ -730,11 +732,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               skippedArray.push(nextEntry);
               continue;
             }
-            // first write property eventually skipped
+            // first write nested value (prop, value) eventually skipped
             const skippedCount = skippedArray.length;
             if (skippedCount) {
-              if (skippedCount > maxPropertyBeforeDiff) {
-                const aboveCount = skippedCount - 1;
+              let displayedBefore = 0;
+              let beforeDiff = "";
+              while (displayedBefore !== maxValueBeforeDiff - 1) {
+                const previousToDisplay = skippedArray[skippedArray.length - 1];
+                if (!previousToDisplay) {
+                  break;
+                }
+                skippedArray.pop();
+                beforeDiff += appendNestedValueDiff(previousToDisplay.write());
+                displayedBefore++;
+              }
+              const aboveCount = skippedArray.length;
+              if (aboveCount) {
+                const skippedName =
+                  skippedArray[0].type === "property" ? "props" : "values";
                 const arrowSign = diffCount > 1 ? `↕` : `↑`;
                 insideDiff += `${indent}  `;
                 insideDiff += ANSI.color(
@@ -742,21 +757,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   delimitersColor,
                 );
                 insideDiff += "\n";
-                const previousToDisplayArray = skippedArray.slice(
-                  -(maxPropertyBeforeDiff - 1),
-                );
-                for (const previousToDisplay of previousToDisplayArray) {
-                  appendNestedValueDiff(previousToDisplay.write());
-                }
-                skippedArray.length = 0;
-              } else {
-                for (const previousToDisplay of skippedArray) {
-                  appendNestedValueDiff(previousToDisplay.write());
-                }
-                skippedArray.length = 0;
               }
+              insideDiff += beforeDiff;
             }
-            appendNestedValueDiff(write());
+            insideDiff += appendNestedValueDiff(write());
             continue;
           }
           skippedArray.push(nextEntry);
@@ -767,21 +771,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         // now display the values below
         const skippedCount = skippedArray.length;
         if (skippedCount) {
+          // maxPropertyInsideDiff
           // I can display only the non modified props
           // and I can display only a subset
           // if there is any
-          let propertyDisplayedAfter = 0;
-          while (propertyDisplayedAfter !== maxPropertyAfterDiff - 1) {
-            const nextToDisplay = skippedArray[propertyDisplayedAfter];
+          let displayedAfter = 0;
+          while (displayedAfter !== maxValueAfterDiff - 1) {
+            const nextToDisplay = skippedArray[0];
             if (!nextToDisplay) {
               break;
             }
             if (nextToDisplay.node.diff.counters.self.any) {
               break;
             }
-            appendNestedValueDiff(nextToDisplay.write());
+            insideDiff += appendNestedValueDiff(nextToDisplay.write());
             skippedArray.shift();
-            propertyDisplayedAfter++;
+            displayedAfter++;
           }
         }
 
@@ -789,66 +794,138 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (skippedArray.length === 0) {
             break remaining_summary;
           }
-          const skippedCounters = {
-            total: skippedArray.length,
+          const skippedPropCounters = {
+            total: 0,
             removed: 0,
             added: 0,
             modified: 0,
           };
+          const skippedValueCounters = {
+            total: 0,
+            removed: 0,
+            added: 0,
+            modified: 0,
+          };
+
           for (const skipped of skippedArray) {
-            if (resultType === "actual") {
-              if (skipped.node.diff.added) {
-                onNodeDisplayed(skipped.node);
-                skippedCounters.added++;
+            if (skipped.node.type === "property") {
+              skippedPropCounters.total++;
+              if (resultType === "actual") {
+                if (skipped.node.diff.added) {
+                  onNodeDisplayed(skipped.node);
+                  skippedPropCounters.added++;
+                  continue;
+                }
+                if (skipped.node.diff.counters.overall.any) {
+                  onNodeDisplayed(skipped.node);
+                  skippedPropCounters.modified++;
+                  continue;
+                }
                 continue;
               }
-              if (skipped.node.diff.counters.overall.any) {
+              if (skipped.node.diff.removed) {
                 onNodeDisplayed(skipped.node);
-
-                skippedCounters.modified++;
-                continue;
+                skippedPropCounters.removed++;
               }
               continue;
             }
-            if (skipped.node.diff.removed) {
-              onNodeDisplayed(skipped.node);
-              skippedCounters.removed++;
+            if (skipped.node.type === "indexed_value") {
+              skippedValueCounters.total++;
+              if (resultType === "actual") {
+                if (skipped.node.diff.added) {
+                  onNodeDisplayed(skipped.node);
+                  skippedValueCounters.added++;
+                  continue;
+                }
+                if (skipped.node.diff.counters.overall.any) {
+                  onNodeDisplayed(skipped.node);
+                  skippedValueCounters.modified++;
+                  continue;
+                }
+                continue;
+              }
+              if (skipped.node.diff.removed) {
+                onNodeDisplayed(skipped.node);
+                skippedValueCounters.removed++;
+              }
+              continue;
             }
           }
 
-          const parts = [];
-          if (skippedCounters.removed) {
-            parts.push(
-              ANSI.color(`${skippedCounters.removed} removed`, removedColor),
+          let belowSummary = "";
+          if (skippedValueCounters.total) {
+            belowSummary += ANSI.color(
+              skippedValueCounters.total === 1
+                ? `1 value`
+                : `${skippedValueCounters.total} values`,
+              delimitersColor,
             );
+            const parts = [];
+            if (skippedValueCounters.removed) {
+              parts.push(
+                ANSI.color(
+                  `${skippedValueCounters.removed} removed`,
+                  removedColor,
+                ),
+              );
+            }
+            if (skippedValueCounters.added) {
+              parts.push(
+                ANSI.color(`${skippedValueCounters.added} added`, addedColor),
+              );
+            }
+            if (skippedValueCounters.modified) {
+              parts.push(
+                ANSI.color(
+                  `${skippedValueCounters.modified} modified`,
+                  unexpectedColor,
+                ),
+              );
+            }
+            if (parts.length) {
+              belowSummary += ` `;
+              belowSummary += ANSI.color(`(`, delimitersColor);
+              belowSummary += parts.join(" ");
+              belowSummary += ANSI.color(`)`, delimitersColor);
+            }
           }
-          if (skippedCounters.added) {
-            parts.push(
-              ANSI.color(`${skippedCounters.added} added`, addedColor),
+          if (skippedPropCounters.total) {
+            belowSummary += ANSI.color(
+              skippedPropCounters.total === 1
+                ? `1 prop`
+                : `${skippedPropCounters.total} props`,
+              delimitersColor,
             );
-          }
-          if (skippedCounters.modified) {
-            parts.push(
-              ANSI.color(
-                `${skippedCounters.modified} modified`,
-                unexpectedColor,
-              ),
-            );
+            const parts = [];
+            if (skippedPropCounters.removed) {
+              parts.push(
+                ANSI.color(
+                  `${skippedPropCounters.removed} removed`,
+                  removedColor,
+                ),
+              );
+            }
+            if (skippedPropCounters.added) {
+              parts.push(
+                ANSI.color(`${skippedPropCounters.added} added`, addedColor),
+              );
+            }
+            if (skippedPropCounters.modified) {
+              parts.push(
+                ANSI.color(
+                  `${skippedPropCounters.modified} modified`,
+                  unexpectedColor,
+                ),
+              );
+            }
+            if (parts.length) {
+              belowSummary += ` `;
+              belowSummary += ANSI.color(`(`, delimitersColor);
+              belowSummary += parts.join(" ");
+              belowSummary += ANSI.color(`)`, delimitersColor);
+            }
           }
 
-          let belowSummary = "";
-          belowSummary += ANSI.color(
-            skippedCounters.total === 1
-              ? `1 ${skippedName}`
-              : `${skippedCounters.total} ${skippedName}s`,
-            delimitersColor,
-          );
-          if (parts.length) {
-            belowSummary += ` `;
-            belowSummary += ANSI.color(`(`, delimitersColor);
-            belowSummary += parts.join(" ");
-            belowSummary += ANSI.color(`)`, delimitersColor);
-          }
           insideDiff += `${indent}  `;
           insideDiff += ANSI.color(`↓`, delimitersColor);
           insideDiff += " ";
@@ -1072,7 +1149,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const length = valueInfo.value.length;
           let index = 0;
           let insideDiff = writeInsideDiff({
-            skippedName: "value",
             next: () => {
               if (index < length) {
                 const indexedValueNode = node.indexedValues[index];
@@ -1098,7 +1174,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let index = 0;
         let prototypeDisplayed = false;
         let insideDiff = writeInsideDiff({
-          skippedName: "prop",
           next: () => {
             if (
               !prototypeDisplayed &&
