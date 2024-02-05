@@ -66,9 +66,10 @@
         <text x="186.43" y="109.55" fill="#cd5555">1</text>
         <text x="194.83" y="109.55" fill="#cd5555">)</text>
         <text x="211.63" y="109.55" fill="#cd5555">}</text>
-        <text x="220.03" y="109.55" fill="#cd5555">,</text>
-        <text x="43.61" y="128.55" fill="#cd5555">}</text>
-        <text x="52.01" y="128.55" fill="#7f7f7f">,</text>
+        <text x="220.03" y="109.55" fill="#7f7f7f">&#x2716;</text>
+        <text x="228.44" y="109.55" fill="#cd5555">,</text>
+        <text x="35.2" y="128.55" fill="#cd5555">}</text>
+        <text x="43.61" y="128.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="147.55" fill="#7f7f7f">}</text>
         <text x="35.2" y="147.55" fill="#7f7f7f">,</text>
         <text x="10" y="166.55" fill="#7f7f7f">}</text>

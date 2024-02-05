@@ -563,17 +563,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         });
         nestedValueDiff += valueDiff;
       }
-
-      if (context.collapsed) {
-        // nestedValueDiff += ANSI.color(",", delimitersColor);
-        // nestedValueDiff += " ";
-      } else {
+      if (!context.collapsed) {
         nestedValueDiff += ANSI.color(",", delimitersColor);
         nestedValueDiff += "\n";
       }
       return nestedValueDiff;
     };
-
     const writeIndexedValueDiff = (node, context) => {
       return writeNestedValueDiff(node, context, {});
     };
@@ -708,6 +703,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         };
         let diffCount = 0;
         let nextEntry;
+        let isFirstNestedValue = true;
+        const appendNestedValueDiff = (diff) => {
+          if (context.collapsed) {
+            insideDiff += diff;
+            return;
+          }
+          if (isFirstNestedValue) {
+            isFirstNestedValue = false;
+            insideDiff += diff;
+            return;
+          }
+          // insideDiff += ANSI.color(",", delimitersColor);
+          // insideDiff += "\n";
+          insideDiff += diff;
+        };
 
         while ((nextEntry = next())) {
           const { node: nodeInsideThisOne, write } = nextEntry;
@@ -751,17 +761,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 insideDiff += "\n";
                 for (const previousToDisplay of previousToDisplayArray) {
                   skippedCounters.total--;
-                  insideDiff += previousToDisplay.write();
+                  appendNestedValueDiff(previousToDisplay.write());
                 }
               } else {
                 for (const previousToDisplay of withoutDiffSkippedArray) {
                   skippedCounters.total--;
-                  insideDiff += previousToDisplay.write();
+                  appendNestedValueDiff(previousToDisplay.write());
                 }
               }
               withoutDiffSkippedArray.length = 0;
             }
-            insideDiff += write();
+            appendNestedValueDiff(write());
             continue;
           }
           skippedCounters.total++;
@@ -840,7 +850,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (added) {
               insideDiff += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
-            } else if (context.forceDiff) {
+            } else if (context.forceDiff || node.diff.counters.self.any) {
               insideDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
               indent = indent.slice(1);
             }
@@ -849,8 +859,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             indent = indent.slice(1);
           }
         }
-        insideDiff += indent;
         insideDiff = `\n${insideDiff}`;
+        // if (!valueInfo.isArray) {
+        //   insideDiff += ANSI.color(",", delimitersColor);
+        // }
+        // insideDiff += "\n";
+        insideDiff += indent;
         return insideDiff;
       };
       const writeInsideOverview = ({ next, remainingWidth, skippedRef }) => {

@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="252.45"
+  height="214.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="250.45"
+      height="212.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="212.45"
+    height="174.45"
     overflow="hidden"
   >
     <svg
       width="482.08"
-      height="212.45"
+      height="174.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -64,17 +64,15 @@
         <text x="354.46" y="109.55" fill="#7f7f7f">1</text>
         <text x="362.86" y="109.55" fill="#7f7f7f">)</text>
         <text x="379.66" y="109.55" fill="#7f7f7f">}</text>
-        <text x="388.06" y="109.55" fill="#7f7f7f">,</text>
-        <text x="10" y="147.55" fill="#7f7f7f">expected</text>
-        <text x="77.21" y="147.55" fill="#7f7f7f">:</text>
-        <text x="262.04" y="147.55" fill="#7f7f7f">{</text>
-        <text x="278.84" y="147.55" fill="#7f7f7f">in</text>
-        <text x="295.65" y="147.55" fill="#7f7f7f">:</text>
-        <text x="312.45" y="147.55" fill="#7f7f7f">Object(</text>
-        <text x="371.26" y="147.55" fill="#7f7f7f">1</text>
-        <text x="379.66" y="147.55" fill="#7f7f7f">)</text>
-        <text x="396.46" y="147.55" fill="#7f7f7f">}</text>
-        <text x="404.86" y="147.55" fill="#7f7f7f">,</text>
+        <text x="10" y="128.55" fill="#7f7f7f">expected</text>
+        <text x="77.21" y="128.55" fill="#7f7f7f">:</text>
+        <text x="262.04" y="128.55" fill="#7f7f7f">{</text>
+        <text x="278.84" y="128.55" fill="#7f7f7f">in</text>
+        <text x="295.65" y="128.55" fill="#7f7f7f">:</text>
+        <text x="312.45" y="128.55" fill="#7f7f7f">Object(</text>
+        <text x="371.26" y="128.55" fill="#7f7f7f">1</text>
+        <text x="379.66" y="128.55" fill="#7f7f7f">)</text>
+        <text x="396.46" y="128.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>
