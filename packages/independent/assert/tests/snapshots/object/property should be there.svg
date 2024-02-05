@@ -65,7 +65,7 @@
         <text x="26.8" y="147.55" fill="#DAA520">should_be_there</text>
         <text x="152.82" y="147.55" fill="#DAA520">:</text>
         <text x="169.63" y="147.55" fill="#DAA520">true</text>
-        <text x="203.23" y="147.55" fill="#7f7f7f">,</text>
+        <text x="203.23" y="147.55" fill="#DAA520">,</text>
         <text x="10" y="166.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

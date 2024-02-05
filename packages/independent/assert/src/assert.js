@@ -563,7 +563,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         });
         nestedValueDiff += valueDiff;
       }
-      if (!context.collapsed) {
+      if (!context.collapsed && node !== startNode) {
         nestedValueDiff += ANSI.color(",", delimitersColor);
         nestedValueDiff += "\n";
       }
@@ -1162,7 +1162,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     diffMessage += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
     const firstValueDiff = writeDiff(startNode, {
-      initialDepth: startNode.depth,
+      initialDepth: -startNode.depth,
       maxColumns: maxColumnsDefault,
       maxDepth: maxDepthDefault,
       resultType: firstValueMeta.resultType,
@@ -1173,7 +1173,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     diffMessage += ANSI.color(":", colorForSame);
     diffMessage += " ";
     const secondValueDiff = writeDiff(startNode, {
-      initialDepth: startNode.depth,
+      initialDepth: -startNode.depth,
       maxColumns: maxColumnsDefault,
       maxDepth: maxDepthDefault,
       resultType: secondValueMeta.resultType,

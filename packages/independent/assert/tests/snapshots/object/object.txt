@@ -55,8 +55,8 @@ AssertionError: actual and expected have 1 difference:
 
 actual: {
 ✖ foo: {
-✖   a: true✖,
- },
+✖   a: true,
+✖ },
 }
 expected: {
   foo: false,
@@ -71,11 +71,30 @@ expected: false
 # object should be false at deep property
 AssertionError: actual and expected have 2 differences:
 
-ℹ to improve readability 2 diffs are completely hidden
+ℹ to improve readability 1 diff is completely hidden
 ℹ diff starts at the.nesting.is.very.deep
 
-actual:                     { in: Object(1) }
-expected:                     { in: Object(1) }
+actual: {
+  in: {
+    this: {
+      one: {
+✖       foo: {
+✖         a: true,
+✖         toto: { test: true, bar: Object(1) },
+✖       },
+      },
+    },
+  },
+}
+expected: {
+  in: {
+    this: {
+      one: {
+        foo: false,
+      },
+    },
+  },
+}
 
 # maxDepth on diff
 AssertionError: actual and expected have 1 difference:
@@ -83,8 +102,8 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   foo: {
 ✖   a: {
-✖     b: { c: Object(1) }✖,
-   },
+✖     b: { c: Object(1) },
+✖   },
   },
 }
 expected: {
@@ -125,24 +144,28 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   a: true,
   b: true,
-✖ c: true  d: true,
+✖ c: true,
+  d: true,
 }
 expected: {
   a: true,
   b: true,
-  c: false  d: true,
+  c: false,
+  d: true,
 }
 
 # max 2 props after prop diff
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-✖ a: true  b: true  ↓ 2 props ↓
-,
+✖ a: true,
+  b: true,
+  ↓ 2 props ↓
 }
 expected: {
-  a: false  b: true  ↓ 2 props ↓
-,
+  a: false,
+  b: true,
+  ↓ 2 props ↓
 }
 
 # max 2 props above after diff and there is exactly 2
@@ -150,11 +173,15 @@ AssertionError: actual and expected have 1 difference:
 
 actual: {
   a: true,
-✖ b: true  c: true  d: true,
+✖ b: true,
+  c: true,
+  d: true,
 }
 expected: {
   a: true,
-  b: false  c: true  d: true,
+  b: false,
+  c: true,
+  d: true,
 }
 
 # max 2 props around prop diff
@@ -163,26 +190,28 @@ AssertionError: actual and expected have 3 differences:
 actual: {
   ↑ 2 props ↑
   c: true,
-✖ d: true  ↕ 2 props ↕
-,
+✖ d: true,
+  ↕ 2 props ↕
   g: true,
-✖ h: true  ↕ 2 props ↕
-,
+✖ h: true,
+  ↕ 2 props ↕
   k: true,
-✖ l: true  m: true  ↓ 2 props ↓
-,
+✖ l: true,
+  m: true,
+  ↓ 2 props ↓
 }
 expected: {
   ↑ 2 props ↑
   c: true,
-  d: false  ↕ 2 props ↕
-,
+  d: false,
+  ↕ 2 props ↕
   g: true,
-  h: false  ↕ 2 props ↕
-,
+  h: false,
+  ↕ 2 props ↕
   k: true,
-  l: false  m: true  ↓ 2 props ↓
-,
+  l: false,
+  m: true,
+  ↓ 2 props ↓
 }
 
 # max X diff per object
@@ -192,13 +221,13 @@ AssertionError: actual and expected have 3 differences:
 
 actual: {
 ✖ a: true,
-✖ b: true  ↓ 1 prop (1 modified) ↓
-,
+✖ b: true,
+  ↓ 1 prop (1 modified) ↓
 }
 expected: {
   a: false,
-  b: false  ↓ 1 prop (1 modified) ↓
-,
+  b: false,
+  ↓ 1 prop ↓
 }
 
 # property should be there and is big
@@ -224,8 +253,8 @@ actual: {
   },
 ✖ d: true,
 ✖ e: true,
-✖ f: true  ↓ 2 props (2 added) ↓
-,
+✖ f: true,
+  ↓ 2 props (2 added) ↓
 }
 expected: {
   a: true,
