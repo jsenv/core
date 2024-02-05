@@ -71,13 +71,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       causeCounters.total++;
       causeSet.add(node);
     };
-    const onDiffDisplayed = (node) => {
+    const onNodeDisplayed = (node) => {
       if (causeSet.has(node)) {
         causeSet.delete(node);
         causeCounters.displayed++;
-      } else if (causeSet.has(node.parent)) {
-        causeSet.delete(node.parent);
-        causeCounters.displayed++;
+      }
+      if (node.type === "property") {
+        for (const descriptor of Object.keys(node.descriptors)) {
+          onNodeDisplayed(node.descriptors[descriptor]);
+        }
       }
     };
 
@@ -401,7 +403,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return;
     }
 
-    let signs = true;
+    let signs = false;
     let refId = 1;
     let startNode = rootComparison;
     const [firstNodeCausingDiff] = causeSet;
@@ -589,15 +591,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           node.descriptors.get[context.resultType].value &&
           node.descriptors.set[context.resultType].value
         ) {
-          return writePropertyDescriptorDiff(node.descriptors.get, context);
+          return writeDiff(node.descriptors.get, context);
         }
         if (node.descriptors.get[context.resultType].value) {
-          return writePropertyDescriptorDiff(node.descriptors.get, context);
+          return writeDiff(node.descriptors.get, context);
         }
         if (node.descriptors.set[context.resultType].value) {
-          return writePropertyDescriptorDiff(node.descriptors.set, context);
+          return writeDiff(node.descriptors.set, context);
         }
-        return writePropertyDescriptorDiff(node.descriptors.value, context);
+        return writeDiff(node.descriptors.value, context);
       }
       let propertyDiff = "";
       const descriptorNames = Object.keys(node.descriptors);
@@ -620,7 +622,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         collapsed,
         initialDepth,
       } = context;
-      onDiffDisplayed(node);
 
       forceDiff = forceDiff || node.diff.counters.self.any > 0;
 
@@ -694,13 +695,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const writeInsideDiff = ({ next, skippedName }) => {
         let insideDiff = "";
         let indent = "  ".repeat(relativeDepth);
-        const withoutDiffSkippedArray = [];
-        const skippedCounters = {
-          total: 0,
-          added: 0,
-          removed: 0,
-          modified: 0,
-        };
+        const skippedArray = [];
         let diffCount = 0;
         let nextEntry;
         let isFirstNestedValue = true;
@@ -732,110 +727,128 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             diffCount++;
             // too many diff
             if (diffCount > maxDiffPerObject) {
-              onDiffDisplayed(nodeInsideThisOne);
-              skippedCounters.total++;
-              if (nodeInsideThisOne.diff.removed) {
-                skippedCounters.removed++;
-              } else if (nodeInsideThisOne.diff.added) {
-                skippedCounters.added++;
-              } else {
-                skippedCounters.modified++;
-              }
+              skippedArray.push(nextEntry);
               continue;
             }
             // first write property eventually skipped
-            const withoutDiffSkippedCount = withoutDiffSkippedArray.length;
-            if (withoutDiffSkippedCount) {
-              if (withoutDiffSkippedCount > maxPropertyBeforeDiff) {
-                const previousToDisplayArray = withoutDiffSkippedArray.slice(
-                  -(maxPropertyBeforeDiff - 1),
-                );
-                const indexAboveCount = withoutDiffSkippedCount - 1;
+            const skippedCount = skippedArray.length;
+            if (skippedCount) {
+              if (skippedCount > maxPropertyBeforeDiff) {
+                const aboveCount = skippedCount - 1;
                 const arrowSign = diffCount > 1 ? `↕` : `↑`;
                 insideDiff += `${indent}  `;
                 insideDiff += ANSI.color(
-                  `${arrowSign} ${indexAboveCount} ${skippedName}s ${arrowSign}`,
+                  `${arrowSign} ${aboveCount} ${skippedName}s ${arrowSign}`,
                   delimitersColor,
                 );
-                skippedCounters.total -= indexAboveCount;
                 insideDiff += "\n";
+                const previousToDisplayArray = skippedArray.slice(
+                  -(maxPropertyBeforeDiff - 1),
+                );
                 for (const previousToDisplay of previousToDisplayArray) {
-                  skippedCounters.total--;
                   appendNestedValueDiff(previousToDisplay.write());
                 }
+                skippedArray.length = 0;
               } else {
-                for (const previousToDisplay of withoutDiffSkippedArray) {
-                  skippedCounters.total--;
+                for (const previousToDisplay of skippedArray) {
                   appendNestedValueDiff(previousToDisplay.write());
                 }
+                skippedArray.length = 0;
               }
-              withoutDiffSkippedArray.length = 0;
             }
             appendNestedValueDiff(write());
             continue;
           }
-          skippedCounters.total++;
-          withoutDiffSkippedArray.push(nextEntry);
+          skippedArray.push(nextEntry);
           // does not have a diff
           // will either be written when we encounter a diff
           // or be skipped
         }
-        let belowSummary = "";
         // now display the values below
-        const withoutDiffSkippedCount = withoutDiffSkippedArray.length;
-        if (withoutDiffSkippedCount) {
-          if (withoutDiffSkippedCount > maxPropertyAfterDiff) {
-            const nextToDisplayArray = withoutDiffSkippedArray.slice(
-              0,
-              maxPropertyAfterDiff - 1,
-            );
-            for (const nextToDisplay of nextToDisplayArray) {
-              skippedCounters.total--;
-              insideDiff += nextToDisplay.write();
+        const skippedCount = skippedArray.length;
+        if (skippedCount) {
+          // I can display only the non modified props
+          // and I can display only a subset
+          // if there is any
+          let propertyDisplayedAfter = 0;
+          while (propertyDisplayedAfter !== maxPropertyAfterDiff - 1) {
+            const nextToDisplay = skippedArray[propertyDisplayedAfter];
+            if (!nextToDisplay) {
+              break;
             }
-          } else {
-            for (const nextToDisplay of withoutDiffSkippedArray) {
-              skippedCounters.total--;
-              insideDiff += nextToDisplay.write();
+            if (nextToDisplay.node.diff.counters.self.any) {
+              break;
             }
+            appendNestedValueDiff(nextToDisplay.write());
+            skippedArray.shift();
+            propertyDisplayedAfter++;
           }
         }
-        if (skippedCounters.total) {
+
+        remaining_summary: {
+          if (skippedArray.length === 0) {
+            break remaining_summary;
+          }
+          const skippedCounters = {
+            total: skippedArray.length,
+            removed: 0,
+            added: 0,
+            modified: 0,
+          };
+          for (const skipped of skippedArray) {
+            if (resultType === "actual") {
+              if (skipped.node.diff.added) {
+                onNodeDisplayed(skipped.node);
+                skippedCounters.added++;
+                continue;
+              }
+              if (skipped.node.diff.counters.overall.any) {
+                onNodeDisplayed(skipped.node);
+
+                skippedCounters.modified++;
+                continue;
+              }
+              continue;
+            }
+            if (skipped.node.diff.removed) {
+              onNodeDisplayed(skipped.node);
+              skippedCounters.removed++;
+            }
+          }
+
+          const parts = [];
+          if (skippedCounters.removed) {
+            parts.push(
+              ANSI.color(`${skippedCounters.removed} removed`, removedColor),
+            );
+          }
+          if (skippedCounters.added) {
+            parts.push(
+              ANSI.color(`${skippedCounters.added} added`, addedColor),
+            );
+          }
+          if (skippedCounters.modified) {
+            parts.push(
+              ANSI.color(
+                `${skippedCounters.modified} modified`,
+                unexpectedColor,
+              ),
+            );
+          }
+
+          let belowSummary = "";
           belowSummary += ANSI.color(
             skippedCounters.total === 1
               ? `1 ${skippedName}`
               : `${skippedCounters.total} ${skippedName}s`,
             delimitersColor,
           );
-          const parts = [];
-          if (resultType === "actual") {
-            if (skippedCounters.added) {
-              parts.push(
-                ANSI.color(`${skippedCounters.added} added`, addedColor),
-              );
-            }
-            if (skippedCounters.modified) {
-              parts.push(
-                ANSI.color(
-                  `${skippedCounters.modified} modified`,
-                  unexpectedColor,
-                ),
-              );
-            }
-          } else if (skippedCounters.removed) {
-            parts.push(
-              ANSI.color(`${skippedCounters.removed} removed`, removedColor),
-            );
-          }
-
           if (parts.length) {
             belowSummary += ` `;
             belowSummary += ANSI.color(`(`, delimitersColor);
             belowSummary += parts.join(" ");
             belowSummary += ANSI.color(`)`, delimitersColor);
           }
-        }
-        if (belowSummary) {
           insideDiff += `${indent}  `;
           insideDiff += ANSI.color(`↓`, delimitersColor);
           insideDiff += " ";
@@ -996,7 +1009,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               return {
                 node: propertyNode,
                 write: () => {
-                  return writePropertyDiff(propertyNode, {
+                  return writeDiff(propertyNode, {
                     ...context,
                     forceDiff,
                     collapsed,
@@ -1096,7 +1109,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               return {
                 node: node.prototype,
                 write: () => {
-                  return writePrototypeDiff(node.prototype, {
+                  return writeDiff(node.prototype, {
                     ...context,
                     forceDiff,
                     collapsed,
@@ -1112,7 +1125,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             return {
               node: propertyNode,
               write: () => {
-                return writePropertyDiff(propertyNode, {
+                return writeDiff(propertyNode, {
                   ...context,
                   forceDiff,
                   collapsed,
@@ -1141,6 +1154,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       property_descriptor: writePropertyDescriptorDiff,
     };
     const writeDiff = (node, context) => {
+      onNodeDisplayed(node);
       const method = methods[node.type];
       return method(node, context);
     };

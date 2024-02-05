@@ -52,11 +52,9 @@
         <text x="26.8" y="71.55" fill="#7f7f7f">foo</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">:</text>
         <text x="68.81" y="71.55" fill="#7f7f7f">{</text>
-        <text x="10" y="90.55" fill="#7f7f7f">&#x2716;</text>
         <text x="43.61" y="90.55" fill="#7f7f7f">a</text>
         <text x="52.01" y="90.55" fill="#7f7f7f">:</text>
         <text x="68.81" y="90.55" fill="#cd5555">{</text>
-        <text x="10" y="109.55" fill="#7f7f7f">&#x2716;</text>
         <text x="60.41" y="109.55" fill="#cd5555">b</text>
         <text x="68.81" y="109.55" fill="#cd5555">:</text>
         <text x="85.61" y="109.55" fill="#cd5555">{</text>
@@ -67,7 +65,6 @@
         <text x="194.83" y="109.55" fill="#cd5555">)</text>
         <text x="211.63" y="109.55" fill="#cd5555">}</text>
         <text x="220.03" y="109.55" fill="#cd5555">,</text>
-        <text x="10" y="128.55" fill="#7f7f7f">&#x2716;</text>
         <text x="43.61" y="128.55" fill="#cd5555">}</text>
         <text x="52.01" y="128.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="147.55" fill="#7f7f7f">}</text>
