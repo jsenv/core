@@ -131,15 +131,11 @@ actual: {
   ↑ 2 props ↑
   c: true,
   d: true,
-  a: true,
-  ↓ 1 prop ↓
 }
 expected: {
   ↑ 2 props ↑
   c: true,
   d: false,
-  a: true,
-  ↓ 1 prop ↓
 }
 
 # max 2 props above prop diff and there is exactly 2
@@ -149,15 +145,13 @@ actual: {
   ↑ 1 props ↑
   b: true,
   c: true,
-  a: true,
-  ↓ 1 prop ↓
+  d: true,
 }
 expected: {
   ↑ 1 props ↑
   b: true,
   c: false,
-  a: true,
-  ↓ 1 prop ↓
+  d: true,
 }
 
 # max 2 props after prop diff
@@ -197,27 +191,27 @@ actual: {
   ↑ 2 props ↑
   c: true,
   d: true,
-  ↕ 4 props ↕
+  ↕ 2 props ↕
   g: true,
   h: true,
-  ↕ 6 props ↕
+  ↕ 2 props ↕
   k: true,
   l: true,
-  a: true,
-  ↓ 8 props ↓
+  m: true,
+  ↓ 2 props ↓
 }
 expected: {
   ↑ 2 props ↑
   c: true,
   d: false,
-  ↕ 4 props ↕
+  ↕ 2 props ↕
   g: true,
   h: false,
-  ↕ 6 props ↕
+  ↕ 2 props ↕
   k: true,
   l: false,
-  a: true,
-  ↓ 8 props ↓
+  m: true,
+  ↓ 2 props ↓
 }
 
 # max X diff per object

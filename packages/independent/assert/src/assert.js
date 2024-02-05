@@ -736,16 +736,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             // first write nested value (prop, value) eventually skipped
             const skippedCount = skippedArray.length;
             if (skippedCount) {
-              let displayedBefore = 0;
               let beforeDiff = "";
-              while (displayedBefore !== maxValueBeforeDiff - 1) {
+              let from = skippedArray.length - maxValueBeforeDiff;
+              let to = skippedArray.length - 1;
+              let index = from;
+              while (index !== to) {
                 const previousToDisplay = skippedArray[skippedArray.length - 1];
                 if (!previousToDisplay) {
                   break;
                 }
                 skippedArray.pop();
                 beforeDiff += appendNestedValueDiff(previousToDisplay.write());
-                displayedBefore++;
+                index++;
               }
               let skippedValues = 0;
               let skippedProps = 0;
@@ -777,6 +779,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 insideDiff += "\n";
               }
               insideDiff += beforeDiff;
+              skippedArray.length = 0;
             }
             insideDiff += appendNestedValueDiff(write());
             continue;
