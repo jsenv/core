@@ -256,19 +256,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 actualValue,
                 expectedValue,
               });
-
-              const removed =
-                expectedHasOwn && actualCanHaveIndexedValues && !actualHasOwn;
-              if (removed) {
+              if (
+                expectedHasOwn &&
+                !actualHasOwn &&
+                actualCanHaveIndexedValues
+              ) {
                 indexedValueNode.diff.removed = true;
                 if (canDiffIndexedValues && !ignoreDiff) {
                   indexedValueNode.diff.counters.self.removed++;
                   addNodeCausingDiff(indexedValueNode);
                 }
               }
-              const added =
-                expectedCanHaveIndexedValues && !expectedHasOwn && actualHasOwn;
-              if (added) {
+              if (
+                !expectedHasOwn &&
+                actualHasOwn &&
+                expectedCanHaveIndexedValues
+              ) {
                 indexedValueNode.diff.added = true;
                 if (canDiffIndexedValues && !ignoreDiff) {
                   indexedValueNode.diff.counters.self.added++;
@@ -277,28 +280,37 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
               visit(indexedValueNode, {
                 ignoreDiff:
-                  ignoreDiff || !canDiffIndexedValues || added || removed,
+                  ignoreDiff ||
+                  !canDiffIndexedValues ||
+                  indexedValueNode.diff.removed ||
+                  indexedValueNode.diff.added,
               });
               appendCounters(
                 node.diff.counters.inside,
                 indexedValueNode.diff.counters.overall,
               );
             };
-            if (expectedCanHaveIndexedValues && !node.expected.reference) {
+            if (
+              expectedCanHaveIndexedValues &&
+              !node.expected.reference &&
+              !node.expected.wellKnownId
+            ) {
               let index = 0;
               while (index < node.expected.value.length) {
                 visitIndexedValue(index);
                 index++;
               }
             }
-            if (actualCanHaveIndexedValues && !node.actual.reference) {
+            if (
+              actualCanHaveIndexedValues &&
+              !node.actual.reference &&
+              !node.actual.wellKnownId
+            ) {
               let index = 0;
               while (index < node.actual.value.length) {
-                if (node.indexedValues[index]) {
-                  // already visited
-                  continue;
+                if (!node.indexedValues[index]) {
+                  visitIndexedValue(index);
                 }
-                visitIndexedValue(index);
                 index++;
               }
             }
@@ -357,6 +369,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 propertyNode.diff.counters.overall,
               );
             };
+            const isArrayIndex = (property) => {
+              if (property === "NaN") {
+                return false;
+              }
+              const asNumber = parseInt(property);
+              if (asNumber < 0) {
+                return false;
+              }
+              if (asNumber > 4_294_967_294) {
+                return false;
+              }
+              if (asNumber % 1 !== 0) {
+                // float
+                return false;
+              }
+              return true;
+            };
+
             if (
               expectedCanHaveProps &&
               // node.after.value is a reference: was already traversed
@@ -365,18 +395,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               !node.expected.reference &&
               !node.expected.wellKnownId
             ) {
+              const expectedKeys = [];
               const expectedPropertyNames = Object.getOwnPropertyNames(
                 node.expected.value,
               );
               for (const expectedPropertyName of expectedPropertyNames) {
-                if (
-                  node.expected.isArray &&
-                  expectedPropertyName === "length"
-                ) {
-                  continue;
+                if (node.expected.isArray) {
+                  if (
+                    expectedPropertyName === "length" ||
+                    isArrayIndex(expectedPropertyName)
+                  ) {
+                    continue;
+                  }
                 }
+                expectedKeys.push(expectedPropertyName);
                 visitProperty(expectedPropertyName);
               }
+              node.expected.keys = expectedKeys;
             }
             if (
               actualCanHaveProps &&
@@ -386,19 +421,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               !node.actual.reference &&
               !node.actual.wellKnownId
             ) {
+              const actualKeys = [];
               const actualPropertyNames = Object.getOwnPropertyNames(
                 node.actual.value,
               );
               for (const actualPropertyName of actualPropertyNames) {
-                if (node.actual.isArray && actualPropertyName === "length") {
-                  continue;
+                if (node.actual.isArray) {
+                  if (
+                    actualPropertyName === "length" ||
+                    isArrayIndex(actualPropertyName)
+                  ) {
+                    continue;
+                  }
                 }
-                if (node.properties[actualPropertyName]) {
-                  // already visited
-                  continue;
+                actualKeys.push(actualPropertyName);
+                if (!node.properties[actualPropertyName]) {
+                  visitProperty(actualPropertyName);
                 }
-                visitProperty(actualPropertyName);
               }
+              node.actual.keys = actualKeys;
             }
           }
         }
@@ -995,7 +1036,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const writeOverview = ({ next }) => {
         const prefix = valueInfo.isArray
           ? `Array(${valueInfo.value.length})`
-          : `Object(${Object.keys(valueInfo.value).length})`;
+          : `Object(${valueInfo.keys.length})`;
         const openBracket = valueInfo.isArray ? "[" : "{ ";
         const closeBracket = valueInfo.isArray ? "]" : " }";
         const estimatedCollapsedBoilerplate = `${prefix} ${openBracket}, ...${closeBracket}`;
@@ -1064,9 +1105,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         const length = valueInfo.canHaveIndexedValues
           ? valueInfo.value.length
           : 0;
-        const propertyNames = valueInfo.canHaveProps
-          ? Object.keys(valueInfo.value)
-          : [];
+        const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
         const propertyCount = propertyNames.length;
 
         let valueIndex = 0;
@@ -1090,7 +1129,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               },
             };
           }
-
           if (
             !prototypeDisplayed &&
             node.diff.prototype.counters.overall.any &&
@@ -1110,7 +1148,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               },
             };
           }
-
           if (propIndex < propertyCount) {
             const propertyNode = node.properties[propertyNames[propIndex]];
             propIndex++;
@@ -1145,7 +1182,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             compositeDiff += ANSI.color(")", delimitersColor);
             break inside;
           }
-          const propertyNames = Object.keys(valueInfo.value);
+          const propertyNames = valueInfo.keys;
           const propertyCount = propertyNames.length;
           compositeDiff += ANSI.color("Object(", delimitersColor);
           compositeDiff += ANSI.color(`${propertyCount}`, delimitersColor);
