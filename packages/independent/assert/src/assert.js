@@ -7,7 +7,7 @@ const addedSign = UNICODE.FAILURE_RAW;
 const unexpectedSign = UNICODE.FAILURE_RAW;
 const colorForSame = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
-const addedColor = ANSI.RED;
+const addedColor = ANSI.YELLOW;
 const unexpectedColor = ANSI.RED;
 const expectedColor = ANSI.GREEN;
 const unexpectedSignColor = ANSI.GREY;
@@ -92,16 +92,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const { self, inside, overall } = counters;
       self.any = self.modified + self.removed + self.added;
       inside.any = inside.modified + inside.removed + inside.added;
-      overall.modified = self.modified + inside.modified;
       overall.removed = self.removed + inside.removed;
       overall.added = self.added + inside.added;
+      overall.modified = self.modified + inside.modified;
       overall.any = self.any + inside.any;
     };
     const appendCounters = (counter, otherCounter) => {
       counter.any += otherCounter.any;
-      counter.modified += otherCounter.modified;
       counter.removed += otherCounter.removed;
       counter.added += otherCounter.added;
+      counter.modified += otherCounter.modified;
     };
 
     const visit = (node, { ignoreDiff } = {}) => {
@@ -462,30 +462,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     }
 
     const getContextForNestedValue = (node, context) => {
-      let { resultType, forceDiff, added, removed } = context;
+      let { resultType, removed, added, modified } = context;
       if (
         node.type === "indexed_value" ||
         node.type === "property_descriptor"
       ) {
         if (node.parent.diff.removed) {
           removed = true;
-          forceDiff = true;
         }
         if (node.parent.diff.added) {
           added = true;
-          forceDiff = true;
         }
       }
       if (node.type === "property_descriptor") {
         if (node.parent.parent.diff.category) {
-          forceDiff = true;
+          modified = true;
         }
         if (isDefaultDescriptor(node.descriptor, node[resultType].value)) {
           return null;
         }
       }
 
-      return { ...context, forceDiff, removed, added };
+      return { ...context, removed, added, modified };
     };
 
     const writeNestedValueDiff = (
@@ -497,7 +495,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (!context) {
         return "";
       }
-      let { resultType, forceDiff, added, removed, maxDepth, initialDepth } =
+      let { resultType, removed, added, modified, maxDepth, initialDepth } =
         context;
       let nestedValueDiff = "";
       const relativeDepth = node.depth + initialDepth;
@@ -509,14 +507,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (resultType === "actual") {
         if (added) {
           keyColor = delimitersColor = addedColor;
-        } else if (forceDiff) {
+        } else if (modified) {
           keyColor = delimitersColor = unexpectedColor;
         } else {
           keyColor = delimitersColor = colorForSame;
         }
       } else if (removed) {
         keyColor = delimitersColor = removedColor;
-      } else if (forceDiff) {
+      } else if (modified) {
         keyColor = delimitersColor = expectedColor;
       } else {
         keyColor = delimitersColor = colorForSame;
@@ -533,7 +531,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             nestedValueDiff += ANSI.color(addedSign, addedSignColor);
             indent = indent.slice(1);
           }
-        } else if (forceDiff || node.diff.counters.self.any) {
+        } else if (modified || node.diff.counters.self.any) {
           if (resultType === "actual") {
             nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
             indent = indent.slice(1);
@@ -559,7 +557,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (displayValue) {
         const valueMaxColumns =
           maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
-        if (forceDiff || node.diff.counters.self.any) {
+        if (modified || node.diff.counters.self.any) {
           maxDepth = Math.min(node.depth + maxDepthInsideDiff, maxDepth);
         }
         const valueDiff = writeValueDiff(node, {
@@ -616,18 +614,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return propertyDiff;
     };
     const writeValueDiff = (node, context) => {
+      if (!context.modified && node.diff.counters.self.any > 0) {
+        context.modified = true;
+      }
       let {
         resultType,
-        forceDiff,
-        added,
         removed,
+        added,
+        modified,
         maxColumns,
         maxDepth,
         collapsed,
         initialDepth,
       } = context;
-
-      forceDiff = forceDiff || node.diff.counters.self.any > 0;
 
       const valueInfo = node[resultType];
       let valueColor;
@@ -635,14 +634,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (resultType === "actual") {
         if (added) {
           delimitersColor = valueColor = addedColor;
-        } else if (forceDiff) {
+        } else if (modified) {
           delimitersColor = valueColor = unexpectedColor;
         } else {
           delimitersColor = valueColor = colorForSame;
         }
       } else if (removed) {
         delimitersColor = valueColor = removedColor;
-      } else if (forceDiff) {
+      } else if (modified) {
         delimitersColor = valueColor = expectedColor;
       } else {
         delimitersColor = valueColor = colorForSame;
@@ -696,7 +695,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
       }
 
-      const writeInsideDiff = ({ next, forceDiff }) => {
+      const writeInsideDiff = ({ next }) => {
         let insideDiff = "";
         let indent = "  ".repeat(relativeDepth);
         const skippedArray = [];
@@ -799,7 +798,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // is there a diff before?
           // if yes then it's maxValueAfterDiff
           // otherwise it's maxper diff
-          const maxValueAfter = forceDiff
+          const maxValueAfter = modified
             ? maxValueInsideDiff - 1
             : maxValueAfterDiff - 1;
           let displayedAfter = 0;
@@ -969,7 +968,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (added) {
               insideDiff += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
-            } else if (context.forceDiff || node.diff.counters.self.any) {
+            } else if (modified) {
               insideDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
               indent = indent.slice(1);
             }
@@ -1061,7 +1060,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                     write: () =>
                       writeDiff(indexedValueNode, {
                         ...context,
-                        forceDiff,
+                        modified,
                         collapsed,
                       }),
                   };
@@ -1115,7 +1114,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(propertyNode, {
                     ...context,
-                    forceDiff,
+                    modified,
                     collapsed,
                   });
                 },
@@ -1180,7 +1179,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let prototypeDisplayed = false;
         let propertyIndex = 0;
         let insideDiff = writeInsideDiff({
-          forceDiff,
           next: () => {
             if (
               valueInfo.canHaveIndexedValues &&
@@ -1193,7 +1191,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(indexedValueNode, {
                     ...context,
-                    forceDiff,
+                    modified,
                     collapsed,
                   });
                 },
@@ -1211,7 +1209,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(node.prototype, {
                     ...context,
-                    forceDiff,
+                    modified,
                     collapsed,
                   });
                 },
@@ -1227,7 +1225,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(propertyNode, {
                     ...context,
-                    forceDiff,
+                    modified,
                     collapsed,
                   });
                 },
