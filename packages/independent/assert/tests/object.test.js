@@ -325,6 +325,18 @@ await startSnapshotTesting("object", {
       maxValueInsideDiff: 2,
     });
   },
+  ["props order"]: () => {
+    assert({
+      actual: {
+        b: true,
+        a: false,
+      },
+      expected: {
+        a: true,
+        b: false,
+      },
+    });
+  },
   // nested_object_becomes_false: () => {
   //   assert({
   //     actual: false,

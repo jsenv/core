@@ -413,3 +413,20 @@ assert({
 
 ![img](<./object/max prop in diff.svg>)
 
+# props order
+
+```js
+assert({
+  actual: {
+    b: true,
+    a: false,
+  },
+  expected: {
+    a: true,
+    b: false,
+  },
+});
+```
+
+![img](<./object/props order.svg>)
+

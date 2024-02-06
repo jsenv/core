@@ -272,3 +272,15 @@ expected: {
   foo: false,
 }
 
+# props order
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  b: true,
+  a: false,
+}
+expected: {
+  a: true,
+  b: false,
+}
+
