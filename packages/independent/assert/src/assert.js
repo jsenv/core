@@ -323,22 +323,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 expectedPropertyDescriptor,
               });
 
-              const removed =
+              if (
+                !actualPropertyDescriptor &&
                 expectedPropertyDescriptor &&
-                actualCanHaveProps &&
-                !actualPropertyDescriptor;
-              if (removed) {
+                actualCanHaveProps
+              ) {
                 propertyNode.diff.removed = true;
                 if (canDiffProps && !ignoreDiff) {
                   propertyNode.diff.counters.self.removed++;
                   addNodeCausingDiff(propertyNode);
                 }
               }
-              const added =
-                expectedCanHaveProps &&
+              if (
+                actualPropertyDescriptor &&
                 !expectedPropertyDescriptor &&
-                actualPropertyDescriptor;
-              if (added) {
+                expectedCanHaveProps
+              ) {
                 propertyNode.diff.added = true;
                 if (canDiffProps && !ignoreDiff) {
                   propertyNode.diff.counters.self.added++;
@@ -346,7 +346,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 }
               }
               visit(propertyNode, {
-                ignoreDiff: ignoreDiff || !canDiffProps || added || removed,
+                ignoreDiff:
+                  ignoreDiff ||
+                  !canDiffProps ||
+                  propertyNode.diff.removed ||
+                  propertyNode.diff.added,
               });
               appendCounters(
                 node.diff.counters.inside,
@@ -475,9 +479,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
       if (node.type === "property_descriptor") {
-        if (node.parent.parent.diff.category) {
-          modified = true;
-        }
         if (isDefaultDescriptor(node.descriptor, node[resultType].value)) {
           return null;
         }
@@ -531,7 +532,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             nestedValueDiff += ANSI.color(addedSign, addedSignColor);
             indent = indent.slice(1);
           }
-        } else if (modified || node.diff.counters.self.any) {
+        } else if (modified) {
           if (resultType === "actual") {
             nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
             indent = indent.slice(1);
@@ -557,7 +558,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (displayValue) {
         const valueMaxColumns =
           maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
-        if (modified || node.diff.counters.self.any) {
+        if (modified) {
           maxDepth = Math.min(node.depth + maxDepthInsideDiff, maxDepth);
         }
         const valueDiff = writeValueDiff(node, {
@@ -614,9 +615,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return propertyDiff;
     };
     const writeValueDiff = (node, context) => {
-      if (!context.modified && node.diff.counters.self.any > 0) {
-        context.modified = true;
-      }
       let {
         resultType,
         removed,
@@ -627,6 +625,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         collapsed,
         initialDepth,
       } = context;
+      if (!modified && node.diff.counters.self.any > 0) {
+        modified = true;
+      }
 
       const valueInfo = node[resultType];
       let valueColor;
@@ -1191,7 +1192,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(indexedValueNode, {
                     ...context,
-                    modified,
+                    modified: node.canDiffIndexedValues
+                      ? context.modified
+                      : modified,
                     collapsed,
                   });
                 },
@@ -1209,7 +1212,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(node.prototype, {
                     ...context,
-                    modified,
+                    modified: node.canDiffPrototypes
+                      ? context.modified
+                      : modified,
                     collapsed,
                   });
                 },
@@ -1225,7 +1230,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 write: () => {
                   return writeDiff(propertyNode, {
                     ...context,
-                    modified,
+                    modified: node.canDiffProps ? context.modified : modified,
                     collapsed,
                   });
                 },

@@ -1,52 +1,52 @@
 # object expected, array received
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-{}
-[]
+actual: []
+expected: {}
 
 # array expected, object received
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-[]
-{}
+actual: {}
+expected: []
 
 # false should be an array
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-[]
-false
+actual: false
+expected: []
 
 # associative array expected, object received
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-{
-  foo: true,
-}
-[
+actual: [
   foo: true,
 ]
+expected: {
+  foo: true,
+}
 
 # diff on associate array.foo and object.foo
-AssertionError: expected and actual have 2 differences:
+AssertionError: actual and expected have 2 differences:
 
-{
-  foo: false,
-}
-[
+actual: [
   foo: true,
 ]
+expected: {
+  foo: false,
+}
 
 # diff on associate array deep property and object deep property
-AssertionError: expected and actual have 2 differences:
+AssertionError: actual and expected have 2 differences:
 
-{
-  user: {
-    name: "alice",
-  },
-}
-[
+actual: [
   user: {
     name: "bob",
   },
 ]
+expected: {
+  user: {
+    name: "alice",
+  },
+}
 
