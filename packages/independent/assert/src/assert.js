@@ -670,9 +670,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       if (context.collapsed && node.type === "property_descriptor") {
         if (node.descriptor === "get") {
+          if (node.parent.descriptors.set[resultType].value) {
+            return ANSI.color("[get/set]", valueColor);
+          }
           return ANSI.color("[get]", valueColor);
         }
         if (node.descriptor === "set") {
+          if (node.parent.descriptors.get[resultType].value) {
+            return ANSI.color("[get/set]", valueColor);
+          }
           return ANSI.color("[set]", valueColor);
         }
       }
@@ -986,7 +992,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         insideDiff += indent;
         return insideDiff;
       };
-      const writeInsideOverview = ({ next, remainingWidth, skippedRef }) => {
+      const writeOverview = ({ next }) => {
+        const prefix = valueInfo.isArray
+          ? `Array(${valueInfo.value.length})`
+          : `Object(${Object.keys(valueInfo.value).length})`;
+        const openBracket = valueInfo.isArray ? "[" : "{ ";
+        const closeBracket = valueInfo.isArray ? "]" : " }";
+        const estimatedCollapsedBoilerplate = `${prefix} ${openBracket}, ...${closeBracket}`;
+        const estimatedCollapsedBoilerplateWidth =
+          estimatedCollapsedBoilerplate.length;
+        const remainingWidth = maxColumns - estimatedCollapsedBoilerplateWidth;
+
         let insideOverview = "";
         let isFirst = true;
         let width = 0;
@@ -1004,8 +1020,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           valueOverview += write();
           const valueWidth = stringWidth(valueOverview);
           if (width + valueWidth > remainingWidth) {
-            skippedRef.current = true;
-            break;
+            let overview = "";
+            overview += ANSI.color(prefix, delimitersColor);
+            overview += " ";
+            overview += ANSI.color(openBracket, delimitersColor);
+            if (insideOverview) {
+              overview += insideOverview;
+              overview += ANSI.color(",", delimitersColor);
+              overview += " ";
+            }
+            overview += ANSI.color(`...`, valueColor);
+            overview += ANSI.color(closeBracket, delimitersColor);
+            return overview;
           }
           width += valueWidth;
           if (isFirst) {
@@ -1018,141 +1044,96 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             insideOverview += valueOverview;
           }
         }
-        return insideOverview;
-      };
-      const wrapInsideOverview = (
-        insideOverview,
-        { prefix, openBracket, closeBracket },
-      ) => {
-        let insideOverviewWrapped = "";
-        insideOverviewWrapped += ANSI.color(prefix, delimitersColor);
-        insideOverviewWrapped += " ";
-        insideOverviewWrapped += ANSI.color(openBracket, delimitersColor);
+
+        let overview = "";
+        overview += valueInfo.isArray
+          ? ANSI.color("[", delimitersColor)
+          : ANSI.color("{", delimitersColor);
         if (insideOverview) {
-          insideOverviewWrapped += insideOverview;
-          insideOverviewWrapped += ANSI.color(",", delimitersColor);
-          insideOverviewWrapped += " ";
+          overview += valueInfo.isArray ? "" : " ";
+          overview += insideOverview;
+          overview += valueInfo.isArray ? "" : " ";
         }
-        insideOverviewWrapped += ANSI.color(`...`, valueColor);
-        insideOverviewWrapped += ANSI.color(closeBracket, delimitersColor);
-        return insideOverviewWrapped;
+        overview += valueInfo.isArray
+          ? ANSI.color("]", delimitersColor)
+          : ANSI.color("}", delimitersColor);
+        return overview;
+      };
+
+      const createGetNextNestedValue = () => {
+        const length = valueInfo.canHaveIndexedValues
+          ? valueInfo.value.length
+          : 0;
+        const propertyNames = valueInfo.canHaveProps
+          ? Object.keys(valueInfo.value)
+          : [];
+        const propertyCount = propertyNames.length;
+
+        let valueIndex = 0;
+        let prototypeDisplayed = false;
+        let propIndex = 0;
+
+        return () => {
+          if (valueIndex < length) {
+            const indexedValueNode = node.indexedValues[valueIndex];
+            valueIndex++;
+            return {
+              node: indexedValueNode,
+              write: () => {
+                return writeDiff(indexedValueNode, {
+                  ...context,
+                  modified: node.canDiffIndexedValues
+                    ? context.modified
+                    : modified,
+                  collapsed,
+                });
+              },
+            };
+          }
+
+          if (
+            !prototypeDisplayed &&
+            node.diff.prototype.counters.overall.any &&
+            !node.prototypeAreDifferentAndWellKnown
+          ) {
+            prototypeDisplayed = true;
+            return {
+              node: node.prototype,
+              write: () => {
+                return writeDiff(node.prototype, {
+                  ...context,
+                  modified: node.canDiffPrototypes
+                    ? context.modified
+                    : modified,
+                  collapsed,
+                });
+              },
+            };
+          }
+
+          if (propIndex < propertyCount) {
+            const propertyNode = node.properties[propertyNames[propIndex]];
+            propIndex++;
+            return {
+              node: propertyNode,
+              write: () => {
+                return writeDiff(propertyNode, {
+                  ...context,
+                  modified: node.canDiffProps ? context.modified : modified,
+                  collapsed,
+                });
+              },
+            };
+          }
+          return null;
+        };
       };
 
       inside: {
-        const propertyNames = Object.keys(valueInfo.value);
-
         if (collapsed && insideOverview) {
-          let overview = "";
-          let overviewWidth = 0;
-          if (valueInfo.isArray) {
-            const length = valueInfo.value.length;
-            const estimatedCollapsedBoilerplate = `Array(${length}) [, ...]`;
-            const estimatedCollapsedBoilerplateWidth =
-              estimatedCollapsedBoilerplate.length;
-            let index = 0;
-            const indexedValueSkippedRef = { current: false };
-            const indexedValuesOverview = writeInsideOverview({
-              next: () => {
-                if (index < length) {
-                  const indexedValueNode = node.indexedValues[index];
-                  index++;
-                  return {
-                    node: indexedValueNode,
-                    write: () =>
-                      writeDiff(indexedValueNode, {
-                        ...context,
-                        modified,
-                        collapsed,
-                      }),
-                  };
-                }
-                return null;
-              },
-              skippedRef: indexedValueSkippedRef,
-              remainingWidth: maxColumns - estimatedCollapsedBoilerplateWidth,
-            });
-
-            if (indexedValueSkippedRef.current) {
-              overview += wrapInsideOverview(indexedValuesOverview, {
-                prefix: `Array(${length})`,
-                openBracket: "[",
-                closeBracket: "]",
-              });
-              compositeDiff += overview;
-              break inside;
-            }
-            overview += ANSI.color("[", delimitersColor);
-            overview += "[".length;
-            if (insideOverview) {
-              overview += insideOverview;
-              overviewWidth += stringWidth(insideOverview);
-            }
-          }
-
-          const propertyCount = propertyNames.length;
-          const estimatedCollapsedBoilerplate = `Object(${propertyCount}) { , ... }`;
-          const estimatedCollapsedBoilerplateWidth =
-            estimatedCollapsedBoilerplate.length;
-          let propertyIndex = 0;
-          const propertiesSkippedRef = { current: false };
-
-          const getNext = () => {
-            if (propertyIndex >= propertyCount) {
-              return null;
-            }
-            const propertyNode = node.properties[propertyNames[propertyIndex]];
-            propertyIndex++;
-            return propertyNode;
-          };
-          const propertiesOverview = writeInsideOverview({
-            next: () => {
-              const propertyNode = getNext();
-              if (!propertyNode) {
-                return null;
-              }
-              return {
-                node: propertyNode,
-                write: () => {
-                  return writeDiff(propertyNode, {
-                    ...context,
-                    modified,
-                    collapsed,
-                  });
-                },
-              };
-            },
-            skippedRef: propertiesSkippedRef,
-            remainingWidth:
-              maxColumns - overviewWidth - estimatedCollapsedBoilerplateWidth,
+          const overview = writeOverview({
+            next: createGetNextNestedValue(),
           });
-          if (propertiesSkippedRef.current) {
-            if (valueInfo.isArray) {
-              overview += wrapInsideOverview(propertiesOverview);
-              overview += ANSI.color("]", delimitersColor);
-            } else {
-              overview += wrapInsideOverview(propertiesOverview, {
-                prefix: `Object(${propertyCount})`,
-                openBracket: "{ ",
-                closeBracket: " }",
-                spaces: true,
-              });
-            }
-            compositeDiff += overview;
-            break inside;
-          }
-          if (!valueInfo.isArray) {
-            overview += ANSI.color("{", delimitersColor);
-          }
-          if (propertiesOverview) {
-            overview += " ";
-            overview += propertiesOverview;
-            overview += " ";
-            overviewWidth += stringWidth(` ${propertiesOverview} `);
-          }
-          if (!valueInfo.isArray) {
-            overview += ANSI.color("}", delimitersColor);
-            overviewWidth += "{}".length;
-          }
           compositeDiff += overview;
           break inside;
         }
@@ -1164,80 +1145,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             compositeDiff += ANSI.color(")", delimitersColor);
             break inside;
           }
+          const propertyNames = Object.keys(valueInfo.value);
+          const propertyCount = propertyNames.length;
           compositeDiff += ANSI.color("Object(", delimitersColor);
-          compositeDiff += ANSI.color(
-            `${propertyNames.length}`,
-            delimitersColor,
-          );
+          compositeDiff += ANSI.color(`${propertyCount}`, delimitersColor);
           compositeDiff += ANSI.color(")", delimitersColor);
           break inside;
         }
         compositeDiff += valueInfo.isArray
           ? ANSI.color("[", delimitersColor)
           : ANSI.color("{", delimitersColor);
-        const propertyCount = propertyNames.length;
-        let valueIndex = 0;
-        let prototypeDisplayed = false;
-        let propertyIndex = 0;
         let insideDiff = writeInsideDiff({
-          next: () => {
-            if (
-              valueInfo.canHaveIndexedValues &&
-              valueIndex < valueInfo.value.length
-            ) {
-              const indexedValueNode = node.indexedValues[valueIndex];
-              valueIndex++;
-              return {
-                node: indexedValueNode,
-                write: () => {
-                  return writeDiff(indexedValueNode, {
-                    ...context,
-                    modified: node.canDiffIndexedValues
-                      ? context.modified
-                      : modified,
-                    collapsed,
-                  });
-                },
-              };
-            }
-
-            if (
-              !prototypeDisplayed &&
-              node.diff.prototype.counters.overall.any &&
-              !node.prototypeAreDifferentAndWellKnown
-            ) {
-              prototypeDisplayed = true;
-              return {
-                node: node.prototype,
-                write: () => {
-                  return writeDiff(node.prototype, {
-                    ...context,
-                    modified: node.canDiffPrototypes
-                      ? context.modified
-                      : modified,
-                    collapsed,
-                  });
-                },
-              };
-            }
-
-            if (valueInfo.canHaveProps && propertyIndex < propertyCount) {
-              const propertyNode =
-                node.properties[propertyNames[propertyIndex]];
-              propertyIndex++;
-              return {
-                node: propertyNode,
-                write: () => {
-                  return writeDiff(propertyNode, {
-                    ...context,
-                    modified: node.canDiffProps ? context.modified : modified,
-                    collapsed,
-                  });
-                },
-              };
-            }
-            return null;
-          },
+          next: createGetNextNestedValue(),
         });
         compositeDiff += insideDiff;
         compositeDiff += valueInfo.isArray
