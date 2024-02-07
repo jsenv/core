@@ -11,6 +11,27 @@ await startSnapshotTesting("array", {
       expected: [false],
     });
   },
+  ["undefined vs empty"]: () => {
+    assert({
+      // eslint-disable-next-line no-sparse-arrays
+      actual: [,],
+      expected: [undefined],
+    });
+  },
+  ["empty added"]: () => {
+    assert({
+      // eslint-disable-next-line no-sparse-arrays
+      actual: [,],
+      expected: [],
+    });
+  },
+  ["empty removed"]: () => {
+    assert({
+      actual: [],
+      // eslint-disable-next-line no-sparse-arrays
+      expected: [,],
+    });
+  },
   // ["object expected, array received"]: () => {
   //   assert({
   //     actual: [],
@@ -66,5 +87,4 @@ await startSnapshotTesting("array", {
   // TODO:
   // - diff on associate when array contains indexed values (now it's just on empty array)
   // and ensure the array length does not prevent the property diff to be displayed
-  // - empty vs undefined
 });

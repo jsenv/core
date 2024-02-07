@@ -13,6 +13,7 @@ const expectedColor = ANSI.GREEN;
 const unexpectedSignColor = ANSI.GREY;
 const removedSignColor = ANSI.GREY;
 const addedSignColor = ANSI.GREY;
+const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empty_value') ?
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -248,17 +249,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 : false;
               const actualValue = actualHasOwn
                 ? node.actual.value[index]
-                : undefined;
+                : actualCanHaveIndexedValues && index < node.actual.value.length
+                  ? ARRAY_EMPTY_VALUE
+                  : undefined;
               const expectedValue = expectedHasOwn
                 ? node.expected.value[index]
-                : undefined;
+                : expectedCanHaveIndexedValues &&
+                    index < node.expected.value.length
+                  ? ARRAY_EMPTY_VALUE
+                  : undefined;
               const indexedValueNode = node.appendIndexedValue(index, {
                 actualValue,
                 expectedValue,
               });
+
               if (
-                expectedHasOwn &&
+                (expectedHasOwn || expectedValue === ARRAY_EMPTY_VALUE) &&
                 !actualHasOwn &&
+                actualValue !== ARRAY_EMPTY_VALUE &&
                 actualCanHaveIndexedValues
               ) {
                 indexedValueNode.diff.removed = true;
@@ -269,7 +277,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
               if (
                 !expectedHasOwn &&
-                actualHasOwn &&
+                expectedValue !== ARRAY_EMPTY_VALUE &&
+                (actualHasOwn || actualValue === ARRAY_EMPTY_VALUE) &&
                 expectedCanHaveIndexedValues
               ) {
                 indexedValueNode.diff.added = true;
@@ -369,6 +378,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 propertyNode.diff.counters.overall,
               );
             };
+            // we could also just do sthing like if (indexedValues[property]) ?
             const isArrayIndex = (property) => {
               if (property === "NaN") {
                 return false;
@@ -508,23 +518,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     const getContextForNestedValue = (node, context) => {
       let { resultType, removed, added, modified } = context;
-      if (
-        node.type === "indexed_value" ||
-        node.type === "property_descriptor"
-      ) {
+      if (node.type === "indexed_value") {
+        if (node.diff.removed) {
+          removed = true;
+        }
+        if (node.diff.added) {
+          added = true;
+        }
+      }
+      if (node.type === "property_descriptor") {
         if (node.parent.diff.removed) {
           removed = true;
         }
         if (node.parent.diff.added) {
           added = true;
         }
-      }
-      if (node.type === "property_descriptor") {
         if (isDefaultDescriptor(node.descriptor, node[resultType].value)) {
           return null;
         }
       }
-
       return { ...context, removed, added, modified };
     };
 
@@ -1486,8 +1498,9 @@ const createComparisonTree = (actualValue, expectedValue) => {
 };
 
 const createValueInfo = (value, name) => {
-  const composite = isComposite(value);
-  const wellKnownId = getWellKnownId(value);
+  const composite = value === ARRAY_EMPTY_VALUE ? false : isComposite(value);
+  const wellKnownId =
+    value === ARRAY_EMPTY_VALUE ? "empty" : getWellKnownId(value);
   const isArray =
     composite && Array.isArray(value) && value !== Array.prototype;
 

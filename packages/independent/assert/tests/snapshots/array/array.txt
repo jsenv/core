@@ -8,3 +8,29 @@ expected: [
   false,
 ]
 
+# undefined vs empty
+AssertionError: actual and expected have 1 difference:
+
+actual: [
+  empty,
+]
+expected: [
+  undefined,
+]
+
+# empty added
+AssertionError: actual and expected have 1 difference:
+
+actual: [
+  empty,
+]
+expected: []
+
+# empty removed
+AssertionError: actual and expected have 1 difference:
+
+actual: []
+expected: [
+  empty,
+]
+
