@@ -1581,6 +1581,9 @@ const getSubtype = (obj) => {
       return String(descriptor.value.name);
     }
     obj = Object.getPrototypeOf(obj);
+    if (obj === null) {
+      return "Object";
+    }
   }
   return "";
 };
