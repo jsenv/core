@@ -225,7 +225,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             });
             if (prototypeNode.diff.counters.overall.any) {
               appendCounters(
-                node.diff.counters.self,
+                node.diff.counters.inside,
                 prototypeNode.diff.counters.overall,
               );
             }

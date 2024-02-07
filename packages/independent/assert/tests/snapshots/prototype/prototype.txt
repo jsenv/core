@@ -1,14 +1,24 @@
-# object with different prototypes
-AssertionError: expected and actual have 1 difference:
+# object null proto vs object
+AssertionError: actual and expected have 1 difference:
 
-{
-  __proto__: {
-    toto: false,
-  },
+actual: {
+  __proto__: null,
 }
-{
+expected: {
+  __proto__: Object.prototype,
+}
+
+# object with different prototypes
+AssertionError: actual and expected have 1 difference:
+
+actual: {
   __proto__: {
     toto: true,
+  },
+}
+expected: {
+  __proto__: {
+    toto: false,
   },
 }
 
