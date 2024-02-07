@@ -51,7 +51,8 @@
         <text x="77.21" y="52.55" fill="#cd5555">{</text>
         <text x="94.01" y="52.55" fill="#cd5555">the</text>
         <text x="119.22" y="52.55" fill="#cd5555">:</text>
-        <text x="136.02" y="52.55" fill="#cd5555">Object(</text>
+        <text x="136.02" y="52.55" fill="#cd5555">Object</text>
+        <text x="186.43" y="52.55" fill="#cd5555">(</text>
         <text x="194.83" y="52.55" fill="#cd5555">1</text>
         <text x="203.23" y="52.55" fill="#cd5555">)</text>
         <text x="211.63" y="52.55" fill="#cd5555">,</text>

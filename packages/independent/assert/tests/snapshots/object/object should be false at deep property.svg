@@ -83,7 +83,8 @@
         <text x="245.24" y="223.55" fill="#cd5555">,</text>
         <text x="262.04" y="223.55" fill="#cd5555">bar</text>
         <text x="287.25" y="223.55" fill="#cd5555">:</text>
-        <text x="304.05" y="223.55" fill="#cd5555">Object(</text>
+        <text x="304.05" y="223.55" fill="#cd5555">Object</text>
+        <text x="354.46" y="223.55" fill="#cd5555">(</text>
         <text x="362.86" y="223.55" fill="#cd5555">1</text>
         <text x="371.26" y="223.55" fill="#cd5555">)</text>
         <text x="388.06" y="223.55" fill="#cd5555">}</text>

@@ -763,6 +763,73 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
       }
 
+      const openBracket = valueInfo.isArray ? "[" : "{";
+      const closeBracket = valueInfo.isArray ? "]" : "}";
+      let bracketsColor = added
+        ? addedColor
+        : removed
+          ? removedColor
+          : modified
+            ? node.actual.isArray && node.expected.isArray
+              ? sameColor
+              : resultType === "actual"
+                ? unexpectedColor
+                : expectedColor
+            : sameColor;
+
+      const writePrefix = ({ overview } = {}) => {
+        if (valueInfo.subtype === "Object" && !overview) {
+          return "";
+        }
+        let prefix = "";
+        let subtypeColor = added
+          ? addedColor
+          : removed
+            ? removedColor
+            : node.actual.isComposite &&
+                node.expected.isComposite &&
+                node.actual.subtype === node.expected.subtype
+              ? sameColor
+              : resultType === "actual"
+                ? unexpectedColor
+                : expectedColor;
+        prefix += ANSI.color(valueInfo.subtype, subtypeColor);
+        if (overview) {
+          if (valueInfo.isArray) {
+            prefix += ANSI.color(`(`, delimitersColor);
+            let lengthColor = added
+              ? addedColor
+              : removed
+                ? removedColor
+                : node.actual.isArray &&
+                    node.expected.isArray &&
+                    node.actual.value.length === node.expected.value.length
+                  ? sameColor
+                  : resultType === "actual"
+                    ? unexpectedColor
+                    : expectedColor;
+            prefix += ANSI.color(valueInfo.value.length, lengthColor);
+            prefix += ANSI.color(`)`, delimitersColor);
+          } else {
+            prefix += ANSI.color(`(`, delimitersColor);
+            let keysColor = added
+              ? addedColor
+              : removed
+                ? removedColor
+                : node.actual.isComposite &&
+                    node.expected.isComposite &&
+                    node.actual.keys.length === node.expected.keys.length
+                  ? sameColor
+                  : resultType === "actual"
+                    ? unexpectedColor
+                    : expectedColor;
+            prefix += ANSI.color(valueInfo.keys.length, keysColor);
+            prefix += ANSI.color(`)`, delimitersColor);
+          }
+        }
+        return prefix;
+      };
+
       const writeInsideDiff = ({ next }) => {
         let insideDiff = "";
         let indent = "  ".repeat(relativeDepth);
@@ -1054,14 +1121,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return insideDiff;
       };
       const writeOverview = ({ next }) => {
-        const prefix = valueInfo.isArray
-          ? `${valueInfo.subtype}(${valueInfo.value.length})`
-          : `${valueInfo.subtype}(${valueInfo.keys.length})`;
-        const openBracket = valueInfo.isArray ? "[" : "{ ";
-        const closeBracket = valueInfo.isArray ? "]" : " }";
-        const estimatedCollapsedBoilerplate = `${prefix} ${openBracket}, ...${closeBracket}`;
-        const estimatedCollapsedBoilerplateWidth =
-          estimatedCollapsedBoilerplate.length;
+        const prefixWithOverview = writePrefix({ overview: true });
+        const estimatedCollapsedBoilerplate = `${prefixWithOverview} ${openBracket}, ...${closeBracket}`;
+        const estimatedCollapsedBoilerplateWidth = stringWidth(
+          estimatedCollapsedBoilerplate,
+        );
         const remainingWidth = maxColumns - estimatedCollapsedBoilerplateWidth;
 
         let insideOverview = "";
@@ -1082,15 +1146,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const valueWidth = stringWidth(valueOverview);
           if (width + valueWidth > remainingWidth) {
             let overview = "";
-            overview += ANSI.color(prefix, delimitersColor);
+            overview += prefixWithOverview;
             overview += " ";
             overview += ANSI.color(openBracket, delimitersColor);
             if (insideOverview) {
+              if (!valueInfo.isArray) {
+                overview += " ";
+              }
               overview += insideOverview;
               overview += ANSI.color(",", delimitersColor);
               overview += " ";
             }
             overview += ANSI.color(`...`, valueColor);
+            if (!valueInfo.isArray) {
+              overview += " ";
+            }
             overview += ANSI.color(closeBracket, delimitersColor);
             return overview;
           }
@@ -1107,17 +1177,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         let overview = "";
-        overview += valueInfo.isArray
-          ? ANSI.color("[", delimitersColor)
-          : ANSI.color("{", delimitersColor);
+        const prefix = writePrefix();
+        if (prefix) {
+          overview += prefix;
+          overview += " ";
+        }
+        overview += ANSI.color(openBracket, bracketsColor);
         if (insideOverview) {
           overview += valueInfo.isArray ? "" : " ";
           overview += insideOverview;
           overview += valueInfo.isArray ? "" : " ";
         }
-        overview += valueInfo.isArray
-          ? ANSI.color("]", delimitersColor)
-          : ANSI.color("}", delimitersColor);
+        overview += ANSI.color(closeBracket, bracketsColor);
         return overview;
       };
       const createGetNextNestedValue = () => {
@@ -1186,61 +1257,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       inside: {
-        if (collapsed && insideOverview) {
-          const overview = writeOverview({
-            next: createGetNextNestedValue(),
-          });
-          compositeDiff += overview;
-          break inside;
-        }
         if (collapsed) {
-          if (valueInfo.isArray) {
-            const length = valueInfo.value.length;
-            compositeDiff += ANSI.color("Array(", delimitersColor);
-            compositeDiff += ANSI.color(`${length}`, delimitersColor);
-            compositeDiff += ANSI.color(")", delimitersColor);
+          if (insideOverview) {
+            const overview = writeOverview({
+              next: createGetNextNestedValue(),
+            });
+            compositeDiff += overview;
             break inside;
           }
-          const propertyNames = valueInfo.keys;
-          const propertyCount = propertyNames.length;
-          compositeDiff += ANSI.color(`${valueInfo.subtype}(`, delimitersColor);
-          compositeDiff += ANSI.color(`${propertyCount}`, delimitersColor);
-          compositeDiff += ANSI.color(")", delimitersColor);
+          const prefix = writePrefix({ overview: true });
+          compositeDiff += prefix;
           break inside;
         }
-
         const insideDiff = writeInsideDiff({
           next: createGetNextNestedValue(),
         });
-
-        if (valueInfo.isArray) {
-          compositeDiff += ANSI.color("[", delimitersColor);
-          compositeDiff += insideDiff;
-          compositeDiff += ANSI.color("]", delimitersColor);
-        } else {
-          const sameSubtype = node.actual.subtype === node.expected.subtype;
-          if (valueInfo.subtype !== "Object") {
-            compositeDiff += ANSI.color(
-              valueInfo.subtype,
-              sameSubtype
-                ? sameColor
-                : resultType === "actual"
-                  ? unexpectedColor
-                  : expectedColor,
-            );
-            compositeDiff += " ";
-          }
-
-          compositeDiff += ANSI.color(
-            "{",
-            sameSubtype ? delimitersColor : sameColor,
-          );
-          compositeDiff += insideDiff;
-          compositeDiff += ANSI.color(
-            "}",
-            sameSubtype ? delimitersColor : sameColor,
-          );
+        const prefix = writePrefix();
+        if (prefix) {
+          compositeDiff += prefix;
+          compositeDiff += " ";
         }
+        compositeDiff += ANSI.color(openBracket, bracketsColor);
+        compositeDiff += insideDiff;
+        compositeDiff += ANSI.color(closeBracket, bracketsColor);
       }
       return compositeDiff;
     };

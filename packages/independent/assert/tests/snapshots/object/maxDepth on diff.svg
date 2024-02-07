@@ -60,7 +60,8 @@
         <text x="85.61" y="109.55" fill="#cd5555">{</text>
         <text x="102.42" y="109.55" fill="#cd5555">c</text>
         <text x="110.82" y="109.55" fill="#cd5555">:</text>
-        <text x="127.62" y="109.55" fill="#cd5555">Object(</text>
+        <text x="127.62" y="109.55" fill="#cd5555">Object</text>
+        <text x="178.03" y="109.55" fill="#cd5555">(</text>
         <text x="186.43" y="109.55" fill="#cd5555">1</text>
         <text x="194.83" y="109.55" fill="#cd5555">)</text>
         <text x="211.63" y="109.55" fill="#cd5555">}</text>
