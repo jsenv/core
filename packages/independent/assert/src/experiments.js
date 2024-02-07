@@ -1,5 +1,11 @@
 import { inspect } from "node:util";
 
+const User = {};
+const dam = Object.create(User);
+dam.name = "toto";
+console.log(inspect(dam));
+process.exit(1);
+
 const item = {
   a: true,
 };

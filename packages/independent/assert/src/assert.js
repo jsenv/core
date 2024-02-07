@@ -5,7 +5,7 @@ import { isAssertionError, createAssertionError } from "./assertion_error.js";
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;
 const unexpectedSign = UNICODE.FAILURE_RAW;
-const colorForSame = ANSI.GREY;
+const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.YELLOW;
 const unexpectedColor = ANSI.RED;
@@ -185,9 +185,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             onSelfDiff();
             break category;
           }
+          // maybe array check not needed as subtype will differ
           const actualIsArray = node.actual.isArray;
           const expectedIsArray = node.expected.isArray;
           if (actualIsArray !== expectedIsArray) {
+            node.diff.category = true;
+            onSelfDiff();
+            break category;
+          }
+          const actualSubtype = node.actual.subtype;
+          const expectedSubtype = node.expected.subtype;
+          if (actualSubtype !== expectedSubtype) {
             node.diff.category = true;
             onSelfDiff();
             break category;
@@ -564,14 +572,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else if (modified) {
           keyColor = delimitersColor = unexpectedColor;
         } else {
-          keyColor = delimitersColor = colorForSame;
+          keyColor = delimitersColor = sameColor;
         }
       } else if (removed) {
         keyColor = delimitersColor = removedColor;
       } else if (modified) {
         keyColor = delimitersColor = expectedColor;
       } else {
-        keyColor = delimitersColor = colorForSame;
+        keyColor = delimitersColor = sameColor;
       }
 
       if (signs && !context.collapsed) {
@@ -691,14 +699,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else if (modified) {
           delimitersColor = valueColor = unexpectedColor;
         } else {
-          delimitersColor = valueColor = colorForSame;
+          delimitersColor = valueColor = sameColor;
         }
       } else if (removed) {
         delimitersColor = valueColor = removedColor;
       } else if (modified) {
         delimitersColor = valueColor = expectedColor;
       } else {
-        delimitersColor = valueColor = colorForSame;
+        delimitersColor = valueColor = sameColor;
       }
 
       if (valueInfo.wellKnownId) {
@@ -1047,8 +1055,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
       const writeOverview = ({ next }) => {
         const prefix = valueInfo.isArray
-          ? `Array(${valueInfo.value.length})`
-          : `Object(${valueInfo.keys.length})`;
+          ? `${valueInfo.subtype}(${valueInfo.value.length})`
+          : `${valueInfo.subtype}(${valueInfo.keys.length})`;
         const openBracket = valueInfo.isArray ? "[" : "{ ";
         const closeBracket = valueInfo.isArray ? "]" : " }";
         const estimatedCollapsedBoilerplate = `${prefix} ${openBracket}, ...${closeBracket}`;
@@ -1112,7 +1120,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           : ANSI.color("}", delimitersColor);
         return overview;
       };
-
       const createGetNextNestedValue = () => {
         const length = valueInfo.canHaveIndexedValues
           ? valueInfo.value.length
@@ -1196,21 +1203,44 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           const propertyNames = valueInfo.keys;
           const propertyCount = propertyNames.length;
-          compositeDiff += ANSI.color("Object(", delimitersColor);
+          compositeDiff += ANSI.color(`${valueInfo.subtype}(`, delimitersColor);
           compositeDiff += ANSI.color(`${propertyCount}`, delimitersColor);
           compositeDiff += ANSI.color(")", delimitersColor);
           break inside;
         }
-        compositeDiff += valueInfo.isArray
-          ? ANSI.color("[", delimitersColor)
-          : ANSI.color("{", delimitersColor);
-        let insideDiff = writeInsideDiff({
+
+        const insideDiff = writeInsideDiff({
           next: createGetNextNestedValue(),
         });
-        compositeDiff += insideDiff;
-        compositeDiff += valueInfo.isArray
-          ? ANSI.color("]", delimitersColor)
-          : ANSI.color("}", delimitersColor);
+
+        if (valueInfo.isArray) {
+          compositeDiff += ANSI.color("[", delimitersColor);
+          compositeDiff += insideDiff;
+          compositeDiff += ANSI.color("]", delimitersColor);
+        } else {
+          const sameSubtype = node.actual.subtype === node.expected.subtype;
+          if (valueInfo.subtype !== "Object") {
+            compositeDiff += ANSI.color(
+              valueInfo.subtype,
+              sameSubtype
+                ? sameColor
+                : resultType === "actual"
+                  ? unexpectedColor
+                  : expectedColor,
+            );
+            compositeDiff += " ";
+          }
+
+          compositeDiff += ANSI.color(
+            "{",
+            sameSubtype ? delimitersColor : sameColor,
+          );
+          compositeDiff += insideDiff;
+          compositeDiff += ANSI.color(
+            "}",
+            sameSubtype ? delimitersColor : sameColor,
+          );
+        }
       }
       return compositeDiff;
     };
@@ -1239,8 +1269,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const secondValueMeta = actualIsFirst ? expectedValueMeta : actualValueMeta;
 
     let diffMessage = "";
-    diffMessage += ANSI.color(firstValueMeta.resultType, colorForSame);
-    diffMessage += ANSI.color(":", colorForSame);
+    diffMessage += ANSI.color(firstValueMeta.resultType, sameColor);
+    diffMessage += ANSI.color(":", sameColor);
     diffMessage += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
     const firstValueDiff = writeDiff(startNode, {
@@ -1251,8 +1281,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     });
     diffMessage += firstValueDiff;
     diffMessage += "\n";
-    diffMessage += ANSI.color(secondValueMeta.resultType, colorForSame);
-    diffMessage += ANSI.color(":", colorForSame);
+    diffMessage += ANSI.color(secondValueMeta.resultType, sameColor);
+    diffMessage += ANSI.color(":", sameColor);
     diffMessage += " ";
     const secondValueDiff = writeDiff(startNode, {
       initialDepth: -startNode.depth,
@@ -1506,12 +1536,14 @@ const createValueInfo = (value, name) => {
 
   const canHaveIndexedValues = isArray;
   const canHaveProps = composite;
+  const subtype = composite ? getSubtype(value) : "";
 
   return {
     value,
     valueOf: () => {
       throw new Error(`use ${name}.value`);
     },
+    subtype,
     isComposite: composite,
     isPrimitive: !composite,
     isArray,
@@ -1529,6 +1561,37 @@ const isComposite = (value) => {
   if (typeof value === "function") return true;
   return false;
 };
+const getSubtype = (obj) => {
+  if (!Object.hasOwn(obj, Symbol.toStringTag)) {
+    const tag = obj[Symbol.toStringTag];
+    if (typeof tag === "string") {
+      return tag;
+    }
+  }
+
+  const tmp = obj;
+  while (obj || isUndetectableObject(obj)) {
+    const descriptor = Object.getOwnPropertyDescriptor(obj, "constructor");
+    if (
+      descriptor !== undefined &&
+      typeof descriptor.value === "function" &&
+      descriptor.value.name !== "" &&
+      tryInstanceof(tmp, descriptor.value)
+    ) {
+      return String(descriptor.value.name);
+    }
+    obj = Object.getPrototypeOf(obj);
+  }
+  return "";
+};
+function tryInstanceof(object, proto) {
+  try {
+    return object instanceof proto;
+  } catch {
+    return false;
+  }
+}
+const isUndetectableObject = (v) => typeof v === "undefined" && v !== undefined;
 
 const humanizePropertyKey = (property) => {
   if (typeof property === "symbol") {

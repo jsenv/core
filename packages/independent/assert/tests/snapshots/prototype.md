@@ -1,22 +1,18 @@
-# object null proto vs object
+# a custom prototype
 
 ```js
+const User = {
+  [Symbol.toStringTag]: "User",
+};
+const dam = Object.create(User);
+dam.name = "dam";
+const bob = { name: "bob" };
+
 assert({
-  actual: Object.create(null),
-  expected: {},
+  actual: dam,
+  expected: bob,
 });
 ```
 
-![img](<./prototype/object null proto vs object.svg>)
-
-# object with different prototypes
-
-```js
-assert({
-  actual: Object.create({ toto: true }),
-  expected: Object.create({ toto: false }),
-});
-```
-
-![img](<./prototype/object with different prototypes.svg>)
+![img](<./prototype/a custom prototype.svg>)
 

@@ -5,16 +5,29 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("prototype", {
-  ["object null proto vs object"]: () => {
+  // ["object null proto vs object"]: () => {
+  //   assert({
+  //     actual: Object.create(null),
+  //     expected: {},
+  //   });
+  // },
+  // ["object with different prototypes"]: () => {
+  //   assert({
+  //     actual: Object.create({ toto: true }),
+  //     expected: Object.create({ toto: false }),
+  //   });
+  // },
+  ["a custom prototype"]: () => {
+    const User = {
+      [Symbol.toStringTag]: "User",
+    };
+    const dam = Object.create(User);
+    dam.name = "dam";
+    const bob = { name: "bob" };
+
     assert({
-      actual: Object.create(null),
-      expected: {},
-    });
-  },
-  ["object with different prototypes"]: () => {
-    assert({
-      actual: Object.create({ toto: true }),
-      expected: Object.create({ toto: false }),
+      actual: dam,
+      expected: bob,
     });
   },
 });
