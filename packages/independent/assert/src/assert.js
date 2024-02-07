@@ -770,7 +770,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         : removed
           ? removedColor
           : modified
-            ? node.actual.isArray && node.expected.isArray
+            ? node.actual.isArray === node.expected.isArray // they use same brackets
               ? sameColor
               : resultType === "actual"
                 ? unexpectedColor
@@ -778,8 +778,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             : sameColor;
 
       const writePrefix = ({ overview } = {}) => {
-        if (valueInfo.subtype === "Object" && !overview) {
-          return "";
+        if (!overview) {
+          if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
+            return "";
+          }
         }
         let prefix = "";
         let subtypeColor = added
