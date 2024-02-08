@@ -29,4 +29,18 @@ await startSnapshotTesting("string", {
   //     expected: "😍",
   //   });
   // },
+  // TODO:
+  // - added char
+  // - removed char
+  // - added emoticon
+  // - removed emoticon
+  // - diff at beginning of long string, end is truncated
+  // - diff on the middle of big string and goes to the end but too long so it's truncated
+  // - diff on the end of a long string, the beginning is truncated
+  //   so that we can see the diff that is at the end
+  // TODO LATER:
+  // - comparing single line / multiline
+  // - compare multiline
+  // - add a new empty line
+  // - remove a line
 });
