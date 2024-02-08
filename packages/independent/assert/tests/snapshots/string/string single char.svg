@@ -49,12 +49,12 @@
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="52.55" fill="#7f7f7f">a</text>
+        <text x="85.61" y="52.55" fill="#cd5555">a</text>
         <text x="94.01" y="52.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="71.55" fill="#7f7f7f">expected</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">:</text>
         <text x="94.01" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="102.42" y="71.55" fill="#7f7f7f">b</text>
+        <text x="102.42" y="71.55" fill="#11bc79">b</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">&#x22;</text>
       </g>
     </svg>
