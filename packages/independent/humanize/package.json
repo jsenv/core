@@ -39,7 +39,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "string-width": "7.0.0"
+    "string-width": "7.1.0"
   },
   "devDependencies": {
     "ansi-escapes": "6.2.0",
