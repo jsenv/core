@@ -1,24 +1,24 @@
 # true should be false
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-false
-true
+actual: true
+expected: false
 
 # false should be true
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-true
-false
+actual: false
+expected: true
 
 # true should be 1
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-1
-true
+actual: true
+expected: 1
 
 # false should be 0
-AssertionError: expected and actual are different:
+AssertionError: actual and expected are different:
 
-0
-false
+actual: false
+expected: 0
 
