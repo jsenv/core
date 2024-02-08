@@ -76,6 +76,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const causeSet = new Set();
     const addNodeCausingDiff = (node) => {
+      if (node.type === "char") {
+        return;
+      }
       causeCounters.total++;
       causeSet.add(node);
     };
@@ -278,18 +281,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 charNode.diff.removed = true;
                 if (canDiffChars && !ignoreDiff) {
                   charNode.diff.counters.self.removed++;
-                  // addNodeCausingDiff(charNode);
+                  addNodeCausingDiff(charNode);
                 }
               }
               if (!expectedHasOwn && actualHasOwn && expectedCanHaveChars) {
                 charNode.diff.added = true;
                 if (canDiffChars && !ignoreDiff) {
                   charNode.diff.counters.self.added++;
-                  // addNodeCausingDiff(charNode);
+                  addNodeCausingDiff(charNode);
                 }
               }
               visit(charNode, {
-                ignoreDiff: true,
+                ignoreDiff:
+                  ignoreDiff ||
+                  !canDiffChars ||
+                  charNode.diff.removed ||
+                  charNode.diff.added,
               });
               appendCounters(
                 node.diff.counters.inside,
@@ -904,7 +911,11 @@ let createValueInfo;
     const canHaveIndexedValues = isArray;
     const canHaveChars = isString && type !== "char";
     const canHaveProps = composite;
-    const subtype = composite ? getSubtype(value) : "";
+    const subtype = composite
+      ? getSubtype(value)
+      : value === null
+        ? "null"
+        : typeof value;
 
     return {
       value,
@@ -959,8 +970,11 @@ let createValueInfo;
 let writeDiff;
 {
   writeDiff = (node, context) => {
-    context.onNodeDisplayed(node);
     const method = methods[node.type];
+    if (!method) {
+      throw new Error(`unknown node type: ${node.type}`);
+    }
+    context.onNodeDisplayed(node);
     return method(node, context);
   };
 
@@ -1007,14 +1021,6 @@ let writeDiff;
     if (!context.modified && node.diff.counters.self.any > 0) {
       valueContext.modified = true;
     }
-    const valueInfo = node[valueContext.resultType];
-    const valueColor = getValueColor(valueContext);
-    const delimitersColor = getDelimitersColor(valueContext);
-
-    if (valueInfo.wellKnownId) {
-      return ANSI.color(valueInfo.wellKnownId, valueColor);
-    }
-
     const relativeDepth = node.depth + context.initialDepth;
     valueContext.insideOverview = valueContext.collapsed !== true;
     if (!valueContext.collapsed) {
@@ -1023,33 +1029,50 @@ let writeDiff;
         node.diff.counters.overall.any === 0;
     }
 
+    const valueInfo = node[valueContext.resultType];
+    const valueColor = getValueColor(valueContext);
+    const delimitersColor = getDelimitersColor(valueContext);
+    const bracketColor = getBracketColor(node, valueContext);
+
+    if (valueInfo.wellKnownId) {
+      return ANSI.color(valueInfo.wellKnownId, valueColor);
+    }
+
     // primitive
     if (valueInfo.isPrimitive) {
       const value = valueInfo.value;
-      if (valueInfo.isString) {
-        if (valueInfo.canHaveIndexedValue) {
-          let { quote } = context;
-          quote = quote === "auto" ? node.quote || pickBestQuote(value) : quote;
-          node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
-
-          if (valueContext.collapsed) {
-            if (valueContext.insideOverview) {
-              // TODO
-            }
-            return writePrefix(node, context, { overview: true });
+      if (valueInfo.isString && valueInfo.canHaveChars) {
+        const { quote } = valueContext;
+        valueContext.quote =
+          quote === "auto" ? node.quote || pickBestQuote(value) : quote;
+        node.quote = valueContext.quote; // ensure the quote in expected is "forced" to the one in actual
+        if (valueContext.collapsed) {
+          let stringOverviewDiff = "";
+          if (value.length > 10) {
+            stringOverviewDiff += ANSI.color(valueContext.quote, bracketColor);
+            stringOverviewDiff += ANSI.color(value.slice(0, 10), valueColor);
+            stringOverviewDiff += ANSI.color(valueContext.quote, bracketColor);
+            stringOverviewDiff += ANSI.color("…", delimitersColor);
+            return stringOverviewDiff;
           }
-          let stringDiff = "";
-          stringDiff += ANSI.color(quote, delimitersColor);
-          valueContext.modified = node.canDiffChars
-            ? context.modified
-            : valueContext.modified;
-          valueContext.quote = quote;
-          for (const char of valueInfo.chars) {
-            stringDiff += writeDiff(char, valueContext);
-          }
-          stringDiff += ANSI.color(quote, delimitersColor);
-          return stringDiff;
+          stringOverviewDiff += ANSI.color(valueContext.quote, bracketColor);
+          stringOverviewDiff += ANSI.color(value, valueColor);
+          stringOverviewDiff += ANSI.color(valueContext.quote, bracketColor);
+          return stringOverviewDiff;
         }
+        let stringDiff = "";
+        stringDiff += ANSI.color(valueContext.quote, bracketColor);
+        valueContext.modified = node.canDiffChars
+          ? context.modified
+          : valueContext.modified;
+        let index = 0;
+        while (index < valueInfo.chars.length) {
+          const charNode = node.chars[index];
+          index++;
+          stringDiff += writeDiff(charNode, context);
+        }
+        stringDiff += ANSI.color(valueContext.quote, bracketColor);
+        return stringDiff;
       }
 
       let valueDiff =
@@ -1096,7 +1119,6 @@ let writeDiff;
 
     const openBracket = valueInfo.isArray ? "[" : "{";
     const closeBracket = valueInfo.isArray ? "]" : "}";
-    const bracketColor = getBracketColor(node, valueContext);
 
     inside: {
       if (valueContext.collapsed) {
@@ -1122,11 +1144,12 @@ let writeDiff;
     return compositeDiff;
   };
   const writeCharDiff = (node, context) => {
+    const valueColor = getValueColor(context);
     const { preserveLineBreaks, quote } = context;
     const char = node[context.resultType].value;
     const point = char.charCodeAt(0);
     if (preserveLineBreaks && (char === "\n" || char === "\r")) {
-      return char;
+      return ANSI.color(char, valueColor);
     }
     if (
       char === quote ||
@@ -1145,9 +1168,9 @@ let writeDiff;
             : point === 8233
               ? "\\u2029"
               : charMeta[point];
-      return replacement;
+      return ANSI.color(replacement, valueColor);
     }
-    return char;
+    return ANSI.color(char, valueColor);
   };
   // prettier-ignore
   const charMeta = [
@@ -1206,7 +1229,7 @@ let writeDiff;
 
     prefix += ANSI.color(valueInfo.subtype, subtypeColor);
     if (overview) {
-      if (valueInfo.isArray || valueInfo.isString) {
+      if (valueInfo.isArray) {
         prefix += ANSI.color(`(`, delimitersColor);
         let lengthColor = context.added
           ? addedColor
@@ -1220,6 +1243,21 @@ let writeDiff;
                 ? unexpectedColor
                 : expectedColor;
         prefix += ANSI.color(valueInfo.value.length, lengthColor);
+        prefix += ANSI.color(`)`, delimitersColor);
+      } else if (valueInfo.isString) {
+        prefix += ANSI.color(`(`, delimitersColor);
+        let lengthColor = context.added
+          ? addedColor
+          : context.removed
+            ? removedColor
+            : node.actual.isString &&
+                node.expected.isString &&
+                node.actual.chars.length === node.expected.chars.length
+              ? sameColor
+              : context.resultType === "actual"
+                ? unexpectedColor
+                : expectedColor;
+        prefix += ANSI.color(valueInfo.chars.length, lengthColor);
         prefix += ANSI.color(`)`, delimitersColor);
       } else if (valueInfo.isComposite) {
         prefix += ANSI.color(`(`, delimitersColor);
@@ -1534,7 +1572,6 @@ let writeDiff;
     return insideDiff;
   };
   const writeOverviewDiff = (node, context, parentContext) => {
-    const valueInfo = node[context.resultType];
     const prefixWithOverview = writePrefix(node, context, { overview: true });
     const delimitersColor = getDelimitersColor(context);
     const bracketColor = getBracketColor(node, context);
@@ -1617,25 +1654,49 @@ let writeDiff;
     }
     overview += ANSI.color(openBracket, bracketColor);
     if (insideOverview) {
-      overview += valueInfo.isArray ? "" : " ";
+      if (nestedValueSpacing) {
+        overview += " ";
+      }
       overview += insideOverview;
-      overview += valueInfo.isArray ? "" : " ";
+      if (nestedValueSpacing) {
+        overview += " ";
+      }
     }
     overview += ANSI.color(closeBracket, bracketColor);
     return overview;
   };
   const createGetNextNestedValue = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
-    const length = valueInfo.canHaveIndexedValues ? valueInfo.value.length : 0;
+    const valueCount = valueInfo.canHaveIndexedValues
+      ? valueInfo.value.length
+      : 0;
+    const chars = valueInfo.canHaveChars ? valueInfo.chars : [];
     const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
+    const charCount = chars.length;
     const propertyCount = propertyNames.length;
 
+    let charIndex = 0;
     let valueIndex = 0;
     let prototypeDisplayed = false;
     let propIndex = 0;
 
     return () => {
-      if (valueIndex < length) {
+      if (charIndex < charCount) {
+        const charNode = node.chars[charIndex];
+        charIndex++;
+        return {
+          node: charNode,
+          write: () => {
+            return writeDiff(charNode, {
+              ...context,
+              modified: node.canDiffChars
+                ? parentContext.modified
+                : context.modified,
+            });
+          },
+        };
+      }
+      if (valueIndex < valueCount) {
         const indexedValueNode = node.indexedValues[valueIndex];
         valueIndex++;
         return {
@@ -1812,8 +1873,8 @@ let writeDiff;
     }
     if (valueInfo.isString && node.type === "value") {
       return {
-        openBracket: `"`, // TODO: use quote from node.quote or context
-        closeBracket: `"`,
+        openBracket: context.quote,
+        closeBracket: context.quote,
         nestedValueSeparator: "",
         ellipsis: "...",
       };
@@ -1884,6 +1945,10 @@ let writeDiff;
         node.expected.isComposite &&
         node.actual.isArray === node.expected.isArray
       ) {
+        // they use same brackets
+        return sameColor;
+      }
+      if (node.actual.isString && node.expected.isString) {
         // they use same brackets
         return sameColor;
       }
