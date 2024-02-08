@@ -57,6 +57,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxValueAroundDiff = 2,
       maxValueInsideDiff = 4,
       maxDepthInsideDiff = 1,
+      quote = "auto",
+      preserveLineBreaks,
+      signs,
     } = firstArg;
     const maxValueBeforeDiff = maxValueAroundDiff;
     const maxValueAfterDiff = maxValueAroundDiff;
@@ -240,6 +243,71 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         inside: {
+          chars: {
+            const actualCanHaveChars = node.actual.canHaveChars;
+            const expectedCanHaveChars = node.expected.canHaveChars;
+            const canDiffChars = actualCanHaveChars && expectedCanHaveChars;
+            node.canDiffChars = canDiffChars;
+
+            const actualChars = actualCanHaveChars
+              ? Array.from(node.actual.value)
+              : [];
+            node.actual.chars = actualChars;
+            const expectedChars = expectedCanHaveChars
+              ? Array.from(node.expected.value)
+              : [];
+            node.expected.chars = expectedChars;
+
+            const visitChar = (index) => {
+              const actualHasOwn = actualCanHaveChars
+                ? Object.hasOwn(actualChars, index)
+                : false;
+              const expectedHasOwn = expectedCanHaveChars
+                ? Object.hasOwn(expectedChars, index)
+                : false;
+              const actualChar = actualHasOwn ? actualChars[index] : undefined;
+              const expectedChar = expectedHasOwn
+                ? expectedChars[index]
+                : undefined;
+              const charNode = node.appendChar({
+                actualChar,
+                expectedChar,
+              });
+
+              if (expectedHasOwn && !actualHasOwn && actualCanHaveChars) {
+                charNode.diff.removed = true;
+                if (canDiffChars && !ignoreDiff) {
+                  charNode.diff.counters.self.removed++;
+                  // addNodeCausingDiff(charNode);
+                }
+              }
+              if (!expectedHasOwn && actualHasOwn && expectedCanHaveChars) {
+                charNode.diff.added = true;
+                if (canDiffChars && !ignoreDiff) {
+                  charNode.diff.counters.self.added++;
+                  // addNodeCausingDiff(charNode);
+                }
+              }
+              visit(charNode, {
+                ignoreDiff: true,
+              });
+              appendCounters(
+                node.diff.counters.inside,
+                charNode.diff.counters.overall,
+              );
+            };
+
+            let expectedCharIndex = 0;
+            while (expectedCharIndex < expectedChars.length) {
+              visitChar(expectedCharIndex);
+              expectedCharIndex++;
+            }
+            let actualExtraCharIndex = expectedCharIndex;
+            while (actualExtraCharIndex < actualChars.length) {
+              visitChar(actualExtraCharIndex);
+              actualExtraCharIndex++;
+            }
+          }
           indexed_values: {
             const actualCanHaveIndexedValues = node.actual.canHaveIndexedValues;
             const expectedCanHaveIndexedValues =
@@ -323,11 +391,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               !node.actual.reference &&
               !node.actual.wellKnownId
             ) {
-              let index = 0;
+              let index = node.expected.value.length;
               while (index < node.actual.value.length) {
-                if (!node.indexedValues[index]) {
-                  visitIndexedValue(index);
-                }
+                visitIndexedValue(index);
                 index++;
               }
             }
@@ -470,8 +536,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return;
     }
 
-    let signs = false;
-    let refId = 1;
     let startNode = rootComparison;
     const [firstNodeCausingDiff] = causeSet;
     if (
@@ -521,782 +585,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           valuePath = valuePath.append(node.index);
           continue;
         }
+        if (type === "char") {
+          valuePath = valuePath.append(node.index);
+          continue;
+        }
       }
     }
-
-    const getContextForNestedValue = (node, context) => {
-      let { resultType, removed, added, modified } = context;
-      if (node.type === "indexed_value") {
-        if (node.diff.removed) {
-          removed = true;
-        }
-        if (node.diff.added) {
-          added = true;
-        }
-      }
-      if (node.type === "property_descriptor") {
-        if (node.parent.diff.removed) {
-          removed = true;
-        }
-        if (node.parent.diff.added) {
-          added = true;
-        }
-        if (isDefaultDescriptor(node.descriptor, node[resultType].value)) {
-          return null;
-        }
-      }
-      return { ...context, removed, added, modified };
-    };
-
-    const writeNestedValueDiff = (
-      node,
-      context,
-      { property, propertyPrefix },
-    ) => {
-      context = getContextForNestedValue(node, context);
-      if (!context) {
-        return "";
-      }
-      let { resultType, removed, added, modified, maxDepth, initialDepth } =
-        context;
-      let nestedValueDiff = "";
-      const relativeDepth = node.depth + initialDepth;
-      let indent = `  `.repeat(relativeDepth);
-      let keyColor;
-      let delimitersColor;
-      let displayValue = true;
-
-      if (resultType === "actual") {
-        if (added) {
-          keyColor = delimitersColor = addedColor;
-        } else if (modified) {
-          keyColor = delimitersColor = unexpectedColor;
-        } else {
-          keyColor = delimitersColor = sameColor;
-        }
-      } else if (removed) {
-        keyColor = delimitersColor = removedColor;
-      } else if (modified) {
-        keyColor = delimitersColor = expectedColor;
-      } else {
-        keyColor = delimitersColor = sameColor;
-      }
-
-      if (signs && !context.collapsed) {
-        if (removed) {
-          if (resultType === "expected") {
-            nestedValueDiff += ANSI.color(removedSign, removedSignColor);
-            indent = indent.slice(1);
-          }
-        } else if (added) {
-          if (resultType === "actual") {
-            nestedValueDiff += ANSI.color(addedSign, addedSignColor);
-            indent = indent.slice(1);
-          }
-        } else if (modified) {
-          if (resultType === "actual") {
-            nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
-            indent = indent.slice(1);
-          }
-        }
-      }
-
-      if (!context.collapsed) {
-        nestedValueDiff += indent;
-      }
-      if (property) {
-        if (propertyPrefix) {
-          nestedValueDiff += ANSI.color(propertyPrefix, keyColor);
-          nestedValueDiff += " ";
-        }
-        const propertyKeyFormatted = humanizePropertyKey(property);
-        nestedValueDiff += ANSI.color(propertyKeyFormatted, keyColor);
-        if (displayValue) {
-          nestedValueDiff += ANSI.color(":", keyColor);
-          nestedValueDiff += " ";
-        }
-      }
-      if (displayValue) {
-        const valueMaxColumns =
-          maxColumnsDefault - stringWidth(nestedValueDiff) - ",".length;
-        if (modified) {
-          maxDepth = Math.min(node.depth + maxDepthInsideDiff, maxDepth);
-        }
-        const valueDiff = writeValueDiff(node, {
-          ...context,
-          maxDepth,
-          maxColumns: valueMaxColumns,
-        });
-        nestedValueDiff += valueDiff;
-      }
-      if (!context.collapsed && node !== startNode) {
-        nestedValueDiff += ANSI.color(",", delimitersColor);
-        nestedValueDiff += "\n";
-      }
-      return nestedValueDiff;
-    };
-    const writeIndexedValueDiff = (node, context) => {
-      return writeNestedValueDiff(node, context, {});
-    };
-    const writePrototypeDiff = (node, context) => {
-      return writeNestedValueDiff(node, context, {
-        property: node === startNode ? null : "__proto__", // "[[Prototype]]"?
-      });
-    };
-    const writePropertyDescriptorDiff = (node, context) => {
-      return writeNestedValueDiff(node, context, {
-        property: node === startNode ? null : node.property,
-        propertyPrefix: node.descriptor === "value" ? null : node.descriptor,
-      });
-    };
-    const writePropertyDiff = (node, context) => {
-      if (context.collapsed) {
-        if (
-          node.descriptors.get[context.resultType].value &&
-          node.descriptors.set[context.resultType].value
-        ) {
-          return writeDiff(node.descriptors.get, context);
-        }
-        if (node.descriptors.get[context.resultType].value) {
-          return writeDiff(node.descriptors.get, context);
-        }
-        if (node.descriptors.set[context.resultType].value) {
-          return writeDiff(node.descriptors.set, context);
-        }
-        return writeDiff(node.descriptors.value, context);
-      }
-      let propertyDiff = "";
-      const descriptorNames = Object.keys(node.descriptors);
-      for (const descriptorName of descriptorNames) {
-        const descriptorNode = node.descriptors[descriptorName];
-        propertyDiff += writeDiff(descriptorNode, {
-          ...context,
-        });
-      }
-      return propertyDiff;
-    };
-    const writeValueDiff = (node, context) => {
-      let {
-        resultType,
-        removed,
-        added,
-        modified,
-        maxColumns,
-        maxDepth,
-        collapsed,
-        initialDepth,
-      } = context;
-      if (!modified && node.diff.counters.self.any > 0) {
-        modified = true;
-      }
-
-      const valueInfo = node[resultType];
-      let valueColor;
-      let delimitersColor;
-      if (resultType === "actual") {
-        if (added) {
-          delimitersColor = valueColor = addedColor;
-        } else if (modified) {
-          delimitersColor = valueColor = unexpectedColor;
-        } else {
-          delimitersColor = valueColor = sameColor;
-        }
-      } else if (removed) {
-        delimitersColor = valueColor = removedColor;
-      } else if (modified) {
-        delimitersColor = valueColor = expectedColor;
-      } else {
-        delimitersColor = valueColor = sameColor;
-      }
-
-      if (valueInfo.wellKnownId) {
-        return ANSI.color(valueInfo.wellKnownId, valueColor);
-      }
-
-      // primitive
-      if (valueInfo.isPrimitive) {
-        const value = valueInfo.value;
-        let valueDiff =
-          value === undefined
-            ? "undefined"
-            : value === null
-              ? "null"
-              : JSON.stringify(value);
-        if (valueDiff.length > maxColumns) {
-          valueDiff = valueDiff.slice(0, maxColumns);
-          valueDiff += "…";
-        }
-        return ANSI.color(valueDiff, valueColor);
-      }
-
-      if (context.collapsed && node.type === "property_descriptor") {
-        if (node.descriptor === "get") {
-          if (node.parent.descriptors.set[resultType].value) {
-            return ANSI.color("[get/set]", valueColor);
-          }
-          return ANSI.color("[get]", valueColor);
-        }
-        if (node.descriptor === "set") {
-          if (node.parent.descriptors.get[resultType].value) {
-            return ANSI.color("[get/set]", valueColor);
-          }
-          return ANSI.color("[set]", valueColor);
-        }
-      }
-
-      // composite
-      let compositeDiff = "";
-      if (valueInfo.reference) {
-        compositeDiff += ANSI.color(
-          `<ref #${valueInfo.referenceId}>`,
-          delimitersColor,
-        );
-      }
-      if (valueInfo.referenceFromOthersSet.size) {
-        compositeDiff += ANSI.color(`<ref #${refId}>`, delimitersColor);
-        compositeDiff += " ";
-      }
-      const relativeDepth = node.depth + initialDepth;
-      const insideOverview = collapsed !== true;
-      if (!collapsed) {
-        collapsed =
-          relativeDepth >= maxDepth || node.diff.counters.overall.any === 0;
-      }
-
-      const openBracket = valueInfo.isArray ? "[" : "{";
-      const closeBracket = valueInfo.isArray ? "]" : "}";
-      let bracketsColor = added
-        ? addedColor
-        : removed
-          ? removedColor
-          : modified
-            ? node.actual.isArray === node.expected.isArray // they use same brackets
-              ? sameColor
-              : resultType === "actual"
-                ? unexpectedColor
-                : expectedColor
-            : sameColor;
-
-      const writePrefix = ({ overview } = {}) => {
-        if (!overview) {
-          if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
-            return "";
-          }
-        }
-        let prefix = "";
-        let subtypeColor = added
-          ? addedColor
-          : removed
-            ? removedColor
-            : node.actual.isComposite &&
-                node.expected.isComposite &&
-                node.actual.subtype === node.expected.subtype
-              ? sameColor
-              : resultType === "actual"
-                ? unexpectedColor
-                : expectedColor;
-        prefix += ANSI.color(valueInfo.subtype, subtypeColor);
-        if (overview) {
-          if (valueInfo.isArray) {
-            prefix += ANSI.color(`(`, delimitersColor);
-            let lengthColor = added
-              ? addedColor
-              : removed
-                ? removedColor
-                : node.actual.isArray &&
-                    node.expected.isArray &&
-                    node.actual.value.length === node.expected.value.length
-                  ? sameColor
-                  : resultType === "actual"
-                    ? unexpectedColor
-                    : expectedColor;
-            prefix += ANSI.color(valueInfo.value.length, lengthColor);
-            prefix += ANSI.color(`)`, delimitersColor);
-          } else {
-            prefix += ANSI.color(`(`, delimitersColor);
-            let keysColor = added
-              ? addedColor
-              : removed
-                ? removedColor
-                : node.actual.isComposite &&
-                    node.expected.isComposite &&
-                    node.actual.keys.length === node.expected.keys.length
-                  ? sameColor
-                  : resultType === "actual"
-                    ? unexpectedColor
-                    : expectedColor;
-            prefix += ANSI.color(valueInfo.keys.length, keysColor);
-            prefix += ANSI.color(`)`, delimitersColor);
-          }
-        }
-        return prefix;
-      };
-
-      const writeInsideDiff = ({ next }) => {
-        let insideDiff = "";
-        let indent = "  ".repeat(relativeDepth);
-        const skippedArray = [];
-        let diffCount = 0;
-        let nextEntry;
-        let isFirstNestedValue = true;
-        const appendNestedValueDiff = (diff) => {
-          if (context.collapsed) {
-            return diff;
-          }
-          if (isFirstNestedValue) {
-            isFirstNestedValue = false;
-
-            return diff;
-          }
-          // insideDiff += ANSI.color(",", delimitersColor);
-          // insideDiff += "\n";
-          return diff;
-        };
-
-        while ((nextEntry = next())) {
-          const { node: nodeInsideThisOne, write } = nextEntry;
-          if (resultType === "actual" && nodeInsideThisOne.diff.removed) {
-            continue;
-          }
-          if (resultType === "expected" && nodeInsideThisOne.diff.added) {
-            continue;
-          }
-
-          if (nodeInsideThisOne.diff.counters.overall.any) {
-            diffCount++;
-            // too many diff
-            if (diffCount > maxDiffPerObject) {
-              skippedArray.push(nextEntry);
-              continue;
-            }
-            // first write nested value (prop, value) eventually skipped
-            const skippedCount = skippedArray.length;
-            if (skippedCount) {
-              let beforeDiff = "";
-              let from = skippedArray.length - maxValueBeforeDiff;
-              let to = skippedArray.length - 1;
-              let index = from;
-              while (index !== to) {
-                const previousToDisplay = skippedArray[skippedArray.length - 1];
-                if (!previousToDisplay) {
-                  break;
-                }
-                skippedArray.pop();
-                beforeDiff += appendNestedValueDiff(previousToDisplay.write());
-                index++;
-              }
-              let skippedValues = 0;
-              let skippedProps = 0;
-              for (const skipped of skippedArray) {
-                if (skipped.node.type === "indexed_value") {
-                  skippedValues++;
-                }
-                if (skipped.node.type === "property") {
-                  skippedProps++;
-                }
-              }
-              if (skippedValues || skippedProps) {
-                let aboveSummary = "";
-                if (skippedValues) {
-                  aboveSummary += `${skippedValues} values`;
-                }
-                if (skippedProps) {
-                  if (aboveSummary) {
-                    aboveSummary += " ";
-                  }
-                  aboveSummary += `${skippedProps} props`;
-                }
-                insideDiff += `${indent}  `;
-                const arrowSign = diffCount > 1 ? `↕` : `↑`;
-                insideDiff += ANSI.color(
-                  `${arrowSign} ${aboveSummary} ${arrowSign}`,
-                  delimitersColor,
-                );
-                insideDiff += "\n";
-              }
-              insideDiff += beforeDiff;
-              skippedArray.length = 0;
-            }
-            insideDiff += appendNestedValueDiff(write());
-            continue;
-          }
-          skippedArray.push(nextEntry);
-          // does not have a diff
-          // will either be written when we encounter a diff
-          // or be skipped
-        }
-        // now display the values below
-        const skippedCount = skippedArray.length;
-        if (skippedCount) {
-          // maxPropertyInsideDiff
-          // I can display only the non modified props
-          // and I can display only a subset
-          // if there is any
-          // is there a diff before?
-          // if yes then it's maxValueAfterDiff
-          // otherwise it's maxper diff
-          const maxValueAfter = modified
-            ? maxValueInsideDiff - 1
-            : maxValueAfterDiff - 1;
-          let displayedAfter = 0;
-          while (displayedAfter !== maxValueAfter) {
-            const nextToDisplay = skippedArray[0];
-            if (!nextToDisplay) {
-              break;
-            }
-            if (nextToDisplay.node.diff.counters.self.any) {
-              break;
-            }
-            insideDiff += appendNestedValueDiff(nextToDisplay.write());
-            skippedArray.shift();
-            displayedAfter++;
-          }
-        }
-
-        remaining_summary: {
-          if (skippedArray.length === 0) {
-            break remaining_summary;
-          }
-          const skippedPropCounters = {
-            total: 0,
-            removed: 0,
-            added: 0,
-            modified: 0,
-          };
-          const skippedValueCounters = {
-            total: 0,
-            removed: 0,
-            added: 0,
-            modified: 0,
-          };
-
-          for (const skipped of skippedArray) {
-            if (skipped.node.type === "property") {
-              skippedPropCounters.total++;
-              if (resultType === "actual") {
-                if (skipped.node.diff.added) {
-                  onNodeDisplayed(skipped.node);
-                  skippedPropCounters.added++;
-                  continue;
-                }
-                if (skipped.node.diff.counters.overall.any) {
-                  onNodeDisplayed(skipped.node);
-                  skippedPropCounters.modified++;
-                  continue;
-                }
-                continue;
-              }
-              if (skipped.node.diff.removed) {
-                onNodeDisplayed(skipped.node);
-                skippedPropCounters.removed++;
-              }
-              continue;
-            }
-            if (skipped.node.type === "indexed_value") {
-              skippedValueCounters.total++;
-              if (resultType === "actual") {
-                if (skipped.node.diff.added) {
-                  onNodeDisplayed(skipped.node);
-                  skippedValueCounters.added++;
-                  continue;
-                }
-                if (skipped.node.diff.counters.overall.any) {
-                  onNodeDisplayed(skipped.node);
-                  skippedValueCounters.modified++;
-                  continue;
-                }
-                continue;
-              }
-              if (skipped.node.diff.removed) {
-                onNodeDisplayed(skipped.node);
-                skippedValueCounters.removed++;
-              }
-              continue;
-            }
-          }
-
-          let belowSummary = "";
-          if (skippedValueCounters.total) {
-            belowSummary += ANSI.color(
-              skippedValueCounters.total === 1
-                ? `1 value`
-                : `${skippedValueCounters.total} values`,
-              delimitersColor,
-            );
-            const parts = [];
-            if (skippedValueCounters.removed) {
-              parts.push(
-                ANSI.color(
-                  `${skippedValueCounters.removed} removed`,
-                  removedColor,
-                ),
-              );
-            }
-            if (skippedValueCounters.added) {
-              parts.push(
-                ANSI.color(`${skippedValueCounters.added} added`, addedColor),
-              );
-            }
-            if (skippedValueCounters.modified) {
-              parts.push(
-                ANSI.color(
-                  `${skippedValueCounters.modified} modified`,
-                  unexpectedColor,
-                ),
-              );
-            }
-            if (parts.length) {
-              belowSummary += ` `;
-              belowSummary += ANSI.color(`(`, delimitersColor);
-              belowSummary += parts.join(" ");
-              belowSummary += ANSI.color(`)`, delimitersColor);
-            }
-          }
-          if (skippedPropCounters.total) {
-            belowSummary += ANSI.color(
-              skippedPropCounters.total === 1
-                ? `1 prop`
-                : `${skippedPropCounters.total} props`,
-              delimitersColor,
-            );
-            const parts = [];
-            if (skippedPropCounters.removed) {
-              parts.push(
-                ANSI.color(
-                  `${skippedPropCounters.removed} removed`,
-                  removedColor,
-                ),
-              );
-            }
-            if (skippedPropCounters.added) {
-              parts.push(
-                ANSI.color(`${skippedPropCounters.added} added`, addedColor),
-              );
-            }
-            if (skippedPropCounters.modified) {
-              parts.push(
-                ANSI.color(
-                  `${skippedPropCounters.modified} modified`,
-                  unexpectedColor,
-                ),
-              );
-            }
-            if (parts.length) {
-              belowSummary += ` `;
-              belowSummary += ANSI.color(`(`, delimitersColor);
-              belowSummary += parts.join(" ");
-              belowSummary += ANSI.color(`)`, delimitersColor);
-            }
-          }
-
-          insideDiff += `${indent}  `;
-          insideDiff += ANSI.color(`↓`, delimitersColor);
-          insideDiff += " ";
-          insideDiff += belowSummary;
-          insideDiff += " ";
-          insideDiff += ANSI.color(`↓`, delimitersColor);
-          insideDiff += "\n";
-        }
-        if (insideDiff === "") {
-          return "";
-        }
-        if (signs) {
-          if (resultType === "actual") {
-            if (added) {
-              insideDiff += ANSI.color(addedSign, addedSignColor);
-              indent = indent.slice(1);
-            } else if (modified) {
-              insideDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
-              indent = indent.slice(1);
-            }
-          } else if (removed) {
-            insideDiff += ANSI.color(removedSign, removedSignColor);
-            indent = indent.slice(1);
-          }
-        }
-        insideDiff = `\n${insideDiff}`;
-        // if (!valueInfo.isArray) {
-        //   insideDiff += ANSI.color(",", delimitersColor);
-        // }
-        // insideDiff += "\n";
-        insideDiff += indent;
-        return insideDiff;
-      };
-      const writeOverview = ({ next }) => {
-        const prefixWithOverview = writePrefix({ overview: true });
-        const estimatedCollapsedBoilerplate = `${prefixWithOverview} ${openBracket}, ...${closeBracket}`;
-        const estimatedCollapsedBoilerplateWidth = stringWidth(
-          estimatedCollapsedBoilerplate,
-        );
-        const remainingWidth = maxColumns - estimatedCollapsedBoilerplateWidth;
-
-        let insideOverview = "";
-        let isFirst = true;
-        let width = 0;
-        let nextEntry;
-        while ((nextEntry = next())) {
-          const { node: nodeInsideThisOne, write } = nextEntry;
-          if (resultType === "actual" && nodeInsideThisOne.diff.removed) {
-            continue;
-          }
-          if (resultType === "expected" && nodeInsideThisOne.diff.added) {
-            continue;
-          }
-
-          let valueOverview = "";
-          valueOverview += write();
-          const valueWidth = stringWidth(valueOverview);
-          if (width + valueWidth > remainingWidth) {
-            let overview = "";
-            overview += prefixWithOverview;
-            overview += " ";
-            overview += ANSI.color(openBracket, delimitersColor);
-            if (insideOverview) {
-              if (!valueInfo.isArray) {
-                overview += " ";
-              }
-              overview += insideOverview;
-              overview += ANSI.color(",", delimitersColor);
-              overview += " ";
-            }
-            overview += ANSI.color(`...`, valueColor);
-            if (!valueInfo.isArray) {
-              overview += " ";
-            }
-            overview += ANSI.color(closeBracket, delimitersColor);
-            return overview;
-          }
-          width += valueWidth;
-          if (isFirst) {
-            isFirst = false;
-            insideOverview += valueOverview;
-          } else {
-            insideOverview += ANSI.color(",", delimitersColor);
-            insideOverview += " ";
-            width += ", ".length;
-            insideOverview += valueOverview;
-          }
-        }
-
-        let overview = "";
-        const prefix = writePrefix();
-        if (prefix) {
-          overview += prefix;
-          overview += " ";
-        }
-        overview += ANSI.color(openBracket, bracketsColor);
-        if (insideOverview) {
-          overview += valueInfo.isArray ? "" : " ";
-          overview += insideOverview;
-          overview += valueInfo.isArray ? "" : " ";
-        }
-        overview += ANSI.color(closeBracket, bracketsColor);
-        return overview;
-      };
-      const createGetNextNestedValue = () => {
-        const length = valueInfo.canHaveIndexedValues
-          ? valueInfo.value.length
-          : 0;
-        const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
-        const propertyCount = propertyNames.length;
-
-        let valueIndex = 0;
-        let prototypeDisplayed = false;
-        let propIndex = 0;
-
-        return () => {
-          if (valueIndex < length) {
-            const indexedValueNode = node.indexedValues[valueIndex];
-            valueIndex++;
-            return {
-              node: indexedValueNode,
-              write: () => {
-                return writeDiff(indexedValueNode, {
-                  ...context,
-                  modified: node.canDiffIndexedValues
-                    ? context.modified
-                    : modified,
-                  collapsed,
-                });
-              },
-            };
-          }
-          if (
-            !prototypeDisplayed &&
-            node.diff.prototype.counters.overall.any &&
-            !node.prototypeAreDifferentAndWellKnown
-          ) {
-            prototypeDisplayed = true;
-            return {
-              node: node.prototype,
-              write: () => {
-                return writeDiff(node.prototype, {
-                  ...context,
-                  modified: node.canDiffPrototypes
-                    ? context.modified
-                    : modified,
-                  collapsed,
-                });
-              },
-            };
-          }
-          if (propIndex < propertyCount) {
-            const propertyNode = node.properties[propertyNames[propIndex]];
-            propIndex++;
-            return {
-              node: propertyNode,
-              write: () => {
-                return writeDiff(propertyNode, {
-                  ...context,
-                  modified: node.canDiffProps ? context.modified : modified,
-                  collapsed,
-                });
-              },
-            };
-          }
-          return null;
-        };
-      };
-
-      inside: {
-        if (collapsed) {
-          if (insideOverview) {
-            const overview = writeOverview({
-              next: createGetNextNestedValue(),
-            });
-            compositeDiff += overview;
-            break inside;
-          }
-          const prefix = writePrefix({ overview: true });
-          compositeDiff += prefix;
-          break inside;
-        }
-        const insideDiff = writeInsideDiff({
-          next: createGetNextNestedValue(),
-        });
-        const prefix = writePrefix();
-        if (prefix) {
-          compositeDiff += prefix;
-          compositeDiff += " ";
-        }
-        compositeDiff += ANSI.color(openBracket, bracketsColor);
-        compositeDiff += insideDiff;
-        compositeDiff += ANSI.color(closeBracket, bracketsColor);
-      }
-      return compositeDiff;
-    };
-    const methods = {
-      value: writeValueDiff,
-      prototype: writePrototypeDiff,
-      indexed_value: writeIndexedValueDiff,
-      property: writePropertyDiff,
-      property_descriptor: writePropertyDescriptorDiff,
-    };
-    const writeDiff = (node, context) => {
-      onNodeDisplayed(node);
-      const method = methods[node.type];
-      return method(node, context);
-    };
 
     const actualValueMeta = {
       resultType: "actual",
@@ -1315,21 +609,44 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     diffMessage += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
     const firstValueDiff = writeDiff(startNode, {
+      onNodeDisplayed,
+      refId: 1,
+      startNode,
+      signs,
       initialDepth: -startNode.depth,
-      maxColumns: maxColumnsDefault,
+      initialMaxColumns: maxColumnsDefault,
+      maxDiffPerObject,
       maxDepth: maxDepthDefault,
+      maxValueBeforeDiff,
+      maxValueAfterDiff,
+      maxValueInsideDiff,
+      maxDepthInsideDiff,
       resultType: firstValueMeta.resultType,
+      quote,
+      preserveLineBreaks,
     });
+
     diffMessage += firstValueDiff;
     diffMessage += "\n";
     diffMessage += ANSI.color(secondValueMeta.resultType, sameColor);
     diffMessage += ANSI.color(":", sameColor);
     diffMessage += " ";
     const secondValueDiff = writeDiff(startNode, {
+      onNodeDisplayed,
+      refId: 1,
+      startNode,
+      signs,
       initialDepth: -startNode.depth,
-      maxColumns: maxColumnsDefault,
+      initialMaxColumns: maxColumnsDefault,
+      maxDiffPerObject,
       maxDepth: maxDepthDefault,
+      maxValueBeforeDiff,
+      maxValueAfterDiff,
+      maxValueInsideDiff,
+      maxDepthInsideDiff,
       resultType: secondValueMeta.resultType,
+      quote,
+      preserveLineBreaks,
     });
     diffMessage += secondValueDiff;
 
@@ -1379,25 +696,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   return assert;
 };
 
-const isDefaultDescriptor = (descriptorName, descriptorValue) => {
-  if (descriptorName === "enumerable" && descriptorValue === true) {
-    return true;
-  }
-  if (descriptorName === "writable" && descriptorValue === true) {
-    return true;
-  }
-  if (descriptorName === "configurable" && descriptorValue === true) {
-    return true;
-  }
-  if (descriptorName === "get" && descriptorValue === undefined) {
-    return true;
-  }
-  if (descriptorName === "set" && descriptorValue === undefined) {
-    return true;
-  }
-  return false;
-};
-
 const createComparisonTree = (actualValue, expectedValue) => {
   let expectedRefId = 1;
   let actualRefId = 1;
@@ -1414,8 +712,14 @@ const createComparisonTree = (actualValue, expectedValue) => {
       type,
       parent,
       depth,
-      actual: createValueInfo(actualValue, "actual"),
-      expected: createValueInfo(expectedValue, "expected"),
+      actual: createValueInfo(actualValue, {
+        type,
+        name: "actual",
+      }),
+      expected: createValueInfo(expectedValue, {
+        type,
+        name: "expected",
+      }),
       prototype: null,
       properties: {},
       indexedValues: [],
@@ -1541,7 +845,10 @@ const createComparisonTree = (actualValue, expectedValue) => {
         return propertyNode;
       };
     }
-    if (node.actual.isArray || node.expected.isArray) {
+    if (
+      node.actual.canHaveIndexedValues ||
+      node.expected.canHaveIndexedValues
+    ) {
       node.appendIndexedValue = (index, { actualValue, expectedValue }) => {
         const indexedValueNode = createComparisonNode({
           type: "indexed_value",
@@ -1553,6 +860,22 @@ const createComparisonTree = (actualValue, expectedValue) => {
         indexedValueNode.index = index;
         node.indexedValues[index] = indexedValueNode;
         return indexedValueNode;
+      };
+    }
+    if (node.actual.canHaveChars || node.expected.canHaveChars) {
+      node.chars = [];
+      node.appendChar = ({ actualChar, expectedChar }) => {
+        const charNode = createComparisonNode({
+          type: "char",
+          actualValue: actualChar,
+          expectedValue: expectedChar,
+          parent: node,
+          depth: depth + 1,
+        });
+        const charIndex = node.chars.length;
+        charNode.index = charIndex;
+        node.chars[charIndex] = charNode;
+        return charNode;
       };
     }
     return node;
@@ -1568,75 +891,1083 @@ const createComparisonTree = (actualValue, expectedValue) => {
   return { root };
 };
 
-const createValueInfo = (value, name) => {
-  const composite = value === ARRAY_EMPTY_VALUE ? false : isComposite(value);
-  const wellKnownId =
-    value === ARRAY_EMPTY_VALUE ? "empty" : getWellKnownId(value);
-  const isArray =
-    composite && Array.isArray(value) && value !== Array.prototype;
+let createValueInfo;
+{
+  createValueInfo = (value, { name, type }) => {
+    const composite = value === ARRAY_EMPTY_VALUE ? false : isComposite(value);
+    const wellKnownId =
+      value === ARRAY_EMPTY_VALUE ? "empty" : getWellKnownId(value);
+    const isArray =
+      composite && Array.isArray(value) && value !== Array.prototype;
+    const isString = typeof value === "string";
 
-  const canHaveIndexedValues = isArray;
-  const canHaveProps = composite;
-  const subtype = composite ? getSubtype(value) : "";
+    const canHaveIndexedValues = isArray;
+    const canHaveChars = isString && type !== "char";
+    const canHaveProps = composite;
+    const subtype = composite ? getSubtype(value) : "";
 
-  return {
-    value,
-    valueOf: () => {
-      throw new Error(`use ${name}.value`);
-    },
-    subtype,
-    isComposite: composite,
-    isPrimitive: !composite,
-    isArray,
-    canHaveIndexedValues,
-    canHaveProps,
-    wellKnownId,
-    reference: undefined,
-    referenceId: null,
-    referenceFromOthersSet: new Set(),
+    return {
+      value,
+      valueOf: () => {
+        throw new Error(`use ${name}.value`);
+      },
+      subtype,
+      isComposite: composite,
+      isPrimitive: !composite,
+      isArray,
+      isString,
+      canHaveIndexedValues,
+      canHaveChars,
+      canHaveProps,
+      wellKnownId,
+      reference: undefined,
+      referenceId: null,
+      referenceFromOthersSet: new Set(),
+
+      keys: null,
+      chars: null,
+    };
   };
-};
+  const getSubtype = (obj) => {
+    if (!Object.hasOwn(obj, Symbol.toStringTag)) {
+      const tag = obj[Symbol.toStringTag];
+      if (typeof tag === "string") {
+        return tag;
+      }
+    }
+
+    while (obj || isUndetectableObject(obj)) {
+      const descriptor = Object.getOwnPropertyDescriptor(obj, "constructor");
+      if (
+        descriptor !== undefined &&
+        typeof descriptor.value === "function" &&
+        descriptor.value.name !== ""
+      ) {
+        return String(descriptor.value.name);
+      }
+      obj = Object.getPrototypeOf(obj);
+      if (obj === null) {
+        return "Object";
+      }
+    }
+    return "";
+  };
+  const isUndetectableObject = (v) =>
+    typeof v === "undefined" && v !== undefined;
+}
+
+let writeDiff;
+{
+  writeDiff = (node, context) => {
+    context.onNodeDisplayed(node);
+    const method = methods[node.type];
+    return method(node, context);
+  };
+
+  const writePrefix = (node, context, { overview } = {}) => {
+    const valueInfo = node[context.resultType];
+
+    if (!overview) {
+      if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
+        return "";
+      }
+    }
+    let prefix = "";
+    let subtypeColor;
+    if (context.added) {
+      subtypeColor = addedColor;
+    } else if (context.removed) {
+      subtypeColor = removedColor;
+    } else if (
+      node.actual.isComposite &&
+      node.expected.isComposite &&
+      node.actual.subtype === node.expected.subtype
+    ) {
+      subtypeColor = sameColor;
+    } else if (node.actual.canHaveChars && node.expected.canHaveChars) {
+      subtypeColor = sameColor;
+    } else {
+      subtypeColor =
+        context.resultType === "actual" ? unexpectedColor : expectedColor;
+    }
+
+    const delimitersColor = getDelimitersColor(context);
+
+    prefix += ANSI.color(valueInfo.subtype, subtypeColor);
+    if (overview) {
+      if (valueInfo.isArray || valueInfo.isString) {
+        prefix += ANSI.color(`(`, delimitersColor);
+        let lengthColor = context.added
+          ? addedColor
+          : context.removed
+            ? removedColor
+            : node.actual.isArray &&
+                node.expected.isArray &&
+                node.actual.value.length === node.expected.value.length
+              ? sameColor
+              : context.resultType === "actual"
+                ? unexpectedColor
+                : expectedColor;
+        prefix += ANSI.color(valueInfo.value.length, lengthColor);
+        prefix += ANSI.color(`)`, delimitersColor);
+      } else if (valueInfo.isComposite) {
+        prefix += ANSI.color(`(`, delimitersColor);
+        let keysColor = context.added
+          ? addedColor
+          : context.removed
+            ? removedColor
+            : node.actual.isComposite &&
+                node.expected.isComposite &&
+                node.actual.keys.length === node.expected.keys.length
+              ? sameColor
+              : context.resultType === "actual"
+                ? unexpectedColor
+                : expectedColor;
+        prefix += ANSI.color(valueInfo.keys.length, keysColor);
+        prefix += ANSI.color(`)`, delimitersColor);
+      }
+    }
+    return prefix;
+  };
+  const writeOverview = (node, context, parentContext) => {
+    const valueInfo = node[context.resultType];
+    const prefixWithOverview = writePrefix(node, context, { overview: true });
+    const delimitersColor = getDelimitersColor(context);
+    const bracketColor = getBracketColor(node, context);
+    const valueColor = getValueColor(context);
+    const openBracket = valueInfo.isArray ? "[" : "{";
+    const closeBracket = valueInfo.isArray ? "]" : "}";
+    const estimatedCollapsedBoilerplate = `${prefixWithOverview} ${openBracket}, ...${closeBracket}`;
+    const estimatedCollapsedBoilerplateWidth = stringWidth(
+      estimatedCollapsedBoilerplate,
+    );
+    const remainingWidth =
+      context.maxColumns - estimatedCollapsedBoilerplateWidth;
+
+    let insideOverview = "";
+    let isFirst = true;
+    let width = 0;
+    let nextEntry;
+    const next = createGetNextNestedValue(node, context, parentContext);
+    while ((nextEntry = next())) {
+      const { node: nodeInsideThisOne, write } = nextEntry;
+      if (context.resultType === "actual" && nodeInsideThisOne.diff.removed) {
+        continue;
+      }
+      if (context.resultType === "expected" && nodeInsideThisOne.diff.added) {
+        continue;
+      }
+
+      let valueOverview = "";
+      valueOverview += write();
+      const valueWidth = stringWidth(valueOverview);
+      if (width + valueWidth > remainingWidth) {
+        let overview = "";
+        overview += prefixWithOverview;
+        overview += " ";
+        overview += ANSI.color(openBracket, delimitersColor);
+        if (insideOverview) {
+          if (!valueInfo.isArray) {
+            overview += " ";
+          }
+          overview += insideOverview;
+          overview += ANSI.color(",", delimitersColor);
+          overview += " ";
+        }
+        overview += ANSI.color(`...`, valueColor);
+        if (!valueInfo.isArray) {
+          overview += " ";
+        }
+        overview += ANSI.color(closeBracket, delimitersColor);
+        return overview;
+      }
+      width += valueWidth;
+      if (isFirst) {
+        isFirst = false;
+        insideOverview += valueOverview;
+      } else {
+        insideOverview += ANSI.color(",", delimitersColor);
+        insideOverview += " ";
+        width += ", ".length;
+        insideOverview += valueOverview;
+      }
+    }
+
+    let overview = "";
+    const prefix = writePrefix(node, context);
+    if (prefix) {
+      overview += prefix;
+      overview += " ";
+    }
+    overview += ANSI.color(openBracket, bracketColor);
+    if (insideOverview) {
+      overview += valueInfo.isArray ? "" : " ";
+      overview += insideOverview;
+      overview += valueInfo.isArray ? "" : " ";
+    }
+    overview += ANSI.color(closeBracket, bracketColor);
+    return overview;
+  };
+  const writeInsideDiff = (node, context, parentContext) => {
+    const delimitersColor = getDelimitersColor(context);
+    const relativeDepth = node.depth + context.initialDepth;
+    let insideDiff = "";
+    let indent = "  ".repeat(relativeDepth);
+    const skippedArray = [];
+    let diffCount = 0;
+    let nextEntry;
+    let isFirstNestedValue = true;
+    const appendNestedValueDiff = (diff) => {
+      if (context.collapsed) {
+        return diff;
+      }
+      if (isFirstNestedValue) {
+        isFirstNestedValue = false;
+
+        return diff;
+      }
+      // insideDiff += ANSI.color(",", delimitersColor);
+      // insideDiff += "\n";
+      return diff;
+    };
+
+    const next = createGetNextNestedValue(node, context, parentContext);
+    while ((nextEntry = next())) {
+      const { node: nodeInsideThisOne, write } = nextEntry;
+      if (context.resultType === "actual" && nodeInsideThisOne.diff.removed) {
+        continue;
+      }
+      if (context.resultType === "expected" && nodeInsideThisOne.diff.added) {
+        continue;
+      }
+
+      if (nodeInsideThisOne.diff.counters.overall.any) {
+        diffCount++;
+        // too many diff
+        if (diffCount > context.maxDiffPerObject) {
+          skippedArray.push(nextEntry);
+          continue;
+        }
+        // first write nested value (prop, value) eventually skipped
+        const skippedCount = skippedArray.length;
+        if (skippedCount) {
+          let beforeDiff = "";
+          let from = skippedArray.length - context.maxValueBeforeDiff;
+          let to = skippedArray.length - 1;
+          let index = from;
+          while (index !== to) {
+            const previousToDisplay = skippedArray[skippedArray.length - 1];
+            if (!previousToDisplay) {
+              break;
+            }
+            skippedArray.pop();
+            beforeDiff += appendNestedValueDiff(previousToDisplay.write());
+            index++;
+          }
+          let skippedValues = 0;
+          let skippedProps = 0;
+          for (const skipped of skippedArray) {
+            if (
+              skipped.node.type === "indexed_value" ||
+              skipped.node.type === "char"
+            ) {
+              skippedValues++;
+            }
+            if (skipped.node.type === "property") {
+              skippedProps++;
+            }
+          }
+          if (skippedValues || skippedProps) {
+            let aboveSummary = "";
+            if (skippedValues) {
+              aboveSummary += `${skippedValues} values`;
+            }
+            if (skippedProps) {
+              if (aboveSummary) {
+                aboveSummary += " ";
+              }
+              aboveSummary += `${skippedProps} props`;
+            }
+            insideDiff += `${indent}  `;
+            const arrowSign = diffCount > 1 ? `↕` : `↑`;
+            insideDiff += ANSI.color(
+              `${arrowSign} ${aboveSummary} ${arrowSign}`,
+              delimitersColor,
+            );
+            insideDiff += "\n";
+          }
+          insideDiff += beforeDiff;
+          skippedArray.length = 0;
+        }
+        insideDiff += appendNestedValueDiff(write());
+        continue;
+      }
+      skippedArray.push(nextEntry);
+      // does not have a diff
+      // will either be written when we encounter a diff
+      // or be skipped
+    }
+    // now display the values below
+    const skippedCount = skippedArray.length;
+    if (skippedCount) {
+      // maxPropertyInsideDiff
+      // I can display only the non modified props
+      // and I can display only a subset
+      // if there is any
+      // is there a diff before?
+      // if yes then it's maxValueAfterDiff
+      // otherwise it's maxper diff
+      const maxValueAfter = context.modified
+        ? context.maxValueInsideDiff - 1
+        : context.maxValueAfterDiff - 1;
+      let displayedAfter = 0;
+      while (displayedAfter !== maxValueAfter) {
+        const nextToDisplay = skippedArray[0];
+        if (!nextToDisplay) {
+          break;
+        }
+        if (nextToDisplay.node.diff.counters.self.any) {
+          break;
+        }
+        insideDiff += appendNestedValueDiff(nextToDisplay.write());
+        skippedArray.shift();
+        displayedAfter++;
+      }
+    }
+
+    remaining_summary: {
+      if (skippedArray.length === 0) {
+        break remaining_summary;
+      }
+      const skippedPropCounters = {
+        total: 0,
+        removed: 0,
+        added: 0,
+        modified: 0,
+      };
+      const skippedValueCounters = {
+        total: 0,
+        removed: 0,
+        added: 0,
+        modified: 0,
+      };
+
+      for (const skipped of skippedArray) {
+        if (skipped.node.type === "property") {
+          skippedPropCounters.total++;
+          if (context.resultType === "actual") {
+            if (skipped.node.diff.added) {
+              context.onNodeDisplayed(skipped.node);
+              skippedPropCounters.added++;
+              continue;
+            }
+            if (skipped.node.diff.counters.overall.any) {
+              context.onNodeDisplayed(skipped.node);
+              skippedPropCounters.modified++;
+              continue;
+            }
+            continue;
+          }
+          if (skipped.node.diff.removed) {
+            context.onNodeDisplayed(skipped.node);
+            skippedPropCounters.removed++;
+          }
+          continue;
+        }
+        if (
+          skipped.node.type === "indexed_value" ||
+          skipped.node.type === "char"
+        ) {
+          skippedValueCounters.total++;
+          if (context.resultType === "actual") {
+            if (skipped.node.diff.added) {
+              context.onNodeDisplayed(skipped.node);
+              skippedValueCounters.added++;
+              continue;
+            }
+            if (skipped.node.diff.counters.overall.any) {
+              context.onNodeDisplayed(skipped.node);
+              skippedValueCounters.modified++;
+              continue;
+            }
+            continue;
+          }
+          if (skipped.node.diff.removed) {
+            context.onNodeDisplayed(skipped.node);
+            skippedValueCounters.removed++;
+          }
+          continue;
+        }
+      }
+
+      let belowSummary = "";
+      if (skippedValueCounters.total) {
+        belowSummary += ANSI.color(
+          skippedValueCounters.total === 1
+            ? `1 value`
+            : `${skippedValueCounters.total} values`,
+          delimitersColor,
+        );
+        const parts = [];
+        if (skippedValueCounters.removed) {
+          parts.push(
+            ANSI.color(`${skippedValueCounters.removed} removed`, removedColor),
+          );
+        }
+        if (skippedValueCounters.added) {
+          parts.push(
+            ANSI.color(`${skippedValueCounters.added} added`, addedColor),
+          );
+        }
+        if (skippedValueCounters.modified) {
+          parts.push(
+            ANSI.color(
+              `${skippedValueCounters.modified} modified`,
+              unexpectedColor,
+            ),
+          );
+        }
+        if (parts.length) {
+          belowSummary += ` `;
+          belowSummary += ANSI.color(`(`, delimitersColor);
+          belowSummary += parts.join(" ");
+          belowSummary += ANSI.color(`)`, delimitersColor);
+        }
+      }
+      if (skippedPropCounters.total) {
+        belowSummary += ANSI.color(
+          skippedPropCounters.total === 1
+            ? `1 prop`
+            : `${skippedPropCounters.total} props`,
+          delimitersColor,
+        );
+        const parts = [];
+        if (skippedPropCounters.removed) {
+          parts.push(
+            ANSI.color(`${skippedPropCounters.removed} removed`, removedColor),
+          );
+        }
+        if (skippedPropCounters.added) {
+          parts.push(
+            ANSI.color(`${skippedPropCounters.added} added`, addedColor),
+          );
+        }
+        if (skippedPropCounters.modified) {
+          parts.push(
+            ANSI.color(
+              `${skippedPropCounters.modified} modified`,
+              unexpectedColor,
+            ),
+          );
+        }
+        if (parts.length) {
+          belowSummary += ` `;
+          belowSummary += ANSI.color(`(`, delimitersColor);
+          belowSummary += parts.join(" ");
+          belowSummary += ANSI.color(`)`, delimitersColor);
+        }
+      }
+
+      insideDiff += `${indent}  `;
+      insideDiff += ANSI.color(`↓`, delimitersColor);
+      insideDiff += " ";
+      insideDiff += belowSummary;
+      insideDiff += " ";
+      insideDiff += ANSI.color(`↓`, delimitersColor);
+      insideDiff += "\n";
+    }
+    if (insideDiff === "") {
+      return "";
+    }
+    if (context.signs) {
+      if (context.resultType === "actual") {
+        if (context.added) {
+          insideDiff += ANSI.color(addedSign, addedSignColor);
+          indent = indent.slice(1);
+        } else if (context.modified) {
+          insideDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
+          indent = indent.slice(1);
+        }
+      } else if (context.removed) {
+        insideDiff += ANSI.color(removedSign, removedSignColor);
+        indent = indent.slice(1);
+      }
+    }
+    insideDiff = `\n${insideDiff}`;
+    // if (!valueInfo.isArray) {
+    //   insideDiff += ANSI.color(",", delimitersColor);
+    // }
+    // insideDiff += "\n";
+    insideDiff += indent;
+    return insideDiff;
+  };
+  const createGetNextNestedValue = (node, context, parentContext) => {
+    const valueInfo = node[context.resultType];
+    const length = valueInfo.canHaveIndexedValues ? valueInfo.value.length : 0;
+    const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
+    const propertyCount = propertyNames.length;
+
+    let valueIndex = 0;
+    let prototypeDisplayed = false;
+    let propIndex = 0;
+
+    return () => {
+      if (valueIndex < length) {
+        const indexedValueNode = node.indexedValues[valueIndex];
+        valueIndex++;
+        return {
+          node: indexedValueNode,
+          write: () => {
+            return writeDiff(indexedValueNode, {
+              ...context,
+              modified: node.canDiffIndexedValues
+                ? parentContext.modified
+                : context.modified,
+            });
+          },
+        };
+      }
+      if (
+        !prototypeDisplayed &&
+        node.diff.prototype.counters.overall.any &&
+        !node.prototypeAreDifferentAndWellKnown
+      ) {
+        prototypeDisplayed = true;
+        return {
+          node: node.prototype,
+          write: () => {
+            return writeDiff(node.prototype, {
+              ...context,
+              modified: node.canDiffPrototypes
+                ? parentContext.modified
+                : context.modified,
+            });
+          },
+        };
+      }
+      if (propIndex < propertyCount) {
+        const propertyNode = node.properties[propertyNames[propIndex]];
+        propIndex++;
+        return {
+          node: propertyNode,
+          write: () => {
+            return writeDiff(propertyNode, {
+              ...context,
+              modified: node.canDiffProps
+                ? parentContext.modified
+                : context.modified,
+            });
+          },
+        };
+      }
+      return null;
+    };
+  };
+  const writeNestedValueDiff = (
+    node,
+    context,
+    { property, propertyPrefix },
+  ) => {
+    const nestedValueContext = { ...context };
+
+    if (node.type === "indexed_value") {
+      if (node.diff.removed) {
+        nestedValueContext.removed = true;
+      }
+      if (node.diff.added) {
+        nestedValueContext.added = true;
+      }
+    }
+    if (node.type === "char") {
+      if (node.diff.removed) {
+        nestedValueContext.removed = true;
+      }
+      if (node.diff.added) {
+        nestedValueContext.added = true;
+      }
+    }
+    if (node.type === "property_descriptor") {
+      if (node.parent.diff.removed) {
+        nestedValueContext.removed = true;
+      }
+      if (node.parent.diff.added) {
+        nestedValueContext.added = true;
+      }
+      if (
+        isDefaultDescriptor(
+          node.descriptor,
+          node[nestedValueContext.resultType].value,
+        )
+      ) {
+        return "";
+      }
+    }
+
+    let nestedValueDiff = "";
+    const relativeDepth = node.depth + nestedValueContext.initialDepth;
+    let indent = `  `.repeat(relativeDepth);
+    const keyColor = getKeyColor(nestedValueContext);
+    const delimitersColor = getDelimitersColor(nestedValueContext);
+    let displayValue = true;
+
+    if (nestedValueContext.signs && !nestedValueContext.collapsed) {
+      if (nestedValueContext.removed) {
+        if (nestedValueContext.resultType === "expected") {
+          nestedValueDiff += ANSI.color(removedSign, removedSignColor);
+          indent = indent.slice(1);
+        }
+      } else if (nestedValueContext.added) {
+        if (nestedValueContext.resultType === "actual") {
+          nestedValueDiff += ANSI.color(addedSign, addedSignColor);
+          indent = indent.slice(1);
+        }
+      } else if (nestedValueContext.modified) {
+        if (nestedValueContext.resultType === "actual") {
+          nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
+          indent = indent.slice(1);
+        }
+      }
+    }
+
+    if (!nestedValueContext.collapsed) {
+      nestedValueDiff += indent;
+    }
+    if (property && node !== nestedValueContext.startNode) {
+      if (propertyPrefix) {
+        nestedValueDiff += ANSI.color(propertyPrefix, keyColor);
+        nestedValueDiff += " ";
+      }
+      const propertyKeyFormatted = humanizePropertyKey(property);
+      nestedValueDiff += ANSI.color(propertyKeyFormatted, keyColor);
+      if (displayValue) {
+        nestedValueDiff += ANSI.color(":", keyColor);
+        nestedValueDiff += " ";
+      }
+    }
+    if (displayValue) {
+      nestedValueContext.maxColumns =
+        nestedValueContext.initialMaxColumns -
+        stringWidth(nestedValueDiff) -
+        ",".length;
+      if (nestedValueContext.modified) {
+        nestedValueContext.maxDepth = Math.min(
+          node.depth + nestedValueContext.maxDepthInsideDiff,
+          nestedValueContext.maxDepth,
+        );
+      }
+      const valueDiff = writeValueDiff(node, nestedValueContext);
+      nestedValueDiff += valueDiff;
+    }
+    if (
+      !nestedValueContext.collapsed &&
+      node !== nestedValueContext.startNode
+    ) {
+      nestedValueDiff += ANSI.color(",", delimitersColor);
+      nestedValueDiff += "\n";
+    }
+    return nestedValueDiff;
+  };
+  const writeIndexedValueDiff = (node, context) => {
+    return writeNestedValueDiff(node, context, {});
+  };
+  const writePrototypeDiff = (node, context) => {
+    return writeNestedValueDiff(node, context, {
+      property: "__proto__", // "[[Prototype]]"?
+    });
+  };
+  const writePropertyDescriptorDiff = (node, context) => {
+    return writeNestedValueDiff(node, context, {
+      property: node.property,
+      propertyPrefix: node.descriptor === "value" ? null : node.descriptor,
+    });
+  };
+  const writePropertyDiff = (node, context) => {
+    if (context.collapsed) {
+      if (
+        node.descriptors.get[context.resultType].value &&
+        node.descriptors.set[context.resultType].value
+      ) {
+        return writeDiff(node.descriptors.get, context);
+      }
+      if (node.descriptors.get[context.resultType].value) {
+        return writeDiff(node.descriptors.get, context);
+      }
+      if (node.descriptors.set[context.resultType].value) {
+        return writeDiff(node.descriptors.set, context);
+      }
+      return writeDiff(node.descriptors.value, context);
+    }
+    let propertyDiff = "";
+    const descriptorNames = Object.keys(node.descriptors);
+    for (const descriptorName of descriptorNames) {
+      const descriptorNode = node.descriptors[descriptorName];
+      propertyDiff += writeDiff(descriptorNode, context);
+    }
+    return propertyDiff;
+  };
+  const writeValueDiff = (node, context) => {
+    const valueContext = { ...context };
+    if (!context.modified && node.diff.counters.self.any > 0) {
+      valueContext.modified = true;
+    }
+    const valueInfo = node[valueContext.resultType];
+    const valueColor = getValueColor(valueContext);
+    const delimitersColor = getDelimitersColor(valueContext);
+
+    if (valueInfo.wellKnownId) {
+      return ANSI.color(valueInfo.wellKnownId, valueColor);
+    }
+
+    const relativeDepth = node.depth + context.initialDepth;
+    valueContext.insideOverview = valueContext.collapsed !== true;
+    if (!valueContext.collapsed) {
+      valueContext.collapsed =
+        relativeDepth >= valueContext.maxDepth ||
+        node.diff.counters.overall.any === 0;
+    }
+
+    // primitive
+    if (valueInfo.isPrimitive) {
+      const value = valueInfo.value;
+      if (valueInfo.isString) {
+        if (valueInfo.canHaveIndexedValue) {
+          let { quote } = context;
+          quote = quote === "auto" ? node.quote || pickBestQuote(value) : quote;
+          node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
+
+          if (valueContext.collapsed) {
+            if (valueContext.insideOverview) {
+              // TODO
+            }
+            return writePrefix(node, context, { overview: true });
+          }
+          let stringDiff = "";
+          stringDiff += ANSI.color(quote, delimitersColor);
+          valueContext.modified = node.canDiffChars
+            ? context.modified
+            : valueContext.modified;
+          valueContext.quote = quote;
+          for (const char of valueInfo.chars) {
+            stringDiff += writeDiff(char, valueContext);
+          }
+          stringDiff += ANSI.color(quote, delimitersColor);
+          return stringDiff;
+        }
+      }
+
+      let valueDiff =
+        value === undefined
+          ? "undefined"
+          : value === null
+            ? "null"
+            : JSON.stringify(value);
+      if (valueDiff.length > valueContext.maxColumns) {
+        valueDiff = valueDiff.slice(0, valueContext.maxColumns);
+        valueDiff += "…";
+      }
+      return ANSI.color(valueDiff, valueColor);
+    }
+
+    if (context.collapsed && node.type === "property_descriptor") {
+      if (node.descriptor === "get") {
+        if (node.parent.descriptors.set[valueContext.resultType].value) {
+          return ANSI.color("[get/set]", valueColor);
+        }
+        return ANSI.color("[get]", valueColor);
+      }
+      if (node.descriptor === "set") {
+        if (node.parent.descriptors.get[valueContext.resultType].value) {
+          return ANSI.color("[get/set]", valueColor);
+        }
+        return ANSI.color("[set]", valueColor);
+      }
+    }
+
+    // composite
+    let compositeDiff = "";
+    if (valueInfo.reference) {
+      compositeDiff += ANSI.color(
+        `<ref #${valueInfo.referenceId}>`,
+        delimitersColor,
+      );
+    }
+    if (valueInfo.referenceFromOthersSet.size) {
+      compositeDiff += ANSI.color(`<ref #${context.refId}>`, delimitersColor);
+      context.refId = context.refId + 1;
+      compositeDiff += " ";
+    }
+
+    const openBracket = valueInfo.isArray ? "[" : "{";
+    const closeBracket = valueInfo.isArray ? "]" : "}";
+    const bracketColor = getBracketColor(node, valueContext);
+
+    inside: {
+      if (valueContext.collapsed) {
+        if (valueContext.insideOverview) {
+          const overview = writeOverview(node, valueContext, context);
+          compositeDiff += overview;
+          break inside;
+        }
+        const prefix = writePrefix(node, valueContext, { overview: true });
+        compositeDiff += prefix;
+        break inside;
+      }
+      const insideDiff = writeInsideDiff(node, valueContext, context);
+      const prefix = writePrefix(node, valueContext);
+      if (prefix) {
+        compositeDiff += prefix;
+        compositeDiff += " ";
+      }
+      compositeDiff += ANSI.color(openBracket, bracketColor);
+      compositeDiff += insideDiff;
+      compositeDiff += ANSI.color(closeBracket, bracketColor);
+    }
+    return compositeDiff;
+  };
+  const writeCharDiff = (node, context) => {
+    const { preserveLineBreaks, quote } = context;
+    const char = node[context.resultType].value;
+    const point = char.charCodeAt(0);
+    if (preserveLineBreaks && (char === "\n" || char === "\r")) {
+      return char;
+    }
+    if (
+      char === quote ||
+      point === 92 ||
+      point < 32 ||
+      (point > 126 && point < 160) ||
+      // line separators
+      point === 8232 ||
+      point === 8233
+    ) {
+      const replacement =
+        char === quote
+          ? `\\${quote}`
+          : point === 8232
+            ? "\\u2028"
+            : point === 8233
+              ? "\\u2029"
+              : charMeta[point];
+      return replacement;
+    }
+    return char;
+  };
+  // prettier-ignore
+  const charMeta = [
+    '\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07', // x07
+    '\\b', '\\t', '\\n', '\\x0B', '\\f', '\\r', '\\x0E', '\\x0F',           // x0F
+    '\\x10', '\\x11', '\\x12', '\\x13', '\\x14', '\\x15', '\\x16', '\\x17', // x17
+    '\\x18', '\\x19', '\\x1A', '\\x1B', '\\x1C', '\\x1D', '\\x1E', '\\x1F', // x1F
+    '', '', '', '', '', '', '', "\\'", '', '', '', '', '', '', '', '',      // x2F
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x3F
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x4F
+    '', '', '', '', '', '', '', '', '', '', '', '', '\\\\', '', '', '',     // x5F
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x6F
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '\\x7F',    // x7F
+    '\\x80', '\\x81', '\\x82', '\\x83', '\\x84', '\\x85', '\\x86', '\\x87', // x87
+    '\\x88', '\\x89', '\\x8A', '\\x8B', '\\x8C', '\\x8D', '\\x8E', '\\x8F', // x8F
+    '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
+    '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
+  ];
+  const methods = {
+    value: writeValueDiff,
+    char: writeCharDiff,
+    prototype: writePrototypeDiff,
+    indexed_value: writeIndexedValueDiff,
+    property: writePropertyDiff,
+    property_descriptor: writePropertyDescriptorDiff,
+  };
+
+  const getDelimitersColor = (context) => {
+    if (context.resultType === "actual") {
+      if (context.added) {
+        return addedColor;
+      }
+      if (context.modified) {
+        return unexpectedColor;
+      }
+      return sameColor;
+    }
+    if (context.removed) {
+      return removedColor;
+    }
+    if (context.modified) {
+      return expectedColor;
+    }
+    return sameColor;
+  };
+  const getKeyColor = (context) => {
+    if (context.resultType === "actual") {
+      if (context.added) {
+        return addedColor;
+      }
+      if (context.modified) {
+        return unexpectedColor;
+      }
+      return sameColor;
+    }
+    if (context.removed) {
+      return removedColor;
+    }
+    if (context.modified) {
+      return expectedColor;
+    }
+    return sameColor;
+  };
+  const getValueColor = (context) => {
+    if (context.removed) {
+      return removedColor;
+    }
+    if (context.added) {
+      return addedColor;
+    }
+    if (context.modified) {
+      if (context.resultType === "actual") {
+        return unexpectedColor;
+      }
+      return expectedColor;
+    }
+    return sameColor;
+  };
+  const getBracketColor = (node, context) => {
+    if (context.removed) {
+      return removedColor;
+    }
+    if (context.added) {
+      return addedColor;
+    }
+    if (context.modified) {
+      // if (node.actual.isArray === node.expected.isArray) {
+      //   // they use same brackets
+      //   return sameColor;
+      // }
+      if (context.resultType === "actual") {
+        return unexpectedColor;
+      }
+      return expectedColor;
+    }
+    return sameColor;
+  };
+
+  const DOUBLE_QUOTE = `"`;
+  const SINGLE_QUOTE = `'`;
+  const BACKTICK = "`";
+  const pickBestQuote = (
+    string,
+    { canUseTemplateString, quoteDefault = DOUBLE_QUOTE } = {},
+  ) => {
+    const containsDoubleQuote = string.includes(DOUBLE_QUOTE);
+    if (!containsDoubleQuote) {
+      return DOUBLE_QUOTE;
+    }
+    const containsSimpleQuote = string.includes(SINGLE_QUOTE);
+    if (!containsSimpleQuote) {
+      return SINGLE_QUOTE;
+    }
+    if (canUseTemplateString) {
+      const containsBackTick = string.includes(BACKTICK);
+      if (!containsBackTick) {
+        return BACKTICK;
+      }
+    }
+    const doubleQuoteCount = string.split(DOUBLE_QUOTE).length - 1;
+    const singleQuoteCount = string.split(SINGLE_QUOTE).length - 1;
+    if (singleQuoteCount > doubleQuoteCount) {
+      return DOUBLE_QUOTE;
+    }
+    if (doubleQuoteCount > singleQuoteCount) {
+      return SINGLE_QUOTE;
+    }
+    return quoteDefault;
+  };
+
+  const isDefaultDescriptor = (descriptorName, descriptorValue) => {
+    if (descriptorName === "enumerable" && descriptorValue === true) {
+      return true;
+    }
+    if (descriptorName === "writable" && descriptorValue === true) {
+      return true;
+    }
+    if (descriptorName === "configurable" && descriptorValue === true) {
+      return true;
+    }
+    if (descriptorName === "get" && descriptorValue === undefined) {
+      return true;
+    }
+    if (descriptorName === "set" && descriptorValue === undefined) {
+      return true;
+    }
+    return false;
+  };
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
+let getWellKnownId;
+{
+  const wellKnownWeakMap = new WeakMap();
+  const symbolWellKnownMap = new Map();
+  getWellKnownId = (value) => {
+    if (!wellKnownWeakMap.size) {
+      addWellKnownComposite(global);
+    }
+    if (typeof value === "symbol") {
+      return symbolWellKnownMap.get(value);
+    }
+    return wellKnownWeakMap.get(value);
+  };
+  const addWellKnownComposite = (value) => {
+    const visitValue = (value, valuePath) => {
+      if (typeof value === "symbol") {
+        symbolWellKnownMap.set(value, String(valuePath));
+        return;
+      }
+      if (!isComposite(value)) {
+        return;
+      }
+
+      if (wellKnownWeakMap.has(value)) {
+        // prevent infinite recursion on circular structures
+        return;
+      }
+      wellKnownWeakMap.set(value, String(valuePath));
+
+      const visitProperty = (property) => {
+        let descriptor;
+        try {
+          descriptor = Object.getOwnPropertyDescriptor(value, property);
+        } catch (e) {
+          // may happen if you try to access some iframe properties or stuff like that
+          if (e.name === "SecurityError") {
+            return;
+          }
+          throw e;
+        }
+        if (!descriptor) {
+          return;
+        }
+        // do not trigger getter/setter
+        if ("value" in descriptor) {
+          const propertyValue = descriptor.value;
+          visitValue(propertyValue, valuePath.append(property));
+        }
+      };
+      for (const property of Object.getOwnPropertyNames(value)) {
+        visitProperty(property);
+      }
+      for (const symbol of Object.getOwnPropertySymbols(value)) {
+        visitProperty(symbol);
+      }
+    };
+    visitValue(value, createValuePath());
+  };
+}
+
 const isComposite = (value) => {
   if (value === null) return false;
   if (typeof value === "object") return true;
   if (typeof value === "function") return true;
   return false;
 };
-const getSubtype = (obj) => {
-  if (!Object.hasOwn(obj, Symbol.toStringTag)) {
-    const tag = obj[Symbol.toStringTag];
-    if (typeof tag === "string") {
-      return tag;
-    }
-  }
-
-  const tmp = obj;
-  while (obj || isUndetectableObject(obj)) {
-    const descriptor = Object.getOwnPropertyDescriptor(obj, "constructor");
-    if (
-      descriptor !== undefined &&
-      typeof descriptor.value === "function" &&
-      descriptor.value.name !== "" &&
-      tryInstanceof(tmp, descriptor.value)
-    ) {
-      return String(descriptor.value.name);
-    }
-    obj = Object.getPrototypeOf(obj);
-    if (obj === null) {
-      return "Object";
-    }
-  }
-  return "";
-};
-function tryInstanceof(object, proto) {
-  try {
-    return object instanceof proto;
-  } catch {
-    return false;
-  }
-}
-const isUndetectableObject = (v) => typeof v === "undefined" && v !== undefined;
-
 const humanizePropertyKey = (property) => {
   if (typeof property === "symbol") {
     return humanizeSymbol(property);
@@ -1673,7 +2004,6 @@ const isDotNotationAllowed = (propertyName) => {
     /^[a-z_$]$/i.test(propertyName)
   );
 };
-
 const symbolToDescription = (symbol) => {
   const toStringResult = symbol.toString();
   const openingParenthesisIndex = toStringResult.indexOf("(");
@@ -1684,7 +2014,6 @@ const symbolToDescription = (symbol) => {
   );
   // return symbol.description // does not work on node
 };
-
 const createValuePath = (path = "") => {
   return {
     toString: () => path,
@@ -1720,62 +2049,4 @@ const createValuePath = (path = "") => {
       return createValuePath(propertyPathString);
     },
   };
-};
-
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
-const wellKnownWeakMap = new WeakMap();
-const symbolWellKnownMap = new Map();
-const getWellKnownId = (value) => {
-  if (!wellKnownWeakMap.size) {
-    addWellKnownComposite(global);
-  }
-  if (typeof value === "symbol") {
-    return symbolWellKnownMap.get(value);
-  }
-  return wellKnownWeakMap.get(value);
-};
-const addWellKnownComposite = (value) => {
-  const visitValue = (value, valuePath) => {
-    if (typeof value === "symbol") {
-      symbolWellKnownMap.set(value, String(valuePath));
-      return;
-    }
-    if (!isComposite(value)) {
-      return;
-    }
-
-    if (wellKnownWeakMap.has(value)) {
-      // prevent infinite recursion on circular structures
-      return;
-    }
-    wellKnownWeakMap.set(value, String(valuePath));
-
-    const visitProperty = (property) => {
-      let descriptor;
-      try {
-        descriptor = Object.getOwnPropertyDescriptor(value, property);
-      } catch (e) {
-        // may happen if you try to access some iframe properties or stuff like that
-        if (e.name === "SecurityError") {
-          return;
-        }
-        throw e;
-      }
-      if (!descriptor) {
-        return;
-      }
-      // do not trigger getter/setter
-      if ("value" in descriptor) {
-        const propertyValue = descriptor.value;
-        visitValue(propertyValue, valuePath.append(property));
-      }
-    };
-    for (const property of Object.getOwnPropertyNames(value)) {
-      visitProperty(property);
-    }
-    for (const symbol of Object.getOwnPropertySymbols(value)) {
-      visitProperty(symbol);
-    }
-  };
-  visitValue(value, createValuePath());
 };
