@@ -1837,10 +1837,14 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
-      // if (node.actual.isArray === node.expected.isArray) {
-      //   // they use same brackets
-      //   return sameColor;
-      // }
+      if (
+        node.actual.isComposite &&
+        node.expected.isComposite &&
+        node.actual.isArray === node.expected.isArray
+      ) {
+        // they use same brackets
+        return sameColor;
+      }
       if (context.resultType === "actual") {
         return unexpectedColor;
       }
