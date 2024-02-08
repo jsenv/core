@@ -88,6 +88,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         causeCounters.displayed++;
       }
       if (node.type === "property") {
+        // happens when node is skipped
+        // in that case we want to consider all child nodes as displayed
+        // (they are "displayed" in the summary)
         for (const descriptor of Object.keys(node.descriptors)) {
           onNodeDisplayed(node.descriptors[descriptor]);
         }
@@ -979,18 +982,13 @@ let writeDiff;
   };
 
   const writeIndexedValueDiff = (node, context) => {
-    return writeNestedValueDiff(node, context, {});
+    return writeNestedValueDiff(node, context);
   };
   const writePrototypeDiff = (node, context) => {
-    return writeNestedValueDiff(node, context, {
-      property: "__proto__", // "[[Prototype]]"?
-    });
+    return writeNestedValueDiff(node, context);
   };
   const writePropertyDescriptorDiff = (node, context) => {
-    return writeNestedValueDiff(node, context, {
-      property: node.property,
-      propertyPrefix: node.descriptor === "value" ? null : node.descriptor,
-    });
+    return writeNestedValueDiff(node, context);
   };
   const writePropertyDiff = (node, context) => {
     if (context.collapsed) {
@@ -1120,7 +1118,7 @@ let writeDiff;
         while (index < valueInfo.chars.length) {
           const charNode = node.chars[index];
           index++;
-          stringDiff += writeValueDiff(charNode, context);
+          stringDiff += writeNestedValueDiff(charNode, context);
         }
         stringDiff += ANSI.color(valueContext.quote, bracketColor);
         return stringDiff;
@@ -1194,11 +1192,7 @@ let writeDiff;
     }
     return compositeDiff;
   };
-  const writeNestedValueDiff = (
-    node,
-    context,
-    { property, propertyPrefix },
-  ) => {
+  const writeNestedValueDiff = (node, context) => {
     const nestedValueContext = { ...context };
     if (node.type === "indexed_value") {
       if (node.diff.removed) {
@@ -1232,31 +1226,42 @@ let writeDiff;
     const delimitersColor = getDelimitersColor(nestedValueContext);
     let displayValue = true;
 
-    if (nestedValueContext.signs && !nestedValueContext.collapsed) {
-      if (nestedValueContext.removed) {
-        if (nestedValueContext.resultType === "expected") {
-          nestedValueDiff += ANSI.color(removedSign, removedSignColor);
-          indent = indent.slice(1);
-        }
-      } else if (nestedValueContext.added) {
-        if (nestedValueContext.resultType === "actual") {
-          nestedValueDiff += ANSI.color(addedSign, addedSignColor);
-          indent = indent.slice(1);
-        }
-      } else if (nestedValueContext.modified) {
-        if (nestedValueContext.resultType === "actual") {
-          nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
-          indent = indent.slice(1);
+    const useIndent =
+      !nestedValueContext.collapsed &&
+      (node.type === "indexed_value" ||
+        node.type === "property_descriptor" ||
+        node.type === "prototype");
+    if (useIndent) {
+      if (nestedValueContext.signs) {
+        if (nestedValueContext.removed) {
+          if (nestedValueContext.resultType === "expected") {
+            nestedValueDiff += ANSI.color(removedSign, removedSignColor);
+            indent = indent.slice(1);
+          }
+        } else if (nestedValueContext.added) {
+          if (nestedValueContext.resultType === "actual") {
+            nestedValueDiff += ANSI.color(addedSign, addedSignColor);
+            indent = indent.slice(1);
+          }
+        } else if (nestedValueContext.modified) {
+          if (nestedValueContext.resultType === "actual") {
+            nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
+            indent = indent.slice(1);
+          }
         }
       }
-    }
-
-    if (!nestedValueContext.collapsed) {
       nestedValueDiff += indent;
     }
+
+    const property =
+      node.type === "property_descriptor"
+        ? node.property
+        : node.type === "prototype"
+          ? "__proto__" // "[[Prototype]]"?
+          : "";
     if (property && node !== nestedValueContext.startNode) {
-      if (propertyPrefix) {
-        nestedValueDiff += ANSI.color(propertyPrefix, keyColor);
+      if (node.type === "property_descriptor" && node.descriptor !== "value") {
+        nestedValueDiff += ANSI.color(node.descriptor, keyColor);
         nestedValueDiff += " ";
       }
       const propertyKeyFormatted = humanizePropertyKey(property);
@@ -1266,11 +1271,13 @@ let writeDiff;
         nestedValueDiff += " ";
       }
     }
+    const separator =
+      useIndent && node !== nestedValueContext.startNode ? "," : "";
     if (displayValue) {
       nestedValueContext.maxColumns =
         nestedValueContext.initialMaxColumns -
         stringWidth(nestedValueDiff) -
-        ",".length;
+        separator.length;
       if (nestedValueContext.modified) {
         nestedValueContext.maxDepth = Math.min(
           node.depth + nestedValueContext.maxDepthInsideDiff,
@@ -1280,11 +1287,8 @@ let writeDiff;
       const valueDiff = writeValueDiff(node, nestedValueContext);
       nestedValueDiff += valueDiff;
     }
-    if (
-      !nestedValueContext.collapsed &&
-      node !== nestedValueContext.startNode
-    ) {
-      nestedValueDiff += ANSI.color(",", delimitersColor);
+    if (separator) {
+      nestedValueDiff += ANSI.color(separator, delimitersColor);
       nestedValueDiff += "\n";
     }
     return nestedValueDiff;
