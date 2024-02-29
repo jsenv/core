@@ -2,65 +2,71 @@
 AssertionError: actual and expected are different:
 
 actual: "a"
-expected: "b"
+expect: "b"
 
 # diff end of string
 AssertionError: actual and expected are different:
 
 actual: "hello world"
-expected: "hello france"
+expect: "hello france"
 
 # one char should be empty
 AssertionError: actual and expected are different:
 
 actual: "a"
-expected: ""
+expect: ""
 
 # empty should be one char
 AssertionError: actual and expected are different:
 
 actual: ""
-expected: "a"
+expect: "a"
 
 # tab vs space
 AssertionError: actual and expected are different:
 
 actual: "\t"
-expected: "  "
+expect: "  "
 
 # blank char should be empty
 AssertionError: actual and expected are different:
 
 actual: "\x7F"
-expected: ""
+expect: ""
 
 # diff unicode
 AssertionError: actual and expected are different:
 
 actual: "⚫️"
-expected: "⚪️"
+expect: "⚪️"
 
 # diff emoticon
 AssertionError: actual and expected are different:
 
 actual: "👨‍👩‍👧‍👧"
-expected: "😍"
+expect: "😍"
 
 # diff special char
 AssertionError: actual and expected are different:
 
 actual: "ñ"
-expected: "n"
+expect: "n"
 
 # added char
 AssertionError: actual and expected are different:
 
 actual: "ab"
-expected: "a"
+expect: "a"
 
 # removed char
 AssertionError: actual and expected are different:
 
 actual: "a"
-expected: "ab"
+expect: "ab"
+
+# truncate some chars before diff
+AssertionError: actual and expected are different:
+
+actual: "…hijk"
+expect: "…hijj"
 

@@ -607,17 +607,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     const actualValueMeta = {
       resultType: "actual",
+      name: "actual",
       color: unexpectedColor,
     };
     const expectedValueMeta = {
       resultType: "expected",
+      name: "expect",
       color: expectedColor,
     };
     const firstValueMeta = actualIsFirst ? actualValueMeta : expectedValueMeta;
     const secondValueMeta = actualIsFirst ? expectedValueMeta : actualValueMeta;
 
     let diffMessage = "";
-    diffMessage += ANSI.color(firstValueMeta.resultType, sameColor);
+    diffMessage += ANSI.color(firstValueMeta.name, sameColor);
     diffMessage += ANSI.color(":", sameColor);
     diffMessage += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
@@ -628,6 +630,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       signs,
       initialDepth: -startNode.depth,
       initialMaxColumns: maxColumnsDefault,
+      maxColumns: maxColumnsDefault,
       maxDiffPerObject,
       maxDepth: maxDepthDefault,
       maxValueBeforeDiff,
@@ -641,7 +644,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     diffMessage += firstValueDiff;
     diffMessage += "\n";
-    diffMessage += ANSI.color(secondValueMeta.resultType, sameColor);
+    diffMessage += ANSI.color(secondValueMeta.name, sameColor);
     diffMessage += ANSI.color(":", sameColor);
     diffMessage += " ";
     const secondValueDiff = writeDiff(startNode, {
@@ -651,6 +654,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       signs,
       initialDepth: -startNode.depth,
       initialMaxColumns: maxColumnsDefault,
+      maxColumns: maxColumnsDefault,
       maxDiffPerObject,
       maxDepth: maxDepthDefault,
       maxValueBeforeDiff,
@@ -993,6 +997,9 @@ let writeDiff;
   const writePropertyDescriptorDiff = (node, context) => {
     return writeNestedValueDiff(node, context);
   };
+  const writeCharDiff = (node, context) => {
+    return writeNestedValueDiff(node, context);
+  };
   const writePropertyDiff = (node, context) => {
     if (context.collapsed) {
       if (
@@ -1016,35 +1023,6 @@ let writeDiff;
       propertyDiff += writeDiff(descriptorNode, context);
     }
     return propertyDiff;
-  };
-  const writeCharDiff = (node, context) => {
-    const valueColor = getValueColor(context);
-    const { preserveLineBreaks, quote } = context;
-    const char = node[context.resultType].value;
-    const point = char.charCodeAt(0);
-    if (preserveLineBreaks && (char === "\n" || char === "\r")) {
-      return ANSI.color(char, valueColor);
-    }
-    if (
-      char === quote ||
-      point === 92 ||
-      point < 32 ||
-      (point > 126 && point < 160) ||
-      // line separators
-      point === 8232 ||
-      point === 8233
-    ) {
-      const replacement =
-        char === quote
-          ? `\\${quote}`
-          : point === 8232
-            ? "\\u2028"
-            : point === 8233
-              ? "\\u2029"
-              : charMeta[point];
-      return ANSI.color(replacement, valueColor);
-    }
-    return ANSI.color(char, valueColor);
   };
   // prettier-ignore
   const charMeta = [
@@ -1087,7 +1065,33 @@ let writeDiff;
     }
 
     if (node.type === "char") {
-      return writeCharDiff(node, valueContext);
+      const valueColor = getValueColor(valueContext);
+      const { preserveLineBreaks, quote } = valueContext;
+      const char = node[valueContext.resultType].value;
+      const point = char.charCodeAt(0);
+      if (preserveLineBreaks && (char === "\n" || char === "\r")) {
+        return ANSI.color(char, valueColor);
+      }
+      if (
+        char === quote ||
+        point === 92 ||
+        point < 32 ||
+        (point > 126 && point < 160) ||
+        // line separators
+        point === 8232 ||
+        point === 8233
+      ) {
+        const replacement =
+          char === quote
+            ? `\\${quote}`
+            : point === 8232
+              ? "\\u2028"
+              : point === 8233
+                ? "\\u2029"
+                : charMeta[point];
+        return ANSI.color(replacement, valueColor);
+      }
+      return ANSI.color(char, valueColor);
     }
 
     // primitive
@@ -1117,13 +1121,10 @@ let writeDiff;
         valueContext.modified = node.canDiffChars
           ? context.modified
           : valueContext.modified;
-        let index = 0;
-        while (index < valueInfo.chars.length) {
-          const charNode = node.chars[index];
-          index++;
-          stringDiff += writeNestedValueDiff(charNode, context);
-        }
-
+        valueContext.maxColumns =
+          valueContext.maxColumns -
+          `${valueContext.quote}${valueContext.quote}`.length;
+        stringDiff += writeInsideDiff(node, valueContext, context);
         stringDiff += ANSI.color(valueContext.quote, bracketColor);
         return stringDiff;
       }
@@ -1386,6 +1387,7 @@ let writeDiff;
     return prefix;
   };
   const writeInsideDiff = (node, context, parentContext) => {
+    const valueInfo = node[context.resultType];
     const delimitersColor = getDelimitersColor(context);
     const relativeDepth = node.depth + context.initialDepth;
     let insideDiff = "";
@@ -1421,7 +1423,7 @@ let writeDiff;
       if (nodeInsideThisOne.diff.counters.overall.any) {
         diffCount++;
         // too many diff
-        if (diffCount > context.maxDiffPerObject) {
+        if (valueInfo.isComposite && diffCount > context.maxDiffPerObject) {
           skippedArray.push(nextEntry);
           continue;
         }
@@ -1429,32 +1431,63 @@ let writeDiff;
         const skippedCount = skippedArray.length;
         if (skippedCount) {
           let beforeDiff = "";
-          let from = skippedArray.length - context.maxValueBeforeDiff;
-          let to = skippedArray.length - 1;
-          let index = from;
-          while (index !== to) {
-            const previousToDisplay = skippedArray[skippedArray.length - 1];
-            if (!previousToDisplay) {
-              break;
+          let from;
+          let to;
+          if (valueInfo.canHaveChars) {
+            from = Math.min(
+              skippedArray.length - 1,
+              context.maxColumns - "…".length,
+            );
+            to = skippedArray.length;
+            let remainingWidth = context.maxColumns - "…".length - 1; // 1 for the char with a diff
+            if (to > remainingWidth) {
+              from = to - remainingWidth;
+            } else {
+              from = 0;
             }
-            skippedArray.pop();
-            beforeDiff += appendNestedValueDiff(previousToDisplay.write());
-            index++;
+            let index = from;
+            while (index !== to) {
+              const previousToDisplay = skippedArray[index];
+              if (!previousToDisplay) {
+                break;
+              }
+
+              beforeDiff += appendNestedValueDiff(previousToDisplay.write());
+              index++;
+            }
+            skippedArray.splice(from, to - from);
+          } else {
+            from = skippedArray.length - context.maxValueBeforeDiff;
+            to = skippedArray.length - 1;
+            let index = from;
+            while (index !== to) {
+              const previousToDisplay = skippedArray[skippedArray.length - 1];
+              if (!previousToDisplay) {
+                break;
+              }
+              skippedArray.pop();
+              beforeDiff += appendNestedValueDiff(previousToDisplay.write());
+              index++;
+            }
           }
+
+          let skippedChars = 0;
           let skippedValues = 0;
           let skippedProps = 0;
           for (const skipped of skippedArray) {
-            if (
-              skipped.node.type === "indexed_value" ||
-              skipped.node.type === "char"
-            ) {
+            if (skipped.node.type === "char") {
+              skippedChars++;
+            }
+            if (skipped.node.type === "indexed_value") {
               skippedValues++;
             }
             if (skipped.node.type === "property") {
               skippedProps++;
             }
           }
-          if (skippedValues || skippedProps) {
+          if (skippedChars) {
+            insideDiff += ANSI.color("…", delimitersColor);
+          } else if (skippedValues || skippedProps) {
             let aboveSummary = "";
             if (skippedValues) {
               aboveSummary += `${skippedValues} values`;
@@ -1493,7 +1526,7 @@ let writeDiff;
       // if there is any
       // is there a diff before?
       // if yes then it's maxValueAfterDiff
-      // otherwise it's maxper diff
+      // otherwise it's max after diff
       const maxValueAfter = context.modified
         ? context.maxValueInsideDiff - 1
         : context.maxValueAfterDiff - 1;
@@ -1528,52 +1561,36 @@ let writeDiff;
         added: 0,
         modified: 0,
       };
+      const skippedCharCounters = {
+        total: 0,
+        removed: 0,
+        added: 0,
+        modified: 0,
+      };
 
       for (const skipped of skippedArray) {
-        if (skipped.node.type === "property") {
-          skippedPropCounters.total++;
-          if (context.resultType === "actual") {
-            if (skipped.node.diff.added) {
-              context.onNodeDisplayed(skipped.node);
-              skippedPropCounters.added++;
-              continue;
-            }
-            if (skipped.node.diff.counters.overall.any) {
-              context.onNodeDisplayed(skipped.node);
-              skippedPropCounters.modified++;
-              continue;
-            }
+        const skippedCounters = {
+          property: skippedPropCounters,
+          indexed_value: skippedValueCounters,
+          char: skippedCharCounters,
+        }[skipped.node.type];
+        skippedCounters.total++;
+        if (context.resultType === "actual") {
+          if (skipped.node.diff.added) {
+            context.onNodeDisplayed(skipped.node);
+            skippedCounters.added++;
             continue;
           }
-          if (skipped.node.diff.removed) {
+          if (skipped.node.diff.counters.overall.any) {
             context.onNodeDisplayed(skipped.node);
-            skippedPropCounters.removed++;
+            skippedCounters.modified++;
+            continue;
           }
           continue;
         }
-        if (
-          skipped.node.type === "indexed_value" ||
-          skipped.node.type === "char"
-        ) {
-          skippedValueCounters.total++;
-          if (context.resultType === "actual") {
-            if (skipped.node.diff.added) {
-              context.onNodeDisplayed(skipped.node);
-              skippedValueCounters.added++;
-              continue;
-            }
-            if (skipped.node.diff.counters.overall.any) {
-              context.onNodeDisplayed(skipped.node);
-              skippedValueCounters.modified++;
-              continue;
-            }
-            continue;
-          }
-          if (skipped.node.diff.removed) {
-            context.onNodeDisplayed(skipped.node);
-            skippedValueCounters.removed++;
-          }
-          continue;
+        if (skipped.node.diff.removed) {
+          context.onNodeDisplayed(skipped.node);
+          skippedCounters.removed++;
         }
       }
 
@@ -1670,7 +1687,9 @@ let writeDiff;
         indent = indent.slice(1);
       }
     }
-    insideDiff = `\n${insideDiff}`;
+    if (!valueInfo.canHaveChars) {
+      insideDiff = `\n${insideDiff}`;
+    }
     // if (!valueInfo.isArray) {
     //   insideDiff += ANSI.color(",", delimitersColor);
     // }
@@ -1820,6 +1839,7 @@ let writeDiff;
       }
       if (
         !prototypeDisplayed &&
+        valueInfo.isComposite &&
         node.diff.prototype.counters.overall.any &&
         !node.prototypeAreDifferentAndWellKnown
       ) {

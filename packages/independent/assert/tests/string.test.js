@@ -71,6 +71,13 @@ await startSnapshotTesting("string", {
       expected: "ab",
     });
   },
+  ["truncate some chars before diff"]: () => {
+    assert({
+      actual: "abcdefghijk",
+      expected: "abcdefghijj",
+      maxColumns: 7,
+    });
+  },
   // TODO:
   // - diff at beginning of long string, end is truncated
   // - diff on the middle of big string and goes to the end but too long so it's truncated

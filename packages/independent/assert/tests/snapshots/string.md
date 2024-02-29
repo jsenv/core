@@ -119,3 +119,15 @@ assert({
 
 ![img](<./string/removed char.svg>)
 
+# truncate some chars before diff
+
+```js
+assert({
+  actual: "abcdefghijk",
+  expected: "abcdefghijj",
+  maxColumns: 7,
+});
+```
+
+![img](<./string/truncate some chars before diff.svg>)
+
