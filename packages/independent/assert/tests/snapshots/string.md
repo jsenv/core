@@ -20,6 +20,50 @@ assert({
 
 ![img](<./string/diff end of string.svg>)
 
+# one char should be empty
+
+```js
+assert({
+  actual: "a",
+  expected: "",
+});
+```
+
+![img](<./string/one char should be empty.svg>)
+
+# empty should be one char
+
+```js
+assert({
+  actual: "",
+  expected: "a",
+});
+```
+
+![img](<./string/empty should be one char.svg>)
+
+# tab vs space
+
+```js
+assert({
+  actual: "	",
+  expected: "  ",
+});
+```
+
+![img](<./string/tab vs space.svg>)
+
+# blank char should be empty
+
+```js
+assert({
+  actual: String.fromCharCode(127),
+  expected: "",
+});
+```
+
+![img](<./string/blank char should be empty.svg>)
+
 # diff unicode
 
 ```js
@@ -52,4 +96,26 @@ assert({
 ```
 
 ![img](<./string/diff special char.svg>)
+
+# added char
+
+```js
+assert({
+  actual: "ab",
+  expected: "a",
+});
+```
+
+![img](<./string/added char.svg>)
+
+# removed char
+
+```js
+assert({
+  actual: "a",
+  expected: "ab",
+});
+```
+
+![img](<./string/removed char.svg>)
 

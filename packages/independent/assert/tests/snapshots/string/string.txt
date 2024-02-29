@@ -10,6 +10,30 @@ AssertionError: actual and expected are different:
 actual: "hello world"
 expected: "hello france"
 
+# one char should be empty
+AssertionError: actual and expected are different:
+
+actual: "a"
+expected: ""
+
+# empty should be one char
+AssertionError: actual and expected are different:
+
+actual: ""
+expected: "a"
+
+# tab vs space
+AssertionError: actual and expected are different:
+
+actual: "\t"
+expected: "  "
+
+# blank char should be empty
+AssertionError: actual and expected are different:
+
+actual: "\x7F"
+expected: ""
+
 # diff unicode
 AssertionError: actual and expected are different:
 
@@ -27,4 +51,16 @@ AssertionError: actual and expected are different:
 
 actual: "ñ"
 expected: "n"
+
+# added char
+AssertionError: actual and expected are different:
+
+actual: "ab"
+expected: "a"
+
+# removed char
+AssertionError: actual and expected are different:
+
+actual: "a"
+expected: "ab"
 

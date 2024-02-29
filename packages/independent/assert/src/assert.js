@@ -1222,6 +1222,14 @@ let writeDiff;
         return "";
       }
     }
+    if (node.type === "char") {
+      if (node.diff.removed) {
+        nestedValueContext.removed = true;
+      }
+      if (node.diff.added) {
+        nestedValueContext.added = true;
+      }
+    }
 
     let nestedValueDiff = "";
     const relativeDepth = node.depth + nestedValueContext.initialDepth;
