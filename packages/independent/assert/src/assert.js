@@ -1,4 +1,5 @@
 import stringWidth from "string-width";
+import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
@@ -255,12 +256,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const canDiffChars = actualCanHaveChars && expectedCanHaveChars;
             node.canDiffChars = canDiffChars;
 
+            // eslint-disable-next-line new-cap
+            const splitter = new Graphemer.default();
             const actualChars = actualCanHaveChars
-              ? Array.from(node.actual.value)
+              ? splitter.splitGraphemes(node.actual.value)
               : [];
             node.actual.chars = actualChars;
             const expectedChars = expectedCanHaveChars
-              ? Array.from(node.expected.value)
+              ? splitter.splitGraphemes(node.expected.value)
               : [];
             node.expected.chars = expectedChars;
 
@@ -1120,6 +1123,7 @@ let writeDiff;
           index++;
           stringDiff += writeNestedValueDiff(charNode, context);
         }
+
         stringDiff += ANSI.color(valueContext.quote, bracketColor);
         return stringDiff;
       }

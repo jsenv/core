@@ -11,24 +11,30 @@ await startSnapshotTesting("string", {
       expected: "b",
     });
   },
-  // ["diff end of string"]: () => {
-  //   assert({
-  //     actual: "hello world",
-  //     expected: "hello france",
-  //   });
-  // },
-  // ["diff unicode"]: () => {
-  //   assert({
-  //     actual: "⚫️",
-  //     expected: "⚪️",
-  //   });
-  // },
-  // ["diff emoticon"]: () => {
-  //   assert({
-  //     actual: "👨‍👩‍👧‍👧",
-  //     expected: "😍",
-  //   });
-  // },
+  ["diff end of string"]: () => {
+    assert({
+      actual: "hello world",
+      expected: "hello france",
+    });
+  },
+  ["diff unicode"]: () => {
+    assert({
+      actual: "⚫️",
+      expected: "⚪️",
+    });
+  },
+  ["diff emoticon"]: () => {
+    assert({
+      actual: "👨‍👩‍👧‍👧",
+      expected: "😍",
+    });
+  },
+  ["diff special char"]: () => {
+    assert({
+      actual: "ñ",
+      expected: "n",
+    });
+  },
   // TODO:
   // - added char
   // - removed char

@@ -4,3 +4,27 @@ AssertionError: actual and expected are different:
 actual: "a"
 expected: "b"
 
+# diff end of string
+AssertionError: actual and expected are different:
+
+actual: "hello world"
+expected: "hello france"
+
+# diff unicode
+AssertionError: actual and expected are different:
+
+actual: "⚫️"
+expected: "⚪️"
+
+# diff emoticon
+AssertionError: actual and expected are different:
+
+actual: "👨‍👩‍👧‍👧"
+expected: "😍"
+
+# diff special char
+AssertionError: actual and expected are different:
+
+actual: "ñ"
+expected: "n"
+
