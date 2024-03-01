@@ -71,18 +71,27 @@ await startSnapshotTesting("string", {
       expected: "ab",
     });
   },
-  ["truncate some chars before diff"]: () => {
+  ["diff at end of long string, start truncated"]: () => {
     assert({
       actual: "abcdefghijk",
       expected: "abcdefghijj",
-      maxColumns: 7,
+      maxColumns: 15,
     });
   },
-  // TODO:
-  // - diff at beginning of long string, end is truncated
-  // - diff on the middle of big string and goes to the end but too long so it's truncated
-  // - diff on the end of a long string, the beginning is truncated
-  //   so that we can see the diff that is at the end
+  ["diff at start of long string, end truncated"]: () => {
+    assert({
+      actual: "a2cdefghijk",
+      expected: "a3cdefghijk",
+      maxColumns: 15,
+    });
+  },
+  // ["diff at middle of long string, start + end truncated"]: () => {
+  //   assert({
+  //     actual: "abcdefgh5jklmnopqrstu",
+  //     expected: "abcdefgh6jklmnopqrstu",
+  //     maxColumns: 15,
+  //   });
+  // },
   // TODO LATER:
   // - comparing single line / multiline
   // - compare multiline

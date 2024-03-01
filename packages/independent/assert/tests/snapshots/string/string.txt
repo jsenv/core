@@ -64,9 +64,15 @@ AssertionError: actual and expected are different:
 actual: "a"
 expect: "ab"
 
-# truncate some chars before diff
+# diff at end of long string, start truncated
 AssertionError: actual and expected are different:
 
 actual: "…hijk"
 expect: "…hijj"
+
+# diff at start of long string, end truncated
+AssertionError: actual and expected are different:
+
+actual: "a2c…"
+expect: "a3c…"
 
