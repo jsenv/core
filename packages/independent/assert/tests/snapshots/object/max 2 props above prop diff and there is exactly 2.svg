@@ -63,9 +63,9 @@
         <text x="52.01" y="128.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="128.55" fill="#7f7f7f">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
-        <text x="10" y="166.55" fill="#7f7f7f">expected</text>
-        <text x="77.21" y="166.55" fill="#7f7f7f">:</text>
-        <text x="94.01" y="166.55" fill="#7f7f7f">{</text>
+        <text x="10" y="166.55" fill="#7f7f7f">expect</text>
+        <text x="60.41" y="166.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="166.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="185.55" fill="#7f7f7f"
           >&#x2191; 1 props &#x2191;</text
         >

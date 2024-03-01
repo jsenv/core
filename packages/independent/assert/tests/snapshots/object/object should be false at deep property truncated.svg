@@ -62,9 +62,9 @@
         <text x="287.25" y="52.55" fill="#cd5555">actual</text>
         <text x="337.65" y="52.55" fill="#cd5555">&#x22;</text>
         <text x="354.46" y="52.55" fill="#cd5555">}</text>
-        <text x="10" y="71.55" fill="#7f7f7f">expected</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">:</text>
-        <text x="94.01" y="71.55" fill="#11bc79">false</text>
+        <text x="10" y="71.55" fill="#7f7f7f">expect</text>
+        <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="71.55" fill="#11bc79">false</text>
       </g>
     </svg>
   </foreignObject>

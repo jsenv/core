@@ -4,7 +4,7 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   a: true,
 }
-expected: {
+expect: {
   a: false,
 }
 
@@ -14,7 +14,7 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   a: true,
 }
-expected: {
+expect: {
   a: true,
   should_be_there: true,
 }
@@ -26,7 +26,7 @@ actual: {
   a: true,
   should_not_be_there: true,
 }
-expected: {
+expect: {
   a: true,
 }
 
@@ -34,7 +34,7 @@ expected: {
 AssertionError: actual and expected are different:
 
 actual: false
-expected: {
+expect: {
   foo: true,
 }
 
@@ -44,7 +44,7 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   foo: false,
 }
-expected: {
+expect: {
   foo: {
     a: true,
   },
@@ -58,7 +58,7 @@ actual: {
     a: true,
   },
 }
-expected: {
+expect: {
   foo: false,
 }
 
@@ -66,7 +66,7 @@ expected: {
 AssertionError: actual and expected are different:
 
 actual: { the: Object(1), toto: "actual" }
-expected: false
+expect: false
 
 # object should be false at deep property
 AssertionError: actual and expected have 2 differences:
@@ -86,7 +86,7 @@ actual: {
     },
   },
 }
-expected: {
+expect: {
   in: {
     this: {
       one: {
@@ -106,7 +106,7 @@ actual: {
     },
   },
 }
-expected: {
+expect: {
   foo: {
     a: true,
   },
@@ -119,7 +119,7 @@ actual: {
   a: { foo: true, bar: true, baz: Object(1) },
   b: true,
 }
-expected: {
+expect: {
   a: { foo: true, bar: true, baz: Object(1) },
   b: false,
 }
@@ -132,7 +132,7 @@ actual: {
   c: true,
   d: true,
 }
-expected: {
+expect: {
   ↑ 2 props ↑
   c: true,
   d: false,
@@ -147,7 +147,7 @@ actual: {
   c: true,
   d: true,
 }
-expected: {
+expect: {
   ↑ 1 props ↑
   b: true,
   c: false,
@@ -162,7 +162,7 @@ actual: {
   b: true,
   ↓ 2 props ↓
 }
-expected: {
+expect: {
   a: false,
   b: true,
   ↓ 2 props ↓
@@ -177,7 +177,7 @@ actual: {
   c: true,
   ↓ 1 prop ↓
 }
-expected: {
+expect: {
   a: true,
   b: false,
   c: true,
@@ -200,7 +200,7 @@ actual: {
   m: true,
   ↓ 2 props ↓
 }
-expected: {
+expect: {
   ↑ 2 props ↑
   c: true,
   d: false,
@@ -222,7 +222,7 @@ actual: {
   b: true,
   ↓ 1 prop (1 modified) ↓
 }
-expected: {
+expect: {
   a: false,
   b: false,
   ↓ 1 prop ↓
@@ -234,7 +234,7 @@ AssertionError: actual and expected have 1 difference:
 actual: {
   a: true,
 }
-expected: {
+expect: {
   a: true,
   should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
 }
@@ -254,7 +254,7 @@ actual: {
   f: true,
   ↓ 2 props (2 added) ↓
 }
-expected: {
+expect: {
   a: true,
   c: {},
 }
@@ -268,7 +268,7 @@ actual: {
     ↓ 4 props ↓
   },
 }
-expected: {
+expect: {
   foo: false,
 }
 
@@ -279,7 +279,7 @@ actual: {
   b: true,
   a: false,
 }
-expected: {
+expect: {
   a: true,
   b: false,
 }

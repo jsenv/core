@@ -98,9 +98,9 @@
         <text x="26.8" y="299.55" fill="#7f7f7f">}</text>
         <text x="35.2" y="299.55" fill="#7f7f7f">,</text>
         <text x="10" y="318.55" fill="#7f7f7f">}</text>
-        <text x="10" y="337.55" fill="#7f7f7f">expected</text>
-        <text x="77.21" y="337.55" fill="#7f7f7f">:</text>
-        <text x="94.01" y="337.55" fill="#7f7f7f">{</text>
+        <text x="10" y="337.55" fill="#7f7f7f">expect</text>
+        <text x="60.41" y="337.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="337.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="356.55" fill="#7f7f7f">in</text>
         <text x="43.61" y="356.55" fill="#7f7f7f">:</text>
         <text x="60.41" y="356.55" fill="#7f7f7f">{</text>
