@@ -1120,9 +1120,6 @@ let writeDiff;
         valueContext.modified = node.canDiffChars
           ? context.modified
           : valueContext.modified;
-        valueContext.maxColumns =
-          valueContext.maxColumns -
-          `${valueContext.quote}${valueContext.quote}`.length;
         stringDiff += writeExpandedDiff(node, valueContext, context);
         return stringDiff;
       }
@@ -1374,28 +1371,141 @@ let writeDiff;
     return prefix;
   };
   const writeExpandedDiff = (node, context, parentContext) => {
-    let expandedDiff = "";
-    let insideDiff = "";
     const valueInfo = node[context.resultType];
+    const delimitersColor = getDelimitersColor(context);
+    if (valueInfo.canHaveChars) {
+      const { openBracket, closeBracket } = getDelimiters(node, context);
+      const bracketColor = getBracketColor(node, context);
 
-    if (!valueInfo.canHaveChars) {
-      const prefix = writePrefix(node, context);
-      if (prefix) {
-        expandedDiff += prefix;
-        expandedDiff += " ";
+      if (valueInfo.chars.length === 0) {
+        let expandedDiff = "";
+        expandedDiff += ANSI.color(openBracket, bracketColor);
+        expandedDiff += ANSI.color(closeBracket, bracketColor);
+        return expandedDiff;
       }
+
+      let remainingWidth = context.maxColumns;
+
+      let charFocusedIndex = -1;
+      let index = 0;
+      for (; index < valueInfo.chars.length - 1; index++) {
+        const charNode = node.chars[index];
+        if (context.resultType === "actual" && charNode.diff.removed) {
+          continue;
+        }
+        if (context.resultType === "expected" && charNode.diff.added) {
+          continue;
+        }
+        if (!charNode.diff.counters.overall.any) {
+          continue;
+        }
+        charFocusedIndex = index;
+        break;
+      }
+      const charsBeforeArray = [];
+      const charsAfterArray = [];
+
+      if (charFocusedIndex === -1) {
+        charFocusedIndex = valueInfo.chars.length - 1;
+      }
+      const focusedCharDiff = writeDiff(node.chars[charFocusedIndex], {
+        ...context,
+        modified: node.canDiffChars ? parentContext.modified : context.modified,
+      });
+      remainingWidth -= stringWidth(focusedCharDiff);
+
+      const leftOverflowBoilerplateWidth = "…".length;
+      const rightOverflowBoilerplateWidth = "…".length;
+      let tryBeforeFirst = true;
+      let previousCharCount = 0;
+      let nextCharCount = 0;
+      while (remainingWidth) {
+        let charIndex;
+        let isBefore = false;
+        const previousCharIndex = charFocusedIndex - previousCharCount - 1;
+        const nextCharIndex = charFocusedIndex + nextCharCount + 1;
+        const hasPreviousChar = previousCharIndex >= 0;
+        const hasNextChar = nextCharIndex < valueInfo.chars.length;
+        if (tryBeforeFirst && hasPreviousChar) {
+          isBefore = true;
+          tryBeforeFirst = false;
+          previousCharCount++;
+          charIndex = previousCharIndex;
+        } else if (hasNextChar) {
+          isBefore = false;
+          nextCharCount++;
+          charIndex = nextCharIndex;
+        } else if (hasPreviousChar) {
+          isBefore = true;
+          previousCharCount++;
+          charIndex = previousCharIndex;
+        } else {
+          break;
+        }
+        const charNode = node.chars[charIndex];
+        if (context.resultType === "actual" && charNode.diff.removed) {
+          continue;
+        }
+        if (context.resultType === "expected" && charNode.diff.added) {
+          continue;
+        }
+
+        const charDiff = writeDiff(charNode, {
+          ...context,
+          modified: node.canDiffChars
+            ? parentContext.modified
+            : context.modified,
+        });
+        const charWidth = stringWidth(charDiff);
+        let nextWidth = charWidth;
+        if (charIndex - 1 > 0) {
+          nextWidth += leftOverflowBoilerplateWidth;
+        }
+        if (charIndex + 1 < valueInfo.chars.length - 1) {
+          nextWidth += rightOverflowBoilerplateWidth;
+        }
+        if (nextWidth >= remainingWidth) {
+          break;
+        }
+        remainingWidth -= charWidth;
+        if (isBefore) {
+          charsBeforeArray.push(charDiff);
+        } else {
+          charsAfterArray.push(charDiff);
+        }
+      }
+
+      let expandedDiff = "";
+      const overflowLeft = charFocusedIndex - previousCharCount > 0;
+      const overflowRight =
+        charFocusedIndex + nextCharCount < valueInfo.chars.length - 1;
+      if (overflowLeft) {
+        expandedDiff += ANSI.color("…", delimitersColor);
+      }
+      expandedDiff += ANSI.color(openBracket, bracketColor);
+      expandedDiff += charsBeforeArray.reverse().join("");
+      expandedDiff += focusedCharDiff;
+      expandedDiff += charsAfterArray.join("");
+      expandedDiff += ANSI.color(closeBracket, bracketColor);
+      if (overflowRight) {
+        expandedDiff += ANSI.color("…", delimitersColor);
+      }
+      return expandedDiff;
     }
 
-    const delimitersColor = getDelimitersColor(context);
+    let expandedDiff = "";
+    let insideDiff = "";
+    const prefix = writePrefix(node, context);
+    if (prefix) {
+      expandedDiff += prefix;
+      expandedDiff += " ";
+    }
     const relativeDepth = node.depth + context.initialDepth;
-
     let indent = "  ".repeat(relativeDepth);
     const entryBeforeDiffArray = [];
     let skippedArray = [];
     let diffCount = 0;
-    let entry;
     let isFirstNestedValue = true;
-    let remainingWidth = context.maxColumns;
     const appendNestedValueDiff = (node, writeContext) => {
       let diff = writeDiff(node, writeContext);
       if (
@@ -1406,7 +1516,6 @@ let writeDiff;
       ) {
         if (node !== context.startNode) {
           diff += `\n`;
-          remainingWidth = context.initialMaxColumns;
         }
       }
       if (isFirstNestedValue) {
@@ -1416,48 +1525,7 @@ let writeDiff;
       return diff;
     };
     const next = createGetNextNestedValue(node, context, parentContext);
-    if (valueInfo.canHaveChars) {
-      while ((entry = next())) {
-        if (context.resultType === "actual" && entry.node.diff.removed) {
-          continue;
-        }
-        if (context.resultType === "expected" && entry.node.diff.added) {
-          continue;
-        }
-        if (!entry.node.diff.counters.overall.any) {
-          entryBeforeDiffArray.push(entry);
-          continue;
-        }
-        const beforeChars = [];
-        const nestedValueInfo = entry.node[context.resultType];
-        const boilerplateWidth = "…".length;
-        // we are going to display the char with a diff, consider
-        // these columns as used
-        remainingWidth -= stringWidth(nestedValueInfo.value);
-        let index = entryBeforeDiffArray.length;
-        while (index-- && remainingWidth) {
-          const entryBeforeDiff = entryBeforeDiffArray[index];
-          const beforeCharDiff = appendNestedValueDiff(
-            entryBeforeDiff.node,
-            entryBeforeDiff.writeContext,
-          );
-          const beforeCharWidth = stringWidth(beforeCharDiff);
-          // if there remainingWidth - boilerplateWidth <= 0
-          // if beforeCharWidth + overflowWidth >= remainingWidth
-          // then we must keep room for boilerplate width
-          if (beforeCharWidth + boilerplateWidth >= remainingWidth) {
-            break;
-          }
-          remainingWidth -= beforeCharWidth;
-          beforeChars.push(beforeCharDiff);
-        }
-        const beforeDiff = beforeChars.reverse().join();
-        insideDiff += beforeDiff;
-        entryBeforeDiffArray.length = 0;
-        continue;
-      }
-    }
-
+    let entry;
     while ((entry = next())) {
       if (context.resultType === "actual" && entry.node.diff.removed) {
         continue;
