@@ -271,26 +271,32 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             "valueOf" in expectedValue &&
             typeof expectedValue.valueOf === "function";
           if (!actualValueOfIsFunction && !expectedValueOfIsFunction) {
+            // ignore valueOf if it's not available in actual nor expected
             break value_of_return_value;
           }
           if (node.actual.reference && !expectedValueOfIsFunction) {
+            // prevent infinite recursion on actual.valueOf()
             break value_of_return_value;
           }
           if (node.expected.reference && !actualValueOfIsFunction) {
+            // prevent infinite recursion on expected.valueOf()
             break value_of_return_value;
           }
+          // the 4th case of infinite recursion is handled inside the "reference" code block
+          // where we early return when both actual/expected are references
+
           const actualValueOfReturnValue = actualValueOfIsFunction
             ? actualValue.valueOf()
-            : undefined;
+            : actualValue;
           const expectedValueOfReturnValue = expectedValueOfIsFunction
             ? expectedValue.valueOf()
-            : undefined;
+            : expectedValue;
           const valueOfReturnValueNode = node.appendValueOfReturnValue({
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
           });
           visit(valueOfReturnValueNode, {
-            ignoreDiff: ignoreDiff || node.diff.category,
+            ignoreDiff,
           });
           if (valueOfReturnValueNode.diff.counters.overall.any) {
             appendCounters(
@@ -309,11 +315,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             // eslint-disable-next-line new-cap
             const splitter = new Graphemer.default();
             const actualChars = actualCanHaveChars
-              ? splitter.splitGraphemes(node.actual.value)
+              ? splitter.splitGraphemes(
+                  node.actual.isComposite
+                    ? node.actual.value.valueOf()
+                    : node.actual.value,
+                )
               : [];
             node.actual.chars = actualChars;
             const expectedChars = expectedCanHaveChars
-              ? splitter.splitGraphemes(node.expected.value)
+              ? splitter.splitGraphemes(
+                  node.expected.isComposite
+                    ? node.expected.value.valueOf()
+                    : node.expected.value,
+                )
               : [];
             node.expected.chars = expectedChars;
 
@@ -990,7 +1004,9 @@ let createComparisonTree;
       const isString = typeof value === "string";
 
       const canHaveIndexedValues = isArray;
-      const canHaveChars = isString && type !== "char";
+      // const canHaveChars = isString && type !== "char";
+      const canHaveChars =
+        (isString || subtype === "String") && type !== "char";
       const canHaveProps = composite;
 
       const valueOfInConstructor = subtype === "String";
@@ -1387,7 +1403,11 @@ let writeDiff;
       node.actual.subtype === node.expected.subtype
     ) {
       subtypeColor = sameColor;
-    } else if (node.actual.canHaveChars && node.expected.canHaveChars) {
+    } else if (
+      node.actual.isComposite === node.expected.isComposite &&
+      node.actual.canHaveChars &&
+      node.expected.canHaveChars
+    ) {
       subtypeColor = sameColor;
     } else {
       subtypeColor =
@@ -1445,19 +1465,12 @@ let writeDiff;
         prefix += ANSI.color(`)`, delimitersColor);
       }
     }
-
-    if (valueInfo.valueOfInConstructor) {
-      prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
-      prefix += ANSI.color("(", delimitersColor);
-      prefix += writeDiff(node.valueOfReturnValue, context);
-      prefix += ANSI.color(")", delimitersColor);
-    }
     return prefix;
   };
   const writeExpandedDiff = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
     const delimitersColor = getDelimitersColor(context);
-    if (valueInfo.canHaveChars) {
+    if (valueInfo.isString && valueInfo.canHaveChars) {
       const { openBracket, closeBracket } = getDelimiters(node, context);
       const bracketColor = getBracketColor(node, context);
 
@@ -1579,7 +1592,13 @@ let writeDiff;
 
     let expandedDiff = "";
     let insideDiff = "";
-    const prefix = writePrefix(node, context);
+    let prefix = writePrefix(node, context);
+    if (prefix && valueInfo.valueOfInConstructor) {
+      prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
+      prefix += ANSI.color("(", delimitersColor);
+      prefix += writeDiff(node.valueOfReturnValue, parentContext);
+      prefix += ANSI.color(")", delimitersColor);
+    }
     expandedDiff += prefix;
 
     const relativeDepth = node.depth + context.initialDepth;
@@ -1860,7 +1879,7 @@ let writeDiff;
     }
 
     let afterPrefix = "";
-    const shouldDisplayBrackets = prefix ? insideDiff : true;
+    const shouldDisplayBrackets = prefix ? insideDiff.length > 0 : true;
     if (shouldDisplayBrackets) {
       const { openBracket, closeBracket } = getDelimiters(node, context);
       const bracketColor = getBracketColor(node, context);
@@ -1974,31 +1993,16 @@ let writeDiff;
     const valueCount = valueInfo.canHaveIndexedValues
       ? valueInfo.value.length
       : 0;
-    const chars = valueInfo.canHaveChars ? valueInfo.chars : [];
     const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
-    const charCount = chars.length;
     const propertyCount = propertyNames.length;
 
-    let charIndex = 0;
+    // let charIndex = 0;
     let valueIndex = 0;
     let valueOfReturnValueDisplayed = false;
     let prototypeDisplayed = false;
     let propIndex = 0;
 
     return () => {
-      if (charIndex < charCount) {
-        const charNode = node.chars[charIndex];
-        charIndex++;
-        return {
-          node: charNode,
-          writeContext: {
-            ...context,
-            modified: node.canDiffChars
-              ? parentContext.modified
-              : context.modified,
-          },
-        };
-      }
       if (valueIndex < valueCount) {
         const indexedValueNode = node.indexedValues[valueIndex];
         valueIndex++;

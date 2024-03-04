@@ -3,8 +3,8 @@
 ```js
 assert({
   // eslint-disable-next-line no-new-wrappers
-  actual: new String("a"),
-  expected: "a",
+  actual: new String("abc"),
+  expected: "a2",
 });
 ```
 
