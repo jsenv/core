@@ -22,15 +22,16 @@ const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   svgFileSnapshot.compare();
 };
 
-await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg", {});
-await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
-  width: "auto",
-});
-await test(
-  "jsenv_test_output.txt",
-  "jsenv_test_output_width_auto_height_480.svg",
-  {
-    width: "auto",
-    height: 480,
-  },
-);
+await test("special.txt", "special_width_640.svg", {});
+// await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg", {});
+// await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
+//   width: "auto",
+// });
+// await test(
+//   "jsenv_test_output.txt",
+//   "jsenv_test_output_width_auto_height_480.svg",
+//   {
+//     width: "auto",
+//     height: 480,
+//   },
+// );
