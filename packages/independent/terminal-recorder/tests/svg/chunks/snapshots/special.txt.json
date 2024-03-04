@@ -37,10 +37,10 @@
       "decorator": "reset"
     },
     "position": {
-      "x": 2,
+      "x": 1,
       "y": 0,
-      "n": 2,
-      "raw": 7
+      "n": 1,
+      "raw": 6
     },
     "style": {}
   }
