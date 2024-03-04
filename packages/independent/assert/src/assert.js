@@ -1256,7 +1256,9 @@ let writeDiff;
           const overviewDiff = writeOverviewDiff(node, valueContext, context);
           compositeDiff += overviewDiff;
         } else {
-          const prefix = writePrefix(node, valueContext, { overview: true });
+          const prefix = writePrefix(node, valueContext, context, {
+            overview: true,
+          });
           compositeDiff += prefix;
         }
       } else {
@@ -1383,14 +1385,14 @@ let writeDiff;
     }
     return nestedValueDiff;
   };
-  const writePrefix = (node, context, { overview } = {}) => {
+  const writePrefix = (node, context, parentContext, { overview } = {}) => {
     const valueInfo = node[context.resultType];
-
     if (!overview) {
       if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
         return "";
       }
     }
+
     let prefix = "";
     let subtypeColor;
     if (context.added) {
@@ -1415,55 +1417,82 @@ let writeDiff;
     }
 
     const delimitersColor = getDelimitersColor(context);
-
     prefix += ANSI.color(valueInfo.subtype, subtypeColor);
-    if (overview) {
-      if (valueInfo.isArray) {
-        prefix += ANSI.color(`(`, delimitersColor);
-        let lengthColor = context.added
-          ? addedColor
-          : context.removed
-            ? removedColor
-            : node.actual.isArray &&
-                node.expected.isArray &&
-                node.actual.value.length === node.expected.value.length
-              ? sameColor
-              : context.resultType === "actual"
-                ? unexpectedColor
-                : expectedColor;
-        prefix += ANSI.color(valueInfo.value.length, lengthColor);
-        prefix += ANSI.color(`)`, delimitersColor);
-      } else if (valueInfo.isString) {
-        prefix += ANSI.color(`(`, delimitersColor);
-        let lengthColor = context.added
-          ? addedColor
-          : context.removed
-            ? removedColor
-            : node.actual.isString &&
-                node.expected.isString &&
-                node.actual.chars.length === node.expected.chars.length
-              ? sameColor
-              : context.resultType === "actual"
-                ? unexpectedColor
-                : expectedColor;
-        prefix += ANSI.color(valueInfo.chars.length, lengthColor);
-        prefix += ANSI.color(`)`, delimitersColor);
-      } else if (valueInfo.isComposite) {
-        prefix += ANSI.color(`(`, delimitersColor);
-        let keysColor = context.added
-          ? addedColor
-          : context.removed
-            ? removedColor
-            : node.actual.isComposite &&
-                node.expected.isComposite &&
-                node.actual.keys.length === node.expected.keys.length
-              ? sameColor
-              : context.resultType === "actual"
-                ? unexpectedColor
-                : expectedColor;
-        prefix += ANSI.color(valueInfo.keys.length, keysColor);
-        prefix += ANSI.color(`)`, delimitersColor);
+    if (valueInfo.isArray) {
+      if (!overview) {
+        return prefix;
       }
+      prefix += ANSI.color(`(`, delimitersColor);
+      let lengthColor = context.added
+        ? addedColor
+        : context.removed
+          ? removedColor
+          : node.actual.isArray &&
+              node.expected.isArray &&
+              node.actual.value.length === node.expected.value.length
+            ? sameColor
+            : context.resultType === "actual"
+              ? unexpectedColor
+              : expectedColor;
+      prefix += ANSI.color(valueInfo.value.length, lengthColor);
+      prefix += ANSI.color(`)`, delimitersColor);
+      return prefix;
+    }
+    if (valueInfo.isString) {
+      if (!overview) {
+        return prefix;
+      }
+      prefix += ANSI.color(`(`, delimitersColor);
+      let lengthColor = context.added
+        ? addedColor
+        : context.removed
+          ? removedColor
+          : node.actual.isString &&
+              node.expected.isString &&
+              node.actual.chars.length === node.expected.chars.length
+            ? sameColor
+            : context.resultType === "actual"
+              ? unexpectedColor
+              : expectedColor;
+      prefix += ANSI.color(valueInfo.chars.length, lengthColor);
+      prefix += ANSI.color(`)`, delimitersColor);
+      return prefix;
+    }
+    if (valueInfo.isComposite) {
+      if (!overview) {
+        if (
+          // value returned by valueOf() is not the composite itself
+          node.valueOfReturnValue &&
+          node.valueOfReturnValue[context.resultType].reference !== node
+        ) {
+          const prefixWithNew =
+            valueInfo.subtype === "String" ||
+            valueInfo.subtype === "Boolean" ||
+            valueInfo.subtype === "Number";
+          if (prefixWithNew) {
+            prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
+          }
+          prefix += ANSI.color("(", delimitersColor);
+          prefix += writeDiff(node.valueOfReturnValue, parentContext);
+          prefix += ANSI.color(")", delimitersColor);
+        }
+        return prefix;
+      }
+      prefix += ANSI.color(`(`, delimitersColor);
+      let keysColor = context.added
+        ? addedColor
+        : context.removed
+          ? removedColor
+          : node.actual.isComposite &&
+              node.expected.isComposite &&
+              node.actual.keys.length === node.expected.keys.length
+            ? sameColor
+            : context.resultType === "actual"
+              ? unexpectedColor
+              : expectedColor;
+      prefix += ANSI.color(valueInfo.keys.length, keysColor);
+      prefix += ANSI.color(`)`, delimitersColor);
+      return prefix;
     }
     return prefix;
   };
@@ -1592,13 +1621,7 @@ let writeDiff;
 
     let expandedDiff = "";
     let insideDiff = "";
-    let prefix = writePrefix(node, context);
-    if (prefix && valueInfo.valueOfInConstructor) {
-      prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
-      prefix += ANSI.color("(", delimitersColor);
-      prefix += writeDiff(node.valueOfReturnValue, parentContext);
-      prefix += ANSI.color(")", delimitersColor);
-    }
+    let prefix = writePrefix(node, context, parentContext);
     expandedDiff += prefix;
 
     const relativeDepth = node.depth + context.initialDepth;
@@ -1896,7 +1919,9 @@ let writeDiff;
     return expandedDiff;
   };
   const writeOverviewDiff = (node, context, parentContext) => {
-    const prefixWithOverview = writePrefix(node, context, { overview: true });
+    const prefixWithOverview = writePrefix(node, context, parentContext, {
+      overview: true,
+    });
     const delimitersColor = getDelimitersColor(context);
     const bracketColor = getBracketColor(node, context);
     const valueColor = getValueColor(context);
@@ -1970,22 +1995,25 @@ let writeDiff;
     }
 
     let overview = "";
-    const prefix = writePrefix(node, context);
-    if (prefix) {
-      overview += prefix;
-      overview += " ";
-    }
-    overview += ANSI.color(openBracket, bracketColor);
+    const prefix = writePrefix(node, context, parentContext);
+    overview += prefix;
+
+    let afterPrefix = "";
+    afterPrefix += ANSI.color(openBracket, bracketColor);
     if (insideOverview) {
       if (nestedValueSpacing) {
-        overview += " ";
+        afterPrefix += " ";
       }
-      overview += insideOverview;
+      afterPrefix += insideOverview;
       if (nestedValueSpacing) {
-        overview += " ";
+        afterPrefix += " ";
       }
     }
-    overview += ANSI.color(closeBracket, bracketColor);
+    afterPrefix += ANSI.color(closeBracket, bracketColor);
+    if (afterPrefix) {
+      overview += " ";
+      overview += afterPrefix;
+    }
     return overview;
   };
   const createGetNextNestedValue = (node, context, parentContext) => {
