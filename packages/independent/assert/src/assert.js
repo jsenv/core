@@ -259,33 +259,44 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             );
           }
         }
-        value_of: {
-          if (node.actual.isComposite && node.expected.isComposite) {
-            const actualValue = node.actual.value;
-            const expectedValue = node.expected.value;
-
-            if (
-              "valueOf" in actualValue &&
-              typeof actualValue.valueOf === "function" &&
-              "valueOf" in expectedValue &&
-              typeof expectedValue.valueOf === "function"
-            ) {
-              const actualValueOfReturnValue = actualValue.valueOf();
-              const expectedValueOfReturnValue = expectedValue.valueOf();
-              const valueOfReturnValueNode = node.appendValueOfReturnValue({
-                actualValueOfReturnValue,
-                expectedValueOfReturnValue,
-              });
-              visit(valueOfReturnValueNode, {
-                ignoreDiff: ignoreDiff || node.diff.category,
-              });
-              if (valueOfReturnValueNode.diff.counters.overall.any) {
-                appendCounters(
-                  node.diff.counters.inside,
-                  valueOfReturnValueNode.diff.counters.overall,
-                );
-              }
-            }
+        value_of_return_value: {
+          const actualValue = node.actual.value;
+          const expectedValue = node.expected.value;
+          const actualValueOfIsFunction =
+            node.actual.isComposite &&
+            "valueOf" in actualValue &&
+            typeof actualValue.valueOf === "function";
+          const expectedValueOfIsFunction =
+            node.expected.isComposite &&
+            "valueOf" in expectedValue &&
+            typeof expectedValue.valueOf === "function";
+          if (!actualValueOfIsFunction && !expectedValueOfIsFunction) {
+            break value_of_return_value;
+          }
+          if (node.actual.reference && !expectedValueOfIsFunction) {
+            break value_of_return_value;
+          }
+          if (node.expected.reference && !actualValueOfIsFunction) {
+            break value_of_return_value;
+          }
+          const actualValueOfReturnValue = actualValueOfIsFunction
+            ? actualValue.valueOf()
+            : undefined;
+          const expectedValueOfReturnValue = expectedValueOfIsFunction
+            ? expectedValue.valueOf()
+            : undefined;
+          const valueOfReturnValueNode = node.appendValueOfReturnValue({
+            actualValueOfReturnValue,
+            expectedValueOfReturnValue,
+          });
+          visit(valueOfReturnValueNode, {
+            ignoreDiff: ignoreDiff || node.diff.category,
+          });
+          if (valueOfReturnValueNode.diff.counters.overall.any) {
+            appendCounters(
+              node.diff.counters.inside,
+              valueOfReturnValueNode.diff.counters.overall,
+            );
           }
         }
         inside: {
@@ -865,7 +876,7 @@ let createComparisonTree;
           expectedValueOfReturnValue,
         }) => {
           const valueOfReturnValueNode = createComparisonNode({
-            type: "valueOfReturnValue",
+            type: "value_of_return_value",
             actualValue: actualValueOfReturnValue,
             expectedValue: expectedValueOfReturnValue,
             parent: node,
@@ -982,6 +993,8 @@ let createComparisonTree;
       const canHaveChars = isString && type !== "char";
       const canHaveProps = composite;
 
+      const valueOfInConstructor = subtype === "String";
+
       return {
         value,
         valueOf: () => {
@@ -992,6 +1005,7 @@ let createComparisonTree;
         isPrimitive: !composite,
         isArray,
         isString,
+        valueOfInConstructor,
         canHaveIndexedValues,
         canHaveChars,
         canHaveProps,
@@ -1053,21 +1067,6 @@ let writeDiff;
     return method(node, context);
   };
 
-  const writeIndexedValueDiff = (node, context) => {
-    return writeNestedValueDiff(node, context);
-  };
-  const writePrototypeDiff = (node, context) => {
-    return writeNestedValueDiff(node, context);
-  };
-  const writeValueOfReturnValueDiff = (node, context) => {
-    return writeNestedValueDiff(node, context);
-  };
-  const writePropertyDescriptorDiff = (node, context) => {
-    return writeNestedValueDiff(node, context);
-  };
-  const writeCharDiff = (node, context) => {
-    return writeNestedValueDiff(node, context);
-  };
   const writePropertyDiff = (node, context) => {
     if (context.collapsed) {
       if (
@@ -1252,6 +1251,12 @@ let writeDiff;
     return compositeDiff;
   };
   const writeNestedValueDiff = (node, context) => {
+    if (
+      node.type === "value_of_return_value" &&
+      node.parent[context.resultType].valueOfInConstructor
+    ) {
+      return writeValueDiff(node, context);
+    }
     const nestedValueContext = { ...context };
     if (node.type === "char") {
       if (node.diff.removed) {
@@ -1298,7 +1303,7 @@ let writeDiff;
       (node.type === "indexed_value" ||
         node.type === "property_descriptor" ||
         node.type === "prototype" ||
-        node.type === "valueOfReturnValue");
+        node.type === "value_of_return_value");
     if (useIndent) {
       if (nestedValueContext.signs) {
         if (nestedValueContext.removed) {
@@ -1326,7 +1331,7 @@ let writeDiff;
         ? node.property
         : node.type === "prototype"
           ? "__proto__" // "[[Prototype]]"?
-          : node.type === "valueOfReturnValue"
+          : node.type === "value_of_return_value"
             ? "valueOf()"
             : "";
     if (property && node !== nestedValueContext.startNode) {
@@ -1439,6 +1444,13 @@ let writeDiff;
         prefix += ANSI.color(valueInfo.keys.length, keysColor);
         prefix += ANSI.color(`)`, delimitersColor);
       }
+    }
+
+    if (valueInfo.valueOfInConstructor) {
+      prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
+      prefix += ANSI.color("(", delimitersColor);
+      prefix += writeDiff(node.valueOfReturnValue, context);
+      prefix += ANSI.color(")", delimitersColor);
     }
     return prefix;
   };
@@ -1568,10 +1580,8 @@ let writeDiff;
     let expandedDiff = "";
     let insideDiff = "";
     const prefix = writePrefix(node, context);
-    if (prefix) {
-      expandedDiff += prefix;
-      expandedDiff += " ";
-    }
+    expandedDiff += prefix;
+
     const relativeDepth = node.depth + context.initialDepth;
     let indent = "  ".repeat(relativeDepth);
     const entryBeforeDiffArray = [];
@@ -1585,7 +1595,7 @@ let writeDiff;
         node.type === "property_descriptor" ||
         node.type === "property" ||
         node.type === "prototype" ||
-        node.type === "valueOfReturnValue"
+        node.type === "value_of_return_value"
       ) {
         if (node !== context.startNode) {
           diff += `\n`;
@@ -1604,6 +1614,12 @@ let writeDiff;
         continue;
       }
       if (context.resultType === "expected" && entry.node.diff.added) {
+        continue;
+      }
+      if (
+        entry.node.type === "value_of_return_value" &&
+        valueInfo.valueOfInConstructor
+      ) {
         continue;
       }
       if (!entry.node.diff.counters.overall.any) {
@@ -1821,9 +1837,7 @@ let writeDiff;
       insideDiff += ANSI.color(`↓`, delimitersColor);
       insideDiff += "\n";
     }
-    const { openBracket, closeBracket } = getDelimiters(node, context);
-    const bracketColor = getBracketColor(node, context);
-    expandedDiff += ANSI.color(openBracket, bracketColor);
+
     if (insideDiff) {
       if (context.signs) {
         if (context.resultType === "actual") {
@@ -1843,9 +1857,23 @@ let writeDiff;
         insideDiff = `\n${insideDiff}`;
         insideDiff += indent;
       }
-      expandedDiff += insideDiff;
     }
-    expandedDiff += ANSI.color(closeBracket, bracketColor);
+
+    let afterPrefix = "";
+    const shouldDisplayBrackets = prefix ? insideDiff : true;
+    if (shouldDisplayBrackets) {
+      const { openBracket, closeBracket } = getDelimiters(node, context);
+      const bracketColor = getBracketColor(node, context);
+      afterPrefix += ANSI.color(openBracket, bracketColor);
+      afterPrefix += insideDiff;
+      afterPrefix += ANSI.color(closeBracket, bracketColor);
+    } else {
+      afterPrefix += insideDiff;
+    }
+    if (afterPrefix) {
+      expandedDiff += " ";
+      expandedDiff += afterPrefix;
+    }
     return expandedDiff;
   };
   const writeOverviewDiff = (node, context, parentContext) => {
@@ -1953,8 +1981,8 @@ let writeDiff;
 
     let charIndex = 0;
     let valueIndex = 0;
-    let prototypeDisplayed = false;
     let valueOfReturnValueDisplayed = false;
+    let prototypeDisplayed = false;
     let propIndex = 0;
 
     return () => {
@@ -1985,6 +2013,22 @@ let writeDiff;
         };
       }
       if (
+        !valueOfReturnValueDisplayed &&
+        valueInfo.isComposite &&
+        node.diff.valueOfReturnValue.counters.overall.any
+      ) {
+        valueOfReturnValueDisplayed = true;
+        return {
+          node: node.valueOfReturnValue,
+          writeContext: {
+            ...context,
+            modified: node.canDiffValueOfReturnValue
+              ? parentContext.modified
+              : context.modified,
+          },
+        };
+      }
+      if (
         !prototypeDisplayed &&
         valueInfo.isComposite &&
         node.diff.prototype.counters.overall.any &&
@@ -1996,22 +2040,6 @@ let writeDiff;
           writeContext: {
             ...context,
             modified: node.canDiffPrototypes
-              ? parentContext.modified
-              : context.modified,
-          },
-        };
-      }
-      if (
-        !valueOfReturnValueDisplayed &&
-        valueInfo.isComposite &&
-        node.diff.valueOfReturnValue.counters.overall.any
-      ) {
-        valueOfReturnValueDisplayed = true;
-        return {
-          node: node.valueOfReturnValue,
-          writeContext: {
-            ...context,
-            modified: node.canDiffValueOfReturnValue
               ? parentContext.modified
               : context.modified,
           },
@@ -2035,12 +2063,12 @@ let writeDiff;
   };
   const methods = {
     value: writeValueDiff,
-    char: writeCharDiff,
-    prototype: writePrototypeDiff,
-    valueOfReturnValue: writeValueOfReturnValueDiff,
-    indexed_value: writeIndexedValueDiff,
     property: writePropertyDiff,
-    property_descriptor: writePropertyDescriptorDiff,
+    char: writeNestedValueDiff,
+    prototype: writeNestedValueDiff,
+    value_of_return_value: writeNestedValueDiff,
+    indexed_value: writeNestedValueDiff,
+    property_descriptor: writeNestedValueDiff,
   };
 
   const getDelimiters = (node, context) => {
@@ -2054,12 +2082,6 @@ let writeDiff;
       };
     }
     if (valueInfo.isComposite) {
-      if (valueInfo.isString) {
-        return {
-          openBracket: "String(",
-          closeBracket: ")",
-        };
-      }
       return {
         openBracket: "{",
         closeBracket: "}",
@@ -2070,7 +2092,7 @@ let writeDiff;
     }
     if (
       valueInfo.isString &&
-      (node.type === "value" || node.type === "valueOfReturnValue")
+      (node.type === "value" || node.type === "value_of_return_value")
     ) {
       return {
         openBracket: context.quote,

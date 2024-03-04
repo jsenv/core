@@ -1,10 +1,6 @@
-# diff new String value
-AssertionError: actual and expected have 1 difference:
+# diff String object vs literal
+AssertionError: actual and expected are different:
 
-actual: String {
-  "valueOf()": "a",
-}
-expect: String {
-  "valueOf()": "b",
-}
+actual: new String("a")
+expect: "a"
 

@@ -1,13 +1,12 @@
-# diff new String value
+# diff String object vs literal
 
 ```js
 assert({
   // eslint-disable-next-line no-new-wrappers
   actual: new String("a"),
-  // eslint-disable-next-line no-new-wrappers
-  expected: new String("b"),
+  expected: "a",
 });
 ```
 
-![img](<./string/diff new String value.svg>)
+![img](<./string/diff String object vs literal.svg>)
 

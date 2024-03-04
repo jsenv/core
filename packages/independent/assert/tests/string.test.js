@@ -99,12 +99,19 @@ await startSnapshotTesting("string", {
   //     maxColumns: 15,
   //   });
   // },
-  ["diff new String value"]: () => {
+  // ["diff new String value"]: () => {
+  //   assert({
+  //     // eslint-disable-next-line no-new-wrappers
+  //     actual: new String("a"),
+  //     // eslint-disable-next-line no-new-wrappers
+  //     expected: new String("b"),
+  //   });
+  // },
+  ["diff String object vs literal"]: () => {
     assert({
       // eslint-disable-next-line no-new-wrappers
       actual: new String("a"),
-      // eslint-disable-next-line no-new-wrappers
-      expected: new String("b"),
+      expected: "a",
     });
   },
   // TODO LATER:
