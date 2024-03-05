@@ -15,6 +15,7 @@ const unexpectedSignColor = ANSI.GREY;
 const removedSignColor = ANSI.GREY;
 const addedSignColor = ANSI.GREY;
 const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empty_value') ?
+const VALUE_OF_RETURN_VALUE_IN_CONSTRUCTOR = true; // otherwise would be displayed as property
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -1009,8 +1010,6 @@ let createComparisonTree;
         (isString || subtype === "String") && type !== "char";
       const canHaveProps = composite;
 
-      const valueOfInConstructor = subtype === "String";
-
       return {
         value,
         valueOf: () => {
@@ -1021,7 +1020,6 @@ let createComparisonTree;
         isPrimitive: !composite,
         isArray,
         isString,
-        valueOfInConstructor,
         canHaveIndexedValues,
         canHaveChars,
         canHaveProps,
@@ -1271,7 +1269,7 @@ let writeDiff;
   const writeNestedValueDiff = (node, context) => {
     if (
       node.type === "value_of_return_value" &&
-      node.parent[context.resultType].valueOfInConstructor
+      VALUE_OF_RETURN_VALUE_IN_CONSTRUCTOR
     ) {
       return writeValueDiff(node, context);
     }
@@ -1658,12 +1656,6 @@ let writeDiff;
       if (context.resultType === "expected" && entry.node.diff.added) {
         continue;
       }
-      if (
-        entry.node.type === "value_of_return_value" &&
-        valueInfo.valueOfInConstructor
-      ) {
-        continue;
-      }
       if (!entry.node.diff.counters.overall.any) {
         entryBeforeDiffArray.push(entry);
         continue;
@@ -2045,8 +2037,11 @@ let writeDiff;
         };
       }
       if (
+        !VALUE_OF_RETURN_VALUE_IN_CONSTRUCTOR &&
         !valueOfReturnValueDisplayed &&
         valueInfo.isComposite &&
+        node.valueOfReturnValue &&
+        node.valueOfReturnValue[context.resultType].reference !== node &&
         node.diff.valueOfReturnValue.counters.overall.any
       ) {
         valueOfReturnValueDisplayed = true;
