@@ -122,3 +122,13 @@ expect: {
   bar: { a: new String("toto") },
 }
 
+# new String prop
+AssertionError: actual and expected have 2 differences:
+
+actual: new String("toto") {
+  foo: "a",
+}
+expect: new String("tata") {
+  foo: "b",
+}
+

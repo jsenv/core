@@ -171,9 +171,7 @@ assert({
 
 ```js
 assert({
-  // eslint-disable-next-line no-new-wrappers
   actual: new String("a"),
-  // eslint-disable-next-line no-new-wrappers
   expected: new String("b"),
 });
 ```
@@ -184,7 +182,6 @@ assert({
 
 ```js
 assert({
-  // eslint-disable-next-line no-new-wrappers
   actual: new String("abc"),
   expected: "a2",
 });
@@ -197,12 +194,10 @@ assert({
 ```js
 assert({
   actual: {
-    // eslint-disable-next-line no-new-wrappers
     a: new String("toto"),
     b: true,
   },
   expected: {
-    // eslint-disable-next-line no-new-wrappers
     a: new String("toto"),
     b: false,
   },
@@ -217,13 +212,11 @@ assert({
 assert({
   actual: {
     foo: {
-      // eslint-disable-next-line no-new-wrappers
       a: new String("toto"),
     },
   },
   expected: {
     bar: {
-      // eslint-disable-next-line no-new-wrappers
       a: new String("toto"),
     },
   },
@@ -232,4 +225,15 @@ assert({
 ```
 
 ![img](<./string/new String collapsed.svg>)
+
+# new String prop
+
+```js
+assert({
+  actual: Object.assign(new String("toto"), { foo: "a" }),
+  expected: Object.assign(new String("tata"), { foo: "b" }),
+});
+```
+
+![img](<./string/new String prop.svg>)
 

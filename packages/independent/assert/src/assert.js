@@ -2167,7 +2167,9 @@ let writeDiff;
     }
     if (
       valueInfo.isString &&
-      (node.type === "value" || node.type === "value_of_return_value")
+      (node.type === "value" ||
+        node.type === "value_of_return_value" ||
+        node.type === "property_descriptor")
     ) {
       return {
         openBracket: context.quote,

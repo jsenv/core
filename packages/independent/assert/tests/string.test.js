@@ -99,52 +99,61 @@ await startSnapshotTesting("string", {
       maxColumns: 15,
     });
   },
+  /* eslint-disable no-new-wrappers */
   ["diff new String value"]: () => {
     assert({
-      // eslint-disable-next-line no-new-wrappers
       actual: new String("a"),
-      // eslint-disable-next-line no-new-wrappers
       expected: new String("b"),
     });
   },
+  /* eslint-enable no-new-wrappers */
+  /* eslint-disable no-new-wrappers */
   ["diff String object vs literal"]: () => {
     assert({
-      // eslint-disable-next-line no-new-wrappers
       actual: new String("abc"),
       expected: "a2",
     });
   },
+  /* eslint-enable no-new-wrappers */
+  /* eslint-disable no-new-wrappers */
   ["new String collapsed with overview"]: () => {
     assert({
       actual: {
-        // eslint-disable-next-line no-new-wrappers
         a: new String("toto"),
         b: true,
       },
       expected: {
-        // eslint-disable-next-line no-new-wrappers
         a: new String("toto"),
         b: false,
       },
     });
   },
+  /* eslint-enable no-new-wrappers */
+  /* eslint-disable no-new-wrappers */
   ["new String collapsed"]: () => {
     assert({
       actual: {
         foo: {
-          // eslint-disable-next-line no-new-wrappers
           a: new String("toto"),
         },
       },
       expected: {
         bar: {
-          // eslint-disable-next-line no-new-wrappers
           a: new String("toto"),
         },
       },
       maxDepthInsideDiff: 0,
     });
   },
+  /* eslint-enable no-new-wrappers */
+  /* eslint-disable no-new-wrappers */
+  ["new String prop"]: () => {
+    assert({
+      actual: Object.assign(new String("toto"), { foo: "a" }),
+      expected: Object.assign(new String("tata"), { foo: "b" }),
+    });
+  },
+  /* eslint-enable no-new-wrappers */
   // TODO LATER:
   // - comparing single line / multiline
   // - compare multiline
