@@ -836,7 +836,7 @@ let createComparisonTree;
       parent,
     }) => {
       const node = {
-        id: nodeId,
+        id: nodeId++,
         type,
         parent,
         actual: createValueInfo(actualValue, {
@@ -882,7 +882,6 @@ let createComparisonTree;
           indexedValues: [],
         },
       };
-      nodeId++;
       const expectedReference = node.expected.isComposite
         ? compositeReferenceMap.get(expectedValue)
         : undefined;
@@ -894,7 +893,6 @@ let createComparisonTree;
       if (node.expected.isComposite) {
         if (expectedReference) {
           expectedReference.expected.referenceFromOthersSet.add(node);
-          node.expected.referenceId = expectedReference.id;
         } else {
           compositeReferenceMap.set(expectedValue, node);
         }
@@ -902,7 +900,6 @@ let createComparisonTree;
       if (node.actual.isComposite) {
         if (actualReference) {
           actualReference.actual.referenceFromOthersSet.add(node);
-          node.actual.referenceId = actualReference.id;
         } else {
           compositeReferenceMap.set(actualValue, node);
         }
@@ -1080,7 +1077,6 @@ let createComparisonTree;
         wellKnownId,
         inConstructor,
         reference: null,
-        referenceId: null,
         referenceFromOthersSet: new Set(),
 
         keys: null,
@@ -1287,11 +1283,24 @@ let writeDiff;
       }
     }
 
+    let idCount = 0;
+    const displayedIdMap = new Map();
+    const getDisplayedId = (nodeId) => {
+      const existingId = displayedIdMap.get(nodeId);
+      if (existingId) {
+        return existingId;
+      }
+      const idDisplayed = idCount + 1;
+      displayedIdMap.set(nodeId, idDisplayed);
+      idCount++;
+      return idDisplayed;
+    };
+
     // composite
     let compositeDiff = "";
     if (valueInfo.reference) {
       compositeDiff += ANSI.color(
-        `<ref #${valueInfo.referenceId}>`,
+        `<ref #${getDisplayedId(valueInfo.reference.id)}>`,
         delimitersColor,
       );
       return compositeDiff;
@@ -1309,9 +1318,12 @@ let writeDiff;
       break;
     }
     if (referenceFromOtherDisplayed) {
-      // except if the ref is the valueOf
-      compositeDiff += ANSI.color(`<ref #${context.refId}>`, delimitersColor);
-      context.refId = context.refId + 1;
+      compositeDiff += ANSI.color(
+        `<ref #${getDisplayedId(
+          referenceFromOtherDisplayed[context.resultType].reference.id,
+        )}>`,
+        delimitersColor,
+      );
       compositeDiff += " ";
     }
 
