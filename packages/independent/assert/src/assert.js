@@ -1242,7 +1242,21 @@ let writeDiff;
         delimitersColor,
       );
     }
-    if (valueInfo.referenceFromOthersSet.size) {
+
+    let referenceFromOtherDisplayed;
+    for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
+      if (
+        referenceFromOther.type === "value_of_return_value" &&
+        referenceFromOther.diff.counters.overall.any === 0 &&
+        referenceFromOther[context.resultType].reference === node
+      ) {
+        continue;
+      }
+      referenceFromOtherDisplayed = referenceFromOther;
+      break;
+    }
+    if (referenceFromOtherDisplayed) {
+      // except if the ref is the valueOf
       compositeDiff += ANSI.color(`<ref #${context.refId}>`, delimitersColor);
       context.refId = context.refId + 1;
       compositeDiff += " ";
@@ -1991,17 +2005,22 @@ let writeDiff;
     overview += prefix;
 
     let afterPrefix = "";
-    afterPrefix += ANSI.color(openBracket, bracketColor);
-    if (insideOverview) {
-      if (nestedValueSpacing) {
-        afterPrefix += " ";
+    const shouldDisplayBrackets = prefix ? insideOverview.length > 0 : true;
+    if (shouldDisplayBrackets) {
+      afterPrefix += ANSI.color(openBracket, bracketColor);
+      if (insideOverview) {
+        if (nestedValueSpacing) {
+          afterPrefix += " ";
+        }
+        afterPrefix += insideOverview;
+        if (nestedValueSpacing) {
+          afterPrefix += " ";
+        }
       }
-      afterPrefix += insideOverview;
-      if (nestedValueSpacing) {
-        afterPrefix += " ";
-      }
+      afterPrefix += ANSI.color(closeBracket, bracketColor);
+    } else {
+      afterPrefix = insideOverview;
     }
-    afterPrefix += ANSI.color(closeBracket, bracketColor);
     if (afterPrefix) {
       overview += " ";
       overview += afterPrefix;
