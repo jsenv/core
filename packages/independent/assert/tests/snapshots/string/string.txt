@@ -100,3 +100,25 @@ AssertionError: actual and expected have 2 differences:
 actual: new String("abc")
 expect: "a2"
 
+# new String collapsed with overview
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: new String("toto"),
+  b: true,
+}
+expect: {
+  a: new String("toto"),
+  b: false,
+}
+
+# new String collapsed
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  foo: { a: new String("toto") },
+}
+expect: {
+  bar: { a: new String("toto") },
+}
+

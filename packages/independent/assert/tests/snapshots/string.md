@@ -192,3 +192,44 @@ assert({
 
 ![img](<./string/diff String object vs literal.svg>)
 
+# new String collapsed with overview
+
+```js
+assert({
+  actual: {
+    // eslint-disable-next-line no-new-wrappers
+    a: new String("toto"),
+    b: true,
+  },
+  expected: {
+    // eslint-disable-next-line no-new-wrappers
+    a: new String("toto"),
+    b: false,
+  },
+});
+```
+
+![img](<./string/new String collapsed with overview.svg>)
+
+# new String collapsed
+
+```js
+assert({
+  actual: {
+    foo: {
+      // eslint-disable-next-line no-new-wrappers
+      a: new String("toto"),
+    },
+  },
+  expected: {
+    bar: {
+      // eslint-disable-next-line no-new-wrappers
+      a: new String("toto"),
+    },
+  },
+  maxDepthInsideDiff: 0,
+});
+```
+
+![img](<./string/new String collapsed.svg>)
+

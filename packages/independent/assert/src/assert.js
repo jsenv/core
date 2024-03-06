@@ -3,6 +3,8 @@ import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
+// ANSI.supported = false;
+
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;
 const unexpectedSign = UNICODE.FAILURE_RAW;
@@ -1268,10 +1270,8 @@ let writeDiff;
           const overviewDiff = writeOverviewDiff(node, valueContext, context);
           compositeDiff += overviewDiff;
         } else {
-          const prefix = writePrefix(node, valueContext, context, {
-            overview: true,
-          });
-          compositeDiff += prefix;
+          const collapsedDiff = writeCollapsedDiff(node, valueContext, context);
+          compositeDiff += collapsedDiff;
         }
       } else {
         const expandedDiff = writeExpandedDiff(node, valueContext, context);
@@ -1406,30 +1406,45 @@ let writeDiff;
     }
 
     let prefix = "";
-    let subtypeColor;
-    if (context.added) {
-      subtypeColor = addedColor;
-    } else if (context.removed) {
-      subtypeColor = removedColor;
-    } else if (
-      node.actual.isComposite &&
-      node.expected.isComposite &&
-      node.actual.subtype === node.expected.subtype
-    ) {
-      subtypeColor = sameColor;
-    } else if (
-      node.actual.isComposite === node.expected.isComposite &&
-      node.actual.canHaveChars &&
-      node.expected.canHaveChars
-    ) {
-      subtypeColor = sameColor;
-    } else {
-      subtypeColor =
-        context.resultType === "actual" ? unexpectedColor : expectedColor;
+
+    let displaySubtype = true;
+    if (node.type === "value_of_return_value") {
+      const parentSubtype = node.parent[context.resultType].subtype;
+      if (
+        parentSubtype === "String" ||
+        parentSubtype === "Number" ||
+        parentSubtype === "Boolean"
+      ) {
+        displaySubtype = false;
+      }
     }
 
     const delimitersColor = getDelimitersColor(context);
-    prefix += ANSI.color(valueInfo.subtype, subtypeColor);
+
+    if (displaySubtype) {
+      let subtypeColor;
+      if (context.added) {
+        subtypeColor = addedColor;
+      } else if (context.removed) {
+        subtypeColor = removedColor;
+      } else if (
+        node.actual.isComposite &&
+        node.expected.isComposite &&
+        node.actual.subtype === node.expected.subtype
+      ) {
+        subtypeColor = sameColor;
+      } else if (
+        node.actual.isComposite === node.expected.isComposite &&
+        node.actual.canHaveChars &&
+        node.expected.canHaveChars
+      ) {
+        subtypeColor = sameColor;
+      } else {
+        subtypeColor =
+          context.resultType === "actual" ? unexpectedColor : expectedColor;
+      }
+      prefix += ANSI.color(valueInfo.subtype, subtypeColor);
+    }
     if (valueInfo.isArray) {
       if (!overview) {
         return prefix;
@@ -1471,39 +1486,48 @@ let writeDiff;
       return prefix;
     }
     if (valueInfo.isComposite) {
-      if (!overview) {
-        if (
-          // value returned by valueOf() is not the composite itself
-          node.valueOfReturnValue &&
-          node.valueOfReturnValue[context.resultType].reference !== node
-        ) {
-          const prefixWithNew =
-            valueInfo.subtype === "String" ||
-            valueInfo.subtype === "Boolean" ||
-            valueInfo.subtype === "Number";
-          if (prefixWithNew) {
-            prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
-          }
-          prefix += ANSI.color("(", delimitersColor);
-          prefix += writeDiff(node.valueOfReturnValue, parentContext);
-          prefix += ANSI.color(")", delimitersColor);
-        }
-        return prefix;
+      let insideConstructor = "";
+      const displayValueOfInsideConstructor =
+        // value returned by valueOf() is not the composite itself
+        node.valueOfReturnValue &&
+        node.valueOfReturnValue[context.resultType].reference !== node;
+      const prefixWithNew =
+        valueInfo.subtype === "String" ||
+        valueInfo.subtype === "Boolean" ||
+        valueInfo.subtype === "Number";
+      if (prefixWithNew) {
+        prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
       }
-      prefix += ANSI.color(`(`, delimitersColor);
-      let keysColor = context.added
-        ? addedColor
-        : context.removed
-          ? removedColor
-          : node.actual.isComposite &&
-              node.expected.isComposite &&
-              node.actual.keys.length === node.expected.keys.length
-            ? sameColor
-            : context.resultType === "actual"
-              ? unexpectedColor
-              : expectedColor;
-      prefix += ANSI.color(valueInfo.keys.length, keysColor);
-      prefix += ANSI.color(`)`, delimitersColor);
+
+      if (displayValueOfInsideConstructor) {
+        insideConstructor = writeDiff(node.valueOfReturnValue, parentContext);
+        // if (overview) {
+        //   insideConstructor = writeDiff(node.valueOfReturnValue, parentContext);
+        // } else {
+        //   insideConstructor = writeValueDiff(node.valueOfReturnValue, context);
+        // }
+      } else if (overview) {
+        let keysColor;
+        if (context.added) {
+          keysColor = addedColor;
+        } else if (context.removed) {
+          keysColor = removedColor;
+        } else if (
+          node.actual.isComposite &&
+          node.expected.isComposite &&
+          node.actual.keys.length === node.expected.keys.length
+        ) {
+          keysColor = sameColor;
+        } else if (context.resultType === "actual") {
+          keysColor = unexpectedColor;
+        } else {
+          keysColor = expectedColor;
+        }
+        insideConstructor = ANSI.color(valueInfo.keys.length, keysColor);
+      }
+      prefix += ANSI.color("(", delimitersColor);
+      prefix += insideConstructor;
+      prefix += ANSI.color(")", delimitersColor);
       return prefix;
     }
     return prefix;
@@ -1918,10 +1942,10 @@ let writeDiff;
     } else {
       afterPrefix += insideDiff;
     }
-    if (afterPrefix) {
+    if (prefix && afterPrefix) {
       expandedDiff += " ";
-      expandedDiff += afterPrefix;
     }
+    expandedDiff += afterPrefix;
     return expandedDiff;
   };
   const writeOverviewDiff = (node, context, parentContext) => {
@@ -2021,11 +2045,16 @@ let writeDiff;
     } else {
       afterPrefix = insideOverview;
     }
-    if (afterPrefix) {
+    if (prefix && afterPrefix) {
       overview += " ";
-      overview += afterPrefix;
     }
+    overview += afterPrefix;
     return overview;
+  };
+  const writeCollapsedDiff = (node, context, parentContext) => {
+    return writePrefix(node, context, parentContext, {
+      overview: true,
+    });
   };
   const createGetNextNestedValue = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
