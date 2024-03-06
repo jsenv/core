@@ -307,7 +307,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (node.diff.category) {
             valueOfReturnValueNode.actual.redundant = true;
             valueOfReturnValueNode.expected.redundant = true;
-          } else if (node.diff.prototype) {
+          } else if (node.diff.prototype.counters.overall.any) {
             valueOfReturnValueNode.actual.redundant = true;
             valueOfReturnValueNode.expected.redundant = true;
           }

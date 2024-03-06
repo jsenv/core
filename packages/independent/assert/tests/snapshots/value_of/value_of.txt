@@ -29,7 +29,7 @@ AssertionError: actual and expected have 2 differences:
 
 ℹ to improve readability 1 diff is completely hidden
 
-actual: {
+actual: <ref #1> {
   "valueOf()": <ref #1>,
 }
 expect: {
