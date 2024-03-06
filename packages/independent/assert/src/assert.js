@@ -79,15 +79,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       displayed: 0,
     };
     const causeSet = new Set();
-    const addNodeCausingDiff = (node) => {
+    const shouldIgnoreDiff = (node) => {
       if (node.type === "char") {
-        return;
+        return true;
       }
       if (node.type === "value_of_return_value") {
         if (node.actual.redundant && node.expected.redundant) {
           // diff expected, one is primitive, other is composite for example
-          return;
+          return true;
         }
+      }
+      return false;
+    };
+    const addNodeCausingDiff = (node) => {
+      if (shouldIgnoreDiff(node)) {
+        return;
+      }
+      if (node.parent && shouldIgnoreDiff(node.parent)) {
+        return;
       }
       causeCounters.total++;
       causeSet.add(node);
@@ -304,16 +313,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
           });
-          if (node.diff.category) {
-            valueOfReturnValueNode.actual.redundant = true;
-            valueOfReturnValueNode.expected.redundant = true;
-          } else if (node.diff.prototype.counters.overall.any) {
-            valueOfReturnValueNode.actual.redundant = true;
-            valueOfReturnValueNode.expected.redundant = true;
-          }
-
+          const ignoreValueOfDiff =
+            ignoreDiff ||
+            node.diff.category ||
+            node.diff.prototype.counters.overall.any;
           visit(valueOfReturnValueNode, {
-            ignoreDiff,
+            ignoreDiff: ignoreValueOfDiff,
           });
 
           if (valueOfReturnValueNode.diff.counters.overall.any) {
@@ -321,6 +326,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               node.diff.counters.inside,
               valueOfReturnValueNode.diff.counters.overall,
             );
+          } else if (ignoreValueOfDiff) {
+            valueOfReturnValueNode.actual.redundant = true;
+            valueOfReturnValueNode.expected.redundant = true;
           } else {
             if (actualValueOfReturnValue === node.actual.value) {
               valueOfReturnValueNode.actual.redundant = true;
