@@ -17,7 +17,6 @@ const unexpectedSignColor = ANSI.GREY;
 const removedSignColor = ANSI.GREY;
 const addedSignColor = ANSI.GREY;
 const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empty_value') ?
-const VALUE_OF_RETURN_VALUE_IN_CONSTRUCTOR = true; // otherwise would be displayed as property
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -170,14 +169,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             node.diff.reference = true;
             onSelfDiff();
           }
-          // if both actual and expected have a reference
-          // then there is no need to go further
-          // they are both known
-          // (prevent infinite recursion on valueOf for example)
-          if (node.actual.reference && node.expected.reference) {
-            settleCounters(node);
-            return;
-          }
         }
         category: {
           if (ignoreDiff) {
@@ -279,14 +270,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           if (node.actual.reference && !expectedValueOfIsFunction) {
             // prevent infinite recursion on actual.valueOf()
+            // while expected.valueOf() stops existing
             break value_of_return_value;
           }
           if (node.expected.reference && !actualValueOfIsFunction) {
             // prevent infinite recursion on expected.valueOf()
+            // while actual.valueOf() stops existing
             break value_of_return_value;
           }
-          // the 4th case of infinite recursion is handled inside the "reference" code block
-          // where we early return when both actual/expected are references
+          if (node.actual.reference && node.expected.reference) {
+            // prevent infinite recursion when both actual.valueOf()
+            // and expected.valueOf() exists and use references
+            break value_of_return_value;
+          }
 
           const actualValueOfReturnValue = actualValueOfIsFunction
             ? actualValue.valueOf()
@@ -567,6 +563,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   return true;
                 }
               }
+              if (node.valueOfReturnValue && property === "valueOf") {
+                return true;
+              }
               return false;
             };
 
@@ -628,7 +627,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let startNode = rootComparison;
     const [firstNodeCausingDiff] = causeSet;
     if (
-      firstNodeCausingDiff.depth >= maxDepthDefault &&
+      firstNodeCausingDiff.expected.depth >= maxDepthDefault &&
       !rootComparison.diff.category
     ) {
       const nodesFromRootToTarget = [firstNodeCausingDiff];
@@ -643,13 +642,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break;
         }
       }
-      let startNodeDepth = firstNodeCausingDiff.depth - maxDepthDefault;
+      let startNodeDepth =
+        firstNodeCausingDiff.expected.depth - maxDepthDefault;
       let valuePath = createValuePath();
       for (const node of nodesFromRootToTarget) {
         if (
           startNode === rootComparison &&
           node.type === "property_descriptor" &&
-          node.depth > startNodeDepth
+          node.expected.depth > startNodeDepth
         ) {
           node.path = String(valuePath);
           startNode = node;
@@ -704,7 +704,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       refId: 1,
       startNode,
       signs,
-      initialDepth: -startNode.depth,
+      initialDepth: -startNode.expected.depth,
       initialMaxColumns: maxColumnsDefault,
       maxColumns: maxColumnsDefault - `${firstValueMeta.name}: `.length,
       maxDiffPerObject,
@@ -728,7 +728,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       refId: 1,
       startNode,
       signs,
-      initialDepth: -startNode.depth,
+      initialDepth: -startNode.expected.depth,
       initialMaxColumns: maxColumnsDefault,
       maxColumns: maxColumnsDefault - `${secondValueMeta.name}: `.length,
       maxDiffPerObject,
@@ -792,26 +792,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 let createComparisonTree;
 {
   createComparisonTree = (actualValue, expectedValue) => {
-    let expectedRefId = 1;
-    let actualRefId = 1;
     const compositeReferenceMap = new Map();
+    let nodeId = 1;
 
     const createComparisonNode = ({
       type,
       actualValue,
       expectedValue,
       parent,
-      depth,
     }) => {
       const node = {
+        id: nodeId,
         type,
         parent,
-        depth,
         actual: createValueInfo(actualValue, {
+          parent,
           type,
           name: "actual",
         }),
         expected: createValueInfo(expectedValue, {
+          parent,
           type,
           name: "expected",
         }),
@@ -848,6 +848,7 @@ let createComparisonTree;
           indexedValues: [],
         },
       };
+      nodeId++;
       const expectedReference = node.expected.isComposite
         ? compositeReferenceMap.get(expectedValue)
         : undefined;
@@ -859,8 +860,7 @@ let createComparisonTree;
       if (node.expected.isComposite) {
         if (expectedReference) {
           expectedReference.expected.referenceFromOthersSet.add(node);
-          node.expected.referenceId = expectedRefId;
-          expectedRefId++;
+          node.expected.referenceId = expectedReference.id;
         } else {
           compositeReferenceMap.set(expectedValue, node);
         }
@@ -868,8 +868,7 @@ let createComparisonTree;
       if (node.actual.isComposite) {
         if (actualReference) {
           actualReference.actual.referenceFromOthersSet.add(node);
-          node.actual.referenceId = actualRefId;
-          actualRefId++;
+          node.actual.referenceId = actualReference.id;
         } else {
           compositeReferenceMap.set(actualValue, node);
         }
@@ -882,7 +881,6 @@ let createComparisonTree;
             actualValue: actualPrototype,
             expectedValue: expectedPrototype,
             parent: node,
-            depth: depth + 1,
           });
           node.prototype = prototypeNode;
           node.diff.prototype = prototypeNode.diff;
@@ -897,7 +895,6 @@ let createComparisonTree;
             actualValue: actualValueOfReturnValue,
             expectedValue: expectedValueOfReturnValue,
             parent: node,
-            depth: depth + 1,
           });
           node.valueOfReturnValue = valueOfReturnValueNode;
           node.diff.valueOfReturnValue = valueOfReturnValueNode.diff;
@@ -912,7 +909,6 @@ let createComparisonTree;
             actualValue: actualPropertyDescriptor,
             expectedValue: expectedPropertyDescriptor,
             parent: node,
-            depth: depth + 1,
           });
           propertyNode.property = property;
           node.properties[property] = propertyNode;
@@ -946,7 +942,6 @@ let createComparisonTree;
               actualValue,
               expectedValue,
               parent: propertyNode,
-              depth: depth + 1,
             });
             propertyDescriptorNode.property = property;
             propertyDescriptorNode.descriptor = name;
@@ -966,7 +961,6 @@ let createComparisonTree;
             actualValue,
             expectedValue,
             parent: node,
-            depth: depth + 1,
           });
           indexedValueNode.index = index;
           node.indexedValues[index] = indexedValueNode;
@@ -981,7 +975,6 @@ let createComparisonTree;
             actualValue: actualChar,
             expectedValue: expectedChar,
             parent: node,
-            depth: depth + 1,
           });
           const charIndex = node.chars.length;
           charNode.index = charIndex;
@@ -992,7 +985,7 @@ let createComparisonTree;
       return node;
     };
 
-    const createValueInfo = (value, { name, type }) => {
+    const createValueInfo = (value, { name, type, parent }) => {
       const composite =
         value === ARRAY_EMPTY_VALUE ? false : isComposite(value);
       const wellKnownId =
@@ -1012,7 +1005,26 @@ let createComparisonTree;
         (isString || subtype === "String") && type !== "char";
       const canHaveProps = composite;
 
+      let inConstructor;
+      if (type === "value_of_return_value") {
+        // we display in constructor if parent subtype is not Object nor Array
+        // (if there is a constructor displayed)
+        const parentSubtype = parent ? parent[name].subtype : null;
+        if (parentSubtype === "Object" || parentSubtype === "Array") {
+          inConstructor = false;
+        } else {
+          inConstructor = true;
+        }
+      }
+
+      let depth = parent
+        ? inConstructor
+          ? parent[name].depth
+          : parent[name].depth + 1
+        : 0;
+
       return {
+        depth,
         value,
         valueOf: () => {
           throw new Error(`use ${name}.value`);
@@ -1026,6 +1038,7 @@ let createComparisonTree;
         canHaveChars,
         canHaveProps,
         wellKnownId,
+        inConstructor,
         reference: null,
         referenceId: null,
         referenceFromOthersSet: new Set(),
@@ -1039,17 +1052,15 @@ let createComparisonTree;
       type: "value",
       actualValue,
       expectedValue,
-      depth: 0,
     });
 
     return { root };
   };
   const getSubtype = (obj) => {
-    if (!Object.hasOwn(obj, Symbol.toStringTag)) {
-      const tag = obj[Symbol.toStringTag];
-      if (typeof tag === "string") {
-        return tag;
-      }
+    // https://github.com/nodejs/node/blob/384fd1787634c13b3e5d2f225076d2175dc3b96b/lib/internal/util/inspect.js#L859
+    const tag = obj[Symbol.toStringTag];
+    if (typeof tag === "string") {
+      return tag;
     }
 
     while (obj || isUndetectableObject(obj)) {
@@ -1130,7 +1141,8 @@ let writeDiff;
     if (!context.modified && node.diff.counters.self.any > 0) {
       valueContext.modified = true;
     }
-    const relativeDepth = node.depth + context.initialDepth;
+    const valueInfo = node[valueContext.resultType];
+    const relativeDepth = valueInfo.depth + context.initialDepth;
     valueContext.insideOverview = valueContext.collapsed !== true;
     if (!valueContext.collapsed) {
       valueContext.collapsed =
@@ -1138,7 +1150,6 @@ let writeDiff;
         node.diff.counters.overall.any === 0;
     }
 
-    const valueInfo = node[valueContext.resultType];
     const valueColor = getValueColor(valueContext);
     const delimitersColor = getDelimitersColor(valueContext);
     const bracketColor = getBracketColor(node, valueContext);
@@ -1243,6 +1254,7 @@ let writeDiff;
         `<ref #${valueInfo.referenceId}>`,
         delimitersColor,
       );
+      return compositeDiff;
     }
 
     let referenceFromOtherDisplayed;
@@ -1283,7 +1295,7 @@ let writeDiff;
   const writeNestedValueDiff = (node, context) => {
     if (
       node.type === "value_of_return_value" &&
-      VALUE_OF_RETURN_VALUE_IN_CONSTRUCTOR
+      node[context.resultType].inConstructor
     ) {
       return writeValueDiff(node, context);
     }
@@ -1322,7 +1334,8 @@ let writeDiff;
     }
 
     let nestedValueDiff = "";
-    const relativeDepth = node.depth + nestedValueContext.initialDepth;
+    const valueInfo = node[context.resultType];
+    const relativeDepth = valueInfo.depth + nestedValueContext.initialDepth;
     let indent = `  `.repeat(relativeDepth);
     const keyColor = getKeyColor(nestedValueContext);
     const delimitersColor = getDelimitersColor(nestedValueContext);
@@ -1385,7 +1398,7 @@ let writeDiff;
         separator.length;
       if (nestedValueContext.modified) {
         nestedValueContext.maxDepth = Math.min(
-          node.depth + nestedValueContext.maxDepthInsideDiff,
+          valueInfo.depth + nestedValueContext.maxDepthInsideDiff,
           nestedValueContext.maxDepth,
         );
       }
@@ -1399,16 +1412,18 @@ let writeDiff;
   };
   const writePrefix = (node, context, parentContext, { overview } = {}) => {
     const valueInfo = node[context.resultType];
-    if (!overview) {
-      if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
-        return "";
-      }
-    }
-
     let prefix = "";
 
+    const displayValueOfInsideConstructor =
+      valueInfo.isComposite &&
+      // value returned by valueOf() is not the composite itself
+      node.valueOfReturnValue &&
+      node.valueOfReturnValue[context.resultType].inConstructor &&
+      node.valueOfReturnValue[context.resultType].reference !== node;
     let displaySubtype = true;
-    if (node.type === "value_of_return_value") {
+    if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
+      displaySubtype = false;
+    } else if (node.type === "value_of_return_value") {
       const parentSubtype = node.parent[context.resultType].subtype;
       if (
         parentSubtype === "String" ||
@@ -1487,10 +1502,6 @@ let writeDiff;
     }
     if (valueInfo.isComposite) {
       let insideConstructor = "";
-      const displayValueOfInsideConstructor =
-        // value returned by valueOf() is not the composite itself
-        node.valueOfReturnValue &&
-        node.valueOfReturnValue[context.resultType].reference !== node;
       const prefixWithNew =
         valueInfo.subtype === "String" ||
         valueInfo.subtype === "Boolean" ||
@@ -1525,9 +1536,11 @@ let writeDiff;
         }
         insideConstructor = ANSI.color(valueInfo.keys.length, keysColor);
       }
-      prefix += ANSI.color("(", delimitersColor);
-      prefix += insideConstructor;
-      prefix += ANSI.color(")", delimitersColor);
+      if (insideConstructor) {
+        prefix += ANSI.color("(", delimitersColor);
+        prefix += insideConstructor;
+        prefix += ANSI.color(")", delimitersColor);
+      }
       return prefix;
     }
     return prefix;
@@ -1660,7 +1673,7 @@ let writeDiff;
     let prefix = writePrefix(node, context, parentContext);
     expandedDiff += prefix;
 
-    const relativeDepth = node.depth + context.initialDepth;
+    const relativeDepth = valueInfo.depth + context.initialDepth;
     let indent = "  ".repeat(relativeDepth);
     const entryBeforeDiffArray = [];
     let skippedArray = [];
@@ -2085,12 +2098,11 @@ let writeDiff;
         };
       }
       if (
-        !VALUE_OF_RETURN_VALUE_IN_CONSTRUCTOR &&
         !valueOfReturnValueDisplayed &&
-        valueInfo.isComposite &&
         node.valueOfReturnValue &&
-        node.valueOfReturnValue[context.resultType].reference !== node &&
-        node.diff.valueOfReturnValue.counters.overall.any
+        !node.valueOfReturnValue[context.resultType].inConstructor &&
+        (node.valueOfReturnValue[context.resultType].reference !== node ||
+          node.diff.valueOfReturnValue.counters.overall.any)
       ) {
         valueOfReturnValueDisplayed = true;
         return {
@@ -2169,7 +2181,8 @@ let writeDiff;
       valueInfo.isString &&
       (node.type === "value" ||
         node.type === "value_of_return_value" ||
-        node.type === "property_descriptor")
+        node.type === "property_descriptor" ||
+        node.type === "indexed_value")
     ) {
       return {
         openBracket: context.quote,
