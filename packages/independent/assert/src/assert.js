@@ -82,6 +82,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (node.type === "char") {
         return;
       }
+      if (node.type === "value_of_return_value") {
+        if (node.parent.diff.category) {
+          // diff expected, one is primitive, other is composite
+          return;
+        }
+      }
       causeCounters.total++;
       causeSet.add(node);
     };
@@ -254,6 +260,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         value_of_return_value: {
+          if (!node.actual.isComposite && !node.expected.isComposite) {
+            break value_of_return_value;
+          }
           const actualValue = node.actual.value;
           const expectedValue = node.expected.value;
           const actualValueOfIsFunction =
@@ -1017,11 +1026,18 @@ let createComparisonTree;
         }
       }
 
-      let depth = parent
-        ? inConstructor
-          ? parent[name].depth
-          : parent[name].depth + 1
-        : 0;
+      let depth;
+      if (parent) {
+        if (type === "property") {
+          depth = parent[name].depth;
+        } else if (type === "value_of_return_value" && inConstructor) {
+          depth = parent[name].depth;
+        } else {
+          depth = parent[name].depth + 1;
+        }
+      } else {
+        depth = 0;
+      }
 
       return {
         depth,
@@ -1261,7 +1277,8 @@ let writeDiff;
     for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
       if (
         referenceFromOther.type === "value_of_return_value" &&
-        referenceFromOther.diff.counters.overall.any === 0 &&
+        (referenceFromOther.diff.counters.overall.any === 0 ||
+          referenceFromOther.diff.category) &&
         referenceFromOther[context.resultType].reference === node
       ) {
         continue;
@@ -1421,7 +1438,12 @@ let writeDiff;
       node.valueOfReturnValue[context.resultType].inConstructor &&
       node.valueOfReturnValue[context.resultType].reference !== node;
     let displaySubtype = true;
-    if (valueInfo.subtype === "Object" || valueInfo.subtype === "Array") {
+    if (overview) {
+      displaySubtype = true;
+    } else if (
+      valueInfo.subtype === "Object" ||
+      valueInfo.subtype === "Array"
+    ) {
       displaySubtype = false;
     } else if (node.type === "value_of_return_value") {
       const parentSubtype = node.parent[context.resultType].subtype;
@@ -2101,6 +2123,7 @@ let writeDiff;
         !valueOfReturnValueDisplayed &&
         node.valueOfReturnValue &&
         !node.valueOfReturnValue[context.resultType].inConstructor &&
+        !node.diff.category &&
         (node.valueOfReturnValue[context.resultType].reference !== node ||
           node.diff.valueOfReturnValue.counters.overall.any)
       ) {
