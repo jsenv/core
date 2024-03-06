@@ -18,10 +18,10 @@ expect: Signal([
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-    a: true,
+  a: true,
 }
 expect: {
-    a: false,
+  a: false,
 }
 
 # valueOf returns something diff
@@ -29,7 +29,7 @@ AssertionError: actual and expected have 2 differences:
 
 ℹ to improve readability 1 diff is completely hidden
 
-actual: <ref #1> {
+actual: {
   "valueOf()": <ref #1>,
 }
 expect: {

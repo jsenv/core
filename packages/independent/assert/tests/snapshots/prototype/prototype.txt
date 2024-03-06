@@ -1,10 +1,14 @@
 # object null proto vs object
-AssertionError: actual and expected have 1 difference:
+AssertionError: actual and expected have 3 differences:
 
-actual: {
+ℹ to improve readability 2 diffs are completely hidden
+
+actual: <ref #1> {
+  "valueOf()": <ref #1>,
   __proto__: null,
 }
-expected: {
+expect: <ref #1> {
+  "valueOf()": <ref #1>,
   __proto__: Object.prototype,
 }
 
@@ -12,12 +16,12 @@ expected: {
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  __proto__: {
+  __proto__: <ref #1> {
     toto: true,
   },
 }
-expected: {
-  __proto__: {
+expect: {
+  __proto__: <ref #1> {
     toto: false,
   },
 }
@@ -28,7 +32,7 @@ AssertionError: actual and expected have 2 differences:
 actual: User {
   name: "dam",
 }
-expected: {
+expect: {
   name: "bob",
 }
 
@@ -38,7 +42,7 @@ AssertionError: actual and expected have 2 differences:
 actual: User {
   name: "dam",
 }
-expected: {
+expect: {
   name: "bob",
 }
 

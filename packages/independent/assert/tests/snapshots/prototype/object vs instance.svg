@@ -59,9 +59,9 @@
         <text x="110.82" y="71.55" fill="#7f7f7f">&#x22;</text>
         <text x="119.22" y="71.55" fill="#7f7f7f">,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
-        <text x="10" y="109.55" fill="#7f7f7f">expected</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">:</text>
-        <text x="94.01" y="109.55" fill="#7f7f7f">{</text>
+        <text x="10" y="109.55" fill="#7f7f7f">expect</text>
+        <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="128.55" fill="#7f7f7f">name</text>
         <text x="60.41" y="128.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="128.55" fill="#7f7f7f">&#x22;</text>

@@ -4,7 +4,7 @@ AssertionError: actual and expected have 1 difference:
 actual: [
   true,
 ]
-expected: [
+expect: [
   false,
 ]
 
@@ -14,7 +14,7 @@ AssertionError: actual and expected have 1 difference:
 actual: [
   empty,
 ]
-expected: [
+expect: [
   undefined,
 ]
 
@@ -24,13 +24,13 @@ AssertionError: actual and expected have 1 difference:
 actual: [
   empty,
 ]
-expected: []
+expect: []
 
 # empty removed
 AssertionError: actual and expected have 1 difference:
 
 actual: []
-expected: [
+expect: [
   empty,
 ]
 
