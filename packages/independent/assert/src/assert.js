@@ -17,6 +17,7 @@ const unexpectedSignColor = ANSI.GREY;
 const removedSignColor = ANSI.GREY;
 const addedSignColor = ANSI.GREY;
 const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empty_value') ?
+const VALUE_OF_NOT_FOUND = { value_of_not_found: true };
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -83,8 +84,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return;
       }
       if (node.type === "value_of_return_value") {
-        if (node.parent.diff.category) {
-          // diff expected, one is primitive, other is composite
+        if (node.actual.redundant && node.expected.redundant) {
+          // diff expected, one is primitive, other is composite for example
           return;
         }
       }
@@ -295,22 +296,38 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           const actualValueOfReturnValue = actualValueOfIsFunction
             ? actualValue.valueOf()
-            : actualValue;
+            : VALUE_OF_NOT_FOUND;
           const expectedValueOfReturnValue = expectedValueOfIsFunction
             ? expectedValue.valueOf()
-            : expectedValue;
+            : VALUE_OF_NOT_FOUND;
           const valueOfReturnValueNode = node.appendValueOfReturnValue({
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
           });
+          if (node.diff.category) {
+            valueOfReturnValueNode.actual.redundant = true;
+            valueOfReturnValueNode.expected.redundant = true;
+          } else if (node.diff.prototype) {
+            valueOfReturnValueNode.actual.redundant = true;
+            valueOfReturnValueNode.expected.redundant = true;
+          }
+
           visit(valueOfReturnValueNode, {
             ignoreDiff,
           });
+
           if (valueOfReturnValueNode.diff.counters.overall.any) {
             appendCounters(
               node.diff.counters.inside,
               valueOfReturnValueNode.diff.counters.overall,
             );
+          } else {
+            if (actualValueOfReturnValue === node.actual.value) {
+              valueOfReturnValueNode.actual.redundant = true;
+            }
+            if (expectedValueOfReturnValue === node.expected.value) {
+              valueOfReturnValueNode.expected.redundant = true;
+            }
           }
         }
         inside: {
@@ -1016,12 +1033,11 @@ let createComparisonTree;
 
       let inConstructor;
       if (type === "value_of_return_value") {
+        const parentValueInfo = parent[name];
         // we display in constructor if parent subtype is not Object nor Array
         // (if there is a constructor displayed)
-        const parentSubtype = parent ? parent[name].subtype : null;
-        if (parentSubtype === "Object" || parentSubtype === "Array") {
-          inConstructor = false;
-        } else {
+        const parentSubtype = parentValueInfo.subtype;
+        if (parentSubtype !== "Object" && parentSubtype !== "Array") {
           inConstructor = true;
         }
       }
@@ -1277,9 +1293,7 @@ let writeDiff;
     for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
       if (
         referenceFromOther.type === "value_of_return_value" &&
-        (referenceFromOther.diff.counters.overall.any === 0 ||
-          referenceFromOther.diff.category) &&
-        referenceFromOther[context.resultType].reference === node
+        referenceFromOther[context.resultType].redundant
       ) {
         continue;
       }
@@ -1436,7 +1450,7 @@ let writeDiff;
       // value returned by valueOf() is not the composite itself
       node.valueOfReturnValue &&
       node.valueOfReturnValue[context.resultType].inConstructor &&
-      node.valueOfReturnValue[context.resultType].reference !== node;
+      !node.valueOfReturnValue[context.resultType].redundant;
     let displaySubtype = true;
     if (overview) {
       displaySubtype = true;
@@ -2123,9 +2137,7 @@ let writeDiff;
         !valueOfReturnValueDisplayed &&
         node.valueOfReturnValue &&
         !node.valueOfReturnValue[context.resultType].inConstructor &&
-        !node.diff.category &&
-        (node.valueOfReturnValue[context.resultType].reference !== node ||
-          node.diff.valueOfReturnValue.counters.overall.any)
+        !node.valueOfReturnValue[context.resultType].redundant
       ) {
         valueOfReturnValueDisplayed = true;
         return {

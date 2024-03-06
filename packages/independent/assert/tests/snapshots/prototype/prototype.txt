@@ -1,14 +1,12 @@
 # object null proto vs object
-AssertionError: actual and expected have 3 differences:
+AssertionError: actual and expected have 6 differences:
 
-ℹ to improve readability 2 diffs are completely hidden
+ℹ to improve readability 5 diffs are completely hidden
 
-actual: <ref #1> {
-  "valueOf()": <ref #1>,
+actual: {
   __proto__: null,
 }
-expect: <ref #1> {
-  "valueOf()": <ref #1>,
+expect: {
   __proto__: Object.prototype,
 }
 
