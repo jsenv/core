@@ -290,9 +290,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         value_of_return_value: {
-          // if (ignoreDiff) {
-          //   break value_of_return_value;
-          // }
           const visitActualValueOfReturnValue =
             node.actual.isComposite &&
             // !node.actual.wellKnownId &&
@@ -379,9 +376,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         inside: {
           chars: {
-            // if (ignoreDiff) {
-            //   break chars;
-            // }
+            if (ignoreDiff) {
+              break chars;
+            }
             const visitActualChars = node.actual.canHaveChars;
             // !node.actual.wellKnownId &&
             // !node.actual.reference;
@@ -465,9 +462,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           indexed_values: {
-            // if (ignoreDiff) {
-            //   break indexed_values;
-            // }
+            if (ignoreDiff) {
+              break indexed_values;
+            }
             const visitActualIndexedValues =
               node.actual.canHaveIndexedValues &&
               !node.actual.wellKnownId &&
