@@ -340,11 +340,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
           });
-          const ignoreValueOfDiff =
-            ignoreDiff ||
-            node.diff.category ||
-            (node.diff.prototype &&
-              node.diff.prototype.counters.overall.any > 0);
+          let ignoreValueOfDiff = ignoreDiff;
+          if (
+            node.diff.category &&
+            // String/string comparison is ok
+            node.actual.subtype.toLowerCase() !==
+              node.expected.subtype.toLowerCase()
+          ) {
+            ignoreValueOfDiff = true;
+          } else if (
+            node.diff.prototype &&
+            node.diff.prototype.counters.overall.any > 0
+          ) {
+            ignoreValueOfDiff = true;
+          }
           visit(valueOfReturnValueNode, {
             ignoreDiff: ignoreValueOfDiff,
           });

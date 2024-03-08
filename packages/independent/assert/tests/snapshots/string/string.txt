@@ -95,7 +95,7 @@ actual: new String("a")
 expect: new String("b")
 
 # diff String object vs literal
-AssertionError: actual and expected are different:
+AssertionError: actual and expected have 2 differences:
 
 actual: new String("abc")
 expect: "a2"
