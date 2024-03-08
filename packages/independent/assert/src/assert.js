@@ -17,7 +17,7 @@ const unexpectedSignColor = ANSI.GREY;
 const removedSignColor = ANSI.GREY;
 const addedSignColor = ANSI.GREY;
 const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empty_value') ?
-const VALUE_OF_NOT_FOUND = { value_of_not_found: true };
+// const VALUE_OF_NOT_FOUND = { value_of_not_found: true };
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -111,7 +111,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         // in that case we want to consider all child nodes as displayed
         // (they are "displayed" in the summary)
         for (const descriptor of Object.keys(node.descriptors)) {
-          onNodeDisplayed(node.descriptors[descriptor]);
+          const descriptorNode = node.descriptors[descriptor];
+          if (descriptorNode) {
+            onNodeDisplayed(descriptorNode);
+          }
         }
       }
     };
@@ -134,22 +137,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
 
     const visit = (node, { ignoreDiff } = {}) => {
-      if (node.type === "property") {
-        const visitPropertyDescriptor = (descriptorName) => {
-          const actualDescriptor = node.actual.value;
-          const actualDescriptorValue = actualDescriptor
-            ? actualDescriptor[descriptorName]
-            : undefined;
-          const expectedDescriptor = node.expected.value;
-          const expectedDescriptorValue = expectedDescriptor
-            ? expectedDescriptor[descriptorName]
-            : undefined;
-          const descriptorNode = node.appendPropertyDescriptor(descriptorName, {
-            actualValue: actualDescriptorValue,
-            expectedValue: expectedDescriptorValue,
-          });
-          visit(descriptorNode, { ignoreDiff });
-          if (!ignoreDiff) {
+      const doVisit = () => {
+        if (node.type === "property") {
+          const visitPropertyDescriptor = (descriptorName) => {
+            const actualDescriptor = node.actual.value;
+            const actualDescriptorValue = actualDescriptor
+              ? actualDescriptor[descriptorName]
+              : undefined;
+            const expectedDescriptor = node.expected.value;
+            const expectedDescriptorValue = expectedDescriptor
+              ? expectedDescriptor[descriptorName]
+              : undefined;
+            const descriptorNode = node.appendPropertyDescriptor(
+              descriptorName,
+              {
+                actualValue: actualDescriptorValue,
+                expectedValue: expectedDescriptorValue,
+              },
+            );
+            visit(descriptorNode, { ignoreDiff });
+            if (ignoreDiff) {
+              return;
+            }
             node.diff[descriptorNode.descriptor] = descriptorNode.diff;
             appendCounters(
               node.diff.counters.self,
@@ -163,20 +172,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               node.diff.counters.overall,
               descriptorNode.diff.counters.overall,
             );
-          }
-        };
-        visitPropertyDescriptor("value");
-        visitPropertyDescriptor("enumerable");
-        visitPropertyDescriptor("writable");
-        visitPropertyDescriptor("configurable");
-        visitPropertyDescriptor("set");
-        visitPropertyDescriptor("get");
-      } else {
+          };
+          visitPropertyDescriptor("value");
+          visitPropertyDescriptor("enumerable");
+          visitPropertyDescriptor("writable");
+          visitPropertyDescriptor("configurable");
+          visitPropertyDescriptor("set");
+          visitPropertyDescriptor("get");
+          return;
+        }
+
         const onSelfDiff = () => {
           addNodeCausingDiff(node);
           node.diff.counters.self.modified++;
         };
-
         reference: {
           if (ignoreDiff) {
             break reference;
@@ -190,6 +199,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (ignoreDiff) {
             break category;
           }
+          // if (node.actual.wellKnownId !== node.expected.wellKnownId) {
+          //   node.diff.category = true;
+          //   onSelfDiff();
+          //   break category;
+          // }
           const actualIsPrimitive = node.actual.isPrimitive;
           const expectedIsPrimitive = node.expected.isPrimitive;
           if (actualIsPrimitive !== expectedIsPrimitive) {
@@ -230,14 +244,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         prototype: {
-          if (!node.actual.isComposite && !node.expected.isComposite) {
+          // if (ignoreDiff) {
+          //   break prototype;
+          // }
+          const visitActualPrototype = node.actual.isComposite;
+          // !node.actual.wellKnownId &&
+          // !node.actual.reference;
+          const visitExpectedPrototype = node.expected.isComposite;
+          // !node.expected.wellKnownId &&
+          // !node.expected.reference;
+          if (!visitActualPrototype && !visitExpectedPrototype) {
             break prototype;
           }
-
-          const actualCanHavePrototype = node.actual.isComposite;
-          const expectedCanHavePrototype = node.expected.isComposite;
           const canDiffPrototypes =
-            actualCanHavePrototype && expectedCanHavePrototype;
+            visitActualPrototype && visitExpectedPrototype;
           const prototypeAreDifferentAndWellKnown =
             (node.actual.isArray && !node.expected.isArray) ||
             (!node.actual.isArray && node.expected.isArray);
@@ -245,10 +265,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           node.prototypeAreDifferentAndWellKnown =
             prototypeAreDifferentAndWellKnown;
 
-          const actualPrototype = node.actual.isComposite
+          const actualPrototype = visitActualPrototype
             ? Object.getPrototypeOf(node.actual.value)
             : null;
-          const expectedPrototype = node.expected.isComposite
+          const expectedPrototype = visitExpectedPrototype
             ? Object.getPrototypeOf(node.expected.value)
             : null;
           const prototypeNode = node.appendPrototype({
@@ -270,29 +290,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         value_of_return_value: {
-          if (!node.actual.isComposite && !node.expected.isComposite) {
-            break value_of_return_value;
-          }
-          const actualValue = node.actual.value;
-          const expectedValue = node.expected.value;
-          const actualValueOfIsFunction =
+          // if (ignoreDiff) {
+          //   break value_of_return_value;
+          // }
+          const visitActualValueOfReturnValue =
             node.actual.isComposite &&
-            "valueOf" in actualValue &&
-            typeof actualValue.valueOf === "function";
-          const expectedValueOfIsFunction =
+            // !node.actual.wellKnownId &&
+            // !node.actual.reference &&
+            "valueOf" in node.actual.value &&
+            typeof node.actual.value.valueOf === "function";
+          const visitExpectedValueOfReturnValue =
             node.expected.isComposite &&
-            "valueOf" in expectedValue &&
-            typeof expectedValue.valueOf === "function";
-          if (!actualValueOfIsFunction && !expectedValueOfIsFunction) {
-            // ignore valueOf if it's not available in actual nor expected
+            // !node.expected.wellKnownId &&
+            // !node.expected.reference &&
+            "valueOf" in node.expected.value &&
+            typeof node.expected.value.valueOf === "function";
+          const canDiffValueOfReturnValue =
+            visitActualValueOfReturnValue && visitExpectedValueOfReturnValue;
+          node.canDiffValueOfReturnValue = canDiffValueOfReturnValue;
+          if (
+            !visitActualValueOfReturnValue &&
+            !visitExpectedValueOfReturnValue
+          ) {
             break value_of_return_value;
           }
-          if (node.actual.reference && !expectedValueOfIsFunction) {
+          if (node.actual.reference && !visitExpectedValueOfReturnValue) {
             // prevent infinite recursion on actual.valueOf()
             // while expected.valueOf() stops existing
             break value_of_return_value;
           }
-          if (node.expected.reference && !actualValueOfIsFunction) {
+          if (node.expected.reference && !visitActualValueOfReturnValue) {
             // prevent infinite recursion on expected.valueOf()
             // while actual.valueOf() stops existing
             break value_of_return_value;
@@ -303,12 +330,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             break value_of_return_value;
           }
 
-          const actualValueOfReturnValue = actualValueOfIsFunction
-            ? actualValue.valueOf()
-            : VALUE_OF_NOT_FOUND;
-          const expectedValueOfReturnValue = expectedValueOfIsFunction
-            ? expectedValue.valueOf()
-            : VALUE_OF_NOT_FOUND;
+          const actualValueOfReturnValue = visitActualValueOfReturnValue
+            ? node.actual.value.valueOf()
+            : node.actual.value;
+          const expectedValueOfReturnValue = visitExpectedValueOfReturnValue
+            ? node.expected.value.valueOf()
+            : node.expected.value;
           const valueOfReturnValueNode = node.appendValueOfReturnValue({
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
@@ -316,7 +343,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           const ignoreValueOfDiff =
             ignoreDiff ||
             node.diff.category ||
-            node.diff.prototype.counters.overall.any;
+            (node.diff.prototype &&
+              node.diff.prototype.counters.overall.any > 0);
           visit(valueOfReturnValueNode, {
             ignoreDiff: ignoreValueOfDiff,
           });
@@ -326,10 +354,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               node.diff.counters.inside,
               valueOfReturnValueNode.diff.counters.overall,
             );
-          } else if (ignoreValueOfDiff) {
-            valueOfReturnValueNode.actual.redundant = true;
-            valueOfReturnValueNode.expected.redundant = true;
-          } else {
+          }
+          // else if (ignoreValueOfDiff) {
+          //   valueOfReturnValueNode.actual.redundant = true;
+          //   valueOfReturnValueNode.actualValueOfReturnValue.redundant = true;
+          // }
+          else {
             if (actualValueOfReturnValue === node.actual.value) {
               valueOfReturnValueNode.actual.redundant = true;
             }
@@ -340,14 +370,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         inside: {
           chars: {
-            const actualCanHaveChars = node.actual.canHaveChars;
-            const expectedCanHaveChars = node.expected.canHaveChars;
-            const canDiffChars = actualCanHaveChars && expectedCanHaveChars;
+            // if (ignoreDiff) {
+            //   break chars;
+            // }
+            const visitActualChars = node.actual.canHaveChars;
+            // !node.actual.wellKnownId &&
+            // !node.actual.reference;
+            const visitExpectedChars = node.expected.canHaveChars;
+            // !node.expected.wellKnownId &&
+            // !node.expected.reference;
+            const canDiffChars = visitActualChars && visitExpectedChars;
             node.canDiffChars = canDiffChars;
 
             // eslint-disable-next-line new-cap
             const splitter = new Graphemer.default();
-            const actualChars = actualCanHaveChars
+            const actualChars = visitActualChars
               ? splitter.splitGraphemes(
                   node.actual.isComposite
                     ? node.actual.value.valueOf()
@@ -355,7 +392,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 )
               : [];
             node.actual.chars = actualChars;
-            const expectedChars = expectedCanHaveChars
+            const expectedChars = visitExpectedChars
               ? splitter.splitGraphemes(
                   node.expected.isComposite
                     ? node.expected.value.valueOf()
@@ -365,10 +402,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             node.expected.chars = expectedChars;
 
             const visitChar = (index) => {
-              const actualHasOwn = actualCanHaveChars
+              const actualHasOwn = visitActualChars
                 ? Object.hasOwn(actualChars, index)
                 : false;
-              const expectedHasOwn = expectedCanHaveChars
+              const expectedHasOwn = visitExpectedChars
                 ? Object.hasOwn(expectedChars, index)
                 : false;
               const actualChar = actualHasOwn ? actualChars[index] : undefined;
@@ -380,14 +417,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 expectedChar,
               });
 
-              if (expectedHasOwn && !actualHasOwn && actualCanHaveChars) {
+              if (expectedHasOwn && !actualHasOwn && visitActualChars) {
                 charNode.diff.removed = true;
                 if (canDiffChars && !ignoreDiff) {
                   charNode.diff.counters.self.removed++;
                   addNodeCausingDiff(charNode);
                 }
               }
-              if (!expectedHasOwn && actualHasOwn && expectedCanHaveChars) {
+              if (!expectedHasOwn && actualHasOwn && visitExpectedChars) {
                 charNode.diff.added = true;
                 if (canDiffChars && !ignoreDiff) {
                   charNode.diff.counters.self.added++;
@@ -419,28 +456,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           indexed_values: {
-            const actualCanHaveIndexedValues = node.actual.canHaveIndexedValues;
-            const expectedCanHaveIndexedValues =
-              node.expected.canHaveIndexedValues;
+            // if (ignoreDiff) {
+            //   break indexed_values;
+            // }
+            const visitActualIndexedValues =
+              node.actual.canHaveIndexedValues &&
+              !node.actual.wellKnownId &&
+              !node.actual.reference;
+            const visitExpectedIndexedValues =
+              node.expected.canHaveIndexedValues &&
+              !node.expected.wellKnownId &&
+              !node.expected.reference;
             const canDiffIndexedValues =
-              actualCanHaveIndexedValues && expectedCanHaveIndexedValues;
+              visitActualIndexedValues && visitExpectedIndexedValues;
             node.canDiffIndexedValues = canDiffIndexedValues;
 
             const visitIndexedValue = (index) => {
-              const actualHasOwn = actualCanHaveIndexedValues
+              const actualHasOwn = visitActualIndexedValues
                 ? Object.hasOwn(node.actual.value, index)
                 : false;
-              const expectedHasOwn = expectedCanHaveIndexedValues
+              const expectedHasOwn = visitExpectedIndexedValues
                 ? Object.hasOwn(node.expected.value, index)
                 : false;
               const actualValue = actualHasOwn
                 ? node.actual.value[index]
-                : actualCanHaveIndexedValues && index < node.actual.value.length
+                : visitActualIndexedValues && index < node.actual.value.length
                   ? ARRAY_EMPTY_VALUE
                   : undefined;
               const expectedValue = expectedHasOwn
                 ? node.expected.value[index]
-                : expectedCanHaveIndexedValues &&
+                : visitExpectedIndexedValues &&
                     index < node.expected.value.length
                   ? ARRAY_EMPTY_VALUE
                   : undefined;
@@ -453,7 +498,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 (expectedHasOwn || expectedValue === ARRAY_EMPTY_VALUE) &&
                 !actualHasOwn &&
                 actualValue !== ARRAY_EMPTY_VALUE &&
-                actualCanHaveIndexedValues
+                visitActualIndexedValues
               ) {
                 indexedValueNode.diff.removed = true;
                 if (canDiffIndexedValues && !ignoreDiff) {
@@ -465,7 +510,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 !expectedHasOwn &&
                 expectedValue !== ARRAY_EMPTY_VALUE &&
                 (actualHasOwn || actualValue === ARRAY_EMPTY_VALUE) &&
-                expectedCanHaveIndexedValues
+                visitExpectedIndexedValues
               ) {
                 indexedValueNode.diff.added = true;
                 if (canDiffIndexedValues && !ignoreDiff) {
@@ -485,22 +530,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 indexedValueNode.diff.counters.overall,
               );
             };
-            if (
-              expectedCanHaveIndexedValues &&
-              !node.expected.reference &&
-              !node.expected.wellKnownId
-            ) {
+            if (visitExpectedIndexedValues) {
               let index = 0;
               while (index < node.expected.value.length) {
                 visitIndexedValue(index);
                 index++;
               }
             }
-            if (
-              actualCanHaveIndexedValues &&
-              !node.actual.reference &&
-              !node.actual.wellKnownId
-            ) {
+            if (visitActualIndexedValues) {
               let index = node.expected.value.length;
               while (index < node.actual.value.length) {
                 visitIndexedValue(index);
@@ -509,18 +546,33 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           properties: {
-            const actualCanHaveProps = node.actual.canHaveProps;
-            const expectedCanHaveProps = node.expected.canHaveProps;
-            const canDiffProps = actualCanHaveProps && expectedCanHaveProps;
+            // if (ignoreDiff) {
+            //   break properties;
+            // }
+            const visitActualProps =
+              node.actual.canHaveProps &&
+              // node.after.value is a reference: was already traversed
+              // - prevent infinite recursion for circular structure
+              // - prevent traversing a structure already known
+              !node.actual.wellKnownId &&
+              !node.actual.reference;
+            const visitExpectedProps =
+              node.expected.canHaveProps &&
+              // node.after.value is a reference: was already traversed
+              // - prevent infinite recursion for circular structure
+              // - prevent traversing a structure already known
+              !node.expected.wellKnownId &&
+              !node.expected.reference;
+            const canDiffProps = visitActualProps && visitExpectedProps;
             node.canDiffProps = canDiffProps;
 
             // here we want to traverse before and after but if they are not composite
             // we'll consider everything as removed or added, depending the scenario
             const visitProperty = (property) => {
-              const actualPropertyDescriptor = actualCanHaveProps
+              const actualPropertyDescriptor = visitActualProps
                 ? Object.getOwnPropertyDescriptor(node.actual.value, property)
                 : undefined;
-              const expectedPropertyDescriptor = expectedCanHaveProps
+              const expectedPropertyDescriptor = visitExpectedProps
                 ? Object.getOwnPropertyDescriptor(node.expected.value, property)
                 : undefined;
               const propertyNode = node.appendProperty(property, {
@@ -531,7 +583,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               if (
                 !actualPropertyDescriptor &&
                 expectedPropertyDescriptor &&
-                actualCanHaveProps
+                visitActualProps
               ) {
                 propertyNode.diff.removed = true;
                 if (canDiffProps && !ignoreDiff) {
@@ -542,7 +594,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               if (
                 actualPropertyDescriptor &&
                 !expectedPropertyDescriptor &&
-                expectedCanHaveProps
+                visitExpectedProps
               ) {
                 propertyNode.diff.added = true;
                 if (canDiffProps && !ignoreDiff) {
@@ -603,15 +655,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               return false;
             };
 
-            if (
-              expectedCanHaveProps &&
-              // node.after.value is a reference: was already traversed
-              // - prevent infinite recursion for circular structure
-              // - prevent traversing a structure already known
-              !node.expected.reference &&
-              !node.expected.wellKnownId
-            ) {
-              const expectedKeys = [];
+            const expectedKeys = [];
+            if (visitExpectedProps) {
               const expectedPropertyNames = Object.getOwnPropertyNames(
                 node.expected.value,
               );
@@ -622,17 +667,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 expectedKeys.push(expectedPropertyName);
                 visitProperty(expectedPropertyName);
               }
-              node.expected.keys = expectedKeys;
             }
-            if (
-              actualCanHaveProps &&
-              // node.after.value is a reference: was already traversed
-              // - prevent infinite recursion for circular structure
-              // - prevent traversing a structure already known
-              !node.actual.reference &&
-              !node.actual.wellKnownId
-            ) {
-              const actualKeys = [];
+            node.expected.keys = expectedKeys;
+
+            const actualKeys = [];
+            if (visitActualProps) {
               const actualPropertyNames = Object.getOwnPropertyNames(
                 node.actual.value,
               );
@@ -645,12 +684,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   visitProperty(actualPropertyName);
                 }
               }
-              node.actual.keys = actualKeys;
             }
+            node.actual.keys = actualKeys;
           }
         }
-      }
+      };
 
+      doVisit();
       settleCounters(node);
     };
     visit(rootComparison);
@@ -1150,7 +1190,9 @@ let writeDiff;
     const descriptorNames = Object.keys(node.descriptors);
     for (const descriptorName of descriptorNames) {
       const descriptorNode = node.descriptors[descriptorName];
-      propertyDiff += writeDiff(descriptorNode, context);
+      if (descriptorNode) {
+        propertyDiff += writeDiff(descriptorNode, context);
+      }
     }
     return propertyDiff;
   };
@@ -1291,40 +1333,43 @@ let writeDiff;
         return existingId;
       }
       const idDisplayed = idCount + 1;
-      displayedIdMap.set(nodeId, idDisplayed);
       idCount++;
+      displayedIdMap.set(nodeId, idDisplayed);
       return idDisplayed;
     };
 
     // composite
     let compositeDiff = "";
-    if (valueInfo.reference) {
-      compositeDiff += ANSI.color(
-        `<ref #${getDisplayedId(valueInfo.reference.id)}>`,
-        delimitersColor,
-      );
-      return compositeDiff;
-    }
-
-    let referenceFromOtherDisplayed;
-    for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
-      if (
-        referenceFromOther.type === "value_of_return_value" &&
-        referenceFromOther[context.resultType].redundant
-      ) {
-        continue;
+    reference: {
+      // referencing an other composite
+      if (valueInfo.reference) {
+        compositeDiff += ANSI.color(
+          `<ref #${getDisplayedId(valueInfo.reference.id)}>`,
+          delimitersColor,
+        );
+        return compositeDiff;
       }
-      referenceFromOtherDisplayed = referenceFromOther;
-      break;
-    }
-    if (referenceFromOtherDisplayed) {
-      compositeDiff += ANSI.color(
-        `<ref #${getDisplayedId(
-          referenceFromOtherDisplayed[context.resultType].reference.id,
-        )}>`,
-        delimitersColor,
-      );
-      compositeDiff += " ";
+      // will be referenced by a composite
+      let referenceFromOtherDisplayed;
+      for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
+        if (
+          referenceFromOther.type === "value_of_return_value" &&
+          referenceFromOther[context.resultType].redundant
+        ) {
+          continue;
+        }
+        referenceFromOtherDisplayed = referenceFromOther;
+        break;
+      }
+      if (referenceFromOtherDisplayed) {
+        compositeDiff += ANSI.color(
+          `<ref #${getDisplayedId(
+            referenceFromOtherDisplayed[context.resultType].reference.id,
+          )}>`,
+          delimitersColor,
+        );
+        compositeDiff += " ";
+      }
     }
 
     inside: {
