@@ -245,9 +245,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         prototype: {
-          // if (ignoreDiff) {
-          //   break prototype;
-          // }
+          if (ignoreDiff) {
+            break prototype;
+          }
           const visitActualPrototype = node.actual.isComposite;
           // !node.actual.wellKnownId &&
           // !node.actual.reference;
@@ -2247,7 +2247,8 @@ let writeDiff;
       if (
         !prototypeDisplayed &&
         valueInfo.isComposite &&
-        node.diff.prototype.counters.overall.any &&
+        node.diff.prototype &&
+        node.diff.prototype.counters.overall.any > 0 &&
         !node.prototypeAreDifferentAndWellKnown
       ) {
         prototypeDisplayed = true;

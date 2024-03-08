@@ -12,12 +12,12 @@ expect: {
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  __proto__: <ref #1> {
+  __proto__: {
     toto: true,
   },
 }
 expect: {
-  __proto__: <ref #1> {
+  __proto__: {
     toto: false,
   },
 }
