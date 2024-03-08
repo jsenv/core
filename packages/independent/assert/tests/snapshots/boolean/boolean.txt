@@ -2,23 +2,23 @@
 AssertionError: actual and expected are different:
 
 actual: true
-expected: false
+expect: false
 
 # false should be true
 AssertionError: actual and expected are different:
 
 actual: false
-expected: true
+expect: true
 
 # true should be 1
 AssertionError: actual and expected are different:
 
 actual: true
-expected: 1
+expect: 1
 
 # false should be 0
 AssertionError: actual and expected are different:
 
 actual: false
-expected: 0
+expect: 0
 

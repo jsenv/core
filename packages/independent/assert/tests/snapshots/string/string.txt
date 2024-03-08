@@ -97,7 +97,7 @@ expect: new String("b")
 # diff String object vs literal
 AssertionError: actual and expected are different:
 
-actual: new String("abc")
+actual: new String
 expect: "a2"
 
 # new String collapsed with overview
@@ -116,10 +116,10 @@ expect: {
 AssertionError: actual and expected have 2 differences:
 
 actual: {
-  foo: { a: new String("toto") },
+  foo: { a: new String(0) },
 }
 expect: {
-  bar: { a: new String("toto") },
+  bar: { a: new String(0) },
 }
 
 # new String prop
