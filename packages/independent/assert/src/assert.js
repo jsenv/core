@@ -137,7 +137,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       counter.modified += otherCounter.modified;
     };
 
-    const visit = (node, { ignoreDiff } = {}) => {
+    const visit = (
+      node,
+      {
+        // ignoreDiff is meant to ignore the diff between actual/expected
+        // (usually because comparison cannot be made (added,removed, visiting something different))
+        // but the structure still have to be visited (properties, values, valueOf, ...)
+        ignoreDiff,
+      } = {},
+    ) => {
       const doVisit = () => {
         if (node.type === "property") {
           const visitPropertyDescriptor = (descriptorName) => {
@@ -244,16 +252,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             break category;
           }
         }
+        // node.after.value is a reference: was already traversed
+        // - prevent infinite recursion for circular structure
+        // - prevent traversing a structure already known
+        const actualStructureIsKnown = Boolean(
+          node.actual.wellKnownId || node.actual.reference,
+        );
+        // node.after.value is a reference: was already traversed
+        // - prevent infinite recursion for circular structure
+        // - prevent traversing a structure already known
+        const expectedStructureIsKnown = Boolean(
+          node.expected.wellKnownId || node.expected.reference,
+        );
         prototype: {
           if (ignoreDiff) {
             break prototype;
           }
-          const visitActualPrototype = node.actual.isComposite;
-          // !node.actual.wellKnownId &&
-          // !node.actual.reference;
-          const visitExpectedPrototype = node.expected.isComposite;
-          // !node.expected.wellKnownId &&
-          // !node.expected.reference;
+          const visitActualPrototype =
+            node.actual.isComposite && !actualStructureIsKnown;
+          const visitExpectedPrototype =
+            node.expected.isComposite && !expectedStructureIsKnown;
           if (!visitActualPrototype && !visitExpectedPrototype) {
             break prototype;
           }
@@ -292,14 +310,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         value_of_return_value: {
           const visitActualValueOfReturnValue =
             node.actual.isComposite &&
-            // !node.actual.wellKnownId &&
-            // !node.actual.reference &&
+            !actualStructureIsKnown &&
             "valueOf" in node.actual.value &&
             typeof node.actual.value.valueOf === "function";
           const visitExpectedValueOfReturnValue =
             node.expected.isComposite &&
-            // !node.expected.wellKnownId &&
-            // !node.expected.reference &&
+            !expectedStructureIsKnown &&
             "valueOf" in node.expected.value &&
             typeof node.expected.value.valueOf === "function";
           const canDiffValueOfReturnValue =
@@ -376,15 +392,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         inside: {
           chars: {
-            if (ignoreDiff) {
-              break chars;
-            }
-            const visitActualChars = node.actual.canHaveChars;
-            // !node.actual.wellKnownId &&
-            // !node.actual.reference;
-            const visitExpectedChars = node.expected.canHaveChars;
-            // !node.expected.wellKnownId &&
-            // !node.expected.reference;
+            const visitActualChars =
+              node.actual.canHaveChars && !actualStructureIsKnown;
+            const visitExpectedChars =
+              node.expected.canHaveChars && !expectedStructureIsKnown;
             const canDiffChars = visitActualChars && visitExpectedChars;
             node.canDiffChars = canDiffChars;
 
@@ -462,17 +473,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           indexed_values: {
-            if (ignoreDiff) {
-              break indexed_values;
-            }
             const visitActualIndexedValues =
-              node.actual.canHaveIndexedValues &&
-              !node.actual.wellKnownId &&
-              !node.actual.reference;
+              node.actual.canHaveIndexedValues && !actualStructureIsKnown;
             const visitExpectedIndexedValues =
-              node.expected.canHaveIndexedValues &&
-              !node.expected.wellKnownId &&
-              !node.expected.reference;
+              node.expected.canHaveIndexedValues && !expectedStructureIsKnown;
             const canDiffIndexedValues =
               visitActualIndexedValues && visitExpectedIndexedValues;
             node.canDiffIndexedValues = canDiffIndexedValues;
@@ -552,23 +556,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           properties: {
-            // if (ignoreDiff) {
-            //   break properties;
-            // }
             const visitActualProps =
-              node.actual.canHaveProps &&
-              // node.after.value is a reference: was already traversed
-              // - prevent infinite recursion for circular structure
-              // - prevent traversing a structure already known
-              !node.actual.wellKnownId &&
-              !node.actual.reference;
+              node.actual.canHaveProps && !actualStructureIsKnown;
             const visitExpectedProps =
-              node.expected.canHaveProps &&
-              // node.after.value is a reference: was already traversed
-              // - prevent infinite recursion for circular structure
-              // - prevent traversing a structure already known
-              !node.expected.wellKnownId &&
-              !node.expected.reference;
+              node.expected.canHaveProps && !expectedStructureIsKnown;
             const canDiffProps = visitActualProps && visitExpectedProps;
             node.canDiffProps = canDiffProps;
 
