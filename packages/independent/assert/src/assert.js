@@ -18,6 +18,7 @@ const removedSignColor = ANSI.GREY;
 const addedSignColor = ANSI.GREY;
 const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empty_value') ?
 // const VALUE_OF_NOT_FOUND = { value_of_not_found: true };
+// const DOES_NOT_EXISTS = { does_not_exists: true };
 
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
@@ -199,11 +200,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (ignoreDiff) {
             break category;
           }
-          // if (node.actual.wellKnownId !== node.expected.wellKnownId) {
-          //   node.diff.category = true;
-          //   onSelfDiff();
-          //   break category;
-          // }
+          if (node.actual.wellKnownId !== node.expected.wellKnownId) {
+            node.diff.category = true;
+            onSelfDiff();
+            break category;
+          }
           const actualIsPrimitive = node.actual.isPrimitive;
           const expectedIsPrimitive = node.expected.isPrimitive;
           if (actualIsPrimitive !== expectedIsPrimitive) {
@@ -267,10 +268,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           const actualPrototype = visitActualPrototype
             ? Object.getPrototypeOf(node.actual.value)
-            : null;
+            : undefined;
           const expectedPrototype = visitExpectedPrototype
             ? Object.getPrototypeOf(node.expected.value)
-            : null;
+            : undefined;
           const prototypeNode = node.appendPrototype({
             actualPrototype,
             expectedPrototype,
@@ -278,7 +279,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visit(prototypeNode, {
             ignoreDiff:
               ignoreDiff ||
-              !canDiffPrototypes ||
               node.diff.category ||
               prototypeAreDifferentAndWellKnown,
           });
@@ -580,10 +580,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const visitProperty = (property) => {
               const actualPropertyDescriptor = visitActualProps
                 ? Object.getOwnPropertyDescriptor(node.actual.value, property)
-                : undefined;
+                : null;
               const expectedPropertyDescriptor = visitExpectedProps
                 ? Object.getOwnPropertyDescriptor(node.expected.value, property)
-                : undefined;
+                : null;
               const propertyNode = node.appendProperty(property, {
                 actualPropertyDescriptor,
                 expectedPropertyDescriptor,
@@ -1066,19 +1066,39 @@ let createComparisonTree;
     };
 
     const createValueInfo = (value, { name, type, parent }) => {
-      const composite =
-        value === ARRAY_EMPTY_VALUE ? false : isComposite(value);
-      const wellKnownId =
-        value === ARRAY_EMPTY_VALUE ? "empty" : getWellKnownId(value);
-      const isArray =
-        composite && Array.isArray(value) && value !== Array.prototype;
-      const subtype = composite
-        ? getSubtype(value)
-        : value === null
-          ? "null"
-          : typeof value;
-      const isString = typeof value === "string";
+      let composite;
+      let wellKnownId;
+      let subtype;
+      let isArray;
+      if (value === ARRAY_EMPTY_VALUE) {
+        composite = false;
+        isArray = false;
+        wellKnownId = "empty";
+        subtype = "empty";
+      }
+      // else if (value === DOES_NOT_EXISTS) {
+      //   composite = false;
+      //   isArray = false;
+      //   wellKnownId = "not_found";
+      //   subtype = "not_found";
+      // }
+      else {
+        composite = isComposite(value);
+        wellKnownId = getWellKnownId(value);
+        if (composite) {
+          isArray = Array.isArray(value) && value !== Array.prototype;
+          subtype = getSubtype(value);
+        } else {
+          isArray = false;
+          if (value === null) {
+            subtype = "null";
+          } else {
+            subtype = typeof value;
+          }
+        }
+      }
 
+      const isString = subtype === "string";
       const canHaveIndexedValues = isArray;
       // const canHaveChars = isString && type !== "char";
       const canHaveChars =
