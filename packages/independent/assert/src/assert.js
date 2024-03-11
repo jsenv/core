@@ -1368,16 +1368,22 @@ let writeDiff;
               context.quote === "auto" ? pickBestQuote(string) : context.quote;
             node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
           }
+          let maxWidth = Math.min(valueContext.maxColumns, 10);
           let stringOverviewDiff = "";
-          if (string.length > 10) {
-            stringOverviewDiff += ANSI.color(node.quote, bracketColor);
-            stringOverviewDiff += ANSI.color(string.slice(0, 10), valueColor);
-            stringOverviewDiff += ANSI.color(node.quote, bracketColor);
-            stringOverviewDiff += ANSI.color("…", delimitersColor);
-            return stringOverviewDiff;
-          }
           stringOverviewDiff += ANSI.color(node.quote, bracketColor);
-          stringOverviewDiff += ANSI.color(string, valueColor);
+          let stringDiff;
+          const quoteWidth = node.quote.length;
+          const width = quoteWidth + stringWidth(string) + quoteWidth;
+          if (width > maxWidth) {
+            stringDiff = string.slice(
+              0,
+              maxWidth - 1 - quoteWidth - quoteWidth,
+            );
+            stringDiff += "…";
+          } else {
+            stringDiff = string;
+          }
+          stringOverviewDiff += ANSI.color(stringDiff, valueColor);
           stringOverviewDiff += ANSI.color(node.quote, bracketColor);
           return stringOverviewDiff;
         }
@@ -1427,7 +1433,7 @@ let writeDiff;
             ? "null"
             : JSON.stringify(value);
       if (valueDiff.length > valueContext.maxColumns) {
-        valueDiff = valueDiff.slice(0, valueContext.maxColumns);
+        valueDiff = valueDiff.slice(0, valueContext.maxColumns - 1);
         valueDiff += "…";
       }
       return ANSI.color(valueDiff, valueColor);

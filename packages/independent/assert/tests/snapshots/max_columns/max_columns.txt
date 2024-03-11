@@ -1,0 +1,12 @@
+# maxColumns respect indent
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: "a…",
+  b: fal…,
+}
+expect: {
+  a: "a…",
+  b: true,
+}
+
