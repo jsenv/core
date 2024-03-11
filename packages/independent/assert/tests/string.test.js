@@ -156,14 +156,18 @@ await startSnapshotTesting("string", {
   /* eslint-enable no-new-wrappers */
   // TODO LATER:
   // - comparing single line / multiline
-  //   ["compare multiline"]: () => {
-  //     assert({
-  //       actual: `Hello,
-  // my name is Benjamin`,
-  //       expected: `Hello,
-  // my name is Ben`,
-  //     });
-  //   },
+  ["compare multiline"]: () => {
+    assert({
+      actual: {
+        foo: `Hello,
+my name is Benjamin`,
+      },
+      expected: {
+        foo: `Hello,
+my name is Ben`,
+      },
+    });
+  },
   // - compare multiline
   // - add a new empty line
   // - remove a line

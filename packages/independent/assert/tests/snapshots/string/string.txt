@@ -132,3 +132,15 @@ expect: new String("tata") {
   foo: "b",
 }
 
+# compare multiline
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  foo: 1| Hello
+       2| my name is Benjamin
+}
+expect: {
+  foo: 1| Hello
+       2| my name is Ben
+}
+

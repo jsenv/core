@@ -237,3 +237,20 @@ assert({
 
 ![img](<./string/new String prop.svg>)
 
+# compare multiline
+
+```js
+assert({
+  actual: {
+    foo: `Hello,
+my name is Benjamin`,
+  },
+  expected: {
+    foo: `Hello,
+my name is Ben`,
+  },
+});
+```
+
+![img](<./string/compare multiline.svg>)
+

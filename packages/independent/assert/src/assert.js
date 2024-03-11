@@ -1623,8 +1623,13 @@ let writeDiff;
       }
     }
     const separator =
-      useIndent && node !== nestedValueContext.startNode ? "," : "";
+      useIndent &&
+      node !== nestedValueContext.startNode &&
+      (!valueInfo.canHaveLines || node.lines.length === 1)
+        ? ","
+        : "";
     if (displayValue) {
+      nestedValueContext.prefix = nestedValueDiff;
       nestedValueContext.maxColumns =
         nestedValueContext.initialMaxColumns -
         stringWidth(nestedValueDiff) -
@@ -1820,6 +1825,7 @@ let writeDiff;
         remainingWidth -= stringWidth(focusedCharDiff);
       } else {
         focusedCharDiff = "";
+        focusedCharIndex = chars.length - 1;
       }
 
       const leftOverflowBoilerplateWidth = "…".length;
@@ -1831,16 +1837,20 @@ let writeDiff;
         let charIndex;
         const previousCharIndex = focusedCharIndex - previousCharAttempt - 1;
         const nextCharIndex = focusedCharIndex + nextCharAttempt + 1;
-        const hasPreviousChar = previousCharIndex >= 0;
+        let hasPreviousChar = previousCharIndex >= 0;
         const hasNextChar = nextCharIndex < chars.length;
+        if (!hasPreviousChar && !hasNextChar) {
+          break;
+        }
+        if (!tryBeforeFirst && hasNextChar) {
+          hasPreviousChar = false;
+        }
         if (hasPreviousChar) {
           previousCharAttempt++;
           charIndex = previousCharIndex;
         } else if (hasNextChar) {
           nextCharAttempt++;
           charIndex = nextCharIndex;
-        } else {
-          break;
         }
         const charNode = charNodes[charIndex];
         if (!charNode) {
@@ -1917,150 +1927,152 @@ let writeDiff;
     // puis prendre un avant, un apres (si deux max on les affiche)
     // puis écrire le nb au dessus/en dessous
     // mettre les prefix
-    let focusedLineIndex = lines.findIndex((line, index) => {
-      const lineNode = lineNodes[index];
-      return lineNode.diff.counters.overall.any > 0;
-    });
-    if (focusedLineIndex === -1) {
-      focusedLineIndex = lines.length - 1;
-    }
-    const focusedLineNode = lineNodes[focusedLineIndex];
-    const focusedLineFocusedCharIndex = getFocusedCharIndex(
-      focusedLineNode,
-      context,
-    );
-    let biggestLineNumber = focusedLineIndex + 1;
-
-    const lineBeforeArray = [];
-    let maxLineBefore = context.maxLineBeforeDiff - 1;
-    while (maxLineBefore--) {
-      const previousLineIndex = focusedLineIndex - lineBeforeArray.length - 1;
-      const hasPreviousLine = previousLineIndex >= 0;
-      if (!hasPreviousLine) {
-        break;
+    multiline: {
+      let focusedLineIndex = lines.findIndex((line, index) => {
+        const lineNode = lineNodes[index];
+        return lineNode.diff.counters.overall.any > 0;
+      });
+      if (focusedLineIndex === -1) {
+        focusedLineIndex = lines.length - 1;
       }
-      const previousLineNode = lineNodes[previousLineIndex];
-      lineBeforeArray.push(previousLineNode);
-    }
-    let previousLineRemaining = focusedLineIndex - lineBeforeArray.length;
-    if (previousLineRemaining === 1) {
-      lineBeforeArray.push(lineNodes[0]);
-      previousLineRemaining = 0;
-    }
-
-    const lineAfterArray = [];
-    let maxLineAfter = context.maxLineAfterDiff - 1;
-    while (maxLineAfter--) {
-      const nextLineIndex = focusedLineIndex + lineAfterArray.length + 1;
-      const hasNextLine = nextLineIndex < lines.length;
-      if (!hasNextLine) {
-        break;
-      }
-      const nextLineNode = lineNodes[nextLineIndex];
-      lineAfterArray.push(nextLineNode);
-      if (nextLineIndex + 1 > biggestLineNumber) {
-        biggestLineNumber = nextLineIndex + 1;
-      }
-    }
-    let nextLineRemaining =
-      lines.length - 1 - focusedLineIndex - lineAfterArray.length;
-    if (nextLineRemaining === 1) {
-      lineAfterArray.push(lineNodes[lines.length - 1]);
-      nextLineRemaining = 0;
-    }
-
-    const delimitersColor = getDelimitersColor(context);
-    const writeLineDiff = (lineNode) => {
-      let lineDiff = "";
-      const lineNumber = String(lineNode.index + 1);
-      lineDiff += ANSI.color(lineNumber, delimitersColor);
-      lineDiff += fillRight(lineNumber, biggestLineNumber);
-      // lineDiff += " ";
-      lineDiff += ANSI.color("|", delimitersColor);
-      lineDiff += " ";
-      lineDiff += writeOneLineDiff(lineNode, focusedLineFocusedCharIndex);
-      return lineDiff;
-    };
-    const diffLines = [];
-    if (previousLineRemaining) {
-      let previousLinesSkippedDiff = "";
-      previousLinesSkippedDiff += ANSI.color(
-        `↑ ${previousLineRemaining} lines ↑`,
-        sameColor,
+      const focusedLineNode = lineNodes[focusedLineIndex];
+      const focusedLineFocusedCharIndex = getFocusedCharIndex(
+        focusedLineNode,
+        context,
       );
-      diffLines.push(previousLinesSkippedDiff);
-    }
-    for (const lineBeforeNode of lineBeforeArray) {
-      diffLines.push(writeLineDiff(lineBeforeNode));
-    }
-    diffLines.push(writeLineDiff(focusedLineNode));
-    for (const lineAfterNode of lineAfterArray) {
-      diffLines.push(writeLineDiff(lineAfterNode));
-    }
-    if (nextLineRemaining) {
-      const skippedCounters = {
-        total: 0,
-        removed: 0,
-        added: 0,
-        modified: 0,
+      let biggestLineNumber = focusedLineIndex + 1;
+
+      const lineBeforeArray = [];
+      let maxLineBefore = context.maxLineBeforeDiff - 1;
+      while (maxLineBefore--) {
+        const previousLineIndex = focusedLineIndex - lineBeforeArray.length - 1;
+        const hasPreviousLine = previousLineIndex >= 0;
+        if (!hasPreviousLine) {
+          break;
+        }
+        const previousLineNode = lineNodes[previousLineIndex];
+        lineBeforeArray.push(previousLineNode);
+      }
+      let previousLineRemaining = focusedLineIndex - lineBeforeArray.length;
+      if (previousLineRemaining === 1) {
+        lineBeforeArray.push(lineNodes[0]);
+        previousLineRemaining = 0;
+      }
+
+      const lineAfterArray = [];
+      let maxLineAfter = context.maxLineAfterDiff - 1;
+      while (maxLineAfter--) {
+        const nextLineIndex = focusedLineIndex + lineAfterArray.length + 1;
+        const hasNextLine = nextLineIndex < lines.length;
+        if (!hasNextLine) {
+          break;
+        }
+        const nextLineNode = lineNodes[nextLineIndex];
+        lineAfterArray.push(nextLineNode);
+        if (nextLineIndex + 1 > biggestLineNumber) {
+          biggestLineNumber = nextLineIndex + 1;
+        }
+      }
+      let nextLineRemaining =
+        lines.length - 1 - focusedLineIndex - lineAfterArray.length;
+      if (nextLineRemaining === 1) {
+        lineAfterArray.push(lineNodes[lines.length - 1]);
+        nextLineRemaining = 0;
+      }
+
+      const delimitersColor = getDelimitersColor(context);
+      const writeLineDiff = (lineNode) => {
+        let lineDiff = "";
+        const lineNumber = String(lineNode.index + 1);
+        lineDiff += ANSI.color(lineNumber, delimitersColor);
+        lineDiff += fillRight(lineNumber, biggestLineNumber);
+        // lineDiff += " ";
+        lineDiff += ANSI.color("|", delimitersColor);
+        lineDiff += " ";
+        lineDiff += writeOneLineDiff(lineNode, focusedLineFocusedCharIndex);
+        return lineDiff;
       };
-      let index = focusedLineIndex;
-      while (index < lines.length - 1) {
-        const nextLineNode = lineNodes[index];
-        skippedCounters.total++;
-        if (nextLineNode.diff.removed) {
-          context.onNodeDisplayed(nextLineNode);
-          skippedCounters.removed++;
-          continue;
-        }
-        if (nextLineNode.diff.added) {
-          context.onNodeDisplayed(nextLineNode);
-          skippedCounters.added++;
-          continue;
-        }
-        if (nextLineNode.diff.counters.overall.any > 0) {
-          context.onNodeDisplayed(nextLineNode);
-          skippedCounters.modified++;
-          continue;
-        }
-        index++;
-      }
-      let nextLinesSkippedDiff = "";
-      nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
-      nextLinesSkippedDiff += " ";
-      let belowSummary = "";
-      belowSummary += ANSI.color(
-        `${skippedCounters.total} lines`,
-        delimitersColor,
-      );
-      const parts = [];
-      if (skippedCounters.removed) {
-        parts.push(
-          ANSI.color(`${skippedCounters.removed} removed`, removedColor),
+      const diffLines = [];
+      if (previousLineRemaining) {
+        let previousLinesSkippedDiff = "";
+        previousLinesSkippedDiff += ANSI.color(
+          `↑ ${previousLineRemaining} lines ↑`,
+          sameColor,
         );
+        diffLines.push(previousLinesSkippedDiff);
       }
-      if (skippedCounters.added) {
-        parts.push(ANSI.color(`${skippedCounters.added} added`, addedColor));
+      for (const lineBeforeNode of lineBeforeArray) {
+        diffLines.push(writeLineDiff(lineBeforeNode));
       }
-      if (skippedCounters.modified) {
-        parts.push(
-          ANSI.color(`${skippedCounters.modified} modified`, unexpectedColor),
+      diffLines.push(writeLineDiff(focusedLineNode));
+      for (const lineAfterNode of lineAfterArray) {
+        diffLines.push(writeLineDiff(lineAfterNode));
+      }
+      if (nextLineRemaining) {
+        const skippedCounters = {
+          total: 0,
+          removed: 0,
+          added: 0,
+          modified: 0,
+        };
+        let index = focusedLineIndex;
+        while (index < lines.length - 1) {
+          const nextLineNode = lineNodes[index];
+          skippedCounters.total++;
+          if (nextLineNode.diff.removed) {
+            context.onNodeDisplayed(nextLineNode);
+            skippedCounters.removed++;
+            continue;
+          }
+          if (nextLineNode.diff.added) {
+            context.onNodeDisplayed(nextLineNode);
+            skippedCounters.added++;
+            continue;
+          }
+          if (nextLineNode.diff.counters.overall.any > 0) {
+            context.onNodeDisplayed(nextLineNode);
+            skippedCounters.modified++;
+            continue;
+          }
+          index++;
+        }
+        let nextLinesSkippedDiff = "";
+        nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
+        nextLinesSkippedDiff += " ";
+        let belowSummary = "";
+        belowSummary += ANSI.color(
+          `${skippedCounters.total} lines`,
+          delimitersColor,
         );
+        const parts = [];
+        if (skippedCounters.removed) {
+          parts.push(
+            ANSI.color(`${skippedCounters.removed} removed`, removedColor),
+          );
+        }
+        if (skippedCounters.added) {
+          parts.push(ANSI.color(`${skippedCounters.added} added`, addedColor));
+        }
+        if (skippedCounters.modified) {
+          parts.push(
+            ANSI.color(`${skippedCounters.modified} modified`, unexpectedColor),
+          );
+        }
+        if (parts.length) {
+          belowSummary += ` `;
+          belowSummary += ANSI.color(`(`, delimitersColor);
+          belowSummary += parts.join(" ");
+          belowSummary += ANSI.color(`)`, delimitersColor);
+        }
+        nextLinesSkippedDiff += belowSummary;
+        nextLinesSkippedDiff += " ";
+        nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
+        diffLines.push(nextLinesSkippedDiff);
       }
-      if (parts.length) {
-        belowSummary += ` `;
-        belowSummary += ANSI.color(`(`, delimitersColor);
-        belowSummary += parts.join(" ");
-        belowSummary += ANSI.color(`)`, delimitersColor);
-      }
-      nextLinesSkippedDiff += belowSummary;
-      nextLinesSkippedDiff += " ";
-      nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
-      diffLines.push(nextLinesSkippedDiff);
+      let separator = `\n`;
+      separator += " ".repeat(context.prefix ? stringWidth(context.prefix) : 0);
+      return diffLines.join(separator);
     }
-    let separator = `\n`;
-    // separator += ""; // TODO: keep same indent as "parent"
-    return diffLines.join(separator);
   };
 
   const writeExpandedDiff = (node, context, parentContext) => {
