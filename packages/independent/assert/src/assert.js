@@ -1175,8 +1175,7 @@ let createComparisonTree;
       const isString = subtype === "string";
       const canHaveIndexedValues = isArray;
       const canHaveLines =
-        isString &&
-        //(isString || subtype === "String") &&
+        (isString || subtype === "String") &&
         type !== "line" &&
         type !== "char";
       // const canHaveChars = isString && type !== "char";
@@ -1897,7 +1896,7 @@ let writeDiff;
 
   const writeExpandedDiff = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
-    if (valueInfo.canHaveLines) {
+    if (valueInfo.isString && valueInfo.canHaveLines) {
       return writeLinesDiff(node, context, parentContext);
     }
 
