@@ -62,12 +62,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxValueAroundDiff = 2,
       maxValueInsideDiff = 4,
       maxDepthInsideDiff = 1,
+      maxLineAroundDiff = 2,
       quote = "auto",
       preserveLineBreaks,
       signs,
     } = firstArg;
     const maxValueBeforeDiff = maxValueAroundDiff;
     const maxValueAfterDiff = maxValueAroundDiff;
+    const maxLineBeforeDiff = maxLineAroundDiff;
+    const maxLineAfterDiff = maxLineAroundDiff;
 
     actualIsFirst = true;
     // actualIsFirst =
@@ -409,6 +412,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               const expectedLines = visitExpectedLines
                 ? node.expected.value.split(/\r?\n/)
                 : [];
+              node.actual.lines = actualLines;
+              node.expected.lines = expectedLines;
               const visitLine = (lineIndex) => {
                 const actualHasOwn = visitActualLines
                   ? Object.hasOwn(actualLines, lineIndex)
@@ -855,6 +860,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxValueAfterDiff,
       maxValueInsideDiff,
       maxDepthInsideDiff,
+      maxLineBeforeDiff,
+      maxLineAfterDiff,
       resultType: firstValueMeta.resultType,
       quote,
       preserveLineBreaks,
@@ -879,6 +886,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxValueAfterDiff,
       maxValueInsideDiff,
       maxDepthInsideDiff,
+      maxLineBeforeDiff,
+      maxLineAfterDiff,
       resultType: secondValueMeta.resultType,
       quote,
       preserveLineBreaks,
@@ -1769,85 +1778,71 @@ let writeDiff;
     return prefix;
   };
   const writeLinesDiff = (node, context, parentContext) => {
-    const bracketColor = getBracketColor(node, context);
-    const firstLineNode = node.lines[0];
+    const lines = node[context.resultType].lines;
+    const lineNodes = node.lines;
+    const firstLineNode = lineNodes[0];
     const firstLineValueInfo = firstLineNode[context.resultType];
 
+    // empty string
     if (firstLineValueInfo.value.length === 0) {
       const quote = node.quote || DOUBLE_QUOTE;
+      const bracketColor = getBracketColor(node, context);
       let expandedDiff = "";
       expandedDiff += ANSI.color(quote, bracketColor);
       expandedDiff += ANSI.color(quote, bracketColor);
       return expandedDiff;
     }
 
-    const valueInfo = node[context.resultType];
-    if (node.lines.length === 1) {
-      // const firstLineValueInfo = firstLineNode[context.resultType];
-      const chars = firstLineValueInfo.chars;
-      const charNodes = firstLineNode.chars;
-      if (!node.quote) {
-        const quote =
-          context.quote === "auto"
-            ? pickBestQuote(valueInfo.value)
-            : context.quote;
-        node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
-      }
+    const isSingleLine = lineNodes.length === 1;
+    const writeOneLineDiff = (lineNode, focusedCharIndex) => {
+      const lineValueInfo = lineNode[context.resultType];
+      const chars = lineValueInfo.chars;
+      const charNodes = lineNode.chars;
+      const charBeforeArray = [];
+      const charAfterArray = [];
 
       let remainingWidth = context.maxColumns;
-      let charFocusedIndex = -1;
-      let index = 0;
-      for (; index < chars.length - 1; index++) {
-        const charNode = charNodes[index];
-        if (!charNode.diff.counters.overall.any) {
-          continue;
-        }
-        charFocusedIndex = index;
-        break;
+      const focusedCharNode = charNodes[focusedCharIndex];
+      let focusedCharDiff;
+      if (focusedCharNode) {
+        focusedCharDiff = writeDiff(focusedCharNode, {
+          ...context,
+          modified: firstLineNode.canDiffChars
+            ? parentContext.modified
+            : context.modified,
+        });
+        remainingWidth -= stringWidth(focusedCharDiff);
+      } else {
+        focusedCharDiff = "";
       }
-      const charsBeforeArray = [];
-      const charsAfterArray = [];
-
-      if (charFocusedIndex === -1) {
-        charFocusedIndex = chars.length - 1;
-      }
-      const focusedCharDiff = writeDiff(charNodes[charFocusedIndex], {
-        ...context,
-        modified: firstLineNode.canDiffChars
-          ? parentContext.modified
-          : context.modified,
-      });
-      remainingWidth -= stringWidth(focusedCharDiff);
 
       const leftOverflowBoilerplateWidth = "…".length;
       const rightOverflowBoilerplateWidth = "…".length;
       let tryBeforeFirst = true;
-      let previousCharCount = 0;
-      let nextCharCount = 0;
+      let previousCharAttempt = 0;
+      let nextCharAttempt = 0;
       while (remainingWidth) {
         let charIndex;
-        let isBefore = false;
-        const previousCharIndex = charFocusedIndex - previousCharCount - 1;
-        const nextCharIndex = charFocusedIndex + nextCharCount + 1;
+        const previousCharIndex = focusedCharIndex - previousCharAttempt - 1;
+        const nextCharIndex = focusedCharIndex + nextCharAttempt + 1;
         const hasPreviousChar = previousCharIndex >= 0;
         const hasNextChar = nextCharIndex < chars.length;
-        if (tryBeforeFirst && hasPreviousChar) {
-          isBefore = true;
-          tryBeforeFirst = false;
-          previousCharCount++;
+        if (hasPreviousChar) {
+          previousCharAttempt++;
           charIndex = previousCharIndex;
         } else if (hasNextChar) {
-          isBefore = false;
-          nextCharCount++;
+          nextCharAttempt++;
           charIndex = nextCharIndex;
-        } else if (hasPreviousChar) {
-          isBefore = true;
-          previousCharCount++;
-          charIndex = previousCharIndex;
         } else {
           break;
         }
         const charNode = charNodes[charIndex];
+        if (!charNode) {
+          continue;
+        }
+        if (tryBeforeFirst && hasPreviousChar) {
+          tryBeforeFirst = false;
+        }
         const charDiff = writeDiff(charNode, {
           ...context,
           modified: firstLineNode.canDiffChars
@@ -1865,33 +1860,201 @@ let writeDiff;
         if (nextWidth >= remainingWidth) {
           break;
         }
-        remainingWidth -= charWidth;
-        if (isBefore) {
-          charsBeforeArray.push(charDiff);
+        if (charIndex < focusedCharIndex) {
+          charBeforeArray.push(charDiff);
         } else {
-          charsAfterArray.push(charDiff);
+          charAfterArray.push(charDiff);
         }
+        remainingWidth -= charWidth;
       }
 
-      let expandedDiff = "";
+      let oneLineDiff = "";
       const delimitersColor = getDelimitersColor(context);
-      const overflowLeft = charFocusedIndex - previousCharCount > 0;
-      const overflowRight = charFocusedIndex + nextCharCount < chars.length - 1;
+      const overflowLeft = focusedCharIndex - previousCharAttempt > 0;
+      const overflowRight =
+        focusedCharIndex + nextCharAttempt < chars.length - 1;
       if (overflowLeft) {
-        expandedDiff += ANSI.color("…", delimitersColor);
+        oneLineDiff += ANSI.color("…", delimitersColor);
       }
-      expandedDiff += ANSI.color(node.quote, bracketColor);
-      expandedDiff += charsBeforeArray.reverse().join("");
-      expandedDiff += focusedCharDiff;
-      expandedDiff += charsAfterArray.join("");
-      expandedDiff += ANSI.color(node.quote, bracketColor);
+      const bracketColor = getBracketColor(node, context);
+      if (node.quote) {
+        oneLineDiff += ANSI.color(node.quote, bracketColor);
+      }
+      oneLineDiff += charBeforeArray.reverse().join("");
+      oneLineDiff += focusedCharDiff;
+      oneLineDiff += charAfterArray.join("");
+      if (node.quote) {
+        oneLineDiff += ANSI.color(node.quote, bracketColor);
+      }
       if (overflowRight) {
-        expandedDiff += ANSI.color("…", delimitersColor);
+        oneLineDiff += ANSI.color("…", delimitersColor);
       }
-      return expandedDiff;
+      return oneLineDiff;
+    };
+
+    // single line string (both actual and expected)
+    if (isSingleLine) {
+      if (!node.quote) {
+        const valueInfo = node[context.resultType];
+        const quote =
+          context.quote === "auto"
+            ? pickBestQuote(valueInfo.value)
+            : context.quote;
+        node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
+      }
+      const charFocusedIndex = getFocusedCharIndex(firstLineNode, context);
+      return writeOneLineDiff(firstLineNode, charFocusedIndex);
     }
 
-    return "multiline";
+    // multiline string
+    // faut trouver la string focused
+    // puis prendre un avant, un apres (si deux max on les affiche)
+    // puis écrire le nb au dessus/en dessous
+    // mettre les prefix
+    let focusedLineIndex = lines.findIndex((line, index) => {
+      const lineNode = lineNodes[index];
+      return lineNode.diff.counters.overall.any > 0;
+    });
+    if (focusedLineIndex === -1) {
+      focusedLineIndex = lines.length - 1;
+    }
+    const focusedLineNode = lineNodes[focusedLineIndex];
+    const focusedLineFocusedCharIndex = getFocusedCharIndex(
+      focusedLineNode,
+      context,
+    );
+    let biggestLineNumber = focusedLineIndex + 1;
+
+    const lineBeforeArray = [];
+    let maxLineBefore = context.maxLineBeforeDiff - 1;
+    while (maxLineBefore--) {
+      const previousLineIndex = focusedLineIndex - lineBeforeArray.length - 1;
+      const hasPreviousLine = previousLineIndex >= 0;
+      if (!hasPreviousLine) {
+        break;
+      }
+      const previousLineNode = lineNodes[previousLineIndex];
+      lineBeforeArray.push(previousLineNode);
+    }
+    let previousLineRemaining = focusedLineIndex - lineBeforeArray.length;
+    if (previousLineRemaining === 1) {
+      lineBeforeArray.push(lineNodes[0]);
+      previousLineRemaining = 0;
+    }
+
+    const lineAfterArray = [];
+    let maxLineAfter = context.maxLineAfterDiff - 1;
+    while (maxLineAfter--) {
+      const nextLineIndex = focusedLineIndex + lineAfterArray.length + 1;
+      const hasNextLine = nextLineIndex < lines.length;
+      if (!hasNextLine) {
+        break;
+      }
+      const nextLineNode = lineNodes[nextLineIndex];
+      lineAfterArray.push(nextLineNode);
+      if (nextLineIndex + 1 > biggestLineNumber) {
+        biggestLineNumber = nextLineIndex + 1;
+      }
+    }
+    let nextLineRemaining =
+      lines.length - 1 - focusedLineIndex - lineAfterArray.length;
+    if (nextLineRemaining === 1) {
+      lineAfterArray.push(lineNodes[lines.length - 1]);
+      nextLineRemaining = 0;
+    }
+
+    const delimitersColor = getDelimitersColor(context);
+    const writeLineDiff = (lineNode) => {
+      let lineDiff = "";
+      const lineNumber = String(lineNode.index + 1);
+      lineDiff += ANSI.color(lineNumber, delimitersColor);
+      lineDiff += fillRight(lineNumber, biggestLineNumber);
+      // lineDiff += " ";
+      lineDiff += ANSI.color("|", delimitersColor);
+      lineDiff += " ";
+      lineDiff += writeOneLineDiff(lineNode, focusedLineFocusedCharIndex);
+      return lineDiff;
+    };
+    const diffLines = [];
+    if (previousLineRemaining) {
+      let previousLinesSkippedDiff = "";
+      previousLinesSkippedDiff += ANSI.color(
+        `↑ ${previousLineRemaining} lines ↑`,
+        sameColor,
+      );
+      diffLines.push(previousLinesSkippedDiff);
+    }
+    for (const lineBeforeNode of lineBeforeArray) {
+      diffLines.push(writeLineDiff(lineBeforeNode));
+    }
+    diffLines.push(writeLineDiff(focusedLineNode));
+    for (const lineAfterNode of lineAfterArray) {
+      diffLines.push(writeLineDiff(lineAfterNode));
+    }
+    if (nextLineRemaining) {
+      const skippedCounters = {
+        total: 0,
+        removed: 0,
+        added: 0,
+        modified: 0,
+      };
+      let index = focusedLineIndex;
+      while (index < lines.length - 1) {
+        const nextLineNode = lineNodes[index];
+        skippedCounters.total++;
+        if (nextLineNode.diff.removed) {
+          context.onNodeDisplayed(nextLineNode);
+          skippedCounters.removed++;
+          continue;
+        }
+        if (nextLineNode.diff.added) {
+          context.onNodeDisplayed(nextLineNode);
+          skippedCounters.added++;
+          continue;
+        }
+        if (nextLineNode.diff.counters.overall.any > 0) {
+          context.onNodeDisplayed(nextLineNode);
+          skippedCounters.modified++;
+          continue;
+        }
+        index++;
+      }
+      let nextLinesSkippedDiff = "";
+      nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
+      nextLinesSkippedDiff += " ";
+      let belowSummary = "";
+      belowSummary += ANSI.color(
+        `${skippedCounters.total} lines`,
+        delimitersColor,
+      );
+      const parts = [];
+      if (skippedCounters.removed) {
+        parts.push(
+          ANSI.color(`${skippedCounters.removed} removed`, removedColor),
+        );
+      }
+      if (skippedCounters.added) {
+        parts.push(ANSI.color(`${skippedCounters.added} added`, addedColor));
+      }
+      if (skippedCounters.modified) {
+        parts.push(
+          ANSI.color(`${skippedCounters.modified} modified`, unexpectedColor),
+        );
+      }
+      if (parts.length) {
+        belowSummary += ` `;
+        belowSummary += ANSI.color(`(`, delimitersColor);
+        belowSummary += parts.join(" ");
+        belowSummary += ANSI.color(`)`, delimitersColor);
+      }
+      nextLinesSkippedDiff += belowSummary;
+      nextLinesSkippedDiff += " ";
+      nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
+      diffLines.push(nextLinesSkippedDiff);
+    }
+    let separator = `\n`;
+    // separator += ""; // TODO: keep same indent as "parent"
+    return diffLines.join(separator);
   };
 
   const writeExpandedDiff = (node, context, parentContext) => {
@@ -2709,4 +2872,29 @@ const splitChars = (string) => {
   // eslint-disable-next-line new-cap
   const splitter = new Graphemer.default();
   return splitter.splitGraphemes(string);
+};
+
+const getFocusedCharIndex = (node, context) => {
+  const chars = node[context.resultType].chars;
+  const charNodes = node.chars;
+  const charWithDiffIndex = chars.findIndex((char, index) => {
+    const charNode = charNodes[index];
+    return charNode.diff.counters.overall.any > 0;
+  });
+  if (charWithDiffIndex !== -1) {
+    return charWithDiffIndex;
+  }
+
+  return chars.length - 1;
+};
+
+const fillRight = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  while (missingWidth--) {
+    padded += char;
+  }
+  return padded;
 };
