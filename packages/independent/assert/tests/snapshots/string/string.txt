@@ -144,3 +144,10 @@ expect: {
        2| my name is Ben
 }
 
+# compare single and multi
+AssertionError: actual and expected are different:
+
+actual: 1| Hel
+expect: 1| Hello
+        2| world
+

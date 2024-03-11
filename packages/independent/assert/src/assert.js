@@ -841,10 +841,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const firstValueMeta = actualIsFirst ? actualValueMeta : expectedValueMeta;
     const secondValueMeta = actualIsFirst ? expectedValueMeta : actualValueMeta;
 
-    let diffMessage = "";
-    diffMessage += ANSI.color(firstValueMeta.name, sameColor);
-    diffMessage += ANSI.color(":", sameColor);
-    diffMessage += " ";
+    let firstPrefix = "";
+    firstPrefix += ANSI.color(firstValueMeta.name, sameColor);
+    firstPrefix += ANSI.color(":", sameColor);
+    firstPrefix += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
     const firstValueDiff = writeDiff(startNode, {
       onNodeDisplayed,
@@ -853,7 +853,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       signs,
       initialDepth: -startNode.expected.depth,
       initialMaxColumns: maxColumnsDefault,
-      maxColumns: maxColumnsDefault - `${firstValueMeta.name}: `.length,
+      maxColumns: maxColumnsDefault - stringWidth(firstPrefix),
+      prefix: firstPrefix,
       maxDiffPerObject,
       maxDepth: maxDepthDefault,
       maxValueBeforeDiff,
@@ -867,11 +868,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       preserveLineBreaks,
     });
 
-    diffMessage += firstValueDiff;
-    diffMessage += "\n";
-    diffMessage += ANSI.color(secondValueMeta.name, sameColor);
-    diffMessage += ANSI.color(":", sameColor);
-    diffMessage += " ";
+    let secondPrefix = "";
+    secondPrefix += ANSI.color(secondValueMeta.name, sameColor);
+    secondPrefix += ANSI.color(":", sameColor);
+    secondPrefix += " ";
     const secondValueDiff = writeDiff(startNode, {
       onNodeDisplayed,
       refId: 1,
@@ -879,7 +879,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       signs,
       initialDepth: -startNode.expected.depth,
       initialMaxColumns: maxColumnsDefault,
-      maxColumns: maxColumnsDefault - `${secondValueMeta.name}: `.length,
+      maxColumns: maxColumnsDefault - stringWidth(secondPrefix),
+      prefix: secondPrefix,
       maxDiffPerObject,
       maxDepth: maxDepthDefault,
       maxValueBeforeDiff,
@@ -892,6 +893,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       quote,
       preserveLineBreaks,
     });
+
+    let diffMessage = "";
+    diffMessage += firstPrefix;
+    diffMessage += firstValueDiff;
+    diffMessage += "\n";
+    diffMessage += secondPrefix;
     diffMessage += secondValueDiff;
 
     let message;
@@ -1788,128 +1795,133 @@ let writeDiff;
     }
     return prefix;
   };
-  const writeLinesDiff = (node, context, parentContext) => {
-    const lines = node[context.resultType].lines;
-    const lineNodes = node.lines;
-    const firstLineNode = lineNodes[0];
-    const firstLineValueInfo = firstLineNode[context.resultType];
+  const writeOneLineDiff = (lineNode, context, parentContext) => {
+    let { focusedCharIndex } = context;
 
-    // empty string
-    if (firstLineValueInfo.value.length === 0) {
-      const quote = node.quote || DOUBLE_QUOTE;
-      const bracketColor = getBracketColor(node, context);
-      let expandedDiff = "";
-      expandedDiff += ANSI.color(quote, bracketColor);
-      expandedDiff += ANSI.color(quote, bracketColor);
-      return expandedDiff;
+    const lineValueInfo = lineNode[context.resultType];
+    const chars = lineValueInfo.chars;
+    const charNodes = lineNode.chars;
+    const charBeforeArray = [];
+    const charAfterArray = [];
+
+    let remainingWidth = context.maxColumns;
+    const focusedCharNode = charNodes[focusedCharIndex];
+    let focusedCharDiff;
+    if (focusedCharNode) {
+      focusedCharDiff = writeDiff(focusedCharNode, {
+        ...context,
+        modified: lineNode.canDiffChars
+          ? parentContext.modified
+          : context.modified,
+      });
+      remainingWidth -= stringWidth(focusedCharDiff);
+    } else {
+      focusedCharDiff = "";
+      focusedCharIndex = chars.length - 1;
     }
 
-    const isSingleLine = lineNodes.length === 1;
-    const writeOneLineDiff = (lineNode, focusedCharIndex) => {
-      const lineValueInfo = lineNode[context.resultType];
-      const chars = lineValueInfo.chars;
-      const charNodes = lineNode.chars;
-      const charBeforeArray = [];
-      const charAfterArray = [];
-
-      let remainingWidth = context.maxColumns;
-      const focusedCharNode = charNodes[focusedCharIndex];
-      let focusedCharDiff;
-      if (focusedCharNode) {
-        focusedCharDiff = writeDiff(focusedCharNode, {
-          ...context,
-          modified: firstLineNode.canDiffChars
-            ? parentContext.modified
-            : context.modified,
-        });
-        remainingWidth -= stringWidth(focusedCharDiff);
+    const leftOverflowBoilerplateWidth = "…".length;
+    const rightOverflowBoilerplateWidth = "…".length;
+    let tryBeforeFirst = true;
+    let previousCharAttempt = 0;
+    let nextCharAttempt = 0;
+    while (remainingWidth) {
+      let charIndex;
+      const previousCharIndex = focusedCharIndex - previousCharAttempt - 1;
+      const nextCharIndex = focusedCharIndex + nextCharAttempt + 1;
+      let hasPreviousChar = previousCharIndex >= 0;
+      const hasNextChar = nextCharIndex < chars.length;
+      if (!hasPreviousChar && !hasNextChar) {
+        break;
+      }
+      if (!tryBeforeFirst && hasNextChar) {
+        hasPreviousChar = false;
+      }
+      if (hasPreviousChar) {
+        previousCharAttempt++;
+        charIndex = previousCharIndex;
+      } else if (hasNextChar) {
+        nextCharAttempt++;
+        charIndex = nextCharIndex;
+      }
+      const charNode = charNodes[charIndex];
+      if (!charNode) {
+        continue;
+      }
+      if (tryBeforeFirst && hasPreviousChar) {
+        tryBeforeFirst = false;
+      }
+      const charDiff = writeDiff(charNode, {
+        ...context,
+        modified: lineNode.canDiffChars
+          ? parentContext.modified
+          : context.modified,
+      });
+      const charWidth = stringWidth(charDiff);
+      let nextWidth = charWidth;
+      if (charIndex - 1 > 0) {
+        nextWidth += leftOverflowBoilerplateWidth;
+      }
+      if (charIndex + 1 < chars.length - 1) {
+        nextWidth += rightOverflowBoilerplateWidth;
+      }
+      if (nextWidth >= remainingWidth) {
+        break;
+      }
+      if (charIndex < focusedCharIndex) {
+        charBeforeArray.push(charDiff);
       } else {
-        focusedCharDiff = "";
-        focusedCharIndex = chars.length - 1;
+        charAfterArray.push(charDiff);
       }
+      remainingWidth -= charWidth;
+    }
 
-      const leftOverflowBoilerplateWidth = "…".length;
-      const rightOverflowBoilerplateWidth = "…".length;
-      let tryBeforeFirst = true;
-      let previousCharAttempt = 0;
-      let nextCharAttempt = 0;
-      while (remainingWidth) {
-        let charIndex;
-        const previousCharIndex = focusedCharIndex - previousCharAttempt - 1;
-        const nextCharIndex = focusedCharIndex + nextCharAttempt + 1;
-        let hasPreviousChar = previousCharIndex >= 0;
-        const hasNextChar = nextCharIndex < chars.length;
-        if (!hasPreviousChar && !hasNextChar) {
-          break;
-        }
-        if (!tryBeforeFirst && hasNextChar) {
-          hasPreviousChar = false;
-        }
-        if (hasPreviousChar) {
-          previousCharAttempt++;
-          charIndex = previousCharIndex;
-        } else if (hasNextChar) {
-          nextCharAttempt++;
-          charIndex = nextCharIndex;
-        }
-        const charNode = charNodes[charIndex];
-        if (!charNode) {
-          continue;
-        }
-        if (tryBeforeFirst && hasPreviousChar) {
-          tryBeforeFirst = false;
-        }
-        const charDiff = writeDiff(charNode, {
-          ...context,
-          modified: firstLineNode.canDiffChars
-            ? parentContext.modified
-            : context.modified,
-        });
-        const charWidth = stringWidth(charDiff);
-        let nextWidth = charWidth;
-        if (charIndex - 1 > 0) {
-          nextWidth += leftOverflowBoilerplateWidth;
-        }
-        if (charIndex + 1 < chars.length - 1) {
-          nextWidth += rightOverflowBoilerplateWidth;
-        }
-        if (nextWidth >= remainingWidth) {
-          break;
-        }
-        if (charIndex < focusedCharIndex) {
-          charBeforeArray.push(charDiff);
-        } else {
-          charAfterArray.push(charDiff);
-        }
-        remainingWidth -= charWidth;
-      }
+    let oneLineDiff = "";
+    const delimitersColor = getDelimitersColor(context);
+    const overflowLeft = focusedCharIndex - previousCharAttempt > 0;
+    const overflowRight = focusedCharIndex + nextCharAttempt < chars.length - 1;
+    if (overflowLeft) {
+      oneLineDiff += ANSI.color("…", delimitersColor);
+    }
+    const parentNode = lineNode.parent;
+    const bracketColor = getBracketColor(parentNode, context);
+    if (parentNode.quote) {
+      oneLineDiff += ANSI.color(parentNode.quote, bracketColor);
+    }
+    oneLineDiff += charBeforeArray.reverse().join("");
+    oneLineDiff += focusedCharDiff;
+    oneLineDiff += charAfterArray.join("");
+    if (parentNode.quote) {
+      oneLineDiff += ANSI.color(parentNode.quote, bracketColor);
+    }
+    if (overflowRight) {
+      oneLineDiff += ANSI.color("…", delimitersColor);
+    }
+    return oneLineDiff;
+  };
 
-      let oneLineDiff = "";
-      const delimitersColor = getDelimitersColor(context);
-      const overflowLeft = focusedCharIndex - previousCharAttempt > 0;
-      const overflowRight =
-        focusedCharIndex + nextCharAttempt < chars.length - 1;
-      if (overflowLeft) {
-        oneLineDiff += ANSI.color("…", delimitersColor);
+  const writeLinesDiff = (node, context, parentContext) => {
+    const lineNodes = node.lines;
+    empty_string: {
+      const firstLineNode = lineNodes[0];
+      const firstLineValueInfo = firstLineNode[context.resultType];
+      if (firstLineValueInfo.value.length === 0) {
+        const quote = node.quote || DOUBLE_QUOTE;
+        const bracketColor = getBracketColor(node, context);
+        let expandedDiff = "";
+        expandedDiff += ANSI.color(quote, bracketColor);
+        expandedDiff += ANSI.color(quote, bracketColor);
+        return expandedDiff;
       }
-      const bracketColor = getBracketColor(node, context);
-      if (node.quote) {
-        oneLineDiff += ANSI.color(node.quote, bracketColor);
-      }
-      oneLineDiff += charBeforeArray.reverse().join("");
-      oneLineDiff += focusedCharDiff;
-      oneLineDiff += charAfterArray.join("");
-      if (node.quote) {
-        oneLineDiff += ANSI.color(node.quote, bracketColor);
-      }
-      if (overflowRight) {
-        oneLineDiff += ANSI.color("…", delimitersColor);
-      }
-      return oneLineDiff;
-    };
+    }
 
-    // single line string (both actual and expected)
-    if (isSingleLine) {
+    single_line: {
+      const isSingleLine = lineNodes.length === 1;
+      // single line string (both actual and expected)
+      if (!isSingleLine) {
+        break single_line;
+      }
+      const firstLineNode = lineNodes[0];
       if (!node.quote) {
         const valueInfo = node[context.resultType];
         const quote =
@@ -1918,16 +1930,24 @@ let writeDiff;
             : context.quote;
         node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
       }
-      const charFocusedIndex = getFocusedCharIndex(firstLineNode, context);
-      return writeOneLineDiff(firstLineNode, charFocusedIndex);
+      const focusedCharIndex = getFocusedCharIndex(firstLineNode, context);
+      return writeOneLineDiff(
+        firstLineNode,
+        {
+          ...context,
+          removed: firstLineNode.diff.removed,
+          added: firstLineNode.diff.added,
+          modified: firstLineNode.canDiffChars
+            ? parentContext.modified
+            : context.modified,
+          focusedCharIndex,
+        },
+        context,
+      );
     }
 
-    // multiline string
-    // faut trouver la string focused
-    // puis prendre un avant, un apres (si deux max on les affiche)
-    // puis écrire le nb au dessus/en dessous
-    // mettre les prefix
     multiline: {
+      const lines = node[context.resultType].lines;
       let focusedLineIndex = lines.findIndex((line, index) => {
         const lineNode = lineNodes[index];
         return lineNode.diff.counters.overall.any > 0;
@@ -1936,10 +1956,7 @@ let writeDiff;
         focusedLineIndex = lines.length - 1;
       }
       const focusedLineNode = lineNodes[focusedLineIndex];
-      const focusedLineFocusedCharIndex = getFocusedCharIndex(
-        focusedLineNode,
-        context,
-      );
+      const focusedCharIndex = getFocusedCharIndex(focusedLineNode, context);
       let biggestLineNumber = focusedLineIndex + 1;
 
       const lineBeforeArray = [];
@@ -1980,8 +1997,18 @@ let writeDiff;
         nextLineRemaining = 0;
       }
 
-      const delimitersColor = getDelimitersColor(context);
       const writeLineDiff = (lineNode) => {
+        const lineContext = {
+          ...context,
+          removed: lineNode.diff.removed,
+          added: lineNode.diff.added,
+          modified: lineNode.canDiffChars
+            ? parentContext.modified
+            : context.modified,
+          focusedCharIndex,
+        };
+        const delimitersColor = getDelimitersColor(lineContext);
+
         let lineDiff = "";
         const lineNumber = String(lineNode.index + 1);
         lineDiff += ANSI.color(lineNumber, delimitersColor);
@@ -1989,7 +2016,8 @@ let writeDiff;
         // lineDiff += " ";
         lineDiff += ANSI.color("|", delimitersColor);
         lineDiff += " ";
-        lineDiff += writeOneLineDiff(lineNode, focusedLineFocusedCharIndex);
+
+        lineDiff += writeOneLineDiff(lineNode, lineContext, context);
         return lineDiff;
       };
       const diffLines = [];
@@ -2009,6 +2037,7 @@ let writeDiff;
         diffLines.push(writeLineDiff(lineAfterNode));
       }
       if (nextLineRemaining) {
+        const delimitersColor = getDelimitersColor(context);
         const skippedCounters = {
           total: 0,
           removed: 0,

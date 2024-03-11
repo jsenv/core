@@ -154,8 +154,6 @@ await startSnapshotTesting("string", {
     });
   },
   /* eslint-enable no-new-wrappers */
-  // TODO LATER:
-  // - comparing single line / multiline
   ["compare multiline"]: () => {
     assert({
       actual: {
@@ -166,6 +164,13 @@ my name is Benjamin`,
         foo: `Hello,
 my name is Ben`,
       },
+    });
+  },
+  ["compare single and multi"]: () => {
+    assert({
+      actual: "Hel",
+      expected: `Hello
+world`,
     });
   },
   // - compare multiline

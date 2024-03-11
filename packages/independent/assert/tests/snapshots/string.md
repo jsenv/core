@@ -254,3 +254,15 @@ my name is Ben`,
 
 ![img](<./string/compare multiline.svg>)
 
+# compare single and multi
+
+```js
+assert({
+  actual: "Hel",
+  expected: `Hello
+world`,
+});
+```
+
+![img](<./string/compare single and multi.svg>)
+
