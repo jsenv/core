@@ -281,3 +281,26 @@ france`,
 
 ![img](<./string/second line differs.svg>)
 
+# too many lines before and after
+
+```js
+assert({
+  actual: `one
+two
+three
+four/true
+five
+six
+seven/0`,
+  expected: `one
+two
+three
+four/false
+five
+six
+seven/1`,
+});
+```
+
+![img](<./string/too many lines before and after.svg>)
+

@@ -183,6 +183,24 @@ world`,
 france`,
     });
   },
+  ["too many lines before and after"]: () => {
+    assert({
+      actual: `one
+two
+three
+four/true
+five
+six
+seven/0`,
+      expected: `one
+two
+three
+four/false
+five
+six
+seven/1`,
+    });
+  },
   // - add a new empty line
   // - remove a line
 });

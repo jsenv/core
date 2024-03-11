@@ -161,3 +161,17 @@ actual: 1| Hello
 expect: 1| Hello
         2| france
 
+# too many lines before and after
+AssertionError: actual and expected are different:
+
+actual:  ↑ 2 lines ↑
+        3| thre
+        4| four/true
+        5| fiv
+         ↓ 2 lines (1 modified) ↓
+expect:  ↑ 2 lines ↑
+        3| thre
+        4| four/false
+        5| fiv
+         ↓ 2 lines (1 modified) ↓
+

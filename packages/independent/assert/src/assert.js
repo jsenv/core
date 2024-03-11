@@ -2023,6 +2023,7 @@ let writeDiff;
       const diffLines = [];
       if (previousLineRemaining) {
         let previousLinesSkippedDiff = "";
+        previousLinesSkippedDiff += fillRight("", biggestLineNumber);
         previousLinesSkippedDiff += ANSI.color(
           `↑ ${previousLineRemaining} lines ↑`,
           sameColor,
@@ -2040,51 +2041,41 @@ let writeDiff;
         const delimitersColor = getDelimitersColor(context);
         const skippedCounters = {
           total: 0,
-          removed: 0,
-          added: 0,
           modified: 0,
         };
-        let index = focusedLineIndex;
-        while (index < lines.length - 1) {
+        const from = focusedLineIndex + lineAfterArray.length + 1;
+        const to = lines.length;
+        let index = from;
+        while (index < to) {
           const nextLineNode = lineNodes[index];
+          index++;
           skippedCounters.total++;
-          if (nextLineNode.diff.removed) {
-            context.onNodeDisplayed(nextLineNode);
-            skippedCounters.removed++;
-            continue;
-          }
-          if (nextLineNode.diff.added) {
-            context.onNodeDisplayed(nextLineNode);
-            skippedCounters.added++;
-            continue;
-          }
           if (nextLineNode.diff.counters.overall.any > 0) {
             context.onNodeDisplayed(nextLineNode);
             skippedCounters.modified++;
             continue;
           }
-          index++;
         }
         let nextLinesSkippedDiff = "";
+        nextLinesSkippedDiff += fillRight("", biggestLineNumber);
         nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
         nextLinesSkippedDiff += " ";
         let belowSummary = "";
         belowSummary += ANSI.color(
           `${skippedCounters.total} lines`,
-          delimitersColor,
+          node.actual.lines.length === node.expected.lines.length
+            ? delimitersColor
+            : context.resultType === "actual"
+              ? unexpectedColor
+              : expectedColor,
         );
         const parts = [];
-        if (skippedCounters.removed) {
-          parts.push(
-            ANSI.color(`${skippedCounters.removed} removed`, removedColor),
-          );
-        }
-        if (skippedCounters.added) {
-          parts.push(ANSI.color(`${skippedCounters.added} added`, addedColor));
-        }
         if (skippedCounters.modified) {
           parts.push(
-            ANSI.color(`${skippedCounters.modified} modified`, unexpectedColor),
+            ANSI.color(
+              `${skippedCounters.modified} modified`,
+              context.resultType === "actual" ? unexpectedColor : expectedColor,
+            ),
           );
         }
         if (parts.length) {
@@ -2314,7 +2305,7 @@ let writeDiff;
           parts.push(
             ANSI.color(
               `${skippedValueCounters.modified} modified`,
-              unexpectedColor,
+              context.resultType === "actual" ? unexpectedColor : expectedColor,
             ),
           );
         }
