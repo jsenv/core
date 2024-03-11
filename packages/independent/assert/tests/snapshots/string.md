@@ -237,24 +237,26 @@ assert({
 
 ![img](<./string/new String prop.svg>)
 
-# compare multiline
+# second line contains extra chars
 
 ```js
 assert({
   actual: {
     foo: `Hello,
-my name is Benjamin`,
+my name is Benjamin
+and my brother is joe`,
   },
   expected: {
     foo: `Hello,
-my name is Ben`,
+my name is Ben
+and my brother is joe`,
   },
 });
 ```
 
-![img](<./string/compare multiline.svg>)
+![img](<./string/second line contains extra chars.svg>)
 
-# compare single and multi
+# one line vs two lines
 
 ```js
 assert({
@@ -264,5 +266,18 @@ world`,
 });
 ```
 
-![img](<./string/compare single and multi.svg>)
+![img](<./string/one line vs two lines.svg>)
+
+# second line differs
+
+```js
+assert({
+  actual: `Hello
+world`,
+  expected: `Hello
+france`,
+});
+```
+
+![img](<./string/second line differs.svg>)
 

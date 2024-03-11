@@ -132,22 +132,32 @@ expect: new String("tata") {
   foo: "b",
 }
 
-# compare multiline
+# second line contains extra chars
 AssertionError: actual and expected have 1 difference:
 
 actual: {
   foo: 1| Hello
        2| my name is Benjamin
+       3| and my brother is joe
 }
 expect: {
   foo: 1| Hello
        2| my name is Ben
+       3| and my brother is joe
 }
 
-# compare single and multi
+# one line vs two lines
 AssertionError: actual and expected are different:
 
 actual: 1| Hel
 expect: 1| Hello
         2| world
+
+# second line differs
+AssertionError: actual and expected are different:
+
+actual: 1| Hello
+        2| world
+expect: 1| Hello
+        2| france
 

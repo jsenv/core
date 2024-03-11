@@ -154,26 +154,35 @@ await startSnapshotTesting("string", {
     });
   },
   /* eslint-enable no-new-wrappers */
-  ["compare multiline"]: () => {
+  ["second line contains extra chars"]: () => {
     assert({
       actual: {
         foo: `Hello,
-my name is Benjamin`,
+my name is Benjamin
+and my brother is joe`,
       },
       expected: {
         foo: `Hello,
-my name is Ben`,
+my name is Ben
+and my brother is joe`,
       },
     });
   },
-  ["compare single and multi"]: () => {
+  ["one line vs two lines"]: () => {
     assert({
       actual: "Hel",
       expected: `Hello
 world`,
     });
   },
-  // - compare multiline
+  ["second line differs"]: () => {
+    assert({
+      actual: `Hello
+world`,
+      expected: `Hello
+france`,
+    });
+  },
   // - add a new empty line
   // - remove a line
 });
