@@ -1175,11 +1175,17 @@ let createComparisonTree;
       const isString = subtype === "string";
       const canHaveIndexedValues = isArray;
       const canHaveLines =
-        (isString || subtype === "String") &&
+        isString &&
+        //(isString || subtype === "String") &&
         type !== "line" &&
         type !== "char";
       // const canHaveChars = isString && type !== "char";
-      const canHaveChars = type === "line";
+      const canHaveChars =
+        // isString is important because value can be undefined, for example when:
+        // - actual is not a string and expected is
+        // - actual string is shorter
+        // - ...
+        isString && type === "line";
       const canHaveProps = composite;
 
       let inConstructor;
@@ -1343,36 +1349,6 @@ let writeDiff;
       return ANSI.color(valueInfo.wellKnownId, valueColor);
     }
 
-    if (node.type === "char") {
-      const valueColor = getValueColor(valueContext);
-      const { preserveLineBreaks, quote } = valueContext;
-      const char = node[valueContext.resultType].value;
-      const point = char.charCodeAt(0);
-      if (preserveLineBreaks && (char === "\n" || char === "\r")) {
-        return ANSI.color(char, valueColor);
-      }
-      if (
-        char === quote ||
-        point === 92 ||
-        point < 32 ||
-        (point > 126 && point < 160) ||
-        // line separators
-        point === 8232 ||
-        point === 8233
-      ) {
-        const replacement =
-          char === quote
-            ? `\\${quote}`
-            : point === 8232
-              ? "\\u2028"
-              : point === 8233
-                ? "\\u2029"
-                : charMeta[point];
-        return ANSI.color(replacement, valueColor);
-      }
-      return ANSI.color(char, valueColor);
-    }
-
     // primitive
     if (valueInfo.isPrimitive) {
       const value = valueInfo.value;
@@ -1404,6 +1380,36 @@ let writeDiff;
           : valueContext.modified;
         stringDiff += writeExpandedDiff(node, valueContext, context);
         return stringDiff;
+      }
+
+      if (valueInfo.isString) {
+        const valueColor = getValueColor(valueContext);
+        const { preserveLineBreaks, quote } = valueContext;
+        const char = node[valueContext.resultType].value;
+        const point = char.charCodeAt(0);
+        if (preserveLineBreaks && (char === "\n" || char === "\r")) {
+          return ANSI.color(char, valueColor);
+        }
+        if (
+          char === quote ||
+          point === 92 ||
+          point < 32 ||
+          (point > 126 && point < 160) ||
+          // line separators
+          point === 8232 ||
+          point === 8233
+        ) {
+          const replacement =
+            char === quote
+              ? `\\${quote}`
+              : point === 8232
+                ? "\\u2028"
+                : point === 8233
+                  ? "\\u2029"
+                  : charMeta[point];
+          return ANSI.color(replacement, valueColor);
+        }
+        return ANSI.color(char, valueColor);
       }
 
       let valueDiff =
@@ -1766,8 +1772,9 @@ let writeDiff;
   const writeLinesDiff = (node, context, parentContext) => {
     const bracketColor = getBracketColor(node, context);
     const firstLineNode = node.lines[0];
+    const firstLineValueInfo = firstLineNode[context.resultType];
 
-    if (firstLineNode.chars.length === 0) {
+    if (firstLineValueInfo.value.length === 0) {
       const quote = node.quote || DOUBLE_QUOTE;
       let expandedDiff = "";
       expandedDiff += ANSI.color(quote, bracketColor);
@@ -1778,6 +1785,7 @@ let writeDiff;
     const valueInfo = node[context.resultType];
     if (node.lines.length === 1) {
       // const firstLineValueInfo = firstLineNode[context.resultType];
+      const chars = firstLineValueInfo.chars;
       const charNodes = firstLineNode.chars;
       if (!node.quote) {
         const quote =
@@ -1790,14 +1798,8 @@ let writeDiff;
       let remainingWidth = context.maxColumns;
       let charFocusedIndex = -1;
       let index = 0;
-      for (; index < charNodes.length - 1; index++) {
+      for (; index < chars.length - 1; index++) {
         const charNode = charNodes[index];
-        if (context.resultType === "actual" && charNode.diff.removed) {
-          continue;
-        }
-        if (context.resultType === "expected" && charNode.diff.added) {
-          continue;
-        }
         if (!charNode.diff.counters.overall.any) {
           continue;
         }
@@ -1808,7 +1810,7 @@ let writeDiff;
       const charsAfterArray = [];
 
       if (charFocusedIndex === -1) {
-        charFocusedIndex = charNodes.length - 1;
+        charFocusedIndex = chars.length - 1;
       }
       const focusedCharDiff = writeDiff(charNodes[charFocusedIndex], {
         ...context,
@@ -1829,7 +1831,7 @@ let writeDiff;
         const previousCharIndex = charFocusedIndex - previousCharCount - 1;
         const nextCharIndex = charFocusedIndex + nextCharCount + 1;
         const hasPreviousChar = previousCharIndex >= 0;
-        const hasNextChar = nextCharIndex < charNodes.length;
+        const hasNextChar = nextCharIndex < chars.length;
         if (tryBeforeFirst && hasPreviousChar) {
           isBefore = true;
           tryBeforeFirst = false;
@@ -1847,13 +1849,6 @@ let writeDiff;
           break;
         }
         const charNode = charNodes[charIndex];
-        if (context.resultType === "actual" && charNode.diff.removed) {
-          continue;
-        }
-        if (context.resultType === "expected" && charNode.diff.added) {
-          continue;
-        }
-
         const charDiff = writeDiff(charNode, {
           ...context,
           modified: firstLineNode.canDiffChars
@@ -1865,7 +1860,7 @@ let writeDiff;
         if (charIndex - 1 > 0) {
           nextWidth += leftOverflowBoilerplateWidth;
         }
-        if (charIndex + 1 < charNodes.length - 1) {
+        if (charIndex + 1 < chars.length - 1) {
           nextWidth += rightOverflowBoilerplateWidth;
         }
         if (nextWidth >= remainingWidth) {
@@ -1882,8 +1877,7 @@ let writeDiff;
       let expandedDiff = "";
       const delimitersColor = getDelimitersColor(context);
       const overflowLeft = charFocusedIndex - previousCharCount > 0;
-      const overflowRight =
-        charFocusedIndex + nextCharCount < charNodes.length - 1;
+      const overflowRight = charFocusedIndex + nextCharCount < chars.length - 1;
       if (overflowLeft) {
         expandedDiff += ANSI.color("…", delimitersColor);
       }
