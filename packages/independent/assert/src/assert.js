@@ -2010,9 +2010,11 @@ let writeDiff;
         const delimitersColor = getDelimitersColor(lineContext);
 
         let lineDiff = "";
-        const lineNumber = String(lineNode.index + 1);
-        lineDiff += ANSI.color(lineNumber, delimitersColor);
-        lineDiff += fillRight(lineNumber, biggestLineNumber);
+        const lineNumberString = String(lineNode.index + 1);
+        if (String(biggestLineNumber).length > lineNumberString.length) {
+          lineDiff += " ";
+        }
+        lineDiff += ANSI.color(lineNumberString, delimitersColor);
         // lineDiff += " ";
         lineDiff += ANSI.color("|", delimitersColor);
         lineDiff += " ";
@@ -2023,7 +2025,9 @@ let writeDiff;
       const diffLines = [];
       if (previousLineRemaining) {
         let previousLinesSkippedDiff = "";
-        previousLinesSkippedDiff += fillRight("", biggestLineNumber);
+        previousLinesSkippedDiff += " ".repeat(
+          String(biggestLineNumber).length,
+        );
         previousLinesSkippedDiff += ANSI.color(
           `↑ ${previousLineRemaining} lines ↑`,
           sameColor,
@@ -2057,7 +2061,7 @@ let writeDiff;
           }
         }
         let nextLinesSkippedDiff = "";
-        nextLinesSkippedDiff += fillRight("", biggestLineNumber);
+        nextLinesSkippedDiff += " ".repeat(String(biggestLineNumber).length);
         nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
         nextLinesSkippedDiff += " ";
         let belowSummary = "";
@@ -2924,15 +2928,4 @@ const getFocusedCharIndex = (node, context) => {
   }
 
   return chars.length - 1;
-};
-
-const fillRight = (value, biggestValue, char = " ") => {
-  const width = String(value).length;
-  const biggestWidth = String(biggestValue).length;
-  let missingWidth = biggestWidth - width;
-  let padded = "";
-  while (missingWidth--) {
-    padded += char;
-  }
-  return padded;
 };
