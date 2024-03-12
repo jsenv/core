@@ -56,8 +56,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const {
       actual,
       expected,
-      maxDepth: maxDepthDefault = 5,
-      maxColumns: maxColumnsDefault = 100,
+      maxDepth = 5,
+      maxColumns = 100,
       maxDiffPerObject = 5,
       maxValueAroundDiff = 2,
       maxValueInsideDiff = 4,
@@ -770,7 +770,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let startNode = rootComparison;
     const [firstNodeCausingDiff] = causeSet;
     if (
-      firstNodeCausingDiff.expected.depth >= maxDepthDefault &&
+      firstNodeCausingDiff.expected.depth >= maxDepth &&
       !rootComparison.diff.category
     ) {
       const nodesFromRootToTarget = [firstNodeCausingDiff];
@@ -785,8 +785,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break;
         }
       }
-      let startNodeDepth =
-        firstNodeCausingDiff.expected.depth - maxDepthDefault;
+      let startNodeDepth = firstNodeCausingDiff.expected.depth - maxDepth;
       let valuePath = createValuePath();
       for (const node of nodesFromRootToTarget) {
         if (
@@ -852,11 +851,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       startNode,
       signs,
       initialDepth: -startNode.expected.depth,
-      initialMaxColumns: maxColumnsDefault,
-      maxColumns: maxColumnsDefault - stringWidth(firstPrefix),
-      prefix: firstPrefix,
+      maxColumns,
+      textIndent: stringWidth(firstPrefix),
       maxDiffPerObject,
-      maxDepth: maxDepthDefault,
+      maxDepth,
       maxValueBeforeDiff,
       maxValueAfterDiff,
       maxValueInsideDiff,
@@ -878,11 +876,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       startNode,
       signs,
       initialDepth: -startNode.expected.depth,
-      initialMaxColumns: maxColumnsDefault,
-      maxColumns: maxColumnsDefault - stringWidth(secondPrefix),
-      prefix: secondPrefix,
+      maxColumns,
+      textIndent: stringWidth(secondPrefix),
       maxDiffPerObject,
-      maxDepth: maxDepthDefault,
+      maxDepth,
       maxValueBeforeDiff,
       maxValueAfterDiff,
       maxValueInsideDiff,
@@ -1375,17 +1372,17 @@ let writeDiff;
               context.quote === "auto" ? pickBestQuote(string) : context.quote;
             node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
           }
-          let maxWidth = Math.min(valueContext.maxColumns, 10);
           let stringOverviewDiff = "";
           stringOverviewDiff += ANSI.color(node.quote, bracketColor);
-          let stringDiff;
           const quoteWidth = node.quote.length;
-          const width = quoteWidth + stringWidth(string) + quoteWidth;
+          const remainingWidth =
+            valueContext.maxColumns - valueContext.textIndent;
+          let maxWidth = Math.min(remainingWidth, 10);
+          maxWidth -= quoteWidth + quoteWidth;
+          let stringDiff;
+          const width = stringWidth(string);
           if (width > maxWidth) {
-            stringDiff = string.slice(
-              0,
-              maxWidth - 1 - quoteWidth - quoteWidth,
-            );
+            stringDiff = string.slice(0, maxWidth - "…".length);
             stringDiff += "…";
           } else {
             stringDiff = string;
@@ -1439,8 +1436,14 @@ let writeDiff;
           : value === null
             ? "null"
             : JSON.stringify(value);
-      if (valueDiff.length > valueContext.maxColumns) {
-        valueDiff = valueDiff.slice(0, valueContext.maxColumns - 1);
+      if (
+        valueDiff.length >
+        valueContext.maxColumns - valueContext.textIndent
+      ) {
+        valueDiff = valueDiff.slice(
+          0,
+          valueContext.maxColumns - valueContext.textIndent - "…".length,
+        );
         valueDiff += "…";
       }
       return ANSI.color(valueDiff, valueColor);
@@ -1636,11 +1639,8 @@ let writeDiff;
         ? ","
         : "";
     if (displayValue) {
-      nestedValueContext.prefix = nestedValueDiff;
-      nestedValueContext.maxColumns =
-        nestedValueContext.initialMaxColumns -
-        stringWidth(nestedValueDiff) -
-        separator.length;
+      nestedValueContext.textIndent += stringWidth(nestedValueDiff);
+      nestedValueContext.maxColumns -= separator.length;
       if (nestedValueContext.modified) {
         nestedValueContext.maxDepth = Math.min(
           valueInfo.depth + nestedValueContext.maxDepthInsideDiff,
@@ -1804,7 +1804,7 @@ let writeDiff;
     const charBeforeArray = [];
     const charAfterArray = [];
 
-    let remainingWidth = context.maxColumns;
+    let remainingWidth = context.maxColumns - context.textIndent;
     const focusedCharNode = charNodes[focusedCharIndex];
     let focusedCharDiff;
     if (focusedCharNode) {
@@ -2094,7 +2094,9 @@ let writeDiff;
         diffLines.push(nextLinesSkippedDiff);
       }
       let separator = `\n`;
-      separator += " ".repeat(context.prefix ? stringWidth(context.prefix) : 0);
+      if (context.textIndent) {
+        separator += " ".repeat(context.textIndent);
+      }
       return diffLines.join(separator);
     }
   };
@@ -2119,7 +2121,11 @@ let writeDiff;
     let diffCount = 0;
     let isFirstNestedValue = true;
     const appendNestedValueDiff = (node, writeContext) => {
-      let diff = writeDiff(node, writeContext);
+      let diff = writeDiff(node, {
+        ...writeContext,
+        textIndent: 0,
+      });
+
       if (
         node.type === "indexed_value" ||
         node.type === "property_descriptor" ||
@@ -2206,6 +2212,7 @@ let writeDiff;
             delimitersColor,
           );
           insideDiff += "\n";
+          // TODO: textIndent must change
         }
         insideDiff += beforeDiff;
         skippedArray.length = 0;
@@ -2420,7 +2427,9 @@ let writeDiff;
       estimatedCollapsedBoilerplate,
     );
     const remainingWidth =
-      context.maxColumns - estimatedCollapsedBoilerplateWidth;
+      context.maxColumns -
+      context.textIndent -
+      estimatedCollapsedBoilerplateWidth;
 
     let insideOverview = "";
     let isFirst = true;
