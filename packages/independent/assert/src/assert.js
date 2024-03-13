@@ -766,9 +766,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
             if (visitActualSetValues) {
               for (const valueInActualSet of node.actual.value) {
-                const actualSetValueNode = node.appendActualSetValue({
-                  actualValue: valueInActualSet,
-                });
+                const actualSetValueNode =
+                  node.appendActualSetValue(valueInActualSet);
                 if (
                   !visitExpectedSetValues ||
                   !node.expected.value.has(valueInActualSet)
@@ -789,9 +788,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
             if (visitExpectedSetValues) {
               for (const valueInExpectedSet of node.expected.value) {
-                const expectedSetValueNode = node.appendExpectedSetValue({
-                  actualValue: valueInExpectedSet,
-                });
+                const expectedSetValueNode =
+                  node.appendExpectedSetValue(valueInExpectedSet);
                 if (
                   !visitExpectedSetValues ||
                   !node.actual.value.has(valueInExpectedSet)
@@ -1209,11 +1207,11 @@ let createComparisonTree;
       }
       if (node.actual.isSet || node.expected.isSet) {
         node.actual.setValues = [];
-        node.appendActualSetValue = ({ actualValue }) => {
+        node.appendActualSetValue = (actualValue) => {
           const setValueNode = createComparisonNode({
             type: "set_value",
             actualValue,
-            expectedValue: null,
+            expectedValue: actualValue, // to make them comparable
             parent: node,
           });
           const setValueIndex = node.actual.setValues.length;
@@ -1222,10 +1220,10 @@ let createComparisonTree;
           return setValueNode;
         };
         node.expected.setValues = [];
-        node.appendExpectedSetValue = ({ expectedValue }) => {
+        node.appendExpectedSetValue = (expectedValue) => {
           const setValueNode = createComparisonNode({
             type: "set_value",
-            actualValue: null,
+            actualValue: expectedValue, // to make them comparable
             expectedValue,
             parent: node,
           });
@@ -1869,6 +1867,9 @@ let writeDiff;
         prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
       }
 
+      let openBracket = "(";
+      let closeBracket = ")";
+
       if (displayValueOfInsideConstructor) {
         insideConstructor = writeDiff(node.valueOfReturnValue, parentContext);
         // if (overview) {
@@ -1919,11 +1920,26 @@ let writeDiff;
             context.resultType === "actual" ? unexpectedColor : expectedColor,
           );
         }
+      } else if (valueInfo.isSet) {
+        openBracket = "([";
+        closeBracket = "])";
+        if (valueInfo.setValues.length) {
+          insideConstructor += "\n";
+          let setValueContext = {
+            ...parentContext,
+            textIndent: 0,
+          };
+          for (const setValueNode of valueInfo.setValues) {
+            let setValueNodeDiff = writeDiff(setValueNode, setValueContext);
+            insideConstructor += setValueNodeDiff;
+          }
+          insideConstructor += "\n";
+        }
       }
       if (insideConstructor) {
-        prefix += ANSI.color("(", delimitersColor);
+        prefix += ANSI.color(openBracket, delimitersColor);
         prefix += insideConstructor;
-        prefix += ANSI.color(")", delimitersColor);
+        prefix += ANSI.color(closeBracket, delimitersColor);
       }
       return prefix;
     }
@@ -2069,8 +2085,14 @@ let writeDiff;
         firstLineNode,
         {
           ...context,
-          removed: firstLineNode.diff.removed,
-          added: firstLineNode.diff.added,
+          removed:
+            firstLineNode.diff.removed === undefined
+              ? context.removed
+              : firstLineNode.diff.removed,
+          added:
+            firstLineNode.diff.added === undefined
+              ? context.added
+              : firstLineNode.diff.added,
           modified: firstLineNode.canDiffChars
             ? parentContext.modified
             : context.modified,
@@ -2134,8 +2156,14 @@ let writeDiff;
       const writeLineDiff = (lineNode) => {
         const lineContext = {
           ...context,
-          removed: lineNode.diff.removed,
-          added: lineNode.diff.added,
+          removed:
+            lineNode.diff.removed === undefined
+              ? context.removed
+              : lineNode.diff.removed,
+          added:
+            lineNode.diff.added === undefined
+              ? context.added
+              : lineNode.diff.added,
           modified: lineNode.canDiffChars
             ? parentContext.modified
             : context.modified,

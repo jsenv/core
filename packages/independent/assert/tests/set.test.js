@@ -7,8 +7,8 @@ const assert = createAssert();
 await startSnapshotTesting("set", {
   ["set value added"]: () => {
     assert({
-      actual: new Set(["a"]),
-      expected: new Set(["b"]),
+      actual: new Set(["a", "b", "c", "Y"]),
+      expected: new Set(["b", "a", "c", "Z"]),
     });
   },
 });
