@@ -2266,10 +2266,7 @@ let writeDiff;
       return writeLinesDiff(node, context, parentContext);
     }
 
-    let expandedDiff = "";
     let prefix = writePrefix(node, context, parentContext);
-    expandedDiff += prefix;
-
     const delimitersColor = getDelimitersColor(context);
     const relativeDepth = valueInfo.depth + context.initialDepth;
     let indent = "  ".repeat(relativeDepth);
@@ -2501,30 +2498,43 @@ let writeDiff;
     };
 
     let insideDiff = "";
+    insideDiff += prefix;
     if (valueInfo.canHaveIndexedValues) {
       const indexedValueDiff = writeGroupDiff(
         createGetIndexedValues(node, context, parentContext),
         {
           valueLabel: "value",
+          forceBracket: true,
           openBracket: "[",
           closeBracket: "]",
         },
       );
-      insideDiff += ANSI.color("(", delimitersColor);
-      insideDiff += indexedValueDiff;
-      insideDiff += ANSI.color(")", delimitersColor);
+      if (valueInfo.isSet) {
+        insideDiff += ANSI.color("(", delimitersColor);
+      }
+      if (indexedValueDiff) {
+        insideDiff += indexedValueDiff;
+      }
+      if (valueInfo.isSet) {
+        insideDiff += ANSI.color(")", delimitersColor);
+      }
     }
-    insideDiff += writeGroupDiff(createGetProps(node, context, parentContext), {
-      valueLabel: "prop",
-      forceBracket: !valueInfo.canHaveIndexedValues && prefix.length === 0,
-      openBracket: "{",
-      closeBracket: "}",
-    });
-    if (prefix && insideDiff && !valueInfo.isSet && !valueInfo.isArray) {
-      expandedDiff += " ";
+    const propsDiff = writeGroupDiff(
+      createGetProps(node, context, parentContext),
+      {
+        valueLabel: "prop",
+        forceBracket: !valueInfo.canHaveIndexedValues && prefix.length === 0,
+        openBracket: "{",
+        closeBracket: "}",
+      },
+    );
+    if (propsDiff) {
+      if (insideDiff) {
+        insideDiff += " ";
+      }
+      insideDiff += propsDiff;
     }
-    expandedDiff += insideDiff;
-    return expandedDiff;
+    return insideDiff;
   };
   const writeOverviewDiff = (node, context, parentContext) => {
     const prefixWithOverview = writePrefix(node, context, parentContext, {

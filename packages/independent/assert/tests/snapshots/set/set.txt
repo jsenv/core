@@ -1,10 +1,10 @@
 # compare set and array
 AssertionError: actual and expected are different:
 
-actual: ([
+actual: [
   "a",
   "b",
-])
+]
 expect: Set([
   "a",
   "b",
