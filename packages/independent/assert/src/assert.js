@@ -2647,85 +2647,20 @@ let writeDiff;
     });
   };
   const createGetNextNestedValue = (node, context, parentContext) => {
-    const valueInfo = node[context.resultType];
-    const indexedValueCount = valueInfo.canHaveIndexedValues
-      ? valueInfo.value.length
-      : 0;
-    const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
-    const propertyCount = propertyNames.length;
-
-    // let charIndex = 0;
-    let indexedValueIndex = 0;
-    let valueOfReturnValueDisplayed = false;
-    let prototypeDisplayed = false;
-    let propIndex = 0;
-
+    const nextIndexedValue = createGetIndexedValues(
+      node,
+      context,
+      parentContext,
+    );
+    const nextProp = createGetProps(node, context, parentContext);
     return () => {
-      if (indexedValueIndex < indexedValueCount) {
-        const indexedValueNode = node.indexedValues[indexedValueIndex];
-        indexedValueIndex++;
-        return {
-          node: indexedValueNode,
-          writeContext: {
-            ...context,
-            modified: node.canDiffIndexedValues
-              ? parentContext.modified
-              : context.modified,
-          },
-        };
+      const indexedValue = nextIndexedValue();
+      if (indexedValue) {
+        return indexedValue;
       }
-      if (
-        !valueOfReturnValueDisplayed &&
-        node.valueOfReturnValue &&
-        !node.valueOfReturnValue[context.resultType].inConstructor &&
-        !node.valueOfReturnValue[context.resultType].redundant
-      ) {
-        valueOfReturnValueDisplayed = true;
-        return {
-          node: node.valueOfReturnValue,
-          writeContext: {
-            ...context,
-            modified: node.canDiffValueOfReturnValue
-              ? parentContext.modified
-              : context.modified,
-          },
-        };
-      }
-      if (
-        !prototypeDisplayed &&
-        valueInfo.isComposite &&
-        node.diff.prototype &&
-        node.diff.prototype.counters.overall.any > 0 &&
-        !node.prototypeAreDifferentAndWellKnown
-      ) {
-        prototypeDisplayed = true;
-        return {
-          node: node.prototype,
-          writeContext: {
-            ...context,
-            modified: node.canDiffPrototypes
-              ? parentContext.modified
-              : context.modified,
-          },
-        };
-      }
-      if (propIndex < propertyCount) {
-        const propertyNode = node.properties[propertyNames[propIndex]];
-        propIndex++;
-        return {
-          node: propertyNode,
-          writeContext: {
-            ...context,
-            modified: node.canDiffProps
-              ? parentContext.modified
-              : context.modified,
-          },
-        };
-      }
-      return null;
+      return nextProp();
     };
   };
-
   const createGetIndexedValues = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
     const indexedValueCount = valueInfo.canHaveIndexedValues
