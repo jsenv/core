@@ -1,11 +1,11 @@
-# set value added
+# compare set and array
 
 ```js
 assert({
-  actual: new Set(["a", "b", "c", "Y"]),
-  expected: new Set(["b", "a", "c", "Z"]),
+  actual: ["a", "b"],
+  expected: new Set(["a", "b"]),
 });
 ```
 
-![img](<./set/set value added.svg>)
+![img](<./set/compare set and array.svg>)
 
