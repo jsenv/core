@@ -870,6 +870,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           valuePath = valuePath.append(node.index);
           continue;
         }
+        if (type === "set_value") {
+          valuePath = valuePath.append(node.index);
+          continue;
+        }
         if (type === "char") {
           valuePath = valuePath.append(node.index);
           continue;
@@ -1212,7 +1216,9 @@ let createComparisonTree;
             expectedValue: null,
             parent: node,
           });
-          node.actual.setValues.push(setValueNode);
+          const setValueIndex = node.actual.setValues.length;
+          setValueNode.index = setValueIndex;
+          node.actual.setValues[setValueIndex] = setValueNode;
           return setValueNode;
         };
         node.expected.setValues = [];
@@ -1223,7 +1229,9 @@ let createComparisonTree;
             expectedValue,
             parent: node,
           });
-          node.expected.setValues.push(setValueNode);
+          const setValueIndex = node.expected.setValues.length;
+          setValueNode.index = setValueIndex;
+          node.expected.setValues[setValueIndex] = setValueNode;
           return setValueNode;
         };
       }
@@ -1651,7 +1659,7 @@ let writeDiff;
         nestedValueContext.added = true;
       }
     }
-    if (node.type === "indexed_value") {
+    if (node.type === "indexed_value" || node.type === "set_value") {
       if (node.diff.removed) {
         nestedValueContext.removed = true;
       }
@@ -1687,6 +1695,7 @@ let writeDiff;
     const useIndent =
       !nestedValueContext.collapsed &&
       (node.type === "indexed_value" ||
+        node.type === "set_value" ||
         node.type === "property_descriptor" ||
         node.type === "prototype" ||
         node.type === "value_of_return_value");
@@ -1868,23 +1877,48 @@ let writeDiff;
         //   insideConstructor = writeValueDiff(node.valueOfReturnValue, context);
         // }
       } else if (overview) {
-        let keysColor;
+        let overviewContent = valueInfo.isSet
+          ? valueInfo.setValues.length
+          : valueInfo.keys.length;
         if (context.added) {
-          keysColor = addedColor;
+          insideConstructor = ANSI.color(overviewContent, addedColor);
         } else if (context.removed) {
-          keysColor = removedColor;
+          insideConstructor = ANSI.color(overviewContent, removedColor);
+        } else if (node.actual.isSet && node.expected.isSet) {
+          if (context.resultType === "actual") {
+            const added = node.actual.setValues.some(
+              (setValueNode) => setValueNode.diff.added,
+            );
+            insideConstructor = ANSI.color(
+              overviewContent,
+              added ? addedColor : sameColor,
+            );
+          } else {
+            const removed = node.expected.setValues.some(
+              (setValueNode) => setValueNode.diff.removed,
+            );
+            insideConstructor = ANSI.color(
+              overviewContent,
+              removed ? removedColor : sameColor,
+            );
+          }
+        } else if (node.actual.isSet !== node.expected.isSet) {
+          insideConstructor = ANSI.color(
+            overviewContent,
+            context.resultType === "actual" ? unexpectedColor : expectedColor,
+          );
         } else if (
           node.actual.isComposite &&
           node.expected.isComposite &&
           node.actual.keys.length === node.expected.keys.length
         ) {
-          keysColor = sameColor;
-        } else if (context.resultType === "actual") {
-          keysColor = unexpectedColor;
+          insideConstructor = ANSI.color(overviewContent, sameColor);
         } else {
-          keysColor = expectedColor;
+          insideConstructor = ANSI.color(
+            overviewContent,
+            context.resultType === "actual" ? unexpectedColor : expectedColor,
+          );
         }
-        insideConstructor = ANSI.color(valueInfo.keys.length, keysColor);
       }
       if (insideConstructor) {
         prefix += ANSI.color("(", delimitersColor);
@@ -2228,6 +2262,7 @@ let writeDiff;
 
       if (
         node.type === "indexed_value" ||
+        node.type === "set_value" ||
         node.type === "property_descriptor" ||
         node.type === "property" ||
         node.type === "prototype" ||
@@ -2287,7 +2322,10 @@ let writeDiff;
         let skippedValues = 0;
         let skippedProps = 0;
         for (const skipped of skippedArray) {
-          if (skipped.node.type === "indexed_value") {
+          if (
+            skipped.node.type === "indexed_value" ||
+            skipped.node.type === "set_value"
+          ) {
             skippedValues++;
           }
           if (skipped.node.type === "property") {
@@ -2619,22 +2657,22 @@ let writeDiff;
   };
   const createGetNextNestedValue = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
-    const valueCount = valueInfo.canHaveIndexedValues
+    const indexedValueCount = valueInfo.canHaveIndexedValues
       ? valueInfo.value.length
       : 0;
     const propertyNames = valueInfo.canHaveProps ? valueInfo.keys : [];
     const propertyCount = propertyNames.length;
 
     // let charIndex = 0;
-    let valueIndex = 0;
+    let indexedValueIndex = 0;
     let valueOfReturnValueDisplayed = false;
     let prototypeDisplayed = false;
     let propIndex = 0;
 
     return () => {
-      if (valueIndex < valueCount) {
-        const indexedValueNode = node.indexedValues[valueIndex];
-        valueIndex++;
+      if (indexedValueIndex < indexedValueCount) {
+        const indexedValueNode = node.indexedValues[indexedValueIndex];
+        indexedValueIndex++;
         return {
           node: indexedValueNode,
           writeContext: {
@@ -2703,6 +2741,7 @@ let writeDiff;
     prototype: writeNestedValueDiff,
     value_of_return_value: writeNestedValueDiff,
     indexed_value: writeNestedValueDiff,
+    set_value: writeNestedValueDiff,
     property_descriptor: writeNestedValueDiff,
   };
 
