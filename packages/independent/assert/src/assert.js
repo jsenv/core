@@ -543,7 +543,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
             }
           }
-
           indexed_values: {
             const visitActualIndexedValues =
               node.actual.canHaveIndexedValues && !actualStructureIsKnown;
@@ -755,6 +754,61 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
             }
             node.actual.keys = actualKeys;
+          }
+          set_values: {
+            const visitActualSetValues =
+              node.actual.isSet && !actualStructureIsKnown;
+            const visitExpectedSetValues =
+              node.expected.isSet && !expectedStructureIsKnown;
+            const canDiffSetValues =
+              visitActualSetValues && visitExpectedSetValues;
+            node.canDiffSetValues = canDiffSetValues;
+
+            if (visitActualSetValues) {
+              for (const valueInActualSet of node.actual.value) {
+                const actualSetValueNode = node.appendActualSetValue({
+                  actualValue: valueInActualSet,
+                });
+                if (
+                  !visitExpectedSetValues ||
+                  !node.expected.value.has(valueInActualSet)
+                ) {
+                  actualSetValueNode.diff.added = true;
+                  if (canDiffSetValues && !ignoreDiff) {
+                    actualSetValueNode.diff.counters.self.added++;
+                    addNodeCausingDiff(actualSetValueNode);
+                  }
+                }
+                visit(actualSetValueNode, { ignoreDiff: true });
+                appendCounters(
+                  node.diff.counters.inside,
+                  actualSetValueNode.diff.counters.overall,
+                );
+              }
+            }
+
+            if (visitExpectedSetValues) {
+              for (const valueInExpectedSet of node.expected.value) {
+                const expectedSetValueNode = node.appendExpectedSetValue({
+                  actualValue: valueInExpectedSet,
+                });
+                if (
+                  !visitExpectedSetValues ||
+                  !node.actual.value.has(valueInExpectedSet)
+                ) {
+                  expectedSetValueNode.diff.removed = true;
+                  if (canDiffSetValues && !ignoreDiff) {
+                    expectedSetValueNode.diff.counters.self.removed++;
+                    addNodeCausingDiff(expectedSetValueNode);
+                  }
+                }
+                visit(expectedSetValueNode, { ignoreDiff: true });
+                appendCounters(
+                  node.diff.counters.inside,
+                  expectedSetValueNode.diff.counters.overall,
+                );
+              }
+            }
           }
         }
       };
@@ -1149,6 +1203,30 @@ let createComparisonTree;
           return charNode;
         };
       }
+      if (node.actual.isSet || node.expected.isSet) {
+        node.actual.setValues = [];
+        node.appendActualSetValue = ({ actualValue }) => {
+          const setValueNode = createComparisonNode({
+            type: "set_value",
+            actualValue,
+            expectedValue: null,
+            parent: node,
+          });
+          node.actual.setValues.push(setValueNode);
+          return setValueNode;
+        };
+        node.expected.setValues = [];
+        node.appendExpectedSetValue = ({ expectedValue }) => {
+          const setValueNode = createComparisonNode({
+            type: "set_value",
+            actualValue: null,
+            expectedValue,
+            parent: node,
+          });
+          node.expected.setValues.push(setValueNode);
+          return setValueNode;
+        };
+      }
       return node;
     };
 
@@ -1157,6 +1235,10 @@ let createComparisonTree;
       let wellKnownId;
       let subtype;
       let isArray;
+      let isSet = false;
+      let isString = false;
+      let isStringObject = false;
+
       if (value === ARRAY_EMPTY_VALUE) {
         composite = false;
         isArray = false;
@@ -1175,22 +1257,29 @@ let createComparisonTree;
         if (composite) {
           isArray = Array.isArray(value) && value !== Array.prototype;
           subtype = getSubtype(value);
+
+          visitPrototypes(value, (proto) => {
+            if (proto.constructor && proto.constructor.name === "Set") {
+              isSet = true;
+            }
+            if (proto.constructor && proto.constructor.name === "String") {
+              isStringObject = true;
+            }
+          });
         } else {
           isArray = false;
           if (value === null) {
             subtype = "null";
           } else {
             subtype = typeof value;
+            isString = subtype === "string";
           }
         }
       }
 
-      const isString = subtype === "string";
       const canHaveIndexedValues = isArray;
       const canHaveLines =
-        (isString || subtype === "String") &&
-        type !== "line" &&
-        type !== "char";
+        (isString || isStringObject) && type !== "line" && type !== "char";
       // const canHaveChars = isString && type !== "char";
       const canHaveChars =
         // isString is important because value can be undefined, for example when:
@@ -1234,6 +1323,7 @@ let createComparisonTree;
         isComposite: composite,
         isPrimitive: !composite,
         isArray,
+        isSet,
         isString,
         canHaveIndexedValues,
         canHaveLines,
@@ -1256,6 +1346,16 @@ let createComparisonTree;
     });
 
     return { root };
+  };
+  const visitPrototypes = (obj, callback) => {
+    while (obj || isUndetectableObject(obj)) {
+      const proto = Object.getPrototypeOf(obj);
+      if (!proto) {
+        break;
+      }
+      callback(proto);
+      obj = proto;
+    }
   };
   const getSubtype = (obj) => {
     // https://github.com/nodejs/node/blob/384fd1787634c13b3e5d2f225076d2175dc3b96b/lib/internal/util/inspect.js#L859
