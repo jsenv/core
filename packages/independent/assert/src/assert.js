@@ -59,9 +59,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxDepth = 5,
       maxColumns = 100,
       maxDiffPerObject = 5,
-      maxPropAroundDiff = 2,
-      maxValueAroundDiff = 4,
-      maxPropInsideDiff = 4,
+      maxValueAroundDiff = 2,
       maxValueInsideDiff = 4,
       maxDepthInsideDiff = 1,
       maxLineAroundDiff = 2,
@@ -69,8 +67,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       preserveLineBreaks,
       signs,
     } = firstArg;
-    const maxPropBeforeDiff = maxPropAroundDiff;
-    const maxPropAfterDiff = maxPropAroundDiff;
     const maxValueBeforeDiff = maxValueAroundDiff;
     const maxValueAfterDiff = maxValueAroundDiff;
     const maxLineBeforeDiff = maxLineAroundDiff;
@@ -911,9 +907,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       textIndent: stringWidth(firstPrefix),
       maxDepth,
       maxDiffPerObject,
-      maxPropBeforeDiff,
-      maxPropAfterDiff,
-      maxPropInsideDiff,
       maxValueBeforeDiff,
       maxValueAfterDiff,
       maxValueInsideDiff,
@@ -939,9 +932,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       textIndent: stringWidth(secondPrefix),
       maxDepth,
       maxDiffPerObject,
-      maxPropBeforeDiff,
-      maxPropAfterDiff,
-      maxPropInsideDiff,
       maxValueBeforeDiff,
       maxValueAfterDiff,
       maxValueInsideDiff,
@@ -2250,15 +2240,7 @@ let writeDiff;
 
     const writeGroupDiff = (
       next,
-      {
-        openBracket,
-        closeBracket,
-        forceBracket,
-        valueLabel,
-        maxEntryBeforeDiff,
-        maxEntryAfterDiff,
-        maxEntryInsideDiff,
-      },
+      { openBracket, closeBracket, forceBracket, valueLabel },
     ) => {
       let groupDiff = "";
       const entryBeforeDiffArray = [];
@@ -2295,7 +2277,10 @@ let writeDiff;
         const entryBeforeDiffCount = entryBeforeDiffArray.length;
         if (entryBeforeDiffCount) {
           let beforeDiff = "";
-          let from = Math.max(entryBeforeDiffCount - maxEntryBeforeDiff + 1, 0);
+          let from = Math.max(
+            entryBeforeDiffCount - context.maxValueBeforeDiff + 1,
+            0,
+          );
           let to = entryBeforeDiffCount;
           let index = from;
           while (index !== to) {
@@ -2332,7 +2317,9 @@ let writeDiff;
       const skippedCount = skippedArray.length;
       if (skippedCount) {
         const maxValueAfter = Math.min(
-          context.modified ? maxEntryInsideDiff - 1 : maxEntryAfterDiff - 1,
+          context.modified
+            ? context.maxValueInsideDiff - 1
+            : context.maxValueAfterDiff - 1,
           skippedArray.length,
         );
         let from = 0;
@@ -2467,9 +2454,6 @@ let writeDiff;
           forceBracket: true,
           openBracket: "[",
           closeBracket: "]",
-          maxEntryBeforeDiff: context.maxValueBeforeDiff,
-          maxEntryAfterDiff: context.maxValueAfterDiff,
-          maxEntryInsideDiff: context.maxValueInsideDiff,
         },
       );
       if (valueInfo.isSet) {
@@ -2489,9 +2473,6 @@ let writeDiff;
         forceBracket: !valueInfo.canHaveIndexedValues && prefix.length === 0,
         openBracket: "{",
         closeBracket: "}",
-        maxEntryBeforeDiff: context.maxPropBeforeDiff,
-        maxEntryAfterDiff: context.maxPropAfterDiff,
-        maxEntryInsideDiff: context.maxPropInsideDiff,
       },
     );
     if (propsDiff) {

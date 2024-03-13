@@ -4,6 +4,7 @@
 assert({
   actual: new Set(["a", "b", "c", "Y"]),
   expected: new Set(["b", "a", "c", "Z"]),
+  maxValueAroundDiff: 4,
 });
 ```
 
