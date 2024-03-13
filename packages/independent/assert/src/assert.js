@@ -59,7 +59,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxDepth = 5,
       maxColumns = 100,
       maxDiffPerObject = 5,
-      maxValueAroundDiff = 2,
+      maxPropAroundDiff = 2,
+      maxValueAroundDiff = 4,
+      maxPropInsideDiff = 4,
       maxValueInsideDiff = 4,
       maxDepthInsideDiff = 1,
       maxLineAroundDiff = 2,
@@ -67,6 +69,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       preserveLineBreaks,
       signs,
     } = firstArg;
+    const maxPropBeforeDiff = maxPropAroundDiff;
+    const maxPropAfterDiff = maxPropAroundDiff;
     const maxValueBeforeDiff = maxValueAroundDiff;
     const maxValueAfterDiff = maxValueAroundDiff;
     const maxLineBeforeDiff = maxLineAroundDiff;
@@ -565,6 +569,46 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               : [];
             node.expected.values = expectedValues;
 
+            if (node.actual.isSet && node.expected.isSet) {
+              let index = 0;
+              const visitSetValue = (value) => {
+                const actualHasValue = node.actual.value.has(value);
+                const expectedHasValue = node.expected.value.has(value);
+                const indexedValueNode = node.appendIndexedValue(index, {
+                  actualValue: actualHasValue ? value : null,
+                  expectedValue: expectedHasValue ? value : null,
+                });
+                index++;
+                if (!actualHasValue) {
+                  indexedValueNode.diff.removed = true;
+                  if (!ignoreDiff) {
+                    indexedValueNode.diff.counters.self.removed++;
+                    addNodeCausingDiff(indexedValueNode);
+                  }
+                }
+                if (!expectedHasValue) {
+                  indexedValueNode.diff.added = true;
+                  if (!ignoreDiff) {
+                    indexedValueNode.diff.counters.self.added++;
+                    addNodeCausingDiff(indexedValueNode);
+                  }
+                }
+                visit(indexedValueNode, { ignoreDiff: true });
+                appendCounters(
+                  node.diff.counters.inside,
+                  indexedValueNode.diff.counters.overall,
+                );
+              };
+
+              for (const actualValue of actualValues) {
+                visitSetValue(actualValue);
+              }
+              for (const expectedValue of expectedValues) {
+                visitSetValue(expectedValue);
+              }
+              break indexed_values;
+            }
+
             const visitIndexedValue = (index) => {
               const actualHasOwn = visitActualIndexedValues
                 ? Object.hasOwn(actualValues, index)
@@ -767,59 +811,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
             node.actual.keys = actualKeys;
           }
-          set_values: {
-            const visitActualSetValues =
-              node.actual.isSet && !actualStructureIsKnown;
-            const visitExpectedSetValues =
-              node.expected.isSet && !expectedStructureIsKnown;
-            const canDiffSetValues =
-              visitActualSetValues && visitExpectedSetValues;
-            node.canDiffSetValues = canDiffSetValues;
-
-            break set_values;
-            // if (visitActualSetValues) {
-            //   for (const valueInActualSet of node.actual.value) {
-            //     const actualSetValueNode =
-            //       node.appendActualSetValue(valueInActualSet);
-            //     if (
-            //       visitExpectedSetValues &&
-            //       !node.expected.value.has(valueInActualSet)
-            //     ) {
-            //       actualSetValueNode.diff.added = true;
-            //       if (canDiffSetValues && !ignoreDiff) {
-            //         actualSetValueNode.diff.counters.self.added++;
-            //         addNodeCausingDiff(actualSetValueNode);
-            //       }
-            //     }
-            //     visit(actualSetValueNode, { ignoreDiff: true });
-            //     appendCounters(
-            //       node.diff.counters.inside,
-            //       actualSetValueNode.diff.counters.overall,
-            //     );
-            //   }
-            // }
-            // if (visitExpectedSetValues) {
-            //   for (const valueInExpectedSet of node.expected.value) {
-            //     const expectedSetValueNode =
-            //       node.appendExpectedSetValue(valueInExpectedSet);
-            //     if (
-            //       visitActualSetValues &&
-            //       !node.actual.value.has(valueInExpectedSet)
-            //     ) {
-            //       expectedSetValueNode.diff.removed = true;
-            //       if (canDiffSetValues && !ignoreDiff) {
-            //         expectedSetValueNode.diff.counters.self.removed++;
-            //         addNodeCausingDiff(expectedSetValueNode);
-            //       }
-            //     }
-            //     visit(expectedSetValueNode, { ignoreDiff: true });
-            //     appendCounters(
-            //       node.diff.counters.inside,
-            //       expectedSetValueNode.diff.counters.overall,
-            //     );
-            //   }
-            // }
-          }
         }
       };
 
@@ -880,10 +871,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           valuePath = valuePath.append(node.index);
           continue;
         }
-        if (type === "set_value") {
-          valuePath = valuePath.append(node.index);
-          continue;
-        }
         if (type === "char") {
           valuePath = valuePath.append(node.index);
           continue;
@@ -921,8 +908,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       initialDepth: -startNode.expected.depth,
       maxColumns,
       textIndent: stringWidth(firstPrefix),
-      maxDiffPerObject,
       maxDepth,
+      maxDiffPerObject,
+      maxPropBeforeDiff,
+      maxPropAfterDiff,
+      maxPropInsideDiff,
       maxValueBeforeDiff,
       maxValueAfterDiff,
       maxValueInsideDiff,
@@ -946,8 +936,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       initialDepth: -startNode.expected.depth,
       maxColumns,
       textIndent: stringWidth(secondPrefix),
-      maxDiffPerObject,
       maxDepth,
+      maxDiffPerObject,
+      maxPropBeforeDiff,
+      maxPropAfterDiff,
+      maxPropInsideDiff,
       maxValueBeforeDiff,
       maxValueAfterDiff,
       maxValueInsideDiff,
@@ -1215,34 +1208,6 @@ let createComparisonTree;
           charNode.index = charIndex;
           node.chars[charIndex] = charNode;
           return charNode;
-        };
-      }
-      if (node.actual.isSet || node.expected.isSet) {
-        node.actual.setValues = [];
-        node.appendActualSetValue = (actualValue) => {
-          const setValueNode = createComparisonNode({
-            type: "set_value",
-            actualValue,
-            expectedValue: actualValue, // to make them comparable
-            parent: node,
-          });
-          const setValueIndex = node.actual.setValues.length;
-          setValueNode.index = setValueIndex;
-          node.actual.setValues[setValueIndex] = setValueNode;
-          return setValueNode;
-        };
-        node.expected.setValues = [];
-        node.appendExpectedSetValue = (expectedValue) => {
-          const setValueNode = createComparisonNode({
-            type: "set_value",
-            actualValue: expectedValue, // to make them comparable
-            expectedValue,
-            parent: node,
-          });
-          const setValueIndex = node.expected.setValues.length;
-          setValueNode.index = setValueIndex;
-          node.expected.setValues[setValueIndex] = setValueNode;
-          return setValueNode;
         };
       }
       return node;
@@ -1669,7 +1634,7 @@ let writeDiff;
         nestedValueContext.added = true;
       }
     }
-    if (node.type === "indexed_value" || node.type === "set_value") {
+    if (node.type === "indexed_value") {
       if (node.diff.removed) {
         nestedValueContext.removed = true;
       }
@@ -1705,7 +1670,6 @@ let writeDiff;
     const useIndent =
       !nestedValueContext.collapsed &&
       (node.type === "indexed_value" ||
-        node.type === "set_value" ||
         node.type === "property_descriptor" ||
         node.type === "prototype" ||
         node.type === "value_of_return_value");
@@ -2277,25 +2241,23 @@ let writeDiff;
         ...writeContext,
         textIndent: 0,
       });
-
-      // if (
-      //   node.type === "indexed_value" ||
-      //   node.type === "set_value" ||
-      //   node.type === "property_descriptor" ||
-      //   node.type === "property" ||
-      //   node.type === "prototype" ||
-      //   node.type === "value_of_return_value"
-      // ) {
       if (node !== context.startNode) {
         diff += `\n`;
       }
-      // }
       return diff;
     };
 
     const writeGroupDiff = (
       next,
-      { valueLabel, openBracket, closeBracket, forceBracket },
+      {
+        openBracket,
+        closeBracket,
+        forceBracket,
+        valueLabel,
+        maxEntryBeforeDiff,
+        maxEntryAfterDiff,
+        maxEntryInsideDiff,
+      },
     ) => {
       let groupDiff = "";
       const entryBeforeDiffArray = [];
@@ -2323,10 +2285,7 @@ let writeDiff;
         const entryBeforeDiffCount = entryBeforeDiffArray.length;
         if (entryBeforeDiffCount) {
           let beforeDiff = "";
-          let from = Math.max(
-            entryBeforeDiffCount - context.maxValueBeforeDiff + 1,
-            0,
-          );
+          let from = Math.max(entryBeforeDiffCount - maxEntryBeforeDiff + 1, 0);
           let to = entryBeforeDiffCount;
           let index = from;
           while (index !== to) {
@@ -2362,17 +2321,8 @@ let writeDiff;
       // now display the values after
       const skippedCount = skippedArray.length;
       if (skippedCount) {
-        // maxPropertyInsideDiff
-        // I can display only the non modified props
-        // and I can display only a subset
-        // if there is any
-        // is there a diff before?
-        // if yes then it's maxValueAfterDiff
-        // otherwise it's max after diff
         const maxValueAfter = Math.min(
-          context.modified
-            ? context.maxValueInsideDiff - 1
-            : context.maxValueAfterDiff - 1,
+          context.modified ? maxEntryInsideDiff - 1 : maxEntryAfterDiff - 1,
           skippedArray.length,
         );
         let from = 0;
@@ -2507,6 +2457,9 @@ let writeDiff;
           forceBracket: true,
           openBracket: "[",
           closeBracket: "]",
+          maxEntryBeforeDiff: context.maxValueBeforeDiff,
+          maxEntryAfterDiff: context.maxValueAfterDiff,
+          maxEntryInsideDiff: context.maxValueInsideDiff,
         },
       );
       if (valueInfo.isSet) {
@@ -2526,6 +2479,9 @@ let writeDiff;
         forceBracket: !valueInfo.canHaveIndexedValues && prefix.length === 0,
         openBracket: "{",
         closeBracket: "}",
+        maxEntryBeforeDiff: context.maxPropBeforeDiff,
+        maxEntryAfterDiff: context.maxPropAfterDiff,
+        maxEntryInsideDiff: context.maxPropInsideDiff,
       },
     );
     if (propsDiff) {
@@ -2664,7 +2620,7 @@ let writeDiff;
   const createGetIndexedValues = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
     const indexedValueCount = valueInfo.canHaveIndexedValues
-      ? valueInfo.values.length
+      ? node.indexedValues.length
       : 0;
     let indexedValueIndex = 0;
     return () => {
@@ -2752,7 +2708,6 @@ let writeDiff;
     prototype: writeNestedValueDiff,
     value_of_return_value: writeNestedValueDiff,
     indexed_value: writeNestedValueDiff,
-    set_value: writeNestedValueDiff,
     property_descriptor: writeNestedValueDiff,
   };
 

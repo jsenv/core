@@ -1,12 +1,20 @@
-# compare set and array
-AssertionError: actual and expected are different:
+# set value added
+AssertionError: actual and expected have 2 differences:
 
-actual: [
+actual: Set([
   "a",
   "b",
-]
+  "c",
+  "Y",
+  "b",
+  "a",
+  "c",
+])
 expect: Set([
-  "a",
+  ↑ 3 values ↑
   "b",
+  "a",
+  "c",
+  "Z",
 ])
 
