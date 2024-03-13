@@ -6,15 +6,23 @@ actual: Set([
   "b",
   "c",
   "Y",
-  "b",
-  "a",
-  "c",
 ])
 expect: Set([
-  ↑ 3 values ↑
   "b",
   "a",
   "c",
   "Z",
+])
+
+# compare set and array
+AssertionError: actual and expected are different:
+
+actual: [
+  "a",
+  "b",
+]
+expect: Set([
+  "a",
+  "b",
 ])
 

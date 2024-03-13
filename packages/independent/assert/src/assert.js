@@ -571,13 +571,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
             if (node.actual.isSet && node.expected.isSet) {
               let index = 0;
-              const visitSetValue = (value) => {
+              const visitSetValue = (value, owner) => {
                 const actualHasValue = node.actual.value.has(value);
                 const expectedHasValue = node.expected.value.has(value);
                 const indexedValueNode = node.appendIndexedValue(index, {
                   actualValue: actualHasValue ? value : null,
                   expectedValue: expectedHasValue ? value : null,
                 });
+                indexedValueNode.owner = owner;
                 index++;
                 if (!actualHasValue) {
                   indexedValueNode.diff.removed = true;
@@ -601,10 +602,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               };
 
               for (const actualValue of actualValues) {
-                visitSetValue(actualValue);
+                visitSetValue(actualValue, "actual");
               }
               for (const expectedValue of expectedValues) {
-                visitSetValue(expectedValue);
+                visitSetValue(expectedValue, "expected");
               }
               break indexed_values;
             }
@@ -2270,6 +2271,15 @@ let writeDiff;
         if (context.resultType === "expected" && entry.node.diff.added) {
           continue;
         }
+        if (entry.node.owner && entry.node.owner !== context.resultType) {
+          // set values are handled as indexed values (array entries)
+          // but they are quite special, because the index does not matter
+          // only the value matters (except when comparsing set and array)
+          // so an indexed value is created for each set in actual/expected
+          // but we don't want to display value beloning to actual
+          // in expected (and the other way around)
+          continue;
+        }
         if (!entry.node.diff.counters.overall.any) {
           entryBeforeDiffArray.push(entry);
           continue;
@@ -2528,7 +2538,6 @@ let writeDiff;
       if (context.resultType === "expected" && entry.node.diff.added) {
         continue;
       }
-
       let valueOverview = "";
       valueOverview += writeDiff(entry.node, entry.writeContext);
       const valueWidth = stringWidth(valueOverview);

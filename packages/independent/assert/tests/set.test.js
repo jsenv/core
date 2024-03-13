@@ -11,10 +11,10 @@ await startSnapshotTesting("set", {
       expected: new Set(["b", "a", "c", "Z"]),
     });
   },
-  // ["compare set and array"]: () => {
-  //   assert({
-  //     actual: ["a", "b"],
-  //     expected: new Set(["a", "b"]),
-  //   });
-  // },
+  ["compare set and array"]: () => {
+    assert({
+      actual: ["a", "b"],
+      expected: new Set(["a", "b"]),
+    });
+  },
 });
