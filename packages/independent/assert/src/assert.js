@@ -543,6 +543,70 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
             }
           }
+          url_parts: {
+            const visitActualUrlParts = node.actual.isUrl;
+            const visitExpectedUrlParts = node.expected.isUrl;
+            const canDiffUrlParts = visitActualUrlParts & visitExpectedUrlParts;
+            node.canDiffUrlParts = canDiffUrlParts;
+
+            if (canDiffUrlParts) {
+              const actualUrlParts = new URL(node.actual.value);
+              const expectedUrlParts = new URL(node.expected.value);
+              const normalizeUrlPart = (name, value) => {
+                if (name === "port") {
+                  if (value === "") {
+                    return 80;
+                  }
+                  return parseInt(value);
+                }
+                return value;
+              };
+              const visitUrlPart = (name) => {
+                let actualUrlPart = normalizeUrlPart(
+                  name,
+                  actualUrlParts[name],
+                );
+                let expectedUrlPart = normalizeUrlPart(
+                  name,
+                  expectedUrlParts[name],
+                );
+                const urlPartNode = node.appendUrlPart(name, {
+                  actualValue: actualUrlPart,
+                  expectedValue: expectedUrlPart,
+                });
+                if (!actualUrlPart && expectedUrlPart) {
+                  urlPartNode.diff.removed = true;
+                  if (!ignoreDiff) {
+                    urlPartNode.diff.counters.self.removed++;
+                    addNodeCausingDiff(urlPartNode);
+                  }
+                }
+                if (expectedUrlPart && !actualUrlPart) {
+                  urlPartNode.diff.added = true;
+                  if (!ignoreDiff) {
+                    urlPartNode.diff.counters.self.added++;
+                    addNodeCausingDiff(urlPartNode);
+                  }
+                }
+                visit(urlPartNode, { ignoreDiff });
+                appendCounters(
+                  node.diff.counters.inside,
+                  urlPartNode.diff.counters.overall,
+                );
+              };
+
+              visitUrlPart("protocol");
+              visitUrlPart("username");
+              visitUrlPart("password");
+              visitUrlPart("hostname");
+              visitUrlPart("port");
+              visitUrlPart("pathname");
+              // for search params I'll have to think about it
+              // for now we'll handle it as a string
+              visitUrlPart("search");
+              visitUrlPart("hash");
+            }
+          }
           indexed_values: {
             const visitActualIndexedValues =
               node.actual.canHaveIndexedValues && !actualStructureIsKnown;
@@ -1201,6 +1265,20 @@ let createComparisonTree;
           return charNode;
         };
       }
+      if (node.actual.isUrl && node.expected.isUrl) {
+        node.urlParts = {};
+        node.appendUrlPart = (name, { actualValue, expectedValue }) => {
+          const urlPartNode = createComparisonNode({
+            type: "url_part",
+            actualValue,
+            expectedValue,
+            parent: node,
+          });
+          urlPartNode.name = name;
+          node.urlParts[name] = urlPartNode;
+          return urlPartNode;
+        };
+      }
       return node;
     };
 
@@ -1212,6 +1290,7 @@ let createComparisonTree;
       let isSet = false;
       let isString = false;
       let isStringObject = false;
+      let isUrl = false;
 
       if (value === ARRAY_EMPTY_VALUE) {
         composite = false;
@@ -1233,11 +1312,14 @@ let createComparisonTree;
           subtype = getSubtype(value);
 
           visitPrototypes(value, (proto) => {
-            if (proto.constructor && proto.constructor.name === "Set") {
-              isSet = true;
-            }
-            if (proto.constructor && proto.constructor.name === "String") {
-              isStringObject = true;
+            if (proto.constructor) {
+              if (proto.constructor.name === "Set") {
+                isSet = true;
+              } else if (proto.constructor.name === "String") {
+                isStringObject = true;
+              } else if (proto.constructor.name === "URL") {
+                isUrl = true;
+              }
             }
           });
         } else {
@@ -1296,9 +1378,10 @@ let createComparisonTree;
         subtype,
         isComposite: composite,
         isPrimitive: !composite,
+        isString,
         isArray,
         isSet,
-        isString,
+        isUrl,
         canHaveIndexedValues,
         canHaveLines,
         canHaveChars,
@@ -1608,48 +1691,14 @@ let writeDiff;
     ) {
       return writeValueDiff(node, context);
     }
-    const nestedValueContext = { ...context };
-    if (node.type === "line") {
-      if (node.diff.removed) {
-        nestedValueContext.removed = true;
-      }
-      if (node.diff.added) {
-        nestedValueContext.added = true;
-      }
-    }
-    if (node.type === "char") {
-      if (node.diff.removed) {
-        nestedValueContext.removed = true;
-      }
-      if (node.diff.added) {
-        nestedValueContext.added = true;
-      }
-    }
-    if (node.type === "indexed_value") {
-      if (node.diff.removed) {
-        nestedValueContext.removed = true;
-      }
-      if (node.diff.added) {
-        nestedValueContext.added = true;
-      }
-    }
-    if (node.type === "property_descriptor") {
-      if (node.parent.diff.removed) {
-        nestedValueContext.removed = true;
-      }
-      if (node.parent.diff.added) {
-        nestedValueContext.added = true;
-      }
-      if (
-        isDefaultDescriptor(
-          node.descriptor,
-          node[nestedValueContext.resultType].value,
-        )
-      ) {
-        return "";
-      }
+    if (
+      node.type === "property_descriptor" &&
+      isDefaultDescriptor(node.descriptor, node[context.resultType].value)
+    ) {
+      return "";
     }
 
+    const nestedValueContext = getNestedValueContext(node, context);
     let nestedValueDiff = "";
     const valueInfo = node[context.resultType];
     const relativeDepth = valueInfo.depth + nestedValueContext.initialDepth;
@@ -1706,15 +1755,23 @@ let writeDiff;
         nestedValueDiff += " ";
       }
     }
-    const separator =
-      useIndent &&
-      node !== nestedValueContext.startNode &&
-      (!valueInfo.canHaveLines || node.lines.length === 1)
-        ? ","
-        : "";
+    let endSeparator;
+    if (valueInfo.canHaveLines && node.lines.length > 1) {
+      // when using
+      // foo: 1| line 1
+      //      2| line 2
+      //      3| line 3
+      // the "," separator is removed because it's not correctly separated from the multiline
+      // and it becomes hard to know if "," is part of the string or not
+      endSeparator = "";
+    } else if (useIndent && node !== nestedValueContext.startNode) {
+      endSeparator = ",";
+    } else {
+      endSeparator = "";
+    }
     if (displayValue) {
       nestedValueContext.textIndent += stringWidth(nestedValueDiff);
-      nestedValueContext.maxColumns -= separator.length;
+      nestedValueContext.maxColumns -= endSeparator.length;
       if (nestedValueContext.modified) {
         nestedValueContext.maxDepth = Math.min(
           valueInfo.depth + nestedValueContext.maxDepthInsideDiff,
@@ -1724,8 +1781,8 @@ let writeDiff;
       const valueDiff = writeValueDiff(node, nestedValueContext);
       nestedValueDiff += valueDiff;
     }
-    if (separator) {
-      nestedValueDiff += ANSI.color(separator, delimitersColor);
+    if (endSeparator) {
+      nestedValueDiff += ANSI.color(endSeparator, delimitersColor);
     }
     return nestedValueDiff;
   };
@@ -2215,6 +2272,41 @@ let writeDiff;
     }
   };
 
+  const writeUrlDiff = (node, context, parentContext) => {
+    // const valueInfo = node[context.resultType];
+    let urlDiff = "";
+    urlDiff += writeDiff(node.urlParts.protocol, context, parentContext);
+    const usernameDiff = writeDiff(
+      node.urlParts.username,
+      context,
+      parentContext,
+    );
+    if (usernameDiff) {
+      urlDiff += usernameDiff;
+    }
+    const passwordDiff = writeDiff(
+      node.urlParts.password,
+      context,
+      parentContext,
+    );
+    if (passwordDiff) {
+      const passwordValueContext = getNestedValueContext(
+        node.urlParts.password,
+        context,
+      );
+      const passwordSeparatorColor = getValueColor(passwordValueContext);
+      urlDiff += ANSI.color(":", passwordSeparatorColor);
+      urlDiff += passwordDiff;
+    }
+
+    urlDiff += writeDiff(node.urlParts.hostname, context, parentContext);
+    urlDiff += writeDiff(node.urlParts.port, context, parentContext);
+    urlDiff += writeDiff(node.urlParts.pathname, context, parentContext);
+    urlDiff += writeDiff(node.urlParts.search, context, parentContext);
+    urlDiff += writeDiff(node.urlParts.hash, context, parentContext);
+    return urlDiff;
+  };
+
   const writeExpandedDiff = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
     if (valueInfo.isString && valueInfo.canHaveLines) {
@@ -2446,6 +2538,12 @@ let writeDiff;
 
     let insideDiff = "";
     insideDiff += prefix;
+    if (node.canDiffUrlParts) {
+      const urlDiff = writeUrlDiff(node, context, parentContext);
+      insideDiff += ANSI.color("(", delimitersColor);
+      insideDiff += urlDiff;
+      insideDiff += ANSI.color(")", delimitersColor);
+    }
     if (valueInfo.canHaveIndexedValues) {
       const indexedValueDiff = writeGroupDiff(
         createGetIndexedValues(node, context, parentContext),
@@ -2699,8 +2797,27 @@ let writeDiff;
     value_of_return_value: writeNestedValueDiff,
     indexed_value: writeNestedValueDiff,
     property_descriptor: writeNestedValueDiff,
+    url_part: writeNestedValueDiff,
   };
 
+  const getNestedValueContext = (node, context) => {
+    const nestedValueContext = { ...context };
+    if (node.diff.removed) {
+      nestedValueContext.removed = true;
+    }
+    if (node.diff.added) {
+      nestedValueContext.added = true;
+    }
+    if (node.type === "property_descriptor") {
+      if (node.parent.diff.removed) {
+        nestedValueContext.removed = true;
+      }
+      if (node.parent.diff.added) {
+        nestedValueContext.added = true;
+      }
+    }
+    return nestedValueContext;
+  };
   const getDelimiters = (node, context) => {
     const valueInfo = node[context.resultType];
     if (valueInfo.isArray) {
