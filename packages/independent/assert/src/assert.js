@@ -359,6 +359,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
           });
+          if (actualValueOfReturnValue === node.actual.value) {
+            valueOfReturnValueNode.actual.redundant = true;
+          }
+          if (expectedValueOfReturnValue === node.expected.value) {
+            valueOfReturnValueNode.expected.redundant = true;
+          }
           let ignoreValueOfDiff = ignoreDiff;
           if (
             node.diff.category &&
@@ -376,7 +382,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visit(valueOfReturnValueNode, {
             ignoreDiff: ignoreValueOfDiff,
           });
-
           if (valueOfReturnValueNode.diff.counters.overall.any) {
             appendCounters(
               node.diff.counters.inside,
@@ -387,14 +392,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           //   valueOfReturnValueNode.actual.redundant = true;
           //   valueOfReturnValueNode.actualValueOfReturnValue.redundant = true;
           // }
-          else {
-            if (actualValueOfReturnValue === node.actual.value) {
-              valueOfReturnValueNode.actual.redundant = true;
-            }
-            if (expectedValueOfReturnValue === node.expected.value) {
-              valueOfReturnValueNode.expected.redundant = true;
-            }
-          }
         }
         inside: {
           string: {
@@ -555,9 +552,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               const normalizeUrlPart = (name, value) => {
                 if (name === "port") {
                   if (value === "") {
-                    return 80;
+                    return "";
                   }
                   return parseInt(value);
+                }
+                if (name === "search") {
+                  return value.slice(1);
                 }
                 return value;
               };
@@ -581,14 +581,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                     addNodeCausingDiff(urlPartNode);
                   }
                 }
-                if (expectedUrlPart && !actualUrlPart) {
+                if (!expectedUrlPart && actualUrlPart) {
                   urlPartNode.diff.added = true;
                   if (!ignoreDiff) {
                     urlPartNode.diff.counters.self.added++;
                     addNodeCausingDiff(urlPartNode);
                   }
                 }
-                visit(urlPartNode, { ignoreDiff });
+                visit(urlPartNode, {
+                  ignoreDiff:
+                    ignoreDiff ||
+                    urlPartNode.diff.removed ||
+                    urlPartNode.diff.added,
+                });
                 appendCounters(
                   node.diff.counters.inside,
                   urlPartNode.diff.counters.overall,
@@ -605,6 +610,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               // for now we'll handle it as a string
               visitUrlPart("search");
               visitUrlPart("hash");
+            } else if (visitActualUrlParts || visitExpectedUrlParts) {
+              const hrefNode = node.appendUrlPart("href", {
+                actualValue: visitActualUrlParts
+                  ? String(node.actual.value)
+                  : undefined,
+                expectedValue: visitExpectedUrlParts
+                  ? String(node.expected.value)
+                  : undefined,
+              });
+              visit(hrefNode, { ignoreDiff });
+              appendCounters(
+                node.diff.counters.inside,
+                hrefNode.diff.counters.overall,
+              );
             }
           }
           indexed_values: {
@@ -834,6 +853,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   return true;
                 }
               }
+              // if (valueInfo.isUrl) {
+              //   if (property === "href" && node.canDiffUrlParts) {
+              //     return true;
+              //   }
+              //   if (
+              //     [
+              //       "origin",
+              //       "host",
+
+              //       "protocol",
+              //       "hostname",
+              //       "username",
+              //       "password",
+              //       "pathname",
+              //       "search",
+              //       "searchParams",
+              //       "hash",
+              //     ].includes(property)
+              //   ) {
+              //     return true;
+              //   }
+              // }
               if (node.valueOfReturnValue && property === "valueOf") {
                 return true;
               }
@@ -1291,6 +1332,7 @@ let createComparisonTree;
       let isString = false;
       let isStringObject = false;
       let isUrl = false;
+      let isUrlString = false;
 
       if (value === ARRAY_EMPTY_VALUE) {
         composite = false;
@@ -1362,6 +1404,8 @@ let createComparisonTree;
           depth = parent[name].depth;
         } else if (type === "value_of_return_value" && inConstructor) {
           depth = parent[name].depth;
+        } else if (type === "url_part") {
+          depth = parent[name].depth;
         } else {
           depth = parent[name].depth + 1;
         }
@@ -1382,6 +1426,7 @@ let createComparisonTree;
         isArray,
         isSet,
         isUrl,
+        isUrlString,
         canHaveIndexedValues,
         canHaveLines,
         canHaveChars,
@@ -1505,9 +1550,11 @@ let writeDiff;
     const relativeDepth = valueInfo.depth + context.initialDepth;
     valueContext.insideOverview = valueContext.collapsed !== true;
     if (!valueContext.collapsed) {
-      valueContext.collapsed =
-        relativeDepth >= valueContext.maxDepth ||
-        node.diff.counters.overall.any === 0;
+      if (relativeDepth >= valueContext.maxDepth) {
+        valueContext.collapsed = true;
+      } else if (node.diff.counters.overall.any === 0) {
+        valueContext.collapsed = true;
+      }
     }
 
     const valueColor = getValueColor(valueContext);
@@ -1524,18 +1571,19 @@ let writeDiff;
       if (valueInfo.canHaveLines) {
         const string = value;
         if (valueContext.collapsed) {
-          if (!node.quote) {
+          if (!node.quote && node.type !== "url_part") {
             const quote =
               context.quote === "auto" ? pickBestQuote(string) : context.quote;
             node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
           }
-          let stringOverviewDiff = "";
-          stringOverviewDiff += ANSI.color(node.quote, bracketColor);
-          const quoteWidth = node.quote.length;
+
           const remainingWidth =
             valueContext.maxColumns - valueContext.textIndent;
-          let maxWidth = Math.min(remainingWidth, 10);
-          maxWidth -= quoteWidth + quoteWidth;
+          let maxWidth = Math.min(remainingWidth, 20);
+          if (node.quote) {
+            const quoteWidth = node.quote.length;
+            maxWidth -= quoteWidth + quoteWidth;
+          }
           let stringDiff;
           const width = stringWidth(string);
           if (width > maxWidth) {
@@ -1544,8 +1592,14 @@ let writeDiff;
           } else {
             stringDiff = string;
           }
+          let stringOverviewDiff = "";
+          if (node.quote) {
+            stringOverviewDiff += ANSI.color(node.quote, bracketColor);
+          }
           stringOverviewDiff += ANSI.color(stringDiff, valueColor);
-          stringOverviewDiff += ANSI.color(node.quote, bracketColor);
+          if (node.quote) {
+            stringOverviewDiff += ANSI.color(node.quote, bracketColor);
+          }
           return stringOverviewDiff;
         }
 
@@ -1884,9 +1938,7 @@ let writeDiff;
     if (valueInfo.isComposite) {
       let insideConstructor = "";
       const prefixWithNew =
-        valueInfo.subtype === "String" ||
-        valueInfo.subtype === "Boolean" ||
-        valueInfo.subtype === "Number";
+        valueInfo.subtype !== "Object" && valueInfo.subtype !== "Array";
       if (prefixWithNew) {
         prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
       }
@@ -2081,7 +2133,7 @@ let writeDiff;
         break single_line;
       }
       const firstLineNode = lineNodes[0];
-      if (!node.quote) {
+      if (!node.quote && node.type !== "url_part") {
         const valueInfo = node[context.resultType];
         const quote =
           context.quote === "auto"
@@ -2273,37 +2325,127 @@ let writeDiff;
   };
 
   const writeUrlDiff = (node, context, parentContext) => {
-    // const valueInfo = node[context.resultType];
+    const writeUrlPart = (name) => {
+      const urlPartNode = node.urlParts[name];
+      if (!urlPartNode[context.resultType].value) {
+        return "";
+      }
+      const urlPartDiff = writeDiff(urlPartNode, context, parentContext);
+      return urlPartDiff;
+    };
+
     let urlDiff = "";
-    urlDiff += writeDiff(node.urlParts.protocol, context, parentContext);
-    const usernameDiff = writeDiff(
-      node.urlParts.username,
-      context,
-      parentContext,
-    );
+    const bracketColor = getBracketColor(node, context);
+    urlDiff += ANSI.color(`"`, bracketColor);
+    urlDiff += writeUrlPart("protocol");
+    const usernameDiff = writeUrlPart("username");
     if (usernameDiff) {
       urlDiff += usernameDiff;
     }
-    const passwordDiff = writeDiff(
-      node.urlParts.password,
-      context,
-      parentContext,
-    );
+    const passwordDiff = writeUrlPart("password");
     if (passwordDiff) {
-      const passwordValueContext = getNestedValueContext(
-        node.urlParts.password,
-        context,
-      );
-      const passwordSeparatorColor = getValueColor(passwordValueContext);
+      const actualHasPassword = node.urlParts.password.actual.value.length;
+      const expectedHasPassword = node.urlParts.password.expected.value.length;
+      let passwordSeparatorColor;
+      if (actualHasPassword && !expectedHasPassword) {
+        passwordSeparatorColor = addedColor;
+      } else if (!actualHasPassword && expectedHasPassword) {
+        passwordSeparatorColor = removedColor;
+      } else if (node.urlParts.password.diff.counters.overall.any) {
+        passwordSeparatorColor =
+          context.resultType === "actual" ? unexpectedColor : expectedColor;
+      } else {
+        passwordSeparatorColor = sameColor;
+      }
       urlDiff += ANSI.color(":", passwordSeparatorColor);
       urlDiff += passwordDiff;
     }
-
-    urlDiff += writeDiff(node.urlParts.hostname, context, parentContext);
-    urlDiff += writeDiff(node.urlParts.port, context, parentContext);
-    urlDiff += writeDiff(node.urlParts.pathname, context, parentContext);
-    urlDiff += writeDiff(node.urlParts.search, context, parentContext);
-    urlDiff += writeDiff(node.urlParts.hash, context, parentContext);
+    const hostnameDiff = writeUrlPart("hostname");
+    if (hostnameDiff) {
+      if (usernameDiff || passwordDiff) {
+        const actualHasAuth =
+          node.urlParts.username.actual.value.length ||
+          node.urlParts.password.actual.value.length;
+        const expectedHasAuth =
+          node.urlParts.username.expected.value.length ||
+          node.urlParts.password.expected.value.length;
+        let authSeparatorColor;
+        if (actualHasAuth && !expectedHasAuth) {
+          authSeparatorColor = addedColor;
+        } else if (!actualHasAuth && expectedHasAuth) {
+          authSeparatorColor = removedColor;
+        } else if (
+          node.urlParts.password[context.resultType].length
+            ? node.urlParts.password.diff.counters.overall.any
+            : node.urlParts.username.diff.counters.overall.any
+        ) {
+          authSeparatorColor =
+            context.resultType === "actual" ? unexpectedColor : expectedColor;
+        } else {
+          authSeparatorColor = sameColor;
+        }
+        urlDiff += ANSI.color("@", authSeparatorColor);
+      }
+      urlDiff += hostnameDiff;
+    }
+    const portDiff = writeUrlPart("port");
+    if (portDiff) {
+      if (hostnameDiff) {
+        const actualHasPort = node.urlParts.port.actual.value.length;
+        const expectedHasPort = node.urlParts.port.expected.value.length;
+        let portSeparatorColor;
+        if (actualHasPort && !expectedHasPort) {
+          portSeparatorColor = addedColor;
+        } else if (!actualHasPort && expectedHasPort) {
+          portSeparatorColor = removedColor;
+        } else if (node.urlParts.port.diff.counters.overall.any) {
+          portSeparatorColor =
+            context.resultType === "actual" ? unexpectedColor : expectedColor;
+        } else {
+          portSeparatorColor = sameColor;
+        }
+        urlDiff += ANSI.color(":", portSeparatorColor);
+      }
+      urlDiff += portDiff;
+    }
+    urlDiff += writeUrlPart("pathname");
+    const searchDiff = writeUrlPart("search");
+    if (searchDiff) {
+      const actualHasSearch = node.urlParts.search.actual.value.length;
+      const expectedHasSearch = node.urlParts.search.expected.value.length;
+      let searchSeparatorColor;
+      if (actualHasSearch && !expectedHasSearch) {
+        searchSeparatorColor = addedColor;
+      } else if (!actualHasSearch && expectedHasSearch) {
+        searchSeparatorColor = removedColor;
+      } else if (node.urlParts.search.diff.counters.overall.any) {
+        searchSeparatorColor =
+          context.resultType === "actual" ? unexpectedColor : expectedColor;
+      } else {
+        searchSeparatorColor = sameColor;
+      }
+      urlDiff += ANSI.color("?", searchSeparatorColor);
+      urlDiff += searchDiff;
+    }
+    const hashDiff = writeUrlPart("hash");
+    if (hashDiff) {
+      const actualHasHash = node.urlParts.hash.actual.value.length;
+      const expectedHasHash = node.urlParts.hash.expected.value.length;
+      let hashSeparatorColor;
+      if (actualHasHash && !expectedHasHash) {
+        hashSeparatorColor = addedColor;
+      } else if (!actualHasHash && expectedHasHash) {
+        hashSeparatorColor = removedColor;
+      } else if (node.urlParts.hash.diff.counters.overall.any) {
+        hashSeparatorColor =
+          context.resultType === "actual" ? unexpectedColor : expectedColor;
+      } else {
+        hashSeparatorColor = sameColor;
+      }
+      urlDiff += ANSI.color("#", hashSeparatorColor);
+      urlDiff += hashDiff;
+    }
+    urlDiff += ANSI.color(`"`, bracketColor);
     return urlDiff;
   };
 
@@ -2542,6 +2684,15 @@ let writeDiff;
       const urlDiff = writeUrlDiff(node, context, parentContext);
       insideDiff += ANSI.color("(", delimitersColor);
       insideDiff += urlDiff;
+      insideDiff += ANSI.color(")", delimitersColor);
+    } else if (valueInfo.isUrl) {
+      const hrefDiff = writeValueDiff(
+        node.urlParts.href,
+        context,
+        parentContext,
+      );
+      insideDiff += ANSI.color("(", delimitersColor);
+      insideDiff += hrefDiff;
       insideDiff += ANSI.color(")", delimitersColor);
     }
     if (valueInfo.canHaveIndexedValues) {
