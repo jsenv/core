@@ -90,11 +90,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (node.type === "char") {
         return true;
       }
-      if (node.type === "value_of_return_value") {
-        if (node.actual.redundant && node.expected.redundant) {
-          // diff expected, one is primitive, other is composite for example
-          return true;
-        }
+      if (node.actual.redundant && node.expected.redundant) {
+        // diff expected, one is primitive, other is composite for example
+        return true;
       }
       return false;
     };
@@ -197,12 +195,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return;
         }
 
+        let ignoreReferenceDiff = ignoreDiff;
+        let ignoreCategoryDiff = ignoreDiff;
+        let ignorePrototypeDiff = ignoreDiff;
+        let ignoreAsStringDiff;
+        if (ignoreDiff) {
+          ignoreAsStringDiff = true;
+        } else if (node.actual.isUrl && node.expected.isString) {
+          ignoreAsStringDiff = false;
+          ignoreReferenceDiff = ignoreCategoryDiff = ignorePrototypeDiff = true;
+        } else if (node.expected.isUrl && node.actual.isString) {
+          ignoreAsStringDiff = false;
+          ignoreReferenceDiff = ignoreCategoryDiff = ignorePrototypeDiff = true;
+        } else {
+          ignoreAsStringDiff = true;
+        }
+
         const onSelfDiff = () => {
           addNodeCausingDiff(node);
           node.diff.counters.self.modified++;
         };
         reference: {
-          if (ignoreDiff) {
+          if (ignoreReferenceDiff) {
             break reference;
           }
           if (node.actual.reference !== node.expected.reference) {
@@ -211,7 +225,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         category: {
-          if (ignoreDiff) {
+          if (ignoreCategoryDiff) {
             break category;
           }
           if (node.actual.wellKnownId !== node.expected.wellKnownId) {
@@ -258,143 +272,176 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             break category;
           }
         }
-        // node.after.value is a reference: was already traversed
-        // - prevent infinite recursion for circular structure
-        // - prevent traversing a structure already known
-        const actualStructureIsKnown = Boolean(
-          node.actual.wellKnownId || node.actual.reference,
-        );
-        // node.after.value is a reference: was already traversed
-        // - prevent infinite recursion for circular structure
-        // - prevent traversing a structure already known
-        const expectedStructureIsKnown = Boolean(
-          node.expected.wellKnownId || node.expected.reference,
-        );
-        prototype: {
-          if (ignoreDiff) {
-            break prototype;
-          }
-          const visitActualPrototype =
-            node.actual.isComposite && !actualStructureIsKnown;
-          const visitExpectedPrototype =
-            node.expected.isComposite && !expectedStructureIsKnown;
-          if (!visitActualPrototype && !visitExpectedPrototype) {
-            break prototype;
-          }
-          const canDiffPrototypes =
-            visitActualPrototype && visitExpectedPrototype;
-          const prototypeAreDifferentAndWellKnown =
-            (node.actual.isArray && !node.expected.isArray) ||
-            (!node.actual.isArray && node.expected.isArray);
-          node.canDiffPrototypes = canDiffPrototypes;
-          node.prototypeAreDifferentAndWellKnown =
-            prototypeAreDifferentAndWellKnown;
-
-          const actualPrototype = visitActualPrototype
-            ? Object.getPrototypeOf(node.actual.value)
-            : undefined;
-          const expectedPrototype = visitExpectedPrototype
-            ? Object.getPrototypeOf(node.expected.value)
-            : undefined;
-          const prototypeNode = node.appendPrototype({
-            actualPrototype,
-            expectedPrototype,
-          });
-          visit(prototypeNode, {
-            ignoreDiff:
-              ignoreDiff ||
-              node.diff.category ||
-              prototypeAreDifferentAndWellKnown,
-          });
-          if (prototypeNode.diff.counters.overall.any) {
-            appendCounters(
-              node.diff.counters.inside,
-              prototypeNode.diff.counters.overall,
-            );
-          }
-        }
-        value_of_return_value: {
-          const visitActualValueOfReturnValue =
-            node.actual.isComposite &&
-            !actualStructureIsKnown &&
-            "valueOf" in node.actual.value &&
-            typeof node.actual.value.valueOf === "function";
-          const visitExpectedValueOfReturnValue =
-            node.expected.isComposite &&
-            !expectedStructureIsKnown &&
-            "valueOf" in node.expected.value &&
-            typeof node.expected.value.valueOf === "function";
-          const canDiffValueOfReturnValue =
-            visitActualValueOfReturnValue && visitExpectedValueOfReturnValue;
-          node.canDiffValueOfReturnValue = canDiffValueOfReturnValue;
-          if (
-            !visitActualValueOfReturnValue &&
-            !visitExpectedValueOfReturnValue
-          ) {
-            break value_of_return_value;
-          }
-          if (node.actual.reference && !visitExpectedValueOfReturnValue) {
-            // prevent infinite recursion on actual.valueOf()
-            // while expected.valueOf() stops existing
-            break value_of_return_value;
-          }
-          if (node.expected.reference && !visitActualValueOfReturnValue) {
-            // prevent infinite recursion on expected.valueOf()
-            // while actual.valueOf() stops existing
-            break value_of_return_value;
-          }
-          if (node.actual.reference && node.expected.reference) {
-            // prevent infinite recursion when both actual.valueOf()
-            // and expected.valueOf() exists and use references
-            break value_of_return_value;
-          }
-
-          const actualValueOfReturnValue = visitActualValueOfReturnValue
-            ? node.actual.value.valueOf()
-            : node.actual.value;
-          const expectedValueOfReturnValue = visitExpectedValueOfReturnValue
-            ? node.expected.value.valueOf()
-            : node.expected.value;
-          const valueOfReturnValueNode = node.appendValueOfReturnValue({
-            actualValueOfReturnValue,
-            expectedValueOfReturnValue,
-          });
-          if (
-            actualValueOfReturnValue === node.actual.value &&
-            expectedValueOfReturnValue === node.expected.value
-          ) {
-            valueOfReturnValueNode.actual.redundant = true;
-            valueOfReturnValueNode.expected.redundant = true;
-          }
-          let ignoreValueOfDiff = ignoreDiff;
-          if (
-            node.diff.category &&
-            // String/string comparison is ok
-            node.actual.subtype.toLowerCase() !==
-              node.expected.subtype.toLowerCase()
-          ) {
-            ignoreValueOfDiff = true;
-          } else if (
-            node.diff.prototype &&
-            node.diff.prototype.counters.overall.any > 0
-          ) {
-            ignoreValueOfDiff = true;
-          }
-          visit(valueOfReturnValueNode, {
-            ignoreDiff: ignoreValueOfDiff,
-          });
-          if (valueOfReturnValueNode.diff.counters.overall.any) {
-            appendCounters(
-              node.diff.counters.inside,
-              valueOfReturnValueNode.diff.counters.overall,
-            );
-          }
-          // else if (ignoreValueOfDiff) {
-          //   valueOfReturnValueNode.actual.redundant = true;
-          //   valueOfReturnValueNode.actualValueOfReturnValue.redundant = true;
-          // }
-        }
         inside: {
+          // node.after.value is a reference: was already traversed
+          // - prevent infinite recursion for circular structure
+          // - prevent traversing a structure already known
+          const actualStructureIsKnown = Boolean(
+            node.actual.wellKnownId || node.actual.reference,
+          );
+          // node.after.value is a reference: was already traversed
+          // - prevent infinite recursion for circular structure
+          // - prevent traversing a structure already known
+          const expectedStructureIsKnown = Boolean(
+            node.expected.wellKnownId || node.expected.reference,
+          );
+          prototype: {
+            if (ignorePrototypeDiff) {
+              break prototype;
+            }
+            const visitActualPrototype =
+              node.actual.isComposite && !actualStructureIsKnown;
+            const visitExpectedPrototype =
+              node.expected.isComposite && !expectedStructureIsKnown;
+            if (!visitActualPrototype && !visitExpectedPrototype) {
+              break prototype;
+            }
+            const canDiffPrototypes =
+              visitActualPrototype && visitExpectedPrototype;
+            const prototypeAreDifferentAndWellKnown =
+              (node.actual.isArray && !node.expected.isArray) ||
+              (!node.actual.isArray && node.expected.isArray);
+            node.canDiffPrototypes = canDiffPrototypes;
+            node.prototypeAreDifferentAndWellKnown =
+              prototypeAreDifferentAndWellKnown;
+
+            const actualPrototype = visitActualPrototype
+              ? Object.getPrototypeOf(node.actual.value)
+              : undefined;
+            const expectedPrototype = visitExpectedPrototype
+              ? Object.getPrototypeOf(node.expected.value)
+              : undefined;
+            const prototypeNode = node.appendPrototype({
+              actualPrototype,
+              expectedPrototype,
+            });
+            visit(prototypeNode, {
+              ignoreDiff:
+                ignoreDiff ||
+                node.diff.category ||
+                prototypeAreDifferentAndWellKnown,
+            });
+            if (prototypeNode.diff.counters.overall.any) {
+              appendCounters(
+                node.diff.counters.inside,
+                prototypeNode.diff.counters.overall,
+              );
+            }
+          }
+          value_of_return_value: {
+            const visitActualValueOfReturnValue =
+              node.actual.isComposite &&
+              !actualStructureIsKnown &&
+              "valueOf" in node.actual.value &&
+              typeof node.actual.value.valueOf === "function";
+            const visitExpectedValueOfReturnValue =
+              node.expected.isComposite &&
+              !expectedStructureIsKnown &&
+              "valueOf" in node.expected.value &&
+              typeof node.expected.value.valueOf === "function";
+            const canDiffValueOfReturnValue =
+              visitActualValueOfReturnValue && visitExpectedValueOfReturnValue;
+            node.canDiffValueOfReturnValue = canDiffValueOfReturnValue;
+            if (
+              !visitActualValueOfReturnValue &&
+              !visitExpectedValueOfReturnValue
+            ) {
+              break value_of_return_value;
+            }
+            if (node.actual.reference && !visitExpectedValueOfReturnValue) {
+              // prevent infinite recursion on actual.valueOf()
+              // while expected.valueOf() stops existing
+              break value_of_return_value;
+            }
+            if (node.expected.reference && !visitActualValueOfReturnValue) {
+              // prevent infinite recursion on expected.valueOf()
+              // while actual.valueOf() stops existing
+              break value_of_return_value;
+            }
+            if (node.actual.reference && node.expected.reference) {
+              // prevent infinite recursion when both actual.valueOf()
+              // and expected.valueOf() exists and use references
+              break value_of_return_value;
+            }
+
+            const actualValueOfReturnValue = visitActualValueOfReturnValue
+              ? node.actual.value.valueOf()
+              : node.actual.value;
+            const expectedValueOfReturnValue = visitExpectedValueOfReturnValue
+              ? node.expected.value.valueOf()
+              : node.expected.value;
+            const valueOfReturnValueNode = node.appendValueOfReturnValue({
+              actualValueOfReturnValue,
+              expectedValueOfReturnValue,
+            });
+            if (
+              actualValueOfReturnValue === node.actual.value &&
+              expectedValueOfReturnValue === node.expected.value
+            ) {
+              valueOfReturnValueNode.actual.redundant = true;
+              valueOfReturnValueNode.expected.redundant = true;
+            }
+            let ignoreValueOfDiff = ignoreDiff;
+            if (
+              node.diff.category &&
+              // String/string comparison is ok
+              node.actual.subtype.toLowerCase() !==
+                node.expected.subtype.toLowerCase()
+            ) {
+              ignoreValueOfDiff = true;
+            } else if (
+              node.diff.prototype &&
+              node.diff.prototype.counters.overall.any > 0
+            ) {
+              ignoreValueOfDiff = true;
+            }
+            visit(valueOfReturnValueNode, {
+              ignoreDiff: ignoreValueOfDiff,
+            });
+            if (valueOfReturnValueNode.diff.counters.overall.any) {
+              appendCounters(
+                node.diff.counters.inside,
+                valueOfReturnValueNode.diff.counters.overall,
+              );
+            }
+            // else if (ignoreValueOfDiff) {
+            //   valueOfReturnValueNode.actual.redundant = true;
+            //   valueOfReturnValueNode.actualValueOfReturnValue.redundant = true;
+            // }
+          }
+          as_string: {
+            if (ignoreAsStringDiff) {
+              break as_string;
+            }
+            const asString = (valueInfo) => {
+              if (
+                valueInfo.isComposite &&
+                "toString" in valueInfo.value &&
+                typeof valueInfo.value.toString === "function"
+              ) {
+                return node.actual.value.toString();
+              }
+              return String(valueInfo.value);
+            };
+            const actualAsString = asString(node.actual);
+            const expectedAsString = asString(node.expected);
+            const canDiffToStringReturnValue =
+              typeof actualAsString === "string" &&
+              typeof expectedAsString === "string";
+            node.canDiffToStringReturnValue = canDiffToStringReturnValue;
+            const asStringNode = node.appendAsString({
+              actualAsString,
+              expectedAsString,
+            });
+            visit(asStringNode, {
+              ignoreDiff: ignoreDiff || !canDiffToStringReturnValue,
+            });
+            appendCounters(
+              node.diff.counters.inside,
+              asStringNode.diff.counters.overall,
+            );
+          }
+
           string: {
             lines: {
               const visitActualLines =
@@ -546,86 +593,68 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const visitExpectedUrlParts = node.expected.isUrl;
             const canDiffUrlParts = visitActualUrlParts & visitExpectedUrlParts;
             node.canDiffUrlParts = canDiffUrlParts;
-
-            if (canDiffUrlParts) {
-              const actualUrlParts = new URL(node.actual.value);
-              const expectedUrlParts = new URL(node.expected.value);
-              const normalizeUrlPart = (name, value) => {
-                if (name === "port") {
-                  if (value === "") {
-                    return "";
-                  }
-                  return parseInt(value);
+            if (!canDiffUrlParts) {
+              break url_parts;
+            }
+            const actualUrlParts = new URL(node.actual.value);
+            const expectedUrlParts = new URL(node.expected.value);
+            const normalizeUrlPart = (name, value) => {
+              if (name === "port") {
+                if (value === "") {
+                  return "";
                 }
-                if (name === "search") {
-                  return value.slice(1);
-                }
-                return value;
-              };
-              const visitUrlPart = (name) => {
-                let actualUrlPart = normalizeUrlPart(
-                  name,
-                  actualUrlParts[name],
-                );
-                let expectedUrlPart = normalizeUrlPart(
-                  name,
-                  expectedUrlParts[name],
-                );
-                const urlPartNode = node.appendUrlPart(name, {
-                  actualValue: actualUrlPart,
-                  expectedValue: expectedUrlPart,
-                });
-                if (!actualUrlPart && expectedUrlPart) {
-                  urlPartNode.diff.removed = true;
-                  if (!ignoreDiff) {
-                    urlPartNode.diff.counters.self.removed++;
-                    addNodeCausingDiff(urlPartNode);
-                  }
-                }
-                if (!expectedUrlPart && actualUrlPart) {
-                  urlPartNode.diff.added = true;
-                  if (!ignoreDiff) {
-                    urlPartNode.diff.counters.self.added++;
-                    addNodeCausingDiff(urlPartNode);
-                  }
-                }
-                visit(urlPartNode, {
-                  ignoreDiff:
-                    ignoreDiff ||
-                    urlPartNode.diff.removed ||
-                    urlPartNode.diff.added,
-                });
-                appendCounters(
-                  node.diff.counters.inside,
-                  urlPartNode.diff.counters.overall,
-                );
-              };
-
-              visitUrlPart("protocol");
-              visitUrlPart("username");
-              visitUrlPart("password");
-              visitUrlPart("hostname");
-              visitUrlPart("port");
-              visitUrlPart("pathname");
-              // for search params I'll have to think about it
-              // for now we'll handle it as a string
-              visitUrlPart("search");
-              visitUrlPart("hash");
-            } else if (visitActualUrlParts || visitExpectedUrlParts) {
-              const hrefNode = node.appendUrlPart("href", {
-                actualValue: visitActualUrlParts
-                  ? String(node.actual.value)
-                  : undefined,
-                expectedValue: visitExpectedUrlParts
-                  ? String(node.expected.value)
-                  : undefined,
+                return parseInt(value);
+              }
+              if (name === "search") {
+                return value.slice(1);
+              }
+              return value;
+            };
+            const visitUrlPart = (name) => {
+              let actualUrlPart = normalizeUrlPart(name, actualUrlParts[name]);
+              let expectedUrlPart = normalizeUrlPart(
+                name,
+                expectedUrlParts[name],
+              );
+              const urlPartNode = node.appendUrlPart(name, {
+                actualValue: actualUrlPart,
+                expectedValue: expectedUrlPart,
               });
-              visit(hrefNode, { ignoreDiff });
+              if (!actualUrlPart && expectedUrlPart) {
+                urlPartNode.diff.removed = true;
+                if (!ignoreDiff) {
+                  urlPartNode.diff.counters.self.removed++;
+                  addNodeCausingDiff(urlPartNode);
+                }
+              }
+              if (!expectedUrlPart && actualUrlPart) {
+                urlPartNode.diff.added = true;
+                if (!ignoreDiff) {
+                  urlPartNode.diff.counters.self.added++;
+                  addNodeCausingDiff(urlPartNode);
+                }
+              }
+              visit(urlPartNode, {
+                ignoreDiff:
+                  ignoreDiff ||
+                  urlPartNode.diff.removed ||
+                  urlPartNode.diff.added,
+              });
               appendCounters(
                 node.diff.counters.inside,
-                hrefNode.diff.counters.overall,
+                urlPartNode.diff.counters.overall,
               );
-            }
+            };
+            visitUrlPart("protocol");
+            visitUrlPart("username");
+            visitUrlPart("password");
+            visitUrlPart("hostname");
+            visitUrlPart("port");
+            visitUrlPart("pathname");
+            // for search params I'll have to think about it
+            // for now we'll handle it as a string
+            visitUrlPart("search");
+            visitUrlPart("hash");
           }
           indexed_values: {
             const visitActualIndexedValues =
@@ -1210,6 +1239,17 @@ let createComparisonTree;
           node.diff.valueOfReturnValue = valueOfReturnValueNode.diff;
           return valueOfReturnValueNode;
         };
+        node.appendAsString = ({ actualAsString, expectedAsString }) => {
+          const asStringNode = createComparisonNode({
+            type: "as_string",
+            actualValue: actualAsString,
+            expectedValue: expectedAsString,
+            parent: node,
+          });
+          node.asString = asStringNode;
+          node.diff.asString = asStringNode.diff;
+          return asStringNode;
+        };
         node.appendProperty = (
           property,
           { actualPropertyDescriptor, expectedPropertyDescriptor },
@@ -1398,12 +1438,20 @@ let createComparisonTree;
           inConstructor = true;
         }
       }
+      if (type === "as_string") {
+        const parentValueInfo = parent[name];
+        if (parentValueInfo.isUrl || !composite) {
+          inConstructor = true;
+        }
+      }
 
       let depth;
       if (parent) {
         if (type === "property") {
           depth = parent[name].depth;
         } else if (type === "value_of_return_value" && inConstructor) {
+          depth = parent[name].depth;
+        } else if (type === "to_string_return_value" && inConstructor) {
           depth = parent[name].depth;
         } else if (type === "url_part") {
           depth = parent[name].depth;
@@ -1558,16 +1606,20 @@ let writeDiff;
       }
     }
 
-    const valueColor = getValueColor(valueContext);
-    const delimitersColor = getDelimitersColor(valueContext);
-    const bracketColor = getBracketColor(node, valueContext);
-
     if (valueInfo.wellKnownId) {
+      const valueColor = getValueColor(valueContext);
       return ANSI.color(valueInfo.wellKnownId, valueColor);
     }
 
+    const delimitersColor = getDelimitersColor(valueContext);
+    const bracketColor = getBracketColor(node, valueContext);
+    const valueColor = getValueColor(valueContext);
+
     // primitive
     if (valueInfo.isPrimitive) {
+      if (node.asString) {
+        return writeDiff(node.asString, context);
+      }
       const value = valueInfo.value;
       if (valueInfo.canHaveLines) {
         const string = value;
@@ -1703,10 +1755,7 @@ let writeDiff;
       // will be referenced by a composite
       let referenceFromOtherDisplayed;
       for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
-        if (
-          referenceFromOther.type === "value_of_return_value" &&
-          referenceFromOther[context.resultType].redundant
-        ) {
+        if (referenceFromOther[context.resultType].redundant) {
           continue;
         }
         referenceFromOtherDisplayed = referenceFromOther;
@@ -1746,6 +1795,9 @@ let writeDiff;
     ) {
       return writeValueDiff(node, context);
     }
+    if (node.type === "as_string" && node[context.resultType].inConstructor) {
+      return writeValueDiff(node, context);
+    }
     if (
       node.type === "property_descriptor" &&
       isDefaultDescriptor(node.descriptor, node[context.resultType].value)
@@ -1767,7 +1819,8 @@ let writeDiff;
       (node.type === "indexed_value" ||
         node.type === "property_descriptor" ||
         node.type === "prototype" ||
-        node.type === "value_of_return_value");
+        node.type === "value_of_return_value" ||
+        node.type === "as_string");
     if (useIndent) {
       if (nestedValueContext.signs) {
         if (nestedValueContext.removed) {
@@ -1797,7 +1850,9 @@ let writeDiff;
           ? "__proto__" // "[[Prototype]]"?
           : node.type === "value_of_return_value"
             ? "valueOf()"
-            : "";
+            : node.type === "to_string_return_value"
+              ? "toString()"
+              : "";
     if (property && node !== nestedValueContext.startNode) {
       if (node.type === "property_descriptor" && node.descriptor !== "value") {
         nestedValueDiff += ANSI.color(node.descriptor, keyColor);
@@ -2688,15 +2743,18 @@ let writeDiff;
       insideDiff += ANSI.color("(", delimitersColor);
       insideDiff += urlDiff;
       insideDiff += ANSI.color(")", delimitersColor);
-    } else if (valueInfo.isUrl) {
-      const hrefDiff = writeValueDiff(
-        node.urlParts.href,
-        context,
-        parentContext,
-      );
-      insideDiff += ANSI.color("(", delimitersColor);
-      insideDiff += hrefDiff;
-      insideDiff += ANSI.color(")", delimitersColor);
+    } else if (node.asString) {
+      const asStringDiff = writeDiff(node.asString, context, parentContext);
+      let parenthesisColor;
+      if (node.actual.isComposite === node.expected.isComposite) {
+        parenthesisColor = sameColor;
+      } else {
+        parenthesisColor =
+          context.resultType === "actual" ? unexpectedColor : expectedColor;
+      }
+      insideDiff += ANSI.color("(", parenthesisColor);
+      insideDiff += asStringDiff;
+      insideDiff += ANSI.color(")", parenthesisColor);
     }
     if (valueInfo.canHaveIndexedValues) {
       const indexedValueDiff = writeGroupDiff(
@@ -2949,6 +3007,7 @@ let writeDiff;
     char: writeNestedValueDiff,
     prototype: writeNestedValueDiff,
     value_of_return_value: writeNestedValueDiff,
+    as_string: writeNestedValueDiff,
     indexed_value: writeNestedValueDiff,
     property_descriptor: writeNestedValueDiff,
     url_part: writeNestedValueDiff,
