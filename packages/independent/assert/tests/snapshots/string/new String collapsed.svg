@@ -57,9 +57,9 @@
         <text x="110.82" y="71.55" fill="#DAA520">new</text>
         <text x="144.42" y="71.55" fill="#DAA520">String</text>
         <text x="194.83" y="71.55" fill="#DAA520">(</text>
-        <text x="203.23" y="71.55" fill="#DAA520">&#x22;</text>
+        <text x="203.23" y="71.55" fill="#7f7f7f">&#x22;</text>
         <text x="211.63" y="71.55" fill="#DAA520">toto</text>
-        <text x="245.24" y="71.55" fill="#DAA520">&#x22;</text>
+        <text x="245.24" y="71.55" fill="#7f7f7f">&#x22;</text>
         <text x="253.64" y="71.55" fill="#DAA520">)</text>
         <text x="270.44" y="71.55" fill="#DAA520">}</text>
         <text x="278.84" y="71.55" fill="#DAA520">,</text>
@@ -75,9 +75,9 @@
         <text x="110.82" y="128.55" fill="#DAA520">new</text>
         <text x="144.42" y="128.55" fill="#DAA520">String</text>
         <text x="194.83" y="128.55" fill="#DAA520">(</text>
-        <text x="203.23" y="128.55" fill="#DAA520">&#x22;</text>
+        <text x="203.23" y="128.55" fill="#7f7f7f">&#x22;</text>
         <text x="211.63" y="128.55" fill="#DAA520">toto</text>
-        <text x="245.24" y="128.55" fill="#DAA520">&#x22;</text>
+        <text x="245.24" y="128.55" fill="#7f7f7f">&#x22;</text>
         <text x="253.64" y="128.55" fill="#DAA520">)</text>
         <text x="270.44" y="128.55" fill="#DAA520">}</text>
         <text x="278.84" y="128.55" fill="#DAA520">,</text>
