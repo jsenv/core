@@ -23,7 +23,7 @@ expect: {
 }
 
 # object vs custom proto
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected are different:
 
 actual: User {
   name: "dam",
@@ -33,7 +33,7 @@ expect: {
 }
 
 # object vs instance
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected are different:
 
 actual: User {
   name: "dam",

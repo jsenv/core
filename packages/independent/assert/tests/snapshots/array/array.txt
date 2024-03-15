@@ -57,7 +57,7 @@ expect: {
 }
 
 # diff on associate array.foo and object.foo
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected are different:
 
 actual: [] {
   foo: true,
@@ -67,7 +67,7 @@ expect: {
 }
 
 # diff on associate array deep property and object deep property
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected are different:
 
 actual: [] {
   user: {

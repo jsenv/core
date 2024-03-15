@@ -90,7 +90,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (node.type === "char") {
         return true;
       }
-      if (node.type === "as_string" && node.parent.canDiffAsStrings) {
+      if (
+        node.type === "as_string" &&
+        node.parent.canDiffAsStrings &&
+        node.canDiffUrlParts
+      ) {
         return true;
       }
       if (node.actual.redundant && node.expected.redundant) {
@@ -208,10 +212,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           compareAsStrings = false;
         } else if (node.actual.isUrl && node.expected.isString) {
           compareAsStrings = true;
-          // onSelfDiff();
+          onSelfDiff();
         } else if (node.expected.isUrl && node.actual.isString) {
           compareAsStrings = true;
-          // onSelfDiff();
+          onSelfDiff();
         } else {
           compareAsStrings = false;
         }
@@ -250,9 +254,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             expectedIsPrimitive &&
             node.actual.value !== node.expected.value
           ) {
-            node.diff.category = true;
-            onSelfDiff();
-            break category;
+            if (node.actual.isUrlString && node.expected.isUrlString) {
+              // url part will contain the diffs
+              node.diff.category = true;
+            } else {
+              node.diff.category = true;
+              onSelfDiff();
+              break category;
+            }
           }
           const actualIsComposite = node.actual.isComposite;
           const expectedIsComposite = node.expected.isComposite;
@@ -1116,7 +1125,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     diffMessage += secondValueDiff;
 
     let message;
-    if (rootComparison.diff.category && causeCounters.total === 1) {
+    if (rootComparison.diff.category) {
       message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} are different`;
     } else {
       message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
@@ -1631,8 +1640,17 @@ let writeDiff;
     const relativeDepth = valueInfo.depth + context.initialDepth;
     const valueContext = {
       ...context,
-      modified: node.diff.counters.self.any > 0 ? true : context.modified,
     };
+    if (!context.modified) {
+      const hasUrlParts = valueInfo.isUrlString || valueInfo.isUrl;
+      if (hasUrlParts && node.canDiffUrlParts) {
+        // the urls parts will display the diff
+      } else if (node.asString && node.canDiffAsStrings) {
+        // as string will display the diff
+      } else if (node.diff.counters.self.any > 0) {
+        valueContext.modified = true;
+      }
+    }
     valueContext.insideOverview = valueContext.collapsed !== true;
     if (!valueContext.collapsed) {
       if (relativeDepth >= valueContext.maxDepth) {
@@ -1646,14 +1664,12 @@ let writeDiff;
       const valueColor = getValueColor(valueContext);
       return ANSI.color(valueInfo.wellKnownId, valueColor);
     }
-    if (valueInfo.isUrlString) {
+    if (valueInfo.isUrlString && node.canDiffUrlParts) {
       return writeCompositeDiff(node, valueContext, context);
     }
-    const bracketColor = getBracketColor(node, valueContext);
-    const valueColor = getValueColor(valueContext);
     if (valueInfo.isPrimitive) {
       if (node.asString && node.canDiffAsStrings) {
-        return writeDiff(node.asString, context);
+        return writeLinesDiff(node.asString, valueContext, context);
       }
       const value = valueInfo.value;
       if (valueInfo.canHaveLines) {
@@ -1680,13 +1696,39 @@ let writeDiff;
           } else {
             stringDiff = string;
           }
+          const valueColor = getValueColor(valueContext);
           let stringOverviewDiff = "";
           if (node.quote) {
-            stringOverviewDiff += ANSI.color(node.quote, bracketColor);
-          }
-          stringOverviewDiff += ANSI.color(stringDiff, valueColor);
-          if (node.quote) {
-            stringOverviewDiff += ANSI.color(node.quote, bracketColor);
+            let quoteColor;
+            let nodeForQuotes = node;
+            if (node.type === "as_string") {
+              nodeForQuotes = node.parent;
+            }
+            if (valueContext.removed) {
+              quoteColor = removedColor;
+            } else if (valueContext.added) {
+              quoteColor = addedColor;
+            } else if (valueContext.modified) {
+              quoteColor =
+                context.resultType === "actual"
+                  ? unexpectedColor
+                  : expectedColor;
+            } else if (
+              nodeForQuotes.actual.isComposite ===
+              nodeForQuotes.expected.isComposite
+            ) {
+              quoteColor = sameColor;
+            } else {
+              quoteColor =
+                context.resultType === "actual"
+                  ? unexpectedColor
+                  : expectedColor;
+            }
+            stringOverviewDiff += ANSI.color(node.quote, quoteColor);
+            stringOverviewDiff += ANSI.color(stringDiff, valueColor);
+            stringOverviewDiff += ANSI.color(node.quote, quoteColor);
+          } else {
+            stringOverviewDiff += ANSI.color(stringDiff, valueColor);
           }
           return stringOverviewDiff;
         }
@@ -1695,7 +1737,7 @@ let writeDiff;
         valueContext.modified = node.canDiffLines
           ? context.modified
           : valueContext.modified;
-        stringDiff += writeExpandedDiff(node, valueContext, context);
+        stringDiff += writeLinesDiff(node, valueContext, context);
         return stringDiff;
       }
 
@@ -1745,9 +1787,11 @@ let writeDiff;
         );
         valueDiff += "…";
       }
+      const valueColor = getValueColor(valueContext);
       return ANSI.color(valueDiff, valueColor);
     }
     if (context.collapsed && node.type === "property_descriptor") {
+      const valueColor = getValueColor(valueContext);
       if (node.descriptor === "get") {
         if (node.parent.descriptors.set[valueContext.resultType].value) {
           return ANSI.color("[get/set]", valueColor);
@@ -2209,7 +2253,6 @@ let writeDiff;
     }
     return oneLineDiff;
   };
-
   const writeLinesDiff = (node, context, parentContext) => {
     const lineNodes = node.lines;
     empty_string: {
@@ -2426,7 +2469,8 @@ let writeDiff;
   const writeUrlDiff = (node, context, parentContext) => {
     const writeUrlPart = (name) => {
       const urlPartNode = node.urlParts[name];
-      if (!urlPartNode[context.resultType].value) {
+      const urlPartValueInfo = urlPartNode[context.resultType];
+      if (String(urlPartValueInfo.value) === "") {
         return "";
       }
       const urlPartDiff = writeDiff(urlPartNode, context, parentContext);
@@ -2556,6 +2600,9 @@ let writeDiff;
       !valueInfo.isUrlString &&
       valueInfo.canHaveLines
     ) {
+      return writeLinesDiff(node, context, parentContext);
+    }
+    if (node.type === "as_string") {
       return writeLinesDiff(node, context, parentContext);
     }
 
@@ -2789,9 +2836,12 @@ let writeDiff;
     }
 
     if (valueInfo.isUrl || valueInfo.isUrlString) {
-      const urlDiff = node.canDiffUrlParts
-        ? writeUrlDiff(node, context, parentContext)
-        : writeDiff(node.asString, context, parentContext);
+      let urlDiff;
+      if (node.canDiffUrlParts) {
+        urlDiff = writeUrlDiff(node, context, parentContext);
+      } else {
+        urlDiff = writeDiff(node.asString, context, parentContext);
+      }
 
       if (valueInfo.isUrl) {
         let parenthesisColor;
