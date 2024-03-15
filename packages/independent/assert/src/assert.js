@@ -359,10 +359,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualValueOfReturnValue,
             expectedValueOfReturnValue,
           });
-          if (actualValueOfReturnValue === node.actual.value) {
+          if (
+            actualValueOfReturnValue === node.actual.value &&
+            expectedValueOfReturnValue === node.expected.value
+          ) {
             valueOfReturnValueNode.actual.redundant = true;
-          }
-          if (expectedValueOfReturnValue === node.expected.value) {
             valueOfReturnValueNode.expected.redundant = true;
           }
           let ignoreValueOfDiff = ignoreDiff;
@@ -1938,7 +1939,9 @@ let writeDiff;
     if (valueInfo.isComposite) {
       let insideConstructor = "";
       const prefixWithNew =
-        valueInfo.subtype !== "Object" && valueInfo.subtype !== "Array";
+        valueInfo.subtype === "String" ||
+        valueInfo.subtype === "Boolean" ||
+        valueInfo.subtype === "Number";
       if (prefixWithNew) {
         prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
       }
