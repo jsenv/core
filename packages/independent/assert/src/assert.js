@@ -419,7 +419,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 "toString" in valueInfo.value &&
                 typeof valueInfo.value.toString === "function"
               ) {
-                return node.actual.value.toString();
+                return valueInfo.value.toString();
               }
               return String(valueInfo.value);
             };
