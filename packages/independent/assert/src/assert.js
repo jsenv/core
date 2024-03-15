@@ -90,6 +90,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (node.type === "char") {
         return true;
       }
+      if (node.type === "as_string" && node.parent.canDiffAsStrings) {
+        return true;
+      }
       if (node.actual.redundant && node.expected.redundant) {
         // diff expected, one is primitive, other is composite for example
         return true;
@@ -195,26 +198,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return;
         }
 
-        let ignoreReferenceDiff = ignoreDiff;
-        let ignoreCategoryDiff = ignoreDiff;
-        let ignorePrototypeDiff = ignoreDiff;
-        let ignoreAsStringDiff;
-        if (ignoreDiff) {
-          ignoreAsStringDiff = true;
-        } else if (node.actual.isUrl && node.expected.isString) {
-          ignoreAsStringDiff = false;
-          ignoreReferenceDiff = ignoreCategoryDiff = ignorePrototypeDiff = true;
-        } else if (node.expected.isUrl && node.actual.isString) {
-          ignoreAsStringDiff = false;
-          ignoreReferenceDiff = ignoreCategoryDiff = ignorePrototypeDiff = true;
-        } else {
-          ignoreAsStringDiff = true;
-        }
-
         const onSelfDiff = () => {
           addNodeCausingDiff(node);
           node.diff.counters.self.modified++;
         };
+
+        let compareAsStrings;
+        if (ignoreDiff) {
+          compareAsStrings = false;
+        } else if (node.actual.isUrl && node.expected.isString) {
+          compareAsStrings = true;
+          // onSelfDiff();
+        } else if (node.expected.isUrl && node.actual.isString) {
+          compareAsStrings = true;
+          // onSelfDiff();
+        } else {
+          compareAsStrings = false;
+        }
+        let ignoreReferenceDiff = ignoreDiff || compareAsStrings;
+        let ignoreCategoryDiff = ignoreDiff || compareAsStrings;
+        let ignorePrototypeDiff = ignoreDiff;
+        let ignoreValueOfReturnValueDiff = compareAsStrings;
+
         reference: {
           if (ignoreReferenceDiff) {
             break reference;
@@ -298,10 +303,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
             const canDiffPrototypes =
               visitActualPrototype && visitExpectedPrototype;
+            node.canDiffPrototypes = canDiffPrototypes;
             const prototypeAreDifferentAndWellKnown =
               (node.actual.isArray && !node.expected.isArray) ||
-              (!node.actual.isArray && node.expected.isArray);
-            node.canDiffPrototypes = canDiffPrototypes;
+              (!node.actual.isArray && node.expected.isArray) ||
+              node.actual.isComposite !== node.expected.isComposite;
             node.prototypeAreDifferentAndWellKnown =
               prototypeAreDifferentAndWellKnown;
 
@@ -329,6 +335,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           value_of_return_value: {
+            if (ignoreValueOfReturnValueDiff) {
+              break value_of_return_value;
+            }
             const visitActualValueOfReturnValue =
               node.actual.isComposite &&
               !actualStructureIsKnown &&
@@ -410,31 +419,42 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             // }
           }
           as_string: {
-            if (ignoreAsStringDiff) {
+            if (!node.actual.isUrl && !node.expected.isUrl) {
               break as_string;
             }
-            const asString = (valueInfo) => {
-              if (
-                valueInfo.isComposite &&
-                "toString" in valueInfo.value &&
-                typeof valueInfo.value.toString === "function"
-              ) {
-                return valueInfo.value.toString();
-              }
-              return String(valueInfo.value);
-            };
-            const actualAsString = asString(node.actual);
-            const expectedAsString = asString(node.expected);
-            const canDiffToStringReturnValue =
+            const actualHasToString =
+              node.actual.isComposite &&
+              !actualStructureIsKnown &&
+              "toString" in node.actual.value &&
+              typeof node.actual.value.toString === "function";
+            const expectedHasToString =
+              node.expected.isComposite &&
+              !expectedStructureIsKnown &&
+              "toString" in node.expected.value &&
+              typeof node.expected.value.toString === "function";
+            if (!actualHasToString && !expectedHasToString) {
+              break as_string;
+            }
+            let actualAsString;
+            let expectedAsString;
+            if (actualHasToString && !expectedHasToString) {
+              actualAsString = node.actual.value.toString();
+              expectedAsString = String(node.expected.value);
+            } else if (!actualHasToString && expectedHasToString) {
+              actualAsString = String(node.actual.value);
+              expectedAsString = node.expected.value.toString();
+            }
+            let canDiffAsStrings =
+              compareAsStrings &&
               typeof actualAsString === "string" &&
               typeof expectedAsString === "string";
-            node.canDiffToStringReturnValue = canDiffToStringReturnValue;
+            node.canDiffAsStrings = canDiffAsStrings;
             const asStringNode = node.appendAsString({
               actualAsString,
               expectedAsString,
             });
             visit(asStringNode, {
-              ignoreDiff: ignoreDiff || !canDiffToStringReturnValue,
+              ignoreDiff: ignoreDiff || !canDiffAsStrings,
             });
             appendCounters(
               node.diff.counters.inside,
@@ -589,15 +609,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           url_parts: {
-            const visitActualUrlParts = node.actual.isUrl;
-            const visitExpectedUrlParts = node.expected.isUrl;
-            const canDiffUrlParts = visitActualUrlParts & visitExpectedUrlParts;
+            if (node.type === "as_string") {
+              break url_parts;
+            }
+            const visitActualUrlParts =
+              node.actual.isUrl || node.actual.isUrlString;
+            const visitExpectedUrlParts =
+              node.expected.isUrl || node.expected.isUrlString;
+            const canDiffUrlParts =
+              visitActualUrlParts && visitExpectedUrlParts;
             node.canDiffUrlParts = canDiffUrlParts;
             if (!canDiffUrlParts) {
               break url_parts;
             }
-            const actualUrlParts = new URL(node.actual.value);
-            const expectedUrlParts = new URL(node.expected.value);
+            const actualUrlParts = node.actual.isUrl
+              ? node.actual.value
+              : new URL(node.actual.value);
+            const expectedUrlParts = node.expected.isUrl
+              ? node.expected.value
+              : new URL(node.expected.value);
             const normalizeUrlPart = (name, value) => {
               if (name === "port") {
                 if (value === "") {
@@ -1347,7 +1377,10 @@ let createComparisonTree;
           return charNode;
         };
       }
-      if (node.actual.isUrl && node.expected.isUrl) {
+      if (
+        (node.actual.isUrl || node.actual.isUrlString) &&
+        (node.expected.isUrl || node.expected.isUrlString)
+      ) {
         node.urlParts = {};
         node.appendUrlPart = (name, { actualValue, expectedValue }) => {
           const urlPartNode = createComparisonNode({
@@ -1411,7 +1444,10 @@ let createComparisonTree;
             subtype = "null";
           } else {
             subtype = typeof value;
-            isString = subtype === "string";
+            if (subtype === "string") {
+              isString = true;
+              isUrlString = canParseUrl(value);
+            }
           }
         }
       }
@@ -1591,12 +1627,12 @@ let writeDiff;
   ];
 
   const writeValueDiff = (node, context) => {
-    const valueContext = { ...context };
-    if (!context.modified && node.diff.counters.self.any > 0) {
-      valueContext.modified = true;
-    }
-    const valueInfo = node[valueContext.resultType];
+    const valueInfo = node[context.resultType];
     const relativeDepth = valueInfo.depth + context.initialDepth;
+    const valueContext = {
+      ...context,
+      modified: node.diff.counters.self.any > 0 ? true : context.modified,
+    };
     valueContext.insideOverview = valueContext.collapsed !== true;
     if (!valueContext.collapsed) {
       if (relativeDepth >= valueContext.maxDepth) {
@@ -1610,14 +1646,13 @@ let writeDiff;
       const valueColor = getValueColor(valueContext);
       return ANSI.color(valueInfo.wellKnownId, valueColor);
     }
-
-    const delimitersColor = getDelimitersColor(valueContext);
+    if (valueInfo.isUrlString) {
+      return writeCompositeDiff(node, valueContext, context);
+    }
     const bracketColor = getBracketColor(node, valueContext);
     const valueColor = getValueColor(valueContext);
-
-    // primitive
     if (valueInfo.isPrimitive) {
-      if (node.asString) {
+      if (node.asString && node.canDiffAsStrings) {
         return writeDiff(node.asString, context);
       }
       const value = valueInfo.value;
@@ -1712,7 +1747,6 @@ let writeDiff;
       }
       return ANSI.color(valueDiff, valueColor);
     }
-
     if (context.collapsed && node.type === "property_descriptor") {
       if (node.descriptor === "get") {
         if (node.parent.descriptors.set[valueContext.resultType].value) {
@@ -1727,9 +1761,11 @@ let writeDiff;
         return ANSI.color("[set]", valueColor);
       }
     }
-
+    return writeCompositeDiff(node, valueContext, context);
+  };
+  const displayedIdMap = new Map();
+  const writeCompositeDiff = (node, context, parentContext) => {
     let idCount = 0;
-    const displayedIdMap = new Map();
     const getDisplayedId = (nodeId) => {
       const existingId = displayedIdMap.get(nodeId);
       if (existingId) {
@@ -1740,8 +1776,9 @@ let writeDiff;
       displayedIdMap.set(nodeId, idDisplayed);
       return idDisplayed;
     };
+    const valueInfo = node[context.resultType];
+    const delimitersColor = getDelimitersColor(context);
 
-    // composite
     let compositeDiff = "";
     reference: {
       // referencing an other composite
@@ -1755,7 +1792,7 @@ let writeDiff;
       // will be referenced by a composite
       let referenceFromOtherDisplayed;
       for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
-        if (referenceFromOther[context.resultType].redundant) {
+        if (referenceFromOther[parentContext.resultType].redundant) {
           continue;
         }
         referenceFromOtherDisplayed = referenceFromOther;
@@ -1764,7 +1801,7 @@ let writeDiff;
       if (referenceFromOtherDisplayed) {
         compositeDiff += ANSI.color(
           `<ref #${getDisplayedId(
-            referenceFromOtherDisplayed[context.resultType].reference.id,
+            referenceFromOtherDisplayed[parentContext.resultType].reference.id,
           )}>`,
           delimitersColor,
         );
@@ -1773,16 +1810,20 @@ let writeDiff;
     }
 
     inside: {
-      if (valueContext.collapsed) {
-        if (valueContext.insideOverview) {
-          const overviewDiff = writeOverviewDiff(node, valueContext, context);
+      if (context.collapsed) {
+        if (context.insideOverview) {
+          const overviewDiff = writeOverviewDiff(node, context, parentContext);
           compositeDiff += overviewDiff;
         } else {
-          const collapsedDiff = writeCollapsedDiff(node, valueContext, context);
+          const collapsedDiff = writeCollapsedDiff(
+            node,
+            context,
+            parentContext,
+          );
           compositeDiff += collapsedDiff;
         }
       } else {
-        const expandedDiff = writeExpandedDiff(node, valueContext, context);
+        const expandedDiff = writeExpandedDiff(node, context, parentContext);
         compositeDiff += expandedDiff;
       }
     }
@@ -2449,8 +2490,9 @@ let writeDiff;
     const portDiff = writeUrlPart("port");
     if (portDiff) {
       if (hostnameDiff) {
-        const actualHasPort = node.urlParts.port.actual.value.length;
-        const expectedHasPort = node.urlParts.port.expected.value.length;
+        const actualHasPort = node.urlParts.port.actual.value.length > 0;
+        const expectedHasPort =
+          String(node.urlParts.port.expected.value).length > 0;
         let portSeparatorColor;
         if (actualHasPort && !expectedHasPort) {
           portSeparatorColor = addedColor;
@@ -2509,11 +2551,14 @@ let writeDiff;
 
   const writeExpandedDiff = (node, context, parentContext) => {
     const valueInfo = node[context.resultType];
-    if (valueInfo.isString && valueInfo.canHaveLines) {
+    if (
+      valueInfo.isString &&
+      !valueInfo.isUrlString &&
+      valueInfo.canHaveLines
+    ) {
       return writeLinesDiff(node, context, parentContext);
     }
 
-    let prefix = writePrefix(node, context, parentContext);
     const delimitersColor = getDelimitersColor(context);
     const relativeDepth = valueInfo.depth + context.initialDepth;
     let indent = "  ".repeat(relativeDepth);
@@ -2737,25 +2782,33 @@ let writeDiff;
     };
 
     let insideDiff = "";
-    insideDiff += prefix;
-    if (node.canDiffUrlParts) {
-      const urlDiff = writeUrlDiff(node, context, parentContext);
-      insideDiff += ANSI.color("(", delimitersColor);
-      insideDiff += urlDiff;
-      insideDiff += ANSI.color(")", delimitersColor);
-    } else if (node.asString) {
-      const asStringDiff = writeDiff(node.asString, context, parentContext);
-      let parenthesisColor;
-      if (node.actual.isComposite === node.expected.isComposite) {
-        parenthesisColor = sameColor;
-      } else {
-        parenthesisColor =
-          context.resultType === "actual" ? unexpectedColor : expectedColor;
-      }
-      insideDiff += ANSI.color("(", parenthesisColor);
-      insideDiff += asStringDiff;
-      insideDiff += ANSI.color(")", parenthesisColor);
+    let prefix = "";
+    if (!valueInfo.isUrlString) {
+      prefix = writePrefix(node, context, parentContext);
+      insideDiff += prefix;
     }
+
+    if (valueInfo.isUrl || valueInfo.isUrlString) {
+      const urlDiff = node.canDiffUrlParts
+        ? writeUrlDiff(node, context, parentContext)
+        : writeDiff(node.asString, context, parentContext);
+
+      if (valueInfo.isUrl) {
+        let parenthesisColor;
+        if (node.actual.isComposite === node.expected.isComposite) {
+          parenthesisColor = sameColor;
+        } else {
+          parenthesisColor =
+            context.resultType === "actual" ? unexpectedColor : expectedColor;
+        }
+        insideDiff += ANSI.color("(", parenthesisColor);
+        insideDiff += urlDiff;
+        insideDiff += ANSI.color(")", parenthesisColor);
+      } else {
+        insideDiff += urlDiff;
+      }
+    }
+
     if (valueInfo.canHaveIndexedValues) {
       const indexedValueDiff = writeGroupDiff(
         createGetIndexedValues(node, context, parentContext),
@@ -2776,20 +2829,22 @@ let writeDiff;
         insideDiff += ANSI.color(")", delimitersColor);
       }
     }
-    const propsDiff = writeGroupDiff(
-      createGetProps(node, context, parentContext),
-      {
-        valueLabel: "prop",
-        forceBracket: !valueInfo.canHaveIndexedValues && prefix.length === 0,
-        openBracket: "{",
-        closeBracket: "}",
-      },
-    );
-    if (propsDiff) {
-      if (insideDiff) {
-        insideDiff += " ";
+    if (!valueInfo.isUrlString) {
+      const propsDiff = writeGroupDiff(
+        createGetProps(node, context, parentContext),
+        {
+          valueLabel: "prop",
+          forceBracket: !valueInfo.canHaveIndexedValues && prefix.length === 0,
+          openBracket: "{",
+          closeBracket: "}",
+        },
+      );
+      if (propsDiff) {
+        if (insideDiff) {
+          insideDiff += " ";
+        }
+        insideDiff += propsDiff;
       }
-      insideDiff += propsDiff;
     }
     return insideDiff;
   };
@@ -3365,3 +3420,15 @@ const getFocusedCharIndex = (node, context) => {
 
   return chars.length - 1;
 };
+
+const canParseUrl =
+  URL.canParse ||
+  (() => {
+    try {
+      // eslint-disable-next-line no-new, no-undef
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  });
