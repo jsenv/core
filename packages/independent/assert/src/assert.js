@@ -655,14 +655,25 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     firstPrefix += ANSI.color(":", sameColor);
     firstPrefix += " ";
     // si le start node a une diff alors il faudrait lui mettre le signe + devant actual
-    const firstValueDiff = writeDiff(comparisonStartNode, {
+    const displayedIdMap = new Map();
+    let idCount = 0;
+    const getDisplayedId = (nodeId) => {
+      const existingId = displayedIdMap.get(nodeId);
+      if (existingId) {
+        return existingId;
+      }
+      const idDisplayed = idCount + 1;
+      idCount++;
+      displayedIdMap.set(nodeId, idDisplayed);
+      return idDisplayed;
+    };
+    const contextBase = {
       onNodeDisplayed,
-      refId: 1,
+      getDisplayedId,
       startNode: comparisonStartNode,
       signs,
       initialDepth: -comparisonStartNode.depth,
       maxColumns,
-      textIndent: stringWidth(firstPrefix),
       maxDepth,
       maxDiffPerObject,
       maxValueBeforeDiff,
@@ -671,9 +682,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxDepthInsideDiff,
       maxLineBeforeDiff,
       maxLineAfterDiff,
-      resultType: firstValueMeta.resultType,
       quote,
       preserveLineBreaks,
+    };
+
+    const firstValueDiff = writeDiff(comparisonStartNode, {
+      ...contextBase,
+      resultType: firstValueMeta.resultType,
+      textIndent: stringWidth(firstPrefix),
     });
 
     let secondPrefix = "";
@@ -681,24 +697,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     secondPrefix += ANSI.color(":", sameColor);
     secondPrefix += " ";
     const secondValueDiff = writeDiff(comparisonStartNode, {
-      onNodeDisplayed,
-      refId: 1,
-      startNode: comparisonStartNode,
-      signs,
-      initialDepth: -comparisonStartNode.depth,
-      maxColumns,
-      textIndent: stringWidth(secondPrefix),
-      maxDepth,
-      maxDiffPerObject,
-      maxValueBeforeDiff,
-      maxValueAfterDiff,
-      maxValueInsideDiff,
-      maxDepthInsideDiff,
-      maxLineBeforeDiff,
-      maxLineAfterDiff,
+      ...contextBase,
       resultType: secondValueMeta.resultType,
-      quote,
-      preserveLineBreaks,
+      textIndent: stringWidth(secondPrefix),
     });
 
     let diffMessage = "";
@@ -1336,7 +1337,7 @@ let writeDiff;
               quoteColor = addedColor;
             } else if (valueContext.modified) {
               quoteColor =
-                context.resultType === "actual"
+                context.resultType === "actualNode"
                   ? unexpectedColor
                   : expectedColor;
             } else if (
@@ -1346,7 +1347,7 @@ let writeDiff;
               quoteColor = sameColor;
             } else {
               quoteColor =
-                context.resultType === "actual"
+                context.resultType === "actualNode"
                   ? unexpectedColor
                   : expectedColor;
             }
@@ -1433,36 +1434,25 @@ let writeDiff;
     }
     return writeCompositeDiff(node, valueContext, context);
   };
-  const displayedIdMap = new Map();
-  const writeCompositeDiff = (node, context, parentContext) => {
-    let idCount = 0;
-    const getDisplayedId = (nodeId) => {
-      const existingId = displayedIdMap.get(nodeId);
-      if (existingId) {
-        return existingId;
-      }
-      const idDisplayed = idCount + 1;
-      idCount++;
-      displayedIdMap.set(nodeId, idDisplayed);
-      return idDisplayed;
-    };
-    const valueInfo = node[context.resultType];
+
+  const writeCompositeDiff = (comparison, context, parentContext) => {
+    const node = comparison[context.resultType];
     const delimitersColor = getDelimitersColor(context);
 
     let compositeDiff = "";
     reference: {
       // referencing an other composite
-      if (valueInfo.reference) {
+      if (node.reference) {
         compositeDiff += ANSI.color(
-          `<ref #${getDisplayedId(valueInfo.reference.id)}>`,
+          `<ref #${context.getDisplayedId(node.reference.id)}>`,
           delimitersColor,
         );
         return compositeDiff;
       }
       // will be referenced by a composite
       let referenceFromOtherDisplayed;
-      for (const referenceFromOther of valueInfo.referenceFromOthersSet) {
-        if (referenceFromOther[parentContext.resultType].redundant) {
+      for (const referenceFromOther of node.referenceFromOthersSet) {
+        if (referenceFromOther[context.resultType].redundant) {
           continue;
         }
         referenceFromOtherDisplayed = referenceFromOther;
@@ -1470,30 +1460,37 @@ let writeDiff;
       }
       if (referenceFromOtherDisplayed) {
         compositeDiff += ANSI.color(
-          `<ref #${getDisplayedId(
-            referenceFromOtherDisplayed[parentContext.resultType].reference.id,
+          `<ref #${context.getDisplayedId(
+            referenceFromOtherDisplayed[context.resultType].reference.id,
           )}>`,
           delimitersColor,
         );
         compositeDiff += " ";
       }
     }
-
     inside: {
       if (context.collapsed) {
         if (context.insideOverview) {
-          const overviewDiff = writeOverviewDiff(node, context, parentContext);
+          const overviewDiff = writeOverviewDiff(
+            comparison,
+            context,
+            parentContext,
+          );
           compositeDiff += overviewDiff;
         } else {
           const collapsedDiff = writeCollapsedDiff(
-            node,
+            comparison,
             context,
             parentContext,
           );
           compositeDiff += collapsedDiff;
         }
       } else {
-        const expandedDiff = writeExpandedDiff(node, context, parentContext);
+        const expandedDiff = writeExpandedDiff(
+          comparison,
+          context,
+          parentContext,
+        );
         compositeDiff += expandedDiff;
       }
     }
@@ -1532,17 +1529,17 @@ let writeDiff;
     if (useIndent) {
       if (nestedValueContext.signs) {
         if (nestedValueContext.removed) {
-          if (nestedValueContext.resultType === "expected") {
+          if (nestedValueContext.resultType === "expectedNode") {
             nestedValueDiff += ANSI.color(removedSign, removedSignColor);
             indent = indent.slice(1);
           }
         } else if (nestedValueContext.added) {
-          if (nestedValueContext.resultType === "actual") {
+          if (nestedValueContext.resultType === "actualNode") {
             nestedValueDiff += ANSI.color(addedSign, addedSignColor);
             indent = indent.slice(1);
           }
         } else if (nestedValueContext.modified) {
-          if (nestedValueContext.resultType === "actual") {
+          if (nestedValueContext.resultType === "actualNode") {
             nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
             indent = indent.slice(1);
           }
@@ -1658,7 +1655,7 @@ let writeDiff;
         subtypeColor = sameColor;
       } else {
         subtypeColor =
-          context.resultType === "actual" ? unexpectedColor : expectedColor;
+          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
       }
       prefix += ANSI.color(node.subtype, subtypeColor);
     }
@@ -1676,7 +1673,7 @@ let writeDiff;
               comparison.actualNode.value.length ===
                 comparison.expectedNode.value.length
             ? sameColor
-            : context.resultType === "actual"
+            : context.resultType === "actualNode"
               ? unexpectedColor
               : expectedColor;
       prefix += ANSI.color(node.value.length, lengthColor);
@@ -1697,7 +1694,7 @@ let writeDiff;
               comparison.actualNode.charNodes.length ===
                 comparison.expectedNode.charNodes.length
             ? sameColor
-            : context.resultType === "actual"
+            : context.resultType === "actualNode"
               ? unexpectedColor
               : expectedColor;
       prefix += ANSI.color(node.charNodes.length, lengthColor);
@@ -1736,7 +1733,7 @@ let writeDiff;
           comparison.actualNode.isSet &&
           comparison.expectedNode.isSet
         ) {
-          if (context.resultType === "actual") {
+          if (context.resultType === "actualNode") {
             const added = comparison.actualNode.setValues.some(
               (setValueNode) => setValueNode.diff.added,
             );
@@ -1758,7 +1755,9 @@ let writeDiff;
         ) {
           insideConstructor = ANSI.color(
             overviewContent,
-            context.resultType === "actual" ? unexpectedColor : expectedColor,
+            context.resultType === "actualNode"
+              ? unexpectedColor
+              : expectedColor,
           );
         } else if (
           comparison.actualNode.isComposite &&
@@ -1770,7 +1769,9 @@ let writeDiff;
         } else {
           insideConstructor = ANSI.color(
             overviewContent,
-            context.resultType === "actual" ? unexpectedColor : expectedColor,
+            context.resultType === "actualNode"
+              ? unexpectedColor
+              : expectedColor,
           );
         }
       }
@@ -1887,12 +1888,12 @@ let writeDiff;
     }
     return oneLineDiff;
   };
-  const writeLinesDiff = (node, context, parentContext) => {
-    const lineNodes = node.lines;
+  const writeLinesDiff = (comparison, context, parentContext) => {
+    const node = comparison[context.resultType];
+    const lineNodes = node.lineNodes;
     empty_string: {
       const firstLineNode = lineNodes[0];
-      const firstLineValueInfo = firstLineNode[context.resultType];
-      if (firstLineValueInfo.value.length === 0) {
+      if (firstLineNode.value === "") {
         const quote = node.quote || DOUBLE_QUOTE;
         const bracketColor = getBracketColor(node, context);
         let expandedDiff = "";
@@ -1909,14 +1910,10 @@ let writeDiff;
         break single_line;
       }
       const firstLineNode = lineNodes[0];
-      // const firstLineValueInfo = firstLineNode[context.resultType];
-      if (!node.quote && node.type !== "url_part") {
-        const valueInfo = node[context.resultType];
+      if (!comparison.quote && node.type !== "url_part") {
         const quote =
-          context.quote === "auto"
-            ? pickBestQuote(valueInfo.value)
-            : context.quote;
-        node.quote = quote; // ensure the quote in expected is "forced" to the one in actual
+          context.quote === "auto" ? pickBestQuote(node.value) : context.quote;
+        comparison.quote = quote; // ensure the quote in expected is "forced" to the one in actual
       }
       const focusedCharIndex = getFocusedCharIndex(firstLineNode, context);
       return writeOneLineDiff(
@@ -1941,13 +1938,11 @@ let writeDiff;
     }
 
     multiline: {
-      const lines = node[context.resultType].lines;
-      let focusedLineIndex = lines.findIndex((line, index) => {
-        const lineNode = lineNodes[index];
+      let focusedLineIndex = lineNodes.findIndex((lineNode) => {
         return lineNode.diff.counters.overall.any > 0;
       });
       if (focusedLineIndex === -1) {
-        focusedLineIndex = lines.length - 1;
+        focusedLineIndex = lineNodes.length - 1;
       }
       const focusedLineNode = lineNodes[focusedLineIndex];
       const focusedCharIndex = getFocusedCharIndex(focusedLineNode, context);
@@ -1974,7 +1969,7 @@ let writeDiff;
       let maxLineAfter = context.maxLineAfterDiff - 1;
       while (maxLineAfter--) {
         const nextLineIndex = focusedLineIndex + lineAfterArray.length + 1;
-        const hasNextLine = nextLineIndex < lines.length;
+        const hasNextLine = nextLineIndex < lineNodes.length;
         if (!hasNextLine) {
           break;
         }
@@ -1985,9 +1980,9 @@ let writeDiff;
         }
       }
       let nextLineRemaining =
-        lines.length - 1 - focusedLineIndex - lineAfterArray.length;
+        lineNodes.length - 1 - focusedLineIndex - lineAfterArray.length;
       if (nextLineRemaining === 1) {
-        lineAfterArray.push(lineNodes[lines.length - 1]);
+        lineAfterArray.push(lineNodes[lineNodes.length - 1]);
         nextLineRemaining = 0;
       }
 
@@ -2048,7 +2043,7 @@ let writeDiff;
           modified: 0,
         };
         const from = focusedLineIndex + lineAfterArray.length + 1;
-        const to = lines.length;
+        const to = lineNodes.length;
         let index = from;
         while (index < to) {
           const nextLineNode = lineNodes[index];
@@ -2065,20 +2060,26 @@ let writeDiff;
         nextLinesSkippedDiff += ANSI.color("↓", delimitersColor);
         nextLinesSkippedDiff += " ";
         let belowSummary = "";
+        let summaryColor = "";
+        if (actualNode.lineNodes.length === expectedNode.lineNodes.length) {
+          summaryColor = delimitersColor;
+        } else if (context.resultType === "actualNode") {
+          summaryColor = unexpectedColor;
+        } else {
+          summaryColor = expectedColor;
+        }
         belowSummary += ANSI.color(
           `${skippedCounters.total} lines`,
-          actualNode.lineNodes.length === expectedNode.lineNodes.length
-            ? delimitersColor
-            : context.resultType === "actual"
-              ? unexpectedColor
-              : expectedColor,
+          summaryColor,
         );
         const parts = [];
         if (skippedCounters.modified) {
           parts.push(
             ANSI.color(
               `${skippedCounters.modified} modified`,
-              context.resultType === "actual" ? unexpectedColor : expectedColor,
+              context.resultType === "actualNode"
+                ? unexpectedColor
+                : expectedColor,
             ),
           );
         }
@@ -2131,7 +2132,7 @@ let writeDiff;
         passwordSeparatorColor = removedColor;
       } else if (node.urlParts.password.diff.counters.overall.any) {
         passwordSeparatorColor =
-          context.resultType === "actual" ? unexpectedColor : expectedColor;
+          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
       } else {
         passwordSeparatorColor = sameColor;
       }
@@ -2158,7 +2159,9 @@ let writeDiff;
             : node.urlParts.username.diff.counters.overall.any
         ) {
           authSeparatorColor =
-            context.resultType === "actual" ? unexpectedColor : expectedColor;
+            context.resultType === "actualNode"
+              ? unexpectedColor
+              : expectedColor;
         } else {
           authSeparatorColor = sameColor;
         }
@@ -2179,7 +2182,9 @@ let writeDiff;
           portSeparatorColor = removedColor;
         } else if (node.urlParts.port.diff.counters.overall.any) {
           portSeparatorColor =
-            context.resultType === "actual" ? unexpectedColor : expectedColor;
+            context.resultType === "actualNode"
+              ? unexpectedColor
+              : expectedColor;
         } else {
           portSeparatorColor = sameColor;
         }
@@ -2199,7 +2204,7 @@ let writeDiff;
         searchSeparatorColor = removedColor;
       } else if (node.urlParts.search.diff.counters.overall.any) {
         searchSeparatorColor =
-          context.resultType === "actual" ? unexpectedColor : expectedColor;
+          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
       } else {
         searchSeparatorColor = sameColor;
       }
@@ -2217,7 +2222,7 @@ let writeDiff;
         hashSeparatorColor = removedColor;
       } else if (node.urlParts.hash.diff.counters.overall.any) {
         hashSeparatorColor =
-          context.resultType === "actual" ? unexpectedColor : expectedColor;
+          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
       } else {
         hashSeparatorColor = sameColor;
       }
@@ -2262,10 +2267,10 @@ let writeDiff;
       let skippedArray = [];
       let entry;
       while ((entry = next())) {
-        if (context.resultType === "actual" && entry.node.diff.removed) {
+        if (context.resultType === "actualNode" && entry.node.diff.removed) {
           continue;
         }
-        if (context.resultType === "expected" && entry.node.diff.added) {
+        if (context.resultType === "expectedNode" && entry.node.diff.added) {
           continue;
         }
         if (entry.node.owner && entry.node.owner !== context.resultType) {
@@ -2365,7 +2370,7 @@ let writeDiff;
         };
         for (const skipped of skippedArray) {
           skippedCounters.total++;
-          if (context.resultType === "actual") {
+          if (context.resultType === "actualNode") {
             if (skipped.node.diff.added) {
               context.onNodeDisplayed(skipped.node);
               skippedCounters.added++;
@@ -2406,7 +2411,7 @@ let writeDiff;
             parts.push(
               ANSI.color(
                 `${skippedCounters.modified} modified`,
-                context.resultType === "actual"
+                context.resultType === "actualNode"
                   ? unexpectedColor
                   : expectedColor,
               ),
@@ -2483,7 +2488,9 @@ let writeDiff;
           parenthesisColor = sameColor;
         } else {
           parenthesisColor =
-            context.resultType === "actual" ? unexpectedColor : expectedColor;
+            context.resultType === "actualNode"
+              ? unexpectedColor
+              : expectedColor;
         }
         insideDiff += ANSI.color("(", parenthesisColor);
         insideDiff += urlDiff;
@@ -2532,8 +2539,9 @@ let writeDiff;
     }
     return insideDiff;
   };
-  const writeOverviewDiff = (node, context, parentContext) => {
-    const prefixWithOverview = writePrefix(node, context, parentContext, {
+  const writeOverviewDiff = (comparison, context, parentContext) => {
+    const node = comparison[context.resultType];
+    const prefixWithOverview = writePrefix(comparison, context, parentContext, {
       overview: true,
     });
     const delimitersColor = getDelimitersColor(context);
@@ -2562,10 +2570,10 @@ let writeDiff;
     let entry;
     const next = createGetNextNestedValue(node, context, parentContext);
     while ((entry = next())) {
-      if (context.resultType === "actual" && entry.node.diff.removed) {
+      if (context.resultType === "actualNode" && entry.node.diff.removed) {
         continue;
       }
-      if (context.resultType === "expected" && entry.node.diff.added) {
+      if (context.resultType === "expectedNode" && entry.node.diff.added) {
         continue;
       }
       let valueOverview = "";
@@ -2805,7 +2813,7 @@ let writeDiff;
     return null;
   };
   const getDelimitersColor = (context) => {
-    if (context.resultType === "actual") {
+    if (context.resultType === "actualNode") {
       if (context.added) {
         return addedColor;
       }
@@ -2823,7 +2831,7 @@ let writeDiff;
     return sameColor;
   };
   const getKeyColor = (context) => {
-    if (context.resultType === "actual") {
+    if (context.resultType === "actualNode") {
       if (context.added) {
         return addedColor;
       }
@@ -2848,7 +2856,7 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
-      if (context.resultType === "actual") {
+      if (context.resultType === "actualNode") {
         return unexpectedColor;
       }
       return expectedColor;
@@ -2884,7 +2892,7 @@ let writeDiff;
         // they use same brackets
         return sameColor;
       }
-      if (context.resultType === "actual") {
+      if (context.resultType === "actualNode") {
         return unexpectedColor;
       }
       return expectedColor;
