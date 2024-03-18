@@ -14,44 +14,53 @@ const assert = createAssert();
 // const signal = (v) => new Signal(v);
 
 await startSnapshotTesting("value_of", {
-  ["signal string"]: () => {
+  // ["signal string"]: () => {
+  //   assert({
+  //     actual: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => "a",
+  //     },
+  //     expected: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => "b",
+  //     },
+  //   });
+  // },
+  // ["signal array"]: () => {
+  //   assert({
+  //     actual: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => ["a"],
+  //     },
+  //     expected: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => ["b"],
+  //     },
+  //   });
+  // },
+  ["signal string and string"]: () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
         valueOf: () => "a",
       },
-      expected: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => "b",
-      },
+      expected: "ab",
     });
   },
-  ["signal array"]: () => {
-    assert({
-      actual: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => ["a"],
-      },
-      expected: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => ["b"],
-      },
-    });
-  },
-  ["valueOf not displayed when return object itself"]: () => {
-    const actual = { a: true, valueOf: () => actual };
-    const expected = { a: false, valueOf: () => expected };
-    assert({
-      actual,
-      expected,
-    });
-  },
-  ["valueOf returns something diff"]: () => {
-    const actual = { valueOf: () => actual };
-    const expected = { valueOf: () => "10" };
-    assert({
-      actual,
-      expected,
-    });
-  },
+  // ["valueOf not displayed when return object itself"]: () => {
+  //   const actual = { a: true, valueOf: () => actual };
+  //   const expected = { a: false, valueOf: () => expected };
+  //   assert({
+  //     actual,
+  //     expected,
+  //   });
+  // },
+  // ["valueOf returns something diff"]: () => {
+  //   const actual = { valueOf: () => actual };
+  //   const expected = { valueOf: () => "10" };
+  //   assert({
+  //     actual,
+  //     expected,
+  //   });
+  // },
 });

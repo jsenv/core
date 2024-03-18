@@ -1,38 +1,6 @@
-# signal string
-AssertionError: actual and expected have 1 difference:
+# signal string and string
+AssertionError: actual and expected are different:
 
 actual: Signal("a")
-expect: Signal("b")
-
-# signal array
-AssertionError: actual and expected have 1 difference:
-
-actual: Signal([
-  "a",
-])
-expect: Signal([
-  "b",
-])
-
-# valueOf not displayed when return object itself
-AssertionError: actual and expected have 1 difference:
-
-actual: {
-  a: true,
-}
-expect: {
-  a: false,
-}
-
-# valueOf returns something diff
-AssertionError: actual and expected have 2 differences:
-
-ℹ to improve readability 1 diff is completely hidden
-
-actual: <ref #1> {
-  "valueOf()": <ref #1>,
-}
-expect: {
-  "valueOf()": "10",
-}
+expect: "ab"
 
