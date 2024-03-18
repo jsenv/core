@@ -155,7 +155,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
 
     const compare = (
-      comparisonNode,
+      comparison,
       {
         // ignoreDiff is meant to ignore the diff between actual/expected
         // (usually because comparison cannot be made (added,removed, visiting something different))
@@ -164,17 +164,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       } = {},
     ) => {
       const doCompare = () => {
-        const { actualNode, expectedNode } = comparisonNode;
+        const { actualNode, expectedNode } = comparison;
 
         if (!actualNode) {
-          addNodeCausingDiff(comparisonNode);
-          comparisonNode.diff.counters.self.added++;
+          addNodeCausingDiff(comparison);
+          comparison.diff.counters.self.added++;
           return;
         }
 
         if (!expectedNode) {
-          addNodeCausingDiff(comparisonNode);
-          comparisonNode.diff.counters.self.removed++;
+          addNodeCausingDiff(comparison);
+          comparison.diff.counters.self.removed++;
           return;
         }
 
@@ -184,7 +184,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualNode.descriptorNodes[descriptorName];
             const expectedPropertyDescriptorNode =
               expectedNode.descriptorNodes[descriptorName];
-            const propertyDescriptorComparison = createComparisonNode(
+            const propertyDescriptorComparison = createComparison(
               actualPropertyDescriptorNode,
               expectedPropertyDescriptorNode,
             );
@@ -200,11 +200,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         const onSelfDiff = () => {
-          addNodeCausingDiff(comparisonNode);
-          comparisonNode.diff.counters.self.modified++;
+          addNodeCausingDiff(comparison);
+          comparison.diff.counters.self.modified++;
         };
         const addSelfDiff = (diff) => {
-          Object.assign(comparisonNode.diff, diff);
+          Object.assign(comparison.diff, diff);
           if (diff.category) {
             if (actualNode.isUrlString && expectedNode.isUrlString) {
               return;
@@ -213,12 +213,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           onSelfDiff();
         };
-        const compareInside = (insideComparisonNode, { ignoreDiff }) => {
-          compare(insideComparisonNode, { ignoreDiff });
-          if (insideComparisonNode.diff.counters.overall.any) {
+        const compareInside = (insideComparison, { ignoreDiff }) => {
+          compare(insideComparison, { ignoreDiff });
+          if (insideComparison.diff.counters.overall.any) {
             appendCounters(
-              comparisonNode.diff.counters.inside,
-              insideComparisonNode.diff.counters.overall,
+              comparison.diff.counters.inside,
+              insideComparison.diff.counters.overall,
             );
           }
         };
@@ -300,7 +300,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (!actualPrototypeNode && !expectedPrototypeNode) {
               break prototype;
             }
-            const prototypeComparisonNode = createComparisonNode(
+            const prototypeComparison = createComparison(
               actualPrototypeNode,
               expectedPrototypeNode,
             );
@@ -308,13 +308,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               (actualNode.isArray && !expectedNode.isArray) ||
               (!actualNode.isArray && expectedNode.isArray) ||
               actualNode.isComposite !== expectedNode.isComposite;
-            comparisonNode.prototypeAreDifferentAndWellKnown =
+            comparison.prototypeAreDifferentAndWellKnown =
               prototypeAreDifferentAndWellKnown;
-            compareInside(prototypeComparisonNode, {
+            compareInside(prototypeComparison, {
               ignoreDiff:
-                comparisonNode.diff.category ||
-                prototypeAreDifferentAndWellKnown,
+                comparison.diff.category || prototypeAreDifferentAndWellKnown,
             });
+            comparison.diff.prototype = prototypeComparison.diff;
           }
           value_of_return_value: {
             if (ignoreValueOfReturnValueDiff) {
@@ -330,27 +330,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             ) {
               break value_of_return_value;
             }
-            const valueOfReturnValueComparisonNode = createComparisonNode(
+            const valueOfReturnValueComparison = createComparison(
               actualValueOfReturnValueNode,
               expectedValueOfReturnValueNode,
             );
             let ignoreValueOfDiff = ignoreDiff;
             if (
-              comparisonNode.diff.category &&
+              comparison.diff.category &&
               // String/string comparison is ok
               actualNode.subtype.toLowerCase() !==
                 expectedNode.subtype.toLowerCase()
             ) {
               ignoreValueOfDiff = true;
             } else if (
-              comparisonNode.diff.prototype &&
-              comparisonNode.diff.prototype.counters.overall.any > 0
+              comparison.diff.prototype &&
+              comparison.diff.prototype.counters.overall.any > 0
             ) {
               ignoreValueOfDiff = true;
             }
-            compareInside(valueOfReturnValueComparisonNode, {
+            compareInside(valueOfReturnValueComparison, {
               ignoreDiff: ignoreValueOfDiff,
             });
+            comparison.diff.valueOfReturnValue =
+              valueOfReturnValueComparison.diff;
           }
           as_string: {
             if (!actualNode.isUrl && !expectedNode.isUrl) {
@@ -361,11 +363,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (!actualAsStringNode && !expectedAsStringNode) {
               break as_string;
             }
-            const asStringComparisonNode = createComparisonNode(
+            const asStringComparison = createComparison(
               actualAsStringNode,
               expectedAsStringNode,
             );
-            compareInside(asStringComparisonNode, { ignoreDiff });
+            compareInside(asStringComparison, { ignoreDiff });
+            comparison.diff.asString = asStringComparison.diff;
           }
 
           string: {
@@ -377,11 +380,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 const lineIndex = lineNode.index;
                 const actualLineNode = actualLineNodes[lineIndex];
                 const expectedLineNode = expectedLineNodes[lineIndex];
-                const lineComparison = createComparisonNode({
+                const lineComparison = createComparison({
                   actualLineNode,
                   expectedLineNode,
                 });
                 compareInside(lineComparison, { ignoreDiff });
+                comparison.diff.lines[lineIndex] = lineComparison.diff;
               };
               for (const actualLineNode of actualLineNodes) {
                 visitLineNode(actualLineNode);
@@ -394,21 +398,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               const actualCharNodes = actualNode.charNodes || [];
               const expectedCharNodes = expectedNode.charNodes || [];
 
-              const visitLineNode = (lineNode) => {
-                const lineIndex = lineNode.index;
-                const actualCharNode = actualCharNodes[lineIndex];
-                const expectedCharNode = expectedCharNodes[lineIndex];
-                const charComparison = createComparisonNode({
+              const visitCharNode = (charNode) => {
+                const charNodeIndex = charNode.index;
+                const actualCharNode = actualCharNodes[charNodeIndex];
+                const expectedCharNode = expectedCharNodes[charNodeIndex];
+                const charComparison = createComparison({
                   actualCharNode,
                   expectedCharNode,
                 });
                 compareInside(charComparison, { ignoreDiff });
+                comparison.chars[charNodeIndex] = charComparison.diff;
               };
               for (const actualCharNode of actualCharNodes) {
-                visitLineNode(actualCharNode);
+                visitCharNode(actualCharNode);
               }
               for (const expectedCharNode of expectedCharNodes) {
-                visitLineNode(expectedCharNode);
+                visitCharNode(expectedCharNode);
               }
             }
           }
@@ -419,11 +424,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const visitUrlPart = (urlPartName) => {
               const actualUrlPartNode = actualUrlPartNodes[urlPartName];
               const expectedUrlPartNode = expectedUrlPartNodes[urlPartName];
-              const urlPartComparison = createComparisonNode(
+              const urlPartComparisonNode = createComparison(
                 actualUrlPartNode,
                 expectedUrlPartNode,
               );
-              compareInside(urlPartComparison, { ignoreDiff });
+              compareInside(urlPartComparisonNode, { ignoreDiff });
+              comparison.urlParts[urlPartName] = urlPartComparisonNode.diff;
             };
             for (const actualUrlPartName of Object.keys(actualUrlPartNodes)) {
               visitUrlPart(actualUrlPartName);
@@ -441,16 +447,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
             if (actualNode.isSet && expectedNode.isSet) {
               const visitSetValue = (indexedValueNode) => {
-                const indexedValueComparisonNode = createComparisonNode(
+                const index = indexedValueNode.index;
+                const indexedValueComparison = createComparison(
                   actualNode.value.has(indexedValueNode.value)
-                    ? actualNode.indexedValueNodes[indexedValueNode.index]
+                    ? actualNode.indexedValueNodes[index]
                     : null,
                   expectedNode.value.has(indexedValueNode.value)
-                    ? expectedNode.indexedValueNodes[indexedValueNode.index]
+                    ? expectedNode.indexedValueNodes[index]
                     : null,
                 );
-                indexedValueComparisonNode.owner = indexedValueNode.name;
-                compareInside(indexedValueComparisonNode, { ignoreDiff: true });
+                // indexedValueComparisonNode.owner = indexedValueNode.name;
+                compareInside(indexedValueComparison, { ignoreDiff: true });
+                comparison.indexedValues[index] = indexedValueComparison.diff;
               };
               for (const actualIndexedValueNode of actualIndexedValueNodes) {
                 visitSetValue(actualIndexedValueNode);
@@ -471,7 +479,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 expectedIndexedValueNodes,
                 index,
               );
-              const indexedValueComparisonNode = createComparisonNode(
+              const indexedValueComparison = createComparison(
                 actualHasOwn
                   ? actualIndexedValueNodes[index]
                   : actualNode.indexedValueNodes &&
@@ -485,7 +493,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                     ? ARRAY_EMPTY_VALUE
                     : undefined,
               );
-              compareInside(indexedValueComparisonNode, { ignoreDiff });
+              compareInside(indexedValueComparison, { ignoreDiff });
+              comparison.indexedValues[index] = indexedValueComparison.diff;
             };
             for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
               visitIndexedValue(expectedIndexedValueNode);
@@ -501,11 +510,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const visitProperty = (property) => {
               const actualPropertyNode = actualPropertyNodes[property];
               const expectedPropertyNode = expectedPropertyNodes[property];
-              const propertyNodeComparison = createComparisonNode(
+              const propertyNodeComparison = createComparison(
                 actualPropertyNode,
                 expectedPropertyNode,
               );
               compareInside(propertyNodeComparison, { ignoreDiff });
+              comparison.diff.properties[property] =
+                propertyNodeComparison.diff;
             };
             for (const actualPropertyName of Object.keys(actualPropertyNodes)) {
               visitProperty(actualPropertyName);
@@ -520,16 +531,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       doCompare();
-      settleCounters(comparisonNode);
+      settleCounters(comparison);
     };
-    const createComparisonNode = (actualNode, expectedNode) => {
+    const createComparison = (actualNode, expectedNode) => {
       const comparisonNode = {
         actualNode,
         expectedNode,
-        prototype: null,
-        valueOfReturnValue: null,
-        properties: {},
-        indexedValues: [],
         diff: {
           counters: {
             overall: {
@@ -555,6 +562,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           category: null,
           prototype: null,
           valueOfReturnValue: null,
+          asString: null,
           properties: {},
           indexedValues: [],
         },
@@ -570,17 +578,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       return comparisonNode;
     };
 
-    const comparisonRootNode = createComparisonNode(actualNode, expectedNode);
-    compare(comparisonRootNode);
+    const rootComparison = createComparison(actualNode, expectedNode);
+    compare(rootComparison);
     if (causeSet.size === 0) {
       return;
     }
 
-    let comparisonStartNode = comparisonRootNode;
+    let startComparison = rootComparison;
     const [firstComparisonCausingDiff] = causeSet;
     if (
       firstComparisonCausingDiff.depth >= maxDepth &&
-      !comparisonRootNode.diff.category
+      !rootComparison.diff.category
     ) {
       const comparisonsFromRootToTarget = [firstComparisonCausingDiff];
       let currentComparison = firstComparisonCausingDiff;
@@ -598,15 +606,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let valuePath = createValuePath();
       for (const comparison of comparisonsFromRootToTarget) {
         if (
-          comparisonStartNode === comparisonRootNode &&
+          startComparison === rootComparison &&
           comparison.type === "property_descriptor" &&
           expectedNode.depth > startComparisonDepth
         ) {
           comparison.path = String(valuePath);
-          comparisonStartNode = comparison;
+          startComparison = comparison;
           break;
         }
-        if (comparison === comparisonRootNode) {
+        if (comparison === rootComparison) {
           continue;
         }
         if (comparison.type === "property") {
@@ -670,9 +678,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const contextBase = {
       onNodeDisplayed,
       getDisplayedId,
-      startNode: comparisonStartNode,
+      startComparison,
       signs,
-      initialDepth: -comparisonStartNode.depth,
+      initialDepth: -startComparison.depth,
       maxColumns,
       maxDepth,
       maxDiffPerObject,
@@ -686,7 +694,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       preserveLineBreaks,
     };
 
-    const firstValueDiff = writeDiff(comparisonStartNode, {
+    const firstValueDiff = writeDiff(startComparison, {
       ...contextBase,
       resultType: firstValueMeta.resultType,
       textIndent: stringWidth(firstPrefix),
@@ -696,7 +704,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     secondPrefix += ANSI.color(secondValueMeta.name, sameColor);
     secondPrefix += ANSI.color(":", sameColor);
     secondPrefix += " ";
-    const secondValueDiff = writeDiff(comparisonStartNode, {
+    const secondValueDiff = writeDiff(startComparison, {
       ...contextBase,
       resultType: secondValueMeta.resultType,
       textIndent: stringWidth(secondPrefix),
@@ -710,7 +718,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     diffMessage += secondValueDiff;
 
     let message;
-    if (comparisonRootNode.diff.category) {
+    if (rootComparison.diff.category) {
       message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} are different`;
     } else {
       message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
@@ -728,9 +736,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         );
       }
     }
-    if (comparisonStartNode !== comparisonRootNode) {
+    if (startComparison !== rootComparison) {
       infos.push(
-        `diff starts at ${ANSI.color(comparisonStartNode.path, ANSI.YELLOW)}`,
+        `diff starts at ${ANSI.color(startComparison.path, ANSI.YELLOW)}`,
       );
     }
     if (infos.length) {
@@ -1558,7 +1566,7 @@ let writeDiff;
             : node.type === "to_string_return_value"
               ? "toString()"
               : "";
-    if (property && node !== nestedValueContext.startNode) {
+    if (property && node !== nestedValueContext.startComparison) {
       if (node.type === "property_descriptor" && node.descriptor !== "value") {
         nestedValueDiff += ANSI.color(node.descriptor, keyColor);
         nestedValueDiff += " ";
@@ -1579,7 +1587,7 @@ let writeDiff;
       // the "," separator is removed because it's not correctly separated from the multiline
       // and it becomes hard to know if "," is part of the string or not
       endSeparator = "";
-    } else if (useIndent && node !== nestedValueContext.startNode) {
+    } else if (useIndent && node !== nestedValueContext.startComparison) {
       endSeparator = ",";
     } else {
       endSeparator = "";
@@ -2252,7 +2260,7 @@ let writeDiff;
         ...writeContext,
         textIndent: 0,
       });
-      if (node !== context.startNode) {
+      if (node !== context.startComparison) {
         diff += `\n`;
       }
       return diff;
