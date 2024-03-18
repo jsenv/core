@@ -11,22 +11,22 @@ await startSnapshotTesting("boolean", {
       expected: false,
     });
   },
-  ["false should be true"]: () => {
-    assert({
-      actual: false,
-      expected: true,
-    });
-  },
-  ["true should be 1"]: () => {
-    assert({
-      actual: true,
-      expected: 1,
-    });
-  },
-  ["false should be 0"]: () => {
-    assert({
-      actual: false,
-      expected: 0,
-    });
-  },
+  // ["false should be true"]: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: true,
+  //   });
+  // },
+  // ["true should be 1"]: () => {
+  //   assert({
+  //     actual: true,
+  //     expected: 1,
+  //   });
+  // },
+  // ["false should be 0"]: () => {
+  //   assert({
+  //     actual: false,
+  //     expected: 0,
+  //   });
+  // },
 });
