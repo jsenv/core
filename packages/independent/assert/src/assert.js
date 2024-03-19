@@ -3,7 +3,7 @@ import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 
-// ANSI.supported = false;
+ANSI.supported = false;
 
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;
@@ -117,8 +117,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
     };
 
-    const settleCounters = (node) => {
-      const { counters } = node.diff;
+    const settleCounters = (comparison) => {
+      const { counters } = comparison;
       const { self, inside, overall } = counters;
       self.any = self.modified + self.removed + self.added;
       inside.any = inside.modified + inside.removed + inside.added;
@@ -188,7 +188,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           addCause(comparison);
         };
         const addCategoryDiff = () => {
-          comparison.diff.category = true;
+          comparison.category = true;
           if (actualNode.isUrlString && expectedNode.isUrlString) {
             return;
           }
@@ -197,10 +197,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
         const compareInside = (insideComparison, { ignoreDiff }) => {
           compare(insideComparison, { ignoreDiff });
-          if (insideComparison.diff.counters.overall.any) {
+          if (insideComparison.counters.overall.any) {
             appendCounters(
-              comparison.diff.counters.inside,
-              insideComparison.diff.counters.overall,
+              comparison.counters.inside,
+              insideComparison.counters.overall,
             );
           }
         };
@@ -227,7 +227,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             break reference;
           }
           if (actualNode.reference !== expectedNode.reference) {
-            comparison.diff.reference = true;
+            comparison.reference = true;
             addSelfDiff();
           }
         }
@@ -582,7 +582,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const [firstComparisonCausingDiff] = causeSet;
       if (
         firstComparisonCausingDiff.depth >= maxDepth &&
-        !rootComparison.diff.category
+        !rootComparison.category
       ) {
         const comparisonsFromRootToTarget = [firstComparisonCausingDiff];
         let currentComparison = firstComparisonCausingDiff;
@@ -643,11 +643,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const actualValueMeta = {
       resultType: "actualNode",
       name: "actual",
+      shortname: "actual",
       color: unexpectedColor,
     };
     const expectedValueMeta = {
       resultType: "expectedNode",
-      name: "expect",
+      name: "expected",
+      shortname: "expect",
       color: expectedColor,
     };
     const firstValueMeta = actualIsFirst ? actualValueMeta : expectedValueMeta;
@@ -689,7 +691,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let firstPrefix = "";
     let firstValueDiff;
     actual_diff: {
-      firstPrefix += ANSI.color(firstValueMeta.name, sameColor);
+      firstPrefix += ANSI.color(firstValueMeta.shortname, sameColor);
       firstPrefix += ANSI.color(":", sameColor);
       firstPrefix += " ";
       firstValueDiff = writeDiff(startComparison, {
@@ -701,7 +703,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     let secondPrefix = "";
     let secondValueDiff;
     expected_diff: {
-      secondPrefix += ANSI.color(secondValueMeta.name, sameColor);
+      secondPrefix += ANSI.color(secondValueMeta.shortname, sameColor);
       secondPrefix += ANSI.color(":", sameColor);
       secondPrefix += " ";
       secondValueDiff = writeDiff(startComparison, {
@@ -719,10 +721,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     diffMessage += secondValueDiff;
 
     let message;
-    if (rootComparison.diff.category) {
-      message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} are different`;
+    if (rootComparison.category) {
+      message = `${ANSI.color(firstValueMeta.name, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.name, secondValueMeta.color)} are different`;
     } else {
-      message = `${ANSI.color(firstValueMeta.resultType, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.resultType, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
+      message = `${ANSI.color(firstValueMeta.name, firstValueMeta.color)} and ${ANSI.color(secondValueMeta.name, secondValueMeta.color)} have ${causeCounters.total} ${causeCounters.total === 1 ? "difference" : "differences"}`;
     }
     message += ":";
     message += "\n\n";
