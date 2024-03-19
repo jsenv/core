@@ -1,0 +1,11 @@
+# property should be there
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: true,
+}
+

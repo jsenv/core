@@ -148,20 +148,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const doCompare = () => {
         const { actualNode, expectedNode } = comparison;
 
-        if (!actualNode) {
-          comparison.removed = true;
-          comparison.counters.self.removed++;
-          addCause(comparison);
-          return;
-        }
-
-        if (!expectedNode) {
-          comparison.added = true;
-          comparison.counters.self.added++;
-          addCause(comparison);
-          return;
-        }
-
         const compareInside = (insideComparison, { ignoreDiff }) => {
           compare(insideComparison, { ignoreDiff });
           if (insideComparison.counters.overall.any) {
@@ -174,10 +160,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
         if (comparison.type === "property") {
           const visitPropertyDescriptor = (descriptorName) => {
-            const actualPropertyDescriptorNode =
-              actualNode.descriptorNodes[descriptorName];
-            const expectedPropertyDescriptorNode =
-              expectedNode.descriptorNodes[descriptorName];
+            const actualPropertyDescriptorNode = actualNode
+              ? actualNode.descriptorNodes[descriptorName]
+              : null;
+            const expectedPropertyDescriptorNode = expectedNode
+              ? expectedNode.descriptorNodes[descriptorName]
+              : null;
             if (
               !actualPropertyDescriptorNode &&
               !expectedPropertyDescriptorNode
@@ -198,6 +186,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           visitPropertyDescriptor("configurable");
           visitPropertyDescriptor("set");
           visitPropertyDescriptor("get");
+          return;
+        }
+
+        if (!actualNode) {
+          comparison.removed = true;
+          comparison.counters.self.removed++;
+          addCause(comparison);
+          return;
+        }
+
+        if (!expectedNode) {
+          comparison.added = true;
+          comparison.counters.self.added++;
+          addCause(comparison);
           return;
         }
 
@@ -765,11 +767,11 @@ const shouldIgnoreComparison = (comparison) => {
   if (comparison.type === "property_descriptor") {
     if (!actualNode) {
       // show only if not the default
-      return !isDefaultDescriptor(expectedNode.descriptor, expectedNode.value);
+      return isDefaultDescriptor(expectedNode.descriptor, expectedNode.value);
     }
     if (!expectedNode) {
       // show only if not the default
-      return !isDefaultDescriptor(actualNode.descriptor, actualNode.value);
+      return isDefaultDescriptor(actualNode.descriptor, actualNode.value);
     }
     // if no diff and both are default, hide
     if (
@@ -2786,31 +2788,35 @@ let writeDiff;
     const propertyNodes = node.propertyNodes || {};
     const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
-    let valueOfReturnValueDisplayed = false;
-    let prototypeDisplayed = false;
+    let valueOfReturnValueComparisonToDisplay =
+      comparison.valueOfReturnValueComparison;
+    let prototypeComparisonToDisplay = comparison.prototypeComparison;
     let propIndex = 0;
 
     return () => {
-      if (!valueOfReturnValueDisplayed) {
-        const valueOfReturnValueComparison =
-          comparison.valueOfReturnValueComparison;
+      if (valueOfReturnValueComparisonToDisplay) {
         if (
-          valueOfReturnValueComparison &&
-          valueOfReturnValueComparison[context.resultType].inConstructor &&
-          !shouldIgnoreComparison(valueOfReturnValueComparison, context)
+          !valueOfReturnValueComparisonToDisplay[context.resultType]
+            .inConstructor
         ) {
-          valueOfReturnValueDisplayed = true;
-          return valueOfReturnValueComparison;
+          valueOfReturnValueComparisonToDisplay = null;
+        } else if (
+          shouldIgnoreComparison(valueOfReturnValueComparisonToDisplay, context)
+        ) {
+          valueOfReturnValueComparisonToDisplay = null;
+        } else {
+          let nestedComparison = valueOfReturnValueComparisonToDisplay;
+          valueOfReturnValueComparisonToDisplay = null;
+          return nestedComparison;
         }
       }
-      if (!prototypeDisplayed) {
-        const prototypeComparison = comparison.prototypeComparison;
-        if (
-          prototypeComparison &&
-          !shouldIgnoreComparison(prototypeComparison, context)
-        ) {
-          prototypeDisplayed = true;
-          return prototypeComparison;
+      if (prototypeComparisonToDisplay) {
+        if (shouldIgnoreComparison(prototypeComparisonToDisplay, context)) {
+          prototypeComparisonToDisplay = null;
+        } else {
+          let nestedComparison = prototypeComparisonToDisplay;
+          prototypeComparisonToDisplay = null;
+          return nestedComparison;
         }
       }
       if (propIndex < propertyCount) {
