@@ -5,27 +5,27 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("object", {
-  ["property are different"]: () => {
-    assert({
-      actual: {
-        a: true,
-      },
-      expected: {
-        a: false,
-      },
-    });
-  },
-  // ["property should be there"]: () => {
+  // ["property are different"]: () => {
   //   assert({
   //     actual: {
   //       a: true,
   //     },
   //     expected: {
-  //       a: true,
-  //       should_be_there: true,
+  //       a: false,
   //     },
   //   });
   // },
+  ["property should be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+      },
+      expected: {
+        a: true,
+        should_be_there: true,
+      },
+    });
+  },
   // ["property should not be there"]: () => {
   //   assert({
   //     actual: {

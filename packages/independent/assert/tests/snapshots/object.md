@@ -1,4 +1,4 @@
-# property are different
+# property should be there
 
 ```js
 assert({
@@ -6,10 +6,11 @@ assert({
     a: true,
   },
   expected: {
-    a: false,
+    a: true,
+    should_be_there: true,
   },
 });
 ```
 
-![img](<./object/property are different.svg>)
+![img](<./object/property should be there.svg>)
 

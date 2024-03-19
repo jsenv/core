@@ -499,10 +499,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       settleCounters(comparison);
     };
     const createComparison = (actualNode, expectedNode) => {
-      if (actualNode.comparison) {
+      if (actualNode && actualNode.comparison) {
         throw new Error("nope");
       }
-      if (expectedNode.comparison) {
+      if (expectedNode && expectedNode.comparison) {
         throw new Error("nope");
       }
 
@@ -545,8 +545,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         urlPartComparisons: {},
       };
 
-      actualNode.comparison = comparisonNode;
-      expectedNode.comparison = comparisonNode;
+      if (actualNode) {
+        actualNode.comparison = comparisonNode;
+      }
+      if (expectedNode) {
+        expectedNode.comparison = comparisonNode;
+      }
 
       const leftOrRightValueNode = actualNode || expectedNode;
       comparisonNode.type = leftOrRightValueNode.type;
@@ -756,28 +760,41 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 };
 
 const shouldIgnoreComparison = (comparison) => {
-  if (
-    comparison.actualNode.ignoreWhenSame &&
-    comparison.expectedNode.ignoreWhenSame &&
-    comparison.counters.overall.any === 0
-  ) {
-    return true;
-  }
+  const { actualNode, expectedNode } = comparison;
 
-  if (comparison.type === "value_of_return_value") {
-    // if the wrapped value has same type than other value
-    // then we are good
-    const { actualNode, expectedNode } = comparison;
-
+  if (comparison.type === "property_descriptor") {
     if (!actualNode) {
-      // show only if it's not the default behavior (returning composite itself)
+      // show only if not the default
+      return !isDefaultDescriptor(expectedNode.descriptor, expectedNode.value);
+    }
+    if (!expectedNode) {
+      // show only if not the default
+      return !isDefaultDescriptor(actualNode.descriptor, actualNode.value);
+    }
+    // if no diff and both are default, hide
+    if (
+      comparison.counters.overall.any === 0 &&
+      isDefaultDescriptor(actualNode.descriptor, actualNode.value) &&
+      isDefaultDescriptor(expectedNode.descriptor, expectedNode.value)
+    ) {
+      return true;
+    }
+    return false;
+  }
+  if (comparison.type === "value_of_return_value") {
+    if (!actualNode) {
+      // show only if it's a custom valueOf with a custom behaviour
+      // (something else than returning composite itself)
       return expectedNode.value !== expectedNode.parent.value;
     }
     if (!expectedNode) {
-      // show only if it's not the default behavior (returning composite itself)
+      // show only if it's a custom valueOf with a custom behaviour
+      // (something else than returning composite itself)
       return actualNode.value !== actualNode.parent.value;
     }
-
+    if (comparison.counters.overall.any === 0) {
+      return true;
+    }
     // actual parent or expected parent is a composite
     // and the other is a primitive
     // but when they hold the same value in the end
@@ -793,17 +810,18 @@ const shouldIgnoreComparison = (comparison) => {
     ) {
       return true;
     }
-
     // value of differ but prototype is different so it's expected
     const prototypeComparison = parentComparison.prototypeComparison;
     if (prototypeComparison.counters.overall.any > 0) {
       return true;
     }
+    return false;
   }
-
   if (comparison.type === "prototype") {
-    const { actualNode, expectedNode } = comparison;
     if (!actualNode || !expectedNode) {
+      return true;
+    }
+    if (comparison.counters.overall.any === 0) {
       return true;
     }
     // when we see a prefix like
@@ -815,7 +833,7 @@ const shouldIgnoreComparison = (comparison) => {
     }
     // but when both have the same prefix AND a prototype diff
     // then we display it
-    return comparison.counters.overall.any > 0;
+    return false;
   }
   if (comparison.type === "line") {
     return true;
@@ -825,13 +843,41 @@ const shouldIgnoreComparison = (comparison) => {
   }
   return false;
 };
+const isDefaultDescriptor = (descriptorName, descriptorValue) => {
+  if (descriptorName === "enumerable" && descriptorValue === true) {
+    return true;
+  }
+  if (descriptorName === "writable" && descriptorValue === true) {
+    return true;
+  }
+  if (descriptorName === "configurable" && descriptorValue === true) {
+    return true;
+  }
+  if (descriptorName === "get" && descriptorValue === undefined) {
+    return true;
+  }
+  if (descriptorName === "set" && descriptorValue === undefined) {
+    return true;
+  }
+  return false;
+};
 
 let createValueNode;
 {
-  const compositeReferenceMap = new Map();
   let nodeId = 1;
 
   createValueNode = ({ name, value }) => {
+    const compositeReferenceMap = new Map();
+    const getReference = (value, node) => {
+      const reference = compositeReferenceMap.get(value);
+      if (reference) {
+        reference.referenceFromOthersSet.add(node);
+      } else {
+        compositeReferenceMap.set(value, node);
+      }
+      return reference;
+    };
+
     const _createValueNode = ({ parent, type, value, origin }) => {
       const node = {
         id: nodeId++,
@@ -864,13 +910,7 @@ let createValueNode;
           wellKnownId = getWellKnownId(value);
           if (composite) {
             subtype = getSubtype(value);
-            reference = compositeReferenceMap.get(value);
-            if (reference) {
-              reference.referenceFromOthersSet.add(node);
-            } else {
-              compositeReferenceMap.set(value, node);
-            }
-
+            reference = getReference(value, node);
             visitPrototypes(value, (proto) => {
               if (proto.constructor) {
                 if (proto.constructor.name === "Array") {
@@ -966,7 +1006,7 @@ let createValueNode;
         });
       }
 
-      node.structureIsKnown = node.wellKnownId || node.reference;
+      node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
 
       // prototype
       if (node.isComposite && !node.structureIsKnown) {
@@ -975,7 +1015,6 @@ let createValueNode;
           type: "prototype",
           value: Object.getPrototypeOf(node.value),
         });
-        prototypeNode.ignoreWhenSame = true;
         node.prototypeNode = prototypeNode;
       }
 
@@ -991,7 +1030,6 @@ let createValueNode;
           type: "value_of_return_value",
           value: node.value.valueOf(),
         });
-        valueOfReturnValueNode.ignoreWhenSame = true;
         node.valueOfReturnValueNode = valueOfReturnValueNode;
       }
 
@@ -1094,10 +1132,6 @@ let createValueNode;
               type: "property_descriptor",
               value: propertyDescriptorValue,
             });
-            propertyDescriptorNode.ignoreWhenSame = isDefaultDescriptor(
-              propertyDescriptorName,
-              propertyDescriptorValue,
-            );
             propertyDescriptorNode.property = propertyName;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
             descriptorNodes[propertyDescriptorName] = propertyDescriptorNode;
@@ -1230,25 +1264,6 @@ let createValueNode;
   };
   const isUndetectableObject = (v) =>
     typeof v === "undefined" && v !== undefined;
-
-  const isDefaultDescriptor = (descriptorName, descriptorValue) => {
-    if (descriptorName === "enumerable" && descriptorValue === true) {
-      return true;
-    }
-    if (descriptorName === "writable" && descriptorValue === true) {
-      return true;
-    }
-    if (descriptorName === "configurable" && descriptorValue === true) {
-      return true;
-    }
-    if (descriptorName === "get" && descriptorValue === undefined) {
-      return true;
-    }
-    if (descriptorName === "set" && descriptorValue === undefined) {
-      return true;
-    }
-    return false;
-  };
 
   // we could also just do sthing like if (indexedValues[property]) ?
   const isArrayIndex = (property) => {
