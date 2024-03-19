@@ -105,11 +105,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         // happens when node is skipped
         // in that case we want to consider all child nodes as displayed
         // (they are "displayed" in the summary)
+        const propertyDescriptorComparisons =
+          comparison.propertyDescriptorComparisons;
         for (const propertyDescriptorName of Object.keys(
-          comparison.propertyDescriptorComparisons,
+          propertyDescriptorComparisons,
         )) {
           const propertyDescriptorComparison =
-            comparison.descriptors[propertyDescriptorName];
+            propertyDescriptorComparisons[propertyDescriptorName];
           if (propertyDescriptorComparison) {
             onComparisonDisplayed(propertyDescriptorComparison);
           }
@@ -160,12 +162,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return;
         }
 
-        if (actualNode.type === "property") {
+        const compareInside = (insideComparison, { ignoreDiff }) => {
+          compare(insideComparison, { ignoreDiff });
+          if (insideComparison.counters.overall.any) {
+            appendCounters(
+              comparison.counters.inside,
+              insideComparison.counters.overall,
+            );
+          }
+        };
+
+        if (comparison.type === "property") {
           const visitPropertyDescriptor = (descriptorName) => {
             const actualPropertyDescriptorNode =
               actualNode.descriptorNodes[descriptorName];
             const expectedPropertyDescriptorNode =
               expectedNode.descriptorNodes[descriptorName];
+            if (
+              !actualPropertyDescriptorNode &&
+              !expectedPropertyDescriptorNode
+            ) {
+              return;
+            }
             const propertyDescriptorComparison = createComparison(
               actualPropertyDescriptorNode,
               expectedPropertyDescriptorNode,
@@ -193,16 +211,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             return;
           }
           addSelfDiff();
-        };
-
-        const compareInside = (insideComparison, { ignoreDiff }) => {
-          compare(insideComparison, { ignoreDiff });
-          if (insideComparison.counters.overall.any) {
-            appendCounters(
-              comparison.counters.inside,
-              insideComparison.counters.overall,
-            );
-          }
         };
 
         let compareAsStrings;
@@ -276,23 +284,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (!actualPrototypeNode && !expectedPrototypeNode) {
               break prototype;
             }
-            const prototypeAreDifferentAndWellKnown =
-              (actualNode.isArray && !expectedNode.isArray) ||
-              (!actualNode.isArray && expectedNode.isArray) ||
-              actualNode.isComposite !== expectedNode.isComposite;
             const prototypeComparison = createComparison(
               actualPrototypeNode,
               expectedPrototypeNode,
             );
-            comparison.prototypeAreDifferentAndWellKnown =
-              prototypeAreDifferentAndWellKnown;
             comparison.prototypeComparison = prototypeComparison;
-            compareInside(prototypeComparison, {
-              ignoreDiff:
-                ignoreDiff ||
-                comparison.category ||
-                comparison.prototypeAreDifferentAndWellKnown,
-            });
+            compareInside(prototypeComparison, { ignoreDiff });
           }
           value_of_return_value: {
             if (ignoreValueOfReturnValueDiff) {
@@ -314,23 +311,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             );
             comparison.valueOfReturnValueComparison =
               valueOfReturnValueComparison;
-            let ignoreValueOfDiff = ignoreDiff;
-            if (
-              comparison.category &&
-              // String/string comparison is ok
-              actualNode.subtype.toLowerCase() !==
-                expectedNode.subtype.toLowerCase()
-            ) {
-              ignoreValueOfDiff = true;
-            } else if (
-              comparison.prototypeComparison &&
-              comparison.prototypeComparison.counters.overall.any > 0
-            ) {
-              ignoreValueOfDiff = true;
-            }
-            compareInside(valueOfReturnValueComparison, {
-              ignoreDiff: ignoreValueOfDiff,
-            });
+            compareInside(valueOfReturnValueComparison, { ignoreDiff });
           }
           as_string: {
             if (!actualNode.isUrl && !expectedNode.isUrl) {
@@ -478,8 +459,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
               visitIndexedValue(expectedIndexedValueNode);
             }
+            let index = 0;
             for (const actualIndexedValueNode of actualIndexedValueNodes) {
-              visitIndexedValue(actualIndexedValueNode);
+              if (!comparison.indexedValueComparisons[index]) {
+                visitIndexedValue(actualIndexedValueNode);
+              }
+              index++;
             }
           }
           properties: {
@@ -502,7 +487,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             for (const expectedPropertyName of Object.keys(
               expectedPropertyNodes,
             )) {
-              visitProperty(expectedPropertyName);
+              if (!comparison.propertyComparisons[expectedPropertyName]) {
+                visitProperty(expectedPropertyName);
+              }
             }
           }
         }
@@ -776,19 +763,66 @@ const shouldIgnoreComparison = (comparison) => {
   ) {
     return true;
   }
+
+  if (comparison.type === "value_of_return_value") {
+    // if the wrapped value has same type than other value
+    // then we are good
+    const { actualNode, expectedNode } = comparison;
+
+    if (!actualNode) {
+      // show only if it's not the default behavior (returning composite itself)
+      return expectedNode.value !== expectedNode.parent.value;
+    }
+    if (!expectedNode) {
+      // show only if it's not the default behavior (returning composite itself)
+      return actualNode.value !== actualNode.parent.value;
+    }
+
+    // actual parent or expected parent is a composite
+    // and the other is a primitive
+    // but when they hold the same value in the end
+    const parentComparison = comparison.actualNode.parent.comparison;
+    const actualInternalOrSelfNode = parentComparison.actualNode.isComposite
+      ? actualNode
+      : parentComparison.actualNode;
+    const expectedInternalOrSelfNode = parentComparison.actualNode.isComposite
+      ? expectedNode
+      : parentComparison.expectedNode;
+    if (
+      actualInternalOrSelfNode.subtype === expectedInternalOrSelfNode.subtype
+    ) {
+      return true;
+    }
+
+    // value of differ but prototype is different so it's expected
+    const prototypeComparison = parentComparison.prototypeComparison;
+    if (prototypeComparison.counters.overall.any > 0) {
+      return true;
+    }
+  }
+
+  if (comparison.type === "prototype") {
+    const { actualNode, expectedNode } = comparison;
+    if (!actualNode || !expectedNode) {
+      return true;
+    }
+    // when we see a prefix like
+    // actual: User {}
+    // expect: Animal {}
+    // we don't show the prototype
+    if (actualNode.subtype !== expectedNode.subtype) {
+      return true;
+    }
+    // but when both have the same prefix AND a prototype diff
+    // then we display it
+    return comparison.counters.overall.any > 0;
+  }
   if (comparison.type === "line") {
     return true;
   }
   if (comparison.type === "char") {
     return true;
   }
-  // if (
-  //   comparison.type === "as_string" &&
-  //   node.parent.canDiffAsStrings &&
-  //   node.canDiffUrlParts
-  // ) {
-  //   return true;
-  // }
   return false;
 };
 
@@ -804,10 +838,10 @@ let createValueNode;
       };
 
       info: {
-        let composite;
+        let composite = false;
         let wellKnownId;
         let subtype;
-        let isArray;
+        let isArray = false;
         let isSet = false;
         let isString = false;
         let isStringObject = false;
@@ -815,10 +849,9 @@ let createValueNode;
         let isUrlString = false;
         let reference = null;
         if (value === ARRAY_EMPTY_VALUE) {
-          composite = false;
-          isArray = false;
           wellKnownId = "empty";
           subtype = "empty";
+        } else if (type === "property") {
         }
         // else if (value === DOES_NOT_EXISTS) {
         //   composite = false;
@@ -830,7 +863,6 @@ let createValueNode;
           composite = isComposite(value);
           wellKnownId = getWellKnownId(value);
           if (composite) {
-            isArray = Array.isArray(value) && value !== Array.prototype;
             subtype = getSubtype(value);
             reference = compositeReferenceMap.get(value);
             if (reference) {
@@ -841,7 +873,9 @@ let createValueNode;
 
             visitPrototypes(value, (proto) => {
               if (proto.constructor) {
-                if (proto.constructor.name === "Set") {
+                if (proto.constructor.name === "Array") {
+                  isArray = true;
+                } else if (proto.constructor.name === "Set") {
                   isSet = true;
                 } else if (proto.constructor.name === "String") {
                   isStringObject = true;
@@ -850,16 +884,13 @@ let createValueNode;
                 }
               }
             });
+          } else if (value === null) {
+            subtype = "null";
           } else {
-            isArray = false;
-            if (value === null) {
-              subtype = "null";
-            } else {
-              subtype = typeof value;
-              if (subtype === "string") {
-                isString = true;
-                isUrlString = canParseUrl(value);
-              }
+            subtype = typeof value;
+            if (subtype === "string") {
+              isString = true;
+              isUrlString = canParseUrl(value);
             }
           }
         }
@@ -894,7 +925,7 @@ let createValueNode;
             depth = parent.depth;
           } else if (type === "value_of_return_value" && inConstructor) {
             depth = parent.depth;
-          } else if (type === "to_string_return_value" && inConstructor) {
+          } else if (type === "as_string" && inConstructor) {
             depth = parent.depth;
           } else if (type === "url_part") {
             depth = parent.depth;
@@ -905,6 +936,7 @@ let createValueNode;
           depth = 0;
         }
         Object.assign(node, {
+          parent,
           depth,
           type,
           value,
@@ -926,7 +958,7 @@ let createValueNode;
           canHaveProps,
           wellKnownId,
           inConstructor,
-          reference: null,
+          reference,
           referenceFromOthersSet: new Set(),
 
           keys: null,
@@ -943,6 +975,7 @@ let createValueNode;
           type: "prototype",
           value: Object.getPrototypeOf(node.value),
         });
+        prototypeNode.ignoreWhenSame = true;
         node.prototypeNode = prototypeNode;
       }
 
@@ -958,9 +991,7 @@ let createValueNode;
           type: "value_of_return_value",
           value: node.value.valueOf(),
         });
-        if (valueOfReturnValueNode.value === node.value) {
-          valueOfReturnValueNode.ignoreWhenSame = true;
-        }
+        valueOfReturnValueNode.ignoreWhenSame = true;
         node.valueOfReturnValueNode = valueOfReturnValueNode;
       }
 
@@ -1045,7 +1076,7 @@ let createValueNode;
             value: propertyDescriptor,
           });
           propertyNode.property = propertyName;
-          propertyNode.descriptors = {
+          const descriptorNodes = {
             value: null,
             enumerable: null,
             writable: null,
@@ -1069,9 +1100,9 @@ let createValueNode;
             );
             propertyDescriptorNode.property = propertyName;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
-            propertyNode.descriptors[propertyDescriptorName] =
-              propertyDescriptorNode;
+            descriptorNodes[propertyDescriptorName] = propertyDescriptorNode;
           }
+          propertyNode.descriptorNodes = descriptorNodes;
           propertyNodes[propertyName] = propertyNode;
         }
 
@@ -1088,7 +1119,7 @@ let createValueNode;
           : node.value;
         for (const indexedValue of indexedValues) {
           const indexedValueNode = _createValueNode({
-            parentNode: node,
+            parent: node,
             type: "indexed_value",
             value: indexedValue,
           });
@@ -1102,17 +1133,20 @@ let createValueNode;
 
       // string (lines and chars)
       if (node.canHaveLines && !node.structureIsKnown) {
-        node.lineNodes = [];
+        const lineNodes = [];
+
         const lines = node.value.split(/\r?\n/);
         for (const line of lines) {
           const lineNode = _createValueNode({
-            parentNode: node,
+            parent: node,
             type: "line",
             value: line,
           });
-          const lineNodeIndex = node.lineNodes.length;
-          node.lineNodes[lineNodeIndex] = lineNode;
+          const lineNodeIndex = lineNodes.length;
+          lineNodes[lineNodeIndex] = lineNode;
         }
+
+        node.lineNodes = lineNodes;
       }
       if (node.canHaveChars && !node.structureIsKnown) {
         const charNodes = [];
@@ -1120,11 +1154,11 @@ let createValueNode;
         const chars = splitChars(node.value);
         for (const char of chars) {
           const charNode = _createValueNode({
-            parentNode: node,
+            parent: node,
             type: "char",
             value: char,
           });
-          const charNodeIndex = node.chars.length;
+          const charNodeIndex = charNodes.length;
           charNode.index = charNodeIndex;
           charNodes[charNodeIndex] = charNode;
         }
@@ -1140,7 +1174,7 @@ let createValueNode;
         for (const urlPartName of URL_PART_NAMES) {
           const urlPartValue = urlParts[urlPartName];
           const urlPartNode = _createValueNode({
-            parentNode: node,
+            parent: node,
             type: "url_part",
             value: normalizeUrlPart(urlPartName, urlPartValue),
           });
@@ -1264,15 +1298,15 @@ let createValueNode;
 
 let writeDiff;
 {
-  writeDiff = (node, context) => {
+  writeDiff = (comparison, context) => {
     // const valueInfo = node[context.resultType];
-    const type = node.type;
+    const type = comparison.type;
     const method = methods[type];
     if (!method) {
-      throw new Error(`unknown node type: ${type}`);
+      throw new Error(`unknown comparison type: ${type}`);
     }
-    context.onComparisonDisplayed(node);
-    return method(node, context);
+    context.onComparisonDisplayed(comparison);
+    return method(comparison, context);
   };
 
   const writePropertyDiff = (comparison, context) => {
@@ -1355,7 +1389,7 @@ let writeDiff;
       return ANSI.color(node.wellKnownId, valueColor);
     }
     if (node.isUrlString) {
-      return writeCompositeDiff(node, valueContext, context);
+      return writeCompositeDiff(comparison, valueContext, context);
     }
     if (node.isPrimitive) {
       if (comparison.asStringComparison && node.type === "as_string") {
@@ -1501,10 +1535,13 @@ let writeDiff;
         return ANSI.color("[set]", valueColor);
       }
     }
-    return writeCompositeDiff(node, valueContext, context);
+    return writeCompositeDiff(comparison, valueContext, context);
   };
   const writeCompositeDiff = (comparison, context, parentContext) => {
     const node = comparison[context.resultType];
+    if (!node) {
+      debugger;
+    }
     const delimitersColor = getDelimitersColor(context);
 
     let compositeDiff = "";
@@ -1569,7 +1606,7 @@ let writeDiff;
     return compositeDiff;
   };
   const writeNestedValueDiff = (comparison, context) => {
-    if (shouldIgnoreComparison(comparison)) {
+    if (shouldIgnoreComparison(comparison, context)) {
       return "";
     }
     const node = comparison[context.resultType];
@@ -1662,7 +1699,7 @@ let writeDiff;
           nestedValueContext.maxDepth,
         );
       }
-      const valueDiff = writeValueDiff(node, nestedValueContext);
+      const valueDiff = writeValueDiff(comparison, nestedValueContext);
       nestedValueDiff += valueDiff;
     }
     if (endSeparator) {
@@ -1684,7 +1721,7 @@ let writeDiff;
       // value returned by valueOf() is not the composite itself
       node.valueOfReturnValueNode &&
       node.valueOfReturnValueNode.inConstructor &&
-      !shouldIgnoreComparison(comparison);
+      !shouldIgnoreComparison(comparison, context);
     let displaySubtype = true;
     if (overview) {
       displaySubtype = true;
@@ -2732,35 +2769,40 @@ let writeDiff;
   const createGetProps = (comparison, context) => {
     const node = comparison[context.resultType];
     const propertyNodes = node.propertyNodes || {};
-    const propertyNames = Object.keys(node.propertyNodes);
+    const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
     let valueOfReturnValueDisplayed = false;
     let prototypeDisplayed = false;
     let propIndex = 0;
 
     return () => {
-      if (
-        !valueOfReturnValueDisplayed &&
-        node.valueOfReturnValueNode &&
-        !node.valueOfReturnValueNode.inConstructor &&
-        !shouldIgnoreComparison(node.comparison)
-      ) {
-        valueOfReturnValueDisplayed = true;
-        return node.valueOfReturnValueNode;
+      if (!valueOfReturnValueDisplayed) {
+        const valueOfReturnValueComparison =
+          comparison.valueOfReturnValueComparison;
+        if (
+          valueOfReturnValueComparison &&
+          valueOfReturnValueComparison[context.resultType].inConstructor &&
+          !shouldIgnoreComparison(valueOfReturnValueComparison, context)
+        ) {
+          valueOfReturnValueDisplayed = true;
+          return valueOfReturnValueComparison;
+        }
       }
-      if (
-        !prototypeDisplayed &&
-        node.prototypeNode &&
-        !node.comparison.prototypeAreDifferentAndWellKnown
-      ) {
-        prototypeDisplayed = true;
-        return node.prototypeNode;
+      if (!prototypeDisplayed) {
+        const prototypeComparison = comparison.prototypeComparison;
+        if (
+          prototypeComparison &&
+          !shouldIgnoreComparison(prototypeComparison, context)
+        ) {
+          prototypeDisplayed = true;
+          return prototypeComparison;
+        }
       }
       if (propIndex < propertyCount) {
         const propertyName = propertyNames[propIndex];
-        const propertyNode = propertyNodes[propertyName];
         propIndex++;
-        return propertyNode;
+        const propertyComparison = comparison.propertyComparisons[propertyName];
+        return propertyComparison;
       }
       return null;
     };
