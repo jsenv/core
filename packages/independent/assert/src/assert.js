@@ -132,7 +132,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       overall.modified = self.modified + inside.modified;
       overall.any = self.any + inside.any;
 
-      comparison.modified = overall.any > 0;
+      comparison.removed = self.removed > 0;
+      comparison.added = self.added > 0;
+      comparison.modified = self.modified > 0;
     };
     const appendCounters = (counter, otherCounter) => {
       counter.any += otherCounter.any;
@@ -152,6 +154,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     ) => {
       const doCompare = () => {
         const { actualNode, expectedNode } = comparison;
+
+        if (!actualNode) {
+          comparison.removed = true;
+          comparison.counters.self.removed++;
+          addCause(comparison);
+        } else if (!expectedNode) {
+          comparison.added = true;
+          comparison.counters.self.added++;
+          addCause(comparison);
+        }
 
         const compareInside = (insideComparison, { ignoreDiff }) => {
           compare(insideComparison, { ignoreDiff });
@@ -194,17 +206,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return;
         }
 
-        if (!actualNode) {
-          comparison.removed = true;
-          comparison.counters.self.removed++;
-          addCause(comparison);
-          return;
-        }
-
-        if (!expectedNode) {
-          comparison.added = true;
-          comparison.counters.self.added++;
-          addCause(comparison);
+        if (comparison.removed || comparison.added) {
           return;
         }
 
@@ -513,7 +515,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         throw new Error("nope");
       }
 
-      const comparisonNode = {
+      const leftOrRightValueNode = actualNode || expectedNode;
+      const parent = leftOrRightValueNode.parent
+        ? leftOrRightValueNode.parent.comparison
+        : null;
+      const comparison = {
+        parent,
+        type: leftOrRightValueNode.type,
+        depth: leftOrRightValueNode.depth,
+        property: leftOrRightValueNode.property,
+        descriptor: leftOrRightValueNode.descriptor,
+        index: leftOrRightValueNode.index,
+
         actualNode,
         expectedNode,
         counters: {
@@ -538,9 +551,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         },
         removed: false,
         added: false,
+        modified: false,
+        // comparisons
         reference: false,
         category: false,
-        prototypeAreDifferentAndWellKnown: false,
         prototypeComparison: null,
         valueOfReturnValueComparison: null,
         asStringComparison: null,
@@ -551,23 +565,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         charComparisons: [],
         urlPartComparisons: {},
       };
-
       if (actualNode) {
-        actualNode.comparison = comparisonNode;
+        actualNode.comparison = comparison;
       }
       if (expectedNode) {
-        expectedNode.comparison = comparisonNode;
+        expectedNode.comparison = comparison;
       }
-
-      const leftOrRightValueNode = actualNode || expectedNode;
-      comparisonNode.type = leftOrRightValueNode.type;
-      comparisonNode.parent = leftOrRightValueNode.parent;
-      comparisonNode.depth = leftOrRightValueNode.depth;
-      comparisonNode.property = leftOrRightValueNode.property;
-      comparisonNode.descriptor = leftOrRightValueNode.descriptor;
-      comparisonNode.index = leftOrRightValueNode.index;
-
-      return comparisonNode;
+      return comparison;
     };
 
     const rootComparison = createComparison(actualNode, expectedNode);
@@ -1324,12 +1328,15 @@ let writeDiff;
   writeDiff = (comparison, context) => {
     // const valueInfo = node[context.resultType];
     const type = comparison.type;
-    const method = methods[type];
-    if (!method) {
-      throw new Error(`unknown comparison type: ${type}`);
+    const valueContext = getValueContext(comparison, context);
+    let method;
+    if (type === "property") {
+      method = writePropertyDiff;
+    } else {
+      method = writeNestedValueDiff;
     }
     context.onComparisonDisplayed(comparison);
-    return method(comparison, context);
+    return method(comparison, valueContext, context);
   };
 
   const writePropertyDiff = (comparison, context) => {
@@ -1382,48 +1389,35 @@ let writeDiff;
     '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
   ];
 
-  const writeValueDiff = (comparison, context) => {
+  const writeValueDiff = (comparison, context, parentContext) => {
     const node = comparison[context.resultType];
-    const relativeDepth = node.depth + context.initialDepth;
-    const valueContext = {
-      ...context,
-    };
-    valueContext.insideOverview = valueContext.collapsed !== true;
-    if (!valueContext.collapsed) {
-      if (relativeDepth >= valueContext.maxDepth) {
-        valueContext.collapsed = true;
-      } else if (comparison.counters.overall.any === 0) {
-        valueContext.collapsed = true;
-      }
-    }
 
     if (node.wellKnownId) {
-      const valueColor = getValueColor(comparison, valueContext);
+      const valueColor = getValueColor(context);
       return ANSI.color(node.wellKnownId, valueColor);
     }
     if (node.isUrlString) {
-      return writeCompositeDiff(comparison, valueContext, context);
+      return writeCompositeDiff(comparison, context, parentContext);
     }
     if (node.isPrimitive) {
       if (comparison.asStringComparison && node.type === "as_string") {
         return writeLinesDiff(
           comparison.asStringComparison,
-          valueContext,
           context,
+          parentContext,
         );
       }
       const value = node.value;
       if (node.canHaveLines) {
         const string = value;
-        if (valueContext.collapsed) {
+        if (context.collapsed) {
           if (!comparison.quote && node.type !== "url_part") {
             const quote =
               context.quote === "auto" ? pickBestQuote(string) : context.quote;
             comparison.quote = quote; // ensure the quote in expected is "forced" to the one in actual
           }
 
-          const remainingWidth =
-            valueContext.maxColumns - valueContext.textIndent;
+          const remainingWidth = context.maxColumns - context.textIndent;
           let maxWidth = Math.min(remainingWidth, 20);
           if (comparison.quote) {
             const quoteWidth = comparison.quote.length;
@@ -1437,7 +1431,7 @@ let writeDiff;
           } else {
             stringDiff = string;
           }
-          const valueColor = getValueColor(comparison, valueContext);
+          const valueColor = getValueColor(context);
           let stringOverviewDiff = "";
           if (comparison.quote) {
             let quoteColor;
@@ -1475,14 +1469,15 @@ let writeDiff;
         }
 
         let stringDiff = "";
-        stringDiff += writeLinesDiff(comparison, valueContext, context);
+        stringDiff += writeLinesDiff(comparison, context, parentContext);
         return stringDiff;
       }
 
       if (node.isString) {
-        const valueColor = getValueColor(comparison, valueContext);
-        const { preserveLineBreaks, quote } = valueContext;
-        const char = node[valueContext.resultType].value;
+        const valueColor = getValueColor(context);
+        const { preserveLineBreaks } = context;
+        const { quote } = comparison;
+        const char = node[context.resultType].value;
         const point = char.charCodeAt(0);
         if (preserveLineBreaks && (char === "\n" || char === "\r")) {
           return ANSI.color(char, valueColor);
@@ -1515,21 +1510,21 @@ let writeDiff;
           : value === null
             ? "null"
             : JSON.stringify(value);
-      if (
-        valueDiff.length >
-        valueContext.maxColumns - valueContext.textIndent
-      ) {
+      if (valueDiff.length > context.maxColumns - context.textIndent) {
         valueDiff = valueDiff.slice(
           0,
-          valueContext.maxColumns - valueContext.textIndent - "…".length,
+          context.maxColumns - context.textIndent - "…".length,
         );
         valueDiff += "…";
       }
-      const valueColor = getValueColor(comparison, valueContext);
+      const valueColor = getValueColor(context);
       return ANSI.color(valueDiff, valueColor);
     }
-    if (context.collapsed && node.type === "property_descriptor") {
-      const valueColor = getValueColor(comparison, valueContext);
+    if (!parentContext) {
+      debugger;
+    }
+    if (parentContext.collapsed && node.type === "property_descriptor") {
+      const valueColor = getValueColor(context);
       if (node.descriptor === "get") {
         const setterNode = node.parent.descriptorNodes.set;
         if (setterNode && setterNode.value) {
@@ -1545,14 +1540,11 @@ let writeDiff;
         return ANSI.color("[set]", valueColor);
       }
     }
-    return writeCompositeDiff(comparison, valueContext, context);
+    return writeCompositeDiff(comparison, context, parentContext);
   };
   const writeCompositeDiff = (comparison, context, parentContext) => {
     const node = comparison[context.resultType];
-    if (!node) {
-      debugger;
-    }
-    const delimitersColor = getDelimitersColor(comparison, context);
+    const delimitersColor = getDelimitersColor(context);
 
     let compositeDiff = "";
     reference: {
@@ -1615,7 +1607,7 @@ let writeDiff;
     }
     return compositeDiff;
   };
-  const writeNestedValueDiff = (comparison, context) => {
+  const writeNestedValueDiff = (comparison, context, parentContext) => {
     if (shouldIgnoreComparison(comparison, context)) {
       return "";
     }
@@ -1627,35 +1619,33 @@ let writeDiff;
       return writeValueDiff(node, context);
     }
 
-    const nestedValueContext = getNestedValueContext(node, context);
     let nestedValueDiff = "";
-    const relativeDepth = node.depth + nestedValueContext.initialDepth;
+    const relativeDepth = node.depth + context.initialDepth;
     let indent = `  `.repeat(relativeDepth);
-    const keyColor = getKeyColor(comparison, nestedValueContext);
-    const delimitersColor = getDelimitersColor(comparison, nestedValueContext);
+    const delimitersColor = getDelimitersColor(context);
     let displayValue = true;
 
     const useIndent =
-      !nestedValueContext.collapsed &&
+      !context.collapsed &&
       (node.type === "indexed_value" ||
         node.type === "property_descriptor" ||
         node.type === "prototype" ||
         node.type === "value_of_return_value" ||
         node.type === "as_string");
     if (useIndent) {
-      if (nestedValueContext.signs) {
+      if (context.signs) {
         if (comparison.removed) {
-          if (nestedValueContext.resultType === "expectedNode") {
+          if (context.resultType === "expectedNode") {
             nestedValueDiff += ANSI.color(removedSign, removedSignColor);
             indent = indent.slice(1);
           }
         } else if (comparison.added) {
-          if (nestedValueContext.resultType === "actualNode") {
+          if (context.resultType === "actualNode") {
             nestedValueDiff += ANSI.color(addedSign, addedSignColor);
             indent = indent.slice(1);
           }
         } else if (comparison.modified) {
-          if (nestedValueContext.resultType === "actualNode") {
+          if (context.resultType === "actualNode") {
             nestedValueDiff += ANSI.color(unexpectedSign, unexpectedSignColor);
             indent = indent.slice(1);
           }
@@ -1674,7 +1664,19 @@ let writeDiff;
             : node.type === "to_string_return_value"
               ? "toString()"
               : "";
-    if (property && node !== nestedValueContext.startComparison) {
+    if (property && comparison !== context.startComparison) {
+      let keyColor;
+      if (context.added) {
+        keyColor = addedColor;
+      } else if (context.removed) {
+        keyColor = removedColor;
+      } else if (context.modified) {
+        keyColor =
+          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
+      } else {
+        keyColor = sameColor;
+      }
+
       if (node.type === "property_descriptor" && node.descriptor !== "value") {
         nestedValueDiff += ANSI.color(node.descriptor, keyColor);
         nestedValueDiff += " ";
@@ -1695,21 +1697,21 @@ let writeDiff;
       // the "," separator is removed because it's not correctly separated from the multiline
       // and it becomes hard to know if "," is part of the string or not
       endSeparator = "";
-    } else if (useIndent && node !== nestedValueContext.startComparison) {
+    } else if (useIndent && comparison !== context.startComparison) {
       endSeparator = ",";
     } else {
       endSeparator = "";
     }
     if (displayValue) {
-      nestedValueContext.textIndent += stringWidth(nestedValueDiff);
-      nestedValueContext.maxColumns -= endSeparator.length;
+      context.textIndent += stringWidth(nestedValueDiff);
+      context.maxColumns -= endSeparator.length;
       if (comparison.modified) {
-        nestedValueContext.maxDepth = Math.min(
-          node.depth + nestedValueContext.maxDepthInsideDiff,
-          nestedValueContext.maxDepth,
+        context.maxDepth = Math.min(
+          node.depth + context.maxDepthInsideDiff,
+          context.maxDepth,
         );
       }
-      const valueDiff = writeValueDiff(comparison, nestedValueContext);
+      const valueDiff = writeValueDiff(comparison, context, parentContext);
       nestedValueDiff += valueDiff;
     }
     if (endSeparator) {
@@ -1748,7 +1750,7 @@ let writeDiff;
       }
     }
 
-    const delimitersColor = getDelimitersColor(comparison, context);
+    const delimitersColor = getDelimitersColor(context);
 
     if (displaySubtype) {
       let subtypeColor;
@@ -1971,7 +1973,7 @@ let writeDiff;
     }
 
     let oneLineDiff = "";
-    const delimitersColor = getDelimitersColor(lineComparison, context);
+    const delimitersColor = getDelimitersColor(context);
     const overflowLeft = focusedCharIndex - previousCharAttempt > 0;
     const overflowRight =
       focusedCharIndex + nextCharAttempt < charNodes.length - 1;
@@ -2089,7 +2091,7 @@ let writeDiff;
           ...context,
           focusedCharIndex,
         };
-        const delimitersColor = getDelimitersColor(lineComparison, lineContext);
+        const delimitersColor = getDelimitersColor(lineContext);
 
         let lineDiff = "";
         const lineNumberString = String(lineComparison.index + 1);
@@ -2128,7 +2130,7 @@ let writeDiff;
         diffLines.push(writeLineDiff(lineAfter));
       }
       if (nextLineRemaining) {
-        const delimitersColor = getDelimitersColor(comparison, context);
+        const delimitersColor = getDelimitersColor(context);
         const skippedCounters = {
           total: 0,
           modified: 0,
@@ -2343,7 +2345,7 @@ let writeDiff;
       return writeLinesDiff(node, context, parentContext);
     }
 
-    const delimitersColor = getDelimitersColor(comparison, context);
+    const delimitersColor = getDelimitersColor(context);
     const relativeDepth = node.depth + context.initialDepth;
     let indent = "  ".repeat(relativeDepth);
     let diffCount = 0;
@@ -2628,9 +2630,9 @@ let writeDiff;
     const prefixWithOverview = writePrefix(comparison, context, parentContext, {
       overview: true,
     });
-    const delimitersColor = getDelimitersColor(comparison, context);
+    const delimitersColor = getDelimitersColor(context);
     const bracketColor = getBracketColor(comparison, context);
-    const valueColor = getValueColor(comparison, context);
+    const valueColor = getValueColor(context);
     const {
       openBracket,
       closeBracket,
@@ -2798,22 +2800,31 @@ let writeDiff;
     };
   };
 
-  const methods = {
-    value: writeValueDiff,
-    property: writePropertyDiff,
-    char: writeNestedValueDiff,
-    prototype: writeNestedValueDiff,
-    value_of_return_value: writeNestedValueDiff,
-    as_string: writeNestedValueDiff,
-    indexed_value: writeNestedValueDiff,
-    property_descriptor: writeNestedValueDiff,
-    url_part: writeNestedValueDiff,
-  };
+  const getValueContext = (comparison, context) => {
+    const valueContext = {
+      ...context,
+    };
+    if (context.modified) {
+      // modified takes precedence
+    } else if (comparison.modified) {
+      valueContext.modified = true;
+    } else if (comparison.added) {
+      valueContext.added = true;
+    } else if (comparison.removed) {
+      valueContext.removed = true;
+    }
 
-  const getNestedValueContext = (comparison, context) => {
-    // const valueInfo = node[context.resultType];
-    const nestedValueContext = { ...context };
-    return nestedValueContext;
+    const node = comparison[context.resultType];
+    const relativeDepth = node.depth + context.initialDepth;
+    valueContext.insideOverview = valueContext.collapsed !== true;
+    if (!valueContext.collapsed) {
+      if (relativeDepth >= valueContext.maxDepth) {
+        valueContext.collapsed = true;
+      } else if (comparison.counters.overall.any === 0) {
+        valueContext.collapsed = true;
+      }
+    }
+    return valueContext;
   };
   const getDelimiters = (comparison, context) => {
     const node = comparison[context.resultType];
@@ -2848,54 +2859,31 @@ let writeDiff;
     }
     return null;
   };
-  const getDelimitersColor = (comparison, context) => {
-    if (context.resultType === "actualNode") {
-      if (comparison.added) {
-        return addedColor;
-      }
-      if (comparison.modified) {
-        return unexpectedColor;
-      }
-      return sameColor;
-    }
-    if (comparison.removed) {
+  const getDelimitersColor = (context) => {
+    if (context.removed) {
       return removedColor;
     }
-    if (comparison.modified) {
-      return expectedColor;
-    }
-    return sameColor;
-  };
-  const getKeyColor = (comparison, context) => {
-    if (context.resultType === "actualNode") {
-      if (comparison.added) {
-        return addedColor;
-      }
-      if (comparison.modified) {
-        return unexpectedColor;
-      }
-      return sameColor;
-    }
-    if (comparison.removed) {
-      return removedColor;
-    }
-    if (comparison.modified) {
-      return expectedColor;
-    }
-    return sameColor;
-  };
-  const getValueColor = (comparison, context) => {
-    if (comparison.removed) {
-      return removedColor;
-    }
-    if (comparison.added) {
+    if (context.added) {
       return addedColor;
     }
-    if (comparison.modified) {
-      if (context.resultType === "actualNode") {
-        return unexpectedColor;
-      }
-      return expectedColor;
+    if (context.modified) {
+      return context.resultType === "actualNode"
+        ? unexpectedColor
+        : expectedColor;
+    }
+    return sameColor;
+  };
+  const getValueColor = (context) => {
+    if (context.removed) {
+      return removedColor;
+    }
+    if (context.added) {
+      return addedColor;
+    }
+    if (context.modified) {
+      return context.resultType === "actualNode"
+        ? unexpectedColor
+        : expectedColor;
     }
     return sameColor;
   };
