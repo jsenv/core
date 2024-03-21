@@ -7,7 +7,6 @@ const assert = createAssert();
 await startSnapshotTesting("object", {
   ["property are different"]: () => {
     assert({
-      colors: false,
       actual: {
         a: true,
       },

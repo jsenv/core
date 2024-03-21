@@ -1,0 +1,12 @@
+# property are different
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: {
+    b: true,
+  },
+}
+

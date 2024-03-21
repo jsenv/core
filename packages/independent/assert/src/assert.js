@@ -1539,10 +1539,7 @@ let writeDiff;
         for (const propertyDescriptorName of propertyDescriptorNames) {
           const propertyDescriptorComparison =
             propertyDescriptorComparisons[propertyDescriptorName];
-          if (
-            propertyDescriptorComparison &&
-            !shouldIgnoreComparison(propertyDescriptorComparison)
-          ) {
+          if (propertyDescriptorComparison) {
             propertyDiff += writeDiff(propertyDescriptorComparison, context);
           }
         }
@@ -1590,6 +1587,8 @@ let writeDiff;
         diff += ANSI.color(valueDiff, valueColor);
         break value;
       }
+      diff += writeCompositeDiff(comparison, context);
+      break value;
     }
 
     if (endSeparator) {
@@ -1679,7 +1678,7 @@ let writeDiff;
     }
     const stringNode = lineNode.parent;
     const stringComparison = stringNode.comparison;
-    const bracketColor = getBracketColor(stringComparison, context);
+    const bracketColor = getBracketColor(context, stringComparison);
     if (stringComparison.quote) {
       oneLineDiff += ANSI.color(stringComparison.quote, bracketColor);
     }
@@ -1703,7 +1702,7 @@ let writeDiff;
       const firstLineNode = lineNodes[0];
       if (firstLineNode.value === "") {
         const quote = node.quote || DOUBLE_QUOTE;
-        const bracketColor = getBracketColor(node, context);
+        const bracketColor = getBracketColor(context, comparison);
         let expandedDiff = "";
         expandedDiff += ANSI.color(quote, bracketColor);
         expandedDiff += ANSI.color(quote, bracketColor);
@@ -2262,7 +2261,7 @@ let writeDiff;
     };
 
     let urlDiff = "";
-    const bracketColor = getBracketColor(comparison, context);
+    const bracketColor = getBracketColor(context, comparison);
     urlDiff += ANSI.color(`"`, bracketColor);
     urlDiff += writeUrlPart("protocol");
     const usernameDiff = writeUrlPart("username");
@@ -2587,7 +2586,7 @@ let writeDiff;
       }
       let finalGroupDiff = "";
       if (forceBracket || groupDiff.length > 0) {
-        const bracketColor = getBracketColor(node, context);
+        const bracketColor = getBracketColor(context, comparison);
         finalGroupDiff += ANSI.color(openBracket, bracketColor);
         finalGroupDiff += groupDiff;
         finalGroupDiff += ANSI.color(closeBracket, bracketColor);
@@ -2682,7 +2681,7 @@ let writeDiff;
       overview: true,
     });
     const delimitersColor = getDelimitersColor(context);
-    const bracketColor = getBracketColor(comparison, context);
+    const bracketColor = getBracketColor(context, comparison);
     const valueColor = getValueColor(context);
     const {
       openBracket,
@@ -2912,14 +2911,14 @@ let writeDiff;
     }
     return sameColor;
   };
-  const getBracketColor = (comparison, context) => {
-    if (comparison.removed) {
+  const getBracketColor = (context, comparison) => {
+    if (context.removed) {
       return removedColor;
     }
-    if (comparison.added) {
+    if (context.added) {
       return addedColor;
     }
-    if (comparison.modified) {
+    if (context.modified) {
       if (
         comparison.actualNode.isComposite &&
         comparison.expectedNode.isComposite
