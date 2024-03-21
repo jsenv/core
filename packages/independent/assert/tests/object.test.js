@@ -5,16 +5,19 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("object", {
-  // ["property are different"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //     },
-  //     expected: {
-  //       a: false,
-  //     },
-  //   });
-  // },
+  ["property are different"]: () => {
+    assert({
+      colors: false,
+      actual: {
+        a: true,
+      },
+      expected: {
+        a: {
+          b: true,
+        },
+      },
+    });
+  },
   // ["property should be there"]: () => {
   //   assert({
   //     actual: {
