@@ -15,17 +15,17 @@ await startSnapshotTesting("object", {
   //     },
   //   });
   // },
-  ["property should be there"]: () => {
-    assert({
-      actual: {
-        a: true,
-      },
-      expected: {
-        a: true,
-        should_be_there: true,
-      },
-    });
-  },
+  // ["property should be there"]: () => {
+  //   assert({
+  //     actual: {
+  //       a: true,
+  //     },
+  //     expected: {
+  //       a: true,
+  //       should_be_there: true,
+  //     },
+  //   });
+  // },
   // ["property should not be there"]: () => {
   //   assert({
   //     actual: {

@@ -14,3 +14,19 @@ assert({
 
 ![img](<./object/property should be there.svg>)
 
+# property should not be there
+
+```js
+assert({
+  actual: {
+    a: true,
+    should_not_be_there: true,
+  },
+  expected: {
+    a: true,
+  },
+});
+```
+
+![img](<./object/property should not be there.svg>)
+
