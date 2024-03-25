@@ -1350,26 +1350,27 @@ let createValueNode;
 let writeDiff;
 {
   writeDiff = (comparison, context) => {
-    if (shouldIgnoreComparison(comparison, context)) {
+    if (shouldIgnoreComparison(comparison)) {
       return "";
     }
     context.onComparisonDisplayed(comparison);
+    const node = comparison[context.resultType];
+    const valueContext = { ...context };
 
     if (context.modified) {
       // modified takes precedence
     } else if (comparison.modified) {
-      context.modified = true;
+      valueContext.modified = true;
     } else if (comparison.added) {
-      context.added = true;
+      valueContext.added = true;
     } else if (comparison.removed) {
-      context.removed = true;
+      valueContext.removed = true;
     }
 
-    const node = comparison[context.resultType];
     let diff = "";
     let displayValue = true;
     let endSeparator;
-    const delimitersColor = getDelimitersColor(context);
+    const delimitersColor = getDelimitersColor(valueContext);
     const isNestedValue =
       node.type === "indexed_value" ||
       node.type === "property_descriptor" ||
@@ -1378,23 +1379,23 @@ let writeDiff;
       node.type === "as_string";
 
     if (isNestedValue) {
-      const relativeDepth = node.depth + context.initialDepth;
+      const relativeDepth = node.depth + valueContext.initialDepth;
       let indent = `  `.repeat(relativeDepth);
-      const useIndent = !context.collapsed;
+      const useIndent = !valueContext.collapsed;
       if (useIndent) {
-        if (context.signs) {
+        if (valueContext.signs) {
           if (comparison.removed) {
-            if (context.resultType === "expectedNode") {
+            if (valueContext.resultType === "expectedNode") {
               diff += ANSI.color(removedSign, removedSignColor);
               indent = indent.slice(1);
             }
           } else if (comparison.added) {
-            if (context.resultType === "actualNode") {
+            if (valueContext.resultType === "actualNode") {
               diff += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
             }
           } else if (comparison.modified) {
-            if (context.resultType === "actualNode") {
+            if (valueContext.resultType === "actualNode") {
               diff += ANSI.color(unexpectedSign, unexpectedSignColor);
               indent = indent.slice(1);
             }
@@ -1413,7 +1414,7 @@ let writeDiff;
               : node.type === "to_string_return_value"
                 ? "toString()"
                 : "";
-      if (property && comparison !== context.startComparison) {
+      if (property && comparison !== valueContext.startComparison) {
         let keyColor;
         if (context.added) {
           keyColor = addedColor;
@@ -1450,18 +1451,18 @@ let writeDiff;
         // the "," separator is removed because it's not correctly separated from the multiline
         // and it becomes hard to know if "," is part of the string or not
         endSeparator = "";
-      } else if (useIndent && comparison !== context.startComparison) {
+      } else if (useIndent && comparison !== valueContext.startComparison) {
         endSeparator = ",";
       } else {
         endSeparator = "";
       }
       if (displayValue) {
-        context.textIndent += stringWidth(diff);
-        context.maxColumns -= endSeparator.length;
-        if (context.modified) {
-          context.maxDepth = Math.min(
-            node.depth + context.maxDepthInsideDiff,
-            context.maxDepth,
+        valueContext.textIndent += stringWidth(diff);
+        valueContext.maxColumns -= endSeparator.length;
+        if (valueContext.modified) {
+          valueContext.maxDepth = Math.min(
+            node.depth + valueContext.maxDepthInsideDiff,
+            valueContext.maxDepth,
           );
         }
       }
@@ -1472,43 +1473,43 @@ let writeDiff;
         break value;
       }
 
-      const relativeDepth = node.depth + context.initialDepth;
-      context.insideOverview = context.collapsed !== true;
-      if (!context.collapsed) {
-        if (relativeDepth >= context.maxDepth) {
-          context.collapsed = true;
+      const relativeDepth = node.depth + valueContext.initialDepth;
+      valueContext.insideOverview = context.collapsed !== true;
+      if (!valueContext.collapsed) {
+        if (relativeDepth >= valueContext.maxDepth) {
+          valueContext.collapsed = true;
         } else if (comparison.counters.overall.any === 0) {
-          context.collapsed = true;
+          valueContext.collapsed = true;
         }
       }
 
-      if (context.collapsed) {
+      if (valueContext.collapsed) {
         if (node.type === "property") {
           const propertyDescriptorComparisons =
             comparison.propertyDescriptorComparisons;
           const propertyGetterComparison = propertyDescriptorComparisons.get;
           const propertySetterComparison = propertyDescriptorComparisons.set;
           if (
-            propertyGetterComparison[context.resultType] &&
-            propertySetterComparison[context.resultType]
+            propertyGetterComparison[valueContext.resultType] &&
+            propertySetterComparison[valueContext.resultType]
           ) {
-            diff += writeDiff(propertyGetterComparison, context);
+            diff += writeDiff(propertyGetterComparison, valueContext);
             break value;
           }
           if (propertyGetterComparison[context.resultType]) {
-            diff += writeDiff(propertyGetterComparison, context);
+            diff += writeDiff(propertyGetterComparison, valueContext);
             break value;
           }
           if (propertySetterComparison[context.resultType]) {
-            diff += writeDiff(propertySetterComparison, context);
+            diff += writeDiff(propertySetterComparison, valueContext);
             break value;
           }
-          diff += writeDiff(propertyDescriptorComparisons.value, context);
+          diff += writeDiff(propertyDescriptorComparisons.value, valueContext);
           break value;
         }
         if (node.type === "property_descriptor") {
           if (node.descriptor === "get") {
-            const valueColor = getValueColor(context);
+            const valueColor = getValueColor(valueContext);
             const setterNode = node.parent.descriptorNodes.set;
             if (setterNode && setterNode.value) {
               diff += ANSI.color("[get/set]", valueColor);
@@ -1518,7 +1519,7 @@ let writeDiff;
             break value;
           }
           if (node.descriptor === "set") {
-            const valueColor = getValueColor(context);
+            const valueColor = getValueColor(valueContext);
             const getterNode = node.parent.descriptorNodes.get;
             if (getterNode && getterNode.value) {
               diff += ANSI.color("[get/set]", valueColor);
@@ -1540,32 +1541,35 @@ let writeDiff;
           const propertyDescriptorComparison =
             propertyDescriptorComparisons[propertyDescriptorName];
           if (propertyDescriptorComparison) {
-            propertyDiff += writeDiff(propertyDescriptorComparison, context);
+            propertyDiff += writeDiff(
+              propertyDescriptorComparison,
+              valueContext,
+            );
           }
         }
         diff += propertyDiff;
         break value;
       }
       if (node.wellKnownId) {
-        const valueColor = getValueColor(context);
+        const valueColor = getValueColor(valueContext);
         diff += ANSI.color(node.wellKnownId, valueColor);
         break value;
       }
       if (node.isUrlString) {
-        diff += writeCompositeDiff(comparison, context);
+        diff += writeCompositeDiff(comparison, valueContext);
         break value;
       }
       if (node.isPrimitive) {
         if (comparison.asStringComparison && node.type === "as_string") {
-          diff += writeLinesDiff(comparison.asStringComparison, context);
+          diff += writeLinesDiff(comparison.asStringComparison, valueContext);
           break value;
         }
         if (node.canHaveLines) {
-          diff += writeLinesDiff(comparison, context);
+          diff += writeLinesDiff(comparison, valueContext);
           break value;
         }
         if (node.isString) {
-          diff += writeCharDiff(comparison, context);
+          diff += writeCharDiff(comparison, valueContext);
           break value;
         }
 
@@ -1576,18 +1580,21 @@ let writeDiff;
             : value === null
               ? "null"
               : JSON.stringify(value);
-        if (valueDiff.length > context.maxColumns - context.textIndent) {
+        if (
+          valueDiff.length >
+          valueContext.maxColumns - valueContext.textIndent
+        ) {
           valueDiff = valueDiff.slice(
             0,
-            context.maxColumns - context.textIndent - "…".length,
+            valueContext.maxColumns - valueContext.textIndent - "…".length,
           );
           valueDiff += "…";
         }
-        const valueColor = getValueColor(context);
+        const valueColor = getValueColor(valueContext);
         diff += ANSI.color(valueDiff, valueColor);
         break value;
       }
-      diff += writeCompositeDiff(comparison, context);
+      diff += writeCompositeDiff(comparison, valueContext);
       break value;
     }
 
