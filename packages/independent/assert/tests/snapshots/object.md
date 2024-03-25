@@ -47,3 +47,44 @@ assert({
 
 ![img](<./object/property should not be there.svg>)
 
+# false should be an object
+
+```js
+assert({
+  actual: false,
+  expected: { foo: true },
+});
+```
+
+![img](<./object/false should be an object.svg>)
+
+# false should be an object at property
+
+```js
+assert({
+  actual: {
+    foo: false,
+  },
+  expected: {
+    foo: { a: true },
+  },
+});
+```
+
+![img](<./object/false should be an object at property.svg>)
+
+# object should be false at property
+
+```js
+assert({
+  actual: {
+    foo: { a: true },
+  },
+  expected: {
+    foo: false,
+  },
+});
+```
+
+![img](<./object/object should be false at property.svg>)
+

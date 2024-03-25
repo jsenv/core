@@ -32,3 +32,35 @@ expect: {
   a: true,
 }
 
+# false should be an object
+AssertionError: actual and expected are different:
+
+actual: false
+expect: {
+  foo: true,
+}
+
+# false should be an object at property
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  foo: false,
+}
+expect: {
+  foo: {
+    a: true,
+  },
+}
+
+# object should be false at property
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  foo: {
+    a: true,
+  },
+}
+expect: {
+  foo: false,
+}
+

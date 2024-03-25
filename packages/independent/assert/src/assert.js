@@ -132,7 +132,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         // in that case we want to consider all child nodes as displayed
         // (they are "displayed" in the summary)
         const propertyDescriptorComparisons =
-          comparison.propertyDescriptorComparisons;
+          comparison.childComparisons.propertyDescriptors;
         for (const propertyDescriptorName of Object.keys(
           propertyDescriptorComparisons,
         )) {
@@ -192,12 +192,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             comparison.added = true;
             comparison.counters.self.added++;
           }
+          const propertyDescriptorComparisons =
+            comparison.childComparisons.propertyDescriptors;
           const visitPropertyDescriptor = (descriptorName) => {
             const actualPropertyDescriptorNode = actualNode
-              ? actualNode.descriptorNodes[descriptorName]
+              ? actualNode.childNodes.descriptors[descriptorName]
               : null;
             const expectedPropertyDescriptorNode = expectedNode
-              ? expectedNode.descriptorNodes[descriptorName]
+              ? expectedNode.childNodes.descriptors[descriptorName]
               : null;
             if (
               !actualPropertyDescriptorNode &&
@@ -209,7 +211,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualPropertyDescriptorNode,
               expectedPropertyDescriptorNode,
             );
-            comparison.propertyDescriptorComparisons[descriptorName] =
+            propertyDescriptorComparisons[descriptorName] =
               propertyDescriptorComparison;
             compareInside(propertyDescriptorComparison);
           };
@@ -516,6 +518,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const actualPropertyNodes = actualNode.childNodes.properties || {};
             const expectedPropertyNodes =
               expectedNode.childNodes.properties || {};
+            const propertyComparisons = comparison.childComparisons.properties;
 
             const visitProperty = (property) => {
               const actualPropertyNode = actualPropertyNodes[property];
@@ -524,7 +527,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 actualPropertyNode,
                 expectedPropertyNode,
               );
-              comparison.propertyComparisons[property] = propertyNodeComparison;
+              propertyComparisons[property] = propertyNodeComparison;
               compareInside(propertyNodeComparison);
             };
             for (const actualPropertyName of Object.keys(actualPropertyNodes)) {
@@ -533,7 +536,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             for (const expectedPropertyName of Object.keys(
               expectedPropertyNodes,
             )) {
-              if (!comparison.propertyComparisons[expectedPropertyName]) {
+              if (!propertyComparisons[expectedPropertyName]) {
                 visitProperty(expectedPropertyName);
               }
             }
@@ -1053,6 +1056,7 @@ let createValueNode;
         lines: [],
         chars: [],
       };
+      node.childNodes = childNodes;
 
       node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
       // prototype
@@ -1139,7 +1143,10 @@ let createValueNode;
           //     return true;
           //   }
           // }
-          if (node.valueOfReturnValue && propertyName === "valueOf") {
+          if (
+            node.childNodes.valueOfReturnValue &&
+            propertyName === "valueOf"
+          ) {
             return true;
           }
           return false;
@@ -1185,7 +1192,7 @@ let createValueNode;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
             descriptorNodes[propertyDescriptorName] = propertyDescriptorNode;
           }
-          propertyNode.descriptorNodes = descriptorNodes;
+          propertyNode.childNodes.descriptors = descriptorNodes;
           propertyNodes[propertyName] = propertyNode;
         }
 
@@ -1269,7 +1276,6 @@ let createValueNode;
         childNodes.urlParts = urlPartNodes;
       }
 
-      node.childNodes = childNodes;
       return node;
     };
 
@@ -1505,7 +1511,7 @@ let writeDiff;
       if (context.collapsed) {
         if (node.type === "property") {
           const propertyDescriptorComparisons =
-            comparison.propertyDescriptorComparisons;
+            comparison.childComparisons.propertyDescriptors;
           const propertyGetterComparison = propertyDescriptorComparisons.get;
           const propertySetterComparison = propertyDescriptorComparisons.set;
           const propertyGetterNode = propertyGetterComparison
@@ -1533,7 +1539,7 @@ let writeDiff;
         if (node.type === "property_descriptor") {
           if (node.descriptor === "get") {
             const valueColor = getValueColor(valueContext);
-            const setterNode = node.parent.descriptorNodes.set;
+            const setterNode = node.parent.children.descriptors.set;
             if (setterNode && setterNode.value) {
               diff += ANSI.color("[get/set]", valueColor);
               break value;
@@ -1543,7 +1549,7 @@ let writeDiff;
           }
           if (node.descriptor === "set") {
             const valueColor = getValueColor(valueContext);
-            const getterNode = node.parent.descriptorNodes.get;
+            const getterNode = node.parent.children.descriptors.get;
             if (getterNode && getterNode.value) {
               diff += ANSI.color("[get/set]", valueColor);
             } else {
@@ -1555,7 +1561,7 @@ let writeDiff;
       }
       if (node.type === "property") {
         const propertyDescriptorComparisons =
-          comparison.propertyDescriptorComparisons;
+          comparison.childComparisons.propertyDescriptors;
         let propertyDiff = "";
         const propertyDescriptorNames = Object.keys(
           propertyDescriptorComparisons,
@@ -2810,7 +2816,7 @@ let writeDiff;
   };
   const createGetProps = (comparison, context) => {
     const node = comparison[context.resultType];
-    const propertyNodes = node.childNodes.propertyNodes || {};
+    const propertyNodes = node.childNodes.properties || {};
     const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
     let valueOfReturnValueComparisonToDisplay =
@@ -2847,7 +2853,8 @@ let writeDiff;
       if (propIndex < propertyCount) {
         const propertyName = propertyNames[propIndex];
         propIndex++;
-        const propertyComparison = comparison.propertyComparisons[propertyName];
+        const propertyComparison =
+          comparison.childComparisons.properties[propertyName];
         return propertyComparison;
       }
       return null;

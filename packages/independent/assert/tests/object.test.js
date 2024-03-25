@@ -39,32 +39,32 @@ await startSnapshotTesting("object", {
       },
     });
   },
-  // ["false should be an object"]: () => {
-  //   assert({
-  //     actual: false,
-  //     expected: { foo: true },
-  //   });
-  // },
-  // ["false should be an object at property"]: () => {
-  //   assert({
-  //     actual: {
-  //       foo: false,
-  //     },
-  //     expected: {
-  //       foo: { a: true },
-  //     },
-  //   });
-  // },
-  // ["object should be false at property"]: () => {
-  //   assert({
-  //     actual: {
-  //       foo: { a: true },
-  //     },
-  //     expected: {
-  //       foo: false,
-  //     },
-  //   });
-  // },
+  ["false should be an object"]: () => {
+    assert({
+      actual: false,
+      expected: { foo: true },
+    });
+  },
+  ["false should be an object at property"]: () => {
+    assert({
+      actual: {
+        foo: false,
+      },
+      expected: {
+        foo: { a: true },
+      },
+    });
+  },
+  ["object should be false at property"]: () => {
+    assert({
+      actual: {
+        foo: { a: true },
+      },
+      expected: {
+        foo: false,
+      },
+    });
+  },
   // ["object should be false at deep property truncated"]: () => {
   //   assert({
   //     actual: {
