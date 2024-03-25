@@ -297,6 +297,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           !expectedNode;
         let ignorePrototypeDiff = context.ignoreDiff;
         let ignoreValueOfReturnValueDiff = compareAsStrings;
+        let ignoreAsStringDiff = !compareAsStrings;
 
         reference: {
           if (ignoreReferenceDiff) {
@@ -394,12 +395,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             compareInside(valueOfReturnValueComparison);
           }
           as_string: {
-            if (
-              actualNode &&
-              !actualNode.isUrl &&
-              expectedNode &&
-              !expectedNode.isUrl
-            ) {
+            if (ignoreAsStringDiff) {
               break as_string;
             }
             const actualAsStringNode = actualNode
@@ -1848,11 +1844,11 @@ let writeDiff;
         if (comparison.type === "as_string") {
           comparisonForQuotes = comparison.parent;
         }
-        if (comparison.removed) {
+        if (context.removed) {
           quoteColor = removedColor;
-        } else if (comparison.added) {
+        } else if (context.added) {
           quoteColor = addedColor;
-        } else if (comparison.modified) {
+        } else if (context.modified) {
           quoteColor =
             context.resultType === "actualNode"
               ? unexpectedColor
