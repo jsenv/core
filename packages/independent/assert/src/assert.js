@@ -217,10 +217,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             comparison.childComparisons.propertyDescriptors;
           const visitPropertyDescriptor = (descriptorName) => {
             const actualPropertyDescriptorNode = actualNode
-              ? actualNode.childNodes.descriptors[descriptorName]
+              ? actualNode.childNodes.propertyDescriptors[descriptorName]
               : null;
             const expectedPropertyDescriptorNode = expectedNode
-              ? expectedNode.childNodes.descriptors[descriptorName]
+              ? expectedNode.childNodes.propertyDescriptors[descriptorName]
               : null;
             if (
               !actualPropertyDescriptorNode &&
@@ -1119,6 +1119,7 @@ let createValueNode;
         valueOfReturnValue: null,
         asString: null,
         properties: {},
+        propertyDescriptors: {},
         lines: [],
         chars: [],
       };
@@ -1236,7 +1237,7 @@ let createValueNode;
             value: propertyDescriptor,
           });
           propertyNode.property = propertyName;
-          const descriptorNodes = {
+          const propertyDescriptorNodes = {
             value: null,
             enumerable: null,
             writable: null,
@@ -1262,9 +1263,10 @@ let createValueNode;
             });
             propertyDescriptorNode.property = propertyName;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
-            descriptorNodes[propertyDescriptorName] = propertyDescriptorNode;
+            propertyDescriptorNodes[propertyDescriptorName] =
+              propertyDescriptorNode;
           }
-          propertyNode.childNodes.descriptors = descriptorNodes;
+          propertyNode.childNodes.propertyDescriptors = propertyDescriptorNodes;
           propertyNodes[propertyName] = propertyNode;
         }
 
@@ -1613,7 +1615,7 @@ let writeDiff;
         if (node.type === "property_descriptor") {
           if (node.descriptor === "get") {
             const valueColor = getValueColor(valueContext, comparison);
-            const setterNode = node.parent.children.descriptors.set;
+            const setterNode = node.parent.childNodes.propertyDescriptors.set;
             if (setterNode && setterNode.value) {
               diff += ANSI.color("[get/set]", valueColor);
               break value;
@@ -1623,7 +1625,7 @@ let writeDiff;
           }
           if (node.descriptor === "set") {
             const valueColor = getValueColor(valueContext, comparison);
-            const getterNode = node.parent.children.descriptors.get;
+            const getterNode = node.parent.childNodes.propertyDescriptors.get;
             if (getterNode && getterNode.value) {
               diff += ANSI.color("[get/set]", valueColor);
             } else {
