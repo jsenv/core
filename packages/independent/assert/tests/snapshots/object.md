@@ -15,6 +15,38 @@ assert({
 
 ![img](<./object/property are different.svg>)
 
+# property should be there
+
+```js
+assert({
+  actual: {
+    a: true,
+  },
+  expected: {
+    a: true,
+    should_be_there: true,
+  },
+});
+```
+
+![img](<./object/property should be there.svg>)
+
+# property should not be there
+
+```js
+assert({
+  actual: {
+    a: true,
+    should_not_be_there: true,
+  },
+  expected: {
+    a: true,
+  },
+});
+```
+
+![img](<./object/property should not be there.svg>)
+
 # false should be an object
 
 ```js
@@ -138,4 +170,276 @@ assert({
 ```
 
 ![img](<./object/object should be false at deep property.svg>)
+
+# maxDepth on diff
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: { b: { c: { d: { e: { f: {} } } } } },
+    },
+  },
+  expected: {
+    foo: {
+      a: true,
+    },
+  },
+  maxDepth: 5,
+});
+```
+
+![img](<./object/maxDepth on diff.svg>)
+
+# collapsed with overview when no diff
+
+```js
+assert({
+  actual: {
+    a: { foo: true, bar: true, baz: { t: 1 } },
+    b: true,
+  },
+  expected: {
+    a: { foo: true, bar: true, baz: { t: 1 } },
+    b: false,
+  },
+});
+```
+
+![img](<./object/collapsed with overview when no diff.svg>)
+
+# max 2 props above prop diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expected: {
+    a: true,
+    b: true,
+    c: true,
+    d: false,
+  },
+});
+```
+
+![img](<./object/max 2 props above prop diff.svg>)
+
+# max 2 props above prop diff and there is exactly 2
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expected: {
+    a: true,
+    b: true,
+    c: false,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 props above prop diff and there is exactly 2.svg>)
+
+# max 2 props after prop diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expected: {
+    a: false,
+    b: true,
+    c: true,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 props after prop diff.svg>)
+
+# max 2 props above after diff and there is exactly 2
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expected: {
+    a: true,
+    b: false,
+    c: true,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 props above after diff and there is exactly 2.svg>)
+
+# max 2 props around prop diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+    e: true,
+    f: true,
+    g: true,
+    h: true,
+    i: true,
+    j: true,
+    k: true,
+    l: true,
+    m: true,
+    n: true,
+    o: true,
+  },
+  expected: {
+    a: true,
+    b: true,
+    c: true,
+    d: false,
+    e: true,
+    f: true,
+    g: true,
+    h: false,
+    i: true,
+    j: true,
+    k: true,
+    l: false,
+    m: true,
+    n: true,
+    o: true,
+  },
+});
+```
+
+![img](<./object/max 2 props around prop diff.svg>)
+
+# max X diff per object
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+  },
+  expected: {
+    a: false,
+    b: false,
+    c: false,
+  },
+  maxDiffPerObject: 2,
+});
+```
+
+![img](<./object/max X diff per object.svg>)
+
+# property should be there and is big
+
+```js
+assert({
+  actual: {
+    a: true,
+  },
+  expected: {
+    a: true,
+    should_be_there: {
+      a: true,
+      b: true,
+      item: { a: 1, b: 1, c: 1 },
+      c: true,
+      d: true,
+      e: true,
+      f: true,
+      g: true,
+    },
+  },
+  maxColumns: 100,
+});
+```
+
+![img](<./object/property should be there and is big.svg>)
+
+# many props should not be there
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: { an_object: true, and: true },
+    d: true,
+    e: true,
+    f: true,
+    g: true,
+    h: true,
+  },
+  expected: {
+    a: true,
+    c: {},
+  },
+});
+```
+
+![img](<./object/many props should not be there.svg>)
+
+# max prop in diff
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: true,
+      b: true,
+      c: true,
+      d: true,
+      e: true,
+    },
+  },
+  expected: {
+    foo: false,
+  },
+  maxValueInsideDiff: 2,
+});
+```
+
+![img](<./object/max prop in diff.svg>)
+
+# props order
+
+```js
+assert({
+  actual: {
+    b: true,
+    a: false,
+  },
+  expected: {
+    a: true,
+    b: false,
+  },
+});
+```
+
+![img](<./object/props order.svg>)
 

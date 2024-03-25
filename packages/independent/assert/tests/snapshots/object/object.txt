@@ -10,6 +10,28 @@ expect: {
   },
 }
 
+# property should be there
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: true,
+}
+
+# property should not be there
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+  should_not_be_there: true,
+}
+expect: {
+  a: true,
+}
+
 # false should be an object
 AssertionError: actual and expected are different:
 
@@ -56,7 +78,7 @@ expect: {
 AssertionError: actual and expected are different:
 
 actual: {
-  the: { nesting: { is: {} } },
+  the: { nesting: Object(1) },
   toto: "actual",
 }
 expect: false
@@ -73,7 +95,7 @@ actual: {
       one: {
         foo: {
           a: true,
-          tata: { test: true, bar: { a: "1" } },
+          tata: { test: true, bar: Object(1) },
         },
       },
     },
@@ -87,5 +109,205 @@ expect: {
       },
     },
   },
+}
+
+# maxDepth on diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  foo: {
+    a: {
+      b: { c: Object(1) },
+    },
+  },
+}
+expect: {
+  foo: {
+    a: true,
+  },
+}
+
+# collapsed with overview when no diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: { foo: true, bar: true, baz: Object(1) },
+  b: true,
+}
+expect: {
+  a: { foo: true, bar: true, baz: Object(1) },
+  b: false,
+}
+
+# max 2 props above prop diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+}
+
+# max 2 props above prop diff and there is exactly 2
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  d: true,
+}
+expect: {
+  a: true,
+  b: true,
+  c: false,
+  d: true,
+}
+
+# max 2 props after prop diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+  b: true,
+  ↓ 2 props ↓
+}
+expect: {
+  a: false,
+  b: true,
+  ↓ 2 props ↓
+}
+
+# max 2 props above after diff and there is exactly 2
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  d: true,
+}
+expect: {
+  a: true,
+  b: false,
+  c: true,
+  d: true,
+}
+
+# max 2 props around prop diff
+AssertionError: actual and expected have 3 differences:
+
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+  ↕ 2 props ↕
+  g: true,
+  h: true,
+  ↕ 2 props ↕
+  k: true,
+  l: true,
+  m: true,
+  ↓ 2 props ↓
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+  ↕ 2 props ↕
+  g: true,
+  h: false,
+  ↕ 2 props ↕
+  k: true,
+  l: false,
+  m: true,
+  ↓ 2 props ↓
+}
+
+# max X diff per object
+AssertionError: actual and expected have 3 differences:
+
+actual: {
+  a: true,
+  b: true,
+  ↓ 1 prop (1 modified) ↓
+}
+expect: {
+  a: false,
+  b: false,
+  ↓ 1 prop ↓
+}
+
+# property should be there and is big
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: {
+    a: true,
+    b: true,
+    item: {
+      a: 1,
+      b: 1,
+      c: 1,
+    },
+    c: true,
+    d: true,
+    ↓ 3 props (3 removed) ↓
+  },
+}
+
+# many props should not be there
+AssertionError: actual and expected have 8 differences:
+
+actual: {
+  a: true,
+  b: true,
+  c: {
+    an_object: true,
+    and: true,
+  },
+  d: true,
+  e: true,
+  f: true,
+  ↓ 2 props (2 modified) ↓
+}
+expect: {
+  a: true,
+  c: {},
+}
+
+# max prop in diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  foo: {
+    a: true,
+    b: true,
+    ↓ 3 props ↓
+  },
+}
+expect: {
+  foo: false,
+}
+
+# props order
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  b: true,
+  a: false,
+}
+expect: {
+  a: true,
+  b: false,
 }
 

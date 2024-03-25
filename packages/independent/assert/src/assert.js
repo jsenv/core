@@ -704,7 +704,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     compare(rootComparison);
     for (const causeComparison of causeSet) {
       if (causeComparison.type === "property_descriptor") {
-        let current = causeComparison.parent;
+        let current = causeComparison.parent.parent;
         while (current) {
           if (current.counters.self.any) {
             removeCause(causeComparison);
@@ -2409,6 +2409,9 @@ let writeDiff;
       const entryBeforeDiffArray = [];
       let skippedArray = [];
       let nestedComparison;
+      const maxDiff = context.modified
+        ? context.maxValueInsideDiff
+        : context.maxDiffPerObject;
       while ((nestedComparison = next())) {
         if (nestedComparison.counters.overall.any === 0) {
           entryBeforeDiffArray.push(nestedComparison);
@@ -2416,7 +2419,7 @@ let writeDiff;
         }
         diffCount++;
         // too many diff
-        if (diffCount > context.maxDiffPerObject) {
+        if (diffCount > maxDiff) {
           skippedArray.push(nestedComparison);
           continue;
         }
@@ -2464,7 +2467,7 @@ let writeDiff;
       // now display the values after
       const skippedCount = skippedArray.length;
       if (skippedCount) {
-        const maxValueAfterDiff = comparison.modified
+        const maxValueAfterDiff = context.modified
           ? context.maxValueInsideDiff
           : context.maxValueAfterDiff;
         let from = 0;
@@ -2497,14 +2500,17 @@ let writeDiff;
         for (const skippedComparison of skippedArray) {
           skippedCounters.total++;
           if (context.resultType === "actualNode") {
-            if (skippedComparison.added) {
-              context.onComparisonDisplayed(skippedComparison);
-              skippedCounters.added++;
+            if (context.modified) {
               continue;
             }
             if (skippedComparison.counters.overall.any > 0) {
               context.onComparisonDisplayed(skippedComparison);
               skippedCounters.modified++;
+              continue;
+            }
+            if (skippedComparison.added) {
+              context.onComparisonDisplayed(skippedComparison);
+              skippedCounters.added++;
               continue;
             }
             continue;
