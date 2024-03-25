@@ -2425,10 +2425,13 @@ let writeDiff;
         const entryBeforeDiffCount = entryBeforeDiffArray.length;
         if (entryBeforeDiffCount) {
           let beforeDiff = "";
-          let from = Math.max(
-            entryBeforeDiffCount - context.maxValueBeforeDiff + 1,
-            0,
-          );
+          let from =
+            entryBeforeDiffCount === context.maxValueBeforeDiff
+              ? 0
+              : Math.max(
+                  entryBeforeDiffCount - context.maxValueBeforeDiff + 1,
+                  0,
+                );
           let to = entryBeforeDiffCount;
           let index = from;
           while (index !== to) {
@@ -2461,14 +2464,14 @@ let writeDiff;
       // now display the values after
       const skippedCount = skippedArray.length;
       if (skippedCount) {
-        const maxValueAfter = Math.min(
-          comparison.modified
-            ? context.maxValueInsideDiff - 1
-            : context.maxValueAfterDiff - 1,
-          skippedArray.length,
-        );
+        const maxValueAfterDiff = comparison.modified
+          ? context.maxValueInsideDiff
+          : context.maxValueAfterDiff;
         let from = 0;
-        let to = maxValueAfter;
+        let to =
+          skippedCount === maxValueAfterDiff
+            ? skippedCount
+            : Math.min(maxValueAfterDiff - 1, skippedCount);
         let index = from;
         while (index !== to) {
           const nextComparison = skippedArray[index];
