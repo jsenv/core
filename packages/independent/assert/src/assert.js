@@ -2475,7 +2475,8 @@ let writeDiff;
         let index = from;
         while (index !== to) {
           const nextComparison = skippedArray[index];
-          if (nextComparison.counters.self.any > 0) {
+          if (nextComparison.counters.overall.any > 0) {
+            // do not display when they come from maxDiffPerObject
             break;
           }
           index++;
