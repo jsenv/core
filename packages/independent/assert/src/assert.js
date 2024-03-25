@@ -1709,7 +1709,6 @@ let writeDiff;
         break value;
       }
 
-      // composite
       reference: {
         // referencing an other composite
         if (node.reference) {
@@ -1744,6 +1743,8 @@ let writeDiff;
           diff += " ";
         }
       }
+
+      // composite collapsed with overview
       if (valueContext.collapsed && valueContext.insideOverview) {
         const prefixWithOverview = writePrefix(comparison, valueContext, {
           overview: true,
@@ -1850,6 +1851,8 @@ let writeDiff;
         diff += overview;
         break value;
       }
+
+      // composite collapsed
       if (valueContext.collapsed) {
         const collapsedDiff = writePrefix(comparison, valueContext, {
           overview: true,
@@ -1858,7 +1861,7 @@ let writeDiff;
         break value;
       }
 
-      // expanded diff
+      // composite expanded
       if (node.isString && !node.isUrlString && node.canHaveLines) {
         diff += writeLinesDiff(comparison, valueContext);
         break value;
@@ -1867,20 +1870,26 @@ let writeDiff;
         diff += writeLinesDiff(comparison, valueContext);
         break value;
       }
+
       const delimitersColor = getDelimitersColor(valueContext, comparison);
       const relativeDepth = node.depth + valueContext.initialDepth;
       let indent = "  ".repeat(relativeDepth);
       let diffCount = 0;
 
-      const appendNestedValueDiff = (nestedComparison) => {
-        let diff = writeDiff(nestedComparison, {
+      const writeNestedValueDiff = (nestedComparison) => {
+        const nestedValueContext = {
           ...valueContext,
           textIndent: 0,
-        });
+        };
+        let nestedValueDiff = writeDiff(
+          nestedComparison,
+          nestedValueContext,
+          context,
+        );
         if (nestedComparison !== context.startComparison) {
-          diff += `\n`;
+          nestedValueDiff += `\n`;
         }
-        return diff;
+        return nestedValueDiff;
       };
       const writeGroupDiff = (
         next,
@@ -1920,7 +1929,7 @@ let writeDiff;
             let index = from;
             while (index !== to) {
               const entryBeforeDiff = entryBeforeDiffArray[index];
-              beforeDiff += appendNestedValueDiff(entryBeforeDiff);
+              beforeDiff += writeNestedValueDiff(entryBeforeDiff);
               index++;
             }
             skippedArray = entryBeforeDiffArray.slice(0, from);
@@ -1941,7 +1950,7 @@ let writeDiff;
             groupDiff += beforeDiff;
             skippedArray.length = 0;
           }
-          groupDiff += appendNestedValueDiff(nestedComparison);
+          groupDiff += writeNestedValueDiff(nestedComparison);
         }
 
         skippedArray.push(...entryBeforeDiffArray);
@@ -1964,7 +1973,7 @@ let writeDiff;
               break;
             }
             index++;
-            groupDiff += appendNestedValueDiff(nextComparison);
+            groupDiff += writeNestedValueDiff(nextComparison);
           }
           skippedArray = skippedArray.slice(index);
         }
