@@ -17,28 +17,28 @@ await startSnapshotTesting("object", {
       },
     });
   },
-  // ["property should be there"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //     },
-  //     expected: {
-  //       a: true,
-  //       should_be_there: true,
-  //     },
-  //   });
-  // },
-  // ["property should not be there"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //       should_not_be_there: true,
-  //     },
-  //     expected: {
-  //       a: true,
-  //     },
-  //   });
-  // },
+  ["property should be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+      },
+      expected: {
+        a: true,
+        should_be_there: true,
+      },
+    });
+  },
+  ["property should not be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+        should_not_be_there: true,
+      },
+      expected: {
+        a: true,
+      },
+    });
+  },
   // ["false should be an object"]: () => {
   //   assert({
   //     actual: false,

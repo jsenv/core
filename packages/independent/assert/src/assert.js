@@ -184,6 +184,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         };
 
         if (comparison.type === "property") {
+          if (!actualNode) {
+            comparison.removed = true;
+            comparison.counters.self.removed++;
+          }
+          if (!expectedNode) {
+            comparison.added = true;
+            comparison.counters.self.added++;
+          }
           const visitPropertyDescriptor = (descriptorName) => {
             const actualPropertyDescriptorNode = actualNode
               ? actualNode.descriptorNodes[descriptorName]
@@ -1380,9 +1388,22 @@ let writeDiff;
 
     if (isNestedValue) {
       const relativeDepth = node.depth + valueContext.initialDepth;
-      let indent = `  `.repeat(relativeDepth);
-      const useIndent = !valueContext.collapsed;
+      let useIndent;
+      if (context.collapsed) {
+        useIndent = false;
+      } else {
+        useIndent = true;
+        if (relativeDepth >= valueContext.maxDepth) {
+          valueContext.collapsed = true;
+          valueContext.insideOverview = true;
+        } else if (comparison.counters.overall.any === 0) {
+          valueContext.collapsed = true;
+          valueContext.insideOverview = true;
+        }
+      }
+
       if (useIndent) {
+        let indent = `  `.repeat(relativeDepth);
         if (valueContext.signs) {
           if (comparison.removed) {
             if (valueContext.resultType === "expectedNode") {
@@ -1473,38 +1494,32 @@ let writeDiff;
         break value;
       }
 
-      const relativeDepth = node.depth + valueContext.initialDepth;
-      valueContext.insideOverview = context.collapsed !== true;
-      if (!valueContext.collapsed) {
-        if (relativeDepth >= valueContext.maxDepth) {
-          valueContext.collapsed = true;
-        } else if (comparison.counters.overall.any === 0) {
-          valueContext.collapsed = true;
-        }
-      }
-
-      if (valueContext.collapsed) {
+      if (context.collapsed) {
         if (node.type === "property") {
           const propertyDescriptorComparisons =
             comparison.propertyDescriptorComparisons;
           const propertyGetterComparison = propertyDescriptorComparisons.get;
           const propertySetterComparison = propertyDescriptorComparisons.set;
-          if (
-            propertyGetterComparison[valueContext.resultType] &&
-            propertySetterComparison[valueContext.resultType]
-          ) {
+          const propertyGetterNode = propertyGetterComparison
+            ? propertyGetterComparison[valueContext.resultType]
+            : null;
+          const propertySetterNode = propertySetterComparison
+            ? propertySetterComparison[valueContext.resultType]
+            : null;
+          if (propertyGetterNode && propertySetterNode) {
             diff += writeDiff(propertyGetterComparison, valueContext);
             break value;
           }
-          if (propertyGetterComparison[context.resultType]) {
+          if (propertyGetterNode) {
             diff += writeDiff(propertyGetterComparison, valueContext);
             break value;
           }
-          if (propertySetterComparison[context.resultType]) {
+          if (propertySetterNode) {
             diff += writeDiff(propertySetterComparison, valueContext);
             break value;
           }
-          diff += writeDiff(propertyDescriptorComparisons.value, valueContext);
+          const propertyValueComparison = propertyDescriptorComparisons.value;
+          diff += writeDiff(propertyValueComparison, valueContext);
           break value;
         }
         if (node.type === "property_descriptor") {
@@ -1700,7 +1715,7 @@ let writeDiff;
     }
     return oneLineDiff;
   };
-  const writeLinesDiff = (comparison, context, parentContext) => {
+  const writeLinesDiff = (comparison, context) => {
     const node = comparison[context.resultType];
 
     const lineNodes = node.lineNodes;
@@ -1793,11 +1808,7 @@ let writeDiff;
         ...context,
         focusedCharIndex,
       };
-      return writeOneLineDiff(
-        firstLineComparison,
-        firstLineContext,
-        parentContext,
-      );
+      return writeOneLineDiff(firstLineComparison, firstLineContext);
     }
 
     multiline: {
@@ -1866,11 +1877,7 @@ let writeDiff;
         lineDiff += ANSI.color("|", delimitersColor);
         lineDiff += " ";
 
-        lineDiff += writeOneLineDiff(
-          lineComparison,
-          lineContext,
-          parentContext,
-        );
+        lineDiff += writeOneLineDiff(lineComparison, lineContext);
         return lineDiff;
       };
       const diffLines = [];
@@ -2008,7 +2015,7 @@ let writeDiff;
     '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
     '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
   ];
-  const writeCompositeDiff = (comparison, context, parentContext) => {
+  const writeCompositeDiff = (comparison, context) => {
     const node = comparison[context.resultType];
     const delimitersColor = getDelimitersColor(context);
 
@@ -2048,26 +2055,14 @@ let writeDiff;
     inside: {
       if (context.collapsed) {
         if (context.insideOverview) {
-          const overviewDiff = writeOverviewDiff(
-            comparison,
-            context,
-            parentContext,
-          );
+          const overviewDiff = writeOverviewDiff(comparison, context);
           compositeDiff += overviewDiff;
         } else {
-          const collapsedDiff = writeCollapsedDiff(
-            comparison,
-            context,
-            parentContext,
-          );
+          const collapsedDiff = writeCollapsedDiff(comparison, context);
           compositeDiff += collapsedDiff;
         }
       } else {
-        const expandedDiff = writeExpandedDiff(
-          comparison,
-          context,
-          parentContext,
-        );
+        const expandedDiff = writeExpandedDiff(comparison, context);
         compositeDiff += expandedDiff;
       }
     }
@@ -2076,7 +2071,7 @@ let writeDiff;
   const writePrefix = (
     comparison,
     context,
-    parentContext,
+
     { overview } = {},
   ) => {
     const node = comparison[context.resultType];
@@ -2189,10 +2184,10 @@ let writeDiff;
       if (displayValueOfInsideConstructor) {
         insideConstructor = writeDiff(
           comparison.valueOfReturnValueComparison,
-          parentContext,
+          context,
         );
         // if (overview) {
-        //   insideConstructor = writeDiff(node.valueOfReturnValue, parentContext);
+        //   insideConstructor = writeDiff(node.valueOfReturnValue, context);
         // } else {
         //   insideConstructor = writeValueDiff(node.valueOfReturnValue, context);
         // }
@@ -2255,7 +2250,7 @@ let writeDiff;
     }
     return prefix;
   };
-  const writeUrlDiff = (comparison, context, parentContext) => {
+  const writeUrlDiff = (comparison, context) => {
     const urlPartComparisons = comparison.urlPartComparisons;
 
     const writeUrlPart = (urlPartName) => {
@@ -2263,7 +2258,7 @@ let writeDiff;
       if (String(urlPartComparison[context.resultType]) === "") {
         return "";
       }
-      const urlPartDiff = writeDiff(urlPartComparison, context, parentContext);
+      const urlPartDiff = writeDiff(urlPartComparison, context);
       return urlPartDiff;
     };
 
@@ -2393,13 +2388,13 @@ let writeDiff;
     urlDiff += ANSI.color(`"`, bracketColor);
     return urlDiff;
   };
-  const writeExpandedDiff = (comparison, context, parentContext) => {
+  const writeExpandedDiff = (comparison, context) => {
     const node = comparison[context.resultType];
     if (node.isString && !node.isUrlString && node.canHaveLines) {
-      return writeLinesDiff(node, context, parentContext);
+      return writeLinesDiff(node, context);
     }
     if (node.type === "as_string") {
-      return writeLinesDiff(node, context, parentContext);
+      return writeLinesDiff(node, context);
     }
 
     const delimitersColor = getDelimitersColor(context);
@@ -2606,20 +2601,16 @@ let writeDiff;
     let insideDiff = "";
     let prefix = "";
     if (!node.isUrlString) {
-      prefix = writePrefix(comparison, context, parentContext);
+      prefix = writePrefix(comparison, context);
       insideDiff += prefix;
     }
 
     if (node.isUrl || node.isUrlString) {
       let urlDiff;
       if (node.canDiffUrlParts) {
-        urlDiff = writeUrlDiff(comparison, context, parentContext);
+        urlDiff = writeUrlDiff(comparison, context);
       } else {
-        urlDiff = writeDiff(
-          comparison.asStringComparison,
-          context,
-          parentContext,
-        );
+        urlDiff = writeDiff(comparison.asStringComparison, context);
       }
 
       if (node.isUrl) {
@@ -2645,7 +2636,7 @@ let writeDiff;
 
     if (node.canHaveIndexedValues) {
       const indexedValueDiff = writeGroupDiff(
-        createGetIndexedValues(comparison, context, parentContext),
+        createGetIndexedValues(comparison, context),
         {
           valueLabel: "value",
           forceBracket: true,
@@ -2664,15 +2655,12 @@ let writeDiff;
       }
     }
     if (!node.isUrlString) {
-      const propsDiff = writeGroupDiff(
-        createGetProps(comparison, context, parentContext),
-        {
-          valueLabel: "prop",
-          forceBracket: !node.canHaveIndexedValues && prefix.length === 0,
-          openBracket: "{",
-          closeBracket: "}",
-        },
-      );
+      const propsDiff = writeGroupDiff(createGetProps(comparison, context), {
+        valueLabel: "prop",
+        forceBracket: !node.canHaveIndexedValues && prefix.length === 0,
+        openBracket: "{",
+        closeBracket: "}",
+      });
       if (propsDiff) {
         if (insideDiff) {
           insideDiff += " ";
@@ -2682,9 +2670,9 @@ let writeDiff;
     }
     return insideDiff;
   };
-  const writeOverviewDiff = (comparison, context, parentContext) => {
+  const writeOverviewDiff = (comparison, context) => {
     const node = comparison[context.resultType];
-    const prefixWithOverview = writePrefix(comparison, context, parentContext, {
+    const prefixWithOverview = writePrefix(comparison, context, {
       overview: true,
     });
     const delimitersColor = getDelimitersColor(context);
@@ -2755,7 +2743,7 @@ let writeDiff;
     }
 
     let overview = "";
-    const prefix = writePrefix(node, context, parentContext);
+    const prefix = writePrefix(node, context);
     overview += prefix;
 
     let afterPrefix = "";
@@ -2781,8 +2769,8 @@ let writeDiff;
     overview += afterPrefix;
     return overview;
   };
-  const writeCollapsedDiff = (comparison, context, parentContext) => {
-    return writePrefix(comparison, context, parentContext, {
+  const writeCollapsedDiff = (comparison, context) => {
+    return writePrefix(comparison, context, {
       overview: true,
     });
   };

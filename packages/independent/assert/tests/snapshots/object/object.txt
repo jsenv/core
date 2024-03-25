@@ -10,3 +10,25 @@ expect: {
   },
 }
 
+# property should be there
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: true,
+}
+
+# property should not be there
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+  should_not_be_there: true,
+}
+expect: {
+  a: true,
+}
+
