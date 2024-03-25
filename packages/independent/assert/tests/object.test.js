@@ -45,6 +45,16 @@ await startSnapshotTesting("object", {
       expected: { foo: true },
     });
   },
+  ["object should be false"]: () => {
+    assert({
+      actual: {
+        foo: {
+          a: {},
+        },
+      },
+      expected: false,
+    });
+  },
   ["false should be an object at property"]: () => {
     assert({
       actual: {

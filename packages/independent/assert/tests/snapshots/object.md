@@ -58,6 +58,21 @@ assert({
 
 ![img](<./object/false should be an object.svg>)
 
+# object should be false
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: {},
+    },
+  },
+  expected: false,
+});
+```
+
+![img](<./object/object should be false.svg>)
+
 # false should be an object at property
 
 ```js

@@ -40,6 +40,18 @@ expect: {
   foo: true,
 }
 
+# object should be false
+AssertionError: actual and expected are different:
+
+ℹ to improve readability 2 diffs are completely hidden
+
+actual: {
+  foo: {
+    a: {},
+  },
+}
+expect: false
+
 # false should be an object at property
 AssertionError: actual and expected have 2 differences:
 

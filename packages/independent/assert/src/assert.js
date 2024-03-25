@@ -227,12 +227,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (!actualNode) {
           comparison.removed = true;
           comparison.counters.self.removed++;
-          addCause(comparison);
         }
         if (!expectedNode) {
           comparison.added = true;
           comparison.counters.self.added++;
-          addCause(comparison);
+        }
+        if (comparison.removed || comparison.added) {
+          if (comparison.type === "property_descriptor") {
+            if (
+              comparison.parent.parent[
+                actualNode ? "expectedNode" : "actualNode"
+              ]
+            ) {
+              addCause(comparison);
+            }
+          } else {
+            addCause(comparison);
+          }
         }
 
         const addSelfDiff = () => {
