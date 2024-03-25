@@ -319,8 +319,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (ignorePrototypeDiff) {
               break prototype;
             }
-            const actualPrototypeNode = actualNode.prototypeNode;
-            const expectedPrototypeNode = expectedNode.prototypeNode;
+            const actualPrototypeNode = actualNode.children.prototype;
+            const expectedPrototypeNode = expectedNode.children.prototype;
             if (!actualPrototypeNode && !expectedPrototypeNode) {
               break prototype;
             }
@@ -336,9 +336,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               break value_of_return_value;
             }
             const actualValueOfReturnValueNode =
-              actualNode.valueOfReturnValueNode;
+              actualNode.children.valueOfReturnValue;
             const expectedValueOfReturnValueNode =
-              expectedNode.valueOfReturnValueNode;
+              expectedNode.children.valueOfReturnValue;
             if (
               !actualValueOfReturnValueNode &&
               !expectedValueOfReturnValueNode
@@ -357,8 +357,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (!actualNode.isUrl && !expectedNode.isUrl) {
               break as_string;
             }
-            const actualAsStringNode = actualNode.valueOfReturnValueNode;
-            const expectedAsStringNode = expectedNode.valueOfReturnValueNode;
+            const actualAsStringNode = actualNode.children.asString;
+            const expectedAsStringNode = expectedNode.children.asString;
             if (!actualAsStringNode && !expectedAsStringNode) {
               break as_string;
             }
@@ -372,8 +372,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
           string: {
             lines: {
-              const actualLineNodes = actualNode.lineNodes || [];
-              const expectedLineNodes = expectedNode.linesNodes || [];
+              const actualLineNodes = actualNode.children.lines || [];
+              const expectedLineNodes = expectedNode.children.lines || [];
 
               const visitLineNode = (lineNode) => {
                 const lineIndex = lineNode.index;
@@ -394,8 +394,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               }
             }
             chars: {
-              const actualCharNodes = actualNode.charNodes || [];
-              const expectedCharNodes = expectedNode.charNodes || [];
+              const actualCharNodes = actualNode.children.chars || [];
+              const expectedCharNodes = expectedNode.children.chars || [];
 
               const visitCharNode = (charNode) => {
                 const charNodeIndex = charNode.index;
@@ -417,8 +417,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           url_parts: {
-            const actualUrlPartNodes = actualNode.urlPartNodes || {};
-            const expectedUrlPartNodes = expectedNode.urlPartNodes || {};
+            const actualUrlPartNodes = actualNode.children.urlParts || {};
+            const expectedUrlPartNodes = expectedNode.children.urlParts || {};
 
             const visitUrlPart = (urlPartName) => {
               const actualUrlPartNode = actualUrlPartNodes[urlPartName];
@@ -440,19 +440,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           indexed_values: {
-            const actualIndexedValueNodes = actualNode.indexedValueNodes || [];
+            const actualIndexedValueNodes =
+              actualNode.children.indexedValues || [];
             const expectedIndexedValueNodes =
-              expectedNode.indexedValueNodes || [];
+              expectedNode.children.indexedValues || [];
 
             if (actualNode.isSet && expectedNode.isSet) {
               const visitSetValue = (indexedValueNode) => {
                 const index = indexedValueNode.index;
                 const indexedValueComparison = createComparison(
                   actualNode.value.has(indexedValueNode.value)
-                    ? actualNode.indexedValueNodes[index]
+                    ? actualIndexedValueNodes[index]
                     : null,
                   expectedNode.value.has(indexedValueNode.value)
-                    ? expectedNode.indexedValueNodes[index]
+                    ? expectedIndexedValueNodes[index]
                     : null,
                 );
                 comparison.indexedValueComparisons[index] =
@@ -483,14 +484,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               const indexedValueComparison = createComparison(
                 actualHasOwn
                   ? actualIndexedValueNodes[index]
-                  : actualNode.indexedValueNodes &&
-                      index < actualNode.indexedValueNodes.length
+                  : actualIndexedValueNodes &&
+                      index < actualIndexedValueNodes.length
                     ? ARRAY_EMPTY_VALUE
                     : undefined,
                 expectedHasOwn
                   ? expectedIndexedValueNodes[index]
-                  : expectedNode.indexedValueNodes &&
-                      index < expectedNode.indexedValueNodes.length
+                  : expectedIndexedValueNodes &&
+                      index < expectedIndexedValueNodes.length
                     ? ARRAY_EMPTY_VALUE
                     : undefined,
               );
@@ -510,8 +511,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           properties: {
-            const actualPropertyNodes = actualNode.propertyNodes || {};
-            const expectedPropertyNodes = expectedNode.propertyNodes || {};
+            const actualPropertyNodes = actualNode.children.properties || {};
+            const expectedPropertyNodes =
+              expectedNode.children.properties || {};
 
             const visitProperty = (property) => {
               const actualPropertyNode = actualPropertyNodes[property];
@@ -1034,14 +1036,20 @@ let createValueNode;
           inConstructor,
           reference,
           referenceFromOthersSet: new Set(),
-
-          keys: null,
-          chars: null,
+          keys: [],
         });
       }
 
-      node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
+      const children = {
+        prototype: null,
+        valueOfReturnValue: null,
+        asString: null,
+        properties: {},
+        lines: [],
+        chars: [],
+      };
 
+      node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
       // prototype
       if (node.isComposite && !node.structureIsKnown) {
         const prototypeNode = _createValueNode({
@@ -1050,9 +1058,8 @@ let createValueNode;
           type: "prototype",
           value: Object.getPrototypeOf(node.value),
         });
-        node.prototypeNode = prototypeNode;
+        children.prototype = prototypeNode;
       }
-
       // valueOf()
       if (
         node.isComposite &&
@@ -1066,9 +1073,8 @@ let createValueNode;
           type: "value_of_return_value",
           value: node.value.valueOf(),
         });
-        node.valueOfReturnValueNode = valueOfReturnValueNode;
+        children.valueOfReturnValue = valueOfReturnValueNode;
       }
-
       // toString()
       if (
         node.isComposite &&
@@ -1082,9 +1088,8 @@ let createValueNode;
           type: "as_string",
           value: String(node.value),
         });
-        node.asStringNode = asStringNode;
+        children.asString = asStringNode;
       }
-
       // properties
       if (node.isComposite && !node.structureIsKnown) {
         const propertyNodes = {};
@@ -1179,10 +1184,9 @@ let createValueNode;
           propertyNodes[propertyName] = propertyNode;
         }
 
+        children.properties = propertyNodes;
         node.keys = keys;
-        node.propertyNodes = propertyNodes;
       }
-
       // indexed_values
       if (node.canHaveIndexedValues && !node.structureIsKnown) {
         const indexedValueNodes = [];
@@ -1202,9 +1206,8 @@ let createValueNode;
           indexedValueNodes[indexedValueNodeIndex] = indexedValueNode;
         }
 
-        node.indexedValueNodes = indexedValueNodes;
+        children.indexedValues = indexedValueNodes;
       }
-
       // string (lines and chars)
       if (node.canHaveLines && !node.structureIsKnown) {
         const lineNodes = [];
@@ -1221,7 +1224,7 @@ let createValueNode;
           lineNodes[lineNodeIndex] = lineNode;
         }
 
-        node.lineNodes = lineNodes;
+        children.lines = lineNodes;
       }
       if (node.canHaveChars && !node.structureIsKnown) {
         const charNodes = [];
@@ -1239,9 +1242,8 @@ let createValueNode;
           charNodes[charNodeIndex] = charNode;
         }
 
-        node.charNodes = charNodes;
+        children.chars = charNodes;
       }
-
       // url parts
       if (node.isUrl || node.isUrlString) {
         const urlPartNodes = {};
@@ -1259,9 +1261,10 @@ let createValueNode;
           urlPartNodes[urlPartName] = urlPartNode;
         }
 
-        node.urlPartNodes = urlPartNodes;
+        children.urlParts = urlPartNodes;
       }
 
+      node.children = children;
       return node;
     };
 
@@ -1464,7 +1467,7 @@ let writeDiff;
           diff += " ";
         }
       }
-      if (node.canHaveLines && node.lineNodes.length > 1) {
+      if (node.canHaveLines && node.children.lines.length > 1) {
         // when using
         // foo: 1| line 1
         //      2| line 2
@@ -1624,7 +1627,7 @@ let writeDiff;
 
     const charComparisons = lineComparison.charComparisons;
     const lineNode = lineComparison[context.resultType];
-    const charNodes = lineNode.charNodes;
+    const charNodes = lineNode.children.chars;
     const charBeforeArray = [];
     const charAfterArray = [];
 
@@ -1718,7 +1721,7 @@ let writeDiff;
   const writeLinesDiff = (comparison, context) => {
     const node = comparison[context.resultType];
 
-    const lineNodes = node.lineNodes;
+    const lineNodes = node.children.lines;
     const lineComparisons = comparison.lineComparisons;
     empty_string: {
       const firstLineNode = lineNodes[0];
@@ -1925,8 +1928,8 @@ let writeDiff;
         let belowSummary = "";
         let summaryColor = "";
         if (
-          comparison.actualNode.lineNodes.length ===
-          comparison.expectedNode.lineNodes.length
+          comparison.actualNode.children.lines.length ===
+          comparison.expectedNode.children.lines.length
         ) {
           summaryColor = delimitersColor;
         } else if (context.resultType === "actualNode") {
@@ -2158,13 +2161,13 @@ let writeDiff;
           ? removedColor
           : comparison.actualNode.isString &&
               comparison.expectedNode.isString &&
-              comparison.actualNode.charNodes.length ===
-                comparison.expectedNode.charNodes.length
+              comparison.actualNode.children.chars.length ===
+                comparison.expectedNode.children.chars.length
             ? sameColor
             : context.resultType === "actualNode"
               ? unexpectedColor
               : expectedColor;
-      prefix += ANSI.color(node.charNodes.length, lengthColor);
+      prefix += ANSI.color(node.children.chars.length, lengthColor);
       prefix += ANSI.color(`)`, delimitersColor);
       return prefix;
     }
@@ -2801,7 +2804,7 @@ let writeDiff;
   };
   const createGetProps = (comparison, context) => {
     const node = comparison[context.resultType];
-    const propertyNodes = node.propertyNodes || {};
+    const propertyNodes = node.children.propertyNodes || {};
     const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
     let valueOfReturnValueComparisonToDisplay =
@@ -2914,6 +2917,9 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
+      if (!comparison.expectedNode) {
+        debugger;
+      }
       if (
         comparison.actualNode.isComposite &&
         comparison.expectedNode.isComposite
