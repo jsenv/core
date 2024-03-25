@@ -687,8 +687,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const propertyComparisons = comparison.childComparisons.properties;
 
             const visitProperty = (property) => {
-              const actualPropertyNode = actualPropertyNodes[property];
-              const expectedPropertyNode = expectedPropertyNodes[property];
+              // hasOwn here because childNode.properties is an object inheriting Object.prototype
+              // so node.childNodes.properties.constructor is returning a function
+              // when we want null (if the object has no custom "constructor" property)
+              const actualPropertyNode = Object.hasOwn(
+                actualPropertyNodes,
+                property,
+              )
+                ? actualPropertyNodes[property]
+                : null;
+              const expectedPropertyNode = Object.hasOwn(
+                expectedPropertyNodes,
+                property,
+              )
+                ? expectedPropertyNodes[property]
+                : null;
               const propertyNodeComparison = createComparison(
                 actualPropertyNode,
                 expectedPropertyNode,
@@ -1539,7 +1552,6 @@ let writeDiff;
         } else {
           keyColor = sameColor;
         }
-
         if (
           node.type === "property_descriptor" &&
           node.descriptor !== "value"
@@ -1660,11 +1672,7 @@ let writeDiff;
         diff += ANSI.color(node.wellKnownId, valueColor);
         break value;
       }
-      if (node.isUrlString) {
-        diff += writeCompositeDiff(comparison, valueContext);
-        break value;
-      }
-      if (node.isPrimitive) {
+      if (node.isPrimitive && !node.isUrlString) {
         const asStringComparison = comparison.childComparisons.asString;
         if (asStringComparison && node.type === "as_string") {
           diff += writeLinesDiff(asStringComparison, valueContext);
@@ -1700,7 +1708,55 @@ let writeDiff;
         diff += ANSI.color(valueDiff, valueColor);
         break value;
       }
-      diff += writeCompositeDiff(comparison, valueContext);
+
+      // composite
+      reference: {
+        const node = comparison[context.resultType];
+        // referencing an other composite
+        if (node.reference) {
+          const delimitersColor = getDelimitersColor(valueContext, comparison);
+          diff += ANSI.color(
+            `<ref #${valueContext.getDisplayedId(node.reference.id)}>`,
+            delimitersColor,
+          );
+          break value;
+        }
+        // will be referenced by a composite
+        let referenceFromOtherDisplayed;
+        for (const referenceFromOther of node.referenceFromOthersSet) {
+          const referenceFromOtherComparison = referenceFromOther.comparison;
+          if (
+            !referenceFromOtherComparison ||
+            referenceFromOtherComparison.hidden
+          ) {
+            continue;
+          }
+          referenceFromOtherDisplayed = referenceFromOther;
+          break;
+        }
+        if (referenceFromOtherDisplayed) {
+          const delimitersColor = getDelimitersColor(valueContext, comparison);
+          diff += ANSI.color(
+            `<ref #${valueContext.getDisplayedId(
+              referenceFromOtherDisplayed.reference.id,
+            )}>`,
+            delimitersColor,
+          );
+          diff += " ";
+        }
+      }
+      if (valueContext.collapsed) {
+        if (valueContext.insideOverview) {
+          const overviewDiff = writeOverviewDiff(comparison, valueContext);
+          diff += overviewDiff;
+          break value;
+        }
+        const collapsedDiff = writeCollapsedDiff(comparison, valueContext);
+        diff += collapsedDiff;
+        break value;
+      }
+      const expandedDiff = writeExpandedDiff(comparison, valueContext);
+      diff += expandedDiff;
       break value;
     }
 
@@ -2106,57 +2162,6 @@ let writeDiff;
     '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
     '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
   ];
-  const writeCompositeDiff = (comparison, context) => {
-    let compositeDiff = "";
-    reference: {
-      const node = comparison[context.resultType];
-      // referencing an other composite
-      if (node.reference) {
-        const delimitersColor = getDelimitersColor(context, comparison);
-        compositeDiff += ANSI.color(
-          `<ref #${context.getDisplayedId(node.reference.id)}>`,
-          delimitersColor,
-        );
-        return compositeDiff;
-      }
-      // will be referenced by a composite
-      let referenceFromOtherDisplayed;
-      for (const referenceFromOther of node.referenceFromOthersSet) {
-        const referenceFromOtherComparison = referenceFromOther.comparison;
-        if (
-          !referenceFromOtherComparison ||
-          referenceFromOtherComparison.hidden
-        ) {
-          continue;
-        }
-        referenceFromOtherDisplayed = referenceFromOther;
-        break;
-      }
-      if (referenceFromOtherDisplayed) {
-        const delimitersColor = getDelimitersColor(context, comparison);
-        compositeDiff += ANSI.color(
-          `<ref #${context.getDisplayedId(
-            referenceFromOtherDisplayed.reference.id,
-          )}>`,
-          delimitersColor,
-        );
-        compositeDiff += " ";
-      }
-    }
-    if (context.collapsed) {
-      if (context.insideOverview) {
-        const overviewDiff = writeOverviewDiff(comparison, context);
-        compositeDiff += overviewDiff;
-        return compositeDiff;
-      }
-      const collapsedDiff = writeCollapsedDiff(comparison, context);
-      compositeDiff += collapsedDiff;
-      return compositeDiff;
-    }
-    const expandedDiff = writeExpandedDiff(comparison, context);
-    compositeDiff += expandedDiff;
-    return compositeDiff;
-  };
   const writePrefix = (comparison, context, { overview } = {}) => {
     const node = comparison[context.resultType];
     let prefix = "";
@@ -2986,20 +2991,20 @@ let writeDiff;
     }
     return sameColor;
   };
-  const getDelimitersColor = (context, comparison) => {
-    return getColorFor("delimiters", context, comparison);
-  };
-  const getValueColor = (context, comparison) => {
-    return getColorFor("value", context, comparison);
-  };
-  const getBracketColor = (context, comparison) => {
-    return getColorFor("bracket", context, comparison);
-  };
   const getSubtypeColor = (context, comparison) => {
     return getColorFor("subtype", context, comparison);
   };
   const getConstructorArgColor = (context, comparison) => {
     return getColorFor("constructor_arg", context, comparison);
+  };
+  const getBracketColor = (context, comparison) => {
+    return getColorFor("bracket", context, comparison);
+  };
+  const getDelimitersColor = (context, comparison) => {
+    return getColorFor("delimiters", context, comparison);
+  };
+  const getValueColor = (context, comparison) => {
+    return getColorFor("value", context, comparison);
   };
 
   const DOUBLE_QUOTE = `"`;
