@@ -131,15 +131,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return;
         }
       }
-      if (shouldIgnoreComparison(comparison)) {
+      if (comparison.hidden) {
         return;
       }
       causeCounters.total++;
       causeSet.add(comparison);
     };
     const removeCause = (comparison) => {
-      causeCounters.total--;
-      causeSet.delete(comparison);
+      if (causeSet.has(comparison)) {
+        causeCounters.total--;
+        causeSet.delete(comparison);
+      }
     };
     const onComparisonDisplayed = (comparison) => {
       if (causeSet.has(comparison)) {
@@ -230,9 +232,39 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualPropertyDescriptorNode,
               expectedPropertyDescriptorNode,
             );
+            if (
+              !actualPropertyDescriptorNode &&
+              isDefaultDescriptor(
+                descriptorName,
+                expectedPropertyDescriptorNode.value,
+              )
+            ) {
+              propertyDescriptorComparison.hidden = true;
+            } else if (
+              !expectedPropertyDescriptorNode &&
+              isDefaultDescriptor(
+                descriptorName,
+                actualPropertyDescriptorNode.value,
+              )
+            ) {
+              propertyDescriptorComparison.hidden = true;
+            }
             propertyDescriptorComparisons[descriptorName] =
               propertyDescriptorComparison;
             compareInside(propertyDescriptorComparison);
+            if (
+              propertyDescriptorComparison.counters.overall.any === 0 &&
+              isDefaultDescriptor(
+                descriptorName,
+                actualPropertyDescriptorNode.value,
+              ) &&
+              isDefaultDescriptor(
+                descriptorName,
+                expectedPropertyDescriptorNode.value,
+              )
+            ) {
+              propertyDescriptorComparison.hidden = true;
+            }
           };
           visitPropertyDescriptor("value");
           visitPropertyDescriptor("enumerable");
@@ -376,8 +408,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualPrototypeNode,
               expectedPrototypeNode,
             );
+            if (!actualPrototypeNode || !expectedPrototypeNode) {
+              prototypeComparison.hidden = true;
+            } else if (actualNode.subtype !== expectedNode.subtype) {
+              // when we see a prefix like
+              // actual: User {}
+              // expect: Animal {}
+              // we don't show the prototype
+              prototypeComparison.hidden = true;
+            }
             comparison.childComparisons.prototype = prototypeComparison;
             compareInside(prototypeComparison);
+            if (prototypeComparison.counters.overall.any === 0) {
+              prototypeComparison.hidden = true;
+            }
           }
           value_of_return_value: {
             if (ignoreValueOfReturnValueDiff) {
@@ -399,6 +443,46 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualValueOfReturnValueNode,
               expectedValueOfReturnValueNode,
             );
+            if (!actualValueOfReturnValueNode) {
+              // show only if it's a custom valueOf with a custom behaviour
+              // (something else than returning composite itself)
+              valueOfReturnValueComparison.hidden =
+                expectedValueOfReturnValueNode.value === expectedNode.value;
+            } else if (!expectedValueOfReturnValueNode) {
+              // show only if it's a custom valueOf with a custom behaviour
+              // (something else than returning composite itself)
+              valueOfReturnValueComparison.hidden =
+                actualValueOfReturnValueNode.value === actualNode.value;
+            } else if (comparison.counters.overall.any === 0) {
+              valueOfReturnValueComparison.hidden = true;
+            } else {
+              // actual parent or expected parent is a composite
+              // and the other is a primitive
+              // but when they hold the same value in the end
+              const actualInternalOrSelfNode = comparison.actualNode.isComposite
+                ? actualValueOfReturnValueNode
+                : comparison.actualNode;
+              const expectedInternalOrSelfNode = comparison.expectedNode
+                .isComposite
+                ? expectedValueOfReturnValueNode
+                : comparison.expectedNode;
+              if (
+                actualInternalOrSelfNode.subtype ===
+                expectedInternalOrSelfNode.subtype
+              ) {
+                valueOfReturnValueComparison.hidden = true;
+              } else {
+                // value of differ but prototype is different so it's expected
+                const prototypeComparison =
+                  comparison.childComparisons.prototype;
+                if (
+                  prototypeComparison &&
+                  prototypeComparison.counters.overall.any > 0
+                ) {
+                  valueOfReturnValueComparison.hidden = true;
+                }
+              }
+            }
             comparison.childComparisons.valueOfReturnValue =
               valueOfReturnValueComparison;
             compareInside(valueOfReturnValueComparison);
@@ -672,6 +756,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             added: 0,
           },
         },
+        hidden: false,
         removed: false,
         added: false,
         modified: false,
@@ -879,83 +964,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   return assert;
 };
 
-const shouldIgnoreComparison = (comparison) => {
-  const { actualNode, expectedNode } = comparison;
-  if (comparison.type === "property_descriptor") {
-    if (!actualNode) {
-      // show only if not the default
-      return isDefaultDescriptor(expectedNode.descriptor, expectedNode.value);
-    }
-    if (!expectedNode) {
-      // show only if not the default
-      return isDefaultDescriptor(actualNode.descriptor, actualNode.value);
-    }
-    // if no diff and both are default, hide
-    if (
-      comparison.counters.overall.any === 0 &&
-      isDefaultDescriptor(actualNode.descriptor, actualNode.value) &&
-      isDefaultDescriptor(expectedNode.descriptor, expectedNode.value)
-    ) {
-      return true;
-    }
-    return false;
-  }
-  if (comparison.type === "value_of_return_value") {
-    if (!actualNode) {
-      // show only if it's a custom valueOf with a custom behaviour
-      // (something else than returning composite itself)
-      return expectedNode.value === expectedNode.parent.value;
-    }
-    if (!expectedNode) {
-      // show only if it's a custom valueOf with a custom behaviour
-      // (something else than returning composite itself)
-      return actualNode.value === actualNode.parent.value;
-    }
-    if (comparison.counters.overall.any === 0) {
-      return true;
-    }
-    // actual parent or expected parent is a composite
-    // and the other is a primitive
-    // but when they hold the same value in the end
-    const parentComparison = comparison.actualNode.parent.comparison;
-    const actualInternalOrSelfNode = parentComparison.actualNode.isComposite
-      ? actualNode
-      : parentComparison.actualNode;
-    const expectedInternalOrSelfNode = parentComparison.actualNode.isComposite
-      ? expectedNode
-      : parentComparison.expectedNode;
-    if (
-      actualInternalOrSelfNode.subtype === expectedInternalOrSelfNode.subtype
-    ) {
-      return true;
-    }
-    // value of differ but prototype is different so it's expected
-    const prototypeComparison = parentComparison.childComparisons.prototype;
-    if (prototypeComparison.counters.overall.any > 0) {
-      return true;
-    }
-    return false;
-  }
-  if (comparison.type === "prototype") {
-    if (!actualNode || !expectedNode) {
-      return true;
-    }
-    if (comparison.counters.overall.any === 0) {
-      return true;
-    }
-    // when we see a prefix like
-    // actual: User {}
-    // expect: Animal {}
-    // we don't show the prototype
-    if (actualNode.subtype !== expectedNode.subtype) {
-      return true;
-    }
-    // but when both have the same prefix AND a prototype diff
-    // then we display it
-    return false;
-  }
-  return false;
-};
 const isDefaultDescriptor = (descriptorName, descriptorValue) => {
   if (descriptorName === "enumerable" && descriptorValue === true) {
     return true;
@@ -1437,7 +1445,7 @@ let createValueNode;
 let writeDiff;
 {
   writeDiff = (comparison, context) => {
-    if (shouldIgnoreComparison(comparison)) {
+    if (comparison.hidden) {
       return "";
     }
     context.onComparisonDisplayed(comparison);
@@ -2115,7 +2123,7 @@ let writeDiff;
         const referenceFromOtherComparison = referenceFromOther.comparison;
         if (
           !referenceFromOtherComparison ||
-          shouldIgnoreComparison(referenceFromOtherComparison)
+          referenceFromOtherComparison.hidden
         ) {
           continue;
         }
@@ -2156,7 +2164,7 @@ let writeDiff;
       // value returned by valueOf() is not the composite itself
       valueOfReturnValueNode &&
       valueOfReturnValueNode.inConstructor &&
-      !shouldIgnoreComparison(comparison);
+      !comparison.hidden;
     let displaySubtype = true;
     if (overview) {
       displaySubtype = true;
@@ -2814,9 +2822,7 @@ let writeDiff;
             .inConstructor
         ) {
           valueOfReturnValueComparisonToDisplay = null;
-        } else if (
-          shouldIgnoreComparison(valueOfReturnValueComparisonToDisplay, context)
-        ) {
+        } else if (valueOfReturnValueComparisonToDisplay.hidden) {
           valueOfReturnValueComparisonToDisplay = null;
         } else {
           let nestedComparison = valueOfReturnValueComparisonToDisplay;
@@ -2825,7 +2831,7 @@ let writeDiff;
         }
       }
       if (prototypeComparisonToDisplay) {
-        if (shouldIgnoreComparison(prototypeComparisonToDisplay, context)) {
+        if (prototypeComparisonToDisplay.hidden) {
           prototypeComparisonToDisplay = null;
         } else {
           let nestedComparison = prototypeComparisonToDisplay;
