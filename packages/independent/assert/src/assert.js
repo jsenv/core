@@ -642,6 +642,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         parent,
         type: leftOrRightValueNode.type,
         depth: leftOrRightValueNode.depth,
+        path: leftOrRightValueNode.path,
         property: leftOrRightValueNode.property,
         descriptor: leftOrRightValueNode.descriptor,
         index: leftOrRightValueNode.index,
@@ -722,44 +723,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         let startComparisonDepth = firstComparisonCausingDiff.depth - maxDepth;
-        let valuePath = createValuePath();
         for (const comparison of comparisonsFromRootToTarget) {
           if (
-            startComparison === rootComparison &&
             comparison.type === "property_descriptor" &&
-            expectedNode.depth > startComparisonDepth
+            comparison.depth > startComparisonDepth
           ) {
-            comparison.path = String(valuePath);
             startComparison = comparison;
             break;
-          }
-          if (comparison === rootComparison) {
-            continue;
-          }
-          if (comparison.type === "property") {
-            valuePath = valuePath.append(comparison.property);
-            continue;
-          }
-          if (comparison.type === "property_descriptor") {
-            if (comparison.descriptor === "value") {
-              continue;
-            }
-            valuePath = valuePath.append(comparison.descriptor, {
-              special: true,
-            });
-            continue;
-          }
-          if (comparison.type === "indexed_value") {
-            valuePath = valuePath.append(comparison.index);
-            continue;
-          }
-          if (comparison.type === "char") {
-            valuePath = valuePath.append(comparison.index);
-            continue;
-          }
-          if (comparison.type === "line") {
-            valuePath = valuePath.append(comparison.index);
-            continue;
           }
         }
       }
@@ -1257,7 +1227,12 @@ let createValueNode;
               propertyDescriptor[propertyDescriptorName];
             const propertyDescriptorNode = _createValueNode({
               parent: propertyNode,
-              path: path.append(propertyDescriptorName),
+              path:
+                propertyDescriptorName === "value"
+                  ? propertyNode.path
+                  : propertyNode.path.append(propertyDescriptorName, {
+                      isPropertyDescriptor: true,
+                    }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
             });
@@ -3120,7 +3095,7 @@ const createValuePath = (path = "") => {
   return {
     toString: () => path,
     valueOf: () => path,
-    append: (property, { special } = {}) => {
+    append: (property, { isPropertyDescriptor } = {}) => {
       let propertyKey = "";
       let propertyKeyCanUseDot = false;
       if (typeof property === "symbol") {
@@ -3138,7 +3113,7 @@ const createValuePath = (path = "") => {
       }
       let propertyPathString;
       if (path) {
-        if (special) {
+        if (isPropertyDescriptor) {
           propertyPathString += `${path}[[${propertyKey}]]`;
         } else if (propertyKeyCanUseDot) {
           propertyPathString = `${path}.${propertyKey}`;
