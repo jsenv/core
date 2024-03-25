@@ -328,7 +328,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualPrototypeNode,
               expectedPrototypeNode,
             );
-            comparison.prototypeComparison = prototypeComparison;
+            comparison.childComparisons.prototype = prototypeComparison;
             compareInside(prototypeComparison);
           }
           value_of_return_value: {
@@ -349,7 +349,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualValueOfReturnValueNode,
               expectedValueOfReturnValueNode,
             );
-            comparison.valueOfReturnValueComparison =
+            comparison.childComparisons.valueOfReturnValue =
               valueOfReturnValueComparison;
             compareInside(valueOfReturnValueComparison);
           }
@@ -366,7 +366,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualAsStringNode,
               expectedAsStringNode,
             );
-            comparison.asStringComparison = asStringComparison;
+            comparison.childComparisons.asString = asStringComparison;
             compareInside(asStringComparison);
           }
 
@@ -383,7 +383,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   actualLineNode,
                   expectedLineNode,
                 });
-                comparison.lineComparisons[lineIndex] = lineComparison;
+                comparison.childComparisons.lines[lineIndex] = lineComparison;
                 compareInside(lineComparison);
               };
               for (const actualLineNode of actualLineNodes) {
@@ -405,7 +405,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   actualCharNode,
                   expectedCharNode,
                 });
-                comparison.charComparisons[charNodeIndex] = charComparison;
+                comparison.childComparisons.chars[charNodeIndex] =
+                  charComparison;
                 compareInside(charComparison);
               };
               for (const actualCharNode of actualCharNodes) {
@@ -427,7 +428,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 actualUrlPartNode,
                 expectedUrlPartNode,
               );
-              comparison.urlPartComparisons[urlPartName] = urlPartComparison;
+              comparison.childComparisons.urlPart[urlPartName] =
+                urlPartComparison;
               compareInside(urlPartComparison);
             };
             for (const actualUrlPartName of Object.keys(actualUrlPartNodes)) {
@@ -861,7 +863,7 @@ const shouldIgnoreComparison = (comparison) => {
       return true;
     }
     // value of differ but prototype is different so it's expected
-    const prototypeComparison = parentComparison.prototypeComparison;
+    const prototypeComparison = parentComparison.childComparisons.prototype;
     if (prototypeComparison.counters.overall.any > 0) {
       return true;
     }
@@ -1581,8 +1583,9 @@ let writeDiff;
         break value;
       }
       if (node.isPrimitive) {
-        if (comparison.asStringComparison && node.type === "as_string") {
-          diff += writeLinesDiff(comparison.asStringComparison, valueContext);
+        const asStringComparison = comparison.childComparisons.asString;
+        if (asStringComparison && node.type === "as_string") {
+          diff += writeLinesDiff(asStringComparison, valueContext);
           break value;
         }
         if (node.canHaveLines) {
@@ -1628,7 +1631,7 @@ let writeDiff;
   const writeOneLineDiff = (lineComparison, context) => {
     let { focusedCharIndex } = context;
 
-    const charComparisons = lineComparison.charComparisons;
+    const charComparisons = lineComparison.childComparisons.chars;
     const lineNode = lineComparison[context.resultType];
     const charNodes = lineNode.childNodes.chars;
     const charBeforeArray = [];
@@ -1725,7 +1728,7 @@ let writeDiff;
     const node = comparison[context.resultType];
 
     const lineNodes = node.childNodes.lines;
-    const lineComparisons = comparison.lineComparisons;
+    const lineComparisons = comparison.childComparisons.lines;
     empty_string: {
       const firstLineNode = lineNodes[0];
       if (firstLineNode.value === "") {
@@ -2189,7 +2192,7 @@ let writeDiff;
 
       if (displayValueOfInsideConstructor) {
         insideConstructor = writeDiff(
-          comparison.valueOfReturnValueComparison,
+          comparison.childComparisons.valueOfReturnValue,
           context,
         );
         // if (overview) {
@@ -2257,7 +2260,7 @@ let writeDiff;
     return prefix;
   };
   const writeUrlDiff = (comparison, context) => {
-    const urlPartComparisons = comparison.urlPartComparisons;
+    const urlPartComparisons = comparison.childComparisons.urlPart;
 
     const writeUrlPart = (urlPartName) => {
       const urlPartComparison = urlPartComparisons[urlPartName];
@@ -2616,7 +2619,7 @@ let writeDiff;
       if (node.canDiffUrlParts) {
         urlDiff = writeUrlDiff(comparison, context);
       } else {
-        urlDiff = writeDiff(comparison.asStringComparison, context);
+        urlDiff = writeDiff(comparison.childComparisons.asString, context);
       }
 
       if (node.isUrl) {
@@ -2811,8 +2814,8 @@ let writeDiff;
     const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
     let valueOfReturnValueComparisonToDisplay =
-      comparison.valueOfReturnValueComparison;
-    let prototypeComparisonToDisplay = comparison.prototypeComparison;
+      comparison.childComparisons.valueOfReturnValue;
+    let prototypeComparisonToDisplay = comparison.childComparisons.prototype;
     let propIndex = 0;
 
     return () => {
@@ -3144,7 +3147,7 @@ const getFocusedCharIndex = (
   comparison,
   // context
 ) => {
-  const charWithDiffIndex = comparison.charComparisons.findIndex(
+  const charWithDiffIndex = comparison.childComparisons.chars.findIndex(
     (charComparison) => {
       return charComparison.counters.overall.any > 0;
     },
