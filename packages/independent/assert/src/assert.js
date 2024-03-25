@@ -122,11 +122,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (comparison.type === "char") {
         return;
       }
+      if (comparison.type === "property_descriptor") {
+        const ownerComparison = comparison.parent.parent;
+        if (!comparison.actualNode && !ownerComparison.actualNode) {
+          return;
+        }
+        if (!comparison.expectedNode && !ownerComparison.expectedNode) {
+          return;
+        }
+      }
       if (shouldIgnoreComparison(comparison)) {
         return;
       }
       causeCounters.total++;
       causeSet.add(comparison);
+    };
+    const removeCause = (comparison) => {
+      causeCounters.total--;
+      causeSet.delete(comparison);
     };
     const onComparisonDisplayed = (comparison) => {
       if (causeSet.has(comparison)) {
@@ -239,17 +252,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           comparison.counters.self.added++;
         }
         if (comparison.removed || comparison.added) {
-          if (comparison.type === "property_descriptor") {
-            if (
-              comparison.parent.parent[
-                actualNode ? "expectedNode" : "actualNode"
-              ]
-            ) {
-              addCause(comparison);
-            }
-          } else {
-            addCause(comparison);
-          }
+          addCause(comparison);
         }
 
         const addSelfDiff = () => {
@@ -699,38 +702,51 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
     const rootComparison = createComparison(actualNode, expectedNode);
     compare(rootComparison);
+    for (const causeComparison of causeSet) {
+      if (causeComparison.type === "property_descriptor") {
+        let current = causeComparison.parent;
+        while (current) {
+          if (current.counters.self.any) {
+            removeCause(causeComparison);
+            break;
+          }
+          current = current.parent;
+        }
+      }
+    }
     if (causeSet.size === 0) {
       return;
     }
 
     let startComparison = rootComparison;
     start_on_max_depth: {
+      if (rootComparison.category) {
+        break start_on_max_depth;
+      }
       const [firstComparisonCausingDiff] = causeSet;
-      if (
-        firstComparisonCausingDiff.depth >= maxDepth &&
-        !rootComparison.category
-      ) {
-        const comparisonsFromRootToTarget = [firstComparisonCausingDiff];
-        let currentComparison = firstComparisonCausingDiff;
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          const parentComparison = currentComparison.parent;
-          if (parentComparison) {
-            comparisonsFromRootToTarget.unshift(parentComparison);
-            currentComparison = parentComparison;
-          } else {
-            break;
-          }
+      if (firstComparisonCausingDiff.depth < maxDepth) {
+        break start_on_max_depth;
+      }
+      const comparisonsFromRootToTarget = [firstComparisonCausingDiff];
+      let currentComparison = firstComparisonCausingDiff;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const parentComparison = currentComparison.parent;
+        if (parentComparison) {
+          comparisonsFromRootToTarget.unshift(parentComparison);
+          currentComparison = parentComparison;
+        } else {
+          break;
         }
-        let startComparisonDepth = firstComparisonCausingDiff.depth - maxDepth;
-        for (const comparison of comparisonsFromRootToTarget) {
-          if (
-            comparison.type === "property_descriptor" &&
-            comparison.depth > startComparisonDepth
-          ) {
-            startComparison = comparison;
-            break;
-          }
+      }
+      let startComparisonDepth = firstComparisonCausingDiff.depth - maxDepth;
+      for (const comparison of comparisonsFromRootToTarget) {
+        if (
+          comparison.type === "property_descriptor" &&
+          comparison.depth > startComparisonDepth
+        ) {
+          startComparison = comparison;
+          break;
         }
       }
     }

@@ -1,5 +1,5 @@
 # property are different
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected have 1 difference:
 
 actual: {
   a: true,
@@ -8,28 +8,6 @@ expect: {
   a: {
     b: true,
   },
-}
-
-# property should be there
-AssertionError: actual and expected have 1 difference:
-
-actual: {
-  a: true,
-}
-expect: {
-  a: true,
-  should_be_there: true,
-}
-
-# property should not be there
-AssertionError: actual and expected have 1 difference:
-
-actual: {
-  a: true,
-  should_not_be_there: true,
-}
-expect: {
-  a: true,
 }
 
 # false should be an object
@@ -43,8 +21,6 @@ expect: {
 # object should be false
 AssertionError: actual and expected are different:
 
-ℹ to improve readability 2 diffs are completely hidden
-
 actual: {
   foo: {
     a: {},
@@ -53,7 +29,7 @@ actual: {
 expect: false
 
 # false should be an object at property
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected have 1 difference:
 
 actual: {
   foo: false,
@@ -65,7 +41,7 @@ expect: {
 }
 
 # object should be false at property
-AssertionError: actual and expected have 2 differences:
+AssertionError: actual and expected have 1 difference:
 
 actual: {
   foo: {
@@ -74,5 +50,42 @@ actual: {
 }
 expect: {
   foo: false,
+}
+
+# object should be false at deep property truncated
+AssertionError: actual and expected are different:
+
+actual: {
+  the: { nesting: { is: {} } },
+  toto: "actual",
+}
+expect: false
+
+# object should be false at deep property
+AssertionError: actual and expected have 2 differences:
+
+ℹ to improve readability 1 diff is completely hidden
+ℹ diff starts at the.nesting.is.very.deep
+
+actual: {
+  in: {
+    this: {
+      one: {
+        foo: {
+          a: true,
+          tata: { test: true, bar: { a: "1" } },
+        },
+      },
+    },
+  },
+}
+expect: {
+  in: {
+    this: {
+      one: {
+        foo: false,
+      },
+    },
+  },
 }
 

@@ -15,38 +15,6 @@ assert({
 
 ![img](<./object/property are different.svg>)
 
-# property should be there
-
-```js
-assert({
-  actual: {
-    a: true,
-  },
-  expected: {
-    a: true,
-    should_be_there: true,
-  },
-});
-```
-
-![img](<./object/property should be there.svg>)
-
-# property should not be there
-
-```js
-assert({
-  actual: {
-    a: true,
-    should_not_be_there: true,
-  },
-  expected: {
-    a: true,
-  },
-});
-```
-
-![img](<./object/property should not be there.svg>)
-
 # false should be an object
 
 ```js
@@ -102,4 +70,72 @@ assert({
 ```
 
 ![img](<./object/object should be false at property.svg>)
+
+# object should be false at deep property truncated
+
+```js
+assert({
+  actual: {
+    the: { nesting: { is: {} } },
+    toto: "actual",
+  },
+  expected: false,
+  maxDepth: 0,
+});
+```
+
+![img](<./object/object should be false at deep property truncated.svg>)
+
+# object should be false at deep property
+
+```js
+assert({
+  actual: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: {
+                      a: true,
+                      tata: { test: true, bar: { a: "1" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    toto: "actual",
+  },
+  expected: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: false,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    toto: "expected",
+  },
+  maxDepth: 5,
+});
+```
+
+![img](<./object/object should be false at deep property.svg>)
 

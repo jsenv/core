@@ -75,68 +75,64 @@ await startSnapshotTesting("object", {
       },
     });
   },
-  // ["object should be false at deep property truncated"]: () => {
-  //   assert({
-  //     actual: {
-  //       the: {
-  //         nesting: {
-  //           is: {},
-  //         },
-  //       },
-  //       toto: "actual",
-  //     },
-  //     expected: false,
-  //     maxDepth: 0,
-  //   });
-  // },
-  // ["object should be false at deep property"]: () => {
-  //   assert({
-  //     actual: {
-  //       the: {
-  //         nesting: {
-  //           is: {
-  //             very: {
-  //               deep: {
-  //                 in: {
-  //                   this: {
-  //                     one: {
-  //                       foo: {
-  //                         a: true,
-  //                         toto: { test: true, bar: { a: "1" } },
-  //                       },
-  //                     },
-  //                   },
-  //                 },
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-  //       toto: "actual",
-  //     },
-  //     expected: {
-  //       the: {
-  //         nesting: {
-  //           is: {
-  //             very: {
-  //               deep: {
-  //                 in: {
-  //                   this: {
-  //                     one: {
-  //                       foo: false,
-  //                     },
-  //                   },
-  //                 },
-  //               },
-  //             },
-  //           },
-  //         },
-  //       },
-  //       toto: "expected",
-  //     },
-  //     maxDepth: 5,
-  //   });
-  // },
+  ["object should be false at deep property truncated"]: () => {
+    assert({
+      actual: {
+        the: { nesting: { is: {} } },
+        toto: "actual",
+      },
+      expected: false,
+      maxDepth: 0,
+    });
+  },
+  ["object should be false at deep property"]: () => {
+    assert({
+      actual: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: {
+                          a: true,
+                          tata: { test: true, bar: { a: "1" } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        toto: "actual",
+      },
+      expected: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: false,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        toto: "expected",
+      },
+      maxDepth: 5,
+    });
+  },
   // ["maxDepth on diff"]: () => {
   //   assert({
   //     actual: {
