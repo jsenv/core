@@ -1074,7 +1074,8 @@ let createValueNode;
         node.isComposite &&
         !node.structureIsKnown &&
         "valueOf" in node.value &&
-        typeof node.value.valueOf === "function"
+        typeof node.value.valueOf === "function" &&
+        node.value.valueOf !== Object.prototype.valueOf
       ) {
         const valueOfReturnValueNode = _createValueNode({
           parent: node,
@@ -2049,7 +2050,7 @@ let writeDiff;
       for (const referenceFromOther of node.referenceFromOthersSet) {
         const referenceFromOtherComparison = referenceFromOther.comparison;
         if (
-          referenceFromOtherComparison &&
+          !referenceFromOtherComparison ||
           shouldIgnoreComparison(referenceFromOtherComparison)
         ) {
           continue;
@@ -2083,21 +2084,16 @@ let writeDiff;
     }
     return compositeDiff;
   };
-  const writePrefix = (
-    comparison,
-    context,
-
-    { overview } = {},
-  ) => {
+  const writePrefix = (comparison, context, { overview } = {}) => {
     const node = comparison[context.resultType];
     let prefix = "";
 
+    const valueOfReturnValueNode = node.childNodes.valueOfReturnValue;
     const displayValueOfInsideConstructor =
-      node.isComposite &&
       // value returned by valueOf() is not the composite itself
-      node.valueOfReturnValueNode &&
-      node.valueOfReturnValueNode.inConstructor &&
-      !shouldIgnoreComparison(comparison, context);
+      valueOfReturnValueNode &&
+      valueOfReturnValueNode.inConstructor &&
+      !shouldIgnoreComparison(comparison);
     let displaySubtype = true;
     if (overview) {
       displaySubtype = true;
@@ -2930,8 +2926,10 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
-      if (!comparison.expectedNode) {
-        debugger;
+      if (comparison.added || comparison.removed) {
+        return context.resultType === "actualNode"
+          ? unexpectedColor
+          : expectedColor;
       }
       if (
         comparison.actualNode.isComposite &&
