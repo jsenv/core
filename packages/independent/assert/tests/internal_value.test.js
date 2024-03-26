@@ -13,7 +13,7 @@ const assert = createAssert();
 // }
 // const signal = (v) => new Signal(v);
 
-await startSnapshotTesting("value_of", {
+await startSnapshotTesting("internal_value", {
   // ["signal string"]: () => {
   //   assert({
   //     actual: {
@@ -26,6 +26,15 @@ await startSnapshotTesting("value_of", {
   //     },
   //   });
   // },
+  ["signal string and string"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+      expected: "ab",
+    });
+  },
   // ["signal array"]: () => {
   //   assert({
   //     actual: {
@@ -38,15 +47,6 @@ await startSnapshotTesting("value_of", {
   //     },
   //   });
   // },
-  ["signal string and string"]: () => {
-    assert({
-      actual: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => "a",
-      },
-      expected: "ab",
-    });
-  },
   // ["valueOf not displayed when return object itself"]: () => {
   //   const actual = { a: true, valueOf: () => actual };
   //   const expected = { a: false, valueOf: () => expected };

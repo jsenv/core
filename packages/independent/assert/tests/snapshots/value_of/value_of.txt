@@ -1,6 +1,0 @@
-# signal string and string
-AssertionError: actual and expected are different:
-
-actual: Signal("a")
-expect: "ab"
-
