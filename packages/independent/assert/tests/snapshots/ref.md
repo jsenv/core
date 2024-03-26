@@ -4,7 +4,10 @@
 const item = { id: "a" };
 assert({
   actual: true,
-  expected: { foo: item, bar: item },
+  expected: {
+    foo: item,
+    bar: item,
+  },
 });
 ```
 

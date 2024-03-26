@@ -204,15 +204,38 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         };
 
-        if (comparison.type === "property") {
-          if (!actualNode) {
+        let ownerComparison;
+        if (comparison.type === "property" || comparison.type === "prototype") {
+          ownerComparison = comparison.parent;
+        } else if (comparison.type === "property_descriptor") {
+          ownerComparison = comparison.parent.parent;
+        }
+
+        if (!actualNode) {
+          if (
+            ownerComparison &&
+            ownerComparison.actualNode &&
+            ownerComparison.actualNode.canHaveProps
+          ) {
             comparison.removed = true;
+          }
+          if (comparison.removed && !comparison.hidden) {
             comparison.counters.self.removed++;
           }
-          if (!expectedNode) {
+        } else if (!expectedNode) {
+          if (
+            ownerComparison &&
+            ownerComparison.expectedNode &&
+            ownerComparison.expectedNode.canHaveProps
+          ) {
             comparison.added = true;
+          }
+          if (comparison.added && !comparison.hidden) {
             comparison.counters.self.added++;
           }
+        }
+
+        if (comparison.type === "property") {
           const propertyDescriptorComparisons =
             comparison.childComparisons.propertyDescriptors;
           const visitPropertyDescriptor = (descriptorName) => {
@@ -277,18 +300,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           return;
         }
 
-        if (!actualNode) {
-          comparison.removed = true;
-          if (!comparison.hidden) {
-            comparison.counters.self.removed++;
-          }
-        }
-        if (!expectedNode) {
-          comparison.added = true;
-          if (!comparison.hidden) {
-            comparison.counters.self.added++;
-          }
-        }
         if (comparison.removed || comparison.added) {
           addCause(comparison);
         }
@@ -1525,17 +1536,17 @@ let writeDiff;
       if (useIndent) {
         let indent = `  `.repeat(relativeDepth);
         if (selfContext.signs) {
-          if (comparison.removed) {
+          if (selfContext.removed) {
             if (selfContext.resultType === "expectedNode") {
               diff += ANSI.color(removedSign, removedSignColor);
               indent = indent.slice(1);
             }
-          } else if (comparison.added) {
+          } else if (selfContext.added) {
             if (selfContext.resultType === "actualNode") {
               diff += ANSI.color(addedSign, addedSignColor);
               indent = indent.slice(1);
             }
-          } else if (comparison.modified) {
+          } else if (selfContext.modified) {
             if (selfContext.resultType === "actualNode") {
               diff += ANSI.color(unexpectedSign, unexpectedSignColor);
               indent = indent.slice(1);
@@ -2932,7 +2943,7 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
-      if (comparison.added || comparison.removed) {
+      if (!comparison.actualNode || !comparison.expectedNode) {
         return context.resultType === "actualNode"
           ? unexpectedColor
           : expectedColor;
