@@ -11,16 +11,15 @@ await startSnapshotTesting("array", {
       expected: [false],
     });
   },
+  /* eslint-disable no-sparse-arrays */
   ["undefined vs empty"]: () => {
     assert({
-      // eslint-disable-next-line no-sparse-arrays
       actual: [,],
       expected: [undefined],
     });
   },
   ["empty added"]: () => {
     assert({
-      // eslint-disable-next-line no-sparse-arrays
       actual: [,],
       expected: [],
     });
@@ -28,10 +27,10 @@ await startSnapshotTesting("array", {
   ["empty removed"]: () => {
     assert({
       actual: [],
-      // eslint-disable-next-line no-sparse-arrays
       expected: [,],
     });
   },
+  /* eslint-enable no-sparse-arrays */
   ["object expected, array received"]: () => {
     assert({
       actual: [],
