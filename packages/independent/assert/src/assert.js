@@ -1495,6 +1495,7 @@ let writeDiff;
 
     let diff = "";
     let displayValue = true;
+
     let endSeparator;
     const delimitersColor = getDelimitersColor(selfContext, comparison);
     const isNestedValue =
@@ -1505,8 +1506,8 @@ let writeDiff;
       node.type === "as_string";
 
     if (isNestedValue) {
-      const relativeDepth = node.depth + selfContext.initialDepth;
       let useIndent;
+      const relativeDepth = node.depth + selfContext.initialDepth;
       if (context.collapsed) {
         useIndent = false;
         selfContext.insideOverview = false;
@@ -1728,7 +1729,6 @@ let writeDiff;
       reference: {
         // referencing an other composite
         if (node.reference) {
-          const delimitersColor = getDelimitersColor(selfContext, comparison);
           diff += ANSI.color(
             `<ref #${selfContext.getDisplayedId(node.reference.id)}>`,
             delimitersColor,
@@ -1749,7 +1749,6 @@ let writeDiff;
           break;
         }
         if (referenceFromOtherDisplayed) {
-          const delimitersColor = getDelimitersColor(selfContext, comparison);
           diff += ANSI.color(
             `<ref #${selfContext.getDisplayedId(
               referenceFromOtherDisplayed.reference.id,
@@ -1765,7 +1764,6 @@ let writeDiff;
         const prefixWithOverview = writePrefix(comparison, selfContext, {
           overview: true,
         });
-        const delimitersColor = getDelimitersColor(selfContext, comparison);
         const bracketColor = getBracketColor(selfContext, comparison);
         const valueColor = getValueColor(selfContext, comparison);
         const {
@@ -1904,8 +1902,6 @@ let writeDiff;
       ) {
         insideContext.modified = false;
       }
-      const delimitersColor = getDelimitersColor(selfContext, comparison);
-
       const writeNestedValueDiff = (nestedComparison) => {
         let nestedValueDiff = writeDiff(nestedComparison, insideContext);
         if (nestedComparison !== context.startComparison) {
@@ -2186,7 +2182,8 @@ let writeDiff;
     }
 
     if (endSeparator) {
-      diff += ANSI.color(endSeparator, delimitersColor);
+      const endSeparatorColor = getDelimitersColor(context, comparison);
+      diff += ANSI.color(endSeparator, endSeparatorColor);
     }
     return diff;
   };

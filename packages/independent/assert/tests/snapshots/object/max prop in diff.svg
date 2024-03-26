@@ -64,7 +64,7 @@
         <text x="60.41" y="128.55" fill="#cd5555">3 props</text>
         <text x="127.62" y="128.55" fill="#cd5555">&#x2193;</text>
         <text x="26.8" y="147.55" fill="#cd5555">}</text>
-        <text x="35.2" y="147.55" fill="#cd5555">,</text>
+        <text x="35.2" y="147.55" fill="#7f7f7f">,</text>
         <text x="10" y="166.55" fill="#7f7f7f">}</text>
         <text x="10" y="185.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="185.55" fill="#7f7f7f">:</text>
@@ -72,7 +72,7 @@
         <text x="26.8" y="204.55" fill="#7f7f7f">foo</text>
         <text x="52.01" y="204.55" fill="#7f7f7f">:</text>
         <text x="68.81" y="204.55" fill="#11bc79">false</text>
-        <text x="110.82" y="204.55" fill="#11bc79">,</text>
+        <text x="110.82" y="204.55" fill="#7f7f7f">,</text>
         <text x="10" y="223.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

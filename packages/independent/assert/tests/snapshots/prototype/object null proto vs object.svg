@@ -52,7 +52,7 @@
         <text x="26.8" y="71.55" fill="#7f7f7f">__proto__</text>
         <text x="102.42" y="71.55" fill="#7f7f7f">:</text>
         <text x="119.22" y="71.55" fill="#cd5555">null</text>
-        <text x="152.82" y="71.55" fill="#cd5555">,</text>
+        <text x="152.82" y="71.55" fill="#7f7f7f">,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
@@ -60,7 +60,7 @@
         <text x="26.8" y="128.55" fill="#7f7f7f">__proto__</text>
         <text x="102.42" y="128.55" fill="#7f7f7f">:</text>
         <text x="119.22" y="128.55" fill="#11bc79">Object.prototype</text>
-        <text x="253.64" y="128.55" fill="#11bc79">,</text>
+        <text x="253.64" y="128.55" fill="#7f7f7f">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

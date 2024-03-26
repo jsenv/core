@@ -90,7 +90,7 @@
         <text x="388.06" y="223.55" fill="#cd5555">}</text>
         <text x="396.46" y="223.55" fill="#cd5555">,</text>
         <text x="77.21" y="242.55" fill="#cd5555">}</text>
-        <text x="85.61" y="242.55" fill="#cd5555">,</text>
+        <text x="85.61" y="242.55" fill="#7f7f7f">,</text>
         <text x="60.41" y="261.55" fill="#7f7f7f">}</text>
         <text x="68.81" y="261.55" fill="#7f7f7f">,</text>
         <text x="43.61" y="280.55" fill="#7f7f7f">}</text>
@@ -113,7 +113,7 @@
         <text x="77.21" y="413.55" fill="#7f7f7f">foo</text>
         <text x="102.42" y="413.55" fill="#7f7f7f">:</text>
         <text x="119.22" y="413.55" fill="#11bc79">false</text>
-        <text x="161.22" y="413.55" fill="#11bc79">,</text>
+        <text x="161.22" y="413.55" fill="#7f7f7f">,</text>
         <text x="60.41" y="432.55" fill="#7f7f7f">}</text>
         <text x="68.81" y="432.55" fill="#7f7f7f">,</text>
         <text x="43.61" y="451.55" fill="#7f7f7f">}</text>
