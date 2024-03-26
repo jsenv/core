@@ -378,8 +378,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           !actualNode ||
           !expectedNode;
         let ignorePrototypeDiff = options.ignoreDiff;
-        let ignoreValueOfReturnValueDiff = compareAsStrings;
-        let ignoreAsStringDiff = !compareAsStrings;
+        let ignoreInternalValueDiff = compareAsStrings;
 
         reference: {
           if (ignoreReferenceDiff) {
@@ -464,45 +463,49 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               prototypeComparison.hidden = true;
             }
           }
-          value_of_return_value: {
-            if (ignoreValueOfReturnValueDiff) {
-              break value_of_return_value;
+          internal_value: {
+            if (ignoreInternalValueDiff) {
+              break internal_value;
             }
-            const actualValueOfReturnValueNode = actualNode
-              ? actualNode.childNodes.valueOfReturnValue
-              : null;
-            const expectedValueOfReturnValueNode = expectedNode
-              ? expectedNode.childNodes.valueOfReturnValue
-              : null;
             if (
-              !actualValueOfReturnValueNode &&
-              !expectedValueOfReturnValueNode
+              actualNode &&
+              actualNode.isPrimitive &&
+              (!expectedNode || expectedNode.isPrimitive)
             ) {
-              break value_of_return_value;
+              break internal_value;
             }
-            const valueOfReturnValueComparison = createComparison(
-              actualValueOfReturnValueNode,
-              expectedValueOfReturnValueNode,
+            if (
+              expectedNode &&
+              expectedNode.isPrimitive &&
+              (!actualNode || actualNode.isPrimitive)
+            ) {
+              break internal_value;
+            }
+
+            const actualInternalValueNode = actualNode
+              ? actualNode.isComposite
+                ? actualNode.childNodes.internalValue
+                : actualNode
+              : null;
+            const expectedInternalValueNode = expectedNode
+              ? expectedNode.isComposite
+                ? expectedNode.childNodes.internalValue
+                : expectedNode
+              : null;
+            if (!actualInternalValueNode && !expectedInternalValueNode) {
+              break internal_value;
+            }
+            const internalValueComparison = createComparison(
+              actualInternalValueNode,
+              expectedInternalValueNode,
+              { fromInternalValue: true },
             );
-            if (
-              actualValueOfReturnValueNode &&
-              expectedValueOfReturnValueNode
-            ) {
-              // actual parent or expected parent is a composite
-              // and the other is a primitive
-              // but when they hold the same value in the end
-              const actualInternalOrSelfNode = comparison.actualNode.isComposite
-                ? actualValueOfReturnValueNode
-                : comparison.actualNode;
-              const expectedInternalOrSelfNode = comparison.expectedNode
-                .isComposite
-                ? expectedValueOfReturnValueNode
-                : comparison.expectedNode;
+            if (actualInternalValueNode && expectedInternalValueNode) {
               if (
-                actualInternalOrSelfNode.subtype ===
-                expectedInternalOrSelfNode.subtype
+                actualInternalValueNode.subtype ===
+                expectedInternalValueNode.subtype
               ) {
-                valueOfReturnValueComparison.hidden = true;
+                internalValueComparison.hidden = true;
               } else {
                 // value of differ but prototype is different so it's expected
                 const prototypeComparison =
@@ -511,49 +514,30 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   prototypeComparison &&
                   prototypeComparison.counters.overall.any > 0
                 ) {
-                  valueOfReturnValueComparison.hidden = true;
+                  internalValueComparison.hidden = true;
                 }
               }
             } else if (
-              actualValueOfReturnValueNode &&
-              !expectedValueOfReturnValueNode
+              actualInternalValueNode &&
+              actualInternalValueNode.origin === "valueOf()" &&
+              !expectedInternalValueNode
             ) {
               // show only if it's a custom valueOf with a custom behaviour
               // (something else than returning composite itself)
-              valueOfReturnValueComparison.hidden =
-                actualValueOfReturnValueNode.value === actualNode.value;
+              internalValueComparison.hidden =
+                actualInternalValueNode.value === actualNode.value;
             } else if (
-              !actualValueOfReturnValueNode &&
-              expectedValueOfReturnValueNode
+              !actualInternalValueNode &&
+              expectedInternalValueNode &&
+              expectedInternalValueNode.origin === "valueOf()"
             ) {
               // show only if it's a custom valueOf with a custom behaviour
               // (something else than returning composite itself)
-              valueOfReturnValueComparison.hidden =
-                expectedValueOfReturnValueNode.value === expectedNode.value;
+              internalValueComparison.hidden =
+                expectedInternalValueNode.value === expectedNode.value;
             }
-            comparison.childComparisons.valueOfReturnValue =
-              valueOfReturnValueComparison;
-            compareInside(valueOfReturnValueComparison);
-          }
-          as_string: {
-            if (ignoreAsStringDiff) {
-              break as_string;
-            }
-            const actualAsStringNode = actualNode
-              ? actualNode.childNodes.asString
-              : null;
-            const expectedAsStringNode = expectedNode
-              ? expectedNode.childNodes.asString
-              : null;
-            if (!actualAsStringNode && !expectedAsStringNode) {
-              break as_string;
-            }
-            const asStringComparison = createComparison(
-              actualAsStringNode,
-              expectedAsStringNode,
-            );
-            comparison.childComparisons.asString = asStringComparison;
-            compareInside(asStringComparison);
+            comparison.childComparisons.internalValue = internalValueComparison;
+            compareInside(internalValueComparison);
           }
 
           string: {
@@ -758,12 +742,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       doCompare();
       settleCounters(comparison);
     };
-    const createComparison = (actualNode, expectedNode) => {
+    const createComparison = (
+      actualNode,
+      expectedNode,
+      { fromInternalValue } = {},
+    ) => {
       const leftOrRightValueNode = actualNode || expectedNode;
       const parent = leftOrRightValueNode.parent
         ? leftOrRightValueNode.parent.comparison
         : null;
       if (parent && parent.isSetComparison) {
+      } else if (fromInternalValue) {
       } else if (actualNode && actualNode.comparison) {
         throw new Error("nope");
       } else if (expectedNode && expectedNode.comparison) {
@@ -772,7 +761,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       const comparison = {
         parent,
-        type: leftOrRightValueNode.type,
+        type: fromInternalValue ? "internal_value" : leftOrRightValueNode.type,
         depth: leftOrRightValueNode.depth,
         path: leftOrRightValueNode.path,
         property: leftOrRightValueNode.property,
@@ -810,8 +799,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         category: false,
         childComparisons: {
           prototype: null,
-          valueOfReturnValue: null,
-          asString: null,
+          internalValue: null,
           properties: {},
           propertyDescriptors: {},
           indexedValues: [],
@@ -822,11 +810,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       if (actualNode) {
-        actualNode.comparison = comparison;
+        if (fromInternalValue && actualNode.isPrimitive) {
+        } else {
+          actualNode.comparison = comparison;
+        }
       }
       if (expectedNode) {
-        expectedNode.comparison = comparison;
+        if (fromInternalValue && expectedNode.isPrimitive) {
+        } else {
+          expectedNode.comparison = comparison;
+        }
       }
+
       return comparison;
     };
 
@@ -1105,26 +1100,26 @@ let createValueNode;
           isString && type === "line";
         const canHaveProps = composite;
         let inConstructor;
-        if (type === "value_of_return_value") {
-          // we display in constructor if parent subtype is not Object nor Array
-          // (if there is a constructor displayed)
-          const parentSubtype = parent.subtype;
-          if (parentSubtype !== "Object" && parentSubtype !== "Array") {
-            inConstructor = true;
+        if (type === "internal_value") {
+          if (origin === "valueOf()") {
+            // we display in constructor if parent subtype is not Object nor Array
+            // (if there is a constructor displayed)
+            const parentSubtype = parent.subtype;
+            if (parentSubtype !== "Object" && parentSubtype !== "Array") {
+              inConstructor = true;
+            }
+          } else if (origin === "toString()") {
+            if (parent.isUrl || !composite) {
+              inConstructor = true;
+            }
           }
         }
-        if (type === "as_string") {
-          if (parent.isUrl || !composite) {
-            inConstructor = true;
-          }
-        }
+
         let depth;
         if (parent) {
           if (type === "property") {
             depth = parent.depth;
-          } else if (type === "value_of_return_value" && inConstructor) {
-            depth = parent.depth;
-          } else if (type === "as_string" && inConstructor) {
+          } else if (type === "internal_value" && inConstructor) {
             depth = parent.depth;
           } else if (type === "url_part") {
             depth = parent.depth;
@@ -1165,8 +1160,7 @@ let createValueNode;
 
       const childNodes = {
         prototype: null,
-        valueOfReturnValue: null,
-        asString: null,
+        internalValue: null,
         properties: {},
         propertyDescriptors: {},
         indexedValues: [],
@@ -1186,7 +1180,7 @@ let createValueNode;
         });
         childNodes.prototype = prototypeNode;
       }
-      // valueOf()
+      // internal value (valueOf(), toString())
       if (
         node.isComposite &&
         !node.structureIsKnown &&
@@ -1194,29 +1188,25 @@ let createValueNode;
         typeof node.value.valueOf === "function" &&
         node.value.valueOf !== Object.prototype.valueOf
       ) {
-        const valueOfReturnValueNode = _createValueNode({
+        const internalValueNode = _createValueNode({
           parent: node,
           path: path.append("valueOf()"),
-          type: "value_of_return_value",
+          type: "internal_value",
           value: node.value.valueOf(),
+          origin: "valueOf()",
         });
-        childNodes.valueOfReturnValue = valueOfReturnValueNode;
-      }
-      // toString()
-      if (
-        node.isComposite &&
-        !node.structureIsKnown &&
-        "toString" in node.value &&
-        typeof node.value.toString === "function"
-      ) {
-        const asStringNode = _createValueNode({
+        childNodes.internalValue = internalValueNode;
+      } else if (node.isUrl) {
+        const internalValueNode = _createValueNode({
           parent: node,
-          path: path.append("__string__"),
-          type: "as_string",
-          value: String(node.value),
+          path: path.append("toString()"),
+          type: "internal_value",
+          value: node.value.toString(),
+          origin: "toString()",
         });
-        childNodes.asString = asStringNode;
+        childNodes.internalValue = internalValueNode;
       }
+
       // properties
       if (node.isComposite && !node.structureIsKnown) {
         const propertyNodes = {};
@@ -1262,8 +1252,16 @@ let createValueNode;
           //   }
           // }
           if (
-            node.childNodes.valueOfReturnValue &&
-            propertyName === "valueOf"
+            propertyName === "valueOf" &&
+            node.childNodes.internalValue &&
+            node.childNodes.internalValue.origin === "valueOf()"
+          ) {
+            return true;
+          }
+          if (
+            propertyName === "toString" &&
+            node.childNodes.internalValue &&
+            node.childNodes.internalValue.origin === "toString()"
           ) {
             return true;
           }
@@ -1535,12 +1533,24 @@ let writeDiff;
 
     let endSeparator;
     const delimitersColor = getDelimitersColor(selfContext, comparison);
-    const isNestedValue =
+    let isNestedValue =
       node.type === "indexed_value" ||
       node.type === "property_descriptor" ||
       node.type === "prototype" ||
-      node.type === "value_of_return_value" ||
-      node.type === "as_string";
+      node.type === "internal_value";
+    let property =
+      node.type === "property_descriptor"
+        ? node.property
+        : node.type === "prototype"
+          ? "__proto__" // "[[Prototype]]"?
+          : node.type === "internal_value"
+            ? node.origin
+            : "";
+
+    if (node.type === "internal_value" && node.inConstructor) {
+      isNestedValue = false;
+      property = "";
+    }
 
     if (isNestedValue) {
       let useIndent;
@@ -1582,16 +1592,6 @@ let writeDiff;
         diff += indent;
       }
 
-      const property =
-        node.type === "property_descriptor"
-          ? node.property
-          : node.type === "prototype"
-            ? "__proto__" // "[[Prototype]]"?
-            : node.type === "value_of_return_value"
-              ? "valueOf()"
-              : node.type === "to_string_return_value"
-                ? "toString()"
-                : "";
       if (property && comparison !== selfContext.startComparison) {
         let keyColor;
         if (context.added) {
@@ -1727,11 +1727,6 @@ let writeDiff;
         break value;
       }
       if (node.isPrimitive && !node.isUrlString) {
-        const asStringComparison = comparison.childComparisons.asString;
-        if (asStringComparison && node.type === "as_string") {
-          diff += writeLinesDiff(asStringComparison, selfContext);
-          break value;
-        }
         if (node.canHaveLines) {
           diff += writeLinesDiff(comparison, selfContext);
           break value;
@@ -1914,10 +1909,6 @@ let writeDiff;
 
       // composite expanded
       if (node.isString && !node.isUrlString && node.canHaveLines) {
-        diff += writeLinesDiff(comparison, selfContext);
-        break value;
-      }
-      if (node.type === "as_string") {
         diff += writeLinesDiff(comparison, selfContext);
         break value;
       }
@@ -2150,11 +2141,6 @@ let writeDiff;
         let urlDiff;
         if (node.canDiffUrlParts) {
           urlDiff = writeUrlDiff(comparison, selfContext);
-        } else {
-          urlDiff = writeDiff(
-            comparison.childComparisons.asString,
-            selfContext,
-          );
         }
         if (node.isUrl) {
           let parenthesisColor;
@@ -2234,6 +2220,108 @@ let writeDiff;
     return diff;
   };
 
+  const writePrefix = (comparison, context, { overview } = {}) => {
+    const node = comparison[context.resultType];
+    let prefix = "";
+
+    const internalValueNode = node.childNodes.internalValue;
+    const displayInternalValueInsideConstructor =
+      node.composite &&
+      internalValueNode &&
+      internalValueNode.inConstructor &&
+      // value returned by valueOf() is not the composite itself
+      !comparison.childComparisons.internalValue.hidden;
+    let displaySubtype = true;
+    if (overview) {
+      if (node.subtype === "Object" && node.keys.length === 0) {
+        displaySubtype = false;
+      } else {
+        displaySubtype = true;
+      }
+    } else if (node.subtype === "Object" || node.subtype === "Array") {
+      displaySubtype = false;
+    } else if (node.type === "internal_value") {
+      const parentSubtype = node.parent[context.resultType].subtype;
+      if (
+        parentSubtype === "String" ||
+        parentSubtype === "Number" ||
+        parentSubtype === "Boolean"
+      ) {
+        displaySubtype = false;
+      }
+    }
+
+    const delimitersColor = getDelimitersColor(context, comparison);
+
+    if (displaySubtype) {
+      const subtypeColor = getSubtypeColor(context, comparison);
+      prefix += ANSI.color(node.subtype, subtypeColor);
+    }
+    if (node.isArray) {
+      if (!overview) {
+        return prefix;
+      }
+      prefix += ANSI.color(`(`, delimitersColor);
+      const lengthColor = getConstructorArgColor(context, comparison);
+      prefix += ANSI.color(node.value.length, lengthColor);
+      prefix += ANSI.color(`)`, delimitersColor);
+      return prefix;
+    }
+    if (node.isString) {
+      if (!overview) {
+        return prefix;
+      }
+      prefix += ANSI.color(`(`, delimitersColor);
+      const lengthColor = getConstructorArgColor(context, comparison);
+      prefix += ANSI.color(node.childNodes.chars.length, lengthColor);
+      prefix += ANSI.color(`)`, delimitersColor);
+      return prefix;
+    }
+    if (node.isComposite) {
+      let insideConstructor = "";
+      const prefixWithNew =
+        node.subtype === "String" ||
+        node.subtype === "Boolean" ||
+        node.subtype === "Number";
+      if (prefixWithNew) {
+        prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
+      }
+
+      let openBracket = "(";
+      let closeBracket = ")";
+
+      if (displayInternalValueInsideConstructor) {
+        const internalValueComparison =
+          comparison.childComparisons.internalValue;
+        insideConstructor = writeDiff(internalValueComparison, context);
+        // if (overview) {
+        //   insideConstructor = writeDiff(node.valueOfReturnValue, context);
+        // } else {
+        //   insideConstructor = writeValueDiff(node.valueOfReturnValue, context);
+        // }
+      } else if (overview) {
+        const constructorArgColor = getConstructorArgColor(context, comparison);
+        if (node.isSet) {
+          insideConstructor = ANSI.color(
+            node.indexedValueNodes.length,
+            constructorArgColor,
+          );
+        } else if (displaySubtype) {
+          insideConstructor = ANSI.color(node.keys.length, constructorArgColor);
+        } else {
+          prefix += ANSI.color("{", delimitersColor);
+          prefix += ANSI.color("}", delimitersColor);
+        }
+      }
+      if (insideConstructor) {
+        prefix += ANSI.color(openBracket, delimitersColor);
+        prefix += insideConstructor;
+        prefix += ANSI.color(closeBracket, delimitersColor);
+      }
+      return prefix;
+    }
+    return prefix;
+  };
   const writeOneLineDiff = (lineComparison, context) => {
     let { focusedCharIndex } = context;
 
@@ -2244,15 +2332,13 @@ let writeDiff;
     const charAfterArray = [];
 
     let remainingWidth = context.maxColumns - context.textIndent;
-    const focusedCharComparison = charComparisons[focusedCharIndex];
-    let focusedCharDiff;
-    if (focusedCharComparison) {
-      focusedCharDiff = writeDiff(focusedCharComparison, context);
-      remainingWidth -= stringWidth(focusedCharDiff);
-    } else {
-      focusedCharDiff = "";
-      focusedCharIndex = charNodes.length === 1 ? -1 : charNodes.length - 1;
+    let focusedCharComparison = charComparisons[focusedCharIndex];
+    if (!focusedCharComparison) {
+      focusedCharIndex = charNodes.length - 1;
+      focusedCharComparison = charComparisons[focusedCharIndex];
     }
+    const focusedCharDiff = writeDiff(focusedCharComparison, context);
+    remainingWidth -= stringWidth(focusedCharDiff);
 
     const leftOverflowBoilerplateWidth = "…".length;
     const rightOverflowBoilerplateWidth = "…".length;
@@ -2374,7 +2460,7 @@ let writeDiff;
       if (comparison.quote) {
         let quoteColor;
         let comparisonForQuotes = comparison;
-        if (comparison.type === "as_string") {
+        if (comparison.type === "internal_value") {
           comparisonForQuotes = comparison.parent;
         }
         if (context.removed) {
@@ -2630,108 +2716,6 @@ let writeDiff;
     '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
     '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
   ];
-  const writePrefix = (comparison, context, { overview } = {}) => {
-    const node = comparison[context.resultType];
-    let prefix = "";
-
-    const valueOfReturnValueNode = node.childNodes.valueOfReturnValue;
-    const displayValueOfInsideConstructor =
-      // value returned by valueOf() is not the composite itself
-      valueOfReturnValueNode &&
-      valueOfReturnValueNode.inConstructor &&
-      !comparison.hidden;
-    let displaySubtype = true;
-    if (overview) {
-      if (node.subtype === "Object" && node.keys.length === 0) {
-        displaySubtype = false;
-      } else {
-        displaySubtype = true;
-      }
-    } else if (node.subtype === "Object" || node.subtype === "Array") {
-      displaySubtype = false;
-    } else if (node.type === "value_of_return_value") {
-      const parentSubtype = node.parent[context.resultType].subtype;
-      if (
-        parentSubtype === "String" ||
-        parentSubtype === "Number" ||
-        parentSubtype === "Boolean"
-      ) {
-        displaySubtype = false;
-      }
-    }
-
-    const delimitersColor = getDelimitersColor(context, comparison);
-
-    if (displaySubtype) {
-      const subtypeColor = getSubtypeColor(context, comparison);
-      prefix += ANSI.color(node.subtype, subtypeColor);
-    }
-    if (node.isArray) {
-      if (!overview) {
-        return prefix;
-      }
-      prefix += ANSI.color(`(`, delimitersColor);
-      const lengthColor = getConstructorArgColor(context, comparison);
-      prefix += ANSI.color(node.value.length, lengthColor);
-      prefix += ANSI.color(`)`, delimitersColor);
-      return prefix;
-    }
-    if (node.isString) {
-      if (!overview) {
-        return prefix;
-      }
-      prefix += ANSI.color(`(`, delimitersColor);
-      const lengthColor = getConstructorArgColor(context, comparison);
-      prefix += ANSI.color(node.childNodes.chars.length, lengthColor);
-      prefix += ANSI.color(`)`, delimitersColor);
-      return prefix;
-    }
-    if (node.isComposite) {
-      let insideConstructor = "";
-      const prefixWithNew =
-        node.subtype === "String" ||
-        node.subtype === "Boolean" ||
-        node.subtype === "Number";
-      if (prefixWithNew) {
-        prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
-      }
-
-      let openBracket = "(";
-      let closeBracket = ")";
-
-      if (displayValueOfInsideConstructor) {
-        insideConstructor = writeDiff(
-          comparison.childComparisons.valueOfReturnValue,
-          context,
-        );
-        // if (overview) {
-        //   insideConstructor = writeDiff(node.valueOfReturnValue, context);
-        // } else {
-        //   insideConstructor = writeValueDiff(node.valueOfReturnValue, context);
-        // }
-      } else if (overview) {
-        const constructorArgColor = getConstructorArgColor(context, comparison);
-        if (node.isSet) {
-          insideConstructor = ANSI.color(
-            node.indexedValueNodes.length,
-            constructorArgColor,
-          );
-        } else if (displaySubtype) {
-          insideConstructor = ANSI.color(node.keys.length, constructorArgColor);
-        } else {
-          prefix += ANSI.color("{", delimitersColor);
-          prefix += ANSI.color("}", delimitersColor);
-        }
-      }
-      if (insideConstructor) {
-        prefix += ANSI.color(openBracket, delimitersColor);
-        prefix += insideConstructor;
-        prefix += ANSI.color(closeBracket, delimitersColor);
-      }
-      return prefix;
-    }
-    return prefix;
-  };
   const writeUrlDiff = (comparison, context) => {
     const urlPartComparisons = comparison.childComparisons.urlPart;
 
@@ -2931,23 +2915,19 @@ let writeDiff;
     const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
     const propertyComparisons = comparison.childComparisons.properties;
-    let valueOfReturnValueComparisonToDisplay =
-      comparison.childComparisons.valueOfReturnValue;
+    let internalValueToDisplay = comparison.childComparisons.internalValue;
     let prototypeComparisonToDisplay = comparison.childComparisons.prototype;
     let propIndex = 0;
 
     return () => {
-      if (valueOfReturnValueComparisonToDisplay) {
-        if (
-          !valueOfReturnValueComparisonToDisplay[context.resultType]
-            .inConstructor
-        ) {
-          valueOfReturnValueComparisonToDisplay = null;
-        } else if (valueOfReturnValueComparisonToDisplay.hidden) {
-          valueOfReturnValueComparisonToDisplay = null;
+      if (internalValueToDisplay) {
+        if (internalValueToDisplay[context.resultType].inConstructor) {
+          internalValueToDisplay = null;
+        } else if (internalValueToDisplay.hidden) {
+          internalValueToDisplay = null;
         } else {
-          let nestedComparison = valueOfReturnValueComparisonToDisplay;
-          valueOfReturnValueComparisonToDisplay = null;
+          let nestedComparison = internalValueToDisplay;
+          internalValueToDisplay = null;
           return nestedComparison;
         }
       }
