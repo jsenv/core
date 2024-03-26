@@ -1059,7 +1059,10 @@ let createValueNode;
           wellKnownId = getWellKnownId(value);
           if (composite) {
             subtype = getSubtype(value);
-            reference = getReference(value, node);
+            reference =
+              wellKnownId || type === "prototype"
+                ? null
+                : getReference(value, node);
             visitPrototypes(value, (proto) => {
               if (proto.constructor) {
                 if (proto.constructor.name === "Array") {
