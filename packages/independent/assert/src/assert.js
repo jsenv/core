@@ -194,16 +194,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const doCompare = () => {
         const { actualNode, expectedNode } = comparison;
 
-        const compareInside = (insideComparison, insideOptions = {}) => {
-          compare(insideComparison, { ...options, ...insideOptions });
-          if (insideComparison.counters.overall.any) {
-            appendCounters(
-              comparison.counters.inside,
-              insideComparison.counters.overall,
-            );
-          }
-        };
-
         let ownerComparison;
         if (
           comparison.type === "property" ||
@@ -215,27 +205,55 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           ownerComparison = comparison.parent.parent;
         }
 
-        if (!actualNode) {
-          if (
-            ownerComparison &&
-            ownerComparison.actualNode &&
-            ownerComparison.actualNode.canHaveProps
-          ) {
-            comparison.removed = true;
+        const compareInside = (insideComparison, insideOptions = {}) => {
+          compare(insideComparison, { ...options, ...insideOptions });
+          if (insideComparison.counters.overall.any) {
+            appendCounters(
+              comparison.counters.inside,
+              insideComparison.counters.overall,
+            );
           }
-          if (comparison.removed && !comparison.hidden) {
-            comparison.counters.self.removed++;
+        };
+
+        if (ownerComparison) {
+          if (ownerComparison.isSetComparison) {
+            if (actualNode.name === "actual") {
+              const added = !ownerComparison.expectedNode.value.has(
+                expectedNode.value,
+              );
+              if (added) {
+                comparison.added = true;
+              }
+            } else {
+              const removed = !ownerComparison.actualNode.value.has(
+                actualNode.value,
+              );
+              if (removed) {
+                comparison.removed = true;
+              }
+            }
+          } else if (!actualNode) {
+            if (
+              ownerComparison.actualNode &&
+              ownerComparison.actualNode.canHaveProps
+            ) {
+              comparison.removed = true;
+            }
+          } else if (!expectedNode) {
+            if (
+              ownerComparison.expectedNode &&
+              ownerComparison.expectedNode.canHaveProps
+            ) {
+              comparison.added = true;
+            }
           }
-        } else if (!expectedNode) {
-          if (
-            ownerComparison &&
-            ownerComparison.expectedNode &&
-            ownerComparison.expectedNode.canHaveProps
-          ) {
-            comparison.added = true;
-          }
-          if (comparison.added && !comparison.hidden) {
-            comparison.counters.self.added++;
+
+          if (!comparison.hidden) {
+            if (comparison.removed) {
+              comparison.counters.self.removed++;
+            } else if (comparison.added) {
+              comparison.counters.self.added++;
+            }
           }
         }
 
@@ -635,6 +653,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const expectedIndexedValueNodes = expectedNode
               ? expectedNode.childNodes.indexedValues || []
               : [];
+            const indexedValueComparisons =
+              comparison.childComparisons.indexedValues;
 
             if (
               actualNode &&
@@ -642,33 +662,33 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               expectedNode &&
               expectedNode.isSet
             ) {
-              const visitSetValue = (indexedValueNode) => {
-                const index = indexedValueNode.index;
+              comparison.isSetComparison = true;
+              let index = 0;
+              const visitSetValue = (
+                actualIndexedValueNode,
+                expectedIndexedValueNode,
+              ) => {
                 const indexedValueComparison = createComparison(
-                  actualNode.value.has(indexedValueNode.value)
-                    ? actualIndexedValueNodes[index]
-                    : null,
-                  expectedNode.value.has(indexedValueNode.value)
-                    ? expectedIndexedValueNodes[index]
-                    : null,
+                  actualIndexedValueNode,
+                  expectedIndexedValueNode,
                 );
-                comparison.indexedValueComparisons[index] =
-                  indexedValueComparison;
-                compareInside(indexedValueComparison, {
-                  ignoreDiff: true,
-                });
+                indexedValueComparison.index = index;
+                indexedValueComparisons[index] = indexedValueComparison;
+                index++;
+                compareInside(indexedValueComparison, { ignoreDiff: true });
               };
               for (const actualIndexedValueNode of actualIndexedValueNodes) {
-                visitSetValue(actualIndexedValueNode);
+                visitSetValue(actualIndexedValueNode, actualIndexedValueNode);
               }
               for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
-                visitSetValue(expectedIndexedValueNode);
+                visitSetValue(
+                  expectedIndexedValueNode,
+                  expectedIndexedValueNode,
+                );
               }
               break indexed_values;
             }
 
-            const indexedValueComparisons =
-              comparison.childComparisons.indexedValues;
             const visitIndexedValue = (indexedValueNode) => {
               const index = indexedValueNode.index;
               const actualIndexedValueNode = actualIndexedValueNodes[index];
@@ -739,17 +759,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       settleCounters(comparison);
     };
     const createComparison = (actualNode, expectedNode) => {
-      if (actualNode && actualNode.comparison) {
-        throw new Error("nope");
-      }
-      if (expectedNode && expectedNode.comparison) {
-        throw new Error("nope");
-      }
-
       const leftOrRightValueNode = actualNode || expectedNode;
       const parent = leftOrRightValueNode.parent
         ? leftOrRightValueNode.parent.comparison
         : null;
+      if (parent && parent.isSetComparison) {
+      } else if (actualNode && actualNode.comparison) {
+        throw new Error("nope");
+      } else if (expectedNode && expectedNode.comparison) {
+        throw new Error("nope");
+      }
+
       const comparison = {
         parent,
         type: leftOrRightValueNode.type,
@@ -1014,6 +1034,7 @@ let createValueNode;
   createValueNode = ({ name, value, getReference }) => {
     const _createValueNode = ({ parent, path, type, value, origin }) => {
       const node = {
+        name,
         id: nodeId++,
         path,
       };
@@ -1306,22 +1327,34 @@ let createValueNode;
       if (node.canHaveIndexedValues && !node.structureIsKnown) {
         const indexedValueNodes = [];
 
-        const indexedValues = node.isSet
-          ? Array.from(node.value.values())
-          : node.value;
-        let index = 0;
-        while (index < indexedValues.length) {
-          const indexedValueNode = _createValueNode({
-            parent: node,
-            path: path.append(index),
-            type: "indexed_value",
-            value: Object.hasOwn(indexedValues, index)
-              ? indexedValues[index]
-              : ARRAY_EMPTY_VALUE,
-          });
-          indexedValueNode.index = index;
-          indexedValueNodes[index] = indexedValueNode;
-          index++;
+        if (node.isSet) {
+          let index = 0;
+          for (const setValue of node.value) {
+            const setValueNode = _createValueNode({
+              parent: node,
+              path: path.append(index),
+              type: "indexed_value",
+              value: setValue,
+            });
+            setValueNode.index = index;
+            indexedValueNodes[index] = setValueNode;
+            index++;
+          }
+        } else {
+          let index = 0;
+          for (const value of node.value) {
+            const indexedValueNode = _createValueNode({
+              parent: node,
+              path: path.append(index),
+              type: "indexed_value",
+              value: Object.hasOwn(node.value, index)
+                ? value
+                : ARRAY_EMPTY_VALUE,
+            });
+            indexedValueNode.index = index;
+            indexedValueNodes[index] = indexedValueNode;
+            index++;
+          }
         }
 
         childNodes.indexedValues = indexedValueNodes;
@@ -2218,7 +2251,7 @@ let writeDiff;
       remainingWidth -= stringWidth(focusedCharDiff);
     } else {
       focusedCharDiff = "";
-      focusedCharIndex = charNodes.length - 1;
+      focusedCharIndex = charNodes.length === 1 ? -1 : charNodes.length - 1;
     }
 
     const leftOverflowBoilerplateWidth = "…".length;
@@ -2850,6 +2883,34 @@ let writeDiff;
   };
   const createGetIndexedValues = (comparison, context) => {
     const node = comparison[context.resultType];
+    if (node.isSet) {
+      const indexedValueComparisons = comparison.childComparisons.indexedValues;
+      const indexedValueCount = indexedValueComparisons.length;
+      let indexedValueIndex = 0;
+      const nextSetValue = () => {
+        if (indexedValueIndex < indexedValueCount) {
+          const indexedValueComparison =
+            indexedValueComparisons[indexedValueIndex];
+          indexedValueIndex++;
+          if (
+            context.resultType === "actualNode" &&
+            indexedValueComparison[context.resultType].name !== "actual"
+          ) {
+            return nextSetValue();
+          }
+          if (
+            context.resultType === "expectedNode" &&
+            indexedValueComparison[context.resultType].name !== "expected"
+          ) {
+            return nextSetValue();
+          }
+          return indexedValueComparison;
+        }
+        return null;
+      };
+      return nextSetValue;
+    }
+
     const indexedValueNodes = node.childNodes.indexedValues || [];
     const indexedValueCount = indexedValueNodes.length;
     const indexedValueComparisons = comparison.childComparisons.indexedValues;
