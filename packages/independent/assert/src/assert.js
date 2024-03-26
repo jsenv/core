@@ -1889,21 +1889,12 @@ let writeDiff;
       let indent = "  ".repeat(relativeDepth);
       let diffCount = 0;
 
-      const insideContext = {
-        ...selfContext,
-        // modified: context.modified,
-        textIndent: 0,
-      };
-      if (
-        comparison.actualNode &&
-        comparison.actualNode.isComposite &&
-        comparison.expectedNode &&
-        comparison.expectedNode.isComposite
-      ) {
-        insideContext.modified = false;
-      }
-      const writeNestedValueDiff = (nestedComparison) => {
-        let nestedValueDiff = writeDiff(nestedComparison, insideContext);
+      const writeNestedValueDiff = (nestedComparison, { resetModified }) => {
+        let nestedValueDiff = writeDiff(nestedComparison, {
+          ...selfContext,
+          textIndent: 0,
+          modified: resetModified ? false : selfContext.modified,
+        });
         if (nestedComparison !== context.startComparison) {
           nestedValueDiff += `\n`;
         }
@@ -1911,7 +1902,7 @@ let writeDiff;
       };
       const writeGroupDiff = (
         next,
-        { openBracket, closeBracket, forceBracket, valueLabel },
+        { openBracket, closeBracket, forceBracket, valueLabel, resetModified },
       ) => {
         let groupDiff = "";
         const entryBeforeDiffArray = [];
@@ -1947,7 +1938,9 @@ let writeDiff;
             let index = from;
             while (index !== to) {
               const entryBeforeDiff = entryBeforeDiffArray[index];
-              beforeDiff += writeNestedValueDiff(entryBeforeDiff);
+              beforeDiff += writeNestedValueDiff(entryBeforeDiff, {
+                resetModified,
+              });
               index++;
             }
             skippedArray = entryBeforeDiffArray.slice(0, from);
@@ -1968,7 +1961,9 @@ let writeDiff;
             groupDiff += beforeDiff;
             skippedArray.length = 0;
           }
-          groupDiff += writeNestedValueDiff(nestedComparison);
+          groupDiff += writeNestedValueDiff(nestedComparison, {
+            resetModified,
+          });
         }
 
         skippedArray.push(...entryBeforeDiffArray);
@@ -1991,7 +1986,9 @@ let writeDiff;
               break;
             }
             index++;
-            groupDiff += writeNestedValueDiff(nextComparison);
+            groupDiff += writeNestedValueDiff(nextComparison, {
+              resetModified,
+            });
           }
           skippedArray = skippedArray.slice(index);
         }
@@ -2148,6 +2145,11 @@ let writeDiff;
             forceBracket: true,
             openBracket: "[",
             closeBracket: "]",
+            resetModified:
+              comparison.actualNode &&
+              comparison.actualNode.canHaveIndexedValues &&
+              comparison.expectedNode &&
+              comparison.expectedNode.canHaveIndexedValues,
           },
         );
         if (node.isSet) {
@@ -2160,7 +2162,7 @@ let writeDiff;
           insideDiff += ANSI.color(")", delimitersColor);
         }
       }
-      if (!node.isUrlString) {
+      if (node.canHaveProps) {
         const propsDiff = writeGroupDiff(
           createGetProps(comparison, selfContext),
           {
@@ -2168,6 +2170,11 @@ let writeDiff;
             forceBracket: !node.canHaveIndexedValues && prefix.length === 0,
             openBracket: "{",
             closeBracket: "}",
+            resetModified:
+              comparison.actualNode &&
+              comparison.actualNode.canHaveProps &&
+              comparison.expectedNode &&
+              comparison.expectedNode.canHaveProps,
           },
         );
         if (propsDiff) {
