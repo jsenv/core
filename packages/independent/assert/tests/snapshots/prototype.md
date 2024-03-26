@@ -13,8 +13,8 @@ assert({
 
 ```js
 assert({
-  actual: Object.create({ toto: true }),
-  expected: Object.create({ toto: false }),
+  actual: Object.create({ a: true }),
+  expected: Object.create({ a: { b: true } }),
 });
 ```
 
@@ -47,8 +47,12 @@ dam.name = "dam";
 const bob = { name: "bob" };
 
 assert({
-  actual: dam,
-  expected: bob,
+  actual: {
+    a: dam,
+  },
+  expected: {
+    a: bob,
+  },
 });
 ```
 

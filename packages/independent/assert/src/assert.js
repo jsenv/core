@@ -254,10 +254,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             compareInside(propertyDescriptorComparison);
             if (
               propertyDescriptorComparison.counters.overall.any === 0 &&
+              actualPropertyDescriptorNode &&
               isDefaultDescriptor(
                 descriptorName,
                 actualPropertyDescriptorNode.value,
               ) &&
+              expectedPropertyDescriptorNode &&
               isDefaultDescriptor(
                 descriptorName,
                 expectedPropertyDescriptorNode.value,
@@ -277,18 +279,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
         if (!actualNode) {
           comparison.removed = true;
-          comparison.counters.self.removed++;
+          if (!comparison.hidden) {
+            comparison.counters.self.removed++;
+          }
         }
         if (!expectedNode) {
           comparison.added = true;
-          comparison.counters.self.added++;
+          if (!comparison.hidden) {
+            comparison.counters.self.added++;
+          }
         }
         if (comparison.removed || comparison.added) {
           addCause(comparison);
         }
 
         const addSelfDiff = () => {
-          comparison.counters.self.modified++;
+          if (!comparison.hidden) {
+            comparison.counters.self.modified++;
+          }
           addCause(comparison);
         };
         const addCategoryDiff = () => {
@@ -443,19 +451,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualValueOfReturnValueNode,
               expectedValueOfReturnValueNode,
             );
-            if (!actualValueOfReturnValueNode) {
-              // show only if it's a custom valueOf with a custom behaviour
-              // (something else than returning composite itself)
-              valueOfReturnValueComparison.hidden =
-                expectedValueOfReturnValueNode.value === expectedNode.value;
-            } else if (!expectedValueOfReturnValueNode) {
-              // show only if it's a custom valueOf with a custom behaviour
-              // (something else than returning composite itself)
-              valueOfReturnValueComparison.hidden =
-                actualValueOfReturnValueNode.value === actualNode.value;
-            } else if (comparison.counters.overall.any === 0) {
-              valueOfReturnValueComparison.hidden = true;
-            } else {
+            if (
+              actualValueOfReturnValueNode &&
+              expectedValueOfReturnValueNode
+            ) {
               // actual parent or expected parent is a composite
               // and the other is a primitive
               // but when they hold the same value in the end
@@ -482,6 +481,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   valueOfReturnValueComparison.hidden = true;
                 }
               }
+            } else if (
+              actualValueOfReturnValueNode &&
+              !expectedValueOfReturnValueNode
+            ) {
+              // show only if it's a custom valueOf with a custom behaviour
+              // (something else than returning composite itself)
+              valueOfReturnValueComparison.hidden =
+                actualValueOfReturnValueNode.value === actualNode.value;
+            } else if (
+              !actualValueOfReturnValueNode &&
+              expectedValueOfReturnValueNode
+            ) {
+              // show only if it's a custom valueOf with a custom behaviour
+              // (something else than returning composite itself)
+              valueOfReturnValueComparison.hidden =
+                expectedValueOfReturnValueNode.value === expectedNode.value;
             }
             comparison.childComparisons.valueOfReturnValue =
               valueOfReturnValueComparison;
@@ -1465,11 +1480,17 @@ let writeDiff;
     }
     context.onComparisonDisplayed(comparison);
     const node = comparison[context.resultType];
+    const selfModified =
+      context.modified || comparison.counters.self.modified > 0;
     const selfContext = {
       ...context,
-      modified: context.modified || comparison.counters.self.modified > 0,
-      added: context.modified ? false : context.added || comparison.added,
-      removed: context.modified ? false : context.removed || comparison.removed,
+      modified: selfModified,
+      added: selfModified
+        ? false
+        : context.added || comparison.counters.self.added > 0,
+      removed: selfModified
+        ? false
+        : context.removed || comparison.counters.self.removed > 0,
     };
 
     let diff = "";
@@ -1866,7 +1887,6 @@ let writeDiff;
         break value;
       }
 
-      const delimitersColor = getDelimitersColor(selfContext, comparison);
       const relativeDepth = node.depth + selfContext.initialDepth;
       let indent = "  ".repeat(relativeDepth);
       let diffCount = 0;
@@ -1876,12 +1896,18 @@ let writeDiff;
         // modified: context.modified,
         textIndent: 0,
       };
+      if (
+        comparison.actualNode &&
+        comparison.actualNode.isComposite &&
+        comparison.expectedNode &&
+        comparison.expectedNode.isComposite
+      ) {
+        insideContext.modified = false;
+      }
+      const delimitersColor = getDelimitersColor(selfContext, comparison);
+
       const writeNestedValueDiff = (nestedComparison) => {
-        let nestedValueDiff = writeDiff(
-          nestedComparison,
-          insideContext,
-          context,
-        );
+        let nestedValueDiff = writeDiff(nestedComparison, insideContext);
         if (nestedComparison !== context.startComparison) {
           nestedValueDiff += `\n`;
         }

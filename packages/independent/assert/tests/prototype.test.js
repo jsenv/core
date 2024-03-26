@@ -13,8 +13,8 @@ await startSnapshotTesting("prototype", {
   },
   ["object with different prototypes"]: () => {
     assert({
-      actual: Object.create({ toto: true }),
-      expected: Object.create({ toto: false }),
+      actual: Object.create({ a: true }),
+      expected: Object.create({ a: { b: true } }),
     });
   },
   ["object vs custom proto"]: () => {
@@ -37,8 +37,12 @@ await startSnapshotTesting("prototype", {
     const bob = { name: "bob" };
 
     assert({
-      actual: dam,
-      expected: bob,
+      actual: {
+        a: dam,
+      },
+      expected: {
+        a: bob,
+      },
     });
   },
 });

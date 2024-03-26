@@ -57,7 +57,7 @@
         <text x="94.01" y="71.55" fill="#cd5555">a</text>
         <text x="102.42" y="71.55" fill="#cd5555">m</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="119.22" y="71.55" fill="#7f7f7f">,</text>
+        <text x="119.22" y="71.55" fill="#cd5555">,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
@@ -69,7 +69,7 @@
         <text x="94.01" y="128.55" fill="#11bc79">o</text>
         <text x="102.42" y="128.55" fill="#11bc79">b</text>
         <text x="110.82" y="128.55" fill="#7f7f7f">&#x22;</text>
-        <text x="119.22" y="128.55" fill="#7f7f7f">,</text>
+        <text x="119.22" y="128.55" fill="#11bc79">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
