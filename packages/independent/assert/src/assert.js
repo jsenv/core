@@ -1919,9 +1919,10 @@ let writeDiff;
         const entryBeforeDiffArray = [];
         let skippedArray = [];
         let nestedComparison;
-        const maxDiff = selfContext.modified
-          ? selfContext.maxValueInsideDiff
-          : selfContext.maxDiffPerObject;
+        const maxDiff =
+          selfContext.modified || selfContext.added || selfContext.removed
+            ? selfContext.maxValueInsideDiff
+            : selfContext.maxDiffPerObject;
         while ((nestedComparison = next())) {
           if (nestedComparison.counters.overall.any === 0) {
             entryBeforeDiffArray.push(nestedComparison);
@@ -1981,9 +1982,10 @@ let writeDiff;
         // now display the values after
         const skippedCount = skippedArray.length;
         if (skippedCount) {
-          const maxValueAfterDiff = selfContext.modified
-            ? selfContext.maxValueInsideDiff
-            : selfContext.maxValueAfterDiff;
+          const maxValueAfterDiff =
+            selfContext.modified || selfContext.added || selfContext.removed
+              ? selfContext.maxValueInsideDiff + 1
+              : selfContext.maxValueAfterDiff;
           let from = 0;
           let to =
             skippedCount === maxValueAfterDiff
@@ -2614,7 +2616,11 @@ let writeDiff;
       !comparison.hidden;
     let displaySubtype = true;
     if (overview) {
-      displaySubtype = true;
+      if (node.subtype === "Object" && node.keys.length === 0) {
+        displaySubtype = false;
+      } else {
+        displaySubtype = true;
+      }
     } else if (node.subtype === "Object" || node.subtype === "Array") {
       displaySubtype = false;
     } else if (node.type === "value_of_return_value") {
@@ -2679,10 +2685,17 @@ let writeDiff;
         // }
       } else if (overview) {
         const constructorArgColor = getConstructorArgColor(context, comparison);
-        const overviewContent = node.isSet
-          ? node.indexedValueNodes.length
-          : node.keys.length;
-        insideConstructor = ANSI.color(overviewContent, constructorArgColor);
+        if (node.isSet) {
+          insideConstructor = ANSI.color(
+            node.indexedValueNodes.length,
+            constructorArgColor,
+          );
+        } else if (displaySubtype) {
+          insideConstructor = ANSI.color(node.keys.length, constructorArgColor);
+        } else {
+          prefix += ANSI.color("{", delimitersColor);
+          prefix += ANSI.color("}", delimitersColor);
+        }
       }
       if (insideConstructor) {
         prefix += ANSI.color(openBracket, delimitersColor);

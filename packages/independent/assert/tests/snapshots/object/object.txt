@@ -44,9 +44,7 @@ expect: {
 AssertionError: actual and expected are different:
 
 actual: {
-  foo: {
-    a: {},
-  },
+  foo: { a: {} },
 }
 expect: false
 
@@ -254,14 +252,9 @@ expect: {
   should_be_there: {
     a: true,
     b: true,
-    item: {
-      a: 1,
-      b: 1,
-      c: 1,
-    },
+    item: { a: 1, b: 1, c: 1 },
     c: true,
-    d: true,
-    ↓ 3 props (3 removed) ↓
+    ↓ 4 props ↓
   },
 }
 
