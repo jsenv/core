@@ -205,7 +205,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         };
 
         let ownerComparison;
-        if (comparison.type === "property" || comparison.type === "prototype") {
+        if (
+          comparison.type === "property" ||
+          comparison.type === "prototype" ||
+          comparison.type === "indexed_value"
+        ) {
           ownerComparison = comparison.parent;
         } else if (comparison.type === "property_descriptor") {
           ownerComparison = comparison.parent.parent;
@@ -667,27 +671,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               comparison.childComparisons.indexedValues;
             const visitIndexedValue = (indexedValueNode) => {
               const index = indexedValueNode.index;
-              const actualHasOwn = Object.hasOwn(
-                actualIndexedValueNodes,
-                index,
-              );
-              const expectedHasOwn = Object.hasOwn(
-                expectedIndexedValueNodes,
-                index,
-              );
+              const actualIndexedValueNode = actualIndexedValueNodes[index];
+              const expectedIndexedValueNode = expectedIndexedValueNodes[index];
               const indexedValueComparison = createComparison(
-                actualHasOwn
-                  ? actualIndexedValueNodes[index]
-                  : actualIndexedValueNodes &&
-                      index < actualIndexedValueNodes.length
-                    ? ARRAY_EMPTY_VALUE
-                    : undefined,
-                expectedHasOwn
-                  ? expectedIndexedValueNodes[index]
-                  : expectedIndexedValueNodes &&
-                      index < expectedIndexedValueNodes.length
-                    ? ARRAY_EMPTY_VALUE
-                    : undefined,
+                actualIndexedValueNode,
+                expectedIndexedValueNode,
               );
               indexedValueComparisons[index] = indexedValueComparison;
               compareInside(indexedValueComparison);
@@ -1321,16 +1309,19 @@ let createValueNode;
         const indexedValues = node.isSet
           ? Array.from(node.value.values())
           : node.value;
-        for (const indexedValue of indexedValues) {
+        let index = 0;
+        while (index < indexedValues.length) {
           const indexedValueNode = _createValueNode({
             parent: node,
-            path: path.append(indexedValue),
+            path: path.append(index),
             type: "indexed_value",
-            value: indexedValue,
+            value: Object.hasOwn(indexedValues, index)
+              ? indexedValues[index]
+              : ARRAY_EMPTY_VALUE,
           });
-          const indexedValueNodeIndex = indexedValueNodes.length;
-          indexedValueNode.index = indexedValueNodeIndex;
-          indexedValueNodes[indexedValueNodeIndex] = indexedValueNode;
+          indexedValueNode.index = index;
+          indexedValueNodes[index] = indexedValueNode;
+          index++;
         }
 
         childNodes.indexedValues = indexedValueNodes;

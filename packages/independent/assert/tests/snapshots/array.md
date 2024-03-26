@@ -13,7 +13,6 @@ assert({
 
 ```js
 assert({
-  // eslint-disable-next-line no-sparse-arrays
   actual: [,],
   expected: [undefined],
 });
@@ -25,7 +24,6 @@ assert({
 
 ```js
 assert({
-  // eslint-disable-next-line no-sparse-arrays
   actual: [,],
   expected: [],
 });
@@ -38,7 +36,6 @@ assert({
 ```js
 assert({
   actual: [],
-  // eslint-disable-next-line no-sparse-arrays
   expected: [,],
 });
 ```
