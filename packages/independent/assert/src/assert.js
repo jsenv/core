@@ -695,12 +695,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
               visitIndexedValue(expectedIndexedValueNode);
             }
-            let index = 0;
             for (const actualIndexedValueNode of actualIndexedValueNodes) {
-              if (!indexedValueComparisons[index]) {
+              if (!indexedValueComparisons[actualIndexedValueNode.index]) {
                 visitIndexedValue(actualIndexedValueNode);
               }
-              index++;
             }
           }
           properties: {
@@ -1162,6 +1160,7 @@ let createValueNode;
         asString: null,
         properties: {},
         propertyDescriptors: {},
+        indexedValues: [],
         lines: [],
         chars: [],
       };
@@ -2860,14 +2859,16 @@ let writeDiff;
   };
   const createGetIndexedValues = (comparison, context) => {
     const node = comparison[context.resultType];
-    const indexedValueNodes = node.indexedValueNodes || [];
+    const indexedValueNodes = node.childNodes.indexedValues || [];
     const indexedValueCount = indexedValueNodes.length;
+    const indexedValueComparisons = comparison.childComparisons.indexedValues;
     let indexedValueIndex = 0;
     return () => {
       if (indexedValueIndex < indexedValueCount) {
-        const indexedValueNode = indexedValueNodes[indexedValueIndex];
+        const indexedValueComparison =
+          indexedValueComparisons[indexedValueIndex];
         indexedValueIndex++;
-        return indexedValueNode;
+        return indexedValueComparison;
       }
       return null;
     };
