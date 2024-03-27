@@ -56,15 +56,15 @@ await startSnapshotTesting("internal_value", {
   //     },
   //   });
   // },
-  ["signal string and string"]: () => {
-    assert({
-      actual: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => "a",
-      },
-      expected: "a",
-    });
-  },
+  // ["signal string and string"]: () => {
+  //   assert({
+  //     actual: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => "a",
+  //     },
+  //     expected: "a",
+  //   });
+  // },
   // ["string and signal string"]: () => {
   //   assert({
   //     actual: "a",
@@ -74,7 +74,6 @@ await startSnapshotTesting("internal_value", {
   //     },
   //   });
   // },
-  // TOOD: signal array and array (with diff in the array)
   // ["signal array"]: () => {
   //   assert({
   //     actual: {
@@ -87,6 +86,15 @@ await startSnapshotTesting("internal_value", {
   //     },
   //   });
   // },
+  ["signal array and array"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+      expected: [true],
+    });
+  },
   // ["valueOf not displayed when return object itself"]: () => {
   //   const actual = { a: true, valueOf: () => actual };
   //   const expected = { a: false, valueOf: () => expected };

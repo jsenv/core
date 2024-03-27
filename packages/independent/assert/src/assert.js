@@ -1797,6 +1797,9 @@ let writeDiff;
         let nestedComparison;
         const next = createGetNextNestedValue(comparison, selfContext);
         while ((nestedComparison = next())) {
+          if (nestedComparison.hidden) {
+            continue;
+          }
           let valueOverview = "";
           valueOverview += writeDiff(nestedComparison, selfContext);
           const valueWidth = stringWidth(valueOverview);
@@ -1917,6 +1920,9 @@ let writeDiff;
             ? selfContext.maxValueInsideDiff
             : selfContext.maxDiffPerObject;
         while ((nestedComparison = next())) {
+          if (nestedComparison.hidden) {
+            continue;
+          }
           if (nestedComparison.counters.overall.any === 0) {
             entryBeforeDiffArray.push(nestedComparison);
             continue;
@@ -2128,12 +2134,10 @@ let writeDiff;
         );
         if (node.isSet) {
           insideDiff += ANSI.color("(", delimitersColor);
-        }
-        if (indexedValueDiff) {
           insideDiff += indexedValueDiff;
-        }
-        if (node.isSet) {
           insideDiff += ANSI.color(")", delimitersColor);
+        } else {
+          insideDiff += indexedValueDiff;
         }
       }
       if (node.canHaveProps) {
@@ -2828,25 +2832,27 @@ let writeDiff;
     const propertyNames = Object.keys(propertyNodes);
     const propertyCount = propertyNames.length;
     const propertyComparisons = comparison.childComparisons.properties;
-    let internalValueToDisplay = comparison.childComparisons.internalValue;
+    let internalValueComparisonToDisplay =
+      comparison.childComparisons.internalValue;
     let prototypeComparisonToDisplay = comparison.childComparisons.prototype;
     let propIndex = 0;
 
     return () => {
-      if (internalValueToDisplay) {
-        const internalValueNode = internalValueToDisplay[context.resultType];
-        if (internalValueNode.inConstructor) {
-          internalValueToDisplay = null;
+      if (internalValueComparisonToDisplay) {
+        const internalValueNode =
+          internalValueComparisonToDisplay[context.resultType];
+        if (!internalValueNode || internalValueNode.inConstructor) {
+          internalValueComparisonToDisplay = null;
         } else {
-          let nestedComparison = internalValueToDisplay;
-          internalValueToDisplay = null;
-          return nestedComparison;
+          let insideComparison = internalValueComparisonToDisplay;
+          internalValueComparisonToDisplay = null;
+          return insideComparison;
         }
       }
       if (prototypeComparisonToDisplay) {
-        let nestedComparison = prototypeComparisonToDisplay;
+        let insideComparison = prototypeComparisonToDisplay;
         prototypeComparisonToDisplay = null;
-        return nestedComparison;
+        return insideComparison;
       }
       if (propIndex < propertyCount) {
         const propertyName = propertyNames[propIndex];
