@@ -12,3 +12,48 @@ assert({
 
 ![img](<./internal_value/signal(true) and true.svg>)
 
+# true and signal(true)
+
+```js
+assert({
+  actual: true,
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => true,
+  },
+});
+```
+
+![img](<./internal_value/true and signal(true).svg>)
+
+# signal(true) and signal(false)
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => true,
+  },
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => false,
+  },
+});
+```
+
+![img](<./internal_value/signal(true) and signal(false).svg>)
+
+# true and signal(false)
+
+```js
+assert({
+  actual: true,
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => false,
+  },
+});
+```
+
+![img](<./internal_value/true and signal(false).svg>)
+

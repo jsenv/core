@@ -14,24 +14,24 @@ const assert = createAssert();
 // const signal = (v) => new Signal(v);
 
 await startSnapshotTesting("internal_value", {
-  ["signal(true) and true"]: () => {
-    assert({
-      actual: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => true,
-      },
-      expected: true,
-    });
-  },
-  // ["true and signal(true)"]: () => {
+  // ["signal(true) and true"]: () => {
   //   assert({
-  //     actual: true,
-  //     expected: {
+  //     actual: {
   //       [Symbol.toStringTag]: "Signal",
   //       valueOf: () => true,
   //     },
+  //     expected: true,
   //   });
   // },
+  ["true and signal(true)"]: () => {
+    assert({
+      actual: true,
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+    });
+  },
   // ["signal(true) and signal(false)"]: () => {
   //   assert({
   //     actual: {

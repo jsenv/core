@@ -4,3 +4,21 @@ AssertionError: actual and expected are different:
 actual: Signal(true)
 expect: true
 
+# true and signal(true)
+AssertionError: actual and expected are different:
+
+actual: true
+expect: Signal(true)
+
+# signal(true) and signal(false)
+AssertionError: actual and expected have 1 difference:
+
+actual: Signal(true)
+expect: Signal(false)
+
+# true and signal(false)
+AssertionError: actual and expected are different:
+
+actual: true
+expect: Signal(false)
+

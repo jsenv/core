@@ -2887,15 +2887,12 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
+      const colorWhenModified =
+        context.resultType === "actualNode" ? unexpectedColor : expectedColor;
       const { actualNode, expectedNode } = comparison;
       if (!actualNode || !expectedNode) {
-        return context.resultType === "actualNode"
-          ? unexpectedColor
-          : expectedColor;
+        return colorWhenModified;
       }
-      // ideally we should loop until we find the least nested internal value
-      // but I'm not sure it's a good idea (the diff output would feel messy)
-
       if (forWhat === "subtype") {
         if (
           actualNode.isComposite &&
@@ -2911,6 +2908,7 @@ let writeDiff;
         ) {
           return sameColor;
         }
+        return colorWhenModified;
       }
       if (forWhat === "constructor_parenthesis") {
         const actualConsructorParenthesis =
@@ -2928,8 +2926,11 @@ let writeDiff;
         if (actualConsructorParenthesis === expectedConsructorParenthesis) {
           return sameColor;
         }
+        return colorWhenModified;
       }
 
+      // ideally we should loop until we find the least nested internal value
+      // but I'm not sure it's a good idea (the diff output would feel messy)
       const actualInsideNode = actualNode.insideNode;
       const expectedInsideNode = expectedNode.insideNode;
       if (forWhat === "constructor_arg") {
@@ -2947,10 +2948,6 @@ let writeDiff;
               return removedColor;
             }
           }
-          return sameColor;
-        }
-
-        if (actualInsideNode.comparison.counters.overall.any === 0) {
           return sameColor;
         }
       }
@@ -2984,9 +2981,10 @@ let writeDiff;
           return sameColor;
         }
       }
-      return context.resultType === "actualNode"
-        ? unexpectedColor
-        : expectedColor;
+      if (actualInsideNode.comparison.counters.overall.any === 0) {
+        return sameColor;
+      }
+      return colorWhenModified;
     }
     return sameColor;
   };
