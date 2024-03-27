@@ -1511,9 +1511,9 @@ let writeDiff;
     };
 
     let diff = "";
+    let displaySubtype = true;
     let displayValue = true;
-
-    let endSeparator;
+    let endSeparator = "";
     const delimitersColor = getDelimitersColor(selfContext, comparison);
     let isNestedValue =
       node.type === "indexed_value" ||
@@ -1539,15 +1539,13 @@ let writeDiff;
       const relativeDepth = node.depth + selfContext.initialDepth;
       if (context.collapsed) {
         useIndent = false;
-        selfContext.insideOverview = false;
+        selfContext.collapsedWithOverview = false;
       } else {
         useIndent = true;
         if (relativeDepth >= selfContext.maxDepth) {
-          selfContext.collapsed = true;
-          selfContext.insideOverview = true;
+          selfContext.collapsedWithOverview = true;
         } else if (comparison.counters.overall.any === 0) {
-          selfContext.collapsed = true;
-          selfContext.insideOverview = true;
+          selfContext.collapsedWithOverview = true;
         }
       }
 
@@ -1616,24 +1614,64 @@ let writeDiff;
       } else {
         endSeparator = "";
       }
-      if (displayValue) {
-        selfContext.textIndent += stringWidth(diff);
-        selfContext.maxColumns -= endSeparator.length;
-        if (selfContext.modified) {
-          selfContext.maxDepth = Math.min(
-            node.depth + selfContext.maxDepthInsideDiff,
-            selfContext.maxDepth,
-          );
+    }
+
+    selfContext.textIndent += stringWidth(diff);
+    selfContext.maxColumns -= endSeparator.length;
+    if (selfContext.modified) {
+      selfContext.maxDepth = Math.min(
+        node.depth + selfContext.maxDepthInsideDiff,
+        selfContext.maxDepth,
+      );
+    }
+
+    reference: {
+      // referencing an other composite
+      if (node.reference) {
+        diff += ANSI.color(
+          `<ref #${selfContext.getDisplayedId(node.reference.id)}>`,
+          delimitersColor,
+        );
+        displayValue = false;
+        displaySubtype = false;
+        break reference;
+      }
+      // will be referenced by a composite
+      let referenceFromOtherDisplayed;
+      for (const referenceFromOther of node.referenceFromOthersSet) {
+        const referenceFromOtherComparison = referenceFromOther.comparison;
+        if (
+          !referenceFromOtherComparison ||
+          referenceFromOtherComparison.hidden
+        ) {
+          continue;
         }
+        referenceFromOtherDisplayed = referenceFromOther;
+        break;
+      }
+      if (referenceFromOtherDisplayed) {
+        diff += ANSI.color(
+          `<ref #${selfContext.getDisplayedId(
+            referenceFromOtherDisplayed.reference.id,
+          )}>`,
+          delimitersColor,
+        );
+        diff += " ";
       }
     }
 
+    let subtypeDiff = "";
+    if (displaySubtype || node.isComposite) {
+      subtypeDiff = writeSubtypeDiff(comparison, selfContext, context);
+    }
+
+    let valueDiff = "";
     value: {
       if (!displayValue) {
         break value;
       }
 
-      if (selfContext.collapsed) {
+      if (selfContext.collapsed || selfContext.collapsedWithOverview) {
         if (node.type === "property") {
           const propertyDescriptorComparisons =
             comparison.childComparisons.propertyDescriptors;
@@ -1646,19 +1684,19 @@ let writeDiff;
             ? propertySetterComparison[selfContext.resultType]
             : null;
           if (propertyGetterNode && propertySetterNode) {
-            diff += writeDiff(propertyGetterComparison, selfContext);
+            valueDiff += writeDiff(propertyGetterComparison, selfContext);
             break value;
           }
           if (propertyGetterNode) {
-            diff += writeDiff(propertyGetterComparison, selfContext);
+            valueDiff += writeDiff(propertyGetterComparison, selfContext);
             break value;
           }
           if (propertySetterNode) {
-            diff += writeDiff(propertySetterComparison, selfContext);
+            valueDiff += writeDiff(propertySetterComparison, selfContext);
             break value;
           }
           const propertyValueComparison = propertyDescriptorComparisons.value;
-          diff += writeDiff(propertyValueComparison, selfContext);
+          valueDiff += writeDiff(propertyValueComparison, selfContext);
           break value;
         }
         if (node.type === "property_descriptor") {
@@ -1666,19 +1704,19 @@ let writeDiff;
             const valueColor = getValueColor(selfContext, comparison);
             const setterNode = node.parent.childNodes.propertyDescriptors.set;
             if (setterNode && setterNode.value) {
-              diff += ANSI.color("[get/set]", valueColor);
+              valueDiff += ANSI.color("[get/set]", valueColor);
               break value;
             }
-            diff += ANSI.color("[get]", valueColor);
+            valueDiff += ANSI.color("[get]", valueColor);
             break value;
           }
           if (node.descriptor === "set") {
             const valueColor = getValueColor(selfContext, comparison);
             const getterNode = node.parent.childNodes.propertyDescriptors.get;
             if (getterNode && getterNode.value) {
-              diff += ANSI.color("[get/set]", valueColor);
+              valueDiff += ANSI.color("[get/set]", valueColor);
             } else {
-              diff += ANSI.color("[set]", valueColor);
+              valueDiff += ANSI.color("[set]", valueColor);
             }
             break value;
           }
@@ -1708,84 +1746,51 @@ let writeDiff;
             }
           }
         }
-        diff += propertyDiff;
+        valueDiff += propertyDiff;
         break value;
       }
       if (node.wellKnownId) {
         const valueColor = getValueColor(selfContext, comparison);
-        diff += ANSI.color(node.wellKnownId, valueColor);
+        valueDiff += ANSI.color(node.wellKnownId, valueColor);
         break value;
       }
       if (node.isPrimitive && !node.isUrlString) {
         if (node.canHaveLines) {
-          diff += writeLinesDiff(comparison, selfContext);
+          valueDiff += writeLinesDiff(comparison, selfContext);
           break value;
         }
         if (node.isString) {
-          diff += writeCharDiff(comparison, selfContext);
+          valueDiff += writeCharDiff(comparison, selfContext);
           break value;
         }
 
         const value = node.value;
-        let valueDiff =
+        let valueDiffRaw =
           value === undefined
             ? "undefined"
             : value === null
               ? "null"
               : JSON.stringify(value);
         if (
-          valueDiff.length >
+          valueDiffRaw.length >
           selfContext.maxColumns - selfContext.textIndent
         ) {
-          valueDiff = valueDiff.slice(
+          valueDiffRaw = valueDiffRaw.slice(
             0,
             selfContext.maxColumns - selfContext.textIndent - "…".length,
           );
-          valueDiff += "…";
+          valueDiffRaw += "…";
         }
         const valueColor = getValueColor(selfContext, comparison);
-        diff += ANSI.color(valueDiff, valueColor);
+        valueDiff += ANSI.color(valueDiffRaw, valueColor);
+        break value;
+      }
+      if (node.isString && !node.isUrlString && node.canHaveLines) {
+        valueDiff += writeLinesDiff(comparison, selfContext);
         break value;
       }
 
-      reference: {
-        // referencing an other composite
-        if (node.reference) {
-          diff += ANSI.color(
-            `<ref #${selfContext.getDisplayedId(node.reference.id)}>`,
-            delimitersColor,
-          );
-          break value;
-        }
-        // will be referenced by a composite
-        let referenceFromOtherDisplayed;
-        for (const referenceFromOther of node.referenceFromOthersSet) {
-          const referenceFromOtherComparison = referenceFromOther.comparison;
-          if (
-            !referenceFromOtherComparison ||
-            referenceFromOtherComparison.hidden
-          ) {
-            continue;
-          }
-          referenceFromOtherDisplayed = referenceFromOther;
-          break;
-        }
-        if (referenceFromOtherDisplayed) {
-          diff += ANSI.color(
-            `<ref #${selfContext.getDisplayedId(
-              referenceFromOtherDisplayed.reference.id,
-            )}>`,
-            delimitersColor,
-          );
-          diff += " ";
-        }
-      }
-
-      // composite collapsed with overview
-      if (selfContext.collapsed && selfContext.insideOverview) {
-        const prefixWithOverview = writePrefix(comparison, selfContext, {
-          overview: true,
-        });
+      if (selfContext.collapsedWithOverview) {
         const bracketColor = getBracketColor(selfContext, comparison);
         const valueColor = getValueColor(selfContext, comparison);
         const {
@@ -1796,7 +1801,12 @@ let writeDiff;
           ellipsis,
         } = getDelimiters(comparison, selfContext);
 
-        const estimatedCollapsedBoilerplate = `${prefixWithOverview} ${openBracket}${nestedValueSeparator} ${ellipsis}${closeBracket}`;
+        const subtypeDiffCollapsed = writeSubtypeDiff(
+          comparison,
+          { ...selfContext, collapsedWithOverview: false, collapsed: true },
+          context,
+        );
+        const estimatedCollapsedBoilerplate = `${subtypeDiffCollapsed} ${openBracket}${nestedValueSeparator} ${ellipsis}${closeBracket}`;
         const estimatedCollapsedBoilerplateWidth = stringWidth(
           estimatedCollapsedBoilerplate,
         );
@@ -1814,12 +1824,12 @@ let writeDiff;
           if (nestedComparison.hidden) {
             continue;
           }
-          let valueOverview = "";
-          valueOverview += writeDiff(nestedComparison, selfContext);
-          const valueWidth = stringWidth(valueOverview);
+          let valueDiffOverview = "";
+          valueDiffOverview += writeDiff(nestedComparison, selfContext);
+          const valueWidth = stringWidth(valueDiffOverview);
           if (width + valueWidth > remainingWidth) {
             let overviewTruncated = "";
-            overviewTruncated += prefixWithOverview;
+            overviewTruncated += subtypeDiffCollapsed;
             overviewTruncated += " ";
             overviewTruncated += ANSI.color(openBracket, delimitersColor);
             if (insideOverview) {
@@ -1840,7 +1850,7 @@ let writeDiff;
               overviewTruncated += " ";
             }
             overviewTruncated += ANSI.color(closeBracket, delimitersColor);
-            diff += overviewTruncated;
+            valueDiff += overviewTruncated;
             break value;
           }
           if (nestedValueSeparator) {
@@ -1858,54 +1868,31 @@ let writeDiff;
               }
             }
           }
-          insideOverview += valueOverview;
+          insideOverview += valueDiffOverview;
           width += valueWidth;
         }
-
-        let overview = "";
-        const prefix = writePrefix(comparison, context);
-        overview += prefix;
-
-        let afterPrefix = "";
-        const shouldDisplayBrackets = prefix ? insideOverview.length > 0 : true;
+        const shouldDisplayBrackets = subtypeDiff
+          ? insideOverview.length > 0
+          : true;
         if (shouldDisplayBrackets) {
-          afterPrefix += ANSI.color(openBracket, bracketColor);
+          valueDiff += ANSI.color(openBracket, bracketColor);
           if (insideOverview) {
             if (nestedValueSpacing) {
-              afterPrefix += " ";
+              valueDiff += " ";
             }
-            afterPrefix += insideOverview;
+            valueDiff += insideOverview;
             if (nestedValueSpacing) {
-              afterPrefix += " ";
+              valueDiff += " ";
             }
           }
-          afterPrefix += ANSI.color(closeBracket, bracketColor);
+          valueDiff += ANSI.color(closeBracket, bracketColor);
         } else {
-          afterPrefix = insideOverview;
+          valueDiff += insideOverview;
         }
-        if (prefix && afterPrefix) {
-          overview += " ";
-        }
-        overview += afterPrefix;
-        diff += overview;
         break value;
       }
 
-      // composite collapsed
-      if (selfContext.collapsed) {
-        const collapsedDiff = writePrefix(comparison, selfContext, {
-          overview: true,
-        });
-        diff += collapsedDiff;
-        break value;
-      }
-
-      // composite expanded
-      if (node.isString && !node.isUrlString && node.canHaveLines) {
-        diff += writeLinesDiff(comparison, selfContext);
-        break value;
-      }
-
+      // composite
       const relativeDepth = node.depth + selfContext.initialDepth;
       let indent = "  ".repeat(relativeDepth);
       let diffCount = 0;
@@ -2128,9 +2115,6 @@ let writeDiff;
       };
 
       let insideDiff = "";
-      let prefix = "";
-      prefix = writePrefix(comparison, selfContext);
-      insideDiff += prefix;
       if (node.canHaveIndexedValues) {
         const indexedValueDiff = writeGroupDiff(
           createGetIndexedValues(comparison, selfContext),
@@ -2159,7 +2143,8 @@ let writeDiff;
           createGetProps(comparison, selfContext),
           {
             valueLabel: "prop",
-            forceBracket: !node.canHaveIndexedValues && prefix.length === 0,
+            forceBracket:
+              !node.canHaveIndexedValues && subtypeDiff.length === 0,
             openBracket: "{",
             closeBracket: "}",
             resetModified:
@@ -2176,10 +2161,15 @@ let writeDiff;
           insideDiff += propsDiff;
         }
       }
-      diff += insideDiff;
+      valueDiff += insideDiff;
       break value;
     }
 
+    diff += subtypeDiff;
+    if (subtypeDiff && valueDiff) {
+      diff += " ";
+    }
+    diff += valueDiff;
     if (endSeparator) {
       const endSeparatorColor = getDelimitersColor(context, comparison);
       diff += ANSI.color(endSeparator, endSeparatorColor);
@@ -2187,103 +2177,72 @@ let writeDiff;
     return diff;
   };
 
-  const writePrefix = (comparison, context, { overview } = {}) => {
+  const writeSubtypeDiff = (comparison, selfContext, context) => {
+    let subtypeDiff = "";
     const node = comparison[context.resultType];
-    let prefix = "";
-
-    const internalValueNode = node.childNodes.internalValue;
-    const displayInternalValueInsideConstructor =
-      internalValueNode &&
-      internalValueNode.inConstructor &&
-      // value returned by valueOf() is not the composite itself
-      !internalValueNode.hidden;
-    let displaySubtype = true;
-    if (overview) {
-      if (node.subtype === "Object" && node.keys.length === 0) {
-        displaySubtype = false;
-      } else {
-        displaySubtype = true;
-      }
-    } else if (node.subtype === "Object" || node.subtype === "Array") {
-      displaySubtype = false;
-    } else if (node.type === "internal_value") {
-      const parentSubtype = node.parent[context.resultType].subtype;
-      if (
-        parentSubtype === "String" ||
-        parentSubtype === "Number" ||
-        parentSubtype === "Boolean"
-      ) {
-        displaySubtype = false;
-      }
+    const useNew =
+      node.subtype === "String" ||
+      node.subtype === "Boolean" ||
+      node.subtype === "Number";
+    if (useNew) {
+      const delimitersColor = getDelimitersColor(context, comparison);
+      subtypeDiff += ANSI.color(`new`, delimitersColor);
+      subtypeDiff += " ";
     }
+    const subtypeColor = getSubtypeColor(context, comparison);
+    subtypeDiff += ANSI.color(node.subtype, subtypeColor);
 
     const constructorParenthesisColor = getConstructorParenthesisColor(
       context,
       comparison,
     );
-
-    if (displaySubtype) {
-      const subtypeColor = getSubtypeColor(context, comparison);
-      prefix += ANSI.color(node.subtype, subtypeColor);
-    }
+    let insideConstructor = "";
     if (node.isArray) {
-      if (!overview) {
-        return prefix;
+      if (selfContext.collapsed) {
+        const lengthColor = getConstructorArgColor(context, comparison);
+        insideConstructor += ANSI.color(node.value.length, lengthColor);
       }
-      prefix += ANSI.color(`(`, constructorParenthesisColor);
-      const lengthColor = getConstructorArgColor(context, comparison);
-      prefix += ANSI.color(node.value.length, lengthColor);
-      prefix += ANSI.color(`)`, constructorParenthesisColor);
-      return prefix;
-    }
-    if (node.isString) {
-      if (!overview) {
-        return prefix;
+    } else if (node.isString) {
+      if (selfContext.collapsed) {
+        const lengthColor = getConstructorArgColor(context, comparison);
+        insideConstructor += ANSI.color(
+          node.childNodes.chars.length,
+          lengthColor,
+        );
       }
-      prefix += ANSI.color(`(`, constructorParenthesisColor);
-      const lengthColor = getConstructorArgColor(context, comparison);
-      prefix += ANSI.color(node.childNodes.chars.length, lengthColor);
-      prefix += ANSI.color(`)`, constructorParenthesisColor);
-      return prefix;
-    }
-    if (node.isComposite) {
-      const delimitersColor = getDelimitersColor(context, comparison);
-      let insideConstructor = "";
-      const prefixWithNew =
-        node.subtype === "String" ||
-        node.subtype === "Boolean" ||
-        node.subtype === "Number";
-      if (prefixWithNew) {
-        prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
+    } else if (node.isSet) {
+      if (selfContext.collapsed) {
+        const sizeColor = getConstructorArgColor(context, comparison);
+        insideConstructor = ANSI.color(
+          node.indexedValueNodes.length,
+          sizeColor,
+        );
       }
-
+    } else {
+      const internalValueNode = node.childNodes.internalValue;
+      const displayInternalValueInsideConstructor =
+        internalValueNode &&
+        internalValueNode.inConstructor &&
+        // value returned by valueOf() is not the composite itself
+        !internalValueNode.hidden;
       if (displayInternalValueInsideConstructor) {
         const internalValueComparison =
           comparison.childComparisons.internalValue;
-        insideConstructor = writeDiff(internalValueComparison, context);
-      } else if (overview) {
-        const constructorArgColor = getConstructorArgColor(context, comparison);
-        if (node.isSet) {
-          insideConstructor = ANSI.color(
-            node.indexedValueNodes.length,
-            constructorArgColor,
-          );
-        } else if (displaySubtype) {
-          insideConstructor = ANSI.color(node.keys.length, constructorArgColor);
-        } else {
-          prefix += ANSI.color("{", delimitersColor);
-          prefix += ANSI.color("}", delimitersColor);
-        }
+        insideConstructor += writeDiff(internalValueComparison, context);
+      } else if (node.canHaveProps) {
+        const keysLengthColor = getConstructorArgColor(context, comparison);
+        insideConstructor = ANSI.color(node.keys.length, keysLengthColor);
       }
-      if (insideConstructor) {
-        prefix += ANSI.color("(", constructorParenthesisColor);
-        prefix += insideConstructor;
-        prefix += ANSI.color(")", constructorParenthesisColor);
-      }
-      return prefix;
     }
-    return prefix;
+
+    if (insideConstructor) {
+      subtypeDiff += ANSI.color(`(`, constructorParenthesisColor);
+      subtypeDiff += insideConstructor;
+      subtypeDiff += ANSI.color(`)`, constructorParenthesisColor);
+    }
+    return subtypeDiff;
   };
+
   const writeOneLineDiff = (lineComparison, context) => {
     let { focusedCharIndex } = context;
 
@@ -2400,7 +2359,7 @@ let writeDiff;
     }
 
     // collapsed
-    if (context.collapsed) {
+    if (context.collapsed || context.collapsedWithOverview) {
       if (!comparison.quote && node.type !== "url_part") {
         const quote =
           context.quote === "auto" ? pickBestQuote(node.value) : context.quote;
