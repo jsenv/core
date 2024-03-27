@@ -497,6 +497,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const internalValueComparison = createComparison(
               actualInternalValueNode,
               expectedInternalValueNode,
+              {
+                // allow reuse of primitive node for comparison
+                fromInternalValue: true,
+              },
             );
             const hideConditions = {
               primitive: (node) => {
@@ -757,11 +761,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       doCompare();
       settleCounters(comparison);
     };
-    const createComparison = (actualNode, expectedNode) => {
-      const leftOrRightValueNode = actualNode || expectedNode;
-      const parent = leftOrRightValueNode.parent
-        ? leftOrRightValueNode.parent.comparison
-        : null;
+    const createComparison = (
+      actualNode,
+      expectedNode,
+      { fromInternalValue } = {},
+    ) => {
+      let mainNode;
+      if (fromInternalValue) {
+        mainNode =
+          actualNode && actualNode.isComposite ? actualNode : expectedNode;
+      } else {
+        mainNode = actualNode || expectedNode;
+      }
+
+      const parent = mainNode.parent ? mainNode.parent.comparison : null;
       if (actualNode && actualNode.comparison) {
         throw new Error("nope");
       } else if (expectedNode && expectedNode.comparison) {
@@ -797,12 +810,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualNode.isComposite !== expectedNode.isComposite,
         },
         parent,
-        type: leftOrRightValueNode.type,
-        depth: leftOrRightValueNode.depth,
-        path: leftOrRightValueNode.path,
-        property: leftOrRightValueNode.property,
-        descriptor: leftOrRightValueNode.descriptor,
-        index: leftOrRightValueNode.index,
+        type: mainNode.type,
+        depth: mainNode.depth,
+        path: mainNode.path,
+        property: mainNode.property,
+        descriptor: mainNode.descriptor,
+        index: mainNode.index,
 
         actualNode,
         expectedNode,
@@ -845,11 +858,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         },
       };
 
-      if (actualNode) {
-        actualNode.comparison = comparison;
-      }
-      if (expectedNode) {
-        expectedNode.comparison = comparison;
+      if (fromInternalValue) {
+        if (actualNode && actualNode.isComposite) {
+          actualNode.comparison = comparison;
+        }
+        if (expectedNode && expectedNode.isComposite) {
+          expectedNode.comparison = comparison;
+        }
+      } else {
+        if (actualNode) {
+          actualNode.comparison = comparison;
+        }
+        if (expectedNode) {
+          expectedNode.comparison = comparison;
+        }
       }
 
       return comparison;
@@ -2179,18 +2201,7 @@ let writeDiff;
           urlDiff = writeUrlDiff(comparison, selfContext);
         }
         if (node.isUrl) {
-          let parenthesisColor;
-          if (
-            comparison.actualNode.isComposite ===
-            comparison.expectedNode.isComposite
-          ) {
-            parenthesisColor = sameColor;
-          } else {
-            parenthesisColor =
-              selfContext.resultType === "actualNode"
-                ? unexpectedColor
-                : expectedColor;
-          }
+          const parenthesisColor = getParenthesisColor(selfContext, comparison);
           insideDiff += ANSI.color("(", parenthesisColor);
           insideDiff += urlDiff;
           insideDiff += ANSI.color(")", parenthesisColor);
@@ -2493,39 +2504,7 @@ let writeDiff;
       const valueColor = getValueColor(context, comparison);
       let stringOverviewDiff = "";
       if (comparison.quote) {
-        let quoteColor;
-        let comparisonForQuotes = comparison;
-        if (comparison.type === "internal_value") {
-          comparisonForQuotes = comparison.parent;
-        }
-        if (context.removed) {
-          quoteColor = removedColor;
-        } else if (context.added) {
-          quoteColor = addedColor;
-        } else if (context.modified) {
-          quoteColor =
-            context.resultType === "actualNode"
-              ? unexpectedColor
-              : expectedColor;
-        } else if (
-          // for sets actualNode/expectedNode is null
-          // and as long as the comparison is not added/removed
-          // it means the value is found in the other set
-          comparisonForQuotes.type === "indexed_value" &&
-          comparisonForQuotes.parent.combinations.sets
-        ) {
-          quoteColor = sameColor;
-        } else if (
-          comparisonForQuotes.combinations.primitives ||
-          comparisonForQuotes.combinations.composites
-        ) {
-          quoteColor = sameColor;
-        } else {
-          quoteColor =
-            context.resultType === "actualNode"
-              ? unexpectedColor
-              : expectedColor;
-        }
+        const quoteColor = getQuoteColor(context, comparison);
         stringOverviewDiff += ANSI.color(comparison.quote, quoteColor);
         stringOverviewDiff += ANSI.color(stringDiff, valueColor);
         stringOverviewDiff += ANSI.color(comparison.quote, quoteColor);
@@ -2673,10 +2652,11 @@ let writeDiff;
           comparison.expectedNode.childNodes.lines.length
         ) {
           summaryColor = delimitersColor;
-        } else if (context.resultType === "actualNode") {
-          summaryColor = unexpectedColor;
         } else {
-          summaryColor = expectedColor;
+          summaryColor =
+            context.resultType === "actualNode"
+              ? unexpectedColor
+              : expectedColor;
         }
         belowSummary += ANSI.color(
           `${skippedCounters.total} lines`,
@@ -3026,94 +3006,107 @@ let writeDiff;
       return addedColor;
     }
     if (context.modified) {
-      if (!comparison.actualNode || !comparison.expectedNode) {
+      const { actualNode, expectedNode } = comparison;
+      if (!actualNode || !expectedNode) {
         return context.resultType === "actualNode"
           ? unexpectedColor
           : expectedColor;
       }
-      if (forWhat === "bracket") {
+      // ideally we should loop until we find the least nested internal value
+      // but I'm not sure it's a good idea (the diff output would feel messy)
+      let actualTarget = actualNode.childNodes.internalValue || actualNode;
+      let expectedTarget =
+        expectedNode.childNodes.internalValue || expectedNode;
+
+      if (forWhat === "subtype") {
         if (
-          comparison.actualNode.isComposite &&
-          comparison.expectedNode.isComposite
+          actualTarget.isComposite &&
+          expectedTarget.isComposite &&
+          actualTarget.subtype === expectedTarget.subtype
         ) {
-          const actualOpenBracket =
-            comparison.actualNode.isArray || comparison.actualNode.isSet
-              ? "["
-              : "{";
-          const expectedOpenBracket =
-            comparison.expectedNode.isArray || comparison.expectedNode.isSet
-              ? "["
-              : "{";
-          if (actualOpenBracket === expectedOpenBracket) {
-            // they use same brackets
-            return sameColor;
-          }
+          return sameColor;
         }
         if (
-          comparison.actualNode.isString &&
-          comparison.expectedNode.isString
+          actualTarget.isComposite === expectedTarget.isComposite &&
+          actualTarget.canHaveLines &&
+          expectedTarget.canHaveLines
         ) {
-          // they use same brackets
           return sameColor;
         }
       }
-      if (forWhat === "subtype") {
-        if (
-          comparison.actualNode.isComposite &&
-          comparison.expectedNode.isComposite &&
-          comparison.actualNode.subtype === comparison.expectedNode.subtype
-        ) {
-          return sameColor;
-        }
-        if (
-          comparison.actualNode.isComposite ===
-            comparison.expectedNode.isComposite &&
-          comparison.actualNode.canHaveLines &&
-          comparison.expectedNode.canHaveLines
-        ) {
+      if (forWhat === "parenthesis") {
+        if (actualTarget.isComposite === expectedTarget.isComposite) {
           return sameColor;
         }
       }
       if (forWhat === "constructor_arg") {
         if (
-          comparison.actualNode.isArray &&
-          comparison.expectedNode.isArray &&
-          comparison.actualNode.value.length ===
-            comparison.expectedNode.value.length
+          actualTarget.isArray &&
+          expectedTarget.isArray &&
+          actualTarget.value.length === expectedTarget.value.length
         ) {
           return sameColor;
         }
         if (
-          comparison.actualNode.isString &&
-          comparison.expectedNode.isString &&
-          comparison.actualNode.childNodes.chars.length ===
-            comparison.expectedNode.childNodes.chars.length
+          actualTarget.isString &&
+          expectedTarget.isString &&
+          actualTarget.childNodes.chars.length ===
+            expectedTarget.childNodes.chars.length
         ) {
           return sameColor;
         }
-        if (comparison.combinations.sets) {
+        if (actualTarget.isSet && expectedTarget.isSet) {
           if (context.resultType === "actualNode") {
-            for (const actualValue of comparison.actualNode.value) {
-              if (!comparison.expectedNode.value.has(actualValue)) {
+            for (const actualValue of actualTarget.value) {
+              if (!expectedTarget.value.has(actualValue)) {
                 return addedColor;
               }
             }
             return sameColor;
           }
-          for (const expectedValue of comparison.expectedNode.value) {
-            if (!comparison.expectedNode.value.has(expectedValue)) {
+          for (const expectedValue of expectedTarget.value) {
+            if (!expectedTarget.value.has(expectedValue)) {
               return removedColor;
             }
           }
           return sameColor;
         }
         if (
-          comparison.actualNode.isSet === comparison.expectedNode.isSet &&
-          comparison.actualNode.isComposite &&
-          comparison.expectedNode.isComposite &&
-          comparison.actualNode.keys.length ===
-            comparison.expectedNode.keys.length
+          actualTarget.isSet === expectedTarget.isSet &&
+          actualTarget.isComposite &&
+          expectedTarget.isComposite &&
+          actualTarget.keys.length === expectedTarget.keys.length
         ) {
+          return sameColor;
+        }
+      }
+      if (forWhat === "bracket") {
+        if (actualTarget.isComposite && expectedTarget.isComposite) {
+          const actualOpenBracket =
+            actualTarget.isArray || actualTarget.isSet ? "[" : "{";
+          const expectedOpenBracket =
+            expectedTarget.isArray || expectedTarget.isSet ? "[" : "{";
+          if (actualOpenBracket === expectedOpenBracket) {
+            // they use same brackets
+            return sameColor;
+          }
+        }
+        if (actualTarget.isString && expectedTarget.isString) {
+          // they use same brackets
+          return sameColor;
+        }
+      }
+      if (forWhat === "quote") {
+        if (
+          // for sets actualNode/expectedNode is null
+          // and as long as the comparison is not added/removed
+          // it means the value is found in the other set
+          comparison.type === "indexed_value" &&
+          comparison.parent.combinations.sets
+        ) {
+          return sameColor;
+        }
+        if (actualTarget.isComposite === expectedTarget.isComposite) {
           return sameColor;
         }
       }
@@ -3132,8 +3125,14 @@ let writeDiff;
   const getBracketColor = (context, comparison) => {
     return getColorFor("bracket", context, comparison);
   };
+  const getParenthesisColor = (context, comparison) => {
+    return getColorFor("parenthesis", context, comparison);
+  };
   const getDelimitersColor = (context, comparison) => {
     return getColorFor("delimiters", context, comparison);
+  };
+  const getQuoteColor = (context, comparison) => {
+    return getColorFor("quote", context, comparison);
   };
   const getValueColor = (context, comparison) => {
     return getColorFor("value", context, comparison);
