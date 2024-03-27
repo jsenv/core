@@ -217,16 +217,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
         if (ownerComparison) {
           if (ownerComparison.combinations.sets) {
-            if (actualNode.name === "actual") {
+            if (actualNode) {
               const added = !ownerComparison.expectedNode.value.has(
-                expectedNode.value,
+                actualNode.value,
               );
               if (added) {
                 comparison.added = true;
               }
             } else {
               const removed = !ownerComparison.actualNode.value.has(
-                actualNode.value,
+                expectedNode.value,
               );
               if (removed) {
                 comparison.removed = true;
@@ -467,29 +467,34 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (ignoreInternalValueDiff) {
               break internal_value;
             }
-            // compare primitive and nothing
-            if (comparison.combinations.primitiveAndNothing) {
-              break internal_value;
+            let actualInternalValueNode;
+            let expectedInternalValueNode;
+            if (comparison.combinations.primitiveAndComposite) {
+              actualInternalValueNode = actualNode.isPrimitive
+                ? null
+                : actualNode.childNodes.internalValue;
+              expectedInternalValueNode = expectedNode.isPrimitive
+                ? null
+                : expectedNode.childNodes.internalValue;
+            } else if (comparison.combinations.compositeAndNothing) {
+              actualInternalValueNode = actualNode
+                ? actualNode.childNodes.internalValue
+                : null;
+              expectedInternalValueNode = expectedNode
+                ? expectedNode.childNodes.internalValue
+                : null;
+            } else if (comparison.combinations.composites) {
+              actualInternalValueNode = actualNode.childNodes.internalValue;
+              expectedInternalValueNode = expectedNode.childNodes.internalValue;
             }
-
-            if (comparison.combinations.primitives) {
-              break internal_value;
-            }
-
-            const actualInternalValueNode = actualNode
-              ? actualNode.childNodes.internalValue
-              : null;
-            const expectedInternalValueNode = expectedNode
-              ? expectedNode.childNodes.internalValue
-              : null;
             if (!actualInternalValueNode && !expectedInternalValueNode) {
               break internal_value;
             }
+
             const internalValueComparison = createComparison(
               actualInternalValueNode,
               expectedInternalValueNode,
             );
-
             const hideConditions = {
               primitive: (node) => {
                 return !node.origin;
@@ -672,13 +677,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 compareInside(indexedValueComparison, { ignoreDiff: true });
               };
               for (const actualIndexedValueNode of actualIndexedValueNodes) {
-                visitSetValue(actualIndexedValueNode, actualIndexedValueNode);
+                visitSetValue(actualIndexedValueNode, null);
               }
               for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
-                visitSetValue(
-                  expectedIndexedValueNode,
-                  expectedIndexedValueNode,
-                );
+                visitSetValue(null, expectedIndexedValueNode);
               }
               break indexed_values;
             }
@@ -757,8 +759,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const parent = leftOrRightValueNode.parent
         ? leftOrRightValueNode.parent.comparison
         : null;
-      if (parent && parent.combinations.sets) {
-      } else if (actualNode && actualNode.comparison) {
+      if (actualNode && actualNode.comparison) {
         throw new Error("nope");
       } else if (expectedNode && expectedNode.comparison) {
         throw new Error("nope");
@@ -766,23 +767,31 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
       const comparison = {
         combinations: {
-          primitiveAndNothing:
-            (actualNode && actualNode.isPrimitive && !expectedNode) ||
-            (!actualNode && expectedNode && expectedNode.isPrimitive),
-          primitiveAndComposite:
-            actualNode &&
-            expectedNode &&
-            actualNode.isComposite !== expectedNode.isComposite,
           primitives:
             actualNode &&
             expectedNode &&
             actualNode.isPrimitive &&
             expectedNode.isPrimitive,
+          composites:
+            actualNode &&
+            expectedNode &&
+            actualNode.isComposite &&
+            expectedNode.isComposite,
           sets:
             actualNode &&
             expectedNode &&
             actualNode.isSet &&
             expectedNode.isSet,
+          primitiveAndNothing:
+            (actualNode && actualNode.isPrimitive && !expectedNode) ||
+            (!actualNode && expectedNode && expectedNode.isPrimitive),
+          compositeAndNothing:
+            (actualNode && actualNode.isComposite && !expectedNode) ||
+            (!actualNode && expectedNode && expectedNode.isComposite),
+          primitiveAndComposite:
+            actualNode &&
+            expectedNode &&
+            actualNode.isComposite !== expectedNode.isComposite,
         },
         parent,
         type: leftOrRightValueNode.type,
@@ -2496,8 +2505,8 @@ let writeDiff;
               ? unexpectedColor
               : expectedColor;
         } else if (
-          comparisonForQuotes.actualNode.isComposite ===
-          comparisonForQuotes.expectedNode.isComposite
+          comparisonForQuotes.combinations.primitives ||
+          comparisonForQuotes.combinations.composites
         ) {
           quoteColor = sameColor;
         } else {
@@ -2899,16 +2908,7 @@ let writeDiff;
           const indexedValueComparison =
             indexedValueComparisons[indexedValueIndex];
           indexedValueIndex++;
-          if (
-            context.resultType === "actualNode" &&
-            indexedValueComparison[context.resultType].name !== "actual"
-          ) {
-            return nextSetValue();
-          }
-          if (
-            context.resultType === "expectedNode" &&
-            indexedValueComparison[context.resultType].name !== "expected"
-          ) {
+          if (!indexedValueComparison[context.resultType]) {
             return nextSetValue();
           }
           return indexedValueComparison;
@@ -3080,17 +3080,21 @@ let writeDiff;
         ) {
           return sameColor;
         }
-        if (comparison.actualNode.isSet && comparison.expectedNode.isSet) {
+        if (comparison.combinations.sets) {
           if (context.resultType === "actualNode") {
-            const added = !comparison.expectedNode.value.has(
-              comparison.actualNode.value,
-            );
-            return added ? addedColor : sameColor;
+            for (const actualValue of comparison.actualNode.value) {
+              if (!comparison.expectedNode.value.has(actualValue)) {
+                return addedColor;
+              }
+            }
+            return sameColor;
           }
-          const removed = !comparison.actualNode.value.has(
-            comparison.expectedNode.value,
-          );
-          return removed ? removedColor : sameColor;
+          for (const expectedValue of comparison.expectedNode.value) {
+            if (!comparison.expectedNode.value.has(expectedValue)) {
+              return removedColor;
+            }
+          }
+          return sameColor;
         }
         if (
           comparison.actualNode.isSet === comparison.expectedNode.isSet &&
