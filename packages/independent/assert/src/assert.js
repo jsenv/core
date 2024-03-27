@@ -342,7 +342,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let ignorePrototypeDiff =
           options.ignoreDiff || !actualNode || !expectedNode;
         let ignoreInternalValueDiff =
-          options.ignoreDiff || !actualNode || !expectedNode;
+          options.ignoreDiff || !actualNode || !expectedNode || true;
 
         reference: {
           if (ignoreReferenceDiff) {
@@ -1528,28 +1528,38 @@ let writeDiff;
           : node.type === "internal_value"
             ? node.origin
             : "";
-
     if (node.type === "internal_value" && node.inConstructor) {
       isNestedValue = false;
       property = "";
     }
 
     if (isNestedValue) {
-      let useIndent;
-      const relativeDepth = node.depth + selfContext.initialDepth;
-      if (context.collapsed) {
-        useIndent = false;
+      if (context.collapsedWithOverview) {
         selfContext.collapsedWithOverview = false;
+        selfContext.collapsed = true;
+      } else if (context.collapsed) {
       } else {
-        useIndent = true;
+        const isMultiline =
+          node.canHaveLines && node.childNodes.lines.length > 1;
+        if (
+          comparison !== selfContext.startComparison &&
+          // when using
+          // foo: 1| line 1
+          //      2| line 2
+          //      3| line 3
+          // the "," separator is removed because it's not correctly separated from the multiline
+          // and it becomes hard to know if "," is part of the string or not
+          !isMultiline
+        ) {
+          endSeparator = ",";
+        }
+
+        const relativeDepth = node.depth + selfContext.initialDepth;
         if (relativeDepth >= selfContext.maxDepth) {
           selfContext.collapsedWithOverview = true;
         } else if (comparison.counters.overall.any === 0) {
           selfContext.collapsedWithOverview = true;
         }
-      }
-
-      if (useIndent) {
         let indent = `  `.repeat(relativeDepth);
         if (selfContext.signs) {
           if (selfContext.removed) {
@@ -1600,19 +1610,6 @@ let writeDiff;
           diff += ANSI.color(":", keyColor);
           diff += " ";
         }
-      }
-      if (node.canHaveLines && node.childNodes.lines.length > 1) {
-        // when using
-        // foo: 1| line 1
-        //      2| line 2
-        //      3| line 3
-        // the "," separator is removed because it's not correctly separated from the multiline
-        // and it becomes hard to know if "," is part of the string or not
-        endSeparator = "";
-      } else if (useIndent && comparison !== selfContext.startComparison) {
-        endSeparator = ",";
-      } else {
-        endSeparator = "";
       }
     }
 
@@ -1671,7 +1668,7 @@ let writeDiff;
         break value;
       }
 
-      if (selfContext.collapsed || selfContext.collapsedWithOverview) {
+      if (selfContext.collapsedWithOverview) {
         if (node.type === "property") {
           const propertyDescriptorComparisons =
             comparison.childComparisons.propertyDescriptors;
@@ -1789,7 +1786,9 @@ let writeDiff;
         valueDiff += writeLinesDiff(comparison, selfContext);
         break value;
       }
-
+      if (selfContext.collapsed) {
+        break value;
+      }
       if (selfContext.collapsedWithOverview) {
         const bracketColor = getBracketColor(selfContext, comparison);
         const valueColor = getValueColor(selfContext, comparison);
@@ -2189,15 +2188,15 @@ let writeDiff;
       subtypeDiff += ANSI.color(`new`, delimitersColor);
       subtypeDiff += " ";
     }
-    if (node.isComposite) {
+    if (
+      node.isComposite &&
+      (selfContext.collapsed ||
+        (node.subtype !== "Object" && node.subtype !== "Array"))
+    ) {
       const subtypeColor = getSubtypeColor(context, comparison);
       subtypeDiff += ANSI.color(node.subtype, subtypeColor);
     }
 
-    const constructorParenthesisColor = getConstructorParenthesisColor(
-      context,
-      comparison,
-    );
     let insideConstructor = "";
     if (node.isArray) {
       if (selfContext.collapsed) {
@@ -2232,12 +2231,18 @@ let writeDiff;
           comparison.childComparisons.internalValue;
         insideConstructor += writeDiff(internalValueComparison, context);
       } else if (node.canHaveProps) {
-        const keysLengthColor = getConstructorArgColor(context, comparison);
-        insideConstructor = ANSI.color(node.keys.length, keysLengthColor);
+        if (selfContext.collapsed) {
+          const keysLengthColor = getConstructorArgColor(context, comparison);
+          insideConstructor = ANSI.color(node.keys.length, keysLengthColor);
+        }
       }
     }
 
     if (insideConstructor) {
+      const constructorParenthesisColor = getConstructorParenthesisColor(
+        context,
+        comparison,
+      );
       subtypeDiff += ANSI.color(`(`, constructorParenthesisColor);
       subtypeDiff += insideConstructor;
       subtypeDiff += ANSI.color(`)`, constructorParenthesisColor);

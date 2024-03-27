@@ -44,7 +44,7 @@ expect: {
 AssertionError: actual and expected are different:
 
 actual: {
-  foo: { a: {} },
+  foo: { a: Object(0) },
 }
 expect: false
 
