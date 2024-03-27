@@ -2214,7 +2214,10 @@ let writeDiff;
       }
     }
 
-    const parenthesisColor = getParenthesisColor(context, comparison);
+    const constructorParenthesisColor = getConstructorParenthesisColor(
+      context,
+      comparison,
+    );
 
     if (displaySubtype) {
       const subtypeColor = getSubtypeColor(context, comparison);
@@ -2224,20 +2227,20 @@ let writeDiff;
       if (!overview) {
         return prefix;
       }
-      prefix += ANSI.color(`(`, parenthesisColor);
+      prefix += ANSI.color(`(`, constructorParenthesisColor);
       const lengthColor = getConstructorArgColor(context, comparison);
       prefix += ANSI.color(node.value.length, lengthColor);
-      prefix += ANSI.color(`)`, parenthesisColor);
+      prefix += ANSI.color(`)`, constructorParenthesisColor);
       return prefix;
     }
     if (node.isString) {
       if (!overview) {
         return prefix;
       }
-      prefix += ANSI.color(`(`, parenthesisColor);
+      prefix += ANSI.color(`(`, constructorParenthesisColor);
       const lengthColor = getConstructorArgColor(context, comparison);
       prefix += ANSI.color(node.childNodes.chars.length, lengthColor);
-      prefix += ANSI.color(`)`, parenthesisColor);
+      prefix += ANSI.color(`)`, constructorParenthesisColor);
       return prefix;
     }
     if (node.isComposite) {
@@ -2270,9 +2273,9 @@ let writeDiff;
         }
       }
       if (insideConstructor) {
-        prefix += ANSI.color("(", parenthesisColor);
+        prefix += ANSI.color("(", constructorParenthesisColor);
         prefix += insideConstructor;
-        prefix += ANSI.color(")", parenthesisColor);
+        prefix += ANSI.color(")", constructorParenthesisColor);
       }
       return prefix;
     }
@@ -2928,7 +2931,7 @@ let writeDiff;
       let actualTarget = actualNode;
       let expectedTarget = expectedNode;
       let internalValueModified = true;
-      if (forWhat !== "subtype" && forWhat !== "parenthesis") {
+      if (forWhat !== "subtype" && forWhat !== "constructor_parenthesis") {
         const actualInternalValueNode =
           actualNode.type === "internal_value"
             ? actualNode
@@ -2976,8 +2979,21 @@ let writeDiff;
           return sameColor;
         }
       }
-      if (forWhat === "parenthesis") {
-        if (actualTarget.isComposite === expectedTarget.isComposite) {
+      if (forWhat === "constructor_parenthesis") {
+        const actualConsructorParenthesis =
+          actualTarget.subtype === "Object" && actualTarget.keys.length === 0
+            ? ""
+            : actualTarget.isComposite
+              ? "("
+              : "";
+        const expectedConsructorParenthesis =
+          expectedTarget.subtype === "Object" &&
+          expectedTarget.keys.length === 0
+            ? ""
+            : expectedTarget.isComposite
+              ? "("
+              : "";
+        if (actualConsructorParenthesis === expectedConsructorParenthesis) {
           return sameColor;
         }
       }
@@ -3067,12 +3083,13 @@ let writeDiff;
   const getConstructorArgColor = (context, comparison) => {
     return getColorFor("constructor_arg", context, comparison);
   };
+  const getConstructorParenthesisColor = (context, comparison) => {
+    return getColorFor("constructor_parenthesis", context, comparison);
+  };
   const getBracketColor = (context, comparison) => {
     return getColorFor("bracket", context, comparison);
   };
-  const getParenthesisColor = (context, comparison) => {
-    return getColorFor("parenthesis", context, comparison);
-  };
+
   const getDelimitersColor = (context, comparison) => {
     return getColorFor("delimiters", context, comparison);
   };
