@@ -2191,7 +2191,7 @@ let writeDiff;
       selfContext.collapsed ||
       (node.subtype !== "Object" && node.subtype !== "Array")
     ) {
-      const subtypeColor = getSubtypeColor(context, comparison);
+      const subtypeColor = getSubtypeColor(selfContext, comparison);
       subtypeDiff += ANSI.color(node.subtype, subtypeColor);
     }
 
