@@ -57,3 +57,17 @@ assert({
 
 ![img](<./internal_value/true and signal(false).svg>)
 
+# signal(true) and false
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => true,
+  },
+  expected: false,
+});
+```
+
+![img](<./internal_value/signal(true) and false.svg>)
+

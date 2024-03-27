@@ -1127,7 +1127,7 @@ let createValueNode;
 
       node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
       // prototype
-      if (node.isComposite && !node.structureIsKnown && false) {
+      if (node.isComposite && !node.structureIsKnown) {
         const prototypeNode = _createValueNode({
           parent: node,
           path: path.append("__proto__"),
@@ -2981,7 +2981,11 @@ let writeDiff;
           return sameColor;
         }
       }
-      if (actualInsideNode.comparison.counters.overall.any === 0) {
+      const insideNode =
+        actualInsideNode.type === "internal_value"
+          ? actualInsideNode
+          : expectedInsideNode;
+      if (insideNode.comparison.counters.overall.any === 0) {
         return sameColor;
       }
       return colorWhenModified;
