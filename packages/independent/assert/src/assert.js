@@ -216,7 +216,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         };
 
         if (ownerComparison) {
-          if (ownerComparison.combinations.sets) {
+          if (
+            ownerComparison.combinations.sets &&
+            comparison.type === "indexed_value"
+          ) {
             if (actualNode) {
               const added = !ownerComparison.expectedNode.value.has(
                 actualNode.value,
@@ -2504,6 +2507,14 @@ let writeDiff;
             context.resultType === "actualNode"
               ? unexpectedColor
               : expectedColor;
+        } else if (
+          // for sets actualNode/expectedNode is null
+          // and as long as the comparison is not added/removed
+          // it means the value is found in the other set
+          comparisonForQuotes.type === "indexed_value" &&
+          comparisonForQuotes.parent.combinations.sets
+        ) {
+          quoteColor = sameColor;
         } else if (
           comparisonForQuotes.combinations.primitives ||
           comparisonForQuotes.combinations.composites
