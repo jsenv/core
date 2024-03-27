@@ -206,29 +206,31 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         const compareInside = (insideComparison, insideOptions = {}) => {
+          const insideActualNode = insideComparison.actualNode;
+          const insideExpectedNode = insideComparison.expectedNode;
+          if (!insideActualNode) {
+            if (insideExpectedNode.showOnlyWhenModified) {
+              insideComparison.hidden = true;
+            }
+          } else if (!insideExpectedNode) {
+            if (insideActualNode.showOnlyWhenModified) {
+              insideComparison.hidden = true;
+            }
+          }
+
           compare(insideComparison, { ...options, ...insideOptions });
           if (insideComparison.counters.overall.any) {
             appendCounters(
               comparison.counters.inside,
               insideComparison.counters.overall,
             );
-          } else {
-            const insideActualNode = insideComparison.actualNode;
-            const insideExpectedNode = insideComparison.expectedNode;
-            if (insideActualNode && insideExpectedNode) {
-              if (
-                insideActualNode.showOnlyWhenDiff &&
-                insideExpectedNode.showOnlyWhenDiff
-              ) {
-                insideComparison.hidden = true;
-              }
-            } else if (insideActualNode) {
-              if (insideActualNode.showOnlyWhenDiff) {
-                insideComparison.hidden = true;
-              }
-            } else if (insideExpectedNode.showOnlyWhenDiff) {
-              insideComparison.hidden = true;
-            }
+          } else if (
+            insideActualNode &&
+            insideExpectedNode &&
+            insideActualNode.showOnlyWhenModified &&
+            insideExpectedNode.showOnlyWhenModified
+          ) {
+            insideComparison.hidden = true;
           }
         };
 
@@ -981,7 +983,7 @@ let createValueNode;
       type,
       value,
       origin,
-      showOnlyWhenDiff = false,
+      showOnlyWhenModified = false,
     }) => {
       const node = {
         name,
@@ -1114,7 +1116,7 @@ let createValueNode;
           wellKnownId,
           inConstructor,
           hidden: false,
-          showOnlyWhenDiff,
+          showOnlyWhenModified,
           reference,
           referenceFromOthersSet: new Set(),
           keys: [],
@@ -1140,7 +1142,7 @@ let createValueNode;
           path: path.append("__proto__"),
           type: "prototype",
           value: Object.getPrototypeOf(node.value),
-          showOnlyWhenDiff: true,
+          showOnlyWhenModified: true,
         });
         childNodes.prototype = prototypeNode;
       }
@@ -1252,7 +1254,7 @@ let createValueNode;
             path: path.append(propertyName),
             type: "property",
             value: propertyDescriptor,
-            showOnlyWhenDiff: !propertyDescriptor.enumerable,
+            showOnlyWhenModified: !propertyDescriptor.enumerable,
           });
           propertyNode.property = propertyName;
           const propertyDescriptorNodes = {
@@ -1278,7 +1280,7 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
-              showOnlyWhenDiff: isDefaultDescriptor(
+              showOnlyWhenModified: isDefaultDescriptor(
                 propertyDescriptorName,
                 propertyDescriptorValue,
               ),
