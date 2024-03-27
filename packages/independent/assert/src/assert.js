@@ -1667,7 +1667,9 @@ let writeDiff;
       if (!displayValue) {
         break value;
       }
-
+      if (selfContext.collapsed) {
+        break value;
+      }
       if (selfContext.collapsedWithOverview) {
         if (node.type === "property") {
           const propertyDescriptorComparisons =
@@ -1784,9 +1786,6 @@ let writeDiff;
       }
       if (node.isString && !node.isUrlString && node.canHaveLines) {
         valueDiff += writeLinesDiff(comparison, selfContext);
-        break value;
-      }
-      if (selfContext.collapsed) {
         break value;
       }
       if (selfContext.collapsedWithOverview) {
@@ -2189,9 +2188,10 @@ let writeDiff;
       subtypeDiff += " ";
     }
     if (
-      node.isComposite &&
-      (selfContext.collapsed ||
-        (node.subtype !== "Object" && node.subtype !== "Array"))
+      selfContext.collapsed ||
+      (node.isComposite &&
+        node.subtype !== "Object" &&
+        node.subtype !== "Array")
     ) {
       const subtypeColor = getSubtypeColor(context, comparison);
       subtypeDiff += ANSI.color(node.subtype, subtypeColor);
@@ -2200,20 +2200,17 @@ let writeDiff;
     let insideConstructor = "";
     if (node.isArray) {
       if (selfContext.collapsed) {
-        const lengthColor = getConstructorArgColor(context, comparison);
+        const lengthColor = getConstructorArgColor(selfContext, comparison);
         insideConstructor += ANSI.color(node.value.length, lengthColor);
       }
     } else if (node.isString) {
       if (selfContext.collapsed) {
-        const lengthColor = getConstructorArgColor(context, comparison);
-        insideConstructor += ANSI.color(
-          node.childNodes.chars.length,
-          lengthColor,
-        );
+        const lengthColor = getConstructorArgColor(selfContext, comparison);
+        insideConstructor += ANSI.color(node.value.length, lengthColor);
       }
     } else if (node.isSet) {
       if (selfContext.collapsed) {
-        const sizeColor = getConstructorArgColor(context, comparison);
+        const sizeColor = getConstructorArgColor(selfContext, comparison);
         insideConstructor = ANSI.color(
           node.indexedValueNodes.length,
           sizeColor,
@@ -2967,18 +2964,13 @@ let writeDiff;
         }
       }
       if (forWhat === "constructor_arg") {
+        if (actualTarget.comparison.counters.overall.any === 0) {
+          return sameColor;
+        }
         if (
           actualTarget.isArray &&
           expectedTarget.isArray &&
           actualTarget.value.length === expectedTarget.value.length
-        ) {
-          return sameColor;
-        }
-        if (
-          actualTarget.isString &&
-          expectedTarget.isString &&
-          actualTarget.childNodes.chars.length ===
-            expectedTarget.childNodes.chars.length
         ) {
           return sameColor;
         }
