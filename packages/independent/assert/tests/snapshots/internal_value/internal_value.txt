@@ -1,0 +1,6 @@
+# signal(true) and true
+AssertionError: actual and expected are different:
+
+actual: Signal(true)
+expect: true
+

@@ -342,7 +342,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         let ignorePrototypeDiff =
           options.ignoreDiff || !actualNode || !expectedNode;
         let ignoreInternalValueDiff =
-          options.ignoreDiff || !actualNode || !expectedNode || true;
+          options.ignoreDiff || !actualNode || !expectedNode;
 
         reference: {
           if (ignoreReferenceDiff) {
@@ -424,40 +424,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             comparison.childComparisons.prototype = prototypeComparison;
             compareInside(prototypeComparison);
           }
+          let actualInsideNode = actualNode ? actualNode.insideNode : null;
+          let expectedInsideNode = expectedNode
+            ? expectedNode.insideNode
+            : null;
           internal_value: {
             if (ignoreInternalValueDiff) {
               break internal_value;
             }
-            let actualInternalValueNode;
-            let expectedInternalValueNode;
-            if (comparison.combinations.primitiveAndComposite) {
-              actualInternalValueNode = actualNode.childNodes.internalValue;
-              expectedInternalValueNode = expectedNode.childNodes.internalValue;
-            } else if (comparison.combinations.compositeAndNothing) {
-              actualInternalValueNode = actualNode
-                ? actualNode.childNodes.internalValue
-                : null;
-              expectedInternalValueNode = expectedNode
-                ? expectedNode.childNodes.internalValue
-                : null;
-            } else if (comparison.combinations.composites) {
-              actualInternalValueNode = actualNode.childNodes.internalValue;
-              expectedInternalValueNode = expectedNode.childNodes.internalValue;
-            }
+            const actualInternalValueNode = actualNode
+              ? actualNode.childNodes.internalValue
+              : null;
+            const expectedInternalValueNode = expectedNode
+              ? expectedNode.childNodes.internalValue
+              : null;
             if (!actualInternalValueNode && !expectedInternalValueNode) {
               break internal_value;
             }
-            const actualTargetNode = actualInternalValueNode || actualNode;
-            const expectedTargetNode =
-              expectedInternalValueNode || expectedNode;
-
-            // ici, si actualNode et target est hidden
-            // alors actualNode devrait etre hidden
-            // parce qu'il n'y a pas d'interet de le ré-afficher
-            // en vrai je suis PAUME je sais pas comment traiter ce cas
             const internalValueComparison = createComparison(
-              actualTargetNode,
-              expectedTargetNode,
+              actualInsideNode,
+              expectedInsideNode,
             );
             comparison.childComparisons.internalValue = internalValueComparison;
             compareInside(internalValueComparison);
@@ -554,11 +540,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           indexed_values: {
-            const actualIndexedValueNodes = actualNode
-              ? actualNode.childNodes.indexedValues || []
+            const actualIndexedValueNodes = actualInsideNode
+              ? actualInsideNode.childNodes.indexedValues || []
               : [];
-            const expectedIndexedValueNodes = expectedNode
-              ? expectedNode.childNodes.indexedValues || []
+            const expectedIndexedValueNodes = expectedInsideNode
+              ? expectedInsideNode.childNodes.indexedValues || []
               : [];
             const indexedValueComparisons =
               comparison.childComparisons.indexedValues;
@@ -608,11 +594,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           properties: {
-            const actualPropertyNodes = actualNode
-              ? actualNode.childNodes.properties || {}
+            const actualPropertyNodes = actualInsideNode
+              ? actualInsideNode.childNodes.properties || {}
               : {};
-            const expectedPropertyNodes = expectedNode
-              ? expectedNode.childNodes.properties || {}
+            const expectedPropertyNodes = expectedInsideNode
+              ? expectedInsideNode.childNodes.properties || {}
               : {};
             const propertyComparisons = comparison.childComparisons.properties;
 
@@ -1141,7 +1127,7 @@ let createValueNode;
 
       node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
       // prototype
-      if (node.isComposite && !node.structureIsKnown) {
+      if (node.isComposite && !node.structureIsKnown && false) {
         const prototypeNode = _createValueNode({
           parent: node,
           path: path.append("__proto__"),
@@ -1170,6 +1156,7 @@ let createValueNode;
         if (internalValue === node.value) {
           internalValueNode.hidden = true;
         }
+        node.insideNode = internalValueNode;
         childNodes.internalValue = internalValueNode;
       } else if (node.isUrl) {
         const internalValue = node.href;
@@ -1180,7 +1167,10 @@ let createValueNode;
           value: internalValue,
           origin: "href",
         });
+        node.insideNode = internalValueNode;
         childNodes.internalValue = internalValueNode;
+      } else {
+        node.insideNode = node;
       }
 
       // properties
@@ -1496,6 +1486,12 @@ let writeDiff;
     }
     const node = comparison[context.resultType];
     if (node.hidden) {
+      return "";
+    }
+    if (
+      comparison.type === "internal_value" &&
+      node.type !== "internal_value"
+    ) {
       return "";
     }
     context.onComparisonDisplayed(comparison);
@@ -1901,7 +1897,7 @@ let writeDiff;
           textIndent: 0,
           modified: resetModified ? false : selfContext.modified,
         });
-        if (nestedComparison !== context.startComparison) {
+        if (nestedValueDiff && nestedComparison !== context.startComparison) {
           nestedValueDiff += `\n`;
         }
         return nestedValueDiff;
@@ -2113,6 +2109,13 @@ let writeDiff;
       };
 
       let insideDiff = "";
+      const actualInsideNode = comparison.actualNode
+        ? comparison.actualNode.insideNode
+        : null;
+      const expectedInsideNode = comparison.expectedNode
+        ? comparison.expectedNode.insideNode
+        : null;
+
       if (node.canHaveIndexedValues) {
         const indexedValueDiff = writeGroupDiff(
           createGetIndexedValues(comparison, selfContext),
@@ -2122,10 +2125,10 @@ let writeDiff;
             openBracket: "[",
             closeBracket: "]",
             resetModified:
-              comparison.actualNode &&
-              comparison.actualNode.canHaveIndexedValues &&
-              comparison.expectedNode &&
-              comparison.expectedNode.canHaveIndexedValues,
+              actualInsideNode &&
+              actualInsideNode.canHaveIndexedValues &&
+              expectedInsideNode &&
+              expectedInsideNode.canHaveIndexedValues,
           },
         );
         if (node.isSet) {
@@ -2146,10 +2149,10 @@ let writeDiff;
             openBracket: "{",
             closeBracket: "}",
             resetModified:
-              comparison.actualNode &&
-              comparison.actualNode.canHaveProps &&
-              comparison.expectedNode &&
-              comparison.expectedNode.canHaveProps,
+              actualInsideNode &&
+              actualInsideNode.canHaveProps &&
+              expectedInsideNode &&
+              expectedInsideNode.canHaveProps,
           },
         );
         if (propsDiff) {
@@ -2892,123 +2895,77 @@ let writeDiff;
       }
       // ideally we should loop until we find the least nested internal value
       // but I'm not sure it's a good idea (the diff output would feel messy)
-      let actualTarget = actualNode;
-      let expectedTarget = expectedNode;
-      let internalValueModified = true;
-      if (forWhat !== "subtype" && forWhat !== "constructor_parenthesis") {
-        const actualInternalValueNode =
-          actualNode.type === "internal_value"
-            ? actualNode
-            : actualNode.childNodes.internalValue;
-        const expectedInternalValueNode =
-          expectedNode.type === "internal_value"
-            ? expectedNode
-            : expectedNode.childNodes.internalValue;
-        if (actualInternalValueNode && expectedInternalValueNode) {
-          actualTarget = actualInternalValueNode;
-          expectedTarget = expectedInternalValueNode;
-          if (
-            actualTarget.comparison.counters.overall.any === 0 &&
-            expectedTarget.comparison.counters.overall.any === 0
-          ) {
-            internalValueModified = false;
-            return sameColor;
-          }
-        } else if (actualInternalValueNode) {
-          actualTarget = actualInternalValueNode;
-          if (actualTarget.comparison.counters.overall.any === 0) {
-            internalValueModified = false;
-          }
-        } else if (expectedInternalValueNode) {
-          expectedTarget = expectedInternalValueNode;
-          if (expectedTarget.comparison.counters.overall.any === 0) {
-            internalValueModified = false;
-          }
-        }
-      }
 
       if (forWhat === "subtype") {
         if (
-          actualTarget.isComposite &&
-          expectedTarget.isComposite &&
-          actualTarget.subtype === expectedTarget.subtype
+          actualNode.isComposite &&
+          expectedNode.isComposite &&
+          actualNode.subtype === expectedNode.subtype
         ) {
           return sameColor;
         }
         if (
-          actualTarget.isComposite === expectedTarget.isComposite &&
-          actualTarget.canHaveLines &&
-          expectedTarget.canHaveLines
+          actualNode.isComposite === expectedNode.isComposite &&
+          actualNode.canHaveLines &&
+          expectedNode.canHaveLines
         ) {
           return sameColor;
         }
       }
       if (forWhat === "constructor_parenthesis") {
         const actualConsructorParenthesis =
-          actualTarget.subtype === "Object" && actualTarget.keys.length === 0
+          actualNode.subtype === "Object" && actualNode.keys.length === 0
             ? ""
-            : actualTarget.isComposite
+            : actualNode.isComposite
               ? "("
               : "";
         const expectedConsructorParenthesis =
-          expectedTarget.subtype === "Object" &&
-          expectedTarget.keys.length === 0
+          expectedNode.subtype === "Object" && expectedNode.keys.length === 0
             ? ""
-            : expectedTarget.isComposite
+            : expectedNode.isComposite
               ? "("
               : "";
         if (actualConsructorParenthesis === expectedConsructorParenthesis) {
           return sameColor;
         }
       }
+
+      const actualInsideNode = actualNode.insideNode;
+      const expectedInsideNode = expectedNode.insideNode;
       if (forWhat === "constructor_arg") {
-        if (actualTarget.comparison.counters.overall.any === 0) {
-          return sameColor;
-        }
-        if (
-          actualTarget.isArray &&
-          expectedTarget.isArray &&
-          actualTarget.value.length === expectedTarget.value.length
-        ) {
-          return sameColor;
-        }
-        if (actualTarget.isSet && expectedTarget.isSet) {
+        if (actualInsideNode.isSet && expectedInsideNode.isSet) {
           if (context.resultType === "actualNode") {
-            for (const actualValue of actualTarget.value) {
-              if (!expectedTarget.value.has(actualValue)) {
+            for (const actualValue of actualInsideNode.value) {
+              if (!expectedInsideNode.value.has(actualValue)) {
                 return addedColor;
               }
             }
             return sameColor;
           }
-          for (const expectedValue of expectedTarget.value) {
-            if (!expectedTarget.value.has(expectedValue)) {
+          for (const expectedValue of expectedInsideNode.value) {
+            if (!actualInsideNode.value.has(expectedValue)) {
               return removedColor;
             }
           }
           return sameColor;
         }
-        if (
-          actualTarget.isSet === expectedTarget.isSet &&
-          actualTarget.isComposite &&
-          expectedTarget.isComposite &&
-          actualTarget.keys.length === expectedTarget.keys.length
-        ) {
+
+        if (actualInsideNode.comparison.counters.overall.any === 0) {
           return sameColor;
         }
       }
       if (forWhat === "bracket") {
-        if (actualTarget.isComposite && expectedTarget.isComposite) {
+        if (actualInsideNode.isComposite && expectedInsideNode.isComposite) {
           const actualOpenBracket =
-            actualTarget.isArray || actualTarget.isSet ? "[" : "{";
+            actualInsideNode.isArray || actualInsideNode.isSet ? "[" : "{";
           const expectedOpenBracket =
-            expectedTarget.isArray || expectedTarget.isSet ? "[" : "{";
+            expectedInsideNode.isArray || expectedInsideNode.isSet ? "[" : "{";
           if (actualOpenBracket === expectedOpenBracket) {
             // they use same brackets
             return sameColor;
           }
         }
-        if (actualTarget.isString && expectedTarget.isString) {
+        if (actualInsideNode.isString && expectedInsideNode.isString) {
           // they use same brackets
           return sameColor;
         }
@@ -3023,12 +2980,9 @@ let writeDiff;
         ) {
           return sameColor;
         }
-        if (actualTarget.isComposite === expectedTarget.isComposite) {
+        if (actualInsideNode.isComposite === expectedInsideNode.isComposite) {
           return sameColor;
         }
-      }
-      if (!internalValueModified) {
-        return sameColor;
       }
       return context.resultType === "actualNode"
         ? unexpectedColor

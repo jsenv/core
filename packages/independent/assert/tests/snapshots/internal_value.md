@@ -1,14 +1,14 @@
-# signal string and string
+# signal(true) and true
 
 ```js
 assert({
   actual: {
     [Symbol.toStringTag]: "Signal",
-    valueOf: () => "a",
+    valueOf: () => true,
   },
-  expected: "ab",
+  expected: true,
 });
 ```
 
-![img](<./internal_value/signal string and string.svg>)
+![img](<./internal_value/signal(true) and true.svg>)
 
