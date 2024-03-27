@@ -212,6 +212,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               comparison.counters.inside,
               insideComparison.counters.overall,
             );
+          } else if (
+            insideComparison.actualNode &&
+            insideComparison.expectedNode
+          ) {
+            if (
+              insideComparison.actualNode.showOnlyWhenDiff &&
+              insideComparison.expectedNode.showOnlyWhenDiff
+            ) {
+              insideComparison.hidden = true;
+            }
+          } else if (insideComparison.actualNode) {
+            if (insideComparison.actualNode.showOnlyWhenDiff) {
+              insideComparison.hidden = true;
+            }
+          } else if (insideComparison.expectedNode.showOnlyWhenDiff) {
+            insideComparison.hidden = true;
           }
         };
 
@@ -280,41 +296,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualPropertyDescriptorNode,
               expectedPropertyDescriptorNode,
             );
-            if (
-              !actualPropertyDescriptorNode &&
-              isDefaultDescriptor(
-                descriptorName,
-                expectedPropertyDescriptorNode.value,
-              )
-            ) {
-              propertyDescriptorComparison.hidden = true;
-            } else if (
-              !expectedPropertyDescriptorNode &&
-              isDefaultDescriptor(
-                descriptorName,
-                actualPropertyDescriptorNode.value,
-              )
-            ) {
-              propertyDescriptorComparison.hidden = true;
-            }
             propertyDescriptorComparisons[descriptorName] =
               propertyDescriptorComparison;
             compareInside(propertyDescriptorComparison);
-            if (
-              propertyDescriptorComparison.counters.overall.any === 0 &&
-              actualPropertyDescriptorNode &&
-              isDefaultDescriptor(
-                descriptorName,
-                actualPropertyDescriptorNode.value,
-              ) &&
-              expectedPropertyDescriptorNode &&
-              isDefaultDescriptor(
-                descriptorName,
-                expectedPropertyDescriptorNode.value,
-              )
-            ) {
-              propertyDescriptorComparison.hidden = true;
-            }
           };
           visitPropertyDescriptor("value");
           visitPropertyDescriptor("enumerable");
@@ -436,9 +420,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
             comparison.childComparisons.prototype = prototypeComparison;
             compareInside(prototypeComparison);
-            if (prototypeComparison.counters.overall.any === 0) {
-              prototypeComparison.hidden = true;
-            }
           }
           internal_value: {
             if (ignoreInternalValueDiff) {
@@ -468,45 +449,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               actualInternalValueNode,
               expectedInternalValueNode,
             );
-            if (actualInternalValueNode && expectedInternalValueNode) {
-              if (
-                actualInternalValueNode.origin === "valueOf()" &&
-                expectedInternalValueNode.origin === "valueOf()"
-              ) {
-                if (
-                  actualInternalValueNode.value === actualNode.value &&
-                  expectedInternalValueNode.value === expectedNode.value
-                ) {
-                  internalValueComparison.hidden = true;
-                } else if (actualNode.subtype === expectedNode.subtype) {
-                  // valueOf differ but prototype is different so it's expected
-                  const prototypeComparison =
-                    comparison.childComparisons.prototype;
-                  if (
-                    prototypeComparison &&
-                    prototypeComparison.counters.overall.any > 0
-                  ) {
-                    internalValueComparison.hidden = true;
-                  }
-                } else {
-                  internalValueComparison.hidden = true;
-                }
-              }
-            } else if (actualInternalValueNode) {
-              if (
-                actualInternalValueNode.origin === "valueOf()" &&
-                actualInternalValueNode.value === actualNode.value
-              ) {
-                internalValueComparison.hidden = true;
-              }
-            } else if (expectedInternalValueNode) {
-              if (
-                expectedInternalValueNode.origin === "valueOf()" &&
-                expectedInternalValueNode.value === expectedNode.value
-              ) {
-                internalValueComparison.hidden = true;
-              }
-            }
             comparison.childComparisons.internalValue = internalValueComparison;
             compareInside(internalValueComparison);
           }
@@ -787,7 +729,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             added: 0,
           },
         },
-        hidden: false,
+        hidden:
+          actualNode && expectedNode
+            ? actualNode.hidden && expectedNode.hidden
+            : actualNode
+              ? actualNode.hidden
+              : expectedNode.hidden,
         removed: false,
         added: false,
         modified: false,
@@ -1027,7 +974,14 @@ let createValueNode;
 {
   let nodeId = 1;
   createValueNode = ({ name, value, getReference }) => {
-    const _createValueNode = ({ parent, path, type, value, origin }) => {
+    const _createValueNode = ({
+      parent,
+      path,
+      type,
+      value,
+      origin,
+      showOnlyWhenDiff = false,
+    }) => {
       const node = {
         name,
         id: nodeId++,
@@ -1158,6 +1112,8 @@ let createValueNode;
           canHaveProps,
           wellKnownId,
           inConstructor,
+          hidden: false,
+          showOnlyWhenDiff,
           reference,
           referenceFromOthersSet: new Set(),
           keys: [],
@@ -1183,6 +1139,7 @@ let createValueNode;
           path: path.append("__proto__"),
           type: "prototype",
           value: Object.getPrototypeOf(node.value),
+          showOnlyWhenDiff: true,
         });
         childNodes.prototype = prototypeNode;
       }
@@ -1202,6 +1159,9 @@ let createValueNode;
           value: internalValue,
           origin: "valueOf()",
         });
+        if (internalValue === node.value) {
+          internalValueNode.hidden = true;
+        }
         childNodes.internalValue = internalValueNode;
       } else if (node.isUrl) {
         const internalValue = node.href;
@@ -1291,6 +1251,7 @@ let createValueNode;
             path: path.append(propertyName),
             type: "property",
             value: propertyDescriptor,
+            showOnlyWhenDiff: !propertyDescriptor.enumerable,
           });
           propertyNode.property = propertyName;
           const propertyDescriptorNodes = {
@@ -1316,6 +1277,10 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
+              showOnlyWhenDiff: isDefaultDescriptor(
+                propertyDescriptorName,
+                propertyDescriptorValue,
+              ),
             });
             propertyDescriptorNode.property = propertyName;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
@@ -1521,8 +1486,11 @@ let writeDiff;
     if (comparison.hidden) {
       return "";
     }
-    context.onComparisonDisplayed(comparison);
     const node = comparison[context.resultType];
+    if (node.hidden) {
+      return "";
+    }
+    context.onComparisonDisplayed(comparison);
     const selfModified =
       context.modified || comparison.counters.self.modified > 0;
     const selfContext = {
@@ -2210,7 +2178,7 @@ let writeDiff;
       internalValueNode &&
       internalValueNode.inConstructor &&
       // value returned by valueOf() is not the composite itself
-      !comparison.childComparisons.internalValue.hidden;
+      !internalValueNode.hidden;
     let displaySubtype = true;
     if (overview) {
       if (node.subtype === "Object" && node.keys.length === 0) {
@@ -2866,9 +2834,8 @@ let writeDiff;
 
     return () => {
       if (internalValueToDisplay) {
-        if (internalValueToDisplay[context.resultType].inConstructor) {
-          internalValueToDisplay = null;
-        } else if (internalValueToDisplay.hidden) {
+        const internalValueNode = internalValueToDisplay[context.resultType];
+        if (internalValueNode.inConstructor) {
           internalValueToDisplay = null;
         } else {
           let nestedComparison = internalValueToDisplay;
@@ -2877,13 +2844,9 @@ let writeDiff;
         }
       }
       if (prototypeComparisonToDisplay) {
-        if (prototypeComparisonToDisplay.hidden) {
-          prototypeComparisonToDisplay = null;
-        } else {
-          let nestedComparison = prototypeComparisonToDisplay;
-          prototypeComparisonToDisplay = null;
-          return nestedComparison;
-        }
+        let nestedComparison = prototypeComparisonToDisplay;
+        prototypeComparisonToDisplay = null;
+        return nestedComparison;
       }
       if (propIndex < propertyCount) {
         const propertyName = propertyNames[propIndex];
