@@ -212,22 +212,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               comparison.counters.inside,
               insideComparison.counters.overall,
             );
-          } else if (
-            insideComparison.actualNode &&
-            insideComparison.expectedNode
-          ) {
-            if (
-              insideComparison.actualNode.showOnlyWhenDiff &&
-              insideComparison.expectedNode.showOnlyWhenDiff
-            ) {
+          } else {
+            const insideActualNode = insideComparison.actualNode;
+            const insideExpectedNode = insideComparison.expectedNode;
+            if (insideActualNode && insideExpectedNode) {
+              if (
+                insideActualNode.showOnlyWhenDiff &&
+                insideExpectedNode.showOnlyWhenDiff
+              ) {
+                insideComparison.hidden = true;
+              }
+            } else if (insideActualNode) {
+              if (insideActualNode.showOnlyWhenDiff) {
+                insideComparison.hidden = true;
+              }
+            } else if (insideExpectedNode.showOnlyWhenDiff) {
               insideComparison.hidden = true;
             }
-          } else if (insideComparison.actualNode) {
-            if (insideComparison.actualNode.showOnlyWhenDiff) {
-              insideComparison.hidden = true;
-            }
-          } else if (insideComparison.expectedNode.showOnlyWhenDiff) {
-            insideComparison.hidden = true;
           }
         };
 
@@ -1582,15 +1583,16 @@ let writeDiff;
         } else {
           keyColor = sameColor;
         }
+        const propertyKeyFormatted = humanizePropertyKey(property);
+        diff += ANSI.color(propertyKeyFormatted, keyColor);
         if (
           node.type === "property_descriptor" &&
           node.descriptor !== "value"
         ) {
+          diff += ANSI.color("[[", keyColor);
           diff += ANSI.color(node.descriptor, keyColor);
-          diff += " ";
+          diff += ANSI.color("]]", keyColor);
         }
-        const propertyKeyFormatted = humanizePropertyKey(property);
-        diff += ANSI.color(propertyKeyFormatted, keyColor);
         if (displayValue) {
           diff += ANSI.color(":", keyColor);
           diff += " ";
@@ -1688,10 +1690,17 @@ let writeDiff;
           const propertyDescriptorComparison =
             propertyDescriptorComparisons[propertyDescriptorName];
           if (propertyDescriptorComparison) {
-            propertyDiff += writeDiff(
+            let propertyDescriptorDiff = writeDiff(
               propertyDescriptorComparison,
               selfContext,
             );
+            if (propertyDescriptorDiff) {
+              if (propertyDiff) {
+                propertyDiff += "\n";
+                selfContext.textIndent = 0;
+              }
+              propertyDiff += propertyDescriptorDiff;
+            }
           }
         }
         diff += propertyDiff;
