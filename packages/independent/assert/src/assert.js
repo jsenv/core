@@ -2189,8 +2189,10 @@ let writeDiff;
       subtypeDiff += ANSI.color(`new`, delimitersColor);
       subtypeDiff += " ";
     }
-    const subtypeColor = getSubtypeColor(context, comparison);
-    subtypeDiff += ANSI.color(node.subtype, subtypeColor);
+    if (node.isComposite) {
+      const subtypeColor = getSubtypeColor(context, comparison);
+      subtypeDiff += ANSI.color(node.subtype, subtypeColor);
+    }
 
     const constructorParenthesisColor = getConstructorParenthesisColor(
       context,
