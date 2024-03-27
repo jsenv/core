@@ -521,12 +521,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 actualInternalValueNode.origin === "valueOf()" &&
                 expectedInternalValueNode.origin === "valueOf()"
               ) {
-                if (
-                  actualInternalValueNode.subtype ===
-                  expectedInternalValueNode.subtype
-                ) {
-                  internalValueComparison.hidden = true;
-                } else {
+                if (actualNode.subtype === expectedNode.subtype) {
                   // value of differ but prototype is different so it's expected
                   const prototypeComparison =
                     comparison.childComparisons.prototype;
@@ -536,6 +531,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   ) {
                     internalValueComparison.hidden = true;
                   }
+                } else {
+                  internalValueComparison.hidden = true;
                 }
               }
             }
@@ -681,7 +678,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                 indexedValueComparison.index = index;
                 indexedValueComparisons[index] = indexedValueComparison;
                 index++;
-                compareInside(indexedValueComparison, { ignoreDiff: true });
+                compareInside(indexedValueComparison);
               };
               for (const actualIndexedValueNode of actualIndexedValueNodes) {
                 visitSetValue(actualIndexedValueNode, null);
@@ -1251,20 +1248,22 @@ let createValueNode;
         typeof node.value.valueOf === "function" &&
         node.value.valueOf !== Object.prototype.valueOf
       ) {
+        const internalValue = node.value.valueOf();
         const internalValueNode = _createValueNode({
           parent: node,
           path: path.append("valueOf()"),
           type: "internal_value",
-          value: node.value.valueOf(),
+          value: internalValue,
           origin: "valueOf()",
         });
         childNodes.internalValue = internalValueNode;
       } else if (node.isUrl) {
+        const internalValue = node.href;
         const internalValueNode = _createValueNode({
           parent: node,
           path: path.append("href"),
           type: "internal_value",
-          value: node.href,
+          value: internalValue,
           origin: "href",
         });
         childNodes.internalValue = internalValueNode;
@@ -2327,11 +2326,6 @@ let writeDiff;
         const internalValueComparison =
           comparison.childComparisons.internalValue;
         insideConstructor = writeDiff(internalValueComparison, context);
-        // if (overview) {
-        //   insideConstructor = writeDiff(node.valueOfReturnValue, context);
-        // } else {
-        //   insideConstructor = writeValueDiff(node.valueOfReturnValue, context);
-        // }
       } else if (overview) {
         const constructorArgColor = getConstructorArgColor(context, comparison);
         if (node.isSet) {
