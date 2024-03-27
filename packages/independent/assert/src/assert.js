@@ -179,6 +179,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       comparison.removed = self.removed > 0;
       comparison.added = self.added > 0;
       comparison.modified = self.modified > 0;
+      comparison.done = true;
     };
     const appendCounters = (counter, otherCounter) => {
       counter.any += otherCounter.any;
@@ -191,455 +192,461 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       // ignoreDiff is meant to ignore the diff between actual/expected
       // (usually because comparison cannot be made (added,removed, visiting something different))
       // but the structure still have to be visited (properties, values, valueOf, ...)
-      const doCompare = () => {
-        const { actualNode, expectedNode } = comparison;
 
-        let ownerComparison;
-        if (
-          comparison.type === "property" ||
-          comparison.type === "prototype" ||
-          comparison.type === "indexed_value"
-        ) {
-          ownerComparison = comparison.parent;
-        } else if (comparison.type === "property_descriptor") {
-          ownerComparison = comparison.parent.parent;
-        }
+      const { actualNode, expectedNode } = comparison;
 
-        const compareInside = (insideComparison, insideOptions = {}) => {
-          const insideActualNode = insideComparison.actualNode;
-          const insideExpectedNode = insideComparison.expectedNode;
-          if (!insideActualNode) {
-            if (insideExpectedNode.showOnlyWhenModified) {
-              insideComparison.hidden = true;
-            }
-          } else if (!insideExpectedNode) {
-            if (insideActualNode.showOnlyWhenModified) {
-              insideComparison.hidden = true;
-            }
-          }
+      let ownerComparison;
+      if (
+        comparison.type === "property" ||
+        comparison.type === "prototype" ||
+        comparison.type === "indexed_value"
+      ) {
+        ownerComparison = comparison.parent;
+      } else if (comparison.type === "property_descriptor") {
+        ownerComparison = comparison.parent.parent;
+      }
 
-          compare(insideComparison, { ...options, ...insideOptions });
-          if (insideComparison.counters.overall.any) {
-            appendCounters(
-              comparison.counters.inside,
-              insideComparison.counters.overall,
-            );
-          } else if (
-            insideActualNode &&
-            insideExpectedNode &&
-            insideActualNode.showOnlyWhenModified &&
-            insideExpectedNode.showOnlyWhenModified
-          ) {
+      const compareInside = (insideComparison, insideOptions = {}) => {
+        const insideActualNode = insideComparison.actualNode;
+        const insideExpectedNode = insideComparison.expectedNode;
+        if (!insideActualNode) {
+          if (insideExpectedNode.showOnlyWhenModified) {
             insideComparison.hidden = true;
           }
-        };
+        } else if (!insideExpectedNode) {
+          if (insideActualNode.showOnlyWhenModified) {
+            insideComparison.hidden = true;
+          }
+        }
 
-        if (ownerComparison) {
-          if (
-            ownerComparison.combinations.sets &&
-            comparison.type === "indexed_value"
-          ) {
-            if (actualNode) {
-              const added = !ownerComparison.expectedNode.value.has(
-                actualNode.value,
-              );
-              if (added) {
-                comparison.added = true;
-              }
-            } else {
-              const removed = !ownerComparison.actualNode.value.has(
-                expectedNode.value,
-              );
-              if (removed) {
-                comparison.removed = true;
-              }
-            }
-          } else if (!actualNode) {
-            if (
-              ownerComparison.actualNode &&
-              ownerComparison.actualNode.canHaveProps
-            ) {
-              comparison.removed = true;
-            }
-          } else if (!expectedNode) {
-            if (
-              ownerComparison.expectedNode &&
-              ownerComparison.expectedNode.canHaveProps
-            ) {
+        compare(insideComparison, { ...options, ...insideOptions });
+        if (insideComparison.counters.overall.any) {
+          appendCounters(
+            comparison.counters.inside,
+            insideComparison.counters.overall,
+          );
+        } else if (
+          insideActualNode &&
+          insideExpectedNode &&
+          insideActualNode.showOnlyWhenModified &&
+          insideExpectedNode.showOnlyWhenModified
+        ) {
+          insideComparison.hidden = true;
+        }
+      };
+
+      if (ownerComparison) {
+        if (
+          ownerComparison.combinations.sets &&
+          comparison.type === "indexed_value"
+        ) {
+          if (actualNode) {
+            const added = !ownerComparison.expectedNode.value.has(
+              actualNode.value,
+            );
+            if (added) {
               comparison.added = true;
             }
-          }
-
-          if (!comparison.hidden) {
-            if (comparison.removed) {
-              comparison.counters.self.removed++;
-            } else if (comparison.added) {
-              comparison.counters.self.added++;
-            }
-          }
-        }
-
-        if (comparison.type === "property") {
-          const propertyDescriptorComparisons =
-            comparison.childComparisons.propertyDescriptors;
-          const visitPropertyDescriptor = (descriptorName) => {
-            const actualPropertyDescriptorNode = actualNode
-              ? actualNode.childNodes.propertyDescriptors[descriptorName]
-              : null;
-            const expectedPropertyDescriptorNode = expectedNode
-              ? expectedNode.childNodes.propertyDescriptors[descriptorName]
-              : null;
-            if (
-              !actualPropertyDescriptorNode &&
-              !expectedPropertyDescriptorNode
-            ) {
-              return;
-            }
-            const propertyDescriptorComparison = createComparison(
-              actualPropertyDescriptorNode,
-              expectedPropertyDescriptorNode,
+          } else {
+            const removed = !ownerComparison.actualNode.value.has(
+              expectedNode.value,
             );
-            propertyDescriptorComparisons[descriptorName] =
-              propertyDescriptorComparison;
-            compareInside(propertyDescriptorComparison);
-          };
-          visitPropertyDescriptor("value");
-          visitPropertyDescriptor("enumerable");
-          visitPropertyDescriptor("writable");
-          visitPropertyDescriptor("configurable");
-          visitPropertyDescriptor("set");
-          visitPropertyDescriptor("get");
-          return;
-        }
-
-        if (comparison.removed || comparison.added) {
-          addCause(comparison);
-        }
-
-        const addSelfDiff = () => {
-          if (!comparison.hidden) {
-            comparison.counters.self.modified++;
+            if (removed) {
+              comparison.removed = true;
+            }
           }
-          addCause(comparison);
-        };
-        const addCategoryDiff = () => {
-          comparison.category = true;
+        } else if (!actualNode) {
           if (
-            actualNode &&
-            actualNode.isUrlString &&
-            expectedNode &&
-            expectedNode.isUrlString
+            ownerComparison.actualNode &&
+            ownerComparison.actualNode.canHaveProps
+          ) {
+            comparison.removed = true;
+          }
+        } else if (!expectedNode) {
+          if (
+            ownerComparison.expectedNode &&
+            ownerComparison.expectedNode.canHaveProps
+          ) {
+            comparison.added = true;
+          }
+        }
+
+        if (!comparison.hidden) {
+          if (comparison.removed) {
+            comparison.counters.self.removed++;
+          } else if (comparison.added) {
+            comparison.counters.self.added++;
+          }
+        }
+      }
+
+      if (comparison.type === "property") {
+        const propertyDescriptorComparisons =
+          comparison.childComparisons.propertyDescriptors;
+        const visitPropertyDescriptor = (descriptorName) => {
+          const actualPropertyDescriptorNode = actualNode
+            ? actualNode.childNodes.propertyDescriptors[descriptorName]
+            : null;
+          const expectedPropertyDescriptorNode = expectedNode
+            ? expectedNode.childNodes.propertyDescriptors[descriptorName]
+            : null;
+          if (
+            !actualPropertyDescriptorNode &&
+            !expectedPropertyDescriptorNode
           ) {
             return;
           }
-          addSelfDiff();
+          const propertyDescriptorComparison = createComparison(
+            actualPropertyDescriptorNode,
+            expectedPropertyDescriptorNode,
+          );
+          propertyDescriptorComparisons[descriptorName] =
+            propertyDescriptorComparison;
+          compareInside(propertyDescriptorComparison);
         };
+        visitPropertyDescriptor("value");
+        visitPropertyDescriptor("enumerable");
+        visitPropertyDescriptor("writable");
+        visitPropertyDescriptor("configurable");
+        visitPropertyDescriptor("set");
+        visitPropertyDescriptor("get");
+        settleCounters(comparison);
+        return;
+      }
 
-        let ignoreReferenceDiff =
-          options.ignoreDiff || !actualNode || !expectedNode;
-        let ignoreCategoryDiff =
-          options.ignoreDiff || !actualNode || !expectedNode;
-        let ignorePrototypeDiff =
-          options.ignoreDiff || !actualNode || !expectedNode;
-        let ignoreInternalValueDiff =
-          options.ignoreDiff || !actualNode || !expectedNode;
+      if (comparison.removed || comparison.added) {
+        addCause(comparison);
+      }
 
-        reference: {
-          if (ignoreReferenceDiff) {
-            break reference;
-          }
-          const actualReferencePath = actualNode.reference
-            ? actualNode.reference.path.toString()
-            : null;
-          const expectedReferencePath = expectedNode.reference
-            ? expectedNode.reference.path.toString()
-            : null;
-          if (actualReferencePath !== expectedReferencePath) {
-            comparison.reference = true;
-            addSelfDiff();
-          }
+      const addSelfDiff = () => {
+        if (!comparison.hidden) {
+          comparison.counters.self.modified++;
         }
-        category: {
-          if (ignoreCategoryDiff) {
-            break category;
-          }
-          if (actualNode.wellKnownId !== expectedNode.wellKnownId) {
-            addCategoryDiff();
-            break category;
-          }
-          const actualIsPrimitive = actualNode.isPrimitive;
-          const expectedIsPrimitive = expectedNode.isPrimitive;
-          if (actualIsPrimitive !== expectedIsPrimitive) {
-            addCategoryDiff();
-            break category;
-          }
-          if (
-            actualIsPrimitive &&
-            expectedIsPrimitive &&
-            actualNode.value !== expectedNode.value
-          ) {
-            addCategoryDiff();
-            break category;
-          }
-          const actualIsComposite = actualNode.isComposite;
-          const expectedIsComposite = expectedNode.isComposite;
-          if (actualIsComposite !== expectedIsComposite) {
-            addCategoryDiff();
-            break category;
-          }
-          const actualSubtype = actualNode.subtype;
-          const expectedSubtype = expectedNode.subtype;
-          if (actualSubtype !== expectedSubtype) {
-            addCategoryDiff();
-            break category;
-          }
+        addCause(comparison);
+      };
+      const addCategoryDiff = () => {
+        comparison.category = true;
+        if (
+          actualNode &&
+          actualNode.isUrlString &&
+          expectedNode &&
+          expectedNode.isUrlString
+        ) {
+          return;
         }
-        inside: {
-          prototype: {
-            if (ignorePrototypeDiff) {
-              break prototype;
-            }
-            const actualPrototypeNode = actualNode
-              ? actualNode.childNodes.prototype
-              : null;
-            const expectedPrototypeNode = expectedNode
-              ? expectedNode.childNodes.prototype
-              : null;
-            if (!actualPrototypeNode && !expectedPrototypeNode) {
-              break prototype;
-            }
-            const prototypeComparison = createComparison(
-              actualPrototypeNode,
-              expectedPrototypeNode,
-            );
-            if (!actualPrototypeNode || !expectedPrototypeNode) {
-              prototypeComparison.hidden = true;
-            } else if (actualNode.subtype !== expectedNode.subtype) {
-              // when we see a prefix like
-              // actual: User {}
-              // expect: Animal {}
-              // we don't show the prototype
-              prototypeComparison.hidden = true;
-            }
-            comparison.childComparisons.prototype = prototypeComparison;
-            compareInside(prototypeComparison);
+        addSelfDiff();
+      };
+
+      let ignoreInsideDiff = "";
+
+      let ignoreReferenceDiff =
+        options.ignoreDiff || !actualNode || !expectedNode;
+      let ignoreCategoryDiff =
+        options.ignoreDiff || !actualNode || !expectedNode;
+      let ignorePrototypeDiff =
+        options.ignoreDiff || !actualNode || !expectedNode || ignoreInsideDiff;
+      let ignoreInternalValueDiff =
+        options.ignoreDiff || !actualNode || !expectedNode || ignoreInsideDiff;
+
+      reference: {
+        if (ignoreReferenceDiff) {
+          break reference;
+        }
+        const actualReferencePath = actualNode.reference
+          ? actualNode.reference.path.toString()
+          : null;
+        const expectedReferencePath = expectedNode.reference
+          ? expectedNode.reference.path.toString()
+          : null;
+        if (actualReferencePath !== expectedReferencePath) {
+          comparison.reference = true;
+          addSelfDiff();
+        }
+      }
+      category: {
+        if (ignoreCategoryDiff) {
+          break category;
+        }
+        if (actualNode.wellKnownId !== expectedNode.wellKnownId) {
+          addCategoryDiff();
+          break category;
+        }
+        const actualIsPrimitive = actualNode.isPrimitive;
+        const expectedIsPrimitive = expectedNode.isPrimitive;
+        if (actualIsPrimitive !== expectedIsPrimitive) {
+          addCategoryDiff();
+          break category;
+        }
+        if (
+          actualIsPrimitive &&
+          expectedIsPrimitive &&
+          actualNode.value !== expectedNode.value
+        ) {
+          addCategoryDiff();
+          break category;
+        }
+        const actualIsComposite = actualNode.isComposite;
+        const expectedIsComposite = expectedNode.isComposite;
+        if (actualIsComposite !== expectedIsComposite) {
+          addCategoryDiff();
+          break category;
+        }
+        const actualSubtype = actualNode.subtype;
+        const expectedSubtype = expectedNode.subtype;
+        if (actualSubtype !== expectedSubtype) {
+          addCategoryDiff();
+          break category;
+        }
+      }
+      inside: {
+        prototype: {
+          if (ignorePrototypeDiff) {
+            break prototype;
           }
-          let actualInsideNode = actualNode ? actualNode.insideNode : null;
-          let expectedInsideNode = expectedNode
-            ? expectedNode.insideNode
+          const actualPrototypeNode = actualNode
+            ? actualNode.childNodes.prototype
             : null;
-          internal_value: {
-            if (ignoreInternalValueDiff) {
-              break internal_value;
-            }
-            const actualInternalValueNode = actualNode
-              ? actualNode.childNodes.internalValue
-              : null;
-            const expectedInternalValueNode = expectedNode
-              ? expectedNode.childNodes.internalValue
-              : null;
-            if (!actualInternalValueNode && !expectedInternalValueNode) {
-              break internal_value;
-            }
-            const internalValueComparison = createComparison(
-              actualInsideNode,
-              expectedInsideNode,
-            );
-            comparison.childComparisons.internalValue = internalValueComparison;
-            compareInside(internalValueComparison);
+          const expectedPrototypeNode = expectedNode
+            ? expectedNode.childNodes.prototype
+            : null;
+          if (!actualPrototypeNode && !expectedPrototypeNode) {
+            break prototype;
           }
-
-          string: {
-            lines: {
-              const actualLineNodes = actualNode
-                ? actualNode.childNodes.lines || []
-                : [];
-              const expectedLineNodes = expectedNode
-                ? expectedNode.childNodes.lines || []
-                : [];
-              const lineComparisons = comparison.childComparisons.lines;
-
-              const visitLineNode = (lineNode) => {
-                const lineIndex = lineNode.index;
-                const actualLineNode = actualLineNodes[lineIndex];
-                const expectedLineNode = expectedLineNodes[lineIndex];
-                const lineComparison = createComparison(
-                  actualLineNode,
-                  expectedLineNode,
-                );
-                lineComparisons[lineIndex] = lineComparison;
-                compareInside(lineComparison);
-              };
-              for (const actualLineNode of actualLineNodes) {
-                visitLineNode(actualLineNode);
-              }
-              for (const expectedLineNode of expectedLineNodes) {
-                if (!lineComparisons[expectedLineNode.index]) {
-                  visitLineNode(expectedLineNode);
-                }
-              }
-            }
-            chars: {
-              const actualCharNodes = actualNode
-                ? actualNode.childNodes.chars || []
-                : [];
-              const expectedCharNodes = expectedNode
-                ? expectedNode.childNodes.chars || []
-                : [];
-              const charComparisons = comparison.childComparisons.chars;
-
-              const visitCharNode = (charNode) => {
-                const charNodeIndex = charNode.index;
-                const actualCharNode = actualCharNodes[charNodeIndex];
-                const expectedCharNode = expectedCharNodes[charNodeIndex];
-                const charComparison = createComparison(
-                  actualCharNode,
-                  expectedCharNode,
-                );
-                charComparisons[charNodeIndex] = charComparison;
-                compareInside(charComparison);
-              };
-              for (const actualCharNode of actualCharNodes) {
-                visitCharNode(actualCharNode);
-              }
-              for (const expectedCharNode of expectedCharNodes) {
-                if (!charComparisons[expectedCharNode.index]) {
-                  visitCharNode(expectedCharNode);
-                }
-              }
-            }
+          const prototypeComparison = createComparison(
+            actualPrototypeNode,
+            expectedPrototypeNode,
+          );
+          if (!actualPrototypeNode || !expectedPrototypeNode) {
+            prototypeComparison.hidden = true;
+          } else if (actualNode.subtype !== expectedNode.subtype) {
+            // when we see a prefix like
+            // actual: User {}
+            // expect: Animal {}
+            // we don't show the prototype
+            prototypeComparison.hidden = true;
           }
-          url_parts: {
-            const actualUrlPartNodes = actualNode
-              ? actualNode.childNodes.urlParts || {}
-              : {};
-            const expectedUrlPartNodes = expectedNode
-              ? expectedNode.childNodes.urlParts || {}
-              : {};
+          comparison.childComparisons.prototype = prototypeComparison;
+          compareInside(prototypeComparison);
+        }
+        let actualInsideNode = actualNode ? actualNode.insideNode : null;
+        let expectedInsideNode = expectedNode ? expectedNode.insideNode : null;
+        internal_value: {
+          if (ignoreInternalValueDiff) {
+            break internal_value;
+          }
+          const actualInternalValueNode = actualNode
+            ? actualNode.childNodes.internalValue
+            : null;
+          const expectedInternalValueNode = expectedNode
+            ? expectedNode.childNodes.internalValue
+            : null;
+          if (!actualInternalValueNode && !expectedInternalValueNode) {
+            break internal_value;
+          }
+          const internalValueComparison = createComparison(
+            actualInsideNode,
+            expectedInsideNode,
+          );
+          comparison.childComparisons.internalValue = internalValueComparison;
+          compareInside(internalValueComparison);
+        }
 
-            const urlPartComparisons = comparison.childComparisons.urlParts;
-            const visitUrlPart = (urlPartName) => {
-              const actualUrlPartNode = actualUrlPartNodes[urlPartName];
-              const expectedUrlPartNode = expectedUrlPartNodes[urlPartName];
-              const urlPartComparison = createComparison(
-                actualUrlPartNode,
-                expectedUrlPartNode,
+        string: {
+          lines: {
+            const actualLineNodes = actualNode
+              ? actualNode.childNodes.lines || []
+              : [];
+            const expectedLineNodes = expectedNode
+              ? expectedNode.childNodes.lines || []
+              : [];
+            const lineComparisons = comparison.childComparisons.lines;
+
+            const visitLineNode = (lineNode) => {
+              const lineIndex = lineNode.index;
+              const actualLineNode = actualLineNodes[lineIndex];
+              const expectedLineNode = expectedLineNodes[lineIndex];
+              const lineComparison = createComparison(
+                actualLineNode,
+                expectedLineNode,
               );
-              urlPartComparisons[urlPartName] = urlPartComparison;
-              compareInside(urlPartComparison);
+              lineComparisons[lineIndex] = lineComparison;
+              compareInside(lineComparison);
             };
-            for (const actualUrlPartName of Object.keys(actualUrlPartNodes)) {
-              visitUrlPart(actualUrlPartName);
+            for (const actualLineNode of actualLineNodes) {
+              visitLineNode(actualLineNode);
             }
-            for (const expectedUrlPartName of Object.keys(
-              expectedUrlPartNodes,
-            )) {
-              if (!urlPartComparisons[expectedUrlPartName]) {
-                visitUrlPart(expectedUrlPartName);
+            for (const expectedLineNode of expectedLineNodes) {
+              if (!lineComparisons[expectedLineNode.index]) {
+                visitLineNode(expectedLineNode);
               }
             }
           }
-          indexed_values: {
-            const actualIndexedValueNodes = actualInsideNode
-              ? actualInsideNode.childNodes.indexedValues || []
+          chars: {
+            const actualCharNodes = actualNode
+              ? actualNode.childNodes.chars || []
               : [];
-            const expectedIndexedValueNodes = expectedInsideNode
-              ? expectedInsideNode.childNodes.indexedValues || []
+            const expectedCharNodes = expectedNode
+              ? expectedNode.childNodes.chars || []
               : [];
-            const indexedValueComparisons =
-              comparison.childComparisons.indexedValues;
+            const charComparisons = comparison.childComparisons.chars;
 
-            if (comparison.combinations.sets) {
-              let index = 0;
-              const visitSetValue = (
-                actualIndexedValueNode,
-                expectedIndexedValueNode,
-              ) => {
-                const indexedValueComparison = createComparison(
-                  actualIndexedValueNode,
-                  expectedIndexedValueNode,
-                );
-                indexedValueComparison.index = index;
-                indexedValueComparisons[index] = indexedValueComparison;
-                index++;
-                compareInside(indexedValueComparison);
-              };
-              for (const actualIndexedValueNode of actualIndexedValueNodes) {
-                visitSetValue(actualIndexedValueNode, null);
-              }
-              for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
-                visitSetValue(null, expectedIndexedValueNode);
-              }
-              break indexed_values;
+            const visitCharNode = (charNode) => {
+              const charNodeIndex = charNode.index;
+              const actualCharNode = actualCharNodes[charNodeIndex];
+              const expectedCharNode = expectedCharNodes[charNodeIndex];
+              const charComparison = createComparison(
+                actualCharNode,
+                expectedCharNode,
+              );
+              charComparisons[charNodeIndex] = charComparison;
+              compareInside(charComparison);
+            };
+            for (const actualCharNode of actualCharNodes) {
+              visitCharNode(actualCharNode);
             }
+            for (const expectedCharNode of expectedCharNodes) {
+              if (!charComparisons[expectedCharNode.index]) {
+                visitCharNode(expectedCharNode);
+              }
+            }
+          }
+        }
+        url_parts: {
+          const actualUrlPartNodes = actualNode
+            ? actualNode.childNodes.urlParts || {}
+            : {};
+          const expectedUrlPartNodes = expectedNode
+            ? expectedNode.childNodes.urlParts || {}
+            : {};
 
-            const visitIndexedValue = (indexedValueNode) => {
-              const index = indexedValueNode.index;
-              const actualIndexedValueNode = actualIndexedValueNodes[index];
-              const expectedIndexedValueNode = expectedIndexedValueNodes[index];
+          const urlPartComparisons = comparison.childComparisons.urlParts;
+          const visitUrlPart = (urlPartName) => {
+            const actualUrlPartNode = actualUrlPartNodes[urlPartName];
+            const expectedUrlPartNode = expectedUrlPartNodes[urlPartName];
+            const urlPartComparison = createComparison(
+              actualUrlPartNode,
+              expectedUrlPartNode,
+            );
+            urlPartComparisons[urlPartName] = urlPartComparison;
+            compareInside(urlPartComparison);
+          };
+          for (const actualUrlPartName of Object.keys(actualUrlPartNodes)) {
+            visitUrlPart(actualUrlPartName);
+          }
+          for (const expectedUrlPartName of Object.keys(expectedUrlPartNodes)) {
+            if (!urlPartComparisons[expectedUrlPartName]) {
+              visitUrlPart(expectedUrlPartName);
+            }
+          }
+        }
+        indexed_values: {
+          if (ignoreInsideDiff) {
+            break indexed_values;
+          }
+          const actualIndexedValueNodes = actualInsideNode
+            ? actualInsideNode.childNodes.indexedValues || []
+            : [];
+          const expectedIndexedValueNodes = expectedInsideNode
+            ? expectedInsideNode.childNodes.indexedValues || []
+            : [];
+          if (
+            actualIndexedValueNodes.length === 0 &&
+            expectedIndexedValueNodes.length === 0
+          ) {
+            break indexed_values;
+          }
+          const indexedValueComparisons =
+            comparison.childComparisons.indexedValues;
+
+          if (comparison.combinations.sets) {
+            let index = 0;
+            const visitSetValue = (
+              actualIndexedValueNode,
+              expectedIndexedValueNode,
+            ) => {
               const indexedValueComparison = createComparison(
                 actualIndexedValueNode,
                 expectedIndexedValueNode,
               );
+              indexedValueComparison.index = index;
               indexedValueComparisons[index] = indexedValueComparison;
+              index++;
               compareInside(indexedValueComparison);
             };
-            for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
-              visitIndexedValue(expectedIndexedValueNode);
-            }
             for (const actualIndexedValueNode of actualIndexedValueNodes) {
-              if (!indexedValueComparisons[actualIndexedValueNode.index]) {
-                visitIndexedValue(actualIndexedValueNode);
-              }
+              visitSetValue(actualIndexedValueNode, null);
             }
+            for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
+              visitSetValue(null, expectedIndexedValueNode);
+            }
+            break indexed_values;
           }
-          properties: {
-            const actualPropertyNodes = actualInsideNode
-              ? actualInsideNode.childNodes.properties || {}
-              : {};
-            const expectedPropertyNodes = expectedInsideNode
-              ? expectedInsideNode.childNodes.properties || {}
-              : {};
-            const propertyComparisons = comparison.childComparisons.properties;
 
-            const visitProperty = (property) => {
-              // hasOwn here because childNode.properties is an object inheriting Object.prototype
-              // so node.childNodes.properties.constructor is returning a function
-              // when we want null (if the object has no custom "constructor" property)
-              const actualPropertyNode = Object.hasOwn(
-                actualPropertyNodes,
-                property,
-              )
-                ? actualPropertyNodes[property]
-                : null;
-              const expectedPropertyNode = Object.hasOwn(
-                expectedPropertyNodes,
-                property,
-              )
-                ? expectedPropertyNodes[property]
-                : null;
-              const propertyNodeComparison = createComparison(
-                actualPropertyNode,
-                expectedPropertyNode,
-              );
-              propertyComparisons[property] = propertyNodeComparison;
-              compareInside(propertyNodeComparison);
-            };
-            for (const actualPropertyName of Object.keys(actualPropertyNodes)) {
-              visitProperty(actualPropertyName);
-            }
-            for (const expectedPropertyName of Object.keys(
-              expectedPropertyNodes,
-            )) {
-              if (!propertyComparisons[expectedPropertyName]) {
-                visitProperty(expectedPropertyName);
-              }
+          const visitIndexedValue = (indexedValueNode) => {
+            const index = indexedValueNode.index;
+            const actualIndexedValueNode = actualIndexedValueNodes[index];
+            const expectedIndexedValueNode = expectedIndexedValueNodes[index];
+            const indexedValueComparison = createComparison(
+              actualIndexedValueNode,
+              expectedIndexedValueNode,
+            );
+            indexedValueComparisons[index] = indexedValueComparison;
+            compareInside(indexedValueComparison);
+          };
+          for (const expectedIndexedValueNode of expectedIndexedValueNodes) {
+            visitIndexedValue(expectedIndexedValueNode);
+          }
+          for (const actualIndexedValueNode of actualIndexedValueNodes) {
+            if (!indexedValueComparisons[actualIndexedValueNode.index]) {
+              visitIndexedValue(actualIndexedValueNode);
             }
           }
         }
-      };
+        properties: {
+          const actualPropertyNodes = actualInsideNode
+            ? actualInsideNode.childNodes.properties || {}
+            : {};
+          const expectedPropertyNodes = expectedInsideNode
+            ? expectedInsideNode.childNodes.properties || {}
+            : {};
+          const propertyComparisons = comparison.childComparisons.properties;
 
-      doCompare();
+          const visitProperty = (property) => {
+            // hasOwn here because childNode.properties is an object inheriting Object.prototype
+            // so node.childNodes.properties.constructor is returning a function
+            // when we want null (if the object has no custom "constructor" property)
+            const actualPropertyNode = Object.hasOwn(
+              actualPropertyNodes,
+              property,
+            )
+              ? actualPropertyNodes[property]
+              : null;
+            const expectedPropertyNode = Object.hasOwn(
+              expectedPropertyNodes,
+              property,
+            )
+              ? expectedPropertyNodes[property]
+              : null;
+            const propertyNodeComparison = createComparison(
+              actualPropertyNode,
+              expectedPropertyNode,
+            );
+            propertyComparisons[property] = propertyNodeComparison;
+            compareInside(propertyNodeComparison);
+          };
+          for (const actualPropertyName of Object.keys(actualPropertyNodes)) {
+            visitProperty(actualPropertyName);
+          }
+          for (const expectedPropertyName of Object.keys(
+            expectedPropertyNodes,
+          )) {
+            if (!propertyComparisons[expectedPropertyName]) {
+              visitProperty(expectedPropertyName);
+            }
+          }
+        }
+      }
+
       settleCounters(comparison);
     };
     const createComparison = (actualNode, expectedNode) => {
