@@ -14,6 +14,18 @@ const assert = createAssert();
 // const signal = (v) => new Signal(v);
 
 await startSnapshotTesting("internal_value", {
+  ["signal(true) and signal(false)"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => false,
+      },
+    });
+  },
   ["signal(true) and true"]: () => {
     assert({
       actual: {
@@ -29,18 +41,6 @@ await startSnapshotTesting("internal_value", {
       expected: {
         [Symbol.toStringTag]: "Signal",
         valueOf: () => true,
-      },
-    });
-  },
-  ["signal(true) and signal(false)"]: () => {
-    assert({
-      actual: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => true,
-      },
-      expected: {
-        [Symbol.toStringTag]: "Signal",
-        valueOf: () => false,
       },
     });
   },
@@ -62,36 +62,63 @@ await startSnapshotTesting("internal_value", {
       expected: false,
     });
   },
-  // ["signal array"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //     expected: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //   });
-  // },
-  // ["signal array and array"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //     expected: [true],
-  //   });
-  // },
-  // ["array and signal array"]: () => {
-  //   assert({
-  //     actual: [true],
-  //     expected: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //   });
-  // },
+  ["signal(true) and 1"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+      expected: 1,
+    });
+  },
+  ["signal([true]) and signal([false])"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [false],
+      },
+    });
+  },
+  ["signal([true]) and [true]"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+      expected: [true],
+    });
+  },
+  ["[true] and signal([true])"]: () => {
+    assert({
+      actual: [true],
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+    });
+  },
+  ["[true] and signal([false])"]: () => {
+    assert({
+      actual: [true],
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [false],
+      },
+    });
+  },
+  ["signal([true]) and false"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+      expected: [false],
+    });
+  },
   // ["signal string"]: () => {
   //   assert({
   //     actual: {

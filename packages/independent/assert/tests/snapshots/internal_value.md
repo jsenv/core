@@ -1,3 +1,20 @@
+# signal(true) and signal(false)
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => true,
+  },
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => false,
+  },
+});
+```
+
+![img](<./internal_value/signal(true) and signal(false).svg>)
+
 # signal(true) and true
 
 ```js
@@ -26,23 +43,6 @@ assert({
 
 ![img](<./internal_value/true and signal(true).svg>)
 
-# signal(true) and signal(false)
-
-```js
-assert({
-  actual: {
-    [Symbol.toStringTag]: "Signal",
-    valueOf: () => true,
-  },
-  expected: {
-    [Symbol.toStringTag]: "Signal",
-    valueOf: () => false,
-  },
-});
-```
-
-![img](<./internal_value/signal(true) and signal(false).svg>)
-
 # true and signal(false)
 
 ```js
@@ -70,4 +70,91 @@ assert({
 ```
 
 ![img](<./internal_value/signal(true) and false.svg>)
+
+# signal(true) and 1
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => true,
+  },
+  expected: 1,
+});
+```
+
+![img](<./internal_value/signal(true) and 1.svg>)
+
+# signal([true]) and signal([false])
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => [true],
+  },
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => [false],
+  },
+});
+```
+
+![img](<./internal_value/signal([true]) and signal([false]).svg>)
+
+# signal([true]) and [true]
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => [true],
+  },
+  expected: [true],
+});
+```
+
+![img](<./internal_value/signal([true]) and [true].svg>)
+
+# [true] and signal([true])
+
+```js
+assert({
+  actual: [true],
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => [true],
+  },
+});
+```
+
+![img](<./internal_value/[true] and signal([true]).svg>)
+
+# [true] and signal([false])
+
+```js
+assert({
+  actual: [true],
+  expected: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => [false],
+  },
+});
+```
+
+![img](<./internal_value/[true] and signal([false]).svg>)
+
+# signal([true]) and false
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => [true],
+  },
+  expected: [false],
+});
+```
+
+![img](<./internal_value/signal([true]) and false.svg>)
 

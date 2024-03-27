@@ -2250,7 +2250,7 @@ let writeDiff;
 
     if (insideConstructor) {
       const constructorParenthesisColor = getConstructorParenthesisColor(
-        context,
+        selfContext,
         comparison,
       );
       subtypeDiff += ANSI.color(`(`, constructorParenthesisColor);
@@ -2923,18 +2923,25 @@ let writeDiff;
         return colorWhenModified;
       }
       if (forWhat === "constructor_parenthesis") {
+        const getConstructorParenthesis = (node) => {
+          if (!node.isComposite) {
+            return "";
+          }
+          if (context.collapsed) {
+            if (node.subtype === "Object" && actualNode.keys.length === 0) {
+              return "";
+            }
+            return "(";
+          }
+          if (node.subtype === "Array" || node.subtype === "Object") {
+            return "";
+          }
+          return "(";
+        };
         const actualConsructorParenthesis =
-          actualNode.subtype === "Object" && actualNode.keys.length === 0
-            ? ""
-            : actualNode.isComposite
-              ? "("
-              : "";
+          getConstructorParenthesis(actualNode);
         const expectedConsructorParenthesis =
-          expectedNode.subtype === "Object" && expectedNode.keys.length === 0
-            ? ""
-            : expectedNode.isComposite
-              ? "("
-              : "";
+          getConstructorParenthesis(expectedNode);
         if (actualConsructorParenthesis === expectedConsructorParenthesis) {
           return sameColor;
         }
