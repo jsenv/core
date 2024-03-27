@@ -2196,24 +2196,8 @@ let writeDiff;
 
       let insideDiff = "";
       let prefix = "";
-      if (!node.isUrlString) {
-        prefix = writePrefix(comparison, selfContext);
-        insideDiff += prefix;
-      }
-      if (node.isUrl || node.isUrlString) {
-        let urlDiff;
-        if (node.canDiffUrlParts) {
-          urlDiff = writeUrlDiff(comparison, selfContext);
-        }
-        if (node.isUrl) {
-          const parenthesisColor = getParenthesisColor(selfContext, comparison);
-          insideDiff += ANSI.color("(", parenthesisColor);
-          insideDiff += urlDiff;
-          insideDiff += ANSI.color(")", parenthesisColor);
-        } else {
-          insideDiff += urlDiff;
-        }
-      }
+      prefix = writePrefix(comparison, selfContext);
+      insideDiff += prefix;
       if (node.canHaveIndexedValues) {
         const indexedValueDiff = writeGroupDiff(
           createGetIndexedValues(comparison, selfContext),
@@ -2302,7 +2286,7 @@ let writeDiff;
       }
     }
 
-    const delimitersColor = getDelimitersColor(context, comparison);
+    const parenthesisColor = getParenthesisColor(context, comparison);
 
     if (displaySubtype) {
       const subtypeColor = getSubtypeColor(context, comparison);
@@ -2312,23 +2296,24 @@ let writeDiff;
       if (!overview) {
         return prefix;
       }
-      prefix += ANSI.color(`(`, delimitersColor);
+      prefix += ANSI.color(`(`, parenthesisColor);
       const lengthColor = getConstructorArgColor(context, comparison);
       prefix += ANSI.color(node.value.length, lengthColor);
-      prefix += ANSI.color(`)`, delimitersColor);
+      prefix += ANSI.color(`)`, parenthesisColor);
       return prefix;
     }
     if (node.isString) {
       if (!overview) {
         return prefix;
       }
-      prefix += ANSI.color(`(`, delimitersColor);
+      prefix += ANSI.color(`(`, parenthesisColor);
       const lengthColor = getConstructorArgColor(context, comparison);
       prefix += ANSI.color(node.childNodes.chars.length, lengthColor);
-      prefix += ANSI.color(`)`, delimitersColor);
+      prefix += ANSI.color(`)`, parenthesisColor);
       return prefix;
     }
     if (node.isComposite) {
+      const delimitersColor = getDelimitersColor(context, comparison);
       let insideConstructor = "";
       const prefixWithNew =
         node.subtype === "String" ||
@@ -2337,9 +2322,6 @@ let writeDiff;
       if (prefixWithNew) {
         prefix = `${ANSI.color(`new`, delimitersColor)} ${prefix}`;
       }
-
-      let openBracket = "(";
-      let closeBracket = ")";
 
       if (displayInternalValueInsideConstructor) {
         const internalValueComparison =
@@ -2365,9 +2347,9 @@ let writeDiff;
         }
       }
       if (insideConstructor) {
-        prefix += ANSI.color(openBracket, delimitersColor);
+        prefix += ANSI.color("(", parenthesisColor);
         prefix += insideConstructor;
-        prefix += ANSI.color(closeBracket, delimitersColor);
+        prefix += ANSI.color(")", parenthesisColor);
       }
       return prefix;
     }
@@ -2748,144 +2730,144 @@ let writeDiff;
     '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
     '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
   ];
-  const writeUrlDiff = (comparison, context) => {
-    const urlPartComparisons = comparison.childComparisons.urlPart;
+  // const writeUrlDiff = (comparison, context) => {
+  //   const urlPartComparisons = comparison.childComparisons.urlPart;
 
-    const writeUrlPart = (urlPartName) => {
-      const urlPartComparison = urlPartComparisons[urlPartName];
-      if (String(urlPartComparison[context.resultType]) === "") {
-        return "";
-      }
-      const urlPartDiff = writeDiff(urlPartComparison, context);
-      return urlPartDiff;
-    };
+  //   const writeUrlPart = (urlPartName) => {
+  //     const urlPartComparison = urlPartComparisons[urlPartName];
+  //     if (String(urlPartComparison[context.resultType]) === "") {
+  //       return "";
+  //     }
+  //     const urlPartDiff = writeDiff(urlPartComparison, context);
+  //     return urlPartDiff;
+  //   };
 
-    let urlDiff = "";
-    const bracketColor = getBracketColor(context, comparison);
-    urlDiff += ANSI.color(`"`, bracketColor);
-    urlDiff += writeUrlPart("protocol");
-    const usernameDiff = writeUrlPart("username");
-    if (usernameDiff) {
-      urlDiff += usernameDiff;
-    }
-    const passwordDiff = writeUrlPart("password");
-    if (passwordDiff) {
-      const passwordComparison = urlPartComparisons.password;
-      const actualHasPassword = passwordComparison.actualNode.value.length;
-      const expectedHasPassword = passwordComparison.expectedNode.value.length;
-      let passwordSeparatorColor;
-      if (actualHasPassword && !expectedHasPassword) {
-        passwordSeparatorColor = addedColor;
-      } else if (!actualHasPassword && expectedHasPassword) {
-        passwordSeparatorColor = removedColor;
-      } else if (passwordComparison.counters.overall.any) {
-        passwordSeparatorColor =
-          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
-      } else {
-        passwordSeparatorColor = sameColor;
-      }
-      urlDiff += ANSI.color(":", passwordSeparatorColor);
-      urlDiff += passwordDiff;
-    }
-    const hostnameDiff = writeUrlPart("hostname");
-    if (hostnameDiff) {
-      if (usernameDiff || passwordDiff) {
-        const usernameComparison = urlPartComparisons.username;
-        const passwordComparison = urlPartComparisons.password;
-        const actualHasAuth =
-          usernameComparison.actualNode.value.length ||
-          passwordComparison.actualNode.value.length;
-        const expectedHasAuth =
-          usernameComparison.expectedNode.value.length ||
-          passwordComparison.expectedNode.value.length;
-        let authSeparatorColor;
-        if (actualHasAuth && !expectedHasAuth) {
-          authSeparatorColor = addedColor;
-        } else if (!actualHasAuth && expectedHasAuth) {
-          authSeparatorColor = removedColor;
-        } else if (
-          passwordComparison[context.resultType].length
-            ? passwordComparison.counters.overall.any
-            : usernameComparison.counters.overall.any
-        ) {
-          authSeparatorColor =
-            context.resultType === "actualNode"
-              ? unexpectedColor
-              : expectedColor;
-        } else {
-          authSeparatorColor = sameColor;
-        }
-        urlDiff += ANSI.color("@", authSeparatorColor);
-      }
-      urlDiff += hostnameDiff;
-    }
-    const portDiff = writeUrlPart("port");
-    if (portDiff) {
-      if (hostnameDiff) {
-        const portComparison = urlPartComparisons.port;
-        const actualHasPort =
-          String(portComparison.actualNode.value).length > 0;
-        const expectedHasPort =
-          String(portComparison.expectedNode.value).length > 0;
-        let portSeparatorColor;
-        if (actualHasPort && !expectedHasPort) {
-          portSeparatorColor = addedColor;
-        } else if (!actualHasPort && expectedHasPort) {
-          portSeparatorColor = removedColor;
-        } else if (portComparison.counters.overall.any) {
-          portSeparatorColor =
-            context.resultType === "actualNode"
-              ? unexpectedColor
-              : expectedColor;
-        } else {
-          portSeparatorColor = sameColor;
-        }
-        urlDiff += ANSI.color(":", portSeparatorColor);
-      }
-      urlDiff += portDiff;
-    }
-    urlDiff += writeUrlPart("pathname");
-    const searchDiff = writeUrlPart("search");
-    if (searchDiff) {
-      const searchComparison = urlPartComparisons.search;
-      const actualHasSearch = searchComparison.actualNode.value.length;
-      const expectedHasSearch = searchComparison.expectedNode.value.length;
-      let searchSeparatorColor;
-      if (actualHasSearch && !expectedHasSearch) {
-        searchSeparatorColor = addedColor;
-      } else if (!actualHasSearch && expectedHasSearch) {
-        searchSeparatorColor = removedColor;
-      } else if (searchComparison.counters.overall.any) {
-        searchSeparatorColor =
-          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
-      } else {
-        searchSeparatorColor = sameColor;
-      }
-      urlDiff += ANSI.color("?", searchSeparatorColor);
-      urlDiff += searchDiff;
-    }
-    const hashDiff = writeUrlPart("hash");
-    if (hashDiff) {
-      const hashComparison = urlPartComparisons.hash;
-      const actualHasHash = hashComparison.actualNode.value.length;
-      const expectedHasHash = hashComparison.expectedNode.value.length;
-      let hashSeparatorColor;
-      if (actualHasHash && !expectedHasHash) {
-        hashSeparatorColor = addedColor;
-      } else if (!actualHasHash && expectedHasHash) {
-        hashSeparatorColor = removedColor;
-      } else if (hashComparison.counters.overall.any) {
-        hashSeparatorColor =
-          context.resultType === "actualNode" ? unexpectedColor : expectedColor;
-      } else {
-        hashSeparatorColor = sameColor;
-      }
-      urlDiff += ANSI.color("#", hashSeparatorColor);
-      urlDiff += hashDiff;
-    }
-    urlDiff += ANSI.color(`"`, bracketColor);
-    return urlDiff;
-  };
+  //   let urlDiff = "";
+  //   const bracketColor = getBracketColor(context, comparison);
+  //   urlDiff += ANSI.color(`"`, bracketColor);
+  //   urlDiff += writeUrlPart("protocol");
+  //   const usernameDiff = writeUrlPart("username");
+  //   if (usernameDiff) {
+  //     urlDiff += usernameDiff;
+  //   }
+  //   const passwordDiff = writeUrlPart("password");
+  //   if (passwordDiff) {
+  //     const passwordComparison = urlPartComparisons.password;
+  //     const actualHasPassword = passwordComparison.actualNode.value.length;
+  //     const expectedHasPassword = passwordComparison.expectedNode.value.length;
+  //     let passwordSeparatorColor;
+  //     if (actualHasPassword && !expectedHasPassword) {
+  //       passwordSeparatorColor = addedColor;
+  //     } else if (!actualHasPassword && expectedHasPassword) {
+  //       passwordSeparatorColor = removedColor;
+  //     } else if (passwordComparison.counters.overall.any) {
+  //       passwordSeparatorColor =
+  //         context.resultType === "actualNode" ? unexpectedColor : expectedColor;
+  //     } else {
+  //       passwordSeparatorColor = sameColor;
+  //     }
+  //     urlDiff += ANSI.color(":", passwordSeparatorColor);
+  //     urlDiff += passwordDiff;
+  //   }
+  //   const hostnameDiff = writeUrlPart("hostname");
+  //   if (hostnameDiff) {
+  //     if (usernameDiff || passwordDiff) {
+  //       const usernameComparison = urlPartComparisons.username;
+  //       const passwordComparison = urlPartComparisons.password;
+  //       const actualHasAuth =
+  //         usernameComparison.actualNode.value.length ||
+  //         passwordComparison.actualNode.value.length;
+  //       const expectedHasAuth =
+  //         usernameComparison.expectedNode.value.length ||
+  //         passwordComparison.expectedNode.value.length;
+  //       let authSeparatorColor;
+  //       if (actualHasAuth && !expectedHasAuth) {
+  //         authSeparatorColor = addedColor;
+  //       } else if (!actualHasAuth && expectedHasAuth) {
+  //         authSeparatorColor = removedColor;
+  //       } else if (
+  //         passwordComparison[context.resultType].length
+  //           ? passwordComparison.counters.overall.any
+  //           : usernameComparison.counters.overall.any
+  //       ) {
+  //         authSeparatorColor =
+  //           context.resultType === "actualNode"
+  //             ? unexpectedColor
+  //             : expectedColor;
+  //       } else {
+  //         authSeparatorColor = sameColor;
+  //       }
+  //       urlDiff += ANSI.color("@", authSeparatorColor);
+  //     }
+  //     urlDiff += hostnameDiff;
+  //   }
+  //   const portDiff = writeUrlPart("port");
+  //   if (portDiff) {
+  //     if (hostnameDiff) {
+  //       const portComparison = urlPartComparisons.port;
+  //       const actualHasPort =
+  //         String(portComparison.actualNode.value).length > 0;
+  //       const expectedHasPort =
+  //         String(portComparison.expectedNode.value).length > 0;
+  //       let portSeparatorColor;
+  //       if (actualHasPort && !expectedHasPort) {
+  //         portSeparatorColor = addedColor;
+  //       } else if (!actualHasPort && expectedHasPort) {
+  //         portSeparatorColor = removedColor;
+  //       } else if (portComparison.counters.overall.any) {
+  //         portSeparatorColor =
+  //           context.resultType === "actualNode"
+  //             ? unexpectedColor
+  //             : expectedColor;
+  //       } else {
+  //         portSeparatorColor = sameColor;
+  //       }
+  //       urlDiff += ANSI.color(":", portSeparatorColor);
+  //     }
+  //     urlDiff += portDiff;
+  //   }
+  //   urlDiff += writeUrlPart("pathname");
+  //   const searchDiff = writeUrlPart("search");
+  //   if (searchDiff) {
+  //     const searchComparison = urlPartComparisons.search;
+  //     const actualHasSearch = searchComparison.actualNode.value.length;
+  //     const expectedHasSearch = searchComparison.expectedNode.value.length;
+  //     let searchSeparatorColor;
+  //     if (actualHasSearch && !expectedHasSearch) {
+  //       searchSeparatorColor = addedColor;
+  //     } else if (!actualHasSearch && expectedHasSearch) {
+  //       searchSeparatorColor = removedColor;
+  //     } else if (searchComparison.counters.overall.any) {
+  //       searchSeparatorColor =
+  //         context.resultType === "actualNode" ? unexpectedColor : expectedColor;
+  //     } else {
+  //       searchSeparatorColor = sameColor;
+  //     }
+  //     urlDiff += ANSI.color("?", searchSeparatorColor);
+  //     urlDiff += searchDiff;
+  //   }
+  //   const hashDiff = writeUrlPart("hash");
+  //   if (hashDiff) {
+  //     const hashComparison = urlPartComparisons.hash;
+  //     const actualHasHash = hashComparison.actualNode.value.length;
+  //     const expectedHasHash = hashComparison.expectedNode.value.length;
+  //     let hashSeparatorColor;
+  //     if (actualHasHash && !expectedHasHash) {
+  //       hashSeparatorColor = addedColor;
+  //     } else if (!actualHasHash && expectedHasHash) {
+  //       hashSeparatorColor = removedColor;
+  //     } else if (hashComparison.counters.overall.any) {
+  //       hashSeparatorColor =
+  //         context.resultType === "actualNode" ? unexpectedColor : expectedColor;
+  //     } else {
+  //       hashSeparatorColor = sameColor;
+  //     }
+  //     urlDiff += ANSI.color("#", hashSeparatorColor);
+  //     urlDiff += hashDiff;
+  //   }
+  //   urlDiff += ANSI.color(`"`, bracketColor);
+  //   return urlDiff;
+  // };
   const createGetNextNestedValue = (comparison, context) => {
     const nextIndexedValue = createGetIndexedValues(comparison, context);
     const nextProp = createGetProps(comparison, context);
@@ -3025,9 +3007,37 @@ let writeDiff;
       // but I'm not sure it's a good idea (the diff output would feel messy)
       let actualTarget = actualNode;
       let expectedTarget = expectedNode;
-      if (forWhat !== "subtype") {
-        actualTarget = actualNode.childNodes.internalValue || actualNode;
-        expectedTarget = expectedNode.childNodes.internalValue || expectedNode;
+      let internalValueModified = true;
+      if (forWhat !== "subtype" && forWhat !== "parenthesis") {
+        const actualInternalValueNode =
+          actualNode.type === "internal_value"
+            ? actualNode
+            : actualNode.childNodes.internalValue;
+        const expectedInternalValueNode =
+          expectedNode.type === "internal_value"
+            ? expectedNode
+            : expectedNode.childNodes.internalValue;
+        if (actualInternalValueNode && expectedInternalValueNode) {
+          actualTarget = actualInternalValueNode;
+          expectedTarget = expectedInternalValueNode;
+          if (
+            actualTarget.comparison.counters.overall.any === 0 &&
+            expectedTarget.comparison.counters.overall.any === 0
+          ) {
+            internalValueModified = false;
+            return sameColor;
+          }
+        } else if (actualInternalValueNode) {
+          actualTarget = actualInternalValueNode;
+          if (actualTarget.comparison.counters.overall.any === 0) {
+            internalValueModified = false;
+          }
+        } else if (expectedInternalValueNode) {
+          expectedTarget = expectedInternalValueNode;
+          if (expectedTarget.comparison.counters.overall.any === 0) {
+            internalValueModified = false;
+          }
+        }
       }
 
       if (forWhat === "subtype") {
@@ -3121,6 +3131,9 @@ let writeDiff;
         if (actualTarget.isComposite === expectedTarget.isComposite) {
           return sameColor;
         }
+      }
+      if (!internalValueModified) {
+        return sameColor;
       }
       return context.resultType === "actualNode"
         ? unexpectedColor
