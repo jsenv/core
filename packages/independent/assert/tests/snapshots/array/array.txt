@@ -8,6 +8,12 @@ expect: [
   false,
 ]
 
+# array expected, object received
+AssertionError: actual and expected are different:
+
+actual: {}
+expect: []
+
 # undefined vs empty
 AssertionError: actual and expected have 1 difference:
 
@@ -70,19 +76,9 @@ expect: {
 AssertionError: actual and expected are different:
 
 actual: [] {
-  user: {
-    name: "bob",
-  },
+  user: { name: "bob" },
 }
 expect: {
-  user: {
-    name: "alice",
-  },
+  user: { name: "alice" },
 }
-
-# array expected, object received
-AssertionError: actual and expected are different:
-
-actual: {}
-expect: []
 

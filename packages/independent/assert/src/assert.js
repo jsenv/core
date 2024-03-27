@@ -996,6 +996,7 @@ let createValueNode;
 
       info: {
         let composite = false;
+        let primitive = false;
         let wellKnownId;
         let subtype;
         let isArray = false;
@@ -1018,6 +1019,7 @@ let createValueNode;
         // }
         else {
           composite = isComposite(value);
+          primitive = !composite;
           wellKnownId = getWellKnownId(value);
           if (composite) {
             subtype = getSubtype(value);
@@ -1106,7 +1108,7 @@ let createValueNode;
           origin,
           subtype,
           isComposite: composite,
-          isPrimitive: !composite,
+          isPrimitive: primitive,
           isString,
           isArray,
           isSet,
@@ -1658,7 +1660,7 @@ let writeDiff;
     }
 
     let subtypeDiff = "";
-    if (displaySubtype || node.isComposite) {
+    if (displaySubtype && node.isComposite) {
       subtypeDiff = writeSubtypeDiff(comparison, selfContext, context);
     }
 
@@ -1667,90 +1669,32 @@ let writeDiff;
       if (!displayValue) {
         break value;
       }
-      if (selfContext.collapsed) {
-        break value;
-      }
-      if (selfContext.collapsedWithOverview) {
-        if (node.type === "property") {
-          const propertyDescriptorComparisons =
-            comparison.childComparisons.propertyDescriptors;
-          const propertyGetterComparison = propertyDescriptorComparisons.get;
-          const propertySetterComparison = propertyDescriptorComparisons.set;
-          const propertyGetterNode = propertyGetterComparison
-            ? propertyGetterComparison[selfContext.resultType]
-            : null;
-          const propertySetterNode = propertySetterComparison
-            ? propertySetterComparison[selfContext.resultType]
-            : null;
-          if (propertyGetterNode && propertySetterNode) {
-            valueDiff += writeDiff(propertyGetterComparison, selfContext);
-            break value;
-          }
-          if (propertyGetterNode) {
-            valueDiff += writeDiff(propertyGetterComparison, selfContext);
-            break value;
-          }
-          if (propertySetterNode) {
-            valueDiff += writeDiff(propertySetterComparison, selfContext);
-            break value;
-          }
-          const propertyValueComparison = propertyDescriptorComparisons.value;
-          valueDiff += writeDiff(propertyValueComparison, selfContext);
-          break value;
-        }
-        if (node.type === "property_descriptor") {
-          if (node.descriptor === "get") {
-            const valueColor = getValueColor(selfContext, comparison);
-            const setterNode = node.parent.childNodes.propertyDescriptors.set;
-            if (setterNode && setterNode.value) {
-              valueDiff += ANSI.color("[get/set]", valueColor);
-              break value;
-            }
-            valueDiff += ANSI.color("[get]", valueColor);
-            break value;
-          }
-          if (node.descriptor === "set") {
-            const valueColor = getValueColor(selfContext, comparison);
-            const getterNode = node.parent.childNodes.propertyDescriptors.get;
-            if (getterNode && getterNode.value) {
-              valueDiff += ANSI.color("[get/set]", valueColor);
-            } else {
-              valueDiff += ANSI.color("[set]", valueColor);
-            }
-            break value;
-          }
-        }
-      }
-      if (node.type === "property") {
-        const propertyDescriptorComparisons =
-          comparison.childComparisons.propertyDescriptors;
-        let propertyDiff = "";
-        const propertyDescriptorNames = Object.keys(
-          propertyDescriptorComparisons,
-        );
-        for (const propertyDescriptorName of propertyDescriptorNames) {
-          const propertyDescriptorComparison =
-            propertyDescriptorComparisons[propertyDescriptorName];
-          if (propertyDescriptorComparison) {
-            let propertyDescriptorDiff = writeDiff(
-              propertyDescriptorComparison,
-              selfContext,
-            );
-            if (propertyDescriptorDiff) {
-              if (propertyDiff) {
-                propertyDiff += "\n";
-                selfContext.textIndent = 0;
-              }
-              propertyDiff += propertyDescriptorDiff;
-            }
-          }
-        }
-        valueDiff += propertyDiff;
-        break value;
-      }
       if (node.wellKnownId) {
         const valueColor = getValueColor(selfContext, comparison);
         valueDiff += ANSI.color(node.wellKnownId, valueColor);
+        break value;
+      }
+      if (
+        selfContext.collapsedWithOverview &&
+        node.type === "property_descriptor" &&
+        (node.descriptor === "get" || node.descriptor === "set")
+      ) {
+        const propertyDescriptorNodes =
+          node.parent.childNodes.propertyDescriptors;
+        const getterNode = propertyDescriptorNodes.get;
+        const setterNode = propertyDescriptorNodes.set;
+        const hasGetter = getterNode && getterNode.value;
+        const hasSetter = setterNode && setterNode.value;
+        const valueColor = getValueColor(selfContext, comparison);
+        if (hasGetter && hasSetter) {
+          valueDiff += ANSI.color("[get/set]", valueColor);
+          break value;
+        }
+        if (hasGetter) {
+          valueDiff += ANSI.color("[get]", valueColor);
+          break value;
+        }
+        valueDiff += ANSI.color("[set]", valueColor);
         break value;
       }
       if (node.isPrimitive && !node.isUrlString) {
@@ -1788,6 +1732,62 @@ let writeDiff;
         valueDiff += writeLinesDiff(comparison, selfContext);
         break value;
       }
+      if (selfContext.collapsed) {
+        break value;
+      }
+      if (node.type === "property") {
+        const propertyDescriptorComparisons =
+          comparison.childComparisons.propertyDescriptors;
+        if (selfContext.collapsedWithOverview) {
+          const propertyGetterComparison = propertyDescriptorComparisons.get;
+          const propertySetterComparison = propertyDescriptorComparisons.set;
+          const propertyGetterNode = propertyGetterComparison
+            ? propertyGetterComparison[selfContext.resultType]
+            : null;
+          const propertySetterNode = propertySetterComparison
+            ? propertySetterComparison[selfContext.resultType]
+            : null;
+          if (propertyGetterNode && propertySetterNode) {
+            valueDiff += writeDiff(propertyGetterComparison, selfContext);
+            break value;
+          }
+          if (propertyGetterNode) {
+            valueDiff += writeDiff(propertyGetterComparison, selfContext);
+            break value;
+          }
+          if (propertySetterNode) {
+            valueDiff += writeDiff(propertySetterComparison, selfContext);
+            break value;
+          }
+          const propertyValueComparison = propertyDescriptorComparisons.value;
+          valueDiff += writeDiff(propertyValueComparison, selfContext);
+          break value;
+        }
+        let propertyDiff = "";
+        const propertyDescriptorNames = Object.keys(
+          propertyDescriptorComparisons,
+        );
+        for (const propertyDescriptorName of propertyDescriptorNames) {
+          const propertyDescriptorComparison =
+            propertyDescriptorComparisons[propertyDescriptorName];
+          if (propertyDescriptorComparison) {
+            let propertyDescriptorDiff = writeDiff(
+              propertyDescriptorComparison,
+              selfContext,
+            );
+            if (propertyDescriptorDiff) {
+              if (propertyDiff) {
+                propertyDiff += "\n";
+                selfContext.textIndent = 0;
+              }
+              propertyDiff += propertyDescriptorDiff;
+            }
+          }
+        }
+        valueDiff += propertyDiff;
+        break value;
+      }
+
       if (selfContext.collapsedWithOverview) {
         const bracketColor = getBracketColor(selfContext, comparison);
         const valueColor = getValueColor(selfContext, comparison);
@@ -2189,9 +2189,7 @@ let writeDiff;
     }
     if (
       selfContext.collapsed ||
-      (node.isComposite &&
-        node.subtype !== "Object" &&
-        node.subtype !== "Array")
+      (node.subtype !== "Object" && node.subtype !== "Array")
     ) {
       const subtypeColor = getSubtypeColor(context, comparison);
       subtypeDiff += ANSI.color(node.subtype, subtypeColor);

@@ -9,6 +9,17 @@ assert({
 
 ![img](<./array/array first item diff.svg>)
 
+# array expected, object received
+
+```js
+assert({
+  actual: {},
+  expected: [],
+});
+```
+
+![img](<./array/array expected, object received.svg>)
+
 # undefined vs empty
 
 ```js
@@ -112,15 +123,4 @@ assert({
 ```
 
 ![img](<./array/diff on associate array deep property and object deep property.svg>)
-
-# array expected, object received
-
-```js
-assert({
-  actual: {},
-  expected: [],
-});
-```
-
-![img](<./array/array expected, object received.svg>)
 

@@ -11,6 +11,12 @@ await startSnapshotTesting("array", {
       expected: [false],
     });
   },
+  ["array expected, object received"]: () => {
+    assert({
+      actual: {},
+      expected: [],
+    });
+  },
   /* eslint-disable no-sparse-arrays */
   ["undefined vs empty"]: () => {
     assert({
@@ -75,12 +81,6 @@ await startSnapshotTesting("array", {
           name: "alice",
         },
       },
-    });
-  },
-  ["array expected, object received"]: () => {
-    assert({
-      actual: {},
-      expected: [],
     });
   },
   // TODO:
