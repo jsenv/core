@@ -216,7 +216,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         };
 
         if (ownerComparison) {
-          if (ownerComparison.isSetComparison) {
+          if (ownerComparison.combinations.sets) {
             if (actualNode.name === "actual") {
               const added = !ownerComparison.expectedNode.value.has(
                 expectedNode.value,
@@ -467,30 +467,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (ignoreInternalValueDiff) {
               break internal_value;
             }
-            if (
-              actualNode &&
-              actualNode.isPrimitive &&
-              (!expectedNode || expectedNode.isPrimitive)
-            ) {
+            // compare primitive and nothing
+            if (comparison.combinations.primitiveAndNothing) {
               break internal_value;
             }
-            if (
-              expectedNode &&
-              expectedNode.isPrimitive &&
-              (!actualNode || actualNode.isPrimitive)
-            ) {
+
+            if (comparison.combinations.primitives) {
               break internal_value;
             }
 
             const actualInternalValueNode = actualNode
-              ? actualNode.isComposite
-                ? actualNode.childNodes.internalValue
-                : actualNode
+              ? actualNode.childNodes.internalValue
               : null;
             const expectedInternalValueNode = expectedNode
-              ? expectedNode.isComposite
-                ? expectedNode.childNodes.internalValue
-                : expectedNode
+              ? expectedNode.childNodes.internalValue
               : null;
             if (!actualInternalValueNode && !expectedInternalValueNode) {
               break internal_value;
@@ -498,43 +488,69 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const internalValueComparison = createComparison(
               actualInternalValueNode,
               expectedInternalValueNode,
-              { fromInternalValue: true },
             );
+
+            const hideConditions = {
+              primitive: (node) => {
+                return !node.origin;
+              },
+              // show only if it's a custom valueOf with a custom behaviour
+              // (something else than returning composite itself)
+              value_of_default: (node) => {
+                return (
+                  node.origin === "valueOf()" &&
+                  node.value === node.parent.value
+                );
+              },
+            };
+
             if (actualInternalValueNode && expectedInternalValueNode) {
               if (
-                actualInternalValueNode.subtype ===
-                expectedInternalValueNode.subtype
+                actualInternalValueNode.origin === "valueOf()" &&
+                expectedInternalValueNode.origin === "valueOf()"
               ) {
-                internalValueComparison.hidden = true;
-              } else {
-                // value of differ but prototype is different so it's expected
-                const prototypeComparison =
-                  comparison.childComparisons.prototype;
                 if (
-                  prototypeComparison &&
-                  prototypeComparison.counters.overall.any > 0
+                  actualInternalValueNode.subtype ===
+                  expectedInternalValueNode.subtype
                 ) {
                   internalValueComparison.hidden = true;
+                } else {
+                  // value of differ but prototype is different so it's expected
+                  const prototypeComparison =
+                    comparison.childComparisons.prototype;
+                  if (
+                    prototypeComparison &&
+                    prototypeComparison.counters.overall.any > 0
+                  ) {
+                    internalValueComparison.hidden = true;
+                  }
                 }
               }
-            } else if (
-              actualInternalValueNode &&
-              actualInternalValueNode.origin === "valueOf()" &&
-              !expectedInternalValueNode
-            ) {
-              // show only if it's a custom valueOf with a custom behaviour
-              // (something else than returning composite itself)
-              internalValueComparison.hidden =
-                actualInternalValueNode.value === actualNode.value;
-            } else if (
-              !actualInternalValueNode &&
-              expectedInternalValueNode &&
-              expectedInternalValueNode.origin === "valueOf()"
-            ) {
-              // show only if it's a custom valueOf with a custom behaviour
-              // (something else than returning composite itself)
-              internalValueComparison.hidden =
-                expectedInternalValueNode.value === expectedNode.value;
+            }
+            if (!internalValueComparison.hidden) {
+              for (const hideConditionName of Object.keys(hideConditions)) {
+                const hideCondition = hideConditions[hideConditionName];
+                if (actualInternalValueNode && expectedInternalValueNode) {
+                  const actualHide = hideCondition(actualInternalValueNode);
+                  const expectedHide = hideCondition(expectedInternalValueNode);
+                  if (actualHide && expectedHide) {
+                    internalValueComparison.hidden = true;
+                    break;
+                  }
+                } else if (actualInternalValueNode) {
+                  const actualHide = hideCondition(actualInternalValueNode);
+                  if (actualHide) {
+                    internalValueComparison.hidden = true;
+                    break;
+                  }
+                } else if (expectedInternalValueNode) {
+                  const expectedHide = hideCondition(actualInternalValueNode);
+                  if (expectedHide) {
+                    internalValueComparison.hidden = true;
+                    break;
+                  }
+                }
+              }
             }
             comparison.childComparisons.internalValue = internalValueComparison;
             compareInside(internalValueComparison);
@@ -640,13 +656,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             const indexedValueComparisons =
               comparison.childComparisons.indexedValues;
 
-            if (
-              actualNode &&
-              actualNode.isSet &&
-              expectedNode &&
-              expectedNode.isSet
-            ) {
-              comparison.isSetComparison = true;
+            if (comparison.combinations.sets) {
               let index = 0;
               const visitSetValue = (
                 actualIndexedValueNode,
@@ -742,17 +752,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       doCompare();
       settleCounters(comparison);
     };
-    const createComparison = (
-      actualNode,
-      expectedNode,
-      { fromInternalValue } = {},
-    ) => {
+    const createComparison = (actualNode, expectedNode) => {
       const leftOrRightValueNode = actualNode || expectedNode;
       const parent = leftOrRightValueNode.parent
         ? leftOrRightValueNode.parent.comparison
         : null;
-      if (parent && parent.isSetComparison) {
-      } else if (fromInternalValue) {
+      if (parent && parent.combinations.sets) {
       } else if (actualNode && actualNode.comparison) {
         throw new Error("nope");
       } else if (expectedNode && expectedNode.comparison) {
@@ -760,8 +765,27 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
 
       const comparison = {
+        combinations: {
+          primitiveAndNothing:
+            (actualNode && actualNode.isPrimitive && !expectedNode) ||
+            (!actualNode && expectedNode && expectedNode.isPrimitive),
+          primitiveAndComposite:
+            actualNode &&
+            expectedNode &&
+            actualNode.isComposite !== expectedNode.isComposite,
+          primitives:
+            actualNode &&
+            expectedNode &&
+            actualNode.isPrimitive &&
+            expectedNode.isPrimitive,
+          sets:
+            actualNode &&
+            expectedNode &&
+            actualNode.isSet &&
+            expectedNode.isSet,
+        },
         parent,
-        type: fromInternalValue ? "internal_value" : leftOrRightValueNode.type,
+        type: leftOrRightValueNode.type,
         depth: leftOrRightValueNode.depth,
         path: leftOrRightValueNode.path,
         property: leftOrRightValueNode.property,
@@ -810,16 +834,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       if (actualNode) {
-        if (fromInternalValue && actualNode.isPrimitive) {
-        } else {
-          actualNode.comparison = comparison;
-        }
+        actualNode.comparison = comparison;
       }
       if (expectedNode) {
-        if (fromInternalValue && expectedNode.isPrimitive) {
-        } else {
-          expectedNode.comparison = comparison;
-        }
+        expectedNode.comparison = comparison;
       }
 
       return comparison;
@@ -1108,8 +1126,8 @@ let createValueNode;
             if (parentSubtype !== "Object" && parentSubtype !== "Array") {
               inConstructor = true;
             }
-          } else if (origin === "toString()") {
-            if (parent.isUrl || !composite) {
+          } else if (origin === "href") {
+            if (parent.isUrl) {
               inConstructor = true;
             }
           }
@@ -1119,8 +1137,14 @@ let createValueNode;
         if (parent) {
           if (type === "property") {
             depth = parent.depth;
-          } else if (type === "internal_value" && inConstructor) {
-            depth = parent.depth;
+          } else if (type === "internal_value") {
+            if (inConstructor) {
+              depth = parent.depth;
+            } else if (origin) {
+              depth = parent.depth + 1;
+            } else {
+              depth = parent.depth;
+            }
           } else if (type === "url_part") {
             depth = parent.depth;
           } else {
@@ -1180,7 +1204,7 @@ let createValueNode;
         });
         childNodes.prototype = prototypeNode;
       }
-      // internal value (valueOf(), toString())
+      // internal value (.valueOf(), .href, .toString())
       if (
         node.isComposite &&
         !node.structureIsKnown &&
@@ -1199,10 +1223,10 @@ let createValueNode;
       } else if (node.isUrl) {
         const internalValueNode = _createValueNode({
           parent: node,
-          path: path.append("toString()"),
+          path: path.append("href"),
           type: "internal_value",
-          value: node.value.toString(),
-          origin: "toString()",
+          value: node.href,
+          origin: "href",
         });
         childNodes.internalValue = internalValueNode;
       }
@@ -1395,7 +1419,7 @@ let createValueNode;
         childNodes.chars = charNodes;
       }
       // url parts
-      if (node.isUrl || node.isUrlString) {
+      if ((node.isUrl || node.isUrlString) && !node.structureIsKnown) {
         const urlPartNodes = {};
 
         const urlParts = node.isUrl ? node.value : new URL(node.value);
@@ -2226,7 +2250,6 @@ let writeDiff;
 
     const internalValueNode = node.childNodes.internalValue;
     const displayInternalValueInsideConstructor =
-      node.composite &&
       internalValueNode &&
       internalValueNode.inConstructor &&
       // value returned by valueOf() is not the composite itself
