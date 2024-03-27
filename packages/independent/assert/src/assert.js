@@ -449,6 +449,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           );
           comparison.childComparisons.internalValue = internalValueComparison;
           compareInside(internalValueComparison);
+          ignoreInsideDiff =
+            actualInsideNode &&
+            actualInsideNode.type === "internal_value" &&
+            expectedInsideNode &&
+            expectedInsideNode.type === "internal_value";
         }
 
         string: {
