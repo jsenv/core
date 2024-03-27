@@ -474,10 +474,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             let expectedInternalValueNode;
             if (comparison.combinations.primitiveAndComposite) {
               actualInternalValueNode = actualNode.isPrimitive
-                ? null
+                ? actualNode
                 : actualNode.childNodes.internalValue;
               expectedInternalValueNode = expectedNode.isPrimitive
-                ? null
+                ? expectedNode
                 : expectedNode.childNodes.internalValue;
             } else if (comparison.combinations.compositeAndNothing) {
               actualInternalValueNode = actualNode
@@ -768,18 +768,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     ) => {
       let mainNode;
       if (fromInternalValue) {
-        mainNode =
-          actualNode && actualNode.isComposite ? actualNode : expectedNode;
+        if (actualNode && actualNode.isComposite) {
+          mainNode = actualNode;
+        } else if (expectedNode && expectedNode.isComposite) {
+          mainNode = expectedNode;
+        } else {
+          mainNode = actualNode || expectedNode;
+        }
       } else {
         mainNode = actualNode || expectedNode;
+        if (actualNode && actualNode.comparison) {
+          throw new Error("nope");
+        } else if (expectedNode && expectedNode.comparison) {
+          throw new Error("nope");
+        }
       }
 
       const parent = mainNode.parent ? mainNode.parent.comparison : null;
-      if (actualNode && actualNode.comparison) {
-        throw new Error("nope");
-      } else if (expectedNode && expectedNode.comparison) {
-        throw new Error("nope");
-      }
 
       const comparison = {
         combinations: {
@@ -859,10 +864,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       if (fromInternalValue) {
-        if (actualNode && actualNode.isComposite) {
+        if (actualNode && actualNode.type === "internal_value") {
           actualNode.comparison = comparison;
         }
-        if (expectedNode && expectedNode.isComposite) {
+        if (expectedNode && expectedNode.type === "internal_value") {
           expectedNode.comparison = comparison;
         }
       } else {
@@ -2442,20 +2447,24 @@ let writeDiff;
     const overflowLeft = focusedCharIndex - previousCharAttempt > 0;
     const overflowRight =
       focusedCharIndex + nextCharAttempt < charNodes.length - 1;
+
+    const stringNode = lineNode.parent;
+    const stringComparison = stringNode.comparison;
+
+    let lineContent = "";
+    lineContent += charBeforeArray.reverse().join("");
+    lineContent += focusedCharDiff;
+    lineContent += charAfterArray.join("");
     if (overflowLeft) {
       oneLineDiff += ANSI.color("…", delimitersColor);
     }
-    const stringNode = lineNode.parent;
-    const stringComparison = stringNode.comparison;
-    const bracketColor = getBracketColor(context, stringComparison);
     if (stringComparison.quote) {
-      oneLineDiff += ANSI.color(stringComparison.quote, bracketColor);
-    }
-    oneLineDiff += charBeforeArray.reverse().join("");
-    oneLineDiff += focusedCharDiff;
-    oneLineDiff += charAfterArray.join("");
-    if (stringComparison.quote) {
-      oneLineDiff += ANSI.color(stringComparison.quote, bracketColor);
+      const quoteColor = getQuoteColor(context, stringComparison);
+      oneLineDiff += ANSI.color(stringComparison.quote, quoteColor);
+      oneLineDiff += lineContent;
+      oneLineDiff += ANSI.color(stringComparison.quote, quoteColor);
+    } else {
+      oneLineDiff += lineContent;
     }
     if (overflowRight) {
       oneLineDiff += ANSI.color("…", delimitersColor);
@@ -3014,9 +3023,12 @@ let writeDiff;
       }
       // ideally we should loop until we find the least nested internal value
       // but I'm not sure it's a good idea (the diff output would feel messy)
-      let actualTarget = actualNode.childNodes.internalValue || actualNode;
-      let expectedTarget =
-        expectedNode.childNodes.internalValue || expectedNode;
+      let actualTarget = actualNode;
+      let expectedTarget = expectedNode;
+      if (forWhat !== "subtype") {
+        actualTarget = actualNode.childNodes.internalValue || actualNode;
+        expectedTarget = expectedNode.childNodes.internalValue || expectedNode;
+      }
 
       if (forWhat === "subtype") {
         if (

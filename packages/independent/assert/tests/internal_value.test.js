@@ -26,15 +26,33 @@ await startSnapshotTesting("internal_value", {
   //     },
   //   });
   // },
-  ["signal string and string"]: () => {
+  ["signal boolean and boolean"]: () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
-        valueOf: () => "a",
+        valueOf: () => true,
       },
-      expected: "ab",
+      expected: true,
     });
   },
+  // ["boolean and signal boolean"]: () => {
+  //   assert({
+  //     actual: true,
+  //     expected: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => true,
+  //     },
+  //   });
+  // },
+  // ["signal string and string"]: () => {
+  //   assert({
+  //     actual: {
+  //       [Symbol.toStringTag]: "Signal",
+  //       valueOf: () => "a",
+  //     },
+  //     expected: "ab",
+  //   });
+  // },
   // ["signal array"]: () => {
   //   assert({
   //     actual: {
