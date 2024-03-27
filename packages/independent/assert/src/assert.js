@@ -447,10 +447,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (!actualInternalValueNode && !expectedInternalValueNode) {
               break internal_value;
             }
+            const actualTargetNode = actualInternalValueNode || actualNode;
+            const expectedTargetNode =
+              expectedInternalValueNode || expectedNode;
 
+            // ici, si actualNode et target est hidden
+            // alors actualNode devrait etre hidden
+            // parce qu'il n'y a pas d'interet de le ré-afficher
+            // en vrai je suis PAUME je sais pas comment traiter ce cas
             const internalValueComparison = createComparison(
-              actualInternalValueNode,
-              expectedInternalValueNode,
+              actualTargetNode,
+              expectedTargetNode,
             );
             comparison.childComparisons.internalValue = internalValueComparison;
             compareInside(internalValueComparison);
@@ -649,28 +656,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       doCompare();
       settleCounters(comparison);
     };
-    const createComparison = (
-      actualNode,
-      expectedNode,
-      { fromInternalValue } = {},
-    ) => {
+    const createComparison = (actualNode, expectedNode) => {
       let mainNode;
-      if (fromInternalValue) {
-        if (actualNode && actualNode.isComposite) {
-          mainNode = actualNode;
-        } else if (expectedNode && expectedNode.isComposite) {
-          mainNode = expectedNode;
-        } else {
-          mainNode = actualNode || expectedNode;
-        }
+      let fromInternalValue = false;
+      if (actualNode && actualNode.type === "internal_value") {
+        mainNode = actualNode;
+        fromInternalValue = true;
+      } else if (expectedNode && expectedNode.type === "internal_value") {
+        mainNode = expectedNode;
+        fromInternalValue = true;
       } else {
         mainNode = actualNode || expectedNode;
-        if (actualNode && actualNode.comparison) {
-          throw new Error("nope");
-        } else if (expectedNode && expectedNode.comparison) {
-          throw new Error("nope");
-        }
       }
+
+      // if (actualNode && actualNode.comparison) {
+      //   throw new Error("nope");
+      // } else if (expectedNode && expectedNode.comparison) {
+      //   throw new Error("nope");
+      // }
 
       const parent = mainNode.parent ? mainNode.parent.comparison : null;
 
