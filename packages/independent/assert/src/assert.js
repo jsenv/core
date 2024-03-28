@@ -19,6 +19,13 @@ const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empt
 // const VALUE_OF_NOT_FOUND = { value_of_not_found: true };
 // const DOES_NOT_EXISTS = { does_not_exists: true };
 
+const sourceCodeSymbol = Symbol.for("source_code");
+const createSourceCode = (value) => {
+  return {
+    [sourceCodeSymbol]: value,
+  };
+};
+
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
     // param validation
@@ -491,6 +498,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           addCategoryDiff();
           break category;
         }
+        if (actualNode.isSourceCode !== expectedNode.isSourceCode) {
+          addCategoryDiff();
+          break category;
+        }
+        if (
+          actualNode.isSourceCode &&
+          expectedNode.isSourceCode &&
+          actualNode[sourceCodeSymbol] !== expectedNode[sourceCodeSymbol]
+        ) {
+          addCategoryDiff();
+          break category;
+        }
+
         const actualIsPrimitive = actualNode.isPrimitive;
         const expectedIsPrimitive = expectedNode.isPrimitive;
         if (actualIsPrimitive !== expectedIsPrimitive) {
@@ -1105,9 +1125,10 @@ let createValueNode;
       origin,
       property,
       descriptor,
+      isSourceCode = false,
       showOnlyWhenModified = false,
       showOnlyWhenDiff = false,
-      isSourceCode = false,
+      hidden = false,
     }) => {
       const node = {
         name,
@@ -1139,7 +1160,13 @@ let createValueNode;
         //   wellKnownId = "not_found";
         //   subtype = "not_found";
         // }
-        else {
+        else if (
+          value &&
+          typeof value === "object" &&
+          sourceCodeSymbol in value
+        ) {
+          isSourceCode = true;
+        } else {
           composite = isComposite(value);
           primitive = !composite;
           wellKnownId = getWellKnownId(value);
@@ -1186,22 +1213,22 @@ let createValueNode;
           isString && type === "line";
         const canHaveUrlParts = isUrlString || isUrl;
 
-        let inConstructor;
+        let displayedIn = "properties";
         if (type === "internal_value") {
           if (origin === "valueOf()") {
             // we display in constructor if parent subtype is not Object nor Array
             // (if there is a constructor displayed)
             const parentSubtype = parent.subtype;
             if (parentSubtype !== "Object" && parentSubtype !== "Array") {
-              inConstructor = true;
+              displayedIn = "constructor";
             }
           } else if (origin === "href") {
             if (parent.isUrl) {
-              inConstructor = true;
+              displayedIn = "constructor";
             }
           } else if (origin === "toString()") {
             if (parent.isFunction) {
-              inConstructor = true;
+              displayedIn = "constructor";
             }
           }
         }
@@ -1211,9 +1238,7 @@ let createValueNode;
           if (type === "property") {
             depth = parent.depth;
           } else if (type === "internal_value") {
-            if (inConstructor) {
-              depth = parent.depth;
-            } else if (origin) {
+            if (displayedIn === "properties") {
               depth = parent.depth + 1;
             } else {
               depth = parent.depth;
@@ -1253,8 +1278,8 @@ let createValueNode;
           canHaveChars,
           canHaveUrlParts,
           wellKnownId,
-          inConstructor,
-          hidden: false,
+          displayedIn,
+          hidden,
           showOnlyWhenModified,
           showOnlyWhenDiff,
           reference,
@@ -1316,11 +1341,9 @@ let createValueNode;
         childNodes.internalValue = internalValueNode;
       } else if (node.isFunction) {
         let functionBody = String(node.value);
-        if (
-          node.type === "property_descriptor" &&
-          (node.descriptor === "get" || node.descriptor === "set")
-        ) {
+        if (node.descriptor === "get" || node.descriptor === "set") {
           functionBody = getFunctionBody(functionBody);
+          functionBody = createSourceCode(functionBody);
         }
         const internalValueNode = _createValueNode({
           parent: node,
@@ -1684,7 +1707,7 @@ let writeDiff;
           : node.type === "internal_value"
             ? node.origin
             : "";
-    if (node.type === "internal_value" && node.inConstructor) {
+    if (node.type === "internal_value" && node.displayedIn === "constructor") {
       isNestedValue = false;
       property = "";
     }
@@ -1848,6 +1871,13 @@ let writeDiff;
       if (node.wellKnownId) {
         const valueColor = getValueColor(selfContext, comparison);
         valueDiff += ANSI.color(node.wellKnownId, valueColor);
+        break value;
+      }
+      if (node.isSourceCode) {
+        const valueColor = getValueColor(selfContext, comparison);
+        valueDiff += " ";
+        valueDiff += ANSI.color("[source code]", valueColor);
+        valueDiff += " ";
         break value;
       }
       if (
@@ -2408,13 +2438,13 @@ let writeDiff;
       const internalValueNode = node.childNodes.internalValue;
       const displayInternalValueInsideConstructor =
         internalValueNode &&
-        internalValueNode.inConstructor &&
+        internalValueNode.displayedIn === "constructor" &&
         // value returned by valueOf() is not the composite itself
         !internalValueNode.hidden;
+      if (node.isFunction) {
+        needParenthesis = false;
+      }
       if (displayInternalValueInsideConstructor) {
-        if (node.isFunction) {
-          needParenthesis = false;
-        }
         const internalValueComparison =
           comparison.childComparisons.internalValue;
         insideConstructor += writeDiff(internalValueComparison, context);
@@ -3046,7 +3076,10 @@ let writeDiff;
       if (internalValueComparisonToDisplay) {
         const internalValueNode =
           internalValueComparisonToDisplay[context.resultType];
-        if (!internalValueNode || internalValueNode.inConstructor) {
+        if (
+          !internalValueNode ||
+          internalValueNode.displayedIn !== "properties"
+        ) {
           internalValueComparisonToDisplay = null;
         } else {
           let insideComparison = internalValueComparisonToDisplay;

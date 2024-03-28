@@ -60,7 +60,7 @@ expect: {
 AssertionError: actual and expected have 2 differences:
 
 actual: {
-  get a() {return true;}
+  get a() { [source code] }
 }
 expect: {
   a: true,
@@ -70,8 +70,8 @@ expect: {
 AssertionError: actual and expected have 3 differences:
 
 actual: {
-  get a() {return true;}
-  set a() {}
+  get a() { [source code] }
+  set a() { [source code] }
 }
 expect: {
   a: true,
@@ -81,20 +81,20 @@ expect: {
 AssertionError: actual and expected have 4 differences:
 
 actual: {
-  get a() {return true;}
+  get a() { [source code] }
 }
 expect: {
-  set a() {}
+  set a() { [source code] }
 }
 
 # setter and no setter
 AssertionError: actual and expected have 4 differences:
 
 actual: {
-  set a() {}
+  set a() { [source code] }
 }
 expect: {
-  get a() {return true;}
+  get a() { [source code] }
 }
 
 # getter are the same
@@ -105,15 +105,5 @@ actual: {
 }
 expect: {
   b: false,
-}
-
-# getter are different
-AssertionError: actual and expected have 1 difference:
-
-actual: {
-  get a() {return false;}
-}
-expect: {
-  get a() {return true;}
 }
 
