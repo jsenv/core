@@ -166,9 +166,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         )) {
           const propertyDescriptorComparison =
             propertyDescriptorComparisons[propertyDescriptorName];
-          if (propertyDescriptorComparison) {
-            onComparisonDisplayed(propertyDescriptorComparison);
-          }
+          onComparisonDisplayed(propertyDescriptorComparison);
         }
       }
     };
@@ -205,9 +203,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         comparison.type === "prototype"
       ) {
         ownerComparison =
-          comparison.type === "prototype" || comparison.type === "property"
-            ? comparison.parent
-            : comparison.parent.parent;
+          comparison.type === "property_descriptor"
+            ? comparison.parent.parent
+            : comparison.parent;
         const ownerActualNode = ownerComparison.actualNode;
         const ownnerExpectedNode = ownerComparison.expectedNode;
         if (!actualNode) {
@@ -304,35 +302,41 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       if (comparison.type === "property") {
+        const actualPropertyDescriptorNodes = actualNode
+          ? actualNode.childNodes.propertyDescriptors
+          : {};
+        const expectedPropertyDescriptorNodes = expectedNode
+          ? expectedNode.childNodes.propertyDescriptors
+          : {};
         const propertyDescriptorComparisons =
           comparison.childComparisons.propertyDescriptors;
-        const visitPropertyDescriptor = (descriptorName) => {
-          const actualPropertyDescriptorNode = actualNode
-            ? actualNode.childNodes.propertyDescriptors[descriptorName]
-            : null;
-          const expectedPropertyDescriptorNode = expectedNode
-            ? expectedNode.childNodes.propertyDescriptors[descriptorName]
-            : null;
+        const propertyDescriporNames = [
+          "value",
+          "get",
+          "set",
+          "enumerable",
+          "writable",
+          "configurable",
+        ];
+        for (const propertyDescriporName of propertyDescriporNames) {
+          const actualPropertyDescriptorNode =
+            actualPropertyDescriptorNodes[propertyDescriporName];
+          const expectedPropertyDescriptorNode =
+            expectedPropertyDescriptorNodes[propertyDescriporName];
           if (
             !actualPropertyDescriptorNode &&
             !expectedPropertyDescriptorNode
           ) {
-            return;
+            continue;
           }
           const propertyDescriptorComparison = createComparison(
             actualPropertyDescriptorNode,
             expectedPropertyDescriptorNode,
           );
-          propertyDescriptorComparisons[descriptorName] =
+          propertyDescriptorComparisons[propertyDescriporName] =
             propertyDescriptorComparison;
           compareInside(propertyDescriptorComparison);
-        };
-        visitPropertyDescriptor("value");
-        visitPropertyDescriptor("enumerable");
-        visitPropertyDescriptor("writable");
-        visitPropertyDescriptor("configurable");
-        visitPropertyDescriptor("set");
-        visitPropertyDescriptor("get");
+        }
         settleCounters(comparison);
         return;
       }
@@ -1303,14 +1307,7 @@ let createValueNode;
             showOnlyWhenDiff: !propertyDescriptor.enumerable,
           });
           propertyNode.property = propertyName;
-          const propertyDescriptorNodes = {
-            value: null,
-            enumerable: null,
-            writable: null,
-            configurable: null,
-            set: null,
-            get: null,
-          };
+          const propertyDescriptorNodes = {};
           for (const propertyDescriptorName of Object.keys(
             propertyDescriptor,
           )) {
@@ -1326,7 +1323,7 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
-              showOnlyWhenModified: propertyDescriptorName !== "value",
+              showOnlyWhenDiff: propertyDescriptorName !== "value",
             });
             propertyDescriptorNode.property = propertyName;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
@@ -1349,7 +1346,7 @@ let createValueNode;
           for (const setValue of node.value) {
             const setValueNode = _createValueNode({
               parent: node,
-              path: path.append(index),
+              path: path.append(index, { isArrayIndex: true }),
               type: "indexed_value",
               value: setValue,
             });
@@ -1362,7 +1359,7 @@ let createValueNode;
           for (const value of node.value) {
             const indexedValueNode = _createValueNode({
               parent: node,
-              path: path.append(index),
+              path: path.append(index, { isArrayIndex: true }),
               type: "indexed_value",
               value: Object.hasOwn(node.value, index)
                 ? value
@@ -1629,6 +1626,23 @@ let writeDiff;
       }
 
       if (property && comparison !== selfContext.startComparison) {
+        let beforeProperty = "";
+        let afterProperty = "";
+
+        if (node.type === "property_descriptor") {
+          if (node.descriptor === "get") {
+            beforeProperty = "get ";
+            afterProperty = "()";
+          } else if (node.descriptor === "set") {
+            beforeProperty = "set ";
+            afterProperty = "()";
+          } else if (node.descriptor !== "value" && node.value) {
+            beforeProperty = node.descriptor;
+            beforeProperty += " ";
+            displayValue = false;
+          }
+        }
+
         let keyColor;
         if (context.added) {
           keyColor = addedColor;
@@ -1642,15 +1656,14 @@ let writeDiff;
         } else {
           keyColor = sameColor;
         }
+
         const propertyKeyFormatted = humanizePropertyKey(property);
+        if (beforeProperty) {
+          diff += ANSI.color(beforeProperty, keyColor);
+        }
         diff += ANSI.color(propertyKeyFormatted, keyColor);
-        if (
-          node.type === "property_descriptor" &&
-          node.descriptor !== "value"
-        ) {
-          diff += ANSI.color("[[", keyColor);
-          diff += ANSI.color(node.descriptor, keyColor);
-          diff += ANSI.color("]]", keyColor);
+        if (afterProperty) {
+          diff += ANSI.color(afterProperty, keyColor);
         }
         if (displayValue) {
           diff += ANSI.color(":", keyColor);
@@ -1780,6 +1793,7 @@ let writeDiff;
         break value;
       }
       if (node.type === "property") {
+        const propertyDescriptorNodes = node.childNodes.propertyDescriptors;
         const propertyDescriptorComparisons =
           comparison.childComparisons.propertyDescriptors;
         if (selfContext.collapsedWithOverview) {
@@ -1808,24 +1822,20 @@ let writeDiff;
           break value;
         }
         let propertyDiff = "";
-        const propertyDescriptorNames = Object.keys(
-          propertyDescriptorComparisons,
-        );
+        const propertyDescriptorNames = Object.keys(propertyDescriptorNodes);
         for (const propertyDescriptorName of propertyDescriptorNames) {
           const propertyDescriptorComparison =
             propertyDescriptorComparisons[propertyDescriptorName];
-          if (propertyDescriptorComparison) {
-            let propertyDescriptorDiff = writeDiff(
-              propertyDescriptorComparison,
-              selfContext,
-            );
-            if (propertyDescriptorDiff) {
-              if (propertyDiff) {
-                propertyDiff += "\n";
-                selfContext.textIndent = 0;
-              }
-              propertyDiff += propertyDescriptorDiff;
+          let propertyDescriptorDiff = writeDiff(
+            propertyDescriptorComparison,
+            selfContext,
+          );
+          if (propertyDescriptorDiff) {
+            if (propertyDiff) {
+              propertyDiff += "\n";
+              selfContext.textIndent = 0;
             }
+            propertyDiff += propertyDescriptorDiff;
           }
         }
         valueDiff += propertyDiff;
@@ -3220,10 +3230,12 @@ const createValuePath = (path = "") => {
   return {
     toString: () => path,
     valueOf: () => path,
-    append: (property, { isPropertyDescriptor } = {}) => {
+    append: (property, { isArrayIndex, isPropertyDescriptor } = {}) => {
       let propertyKey = "";
       let propertyKeyCanUseDot = false;
-      if (typeof property === "symbol") {
+      if (isArrayIndex) {
+        propertyKey = `[${property}]`;
+      } else if (typeof property === "symbol") {
         propertyKey = humanizeSymbol(property);
       } else if (typeof property === "string") {
         if (isDotNotationAllowed(property)) {
