@@ -34,15 +34,31 @@ AssertionError: actual and expected are different:
 actual: Signal(true)
 expect: 1
 
-# signal([true]) and signal([false])
+# signal({ foo: true }) and signal({ a: false })
 AssertionError: actual and expected have 1 difference:
+
+actual: Signal({
+  foo: true,
+})
+expect: Signal({
+  foo: false,
+})
+
+# signal([true]) and signal([false])
+AssertionError: actual and expected have 3 differences:
+
+ℹ to improve readability 1 diff is completely hidden
 
 actual: Signal([
   true,
-])
+]) {
+  a: true,
+}
 expect: Signal([
   false,
-])
+]) {
+  a: false,
+}
 
 # signal([true]) and [true]
 AssertionError: actual and expected are different:

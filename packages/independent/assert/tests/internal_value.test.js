@@ -71,15 +71,29 @@ await startSnapshotTesting("internal_value", {
       expected: 1,
     });
   },
+  ["signal({ foo: true }) and signal({ a: false })"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => ({ foo: true }),
+      },
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => ({ foo: false }),
+      },
+    });
+  },
   ["signal([true]) and signal([false])"]: () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
         valueOf: () => [true],
+        a: true,
       },
       expected: {
         [Symbol.toStringTag]: "Signal",
         valueOf: () => [false],
+        a: false,
       },
     });
   },

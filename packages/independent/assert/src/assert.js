@@ -343,7 +343,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         addSelfDiff();
       };
 
-      let ignoreInsideDiff = "";
       let ignoreReferenceDiff =
         options.ignoreDiff || !actualNode || !expectedNode;
       let ignoreCategoryDiff =
@@ -403,46 +402,66 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
 
-      let actualInsideNode = actualNode ? actualNode.insideNode : null;
-      let expectedInsideNode = expectedNode ? expectedNode.insideNode : null;
+      const actualInternalValueNode = actualNode
+        ? actualNode.childNodes.internalValue
+        : null;
+      const expectedInternalValueNode = expectedNode
+        ? expectedNode.childNodes.internalValue
+        : null;
+      const actualInternalOrSelfNode = actualInternalValueNode || actualNode;
+      const expectedInternalOrSelfNode =
+        expectedInternalValueNode || expectedNode;
       internal_value: {
         if (ignoreInternalValueDiff) {
           break internal_value;
         }
-        const actualInternalValueNode = actualNode
-          ? actualNode.childNodes.internalValue
-          : null;
-        const expectedInternalValueNode = expectedNode
-          ? expectedNode.childNodes.internalValue
-          : null;
         if (!actualInternalValueNode && !expectedInternalValueNode) {
           break internal_value;
         }
         const internalValueComparison = createComparison(
-          actualInsideNode,
-          expectedInsideNode,
+          actualInternalOrSelfNode,
+          expectedInternalOrSelfNode,
         );
         comparison.childComparisons.internalValue = internalValueComparison;
         compareInside(internalValueComparison);
-        ignoreInsideDiff =
-          actualInsideNode &&
-          actualInsideNode.type === "internal_value" &&
-          expectedInsideNode &&
-          expectedInsideNode.type === "internal_value";
+      }
+      prototype: {
+        if (ignorePrototypeDiff) {
+          break prototype;
+        }
+        const actualPrototypeNode = actualNode
+          ? actualNode.childNodes.prototype
+          : null;
+        const expectedPrototypeNode = expectedNode
+          ? expectedNode.childNodes.prototype
+          : null;
+        if (!actualPrototypeNode && !expectedPrototypeNode) {
+          break prototype;
+        }
+        const prototypeComparison = createComparison(
+          actualPrototypeNode,
+          expectedPrototypeNode,
+        );
+        if (!actualPrototypeNode || !expectedPrototypeNode) {
+          prototypeComparison.hidden = true;
+        } else if (actualNode.subtype !== expectedNode.subtype) {
+          // when we see a prefix like
+          // actual: User {}
+          // expect: Animal {}
+          // we don't show the prototype
+          prototypeComparison.hidden = true;
+        }
+        comparison.childComparisons.prototype = prototypeComparison;
+        compareInside(prototypeComparison);
       }
 
       inside: {
-        if (ignoreInsideDiff) {
-          break inside;
-        }
         string: {
           lines: {
-            const actualLineNodes = actualNode
-              ? actualNode.childNodes.lines || []
-              : [];
-            const expectedLineNodes = expectedNode
-              ? expectedNode.childNodes.lines || []
-              : [];
+            const actualLineNodes =
+              getSelfOrInternalNodes(actualNode, "lines") || [];
+            const expectedLineNodes =
+              getSelfOrInternalNodes(expectedNode, "lines") || [];
             const lineComparisons = comparison.childComparisons.lines;
 
             const visitLineNode = (lineNode) => {
@@ -466,12 +485,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           chars: {
-            const actualCharNodes = actualNode
-              ? actualNode.childNodes.chars || []
-              : [];
-            const expectedCharNodes = expectedNode
-              ? expectedNode.childNodes.chars || []
-              : [];
+            const actualCharNodes =
+              getSelfOrInternalNodes(actualNode, "chars") || [];
+            const expectedCharNodes =
+              getSelfOrInternalNodes(expectedNode, "chars") || [];
             const charComparisons = comparison.childComparisons.chars;
 
             const visitCharNode = (charNode) => {
@@ -496,14 +513,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         url_parts: {
-          const actualUrlPartNodes = actualNode
-            ? actualNode.childNodes.urlParts || {}
-            : {};
-          const expectedUrlPartNodes = expectedNode
-            ? expectedNode.childNodes.urlParts || {}
-            : {};
-
+          const actualUrlPartNodes =
+            getSelfOrInternalNodes(actualNode, "urlParts") || {};
+          const expectedUrlPartNodes =
+            getSelfOrInternalNodes(expectedNode, "urlParts") || {};
           const urlPartComparisons = comparison.childComparisons.urlParts;
+
           const visitUrlPart = (urlPartName) => {
             const actualUrlPartNode = actualUrlPartNodes[urlPartName];
             const expectedUrlPartNode = expectedUrlPartNodes[urlPartName];
@@ -523,50 +538,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
-        prototype: {
-          if (ignorePrototypeDiff) {
-            break prototype;
-          }
-          const actualPrototypeNode = actualNode
-            ? actualNode.childNodes.prototype
-            : null;
-          const expectedPrototypeNode = expectedNode
-            ? expectedNode.childNodes.prototype
-            : null;
-          if (!actualPrototypeNode && !expectedPrototypeNode) {
-            break prototype;
-          }
-          const prototypeComparison = createComparison(
-            actualPrototypeNode,
-            expectedPrototypeNode,
-          );
-          if (!actualPrototypeNode || !expectedPrototypeNode) {
-            prototypeComparison.hidden = true;
-          } else if (actualNode.subtype !== expectedNode.subtype) {
-            // when we see a prefix like
-            // actual: User {}
-            // expect: Animal {}
-            // we don't show the prototype
-            prototypeComparison.hidden = true;
-          }
-          comparison.childComparisons.prototype = prototypeComparison;
-          compareInside(prototypeComparison);
-        }
         indexed_values: {
-          const actualIndexedValueNodes = actualInsideNode
-            ? actualInsideNode.childNodes.indexedValues || []
-            : [];
-          const expectedIndexedValueNodes = expectedInsideNode
-            ? expectedInsideNode.childNodes.indexedValues || []
-            : [];
+          const actualIndexedValueNodes =
+            getSelfOrInternalNodes(actualNode, "indexedValues") || [];
+          const expectedIndexedValueNodes =
+            getSelfOrInternalNodes(expectedNode, "indexedValues") || [];
+          const indexedValueComparisons =
+            comparison.childComparisons.indexedValues;
           if (
             actualIndexedValueNodes.length === 0 &&
             expectedIndexedValueNodes.length === 0
           ) {
             break indexed_values;
           }
-          const indexedValueComparisons =
-            comparison.childComparisons.indexedValues;
 
           if (comparison.combinations.sets) {
             let index = 0;
@@ -613,12 +597,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         properties: {
-          const actualPropertyNodes = actualInsideNode
-            ? actualInsideNode.childNodes.properties || {}
-            : {};
-          const expectedPropertyNodes = expectedInsideNode
-            ? expectedInsideNode.childNodes.properties || {}
-            : {};
+          const actualPropertyNodes =
+            getSelfOrInternalNodes(actualNode, "properties") || {};
+          const expectedPropertyNodes =
+            getSelfOrInternalNodes(expectedNode, "properties") || {};
           const propertyComparisons = comparison.childComparisons.properties;
 
           const visitProperty = (property) => {
@@ -1055,6 +1037,7 @@ let createValueNode;
           }
         }
         const canHaveIndexedValues = isArray || isSet;
+        const canHaveProps = composite;
         const canHaveLines =
           (isString || isStringObject) && type !== "line" && type !== "char";
         // const canHaveChars = isString && type !== "char";
@@ -1064,7 +1047,8 @@ let createValueNode;
           // - actual string is shorter
           // - ...
           isString && type === "line";
-        const canHaveProps = composite;
+        const canHaveUrlParts = isUrlString || isUrl;
+
         let inConstructor;
         if (type === "internal_value") {
           if (origin === "valueOf()") {
@@ -1118,10 +1102,11 @@ let createValueNode;
           isSet,
           isUrl,
           isUrlString,
+          canHaveProps,
           canHaveIndexedValues,
           canHaveLines,
           canHaveChars,
-          canHaveProps,
+          canHaveUrlParts,
           wellKnownId,
           inConstructor,
           hidden: false,
@@ -1175,7 +1160,6 @@ let createValueNode;
         if (internalValue === node.value) {
           internalValueNode.hidden = true;
         }
-        node.insideNode = internalValueNode;
         childNodes.internalValue = internalValueNode;
       } else if (node.isUrl) {
         const internalValue = node.href;
@@ -1186,10 +1170,7 @@ let createValueNode;
           value: internalValue,
           origin: "href",
         });
-        node.insideNode = internalValueNode;
         childNodes.internalValue = internalValueNode;
-      } else {
-        node.insideNode = node;
       }
 
       // properties
@@ -2128,11 +2109,13 @@ let writeDiff;
       };
 
       let insideDiff = "";
-      const actualInsideNode = comparison.actualNode
-        ? comparison.actualNode.insideNode
+      const actualInternalOrSelfNode = comparison.actualNode
+        ? comparison.actualNode.childNodes.internalValue ||
+          comparison.actualNode
         : null;
-      const expectedInsideNode = comparison.expectedNode
-        ? comparison.expectedNode.insideNode
+      const expectedInternalOrSelfNode = comparison.expectedNode
+        ? comparison.expectedNode.childNodes.internalValue ||
+          comparison.expectedNode
         : null;
 
       if (node.canHaveIndexedValues) {
@@ -2144,10 +2127,10 @@ let writeDiff;
             openBracket: "[",
             closeBracket: "]",
             resetModified:
-              actualInsideNode &&
-              actualInsideNode.canHaveIndexedValues &&
-              expectedInsideNode &&
-              expectedInsideNode.canHaveIndexedValues,
+              actualInternalOrSelfNode &&
+              actualInternalOrSelfNode.canHaveIndexedValues &&
+              expectedInternalOrSelfNode &&
+              expectedInternalOrSelfNode.canHaveIndexedValues,
           },
         );
         if (node.isSet) {
@@ -2168,10 +2151,10 @@ let writeDiff;
             openBracket: "{",
             closeBracket: "}",
             resetModified:
-              actualInsideNode &&
-              actualInsideNode.canHaveProps &&
-              expectedInsideNode &&
-              expectedInsideNode.canHaveProps,
+              actualInternalOrSelfNode &&
+              actualInternalOrSelfNode.canHaveProps &&
+              expectedInternalOrSelfNode &&
+              expectedInternalOrSelfNode.canHaveProps,
           },
         );
         if (propsDiff) {
@@ -2955,22 +2938,27 @@ let writeDiff;
         return colorWhenModified;
       }
 
-      // ideally we should loop until we find the least nested internal value
-      // but I'm not sure it's a good idea (the diff output would feel messy)
-      const actualInsideNode = actualNode.insideNode;
-      const expectedInsideNode = expectedNode.insideNode;
+      const actualInternalOrSelfNode =
+        actualNode.childNodes.internalValue || actualNode;
+      const expectedInternalOrSelfNode =
+        expectedNode.childNodes.internalValue || expectedNode;
       if (forWhat === "constructor_arg") {
-        if (actualInsideNode.isSet && expectedInsideNode.isSet) {
+        if (
+          actualInternalOrSelfNode.isSet &&
+          expectedInternalOrSelfNode.isSet
+        ) {
+          const actualSet = actualInternalOrSelfNode.value;
+          const expectedSet = expectedInternalOrSelfNode.value;
           if (context.resultType === "actualNode") {
-            for (const actualValue of actualInsideNode.value) {
-              if (!expectedInsideNode.value.has(actualValue)) {
+            for (const actualValue of actualSet) {
+              if (!expectedSet.has(actualValue)) {
                 return addedColor;
               }
             }
             return sameColor;
           }
-          for (const expectedValue of expectedInsideNode.value) {
-            if (!actualInsideNode.value.has(expectedValue)) {
+          for (const expectedValue of expectedSet) {
+            if (!actualSet.has(expectedValue)) {
               return removedColor;
             }
           }
@@ -2978,17 +2966,28 @@ let writeDiff;
         }
       }
       if (forWhat === "bracket") {
-        if (actualInsideNode.isComposite && expectedInsideNode.isComposite) {
+        if (
+          actualInternalOrSelfNode.isComposite &&
+          expectedInternalOrSelfNode.isComposite
+        ) {
           const actualOpenBracket =
-            actualInsideNode.isArray || actualInsideNode.isSet ? "[" : "{";
+            actualInternalOrSelfNode.isArray || actualInternalOrSelfNode.isSet
+              ? "["
+              : "{";
           const expectedOpenBracket =
-            expectedInsideNode.isArray || expectedInsideNode.isSet ? "[" : "{";
+            expectedInternalOrSelfNode.isArray ||
+            expectedInternalOrSelfNode.isSet
+              ? "["
+              : "{";
           if (actualOpenBracket === expectedOpenBracket) {
             // they use same brackets
             return sameColor;
           }
         }
-        if (actualInsideNode.isString && expectedInsideNode.isString) {
+        if (
+          actualInternalOrSelfNode.isString &&
+          expectedInternalOrSelfNode.isString
+        ) {
           // they use same brackets
           return sameColor;
         }
@@ -3003,15 +3002,18 @@ let writeDiff;
         ) {
           return sameColor;
         }
-        if (actualInsideNode.isComposite === expectedInsideNode.isComposite) {
+        if (
+          actualInternalOrSelfNode.isComposite ===
+          expectedInternalOrSelfNode.isComposite
+        ) {
           return sameColor;
         }
       }
-      const insideNode =
-        actualInsideNode.type === "internal_value"
-          ? actualInsideNode
-          : expectedInsideNode;
-      if (insideNode.comparison.counters.overall.any === 0) {
+      const internalOrSelfNode =
+        actualInternalOrSelfNode.type === "internal_value"
+          ? actualInternalOrSelfNode
+          : expectedInternalOrSelfNode;
+      if (internalOrSelfNode.comparison.counters.overall.any === 0) {
         return sameColor;
       }
       return colorWhenModified;
@@ -3228,6 +3230,38 @@ const splitChars = (string) => {
   // eslint-disable-next-line new-cap
   const splitter = new Graphemer.default();
   return splitter.splitGraphemes(string);
+};
+
+const NAME_TO_CHILD_NODES_META = {
+  indexedValues: {
+    can: "canHaveIndexedValues",
+  },
+  urlParts: {
+    can: "canHaveUrlParts",
+  },
+  properties: {
+    can: "canHaveProps",
+  },
+  lines: {
+    can: "canHaveLines",
+  },
+  chars: {
+    can: "canHaveChars",
+  },
+};
+const getSelfOrInternalNodes = (node, name) => {
+  if (!node) {
+    return null;
+  }
+  const { can } = NAME_TO_CHILD_NODES_META[name];
+  if (node[can]) {
+    return node.childNodes[name];
+  }
+  const internalValueNode = node.childNodes.internalValue;
+  if (internalValueNode && internalValueNode[can]) {
+    return internalValueNode.childNodes[name];
+  }
+  return null;
 };
 
 const getFocusedCharIndex = (
