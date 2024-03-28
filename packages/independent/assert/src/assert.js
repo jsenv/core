@@ -225,13 +225,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             comparison.counters.inside,
             insideComparison.counters.overall,
           );
-        } else if (
-          insideActualNode &&
-          insideExpectedNode &&
-          insideActualNode.showOnlyWhenModified &&
-          insideExpectedNode.showOnlyWhenModified
-        ) {
-          insideComparison.hidden = true;
+        } else if (insideActualNode && insideExpectedNode) {
+          const actualShouldHideBecauseNoDiff =
+            insideActualNode.showOnlyWhenModified ||
+            insideActualNode.showOnlyWhenDiff;
+          const expectedShouldHideBecauseNoDiff =
+            insideExpectedNode.showOnlyWhenModified ||
+            insideExpectedNode.showOnlyWhenDiff;
+          if (
+            actualShouldHideBecauseNoDiff &&
+            expectedShouldHideBecauseNoDiff
+          ) {
+            insideComparison.hidden = true;
+          }
         }
       };
 
@@ -338,15 +344,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       };
 
       let ignoreInsideDiff = "";
-
       let ignoreReferenceDiff =
         options.ignoreDiff || !actualNode || !expectedNode;
       let ignoreCategoryDiff =
         options.ignoreDiff || !actualNode || !expectedNode;
       let ignorePrototypeDiff =
-        options.ignoreDiff || !actualNode || !expectedNode || ignoreInsideDiff;
-      let ignoreInternalValueDiff =
-        options.ignoreDiff || !actualNode || !expectedNode || ignoreInsideDiff;
+        options.ignoreDiff || !actualNode || !expectedNode;
+      let ignoreInternalValueDiff = options.ignoreDiff;
 
       reference: {
         if (ignoreReferenceDiff) {
@@ -986,6 +990,7 @@ let createValueNode;
       value,
       origin,
       showOnlyWhenModified = false,
+      showOnlyWhenDiff = false,
     }) => {
       const node = {
         name,
@@ -1121,6 +1126,7 @@ let createValueNode;
           inConstructor,
           hidden: false,
           showOnlyWhenModified,
+          showOnlyWhenDiff,
           reference,
           referenceFromOthersSet: new Set(),
           keys: [],
@@ -1262,7 +1268,7 @@ let createValueNode;
             path: path.append(propertyName),
             type: "property",
             value: propertyDescriptor,
-            showOnlyWhenModified: !propertyDescriptor.enumerable,
+            showOnlyWhenDiff: !propertyDescriptor.enumerable,
           });
           propertyNode.property = propertyName;
           const propertyDescriptorNodes = {
