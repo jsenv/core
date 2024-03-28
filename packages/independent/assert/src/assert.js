@@ -357,18 +357,33 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let ignoreCategoryDiff = !actualNode || !expectedNode;
       let ignorePrototypeDiff = !actualNode || !expectedNode;
       let ignoreInternalValueDiff = false;
-      let ignoreIndexedValuesDiff =
-        // prevent to compare twice when internal can have indexed
-        // but wrapper cannot
-        actualNode &&
-        !actualNode.canHaveIndexedValues &&
-        expectedNode &&
-        !expectedNode.canHaveIndexedValues;
       let ignorePropertiesDiff =
+        // prevent to compare twice when internal can have
+        // but wrapper cannot
         actualNode &&
         !actualNode.canHaveProps &&
         expectedNode &&
         !expectedNode.canHaveProps;
+      let ignoreIndexedValuesDiff =
+        actualNode &&
+        !actualNode.canHaveIndexedValues &&
+        expectedNode &&
+        !expectedNode.canHaveIndexedValues;
+      let ignoreLinesDiff =
+        actualNode &&
+        !actualNode.canHaveLines &&
+        expectedNode &&
+        !expectedNode.canHaveLines;
+      let ignoreCharsDiff =
+        actualNode &&
+        !actualNode.canHaveChars &&
+        expectedNode &&
+        !expectedNode.canHaveChars;
+      let ignoreUrlPartsDiff =
+        actualNode &&
+        !actualNode.canHaveUrlParts &&
+        expectedNode &&
+        !expectedNode.canHaveUrlParts;
 
       reference: {
         if (ignoreReferenceDiff) {
@@ -477,6 +492,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       inside: {
         string: {
           lines: {
+            if (ignoreLinesDiff) {
+              break lines;
+            }
             const actualLineNodes =
               getSelfOrInternalNodes(actualNode, "lines") || [];
             const expectedLineNodes =
@@ -504,6 +522,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
           chars: {
+            if (ignoreCharsDiff) {
+              break chars;
+            }
             const actualCharNodes =
               getSelfOrInternalNodes(actualNode, "chars") || [];
             const expectedCharNodes =
@@ -532,6 +553,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         url_parts: {
+          if (ignoreUrlPartsDiff) {
+            break url_parts;
+          }
           const actualUrlPartNodes =
             getSelfOrInternalNodes(actualNode, "urlParts") || {};
           const expectedUrlPartNodes =

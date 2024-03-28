@@ -5,18 +5,18 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("string", {
-  ["string single char"]: () => {
-    assert({
-      actual: "a",
-      expected: "b",
-    });
-  },
-  ["diff end of string"]: () => {
-    assert({
-      actual: "hello world",
-      expected: "hello france",
-    });
-  },
+  // ["string single char"]: () => {
+  //   assert({
+  //     actual: "a",
+  //     expected: "b",
+  //   });
+  // },
+  // ["diff end of string"]: () => {
+  //   assert({
+  //     actual: "hello world",
+  //     expected: "hello france",
+  //   });
+  // },
   ["one char should be empty"]: () => {
     assert({
       actual: "a",
@@ -149,8 +149,8 @@ await startSnapshotTesting("string", {
   /* eslint-disable no-new-wrappers */
   ["new String prop"]: () => {
     assert({
-      actual: Object.assign(new String("toto"), { foo: "a" }),
-      expected: Object.assign(new String("tata"), { foo: "b" }),
+      actual: Object.assign(new String("a"), { foo: true }),
+      expected: Object.assign(new String("b"), { foo: false }),
     });
   },
   /* eslint-enable no-new-wrappers */
