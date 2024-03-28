@@ -189,6 +189,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
 
     const compare = (comparison, options = {}) => {
+      if (comparison.started) {
+        // useful to prevent comparing twice, happens when:
+        // - a composite is wrapped both in actual and expected
+        // and when comparing internal value the nested comparison are performed
+        // then when trying to compare the node wrapping internal value,
+        // the internal value is again picked by "getSelfOrInternalNodes"
+        return;
+      }
+      comparison.started = true;
+
       // ignoreDiff is meant to ignore the diff between actual/expected
       // (usually because comparison cannot be made (added,removed, visiting something different))
       // but the structure still have to be visited (properties, values, valueOf, ...)
@@ -343,13 +353,22 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         addSelfDiff();
       };
 
-      let ignoreReferenceDiff =
-        options.ignoreDiff || !actualNode || !expectedNode;
-      let ignoreCategoryDiff =
-        options.ignoreDiff || !actualNode || !expectedNode;
-      let ignorePrototypeDiff =
-        options.ignoreDiff || !actualNode || !expectedNode;
-      let ignoreInternalValueDiff = options.ignoreDiff;
+      let ignoreReferenceDiff = !actualNode || !expectedNode;
+      let ignoreCategoryDiff = !actualNode || !expectedNode;
+      let ignorePrototypeDiff = !actualNode || !expectedNode;
+      let ignoreInternalValueDiff = false;
+      let ignoreIndexedValuesDiff =
+        // prevent to compare twice when internal can have indexed
+        // but wrapper cannot
+        actualNode &&
+        !actualNode.canHaveIndexedValues &&
+        expectedNode &&
+        !expectedNode.canHaveIndexedValues;
+      let ignorePropertiesDiff =
+        actualNode &&
+        !actualNode.canHaveProps &&
+        expectedNode &&
+        !expectedNode.canHaveProps;
 
       reference: {
         if (ignoreReferenceDiff) {
@@ -539,6 +558,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         indexed_values: {
+          if (ignoreIndexedValuesDiff) {
+            break indexed_values;
+          }
           const actualIndexedValueNodes =
             getSelfOrInternalNodes(actualNode, "indexedValues") || [];
           const expectedIndexedValueNodes =
@@ -597,6 +619,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
         properties: {
+          if (ignorePropertiesDiff) {
+            break properties;
+          }
           const actualPropertyNodes =
             getSelfOrInternalNodes(actualNode, "properties") || {};
           const expectedPropertyNodes =

@@ -44,10 +44,8 @@ expect: Signal({
   foo: false,
 })
 
-# signal([true]) and signal([false])
-AssertionError: actual and expected have 3 differences:
-
-ℹ to improve readability 1 diff is completely hidden
+# signal([true]) and signal([false]) with props
+AssertionError: actual and expected have 2 differences:
 
 actual: Signal([
   true,

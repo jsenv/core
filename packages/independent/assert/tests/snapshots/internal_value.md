@@ -102,7 +102,7 @@ assert({
 
 ![img](<./internal_value/signal({ foo: true }) and signal({ a: false }).svg>)
 
-# signal([true]) and signal([false])
+# signal([true]) and signal([false]) with props
 
 ```js
 assert({
@@ -119,7 +119,7 @@ assert({
 });
 ```
 
-![img](<./internal_value/signal([true]) and signal([false]).svg>)
+![img](<./internal_value/signal([true]) and signal([false]) with props.svg>)
 
 # signal([true]) and [true]
 
