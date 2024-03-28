@@ -125,23 +125,23 @@ expect: {
 # new String prop
 AssertionError: actual and expected have 2 differences:
 
-actual: new String("toto") {
-  foo: "a",
+actual: new String("a") {
+  foo: true,
 }
-expect: new String("tata") {
-  foo: "b",
+expect: new String("b") {
+  foo: false,
 }
 
 # second line contains extra chars
 AssertionError: actual and expected have 1 difference:
 
 actual: {
-  foo: 1| Hello
+  foo: 1| Hello,
        2| my name is Benjamin
        3| and my brother is joe
 }
 expect: {
-  foo: 1| Hello
+  foo: 1| Hello,
        2| my name is Ben
        3| and my brother is joe
 }
@@ -165,13 +165,13 @@ expect: 1| Hello
 AssertionError: actual and expected are different:
 
 actual:  ↑ 2 lines ↑
-        3| thre
+        3| three
         4| four/true
-        5| fiv
+        5| five
          ↓ 2 lines (1 modified) ↓
 expect:  ↑ 2 lines ↑
-        3| thre
+        3| three
         4| four/false
-        5| fiv
+        5| five
          ↓ 2 lines (1 modified) ↓
 

@@ -5,13 +5,13 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("max_columns", {
-  //   ["maxColumns respect actual prefix"]: () => {
-  //     assert({
-  //       actual: "a_string",
-  //       expected: "a_string_2",
-  //       maxColumns: 15,
-  //     });
-  //   },
+  ["maxColumns respect actual prefix"]: () => {
+    assert({
+      actual: "a_string",
+      expected: "a_string_2",
+      maxColumns: 15,
+    });
+  },
   ["maxColumns respect indent"]: () => {
     assert({
       actual: {

@@ -230,8 +230,8 @@ assert({
 
 ```js
 assert({
-  actual: Object.assign(new String("toto"), { foo: "a" }),
-  expected: Object.assign(new String("tata"), { foo: "b" }),
+  actual: Object.assign(new String("a"), { foo: true }),
+  expected: Object.assign(new String("b"), { foo: false }),
 });
 ```
 

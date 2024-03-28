@@ -1,3 +1,15 @@
+# maxColumns respect actual prefix
+
+```js
+assert({
+  actual: "a_string",
+  expected: "a_string_2",
+  maxColumns: 15,
+});
+```
+
+![img](<./max_columns/maxColumns respect actual prefix.svg>)
+
 # maxColumns respect indent
 
 ```js

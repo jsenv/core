@@ -5,18 +5,18 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("string", {
-  // ["string single char"]: () => {
-  //   assert({
-  //     actual: "a",
-  //     expected: "b",
-  //   });
-  // },
-  // ["diff end of string"]: () => {
-  //   assert({
-  //     actual: "hello world",
-  //     expected: "hello france",
-  //   });
-  // },
+  ["string single char"]: () => {
+    assert({
+      actual: "a",
+      expected: "b",
+    });
+  },
+  ["diff end of string"]: () => {
+    assert({
+      actual: "hello world",
+      expected: "hello france",
+    });
+  },
   ["one char should be empty"]: () => {
     assert({
       actual: "a",
