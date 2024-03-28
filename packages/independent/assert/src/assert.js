@@ -2237,8 +2237,11 @@ let writeDiff;
       node.subtype === "Boolean" ||
       node.subtype === "Number";
     if (useNew) {
-      const delimitersColor = getDelimitersColor(context, comparison);
-      subtypeDiff += ANSI.color(`new`, delimitersColor);
+      const constructorNewColor = getConstructorNewColor(
+        selfContext,
+        comparison,
+      );
+      subtypeDiff += ANSI.color(`new`, constructorNewColor);
       subtypeDiff += " ";
     }
     if (
@@ -2304,11 +2307,12 @@ let writeDiff;
     context,
     { focusedCharIndex, resetModified },
   ) => {
+    const lineContext = {
+      ...context,
+      modified: resetModified ? false : context.modified,
+    };
     const writeOneCharDiff = (charComparison) => {
-      return writeDiff(charComparison, {
-        ...context,
-        modified: resetModified ? false : context.modified,
-      });
+      return writeDiff(charComparison, lineContext);
     };
 
     const charComparisons = lineComparison.childComparisons.chars;
@@ -2378,7 +2382,6 @@ let writeDiff;
     }
 
     let oneLineDiff = "";
-    const delimitersColor = getDelimitersColor(context, lineComparison);
     const overflowLeft = focusedCharIndex - previousCharAttempt > 0;
     const overflowRight =
       focusedCharIndex + nextCharAttempt < charNodes.length - 1;
@@ -2390,6 +2393,7 @@ let writeDiff;
     lineContent += charBeforeArray.reverse().join("");
     lineContent += focusedCharDiff;
     lineContent += charAfterArray.join("");
+    const delimitersColor = getDelimitersColor(lineContext, lineComparison);
     if (overflowLeft) {
       oneLineDiff += ANSI.color("…", delimitersColor);
     }
@@ -2483,7 +2487,10 @@ let writeDiff;
         comparison.quote = quote; // ensure the quote in expected is "forced" to the one in actual
       }
       const firstLineComparison = lineComparisons[0];
-      const focusedCharIndex = getFocusedCharIndex(firstLineComparison);
+      const focusedCharIndex = getFocusedCharIndex(
+        firstLineComparison,
+        context,
+      );
       const firstLineContext = { ...context };
       return writeOneLineDiff(firstLineComparison, firstLineContext, {
         focusedCharIndex,
@@ -2499,7 +2506,10 @@ let writeDiff;
         focusedLineIndex = lineNodes.length - 1;
       }
       const focusedLineComparison = lineComparisons[focusedLineIndex];
-      const focusedCharIndex = getFocusedCharIndex(focusedLineComparison);
+      const focusedCharIndex = getFocusedCharIndex(
+        focusedLineComparison,
+        context,
+      );
       let biggestLineNumber = focusedLineIndex + 1;
 
       const lineBeforeArray = [];
@@ -2965,6 +2975,17 @@ let writeDiff;
       if (!actualNode || !expectedNode) {
         return colorWhenModified;
       }
+      if (forWhat === "constructor_new") {
+        const actualUseNew =
+          actualNode.subtype === "String" ||
+          actualNode.subtype === "Boolean" ||
+          actualNode.subtype === "Number";
+        const expectedUseNew =
+          expectedNode.subtype === "String" ||
+          expectedNode.subtype === "Boolean" ||
+          expectedNode.subtype === "Number";
+        return actualUseNew === expectedUseNew ? sameColor : colorWhenModified;
+      }
       if (forWhat === "subtype") {
         if (
           actualNode.isComposite &&
@@ -3007,7 +3028,6 @@ let writeDiff;
         }
         return colorWhenModified;
       }
-
       const actualInternalOrSelfNode =
         actualNode.childNodes.internalValue || actualNode;
       const expectedInternalOrSelfNode =
@@ -3092,6 +3112,9 @@ let writeDiff;
   };
   const getSubtypeColor = (context, comparison) => {
     return getColorFor("subtype", context, comparison);
+  };
+  const getConstructorNewColor = (context, comparison) => {
+    return getColorFor("constructor_new", context, comparison);
   };
   const getConstructorArgColor = (context, comparison) => {
     return getColorFor("constructor_arg", context, comparison);
@@ -3334,15 +3357,13 @@ const getSelfOrInternalNodes = (node, name) => {
   return null;
 };
 
-const getFocusedCharIndex = (
-  comparison,
-  // context
-) => {
-  const charWithDiffIndex = comparison.childComparisons.chars.findIndex(
-    (charComparison) => {
-      return charComparison.counters.overall.any > 0;
-    },
-  );
+const getFocusedCharIndex = (comparison, context) => {
+  const node = comparison[context.resultType];
+  const charComparisons = comparison.childComparisons.chars;
+  const charWithDiffIndex = node.childNodes.chars.findIndex((_, index) => {
+    const charComparison = charComparisons[index];
+    return charComparison.counters.overall.any > 0;
+  });
   if (charWithDiffIndex !== -1) {
     return charWithDiffIndex;
   }
