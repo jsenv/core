@@ -1662,7 +1662,7 @@ let writeDiff;
 
     selfContext.textIndent += stringWidth(diff);
     selfContext.maxColumns -= endSeparator.length;
-    if (selfContext.modified) {
+    if (selfContext.modified || selfContext.added || selfContext.removed) {
       selfContext.maxDepth = Math.min(
         node.depth + selfContext.maxDepthInsideDiff,
         selfContext.maxDepth,
