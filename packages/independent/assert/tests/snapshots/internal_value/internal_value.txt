@@ -127,14 +127,22 @@ expect: {
 }
 
 # valueOf self and valueOf 10
-AssertionError: actual and expected have 2 differences:
-
-ℹ to improve readability 1 diff is completely hidden
+AssertionError: actual and expected have 1 difference:
 
 actual: <ref #1> {
   "valueOf()": <ref #1>,
 }
 expect: {
   "valueOf()": "10",
+}
+
+# valueOf 10 and valueOf self
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  "valueOf()": 10,
+}
+expect: <ref #1> {
+  "valueOf()": <ref #1>,
 }
 

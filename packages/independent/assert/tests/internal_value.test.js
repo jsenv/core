@@ -179,4 +179,12 @@ await startSnapshotTesting("internal_value", {
       expected,
     });
   },
+  ["valueOf 10 and valueOf self"]: () => {
+    const actual = { valueOf: () => 10 };
+    const expected = { valueOf: () => expected };
+    assert({
+      actual,
+      expected,
+    });
+  },
 });

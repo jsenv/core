@@ -248,3 +248,16 @@ assert({
 
 ![img](<./internal_value/valueOf self and valueOf 10.svg>)
 
+# valueOf 10 and valueOf self
+
+```js
+const actual = { valueOf: () => 10 };
+const expected = { valueOf: () => expected };
+assert({
+  actual,
+  expected,
+});
+```
+
+![img](<./internal_value/valueOf 10 and valueOf self.svg>)
+

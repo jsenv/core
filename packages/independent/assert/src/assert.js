@@ -116,6 +116,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const causeSet = new Set();
     const addCause = (comparison) => {
+      if (causeSet.has(comparison)) {
+        throw new Error("nope");
+      }
       if (comparison.type === "line") {
         return;
       }
@@ -398,6 +401,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (actualReferencePath !== expectedReferencePath) {
           comparison.reference = true;
           addSelfDiff();
+          ignoreCategoryDiff = true;
         }
       }
       category: {
