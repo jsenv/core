@@ -1,0 +1,119 @@
+# non enumerable hidden when value same
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+
+# non enumerable displayed when value modified
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  b: "b",
+}
+expect: {
+  b: "c",
+}
+
+# enumerable diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: "a",
+  enumerable a: true,
+}
+expect: {
+  a: "a",
+  enumerable a: false,
+}
+
+# enumerable and value diff
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  a: "a",
+  enumerable a: false,
+}
+expect: {
+  a: "b",
+  enumerable a: true,
+}
+
+# enumerable and configurable and value diff
+AssertionError: actual and expected have 3 differences:
+
+actual: {
+  a: "a",
+  enumerable a: true,
+  configurable a: true,
+}
+expect: {
+  a: "b",
+  enumerable a: false,
+  configurable a: false,
+}
+
+# getter and value
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  get a() { [source code] }
+}
+expect: {
+  a: true,
+}
+
+# getter/setter and value
+AssertionError: actual and expected have 3 differences:
+
+actual: {
+  get a() { [source code] }
+  set a() { [source code] }
+}
+expect: {
+  a: true,
+}
+
+# getter and no getter
+AssertionError: actual and expected have 4 differences:
+
+actual: {
+  get a() { [source code] }
+}
+expect: {
+  set a() { [source code] }
+}
+
+# setter and no setter
+AssertionError: actual and expected have 4 differences:
+
+actual: {
+  set a() { [source code] }
+}
+expect: {
+  get a() { [source code] }
+}
+
+# getter are the same
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  b: true,
+}
+expect: {
+  b: false,
+}
+
+# getter are different
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  get a() { [source code] }
+}
+expect: {
+  get a() { [source code] }
+}
+

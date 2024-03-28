@@ -1,0 +1,28 @@
+# set value added
+AssertionError: actual and expected have 2 differences:
+
+actual: Set([
+  "a",
+  "b",
+  "c",
+  "Y",
+])
+expect: Set([
+  "b",
+  "a",
+  "c",
+  "Z",
+])
+
+# compare set and array
+AssertionError: actual and expected are different:
+
+actual: [
+  "a",
+  "b",
+]
+expect: Set([
+  "a",
+  "b",
+])
+

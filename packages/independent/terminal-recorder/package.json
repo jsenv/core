@@ -38,6 +38,7 @@
     "he": "1.2.0",
     "playwright": "1.40.1",
     "strip-ansi": "7.1.0",
+    "string-width": "7.1.0",
     "webm-to-mp4": "1.0.0"
   },
   "devDependencies": {

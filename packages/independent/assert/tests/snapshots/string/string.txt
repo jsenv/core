@@ -1,0 +1,177 @@
+# string single char
+AssertionError: actual and expected are different:
+
+actual: "a"
+expect: "b"
+
+# diff end of string
+AssertionError: actual and expected are different:
+
+actual: "hello world"
+expect: "hello france"
+
+# one char should be empty
+AssertionError: actual and expected are different:
+
+actual: "a"
+expect: ""
+
+# empty should be one char
+AssertionError: actual and expected are different:
+
+actual: ""
+expect: "a"
+
+# tab vs space
+AssertionError: actual and expected are different:
+
+actual: "\t"
+expect: "  "
+
+# blank char should be empty
+AssertionError: actual and expected are different:
+
+actual: "\x7F"
+expect: ""
+
+# diff unicode
+AssertionError: actual and expected are different:
+
+actual: "⚫️"
+expect: "⚪️"
+
+# diff emoticon
+AssertionError: actual and expected are different:
+
+actual: "👨‍👩‍👧‍👧"
+expect: "😍"
+
+# diff special char
+AssertionError: actual and expected are different:
+
+actual: "ñ"
+expect: "n"
+
+# added char
+AssertionError: actual and expected are different:
+
+actual: "ab"
+expect: "a"
+
+# removed char
+AssertionError: actual and expected are different:
+
+actual: "a"
+expect: "ab"
+
+# diff at end of long string, start truncated
+AssertionError: actual and expected are different:
+
+actual: …"efghijk"
+expect: …"efghijj"
+
+# diff at start of long string, end truncated
+AssertionError: actual and expected are different:
+
+actual: "a2cdefg"…
+expect: "a3cdefg"…
+
+# many diff in long string, only first is shown truncated
+AssertionError: actual and expected are different:
+
+actual: "a2cdefZ"…
+expect: "a3cdefY"…
+
+# diff at middle of long string, start + end truncated
+AssertionError: actual and expected are different:
+
+actual: …"h5jk"…
+expect: …"h6jk"…
+
+# diff new String value
+AssertionError: actual and expected have 1 difference:
+
+actual: new String("a")
+expect: new String("b")
+
+# diff String object vs literal
+AssertionError: actual and expected are different:
+
+actual: new String("abc")
+expect: "a2"
+
+# new String collapsed with overview
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: new String("toto"),
+  b: true,
+}
+expect: {
+  a: new String("toto"),
+  b: false,
+}
+
+# new String collapsed
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  foo: { a: new String("toto") },
+}
+expect: {
+  bar: { a: new String("toto") },
+}
+
+# new String prop
+AssertionError: actual and expected have 2 differences:
+
+actual: new String("a") {
+  foo: true,
+}
+expect: new String("b") {
+  foo: false,
+}
+
+# second line contains extra chars
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  foo: 1| Hello,
+       2| my name is Benjamin
+       3| and my brother is joe
+}
+expect: {
+  foo: 1| Hello,
+       2| my name is Ben
+       3| and my brother is joe
+}
+
+# one line vs two lines
+AssertionError: actual and expected are different:
+
+actual: 1| Hel
+expect: 1| Hello
+        2| world
+
+# second line differs
+AssertionError: actual and expected are different:
+
+actual: 1| Hello
+        2| world
+expect: 1| Hello
+        2| france
+
+# too many lines before and after
+AssertionError: actual and expected are different:
+
+actual:  ↑ 2 lines ↑
+        3| three
+        4| four/true
+        5| five
+         ↓ 2 lines (1 modified) ↓
+expect:  ↑ 2 lines ↑
+        3| three
+        4| four/false
+        5| five
+         ↓ 2 lines (1 modified) ↓
+

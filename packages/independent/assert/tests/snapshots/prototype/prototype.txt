@@ -1,0 +1,50 @@
+# object null proto vs object
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  __proto__: null,
+}
+expect: {
+  __proto__: Object.prototype,
+}
+
+# object with different prototypes
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  __proto__: {
+    a: true,
+  },
+}
+expect: {
+  __proto__: {
+    a: {
+      b: true,
+    },
+  },
+}
+
+# object vs custom proto
+AssertionError: actual and expected are different:
+
+actual: User {
+  name: "dam",
+}
+expect: {
+  name: "bob",
+}
+
+# object vs instance
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: User {
+    name: "dam",
+  },
+}
+expect: {
+  a: {
+    name: "bob",
+  },
+}
+

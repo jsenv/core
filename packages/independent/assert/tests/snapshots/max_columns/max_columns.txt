@@ -1,0 +1,18 @@
+# maxColumns respect actual prefix
+AssertionError: actual and expected are different:
+
+actual: …"ring"
+expect: …"ng_2"
+
+# maxColumns respect indent
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: "a…",
+  b: fal…,
+}
+expect: {
+  a: "a…",
+  b: true,
+}
+
