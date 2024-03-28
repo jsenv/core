@@ -2304,24 +2304,20 @@ let writeDiff;
 
   const writeOneLineDiff = (
     lineComparison,
-    context,
-    { focusedCharIndex, resetModified },
+    lineContext,
+    { focusedCharIndex },
   ) => {
-    const lineContext = {
-      ...context,
-      modified: resetModified ? false : context.modified,
-    };
     const writeOneCharDiff = (charComparison) => {
       return writeDiff(charComparison, lineContext);
     };
 
     const charComparisons = lineComparison.childComparisons.chars;
-    const lineNode = lineComparison[context.resultType];
+    const lineNode = lineComparison[lineContext.resultType];
     const charNodes = lineNode.childNodes.chars;
     const charBeforeArray = [];
     const charAfterArray = [];
 
-    let remainingWidth = context.maxColumns - context.textIndent;
+    let remainingWidth = lineContext.maxColumns - lineContext.textIndent;
     let focusedCharComparison = charComparisons[focusedCharIndex];
     if (!focusedCharComparison) {
       focusedCharIndex = charNodes.length - 1;
@@ -2398,7 +2394,7 @@ let writeDiff;
       oneLineDiff += ANSI.color("…", delimitersColor);
     }
     if (stringComparison.quote) {
-      const quoteColor = getQuoteColor(context, stringComparison);
+      const quoteColor = getQuoteColor(lineContext, stringComparison);
       oneLineDiff += ANSI.color(stringComparison.quote, quoteColor);
       oneLineDiff += lineContent;
       oneLineDiff += ANSI.color(stringComparison.quote, quoteColor);
@@ -2474,9 +2470,13 @@ let writeDiff;
       actualInternalOrSelfNode.canHaveLines &&
       expectedInternalOrSelfNode &&
       expectedInternalOrSelfNode.canHaveLines;
+    const lineContext = {
+      ...context,
+      modified: resetModified ? false : context.modified,
+    };
 
     single_line: {
-      const isSingleLine = lineNodes.length === 1;
+      const isSingleLine = lineComparisons.length === 1;
       // single line string (both actual and expected)
       if (!isSingleLine) {
         break single_line;
@@ -2491,10 +2491,8 @@ let writeDiff;
         firstLineComparison,
         context,
       );
-      const firstLineContext = { ...context };
-      return writeOneLineDiff(firstLineComparison, firstLineContext, {
+      return writeOneLineDiff(firstLineComparison, lineContext, {
         focusedCharIndex,
-        resetModified,
       });
     }
 
@@ -2551,7 +2549,7 @@ let writeDiff;
       }
 
       const writeLineDiff = (lineComparison) => {
-        const delimitersColor = getDelimitersColor(context, lineComparison);
+        const delimitersColor = getDelimitersColor(lineContext, lineComparison);
 
         let lineDiff = "";
         const lineNumberString = String(lineComparison.index + 1);
@@ -2562,10 +2560,8 @@ let writeDiff;
         // lineDiff += " ";
         lineDiff += ANSI.color("|", delimitersColor);
         lineDiff += " ";
-
-        lineDiff += writeOneLineDiff(lineComparison, context, {
+        lineDiff += writeOneLineDiff(lineComparison, lineContext, {
           focusedCharIndex,
-          resetModified,
         });
         return lineDiff;
       };
