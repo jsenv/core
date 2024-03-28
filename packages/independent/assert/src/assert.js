@@ -505,7 +505,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (
           actualNode.isSourceCode &&
           expectedNode.isSourceCode &&
-          actualNode[sourceCodeSymbol] !== expectedNode[sourceCodeSymbol]
+          actualNode.value[sourceCodeSymbol] !==
+            expectedNode.value[sourceCodeSymbol]
         ) {
           addCategoryDiff();
           break category;

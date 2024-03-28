@@ -195,3 +195,22 @@ assert({
 
 ![img](<./property_descriptor/getter are the same.svg>)
 
+# getter are different
+
+```js
+assert({
+  actual: {
+    get a() {
+      return false;
+    },
+  },
+  expected: {
+    get a() {
+      return true;
+    },
+  },
+});
+```
+
+![img](<./property_descriptor/getter are different.svg>)
+

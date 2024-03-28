@@ -107,3 +107,13 @@ expect: {
   b: false,
 }
 
+# getter are different
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  get a() { [source code] }
+}
+expect: {
+  get a() { [source code] }
+}
+
