@@ -1,0 +1,10 @@
+# non enumerable displayed when modified
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  b: "b",
+}
+expect: {
+  b: "c",
+}
+

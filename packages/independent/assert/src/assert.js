@@ -995,24 +995,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   return assert;
 };
 
-const isDefaultDescriptor = (descriptorName, descriptorValue) => {
-  if (descriptorName === "enumerable" && descriptorValue === true) {
-    return true;
-  }
-  if (descriptorName === "writable" && descriptorValue === true) {
-    return true;
-  }
-  if (descriptorName === "configurable" && descriptorValue === true) {
-    return true;
-  }
-  if (descriptorName === "get" && descriptorValue === undefined) {
-    return true;
-  }
-  if (descriptorName === "set" && descriptorValue === undefined) {
-    return true;
-  }
-  return false;
-};
+// const isDefaultDescriptor = (descriptorName, descriptorValue) => {
+//   if (descriptorName === "enumerable" && descriptorValue === true) {
+//     return true;
+//   }
+//   if (descriptorName === "writable" && descriptorValue === true) {
+//     return true;
+//   }
+//   if (descriptorName === "configurable" && descriptorValue === true) {
+//     return true;
+//   }
+//   if (descriptorName === "get" && descriptorValue === undefined) {
+//     return true;
+//   }
+//   if (descriptorName === "set" && descriptorValue === undefined) {
+//     return true;
+//   }
+//   return false;
+// };
 
 let createValueNode;
 {
@@ -1326,10 +1326,7 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
-              showOnlyWhenModified: isDefaultDescriptor(
-                propertyDescriptorName,
-                propertyDescriptorValue,
-              ),
+              showOnlyWhenModified: propertyDescriptorName !== "value",
             });
             propertyDescriptorNode.property = propertyName;
             propertyDescriptorNode.descriptor = propertyDescriptorName;
