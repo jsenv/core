@@ -21,10 +21,12 @@ export const getFunctionBody = (fn) => {
   return removeRootIndentation(string);
 };
 
+// const GETTER_FUNCTION_BODY_REGEX = /^get \([\s\S]*\)\s*\{([\s\S]*)\}$/;
+
 const ARROW_FUNCTION_BODY_REGEX = /^\([\s\S]*\)\s*=>\s*\{([\s\S]*)\}$/;
 const ARROW_FUNCTION_SHORTHAND_BODY_REGEX =
   /^\([\s\S]*\)\s*=>\s*\(([\s\S]*)\)$/;
-const FUNCTION_BODY_REGEX = /^function\s*\([\s\S]*\)\s*\{([\s\S]*)\}$/;
+const FUNCTION_BODY_REGEX = /^function\s*[\S]*\s*\([\s\S]*\)\s*\{([\s\S]*)\}$/;
 
 const removeRootIndentation = (text) => {
   const lines = text.split(/\r?\n/);
@@ -68,20 +70,3 @@ const removeRootIndentation = (text) => {
   }
   return result;
 };
-
-// console.log(
-//   getFunctionBody((a = () => {}) => {
-//     return a;
-//   }),
-// );
-// console.log(
-//   getFunctionBody(() => {
-//     return "yo";
-//   }),
-// );
-// console.log(getFunctionBody(() => ({})));
-// console.log(
-//   getFunctionBody(function (a, b) {
-//     return a + b;
-//   }),
-// );

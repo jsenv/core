@@ -2,7 +2,8 @@ import stripAnsi from "strip-ansi";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { clearDirectorySync, writeFileSync } from "@jsenv/filesystem";
-import { getFunctionBody } from "./get_function_body.js";
+
+import { getFunctionBody } from "@jsenv/assert/src/get_function_body.js";
 
 const generateMarkdown =
   process.execArgv.includes("--conditions=development") && !process.env.CI;
@@ -28,7 +29,7 @@ export const startSnapshotTesting = async (name, scenarios) => {
       if (e.name === "AssertionError") {
         fileContent += `${e.name}: ${stripAnsi(e.message)}\n\n`;
       } else {
-        fileContent += e.stack;
+        fileContent += `${e.stack}\n\n`;
       }
 
       if (generateMarkdown) {

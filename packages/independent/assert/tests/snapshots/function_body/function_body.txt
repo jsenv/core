@@ -1,0 +1,19 @@
+# anonymous arrow returning string
+return "yo";
+
+# anonymous arrow one liner object notation
+{}
+
+# anonymous arrow default param arrow
+return a;
+
+# anonymous function returning a + b
+return a + b;
+
+# named function returning a + b
+return a + b;
+
+# getter returning 10
+get   a()  {return 10;
+}
+
