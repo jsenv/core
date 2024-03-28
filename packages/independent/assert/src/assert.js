@@ -225,7 +225,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         const ownnerExpectedNode = ownerComparison.expectedNode;
         if (ownerComparison.combinations.sets) {
           if (actualNode) {
-            const added = ownnerExpectedNode.value.has(actualNode.value);
+            const added = !ownnerExpectedNode.value.has(actualNode.value);
             if (added) {
               comparison.added = true;
             }
@@ -2220,7 +2220,7 @@ let writeDiff;
     }
 
     diff += subtypeDiff;
-    if (subtypeDiff && valueDiff) {
+    if (subtypeDiff && valueDiff && !node.isSet) {
       diff += " ";
     }
     diff += valueDiff;
