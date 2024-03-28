@@ -122,6 +122,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       if (comparison.type === "char") {
         return;
       }
+      if (comparison.type === "property") {
+        // descriptors will do that
+        return;
+      }
       if (comparison.type === "property_descriptor") {
         const ownerComparison = comparison.parent.parent;
         if (!comparison.actualNode && !ownerComparison.actualNode) {
@@ -189,31 +193,76 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
 
     const compare = (comparison, options = {}) => {
-      if (comparison.started) {
-        // useful to prevent comparing twice, happens when:
-        // - a composite is wrapped both in actual and expected
-        // and when comparing internal value the nested comparison are performed
-        // then when trying to compare the node wrapping internal value,
-        // the internal value is again picked by "getSelfOrInternalNodes"
-        return;
-      }
-      comparison.started = true;
-
-      // ignoreDiff is meant to ignore the diff between actual/expected
-      // (usually because comparison cannot be made (added,removed, visiting something different))
-      // but the structure still have to be visited (properties, values, valueOf, ...)
-
       const { actualNode, expectedNode } = comparison;
 
       let ownerComparison;
       if (
+        comparison.type === "property_descriptor" ||
         comparison.type === "property" ||
-        comparison.type === "prototype" ||
-        comparison.type === "indexed_value"
+        comparison.type === "prototype"
       ) {
+        ownerComparison =
+          comparison.type === "prototype" || comparison.type === "property"
+            ? comparison.parent
+            : comparison.parent.parent;
+        const ownerActualNode = ownerComparison.actualNode;
+        const ownnerExpectedNode = ownerComparison.expectedNode;
+        if (!actualNode) {
+          if (ownerActualNode && ownerActualNode.canHaveProps) {
+            comparison.removed = true;
+          }
+        } else if (!expectedNode) {
+          if (ownnerExpectedNode && ownnerExpectedNode.canHaveProps) {
+            comparison.added = true;
+          }
+        }
+      } else if (comparison.type === "indexed_value") {
         ownerComparison = comparison.parent;
-      } else if (comparison.type === "property_descriptor") {
+        const ownerActualNode = ownerComparison.actualNode;
+        const ownnerExpectedNode = ownerComparison.expectedNode;
+        if (ownerComparison.combinations.sets) {
+          if (actualNode) {
+            const added = ownnerExpectedNode.value.has(actualNode.value);
+            if (added) {
+              comparison.added = true;
+            }
+          } else {
+            const removed = !ownerActualNode.value.has(expectedNode.value);
+            if (removed) {
+              comparison.removed = true;
+            }
+          }
+        } else if (!actualNode) {
+          if (ownerActualNode && ownerActualNode.canHaveIndexedValues) {
+            comparison.removed = true;
+          }
+        } else if (!expectedNode) {
+          if (ownnerExpectedNode && ownnerExpectedNode.canHaveIndexedValues) {
+            comparison.added = true;
+          }
+        }
+      } else if (comparison.type === "char") {
         ownerComparison = comparison.parent.parent;
+        const ownerActualNode = ownerComparison.actualNode;
+        const ownnerExpectedNode = ownerComparison.expectedNode;
+        if (!actualNode) {
+          if (ownerActualNode && ownerActualNode.canHaveLines) {
+            comparison.removed = true;
+          }
+        } else if (!expectedNode) {
+          if (ownnerExpectedNode && ownnerExpectedNode.canHaveLines) {
+            comparison.added = true;
+          }
+        }
+      }
+      if (!comparison.hidden) {
+        if (comparison.removed) {
+          comparison.counters.self.removed++;
+          addCause(comparison);
+        } else if (comparison.added) {
+          comparison.counters.self.added++;
+          addCause(comparison);
+        }
       }
 
       const compareInside = (insideComparison, insideOptions = {}) => {
@@ -251,51 +300,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       };
 
-      if (ownerComparison) {
-        if (
-          ownerComparison.combinations.sets &&
-          comparison.type === "indexed_value"
-        ) {
-          if (actualNode) {
-            const added = !ownerComparison.expectedNode.value.has(
-              actualNode.value,
-            );
-            if (added) {
-              comparison.added = true;
-            }
-          } else {
-            const removed = !ownerComparison.actualNode.value.has(
-              expectedNode.value,
-            );
-            if (removed) {
-              comparison.removed = true;
-            }
-          }
-        } else if (!actualNode) {
-          if (
-            ownerComparison.actualNode &&
-            ownerComparison.actualNode.canHaveProps
-          ) {
-            comparison.removed = true;
-          }
-        } else if (!expectedNode) {
-          if (
-            ownerComparison.expectedNode &&
-            ownerComparison.expectedNode.canHaveProps
-          ) {
-            comparison.added = true;
-          }
-        }
-
-        if (!comparison.hidden) {
-          if (comparison.removed) {
-            comparison.counters.self.removed++;
-          } else if (comparison.added) {
-            comparison.counters.self.added++;
-          }
-        }
-      }
-
       if (comparison.type === "property") {
         const propertyDescriptorComparisons =
           comparison.childComparisons.propertyDescriptors;
@@ -328,10 +332,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         visitPropertyDescriptor("get");
         settleCounters(comparison);
         return;
-      }
-
-      if (comparison.removed || comparison.added) {
-        addCause(comparison);
       }
 
       const addSelfDiff = () => {
@@ -2299,8 +2299,17 @@ let writeDiff;
     return subtypeDiff;
   };
 
-  const writeOneLineDiff = (lineComparison, context) => {
-    let { focusedCharIndex } = context;
+  const writeOneLineDiff = (
+    lineComparison,
+    context,
+    { focusedCharIndex, resetModified },
+  ) => {
+    const writeOneCharDiff = (charComparison) => {
+      return writeDiff(charComparison, {
+        ...context,
+        modified: resetModified ? false : context.modified,
+      });
+    };
 
     const charComparisons = lineComparison.childComparisons.chars;
     const lineNode = lineComparison[context.resultType];
@@ -2314,7 +2323,7 @@ let writeDiff;
       focusedCharIndex = charNodes.length - 1;
       focusedCharComparison = charComparisons[focusedCharIndex];
     }
-    const focusedCharDiff = writeDiff(focusedCharComparison, context);
+    const focusedCharDiff = writeOneCharDiff(focusedCharComparison);
     remainingWidth -= stringWidth(focusedCharDiff);
 
     const leftOverflowBoilerplateWidth = "…".length;
@@ -2348,7 +2357,7 @@ let writeDiff;
       if (tryBeforeFirst && hasPreviousChar) {
         tryBeforeFirst = false;
       }
-      const charDiff = writeDiff(charNode.comparison, context);
+      const charDiff = writeOneCharDiff(charNode.comparison);
       const charWidth = stringWidth(charDiff);
       let nextWidth = charWidth;
       if (charIndex - 1 > 0) {
@@ -2449,6 +2458,19 @@ let writeDiff;
       return stringOverviewDiff;
     }
 
+    const actualInternalOrSelfNode = comparison.actualNode
+      ? comparison.actualNode.childNodes.internalValue || comparison.actualNode
+      : null;
+    const expectedInternalOrSelfNode = comparison.expectedNode
+      ? comparison.expectedNode.childNodes.internalValue ||
+        comparison.expectedNode
+      : null;
+    const resetModified =
+      actualInternalOrSelfNode &&
+      actualInternalOrSelfNode.canHaveLines &&
+      expectedInternalOrSelfNode &&
+      expectedInternalOrSelfNode.canHaveLines;
+
     single_line: {
       const isSingleLine = lineNodes.length === 1;
       // single line string (both actual and expected)
@@ -2462,11 +2484,11 @@ let writeDiff;
       }
       const firstLineComparison = lineComparisons[0];
       const focusedCharIndex = getFocusedCharIndex(firstLineComparison);
-      const firstLineContext = {
-        ...context,
+      const firstLineContext = { ...context };
+      return writeOneLineDiff(firstLineComparison, firstLineContext, {
         focusedCharIndex,
-      };
-      return writeOneLineDiff(firstLineComparison, firstLineContext);
+        resetModified,
+      });
     }
 
     multiline: {
@@ -2519,11 +2541,7 @@ let writeDiff;
       }
 
       const writeLineDiff = (lineComparison) => {
-        const lineContext = {
-          ...context,
-          focusedCharIndex,
-        };
-        const delimitersColor = getDelimitersColor(lineContext, lineComparison);
+        const delimitersColor = getDelimitersColor(context, lineComparison);
 
         let lineDiff = "";
         const lineNumberString = String(lineComparison.index + 1);
@@ -2535,7 +2553,10 @@ let writeDiff;
         lineDiff += ANSI.color("|", delimitersColor);
         lineDiff += " ";
 
-        lineDiff += writeOneLineDiff(lineComparison, lineContext);
+        lineDiff += writeOneLineDiff(lineComparison, context, {
+          focusedCharIndex,
+          resetModified,
+        });
         return lineDiff;
       };
       const diffLines = [];
