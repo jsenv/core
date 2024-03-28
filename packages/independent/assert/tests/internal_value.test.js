@@ -133,36 +133,36 @@ await startSnapshotTesting("internal_value", {
       expected: [false],
     });
   },
-  // ["signal string"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "a",
-  //     },
-  //     expected: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "b",
-  //     },
-  //   });
-  // },
-  // ["signal string and string"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "a",
-  //     },
-  //     expected: "a",
-  //   });
-  // },
-  // ["string and signal string"]: () => {
-  //   assert({
-  //     actual: "a",
-  //     expected: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "a",
-  //     },
-  //   });
-  // },
+  ["signal(string) and signal(string)"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "ab",
+      },
+    });
+  },
+  ["signal(string) and string"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+      expected: "a",
+    });
+  },
+  ["string and signal(string)"]: () => {
+    assert({
+      actual: "a",
+      expected: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+    });
+  },
   // ["valueOf not displayed when return object itself"]: () => {
   //   const actual = { a: true, valueOf: () => actual };
   //   const expected = { a: false, valueOf: () => expected };

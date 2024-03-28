@@ -98,3 +98,21 @@ expect: [
   false,
 ]
 
+# signal(string) and signal(string)
+AssertionError: actual and expected have 1 difference:
+
+actual: Signal("a")
+expect: Signal("ab")
+
+# signal(string) and string
+AssertionError: actual and expected are different:
+
+actual: Signal("a")
+expect: "a"
+
+# string and signal(string)
+AssertionError: actual and expected are different:
+
+actual: "a"
+expect: Signal("a")
+
