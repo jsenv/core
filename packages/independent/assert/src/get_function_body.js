@@ -1,32 +1,26 @@
 export const getFunctionBody = (fn) => {
   const string = fn.toString();
-
-  const arrowFunctionBodyMatch = string.match(ARROW_FUNCTION_BODY_REGEX);
-  if (arrowFunctionBodyMatch) {
-    const body = arrowFunctionBodyMatch[1];
-    return removeRootIndentation(body);
-  }
-  const arrowFunctionShorthandBodyMatch = string.match(
-    ARROW_FUNCTION_SHORTHAND_BODY_REGEX,
-  );
-  if (arrowFunctionShorthandBodyMatch) {
-    const body = arrowFunctionShorthandBodyMatch[1];
-    return removeRootIndentation(body);
-  }
-  const functionBodyMatch = string.match(FUNCTION_BODY_REGEX);
-  if (functionBodyMatch) {
-    const body = functionBodyMatch[1];
-    return removeRootIndentation(body);
+  for (const candidate of CANDIDATES) {
+    const match = string.match(candidate);
+    if (match) {
+      return removeRootIndentation(match[1]);
+    }
   }
   return removeRootIndentation(string);
 };
 
-// const GETTER_FUNCTION_BODY_REGEX = /^get \([\s\S]*\)\s*\{([\s\S]*)\}$/;
-
-const ARROW_FUNCTION_BODY_REGEX = /^\([\s\S]*\)\s*=>\s*\{([\s\S]*)\}$/;
+const GETTER_SETTER_FUNCTION_BODY_REGEX =
+  /^[gs]et\s*[\S]*\s*\([\s\S]*?\)\s*\{([\s\S]*)\}$/;
+const ARROW_FUNCTION_BODY_REGEX = /^\([\s\S]*?\)\s*=>\s*\{([\s\S]*)\}$/;
 const ARROW_FUNCTION_SHORTHAND_BODY_REGEX =
-  /^\([\s\S]*\)\s*=>\s*\(([\s\S]*)\)$/;
-const FUNCTION_BODY_REGEX = /^function\s*[\S]*\s*\([\s\S]*\)\s*\{([\s\S]*)\}$/;
+  /^\([\s\S]*?\)\s*=>\s*\(([\s\S]*)\)$/;
+const FUNCTION_BODY_REGEX = /^function\s*[\S]*\s*\([\s\S]*?\)\s*\{([\s\S]*)\}$/;
+const CANDIDATES = [
+  ARROW_FUNCTION_BODY_REGEX,
+  ARROW_FUNCTION_SHORTHAND_BODY_REGEX,
+  FUNCTION_BODY_REGEX,
+  GETTER_SETTER_FUNCTION_BODY_REGEX,
+];
 
 const removeRootIndentation = (text) => {
   const lines = text.split(/\r?\n/);
