@@ -2585,7 +2585,7 @@ let writeDiff;
         diffLines.push(writeLineDiff(lineAfter));
       }
       if (nextLineRemaining) {
-        const delimitersColor = getDelimitersColor(context, comparison);
+        const delimitersColor = getDelimitersColor(lineContext, comparison);
         const skippedCounters = {
           total: 0,
           modified: 0,
