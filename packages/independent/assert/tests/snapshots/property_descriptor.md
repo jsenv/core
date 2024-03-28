@@ -122,3 +122,95 @@ assert({
 
 ![img](<./property_descriptor/getter and value.svg>)
 
+# getter/setter and value
+
+```js
+assert({
+  actual: {
+    get a() {
+      return true;
+    },
+    set a(v) {},
+  },
+  expected: {
+    a: true,
+  },
+});
+```
+
+![img](<./property_descriptor/getter/setter and value.svg>)
+
+# getter and no getter
+
+```js
+assert({
+  actual: {
+    get a() {
+      return true;
+    },
+  },
+  expected: {
+    set a(v) {},
+  },
+});
+```
+
+![img](<./property_descriptor/getter and no getter.svg>)
+
+# setter and no setter
+
+```js
+assert({
+  actual: {
+    set a(v) {},
+  },
+  expected: {
+    get a() {
+      return true;
+    },
+  },
+});
+```
+
+![img](<./property_descriptor/setter and no setter.svg>)
+
+# getter are the same
+
+```js
+assert({
+  actual: {
+    get a() {
+      return true;
+    },
+    b: true,
+  },
+  expected: {
+    get a() {
+      return true;
+    },
+    b: false,
+  },
+});
+```
+
+![img](<./property_descriptor/getter are the same.svg>)
+
+# getter are different
+
+```js
+assert({
+  actual: {
+    get a() {
+      return false;
+    },
+  },
+  expected: {
+    get a() {
+      return true;
+    },
+  },
+});
+```
+
+![img](<./property_descriptor/getter are different.svg>)
+

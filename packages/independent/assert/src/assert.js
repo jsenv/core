@@ -346,20 +346,34 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             propertyDescriporName === "get" ||
             propertyDescriporName === "set"
           ) {
+            // when both use property accessor do not display any missing
+            // getter/setter, the abscence will speak for itself better
+            // than get a(): undefined
+            if (actualUsePropertyAccessor && expectedUsePropertyAccessor) {
+              if (actualPropertyDescriptorNode.value === undefined) {
+                actualPropertyDescriptorNode.hidden = true;
+              }
+              if (expectedPropertyDescriptorNode.value === undefined) {
+                expectedPropertyDescriptorNode.hidden = true;
+              }
+              if (
+                actualPropertyDescriptorNode.hidden &&
+                expectedPropertyDescriptorNode.hidden
+              ) {
+                propertyDescriptorComparison.hidden = true;
+              }
+            }
             // when one uses property accessor and the other not
             // do not display get/set if they are not defined
-            if (
-              actualUsePropertyAccessor &&
-              !expectedUsePropertyAccessor &&
-              actualPropertyDescriptorNode.value === undefined
+            else if (
+              (actualUsePropertyAccessor && !expectedUsePropertyAccessor) ||
+              (!actualUsePropertyAccessor && expectedUsePropertyAccessor)
             ) {
-              propertyDescriptorComparison.hidden = true;
-            } else if (
-              !actualUsePropertyAccessor &&
-              expectedUsePropertyAccessor &&
-              expectedPropertyDescriptorNode.value === undefined
-            ) {
-              propertyDescriptorComparison.hidden = true;
+              const leftOrRightNode =
+                actualPropertyDescriptorNode || expectedPropertyDescriptorNode;
+              if (leftOrRightNode.value === undefined) {
+                propertyDescriptorComparison.hidden = true;
+              }
             }
           } else if (propertyDescriporName === "writable") {
             if (actualUsePropertyAccessor !== expectedUsePropertyAccessor) {
@@ -1753,7 +1767,7 @@ let writeDiff;
           diff += ANSI.color("set", keyColor);
           diff += " ";
           diff += ANSI.color(humanizePropertyKey(property), keyColor);
-          diff += "()";
+          diff += ANSI.color("()", keyColor);
           if (displayValue) {
             diff += " ";
             diff += ANSI.color("{", keyColor);
@@ -2310,7 +2324,9 @@ let writeDiff;
           {
             valueLabel: "prop",
             forceBracket:
-              !node.canHaveIndexedValues && subtypeDiff.length === 0,
+              !node.canHaveIndexedValues &&
+              subtypeDiff.length === 0 &&
+              !node.isFunction,
             openBracket: "{",
             closeBracket: "}",
             resetModified:
@@ -2538,6 +2554,9 @@ let writeDiff;
     empty_string: {
       const firstLineNode = lineNodes[0];
       if (firstLineNode.value === "") {
+        if (node.isSourceCode) {
+          return "";
+        }
         const quote = node.quote || DOUBLE_QUOTE;
         const bracketColor = getBracketColor(context, comparison);
         let expandedDiff = "";

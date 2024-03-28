@@ -1,3 +1,4 @@
+/* eslint-disable accessor-pairs */
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 import { createAssert } from "../src/assert.js";
@@ -96,6 +97,73 @@ await startSnapshotTesting("property_descriptor", {
       },
       expected: {
         a: true,
+      },
+    });
+  },
+  ["getter/setter and value"]: () => {
+    assert({
+      actual: {
+        get a() {
+          return true;
+        },
+        set a(v) {},
+      },
+      expected: {
+        a: true,
+      },
+    });
+  },
+  ["getter and no getter"]: () => {
+    assert({
+      actual: {
+        get a() {
+          return true;
+        },
+      },
+      expected: {
+        set a(v) {},
+      },
+    });
+  },
+  ["setter and no setter"]: () => {
+    assert({
+      actual: {
+        set a(v) {},
+      },
+      expected: {
+        get a() {
+          return true;
+        },
+      },
+    });
+  },
+  ["getter are the same"]: () => {
+    assert({
+      actual: {
+        get a() {
+          return true;
+        },
+        b: true,
+      },
+      expected: {
+        get a() {
+          return true;
+        },
+        b: false,
+      },
+    });
+  },
+  ["getter are different"]: () => {
+    assert({
+      actual: {
+        get a() {
+          return false;
+        },
+      },
+      expected: {
+        get a() {
+          return true;
+        },
       },
     });
   },

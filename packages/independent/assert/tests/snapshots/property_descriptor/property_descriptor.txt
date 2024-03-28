@@ -66,3 +66,54 @@ expect: {
   a: true,
 }
 
+# getter/setter and value
+AssertionError: actual and expected have 3 differences:
+
+actual: {
+  get a() {return true;}
+  set a() {}
+}
+expect: {
+  a: true,
+}
+
+# getter and no getter
+AssertionError: actual and expected have 4 differences:
+
+actual: {
+  get a() {return true;}
+}
+expect: {
+  set a() {}
+}
+
+# setter and no setter
+AssertionError: actual and expected have 4 differences:
+
+actual: {
+  set a() {}
+}
+expect: {
+  get a() {return true;}
+}
+
+# getter are the same
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  b: true,
+}
+expect: {
+  b: false,
+}
+
+# getter are different
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  get a() {return false;}
+}
+expect: {
+  get a() {return true;}
+}
+
