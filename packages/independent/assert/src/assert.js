@@ -2,6 +2,7 @@ import stringWidth from "string-width";
 import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
+import { getFunctionBody } from "./get_function_body.js";
 
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;
@@ -310,6 +311,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           : {};
         const propertyDescriptorComparisons =
           comparison.childComparisons.propertyDescriptors;
+
+        const actualUsePropertyAccessor =
+          actualPropertyDescriptorNodes.get ||
+          actualPropertyDescriptorNodes.set;
+        const expectedUsePropertyAccessor =
+          expectedPropertyDescriptorNodes.get ||
+          expectedPropertyDescriptorNodes.set;
         const propertyDescriporNames = [
           "value",
           "get",
@@ -333,6 +341,59 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualPropertyDescriptorNode,
             expectedPropertyDescriptorNode,
           );
+
+          if (
+            propertyDescriporName === "get" ||
+            propertyDescriporName === "set"
+          ) {
+            // when one uses property accessor and the other not
+            // do not display get/set if they are not defined
+            if (
+              actualUsePropertyAccessor &&
+              !expectedUsePropertyAccessor &&
+              actualPropertyDescriptorNode.value === undefined
+            ) {
+              propertyDescriptorComparison.hidden = true;
+            } else if (
+              !actualUsePropertyAccessor &&
+              expectedUsePropertyAccessor &&
+              expectedPropertyDescriptorNode.value === undefined
+            ) {
+              propertyDescriptorComparison.hidden = true;
+            }
+          } else if (propertyDescriporName === "writable") {
+            if (actualUsePropertyAccessor !== expectedUsePropertyAccessor) {
+              // when one uses property accessor and the other not
+              // the diff on writable would be redundant to display
+              propertyDescriptorComparison.hidden = true;
+            }
+          }
+          if (
+            propertyDescriporName === "writable" ||
+            propertyDescriporName === "configurable" ||
+            propertyDescriporName === "enumerable"
+          ) {
+            if (
+              actualPropertyDescriptorNode &&
+              expectedPropertyDescriptorNode
+            ) {
+              if (
+                actualPropertyDescriptorNode.value ===
+                expectedPropertyDescriptorNode.value
+              ) {
+                propertyDescriptorComparison.hidden = true;
+              }
+            } else {
+              const leftOrRightNode =
+                actualPropertyDescriptorNode || expectedPropertyDescriptorNode;
+              if (leftOrRightNode.value === true) {
+                // writable, configurable and enumerable default value is true
+                // do not display when it uses the default
+                propertyDescriptorComparison.hidden = true;
+              }
+            }
+          }
+
           propertyDescriptorComparisons[propertyDescriporName] =
             propertyDescriptorComparison;
           compareInside(propertyDescriptorComparison);
@@ -1028,8 +1089,11 @@ let createValueNode;
       type,
       value,
       origin,
+      property,
+      descriptor,
       showOnlyWhenModified = false,
       showOnlyWhenDiff = false,
+      isSourceCode = false,
     }) => {
       const node = {
         name,
@@ -1042,6 +1106,7 @@ let createValueNode;
         let primitive = false;
         let wellKnownId;
         let subtype;
+        let isFunction = false;
         let isArray = false;
         let isSet = false;
         let isString = false;
@@ -1065,7 +1130,8 @@ let createValueNode;
           primitive = !composite;
           wellKnownId = getWellKnownId(value);
           if (composite) {
-            subtype = getSubtype(value);
+            isFunction = typeof value === "function";
+            subtype = isFunction ? "Function" : getSubtype(value);
             reference =
               wellKnownId || type === "prototype"
                 ? null
@@ -1119,6 +1185,10 @@ let createValueNode;
             if (parent.isUrl) {
               inConstructor = true;
             }
+          } else if (origin === "toString()") {
+            if (parent.isFunction) {
+              inConstructor = true;
+            }
           }
         }
 
@@ -1151,10 +1221,14 @@ let createValueNode;
             throw new Error(`use ${name}.value`);
           },
           origin,
+          property,
+          descriptor,
           subtype,
           isComposite: composite,
           isPrimitive: primitive,
+          isSourceCode,
           isString,
+          isFunction,
           isArray,
           isSet,
           isUrl,
@@ -1226,6 +1300,23 @@ let createValueNode;
           origin: "href",
         });
         childNodes.internalValue = internalValueNode;
+      } else if (node.isFunction) {
+        let functionBody = String(node.value);
+        if (
+          node.type === "property_descriptor" &&
+          (node.descriptor === "get" || node.descriptor === "set")
+        ) {
+          functionBody = getFunctionBody(functionBody);
+        }
+        const internalValueNode = _createValueNode({
+          parent: node,
+          path: path.append("toString()"),
+          type: "internal_value",
+          value: functionBody,
+          origin: "toString()",
+          isSourceCode: true,
+        });
+        childNodes.internalValue = internalValueNode;
       }
 
       // properties
@@ -1247,6 +1338,14 @@ let createValueNode;
               return true;
             }
             if (isArrayIndex(propertyName)) {
+              return true;
+            }
+          }
+          if (node.subtype === "function") {
+            if (propertyName === "name") {
+              return true;
+            }
+            if (propertyName === "length") {
               return true;
             }
           }
@@ -1304,7 +1403,7 @@ let createValueNode;
             path: path.append(propertyName),
             type: "property",
             value: propertyDescriptor,
-            showOnlyWhenDiff: !propertyDescriptor.enumerable,
+            showOnlyWhenModified: !propertyDescriptor.enumerable,
           });
           propertyNode.property = propertyName;
           const propertyDescriptorNodes = {};
@@ -1323,10 +1422,10 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
+              property: propertyName,
+              descriptor: propertyDescriptorName,
               showOnlyWhenDiff: propertyDescriptorName !== "value",
             });
-            propertyDescriptorNode.property = propertyName;
-            propertyDescriptorNode.descriptor = propertyDescriptorName;
             propertyDescriptorNodes[propertyDescriptorName] =
               propertyDescriptorNode;
           }
@@ -1626,23 +1725,6 @@ let writeDiff;
       }
 
       if (property && comparison !== selfContext.startComparison) {
-        let beforeProperty = "";
-        let afterProperty = "";
-
-        if (node.type === "property_descriptor") {
-          if (node.descriptor === "get") {
-            beforeProperty = "get ";
-            afterProperty = "()";
-          } else if (node.descriptor === "set") {
-            beforeProperty = "set ";
-            afterProperty = "()";
-          } else if (node.descriptor !== "value" && node.value) {
-            beforeProperty = node.descriptor;
-            beforeProperty += " ";
-            displayValue = false;
-          }
-        }
-
         let keyColor;
         if (context.added) {
           keyColor = addedColor;
@@ -1657,17 +1739,40 @@ let writeDiff;
           keyColor = sameColor;
         }
 
-        const propertyKeyFormatted = humanizePropertyKey(property);
-        if (beforeProperty) {
-          diff += ANSI.color(beforeProperty, keyColor);
-        }
-        diff += ANSI.color(propertyKeyFormatted, keyColor);
-        if (afterProperty) {
-          diff += ANSI.color(afterProperty, keyColor);
-        }
-        if (displayValue) {
-          diff += ANSI.color(":", keyColor);
+        if (node.descriptor === "get") {
+          diff += ANSI.color("get", keyColor);
           diff += " ";
+          diff += ANSI.color(humanizePropertyKey(property), keyColor);
+          diff += ANSI.color("()", keyColor);
+          if (displayValue) {
+            diff += " ";
+            diff += ANSI.color("{", keyColor);
+            endSeparator = "}";
+          }
+        } else if (node.descriptor === "set") {
+          diff += ANSI.color("set", keyColor);
+          diff += " ";
+          diff += ANSI.color(humanizePropertyKey(property), keyColor);
+          diff += "()";
+          if (displayValue) {
+            diff += " ";
+            diff += ANSI.color("{", keyColor);
+            endSeparator = "}";
+          }
+        } else if (node.descriptor && node.descriptor !== "value") {
+          diff += ANSI.color(node.descriptor, keyColor);
+          diff += " ";
+          diff += ANSI.color(humanizePropertyKey(property), keyColor);
+          if (displayValue) {
+            diff += ANSI.color(":", keyColor);
+            diff += " ";
+          }
+        } else {
+          diff += ANSI.color(humanizePropertyKey(property), keyColor);
+          if (displayValue) {
+            diff += ANSI.color(":", keyColor);
+            diff += " ";
+          }
         }
       }
     }
@@ -2255,13 +2360,16 @@ let writeDiff;
     }
     if (
       selfContext.collapsed ||
-      (node.subtype !== "Object" && node.subtype !== "Array")
+      (node.subtype !== "Object" &&
+        node.subtype !== "Array" &&
+        node.subtype !== "Function")
     ) {
       const subtypeColor = getSubtypeColor(selfContext, comparison);
       subtypeDiff += ANSI.color(node.subtype, subtypeColor);
     }
 
     let insideConstructor = "";
+    let needParenthesis = true;
     if (node.isArray) {
       if (selfContext.collapsed) {
         const lengthColor = getConstructorArgColor(selfContext, comparison);
@@ -2288,6 +2396,9 @@ let writeDiff;
         // value returned by valueOf() is not the composite itself
         !internalValueNode.hidden;
       if (displayInternalValueInsideConstructor) {
+        if (node.isFunction) {
+          needParenthesis = false;
+        }
         const internalValueComparison =
           comparison.childComparisons.internalValue;
         insideConstructor += writeDiff(internalValueComparison, context);
@@ -2300,13 +2411,17 @@ let writeDiff;
     }
 
     if (insideConstructor) {
-      const constructorParenthesisColor = getConstructorParenthesisColor(
-        selfContext,
-        comparison,
-      );
-      subtypeDiff += ANSI.color(`(`, constructorParenthesisColor);
-      subtypeDiff += insideConstructor;
-      subtypeDiff += ANSI.color(`)`, constructorParenthesisColor);
+      if (needParenthesis) {
+        const constructorParenthesisColor = getConstructorParenthesisColor(
+          selfContext,
+          comparison,
+        );
+        subtypeDiff += ANSI.color(`(`, constructorParenthesisColor);
+        subtypeDiff += insideConstructor;
+        subtypeDiff += ANSI.color(`)`, constructorParenthesisColor);
+      } else {
+        subtypeDiff += insideConstructor;
+      }
     }
     return subtypeDiff;
   };
@@ -2402,7 +2517,7 @@ let writeDiff;
     if (overflowLeft) {
       oneLineDiff += ANSI.color("…", delimitersColor);
     }
-    if (stringComparison.quote) {
+    if (stringComparison.quote && !stringNode.isSourceCode) {
       const quoteColor = getQuoteColor(lineContext, stringComparison);
       oneLineDiff += ANSI.color(stringComparison.quote, quoteColor);
       oneLineDiff += lineContent;
@@ -2532,7 +2647,7 @@ let writeDiff;
       }
       let previousLineRemaining = focusedLineIndex - lineBeforeArray.length;
       if (previousLineRemaining === 1) {
-        lineBeforeArray.push(lineNodes[0]);
+        lineBeforeArray.push(lineComparisons[0]);
         previousLineRemaining = 0;
       }
 
@@ -2561,14 +2676,17 @@ let writeDiff;
         const delimitersColor = getDelimitersColor(lineContext, lineComparison);
 
         let lineDiff = "";
-        const lineNumberString = String(lineComparison.index + 1);
-        if (String(biggestLineNumber).length > lineNumberString.length) {
+        const node = comparison[context.resultType];
+        if (!node.isSourceCode) {
+          const lineNumberString = String(lineComparison.index + 1);
+          if (String(biggestLineNumber).length > lineNumberString.length) {
+            lineDiff += " ";
+          }
+          lineDiff += ANSI.color(lineNumberString, delimitersColor);
+          // lineDiff += " ";
+          lineDiff += ANSI.color("|", delimitersColor);
           lineDiff += " ";
         }
-        lineDiff += ANSI.color(lineNumberString, delimitersColor);
-        // lineDiff += " ";
-        lineDiff += ANSI.color("|", delimitersColor);
-        lineDiff += " ";
         lineDiff += writeOneLineDiff(lineComparison, lineContext, {
           focusedCharIndex,
         });

@@ -1,4 +1,14 @@
-# non enumerable displayed when modified
+# non enumerable hidden when value same
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+
+# non enumerable displayed when value modified
 AssertionError: actual and expected have 1 difference:
 
 actual: {
@@ -6,5 +16,53 @@ actual: {
 }
 expect: {
   b: "c",
+}
+
+# enumerable diff
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: "a",
+  enumerable a: true,
+}
+expect: {
+  a: "a",
+  enumerable a: false,
+}
+
+# enumerable and value diff
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  a: "a",
+  enumerable a: false,
+}
+expect: {
+  a: "b",
+  enumerable a: true,
+}
+
+# enumerable and configurable and value diff
+AssertionError: actual and expected have 3 differences:
+
+actual: {
+  a: "a",
+  enumerable a: true,
+  configurable a: true,
+}
+expect: {
+  a: "b",
+  enumerable a: false,
+  configurable a: false,
+}
+
+# getter and value
+AssertionError: actual and expected have 2 differences:
+
+actual: {
+  get a() {return true;}
+}
+expect: {
+  a: true,
 }
 
