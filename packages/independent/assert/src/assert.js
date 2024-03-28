@@ -398,64 +398,39 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           break category;
         }
       }
-      inside: {
-        prototype: {
-          if (ignorePrototypeDiff) {
-            break prototype;
-          }
-          const actualPrototypeNode = actualNode
-            ? actualNode.childNodes.prototype
-            : null;
-          const expectedPrototypeNode = expectedNode
-            ? expectedNode.childNodes.prototype
-            : null;
-          if (!actualPrototypeNode && !expectedPrototypeNode) {
-            break prototype;
-          }
-          const prototypeComparison = createComparison(
-            actualPrototypeNode,
-            expectedPrototypeNode,
-          );
-          if (!actualPrototypeNode || !expectedPrototypeNode) {
-            prototypeComparison.hidden = true;
-          } else if (actualNode.subtype !== expectedNode.subtype) {
-            // when we see a prefix like
-            // actual: User {}
-            // expect: Animal {}
-            // we don't show the prototype
-            prototypeComparison.hidden = true;
-          }
-          comparison.childComparisons.prototype = prototypeComparison;
-          compareInside(prototypeComparison);
-        }
-        let actualInsideNode = actualNode ? actualNode.insideNode : null;
-        let expectedInsideNode = expectedNode ? expectedNode.insideNode : null;
-        internal_value: {
-          if (ignoreInternalValueDiff) {
-            break internal_value;
-          }
-          const actualInternalValueNode = actualNode
-            ? actualNode.childNodes.internalValue
-            : null;
-          const expectedInternalValueNode = expectedNode
-            ? expectedNode.childNodes.internalValue
-            : null;
-          if (!actualInternalValueNode && !expectedInternalValueNode) {
-            break internal_value;
-          }
-          const internalValueComparison = createComparison(
-            actualInsideNode,
-            expectedInsideNode,
-          );
-          comparison.childComparisons.internalValue = internalValueComparison;
-          compareInside(internalValueComparison);
-          ignoreInsideDiff =
-            actualInsideNode &&
-            actualInsideNode.type === "internal_value" &&
-            expectedInsideNode &&
-            expectedInsideNode.type === "internal_value";
-        }
 
+      let actualInsideNode = actualNode ? actualNode.insideNode : null;
+      let expectedInsideNode = expectedNode ? expectedNode.insideNode : null;
+      internal_value: {
+        if (ignoreInternalValueDiff) {
+          break internal_value;
+        }
+        const actualInternalValueNode = actualNode
+          ? actualNode.childNodes.internalValue
+          : null;
+        const expectedInternalValueNode = expectedNode
+          ? expectedNode.childNodes.internalValue
+          : null;
+        if (!actualInternalValueNode && !expectedInternalValueNode) {
+          break internal_value;
+        }
+        const internalValueComparison = createComparison(
+          actualInsideNode,
+          expectedInsideNode,
+        );
+        comparison.childComparisons.internalValue = internalValueComparison;
+        compareInside(internalValueComparison);
+        ignoreInsideDiff =
+          actualInsideNode &&
+          actualInsideNode.type === "internal_value" &&
+          expectedInsideNode &&
+          expectedInsideNode.type === "internal_value";
+      }
+
+      inside: {
+        if (ignoreInsideDiff) {
+          break inside;
+        }
         string: {
           lines: {
             const actualLineNodes = actualNode
@@ -544,10 +519,36 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
           }
         }
-        indexed_values: {
-          if (ignoreInsideDiff) {
-            break indexed_values;
+        prototype: {
+          if (ignorePrototypeDiff) {
+            break prototype;
           }
+          const actualPrototypeNode = actualNode
+            ? actualNode.childNodes.prototype
+            : null;
+          const expectedPrototypeNode = expectedNode
+            ? expectedNode.childNodes.prototype
+            : null;
+          if (!actualPrototypeNode && !expectedPrototypeNode) {
+            break prototype;
+          }
+          const prototypeComparison = createComparison(
+            actualPrototypeNode,
+            expectedPrototypeNode,
+          );
+          if (!actualPrototypeNode || !expectedPrototypeNode) {
+            prototypeComparison.hidden = true;
+          } else if (actualNode.subtype !== expectedNode.subtype) {
+            // when we see a prefix like
+            // actual: User {}
+            // expect: Animal {}
+            // we don't show the prototype
+            prototypeComparison.hidden = true;
+          }
+          comparison.childComparisons.prototype = prototypeComparison;
+          compareInside(prototypeComparison);
+        }
+        indexed_values: {
           const actualIndexedValueNodes = actualInsideNode
             ? actualInsideNode.childNodes.indexedValues || []
             : [];
