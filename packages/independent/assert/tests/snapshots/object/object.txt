@@ -249,13 +249,7 @@ actual: {
 }
 expect: {
   a: true,
-  should_be_there: {
-    a: true,
-    b: true,
-    item: { a: 1, b: 1, c: 1 },
-    c: true,
-    ↓ 4 props ↓
-  },
+  should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
 }
 
 # many props should not be there

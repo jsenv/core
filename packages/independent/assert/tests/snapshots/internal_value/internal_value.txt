@@ -116,3 +116,25 @@ AssertionError: actual and expected are different:
 actual: "a"
 expect: Signal("a")
 
+# valueOf not displayed when return object itself
+AssertionError: actual and expected have 1 difference:
+
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+
+# valueOf self and valueOf 10
+AssertionError: actual and expected have 2 differences:
+
+ℹ to improve readability 1 diff is completely hidden
+
+actual: <ref #1> {
+  "valueOf()": <ref #1>,
+}
+expect: {
+  "valueOf()": "10",
+}
+

@@ -222,3 +222,29 @@ assert({
 
 ![img](<./internal_value/string and signal(string).svg>)
 
+# valueOf not displayed when return object itself
+
+```js
+const actual = { a: true, valueOf: () => actual };
+const expected = { a: false, valueOf: () => expected };
+assert({
+  actual,
+  expected,
+});
+```
+
+![img](<./internal_value/valueOf not displayed when return object itself.svg>)
+
+# valueOf self and valueOf 10
+
+```js
+const actual = { valueOf: () => actual };
+const expected = { valueOf: () => "10" };
+assert({
+  actual,
+  expected,
+});
+```
+
+![img](<./internal_value/valueOf self and valueOf 10.svg>)
+

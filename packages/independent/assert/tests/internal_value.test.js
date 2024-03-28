@@ -163,20 +163,20 @@ await startSnapshotTesting("internal_value", {
       },
     });
   },
-  // ["valueOf not displayed when return object itself"]: () => {
-  //   const actual = { a: true, valueOf: () => actual };
-  //   const expected = { a: false, valueOf: () => expected };
-  //   assert({
-  //     actual,
-  //     expected,
-  //   });
-  // },
-  // ["valueOf returns something diff"]: () => {
-  //   const actual = { valueOf: () => actual };
-  //   const expected = { valueOf: () => "10" };
-  //   assert({
-  //     actual,
-  //     expected,
-  //   });
-  // },
+  ["valueOf not displayed when return object itself"]: () => {
+    const actual = { a: true, valueOf: () => actual };
+    const expected = { a: false, valueOf: () => expected };
+    assert({
+      actual,
+      expected,
+    });
+  },
+  ["valueOf self and valueOf 10"]: () => {
+    const actual = { valueOf: () => actual };
+    const expected = { valueOf: () => "10" };
+    assert({
+      actual,
+      expected,
+    });
+  },
 });

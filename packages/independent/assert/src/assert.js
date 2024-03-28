@@ -1205,10 +1205,8 @@ let createValueNode;
           type: "internal_value",
           value: internalValue,
           origin: "valueOf()",
+          showOnlyWhenDiff: internalValue === node.value,
         });
-        if (internalValue === node.value) {
-          internalValueNode.hidden = true;
-        }
         childNodes.internalValue = internalValueNode;
       } else if (node.isUrl) {
         const internalValue = node.href;
