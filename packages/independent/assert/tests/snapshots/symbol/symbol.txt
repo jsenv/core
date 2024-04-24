@@ -1,3 +1,15 @@
+# Symbol() description modified
+AssertionError: actual and expect are different:
+
+actual: Symbol("a")
+expect: Symbol("b")
+
+# Symbol.for() key modified
+AssertionError: actual and expect are different:
+
+actual: Symbol.for("a")
+expect: Symbol.for("b")
+
 # named Symbol() vs anonymous symbol
 AssertionError: actual and expect are different:
 
@@ -9,4 +21,16 @@ AssertionError: actual and expect are different:
 
 actual: Symbol()
 expect: Symbol("b")
+
+# named Symbol() vs Symbol.for()
+AssertionError: actual and expect are different:
+
+actual: Symbol("a")
+expect: Symbol.for("a")
+
+# Symbol.for() vs named Symbol()
+AssertionError: actual and expect are different:
+
+actual: Symbol.for("b")
+expect: Symbol("a")
 

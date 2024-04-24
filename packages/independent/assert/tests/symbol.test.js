@@ -83,18 +83,18 @@ await startSnapshotTesting("symbol", {
   //     },
   //   });
   // },
-  // ["Symbol() description modified"]: () => {
-  //   assert({
-  //     actual: Symbol("a"),
-  //     expect: Symbol("b"),
-  //   });
-  // },
-  // ["Symbol.for() key modified"]: () => {
-  //   assert({
-  //     actual: Symbol.for("a"),
-  //     expect: Symbol.for("b"),
-  //   });
-  // },
+  ["Symbol() description modified"]: () => {
+    assert({
+      actual: Symbol("a"),
+      expect: Symbol("b"),
+    });
+  },
+  ["Symbol.for() key modified"]: () => {
+    assert({
+      actual: Symbol.for("a"),
+      expect: Symbol.for("b"),
+    });
+  },
   ["named Symbol() vs anonymous symbol"]: () => {
     assert({
       actual: Symbol("a"),
@@ -107,10 +107,16 @@ await startSnapshotTesting("symbol", {
       expect: Symbol("b"),
     });
   },
-  // ["named Symbol() vs Symbol.for()"]: () => {
-  //   assert({
-  //     actual: Symbol("a"),
-  //     expect: Symbol.for("a"),
-  //   });
-  // },
+  ["named Symbol() vs Symbol.for()"]: () => {
+    assert({
+      actual: Symbol("a"),
+      expect: Symbol.for("a"),
+    });
+  },
+  ["Symbol.for() vs named Symbol()"]: () => {
+    assert({
+      actual: Symbol.for("b"),
+      expect: Symbol("a"),
+    });
+  },
 });

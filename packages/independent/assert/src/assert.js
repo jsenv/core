@@ -3555,7 +3555,7 @@ let writeDiff;
               return targetNode === node ? part : otherPart;
             },
             {
-              // preferSolorColor: true,
+              preferSolorColor: index > 0,
             },
           );
           labelDiff += ANSI.color(part, partColor);
