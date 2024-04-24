@@ -1,6 +1,7 @@
 // inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
 
 import ansiRegex from "ansi-regex";
+import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
@@ -231,9 +232,11 @@ export const parseAnsi = (ansi) => {
       const chunk = bundle("text", word);
       result.chunks.push(chunk);
 
-      x += word.length;
-      nAnsi += word.length;
-      nPlain += word.length;
+      const width = stringWidth(word);
+
+      x += width;
+      nAnsi += width;
+      nPlain += width;
       continue;
     }
     // ANSI Escape characters

@@ -88,20 +88,22 @@ export const createDynamicLog = ({
     clearAttemptResult = undefined;
   };
 
-  const clearDuringFunctionCall = (callback) => {
+  const clearDuringFunctionCall = (
+    callback,
+    ouputAfterCallback = lastOutput,
+  ) => {
     // 1. Erase the current log
     // 2. Call callback (expected to write something on stdout)
     // 3. Restore the current log
     // During step 2. we expect a "write from outside" so we uninstall
     // the stream spy during function call
-    const currentOutput = lastOutput;
     update("");
 
     writing = true;
     callback();
     writing = false;
 
-    update(currentOutput);
+    update(ouputAfterCallback);
   };
 
   const writeFromOutsideEffect = (value) => {

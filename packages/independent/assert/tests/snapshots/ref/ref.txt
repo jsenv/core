@@ -1,0 +1,9 @@
+# true should be object using ref
+AssertionError: actual and expect are different:
+
+actual: true
+expect: {
+  foo: <ref #1> { id: "a" },
+  bar: <ref #1>,
+}
+

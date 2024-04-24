@@ -44,7 +44,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.0.0"
+    "@jsenv/humanize": "1.0.0",
+    "graphemer": "1.4.0"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"

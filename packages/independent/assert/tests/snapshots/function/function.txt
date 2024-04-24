@@ -1,0 +1,188 @@
+# async arrow function vs arrow function
+AssertionError: actual and expect are different:
+
+actual: async () => { [source code] }
+expect: () => { [source code] }
+
+# arrow function source modified, name same
+AssertionError: actual and expect have 1 difference:
+
+actual: () => { [source code] }
+expect: () => { [source code] }
+
+# async function vs function
+AssertionError: actual and expect are different:
+
+actual: async function () { [source code] }
+expect: function () { [source code] }
+
+# function vs arrow function
+AssertionError: actual and expect are different:
+
+actual: function () { [source code] }
+expect: () => { [source code] }
+
+# function source modified, name same
+AssertionError: actual and expect have 1 difference:
+
+actual: function () { [source code] }
+expect: function () { [source code] }
+
+# function source same, name modified
+AssertionError: actual and expect are different:
+
+actual: function foo () { [source code] }
+expect: function bar () { [source code] }
+
+# anonymous function vs named function
+AssertionError: actual and expect are different:
+
+actual: function () { [source code] }
+expect: function foo () { [source code] }
+
+# number of diff when comparing async function and function
+AssertionError: actual and expect have 2 differences:
+
+actual: {
+  a: async function () { [source code] },
+  b: true,
+}
+expect: {
+  a: function () { [source code] },
+  b: false,
+}
+
+# function prototype modified
+AssertionError: actual and expect are different:
+
+actual: function Foo () { [source code] } {
+  prototype: { a: true, b: false },
+}
+expect: function Bar () { [source code] } {
+  prototype: { a: true, b: true },
+}
+
+# function prototype added
+AssertionError: actual and expect are different:
+
+actual: function Foo () { [source code] }
+expect: function Bar () { [source code] } {
+  prototype: { a: true },
+}
+
+# class vs function
+AssertionError: actual and expect are different:
+
+actual: class actual {}
+expect: function expect () { [source code] }
+
+# class Animal vs class Robot
+AssertionError: actual and expect are different:
+
+actual: class Animal {}
+expect: class Robot {}
+
+# extends Animal vs extend Robot
+AssertionError: actual and expect are different:
+
+actual: class Human extends Animal {
+  type = "human_actual";
+}
+expect: class Human extends Robot {
+  type = "human_expected";
+}
+
+# class static property modified
+AssertionError: actual and expect have 2 differences:
+
+actual: class A {
+  a = true;
+}
+expect: class A {
+  a = false;
+}
+
+# class static property added
+AssertionError: actual and expect have 2 differences:
+
+actual: class A {
+  a = true;
+}
+expect: class A {}
+
+# class static property removed
+AssertionError: actual and expect have 2 differences:
+
+actual: class A {}
+expect: class A {
+  a = false;
+}
+
+# class method diff source
+AssertionError: actual and expect have 2 differences:
+
+actual: class {
+  a() { [source code] }
+}
+expect: class {
+  a() { [source code] }
+}
+
+# class method added
+AssertionError: actual and expect have 2 differences:
+
+actual: class A {
+  a() { [source code] }
+}
+expect: class A {}
+
+# class method removed
+AssertionError: actual and expect have 2 differences:
+
+actual: class A {}
+expect: class A {
+  a() { [source code] }
+}
+
+# class constructor modified
+AssertionError: actual and expect are different:
+
+actual: class actual {}
+expect: class expect {}
+
+# arrow function source same, name modified
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  a: () => { [source code] },
+  b: true,
+}
+expect: {
+  a: () => { [source code] },
+  b: false,
+}
+
+# arrow function source same, name same
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  a: () => { [source code] },
+  b: true,
+}
+expect: {
+  a: () => { [source code] },
+  b: false,
+}
+
+# class constructor added
+AssertionError: actual and expect are different:
+
+actual: class actual {}
+expect: class expect {}
+
+# class constructor removed
+AssertionError: actual and expect are different:
+
+actual: class actual {}
+expect: class expect {}
+

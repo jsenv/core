@@ -49,4 +49,7 @@ export const UNICODE = {
   get CIRCLE_CROSS() {
     return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
   },
+  get ELLIPSIS() {
+    return UNICODE.supported ? `…` : `...`;
+  },
 };

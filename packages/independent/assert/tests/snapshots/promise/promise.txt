@@ -1,0 +1,12 @@
+# promise
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  a: true,
+  b: Promise,
+}
+expect: {
+  a: false,
+  b: Promise,
+}
+

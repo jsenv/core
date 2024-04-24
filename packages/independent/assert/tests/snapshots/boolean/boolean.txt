@@ -1,0 +1,24 @@
+# true should be false
+AssertionError: actual and expect are different:
+
+actual: true
+expect: false
+
+# false should be true
+AssertionError: actual and expect are different:
+
+actual: false
+expect: true
+
+# true should be 1
+AssertionError: actual and expect are different:
+
+actual: true
+expect: 1
+
+# false should be 0
+AssertionError: actual and expect are different:
+
+actual: false
+expect: 0
+

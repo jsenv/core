@@ -1,0 +1,52 @@
+# set value added
+AssertionError: actual and expect have 2 differences:
+
+actual: Set([
+  "a",
+  "b",
+  "c",
+  "Y",
+])
+expect: Set([
+  "b",
+  "a",
+  "c",
+  "Z",
+])
+
+# compare set and array
+AssertionError: actual and expect are different:
+
+actual: [
+  "a",
+]
+expect: Set([
+  "a",
+])
+
+# set collapsed various cases
+AssertionError: actual and expect have 3 differences:
+
+actual: {
+  a: true,
+  set_without_diff: Set(["a","b"]),
+  set_with_added: Set(["a"]),
+}
+expect: {
+  a: false,
+  set_without_diff: Set(["b","a"]),
+  set_with_added: Set(["b"]),
+}
+
+# set collapsed deep
+AssertionError: actual and expect have 2 differences:
+
+ℹ to improve readability 2 diffs are completely hidden
+
+actual: {
+  a: { set_without_diff: Set(2), set_with_added: Set(1) },
+}
+expect: {
+  a: { set_without_diff: Set(2), set_with_added: Set(1) },
+}
+

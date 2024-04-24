@@ -1,0 +1,12 @@
+# named Symbol() vs anonymous symbol
+AssertionError: actual and expect are different:
+
+actual: Symbol("a")
+expect: Symbol()
+
+# anonymous symbol vs named Symbol()
+AssertionError: actual and expect are different:
+
+actual: Symbol()
+expect: Symbol("b")
+

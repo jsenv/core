@@ -4,14 +4,14 @@ import { createSvgRootNode } from "./xml_generator.js";
 
 const colorsDefault = {
   black: "#000000",
-  red: "#B22222",
-  green: "#32CD32",
+  red: "#cd5555",
+  green: "#11bc79",
   yellow: "#DAA520",
   blue: "#4169E1",
   magenta: "#9932CC",
   cyan: "#008B8B",
   white: "#D3D3D3",
-  gray: "#A9A9A9",
+  gray: "#7f7f7f",
   redBright: "#FF4500",
   greenBright: "#ADFF2F",
   yellowBright: "#FFFF00",
@@ -27,7 +27,7 @@ const colorsDefault = {
   bgMagenta: "#9932CC",
   bgCyan: "#008B8B",
   bgWhite: "#D3D3D3",
-  bgGray: "#A9A9A9",
+  bgGray: "#7f7f7f",
   bgRedBright: "#FF0000",
   bgGreenBright: "#ADFF2F",
   bgYellowBright: "#FFFF00",
@@ -53,7 +53,7 @@ export const renderTerminalSvg = async (
     paddingRight = 10,
 
     backgroundColor = "#282c34",
-    foregroundColor = "#abb2bf",
+    foregroundColor = "#cccccc",
     colors = colorsDefault,
 
     // by default: fixed width of 640 + fluid height

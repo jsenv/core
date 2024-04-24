@@ -1,5 +1,6 @@
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import supportsColor from "supports-color";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
@@ -36,6 +37,7 @@ export const nodeChildProcess = ({
   env = {
     ...env,
     JSENV: true,
+    FORCE_COLOR: supportsColor.stdout,
   };
 
   return {

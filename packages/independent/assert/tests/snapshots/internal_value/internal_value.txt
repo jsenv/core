@@ -1,0 +1,194 @@
+# diff new String value
+AssertionError: actual and expect have 1 difference:
+
+actual: new String("a")
+expect: new String("b")
+
+# diff String object vs literal
+AssertionError: actual and expect are different:
+
+actual: new String("abc")
+expect: "a2"
+
+# new String collapsed with overview
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  a: new String("toto"),
+  b: true,
+}
+expect: {
+  a: new String("toto"),
+  b: false,
+}
+
+# new String collapsed
+AssertionError: actual and expect have 2 differences:
+
+actual: {
+  foo: { a: new String("toto") },
+}
+expect: {
+  bar: { a: new String("toto") },
+}
+
+# new String prop
+AssertionError: actual and expect have 2 differences:
+
+actual: new String("a") {
+  foo: true,
+}
+expect: new String("b") {
+  foo: false,
+}
+
+# signal(true) and signal(false)
+AssertionError: actual and expect have 1 difference:
+
+actual: Signal(true)
+expect: Signal(false)
+
+# signal(true) and true
+AssertionError: actual and expect are different:
+
+actual: Signal(true)
+expect: true
+
+# true and signal(true)
+AssertionError: actual and expect are different:
+
+actual: true
+expect: Signal(true)
+
+# true and signal(false)
+AssertionError: actual and expect are different:
+
+actual: true
+expect: Signal(false)
+
+# signal(true) and false
+AssertionError: actual and expect are different:
+
+actual: Signal(true)
+expect: false
+
+# signal(true) and 1
+AssertionError: actual and expect are different:
+
+actual: Signal(true)
+expect: 1
+
+# signal({ foo: true }) and signal({ foo: false })
+AssertionError: actual and expect have 1 difference:
+
+actual: Signal({
+  foo: true,
+})
+expect: Signal({
+  foo: false,
+})
+
+# signal([true]) and signal([false]) with props
+AssertionError: actual and expect have 2 differences:
+
+actual: Signal([
+  true,
+]) {
+  a: true,
+}
+expect: Signal([
+  false,
+]) {
+  a: false,
+}
+
+# signal([true]) and [true]
+AssertionError: actual and expect are different:
+
+actual: Signal([
+  true,
+])
+expect: [
+  true,
+]
+
+# [true] and signal([true])
+AssertionError: actual and expect are different:
+
+actual: [
+  true,
+]
+expect: Signal([
+  true,
+])
+
+# [true] and signal([false])
+AssertionError: actual and expect are different:
+
+actual: [
+  true,
+]
+expect: Signal([
+  false,
+])
+
+# signal([true]) and false
+AssertionError: actual and expect are different:
+
+actual: Signal([
+  true,
+])
+expect: [
+  false,
+]
+
+# signal(string) and signal(string)
+AssertionError: actual and expect have 1 difference:
+
+actual: Signal("ab")
+expect: Signal("a")
+
+# signal(string) and string
+AssertionError: actual and expect are different:
+
+actual: Signal("a")
+expect: "a"
+
+# string and signal(string)
+AssertionError: actual and expect are different:
+
+actual: "a"
+expect: Signal("a")
+
+# both valueOf return object itself
+AssertionError: actual and expect have 1 difference:
+
+actual: <ref #1> {
+  "valueOf()": <ref #1>,
+  a: true,
+}
+expect: <ref #2> {
+  "valueOf()": <ref #2>,
+  a: false,
+}
+
+# valueOf self and valueOf 10
+AssertionError: actual and expect have 1 difference:
+
+actual: <ref #1> {
+  "valueOf()": <ref #1>,
+}
+expect: {
+  "valueOf()": 10,
+}
+
+# valueOf 10 and valueOf self
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  "valueOf()": 10,
+}
+expect: <ref #1> {
+  "valueOf()": <ref #1>,
+}
+

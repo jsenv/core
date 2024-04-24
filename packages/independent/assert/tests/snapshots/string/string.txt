@@ -1,0 +1,189 @@
+# string single char
+AssertionError: actual and expect are different:
+
+actual: "a"
+expect: "b"
+
+# diff end of string
+AssertionError: actual and expect are different:
+
+actual: "hello world"
+expect: "hello france"
+
+# one char should be empty
+AssertionError: actual and expect are different:
+
+actual: "a"
+expect: ""
+
+# empty should be one char
+AssertionError: actual and expect are different:
+
+actual: ""
+expect: "a"
+
+# tab vs space
+AssertionError: actual and expect are different:
+
+actual: "\t"
+expect: "  "
+
+# blank char should be empty
+AssertionError: actual and expect are different:
+
+actual: "\x7F"
+expect: ""
+
+# diff unicode
+AssertionError: actual and expect are different:
+
+actual: "⚫️"
+expect: "⚪️"
+
+# diff emoticon
+AssertionError: actual and expect are different:
+
+actual: "👨‍👩‍👧‍👧"
+expect: "😍"
+
+# diff special char
+AssertionError: actual and expect are different:
+
+actual: "ñ"
+expect: "n"
+
+# added char
+AssertionError: actual and expect are different:
+
+actual: "ab"
+expect: "a"
+
+# removed char
+AssertionError: actual and expect are different:
+
+actual: "a"
+expect: "ab"
+
+# diff at end of long string, start truncated
+AssertionError: actual and expect are different:
+
+actual: …"efghijk"
+expect: …"efghijj"
+
+# diff at start of long string, end truncated
+AssertionError: actual and expect are different:
+
+actual: "a2cdefg"…
+expect: "a3cdefg"…
+
+# many diff in long string, only first is shown truncated
+AssertionError: actual and expect are different:
+
+actual: "a2cdefZ"…
+expect: "a3cdefY"…
+
+# diff at middle of long string, start + end truncated
+AssertionError: actual and expect are different:
+
+actual: …"h5jk"…
+expect: …"h6jk"…
+
+# single quote best in actual
+AssertionError: actual and expect are different:
+
+actual: 'My name is "dam"'
+expect: 'My name is ZdamZ'
+
+# single quote best in expect
+AssertionError: actual and expect are different:
+
+actual: 'My name is ZdamZ'
+expect: 'My name is "dam"'
+
+# template quote best in expect
+AssertionError: actual and expect are different:
+
+actual: `I'm "zac"`
+expect: `I'm "dam"`
+
+# double best and must be escaped
+AssertionError: actual and expect are different:
+
+actual: "START \"dam\" `''' END"
+expect: "START \"zac\" `''' END"
+
+# second line contains extra chars
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  foo: 1| Hello,
+       2| my name is Benjamin
+       3| and my brother is joe
+}
+expect: {
+  foo: 1| Hello,
+       2| my name is Ben
+       3| and my brother is joe
+}
+
+# add empty line
+AssertionError: actual and expect are different:
+
+actual: 1| 
+        2| 
+expect: 1| 
+
+# remove empty line
+AssertionError: actual and expect are different:
+
+actual: 1| 
+expect: 1| 
+        2| 
+
+# one line vs two lines
+AssertionError: actual and expect are different:
+
+actual: 1| Hel
+expect: 1| Hello
+        2| world
+
+# second line differs
+AssertionError: actual and expect are different:
+
+actual: 1| Hello
+        2| world
+expect: 1| Hello
+        2| france
+
+# too many lines before and after
+AssertionError: actual and expect are different:
+
+actual:  ↑ 2 lines ↑
+        3| three
+        4| four/true
+        5| five
+         ↓ 2 lines (1 modified) ↓
+expect:  ↑ 2 lines ↑
+        3| three
+        4| four/false
+        5| five
+         ↓ 2 lines (1 modified) ↓
+
+# many lines added
+AssertionError: actual and expect are different:
+
+actual: 1| one
+        2| two
+        3| three
+         ↓ 2 lines ↓
+expect: 1| one
+
+# many lines removed
+AssertionError: actual and expect are different:
+
+actual: 1| one
+expect: 1| one
+        2| two
+        3| three
+         ↓ 2 lines ↓
+
