@@ -1435,10 +1435,10 @@ const shouldIgnorePrototype = (node, prototypeValue) => {
 };
 const shouldIgnoreProperty = (
   node,
-  propertyName,
+  propertyNameOrSymbol,
   { propertyDescriptor, isStringIndex },
 ) => {
-  if (propertyName === "prototype") {
+  if (propertyNameOrSymbol === "prototype") {
     if (!node.isFunction) {
       return false;
     }
@@ -1483,7 +1483,7 @@ const shouldIgnoreProperty = (
     const propertyNames = Object.getOwnPropertyNames(prototypeValue);
     return propertyNames.length === 1;
   }
-  if (propertyName === "constructor") {
+  if (propertyNameOrSymbol === "constructor") {
     return (
       node.parent.property === "prototype" &&
       node.parent.parent.isFunction &&
@@ -1491,22 +1491,22 @@ const shouldIgnoreProperty = (
       propertyDescriptor.value === node.parent.parent.value
     );
   }
-  if (propertyName === "length") {
+  if (propertyNameOrSymbol === "length") {
     return node.isArray || node.isStringObject || node.isFunction;
   }
-  if (propertyName === "name") {
+  if (propertyNameOrSymbol === "name") {
     return node.isFunction;
   }
-  if (propertyName === "stack") {
+  if (propertyNameOrSymbol === "stack") {
     return node.isError;
   }
-  if (propertyName === "valueOf") {
+  if (propertyNameOrSymbol === "valueOf") {
     return (
       node.childNodes.internalValue &&
       node.childNodes.internalValue.property === "valueOf()"
     );
   }
-  if (propertyName === "toString") {
+  if (propertyNameOrSymbol === "toString") {
     return (
       node.childNodes.internalValue &&
       node.childNodes.internalValue.property === "toString()"
@@ -1514,6 +1514,23 @@ const shouldIgnoreProperty = (
   }
   if (isStringIndex) {
     return true;
+  }
+  if (propertyNameOrSymbol === Symbol.toStringTag) {
+    if (!Object.hasOwn(propertyDescriptor, "value")) {
+      return false;
+    }
+    // toStringTag is already reflected on subtype
+    return true;
+  }
+  if (typeof propertyNameOrSymbol === "symbol") {
+    if (
+      node.subtype === "Promise" &&
+      !Symbol.keyFor(propertyNameOrSymbol) &&
+      symbolToDescription(propertyNameOrSymbol) === "async_id_symbol"
+    ) {
+      // nodejs runtime puts a custom Symbol on promise
+      return true;
+    }
   }
   // if (valueInfo.isUrl) {
   //   if (property === "href" && node.canDiffUrlParts) {
@@ -1989,6 +2006,9 @@ let createValueNode;
       };
       node.childNodes = childNodes;
       node.structureIsKnown = Boolean(node.wellKnownId || node.reference);
+      if (node.structureIsKnown) {
+        return node;
+      }
 
       const createPropertyLikeNode = (params) => {
         const propertyLikeNode = _createValueNode(params);
@@ -2003,9 +2023,8 @@ let createValueNode;
         propertyLikeNode.childNodes.key = keyNode;
         return propertyLikeNode;
       };
-
       prototype: {
-        if (!node.isComposite || node.structureIsKnown) {
+        if (!node.isComposite) {
           break prototype;
         }
         const prototypeValue = Object.getPrototypeOf(node.value);
@@ -2026,9 +2045,6 @@ let createValueNode;
       }
       // internal value (.valueOf(), .href, .toString())
       internal_value: {
-        if (node.structureIsKnown) {
-          break internal_value;
-        }
         if (node.isFunction) {
           const functionBody = createSourceCode(
             node.functionAnalysis.argsAndBodySource,
@@ -2143,7 +2159,7 @@ let createValueNode;
           childNodes.internalValue = internalValueNode;
         }
       }
-
+      // map entries
       if (node.isMap) {
         const mapEntryMap = childNodes.mapEntryMap;
         const subtypeCounterMap = new Map();
@@ -2187,15 +2203,26 @@ let createValueNode;
           mapEntryNode.childNodes.value = mapEntryValueNode;
         }
       }
-
-      // properties
-      if (node.isComposite && !node.structureIsKnown) {
-        const indexedPropertyMap = childNodes.indexedPropertyMap;
-        const namedPropertyMap = childNodes.namedPropertyMap;
+      // key/value pairs
+      // where key can be integers, string or symbols
+      // aka "properties"
+      props: {
         const associatedValueMetaMap = new Map();
-
-        // indexed properties
-        if (node.isArray) {
+        // integers
+        if (node.isString || node.isStringObject) {
+          let index = 0;
+          // eslint-disable-next-line no-unused-vars
+          while (index < node.value.length) {
+            associatedValueMetaMap.set(String(index), {
+              isStringIndex: true,
+              propertyDescriptor: Object.getOwnPropertyDescriptor(
+                node.value,
+                index,
+              ),
+            });
+            index++;
+          }
+        } else if (node.isArray) {
           let index = 0;
           while (index < node.value.length) {
             if (node.parent && node.parent.isSet) {
@@ -2221,39 +2248,40 @@ let createValueNode;
             }
             index++;
           }
-        } else if (node.isString || node.isStringObject) {
-          let index = 0;
-          // eslint-disable-next-line no-unused-vars
-          while (index < node.value.length) {
-            associatedValueMetaMap.set(String(index), {
-              isStringIndex: true,
-              propertyDescriptor: Object.getOwnPropertyDescriptor(
-                node.value,
-                index,
-              ),
+        }
+        // symbols
+        if (node.isComposite) {
+          const propertySymbols = Object.getOwnPropertySymbols(node.value);
+          for (const propertySymbol of propertySymbols) {
+            const propertyDescriptor = Object.getOwnPropertyDescriptor(
+              node.value,
+              propertySymbol,
+            );
+            associatedValueMetaMap.set(propertySymbol, {
+              propertyDescriptor,
             });
-            index++;
           }
         }
-        // named properties
-        const propertyNames = node.isString
-          ? []
-          : Object.getOwnPropertyNames(node.value);
-        for (const propertyName of propertyNames) {
-          if (associatedValueMetaMap.has(propertyName)) {
-            continue;
+        // strings
+        if (node.isComposite) {
+          const propertyNames = Object.getOwnPropertyNames(node.value);
+          for (const propertyName of propertyNames) {
+            if (associatedValueMetaMap.has(propertyName)) {
+              continue;
+            }
+            const propertyDescriptor = Object.getOwnPropertyDescriptor(
+              node.value,
+              propertyName,
+            );
+            associatedValueMetaMap.set(propertyName, {
+              propertyDescriptor,
+            });
           }
-          const propertyDescriptor = Object.getOwnPropertyDescriptor(
-            node.value,
-            propertyName,
-          );
-          associatedValueMetaMap.set(propertyName, {
-            propertyDescriptor,
-          });
         }
-
+        const indexedPropertyMap = childNodes.indexedPropertyMap;
+        const namedPropertyMap = childNodes.namedPropertyMap;
         for (const [
-          propertyName,
+          propertyNameOrSymbol,
           {
             isSetValue,
             value,
@@ -2265,17 +2293,16 @@ let createValueNode;
           if (isSetValue) {
             const setValueNode = _createValueNode({
               parent: node,
-              path: path.append(propertyName, { isArrayIndex: true }),
+              path: path.append(propertyNameOrSymbol, { isArrayIndex: true }),
               type: "set_value",
               value,
               valueEndSeparator: ",",
             });
-            indexedPropertyMap.set(propertyName, setValueNode);
+            indexedPropertyMap.set(propertyNameOrSymbol, setValueNode);
             continue;
           }
-
           if (
-            shouldIgnoreProperty(node, propertyName, {
+            shouldIgnoreProperty(node, propertyNameOrSymbol, {
               propertyDescriptor,
               isArrayIndex,
               isStringIndex,
@@ -2285,7 +2312,7 @@ let createValueNode;
           }
           let displayedIn;
           let showOnlyWhenDiff = node.showOnlyWhenDiff === "deep" ? "deep" : "";
-          if (propertyName === "name") {
+          if (propertyNameOrSymbol === "name") {
             if (
               node.functionAnalysis.type === "classic" ||
               node.functionAnalysis.type === "class"
@@ -2294,45 +2321,47 @@ let createValueNode;
               displayedIn = "subtype";
             }
           }
-          if (propertyName === "message") {
+          if (propertyNameOrSymbol === "message") {
             if (node.isError) {
               displayedIn = "subtype";
             }
           }
           if (!showOnlyWhenDiff) {
-            if (propertyName === "prototype") {
+            if (propertyNameOrSymbol === "prototype") {
               showOnlyWhenDiff = "deep";
             } else if (!propertyDescriptor.enumerable) {
-              if (propertyName === "message" && node.isError) {
+              if (propertyNameOrSymbol === "message" && node.isError) {
               } else {
                 showOnlyWhenDiff = true;
               }
+            } else if (typeof propertyNameOrSymbol === "symbol") {
+              showOnlyWhenDiff = true;
             }
           }
 
           const propertyNode = _createValueNode({
             parent: node,
-            path: path.append(propertyName, { isArrayIndex }),
+            path: path.append(propertyNameOrSymbol, { isArrayIndex }),
             type: "property",
             value: null,
             showOnlyWhenDiff,
             hidden,
             displayedIn,
-            property: isArrayIndex ? null : propertyName,
+            property: isArrayIndex ? null : propertyNameOrSymbol,
             isClassProperty: node.functionAnalysis.type === "class",
             isClassPrototype:
               node.functionAnalysis.type === "class" &&
-              propertyName === "prototype",
+              propertyNameOrSymbol === "prototype",
           });
           if (isArrayIndex) {
-            indexedPropertyMap.set(propertyName, propertyNode);
+            indexedPropertyMap.set(propertyNameOrSymbol, propertyNode);
           } else {
-            namedPropertyMap.set(propertyName, propertyNode);
+            namedPropertyMap.set(propertyNameOrSymbol, propertyNode);
             const keyNode = _createValueNode({
               parent: propertyNode,
               path: propertyNode.path,
               type: "property_key",
-              value: propertyName,
+              value: propertyNameOrSymbol,
               showOnlyWhenDiff: false,
               property: propertyNode.property,
               isArrayIndex,
@@ -2364,7 +2393,7 @@ let createValueNode;
             if (
               shouldIgnorePropertyDescriptor(
                 node,
-                propertyName,
+                propertyNameOrSymbol,
                 propertyDescriptorName,
                 propertyDescriptorValue,
               )
@@ -2412,7 +2441,7 @@ let createValueNode;
         }
       }
       // string (lines and chars)
-      if (node.canHaveLines && !node.structureIsKnown) {
+      if (node.canHaveLines) {
         const lineNodes = [];
 
         const lines = node.lines;
@@ -2429,7 +2458,7 @@ let createValueNode;
 
         childNodes.lines = lineNodes;
       }
-      if (node.canHaveChars && !node.structureIsKnown) {
+      if (node.canHaveChars) {
         const charNodes = [];
 
         const chars = node.chars;
@@ -2447,7 +2476,7 @@ let createValueNode;
         childNodes.chars = charNodes;
       }
       // url parts
-      if ((node.isUrl || node.isUrlString) && !node.structureIsKnown) {
+      if (node.isUrl || node.isUrlString) {
         const urlPartNodes = {};
 
         const urlParts = node.isUrl ? node.value : new URL(node.value);
