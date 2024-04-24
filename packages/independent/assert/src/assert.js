@@ -2843,8 +2843,9 @@ let writeDiff;
         break value;
       }
       if (node.wellKnownId) {
-        const valueColor = getValueColor(comparison, selfContext);
-        valueDiff += ANSI.color(node.wellKnownId, valueColor);
+        valueDiff += writePathDiff(comparison, selfContext, (node) =>
+          node.wellKnownPath ? node.wellKnownPath.parts : undefined,
+        );
         break value;
       }
       if (node.isSourceCode) {
@@ -4514,16 +4515,16 @@ const createValuePath = (parts = []) => {
         propertyKey = String(property);
         propertyKeyCanUseDot = true;
       }
-      if (parts.length > 0) {
-        if (isPropertyDescriptor || isMeta) {
-          propertyKey = `[[${propertyKey}]]`;
-        } else if (propertyKeyCanUseDot) {
-          propertyKey = `.${propertyKey}`;
-        } else {
-          propertyKey = `[${propertyKey}]`;
-        }
+      if (parts.length === 0) {
+        return createValuePath([propertyKey]);
       }
-      return createValuePath([...parts, propertyKey]);
+      if (isPropertyDescriptor || isMeta) {
+        return createValuePath([...parts, "[[", propertyKey, "]]"]);
+      }
+      if (propertyKeyCanUseDot) {
+        return createValuePath([...parts, ".", propertyKey]);
+      }
+      return createValuePath([...parts, "[", propertyKey, "]"]);
     },
   };
 };
@@ -4608,7 +4609,8 @@ const writePathDiff = (comparison, context, getter) => {
   const node = comparison[context.resultType];
   const otherNode = comparison[context.otherResultType];
   let path = getter(node);
-  let otherPath = otherNode ? getter(otherNode) : null;
+  let otherPath = otherNode ? getter(otherNode) : [];
+  let hasOtherPath = otherNode && otherPath !== undefined;
   path = Array.isArray(path) ? path : [path];
   otherPath = Array.isArray(otherPath) ? otherPath : [otherPath];
 
@@ -4624,7 +4626,7 @@ const writePathDiff = (comparison, context, getter) => {
         return targetNode === node ? part : otherPart;
       },
       {
-        preferSolorColor: index > 0,
+        preferSolorColor: hasOtherPath && index >= otherPath.length,
       },
     );
     pathDiff += ANSI.color(part, partColor);
