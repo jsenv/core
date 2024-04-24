@@ -4,6 +4,10 @@ import { createAssert } from "../src/assert.js";
 
 const assert = createAssert();
 
+// TODO:
+// - symbol diff are displayed first
+// - symbol not displayed when no diff (because they are usually internal)
+
 await startSnapshotTesting("symbol", {
   // ["named Symbol() property added"]: () => {
   //   assert({
