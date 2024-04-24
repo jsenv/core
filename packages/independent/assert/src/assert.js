@@ -4514,10 +4514,11 @@ const symbolToDescription = (symbol) => {
   );
   // return symbol.description // does not work on node
 };
-const createValuePath = (path = "") => {
+const createValuePath = (parts = []) => {
   return {
-    toString: () => path,
-    valueOf: () => path,
+    parts,
+    toString: () => parts.join(""),
+    valueOf: () => parts.join(""),
     append: (property, { isArrayIndex, isPropertyDescriptor, isMeta } = {}) => {
       let propertyKey = "";
       let propertyKeyCanUseDot = false;
@@ -4536,8 +4537,7 @@ const createValuePath = (path = "") => {
         propertyKey = String(property);
         propertyKeyCanUseDot = true;
       }
-      let propertyPathString;
-      if (path) {
+      if (parts.length > 0) {
         if (isPropertyDescriptor || isMeta) {
           propertyKey = `[[${propertyKey}]]`;
         } else if (propertyKeyCanUseDot) {
@@ -4545,11 +4545,8 @@ const createValuePath = (path = "") => {
         } else {
           propertyKey = `[${propertyKey}]`;
         }
-        propertyPathString = `${path}${propertyKey}`;
-      } else {
-        propertyPathString = propertyKey;
       }
-      return createValuePath(propertyPathString);
+      return createValuePath([...parts, propertyKey]);
     },
   };
 };
@@ -4566,12 +4563,12 @@ let getWellKnownId;
   getWellKnownId = (value) => {
     if (!wellKnownWeakMap.size) {
       visitValue(global, createValuePath());
-      visitValue(AsyncFunction, createValuePath("AsyncFunction"));
+      visitValue(AsyncFunction, createValuePath(["AsyncFunction"]));
 
-      visitValue(GeneratorFunction, createValuePath("GeneratorFunction"));
+      visitValue(GeneratorFunction, createValuePath(["GeneratorFunction"]));
       visitValue(
         AsyncGeneratorFunction,
-        createValuePath("AsyncGeneratorFunction"),
+        createValuePath(["AsyncGeneratorFunction"]),
       );
     }
     if (typeof value === "symbol") {

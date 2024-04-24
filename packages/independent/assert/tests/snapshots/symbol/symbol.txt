@@ -1,3 +1,9 @@
+# well known symbol diff
+AssertionError: actual and expect are different:
+
+actual: Symbol.iterator
+expect: Symbol.toStringTag
+
 # Symbol() description modified
 AssertionError: actual and expect are different:
 

@@ -1,3 +1,14 @@
+# well known symbol diff
+
+```js
+assert({
+  actual: Symbol.iterator,
+  expect: Symbol.toStringTag,
+});
+```
+
+![img](<./symbol/well known symbol diff.svg>)
+
 # Symbol() description modified
 
 ```js

@@ -83,6 +83,12 @@ await startSnapshotTesting("symbol", {
   //     },
   //   });
   // },
+  ["well known symbol diff"]: () => {
+    assert({
+      actual: Symbol.iterator,
+      expect: Symbol.toStringTag,
+    });
+  },
   ["Symbol() description modified"]: () => {
     assert({
       actual: Symbol("a"),
