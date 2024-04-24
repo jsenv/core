@@ -1629,7 +1629,7 @@ let createValueNode;
       info: {
         let composite = false;
         let primitive = false;
-        let wellKnownId;
+        let wellKnownPath;
         let subtype;
         let subtypeDisplayed;
         let subtypeDisplayedWhenCollapsed;
@@ -1673,7 +1673,7 @@ let createValueNode;
         let canHaveUrlParts = false;
 
         if (value === ARRAY_EMPTY_VALUE) {
-          wellKnownId = "empty";
+          wellKnownPath = createValuePath(["empty"]);
           subtype = "empty";
         } else if (type === "property") {
         } else if (type === "map_entry") {
@@ -1695,7 +1695,7 @@ let createValueNode;
         } else {
           composite = isComposite(value);
           primitive = !composite;
-          wellKnownId = getWellKnownId(value);
+          wellKnownPath = getWellKnownValuePath(value);
           if (composite) {
             canHaveProps = true;
             if (Object.isFrozen(value)) {
@@ -1744,7 +1744,7 @@ let createValueNode;
               subtype = getSubtype(value);
             }
             reference =
-              wellKnownId || type === "prototype"
+              wellKnownPath || type === "prototype"
                 ? null
                 : getReference(value, node);
             visitPrototypes(value, (proto) => {
@@ -1858,7 +1858,7 @@ let createValueNode;
               }
             } else if (subtype === "symbol") {
               isSymbol = true;
-              if (!wellKnownId) {
+              if (!wellKnownPath) {
                 symbolKey = Symbol.keyFor(value);
                 if (symbolKey) {
                   subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
@@ -1953,7 +1953,8 @@ let createValueNode;
           propsSealed,
           propsExtensionsPrevented,
           canHaveIndexedValues,
-          wellKnownId,
+          wellKnownPath,
+          wellKnownId: wellKnownPath ? wellKnownPath.toString() : "",
           constructorCall,
           constructorCallUseNew,
           constructorCallOpenDelimiter,
@@ -3532,35 +3533,11 @@ let writeDiff;
         return "";
       }
       if (subtypeDisplayed) {
-        subtypeDisplayed = Array.isArray(subtypeDisplayed)
-          ? subtypeDisplayed
-          : [subtypeDisplayed];
-        const otherNode = comparison[context.otherResultType];
-        let otherNodeSubtypeDisplayed = otherNode
-          ? context.collapsed
-            ? otherNode.subtypeDisplayedWhenCollapsed
-            : otherNode.subtypeDisplayed
-          : null;
-        otherNodeSubtypeDisplayed = Array.isArray(otherNodeSubtypeDisplayed)
-          ? otherNodeSubtypeDisplayed
-          : [otherNodeSubtypeDisplayed];
-        let index = 0;
-        while (index < subtypeDisplayed.length) {
-          const part = subtypeDisplayed[index];
-          const otherPart = otherNodeSubtypeDisplayed[index];
-          const partColor = pickColor(
-            comparison,
-            context,
-            (targetNode) => {
-              return targetNode === node ? part : otherPart;
-            },
-            {
-              preferSolorColor: index > 0,
-            },
-          );
-          labelDiff += ANSI.color(part, partColor);
-          index++;
-        }
+        labelDiff += writePathDiff(comparison, context, (node) =>
+          context.collapsed
+            ? node.subtypeDisplayedWhenCollapsed
+            : node.subtypeDisplayed,
+        );
       }
     }
 
@@ -4477,9 +4454,9 @@ const isComposite = (value) => {
   return false;
 };
 const humanizeSymbol = (symbol) => {
-  const symbolWellKnownId = getWellKnownId(symbol);
-  if (symbolWellKnownId) {
-    return symbolWellKnownId;
+  const symbolWellKnownValuePath = getWellKnownValuePath(symbol);
+  if (symbolWellKnownValuePath) {
+    return symbolWellKnownValuePath.toString();
   }
   const description = symbolToDescription(symbol);
   if (description) {
@@ -4556,11 +4533,11 @@ const GeneratorFunction = function* () {}.constructor;
 const AsyncGeneratorFunction = async function* () {}.constructor;
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
-let getWellKnownId;
+let getWellKnownValuePath;
 {
   const wellKnownWeakMap = new WeakMap();
   const symbolWellKnownMap = new Map();
-  getWellKnownId = (value) => {
+  getWellKnownValuePath = (value) => {
     if (!wellKnownWeakMap.size) {
       visitValue(global, createValuePath());
       visitValue(AsyncFunction, createValuePath(["AsyncFunction"]));
@@ -4579,7 +4556,7 @@ let getWellKnownId;
 
   const visitValue = (value, valuePath) => {
     if (typeof value === "symbol") {
-      symbolWellKnownMap.set(value, String(valuePath));
+      symbolWellKnownMap.set(value, valuePath);
       return;
     }
     if (!isComposite(value)) {
@@ -4590,7 +4567,7 @@ let getWellKnownId;
       // prevent infinite recursion on circular structures
       return;
     }
-    wellKnownWeakMap.set(value, String(valuePath));
+    wellKnownWeakMap.set(value, valuePath);
 
     const visitProperty = (property) => {
       let descriptor;
@@ -4625,6 +4602,35 @@ const splitChars = (string) => {
   // eslint-disable-next-line new-cap
   const splitter = new Graphemer.default();
   return splitter.splitGraphemes(string);
+};
+
+const writePathDiff = (comparison, context, getter) => {
+  const node = comparison[context.resultType];
+  const otherNode = comparison[context.otherResultType];
+  let path = getter(node);
+  let otherPath = otherNode ? getter(otherNode) : null;
+  path = Array.isArray(path) ? path : [path];
+  otherPath = Array.isArray(otherPath) ? otherPath : [otherPath];
+
+  let pathDiff = "";
+  let index = 0;
+  while (index < path.length) {
+    const part = path[index];
+    const otherPart = otherPath[index];
+    const partColor = pickColor(
+      comparison,
+      context,
+      (targetNode) => {
+        return targetNode === node ? part : otherPart;
+      },
+      {
+        preferSolorColor: index > 0,
+      },
+    );
+    pathDiff += ANSI.color(part, partColor);
+    index++;
+  }
+  return pathDiff;
 };
 
 const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
