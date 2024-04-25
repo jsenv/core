@@ -4735,8 +4735,8 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
       return sameColor;
     }
     const node = comparison[context.resultType];
-    const currentValue = getter(node);
-    const otherValue = getter(otherNode);
+    const currentValue = getter(node, otherNode);
+    const otherValue = getter(otherNode, node);
     if (currentValue !== otherValue) {
       return preferSolorColor
         ? context.resultColorWhenSolo
@@ -4747,9 +4747,14 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
 };
 const pickDelimitersColor = (comparison, context) => {
   return pickColor(comparison, context, (node) => {
-    const internalOrSelfNode = node.childNodes.internalValue || node;
-    // if they got the same subtype ok, otherwise no
-    return internalOrSelfNode.openDelimiter;
+    if (comparison.reasons.self.modified.has("primitive")) {
+      return node.openDelimiter;
+    }
+    const internalNode = node.childNodes.internalValue;
+    if (internalNode) {
+      return internalNode.openDelimiter;
+    }
+    return node.openDelimiter;
   });
 };
 const pickColorAccordingToChild = (comparison, context, getter) => {
