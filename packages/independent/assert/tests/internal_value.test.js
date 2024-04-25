@@ -1,3 +1,5 @@
+/* eslint-disable no-new-wrappers */
+
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 import { createAssert } from "../src/assert.js";
@@ -14,7 +16,6 @@ const assert = createAssert();
 // const signal = (v) => new Signal(v);
 
 await startSnapshotTesting("internal_value", {
-  /* eslint-disable no-new-wrappers */
   ["diff new String value"]: () => {
     assert({
       actual: new String("a"),
@@ -60,7 +61,6 @@ await startSnapshotTesting("internal_value", {
       expect: Object.assign(new String("b"), { foo: false }),
     });
   },
-  /* eslint-enable no-new-wrappers */
   ["signal(true) and signal(false)"]: () => {
     assert({
       actual: {
@@ -238,6 +238,16 @@ await startSnapshotTesting("internal_value", {
     assert({
       actual,
       expect,
+    });
+  },
+  ["Symbol.toPrimitive"]: () => {
+    assert({
+      actual: {
+        [Symbol.toPrimitive]: () => {
+          return "10";
+        },
+      },
+      expect: "10",
     });
   },
 });

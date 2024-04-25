@@ -164,11 +164,11 @@ expect: Signal("a")
 AssertionError: actual and expect have 1 difference:
 
 actual: <ref #1> {
-  "valueOf()": <ref #1>,
+  valueOf(): <ref #1>,
   a: true,
 }
 expect: <ref #2> {
-  "valueOf()": <ref #2>,
+  valueOf(): <ref #2>,
   a: false,
 }
 
@@ -176,19 +176,27 @@ expect: <ref #2> {
 AssertionError: actual and expect have 1 difference:
 
 actual: <ref #1> {
-  "valueOf()": <ref #1>,
+  valueOf(): <ref #1>,
 }
 expect: {
-  "valueOf()": 10,
+  valueOf(): 10,
 }
 
 # valueOf 10 and valueOf self
 AssertionError: actual and expect have 1 difference:
 
 actual: {
-  "valueOf()": 10,
+  valueOf(): 10,
 }
 expect: <ref #1> {
-  "valueOf()": <ref #1>,
+  valueOf(): <ref #1>,
 }
+
+# Symbol.toPrimitive
+AssertionError: actual and expect are different:
+
+actual: {
+  Symbol.toPrimitive(): "10"
+}
+expect: "10"
 

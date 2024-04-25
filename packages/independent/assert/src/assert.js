@@ -26,6 +26,22 @@ const createSourceCode = (value) => {
   };
 };
 
+const defaultOptions = {
+  colors: true,
+  actual: undefined,
+  expect: undefined,
+  maxDepth: 5,
+  maxColumns: 100,
+  maxDiffPerObject: 5,
+  maxValueAroundDiff: 2,
+  maxValueInsideDiff: 4,
+  maxDepthInsideDiff: 1,
+  maxLineAroundDiff: 2,
+  quote: "auto",
+  preserveLineBreaks: false,
+  signs: false,
+};
+
 export const createAssert = ({ format = (v) => v } = {}) => {
   const assert = (...args) => {
     // param validation
@@ -48,6 +64,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           `assert must be called with { actual, expect }, received ${firstArg} as first argument instead of object`,
         );
       }
+      const unexpectedParamNames = Object.keys(firstArg).filter(
+        (key) => !Object.hasOwn(defaultOptions, key),
+      );
+      if (unexpectedParamNames.length > 0) {
+        throw new TypeError(
+          `${unexpectedParamNames.join(",")}: there is no such param`,
+        );
+      }
       if ("actual" in firstArg === false) {
         throw new Error(
           `assert must be called with { actual, expect }, missing actual property on first argument`,
@@ -58,20 +82,21 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           `assert must be called with { actual, expect }, missing expect property on first argument`,
         );
       }
+      firstArg = { ...defaultOptions, ...firstArg };
     }
 
     const {
-      colors = true,
+      colors,
       actual,
       expect,
-      maxDepth = 5,
-      maxColumns = 100,
-      maxDiffPerObject = 5,
-      maxValueAroundDiff = 2,
-      maxValueInsideDiff = 4,
-      maxDepthInsideDiff = 1,
-      maxLineAroundDiff = 2,
-      quote = "auto",
+      maxDepth,
+      maxColumns,
+      maxDiffPerObject,
+      maxValueAroundDiff,
+      maxValueInsideDiff,
+      maxDepthInsideDiff,
+      maxLineAroundDiff,
+      quote,
       preserveLineBreaks,
       signs,
     } = firstArg;
@@ -1512,6 +1537,12 @@ const shouldIgnoreProperty = (
       node.childNodes.internalValue.property === "toString()"
     );
   }
+  if (propertyNameOrSymbol === Symbol.toPrimitive) {
+    return (
+      node.childNodes.internalValue &&
+      node.childNodes.internalValue.property === "Symbol.toPrimitive()"
+    );
+  }
   if (isStringIndex) {
     return true;
   }
@@ -1627,6 +1658,7 @@ let createValueNode;
       valueEndSeparator,
       isArrayIndex,
       property,
+      isSpecialProperty,
       descriptor,
       index,
       isSourceCode = false,
@@ -1850,7 +1882,10 @@ let createValueNode;
                 if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (type === "property_key") {
-                  if (isValidPropertyIdentifier(property)) {
+                  if (
+                    isValidPropertyIdentifier(property) ||
+                    isSpecialProperty
+                  ) {
                     // this property does not require quotes
                   } else {
                     useQuotes = true;
@@ -2020,6 +2055,7 @@ let createValueNode;
           type: "property_key",
           value: propertyLikeNode.property,
           property: propertyLikeNode.property,
+          isSpecialProperty: propertyLikeNode.property.endsWith("()"),
           showOnlyWhenDiff: false,
         });
         propertyLikeNode.childNodes.key = keyNode;
@@ -2133,7 +2169,7 @@ let createValueNode;
             property: "Symbol.toPrimitive()",
             valueSeparator: ":",
           });
-          node.constructorCall = true;
+          // node.constructorCall = true;
           childNodes.internalValue = internalValueNode;
         } else if (
           node.isComposite &&
@@ -3612,7 +3648,7 @@ let writeDiff;
     } else if (node.constructorCall) {
       const internalValueNode = node.childNodes.internalValue;
       let internalValueDiff = "";
-      if (internalValueNode) {
+      if (internalValueNode && internalValueNode.displayedIn === "subtype") {
         const internalValueComparison = internalValueNode.comparison;
         // const actualCanHaveInternalValue = Boolean(
         //   internalValueComparison.actualNode &&
