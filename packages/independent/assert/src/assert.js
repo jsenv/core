@@ -1623,6 +1623,7 @@ let createValueNode;
       type,
       value,
       valueSeparator,
+      valueStartSeparator,
       valueEndSeparator,
       isArrayIndex,
       property,
@@ -1925,6 +1926,7 @@ let createValueNode;
           type,
           value,
           valueSeparator,
+          valueStartSeparator,
           valueEndSeparator,
           valueOf: () => {
             throw new Error(`use ${name}.value`);
@@ -2258,6 +2260,7 @@ let createValueNode;
               propertySymbol,
             );
             associatedValueMetaMap.set(propertySymbol, {
+              propertyIsSymbol: true,
               propertyDescriptor,
             });
           }
@@ -2283,6 +2286,7 @@ let createValueNode;
         for (const [
           propertyNameOrSymbol,
           {
+            propertyIsSymbol,
             isSetValue,
             value,
             isArrayIndex,
@@ -2362,6 +2366,8 @@ let createValueNode;
               path: propertyNode.path,
               type: "property_key",
               value: propertyNameOrSymbol,
+              valueStartSeparator: propertyIsSymbol ? "[" : "",
+              valueEndSeparator: propertyIsSymbol ? "]" : "",
               showOnlyWhenDiff: false,
               property: propertyNode.property,
               isArrayIndex,
@@ -2674,6 +2680,7 @@ let writeDiff;
     let isNestedValue = false;
     let property = getNodeDisplayedProperty(node);
     let valueSeparator = node.valueSeparator;
+    let valueStartSeparator = node.valueStartSeparator;
     let valueEndSeparator = getNodeValueEndSeparator(node);
 
     if (node.type === "property_key") {
@@ -2803,6 +2810,9 @@ let writeDiff;
     }
 
     selfContext.textIndent += stringWidth(diff);
+    if (valueStartSeparator) {
+      selfContext.maxColumns -= valueStartSeparator.length;
+    }
     if (valueEndSeparator) {
       selfContext.maxColumns -= valueEndSeparator.length;
     }
@@ -3526,6 +3536,14 @@ let writeDiff;
         diff += " ";
       }
       diff += valueDiff;
+    }
+    if (valueStartSeparator) {
+      const valueStartSeparatorColor = pickColor(
+        comparison,
+        context,
+        (node) => node.valueStartSeparator,
+      );
+      diff = ANSI.color(valueStartSeparator, valueStartSeparatorColor) + diff;
     }
     if (valueEndSeparator) {
       const valueEndSeparatorColor = pickColor(

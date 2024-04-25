@@ -6,87 +6,98 @@ const assert = createAssert();
 
 // TODO:
 // - symbol diff are displayed first
-// - symbol not displayed when no diff (because they are usually internal)
 
 await startSnapshotTesting("symbol", {
-  // ["named Symbol() property added"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol("foo")]: true,
-  //     },
-  //     expect: {},
-  //   });
-  // },
-  // ["named Symbol() property removed"]: () => {
-  //   assert({
-  //     actual: {},
-  //     expect: {
-  //       [Symbol("foo")]: true,
-  //     },
-  //   });
-  // },
-  // ["named Symbol() property value modified"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol("foo")]: true,
-  //     },
-  //     expect: {
-  //       [Symbol("foo")]: false,
-  //     },
-  //   });
-  // },
-  // ["named Symbol() property no diff"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //       [Symbol("foo")]: true,
-  //     },
-  //     expect: {
-  //       a: false,
-  //       [Symbol("foo")]: true,
-  //     },
-  //   });
-  // },
-  // ["anonymous Symbol() property value modified"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol()]: true,
-  //     },
-  //     expect: {
-  //       [Symbol()]: false,
-  //     },
-  //   });
-  // },
-  // ["Symbol.for() property value modified"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.for("foo")]: true,
-  //     },
-  //     expect: {
-  //       [Symbol.for("foo")]: false,
-  //     },
-  //   });
-  // },
-  // ["Symbol.iterator property value modified"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.iterator]: true,
-  //     },
-  //     expect: {
-  //       [Symbol.iterator]: false,
-  //     },
-  //   });
-  // },
-  // ["Symbol.toStringTag property value modified"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "a",
-  //     },
-  //     expect: {
-  //       [Symbol.toStringTag]: "b",
-  //     },
-  //   });
-  // },
+  ["named Symbol() property added"]: () => {
+    assert({
+      actual: {
+        [Symbol("foo")]: true,
+      },
+      expect: {},
+    });
+  },
+  ["named Symbol() property removed"]: () => {
+    assert({
+      actual: {},
+      expect: {
+        [Symbol("foo")]: true,
+      },
+    });
+  },
+  ["Symbol.for() property value modified"]: () => {
+    assert({
+      actual: {
+        [Symbol.for("foo")]: true,
+      },
+      expect: {
+        [Symbol.for("foo")]: false,
+      },
+    });
+  },
+  ["Symbol.for() property no diff"]: () => {
+    assert({
+      actual: {
+        a: true,
+        [Symbol.for("foo")]: true,
+      },
+      expect: {
+        a: false,
+        [Symbol.for("foo")]: true,
+      },
+    });
+  },
+  ["named Symbol() property value modified"]: () => {
+    assert({
+      actual: {
+        [Symbol("foo")]: true,
+      },
+      expect: {
+        [Symbol("foo")]: false,
+      },
+    });
+  },
+  ["named Symbol() property no diff"]: () => {
+    assert({
+      actual: {
+        a: true,
+        [Symbol("foo")]: true,
+      },
+      expect: {
+        a: false,
+        [Symbol("foo")]: true,
+      },
+    });
+  },
+  ["anonymous Symbol() property value modified"]: () => {
+    assert({
+      actual: {
+        [Symbol()]: true,
+      },
+      expect: {
+        [Symbol()]: false,
+      },
+    });
+  },
+  ["Symbol.iterator property value modified"]: () => {
+    assert({
+      actual: {
+        [Symbol.iterator]: true,
+      },
+      expect: {
+        [Symbol.iterator]: false,
+      },
+    });
+  },
+  ["Symbol.toStringTag property value modified"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "a",
+      },
+      expect: {
+        [Symbol.toStringTag]: "b",
+      },
+    });
+  },
   ["well known symbol diff"]: () => {
     assert({
       actual: Symbol.iterator,
@@ -127,6 +138,18 @@ await startSnapshotTesting("symbol", {
     assert({
       actual: Symbol.for("b"),
       expect: Symbol("a"),
+    });
+  },
+  ["symbol diff comes first"]: () => {
+    assert({
+      actual: {
+        a: true,
+        [Symbol.for("a")]: true,
+      },
+      expect: {
+        a: false,
+        [Symbol.for("a")]: false,
+      },
     });
   },
 });
