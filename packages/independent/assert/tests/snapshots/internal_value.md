@@ -337,7 +337,7 @@ assert({
 
 ![img](<./internal_value/valueOf 10 and valueOf self.svg>)
 
-# Symbol.toPrimitive
+# Symbol.toPrimitive vs primitive
 
 ```js
 assert({
@@ -350,5 +350,20 @@ assert({
 });
 ```
 
-![img](<./internal_value/Symbol.toPrimitive.svg>)
+![img](<./internal_value/Symbol.toPrimitive vs primitive.svg>)
+
+# primitive vs Symbol.toPrimitive
+
+```js
+assert({
+  actual: 10,
+  expect: {
+    [Symbol.toPrimitive]: () => {
+      return "10";
+    },
+  },
+});
+```
+
+![img](<./internal_value/primitive vs Symbol.toPrimitive.svg>)
 

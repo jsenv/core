@@ -192,11 +192,19 @@ expect: <ref #1> {
   valueOf(): <ref #1>,
 }
 
-# Symbol.toPrimitive
+# Symbol.toPrimitive vs primitive
 AssertionError: actual and expect are different:
 
 actual: {
   Symbol.toPrimitive(): "10"
 }
 expect: "10"
+
+# primitive vs Symbol.toPrimitive
+AssertionError: actual and expect are different:
+
+actual: 10
+expect: {
+  Symbol.toPrimitive(): "10"
+}
 
