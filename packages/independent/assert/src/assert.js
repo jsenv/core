@@ -2092,12 +2092,11 @@ let createValueNode;
             path: path.append("toString()"),
             type: "internal_value",
             value: functionBody,
-            displayedIn:
-              node.functionAnalysis.type === "class" ? "" : "subtype",
+            displayedIn: node.functionAnalysis.type === "class" ? "" : "label",
             property: "toString()",
             isSourceCode: true,
           });
-          node.constructorCall = internalValueNode.displayedIn === "subtype";
+          node.constructorCall = internalValueNode.displayedIn === "label";
           childNodes.internalValue = internalValueNode;
         } else if (node.isSet) {
           const setValues = [];
@@ -2109,7 +2108,7 @@ let createValueNode;
             path: path.append("Symbol.iterator()"),
             type: "internal_value",
             value: setValues,
-            displayedIn: "subtype",
+            displayedIn: "label",
             property: "Symbol.iterator()",
           });
           node.constructorCall = true;
@@ -2121,10 +2120,10 @@ let createValueNode;
             path: path.append("href"),
             type: "internal_value",
             value: internalValue,
-            displayedIn: "subtype",
+            displayedIn: "label",
             property: "href",
           });
-          node.constructorCall = internalValueNode.displayedIn === "subtype";
+          node.constructorCall = internalValueNode.displayedIn === "label";
           childNodes.internalValue = internalValueNode;
         } else if (node.isSymbol) {
           const { symbolDescription, symbolKey } = node;
@@ -2134,7 +2133,7 @@ let createValueNode;
               path: path.append("toString()"),
               type: "internal_value",
               value: symbolDescription,
-              displayedIn: "subtype",
+              displayedIn: "label",
               property: "toString()",
             });
             node.constructorCall = true;
@@ -2145,7 +2144,7 @@ let createValueNode;
               path: path.append("keyFor()"),
               type: "internal_value",
               value: symbolKey,
-              displayedIn: "subtype",
+              displayedIn: "label",
               property: "keyFor()",
             });
             node.constructorCall = true;
@@ -2182,7 +2181,7 @@ let createValueNode;
             // otherwise it's displayed as a prop
             node.subtype === "Object" || node.subtype === "Array"
               ? "properties"
-              : "subtype";
+              : "label";
           const internalValueNode = createPropertyLikeNode({
             parent: node,
             path: path.append("valueOf()"),
@@ -2191,9 +2190,9 @@ let createValueNode;
             displayedIn,
             property: "valueOf()",
             valueSeparator: ":",
-            valueEndSeparator: displayedIn === "subtype" ? "" : ",",
+            valueEndSeparator: displayedIn === "label" ? "" : ",",
           });
-          node.constructorCall = internalValueNode.displayedIn === "subtype";
+          node.constructorCall = internalValueNode.displayedIn === "label";
           childNodes.internalValue = internalValueNode;
         }
       }
@@ -2358,12 +2357,12 @@ let createValueNode;
               node.functionAnalysis.type === "class"
             ) {
               // function name or class name will be displayed in the "subtypeDiff"
-              displayedIn = "subtype";
+              displayedIn = "label";
             }
           }
           if (propertyNameOrSymbol === "message") {
             if (node.isError) {
-              displayedIn = "subtype";
+              displayedIn = "label";
             }
           }
           if (!showOnlyWhenDiff) {
@@ -2462,7 +2461,7 @@ let createValueNode;
                     ? ""
                     : ":",
               valueEndSeparator:
-                propertyNode.displayedIn === "subtype"
+                propertyNode.displayedIn === "label"
                   ? ""
                   : propertyNode.isClassPrototype
                     ? ""
@@ -2681,7 +2680,7 @@ let writeDiff;
     }
 
     const getNodeDisplayedProperty = (node) => {
-      if (node.displayedIn === "subtype") {
+      if (node.displayedIn === "label") {
         return "";
       }
       if (node.isClassPrototype) {
@@ -2723,13 +2722,13 @@ let writeDiff;
       const maxColumns = selfContext.maxColumns;
       selfContext.maxColumns = Math.round(maxColumns * 0.5);
     } else if (node.type === "property_descriptor") {
-      if (node.displayedIn !== "subtype") {
+      if (node.displayedIn !== "label") {
         isNestedValue = true;
       }
     } else if (node.type === "prototype") {
       isNestedValue = true;
     } else if (node.type === "internal_value") {
-      if (node.displayedIn !== "subtype") {
+      if (node.displayedIn !== "label") {
         isNestedValue = true;
       }
     } else if (node.type === "set_value") {
@@ -3105,15 +3104,15 @@ let writeDiff;
         const nestedValueSpacing = node.canHaveProps && !node.isArray;
         const ellipsis = "...";
 
-        let subtypeDiffCollapsed = writeLabelDiff(comparison, {
+        let labelDiffCollapsed = writeLabelDiff(comparison, {
           ...selfContext,
           collapsedWithOverview: false,
           collapsed: true,
         });
-        if (subtypeDiffCollapsed) {
-          subtypeDiffCollapsed += " ";
+        if (labelDiffCollapsed) {
+          labelDiffCollapsed += " ";
         }
-        const estimatedCollapsedBoilerplate = `${subtypeDiffCollapsed}${openDelimiter}${nestedValueSeparator} ${ellipsis} ${closeDelimiter}`;
+        const estimatedCollapsedBoilerplate = `${labelDiffCollapsed}${openDelimiter}${nestedValueSeparator} ${ellipsis} ${closeDelimiter}`;
         const estimatedCollapsedBoilerplateWidth = stringWidth(
           estimatedCollapsedBoilerplate,
         );
@@ -3135,7 +3134,7 @@ let writeDiff;
             continue;
           }
           const nestedNode = nestedComparison[context.resultType];
-          if (nestedNode.displayedIn === "subtype") {
+          if (nestedNode.displayedIn === "label") {
             continue;
           }
           // TODO: we should respect maxValueInsideDiff here too
@@ -3160,7 +3159,7 @@ let writeDiff;
           const valueWidth = stringWidth(valueDiffOverview);
           if (width + valueWidth > remainingWidth) {
             let overviewTruncated = "";
-            overviewTruncated += subtypeDiffCollapsed;
+            overviewTruncated += labelDiffCollapsed;
             overviewTruncated += ANSI.color(openDelimiter, markersColor);
             if (insideOverview) {
               if (nestedValueSpacing) {
@@ -3263,7 +3262,7 @@ let writeDiff;
             continue;
           }
           const nestedNode = nestedComparison[context.resultType];
-          if (nestedNode.displayedIn === "subtype") {
+          if (nestedNode.displayedIn === "label") {
             continue;
           }
           if (!nestedComparison.hasAnyDiff) {
@@ -3648,7 +3647,7 @@ let writeDiff;
     } else if (node.constructorCall) {
       const internalValueNode = node.childNodes.internalValue;
       let internalValueDiff = "";
-      if (internalValueNode && internalValueNode.displayedIn === "subtype") {
+      if (internalValueNode && internalValueNode.displayedIn === "label") {
         const internalValueComparison = internalValueNode.comparison;
         // const actualCanHaveInternalValue = Boolean(
         //   internalValueComparison.actualNode &&
@@ -4749,6 +4748,7 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
 const pickDelimitersColor = (comparison, context) => {
   return pickColor(comparison, context, (node) => {
     const internalOrSelfNode = node.childNodes.internalValue || node;
+    // if they got the same subtype ok, otherwise no
     return internalOrSelfNode.openDelimiter;
   });
 };

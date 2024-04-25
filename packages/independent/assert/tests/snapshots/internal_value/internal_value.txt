@@ -132,7 +132,7 @@ expect: Signal([
   false,
 ])
 
-# signal([true]) and false
+# signal([true]) and [false]
 AssertionError: actual and expect are different:
 
 actual: Signal([

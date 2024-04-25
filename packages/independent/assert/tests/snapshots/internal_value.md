@@ -233,7 +233,7 @@ assert({
 
 ![img](<./internal_value/[true] and signal([false]).svg>)
 
-# signal([true]) and false
+# signal([true]) and [false]
 
 ```js
 assert({
@@ -245,7 +245,7 @@ assert({
 });
 ```
 
-![img](<./internal_value/signal([true]) and false.svg>)
+![img](<./internal_value/signal([true]) and [false].svg>)
 
 # signal(string) and signal(string)
 

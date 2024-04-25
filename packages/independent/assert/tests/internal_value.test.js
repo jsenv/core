@@ -171,7 +171,7 @@ await startSnapshotTesting("internal_value", {
       },
     });
   },
-  ["signal([true]) and false"]: () => {
+  ["signal([true]) and [false]"]: () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
