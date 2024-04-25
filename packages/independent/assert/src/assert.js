@@ -2152,7 +2152,9 @@ let createValueNode;
           } else {
             node.constructorCall = true;
           }
-        } else if (
+        }
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toPrimitive
+        else if (
           node.isComposite &&
           Symbol.toPrimitive in node.value &&
           typeof node.value[Symbol.toPrimitive] === "function"
