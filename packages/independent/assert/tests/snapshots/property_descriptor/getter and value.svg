@@ -55,7 +55,7 @@
         <text x="94.01" y="71.55" fill="#DAA520">{</text>
         <text x="110.82" y="71.55" fill="#DAA520">[source code]</text>
         <text x="228.44" y="71.55" fill="#DAA520">}</text>
-        <text x="236.84" y="71.55" fill="#7f7f7f">,</text>
+        <text x="236.84" y="71.55" fill="#DAA520">,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
@@ -63,7 +63,7 @@
         <text x="26.8" y="128.55" fill="#DAA520">a</text>
         <text x="35.2" y="128.55" fill="#DAA520">:</text>
         <text x="52.01" y="128.55" fill="#DAA520">true</text>
-        <text x="85.61" y="128.55" fill="#7f7f7f">,</text>
+        <text x="85.61" y="128.55" fill="#DAA520">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

@@ -55,7 +55,7 @@
         <text x="43.61" y="71.55" fill="#DAA520">&#x22;</text>
         <text x="60.41" y="71.55" fill="#DAA520">=&#x3E;</text>
         <text x="85.61" y="71.55" fill="#DAA520">true</text>
-        <text x="119.22" y="71.55" fill="#7f7f7f">,</text>
+        <text x="119.22" y="71.55" fill="#DAA520">,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="26.8" y="90.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="109.55" fill="#7f7f7f">a</text>

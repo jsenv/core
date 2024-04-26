@@ -388,3 +388,100 @@ assert({
 
 ![img](<./function/class constructor removed.svg>)
 
+# static property value modified
+
+```js
+const anonymousActualClass = (function () {
+  return class {
+    a = "a_prop"; // class properties cannot be listed so it won't be catched
+    static a = "a_static";
+  };
+})();
+const anonymousExpectClass = (function () {
+  return class {
+    a = "a_prop_2";
+    static a = "a_static_2";
+  };
+})();
+assert({
+  actual: anonymousActualClass,
+  expect: anonymousExpectClass,
+});
+```
+
+![img](<./function/static property value modified.svg>)
+
+# static method return value modified
+
+```js
+const anonymousActualClass = (function () {
+  return class {
+    static a() {
+      return true;
+    }
+  };
+})();
+const anonymousExpectClass = (function () {
+  return class {
+    static a() {
+      return false;
+    }
+  };
+})();
+assert({
+  actual: anonymousActualClass,
+  expect: anonymousExpectClass,
+});
+```
+
+![img](<./function/static method return value modified.svg>)
+
+# class static property and object property
+
+```js
+assert({
+  actual: class {
+    static a = true;
+    static b = true;
+  },
+  expect: {
+    a: true,
+    b: false,
+  },
+});
+```
+
+![img](<./function/class static property and object property.svg>)
+
+# class static prop and function prop
+
+```js
+assert({
+  actual: class {
+    static a = true;
+  },
+  expect: Object.assign(function () {}, {
+    a: true,
+  }),
+});
+```
+
+![img](<./function/class static prop and function prop.svg>)
+
+# class prototype method vs function prototype method
+
+```js
+const toto = function () {};
+toto.a = true;
+toto.prototype.b = () => {};
+assert({
+  actual: class {
+    static a = true;
+    b() {}
+  },
+  expect: toto,
+});
+```
+
+![img](<./function/class prototype method vs function prototype method.svg>)
+

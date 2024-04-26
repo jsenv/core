@@ -51,7 +51,8 @@
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="71.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="71.55" fill="#7f7f7f">:</text>
-        <text x="52.01" y="71.55" fill="#7f7f7f">Object.</text>
+        <text x="52.01" y="71.55" fill="#7f7f7f">Object</text>
+        <text x="102.42" y="71.55" fill="#7f7f7f">.</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">freeze</text>
         <text x="161.22" y="71.55" fill="#7f7f7f">(</text>
         <text x="169.63" y="71.55" fill="#7f7f7f">{</text>
@@ -71,7 +72,8 @@
         <text x="77.21" y="128.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="147.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="147.55" fill="#7f7f7f">:</text>
-        <text x="52.01" y="147.55" fill="#7f7f7f">Object.</text>
+        <text x="52.01" y="147.55" fill="#7f7f7f">Object</text>
+        <text x="102.42" y="147.55" fill="#7f7f7f">.</text>
         <text x="110.82" y="147.55" fill="#7f7f7f">freeze</text>
         <text x="161.22" y="147.55" fill="#7f7f7f">(</text>
         <text x="169.63" y="147.55" fill="#7f7f7f">{</text>

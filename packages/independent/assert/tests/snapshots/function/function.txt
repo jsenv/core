@@ -86,27 +86,27 @@ expect: class Robot {}
 AssertionError: actual and expect are different:
 
 actual: class Human extends Animal {
-  type = "human_actual";
+  static type = "human_actual";
 }
 expect: class Human extends Robot {
-  type = "human_expected";
+  static type = "human_expected";
 }
 
 # class static property modified
 AssertionError: actual and expect have 2 differences:
 
 actual: class A {
-  a = true;
+  static a = true;
 }
 expect: class A {
-  a = false;
+  static a = false;
 }
 
 # class static property added
 AssertionError: actual and expect have 2 differences:
 
 actual: class A {
-  a = true;
+  static a = true;
 }
 expect: class A {}
 
@@ -115,7 +115,7 @@ AssertionError: actual and expect have 2 differences:
 
 actual: class A {}
 expect: class A {
-  a = false;
+  static a = false;
 }
 
 # class method diff source
@@ -185,4 +185,58 @@ AssertionError: actual and expect are different:
 
 actual: class actual {}
 expect: class expect {}
+
+# static property value modified
+AssertionError: actual and expect have 2 differences:
+
+actual: class {
+  static a = "a_static";
+}
+expect: class {
+  static a = "a_static_2";
+}
+
+# static method return value modified
+AssertionError: actual and expect have 2 differences:
+
+actual: class {
+  static a() { [source code] };
+}
+expect: class {
+  static a() { [source code] };
+}
+
+# class static property and object property
+AssertionError: actual and expect are different:
+
+actual: class actual {
+  static a = true;
+  static b = true;
+}
+expect: {
+  a: true,
+  b: false,
+}
+
+# class static prop and function prop
+AssertionError: actual and expect are different:
+
+actual: class actual {
+  static a = true;
+}
+expect: function () { [source code] } {
+  a: true,
+}
+
+# class prototype method vs function prototype method
+AssertionError: actual and expect are different:
+
+actual: class actual {
+  static a = true;
+  b() { [source code] }
+}
+expect: function toto () { [source code] } {
+  a: true,
+  prototype: { b: () => { [source code] } },
+}
 

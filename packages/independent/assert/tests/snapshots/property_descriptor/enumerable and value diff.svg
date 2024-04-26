@@ -59,7 +59,7 @@
         <text x="119.22" y="90.55" fill="#DAA520">a</text>
         <text x="127.62" y="90.55" fill="#DAA520">:</text>
         <text x="144.42" y="90.55" fill="#DAA520">false</text>
-        <text x="186.43" y="90.55" fill="#7f7f7f">,</text>
+        <text x="186.43" y="90.55" fill="#DAA520">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
         <text x="10" y="128.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="128.55" fill="#7f7f7f">:</text>

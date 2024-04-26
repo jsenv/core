@@ -69,12 +69,12 @@
         <text x="119.22" y="147.55" fill="#DAA520">a</text>
         <text x="127.62" y="147.55" fill="#DAA520">:</text>
         <text x="144.42" y="147.55" fill="#DAA520">false</text>
-        <text x="186.43" y="147.55" fill="#7f7f7f">,</text>
+        <text x="186.43" y="147.55" fill="#DAA520">,</text>
         <text x="26.8" y="166.55" fill="#DAA520">configurable</text>
         <text x="136.02" y="166.55" fill="#DAA520">a</text>
         <text x="144.42" y="166.55" fill="#DAA520">:</text>
         <text x="161.22" y="166.55" fill="#DAA520">false</text>
-        <text x="203.23" y="166.55" fill="#7f7f7f">,</text>
+        <text x="203.23" y="166.55" fill="#DAA520">,</text>
         <text x="10" y="185.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

@@ -51,13 +51,13 @@
         <text x="77.21" y="52.55" fill="#cd5555">function</text>
         <text x="152.82" y="52.55" fill="#cd5555">()</text>
         <text x="178.03" y="52.55" fill="#7f7f7f">{</text>
-        <text x="194.83" y="52.55" fill="#7f7f7f">[source code]</text>
+        <text x="194.83" y="52.55" fill="#cd5555">[source code]</text>
         <text x="312.45" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#11bc79">() =&#x3E;</text>
         <text x="127.62" y="71.55" fill="#7f7f7f">{</text>
-        <text x="144.42" y="71.55" fill="#7f7f7f">[source code]</text>
+        <text x="144.42" y="71.55" fill="#11bc79">[source code]</text>
         <text x="262.04" y="71.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

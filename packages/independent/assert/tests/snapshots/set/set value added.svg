@@ -66,7 +66,7 @@
         <text x="26.8" y="128.55" fill="#DAA520">&#x22;</text>
         <text x="35.2" y="128.55" fill="#DAA520">Y</text>
         <text x="43.61" y="128.55" fill="#DAA520">&#x22;</text>
-        <text x="52.01" y="128.55" fill="#7f7f7f">,</text>
+        <text x="52.01" y="128.55" fill="#DAA520">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">]</text>
         <text x="18.4" y="147.55" fill="#7f7f7f">)</text>
         <text x="10" y="166.55" fill="#7f7f7f">expect</text>
@@ -89,7 +89,7 @@
         <text x="26.8" y="242.55" fill="#DAA520">&#x22;</text>
         <text x="35.2" y="242.55" fill="#DAA520">Z</text>
         <text x="43.61" y="242.55" fill="#DAA520">&#x22;</text>
-        <text x="52.01" y="242.55" fill="#7f7f7f">,</text>
+        <text x="52.01" y="242.55" fill="#DAA520">,</text>
         <text x="10" y="261.55" fill="#7f7f7f">]</text>
         <text x="18.4" y="261.55" fill="#7f7f7f">)</text>
       </g>

@@ -535,15 +535,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           addSelfDiff("primitiveValue");
         } else if (actualNode.isSourceCode !== expectNode.isSourceCode) {
           addSelfDiff("sourceCode");
-        } else if (actualNode.isSourceCode && expectNode.isSourceCode) {
-          if (
-            actualNode.parent.functionAnalysis.type ===
-              expectNode.parent.functionAnalysis.type &&
-            actualNode.value[sourceCodeSymbol] !==
-              expectNode.value[sourceCodeSymbol]
-          ) {
-            addSelfDiff("sourceCodeValue");
-          }
+        } else if (
+          actualNode.isSourceCode &&
+          expectNode.isSourceCode &&
+          actualNode.value[sourceCodeSymbol] !==
+            expectNode.value[sourceCodeSymbol]
+        ) {
+          addSelfDiff("sourceCodeValue");
         } else if (actualNode.subtype !== expectNode.subtype) {
           if (
             actualNode.isFunctionPrototype &&
@@ -583,6 +581,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           if (actualNode.extendedClassName !== expectNode.extendedClassName) {
             addSelfDiff("extendedClassName");
           }
+        }
+        if (
+          (actualNode.isClassStaticProperty &&
+            !expectNode.isClassStaticProperty) ||
+          (!actualNode.isClassStaticProperty &&
+            expectNode.isClassStaticProperty)
+        ) {
+          addSelfDiff("class_static");
         }
 
         props_frozen_or_sealed_or_non_extensible: {
@@ -1608,7 +1614,8 @@ const shouldIgnorePropertyDescriptor = (
   if (propertyDescriptorName === "enumerable") {
     const defaultValue =
       (propertyName === "prototype" && node.isFunction) ||
-      (propertyName === "message" && node.isError)
+      (propertyName === "message" && node.isError) ||
+      node.isClassPrototype
         ? false
         : true;
     return propertyDescriptorValue === defaultValue;
@@ -1662,7 +1669,7 @@ let createValueNode;
       descriptor,
       index,
       isSourceCode = false,
-      isClassProperty = false,
+      isClassStaticProperty = false,
       isClassPrototype = false,
       displayedIn,
       showOnlyWhenDiff = parent && parent.showOnlyWhenDiff === "deep"
@@ -1949,6 +1956,8 @@ let createValueNode;
             }
           } else if (type === "url_part") {
             depth = parent.depth;
+          } else if (isClassPrototype) {
+            depth = parent.depth;
           } else {
             depth = parent.depth + 1;
           }
@@ -1991,7 +2000,7 @@ let createValueNode;
           functionAnalysis,
           isFunctionPrototype,
           extendedClassName,
-          isClassProperty,
+          isClassStaticProperty,
           isClassPrototype,
           isArray,
           isSet,
@@ -2389,7 +2398,7 @@ let createValueNode;
             hidden,
             displayedIn,
             property: isArrayIndex ? null : propertyNameOrSymbol,
-            isClassProperty: node.functionAnalysis.type === "class",
+            isClassStaticProperty: node.functionAnalysis.type === "class",
             isClassPrototype:
               node.functionAnalysis.type === "class" &&
               propertyNameOrSymbol === "prototype",
@@ -2408,7 +2417,7 @@ let createValueNode;
               showOnlyWhenDiff: false,
               property: propertyNode.property,
               isArrayIndex,
-              isClassProperty: propertyNode.isClassProperty,
+              isClassStaticProperty: propertyNode.isClassStaticProperty,
               isClassPrototype: propertyNode.isClassPrototype,
               displayedIn: propertyNode.displayedIn,
             });
@@ -2453,7 +2462,7 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
-              valueSeparator: propertyNode.isClassProperty
+              valueSeparator: propertyNode.isClassStaticProperty
                 ? "="
                 : propertyDescriptorName === "get" ||
                     propertyDescriptorName === "set"
@@ -2465,15 +2474,15 @@ let createValueNode;
               valueEndSeparator:
                 propertyNode.displayedIn === "label"
                   ? ""
-                  : propertyNode.isClassPrototype
+                  : propertyNode.isClassPrototype || node.isClassPrototype
                     ? ""
-                    : propertyNode.isClassProperty
+                    : propertyNode.isClassStaticProperty
                       ? ";"
                       : ",",
               property: propertyNode.property,
               isArrayIndex,
               descriptor: propertyDescriptorName,
-              isClassProperty: propertyNode.isClassProperty,
+              isClassStaticProperty: propertyNode.isClassStaticProperty,
               isClassPrototype: propertyNode.isClassPrototype,
               displayedIn: propertyNode.displayedIn,
               showOnlyWhenDiff: propertyDescriptorName !== "value",
@@ -2854,30 +2863,58 @@ let writeDiff;
       selfContext.maxColumns -= valueEndSeparator.length;
     }
     if (
+      comparison.hasAnyDiff &&
       node.type !== "property" &&
-      node.type !== "line" &&
-      comparison.hasAnyDiff
+      node.type !== "line"
     ) {
+      let maxDepthInsideDiff = selfContext.maxDepthInsideDiff;
+      if (
+        comparison.reasons.self.modified.has("functionType") &&
+        (comparison.actualNode.functionAnalysis.type === "class" ||
+          comparison.expectNode.functionAnalysis.type === "class")
+      ) {
+        // maxDepthInsideDiff++;
+      }
       selfContext.maxDepth = Math.min(
-        node.depth + selfContext.maxDepthInsideDiff,
+        node.depth + maxDepthInsideDiff,
         selfContext.maxDepth,
       );
     }
 
     let displaySubtype = true;
-    reference: {
+    if (node.reference) {
+      displaySubtype = false;
+    }
+
+    let labelDiff = "";
+    if (displaySubtype) {
+      labelDiff = writeLabelDiff(comparison, selfContext);
+    }
+    let valueDiff = "";
+    value: {
+      if (!displayValue) {
+        break value;
+      }
+      if (node.type === "property_key" && node.isClassStaticProperty) {
+        const staticColor = pickColor(
+          comparison,
+          selfContext,
+          (node) => node.isClassStaticProperty,
+        );
+        valueDiff += ANSI.color("static", staticColor);
+        valueDiff += " ";
+      }
+
       // referencing an other composite
       if (node.reference) {
         const refColor = pickColor(comparison, selfContext, (node) =>
           node.reference ? node.reference.path.toString() : null,
         );
-        diff += ANSI.color(
+        valueDiff += ANSI.color(
           `<ref #${selfContext.getDisplayedId(node.reference.id)}>`,
           refColor,
         );
-        displayValue = false;
-        displaySubtype = false;
-        break reference;
+        break value;
       }
       // will be referenced by a composite
       let referenceFromOtherDisplayed;
@@ -2899,25 +2936,15 @@ let writeDiff;
           }
           return node.reference ? node.reference.path.toString() : null;
         });
-        diff += ANSI.color(
+        valueDiff += ANSI.color(
           `<ref #${selfContext.getDisplayedId(
             referenceFromOtherDisplayed.reference.id,
           )}>`,
           refColor,
         );
-        diff += " ";
+        valueDiff += " ";
       }
-    }
 
-    let subtypeDiff = "";
-    if (displaySubtype) {
-      subtypeDiff = writeLabelDiff(comparison, selfContext);
-    }
-    let valueDiff = "";
-    value: {
-      if (!displayValue) {
-        break value;
-      }
       if (node.wellKnownId) {
         valueDiff += writePathDiff(comparison, selfContext, (node) =>
           node.wellKnownPath ? node.wellKnownPath.parts : undefined,
@@ -3203,7 +3230,7 @@ let writeDiff;
         }
         const shouldDisplayDelimiters = node.isClassPrototype
           ? false
-          : subtypeDiff
+          : labelDiff
             ? insideOverview.length > 0
             : true;
         if (shouldDisplayDelimiters) {
@@ -3232,15 +3259,25 @@ let writeDiff;
       const relativeDepth = node.depth + selfContext.initialDepth;
       let indent = "  ".repeat(relativeDepth);
       let diffCount = 0;
+      let canResetTextIndent = !node.isClassPrototype;
 
       const writeNestedValueDiff = (nestedComparison, { resetModified }) => {
-        let nestedValueDiff = writeDiff(nestedComparison, {
+        const nestedContext = {
           ...selfContext,
-          textIndent: 0,
           modified: resetModified ? false : selfContext.modified,
-        });
-        if (nestedValueDiff && nestedComparison !== context.startComparison) {
+        };
+        if (canResetTextIndent) {
+          nestedContext.textIndent = 0;
+          canResetTextIndent = false;
+        }
+        let nestedValueDiff = writeDiff(nestedComparison, nestedContext);
+        if (
+          nestedValueDiff &&
+          nestedComparison !== context.startComparison &&
+          !nestedComparison[context.resultType].isClassPrototype
+        ) {
           nestedValueDiff += `\n`;
+          canResetTextIndent = true;
         }
         return nestedValueDiff;
       };
@@ -3455,7 +3492,9 @@ let writeDiff;
         }
         if (groupDiff) {
           if (node.isComposite) {
-            groupDiff = `\n${groupDiff}`;
+            if (!node.isClassPrototype) {
+              groupDiff = `\n${groupDiff}`;
+            }
             groupDiff += indent;
           }
         }
@@ -3498,16 +3537,19 @@ let writeDiff;
       if (node.canHaveProps) {
         const namedPropsComparisons =
           createNamedPropertyComparisonIterable(node);
-        const forceDelimitersWhenEmpty =
+        let forceDelimitersWhenEmpty =
           (!node.canHaveIndexedValues &&
             !node.isMap &&
-            subtypeDiff.length === 0 &&
+            labelDiff.length === 0 &&
             node.functionAnalysis.type === undefined) ||
           node.functionAnalysis.type === "class";
+        if (node.isClassPrototype) {
+          forceDelimitersWhenEmpty = false;
+        }
         let namedValuesDiff = writeNestedValueGroupDiff({
           label: "prop",
-          openDelimiter: "{",
-          closeDelimiter: "}",
+          openDelimiter: node.isClassPrototype ? "" : "{",
+          closeDelimiter: node.isClassPrototype ? "" : "}",
           forceDelimitersWhenEmpty,
           resetModified: canResetModifiedOnProperty,
           nestedComparisons: namedPropsComparisons,
@@ -3524,51 +3566,47 @@ let writeDiff;
     }
 
     const spaceBetweenLabelAndValue =
-      subtypeDiff &&
+      labelDiff &&
       valueDiff &&
       !node.isSet &&
       node.functionAnalysis.type !== "class";
-    if (node.propsFrozen || node.propsSealed || node.propsExtensionsPrevented) {
-      const objectMethodCallColor = pickColor(
-        comparison,
-        selfContext,
-        (node) =>
-          node.propsFrozen || node.propsSealed || node.propsExtensionsPrevented,
-        {
-          preferSolorColor: true,
-        },
-      );
-      let methodName;
-      let propertyForThatMethod;
+    const getObjectIntegrityCallPath = (node) => {
       if (node.propsFrozen) {
-        methodName = "freeze";
-        propertyForThatMethod = "propsFrozen";
-      } else if (node.propsSealed) {
-        methodName = "seal";
-        propertyForThatMethod = "propsSealed";
-      } else {
-        methodName = "preventExtensions";
-        propertyForThatMethod = "propsExtensionsPrevented";
+        return ["Object", ".", "freeze"];
       }
-      const objectMethodColor = pickColor(
+      if (node.propsSealed) {
+        return ["Object", ".", "seal"];
+      }
+      if (node.propsExtensionsPrevented) {
+        return ["Object", ".", "preventExtensions"];
+      }
+      return [];
+    };
+    const objectIntegrityCallPath = getObjectIntegrityCallPath(node);
+    if (objectIntegrityCallPath.length) {
+      let objectIntegrityDiff = writePathDiff(
         comparison,
         selfContext,
-        (node) => node[propertyForThatMethod],
-        {
-          preferSolorColor: objectMethodCallColor !== sameColor,
-        },
+        getObjectIntegrityCallPath,
       );
-      diff += ANSI.color(`Object.`, objectMethodCallColor);
-      diff += ANSI.color(methodName, objectMethodColor);
-      diff += ANSI.color(`(`, objectMethodCallColor);
-      diff += subtypeDiff;
+      const objectIntegrityCallColor = pickColor(
+        comparison,
+        selfContext,
+        (node) => {
+          return getObjectIntegrityCallPath(node).length > 0;
+        },
+        { preferSolorColor: true },
+      );
+      diff += objectIntegrityDiff;
+      diff += ANSI.color(`(`, objectIntegrityCallColor);
+      diff += labelDiff;
       if (spaceBetweenLabelAndValue) {
         diff += " ";
       }
       diff += valueDiff;
-      diff += ANSI.color(")", objectMethodCallColor);
+      diff += ANSI.color(")", objectIntegrityCallColor);
     } else {
-      diff += subtypeDiff;
+      diff += labelDiff;
       if (spaceBetweenLabelAndValue) {
         diff += " ";
       }
@@ -3585,7 +3623,7 @@ let writeDiff;
     if (valueEndSeparator) {
       const valueEndSeparatorColor = pickColor(
         comparison,
-        context,
+        selfContext,
         getNodeValueEndSeparator,
       );
       diff += ANSI.color(valueEndSeparator, valueEndSeparatorColor);
@@ -3795,11 +3833,11 @@ let writeDiff;
         context.onComparisonDisplayed(internalValueComparison, true);
       }
     }
-    if (node.isClassProperty) {
+    if (node.isClassStaticProperty) {
       const staticColor = pickColor(
         comparison,
         context,
-        (node) => node.isClassProperty,
+        (node) => node.isClassStaticProperty,
       );
       functionLabelDiff += ANSI.color("static", staticColor);
     }
@@ -3882,15 +3920,22 @@ let writeDiff;
         extendedClassNameColor,
       );
     }
-    const beforeFunctionBodyColor = pickColor(comparison, context, (node) =>
-      node.functionAnalysis.type === "arrow"
-        ? "() => "
-        : node.functionAnalysis.getterName ||
-            node.functionAnalysis.setterName ||
-            node.isFunction
-          ? "()"
-          : "",
-    );
+    const beforeFunctionBodyColor = pickColor(comparison, context, (node) => {
+      if (node.functionAnalysis.type === "arrow") {
+        return "() => ";
+      }
+      if (node.functionAnalysis.type === "class") {
+        return "";
+      }
+      if (
+        node.functionAnalysis.getterName ||
+        node.functionAnalysis.setterName ||
+        node.isFunction
+      ) {
+        return "()";
+      }
+      return null;
+    });
     if (node.functionAnalysis.type === "arrow") {
       if (functionLabelDiff) {
         functionLabelDiff += " ";
@@ -4464,7 +4509,7 @@ let writeDiff;
   const createNamedPropertyComparisonIterable = (node) => {
     const namedPropertyNodeMap = node.childNodes.namedPropertyMap;
     const propertyNames = Array.from(namedPropertyNodeMap.keys());
-    if (node.functionAnalysis.type === "class") {
+    if (node.isFunction) {
       const prototypePropertyIndex = propertyNames.indexOf("prototype");
       if (prototypePropertyIndex > -1) {
         propertyNames.splice(prototypePropertyIndex, 1);
@@ -4492,7 +4537,7 @@ let writeDiff;
       prototypeComparison = prototypeNode.comparison;
     }
 
-    if (node.isClassPrototype) {
+    if (node.isClassPrototype || node.isFunctionPrototype) {
       return [
         ...(internalValueComparison ? [internalValueComparison] : []),
         ...propertyComparisons,
@@ -4703,16 +4748,23 @@ const writePathDiff = (comparison, context, getter) => {
   while (index < path.length) {
     const part = path[index];
     const otherPart = otherPath[index];
-    const partColor = pickColor(
-      comparison,
-      context,
-      (targetNode) => {
-        return targetNode === node ? part : otherPart;
-      },
-      {
-        preferSolorColor: hasOtherPath && index >= otherPath.length,
-      },
-    );
+    let partColor;
+    if (context.removed || context.added) {
+      partColor = context.resultColorWhenSolo;
+    } else if (context.modified) {
+      if (index >= otherPath.length) {
+        // other part does not exists
+        partColor = hasOtherPath
+          ? context.resultColorWhenSolo
+          : context.resultColor;
+      } else if (part === otherPart) {
+        partColor = sameColor;
+      } else {
+        partColor = context.resultColor;
+      }
+    } else {
+      partColor = sameColor;
+    }
     pathDiff += ANSI.color(part, partColor);
     index++;
   }

@@ -56,7 +56,8 @@
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="109.55" fill="#DAA520">Object.</text>
+        <text x="77.21" y="109.55" fill="#DAA520">Object</text>
+        <text x="127.62" y="109.55" fill="#DAA520">.</text>
         <text x="136.02" y="109.55" fill="#DAA520">preventExtensions</text>
         <text x="278.84" y="109.55" fill="#DAA520">(</text>
         <text x="287.25" y="109.55" fill="#7f7f7f">{</text>

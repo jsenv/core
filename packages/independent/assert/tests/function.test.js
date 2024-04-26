@@ -1,10 +1,20 @@
 /* eslint-disable object-shorthand */
 /*
-- tester une fonction async
-- tester une classe
-  https://github.com/nodejs/node/blob/8a41d9b636be86350cd32847c3f89d327c4f6ff7/lib/internal/util/inspect.js#L1156
-- tester deux fonctions dont une a des props
-*/
+ * Too keep in mind:
+ * - runtime cannot know class properties
+ *   class {
+ *     a = true;
+ *   }
+ * - runtime cannot know static blocks
+ *   class {
+ *     static {
+ *       console.log('here');
+ *     }
+ *   }
+ * As a result a diff in those parts will still be detected in by assert
+ * because we compare the class source code using classFunction.toString()
+ * but won't be visible in the diff message
+ */
 
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
@@ -235,7 +245,6 @@ await startSnapshotTesting("function", {
       },
     });
   },
-
   // arrow function name is infered and does not matter so it's ignored
   // by the diff inside "assert"
   // ->in the test below the name are different but will not be displayed in the diff
@@ -288,25 +297,79 @@ await startSnapshotTesting("function", {
       },
     });
   },
-  // TODO: property cannot be listed so it won't be catched
-  // ["diff static property on class"]: () => {
-  //   const anonymousActualClass = (function () {
-  //     return class {
-  //       // a = true;
-  //       // b = true;
-  //       c = true;
-  //     };
-  //   })();
-  //   const anonymousExpectClass = (function () {
-  //     return class {
-  //       // a = true;
-  //       // b = true;
-  //       c = false;
-  //     };
-  //   })();
-  //   assert({
-  //     actual: anonymousActualClass,
-  //     expect: anonymousExpectClass,
-  //   });
-  // },
+  ["static property value modified"]: () => {
+    const anonymousActualClass = (function () {
+      return class {
+        a = "a_prop"; // class properties cannot be listed so it won't be catched
+        static a = "a_static";
+      };
+    })();
+    const anonymousExpectClass = (function () {
+      return class {
+        a = "a_prop_2";
+        static a = "a_static_2";
+      };
+    })();
+    assert({
+      actual: anonymousActualClass,
+      expect: anonymousExpectClass,
+    });
+  },
+  ["static method return value modified"]: () => {
+    const anonymousActualClass = (function () {
+      return class {
+        static a() {
+          return true;
+        }
+      };
+    })();
+    const anonymousExpectClass = (function () {
+      return class {
+        static a() {
+          return false;
+        }
+      };
+    })();
+    assert({
+      actual: anonymousActualClass,
+      expect: anonymousExpectClass,
+    });
+  },
+  ["class static property and object property"]: () => {
+    assert({
+      actual: class {
+        static a = true;
+        static b = true;
+      },
+      expect: {
+        a: true,
+        b: false,
+      },
+    });
+  },
+  ["class static prop and function prop"]: () => {
+    assert({
+      actual: class {
+        static a = true;
+      },
+      expect: Object.assign(function () {}, {
+        a: true,
+      }),
+    });
+  },
+  ["class prototype method vs function prototype method"]: () => {
+    const toto = function () {};
+    toto.a = true;
+    toto.prototype.b = () => {};
+    assert({
+      actual: class {
+        static a = true;
+        b() {}
+      },
+      expect: toto,
+    });
+  },
+  // ['class constructor vs function']: () => {
+
+  // }
 });
