@@ -485,3 +485,20 @@ assert({
 
 ![img](<./function/class prototype method vs function prototype method.svg>)
 
+# class constructor vs function
+
+```js
+assert({
+  actual: class {
+    constructor() {
+      console.log("actual");
+    }
+  },
+  expect: function () {
+    console.log("expect");
+  },
+});
+```
+
+![img](<./function/class constructor vs function.svg>)
+

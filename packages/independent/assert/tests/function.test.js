@@ -14,6 +14,7 @@
  * As a result a diff in those parts will still be detected in by assert
  * because we compare the class source code using classFunction.toString()
  * but won't be visible in the diff message
+ * - At runtime you cannot know if a class defines a constructor or not
  */
 
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
@@ -369,7 +370,16 @@ await startSnapshotTesting("function", {
       expect: toto,
     });
   },
-  // ['class constructor vs function']: () => {
-
-  // }
+  ["class constructor vs function"]: () => {
+    assert({
+      actual: class {
+        constructor() {
+          console.log("actual");
+        }
+      },
+      expect: function () {
+        console.log("expect");
+      },
+    });
+  },
 });
