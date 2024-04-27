@@ -2927,7 +2927,7 @@ let writeDiff;
         break value;
       }
       if (node.isSourceCode) {
-        const valueColor = getValueColor(comparison, selfContext);
+        const valueColor = pickValueColor(comparison, selfContext);
         valueDiff += " ";
         valueDiff += ANSI.color("[source code]", valueColor);
         valueDiff += " ";
@@ -2993,12 +2993,7 @@ let writeDiff;
           );
           valueDiffRaw += "…";
         }
-        const valueColor = getValueColor(comparison, selfContext);
-        // const valueColor = pickColor(
-        //   comparison,
-        //   selfContext,
-        //   (node) => node.value,
-        // );
+        const valueColor = pickValueColor(comparison, selfContext);
         valueDiff += ANSI.color(valueDiffRaw, valueColor);
         break value;
       }
@@ -3108,7 +3103,7 @@ let writeDiff;
       const canResetModifiedOnMapEntry = canResetModifiedOnProperty;
 
       if (selfContext.collapsedWithOverview) {
-        const valueColor = getValueColor(comparison, selfContext);
+        const valueColor = pickValueColor(comparison, selfContext);
         const openDelimiter = node.openDelimiter;
         const closeDelimiter = node.closeDelimiter;
         const nestedValueSeparator = node.canHaveProps ? "," : "";
@@ -4469,29 +4464,12 @@ let writeDiff;
     ];
   };
 
-  const getValueColor = (comparison, context) => {
-    if (context.removed || context.added) {
-      return context.resultColorWhenSolo;
-    }
-    if (!context.modified) {
-      return sameColor;
-    }
-    const { actualNode, expectNode } = comparison;
-    if (!actualNode || !expectNode) {
-      return context.resultColor;
-    }
-    const actualInternalOrSelfNode =
-      actualNode.childNodes.internalValue || actualNode;
-    const expectInternalOrSelfNode =
-      expectNode.childNodes.internalValue || expectNode;
-    const internalOrSelfNode =
-      actualInternalOrSelfNode.type === "internal_value"
-        ? actualInternalOrSelfNode
-        : expectInternalOrSelfNode;
-    if (!internalOrSelfNode.comparison.hasAnyDiff) {
-      return sameColor;
-    }
-    return context.resultColor;
+  const pickValueColor = (comparison, context) => {
+    return pickColor(comparison, context, (node) => {
+      return node.childNodes.internalValue
+        ? node.childNodes.internalValue.value
+        : node.value;
+    });
   };
 }
 
