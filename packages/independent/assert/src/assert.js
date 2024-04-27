@@ -509,11 +509,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         !actualNode.canHaveChars &&
         expectNode &&
         !expectNode.canHaveChars;
-      let ignoreUrlPartsDiff =
-        actualNode &&
-        !actualNode.canHaveUrlParts &&
-        expectNode &&
-        !expectNode.canHaveUrlParts;
 
       if (actualNode && expectNode) {
         if (
@@ -774,48 +769,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               if (!charComparisons[expectCharNode.index]) {
                 visitCharNode(expectCharNode);
               }
-            }
-          }
-        }
-        url_parts: {
-          if (ignoreUrlPartsDiff) {
-            break url_parts;
-          }
-          const actualNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
-            actualNode,
-            (node) => node.canHaveUrlParts,
-          );
-          const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
-            expectNode,
-            (node) => node.canHaveUrlParts,
-          );
-          if (!actualNodeWhoCanHaveUrlParts && !expectNodeWhoCanHaveUrlParts) {
-            break url_parts;
-          }
-          const actualUrlPartNodes = actualNodeWhoCanHaveUrlParts
-            ? actualNodeWhoCanHaveUrlParts.childNodes.urlParts
-            : {};
-          const expectUrlPartNodes = expectNodeWhoCanHaveUrlParts
-            ? expectNodeWhoCanHaveUrlParts.childNodes.urlParts
-            : {};
-          const urlPartComparisons = comparison.childComparisons.urlParts;
-
-          const visitUrlPart = (urlPartName) => {
-            const actualUrlPartNode = actualUrlPartNodes[urlPartName];
-            const expectUrlPartNode = expectUrlPartNodes[urlPartName];
-            const urlPartComparison = createComparison(
-              actualUrlPartNode,
-              expectUrlPartNode,
-            );
-            urlPartComparisons[urlPartName] = urlPartComparison;
-            compareInside(urlPartComparison);
-          };
-          for (const actualUrlPartName of Object.keys(actualUrlPartNodes)) {
-            visitUrlPart(actualUrlPartName);
-          }
-          for (const expectUrlPartName of Object.keys(expectUrlPartNodes)) {
-            if (!urlPartComparisons[expectUrlPartName]) {
-              visitUrlPart(expectUrlPartName);
             }
           }
         }
@@ -1230,7 +1183,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           get: null,
           lines: [],
           chars: [],
-          urlParts: {},
         },
       };
 
@@ -1914,6 +1866,7 @@ let createValueNode;
                 if (canParseUrl(value)) {
                   isUrlString = true;
                   canHaveUrlParts = true;
+                  canHaveProps = true;
                 }
               }
             } else if (subtype === "symbol") {
@@ -2255,6 +2208,17 @@ let createValueNode;
       // where key can be integers, string or symbols
       // aka "properties"
       props: {
+        const createFacadePropertyDescriptor = (value) => {
+          return {
+            enumerable: true,
+            /* eslint-disable no-unneeded-ternary */
+            configurable: node.propsFrozen || node.propsSealed ? false : true,
+            writable: node.propsFrozen ? false : true,
+            /* eslint-enable no-unneeded-ternary */
+            value,
+          };
+        };
+
         const associatedValueMetaMap = new Map();
         // integers
         if (node.isString || node.isStringObject) {
@@ -2283,15 +2247,7 @@ let createValueNode;
                 isArrayIndex: true,
                 propertyDescriptor: Object.hasOwn(node.value, index)
                   ? Object.getOwnPropertyDescriptor(node.value, index)
-                  : {
-                      enumerable: true,
-                      /* eslint-disable no-unneeded-ternary */
-                      configurable:
-                        node.propsFrozen || node.propsSealed ? false : true,
-                      writable: node.propsFrozen ? false : true,
-                      /* eslint-enable no-unneeded-ternary */
-                      value: ARRAY_EMPTY_VALUE,
-                    },
+                  : createFacadePropertyDescriptor(ARRAY_EMPTY_VALUE),
               });
             }
             index++;
@@ -2312,6 +2268,43 @@ let createValueNode;
           }
         }
         // strings
+        if (node.canHaveUrlParts) {
+          const urlParts = node.isUrl ? node.value : new URL(node.value);
+          for (const urlPartName of URL_PART_NAMES) {
+            const urlPartValue = urlParts[urlPartName];
+            const meta = {
+              propertyDescriptor: createFacadePropertyDescriptor(
+                normalizeUrlPart(urlPartName, urlPartValue),
+              ),
+            };
+            if (
+              urlPartName === "href" ||
+              urlPartName === "host" ||
+              urlPartName === "origin" ||
+              urlPartName === "searchParams"
+            ) {
+              meta.shouldHide = true;
+            }
+            if (urlPartValue) {
+              if (urlPartName === "username") {
+                if (urlParts.password) {
+                  meta.valueEndSeparator = ":";
+                } else {
+                  meta.valueEndSeparator = "@";
+                }
+              } else if (urlPartName === "password") {
+                meta.valueEndSeparator = "@";
+              } else if (urlPartName === "port") {
+                meta.valueStartSeparator = ":";
+              } else if (urlPartName === "search") {
+                meta.valueStartSeparator = "?";
+              } else if (urlPartName === "hash") {
+                meta.valueStartSeparator = "#";
+              }
+            }
+            associatedValueMetaMap.set(urlPartName, meta);
+          }
+        }
         if (node.isComposite) {
           const propertyNames = Object.getOwnPropertyNames(node.value);
           for (const propertyName of propertyNames) {
@@ -2338,6 +2331,9 @@ let createValueNode;
             isArrayIndex,
             isStringIndex,
             propertyDescriptor,
+            valueStartSeparator,
+            valueEndSeparator,
+            shouldHide,
           },
         ] of associatedValueMetaMap) {
           if (isSetValue) {
@@ -2395,7 +2391,7 @@ let createValueNode;
             type: "property",
             value: null,
             showOnlyWhenDiff,
-            hidden,
+            hidden: hidden || shouldHide,
             displayedIn,
             property: isArrayIndex ? null : propertyNameOrSymbol,
             isClassStaticProperty: node.functionAnalysis.type === "class",
@@ -2471,14 +2467,16 @@ let createValueNode;
                       propertyDescriptorName === "value"
                     ? ""
                     : ":",
+              valueStartSeparator,
               valueEndSeparator:
-                propertyNode.displayedIn === "label"
+                valueEndSeparator ||
+                (propertyNode.displayedIn === "label"
                   ? ""
                   : propertyNode.isClassPrototype || node.isClassPrototype
                     ? ""
                     : propertyNode.isClassStaticProperty
                       ? ";"
-                      : ",",
+                      : ","),
               property: propertyNode.property,
               isArrayIndex,
               descriptor: propertyDescriptorName,
@@ -2526,25 +2524,6 @@ let createValueNode;
         }
 
         childNodes.chars = charNodes;
-      }
-      // url parts
-      if (node.isUrl || node.isUrlString) {
-        const urlPartNodes = {};
-
-        const urlParts = node.isUrl ? node.value : new URL(node.value);
-        for (const urlPartName of URL_PART_NAMES) {
-          const urlPartValue = urlParts[urlPartName];
-          const urlPartNode = _createValueNode({
-            parent: node,
-            path: path.append(urlPartName),
-            type: "url_part",
-            value: normalizeUrlPart(urlPartName, urlPartValue),
-          });
-          urlPartNode.urlPartName = urlPartName;
-          urlPartNodes[urlPartName] = urlPartNode;
-        }
-
-        childNodes.urlParts = urlPartNodes;
       }
 
       return node;
@@ -2607,19 +2586,6 @@ let createValueNode;
     return value;
   };
 
-  const URL_PART_NAMES = [
-    "protocol",
-    "username",
-    "password",
-    "hostname",
-    "port",
-    "pathname",
-    // for search params I'll have to think about it
-    // for now we'll handle it as a string
-    "search",
-    "hash",
-  ];
-
   const DOUBLE_QUOTE = `"`;
   const SINGLE_QUOTE = `'`;
   const BACKTICK = "`";
@@ -2670,26 +2636,8 @@ let writeDiff;
       return "";
     }
     context.onComparisonDisplayed(comparison);
-    const selfModified = context.modified || comparison.selfHasModification;
-    const selfContext = { ...context };
-    if (comparison.reasons.self.added.has("internal_value")) {
-      selfContext.added = true;
-      selfContext.removed = false;
-      selfContext.modified = false;
-    } else if (comparison.reasons.self.removed.has("internal_value")) {
-      selfContext.added = false;
-      selfContext.removed = false;
-      selfContext.modified = true;
-    } else if (selfModified) {
-      selfContext.added = false;
-      selfContext.removed = false;
-      selfContext.modified = true;
-    } else {
-      selfContext.added = context.added || comparison.selfHasAddition;
-      selfContext.removed = context.removed || comparison.selfHasRemoval;
-      selfContext.modified = false;
-    }
 
+    const selfContext = createSelfContext(comparison, context);
     const getNodeDisplayedProperty = (node) => {
       if (node.displayedIn === "label") {
         return "";
@@ -2981,7 +2929,9 @@ let writeDiff;
       //   valueDiff += ANSI.color("[set]", valueColor);
       //   break value;
       // }
-      if (node.isPrimitive && !node.isUrlString) {
+      if (node.canHaveUrlParts) {
+        valueDiff += writeUrlDiff(comparison, selfContext);
+      } else if (node.isPrimitive) {
         if (node.canHaveLines) {
           valueDiff += writeLinesDiff(comparison, selfContext);
           break value;
@@ -3629,6 +3579,29 @@ let writeDiff;
       diff += ANSI.color(valueEndSeparator, valueEndSeparatorColor);
     }
     return diff;
+  };
+
+  const createSelfContext = (comparison, context) => {
+    const selfContext = { ...context };
+    const selfModified = context.modified || comparison.selfHasModification;
+    if (comparison.reasons.self.added.has("internal_value")) {
+      selfContext.added = true;
+      selfContext.removed = false;
+      selfContext.modified = false;
+    } else if (comparison.reasons.self.removed.has("internal_value")) {
+      selfContext.added = false;
+      selfContext.removed = false;
+      selfContext.modified = true;
+    } else if (selfModified) {
+      selfContext.added = false;
+      selfContext.removed = false;
+      selfContext.modified = true;
+    } else {
+      selfContext.added = context.added || comparison.selfHasAddition;
+      selfContext.removed = context.removed || comparison.selfHasRemoval;
+      selfContext.modified = false;
+    }
+    return selfContext;
   };
 
   const writeLabelDiff = (comparison, context) => {
@@ -4355,140 +4328,27 @@ let writeDiff;
     '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
     '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
   ];
-  // const writeUrlDiff = (comparison, context) => {
-  //   const urlPartComparisons = comparison.childComparisons.urlPart;
+  const writeUrlDiff = (comparison, context) => {
+    let urlDiff = "";
+    const propertyComparisonMap = comparison.childComparisons.propertyMap;
+    const writeUrlPart = (urlPartName) => {
+      const urlPartComparison = propertyComparisonMap.get(urlPartName);
+      const urlPartDiff = writeDiff(urlPartComparison, context);
+      return urlPartDiff;
+    };
 
-  //   const writeUrlPart = (urlPartName) => {
-  //     const urlPartComparison = urlPartComparisons[urlPartName];
-  //     if (String(urlPartComparison[context.resultType]) === "") {
-  //       return "";
-  //     }
-  //     const urlPartDiff = writeDiff(urlPartComparison, context);
-  //     return urlPartDiff;
-  //   };
-
-  //   let urlDiff = "";
-  //   const bracketColor = getBracketColor(context, comparison);
-  //   urlDiff += ANSI.color(`"`, bracketColor);
-  //   urlDiff += writeUrlPart("protocol");
-  //   const usernameDiff = writeUrlPart("username");
-  //   if (usernameDiff) {
-  //     urlDiff += usernameDiff;
-  //   }
-  //   const passwordDiff = writeUrlPart("password");
-  //   if (passwordDiff) {
-  //     const passwordComparison = urlPartComparisons.password;
-  //     const actualHasPassword = passwordComparison.actualNode.value.length;
-  //     const expectHasPassword = passwordComparison.expectNode.value.length;
-  //     let passwordSeparatorColor;
-  //     if (actualHasPassword && !expectHasPassword) {
-  //       passwordSeparatorColor = addedColor;
-  //     } else if (!actualHasPassword && expectHasPassword) {
-  //       passwordSeparatorColor = removedColor;
-  //     } else if (passwordComparison.reasons.overall.any.size) {
-  //       passwordSeparatorColor =
-  //         context.resultColor;
-  //     } else {
-  //       passwordSeparatorColor = sameColor;
-  //     }
-  //     urlDiff += ANSI.color(":", passwordSeparatorColor);
-  //     urlDiff += passwordDiff;
-  //   }
-  //   const hostnameDiff = writeUrlPart("hostname");
-  //   if (hostnameDiff) {
-  //     if (usernameDiff || passwordDiff) {
-  //       const usernameComparison = urlPartComparisons.username;
-  //       const passwordComparison = urlPartComparisons.password;
-  //       const actualHasAuth =
-  //         usernameComparison.actualNode.value.length ||
-  //         passwordComparison.actualNode.value.length;
-  //       const expectHasAuth =
-  //         usernameComparison.expectNode.value.length ||
-  //         passwordComparison.expectNode.value.length;
-  //       let authSeparatorColor;
-  //       if (actualHasAuth && !expectHasAuth) {
-  //         authSeparatorColor = addedColor;
-  //       } else if (!actualHasAuth && expectHasAuth) {
-  //         authSeparatorColor = removedColor;
-  //       } else if (
-  //         passwordComparison[context.resultType].length
-  //           ? passwordComparison.reasons.overall.any.size
-  //           : usernameComparison.reasons.overall.any.size
-  //       ) {
-  //         authSeparatorColor =
-  //           context.resultColor;
-  //       } else {
-  //         authSeparatorColor = sameColor;
-  //       }
-  //       urlDiff += ANSI.color("@", authSeparatorColor);
-  //     }
-  //     urlDiff += hostnameDiff;
-  //   }
-  //   const portDiff = writeUrlPart("port");
-  //   if (portDiff) {
-  //     if (hostnameDiff) {
-  //       const portComparison = urlPartComparisons.port;
-  //       const actualHasPort =
-  //         String(portComparison.actualNode.value).length > 0;
-  //       const expectHasPort =
-  //         String(portComparison.expectNode.value).length > 0;
-  //       let portSeparatorColor;
-  //       if (actualHasPort && !expectHasPort) {
-  //         portSeparatorColor = addedColor;
-  //       } else if (!actualHasPort && expectHasPort) {
-  //         portSeparatorColor = removedColor;
-  //       } else if (portComparison.reasons.overall.any.size) {
-  //         portSeparatorColor =
-  //           context.resultColor;
-  //       } else {
-  //         portSeparatorColor = sameColor;
-  //       }
-  //       urlDiff += ANSI.color(":", portSeparatorColor);
-  //     }
-  //     urlDiff += portDiff;
-  //   }
-  //   urlDiff += writeUrlPart("pathname");
-  //   const searchDiff = writeUrlPart("search");
-  //   if (searchDiff) {
-  //     const searchComparison = urlPartComparisons.search;
-  //     const actualHasSearch = searchComparison.actualNode.value.length;
-  //     const expectHasSearch = searchComparison.expectNode.value.length;
-  //     let searchSeparatorColor;
-  //     if (actualHasSearch && !expectHasSearch) {
-  //       searchSeparatorColor = addedColor;
-  //     } else if (!actualHasSearch && expectHasSearch) {
-  //       searchSeparatorColor = removedColor;
-  //     } else if (searchComparison.reasons.overall.any.size) {
-  //       searchSeparatorColor =
-  //         context.resultColor;
-  //     } else {
-  //       searchSeparatorColor = sameColor;
-  //     }
-  //     urlDiff += ANSI.color("?", searchSeparatorColor);
-  //     urlDiff += searchDiff;
-  //   }
-  //   const hashDiff = writeUrlPart("hash");
-  //   if (hashDiff) {
-  //     const hashComparison = urlPartComparisons.hash;
-  //     const actualHasHash = hashComparison.actualNode.value.length;
-  //     const expectHasHash = hashComparison.expectNode.value.length;
-  //     let hashSeparatorColor;
-  //     if (actualHasHash && !expectHasHash) {
-  //       hashSeparatorColor = addedColor;
-  //     } else if (!actualHasHash && expectHasHash) {
-  //       hashSeparatorColor = removedColor;
-  //     } else if (hashComparison.reasons.overall.any.size) {
-  //       hashSeparatorColor =
-  //         context.resultColor;
-  //     } else {
-  //       hashSeparatorColor = sameColor;
-  //     }
-  //     urlDiff += ANSI.color("#", hashSeparatorColor);
-  //     urlDiff += hashDiff;
-  //   }
-  //   urlDiff += ANSI.color(`"`, bracketColor);
-  //   return urlDiff;
-  // };
+    const delimitersColor = pickDelimitersColor(comparison, context);
+    urlDiff += ANSI.color(`"`, delimitersColor);
+    urlDiff += writeUrlPart("protocol");
+    urlDiff += writeUrlPart("username");
+    urlDiff += writeUrlPart("hostname");
+    urlDiff += writeUrlPart("port");
+    urlDiff += writeUrlPart("pathname");
+    urlDiff += writeUrlPart("search");
+    urlDiff += writeUrlPart("hash");
+    urlDiff += ANSI.color(`"`, delimitersColor);
+    return urlDiff;
+  };
 
   const createIndexedPropertyComparisonIterable = (node) => {
     const indexedPropertyMap = node.childNodes.indexedPropertyMap;
@@ -4508,13 +4368,18 @@ let writeDiff;
   };
   const createNamedPropertyComparisonIterable = (node) => {
     const namedPropertyNodeMap = node.childNodes.namedPropertyMap;
-    const propertyNames = Array.from(namedPropertyNodeMap.keys());
+    let propertyNames = Array.from(namedPropertyNodeMap.keys());
     if (node.isFunction) {
       const prototypePropertyIndex = propertyNames.indexOf("prototype");
       if (prototypePropertyIndex > -1) {
         propertyNames.splice(prototypePropertyIndex, 1);
         propertyNames.push("prototype");
       }
+    }
+    if (node.canHaveUrlParts) {
+      propertyNames = propertyNames.filter(
+        (name) => !URL_PART_NAMES.includes(name),
+      );
     }
     const propertyComparisons = propertyNames.map(
       (propertyName) => namedPropertyNodeMap.get(propertyName).comparison,
@@ -4882,3 +4747,20 @@ const canParseUrl =
       return false;
     }
   });
+const URL_PART_NAMES = [
+  "protocol",
+  "username",
+  "password",
+  "hostname",
+  "port",
+  "pathname",
+  // for search params I'll have to think about it
+  // for now we'll handle it as a string
+  "search",
+  "hash",
+
+  "href",
+  "host",
+  "origin",
+  "searchParams",
+];
