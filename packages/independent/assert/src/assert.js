@@ -2282,6 +2282,9 @@ let createValueNode;
           const urlParts = node.isUrl ? node.value : new URL(node.value);
           for (const urlPartName of URL_PART_NAMES) {
             const urlPartValue = urlParts[urlPartName];
+            if (!urlPartValue) {
+              continue;
+            }
             const meta = {
               isUrlProperty: true,
               propertyDescriptor: createFacadePropertyDescriptor(
@@ -2298,24 +2301,23 @@ let createValueNode;
             ) {
               meta.shouldHide = true;
             }
-            if (urlPartValue) {
-              if (urlPartName === "protocol") {
-                meta.valueEndSeparator = "//";
-              } else if (urlPartName === "username") {
-                if (urlParts.password) {
-                  meta.valueEndSeparator = ":";
-                } else {
-                  meta.valueEndSeparator = "@";
-                }
-              } else if (urlPartName === "password") {
+
+            if (urlPartName === "protocol") {
+              meta.valueEndSeparator = "//";
+            } else if (urlPartName === "username") {
+              if (urlParts.password) {
+                meta.valueEndSeparator = ":";
+              } else {
                 meta.valueEndSeparator = "@";
-              } else if (urlPartName === "port") {
-                meta.valueStartSeparator = ":";
-              } else if (urlPartName === "search") {
-                meta.valueStartSeparator = "?";
-              } else if (urlPartName === "hash") {
-                meta.valueStartSeparator = "#";
               }
+            } else if (urlPartName === "password") {
+              meta.valueEndSeparator = "@";
+            } else if (urlPartName === "port") {
+              meta.valueStartSeparator = ":";
+            } else if (urlPartName === "search") {
+              meta.valueStartSeparator = "?";
+            } else if (urlPartName === "hash") {
+              meta.valueStartSeparator = "#";
             }
             associatedValueMetaMap.set(urlPartName, meta);
           }
@@ -2992,6 +2994,11 @@ let writeDiff;
           valueDiffRaw += "…";
         }
         const valueColor = getValueColor(comparison, selfContext);
+        // const valueColor = pickColor(
+        //   comparison,
+        //   selfContext,
+        //   (node) => node.value,
+        // );
         valueDiff += ANSI.color(valueDiffRaw, valueColor);
         break value;
       }
@@ -4360,9 +4367,26 @@ let writeDiff;
     let urlDiff = "";
     const propertyComparisonMap = comparison.childComparisons.propertyMap;
     const writeUrlPart = (urlPartName) => {
-      const urlPartValueComparison =
-        propertyComparisonMap.get(urlPartName).childComparisons.value;
-      const urlPartDiff = writeDiff(urlPartValueComparison, context);
+      const urlPartComparison = propertyComparisonMap.get(urlPartName);
+      if (!urlPartComparison || !urlPartComparison[context.resultType]) {
+        return "";
+      }
+      const urlPartValueComparison = urlPartComparison.childComparisons.value;
+      const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
+        comparison.actualNode,
+        (node) => node.canHaveUrlParts,
+      );
+      const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
+        comparison.expectNode,
+        (node) => node.canHaveUrlParts,
+      );
+      const canResetModifiedOnUrlPart = Boolean(
+        actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
+      );
+      const urlPartDiff = writeDiff(urlPartValueComparison, {
+        ...context,
+        modified: canResetModifiedOnUrlPart ? false : context.modified,
+      });
       return urlPartDiff;
     };
 
