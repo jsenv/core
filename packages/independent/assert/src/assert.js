@@ -1414,6 +1414,12 @@ const shouldIgnorePrototype = (node, prototypeValue) => {
   if (node.isArray) {
     return prototypeValue === Array.prototype;
   }
+  if (node.isUrl) {
+    return prototypeValue === URL.prototype;
+  }
+  if (prototypeValue === URLSearchParams.prototype) {
+    return true;
+  }
   return false;
 };
 const shouldIgnoreProperty = (
@@ -1616,6 +1622,7 @@ let createValueNode;
       valueStartSeparator,
       valueEndSeparator,
       isArrayIndex,
+      isUrlProperty,
       property,
       isSpecialProperty,
       descriptor,
@@ -1767,7 +1774,7 @@ let createValueNode;
                   isStringObject = true;
                 } else if (proto.constructor.name === "URL") {
                   isUrl = true;
-                  canHaveUrlParts = true;
+                  //  canHaveUrlParts = true;
                 } else if (proto.constructor.name === "Error") {
                   isError = true;
                 } else if (proto.constructor.name === "Map") {
@@ -1823,8 +1830,7 @@ let createValueNode;
             subtype = typeof value;
             if (subtype === "string") {
               isString = true;
-              if (type === "url_part") {
-              } else if (type === "line") {
+              if (type === "line") {
                 canHaveChars = true;
                 chars = splitChars(value);
                 openDelimiter = `${index + 1} | `;
@@ -1840,6 +1846,7 @@ let createValueNode;
                 }
                 if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
+                } else if (isUrlProperty) {
                 } else if (type === "property_key") {
                   if (
                     isValidPropertyIdentifier(property) ||
@@ -1863,7 +1870,9 @@ let createValueNode;
                   openDelimiter = quote;
                   closeDelimiter = quote;
                 }
-                if (canParseUrl(value)) {
+                if (type === "property_descriptor" && parent.parent.isUrl) {
+                }
+                if (canParseUrl(value) && !hidden) {
                   isUrlString = true;
                   canHaveUrlParts = true;
                   canHaveProps = true;
@@ -1907,7 +1916,7 @@ let createValueNode;
             } else {
               depth = parent.depth;
             }
-          } else if (type === "url_part") {
+          } else if (isUrlProperty) {
             depth = parent.depth;
           } else if (isClassPrototype) {
             depth = parent.depth;
@@ -1929,6 +1938,7 @@ let createValueNode;
             throw new Error(`use ${name}.value`);
           },
           isArrayIndex,
+          isUrlProperty,
           property,
           descriptor,
           index,
@@ -2076,17 +2086,17 @@ let createValueNode;
           node.constructorCall = true;
           childNodes.internalValue = setInternalValueNode;
         } else if (node.isUrl) {
-          const internalValue = node.href;
-          const internalValueNode = createPropertyLikeNode({
+          const urlString = node.value.href;
+          const urlStringNode = createPropertyLikeNode({
             parent: node,
-            path: path.append("href"),
+            path: path.append("toString()"),
             type: "internal_value",
-            value: internalValue,
+            value: urlString,
             displayedIn: "label",
-            property: "href",
+            property: "toString()",
           });
-          node.constructorCall = internalValueNode.displayedIn === "label";
-          childNodes.internalValue = internalValueNode;
+          node.constructorCall = true;
+          childNodes.internalValue = urlStringNode;
         } else if (node.isSymbol) {
           const { symbolDescription, symbolKey } = node;
           if (symbolDescription) {
@@ -2273,9 +2283,12 @@ let createValueNode;
           for (const urlPartName of URL_PART_NAMES) {
             const urlPartValue = urlParts[urlPartName];
             const meta = {
+              isUrlProperty: true,
               propertyDescriptor: createFacadePropertyDescriptor(
                 normalizeUrlPart(urlPartName, urlPartValue),
               ),
+              valueSeparator: "",
+              valueEndSeparator: "",
             };
             if (
               urlPartName === "href" ||
@@ -2286,7 +2299,9 @@ let createValueNode;
               meta.shouldHide = true;
             }
             if (urlPartValue) {
-              if (urlPartName === "username") {
+              if (urlPartName === "protocol") {
+                meta.valueEndSeparator = "//";
+              } else if (urlPartName === "username") {
                 if (urlParts.password) {
                   meta.valueEndSeparator = ":";
                 } else {
@@ -2330,7 +2345,9 @@ let createValueNode;
             value,
             isArrayIndex,
             isStringIndex,
+            isUrlProperty,
             propertyDescriptor,
+            valueSeparator,
             valueStartSeparator,
             valueEndSeparator,
             shouldHide,
@@ -2352,6 +2369,7 @@ let createValueNode;
               propertyDescriptor,
               isArrayIndex,
               isStringIndex,
+              isUrlProperty,
             })
           ) {
             continue;
@@ -2412,7 +2430,7 @@ let createValueNode;
               valueEndSeparator: propertyIsSymbol ? "]" : "",
               showOnlyWhenDiff: false,
               property: propertyNode.property,
-              isArrayIndex,
+              isUrlProperty,
               isClassStaticProperty: propertyNode.isClassStaticProperty,
               isClassPrototype: propertyNode.isClassPrototype,
               displayedIn: propertyNode.displayedIn,
@@ -2458,27 +2476,32 @@ let createValueNode;
                     }),
               type: "property_descriptor",
               value: propertyDescriptorValue,
-              valueSeparator: propertyNode.isClassStaticProperty
-                ? "="
-                : propertyDescriptorName === "get" ||
-                    propertyDescriptorName === "set"
-                  ? ""
-                  : propertyNode.isArrayIndex &&
-                      propertyDescriptorName === "value"
-                    ? ""
-                    : ":",
+              valueSeparator:
+                valueSeparator === undefined
+                  ? propertyNode.isClassStaticProperty
+                    ? "="
+                    : propertyDescriptorName === "get" ||
+                        propertyDescriptorName === "set"
+                      ? ""
+                      : propertyNode.isArrayIndex &&
+                          propertyDescriptorName === "value"
+                        ? ""
+                        : ":"
+                  : valueSeparator,
               valueStartSeparator,
               valueEndSeparator:
-                valueEndSeparator ||
-                (propertyNode.displayedIn === "label"
-                  ? ""
-                  : propertyNode.isClassPrototype || node.isClassPrototype
+                valueEndSeparator === undefined
+                  ? propertyNode.displayedIn === "label"
                     ? ""
-                    : propertyNode.isClassStaticProperty
-                      ? ";"
-                      : ","),
+                    : propertyNode.isClassPrototype || node.isClassPrototype
+                      ? ""
+                      : propertyNode.isClassStaticProperty
+                        ? ";"
+                        : ","
+                  : valueEndSeparator,
               property: propertyNode.property,
               isArrayIndex,
+              isUrlProperty,
               descriptor: propertyDescriptorName,
               isClassStaticProperty: propertyNode.isClassStaticProperty,
               isClassPrototype: propertyNode.isClassPrototype,
@@ -2525,7 +2548,6 @@ let createValueNode;
 
         childNodes.chars = charNodes;
       }
-
       return node;
     };
 
@@ -2649,6 +2671,9 @@ let writeDiff;
         return "";
       }
       if (node.isArrayIndex && node.descriptor === "value") {
+        return "";
+      }
+      if (node.isUrlProperty) {
         return "";
       }
       return node.property;
@@ -3496,6 +3521,9 @@ let writeDiff;
         if (node.isClassPrototype) {
           forceDelimitersWhenEmpty = false;
         }
+        if (node.isUrlString) {
+          forceDelimitersWhenEmpty = false;
+        }
         let namedValuesDiff = writeNestedValueGroupDiff({
           label: "prop",
           openDelimiter: node.isClassPrototype ? "" : "{",
@@ -4332,8 +4360,9 @@ let writeDiff;
     let urlDiff = "";
     const propertyComparisonMap = comparison.childComparisons.propertyMap;
     const writeUrlPart = (urlPartName) => {
-      const urlPartComparison = propertyComparisonMap.get(urlPartName);
-      const urlPartDiff = writeDiff(urlPartComparison, context);
+      const urlPartValueComparison =
+        propertyComparisonMap.get(urlPartName).childComparisons.value;
+      const urlPartDiff = writeDiff(urlPartValueComparison, context);
       return urlPartDiff;
     };
 

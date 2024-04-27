@@ -3,7 +3,7 @@
 ```js
 assert({
   actual: new URL("http://example.com"),
-  expected: new URL("http://example.com:8000"),
+  expect: new URL("http://example.com:8000"),
 });
 ```
 
