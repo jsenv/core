@@ -1481,7 +1481,7 @@ const shouldIgnoreProperty = (
     );
   }
   if (propertyNameOrSymbol === "length") {
-    return node.isArray || node.isStringObject || node.isFunction;
+    return node.isArray || node.isObjectForString || node.isFunction;
   }
   if (propertyNameOrSymbol === "name") {
     return node.isFunction;
@@ -1656,7 +1656,7 @@ let createValueNode;
         let isArray = false;
         let isSet = false;
         let isString = false;
-        let isStringObject = false;
+        let isObjectForString = false;
         let isUrl = false;
         let isStringForUrl = false;
         let isError = false;
@@ -1771,7 +1771,7 @@ let createValueNode;
                 } else if (proto.constructor.name === "Set") {
                   isSet = true;
                 } else if (proto.constructor.name === "String") {
-                  isStringObject = true;
+                  isObjectForString = true;
                 } else if (proto.constructor.name === "URL") {
                   isUrl = true;
                   //  canHaveUrlParts = true;
@@ -1959,7 +1959,7 @@ let createValueNode;
           canHaveChars,
           chars,
           canHaveUrlParts,
-          isStringObject,
+          isObjectForString,
           isFunction,
           functionAnalysis,
           isFunctionPrototype,
@@ -2231,7 +2231,7 @@ let createValueNode;
 
         const associatedValueMetaMap = new Map();
         // integers
-        if (node.isString || node.isStringObject) {
+        if (node.isString || node.isObjectString) {
           let index = 0;
           // eslint-disable-next-line no-unused-vars
           while (index < node.value.length) {
