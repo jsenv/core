@@ -69,7 +69,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       );
       if (unexpectedParamNames.length > 0) {
         throw new TypeError(
-          `${unexpectedParamNames.join(",")}: there is no such param`,
+          `"${unexpectedParamNames.join(",")}": there is no such param`,
         );
       }
       if ("actual" in firstArg === false) {
@@ -2699,7 +2699,7 @@ let writeDiff;
     let diff = "";
     let displayValue = true;
     let isNestedValue = false;
-    let property = getNodeDisplayedProperty(node);
+    let displayedProperty = getNodeDisplayedProperty(node);
     let valueSeparator = node.valueSeparator;
     let valueStartSeparator = node.valueStartSeparator;
     let valueEndSeparator = getNodeValueEndSeparator(node);
@@ -2768,7 +2768,7 @@ let writeDiff;
         }
       }
 
-      if (property && comparison !== selfContext.startComparison) {
+      if (displayedProperty && comparison !== selfContext.startComparison) {
         if (node.descriptor && node.descriptor !== "value") {
           const propertyPrefixColor = pickColor(
             comparison,
@@ -2807,7 +2807,7 @@ let writeDiff;
         // }
       }
       if (
-        (property ||
+        (displayedProperty ||
           node.type === "map_entry_value" ||
           node.type === "set_value") &&
         displayValue &&
