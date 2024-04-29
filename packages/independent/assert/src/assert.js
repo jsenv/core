@@ -128,6 +128,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       value: actual,
       getReference: getActualReference,
       quoteOption: quote,
+      preserveLineBreaksOption: preserveLineBreaks,
     });
     const expectReferenceMap = new Map();
     const getExpectReference = (value, node) => {
@@ -144,6 +145,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       value: expect,
       getReference: getExpectReference,
       quoteOption: quote,
+      preserveLineBreaksOption: preserveLineBreaks,
     });
     const causeCounters = {
       total: 0,
@@ -345,6 +347,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           nodePresent.type === "char"
         ) {
           const parentComparison = comparison.parent;
+          // if (
+          //   nodePresent.type === "property_key" &&
+          //   parentComparison.type === "internal_value" &&
+          //   parentComparison[missingNodeName].type !== "internal_value"
+          // ) {
+          //   // do not compare toString() with value itself
+          // }
           ownerComparison = parentComparison.parent;
         } else {
           ownerComparison = comparison.parent;
@@ -787,90 +796,43 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
         }
 
-        let actualIndexedPropertyNodeMap;
-        let expectIndexedPropertyNodeMap;
-        let actualNamedPropertyNodeMap;
-        let expectNamedPropertyNodeMap;
-        let actualMapEntryNodeMap;
-        let expectMapEntryNodeMap;
-        if (
-          actualNode &&
-          !actualNode.canHaveIndexedValues &&
-          expectNode &&
-          !expectNode.canHaveIndexedValues
-        ) {
-          // prevent to compare twice when internal can have
-          // but wrapper cannot
-          actualIndexedPropertyNodeMap = new Map();
-          expectIndexedPropertyNodeMap = new Map();
-        } else {
-          const actualNodeWhoCanHaveIndexedValues = pickSelfOrInternalNode(
-            actualNode,
+        const pickNodeMap = (canGetter, getter) => {
+          if (
+            actualNode &&
+            !canGetter(actualNode) &&
+            expectNode &&
+            !canGetter(expectNode)
+          ) {
+            // prevent to compare twice when internal can but wrapper cannot
+            return [new Map(), new Map()];
+          }
+          const actualWhoCan = pickSelfOrInternalNode(actualNode, canGetter);
+          const expectWhoCan = pickSelfOrInternalNode(expectNode, canGetter);
+          return [
+            actualWhoCan ? getter(actualWhoCan) : new Map(),
+            expectWhoCan ? getter(expectWhoCan) : new Map(),
+          ];
+        };
+
+        const [actualIndexedPropertyNodeMap, expectIndexedPropertyNodeMap] =
+          pickNodeMap(
             (node) => node.canHaveIndexedValues,
+            (node) => node.childNodes.indexedPropertyMap,
           );
-          const expectNodeWhoCanHaveIndexedValues = pickSelfOrInternalNode(
-            expectNode,
-            (node) => node.canHaveIndexedValues,
-          );
-          actualIndexedPropertyNodeMap = actualNodeWhoCanHaveIndexedValues
-            ? actualNodeWhoCanHaveIndexedValues.childNodes.indexedPropertyMap
-            : new Map();
-          expectIndexedPropertyNodeMap = expectNodeWhoCanHaveIndexedValues
-            ? expectNodeWhoCanHaveIndexedValues.childNodes.indexedPropertyMap
-            : new Map();
-        }
-        if (
-          actualNode &&
-          !actualNode.canHaveProps &&
-          expectNode &&
-          !expectNode.canHaveProps
-        ) {
-          // prevent to compare twice when internal can have
-          // but wrapper cannot
-          actualNamedPropertyNodeMap = new Map();
-          expectNamedPropertyNodeMap = new Map();
-        } else {
-          const actualNodeWhoCanHaveNamedProps = pickSelfOrInternalNode(
-            actualNode,
+        const [actualNamedPropertyNodeMap, expectNamedPropertyNodeMap] =
+          pickNodeMap(
             (node) => node.canHaveProps,
+            (node) => node.childNodes.namedPropertyMap,
           );
-          const expectNodeWhoCanHaveNamedProps = pickSelfOrInternalNode(
-            expectNode,
-            (node) => node.canHaveProps,
+        const [actualInternalPropertyNodeMap, expectInternalPropertyNodeMap] =
+          pickNodeMap(
+            (node) => node.canHaveInternalProps,
+            (node) => node.childNodes.internalPropertyMap,
           );
-          actualNamedPropertyNodeMap = actualNodeWhoCanHaveNamedProps
-            ? actualNodeWhoCanHaveNamedProps.childNodes.namedPropertyMap
-            : new Map();
-          expectNamedPropertyNodeMap = expectNodeWhoCanHaveNamedProps
-            ? expectNodeWhoCanHaveNamedProps.childNodes.namedPropertyMap
-            : new Map();
-        }
-        if (
-          actualNode &&
-          !actualNode.isMap &&
-          expectNode &&
-          !expectNode.isMap
-        ) {
-          // prevent to compare twice when internal can have
-          // but wrapper cannot
-          actualMapEntryNodeMap = new Map();
-          expectMapEntryNodeMap = new Map();
-        } else {
-          const actualNodeWhoCanHaveMapEntries = pickSelfOrInternalNode(
-            actualNode,
-            (node) => node.isMap,
-          );
-          const expectNodeWhoCanHaveMapEntries = pickSelfOrInternalNode(
-            expectNode,
-            (node) => node.isMap,
-          );
-          actualMapEntryNodeMap = actualNodeWhoCanHaveMapEntries
-            ? actualNodeWhoCanHaveMapEntries.childNodes.mapEntryMap
-            : new Map();
-          expectMapEntryNodeMap = expectNodeWhoCanHaveMapEntries
-            ? expectNodeWhoCanHaveMapEntries.childNodes.mapEntryMap
-            : new Map();
-        }
+        const [actualMapEntryNodeMap, expectMapEntryNodeMap] = pickNodeMap(
+          (node) => node.isMap,
+          (node) => node.childNodes.mapEntryMap,
+        );
         const propertyComparisonMap = comparison.childComparisons.propertyMap;
         const mapEntryComparisonMap = comparison.childComparisons.mapEntryMap;
 
@@ -925,10 +887,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               } else if (expectNamedPropertyNodeMap.size === 0) {
                 expectNodeForComparison =
                   expectMapEntryNodeMap.get(index) ||
-                  expectMapEntryNodeMap.get(indexString);
+                  expectMapEntryNodeMap.get(indexString) ||
+                  expectInternalPropertyNodeMap.get(indexString);
               } else {
                 expectNodeForComparison =
-                  expectNamedPropertyNodeMap.get(indexString);
+                  expectNamedPropertyNodeMap.get(indexString) ||
+                  expectInternalPropertyNodeMap.get(indexString);
               }
               const propertyComparison = createComparison(
                 actualIndexedPropertyNode,
@@ -953,10 +917,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               if (actualNamedPropertyNodeMap.size === 0) {
                 actualNodeForComparison =
                   actualMapEntryNodeMap.get(index) ||
-                  actualMapEntryNodeMap.get(indexString);
+                  actualMapEntryNodeMap.get(indexString) ||
+                  actualInternalPropertyNodeMap.get(indexString);
               } else {
                 actualNodeForComparison =
-                  actualNamedPropertyNodeMap.get(indexString);
+                  actualNamedPropertyNodeMap.get(indexString) ||
+                  actualInternalPropertyNodeMap.get(indexString) ||
+                  actualIndexedPropertyNodeMap.get(indexString);
               }
               const propertyComparison = createComparison(
                 actualNodeForComparison,
@@ -983,10 +950,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             let expectNodeForComparison;
             if (expectNamedPropertyNodeMap.size === 0) {
               expectNodeForComparison =
+                expectInternalPropertyNodeMap.get(actualProperty) ||
                 expectMapEntryNodeMap.get(actualProperty);
             } else {
               expectNodeForComparison =
                 expectNamedPropertyNodeMap.get(actualProperty) ||
+                expectInternalPropertyNodeMap.get(actualProperty) ||
                 expectIndexedPropertyNodeMap.get(actualProperty);
             }
             const propertyComparison = createComparison(
@@ -1007,7 +976,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             let actualNodeForComparison;
             if (actualNamedPropertyNodeMap.size === 0) {
               actualNodeForComparison =
-                expectMapEntryNodeMap.get(expectProperty);
+                actualInternalPropertyNodeMap.get(expectProperty) ||
+                actualMapEntryNodeMap.get(expectProperty);
             }
             const propertyComparison = createComparison(
               actualNodeForComparison,
@@ -1017,11 +987,75 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             compareInside(propertyComparison);
           }
         }
+        internal_props: {
+          // internal properties
+          for (const [
+            actualInternalProperty,
+            actualInternalPropertyNode,
+          ] of actualInternalPropertyNodeMap) {
+            if (propertyComparisonMap.has(actualInternalProperty)) {
+              continue;
+            }
+            if (mapEntryComparisonMap.has(actualInternalProperty)) {
+              continue;
+            }
+            let expectNodeForComparison;
+            if (expectNamedPropertyNodeMap.size === 0) {
+              expectNodeForComparison =
+                expectInternalPropertyNodeMap.get(actualInternalProperty) ||
+                expectMapEntryNodeMap.get(actualInternalProperty);
+            } else {
+              expectNodeForComparison =
+                expectNamedPropertyNodeMap.get(actualInternalProperty) ||
+                expectInternalPropertyNodeMap.get(actualInternalProperty) ||
+                expectIndexedPropertyNodeMap.get(actualInternalProperty);
+            }
+            const internalPropertyComparison = createComparison(
+              actualInternalPropertyNode,
+              expectNodeForComparison,
+            );
+            propertyComparisonMap.set(
+              actualInternalProperty,
+              internalPropertyComparison,
+            );
+            compareInside(internalPropertyComparison);
+          }
+          for (const [
+            expectInternalProperty,
+            expectInternalPropertyNode,
+          ] of expectInternalPropertyNodeMap) {
+            if (propertyComparisonMap.has(expectInternalProperty)) {
+              continue;
+            }
+            if (mapEntryComparisonMap.has(expectInternalProperty)) {
+              continue;
+            }
+            // we know it's an extra internal property here
+            let actualNodeForComparison;
+            if (actualNamedPropertyNodeMap.size === 0) {
+              actualNodeForComparison = expectMapEntryNodeMap.get(
+                expectInternalProperty,
+              );
+            }
+            const internalPropertyComparison = createComparison(
+              actualNodeForComparison,
+              expectInternalPropertyNode,
+            );
+            propertyComparisonMap.set(
+              expectInternalProperty,
+              internalPropertyComparison,
+            );
+            compareInside(internalPropertyComparison);
+          }
+        }
         map_entries: {
           for (const [
             actualMapEntryKey,
             actualMapEntryNode,
           ] of actualMapEntryNodeMap) {
+            if (propertyComparisonMap.has(actualMapEntryKey)) {
+              continue;
+            }
             let expectNodeForComparison;
             if (expectMapEntryNodeMap.has(actualMapEntryKey)) {
               expectNodeForComparison =
@@ -1034,7 +1068,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   : actualMapEntryKey;
               expectNodeForComparison =
                 expectIndexedPropertyNodeMap.get(namedProperty) ||
-                expectNamedPropertyNodeMap.get(namedProperty);
+                expectNamedPropertyNodeMap.get(namedProperty) ||
+                expectInternalPropertyNodeMap.get(namedProperty);
             }
             const mapEntryComparison = createComparison(
               actualMapEntryNode,
@@ -1059,7 +1094,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
                   : expectMapEntryKey;
               actualNodeForComparison =
                 actualIndexedPropertyNodeMap.get(namedProperty) ||
-                actualNamedPropertyNodeMap.get(namedProperty);
+                actualNamedPropertyNodeMap.get(namedProperty) ||
+                actualInternalPropertyNodeMap.get(namedProperty);
             }
             const mapEntryComparison = createComparison(
               actualNodeForComparison,
@@ -1317,7 +1353,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       maxDepthInsideDiff,
       maxLineBeforeDiff,
       maxLineAfterDiff,
-      preserveLineBreaks,
     };
 
     let firstPrefix = "";
@@ -1626,7 +1661,13 @@ const shouldIgnorePropertyDescriptor = (
 let createValueNode;
 {
   let nodeId = 1;
-  createValueNode = ({ name, value, getReference, quoteOption }) => {
+  createValueNode = ({
+    name,
+    value,
+    getReference,
+    quoteOption,
+    preserveLineBreaksOption,
+  }) => {
     const _createValueNode = ({
       parent,
       path,
@@ -1636,7 +1677,8 @@ let createValueNode;
       valueStartSeparator,
       valueEndSeparator,
       isArrayIndex,
-      isUrlProperty,
+      isInternalProperty,
+      isUrlInternalProperty,
       property,
       isSpecialProperty,
       descriptor,
@@ -1688,12 +1730,14 @@ let createValueNode;
         let closeDelimiter = "";
         let quote = "";
 
+        let canHaveInternalProps = false;
         let canHaveProps = false;
         let propsFrozen = false;
         let propsSealed = false;
         let propsExtensionsPrevented = false;
         let canHaveIndexedValues = false;
         let canHaveLines = false;
+        let preserveLineBreaks;
         let lines = [];
         let isMultiline = false;
         let useLineNumbersOnTheLeft = false;
@@ -1843,13 +1887,19 @@ let createValueNode;
             subtype = typeof value;
             if (subtype === "string") {
               isString = true;
-              if (isUrlProperty) {
-              } else if (type === "line") {
+              if (type === "line") {
                 canHaveChars = true;
                 chars = splitChars(value);
                 openDelimiter = `${index + 1} | `;
+                preserveLineBreaks = parent.preserveLineBreaks;
               } else if (type === "char") {
+                preserveLineBreaks = parent.preserveLineBreaks;
               } else {
+                if (isUrlInternalProperty) {
+                  preserveLineBreaks = true;
+                } else {
+                  preserveLineBreaks = preserveLineBreaksOption;
+                }
                 canHaveLines = true;
                 lines = value.split(/\r?\n/);
                 isMultiline = lines.length > 1;
@@ -1858,7 +1908,13 @@ let createValueNode;
                 if (isMultiline && !isErrorMessageString) {
                   useLineNumbersOnTheLeft = true;
                 }
-                if (isErrorMessageString) {
+                if (canParseUrl(value) && !hidden) {
+                  isStringForUrl = true;
+                  canHaveUrlParts = true;
+                  canHaveInternalProps = true;
+                  canHaveProps = true;
+                  openDelimiter = closeDelimiter = '"';
+                } else if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (type === "property_key") {
                   if (
@@ -1874,6 +1930,8 @@ let createValueNode;
                   }
                 } else if (isMultiline) {
                   // no quote around multiline
+                } else if (isUrlInternalProperty) {
+                  // no quote around url property
                 } else {
                   useQuotes = true;
                   quote =
@@ -1882,13 +1940,6 @@ let createValueNode;
                       : quoteOption;
                   openDelimiter = quote;
                   closeDelimiter = quote;
-                }
-                if (type === "property_descriptor" && parent.parent.isUrl) {
-                }
-                if (canParseUrl(value) && !hidden) {
-                  isStringForUrl = true;
-                  canHaveUrlParts = true;
-                  canHaveProps = true;
                 }
               }
             } else if (subtype === "symbol") {
@@ -1929,7 +1980,7 @@ let createValueNode;
             } else {
               depth = parent.depth;
             }
-          } else if (isUrlProperty) {
+          } else if (isUrlInternalProperty) {
             depth = parent.depth;
           } else if (isClassPrototype) {
             depth = parent.depth;
@@ -1951,7 +2002,8 @@ let createValueNode;
             throw new Error(`use ${name}.value`);
           },
           isArrayIndex,
-          isUrlProperty,
+          isInternalProperty,
+          isUrlInternalProperty,
           property,
           descriptor,
           index,
@@ -1968,6 +2020,7 @@ let createValueNode;
           useLineNumbersOnTheLeft,
           useQuotes,
           canHaveLines,
+          preserveLineBreaks,
           lines,
           canHaveChars,
           chars,
@@ -1987,6 +2040,7 @@ let createValueNode;
           isSymbol,
           symbolKey,
           symbolDescription,
+          canHaveInternalProps,
           canHaveProps,
           propsFrozen,
           propsSealed,
@@ -2015,6 +2069,7 @@ let createValueNode;
         indexedPropertyMap: new Map(),
         namedPropertyMap: new Map(),
         symbolPropertyMap: new Map(),
+        internalPropertyMap: new Map(),
         mapEntryMap: new Map(),
         key: null,
         value: null,
@@ -2291,50 +2346,6 @@ let createValueNode;
           }
         }
         // strings
-        if (node.canHaveUrlParts) {
-          const urlParts = node.isUrl ? node.value : new URL(node.value);
-          for (const urlPartName of URL_PART_NAMES) {
-            const urlPartValue = urlParts[urlPartName];
-            if (!urlPartValue) {
-              continue;
-            }
-            const meta = {
-              isUrlProperty: true,
-              propertyDescriptor: createFacadePropertyDescriptor(
-                normalizeUrlPart(urlPartName, urlPartValue),
-              ),
-              valueSeparator: "",
-              valueEndSeparator: "",
-            };
-            if (
-              urlPartName === "href" ||
-              urlPartName === "host" ||
-              urlPartName === "origin" ||
-              urlPartName === "searchParams"
-            ) {
-              meta.shouldHide = true;
-            }
-
-            if (urlPartName === "protocol") {
-              meta.valueEndSeparator = "//";
-            } else if (urlPartName === "username") {
-              if (urlParts.password) {
-                meta.valueEndSeparator = ":";
-              } else {
-                meta.valueEndSeparator = "@";
-              }
-            } else if (urlPartName === "password") {
-              meta.valueEndSeparator = "@";
-            } else if (urlPartName === "port") {
-              meta.valueStartSeparator = ":";
-            } else if (urlPartName === "search") {
-              meta.valueStartSeparator = "?";
-            } else if (urlPartName === "hash") {
-              meta.valueStartSeparator = "#";
-            }
-            associatedValueMetaMap.set(urlPartName, meta);
-          }
-        }
         if (node.isComposite) {
           const propertyNames = Object.getOwnPropertyNames(node.value);
           for (const propertyName of propertyNames) {
@@ -2350,6 +2361,58 @@ let createValueNode;
             });
           }
         }
+
+        // internal associations
+        if (node.canHaveUrlParts) {
+          const urlParts = node.isUrl ? node.value : new URL(node.value);
+          for (const urlInternalPropertyName of URL_INTERNAL_PROPERTY_NAMES) {
+            const urlInternalPropertyValue = urlParts[urlInternalPropertyName];
+            if (!urlInternalPropertyValue) {
+              continue;
+            }
+            const meta = {
+              isInternalProperty: true,
+              isUrlInternalProperty: true,
+              propertyDescriptor: createFacadePropertyDescriptor(
+                normalizeUrlPart(
+                  urlInternalPropertyName,
+                  urlInternalPropertyValue,
+                ),
+              ),
+              valueSeparator: "",
+              valueEndSeparator: "",
+            };
+            if (
+              urlInternalPropertyName === "href" ||
+              urlInternalPropertyName === "host" ||
+              urlInternalPropertyName === "origin" ||
+              urlInternalPropertyName === "searchParams"
+            ) {
+              meta.shouldHide = true;
+            }
+
+            if (urlInternalPropertyName === "protocol") {
+              meta.valueEndSeparator = "//";
+            } else if (urlInternalPropertyName === "username") {
+              if (urlParts.password) {
+                meta.valueEndSeparator = ":";
+              } else {
+                meta.valueEndSeparator = "@";
+              }
+            } else if (urlInternalPropertyName === "password") {
+              meta.valueEndSeparator = "@";
+            } else if (urlInternalPropertyName === "port") {
+              meta.valueStartSeparator = ":";
+            } else if (urlInternalPropertyName === "search") {
+              meta.valueStartSeparator = "?";
+            } else if (urlInternalPropertyName === "hash") {
+              meta.valueStartSeparator = "#";
+            }
+            associatedValueMetaMap.set(urlInternalPropertyName, meta);
+          }
+        }
+
+        const internalPropertyMap = childNodes.internalPropertyMap;
         const indexedPropertyMap = childNodes.indexedPropertyMap;
         const namedPropertyMap = childNodes.namedPropertyMap;
         for (const [
@@ -2360,7 +2423,8 @@ let createValueNode;
             value,
             isArrayIndex,
             isStringIndex,
-            isUrlProperty,
+            isInternalProperty,
+            isUrlInternalProperty,
             propertyDescriptor,
             valueSeparator,
             valueStartSeparator,
@@ -2384,7 +2448,8 @@ let createValueNode;
               propertyDescriptor,
               isArrayIndex,
               isStringIndex,
-              isUrlProperty,
+              isInternalProperty,
+              isUrlInternalProperty,
             })
           ) {
             continue;
@@ -2432,10 +2497,17 @@ let createValueNode;
               node.functionAnalysis.type === "class" &&
               propertyNameOrSymbol === "prototype",
           });
+          let needKeyNode;
           if (isArrayIndex) {
             indexedPropertyMap.set(propertyNameOrSymbol, propertyNode);
+          } else if (isInternalProperty) {
+            internalPropertyMap.set(propertyNameOrSymbol, propertyNode);
+            needKeyNode = true;
           } else {
             namedPropertyMap.set(propertyNameOrSymbol, propertyNode);
+            needKeyNode = true;
+          }
+          if (needKeyNode) {
             const keyNode = _createValueNode({
               parent: propertyNode,
               path: propertyNode.path,
@@ -2445,7 +2517,8 @@ let createValueNode;
               valueEndSeparator: propertyIsSymbol ? "]" : "",
               showOnlyWhenDiff: false,
               property: propertyNode.property,
-              isUrlProperty,
+              isInternalProperty,
+              isUrlInternalProperty,
               isClassStaticProperty: propertyNode.isClassStaticProperty,
               isClassPrototype: propertyNode.isClassPrototype,
               displayedIn: propertyNode.displayedIn,
@@ -2516,7 +2589,8 @@ let createValueNode;
                   : valueEndSeparator,
               property: propertyNode.property,
               isArrayIndex,
-              isUrlProperty,
+              isInternalProperty,
+              isUrlInternalProperty,
               descriptor: propertyDescriptorName,
               isClassStaticProperty: propertyNode.isClassStaticProperty,
               isClassPrototype: propertyNode.isClassPrototype,
@@ -2688,7 +2762,7 @@ let writeDiff;
       if (node.isArrayIndex && node.descriptor === "value") {
         return "";
       }
-      if (node.isUrlProperty) {
+      if (node.isUrlInternalProperty) {
         return "";
       }
       return node.property;
@@ -3282,6 +3356,9 @@ let writeDiff;
             ? selfContext.maxValueInsideDiff
             : selfContext.maxDiffPerObject;
         for (const nestedComparison of nestedComparisons) {
+          if (!nestedComparison) {
+            debugger;
+          }
           if (nestedComparison.hidden) {
             continue;
           }
@@ -4321,10 +4398,10 @@ let writeDiff;
   };
   const writeCharDiff = (charComparison, context) => {
     const node = charComparison[context.resultType];
-    const { preserveLineBreaks, quotes } = context;
+    const { quotes } = context;
     const char = node.value;
     const charColor = pickColor(charComparison, context, (node) => node.value);
-    if (preserveLineBreaks && (char === "\n" || char === "\r")) {
+    if (node.preserveLineBreaks && (char === "\n" || char === "\r")) {
       return ANSI.color(char, charColor);
     }
     const point = char.charCodeAt(0);
@@ -4369,31 +4446,34 @@ let writeDiff;
   const writeUrlDiff = (comparison, context) => {
     let urlDiff = "";
     const propertyComparisonMap = comparison.childComparisons.propertyMap;
+    const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
+      comparison.actualNode,
+      (node) => node.canHaveUrlParts,
+    );
+    const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
+      comparison.expectNode,
+      (node) => node.canHaveUrlParts,
+    );
+    const canResetModifiedOnUrlPart = Boolean(
+      actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
+    );
+    const urlContext = {
+      ...context,
+      modified: canResetModifiedOnUrlPart ? false : context.modified,
+    };
+
     const writeUrlPart = (urlPartName) => {
       const urlPartComparison = propertyComparisonMap.get(urlPartName);
       if (!urlPartComparison || !urlPartComparison[context.resultType]) {
         return "";
       }
       const urlPartValueComparison = urlPartComparison.childComparisons.value;
-      const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
-        comparison.actualNode,
-        (node) => node.canHaveUrlParts,
-      );
-      const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
-        comparison.expectNode,
-        (node) => node.canHaveUrlParts,
-      );
-      const canResetModifiedOnUrlPart = Boolean(
-        actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
-      );
-      const urlPartDiff = writeDiff(urlPartValueComparison, {
-        ...context,
-        modified: canResetModifiedOnUrlPart ? false : context.modified,
-      });
+
+      const urlPartDiff = writeDiff(urlPartValueComparison, urlContext);
       return urlPartDiff;
     };
 
-    const delimitersColor = pickDelimitersColor(comparison, context);
+    const delimitersColor = pickDelimitersColor(comparison, urlContext);
     urlDiff += ANSI.color(`"`, delimitersColor);
     urlDiff += writeUrlPart("protocol");
     urlDiff += writeUrlPart("username");
@@ -4431,11 +4511,6 @@ let writeDiff;
         propertyNames.splice(prototypePropertyIndex, 1);
         propertyNames.push("prototype");
       }
-    }
-    if (node.canHaveUrlParts) {
-      propertyNames = propertyNames.filter(
-        (name) => !URL_PART_NAMES.includes(name),
-      );
     }
     const propertyComparisons = propertyNames.map(
       (propertyName) => namedPropertyNodeMap.get(propertyName).comparison,
@@ -4786,7 +4861,7 @@ const canParseUrl =
       return false;
     }
   });
-const URL_PART_NAMES = [
+const URL_INTERNAL_PROPERTY_NAMES = [
   "protocol",
   "username",
   "password",

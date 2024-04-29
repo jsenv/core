@@ -4,3 +4,21 @@ AssertionError: actual and expect have 1 difference:
 actual: URL("http://example.com/")
 expect: URL("http://example.com:8000/")
 
+# url string and url
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/"
+expect: URL("http://example.com:8000/")
+
+# url and url string
+AssertionError: actual and expect are different:
+
+actual: URL("http://example.com/")
+expect: "http://example.com:8000/"
+
+# url string and url string
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/"
+expect: "http://example.com:8000/"
+

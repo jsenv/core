@@ -10,24 +10,24 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com:8000"),
     });
   },
-  // ["url and url string"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com"),
-  //     expected: "http://example.com:8000",
-  //   });
-  // },
-  // ["url string and url"]: () => {
-  //   assert({
-  //     actual: "http://example.com",
-  //     expected: new URL("http://example.com:8000"),
-  //   });
-  // },
-  // ["url string and url string"]: () => {
-  //   assert({
-  //     actual: "http://example.com",
-  //     expected: "http://example.com:8000",
-  //   });
-  // },
+  ["url string and url"]: () => {
+    assert({
+      actual: "http://example.com",
+      expect: new URL("http://example.com:8000"),
+    });
+  },
+  ["url and url string"]: () => {
+    assert({
+      actual: new URL("http://example.com"),
+      expect: "http://example.com:8000",
+    });
+  },
+  ["url string and url string"]: () => {
+    assert({
+      actual: "http://example.com",
+      expect: "http://example.com:8000",
+    });
+  },
   // ["url and non url string"]: () => {
   //   assert({
   //     actual: new URL("http://example.com"),
