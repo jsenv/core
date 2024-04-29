@@ -280,12 +280,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       const { actualNode, expectNode } = comparison;
 
       let nodePresent;
+      let missingReason = "";
       added_or_removed: {
+        const onAdded = (reason) => {
+          missingReason = "added";
+          comparison.reasons.self.added.add(reason);
+          comparison.added = true;
+        };
+        const onRemoved = (reason) => {
+          missingReason = "removed";
+          comparison.reasons.self.removed.add(reason);
+          comparison.removed = true;
+        };
         const onMissing = (reason) => {
-          const reasonType =
-            nodePresent.name === "actual" ? "added" : "removed";
-          comparison.reasons.self[reasonType].add(reason);
-          comparison[reasonType] = true;
+          if (nodePresent.name === "actual") {
+            onAdded(reason);
+          } else {
+            onRemoved(reason);
+          }
           addCause(comparison);
         };
 
@@ -297,8 +309,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualNode.parent.isSymbol
           ) {
             nodePresent = actualNode;
-            comparison.reasons.self.added.add("internal_value");
             comparison["internal_value"] = true;
+            onAdded("internal_value");
             break added_or_removed;
           }
           if (
@@ -307,18 +319,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             expectNode.parent.isSymbol
           ) {
             nodePresent = expectNode;
-            comparison.reasons.self.removed.add("internal_value");
             comparison["internal_value"] = true;
+            onRemoved("internal_value");
             break added_or_removed;
           }
           nodePresent = expectNode;
           break added_or_removed;
         }
-
         if (!actualNode) {
+          missingReason = "modified";
           missingNodeName = "actualNode";
           nodePresent = expectNode;
         } else if (!expectNode) {
+          missingReason = "modified";
           missingNodeName = "expectNode";
           nodePresent = actualNode;
         }
@@ -392,6 +405,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           onMissing("internal_value");
         }
       }
+      comparison.missingReason = missingReason;
 
       const compareInside = (insideComparison, insideOptions = {}) => {
         const insideActualNode = insideComparison.actualNode;
@@ -1774,7 +1788,6 @@ let createValueNode;
                   isObjectForString = true;
                 } else if (proto.constructor.name === "URL") {
                   isUrl = true;
-                  //  canHaveUrlParts = true;
                 } else if (proto.constructor.name === "Error") {
                   isError = true;
                 } else if (proto.constructor.name === "Map") {
@@ -1830,7 +1843,8 @@ let createValueNode;
             subtype = typeof value;
             if (subtype === "string") {
               isString = true;
-              if (type === "line") {
+              if (isUrlProperty) {
+              } else if (type === "line") {
                 canHaveChars = true;
                 chars = splitChars(value);
                 openDelimiter = `${index + 1} | `;
@@ -1846,7 +1860,6 @@ let createValueNode;
                 }
                 if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
-                } else if (isUrlProperty) {
                 } else if (type === "property_key") {
                   if (
                     isValidPropertyIdentifier(property) ||
@@ -2231,7 +2244,7 @@ let createValueNode;
 
         const associatedValueMetaMap = new Map();
         // integers
-        if (node.isString || node.isObjectString) {
+        if (node.isString || node.isObjectForString) {
           let index = 0;
           // eslint-disable-next-line no-unused-vars
           while (index < node.value.length) {
@@ -2697,7 +2710,6 @@ let writeDiff;
     };
 
     let diff = "";
-    let displayValue = true;
     let isNestedValue = false;
     let displayedProperty = getNodeDisplayedProperty(node);
     let valueSeparator = node.valueSeparator;
@@ -2810,7 +2822,6 @@ let writeDiff;
         (displayedProperty ||
           node.type === "map_entry_value" ||
           node.type === "set_value") &&
-        displayValue &&
         valueSeparator &&
         comparison !== selfContext.startComparison
       ) {
@@ -2867,9 +2878,6 @@ let writeDiff;
     }
     let valueDiff = "";
     value: {
-      if (!displayValue) {
-        break value;
-      }
       if (node.type === "property_key" && node.isClassStaticProperty) {
         const staticColor = pickColor(
           comparison,
