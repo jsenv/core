@@ -1658,7 +1658,7 @@ let createValueNode;
         let isString = false;
         let isStringObject = false;
         let isUrl = false;
-        let isUrlString = false;
+        let isStringForUrl = false;
         let isError = false;
         let isErrorMessageString = false;
         let isMap = false;
@@ -1873,7 +1873,7 @@ let createValueNode;
                 if (type === "property_descriptor" && parent.parent.isUrl) {
                 }
                 if (canParseUrl(value) && !hidden) {
-                  isUrlString = true;
+                  isStringForUrl = true;
                   canHaveUrlParts = true;
                   canHaveProps = true;
                 }
@@ -1949,6 +1949,7 @@ let createValueNode;
           isPrimitive: primitive,
           isSourceCode,
           isString,
+          isStringForUrl,
           isErrorMessageString,
           isMultiline,
           useLineNumbersOnTheLeft,
@@ -1968,7 +1969,6 @@ let createValueNode;
           isArray,
           isSet,
           isUrl,
-          isUrlString,
           isError,
           isMap,
           isSymbol,
@@ -3523,7 +3523,7 @@ let writeDiff;
         if (node.isClassPrototype) {
           forceDelimitersWhenEmpty = false;
         }
-        if (node.isUrlString) {
+        if (node.isStringForUrl) {
           forceDelimitersWhenEmpty = false;
         }
         let namedValuesDiff = writeNestedValueGroupDiff({
