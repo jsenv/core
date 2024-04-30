@@ -2774,7 +2774,7 @@ let writeDiff;
         const keyContext = {
           ...selfContext,
           modified: context.modified,
-          collapsedWithOverview: !node.isMapEntryKey,
+          collapsedWithOverview: !node.isMapEntryValue,
         };
         const keyDiff = writeDiff(keyComparison, keyContext);
         diff += keyDiff;
