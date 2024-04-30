@@ -74,3 +74,9 @@ AssertionError: actual and expect are different:
 actual: "http://example/file.txt"
 expect: "file://example/file.js"
 
+# quote test
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/"
+expect: 'test"quotes'
+

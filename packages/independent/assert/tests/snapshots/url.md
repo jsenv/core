@@ -129,3 +129,14 @@ assert({
 
 ![img](<./url/file protocol vs http protocol.svg>)
 
+# quote test
+
+```js
+assert({
+  actual: "http://example.com",
+  expect: `test"quotes`,
+});
+```
+
+![img](<./url/quote test.svg>)
+

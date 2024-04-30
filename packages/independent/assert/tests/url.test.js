@@ -80,4 +80,10 @@ await startSnapshotTesting("url", {
       expect: "file://example/file.js",
     });
   },
+  ["quote test"]: () => {
+    assert({
+      actual: "http://example.com",
+      expect: `test"quotes`,
+    });
+  },
 });

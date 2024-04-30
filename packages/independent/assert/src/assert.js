@@ -1767,10 +1767,12 @@ let createValueNode;
                   useLineNumbersOnTheLeft = true;
                 }
                 if (!isUrlEntry && !hidden && canParseUrl(value)) {
+                  useQuotes = true;
+                  quote = DOUBLE_QUOTE;
                   isStringForUrl = true;
                   canHaveUrlParts = true;
                   canHaveInternalEntries = true;
-                  openDelimiter = closeDelimiter = '"';
+                  openDelimiter = closeDelimiter = quote;
                 } else if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (type === "entry_key") {
