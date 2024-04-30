@@ -2757,6 +2757,16 @@ let writeDiff;
       }
 
       if (displayedKey && comparison !== selfContext.startComparison) {
+        if (node.descriptor && node.descriptor !== "value") {
+          const descriptorName = node.descriptor;
+          const descriptorNameColor = pickColor(
+            comparison,
+            selfContext,
+            (node) => node.descriptor,
+          );
+          diff += ANSI.color(descriptorName, descriptorNameColor);
+          diff += " ";
+        }
         const keyComparison =
           node.type === "entry_value"
             ? node.parent.childNodes.key.comparison
@@ -2894,16 +2904,6 @@ let writeDiff;
         break value;
       }
       if (node.type === "entry_key") {
-        if (node.descriptor && node.descriptor !== "value") {
-          const descriptorName = node.descriptor;
-          const descriptorNameColor = pickColor(
-            comparison,
-            selfContext,
-            (node) => node.descriptor,
-          );
-          valueDiff += ANSI.color(descriptorName, descriptorNameColor);
-          valueDiff += " ";
-        }
         if (node.isClassStaticProperty) {
           const staticColor = pickColor(
             comparison,
