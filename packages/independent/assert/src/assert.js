@@ -1537,14 +1537,17 @@ let createValueNode;
       entryKey,
       isObjectPropertyEntry,
       isObjectPropertySymbolEntry,
+      isPropertyDescriptorEntry,
+      descriptor,
       isArrayEntry,
       isStringEntry,
       isSetEntry,
-      isSetValue,
       isMapEntry,
+      isUrlEntry,
+      isArrayValue,
+      isSetValue,
       isMapEntryKey,
       isMapEntryValue,
-      isUrlEntry,
       isUrlEntryKey,
       isUrlEntryValue,
       isClassStaticProperty,
@@ -1869,14 +1872,17 @@ let createValueNode;
           entryKey,
           isObjectPropertyEntry,
           isObjectPropertySymbolEntry,
+          isPropertyDescriptorEntry,
+          descriptor,
           isArrayEntry,
           isStringEntry,
           isSetEntry,
-          isSetValue,
           isMapEntry,
+          isUrlEntry,
+          isArrayValue,
+          isSetValue,
           isMapEntryKey,
           isMapEntryValue,
-          isUrlEntry,
           isUrlEntryKey,
           isUrlEntryValue,
           isClassStaticProperty,
@@ -1962,15 +1968,18 @@ let createValueNode;
         return node;
       }
 
-      const createPropertyLikeNode = (params) => {
-        const propertyLikeNode = _createValueNode(params);
+      const createPropertyLikeNode = (property, params) => {
+        const propertyLikeNode = _createValueNode({
+          ...params,
+          entryKey: property,
+        });
         const keyNode = _createValueNode({
           parent: propertyLikeNode,
-          path: propertyLikeNode.path,
-          type: "property_key",
-          value: propertyLikeNode.property,
-          property: propertyLikeNode.property,
-          isSpecialProperty: propertyLikeNode.property.endsWith("()"),
+          path: path.append(property),
+          type: "entry_key",
+          value: property,
+          entryKey: property,
+          isSpecialProperty: property.endsWith("()"),
           showOnlyWhenDiff: false,
         });
         propertyLikeNode.childNodes.key = keyNode;
@@ -1984,11 +1993,9 @@ let createValueNode;
         if (shouldIgnorePrototype(node, prototypeValue)) {
           break prototype;
         }
-        const prototypeNode = createPropertyLikeNode({
+        const prototypeNode = createPropertyLikeNode("__proto__", {
           parent: node,
-          path: path.append("__proto__"),
           type: "prototype",
-          property: "__proto__",
           valueSeparator: ":",
           value: prototypeValue,
           valueEndSeparator: ",",
@@ -2002,13 +2009,11 @@ let createValueNode;
           const functionBody = createSourceCode(
             node.functionAnalysis.argsAndBodySource,
           );
-          const internalValueNode = createPropertyLikeNode({
+          const internalValueNode = createPropertyLikeNode("toString()", {
             parent: node,
-            path: path.append("toString()"),
             type: "internal_value",
             value: functionBody,
             displayedIn: node.functionAnalysis.type === "class" ? "" : "label",
-            property: "toString()",
             isSourceCode: true,
           });
           node.constructorCall = internalValueNode.displayedIn === "label";
@@ -2018,49 +2023,44 @@ let createValueNode;
           for (const setValue of node.value) {
             setValues.push(setValue);
           }
-          const setInternalValueNode = createPropertyLikeNode({
-            parent: node,
-            path: path.append("Symbol.iterator()"),
-            type: "internal_value",
-            value: setValues,
-            displayedIn: "label",
-            property: "Symbol.iterator()",
-          });
+          const setInternalValueNode = createPropertyLikeNode(
+            "Symbol.iterator()",
+            {
+              parent: node,
+              type: "internal_value",
+              value: setValues,
+              displayedIn: "label",
+            },
+          );
           node.constructorCall = true;
           childNodes.internalValue = setInternalValueNode;
         } else if (node.isUrl) {
           const urlString = node.value.href;
-          const urlStringNode = createPropertyLikeNode({
+          const urlStringNode = createPropertyLikeNode("toString()", {
             parent: node,
-            path: path.append("toString()"),
             type: "internal_value",
             value: urlString,
             displayedIn: "label",
-            property: "toString()",
           });
           node.constructorCall = true;
           childNodes.internalValue = urlStringNode;
         } else if (node.isSymbol) {
           const { symbolDescription, symbolKey } = node;
           if (symbolDescription) {
-            const symbolDescriptionNode = createPropertyLikeNode({
+            const symbolDescriptionNode = createPropertyLikeNode("toString()", {
               parent: node,
-              path: path.append("toString()"),
               type: "internal_value",
               value: symbolDescription,
               displayedIn: "label",
-              property: "toString()",
             });
             node.constructorCall = true;
             childNodes.internalValue = symbolDescriptionNode;
           } else if (symbolKey) {
-            const symbolKeyNode = createPropertyLikeNode({
+            const symbolKeyNode = createPropertyLikeNode("keyFor()", {
               parent: node,
-              path: path.append("keyFor()"),
               type: "internal_value",
               value: symbolKey,
               displayedIn: "label",
-              property: "keyFor()",
             });
             node.constructorCall = true;
             childNodes.internalValue = symbolKeyNode;
@@ -2076,15 +2076,16 @@ let createValueNode;
         ) {
           const toPrimitiveReturnValue =
             node.value[Symbol.toPrimitive]("string");
-          const internalValueNode = createPropertyLikeNode({
-            parent: node,
-            path: path.append("Symbol.toPrimitive()"),
-            type: "internal_value",
-            value: toPrimitiveReturnValue,
-            displayedIn: "properties",
-            property: "Symbol.toPrimitive()",
-            valueSeparator: ":",
-          });
+          const internalValueNode = createPropertyLikeNode(
+            "Symbol.toPrimitive()",
+            {
+              parent: node,
+              type: "internal_value",
+              value: toPrimitiveReturnValue,
+              displayedIn: "properties",
+              valueSeparator: ":",
+            },
+          );
           // node.constructorCall = true;
           childNodes.internalValue = internalValueNode;
         } else if (
@@ -2099,13 +2100,11 @@ let createValueNode;
             node.subtype === "Object" || node.subtype === "Array"
               ? "properties"
               : "label";
-          const internalValueNode = createPropertyLikeNode({
+          const internalValueNode = createPropertyLikeNode("valueOf()", {
             parent: node,
-            path: path.append("valueOf()"),
             type: "internal_value",
             value: valueOfReturnValue,
             displayedIn,
-            property: "valueOf()",
             valueSeparator: ":",
             valueEndSeparator: displayedIn === "label" ? "" : ",",
           });
@@ -2465,9 +2464,10 @@ let createValueNode;
                 type: "entry_value",
                 value: propertyDescriptorValue,
                 ...entrySharedInfo,
+                descriptor: propertyDescriptorName,
                 isPropertyDescriptorEntry: true,
                 isPropertyValueEntry,
-                descriptor: propertyDescriptorName,
+                isArrayValue: isArrayEntry && isPropertyValueEntry,
                 showOnlyWhenDiff: !isPropertyValueEntry,
                 valueSeparator:
                   valueSeparator === undefined
