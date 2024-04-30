@@ -118,3 +118,14 @@ assert({
 
 ![img](<./url/url object port and object with port.svg>)
 
+# file protocol vs http protocol
+
+```js
+assert({
+  actual: "http://example/file.txt",
+  expect: "file://example/file.js",
+});
+```
+
+![img](<./url/file protocol vs http protocol.svg>)
+

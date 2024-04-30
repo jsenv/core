@@ -74,4 +74,10 @@ await startSnapshotTesting("url", {
       },
     });
   },
+  ["file protocol vs http protocol"]: () => {
+    assert({
+      actual: "http://example/file.txt",
+      expect: "file://example/file.js",
+    });
+  },
 });

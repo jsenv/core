@@ -1766,7 +1766,7 @@ let createValueNode;
                 if (isMultiline && !isErrorMessageString) {
                   useLineNumbersOnTheLeft = true;
                 }
-                if (canParseUrl(value) && !hidden) {
+                if (!isUrlEntry && !hidden && canParseUrl(value)) {
                   isStringForUrl = true;
                   canHaveUrlParts = true;
                   canHaveInternalEntries = true;

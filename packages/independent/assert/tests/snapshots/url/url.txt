@@ -68,3 +68,9 @@ expect: {
   port: 45,
 }
 
+# file protocol vs http protocol
+AssertionError: actual and expect are different:
+
+actual: "http://example/file.txt"
+expect: "file://example/file.js"
+
