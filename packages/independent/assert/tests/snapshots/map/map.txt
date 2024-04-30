@@ -65,22 +65,24 @@ expect: {
 }
 
 # object with map
-TypeError: Cannot read properties of undefined (reading 'hidden')
-    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3264:32)
-    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3517:25)
-    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1290:24)
-    at object with map (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:76:5)
-    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
-    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:7:1
+AssertionError: actual and expect are different:
+
+actual: {
+  a: false,
+}
+expect: Map {
+  "a" => true,
+}
 
 # object with map having cusom prop
-TypeError: Cannot read properties of undefined (reading 'hidden')
-    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3264:32)
-    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3517:25)
-    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1290:24)
-    at object with map having cusom prop (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:84:5)
-    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
-    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:7:1
+AssertionError: actual and expect are different:
+
+actual: {
+  a: false,
+}
+expect: Map {
+  "a" => true,
+}
 
 # map having cusom prop with object
 AssertionError: actual and expect are different:

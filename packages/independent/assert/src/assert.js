@@ -832,17 +832,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualInternalEntryKey,
             actualInternalEntryNode,
           ] of actualInternalEntryNodeMap) {
-            let expectEntryNodeForComparison;
-            if (expectPropertyEntryNodeMap.size === 0) {
-              expectEntryNodeForComparison = expectInternalEntryNodeMap.get(
-                actualInternalEntryKey,
-              );
-            } else {
-              expectEntryNodeForComparison =
-                expectInternalEntryNodeMap.get(actualInternalEntryKey) ||
-                expectPropertyEntryNodeMap.get(actualInternalEntryKey) ||
-                expectIndexedEntryNodeMap.get(actualInternalEntryKey);
-            }
+            let expectEntryNodeForComparison = expectInternalEntryNodeMap.get(
+              actualInternalEntryKey,
+            );
             const internalEntryComparison = createComparison(
               actualInternalEntryNode,
               expectEntryNodeForComparison,
@@ -860,12 +852,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (internalEntryComparisonMap.has(expectInternalEntryKey)) {
               continue;
             }
-            let actualEntryNodeForComparison;
-            if (actualPropertyEntryNodeMap.size === 0) {
-              actualEntryNodeForComparison = actualInternalEntryNodeMap.get(
-                expectInternalEntryKey,
-              );
-            }
+            let actualEntryNodeForComparison = actualInternalEntryNodeMap.get(
+              expectInternalEntryKey,
+            );
             const internalEntryComparison = createComparison(
               actualEntryNodeForComparison,
               expectInternalEntryNode,
@@ -923,26 +912,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           let index = 0;
           for (const [, actualIndexedEntryNode] of actualIndexedEntryNodeMap) {
             let indexString = String(index);
-            if (
-              internalEntryComparisonMap.has(index) ||
-              internalEntryComparisonMap.has(indexString)
-            ) {
-              continue;
-            }
-            let expectNodeForComparison;
-            if (expectIndexedEntryNodeMap.has(indexString)) {
-              expectNodeForComparison =
-                expectIndexedEntryNodeMap.get(indexString);
-            } else if (expectPropertyEntryNodeMap.size > 0) {
+            let expectNodeForComparison =
+              expectIndexedEntryNodeMap.get(indexString);
+            if (!expectNodeForComparison) {
               expectNodeForComparison =
                 expectPropertyEntryNodeMap.get(index) ||
-                expectPropertyEntryNodeMap.get(indexString) ||
-                expectInternalEntryNodeMap.get(index) ||
-                expectInternalEntryNodeMap.get(indexString);
-            } else {
-              expectNodeForComparison =
-                expectInternalEntryNodeMap.get(index) ||
-                expectInternalEntryNodeMap.get(indexString);
+                expectPropertyEntryNodeMap.get(indexString);
             }
             const entryComparison = createComparison(
               actualIndexedEntryNode,
@@ -962,25 +937,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             ))
           ) {
             let indexString = String(index);
-            if (
-              internalEntryComparisonMap.has(index) ||
-              internalEntryComparisonMap.has(indexString) ||
-              entryComparisonMap.has(indexString)
-            ) {
+            if (entryComparisonMap.has(indexString)) {
               continue;
             }
-            let actualNodeForComparison;
-            if (actualPropertyEntryNodeMap.size > 0) {
-              actualNodeForComparison =
-                actualPropertyEntryNodeMap.get(index) ||
-                actualPropertyEntryNodeMap.get(indexString) ||
-                actualInternalEntryNodeMap.get(index) ||
-                actualInternalEntryNodeMap.get(indexString);
-            } else {
-              actualNodeForComparison =
-                actualInternalEntryNodeMap.get(index) ||
-                actualInternalEntryNodeMap.get(indexString);
-            }
+            let actualNodeForComparison =
+              actualPropertyEntryNodeMap.get(index) ||
+              actualPropertyEntryNodeMap.get(indexString);
             const entryComparison = createComparison(
               actualNodeForComparison,
               expectIndexedEntryNode,
@@ -996,7 +958,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualPropertyEntryNode,
           ] of actualPropertyEntryNodeMap) {
             if (
-              internalEntryComparisonMap.has(actualProperty) ||
               // can happen for
               // actual: {0: 'b'}
               // expect: ['b']
@@ -1004,13 +965,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             ) {
               continue;
             }
-            let expectEntryNodeForComparison;
-            if (expectPropertyEntryNodeMap.size > 0) {
-              expectEntryNodeForComparison =
-                expectPropertyEntryNodeMap.get(actualProperty) ||
-                expectIndexedEntryNodeMap.get(actualProperty) ||
-                expectInternalEntryNodeMap.get(actualProperty);
-            } else {
+            let expectEntryNodeForComparison =
+              expectPropertyEntryNodeMap.get(actualProperty);
+            if (
+              !expectEntryNodeForComparison &&
+              expectNode &&
+              !expectNode.canHaveProps
+            ) {
               expectEntryNodeForComparison =
                 expectInternalEntryNodeMap.get(actualProperty);
             }
@@ -1025,16 +986,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             expectProperty,
             expectPropertyEntryNode,
           ] of expectPropertyEntryNodeMap) {
-            if (
-              internalEntryComparisonMap.has(expectProperty) ||
-              entryComparisonMap.has(expectProperty)
-            ) {
+            if (entryComparisonMap.has(expectProperty)) {
               continue;
             }
             let actualEntryNodeForComparison;
-            if (actualPropertyEntryNodeMap.size === 0) {
+            if (actualNode && !actualNode.canHaveProps) {
               actualEntryNodeForComparison =
-                actualInternalEntryNodeMap.get(expectProperty);
+                expectInternalEntryNodeMap.get(expectProperty);
             }
             const entryComparison = createComparison(
               actualEntryNodeForComparison,
@@ -3261,6 +3219,9 @@ let writeDiff;
             ? selfContext.maxValueInsideDiff
             : selfContext.maxDiffPerObject;
         for (const nestedComparison of nestedComparisons) {
+          if (!nestedComparison) {
+            debugger;
+          }
           if (nestedComparison.hidden) {
             continue;
           }
