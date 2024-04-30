@@ -355,9 +355,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else if (nodePresent.type === "entry_value") {
           ownerComparison = nodePresent.parent.parent.comparison;
         } else if (nodePresent.type === "line") {
-          ownerComparison = nodePresent.parent.parent.comparison;
+          ownerComparison = nodePresent.parent.comparison;
         } else if (nodePresent.type === "char") {
-          ownerComparison = nodePresent.parent.parent.comparison;
+          ownerComparison = nodePresent.parent.comparison;
+        } else if (nodePresent.type === "prototype") {
+          ownerComparison = nodePresent.parent.comparison;
+        } else if (nodePresent.type === "internal_value") {
+          ownerComparison = nodePresent.parent.comparison;
         }
         if (!ownerComparison) {
           break added_or_removed;
@@ -393,6 +397,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (nodePresent.type === "char") {
           if (otherOwnerNode.canHaveChars) {
             onMissing(nodePresent.value);
+          }
+          break added_or_removed;
+        }
+        if (nodePresent.type === "prototype") {
+          if (otherOwnerNode.canHaveProps) {
+            onMissing("prototype");
+          }
+          break added_or_removed;
+        }
+        if (nodePresent.type === "internal_value") {
+          if (!otherOwnerNode.childNodes.internalValue) {
+            onMissing("internal_value");
           }
           break added_or_removed;
         }
@@ -434,7 +450,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         compareInside(keyComparison);
       }
       if (nodePresent.type === "entry" || nodePresent.isSetValue) {
-        const getChildName = (node, childName) => {
+        const getChildByName = (node, childName) => {
           if (!node) {
             return null;
           }
@@ -454,10 +470,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         };
         const childComparisons = comparison.childComparisons;
         const actualUsePropertyAccessor = Boolean(
-          getChildName(actualNode, "get") || getChildName(actualNode, "set"),
+          getChildByName(actualNode, "get") ||
+            getChildByName(actualNode, "set"),
         );
         const expectUsePropertyAccessor = Boolean(
-          getChildName(expectNode, "get") || getChildName(expectNode, "set"),
+          getChildByName(expectNode, "get") ||
+            getChildByName(expectNode, "set"),
         );
         const childsToCompare = [
           "value",
@@ -468,8 +486,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           "configurable",
         ];
         for (const childName of childsToCompare) {
-          const actualChildNode = getChildName(actualNode, childName);
-          const expectChildNode = getChildName(expectNode, childName);
+          const actualChildNode = getChildByName(actualNode, childName);
+          const expectChildNode = getChildByName(expectNode, childName);
           if (!actualChildNode && !expectChildNode) {
             continue;
           }
@@ -792,7 +810,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
 
         const [actualInternalEntryNodeMap, expectInternalEntryNodeMap] =
           pickNodeMap(
-            (node) => node.canHaveInternalProps,
+            (node) => node.canHaveInternalEntries,
             (node) => node.childNodes.internalEntryMap,
           );
         const [actualIndexedEntryNodeMap, expectIndexedEntryNodeMap] =
@@ -1377,9 +1395,6 @@ const shouldIgnorePrototype = (node, prototypeValue) => {
   if (prototypeValue === URLSearchParams.prototype) {
     return true;
   }
-  if (Object.getPrototypeOf(node.value) === Object.prototype) {
-    return true;
-  }
   return false;
 };
 const shouldIgnorePropertyEntry = (
@@ -1737,6 +1752,7 @@ let createValueNode;
                   isError = true;
                 } else if (proto.constructor.name === "Map") {
                   isMap = true;
+                  canHaveInternalEntries = true;
                 }
               }
             });
@@ -2004,11 +2020,12 @@ let createValueNode;
       const createPropertyLikeNode = (property, params) => {
         const propertyLikeNode = _createValueNode({
           ...params,
+          path: path.append(property),
           entryKey: property,
         });
         const keyNode = _createValueNode({
           parent: propertyLikeNode,
-          path: path.append(property),
+          path: propertyLikeNode.path,
           type: "entry_key",
           value: property,
           entryKey: property,
@@ -2252,7 +2269,7 @@ let createValueNode;
             associatedValueMetaMap.set(mapEntryKey, {
               isInternalEntry: true,
               isMapEntry: true,
-              value: createFacadePropertyDescriptor(mapEntryValue),
+              value: mapEntryValue,
               valueSeparator: "=>",
               valueEndSeparator: ",",
               pathPart,
@@ -2270,11 +2287,9 @@ let createValueNode;
             const meta = {
               isInternalEntry: true,
               isUrlEntry: true,
-              propertyDescriptor: createFacadePropertyDescriptor(
-                normalizeUrlPart(
-                  urlInternalPropertyName,
-                  urlInternalPropertyValue,
-                ),
+              value: normalizeUrlPart(
+                urlInternalPropertyName,
+                urlInternalPropertyValue,
               ),
               valueSeparator: "",
               valueEndSeparator: "",
@@ -2375,7 +2390,7 @@ let createValueNode;
           if (!showOnlyWhenDiff) {
             if (entryKey === "prototype") {
               showOnlyWhenDiff = "deep";
-            } else if (!propertyDescriptor.enumerable) {
+            } else if (propertyDescriptor && !propertyDescriptor.enumerable) {
               if (entryKey === "message" && node.isError) {
               } else {
                 showOnlyWhenDiff = true;
@@ -2450,6 +2465,9 @@ let createValueNode;
               ...entrySharedInfo,
               isMapEntryValue: isMapEntry,
               isUrlEntryValue: isUrlEntry,
+              valueSeparator,
+              valueStartSeparator,
+              valueEndSeparator,
             });
             entryNode.childNodes.value = entryValueNode;
           } else {
@@ -2485,12 +2503,11 @@ let createValueNode;
               const isPropertyValue = propertyDescriptorName === "value";
               const propertyDescriptorNode = _createValueNode({
                 parent: entryNode,
-                path:
-                  propertyDescriptorName === "value"
-                    ? entryNode.path
-                    : entryNode.path.append(propertyDescriptorName, {
-                        isPropertyDescriptor: true,
-                      }),
+                path: propertyDescriptorValue
+                  ? entryNode.path
+                  : entryNode.path.append(propertyDescriptorName, {
+                      isPropertyDescriptor: true,
+                    }),
                 type: "entry_value",
                 value: propertyDescriptorValue,
                 ...entrySharedInfo,
@@ -2677,6 +2694,9 @@ let writeDiff;
 
     const selfContext = createSelfContext(comparison, context);
     const getDisplayedProperty = (node) => {
+      if (node.type === "entry_key") {
+        return "";
+      }
       if (node.displayedIn === "label") {
         return "";
       }
@@ -2752,7 +2772,7 @@ let writeDiff;
           selfContext.collapsedWithOverview = true;
         }
 
-        if (!node.isMapEntryValue) {
+        if (node.isMapEntryValue) {
           let indent = `  `.repeat(relativeDepth);
           if (selfContext.signs) {
             if (selfContext.removed) {
@@ -3250,9 +3270,6 @@ let writeDiff;
             ? selfContext.maxValueInsideDiff
             : selfContext.maxDiffPerObject;
         for (const nestedComparison of nestedComparisons) {
-          if (!nestedComparison) {
-            debugger;
-          }
           if (nestedComparison.hidden) {
             continue;
           }
@@ -3466,7 +3483,7 @@ let writeDiff;
       };
 
       let insideDiff = "";
-      if (node.canHaveInternalProps) {
+      if (node.canHaveInternalEntries) {
         const internalEntryComparisons =
           createInternalEntryComparisonIterable(node);
         const internalEntriesDiff = writeNestedValueGroupDiff({
@@ -4379,14 +4396,6 @@ let writeDiff;
     return urlDiff;
   };
 
-  const createIndexedEntryComparisonIterable = (node) => {
-    const indexedEntryMap = node.childNodes.indexedEntryMap;
-    const indexedEntryNodes = Array.from(indexedEntryMap.values());
-    const indexedEntryComparisons = indexedEntryNodes.map(
-      (indexedEntryNode) => indexedEntryNode.comparison,
-    );
-    return indexedEntryComparisons;
-  };
   const createInternalEntryComparisonIterable = (node) => {
     const internalEntryNodeMap = node.childNodes.internalEntryMap;
     const internalEntryNodes = Array.from(internalEntryNodeMap.values());
@@ -4394,6 +4403,14 @@ let writeDiff;
       (internalEntryNode) => internalEntryNode.comparison,
     );
     return internalEntryComparisons;
+  };
+  const createIndexedEntryComparisonIterable = (node) => {
+    const indexedEntryMap = node.childNodes.indexedEntryMap;
+    const indexedEntryNodes = Array.from(indexedEntryMap.values());
+    const indexedEntryComparisons = indexedEntryNodes.map(
+      (indexedEntryNode) => indexedEntryNode.comparison,
+    );
+    return indexedEntryComparisons;
   };
   const createPropertyEntryComparisonIterable = (node) => {
     const propertyEntryNodeMap = node.childNodes.propertyEntryMap;

@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="465.27"
+      width="456.87"
       height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -45,7 +45,7 @@
         <text x="144.42" y="14.55" fill="#cd5555">actual</text>
         <text x="203.23" y="14.55"> and </text>
         <text x="236.84" y="14.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="14.55"> have 2 differences:</text>
+        <text x="295.65" y="14.55"> have 1 difference:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">Map</text>
@@ -55,12 +55,10 @@
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Map</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="90.55" fill="#DAA520">&#x22;</text>
-        <text x="35.2" y="90.55" fill="#DAA520">a</text>
-        <text x="43.61" y="90.55" fill="#DAA520">&#x22;</text>
-        <text x="60.41" y="90.55" fill="#DAA520">=&#x3E;</text>
-        <text x="85.61" y="90.55" fill="#DAA520">true</text>
-        <text x="119.22" y="90.55" fill="#DAA520">,</text>
+        <text x="26.8" y="90.55" fill="#DAA520">a</text>
+        <text x="43.61" y="90.55" fill="#DAA520">=&#x3E;</text>
+        <text x="68.81" y="90.55" fill="#DAA520">true</text>
+        <text x="102.42" y="90.55" fill="#DAA520">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

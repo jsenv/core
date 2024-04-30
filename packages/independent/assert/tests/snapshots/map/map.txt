@@ -1,0 +1,94 @@
+# map entry added
+AssertionError: actual and expect have 1 difference:
+
+actual: Map {
+  a => true,
+}
+expect: Map {}
+
+# map entry removed
+AssertionError: actual and expect have 1 difference:
+
+actual: Map {}
+expect: Map {
+  a => true,
+}
+
+# map value modified
+AssertionError: actual and expect have 1 difference:
+
+actual: Map {
+  a => true,
+}
+expect: Map {
+  a => false,
+}
+
+# map key is an object
+AssertionError: actual and expect have 1 difference:
+
+actual: Map {
+   => true,
+}
+expect: Map {
+   => false,
+}
+
+# map key objects are compared by identity
+AssertionError: actual and expect have 2 differences:
+
+actual: Map {
+   => true,
+}
+expect: Map {
+   => false,
+}
+
+# map key objects are collapsed and take a subset of max columns
+AssertionError: actual and expect have 1 difference:
+
+actual: Map {
+   => true,
+}
+expect: Map {
+   => false,
+}
+
+# map comparing with object
+AssertionError: actual and expect are different:
+
+actual: Map {
+  a => true,
+}
+expect: {
+a: false,
+}
+
+# object with map
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3273:32)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3526:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1290:24)
+    at object with map (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:76:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:7:1
+
+# object with map having cusom prop
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3273:32)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3526:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1290:24)
+    at object with map having cusom prop (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:84:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:7:1
+
+# map having cusom prop with object
+AssertionError: actual and expect are different:
+
+actual: Map {
+  a => true,
+}
+expect: {
+a: false,
+}
+
