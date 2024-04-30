@@ -352,9 +352,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         let ownerComparison;
-        if (nodePresent.type === "entry_key") {
-          ownerComparison = nodePresent.parent.parent.comparison;
-        } else if (nodePresent.type === "entry_value") {
+        if (nodePresent.type === "entry_value") {
           ownerComparison = nodePresent.parent.parent.comparison;
         } else if (nodePresent.type === "line") {
           ownerComparison = nodePresent.parent.comparison;
@@ -372,48 +370,29 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (!otherOwnerNode) {
           break added_or_removed;
         }
+        let canBeAddedOrRemoved;
         if (nodePresent.isInternalEntry) {
-          if (otherOwnerNode.canHaveInternalEntries) {
-            onMissing(nodePresent.value);
-          }
-          break added_or_removed;
+          canBeAddedOrRemoved = (node) => node.canHaveInternalEntries;
+        } else if (nodePresent.isIndexedEntry) {
+          canBeAddedOrRemoved = (node) => node.canHaveIndexedValues;
+        } else if (nodePresent.isPropertyEntry) {
+          canBeAddedOrRemoved = (node) => node.canHaveProps;
+        } else if (nodePresent.type === "line") {
+          canBeAddedOrRemoved = (node) => node.canHaveLines;
+        } else if (nodePresent.type === "char") {
+          canBeAddedOrRemoved = (node) => node.canHaveChars;
+        } else if (nodePresent.type === "prototype") {
+          canBeAddedOrRemoved = (node) => node.canHaveProps;
+        } else if (nodePresent.type === "internal_value") {
+          canBeAddedOrRemoved = (node) => node.childNodes.internalValue;
         }
-        if (nodePresent.isIndexedEntry) {
-          if (otherOwnerNode.canHaveIndexedValues) {
-            onMissing(nodePresent.value);
-          }
-          break added_or_removed;
+        if (
+          canBeAddedOrRemoved &&
+          pickSelfOrInternalNode(otherOwnerNode, canBeAddedOrRemoved)
+        ) {
+          onMissing(nodePresent.entryKey);
         }
-        if (nodePresent.isPropertyEntry) {
-          if (otherOwnerNode.canHaveProps) {
-            onMissing(nodePresent.value);
-          }
-          break added_or_removed;
-        }
-        if (nodePresent.type === "line") {
-          if (otherOwnerNode.canHaveLines) {
-            onMissing(nodePresent.value);
-          }
-          break added_or_removed;
-        }
-        if (nodePresent.type === "char") {
-          if (otherOwnerNode.canHaveChars) {
-            onMissing(nodePresent.value);
-          }
-          break added_or_removed;
-        }
-        if (nodePresent.type === "prototype") {
-          if (otherOwnerNode.canHaveProps) {
-            onMissing("prototype");
-          }
-          break added_or_removed;
-        }
-        if (nodePresent.type === "internal_value") {
-          if (!otherOwnerNode.childNodes.internalValue) {
-            onMissing("internal_value");
-          }
-          break added_or_removed;
-        }
+        break added_or_removed;
       }
       comparison.missingReason = missingReason;
 
@@ -834,7 +813,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualInternalEntryKey,
             actualInternalEntryNode,
           ] of actualInternalEntryNodeMap) {
-            let expectEntryNodeForComparison = expectInternalEntryNodeMap.get(
+            const expectEntryNodeForComparison = expectInternalEntryNodeMap.get(
               actualInternalEntryKey,
             );
             const internalEntryComparison = createComparison(
@@ -854,7 +833,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (internalEntryComparisonMap.has(expectInternalEntryKey)) {
               continue;
             }
-            let actualEntryNodeForComparison = actualInternalEntryNodeMap.get(
+            const actualEntryNodeForComparison = actualInternalEntryNodeMap.get(
               expectInternalEntryKey,
             );
             const internalEntryComparison = createComparison(
@@ -2507,12 +2486,14 @@ let createValueNode;
 
         const lines = node.lines;
         for (const line of lines) {
+          let lineEntryKey = `#L${lineNodes.length + 1}`;
           const lineNode = _createValueNode({
             parent: node,
-            path: path.append(`#L${lineNodes.length + 1}`),
+            path: path.append(lineEntryKey),
             type: "line",
             value: line,
             index: lineNodes.length,
+            entryKey: lineEntryKey,
           });
           lineNodes[lineNode.index] = lineNode;
         }
@@ -2524,12 +2505,14 @@ let createValueNode;
 
         const chars = node.chars;
         for (const char of chars) {
+          let charEntryKey = `C${charNodes.length + 1}`;
           const charNode = _createValueNode({
             parent: node,
-            path: path.append(`C${charNodes.length + 1}`),
+            path: path.append(charEntryKey),
             type: "char",
             value: char,
             index: charNodes.length,
+            entryKey: `${node.parent.entryKey}${charEntryKey}`,
           });
           charNodes[charNode.index] = charNode;
         }
