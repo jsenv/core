@@ -28,22 +28,30 @@ await startSnapshotTesting("url", {
       expect: "http://example.com:8000",
     });
   },
-  // ["url and non url string"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com"),
-  //     expected: "totoabcexample.com",
-  //   });
-  // },
-  // ["non url string and url"]: () => {
-  //   assert({
-  //     actual: "totoabcexample.com",
-  //     expected: new URL("http://example.com"),
-  //   });
-  // },
-  // ["url and boolean"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com"),
-  //     expected: true,
-  //   });
-  // },
+  ["url and non url string"]: () => {
+    assert({
+      actual: new URL("http://example.com"),
+      expect: "totoabcexample.com",
+    });
+  },
+  ["non url string and url"]: () => {
+    assert({
+      actual: "totoabcexample.com",
+      expect: new URL("http://example.com"),
+    });
+  },
+  ["url and boolean"]: () => {
+    assert({
+      actual: new URL("http://example.com"),
+      expect: true,
+    });
+  },
+  ["url and object with href"]: () => {
+    assert({
+      actual: "http://example.com",
+      expect: {
+        href: "http://example.com",
+      },
+    });
+  },
 });

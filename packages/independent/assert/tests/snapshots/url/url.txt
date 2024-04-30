@@ -22,3 +22,29 @@ AssertionError: actual and expect are different:
 actual: "http://example.com/"
 expect: "http://example.com:8000/"
 
+# url and non url string
+AssertionError: actual and expect are different:
+
+actual: URL("http://example.com/")
+expect: "totoabcexample.com"
+
+# non url string and url
+AssertionError: actual and expect are different:
+
+actual: "totoabcexample.com"
+expect: URL("http://example.com/")
+
+# url and boolean
+AssertionError: actual and expect are different:
+
+actual: URL("http://example.com/")
+expect: true
+
+# url and object with href
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/"
+expect: {
+  href: "http:example.com/""",
+}
+
