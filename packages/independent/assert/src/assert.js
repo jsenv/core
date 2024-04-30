@@ -517,7 +517,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         ) {
           addSelfDiff("reference");
         } else if (actualNode.wellKnownId !== expectNode.wellKnownId) {
-          addSelfDiff("wellKnownId");
+          addSelfDiff("well_known_id");
         } else if (actualNode.isPrimitive !== expectNode.isPrimitive) {
           addSelfDiff("primitive");
         } else if (
@@ -525,16 +525,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           expectNode.isPrimitive &&
           actualNode.value !== expectNode.value
         ) {
-          addSelfDiff("primitiveValue");
+          addSelfDiff("primitive_value");
         } else if (actualNode.isSourceCode !== expectNode.isSourceCode) {
-          addSelfDiff("sourceCode");
+          addSelfDiff("source_code");
         } else if (
           actualNode.isSourceCode &&
           expectNode.isSourceCode &&
           actualNode.value[sourceCodeSymbol] !==
             expectNode.value[sourceCodeSymbol]
         ) {
-          addSelfDiff("sourceCodeValue");
+          addSelfDiff("source_code_value");
         } else if (actualNode.subtype !== expectNode.subtype) {
           if (
             actualNode.isFunctionPrototype &&
@@ -551,28 +551,28 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualNode.functionAnalysis.isAsync !==
             expectNode.functionAnalysis.isAsync
           ) {
-            addSelfDiff("isAsync");
+            addSelfDiff("is_async");
           }
           if (
             actualNode.functionAnalysis.isGenerator !==
             expectNode.functionAnalysis.isGenerator
           ) {
-            addSelfDiff("isGenerator");
+            addSelfDiff("is_generator");
           }
           if (
             actualNode.functionAnalysis.type !==
             expectNode.functionAnalysis.type
           ) {
-            addSelfDiff("functionType");
+            addSelfDiff("function_fype");
           }
           if (
             actualNode.functionAnalysis.name !==
             expectNode.functionAnalysis.name
           ) {
-            addSelfDiff("functionName");
+            addSelfDiff("function_name");
           }
           if (actualNode.extendedClassName !== expectNode.extendedClassName) {
-            addSelfDiff("extendedClassName");
+            addSelfDiff("extended_class_name");
           }
         }
         if (
@@ -582,6 +582,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             expectNode.isClassStaticProperty)
         ) {
           addSelfDiff("class_static");
+        }
+        if (
+          actualNode.type === "entry_key" &&
+          ((actualNode.isInternalEntry && !expectNode.isInternalEntry) ||
+            (actualNode.isIndexedEntry && !expectNode.isIndexedEntry) ||
+            (actualNode.isPropertyEntry && !expectNode.isPropertyEntry))
+        ) {
+          addSelfDiff("entry_key_type");
         }
 
         props_frozen_or_sealed_or_non_extensible: {
@@ -625,18 +633,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               // - the function type
               //    actual: () => {}
               //    expect: function () {}
-              comparison.reasons.self.modified.has("functionType") ||
+              comparison.reasons.self.modified.has("function_type") ||
               // - the usage of async/generator
               //   actual: function () {}
               //   expect: async function () {}
-              comparison.reasons.self.modified.has("isAsync") ||
-              comparison.reasons.self.modified.has("isGenerator") ||
+              comparison.reasons.self.modified.has("is_async") ||
+              comparison.reasons.self.modified.has("is_generator") ||
               // prototype property can be infered thanks to the usage of extends
               // (nan c'est le proto ça)
               // - the usage of extends keyword
               //   actual: class A extends Human {}
               //   expect: class B extends Robot {}
-              comparison.reasons.self.modified.has("extendedClassName")
+              comparison.reasons.self.modified.has("extended_class_name")
             ) {
               prototypeCanBeInfered = true;
             }
@@ -2793,7 +2801,7 @@ let writeDiff;
     ) {
       let maxDepthInsideDiff = selfContext.maxDepthInsideDiff;
       if (
-        comparison.reasons.self.modified.has("functionType") &&
+        comparison.reasons.self.modified.has("function_type") &&
         (comparison.actualNode.functionAnalysis.type === "class" ||
           comparison.expectNode.functionAnalysis.type === "class")
       ) {
