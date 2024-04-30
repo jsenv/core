@@ -3421,7 +3421,7 @@ let writeDiff;
           label: "value",
           openDelimiter: "{",
           closeDelimiter: "}",
-          forceDelimitersWhenEmpty: false,
+          forceDelimitersWhenEmpty: true,
           resetModified: canResetModifiedOnInternalEntry,
           nestedComparisons: internalEntryComparisons,
         });
