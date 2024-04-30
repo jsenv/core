@@ -350,6 +350,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         let ownerComparison;
+        if (nodePresent.type === "entry_key") {
+          ownerComparison = nodePresent.parent.parent.comparison;
+        } else if (nodePresent.type === "entry_value") {
+          ownerComparison = nodePresent.parent.parent.comparison;
+        } else if (nodePresent.type === "line") {
+          ownerComparison = nodePresent.parent.parent.comparison;
+        } else if (nodePresent.type === "char") {
+          ownerComparison = nodePresent.parent.parent.comparison;
+        }
         if (!ownerComparison) {
           break added_or_removed;
         }
@@ -369,11 +378,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           break added_or_removed;
         }
-        // nodePresent.objectPropertyEntry
-        if (otherOwnerNode.canHaveProps) {
-          onMissing(nodePresent.value);
+        if (nodePresent.isObjectPropertyEntry) {
+          if (otherOwnerNode.canHaveProps) {
+            onMissing(nodePresent.value);
+          }
+          break added_or_removed;
         }
-        break added_or_removed;
+        if (nodePresent.type === "line") {
+          if (otherOwnerNode.canHaveLines) {
+            onMissing(nodePresent.value);
+          }
+          break added_or_removed;
+        }
+        if (nodePresent.type === "char") {
+          if (otherOwnerNode.canHaveChars) {
+            onMissing(nodePresent.value);
+          }
+          break added_or_removed;
+        }
       }
       comparison.missingReason = missingReason;
 
@@ -1083,6 +1105,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         actualNode,
         expectNode,
         type: mainNode.type,
+        depth: mainNode.depth,
+        index: mainNode.index,
 
         reasons: {
           overall: {
@@ -1353,6 +1377,9 @@ const shouldIgnorePrototype = (node, prototypeValue) => {
   if (prototypeValue === URLSearchParams.prototype) {
     return true;
   }
+  if (Object.getPrototypeOf(node.value) === Object.prototype) {
+    return true;
+  }
   return false;
 };
 const shouldIgnoreObjectPropertyEntry = (
@@ -1538,6 +1565,7 @@ let createValueNode;
       isObjectPropertyEntry,
       isObjectPropertySymbolEntry,
       isPropertyDescriptorEntry,
+      index,
       descriptor,
       isArrayEntry,
       isStringEntry,
@@ -1761,7 +1789,7 @@ let createValueNode;
               if (type === "line") {
                 canHaveChars = true;
                 chars = splitChars(value);
-                openDelimiter = `${entryKey + 1} | `;
+                openDelimiter = `${index + 1} | `;
                 preserveLineBreaks = parent.preserveLineBreaks;
               } else if (type === "char") {
                 preserveLineBreaks = parent.preserveLineBreaks;
@@ -1873,6 +1901,7 @@ let createValueNode;
           isObjectPropertyEntry,
           isObjectPropertySymbolEntry,
           isPropertyDescriptorEntry,
+          index,
           descriptor,
           isArrayEntry,
           isStringEntry,
@@ -2646,7 +2675,7 @@ let writeDiff;
     context.onComparisonDisplayed(comparison);
 
     const selfContext = createSelfContext(comparison, context);
-    const getNodeDisplayedProperty = (node) => {
+    const getDisplayedProperty = (node) => {
       if (node.displayedIn === "label") {
         return "";
       }
@@ -2682,7 +2711,7 @@ let writeDiff;
 
     let diff = "";
     let isNestedValue = false;
-    let displayedProperty = getNodeDisplayedProperty(node);
+    let displayedProperty = getDisplayedProperty(node);
     let valueSeparator = node.valueSeparator;
     let valueStartSeparator = node.valueStartSeparator;
     let valueEndSeparator = getNodeValueEndSeparator(node);
