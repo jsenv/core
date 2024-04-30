@@ -44,11 +44,11 @@ expect: true
 AssertionError: actual and expect have 1 difference:
 
 actual: {
-  a: "http:example.com/""",
+  a: "http://example.com/",
   b: true,
 }
 expect: {
-  a: "http:example.com/""",
+  a: "http://example.com/",
   b: false,
 }
 
@@ -57,7 +57,7 @@ AssertionError: actual and expect are different:
 
 actual: "http://example.com/"
 expect: {
-  href: "http:example.com/""",
+  href: "http://example.com/",
 }
 
 # url object port and object with port

@@ -2705,9 +2705,13 @@ let writeDiff;
       if (context.collapsedWithOverview) {
         selfContext.collapsedWithOverview = false;
         selfContext.collapsed = true;
-        valueEndSeparator = "";
+        if (!node.isUrlEntry) {
+          valueEndSeparator = "";
+        }
       } else if (context.collapsed) {
-        valueEndSeparator = "";
+        if (!node.isUrlEntry) {
+          valueEndSeparator = "";
+        }
       } else {
         const relativeDepth = node.depth + selfContext.initialDepth;
         if (!node.isMultiline && relativeDepth >= selfContext.maxDepth) {
@@ -3039,6 +3043,9 @@ let writeDiff;
       );
 
       if (selfContext.collapsedWithOverview) {
+        if (node.canHaveUrlParts) {
+          break value;
+        }
         const valueColor = pickValueColor(comparison, selfContext);
         const openDelimiter = node.openDelimiter;
         const closeDelimiter = node.closeDelimiter;
