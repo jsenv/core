@@ -81,7 +81,7 @@ assert({
   expect: new Map([
     [object, false], //
   ]),
-  maxColumns: 40,
+  maxColumns: 35,
 });
 ```
 

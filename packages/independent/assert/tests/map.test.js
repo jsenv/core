@@ -61,7 +61,7 @@ await startSnapshotTesting("map", {
       expect: new Map([
         [object, false], //
       ]),
-      maxColumns: 40,
+      maxColumns: 35,
     });
   },
   ["map comparing with object"]: () => {

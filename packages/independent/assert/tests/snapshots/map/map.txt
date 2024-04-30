@@ -2,7 +2,7 @@
 AssertionError: actual and expect have 1 difference:
 
 actual: Map {
-  a => true,
+  "a" => true,
 }
 expect: Map {}
 
@@ -11,63 +11,63 @@ AssertionError: actual and expect have 1 difference:
 
 actual: Map {}
 expect: Map {
-  a => true,
+  "a" => true,
 }
 
 # map value modified
 AssertionError: actual and expect have 1 difference:
 
 actual: Map {
-  a => true,
+  "a" => true,
 }
 expect: Map {
-  a => false,
+  "a" => false,
 }
 
 # map key is an object
 AssertionError: actual and expect have 1 difference:
 
 actual: Map {
-   => true,
+  { name: "test" } => true,
 }
 expect: Map {
-   => false,
+  { name: "test" } => false,
 }
 
 # map key objects are compared by identity
 AssertionError: actual and expect have 2 differences:
 
 actual: Map {
-   => true,
+  { name: "a" } => true,
 }
 expect: Map {
-   => false,
+  { name: "a" } => false,
 }
 
 # map key objects are collapsed and take a subset of max columns
 AssertionError: actual and expect have 1 difference:
 
 actual: Map {
-   => true,
+  { ... } => true,
 }
 expect: Map {
-   => false,
+  { ... } => false,
 }
 
 # map comparing with object
 AssertionError: actual and expect are different:
 
 actual: Map {
-  a => true,
+  "a" => true,
 }
 expect: {
-a: false,
+  a: false,
 }
 
 # object with map
 TypeError: Cannot read properties of undefined (reading 'hidden')
-    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3273:32)
-    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3526:25)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3264:32)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3517:25)
     at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1290:24)
     at object with map (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:76:5)
     at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
@@ -75,8 +75,8 @@ TypeError: Cannot read properties of undefined (reading 'hidden')
 
 # object with map having cusom prop
 TypeError: Cannot read properties of undefined (reading 'hidden')
-    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3273:32)
-    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3526:25)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3264:32)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3517:25)
     at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1290:24)
     at object with map having cusom prop (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/map.test.js:84:5)
     at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
@@ -86,9 +86,9 @@ TypeError: Cannot read properties of undefined (reading 'hidden')
 AssertionError: actual and expect are different:
 
 actual: Map {
-  a => true,
+  "a" => true,
 }
 expect: {
-a: false,
+  a: false,
 }
 

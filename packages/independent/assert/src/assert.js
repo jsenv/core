@@ -1834,8 +1834,9 @@ let createValueNode;
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (type === "entry_key") {
                   if (
-                    isValidPropertyIdentifier(entryKey) ||
-                    isSpecialProperty
+                    (isSpecialProperty ||
+                      isValidPropertyIdentifier(entryKey)) &&
+                    !isMapEntryKey
                   ) {
                     // this property does not require quotes
                   } else {
@@ -2693,7 +2694,7 @@ let writeDiff;
     context.onComparisonDisplayed(comparison);
 
     const selfContext = createSelfContext(comparison, context);
-    const getDisplayedProperty = (node) => {
+    const getDisplayedKey = (node) => {
       if (node.type === "entry_key") {
         return "";
       }
@@ -2732,7 +2733,7 @@ let writeDiff;
 
     let diff = "";
     let isNestedValue = false;
-    let displayedProperty = getDisplayedProperty(node);
+    let displayedKey = getDisplayedKey(node);
     let valueSeparator = node.valueSeparator;
     let valueStartSeparator = node.valueStartSeparator;
     let valueEndSeparator = getNodeValueEndSeparator(node);
@@ -2772,7 +2773,7 @@ let writeDiff;
           selfContext.collapsedWithOverview = true;
         }
 
-        if (node.isMapEntryValue) {
+        if (!node.isMapEntryKey) {
           let indent = `  `.repeat(relativeDepth);
           if (selfContext.signs) {
             if (selfContext.removed) {
@@ -2792,20 +2793,12 @@ let writeDiff;
               }
             }
           }
+
           diff += indent;
         }
       }
 
-      if (displayedProperty && comparison !== selfContext.startComparison) {
-        if (node.descriptor && node.descriptor !== "value") {
-          const propertyPrefixColor = pickColor(
-            comparison,
-            selfContext,
-            (node) => node.descriptor,
-          );
-          diff += ANSI.color(node.descriptor, propertyPrefixColor);
-          diff += " ";
-        }
+      if (displayedKey && comparison !== selfContext.startComparison) {
         const keyComparison =
           node.type === "entry_value"
             ? node.parent.childNodes.key.comparison
@@ -2813,29 +2806,13 @@ let writeDiff;
         const keyContext = {
           ...selfContext,
           modified: context.modified,
+          collapsedWithOverview: false,
         };
         const keyDiff = writeDiff(keyComparison, keyContext);
         diff += keyDiff;
-        // if (
-        //   selfContext.collapsedWithOverview &&
-        //   !comparison.hasAnyDiff &&
-        //   !context.modified &&
-        //   !context.added &&
-        //   !context.modified
-        // ) {
-        //   if (valueEndSeparator) {
-        //     const valueEndSeparatorColor = pickColor(
-        //       comparison,
-        //       context,
-        //       getNodeValueEndSeparator,
-        //     );
-        //     diff += ANSI.color(valueEndSeparator, valueEndSeparatorColor);
-        //   }
-        //   return diff;
-        // }
       }
       if (
-        (displayedProperty || node.isMapEntryValue || node.isSetValue) &&
+        (displayedKey || node.isSetValue) &&
         valueSeparator &&
         comparison !== selfContext.startComparison
       ) {
@@ -2892,14 +2869,92 @@ let writeDiff;
     }
     let valueDiff = "";
     value: {
-      if (node.type === "entry_key" && node.isClassStaticProperty) {
-        const staticColor = pickColor(
-          comparison,
-          selfContext,
-          (node) => node.isClassStaticProperty,
-        );
-        valueDiff += ANSI.color("static", staticColor);
-        valueDiff += " ";
+      if (node.type === "entry") {
+        if (selfContext.collapsed) {
+          break value;
+        }
+        const propertyDescriptorComparisons = comparison.childComparisons;
+        if (selfContext.collapsedWithOverview) {
+          const propertyGetterComparison = propertyDescriptorComparisons.get;
+          const propertySetterComparison = propertyDescriptorComparisons.set;
+          const propertyGetterNode = propertyGetterComparison
+            ? propertyGetterComparison[selfContext.resultType]
+            : null;
+          const propertySetterNode = propertySetterComparison
+            ? propertySetterComparison[selfContext.resultType]
+            : null;
+          if (propertyGetterNode && propertySetterNode) {
+            valueDiff += writeDiff(propertyGetterComparison, selfContext);
+            break value;
+          }
+          if (propertyGetterNode) {
+            valueDiff += writeDiff(propertyGetterComparison, selfContext);
+            break value;
+          }
+          if (propertySetterNode) {
+            valueDiff += writeDiff(propertySetterComparison, selfContext);
+            break value;
+          }
+          const propertyValueComparison = propertyDescriptorComparisons.value;
+          valueDiff += writeDiff(propertyValueComparison, selfContext);
+          break value;
+        }
+        let propertyDiff = "";
+        for (const propertyDescriptorName of [
+          "value",
+          "get",
+          "set",
+          "enumerable",
+          "configurable",
+          "writable",
+        ]) {
+          const propertyDescriptorComparison =
+            propertyDescriptorComparisons[propertyDescriptorName];
+          if (propertyDescriptorComparison === null) {
+            continue;
+          }
+          const propertyDescriptorNode =
+            propertyDescriptorComparison[context.resultType];
+          if (!propertyDescriptorNode) {
+            continue;
+          }
+          let propertyDescriptorDiff = "";
+
+          propertyDescriptorDiff += writeDiff(
+            propertyDescriptorComparison,
+            selfContext,
+          );
+          if (propertyDescriptorDiff.trim()) {
+            if (propertyDiff) {
+              propertyDiff += "\n";
+              selfContext.textIndent = 0;
+            }
+            propertyDiff += propertyDescriptorDiff;
+          }
+        }
+        valueDiff += propertyDiff;
+        break value;
+      }
+      if (node.type === "entry_key") {
+        if (node.descriptor && node.descriptor !== "value") {
+          const descriptorName = node.descriptor;
+          const descriptorNameColor = pickColor(
+            comparison,
+            selfContext,
+            (node) => node.descriptor,
+          );
+          valueDiff += ANSI.color(descriptorName, descriptorNameColor);
+          valueDiff += " ";
+        }
+        if (node.isClassStaticProperty) {
+          const staticColor = pickColor(
+            comparison,
+            selfContext,
+            (node) => node.isClassStaticProperty,
+          );
+          valueDiff += ANSI.color("static", staticColor);
+          valueDiff += " ";
+        }
       }
 
       // referencing an other composite
@@ -3022,70 +3077,6 @@ let writeDiff;
       if (selfContext.collapsed) {
         break value;
       }
-      if (node.type === "entry") {
-        const propertyDescriptorComparisons = comparison.childComparisons;
-        if (selfContext.collapsedWithOverview) {
-          const propertyGetterComparison = propertyDescriptorComparisons.get;
-          const propertySetterComparison = propertyDescriptorComparisons.set;
-          const propertyGetterNode = propertyGetterComparison
-            ? propertyGetterComparison[selfContext.resultType]
-            : null;
-          const propertySetterNode = propertySetterComparison
-            ? propertySetterComparison[selfContext.resultType]
-            : null;
-          if (propertyGetterNode && propertySetterNode) {
-            valueDiff += writeDiff(propertyGetterComparison, selfContext);
-            break value;
-          }
-          if (propertyGetterNode) {
-            valueDiff += writeDiff(propertyGetterComparison, selfContext);
-            break value;
-          }
-          if (propertySetterNode) {
-            valueDiff += writeDiff(propertySetterComparison, selfContext);
-            break value;
-          }
-          const propertyValueComparison = propertyDescriptorComparisons.value;
-          valueDiff += writeDiff(propertyValueComparison, selfContext);
-          break value;
-        }
-        let propertyDiff = "";
-        for (const propertyDescriptorName of [
-          "value",
-          "get",
-          "set",
-          "enumerable",
-          "configurable",
-          "writable",
-        ]) {
-          const propertyDescriptorComparison =
-            propertyDescriptorComparisons[propertyDescriptorName];
-          if (propertyDescriptorComparison === null) {
-            continue;
-          }
-          const propertyDescriptorNode =
-            propertyDescriptorComparison[context.resultType];
-          if (!propertyDescriptorNode) {
-            continue;
-          }
-          let propertyDescriptorDiff = "";
-
-          propertyDescriptorDiff += writeDiff(
-            propertyDescriptorComparison,
-            selfContext,
-          );
-          if (propertyDescriptorDiff.trim()) {
-            if (propertyDiff) {
-              propertyDiff += "\n";
-              selfContext.textIndent = 0;
-            }
-            propertyDiff += propertyDescriptorDiff;
-          }
-        }
-        valueDiff += propertyDiff;
-        break value;
-      }
-
       const pickCanReset = (getter) => {
         const actualCan = pickSelfOrInternalNode(comparison.actualNode, getter);
         const expectCan = pickSelfOrInternalNode(comparison.expectNode, getter);
