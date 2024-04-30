@@ -3431,14 +3431,14 @@ let writeDiff;
       };
 
       let insideDiff = "";
-      if (node.canHaveInternalEntries) {
+      if (node.canHaveInternalEntries && !node.canHaveUrlParts) {
         const internalEntryComparisons =
           createInternalEntryComparisonIterable(node);
         const internalEntriesDiff = writeNestedValueGroupDiff({
           label: "value",
           openDelimiter: "{",
           closeDelimiter: "}",
-          forceDelimitersWhenEmpty: true,
+          forceDelimitersWhenEmpty: false,
           resetModified: canResetModifiedOnInternalEntry,
           nestedComparisons: internalEntryComparisons,
         });
@@ -4303,7 +4303,7 @@ let writeDiff;
   ];
   const writeUrlDiff = (comparison, context) => {
     let urlDiff = "";
-    const propertyComparisonMap = comparison.childComparisons.propertyMap;
+    const node = comparison[context.resultType];
     const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
       comparison.actualNode,
       (node) => node.canHaveUrlParts,
@@ -4321,12 +4321,12 @@ let writeDiff;
     };
 
     const writeUrlPart = (urlPartName) => {
-      const urlPartComparison = propertyComparisonMap.get(urlPartName);
-      if (!urlPartComparison || !urlPartComparison[context.resultType]) {
+      const urlPartNode = node.childNodes.internalEntryMap.get(urlPartName);
+      if (!urlPartNode) {
         return "";
       }
+      const urlPartComparison = urlPartNode.comparison;
       const urlPartValueComparison = urlPartComparison.childComparisons.value;
-
       const urlPartDiff = writeDiff(urlPartValueComparison, urlContext);
       return urlPartDiff;
     };
@@ -4346,9 +4346,16 @@ let writeDiff;
 
   const createInternalEntryComparisonIterable = (node) => {
     const internalEntryNodeMap = node.childNodes.internalEntryMap;
-    const internalEntryNodes = Array.from(internalEntryNodeMap.values());
-    const internalEntryComparisons = internalEntryNodes.map(
-      (internalEntryNode) => internalEntryNode.comparison,
+    let internalEntryKeys = Array.from(internalEntryNodeMap.keys());
+    if (node.canHaveUrlParts) {
+      internalEntryKeys = internalEntryKeys.filter(
+        (internalEntryKey) =>
+          !URL_INTERNAL_PROPERTY_NAMES.includes(internalEntryKey),
+      );
+    }
+    const internalEntryComparisons = internalEntryKeys.map(
+      (internalEntryKey) =>
+        internalEntryNodeMap.get(internalEntryKey).comparison,
     );
     return internalEntryComparisons;
   };
