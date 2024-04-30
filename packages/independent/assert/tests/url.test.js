@@ -46,11 +46,31 @@ await startSnapshotTesting("url", {
       expect: true,
     });
   },
-  ["url and object with href"]: () => {
+  ["url string inside a prop"]: () => {
+    assert({
+      actual: {
+        a: "http://example.com",
+        b: true,
+      },
+      expect: {
+        a: "http://example.com",
+        b: false,
+      },
+    });
+  },
+  ["url string and object with href"]: () => {
     assert({
       actual: "http://example.com",
       expect: {
         href: "http://example.com",
+      },
+    });
+  },
+  ["url object port and object with port"]: () => {
+    assert({
+      actual: new URL("http://example.com:45"),
+      expect: {
+        port: 45,
       },
     });
   },

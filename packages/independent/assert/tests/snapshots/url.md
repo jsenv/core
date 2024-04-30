@@ -75,7 +75,24 @@ assert({
 
 ![img](<./url/url and boolean.svg>)
 
-# url and object with href
+# url string inside a prop
+
+```js
+assert({
+  actual: {
+    a: "http://example.com",
+    b: true,
+  },
+  expect: {
+    a: "http://example.com",
+    b: false,
+  },
+});
+```
+
+![img](<./url/url string inside a prop.svg>)
+
+# url string and object with href
 
 ```js
 assert({
@@ -86,5 +103,18 @@ assert({
 });
 ```
 
-![img](<./url/url and object with href.svg>)
+![img](<./url/url string and object with href.svg>)
+
+# url object port and object with port
+
+```js
+assert({
+  actual: new URL("http://example.com:45"),
+  expect: {
+    port: 45,
+  },
+});
+```
+
+![img](<./url/url object port and object with port.svg>)
 
