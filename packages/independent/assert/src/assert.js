@@ -2656,7 +2656,7 @@ let writeDiff;
       if (node.functionAnalysis.type === "method") {
         return "";
       }
-      if (node.isArrayEntry && node.descriptor === "value") {
+      if (node.isArrayEntry && node.isPropertyValueEntry) {
         return "";
       }
       if (node.isUrlEntry) {
@@ -2693,12 +2693,10 @@ let writeDiff;
       if (node.isMapEntryKey) {
         isNestedValue = true;
       }
-    } else if (node.type === "property_descriptor") {
+    } else if (node.type === "entry_value") {
       if (node.displayedIn !== "label") {
         isNestedValue = true;
       }
-    } else if (node.isSetValue) {
-      isNestedValue = true;
     } else if (node.type === "prototype") {
       isNestedValue = true;
     } else if (node.type === "internal_value") {
@@ -3037,44 +3035,22 @@ let writeDiff;
         valueDiff += propertyDiff;
         break value;
       }
-      if (node.type === "map_entry") {
-        let mapEntryDiff = "";
-        const mapEntryKeyDiff = writeDiff(
-          node.childNodes.key.comparison,
-          selfContext,
-        );
-        mapEntryDiff += mapEntryKeyDiff;
-        const mapEntryValueDiff = writeDiff(
-          node.childNodes.value.comparison,
-          selfContext,
-        );
-        mapEntryDiff += mapEntryValueDiff;
-        return mapEntryDiff;
-      }
 
-      const actualNodeWhoCanHaveIndexedValues = pickSelfOrInternalNode(
-        comparison.actualNode,
-        (node) => node.canHaveIndexedValues,
+      const pickCanReset = (getter) => {
+        const actualCan = pickSelfOrInternalNode(comparison.actualNode, getter);
+        const expectCan = pickSelfOrInternalNode(comparison.expectNode, getter);
+        return Boolean(actualCan && expectCan);
+      };
+
+      const canResetModifiedOnInternalEntry = pickCanReset(
+        (node) => node.canHaveInternalEntries,
       );
-      const expectNodeWhoCanHaveIndexedValues = pickSelfOrInternalNode(
-        comparison.expectNode,
-        (node) => node.canHaveIndexedValues,
+      const canResetModifiedOnIndexedEntry = pickCanReset(
+        (node) => node.canHaveIndexedEntries,
       );
-      const canResetModifiedOnIndexedEntry = Boolean(
-        actualNodeWhoCanHaveIndexedValues && expectNodeWhoCanHaveIndexedValues,
-      );
-      const actualNodeWhoCanHaveProps = pickSelfOrInternalNode(
-        comparison.actualNode,
+      const canResetModifiedOnPropertyEntry = pickCanReset(
         (node) => node.canHaveProps,
       );
-      const expectNodeWhoCanHaveProps = pickSelfOrInternalNode(
-        comparison.expectNode,
-        (node) => node.canHaveProps,
-      );
-      const canResetModifiedOnPropertyEntry = Boolean(
-        actualNodeWhoCanHaveProps && expectNodeWhoCanHaveProps,
-      );
-      const canResetModifiedOnInternalEntry = canResetModifiedOnPropertyEntry;
 
       if (selfContext.collapsedWithOverview) {
         const valueColor = pickValueColor(comparison, selfContext);
@@ -3104,10 +3080,10 @@ let writeDiff;
         let insideOverview = "";
         let isFirst = true;
         let width = 0;
-        const nestedComparisons = node.canHaveIndexedValues
-          ? createIndexedEntryComparisonIterable(node)
-          : node.isMap
-            ? createInternalEntryComparisonIterable(node)
+        const nestedComparisons = node.canHaveInternalEntries
+          ? createInternalEntryComparisonIterable(node)
+          : node.canHaveIndexedValues
+            ? createIndexedEntryComparisonIterable(node)
             : createPropertyEntryComparisonIterable(node);
         for (const nestedComparison of nestedComparisons) {
           if (nestedComparison.hidden) {
@@ -3119,12 +3095,12 @@ let writeDiff;
           }
           // TODO: we should respect maxValueInsideDiff here too
           let valueDiffOverview = "";
-          const canReset = nestedNode.isIndexedEntry
-            ? canResetModifiedOnIndexedEntry
-            : nestedNode.isPropertyEntry
-              ? canResetModifiedOnPropertyEntry
-              : nestedNode.isInternalEntry
-                ? canResetModifiedOnInternalEntry
+          const canReset = nestedNode.isInternalEntry
+            ? canResetModifiedOnInternalEntry
+            : nestedNode.isIndexedEntry
+              ? canResetModifiedOnIndexedEntry
+              : nestedNode.isObjectPropertyEntry
+                ? canResetModifiedOnPropertyEntry
                 : false;
           const nestedValueContext = {
             ...selfContext,
