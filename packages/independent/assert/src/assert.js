@@ -339,12 +339,14 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         if (nodePresent.isSetValue) {
-          const ownerSetComparison = comparison.parent;
-          const ownerSetNode = ownerSetComparison[missingNodeName];
-          if (ownerSetNode && ownerSetNode.isSet) {
-            if (!ownerSetNode.value.has(nodePresent.value)) {
-              onMissing(nodePresent.value);
-            }
+          const comparisonOwningSet = comparison.parent.parent;
+          const nodeComparedWithSet = comparisonOwningSet[missingNodeName];
+          if (
+            nodeComparedWithSet &&
+            nodeComparedWithSet.isSet &&
+            !nodeComparedWithSet.value.has(nodePresent.value)
+          ) {
+            onMissing(nodePresent.value);
           }
           break added_or_removed;
         }
@@ -880,9 +882,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               ,
               actualIndexedEntryNode,
             ] of actualIndexedEntryNodeMap) {
-              if (internalEntryComparisonMap.has(index)) {
-                continue;
-              }
               const setEntryComparison = createComparison(
                 actualIndexedEntryNode,
                 null,
@@ -895,9 +894,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               ,
               expectIndexedEntryNode,
             ] of expectIndexedEntryNodeMap) {
-              if (internalEntryComparisonMap.has(index)) {
-                continue;
-              }
               const setEntryComparison = createComparison(
                 null,
                 expectIndexedEntryNode,
