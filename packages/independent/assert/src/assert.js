@@ -378,7 +378,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           break added_or_removed;
         }
-        if (nodePresent.isObjectPropertyEntry) {
+        if (nodePresent.isPropertyEntry) {
           if (otherOwnerNode.canHaveProps) {
             onMissing(nodePresent.value);
           }
@@ -937,9 +937,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           // here we know it's an extra index, like "b" in
           // actual: ["a"]
           // expect: ["a", "b"]
-          let expectIndexedPropertyNode;
+          let expectIndexedEntryNode;
           while (
-            (expectIndexedPropertyNode = expectIndexedEntryNodeMap.get(
+            (expectIndexedEntryNode = expectIndexedEntryNodeMap.get(
               String(index),
             ))
           ) {
@@ -965,7 +965,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             }
             const entryComparison = createComparison(
               actualNodeForComparison,
-              expectIndexedPropertyNode,
+              expectIndexedEntryNode,
             );
             entryComparisonMap.set(indexString, entryComparison);
             compareInside(entryComparison);
@@ -1382,7 +1382,7 @@ const shouldIgnorePrototype = (node, prototypeValue) => {
   }
   return false;
 };
-const shouldIgnoreObjectPropertyEntry = (
+const shouldIgnorePropertyEntry = (
   node,
   propertyNameOrSymbol,
   { propertyDescriptor },
@@ -1562,11 +1562,13 @@ let createValueNode;
       value,
 
       entryKey,
-      isObjectPropertyEntry,
-      isObjectPropertySymbolEntry,
-      isPropertyDescriptorEntry,
+      isInternalEntry,
+      isIndexedEntry,
       index,
+      isPropertyEntry,
       descriptor,
+      isPropertyDescriptor,
+      isPropertyValue,
       isArrayEntry,
       isStringEntry,
       isSetEntry,
@@ -1898,11 +1900,13 @@ let createValueNode;
           },
 
           entryKey,
-          isObjectPropertyEntry,
-          isObjectPropertySymbolEntry,
-          isPropertyDescriptorEntry,
+          isInternalEntry,
+          isIndexedEntry,
           index,
+          isPropertyEntry,
+          isPropertyDescriptor,
           descriptor,
+          isPropertyValue,
           isArrayEntry,
           isStringEntry,
           isSetEntry,
@@ -2204,8 +2208,7 @@ let createValueNode;
               propertySymbol,
             );
             associatedValueMetaMap.set(propertySymbol, {
-              isObjectPropertyEntry: true,
-              isObjectPropertySymbolEntry: true,
+              isPropertyEntry: true,
               propertyDescriptor,
             });
           }
@@ -2222,7 +2225,7 @@ let createValueNode;
               propertyName,
             );
             associatedValueMetaMap.set(propertyName, {
-              isObjectPropertyEntry: true,
+              isPropertyEntry: true,
               propertyDescriptor,
             });
           }
@@ -2315,8 +2318,7 @@ let createValueNode;
             pathPart,
             isIndexedEntry,
             isInternalEntry,
-            isObjectPropertyEntry,
-            isObjectPropertySymbolEntry,
+            isPropertyEntry,
             isArrayEntry,
             isStringEntry,
             isSetEntry,
@@ -2344,8 +2346,8 @@ let createValueNode;
           }
           if (
             isStringEntry ||
-            (isObjectPropertyEntry &&
-              shouldIgnoreObjectPropertyEntry(node, entryKey, {
+            (isPropertyEntry &&
+              shouldIgnorePropertyEntry(node, entryKey, {
                 propertyDescriptor,
                 isArrayEntry,
                 isStringEntry,
@@ -2387,17 +2389,16 @@ let createValueNode;
             entryKey,
             isIndexedEntry,
             isInternalEntry,
-            isObjectPropertyEntry,
-            isObjectPropertySymbolEntry,
+            isPropertyEntry,
             isArrayEntry,
             isStringEntry,
             isSetEntry,
             isMapEntry,
             isUrlEntry,
             isClassStaticProperty:
-              isObjectPropertyEntry && node.functionAnalysis.type === "class",
+              isPropertyEntry && node.functionAnalysis.type === "class",
             isClassPrototype:
-              isObjectPropertyEntry &&
+              isPropertyEntry &&
               entryKey === "prototype" &&
               node.functionAnalysis.type === "class",
             displayedIn,
@@ -2420,7 +2421,7 @@ let createValueNode;
             internalEntryMap.set(entryKey, entryNode);
             needKeyNode = true;
           } else {
-            // isObjectPropertyEntry
+            // isPropertyEntry
             propertyEntryMap.set(entryKey, entryNode);
             needKeyNode = true;
           }
@@ -2434,8 +2435,8 @@ let createValueNode;
               isMapEntryKey: isMapEntry,
               isUrlEntryKey: isUrlEntry,
               showOnlyWhenDiff: false,
-              valueStartSeparator: isObjectPropertySymbolEntry ? "[" : "",
-              valueEndSeparator: isObjectPropertySymbolEntry ? "]" : "",
+              valueStartSeparator: typeof entryKey === "symbol" ? "[" : "",
+              valueEndSeparator: typeof entryKey === "symbol" ? "]" : "",
             });
             entryNode.childNodes.key = keyNode;
           }
@@ -2481,7 +2482,7 @@ let createValueNode;
               ) {
                 continue;
               }
-              const isPropertyValueEntry = propertyDescriptorName === "value";
+              const isPropertyValue = propertyDescriptorName === "value";
               const propertyDescriptorNode = _createValueNode({
                 parent: entryNode,
                 path:
@@ -2494,10 +2495,10 @@ let createValueNode;
                 value: propertyDescriptorValue,
                 ...entrySharedInfo,
                 descriptor: propertyDescriptorName,
-                isPropertyDescriptorEntry: true,
-                isPropertyValueEntry,
-                isArrayValue: isArrayEntry && isPropertyValueEntry,
-                showOnlyWhenDiff: !isPropertyValueEntry,
+                isPropertyDescriptor: true,
+                isPropertyValue,
+                isArrayValue: isArrayEntry && isPropertyValue,
+                showOnlyWhenDiff: !isPropertyValue,
                 valueSeparator:
                   valueSeparator === undefined
                     ? entryNode.isClassStaticProperty
@@ -2685,7 +2686,7 @@ let writeDiff;
       if (node.functionAnalysis.type === "method") {
         return "";
       }
-      if (node.isArrayEntry && node.isPropertyValueEntry) {
+      if (node.isArrayEntry && node.isPropertyValue) {
         return "";
       }
       if (node.isUrlEntry) {
@@ -3128,7 +3129,7 @@ let writeDiff;
             ? canResetModifiedOnInternalEntry
             : nestedNode.isIndexedEntry
               ? canResetModifiedOnIndexedEntry
-              : nestedNode.isObjectPropertyEntry
+              : nestedNode.isPropertyEntry
                 ? canResetModifiedOnPropertyEntry
                 : false;
           const nestedValueContext = {
@@ -3709,7 +3710,7 @@ let writeDiff;
     if (node.canHaveIndexedValues) {
       const indexedEntrySize = node.childNodes.indexedEntryMap.size;
       const sizeColor = pickColorAccordingToChild(comparison, context, (node) =>
-        node.childNodes.indexedPropertyMap.values(),
+        node.childNodes.indexedEntryMap.values(),
       );
       const indexedSizeDiff = ANSI.color(indexedEntrySize, sizeColor);
       if (node.constructorCallOpenDelimiter) {
