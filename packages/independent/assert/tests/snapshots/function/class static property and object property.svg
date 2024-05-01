@@ -55,7 +55,7 @@
         <text x="262.04" y="52.55" fill="#7f7f7f">a</text>
         <text x="278.84" y="52.55" fill="#cd5555">=</text>
         <text x="295.65" y="52.55" fill="#7f7f7f">true</text>
-        <text x="329.25" y="52.55" fill="#7f7f7f">,</text>
+        <text x="329.25" y="52.55" fill="#cd5555">;</text>
         <text x="346.05" y="52.55" fill="#cd5555">static</text>
         <text x="404.86" y="52.55" fill="#7f7f7f">b</text>
         <text x="421.67" y="52.55" fill="#cd5555">=</text>

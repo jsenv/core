@@ -62,7 +62,7 @@
         <text x="152.82" y="71.55" fill="#11bc79">()</text>
         <text x="178.03" y="71.55" fill="#7f7f7f">{</text>
         <text x="194.83" y="71.55" fill="#11bc79">[source code]</text>
-        <text x="304.05" y="71.55" fill="#7f7f7f">,</text>
+        <text x="304.05" y="71.55" fill="#11bc79">,</text>
         <text x="320.85" y="71.55" fill="#7f7f7f">a</text>
         <text x="329.25" y="71.55" fill="#11bc79">:</text>
         <text x="346.05" y="71.55" fill="#7f7f7f">true</text>

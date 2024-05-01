@@ -59,7 +59,7 @@
         <text x="262.04" y="90.55" fill="#7f7f7f">a</text>
         <text x="278.84" y="90.55" fill="#cd5555">=</text>
         <text x="295.65" y="90.55" fill="#7f7f7f">true</text>
-        <text x="329.25" y="90.55" fill="#7f7f7f">,</text>
+        <text x="329.25" y="90.55" fill="#cd5555">;</text>
         <text x="354.46" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
@@ -68,11 +68,11 @@
         <text x="194.83" y="109.55" fill="#11bc79">()</text>
         <text x="220.03" y="109.55" fill="#7f7f7f">{</text>
         <text x="236.84" y="109.55" fill="#11bc79">[source code]</text>
-        <text x="346.05" y="109.55" fill="#7f7f7f">,</text>
+        <text x="346.05" y="109.55" fill="#11bc79">,</text>
         <text x="362.86" y="109.55" fill="#7f7f7f">a</text>
         <text x="371.26" y="109.55" fill="#11bc79">:</text>
         <text x="388.06" y="109.55" fill="#7f7f7f">true</text>
-        <text x="421.67" y="109.55" fill="#7f7f7f">,</text>
+        <text x="421.67" y="109.55" fill="#11bc79">,</text>
         <text x="438.47" y="109.55" fill="#7f7f7f">p</text>
         <text x="446.87" y="109.55" fill="#7f7f7f">r</text>
         <text x="455.27" y="109.55" fill="#7f7f7f">o</text>

@@ -1,3 +1,4 @@
+/* eslint-disable no-sparse-arrays */
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 import { createAssert } from "../src/assert.js";
@@ -36,7 +37,6 @@ await startSnapshotTesting("array", {
       maxColumns: 35,
     });
   },
-  /* eslint-disable no-sparse-arrays */
   ["undefined vs empty"]: () => {
     assert({
       actual: [,],
@@ -55,7 +55,6 @@ await startSnapshotTesting("array", {
       expect: [,],
     });
   },
-  /* eslint-enable no-sparse-arrays */
   ["object expect, array received"]: () => {
     assert({
       actual: [],

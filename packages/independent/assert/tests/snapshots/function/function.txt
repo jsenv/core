@@ -179,7 +179,7 @@ expect: class { static a() (0) }
 # class static property and object property
 AssertionError: actual and expect are different:
 
-actual: class actual { static a = true, static b = true }
+actual: class actual { static a = true; static b = true }
 expect: {
   a: true,
   b: false,
@@ -196,7 +196,7 @@ AssertionError: actual and expect are different:
 
 ℹ to improve readability 1 diff is completely hidden
 
-actual: class actual { static a = true,  }
+actual: class actual { static a = true;  }
 expect: function toto () { [source code], a: true, prototype:  }
 
 # class constructor vs function

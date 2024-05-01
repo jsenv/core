@@ -2016,6 +2016,8 @@ let createValueNode;
               value: functionBody,
               displayedIn: "properties",
               isSourceCode: true,
+              valueEndSeparator:
+                node.functionAnalysis.type === "class" ? ";" : ",",
             });
             //  node.constructorCall = true;
             childNodes.internalValue = internalValueNode;
@@ -2694,7 +2696,9 @@ let writeDiff;
     let displayedKey = getDisplayedKey(node);
     let valueSeparator = node.valueSeparator;
     let valueStartSeparator = node.valueStartSeparator;
-    let valueEndSeparator = getNodeValueEndSeparator(node);
+    let valueEndSeparator = context.valueEndSeparatorDisabled
+      ? ""
+      : getNodeValueEndSeparator(node);
 
     if (node.type === "entry_key") {
       const maxColumns = selfContext.maxColumns;
@@ -2718,13 +2722,7 @@ let writeDiff;
       if (context.collapsedWithOverview) {
         selfContext.collapsedWithOverview = false;
         selfContext.collapsed = true;
-        if (!node.isUrlEntry) {
-          valueEndSeparator = "";
-        }
       } else if (context.collapsed) {
-        if (!node.isUrlEntry) {
-          valueEndSeparator = "";
-        }
       } else {
         const relativeDepth = node.depth + selfContext.initialDepth;
         if (!node.isMultiline && relativeDepth >= selfContext.maxDepth) {
@@ -3091,6 +3089,7 @@ let writeDiff;
           : node.canHaveIndexedValues
             ? createIndexedEntryComparisonIterable(node)
             : createPropertyEntryComparisonIterable(node, context);
+
         for (const nestedComparison of nestedComparisons) {
           if (nestedComparison.hidden) {
             continue;
@@ -3111,6 +3110,9 @@ let writeDiff;
           const nestedValueContext = {
             ...selfContext,
             modified: canReset ? false : selfContext.modified,
+            valueEndSeparatorDisabled:
+              nestedComparison ===
+              nestedComparisons[nestedComparisons.length - 1],
           };
           const markersColor = pickColor(nestedComparison, nestedValueContext);
           valueDiffOverview += writeDiff(nestedComparison, nestedValueContext);
@@ -3124,9 +3126,9 @@ let writeDiff;
                 overviewTruncated += " ";
               }
               overviewTruncated += insideOverview;
-              if (nestedValueSeparator) {
+              if (nestedNode.valueSeparator) {
                 overviewTruncated += ANSI.color(
-                  nestedValueSeparator,
+                  nestedNode.valueSeparator,
                   markersColor,
                 );
               }
@@ -3142,17 +3144,11 @@ let writeDiff;
             valueDiff += overviewTruncated;
             break value;
           }
-          if (nestedValueSeparator) {
-            if (isFirst) {
-              isFirst = false;
-            } else {
-              insideOverview += ANSI.color(nestedValueSeparator, markersColor);
-              width += nestedValueSeparator.length;
-              if (nestedValueSpacing) {
-                insideOverview += " ";
-                width += " ".length;
-              }
-            }
+          if (isFirst) {
+            isFirst = false;
+          } else if (nestedValueSpacing) {
+            insideOverview += " ";
+            width += " ".length;
           }
           insideOverview += valueDiffOverview;
           width += valueWidth;
