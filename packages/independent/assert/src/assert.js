@@ -620,11 +620,15 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           );
           let prototypeCanBeInfered;
           if (!actualPrototypeNode) {
-            prototypeCanBeInfered = true;
+            prototypeCanBeInfered = expectPrototypeNode.value !== null;
           } else if (!expectPrototypeNode) {
-            prototypeCanBeInfered = true;
+            prototypeCanBeInfered = actualPrototypeNode.value !== null;
           } else if (actualPrototypeNode && expectPrototypeNode) {
-            if (
+            if (actualPrototypeNode.value === null) {
+              prototypeCanBeInfered = false;
+            } else if (expectPrototypeNode.value === null) {
+              prototypeCanBeInfered = false;
+            } else if (
               // prototype can be infered by
               // - the subtype
               //    actual: User {}

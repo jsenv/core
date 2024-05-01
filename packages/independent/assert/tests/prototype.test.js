@@ -45,4 +45,16 @@ await startSnapshotTesting("prototype", {
       },
     });
   },
+  ["null and Array.prototype"]: () => {
+    assert({
+      actual: null,
+      expect: Array.prototype,
+    });
+  },
+  ["Object.create(null) and []"]: () => {
+    assert({
+      actual: Object.create(null),
+      expect: [],
+    });
+  },
 });

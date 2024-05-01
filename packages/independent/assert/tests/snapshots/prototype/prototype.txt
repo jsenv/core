@@ -38,3 +38,17 @@ expect: {
   a: { name: "bob" },
 }
 
+# null and Array.prototype
+AssertionError: actual and expect are different:
+
+actual: null
+expect: Array.prototype
+
+# Object.create(null) and []
+AssertionError: actual and expect are different:
+
+actual: {
+  __proto__: null,
+}
+expect: []
+

@@ -58,3 +58,25 @@ assert({
 
 ![img](<./prototype/object vs instance.svg>)
 
+# null and Array.prototype
+
+```js
+assert({
+  actual: null,
+  expect: Array.prototype,
+});
+```
+
+![img](<./prototype/null and Array.prototype.svg>)
+
+# Object.create(null) and []
+
+```js
+assert({
+  actual: Object.create(null),
+  expect: [],
+});
+```
+
+![img](<./prototype/Object.create(null) and [].svg>)
+
