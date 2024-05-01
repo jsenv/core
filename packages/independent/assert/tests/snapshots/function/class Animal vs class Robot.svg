@@ -50,14 +50,10 @@
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">class</text>
         <text x="127.62" y="52.55" fill="#cd5555">Animal</text>
-        <text x="186.43" y="52.55" fill="#7f7f7f">{</text>
-        <text x="194.83" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">class</text>
         <text x="127.62" y="71.55" fill="#11bc79">Robot</text>
-        <text x="178.03" y="71.55" fill="#7f7f7f">{</text>
-        <text x="186.43" y="71.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

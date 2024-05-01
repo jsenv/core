@@ -2733,8 +2733,6 @@ let writeDiff;
           selfContext.collapsedWithOverview = true;
         } else if (node.isMapEntryKey) {
           selfContext.collapsedWithOverview = true;
-        } else if (node.isFunction) {
-          selfContext.collapsedWithOverview = true;
         }
 
         if (!node.isMapEntryKey) {
@@ -2804,6 +2802,8 @@ let writeDiff;
           diff += " ";
         }
       }
+    } else if (node.isFunction && !selfContext.collapsed) {
+      selfContext.collapsedWithOverview = true;
     }
 
     selfContext.textIndent += stringWidth(diff);
@@ -3468,7 +3468,7 @@ let writeDiff;
       if (node.canHaveProps) {
         const propsComparisons = createPropertyEntryComparisonIterable(
           node,
-          context,
+          selfContext,
         );
         let forceDelimitersWhenEmpty =
           !node.canHaveIndexedValues && !node.isMap && labelDiff.length === 0;
