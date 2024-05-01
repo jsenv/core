@@ -55,7 +55,7 @@
         <text x="102.42" y="71.55" fill="#7f7f7f">function</text>
         <text x="178.03" y="71.55" fill="#7f7f7f">()</text>
         <text x="203.23" y="71.55" fill="#7f7f7f">{</text>
-        <text x="220.03" y="71.55" fill="#7f7f7f">[source code]</text>
+        <text x="220.03" y="71.55" fill="#cd5555">[source code]</text>
         <text x="337.65" y="71.55" fill="#7f7f7f">}</text>
         <text x="346.05" y="71.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="90.55" fill="#7f7f7f">b</text>
@@ -71,7 +71,7 @@
         <text x="52.01" y="147.55" fill="#7f7f7f">function</text>
         <text x="127.62" y="147.55" fill="#7f7f7f">()</text>
         <text x="152.82" y="147.55" fill="#7f7f7f">{</text>
-        <text x="169.63" y="147.55" fill="#7f7f7f">[source code]</text>
+        <text x="169.63" y="147.55" fill="#11bc79">[source code]</text>
         <text x="287.25" y="147.55" fill="#7f7f7f">}</text>
         <text x="295.65" y="147.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="166.55" fill="#7f7f7f">b</text>

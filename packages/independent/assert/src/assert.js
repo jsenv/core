@@ -1538,6 +1538,7 @@ let createValueNode;
       isUrlEntryValue,
       isClassStaticProperty,
       isClassPrototype,
+      isClassSourceCode,
       isSpecialProperty,
 
       valueSeparator,
@@ -1621,8 +1622,8 @@ let createValueNode;
           sourceCodeSymbol in value
         ) {
           isSourceCode = true;
-          openDelimiter = "{";
-          closeDelimiter = "}";
+          // openDelimiter = "{";
+          // closeDelimiter = "}";
         } else {
           composite = isComposite(value);
           primitive = !composite;
@@ -1880,6 +1881,7 @@ let createValueNode;
           isUrlEntryValue,
           isClassStaticProperty,
           isClassPrototype,
+          isClassSourceCode,
           isSpecialProperty,
 
           subtype,
@@ -2000,18 +2002,24 @@ let createValueNode;
       // internal value (.valueOf(), .href, .toString())
       internal_value: {
         if (node.isFunction) {
-          const functionBody = createSourceCode(
-            node.functionAnalysis.argsAndBodySource,
-          );
-          const internalValueNode = createPropertyLikeNode("toString()", {
-            parent: node,
-            type: "internal_value",
-            value: functionBody,
-            displayedIn: node.functionAnalysis.type === "class" ? "" : "label",
-            isSourceCode: true,
-          });
-          node.constructorCall = internalValueNode.displayedIn === "label";
-          childNodes.internalValue = internalValueNode;
+          let argsAndBodySource = node.functionAnalysis.argsAndBodySource;
+          if (node.functionAnalysis.type === "class") {
+            argsAndBodySource = argsAndBodySource.slice(1, -1).trim();
+          }
+          if (argsAndBodySource.length) {
+            const functionBody = createSourceCode(
+              node.functionAnalysis.argsAndBodySource,
+            );
+            const internalValueNode = createPropertyLikeNode("toString()", {
+              parent: node,
+              type: "internal_value",
+              value: functionBody,
+              displayedIn: "properties",
+              isSourceCode: true,
+            });
+            //  node.constructorCall = true;
+            childNodes.internalValue = internalValueNode;
+          }
         } else if (node.isSet) {
           const setValues = [];
           for (const setValue of node.value) {
@@ -2660,6 +2668,9 @@ let writeDiff;
       if (node.isUrlEntry) {
         return "";
       }
+      if (node.isSourceCode) {
+        return "";
+      }
       return node.entryKey;
     };
     const getNodeValueEndSeparator = (node) => {
@@ -2721,6 +2732,8 @@ let writeDiff;
         } else if (!comparison.hasAnyDiff) {
           selfContext.collapsedWithOverview = true;
         } else if (node.isMapEntryKey) {
+          selfContext.collapsedWithOverview = true;
+        } else if (node.isFunction) {
           selfContext.collapsedWithOverview = true;
         }
 
@@ -2956,9 +2969,7 @@ let writeDiff;
       }
       if (node.isSourceCode) {
         const valueColor = pickValueColor(comparison, selfContext);
-        valueDiff += " ";
         valueDiff += ANSI.color("[source code]", valueColor);
-        valueDiff += " ";
         break value;
       }
       // if (
@@ -3215,9 +3226,6 @@ let writeDiff;
             ? selfContext.maxValueInsideDiff
             : selfContext.maxDiffPerObject;
         for (const nestedComparison of nestedComparisons) {
-          if (!nestedComparison) {
-            debugger;
-          }
           if (nestedComparison.hidden) {
             continue;
           }
@@ -3460,11 +3468,10 @@ let writeDiff;
       if (node.canHaveProps) {
         const propsComparisons = createPropertyEntryComparisonIterable(node);
         let forceDelimitersWhenEmpty =
-          (!node.canHaveIndexedValues &&
-            !node.isMap &&
-            labelDiff.length === 0 &&
-            node.functionAnalysis.type === undefined) ||
-          node.functionAnalysis.type === "class";
+          !node.canHaveIndexedValues && !node.isMap && labelDiff.length === 0;
+        if (node.isFunction) {
+          forceDelimitersWhenEmpty = true;
+        }
         if (node.isClassPrototype) {
           forceDelimitersWhenEmpty = false;
         }
@@ -3491,10 +3498,7 @@ let writeDiff;
     }
 
     const spaceBetweenLabelAndValue =
-      labelDiff &&
-      valueDiff &&
-      !node.isSet &&
-      node.functionAnalysis.type !== "class";
+      labelDiff && valueDiff && !node.isSet && !node.isFunction;
     const getObjectIntegrityCallPath = (node) => {
       if (node.propsFrozen) {
         return ["Object", ".", "freeze"];
@@ -3635,22 +3639,39 @@ let writeDiff;
     } else if (node.constructorCall) {
       const internalValueNode = node.childNodes.internalValue;
       let internalValueDiff = "";
-      if (internalValueNode && internalValueNode.displayedIn === "label") {
-        const internalValueComparison = internalValueNode.comparison;
-        // const actualCanHaveInternalValue = Boolean(
-        //   internalValueComparison.actualNode &&
-        //     internalValueComparison.actualNode.type === "internal_value",
-        // );
-        // const expectCanHaveInternalValue = Boolean(
-        //   internalValueComparison.expectNode &&
-        //     internalValueComparison.expectNode.type === "internal_value",
-        // );
-        // const canResetModifiedOnInternalValue =
-        //   actualCanHaveInternalValue && expectCanHaveInternalValue;
-        internalValueDiff = writeDiff(internalValueComparison, {
-          ...context,
-          modified: false,
-        });
+      internal_value: {
+        if (internalValueNode && internalValueNode.displayedIn === "label") {
+          if (node.functionAnalysis.type === "class") {
+            const overallDiffReasons = new Set(comparison.reasons.overall.any);
+            overallDiffReasons.delete("function_name");
+            overallDiffReasons.delete("source_code_value");
+            if (overallDiffReasons.size > 0) {
+              // the class .toString() is not displayed because it contains the whole
+              // class definition which is actually rendered differently
+              const sourceCodeValueComparison =
+                comparison.childComparisons.internalValue;
+              if (sourceCodeValueComparison) {
+                context.onComparisonDisplayed(sourceCodeValueComparison, true);
+              }
+              break internal_value;
+            }
+          }
+          const internalValueComparison = internalValueNode.comparison;
+          // const actualCanHaveInternalValue = Boolean(
+          //   internalValueComparison.actualNode &&
+          //     internalValueComparison.actualNode.type === "internal_value",
+          // );
+          // const expectCanHaveInternalValue = Boolean(
+          //   internalValueComparison.expectNode &&
+          //     internalValueComparison.expectNode.type === "internal_value",
+          // );
+          // const canResetModifiedOnInternalValue =
+          //   actualCanHaveInternalValue && expectCanHaveInternalValue;
+          internalValueDiff = writeDiff(internalValueComparison, {
+            ...context,
+            modified: false,
+          });
+        }
       }
       if (node.constructorCallOpenDelimiter) {
         labelDiff += ANSI.color(
@@ -3770,14 +3791,6 @@ let writeDiff;
     const prototypeComparison = comparison.childComparisons.prototype;
     if (prototypeComparison) {
       context.onComparisonDisplayed(prototypeComparison, true);
-    }
-    if (node.functionAnalysis.type === "class") {
-      // the class .toString() is not displayed because it contains the whole
-      // class definition which is actually rendered differently
-      const internalValueComparison = comparison.childComparisons.internalValue;
-      if (internalValueComparison) {
-        context.onComparisonDisplayed(internalValueComparison, true);
-      }
     }
     if (node.isClassStaticProperty) {
       const staticColor = pickColor(

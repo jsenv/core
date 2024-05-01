@@ -156,6 +156,20 @@ classes: {
       argsAndBodySource: `{  }`,
     },
   );
+  test(
+    class a {
+      toto = 10;
+      static {
+        this.toto++;
+      }
+      constructor() {
+        console.log(this.toto);
+      }
+    },
+    {
+      type: "class",
+    },
+  );
 }
 basic: {
   arrow: {
