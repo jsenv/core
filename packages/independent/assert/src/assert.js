@@ -3748,6 +3748,7 @@ let writeDiff;
       labelDiff += ANSI.color(")", constructorCallDelimitersColor);
       return labelDiff;
     }
+
     if (node.canHaveProps) {
       const propertySize = node.childNodes.propertyEntryMap.size;
       const propertySizeColor = pickColorAccordingToChild(
@@ -3755,7 +3756,13 @@ let writeDiff;
         context,
         (node) => node.childNodes.propertyEntryMap.values(),
       );
-      if (node.constructorCall) {
+      if (node.isFunction) {
+        labelDiff += ANSI.color("{", constructorCallDelimitersColor);
+        labelDiff += " ";
+        labelDiff += ANSI.color("...", propertySizeColor);
+        labelDiff += " ";
+        labelDiff += ANSI.color("}", constructorCallDelimitersColor);
+      } else if (node.constructorCall) {
         if (propertySize) {
           labelDiff += " ";
           labelDiff += ANSI.color("{", constructorCallDelimitersColor);

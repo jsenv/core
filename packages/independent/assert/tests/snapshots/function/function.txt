@@ -173,8 +173,8 @@ AssertionError: actual and expect have 2 differences:
 
 ℹ to improve readability 1 diff is completely hidden
 
-actual: class { static a() (0); }
-expect: class { static a() (0); }
+actual: class { static a() { ... }; }
+expect: class { static a() { ... }; }
 
 # class static property and object property
 AssertionError: actual and expect are different:

@@ -41,39 +41,14 @@
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55">AssertionError: </text>
-        <text x="144.42" y="14.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="14.55"> and </text>
-        <text x="236.84" y="14.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="14.55"> have 2 differences:</text>
-        <text x="10" y="52.55" fill="#4169E1">&#x2139;</text>
-        <text x="35.2" y="52.55">
-          to improve readability 1 diff is completely hidden</text
+        <text x="10" y="14.55"
+          >AssertionError: actual and expect have 2 differences:</text
         >
-        <text x="10" y="90.55" fill="#7f7f7f">actual</text>
-        <text x="60.41" y="90.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="90.55" fill="#7f7f7f">class</text>
-        <text x="127.62" y="90.55" fill="#7f7f7f">{</text>
-        <text x="144.42" y="90.55" fill="#7f7f7f">static</text>
-        <text x="203.23" y="90.55" fill="#7f7f7f">a</text>
-        <text x="211.63" y="90.55" fill="#7f7f7f">()</text>
-        <text x="236.84" y="90.55" fill="#7f7f7f">(</text>
-        <text x="245.24" y="90.55" fill="#7f7f7f">0</text>
-        <text x="253.64" y="90.55" fill="#7f7f7f">)</text>
-        <text x="262.04" y="90.55" fill="#7f7f7f">;</text>
-        <text x="278.84" y="90.55" fill="#7f7f7f">}</text>
-        <text x="10" y="109.55" fill="#7f7f7f">expect</text>
-        <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">class</text>
-        <text x="127.62" y="109.55" fill="#7f7f7f">{</text>
-        <text x="144.42" y="109.55" fill="#7f7f7f">static</text>
-        <text x="203.23" y="109.55" fill="#7f7f7f">a</text>
-        <text x="211.63" y="109.55" fill="#7f7f7f">()</text>
-        <text x="236.84" y="109.55" fill="#7f7f7f">(</text>
-        <text x="245.24" y="109.55" fill="#7f7f7f">0</text>
-        <text x="253.64" y="109.55" fill="#7f7f7f">)</text>
-        <text x="262.04" y="109.55" fill="#7f7f7f">;</text>
-        <text x="278.84" y="109.55" fill="#7f7f7f">}</text>
+        <text x="10" y="52.55"
+          >&#x2139; to improve readability 1 diff is completely hidden</text
+        >
+        <text x="10" y="90.55">actual: class { static a() { ... }; }</text>
+        <text x="10" y="109.55">expect: class { static a() { ... }; }</text>
       </g>
     </svg>
   </foreignObject>

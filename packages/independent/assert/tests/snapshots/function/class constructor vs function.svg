@@ -41,26 +41,13 @@
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55">AssertionError: </text>
-        <text x="144.42" y="14.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="14.55"> and </text>
-        <text x="236.84" y="14.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="14.55"> are different:</text>
-        <text x="10" y="52.55" fill="#7f7f7f">actual</text>
-        <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="52.55" fill="#cd5555">class</text>
-        <text x="127.62" y="52.55" fill="#cd5555">actual</text>
-        <text x="186.43" y="52.55" fill="#7f7f7f">{</text>
-        <text x="203.23" y="52.55" fill="#cd5555">[source code]</text>
-        <text x="320.85" y="52.55" fill="#7f7f7f">}</text>
-        <text x="10" y="71.55" fill="#7f7f7f">expect</text>
-        <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="71.55" fill="#11bc79">function</text>
-        <text x="152.82" y="71.55" fill="#11bc79">expect</text>
-        <text x="211.63" y="71.55" fill="#11bc79">()</text>
-        <text x="236.84" y="71.55" fill="#7f7f7f">{</text>
-        <text x="253.64" y="71.55" fill="#11bc79">[source code]</text>
-        <text x="371.26" y="71.55" fill="#7f7f7f">}</text>
+        <text x="10" y="14.55"
+          >AssertionError: actual and expect are different:</text
+        >
+        <text x="10" y="52.55">actual: class actual { [source code] }</text>
+        <text x="10" y="71.55"
+          >expect: function expect () { [source code] }</text
+        >
       </g>
     </svg>
   </foreignObject>
