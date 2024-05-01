@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="157.45"
+  height="233.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="155.45"
+      height="231.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="117.45"
+    height="193.45"
     overflow="hidden"
   >
     <svg
-      width="599.69"
-      height="117.45"
+      width="423.27"
+      height="193.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -53,59 +53,59 @@
         <text x="178.03" y="52.55" fill="#7f7f7f">extends</text>
         <text x="245.24" y="52.55" fill="#cd5555">Animal</text>
         <text x="304.05" y="52.55" fill="#7f7f7f">{</text>
-        <text x="320.85" y="52.55" fill="#7f7f7f">static</text>
-        <text x="379.66" y="52.55" fill="#7f7f7f">t</text>
-        <text x="388.06" y="52.55" fill="#7f7f7f">y</text>
-        <text x="396.46" y="52.55" fill="#7f7f7f">p</text>
-        <text x="404.86" y="52.55" fill="#7f7f7f">e</text>
-        <text x="421.67" y="52.55" fill="#7f7f7f">=</text>
-        <text x="438.47" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="446.87" y="52.55" fill="#7f7f7f">h</text>
-        <text x="455.27" y="52.55" fill="#7f7f7f">u</text>
-        <text x="463.67" y="52.55" fill="#7f7f7f">m</text>
-        <text x="472.08" y="52.55" fill="#7f7f7f">a</text>
-        <text x="480.48" y="52.55" fill="#7f7f7f">n</text>
-        <text x="488.88" y="52.55" fill="#7f7f7f">_</text>
-        <text x="497.28" y="52.55" fill="#cd5555">a</text>
-        <text x="505.68" y="52.55" fill="#cd5555">c</text>
-        <text x="514.08" y="52.55" fill="#cd5555">t</text>
-        <text x="522.48" y="52.55" fill="#cd5555">u</text>
-        <text x="530.88" y="52.55" fill="#cd5555">a</text>
-        <text x="539.29" y="52.55" fill="#cd5555">l</text>
-        <text x="547.69" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="556.09" y="52.55" fill="#7f7f7f">;</text>
-        <text x="572.89" y="52.55" fill="#7f7f7f">}</text>
-        <text x="10" y="71.55" fill="#7f7f7f">expect</text>
-        <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">class</text>
-        <text x="127.62" y="71.55" fill="#7f7f7f">Human</text>
-        <text x="178.03" y="71.55" fill="#7f7f7f">extends</text>
-        <text x="245.24" y="71.55" fill="#11bc79">Robot</text>
-        <text x="295.65" y="71.55" fill="#7f7f7f">{</text>
-        <text x="312.45" y="71.55" fill="#7f7f7f">static</text>
-        <text x="371.26" y="71.55" fill="#7f7f7f">t</text>
-        <text x="379.66" y="71.55" fill="#7f7f7f">y</text>
-        <text x="388.06" y="71.55" fill="#7f7f7f">p</text>
-        <text x="396.46" y="71.55" fill="#7f7f7f">e</text>
-        <text x="413.27" y="71.55" fill="#7f7f7f">=</text>
-        <text x="430.07" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="438.47" y="71.55" fill="#7f7f7f">h</text>
-        <text x="446.87" y="71.55" fill="#7f7f7f">u</text>
-        <text x="455.27" y="71.55" fill="#7f7f7f">m</text>
-        <text x="463.67" y="71.55" fill="#7f7f7f">a</text>
-        <text x="472.08" y="71.55" fill="#7f7f7f">n</text>
-        <text x="480.48" y="71.55" fill="#7f7f7f">_</text>
-        <text x="488.88" y="71.55" fill="#11bc79">e</text>
-        <text x="497.28" y="71.55" fill="#11bc79">x</text>
-        <text x="505.68" y="71.55" fill="#11bc79">p</text>
-        <text x="514.08" y="71.55" fill="#11bc79">e</text>
-        <text x="522.48" y="71.55" fill="#11bc79">c</text>
-        <text x="530.88" y="71.55" fill="#11bc79">t</text>
-        <text x="539.29" y="71.55" fill="#DAA520">e</text>
-        <text x="547.69" y="71.55" fill="#DAA520">d</text>
-        <text x="556.09" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="564.49" y="71.55" fill="#7f7f7f">;</text>
-        <text x="581.29" y="71.55" fill="#7f7f7f">}</text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">static</text>
+        <text x="85.61" y="71.55" fill="#7f7f7f">t</text>
+        <text x="94.01" y="71.55" fill="#7f7f7f">y</text>
+        <text x="102.42" y="71.55" fill="#7f7f7f">p</text>
+        <text x="110.82" y="71.55" fill="#7f7f7f">e</text>
+        <text x="127.62" y="71.55" fill="#7f7f7f">=</text>
+        <text x="144.42" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="152.82" y="71.55" fill="#7f7f7f">h</text>
+        <text x="161.22" y="71.55" fill="#7f7f7f">u</text>
+        <text x="169.63" y="71.55" fill="#7f7f7f">m</text>
+        <text x="178.03" y="71.55" fill="#7f7f7f">a</text>
+        <text x="186.43" y="71.55" fill="#7f7f7f">n</text>
+        <text x="194.83" y="71.55" fill="#7f7f7f">_</text>
+        <text x="203.23" y="71.55" fill="#cd5555">a</text>
+        <text x="211.63" y="71.55" fill="#cd5555">c</text>
+        <text x="220.03" y="71.55" fill="#cd5555">t</text>
+        <text x="228.44" y="71.55" fill="#cd5555">u</text>
+        <text x="236.84" y="71.55" fill="#cd5555">a</text>
+        <text x="245.24" y="71.55" fill="#cd5555">l</text>
+        <text x="253.64" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="262.04" y="71.55" fill="#7f7f7f">;</text>
+        <text x="10" y="90.55" fill="#7f7f7f">}</text>
+        <text x="10" y="109.55" fill="#7f7f7f">expect</text>
+        <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">class</text>
+        <text x="127.62" y="109.55" fill="#7f7f7f">Human</text>
+        <text x="178.03" y="109.55" fill="#7f7f7f">extends</text>
+        <text x="245.24" y="109.55" fill="#11bc79">Robot</text>
+        <text x="295.65" y="109.55" fill="#7f7f7f">{</text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">static</text>
+        <text x="85.61" y="128.55" fill="#7f7f7f">t</text>
+        <text x="94.01" y="128.55" fill="#7f7f7f">y</text>
+        <text x="102.42" y="128.55" fill="#7f7f7f">p</text>
+        <text x="110.82" y="128.55" fill="#7f7f7f">e</text>
+        <text x="127.62" y="128.55" fill="#7f7f7f">=</text>
+        <text x="144.42" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="152.82" y="128.55" fill="#7f7f7f">h</text>
+        <text x="161.22" y="128.55" fill="#7f7f7f">u</text>
+        <text x="169.63" y="128.55" fill="#7f7f7f">m</text>
+        <text x="178.03" y="128.55" fill="#7f7f7f">a</text>
+        <text x="186.43" y="128.55" fill="#7f7f7f">n</text>
+        <text x="194.83" y="128.55" fill="#7f7f7f">_</text>
+        <text x="203.23" y="128.55" fill="#11bc79">e</text>
+        <text x="211.63" y="128.55" fill="#11bc79">x</text>
+        <text x="220.03" y="128.55" fill="#11bc79">p</text>
+        <text x="228.44" y="128.55" fill="#11bc79">e</text>
+        <text x="236.84" y="128.55" fill="#11bc79">c</text>
+        <text x="245.24" y="128.55" fill="#11bc79">t</text>
+        <text x="253.64" y="128.55" fill="#DAA520">e</text>
+        <text x="262.04" y="128.55" fill="#DAA520">d</text>
+        <text x="270.44" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="278.84" y="128.55" fill="#7f7f7f">;</text>
+        <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

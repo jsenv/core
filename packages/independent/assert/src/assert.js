@@ -2806,7 +2806,11 @@ let writeDiff;
           diff += " ";
         }
       }
-    } else if (node.isFunction && !selfContext.collapsed) {
+    } else if (
+      node.isFunction &&
+      !selfContext.collapsed &&
+      node.childNodes.propertyEntryMap.size === 0
+    ) {
       selfContext.collapsedWithOverview = true;
     }
 
@@ -3764,7 +3768,10 @@ let writeDiff;
       if (node.isFunction) {
         labelDiff += ANSI.color("{", constructorCallDelimitersColor);
         labelDiff += " ";
-        labelDiff += ANSI.color("...", propertySizeColor);
+        labelDiff += ANSI.color(
+          "[source code]",
+          pickColor(comparison, context),
+        );
         labelDiff += " ";
         labelDiff += ANSI.color("}", constructorCallDelimitersColor);
       } else if (node.constructorCall) {

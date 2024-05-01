@@ -55,14 +55,23 @@ expect: {
 # function prototype modified
 AssertionError: actual and expect are different:
 
-actual: function Foo () { [source code], prototype }
-expect: function Bar () { [source code], prototype }
+actual: function Foo () {
+  [source code],
+  prototype: { a: true, b: false, },
+}
+expect: function Bar () {
+  [source code],
+  prototype: { a: true, b: true, },
+}
 
 # function prototype added
 AssertionError: actual and expect are different:
 
 actual: function Foo () { [source code] }
-expect: function Bar () { [source code], prototype }
+expect: function Bar () {
+  [source code],
+  prototype: { a: true },
+}
 
 # class vs function
 AssertionError: actual and expect are different:
@@ -79,46 +88,64 @@ expect: class Robot
 # extends Animal vs extend Robot
 AssertionError: actual and expect are different:
 
-actual: class Human extends Animal { static type = "human_actual"; }
-expect: class Human extends Robot { static type = "human_expected"; }
+actual: class Human extends Animal {
+  static type = "human_actual";
+}
+expect: class Human extends Robot {
+  static type = "human_expected";
+}
 
 # class static property modified
 AssertionError: actual and expect have 2 differences:
 
-actual: class A { static a = true; }
-expect: class A { static a = false; }
+actual: class A {
+  static a = true;
+}
+expect: class A {
+  static a = false;
+}
 
 # class static property added
 AssertionError: actual and expect have 2 differences:
 
-actual: class A { static a = true; }
+actual: class A {
+  static a = true;
+}
 expect: class A 
 
 # class static property removed
 AssertionError: actual and expect have 2 differences:
 
 actual: class A 
-expect: class A { static a = false; }
+expect: class A {
+  static a = false;
+}
 
 # class method diff source
 AssertionError: actual and expect have 2 differences:
 
-ℹ to improve readability 1 diff is completely hidden
-
-actual: class 
-expect: class 
+actual: class {
+  a() { [source code] }
+}
+expect: class {
+  a() { [source code] }
+}
 
 # class method added
 AssertionError: actual and expect have 2 differences:
 
-actual: class A 
+actual: class A {
+  a() { [source code] }
+}
 expect: class A 
 
 # class method removed
 AssertionError: actual and expect have 2 differences:
 
 actual: class A 
-expect: class A 
+expect: class A {
+  a() { [source code] }
+}
 
 # class constructor modified
 AssertionError: actual and expect are different:
@@ -165,21 +192,30 @@ expect: class expect { [source code] }
 # static property value modified
 AssertionError: actual and expect have 2 differences:
 
-actual: class { static a = "a_static"; }
-expect: class { static a = "a_static_2"; }
+actual: class {
+  static a = "a_static";
+}
+expect: class {
+  static a = "a_static_2";
+}
 
 # static method return value modified
 AssertionError: actual and expect have 2 differences:
 
-ℹ to improve readability 1 diff is completely hidden
-
-actual: class { static a() { ... }; }
-expect: class { static a() { ... }; }
+actual: class {
+  static a() { [source code] };
+}
+expect: class {
+  static a() { [source code] };
+}
 
 # class static property and object property
 AssertionError: actual and expect are different:
 
-actual: class actual { static a = true; static b = true; }
+actual: class actual {
+  static a = true;
+  static b = true;
+}
 expect: {
   a: true,
   b: false,
@@ -188,16 +224,26 @@ expect: {
 # class static prop and function prop
 AssertionError: actual and expect are different:
 
-actual: class actual { static a = true; }
-expect: function () { [source code], a: true }
+actual: class actual {
+  static a = true;
+}
+expect: function () {
+  [source code],
+  a: true,
+}
 
 # class prototype method vs function prototype method
 AssertionError: actual and expect are different:
 
-ℹ to improve readability 1 diff is completely hidden
-
-actual: class actual { static a = true;  }
-expect: function toto () { [source code], a: true, prototype }
+actual: class actual {
+  static a = true;
+  b() { [source code] }
+}
+expect: function toto () {
+  [source code],
+  a: true,
+  prototype: { b() => { [source code] }, },
+}
 
 # class constructor vs function
 AssertionError: actual and expect are different:
