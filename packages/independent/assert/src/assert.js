@@ -3090,7 +3090,7 @@ let writeDiff;
           ? createInternalEntryComparisonIterable(node)
           : node.canHaveIndexedValues
             ? createIndexedEntryComparisonIterable(node)
-            : createPropertyEntryComparisonIterable(node);
+            : createPropertyEntryComparisonIterable(node, context);
         for (const nestedComparison of nestedComparisons) {
           if (nestedComparison.hidden) {
             continue;
@@ -3466,7 +3466,10 @@ let writeDiff;
         insideDiff += indexedValuesDiff;
       }
       if (node.canHaveProps) {
-        const propsComparisons = createPropertyEntryComparisonIterable(node);
+        const propsComparisons = createPropertyEntryComparisonIterable(
+          node,
+          context,
+        );
         let forceDelimitersWhenEmpty =
           !node.canHaveIndexedValues && !node.isMap && labelDiff.length === 0;
         if (node.isFunction) {
@@ -3641,21 +3644,6 @@ let writeDiff;
       let internalValueDiff = "";
       internal_value: {
         if (internalValueNode && internalValueNode.displayedIn === "label") {
-          if (node.functionAnalysis.type === "class") {
-            const overallDiffReasons = new Set(comparison.reasons.overall.any);
-            overallDiffReasons.delete("function_name");
-            overallDiffReasons.delete("source_code_value");
-            if (overallDiffReasons.size > 0) {
-              // the class .toString() is not displayed because it contains the whole
-              // class definition which is actually rendered differently
-              const sourceCodeValueComparison =
-                comparison.childComparisons.internalValue;
-              if (sourceCodeValueComparison) {
-                context.onComparisonDisplayed(sourceCodeValueComparison, true);
-              }
-              break internal_value;
-            }
-          }
           const internalValueComparison = internalValueNode.comparison;
           // const actualCanHaveInternalValue = Boolean(
           //   internalValueComparison.actualNode &&
@@ -4380,25 +4368,48 @@ let writeDiff;
     );
     return indexedEntryComparisons;
   };
-  const createPropertyEntryComparisonIterable = (node) => {
+  const createPropertyEntryComparisonIterable = (node, context) => {
     const propertyEntryNodeMap = node.childNodes.propertyEntryMap;
     let propertyNames = Array.from(propertyEntryNodeMap.keys());
+    let internalValueNode = node.childNodes.internalValue;
+    let internalValueComparison;
+    if (internalValueNode && internalValueNode.displayedIn === "properties") {
+      internalValueComparison = internalValueNode.comparison;
+    }
+
     if (node.isFunction) {
       const prototypePropertyIndex = propertyNames.indexOf("prototype");
       if (prototypePropertyIndex > -1) {
         propertyNames.splice(prototypePropertyIndex, 1);
         propertyNames.push("prototype");
       }
+
+      if (node.functionAnalysis.type === "class") {
+        let hasDiff;
+        if (node.comparison.reasons.inside.any.size > 0) {
+          hasDiff = true;
+        } else {
+          const selfDiffReasons = new Set(node.comparison.reasons.overall.any);
+          selfDiffReasons.delete("function_name");
+          selfDiffReasons.delete("source_code");
+          selfDiffReasons.delete("source_code_value");
+          hasDiff = selfDiffReasons > 0;
+        }
+        if (hasDiff) {
+          // the class .toString() is not displayed because it contains the whole
+          // class definition which is actually rendered differently
+          if (internalValueComparison) {
+            context.onComparisonDisplayed(internalValueComparison, true);
+          }
+          internalValueComparison = null;
+        }
+      }
     }
+
     const propertyComparisons = propertyNames.map(
       (propertyName) => propertyEntryNodeMap.get(propertyName).comparison,
     );
 
-    let internalValueNode = node.childNodes.internalValue;
-    let internalValueComparison;
-    if (internalValueNode && internalValueNode.displayedIn === "properties") {
-      internalValueComparison = internalValueNode.comparison;
-    }
     let prototypeNode = node.childNodes.prototype;
     let prototypeComparison;
     if (
