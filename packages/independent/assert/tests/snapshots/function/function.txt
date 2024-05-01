@@ -55,14 +55,14 @@ expect: {
 # function prototype modified
 AssertionError: actual and expect are different:
 
-actual: function Foo () { [source code], prototype:  }
-expect: function Bar () { [source code], prototype:  }
+actual: function Foo () { [source code], prototype }
+expect: function Bar () { [source code], prototype }
 
 # function prototype added
 AssertionError: actual and expect are different:
 
 actual: function Foo () { [source code] }
-expect: function Bar () { [source code], prototype:  }
+expect: function Bar () { [source code], prototype }
 
 # class vs function
 AssertionError: actual and expect are different:
@@ -197,7 +197,7 @@ AssertionError: actual and expect are different:
 ℹ to improve readability 1 diff is completely hidden
 
 actual: class actual { static a = true;  }
-expect: function toto () { [source code], a: true, prototype:  }
+expect: function toto () { [source code], a: true, prototype }
 
 # class constructor vs function
 AssertionError: actual and expect are different:

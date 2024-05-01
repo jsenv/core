@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="557.69"
+      width="540.88"
       height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -49,7 +49,7 @@
         >
         <text x="10" y="90.55">actual: class actual { static a = true; }</text>
         <text x="10" y="109.55"
-          >expect: function toto () { [source code], a: true, prototype: }</text
+          >expect: function toto () { [source code], a: true, prototype }</text
         >
       </g>
     </svg>

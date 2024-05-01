@@ -2782,6 +2782,12 @@ let writeDiff;
         diff += keyDiff;
       }
       if (
+        selfContext.collapsed &&
+        !node.isClassStaticProperty &&
+        !node.isInternalEntry &&
+        !node.isPrimitive
+      ) {
+      } else if (
         (displayedKey || node.isSetValue) &&
         valueSeparator &&
         comparison !== selfContext.startComparison
@@ -3748,7 +3754,6 @@ let writeDiff;
       labelDiff += ANSI.color(")", constructorCallDelimitersColor);
       return labelDiff;
     }
-
     if (node.canHaveProps) {
       const propertySize = node.childNodes.propertyEntryMap.size;
       const propertySizeColor = pickColorAccordingToChild(

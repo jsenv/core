@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="473.67"
+      width="456.87"
       height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -63,8 +63,7 @@
         <text x="404.86" y="52.55" fill="#7f7f7f">y</text>
         <text x="413.27" y="52.55" fill="#7f7f7f">p</text>
         <text x="421.67" y="52.55" fill="#7f7f7f">e</text>
-        <text x="430.07" y="52.55" fill="#7f7f7f">:</text>
-        <text x="455.27" y="52.55" fill="#7f7f7f">}</text>
+        <text x="438.47" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">function</text>
@@ -82,8 +81,7 @@
         <text x="404.86" y="71.55" fill="#7f7f7f">y</text>
         <text x="413.27" y="71.55" fill="#7f7f7f">p</text>
         <text x="421.67" y="71.55" fill="#7f7f7f">e</text>
-        <text x="430.07" y="71.55" fill="#7f7f7f">:</text>
-        <text x="455.27" y="71.55" fill="#7f7f7f">}</text>
+        <text x="438.47" y="71.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>
