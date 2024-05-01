@@ -52,7 +52,7 @@
         <text x="26.8" y="147.55"> [source code],</text>
         <text x="26.8" y="166.55"> a: true,</text>
         <text x="26.8" y="185.55">
-          prototype: { b() =&#x3E; { [source code] }, },</text
+          prototype: { b: () =&#x3E; { [source code] }, },</text
         >
         <text x="10" y="204.55">}</text>
       </g>

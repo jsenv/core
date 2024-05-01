@@ -2782,12 +2782,6 @@ let writeDiff;
         diff += keyDiff;
       }
       if (
-        selfContext.collapsed &&
-        !node.isClassStaticProperty &&
-        !node.isInternalEntry &&
-        !node.isPrimitive
-      ) {
-      } else if (
         (displayedKey || node.isSetValue) &&
         valueSeparator &&
         comparison !== selfContext.startComparison

@@ -242,7 +242,7 @@ actual: class actual {
 expect: function toto () {
   [source code],
   a: true,
-  prototype: { b() => { [source code] }, },
+  prototype: { b: () => { [source code] }, },
 }
 
 # class constructor vs function
