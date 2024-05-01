@@ -3112,7 +3112,8 @@ let writeDiff;
             modified: canReset ? false : selfContext.modified,
             valueEndSeparatorDisabled:
               nestedComparison ===
-              nestedComparisons[nestedComparisons.length - 1],
+                nestedComparisons[nestedComparisons.length - 1] &&
+              !nestedNode.isClassStaticProperty,
           };
           const markersColor = pickColor(nestedComparison, nestedValueContext);
           valueDiffOverview += writeDiff(nestedComparison, nestedValueContext);
@@ -3673,7 +3674,7 @@ let writeDiff;
     }
 
     const shouldDisplayNestedValueCount =
-      context.collapsed && node.type !== "map_entry_key";
+      context.collapsed && node.type !== "map_entry_key" && !node.isSourceCode;
     if (!shouldDisplayNestedValueCount) {
       return labelDiff;
     }

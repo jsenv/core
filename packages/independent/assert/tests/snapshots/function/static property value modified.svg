@@ -63,7 +63,8 @@
         <text x="295.65" y="52.55" fill="#7f7f7f">i</text>
         <text x="304.05" y="52.55" fill="#7f7f7f">c</text>
         <text x="312.45" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="329.25" y="52.55" fill="#7f7f7f">}</text>
+        <text x="320.85" y="52.55" fill="#7f7f7f">;</text>
+        <text x="337.65" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">class</text>
@@ -83,7 +84,8 @@
         <text x="312.45" y="71.55" fill="#DAA520">_</text>
         <text x="320.85" y="71.55" fill="#DAA520">2</text>
         <text x="329.25" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="346.05" y="71.55" fill="#7f7f7f">}</text>
+        <text x="337.65" y="71.55" fill="#7f7f7f">;</text>
+        <text x="354.46" y="71.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

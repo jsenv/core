@@ -59,7 +59,8 @@
         <text x="220.03" y="71.55" fill="#DAA520">a</text>
         <text x="236.84" y="71.55" fill="#DAA520">=</text>
         <text x="253.64" y="71.55" fill="#DAA520">false</text>
-        <text x="304.05" y="71.55" fill="#7f7f7f">}</text>
+        <text x="295.65" y="71.55" fill="#DAA520">;</text>
+        <text x="312.45" y="71.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>
