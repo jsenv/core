@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="157.45"
+  height="195.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="155.45"
+      height="193.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="117.45"
+    height="155.45"
     overflow="hidden"
   >
     <svg
       width="423.27"
-      height="117.45"
+      height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -57,7 +57,8 @@
         <text x="77.21" y="71.55" fill="#7f7f7f">class</text>
         <text x="127.62" y="71.55" fill="#11bc79">expect</text>
         <text x="186.43" y="71.55" fill="#11bc79">{</text>
-        <text x="194.83" y="71.55" fill="#11bc79">}</text>
+        <text x="26.8" y="90.55" fill="#11bc79">[source code]</text>
+        <text x="10" y="109.55" fill="#11bc79">}</text>
       </g>
     </svg>
   </foreignObject>

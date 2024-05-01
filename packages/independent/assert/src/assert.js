@@ -4386,14 +4386,8 @@ let writeDiff;
 
       if (node.functionAnalysis.type === "class") {
         let hasDiff;
-        if (node.comparison.reasons.inside.any.size > 0) {
+        if (node.childNodes.propertyEntryMap.size > 0) {
           hasDiff = true;
-        } else {
-          const selfDiffReasons = new Set(node.comparison.reasons.overall.any);
-          selfDiffReasons.delete("function_name");
-          selfDiffReasons.delete("source_code");
-          selfDiffReasons.delete("source_code_value");
-          hasDiff = selfDiffReasons > 0;
         }
         if (hasDiff) {
           // the class .toString() is not displayed because it contains the whole
