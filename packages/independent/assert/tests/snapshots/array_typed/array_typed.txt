@@ -26,19 +26,101 @@ expect: {
   b: false,
 }
 
-# buffer diff at the end of long buffer
+# same length buffer diff at the end
 AssertionError: actual and expect have 1 difference:
 
 actual: Buffer [
-  ↑ 18 bytes ↑
-  64 
+  ↑ 19 bytes ↑
   61 
   6d 
 ]
 expect: Buffer [
-  ↑ 18 bytes ↑
-  64 
-  6f 
+  ↑ 19 bytes ↑
+  61 
+  5a 
+]
+
+# same length buffer diff at start
+AssertionError: actual and expect have 1 difference:
+
+actual: Buffer [
+  68 
+  65 
+  ↓ 19 bytes ↓
+]
+expect: Buffer [
+  5a 
+  65 
+  ↓ 19 bytes ↓
+]
+
+# same length buffer diff at middle
+AssertionError: actual and expect have 1 difference:
+
+actual: Buffer [
+  ↑ 10 bytes ↑
+  6e 
+  61 
+  6d 
+  ↓ 8 bytes ↓
+]
+expect: Buffer [
+  ↑ 10 bytes ↑
+  6e 
+  5a 
+  6d 
+  ↓ 8 bytes ↓
+]
+
+# same length buffer diff start, middle, end
+AssertionError: actual and expect have 3 differences:
+
+actual: Buffer [
+  68 
+  ↕ 9 bytes ↕
+  6e 
+  61 
+  ↕ 7 bytes ↕
+  61 
   6d 
 ]
+expect: Buffer [
+  5a 
+  ↕ 9 bytes ↕
+  6e 
+  5a 
+  ↕ 7 bytes ↕
+  61 
+  5a 
+]
+
+# buffer vs string
+AssertionError: actual and expect are different:
+
+actual: Buffer [
+  61 
+]
+expect: "a"
+
+# buffer vs array
+AssertionError: actual and expect have 2 differences:
+
+actual: {
+  a: Buffer [97],
+  b: Buffer [97],
+}
+expect: {
+  a: [97],
+  b: [61],
+}
+
+# buffer vs uint8
+AssertionError: actual and expect are different:
+
+actual: Buffer [
+  97 
+]
+expect: Uint8Array {
+  0: 97,
+}
 

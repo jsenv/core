@@ -1053,6 +1053,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           expectNode.quote = actualQuote;
           expectNode.openDelimiter = expectNode.closeDelimiter = actualQuote;
         }
+
+        if (
+          actualNode.displayNumberAsShortHex &&
+          !expectNode.displayNumberAsShortHex
+        ) {
+          actualNode.displayNumberAsShortHex = false;
+        } else if (
+          !actualNode.displayNumberAsShortHex &&
+          expectNode.displayNumberAsShortHex
+        ) {
+          expectNode.displayNumberAsShortHex = false;
+        }
       }
 
       // if (actualNode && actualNode.comparison) {
@@ -1597,7 +1609,7 @@ let createValueNode;
         let quote = "";
 
         let isNumberForByte = false;
-        let useHexShortNotation = false;
+        let displayNumberAsShortHex = false;
 
         let canHaveInternalEntries = false;
         let canHaveIndexedValues = false;
@@ -1837,7 +1849,7 @@ let createValueNode;
               isNumber = true;
               if (isIndexedEntry && parent.parent.isBuffer) {
                 isNumberForByte = true;
-                useHexShortNotation = true;
+                displayNumberAsShortHex = true;
               }
             }
           }
@@ -1916,7 +1928,7 @@ let createValueNode;
           isString,
           isNumber,
           isNumberForByte,
-          useHexShortNotation,
+          displayNumberAsShortHex,
           isStringForUrl,
           isErrorMessageString,
           isMultiline,
@@ -3065,9 +3077,9 @@ let writeDiff;
         }
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
-        if (node.useHexShortNotation) {
-          const hexShortNotation = value.toString(16).slice(-2);
-          valueDiff += ANSI.color(hexShortNotation, valueColor);
+        if (node.displayNumberAsShortHex) {
+          const numberAsShortHex = value.toString(16).slice(-2);
+          valueDiff += ANSI.color(numberAsShortHex, valueColor);
           break value;
         }
 
@@ -4836,3 +4848,6 @@ const URL_INTERNAL_PROPERTY_NAMES = [
   "origin",
   "searchParams",
 ];
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_a_valid_code_point
+// const isValidCodePoint = (number) => number > 0 && number < 1_114_111;

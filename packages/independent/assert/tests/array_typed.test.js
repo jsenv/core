@@ -29,13 +29,52 @@ await startSnapshotTesting("array_typed", {
       },
     });
   },
-  ["buffer diff at the end of long buffer"]: () => {
+  ["same length buffer diff at the end"]: () => {
     assert({
       actual: Buffer.from("hello, my name is dam"),
-      expect: Buffer.from("hello, my name is dom"),
+      expect: Buffer.from("hello, my name is daZ"),
     });
   },
-  // buffer vs string
-  // buffer vs array
-  // buffer vs uint8
+  ["same length buffer diff at start"]: () => {
+    assert({
+      actual: Buffer.from("hello, my name is dam"),
+      expect: Buffer.from("Zello, my name is dam"),
+    });
+  },
+  ["same length buffer diff at middle"]: () => {
+    assert({
+      actual: Buffer.from("hello, my name is dam"),
+      expect: Buffer.from("hello, my nZme is dam"),
+    });
+  },
+  ["same length buffer diff start, middle, end"]: () => {
+    assert({
+      actual: Buffer.from("hello, my name is dam"),
+      expect: Buffer.from("Zello, my nZme is daZ"),
+    });
+  },
+  ["buffer vs string"]: () => {
+    assert({
+      actual: Buffer.from("a"),
+      expect: "a",
+    });
+  },
+  ["buffer vs array"]: () => {
+    assert({
+      actual: {
+        a: Buffer.from("a"),
+        b: Buffer.from("a"),
+      },
+      expect: {
+        a: [97],
+        b: [61],
+      },
+    });
+  },
+  ["buffer.from vs Uint8Array.from"]: () => {
+    assert({
+      actual: Buffer.from("a"),
+      expect: Uint8Array.from([0x61]),
+    });
+  },
 });
