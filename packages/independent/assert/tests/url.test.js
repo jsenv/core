@@ -86,4 +86,40 @@ await startSnapshotTesting("url", {
       expect: `test"quotes`,
     });
   },
+  ["double quote in url string"]: () => {
+    assert({
+      actual: `http://a.com"`,
+      expect: `http://b.com"`,
+    });
+  },
+  ["url origin is case insensitive"]: () => {
+    assert({
+      actual: {
+        a: `http://example.com/page`,
+        b: true,
+      },
+      expect: {
+        a: `HTTP://EXAMPLE.COM/PAGE`,
+        b: false,
+      },
+    });
+  },
+  ["internal string vs url object"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "toto",
+      },
+      expect: new URL("http://toto.com"),
+    });
+  },
+  ["internal url string vs url string"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "http://a.com/",
+      },
+      expect: "http://b.com",
+    });
+  },
 });

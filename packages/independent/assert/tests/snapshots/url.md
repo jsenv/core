@@ -140,3 +140,59 @@ assert({
 
 ![img](<./url/quote test.svg>)
 
+# double quote in url string
+
+```js
+assert({
+  actual: `http://a.com"`,
+  expect: `http://b.com"`,
+});
+```
+
+![img](<./url/double quote in url string.svg>)
+
+# url origin is case insensitive
+
+```js
+assert({
+  actual: {
+    a: `http://example.com/page`,
+    b: true,
+  },
+  expect: {
+    a: `HTTP://EXAMPLE.COM/PAGE`,
+    b: false,
+  },
+});
+```
+
+![img](<./url/url origin is case insensitive.svg>)
+
+# internal string vs url object
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => "toto",
+  },
+  expect: new URL("http://toto.com"),
+});
+```
+
+![img](<./url/internal string vs url object.svg>)
+
+# internal url string vs url string
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => "http://a.com/",
+  },
+  expect: "http://b.com",
+});
+```
+
+![img](<./url/internal url string vs url string.svg>)
+

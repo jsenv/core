@@ -80,3 +80,33 @@ AssertionError: actual and expect are different:
 actual: "http://example.com/"
 expect: 'test"quotes'
 
+# double quote in url string
+AssertionError: actual and expect are different:
+
+actual: "http://a.com"/"
+expect: "http://b.com"/"
+
+# url origin is case insensitive
+AssertionError: actual and expect have 2 differences:
+
+actual: {
+  a: "http://example.com/page",
+  b: true,
+}
+expect: {
+  a: "http://example.com/PAGE",
+  b: false,
+}
+
+# internal string vs url object
+AssertionError: actual and expect are different:
+
+actual: Signal("toto")
+expect: URL("http://toto.com/")
+
+# internal url string vs url string
+AssertionError: actual and expect are different:
+
+actual: Signal("http://a.com/")
+expect: "http://b.com/"
+
