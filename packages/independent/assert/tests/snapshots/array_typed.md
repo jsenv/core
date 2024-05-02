@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./buffer/buffer.from("") vs buffer.from("a").svg>)
+![img](<./array_typed/buffer.from("") vs buffer.from("a").svg>)
 
 # buffer without diff are collapsed
 
@@ -24,5 +24,5 @@ assert({
 });
 ```
 
-![img](<./buffer/buffer without diff are collapsed.svg>)
+![img](<./array_typed/buffer without diff are collapsed.svg>)
 

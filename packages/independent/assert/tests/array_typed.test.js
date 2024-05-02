@@ -4,7 +4,7 @@ import { createAssert } from "../src/assert.js";
 
 const assert = createAssert();
 
-await startSnapshotTesting("buffer", {
+await startSnapshotTesting("array_typed", {
   [`buffer.from("") vs buffer.from("a")`]: () => {
     assert({
       actual: Buffer.from(""),
