@@ -6,6 +6,14 @@ expect: Buffer [
   61 
 ]
 
+# buffer.from("a") vs buffer.from("")
+AssertionError: actual and expect have 1 difference:
+
+actual: Buffer [
+  61 
+]
+expect: Buffer []
+
 # buffer without diff are collapsed
 AssertionError: actual and expect have 1 difference:
 
@@ -17,4 +25,20 @@ expect: {
   a: Buffer [61],
   b: false,
 }
+
+# buffer diff at the end of long buffer
+AssertionError: actual and expect have 1 difference:
+
+actual: Buffer [
+  ↑ 18 bytes ↑
+  64 
+  61 
+  6d 
+]
+expect: Buffer [
+  ↑ 18 bytes ↑
+  64 
+  6f 
+  6d 
+]
 

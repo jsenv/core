@@ -11,6 +11,12 @@ await startSnapshotTesting("array_typed", {
       expect: Buffer.from("a"),
     });
   },
+  [`buffer.from("a") vs buffer.from("")`]: () => {
+    assert({
+      actual: Buffer.from("a"),
+      expect: Buffer.from(""),
+    });
+  },
   ["buffer without diff are collapsed"]: () => {
     assert({
       actual: {
@@ -21,6 +27,12 @@ await startSnapshotTesting("array_typed", {
         a: Buffer.from("a"),
         b: false,
       },
+    });
+  },
+  ["buffer diff at the end of long buffer"]: () => {
+    assert({
+      actual: Buffer.from("hello, my name is dam"),
+      expect: Buffer.from("hello, my name is dom"),
     });
   },
   // buffer vs string

@@ -1596,6 +1596,9 @@ let createValueNode;
         let closeDelimiter = "";
         let quote = "";
 
+        let isNumberForHexadecimal = false;
+        let useHexShortNotation = false;
+
         let canHaveInternalEntries = false;
         let canHaveIndexedValues = false;
         let canHaveProps = false;
@@ -1832,6 +1835,10 @@ let createValueNode;
               }
             } else if (subtype === "number") {
               isNumber = true;
+              if (isIndexedEntry && parent.parent.isBuffer) {
+                isNumberForHexadecimal = true;
+                useHexShortNotation = true;
+              }
             }
           }
         }
@@ -1908,6 +1915,8 @@ let createValueNode;
           isBuffer,
           isString,
           isNumber,
+          isNumberForHexadecimal,
+          useHexShortNotation,
           isStringForUrl,
           isErrorMessageString,
           isMultiline,
@@ -3054,17 +3063,14 @@ let writeDiff;
           // already in subtype
           break value;
         }
-        if (
-          node.isNumber &&
-          node.isIndexedValue &&
-          node.parent.parent.isBuffer
-        ) {
-          const byteAsHex = node.value.toString(16).slice(-2);
-          valueDiff += byteAsHex;
+        const value = node.value;
+        const valueColor = pickValueColor(comparison, selfContext);
+        if (node.isNumberForHexadecimal && node.useHexShortNotation) {
+          const hexShortNotation = node.value.toString(16).slice(-2);
+          valueDiff += ANSI.color(hexShortNotation, valueColor);
           break value;
         }
 
-        const value = node.value;
         let valueDiffRaw =
           value === undefined
             ? "undefined"
@@ -3081,7 +3087,7 @@ let writeDiff;
           );
           valueDiffRaw += "…";
         }
-        const valueColor = pickValueColor(comparison, selfContext);
+
         valueDiff += ANSI.color(valueDiffRaw, valueColor);
         break value;
       }
@@ -3260,7 +3266,8 @@ let writeDiff;
         return nestedValueDiff;
       };
       const writeNestedValueGroupDiff = ({
-        label,
+        nestedValueName,
+        nestedValueNamePlural,
         openDelimiter,
         closeDelimiter,
         forceDelimitersWhenEmpty,
@@ -3319,7 +3326,7 @@ let writeDiff;
             let skipped = skippedArray.length;
             if (skipped) {
               let aboveSummary = "";
-              aboveSummary += `${skipped} ${label}s`;
+              aboveSummary += `${skipped} ${nestedValueNamePlural}`;
               groupDiff += `${indent}  `;
               const arrowSign = diffCount > 1 ? `↕` : `↑`;
               groupDiff += ANSI.color(
@@ -3440,8 +3447,8 @@ let writeDiff;
           groupDiff += " ";
           groupDiff += ANSI.color(
             skippedCounters.total === 1
-              ? `${skippedCounters.total} ${label}`
-              : `${skippedCounters.total} ${label}s`,
+              ? `${skippedCounters.total} ${nestedValueName}`
+              : `${skippedCounters.total} ${nestedValueNamePlural}`,
             summaryColor,
           );
           if (summaryDetails.length) {
@@ -3492,7 +3499,8 @@ let writeDiff;
         const internalEntryComparisons =
           createInternalEntryComparisonIterable(node);
         const internalEntriesDiff = writeNestedValueGroupDiff({
-          label: "value",
+          nestedValueName: "entry",
+          nestedValueNamePlural: "entries",
           openDelimiter: "{",
           closeDelimiter: "}",
           forceDelimitersWhenEmpty: true,
@@ -3505,7 +3513,20 @@ let writeDiff;
         const indexedEntryComparisons =
           createIndexedEntryComparisonIterable(node);
         const indexedValuesDiff = writeNestedValueGroupDiff({
-          label: "value",
+          ...(node.isBuffer
+            ? {
+                nestedValueName: "byte",
+                nestedValueNamePlural: "bytes",
+              }
+            : node.isString || node.isObjectForString
+              ? {
+                  nestedValueName: "char",
+                  nestedValueNamePlural: "chars",
+                }
+              : {
+                  nestedValueName: "value",
+                  nestedValueNamePlural: "values",
+                }),
           openDelimiter: "[",
           closeDelimiter: "]",
           forceDelimitersWhenEmpty: !node.isString && !node.isObjectForString,
@@ -3531,7 +3552,8 @@ let writeDiff;
           forceDelimitersWhenEmpty = false;
         }
         let propsDiff = writeNestedValueGroupDiff({
-          label: "prop",
+          nestedValueName: "prop",
+          nestedValueNamePlural: "props",
           openDelimiter: node.isClassPrototype ? "" : "{",
           closeDelimiter: node.isClassPrototype ? "" : "}",
           forceDelimitersWhenEmpty,
