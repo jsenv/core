@@ -1,0 +1,20 @@
+# buffer.from("") vs buffer.from("a")
+AssertionError: actual and expect have 1 difference:
+
+actual: Buffer []
+expect: Buffer [
+  97 
+]
+
+# buffer without diff are collapsed
+AssertionError: actual and expect have 1 difference:
+
+actual: {
+  a: Buffer [97],
+  b: true,
+}
+expect: {
+  a: Buffer [97],
+  b: false,
+}
+

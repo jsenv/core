@@ -1401,7 +1401,7 @@ const shouldIgnorePropertyEntry = (
     );
   }
   if (propertyNameOrSymbol === "length") {
-    return node.isArray || node.isObjectForString || node.isFunction;
+    return node.canHaveIndexedValues || node.isFunction;
   }
   if (propertyNameOrSymbol === "name") {
     return node.isFunction;
@@ -1531,10 +1531,11 @@ let createValueNode;
       isPropertyValue,
       isArrayEntry,
       isStringEntry,
+      isBufferEntry,
       isSetEntry,
       isMapEntry,
       isUrlEntry,
-      isArrayValue,
+      isIndexedValue,
       isSetValue,
       isMapEntryKey,
       isMapEntryValue,
@@ -1582,6 +1583,7 @@ let createValueNode;
         let isMap = false;
         let isSymbol = false;
         let isSourceCode = false;
+        let isBuffer = false;
         let symbolKey = "";
         let symbolDescription = "";
         let reference = null;
@@ -1678,6 +1680,10 @@ let createValueNode;
               subtype = parent.parent.value.name;
             } else {
               subtype = getSubtype(value);
+              if (typeof Buffer === "function" && Buffer.isBuffer(value)) {
+                isBuffer = true;
+                canHaveIndexedValues = true;
+              }
             }
             reference =
               wellKnownPath || type === "prototype"
@@ -1692,6 +1698,7 @@ let createValueNode;
                   isSet = true;
                 } else if (proto.constructor.name === "String") {
                   isObjectForString = true;
+                  canHaveIndexedValues = true;
                 } else if (proto.constructor.name === "URL") {
                   isUrl = true;
                 } else if (proto.constructor.name === "Error") {
@@ -1737,7 +1744,7 @@ let createValueNode;
               subtypeDisplayed = subtypeDisplayedWhenCollapsed = subtype;
             }
 
-            if (isArray) {
+            if (canHaveIndexedValues) {
               openDelimiter = "[";
               closeDelimiter = "]";
             } else {
@@ -1750,6 +1757,7 @@ let createValueNode;
             subtype = typeof value;
             if (subtype === "string") {
               isString = true;
+              canHaveIndexedValues = true;
               if (type === "line") {
                 canHaveChars = true;
                 chars = splitChars(value);
@@ -1873,10 +1881,11 @@ let createValueNode;
           isPropertyValue,
           isArrayEntry,
           isStringEntry,
+          isBufferEntry,
           isSetEntry,
           isMapEntry,
           isUrlEntry,
-          isArrayValue,
+          isIndexedValue,
           isSetValue,
           isMapEntryKey,
           isMapEntryValue,
@@ -1893,6 +1902,7 @@ let createValueNode;
           isComposite: composite,
           isPrimitive: primitive,
           isSourceCode,
+          isBuffer,
           isString,
           isStringForUrl,
           isErrorMessageString,
@@ -2139,10 +2149,23 @@ let createValueNode;
         // string chars
         if (node.isString || node.isObjectForString) {
           let index = 0;
-          // eslint-disable-next-line no-unused-vars
           while (index < node.value.length) {
             associatedValueMetaMap.set(String(index), {
+              isIndexedEntry: true,
               isStringEntry: true,
+              propertyDescriptor: Object.getOwnPropertyDescriptor(
+                node.value,
+                index,
+              ),
+            });
+            index++;
+          }
+        } else if (node.isBuffer) {
+          let index = 0;
+          while (index < node.value.length) {
+            associatedValueMetaMap.set(String(index), {
+              isIndexedEntry: true,
+              isBufferEntry: true,
               propertyDescriptor: Object.getOwnPropertyDescriptor(
                 node.value,
                 index,
@@ -2293,6 +2316,7 @@ let createValueNode;
             isPropertyEntry,
             isArrayEntry,
             isStringEntry,
+            isBufferEntry,
             isSetEntry,
             isMapEntry,
             isUrlEntry,
@@ -2307,7 +2331,7 @@ let createValueNode;
           if (isSetEntry) {
             const setEntryNode = _createValueNode({
               parent: node,
-              path: path.append(entryKey, { isArrayEntry: true }),
+              path: path.append(entryKey, { isIndexedEntry: true }),
               type: "entry_value",
               value,
               isSetValue: true,
@@ -2319,12 +2343,7 @@ let createValueNode;
           if (
             isStringEntry ||
             (isPropertyEntry &&
-              shouldIgnorePropertyEntry(node, entryKey, {
-                propertyDescriptor,
-                isArrayEntry,
-                isStringEntry,
-                isUrlEntry,
-              }))
+              shouldIgnorePropertyEntry(node, entryKey, { propertyDescriptor }))
           ) {
             continue;
           }
@@ -2364,6 +2383,7 @@ let createValueNode;
             isPropertyEntry,
             isArrayEntry,
             isStringEntry,
+            isBufferEntry,
             isSetEntry,
             isMapEntry,
             isUrlEntry,
@@ -2378,7 +2398,7 @@ let createValueNode;
           const entryNode = _createValueNode({
             parent: node,
             path: path.append(pathPart || entryKey, {
-              isArrayEntry,
+              isIndexedEntry,
             }),
             type: "entry",
             value: null,
@@ -2471,7 +2491,7 @@ let createValueNode;
                 descriptor: propertyDescriptorName,
                 isPropertyDescriptor: true,
                 isPropertyValue,
-                isArrayValue: isArrayEntry && isPropertyValue,
+                isIndexedValue: isIndexedEntry && isPropertyValue,
                 showOnlyWhenDiff: !isPropertyValue,
                 valueSeparator:
                   valueSeparator === undefined
@@ -2480,7 +2500,7 @@ let createValueNode;
                       : propertyDescriptorName === "get" ||
                           propertyDescriptorName === "set"
                         ? ""
-                        : entryNode.isArrayIndex &&
+                        : entryNode.isIndexedEntry &&
                             propertyDescriptorName === "value"
                           ? ""
                           : ":"
@@ -2494,7 +2514,9 @@ let createValueNode;
                         ? ""
                         : entryNode.isClassStaticProperty
                           ? ";"
-                          : ","
+                          : entryNode.isBufferEntry
+                            ? " "
+                            : ","
                     : valueEndSeparator,
               });
               entryNode.childNodes[propertyDescriptorName] =
@@ -2565,20 +2587,29 @@ let createValueNode;
   };
   const getSubtype = (obj) => {
     // https://github.com/nodejs/node/blob/384fd1787634c13b3e5d2f225076d2175dc3b96b/lib/internal/util/inspect.js#L859
-    const tag = obj[Symbol.toStringTag];
-    if (typeof tag === "string") {
-      return tag;
-    }
-
     while (obj || isUndetectableObject(obj)) {
-      const descriptor = Object.getOwnPropertyDescriptor(obj, "constructor");
+      const constructorDescriptor = Object.getOwnPropertyDescriptor(
+        obj,
+        "constructor",
+      );
       if (
-        descriptor !== undefined &&
-        typeof descriptor.value === "function" &&
-        descriptor.value.name !== ""
+        constructorDescriptor !== undefined &&
+        typeof constructorDescriptor.value === "function" &&
+        constructorDescriptor.value.name !== ""
       ) {
-        return String(descriptor.value.name);
+        return String(constructorDescriptor.value.name);
       }
+      const toStringTagDescriptor = Object.getOwnPropertyDescriptor(
+        obj,
+        Symbol.toStringTag,
+      );
+      if (
+        toStringTagDescriptor &&
+        typeof toStringTagDescriptor.value === "string"
+      ) {
+        return toStringTagDescriptor.value;
+      }
+
       obj = Object.getPrototypeOf(obj);
       if (obj === null) {
         return "Object";
@@ -2667,7 +2698,7 @@ let writeDiff;
       if (node.functionAnalysis.type === "method") {
         return "";
       }
-      if (node.isArrayEntry && node.isPropertyValue) {
+      if (node.isIndexedEntry && node.isPropertyValue) {
         return "";
       }
       if (node.isUrlEntry) {
@@ -3068,7 +3099,8 @@ let writeDiff;
         const openDelimiter = node.openDelimiter;
         const closeDelimiter = node.closeDelimiter;
         const nestedValueSeparator = node.canHaveProps ? "," : "";
-        const nestedValueSpacing = node.canHaveProps && !node.isArray;
+        const nestedValueSpacing =
+          node.canHaveProps && !node.canHaveIndexedValues;
         const ellipsis = "...";
 
         let labelDiffCollapsed = writeLabelDiff(comparison, {
@@ -3463,7 +3495,7 @@ let writeDiff;
           label: "value",
           openDelimiter: "[",
           closeDelimiter: "]",
-          forceDelimitersWhenEmpty: true,
+          forceDelimitersWhenEmpty: !node.isString && !node.isObjectForString,
           resetModified: canResetModifiedOnIndexedEntry,
           nestedComparisons: indexedEntryComparisons,
         });
@@ -3685,6 +3717,9 @@ let writeDiff;
     if (!shouldDisplayNestedValueCount) {
       return labelDiff;
     }
+    if (node.isString || node.isObjectForString) {
+      return labelDiff;
+    }
     if (node.canHaveIndexedValues) {
       const indexedEntrySize = node.childNodes.indexedEntryMap.size;
       const sizeColor = pickColorAccordingToChild(comparison, context, (node) =>
@@ -3742,17 +3777,6 @@ let writeDiff;
         labelDiff += ANSI.color(propertySize, propertySizeColor);
         labelDiff += ANSI.color("}", delimitersColor);
       }
-      return labelDiff;
-    }
-    if (node.isString) {
-      const stringLengthColor = pickColorAccordingToChild(
-        comparison,
-        context,
-        (node) => node.childNodes.lines,
-      );
-      labelDiff += ANSI.color("(", constructorCallDelimitersColor);
-      labelDiff += ANSI.color(node.value.length, stringLengthColor);
-      labelDiff += ANSI.color(")", constructorCallDelimitersColor);
       return labelDiff;
     }
     if (node.canHaveProps) {
@@ -4501,10 +4525,13 @@ const createValuePath = (parts = []) => {
     parts,
     toString: () => parts.join(""),
     valueOf: () => parts.join(""),
-    append: (property, { isArrayEntry, isPropertyDescriptor, isMeta } = {}) => {
+    append: (
+      property,
+      { isIndexedEntry, isPropertyDescriptor, isMeta } = {},
+    ) => {
       let propertyKey = "";
       let propertyKeyCanUseDot = false;
-      if (isArrayEntry) {
+      if (isIndexedEntry) {
         propertyKey = `[${property}]`;
       } else if (typeof property === "symbol") {
         propertyKey = humanizeSymbol(property);
