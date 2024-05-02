@@ -48,7 +48,7 @@
         <text x="295.65" y="14.55"> are different:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="77.21" y="52.55" fill="#7f7f7f">&#x27;</text>
         <text x="85.61" y="52.55" fill="#7f7f7f">h</text>
         <text x="94.01" y="52.55" fill="#7f7f7f">t</text>
         <text x="102.42" y="52.55" fill="#7f7f7f">t</text>
@@ -62,10 +62,10 @@
         <text x="178.03" y="52.55" fill="#7f7f7f">m</text>
         <text x="186.43" y="52.55" fill="#7f7f7f">&#x22;</text>
         <text x="194.83" y="52.55" fill="#7f7f7f">/</text>
-        <text x="203.23" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="203.23" y="52.55" fill="#7f7f7f">&#x27;</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="77.21" y="71.55" fill="#7f7f7f">&#x27;</text>
         <text x="85.61" y="71.55" fill="#7f7f7f">h</text>
         <text x="94.01" y="71.55" fill="#7f7f7f">t</text>
         <text x="102.42" y="71.55" fill="#7f7f7f">t</text>
@@ -79,7 +79,7 @@
         <text x="178.03" y="71.55" fill="#7f7f7f">m</text>
         <text x="186.43" y="71.55" fill="#7f7f7f">&#x22;</text>
         <text x="194.83" y="71.55" fill="#7f7f7f">/</text>
-        <text x="203.23" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="203.23" y="71.55" fill="#7f7f7f">&#x27;</text>
       </g>
     </svg>
   </foreignObject>

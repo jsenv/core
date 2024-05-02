@@ -77,14 +77,14 @@ expect: "file://example/file.js"
 # quote test
 AssertionError: actual and expect are different:
 
-actual: "http://example.com/"
+actual: 'http://example.com/'
 expect: 'test"quotes'
 
 # double quote in url string
 AssertionError: actual and expect are different:
 
-actual: "http://a.com"/"
-expect: "http://b.com"/"
+actual: 'http://a.com"/'
+expect: 'http://b.com"/'
 
 # url origin is case insensitive
 AssertionError: actual and expect have 2 differences:

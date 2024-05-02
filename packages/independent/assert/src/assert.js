@@ -1771,14 +1771,7 @@ let createValueNode;
                 if (isMultiline && !isErrorMessageString) {
                   useLineNumbersOnTheLeft = true;
                 }
-                if (!isUrlEntry && !hidden && canParseUrl(value)) {
-                  useQuotes = true;
-                  quote = DOUBLE_QUOTE;
-                  isStringForUrl = true;
-                  canHaveUrlParts = true;
-                  canHaveInternalEntries = true;
-                  openDelimiter = closeDelimiter = quote;
-                } else if (isErrorMessageString) {
+                if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (type === "entry_key") {
                   if (
@@ -1805,6 +1798,12 @@ let createValueNode;
                       : quoteOption;
                   openDelimiter = quote;
                   closeDelimiter = quote;
+
+                  if (!hidden && canParseUrl(value)) {
+                    isStringForUrl = true;
+                    canHaveUrlParts = true;
+                    canHaveInternalEntries = true;
+                  }
                 }
               }
             } else if (subtype === "symbol") {
@@ -4347,7 +4346,7 @@ let writeDiff;
     };
 
     const delimitersColor = pickDelimitersColor(comparison, urlContext);
-    urlDiff += ANSI.color(`"`, delimitersColor);
+    urlDiff += ANSI.color(node.quote, delimitersColor);
     urlDiff += writeUrlPart("protocol");
     urlDiff += writeUrlPart("username");
     urlDiff += writeUrlPart("hostname");
@@ -4355,7 +4354,7 @@ let writeDiff;
     urlDiff += writeUrlPart("pathname");
     urlDiff += writeUrlPart("search");
     urlDiff += writeUrlPart("hash");
-    urlDiff += ANSI.color(`"`, delimitersColor);
+    urlDiff += ANSI.color(node.quote, delimitersColor);
     return urlDiff;
   };
 
