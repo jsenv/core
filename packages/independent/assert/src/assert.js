@@ -1575,6 +1575,7 @@ let createValueNode;
         let isArray = false;
         let isSet = false;
         let isString = false;
+        let isNumber = false;
         let isObjectForString = false;
         let isUrl = false;
         let isStringForUrl = false;
@@ -1829,6 +1830,8 @@ let createValueNode;
                   symbolDescription = symbolToDescription(value);
                 }
               }
+            } else if (subtype === "number") {
+              isNumber = true;
             }
           }
         }
@@ -1904,6 +1907,7 @@ let createValueNode;
           isSourceCode,
           isBuffer,
           isString,
+          isNumber,
           isStringForUrl,
           isErrorMessageString,
           isMultiline,
@@ -3048,6 +3052,15 @@ let writeDiff;
         }
         if (node.isSymbol) {
           // already in subtype
+          break value;
+        }
+        if (
+          node.isNumber &&
+          node.isIndexedValue &&
+          node.parent.parent.isBuffer
+        ) {
+          const byteAsHex = node.value.toString(16).slice(-2);
+          valueDiff += byteAsHex;
           break value;
         }
 
