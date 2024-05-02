@@ -1596,7 +1596,7 @@ let createValueNode;
         let closeDelimiter = "";
         let quote = "";
 
-        let isNumberForHexadecimal = false;
+        let isNumberForByte = false;
         let useHexShortNotation = false;
 
         let canHaveInternalEntries = false;
@@ -1836,7 +1836,7 @@ let createValueNode;
             } else if (subtype === "number") {
               isNumber = true;
               if (isIndexedEntry && parent.parent.isBuffer) {
-                isNumberForHexadecimal = true;
+                isNumberForByte = true;
                 useHexShortNotation = true;
               }
             }
@@ -1915,7 +1915,7 @@ let createValueNode;
           isBuffer,
           isString,
           isNumber,
-          isNumberForHexadecimal,
+          isNumberForByte,
           useHexShortNotation,
           isStringForUrl,
           isErrorMessageString,
@@ -3065,8 +3065,8 @@ let writeDiff;
         }
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
-        if (node.isNumberForHexadecimal && node.useHexShortNotation) {
-          const hexShortNotation = node.value.toString(16).slice(-2);
+        if (node.useHexShortNotation) {
+          const hexShortNotation = value.toString(16).slice(-2);
           valueDiff += ANSI.color(hexShortNotation, valueColor);
           break value;
         }
