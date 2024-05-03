@@ -3267,7 +3267,7 @@ let writeDiff;
           ? createInternalEntryComparisonIterable(node)
           : node.canHaveIndexedValues
             ? createIndexedEntryComparisonIterable(node)
-            : createPropertyEntryComparisonIterable(node, context);
+            : createPropertyEntryComparisonIterable(node);
 
         for (const nestedComparison of nestedComparisons) {
           if (nestedComparison.hidden) {
@@ -4578,7 +4578,7 @@ let writeDiff;
     );
     return indexedEntryComparisons;
   };
-  const createPropertyEntryComparisonIterable = (node, context) => {
+  const createPropertyEntryComparisonIterable = (node) => {
     const propertyEntryNodeMap = node.childNodes.propertyEntryMap;
     let propertyNames = Array.from(propertyEntryNodeMap.keys());
     let internalValueNode = node.childNodes.internalValue;
