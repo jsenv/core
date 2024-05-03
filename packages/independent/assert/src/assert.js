@@ -19,10 +19,30 @@ const ARRAY_EMPTY_VALUE = { array_empty_value: true }; // Symbol.for('array_empt
 // const VALUE_OF_NOT_FOUND = { value_of_not_found: true };
 // const DOES_NOT_EXISTS = { does_not_exists: true };
 
-const sourceCodeSymbol = Symbol.for("source_code");
+const sourceCodeSymbol = Symbol.for("jsenv_assert_source_code");
 const createSourceCode = (value) => {
   return {
     [sourceCodeSymbol]: value,
+  };
+};
+const compareSymbol = Symbol.for("jsenv_assert_compare");
+const numberPartSymbol = Symbol.for("jsenv_assert_number_part");
+const createNumberPart = (numberPartAsString) => {
+  return {
+    [numberPartSymbol]: numberPartAsString,
+    [Symbol.toPrimitive]: () => {
+      return numberPartAsString;
+    },
+    [compareSymbol]: (otherValue) => {
+      if (otherValue && numberPartSymbol in otherValue) {
+        return numberPartAsString === otherValue[numberPartSymbol];
+      }
+      if (typeof otherValue !== "number") {
+        return false;
+      }
+      const otherValueAsString = String(otherValue);
+      return otherValueAsString === numberPartAsString;
+    },
   };
 };
 
@@ -3198,8 +3218,45 @@ let writeDiff;
 
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
+        if (node.isNumber) {
+          valueDiff += writePathDiff(comparison, selfContext, (node) => {
+            if (!node.isNumber) {
+              return [node.value];
+            }
+            if (node.isNegativeZero) {
+              return ["-", 0];
+            }
+            if (node.isNaN) {
+              return [NaN];
+            }
+            let parts = [];
+            if (Math.sign(node.value) === -1) {
+              parts.push("-");
+            } else {
+              parts.push("");
+            }
+            let isInteger = node.value % 1 === 0;
+            if (isInteger) {
+              parts.push(createNumberPart(node.value));
+              return parts;
+            }
+            const floatAsString = String(node.value);
+            const integer = Math.floor(node.value);
+            const integerAsString = String(integer);
+            const separator = floatAsString[integerAsString.length];
+            const decimalAsString = floatAsString.slice(
+              integerAsString.length + 1,
+            );
+            parts.push(
+              createNumberPart(integerAsString),
+              separator,
+              createNumberPart(decimalAsString),
+            );
+            return parts;
+          });
+          break value;
+        }
         if (node.isNegativeZero) {
-          valueDiff += ANSI.color("-0", valueColor);
           break value;
         }
         if (node.isNaN) {
@@ -4856,7 +4913,7 @@ const writePathDiff = (comparison, context, getter) => {
         partColor = hasOtherPath
           ? context.resultColorWhenSolo
           : context.resultColor;
-      } else if (part === otherPart) {
+      } else if (compareTwoValues(part, otherPart)) {
         partColor = sameColor;
       } else {
         partColor = context.resultColor;
@@ -4868,6 +4925,16 @@ const writePathDiff = (comparison, context, getter) => {
     index++;
   }
   return pathDiff;
+};
+
+const compareTwoValues = (left, right) => {
+  if (left && left[compareSymbol]) {
+    return left[compareSymbol](right);
+  }
+  if (right && right[compareSymbol]) {
+    return right[compareSymbol](left);
+  }
+  return left === right;
 };
 
 const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
