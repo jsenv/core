@@ -583,7 +583,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else if (
           actualNode.isPrimitive &&
           expectNode.isPrimitive &&
-          actualNode.value !== expectNode.value
+          (actualNode.value !== expectNode.value ||
+            actualNode.isNegativeZero !== expectNode.isNegativeZero)
         ) {
           addSelfDiff("primitive_value");
         } else if (actualNode.isSourceCode !== expectNode.isSourceCode) {
@@ -1678,6 +1679,8 @@ let createValueNode;
         let quote = "";
 
         let isNumberForByte = false;
+        let isNegativeZero = false;
+        let isNaN = false;
         let displayNumberAsShortHex = false;
 
         let canHaveInternalEntries = false;
@@ -1940,6 +1943,12 @@ let createValueNode;
               }
             } else if (subtype === "number") {
               isNumber = true;
+              // eslint-disable-next-line no-self-compare
+              if (value !== value) {
+                isNaN = true;
+              } else if (getIsNegativeZero(value)) {
+                isNegativeZero = true;
+              }
               if (isIndexedEntry && parent.parent.isTypedArray) {
                 isNumberForByte = true;
                 if (parent.parent.isBuffer) {
@@ -2024,6 +2033,8 @@ let createValueNode;
           isString,
           isNumber,
           isNumberForByte,
+          isNaN,
+          isNegativeZero,
           displayNumberAsShortHex,
           isStringForUrl,
           isErrorMessageString,
@@ -3180,8 +3191,25 @@ let writeDiff;
           // already in subtype
           break value;
         }
+
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
+        if (node.isNegativeZero) {
+          valueDiff += ANSI.color("-0", valueColor);
+          break value;
+        }
+        if (node.isNaN) {
+          valueDiff += ANSI.color("NaN", valueColor);
+          break value;
+        }
+        if (value === Infinity) {
+          valueDiff += ANSI.color("Infinity", valueColor);
+          break value;
+        }
+        if (value === -Infinity) {
+          valueDiff += ANSI.color("-Infinity", valueColor);
+          break value;
+        }
         if (node.displayNumberAsShortHex) {
           const numberAsShortHex = value.toString(16).slice(-2);
           valueDiff += ANSI.color(numberAsShortHex, valueColor);
@@ -4858,7 +4886,10 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
     const node = comparison[context.resultType];
     const currentValue = getter(node, otherNode);
     const otherValue = getter(otherNode, node);
-    if (currentValue !== otherValue) {
+    if (
+      currentValue !== otherValue ||
+      getIsNegativeZero(currentValue) !== getIsNegativeZero(otherValue)
+    ) {
       return preferSolorColor
         ? context.resultColorWhenSolo
         : context.resultColor;
@@ -4967,5 +4998,35 @@ const URL_INTERNAL_PROPERTY_NAMES = [
   "searchParams",
 ];
 
+// under some rare and odd circumstances firefox Object.is(-0, -0)
+// returns false making test fail.
+// it is 100% reproductible with big.test.js.
+// However putting debugger or executing Object.is just before the
+// comparison prevent Object.is failure.
+// It makes me thing there is something strange inside firefox internals.
+// All this to say avoid relying on Object.is to test if the value is -0
+const getIsNegativeZero = (value) => {
+  return typeof value === "number" && 1 / value === -Infinity;
+};
+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_a_valid_code_point
 // const isValidCodePoint = (number) => number > 0 && number < 1_114_111;
+
+// const numberString = String(value);
+// if (!numericSeparator) {
+//   return numberString;
+// }
+// const {
+//   number,
+//   mark = "",
+//   sign = "",
+//   power = "",
+// } = numberString.match(
+//   /^(?<number>.*?)(?:(?<mark>e)(?<sign>[+-])?(?<power>\d+))?$/i,
+// ).groups;
+// const numberWithSeparators = formatNumber(number);
+// const powerWithSeparators = addSeparator(power, {
+//   minimumDigits: 5,
+//   groupLength: 3,
+// });
+// return `${numberWithSeparators}${mark}${sign}${powerWithSeparators}`;
