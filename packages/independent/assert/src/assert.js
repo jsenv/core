@@ -1657,8 +1657,9 @@ let createValueNode;
         let isTypedArray = false;
         let isSet = false;
         let isString = false;
-        let isNumber = false;
         let isObjectForString = false;
+        let isNumber = false;
+        let isObjectForNumber = false;
         let isUrl = false;
         let isStringForUrl = false;
         let isError = false;
@@ -1811,6 +1812,8 @@ let createValueNode;
                 } else if (parentConstructor.name === "String") {
                   isObjectForString = true;
                   canHaveIndexedValues = true;
+                } else if (parentConstructor.name === "Number") {
+                  isObjectForNumber = true;
                 } else if (parentConstructor.name === "URL") {
                   isUrl = true;
                 } else if (parentConstructor.name === "Error") {
@@ -2048,6 +2051,7 @@ let createValueNode;
           chars,
           canHaveUrlParts,
           isObjectForString,
+          isObjectForNumber,
           isFunction,
           functionAnalysis,
           isFunctionPrototype,
