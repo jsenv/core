@@ -281,29 +281,91 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const compare = (comparison, options = {}) => {
       const { actualNode, expectNode } = comparison;
 
+      const onNestedDiff = (node) => {
+        if (!node) {
+          return;
+        }
+        if (node.hidden) {
+          return;
+        }
+        const ownerNode = getOwnerNode(node);
+        if (!ownerNode) {
+          return;
+        }
+        if (node.type === "internal_value") {
+          if (ownerNode.isFunction) {
+            return;
+          }
+          if (node.displayedIn === "label") {
+            return;
+          }
+        }
+        if (node.type === "prototype") {
+          // seulement si on affiche le proto
+          // et on affiche le proto que si c'est Object le subtype
+          if (node.subtype !== "Object" && node.subtype !== "Array") {
+            // return;
+          }
+        }
+        if (ownerNode.comparison.actualNode) {
+          ownerNode.comparison.actualNode.shouldExpand = true;
+        }
+        if (ownerNode.comparison.expectNode) {
+          ownerNode.comparison.expectNode.shouldExpand = true;
+        }
+      };
+      const getOwnerNode = (node) => {
+        if (node.type === "value") {
+          return node;
+        }
+        if (node.type === "entry") {
+          return node.parent;
+        }
+        if (node.isSetValue) {
+          return node.parent;
+        }
+        if (node.type === "entry_value") {
+          return node.parent.parent;
+        }
+        if (node.type === "line") {
+          return node.parent;
+        }
+        if (node.type === "char") {
+          return node.parent;
+        }
+        if (node.type === "prototype") {
+          return node.parent;
+        }
+        if (node.type === "internal_value") {
+          return node.parent;
+        }
+        return null;
+      };
+
       let nodePresent;
       let missingReason = "";
+      let missingNodeName;
+      const onAdded = (reason) => {
+        missingReason = "added";
+        comparison.reasons.self.added.add(reason);
+        comparison.added = true;
+        onNestedDiff(actualNode);
+      };
+      const onRemoved = (reason) => {
+        missingReason = "removed";
+        comparison.reasons.self.removed.add(reason);
+        comparison.removed = true;
+        onNestedDiff(expectNode);
+      };
+      const onMissing = (reason) => {
+        if (nodePresent.name === "actual") {
+          onAdded(reason);
+        } else {
+          onRemoved(reason);
+        }
+        addCause(comparison);
+      };
       added_or_removed: {
-        const onAdded = (reason) => {
-          missingReason = "added";
-          comparison.reasons.self.added.add(reason);
-          comparison.added = true;
-        };
-        const onRemoved = (reason) => {
-          missingReason = "removed";
-          comparison.reasons.self.removed.add(reason);
-          comparison.removed = true;
-        };
-        const onMissing = (reason) => {
-          if (nodePresent.name === "actual") {
-            onAdded(reason);
-          } else {
-            onRemoved(reason);
-          }
-          addCause(comparison);
-        };
-
-        let missingNodeName;
         if (actualNode && expectNode) {
           if (
             actualNode.type === "internal_value" &&
@@ -339,8 +401,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
 
         if (nodePresent.isSetValue) {
-          const comparisonOwningSet = comparison.parent.parent;
-          const nodeComparedWithSet = comparisonOwningSet[missingNodeName];
+          const nodeComparedWithSet =
+            nodePresent.parent.parent.comparison[missingNodeName];
           if (
             nodeComparedWithSet &&
             nodeComparedWithSet.isSet &&
@@ -350,24 +412,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           break added_or_removed;
         }
-
-        let ownerComparison;
-        if (nodePresent.type === "entry_value") {
-          ownerComparison = nodePresent.parent.parent.comparison;
-        } else if (nodePresent.type === "line") {
-          ownerComparison = nodePresent.parent.comparison;
-        } else if (nodePresent.type === "char") {
-          ownerComparison = nodePresent.parent.comparison;
-        } else if (nodePresent.type === "prototype") {
-          ownerComparison = nodePresent.parent.comparison;
-        } else if (nodePresent.type === "internal_value") {
-          ownerComparison = nodePresent.parent.comparison;
-        }
-        if (!ownerComparison) {
+        const ownerNode = getOwnerNode(nodePresent);
+        if (!ownerNode) {
           break added_or_removed;
         }
-        const otherOwnerNode = ownerComparison[missingNodeName];
+        const otherOwnerNode = ownerNode.comparison[missingNodeName];
         if (!otherOwnerNode) {
+          onNestedDiff(nodePresent);
           break added_or_removed;
         }
         let canBeAddedOrRemoved;
@@ -391,6 +442,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           pickSelfOrInternalNode(otherOwnerNode, canBeAddedOrRemoved)
         ) {
           onMissing(nodePresent.entryKey);
+        } else {
+          onNestedDiff(nodePresent);
         }
         break added_or_removed;
       }
@@ -405,12 +458,16 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             comparison.reasons.inside,
             insideComparison.reasons.overall,
           );
+          onNestedDiff(insideActualNode);
+          onNestedDiff(insideExpectNode);
         } else if (insideActualNode && insideExpectNode) {
           const actualShouldHideBecauseNoDiff =
             insideActualNode.showOnlyWhenDiff;
           const expectShouldHideBecauseNoDiff =
             insideExpectNode.showOnlyWhenDiff;
           if (actualShouldHideBecauseNoDiff && expectShouldHideBecauseNoDiff) {
+            insideActualNode.hidden = true;
+            insideExpectNode.hidden = true;
             insideComparison.hidden = true;
           }
         }
@@ -493,11 +550,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       }
 
       const addSelfDiff = (reason) => {
-        if (!comparison.hidden) {
-          comparison.reasons.self.modified.add(reason);
-          if (comparison.reasons.self.modified.size === 1) {
-            addCause(comparison);
-          }
+        if (comparison.hidden) {
+          return;
+        }
+        comparison.reasons.self.modified.add(reason);
+        if (comparison.reasons.self.modified.size === 1) {
+          addCause(comparison);
         }
       };
 
@@ -519,6 +577,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else if (actualNode.wellKnownId !== expectNode.wellKnownId) {
           addSelfDiff("well_known_id");
         } else if (actualNode.isPrimitive !== expectNode.isPrimitive) {
+          actualNode.shouldExpand = true;
+          expectNode.shouldExpand = true;
           addSelfDiff("primitive");
         } else if (
           actualNode.isPrimitive &&
@@ -620,9 +680,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           );
           let prototypeCanBeInfered;
           if (!actualPrototypeNode) {
-            prototypeCanBeInfered = expectPrototypeNode.value !== null;
+            if (expectPrototypeNode.value === null) {
+            } else {
+              prototypeCanBeInfered = true;
+              expectPrototypeNode.hidden = true;
+            }
           } else if (!expectPrototypeNode) {
-            prototypeCanBeInfered = actualPrototypeNode.value !== null;
+            if (actualPrototypeNode.value === null) {
+            } else {
+              prototypeCanBeInfered = true;
+              actualPrototypeNode.hidden = true;
+            }
           } else if (actualPrototypeNode && expectPrototypeNode) {
             if (actualPrototypeNode.value === null) {
               prototypeCanBeInfered = false;
@@ -651,6 +719,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               comparison.reasons.self.modified.has("extended_class_name")
             ) {
               prototypeCanBeInfered = true;
+              actualPrototypeNode.hidden = true;
+              expectPrototypeNode.hidden = true;
             }
           }
           if (prototypeCanBeInfered) {
@@ -1065,6 +1135,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         ) {
           expectNode.displayNumberAsShortHex = false;
         }
+
+        if (actualNode.shouldExpand && !expectNode.shouldExpand) {
+          expectNode.shouldExpand = true;
+        } else if (!actualNode.shouldExpand && expectNode.shouldExpand) {
+          actualNode.shouldExpand = true;
+        }
       }
 
       // if (actualNode && actualNode.comparison) {
@@ -1324,35 +1400,26 @@ export const createAssert = ({ format = (v) => v } = {}) => {
   return assert;
 };
 
-const shouldIgnorePrototype = (node, prototypeValue) => {
-  if (node.isFunction) {
-    if (node.functionAnalysis.isAsync) {
-      if (node.functionAnalysis.isGenerator) {
-        return prototypeValue === AsyncGeneratorFunction.prototype;
-      }
-      return prototypeValue === AsyncFunction.prototype;
-    }
-    if (node.functionAnalysis.isGenerator) {
-      return prototypeValue === GeneratorFunction.prototype;
-    }
-    return prototypeValue === Function.prototype;
-  }
-  if (node.isSet) {
-    return prototypeValue === Set.prototype;
-  }
-  if (node.isMap) {
-    return prototypeValue === Map.prototype;
-  }
-  if (node.isArray) {
-    return prototypeValue === Array.prototype;
-  }
-  if (node.isUrl) {
-    return prototypeValue === URL.prototype;
-  }
-  if (prototypeValue === URLSearchParams.prototype) {
-    return true;
+const shouldIgnorePrototype = (node) => {
+  if (node.subtype === "Object") {
+    return false;
   }
   return false;
+  // if (node.isSet) {
+  //   return prototypeValue === Set.prototype;
+  // }
+  // if (node.isMap) {
+  //   return prototypeValue === Map.prototype;
+  // }
+  // if (node.isArray) {
+  //   return prototypeValue === Array.prototype;
+  // }
+  // if (node.isUrl) {
+  //   return prototypeValue === URL.prototype;
+  // }
+  // if (prototypeValue === URLSearchParams.prototype) {
+  //   return true;
+  // }
 };
 const shouldIgnorePropertyEntry = (
   node,
@@ -1542,8 +1609,8 @@ let createValueNode;
       isPropertyDescriptor,
       isPropertyValue,
       isArrayEntry,
+      isTypedArrayEntry,
       isStringEntry,
-      isBufferEntry,
       isSetEntry,
       isMapEntry,
       isUrlEntry,
@@ -1553,6 +1620,7 @@ let createValueNode;
       isMapEntryValue,
       isUrlEntryKey,
       isUrlEntryValue,
+      isPrototype,
       isClassStaticProperty,
       isClassPrototype,
       isClassSourceCode,
@@ -1585,6 +1653,7 @@ let createValueNode;
         let extendedClassName = "";
         let isFunctionPrototype = false;
         let isArray = false;
+        let isTypedArray = false;
         let isSet = false;
         let isString = false;
         let isNumber = false;
@@ -1644,8 +1713,6 @@ let createValueNode;
           sourceCodeSymbol in value
         ) {
           isSourceCode = true;
-          // openDelimiter = "{";
-          // closeDelimiter = "}";
         } else {
           composite = isComposite(value);
           primitive = !composite;
@@ -1702,29 +1769,55 @@ let createValueNode;
               }
             }
             reference =
-              wellKnownPath || type === "prototype"
-                ? null
-                : getReference(value, node);
-            visitPrototypes(value, (proto) => {
-              if (proto.constructor) {
-                if (proto.constructor.name === "Array") {
+              wellKnownPath || isPrototype ? null : getReference(value, node);
+            if (!isPrototype) {
+              visitPrototypes(value, (proto) => {
+                const parentConstructor = proto.constructor;
+                if (!parentConstructor) {
+                  return;
+                }
+                // try {
+                //   const isInstance = value instanceof parentConstructor;
+                //   if (!isInstance) {
+                //     return;
+                //   }
+                // } catch (e) {
+                //   return;
+                // }
+                if (parentConstructor.name === "Array") {
                   isArray = true;
                   canHaveIndexedValues = true;
-                } else if (proto.constructor.name === "Set") {
+                } else if (
+                  // "Int8Array",
+                  // "Uint8Array",
+                  // "Uint8ClampedArray",
+                  // "Int16Array",
+                  // "Uint16Array",
+                  // "Int32Array",
+                  // "Uint32Array",
+                  // "Float32Array",
+                  // "Float64Array",
+                  // "BigInt64Array",
+                  // "BigUint64Array",
+                  parentConstructor.name === "TypedArray"
+                ) {
+                  isTypedArray = true;
+                  canHaveIndexedValues = true;
+                } else if (parentConstructor.name === "Set") {
                   isSet = true;
-                } else if (proto.constructor.name === "String") {
+                } else if (parentConstructor.name === "String") {
                   isObjectForString = true;
                   canHaveIndexedValues = true;
-                } else if (proto.constructor.name === "URL") {
+                } else if (parentConstructor.name === "URL") {
                   isUrl = true;
-                } else if (proto.constructor.name === "Error") {
+                } else if (parentConstructor.name === "Error") {
                   isError = true;
-                } else if (proto.constructor.name === "Map") {
+                } else if (parentConstructor.name === "Map") {
                   isMap = true;
                   canHaveInternalEntries = true;
                 }
-              }
-            });
+              });
+            }
 
             if (
               subtype === "String" ||
@@ -1847,9 +1940,11 @@ let createValueNode;
               }
             } else if (subtype === "number") {
               isNumber = true;
-              if (isIndexedEntry && parent.parent.isBuffer) {
+              if (isIndexedEntry && parent.parent.isTypedArray) {
                 isNumberForByte = true;
-                displayNumberAsShortHex = true;
+                if (parent.parent.isBuffer) {
+                  displayNumberAsShortHex = true;
+                }
               }
             }
           }
@@ -1902,8 +1997,8 @@ let createValueNode;
           descriptor,
           isPropertyValue,
           isArrayEntry,
+          isTypedArrayEntry,
           isStringEntry,
-          isBufferEntry,
           isSetEntry,
           isMapEntry,
           isUrlEntry,
@@ -1913,6 +2008,7 @@ let createValueNode;
           isMapEntryValue,
           isUrlEntryKey,
           isUrlEntryValue,
+          isPrototype,
           isClassStaticProperty,
           isClassPrototype,
           isClassSourceCode,
@@ -1946,6 +2042,7 @@ let createValueNode;
           isFunctionPrototype,
           extendedClassName,
           isArray,
+          isTypedArray,
           isSet,
           isUrl,
           isError,
@@ -2034,6 +2131,7 @@ let createValueNode;
           value: prototypeValue,
           valueEndSeparator: ",",
           showOnlyWhenDiff: "deep",
+          isPrototype: true,
         });
         childNodes.prototype = prototypeNode;
       }
@@ -2057,7 +2155,6 @@ let createValueNode;
               valueEndSeparator:
                 node.functionAnalysis.type === "class" ? ";" : ",",
             });
-            //  node.constructorCall = true;
             childNodes.internalValue = internalValueNode;
           }
         } else if (node.isSet) {
@@ -2185,12 +2282,14 @@ let createValueNode;
             });
             index++;
           }
-        } else if (node.isBuffer) {
+        }
+        // typed array values
+        else if (node.isTypedArray) {
           let index = 0;
           while (index < node.value.length) {
             associatedValueMetaMap.set(String(index), {
               isIndexedEntry: true,
-              isBufferEntry: true,
+              isTypedArrayEntry: true,
               propertyDescriptor: Object.getOwnPropertyDescriptor(
                 node.value,
                 index,
@@ -2340,8 +2439,8 @@ let createValueNode;
             isInternalEntry,
             isPropertyEntry,
             isArrayEntry,
+            isTypedArrayEntry,
             isStringEntry,
-            isBufferEntry,
             isSetEntry,
             isMapEntry,
             isUrlEntry,
@@ -2407,11 +2506,12 @@ let createValueNode;
             isInternalEntry,
             isPropertyEntry,
             isArrayEntry,
+            isTypedArrayEntry,
             isStringEntry,
-            isBufferEntry,
             isSetEntry,
             isMapEntry,
             isUrlEntry,
+            isPrototype: isPropertyEntry && entryKey === "prototype",
             isClassStaticProperty:
               isPropertyEntry && node.functionAnalysis.type === "class",
             isClassPrototype:
@@ -2439,6 +2539,9 @@ let createValueNode;
             needKeyNode = true;
           } else {
             // isPropertyEntry
+            if (node.canHaveInternalEntries || node.canHaveIndexedValues) {
+              node.shouldExpand = true;
+            }
             propertyEntryMap.set(entryKey, entryNode);
             needKeyNode = true;
           }
@@ -2503,6 +2606,7 @@ let createValueNode;
                 continue;
               }
               const isPropertyValue = propertyDescriptorName === "value";
+              const isIndexedValue = isIndexedEntry && isPropertyValue;
               const propertyDescriptorNode = _createValueNode({
                 parent: entryNode,
                 path: propertyDescriptorValue
@@ -2516,7 +2620,7 @@ let createValueNode;
                 descriptor: propertyDescriptorName,
                 isPropertyDescriptor: true,
                 isPropertyValue,
-                isIndexedValue: isIndexedEntry && isPropertyValue,
+                isIndexedValue,
                 showOnlyWhenDiff: !isPropertyValue,
                 valueSeparator:
                   valueSeparator === undefined
@@ -2539,7 +2643,7 @@ let createValueNode;
                         ? ""
                         : entryNode.isClassStaticProperty
                           ? ";"
-                          : entryNode.isBufferEntry
+                          : isIndexedValue && node.isBuffer
                             ? " "
                             : ","
                     : valueEndSeparator,
@@ -2751,7 +2855,6 @@ let writeDiff;
     };
 
     let diff = "";
-    let isNestedValue = false;
     let displayedKey = getDisplayedKey(node);
     let valueSeparator = node.valueSeparator;
     let valueStartSeparator = node.valueStartSeparator;
@@ -2759,37 +2862,45 @@ let writeDiff;
       ? ""
       : getNodeValueEndSeparator(node);
 
+    let isValue = false;
     if (node.type === "entry_key") {
       const maxColumns = selfContext.maxColumns;
       selfContext.maxColumns = Math.round(maxColumns * 0.5);
       if (node.isMapEntryKey) {
-        isNestedValue = true;
+        isValue = true;
       }
     } else if (node.type === "entry_value") {
       if (node.displayedIn !== "label") {
-        isNestedValue = true;
+        isValue = true;
       }
     } else if (node.type === "prototype") {
-      isNestedValue = true;
+      isValue = true;
     } else if (node.type === "internal_value") {
       if (node.displayedIn !== "label") {
-        isNestedValue = true;
+        isValue = true;
       }
     }
 
-    if (isNestedValue) {
+    if (isValue) {
       if (context.collapsedWithOverview) {
         selfContext.collapsedWithOverview = false;
         selfContext.collapsed = true;
       } else if (context.collapsed) {
       } else {
         const relativeDepth = node.depth + selfContext.initialDepth;
-        if (!node.isMultiline && relativeDepth >= selfContext.maxDepth) {
-          selfContext.collapsedWithOverview = true;
-        } else if (!comparison.hasAnyDiff) {
-          selfContext.collapsedWithOverview = true;
-        } else if (node.isMapEntryKey) {
-          selfContext.collapsedWithOverview = true;
+        auto_collapse_with_overview: {
+          if (!node.isMultiline && relativeDepth >= selfContext.maxDepth) {
+            selfContext.collapsedWithOverview = true;
+            break auto_collapse_with_overview;
+          }
+          if (!comparison.hasAnyDiff) {
+            selfContext.collapsedWithOverview = true;
+            break auto_collapse_with_overview;
+          }
+          if (node.isMapEntryKey) {
+            selfContext.collapsedWithOverview = true;
+            break auto_collapse_with_overview;
+          }
         }
 
         if (!node.isMapEntryKey) {
@@ -2812,11 +2923,11 @@ let writeDiff;
               }
             }
           }
-
           diff += indent;
         }
       }
-
+    }
+    if (isValue) {
       if (displayedKey && comparison !== selfContext.startComparison) {
         if (node.descriptor && node.descriptor !== "value") {
           const descriptorName = node.descriptor;
@@ -2859,12 +2970,6 @@ let writeDiff;
           diff += " ";
         }
       }
-    } else if (
-      node.isFunction &&
-      !selfContext.collapsed &&
-      node.childNodes.propertyEntryMap.size === 0
-    ) {
-      selfContext.collapsedWithOverview = true;
     }
 
     selfContext.textIndent += stringWidth(diff);
@@ -3116,13 +3221,17 @@ let writeDiff;
         (node) => node.canHaveInternalEntries,
       );
       const canResetModifiedOnIndexedEntry = pickCanReset(
-        (node) => node.canHaveIndexedEntries,
+        (node) => node.canHaveIndexedValues,
       );
       const canResetModifiedOnPropertyEntry = pickCanReset(
         (node) => node.canHaveProps,
       );
 
-      if (selfContext.collapsedWithOverview) {
+      let childCollapsedWithOverview = selfContext.collapsedWithOverview;
+      if (!childCollapsedWithOverview && !selfContext.collapsed) {
+        childCollapsedWithOverview = !node.shouldExpand;
+      }
+      if (childCollapsedWithOverview) {
         if (node.canHaveUrlParts) {
           break value;
         }
@@ -3179,6 +3288,7 @@ let writeDiff;
                 : false;
           const nestedValueContext = {
             ...selfContext,
+            collapsedWithOverview: true,
             modified: canReset ? false : selfContext.modified,
             valueEndSeparatorDisabled:
               nestedComparison ===
@@ -3224,11 +3334,24 @@ let writeDiff;
           insideOverview += valueDiffOverview;
           width += valueWidth;
         }
-        const shouldDisplayDelimiters = node.isClassPrototype
-          ? false
-          : labelDiff
-            ? insideOverview.length > 0
-            : true;
+        let shouldDisplayDelimiters;
+        if (node.isClassPrototype) {
+          shouldDisplayDelimiters = false;
+        } else if (
+          node.isString ||
+          node.isObjectForString ||
+          node.canHaveUrlParts
+        ) {
+          shouldDisplayDelimiters = false;
+        } else if (node.canHaveIndexedValues) {
+          shouldDisplayDelimiters = true;
+        } else if (node.canHaveInternalEntries) {
+          shouldDisplayDelimiters = true;
+        } else if (labelDiff) {
+          shouldDisplayDelimiters = insideOverview.length > 0;
+        } else {
+          shouldDisplayDelimiters = true;
+        }
         if (shouldDisplayDelimiters) {
           const delimitersColor = pickDelimitersColor(comparison, selfContext);
 
@@ -3672,6 +3795,9 @@ let writeDiff;
   const writeLabelDiff = (comparison, context) => {
     let labelDiff = "";
     const node = comparison[context.resultType];
+    if (node.wellKnownId) {
+      return "";
+    }
     if (node.isFunction) {
       labelDiff += writeFunctionLabelDiff(comparison, context);
     } else {
@@ -4467,37 +4593,24 @@ let writeDiff;
         propertyNames.splice(prototypePropertyIndex, 1);
         propertyNames.push("prototype");
       }
+    }
 
-      if (node.functionAnalysis.type === "class") {
-        let hasDiff;
-        if (node.childNodes.propertyEntryMap.size > 0) {
-          hasDiff = true;
-        }
-        if (hasDiff) {
-          // the class .toString() is not displayed because it contains the whole
-          // class definition which is actually rendered differently
-          if (internalValueComparison) {
-            context.onComparisonDisplayed(internalValueComparison, true);
-          }
-          internalValueComparison = null;
-        }
+    const propertyComparisons = [];
+    for (const propertyName of propertyNames) {
+      const propertyComparison =
+        propertyEntryNodeMap.get(propertyName).comparison;
+      if (!propertyComparison.hidden) {
+        propertyComparisons.push(propertyComparison);
       }
     }
 
-    const propertyComparisons = propertyNames.map(
-      (propertyName) => propertyEntryNodeMap.get(propertyName).comparison,
-    );
-
     let prototypeNode = node.childNodes.prototype;
     let prototypeComparison;
-    if (
-      prototypeNode &&
-      // when function are rendered the prototype is implicit
-      // "function () {}" implies Function.prototype
-      // "async function () {}" implies AsyncFunction
-      !prototypeNode.parent.isFunction
-    ) {
+    if (prototypeNode) {
       prototypeComparison = prototypeNode.comparison;
+      if (prototypeComparison && prototypeComparison.hidden) {
+        prototypeComparison = null;
+      }
     }
 
     if (node.isClassPrototype || node.isFunctionPrototype) {
@@ -4583,7 +4696,12 @@ const createValuePath = (parts = []) => {
       } else if (typeof property === "symbol") {
         propertyKey = humanizeSymbol(property);
       } else if (typeof property === "string") {
-        if (isDotNotationAllowed(property)) {
+        if (
+          // first "property" is a "global" variable name that does not need to be wrapped
+          // in quotes
+          parts.length === 0 ||
+          isDotNotationAllowed(property)
+        ) {
           propertyKey = property;
           propertyKeyCanUseDot = true;
         } else {

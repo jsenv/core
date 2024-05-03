@@ -72,9 +72,8 @@
         <text x="211.63" y="90.55" fill="#7f7f7f">b</text>
         <text x="220.03" y="90.55" fill="#7f7f7f">:</text>
         <text x="236.84" y="90.55" fill="#cd5555">false</text>
-        <text x="278.84" y="90.55" fill="#7f7f7f">,</text>
-        <text x="295.65" y="90.55" fill="#7f7f7f">}</text>
-        <text x="304.05" y="90.55" fill="#7f7f7f">,</text>
+        <text x="287.25" y="90.55" fill="#7f7f7f">}</text>
+        <text x="295.65" y="90.55" fill="#7f7f7f">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
         <text x="10" y="128.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="128.55" fill="#7f7f7f">:</text>
@@ -102,9 +101,8 @@
         <text x="211.63" y="166.55" fill="#7f7f7f">b</text>
         <text x="220.03" y="166.55" fill="#7f7f7f">:</text>
         <text x="236.84" y="166.55" fill="#11bc79">true</text>
-        <text x="270.44" y="166.55" fill="#7f7f7f">,</text>
-        <text x="287.25" y="166.55" fill="#7f7f7f">}</text>
-        <text x="295.65" y="166.55" fill="#7f7f7f">,</text>
+        <text x="278.84" y="166.55" fill="#7f7f7f">}</text>
+        <text x="287.25" y="166.55" fill="#7f7f7f">,</text>
         <text x="10" y="185.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

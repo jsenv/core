@@ -77,4 +77,10 @@ await startSnapshotTesting("array_typed", {
       expect: Uint8Array.from([0x61]),
     });
   },
+  ["Uint8Array vs Array"]: () => {
+    assert({
+      actual: Uint8Array,
+      expect: Array,
+    });
+  },
 });

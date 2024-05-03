@@ -57,17 +57,19 @@ AssertionError: actual and expect are different:
 
 actual: function Foo () {
   [source code],
-  prototype: { a: true, b: false, },
+  prototype: { a: true, b: false },
 }
 expect: function Bar () {
   [source code],
-  prototype: { a: true, b: true, },
+  prototype: { a: true, b: true },
 }
 
 # function prototype added
 AssertionError: actual and expect are different:
 
-actual: function Foo () { [source code] }
+actual: function Foo () {
+  [source code],
+}
 expect: function Bar () {
   [source code],
   prototype: { a: true },
@@ -76,8 +78,10 @@ expect: function Bar () {
 # class vs function
 AssertionError: actual and expect are different:
 
-actual: class actual 
-expect: function expect () { [source code] }
+actual: class actual {}
+expect: function expect () {
+  [source code],
+}
 
 # class Animal vs class Robot
 AssertionError: actual and expect are different:
@@ -89,9 +93,11 @@ expect: class Robot
 AssertionError: actual and expect are different:
 
 actual: class Human extends Animal {
+  [source code];
   static type = "human_actual";
 }
 expect: class Human extends Robot {
+  [source code];
   static type = "human_expected";
 }
 
@@ -99,9 +105,11 @@ expect: class Human extends Robot {
 AssertionError: actual and expect have 2 differences:
 
 actual: class A {
+  [source code];
   static a = true;
 }
 expect: class A {
+  [source code];
   static a = false;
 }
 
@@ -109,15 +117,17 @@ expect: class A {
 AssertionError: actual and expect have 2 differences:
 
 actual: class A {
+  [source code];
   static a = true;
 }
-expect: class A 
+expect: class A {}
 
 # class static property removed
 AssertionError: actual and expect have 2 differences:
 
-actual: class A 
+actual: class A {}
 expect: class A {
+  [source code];
   static a = false;
 }
 
@@ -125,9 +135,11 @@ expect: class A {
 AssertionError: actual and expect have 2 differences:
 
 actual: class {
+  [source code];
   a() { [source code] }
 }
 expect: class {
+  [source code];
   a() { [source code] }
 }
 
@@ -135,15 +147,17 @@ expect: class {
 AssertionError: actual and expect have 2 differences:
 
 actual: class A {
+  [source code];
   a() { [source code] }
 }
-expect: class A 
+expect: class A {}
 
 # class method removed
 AssertionError: actual and expect have 2 differences:
 
-actual: class A 
+actual: class A {}
 expect: class A {
+  [source code];
   a() { [source code] }
 }
 
@@ -180,22 +194,28 @@ expect: {
 # class constructor added
 AssertionError: actual and expect are different:
 
-actual: class actual { [source code] }
-expect: class expect 
+actual: class actual {
+  [source code];
+}
+expect: class expect {}
 
 # class constructor removed
 AssertionError: actual and expect are different:
 
-actual: class actual 
-expect: class expect { [source code] }
+actual: class actual {}
+expect: class expect {
+  [source code];
+}
 
 # static property value modified
 AssertionError: actual and expect have 2 differences:
 
 actual: class {
+  [source code];
   static a = "a_static";
 }
 expect: class {
+  [source code];
   static a = "a_static_2";
 }
 
@@ -203,9 +223,11 @@ expect: class {
 AssertionError: actual and expect have 2 differences:
 
 actual: class {
+  [source code];
   static a() { [source code] };
 }
 expect: class {
+  [source code];
   static a() { [source code] };
 }
 
@@ -213,6 +235,7 @@ expect: class {
 AssertionError: actual and expect are different:
 
 actual: class actual {
+  [source code];
   static a = true;
   static b = true;
 }
@@ -225,6 +248,7 @@ expect: {
 AssertionError: actual and expect are different:
 
 actual: class actual {
+  [source code];
   static a = true;
 }
 expect: function () {
@@ -236,13 +260,14 @@ expect: function () {
 AssertionError: actual and expect are different:
 
 actual: class actual {
+  [source code];
   static a = true;
   b() { [source code] }
 }
 expect: function toto () {
   [source code],
   a: true,
-  prototype: { b: () => { [source code] }, },
+  prototype: { b: () => { [source code] } },
 }
 
 # class constructor vs function

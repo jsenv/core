@@ -1,102 +1,62 @@
 # frozen vs not frozen
 AssertionError: actual and expect are different:
 
-actual: Object.freeze({
-  a: true,
-})
-expect: {
-  a: true,
-}
+actual: Object.freeze({ a: true })
+expect: { a: true }
 
 # not frozen vs frozen
 AssertionError: actual and expect are different:
 
-actual: {
-  a: true,
-}
-expect: Object.freeze({
-  a: true,
-})
+actual: { a: true }
+expect: Object.freeze({ a: true })
 
 # sealed vs not sealed
 AssertionError: actual and expect are different:
 
-actual: Object.seal({
-  a: true,
-})
-expect: {
-  a: true,
-}
+actual: Object.seal({ a: true })
+expect: { a: true }
 
 # not sealed vs sealed
 AssertionError: actual and expect are different:
 
-actual: {
-  a: true,
-}
-expect: Object.seal({
-  a: true,
-})
+actual: { a: true }
+expect: Object.seal({ a: true })
 
 # frozen vs sealed
 AssertionError: actual and expect are different:
 
-actual: Object.freeze({
-  a: true,
-})
-expect: Object.seal({
-  a: true,
-})
+actual: Object.freeze({ a: true })
+expect: Object.seal({ a: true })
 
 # sealed vs frozen
 AssertionError: actual and expect are different:
 
-actual: Object.seal({
-  a: true,
-})
-expect: Object.freeze({
-  a: true,
-})
+actual: Object.seal({ a: true })
+expect: Object.freeze({ a: true })
 
 # extensible vs non extensible
 AssertionError: actual and expect are different:
 
-actual: {
-  a: true,
-}
-expect: Object.preventExtensions({
-  a: true,
-})
+actual: { a: true }
+expect: Object.preventExtensions({ a: true })
 
 # non extensible vs extensible
 AssertionError: actual and expect are different:
 
-actual: Object.preventExtensions({
-  a: true,
-})
-expect: {
-  a: true,
-}
+actual: Object.preventExtensions({ a: true })
+expect: { a: true }
 
 # sealed vs non extensible
 AssertionError: actual and expect are different:
 
-actual: Object.seal({
-  a: true,
-})
-expect: Object.preventExtensions({
-  a: true,
-})
+actual: Object.seal({ a: true })
+expect: Object.preventExtensions({ a: true })
 
 # non extensible vs frozen
 AssertionError: actual and expect are different:
 
-actual: Object.preventExtensions({
-  a: true,
-})
-expect: Object.freeze({
-  a: true,
-})
+actual: Object.preventExtensions({ a: true })
+expect: Object.freeze({ a: true })
 
 # frozen array vs frozen function
 AssertionError: actual and expect are different:
@@ -104,7 +64,9 @@ AssertionError: actual and expect are different:
 actual: Object.freeze([
   "a",
 ])
-expect: Object.freeze(() => { [source code] })
+expect: Object.freeze(() => {
+  [source code],
+})
 
 # both sealed, diff is elsewhere
 AssertionError: actual and expect have 1 difference:

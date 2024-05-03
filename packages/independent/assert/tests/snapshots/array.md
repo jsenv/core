@@ -225,3 +225,15 @@ assert({
 
 ![img](<./array/array like and array.svg>)
 
+# array subclass
+
+```js
+class MyArray extends Array {}
+assert({
+  actual: [true],
+  expect: new MyArray(true),
+});
+```
+
+![img](<./array/array subclass.svg>)
+

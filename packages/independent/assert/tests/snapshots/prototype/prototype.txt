@@ -50,5 +50,7 @@ AssertionError: actual and expect are different:
 actual: {
   __proto__: null,
 }
-expect: []
+expect: [] {
+  __proto__: Array.prototype,
+}
 

@@ -109,7 +109,7 @@ assert({
 
 ![img](<./array_typed/buffer vs array.svg>)
 
-# buffer vs uint8
+# buffer.from vs Uint8Array.from
 
 ```js
 assert({
@@ -118,5 +118,16 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer vs uint8.svg>)
+![img](<./array_typed/buffer.from vs Uint8Array.from.svg>)
+
+# Uint8Array vs Array
+
+```js
+assert({
+  actual: Uint8Array,
+  expect: Array,
+});
+```
+
+![img](<./array_typed/Uint8Array vs Array.svg>)
 

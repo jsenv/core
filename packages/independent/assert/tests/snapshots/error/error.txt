@@ -20,9 +20,7 @@ expect: Error: bar
 AssertionError: actual and expect are different:
 
 actual: Error: foo
-expect: {
-  message: "foo",
-}
+expect: { message: "foo" }
 
 # error stack vs object with stack
 AssertionError: actual and expect are different:

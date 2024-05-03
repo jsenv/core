@@ -105,22 +105,14 @@ expect: Signal([
 # signal([true]) and [true]
 AssertionError: actual and expect are different:
 
-actual: Signal([
-  true,
-])
-expect: [
-  true,
-]
+actual: Signal([true])
+expect: [true]
 
 # [true] and signal([true])
 AssertionError: actual and expect are different:
 
-actual: [
-  true,
-]
-expect: Signal([
-  true,
-])
+actual: [true]
+expect: Signal([true])
 
 # [true] and signal([false])
 AssertionError: actual and expect are different:

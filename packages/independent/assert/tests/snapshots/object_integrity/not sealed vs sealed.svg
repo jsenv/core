@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="233.45"
+  height="157.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="231.45"
+      height="155.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="193.45"
+    height="117.45"
     overflow="hidden"
   >
     <svg
       width="423.27"
-      height="193.45"
+      height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -49,24 +49,22 @@
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="71.55" fill="#7f7f7f">:</text>
-        <text x="52.01" y="71.55" fill="#7f7f7f">true</text>
-        <text x="85.61" y="71.55" fill="#7f7f7f">,</text>
-        <text x="10" y="90.55" fill="#7f7f7f">}</text>
-        <text x="10" y="109.55" fill="#7f7f7f">expect</text>
-        <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="109.55" fill="#DAA520">Object</text>
-        <text x="127.62" y="109.55" fill="#DAA520">.</text>
-        <text x="136.02" y="109.55" fill="#DAA520">seal</text>
-        <text x="169.63" y="109.55" fill="#DAA520">(</text>
-        <text x="178.03" y="109.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="128.55" fill="#7f7f7f">:</text>
-        <text x="52.01" y="128.55" fill="#7f7f7f">true</text>
-        <text x="85.61" y="128.55" fill="#7f7f7f">,</text>
-        <text x="10" y="147.55" fill="#7f7f7f">}</text>
-        <text x="18.4" y="147.55" fill="#DAA520">)</text>
+        <text x="94.01" y="52.55" fill="#7f7f7f">a</text>
+        <text x="102.42" y="52.55" fill="#7f7f7f">:</text>
+        <text x="119.22" y="52.55" fill="#7f7f7f">true</text>
+        <text x="161.22" y="52.55" fill="#7f7f7f">}</text>
+        <text x="10" y="71.55" fill="#7f7f7f">expect</text>
+        <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
+        <text x="77.21" y="71.55" fill="#DAA520">Object</text>
+        <text x="127.62" y="71.55" fill="#DAA520">.</text>
+        <text x="136.02" y="71.55" fill="#DAA520">seal</text>
+        <text x="169.63" y="71.55" fill="#DAA520">(</text>
+        <text x="178.03" y="71.55" fill="#7f7f7f">{</text>
+        <text x="194.83" y="71.55" fill="#7f7f7f">a</text>
+        <text x="203.23" y="71.55" fill="#7f7f7f">:</text>
+        <text x="220.03" y="71.55" fill="#7f7f7f">true</text>
+        <text x="262.04" y="71.55" fill="#7f7f7f">}</text>
+        <text x="270.44" y="71.55" fill="#DAA520">)</text>
       </g>
     </svg>
   </foreignObject>

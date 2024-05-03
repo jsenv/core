@@ -153,4 +153,11 @@ await startSnapshotTesting("array", {
       ],
     });
   },
+  ["array subclass"]: () => {
+    class MyArray extends Array {}
+    assert({
+      actual: [true],
+      expect: new MyArray(true),
+    });
+  },
 });
