@@ -130,4 +130,16 @@ await startSnapshotTesting("number", {
       expect: {},
     });
   },
+  ["BigInt(1) and BigInt(2)"]: () => {
+    assert({
+      actual: BigInt(1),
+      expect: BigInt(2),
+    });
+  },
+  [`BigInt(1) and "1n"`]: () => {
+    assert({
+      actual: BigInt(1),
+      expect: "1n",
+    });
+  },
 });

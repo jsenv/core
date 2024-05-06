@@ -1650,6 +1650,7 @@ let createValueNode;
         let isObjectForString = false;
         let isNumber = false;
         let isObjectForNumber = false;
+        let isBigInt = false;
         let isInteger = false;
         let isFloat = false;
         let isUrl = false;
@@ -1997,7 +1998,10 @@ let createValueNode;
                 if (value % 1 === 0) {
                   isInteger = true;
                   const { integer } = tokenizeInteger(Math.abs(value));
-                  parts.push({ type: "integer", value: groupDigits(integer) });
+                  parts.push({
+                    type: "integer",
+                    value: isUrlEntry ? integer : groupDigits(integer),
+                  });
                 } else {
                   isFloat = true;
                   const { integer, decimalSeparator, decimal } = tokenizeFloat(
@@ -2013,6 +2017,9 @@ let createValueNode;
               if (isIndexedEntry && parent.parent.isTypedArray) {
                 isNumberForByte = true;
               }
+            } else if (subtype === "bigint") {
+              parts = [{ type: "bigint", value: `${value}n` }];
+              isBigInt = true;
             } else {
               parts = [{ type: "value", value }];
             }
@@ -2092,6 +2099,7 @@ let createValueNode;
           isBuffer,
           isString,
           isNumber,
+          isBigInt,
           isNumberForByte,
           isNaN,
           isNegativeZero,
@@ -3226,6 +3234,10 @@ let writeDiff;
         break value;
       }
       if (node.isNumber) {
+        valueDiff += writeValueDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.isBigInt) {
         valueDiff += writeValueDiff(comparison, selfContext);
         break value;
       }
