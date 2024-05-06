@@ -1125,18 +1125,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           expectNode.openDelimiter = expectNode.closeDelimiter = actualQuote;
         }
 
-        if (
-          actualNode.displayNumberAsShortHex &&
-          !expectNode.displayNumberAsShortHex
-        ) {
-          actualNode.displayNumberAsShortHex = false;
-        } else if (
-          !actualNode.displayNumberAsShortHex &&
-          expectNode.displayNumberAsShortHex
-        ) {
-          expectNode.displayNumberAsShortHex = false;
-        }
-
         if (actualNode.shouldExpand && !expectNode.shouldExpand) {
           expectNode.shouldExpand = true;
         } else if (!actualNode.shouldExpand && expectNode.shouldExpand) {
@@ -1683,7 +1671,6 @@ let createValueNode;
         let isNumberForByte = false;
         let isNegativeZero = false;
         let isNaN = false;
-        let displayNumberAsShortHex = false;
 
         let canHaveInternalEntries = false;
         let canHaveIndexedValues = false;
@@ -2026,9 +2013,6 @@ let createValueNode;
               }
               if (isIndexedEntry && parent.parent.isTypedArray) {
                 isNumberForByte = true;
-                if (parent.parent.isBuffer) {
-                  displayNumberAsShortHex = true;
-                }
               }
             } else {
               parts = [{ type: "value", value }];
@@ -2112,7 +2096,6 @@ let createValueNode;
           isNumberForByte,
           isNaN,
           isNegativeZero,
-          displayNumberAsShortHex,
           isStringForUrl,
           isErrorMessageString,
           isMultiline,
@@ -2731,9 +2714,7 @@ let createValueNode;
                         ? ""
                         : entryNode.isClassStaticProperty
                           ? ";"
-                          : isIndexedValue && node.isBuffer
-                            ? " "
-                            : ","
+                          : ","
                     : valueEndSeparator,
               });
               entryNode.childNodes[propertyDescriptorName] =
@@ -3269,11 +3250,6 @@ let writeDiff;
 
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
-        if (node.displayNumberAsShortHex) {
-          const numberAsShortHex = value.toString(16).slice(-2);
-          valueDiff += ANSI.color(numberAsShortHex, valueColor);
-          break value;
-        }
         if (node.isNumber) {
           valueDiff += writeValueDiff(comparison, selfContext);
           break value;

@@ -53,12 +53,12 @@
         <text x="26.8" y="71.55" fill="#7f7f7f"
           >&#x2191; 10 bytes &#x2191;</text
         >
-        <text x="26.8" y="90.55" fill="#7f7f7f">6e</text>
-        <text x="52.01" y="90.55" fill="#7f7f7f"> </text>
-        <text x="26.8" y="109.55" fill="#cd5555">61</text>
-        <text x="52.01" y="109.55" fill="#7f7f7f"> </text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">6d</text>
-        <text x="52.01" y="128.55" fill="#7f7f7f"> </text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">110</text>
+        <text x="52.01" y="90.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="109.55" fill="#cd5555">97</text>
+        <text x="43.61" y="109.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">109</text>
+        <text x="52.01" y="128.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="147.55" fill="#7f7f7f">&#x2193;</text>
         <text x="43.61" y="147.55" fill="#7f7f7f">8 bytes</text>
         <text x="110.82" y="147.55" fill="#7f7f7f">&#x2193;</text>
@@ -70,12 +70,12 @@
         <text x="26.8" y="204.55" fill="#7f7f7f"
           >&#x2191; 10 bytes &#x2191;</text
         >
-        <text x="26.8" y="223.55" fill="#7f7f7f">6e</text>
-        <text x="52.01" y="223.55" fill="#7f7f7f"> </text>
-        <text x="26.8" y="242.55" fill="#11bc79">5a</text>
-        <text x="52.01" y="242.55" fill="#7f7f7f"> </text>
-        <text x="26.8" y="261.55" fill="#7f7f7f">6d</text>
-        <text x="52.01" y="261.55" fill="#7f7f7f"> </text>
+        <text x="26.8" y="223.55" fill="#7f7f7f">110</text>
+        <text x="52.01" y="223.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="242.55" fill="#11bc79">90</text>
+        <text x="43.61" y="242.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="261.55" fill="#7f7f7f">109</text>
+        <text x="52.01" y="261.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="280.55" fill="#7f7f7f">&#x2193;</text>
         <text x="43.61" y="280.55" fill="#7f7f7f">8 bytes</text>
         <text x="110.82" y="280.55" fill="#7f7f7f">&#x2193;</text>

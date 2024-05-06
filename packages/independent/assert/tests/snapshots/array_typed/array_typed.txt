@@ -3,14 +3,14 @@ AssertionError: actual and expect have 1 difference:
 
 actual: Buffer []
 expect: Buffer [
-  61 
+  97,
 ]
 
 # buffer.from("a") vs buffer.from("")
 AssertionError: actual and expect have 1 difference:
 
 actual: Buffer [
-  61 
+  97,
 ]
 expect: Buffer []
 
@@ -18,11 +18,11 @@ expect: Buffer []
 AssertionError: actual and expect have 1 difference:
 
 actual: {
-  a: Buffer [61],
+  a: Buffer [97],
   b: true,
 }
 expect: {
-  a: Buffer [61],
+  a: Buffer [97],
   b: false,
 }
 
@@ -31,26 +31,26 @@ AssertionError: actual and expect have 1 difference:
 
 actual: Buffer [
   ↑ 19 bytes ↑
-  61 
-  6d 
+  97,
+  109,
 ]
 expect: Buffer [
   ↑ 19 bytes ↑
-  61 
-  5a 
+  97,
+  90,
 ]
 
 # same length buffer diff at start
 AssertionError: actual and expect have 1 difference:
 
 actual: Buffer [
-  68 
-  65 
+  104,
+  101,
   ↓ 19 bytes ↓
 ]
 expect: Buffer [
-  5a 
-  65 
+  90,
+  101,
   ↓ 19 bytes ↓
 ]
 
@@ -59,16 +59,16 @@ AssertionError: actual and expect have 1 difference:
 
 actual: Buffer [
   ↑ 10 bytes ↑
-  6e 
-  61 
-  6d 
+  110,
+  97,
+  109,
   ↓ 8 bytes ↓
 ]
 expect: Buffer [
   ↑ 10 bytes ↑
-  6e 
-  5a 
-  6d 
+  110,
+  90,
+  109,
   ↓ 8 bytes ↓
 ]
 
@@ -76,29 +76,29 @@ expect: Buffer [
 AssertionError: actual and expect have 3 differences:
 
 actual: Buffer [
-  68 
+  104,
   ↕ 9 bytes ↕
-  6e 
-  61 
+  110,
+  97,
   ↕ 7 bytes ↕
-  61 
-  6d 
+  97,
+  109,
 ]
 expect: Buffer [
-  5a 
+  90,
   ↕ 9 bytes ↕
-  6e 
-  5a 
+  110,
+  90,
   ↕ 7 bytes ↕
-  61 
-  5a 
+  97,
+  90,
 ]
 
 # buffer vs string
 AssertionError: actual and expect are different:
 
 actual: Buffer [
-  61 
+  97,
 ]
 expect: "a"
 

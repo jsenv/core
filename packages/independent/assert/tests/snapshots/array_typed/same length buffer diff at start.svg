@@ -50,10 +50,10 @@
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">Buffer</text>
         <text x="136.02" y="52.55" fill="#7f7f7f">[</text>
-        <text x="26.8" y="71.55" fill="#cd5555">68</text>
-        <text x="52.01" y="71.55" fill="#7f7f7f"> </text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">65</text>
-        <text x="52.01" y="90.55" fill="#7f7f7f"> </text>
+        <text x="26.8" y="71.55" fill="#cd5555">104</text>
+        <text x="52.01" y="71.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">101</text>
+        <text x="52.01" y="90.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="109.55" fill="#7f7f7f">&#x2193;</text>
         <text x="43.61" y="109.55" fill="#7f7f7f">19 bytes</text>
         <text x="119.22" y="109.55" fill="#7f7f7f">&#x2193;</text>
@@ -62,10 +62,10 @@
         <text x="60.41" y="147.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="147.55" fill="#7f7f7f">Buffer</text>
         <text x="136.02" y="147.55" fill="#7f7f7f">[</text>
-        <text x="26.8" y="166.55" fill="#11bc79">5a</text>
-        <text x="52.01" y="166.55" fill="#7f7f7f"> </text>
-        <text x="26.8" y="185.55" fill="#7f7f7f">65</text>
-        <text x="52.01" y="185.55" fill="#7f7f7f"> </text>
+        <text x="26.8" y="166.55" fill="#11bc79">90</text>
+        <text x="43.61" y="166.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="185.55" fill="#7f7f7f">101</text>
+        <text x="52.01" y="185.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="204.55" fill="#7f7f7f">&#x2193;</text>
         <text x="43.61" y="204.55" fill="#7f7f7f">19 bytes</text>
         <text x="119.22" y="204.55" fill="#7f7f7f">&#x2193;</text>
