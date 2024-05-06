@@ -25,26 +25,6 @@ const createSourceCode = (value) => {
     [sourceCodeSymbol]: value,
   };
 };
-const compareSymbol = Symbol.for("jsenv_assert_compare");
-const numberPartSymbol = Symbol.for("jsenv_assert_number_part");
-const createNumberPart = (numberPartAsString) => {
-  return {
-    [numberPartSymbol]: numberPartAsString,
-    [Symbol.toPrimitive]: () => {
-      return numberPartAsString;
-    },
-    [compareSymbol]: (otherValue) => {
-      if (otherValue && numberPartSymbol in otherValue) {
-        return numberPartAsString === otherValue[numberPartSymbol];
-      }
-      if (typeof otherValue !== "number") {
-        return false;
-      }
-      const otherValueAsString = String(otherValue);
-      return otherValueAsString === numberPartAsString;
-    },
-  };
-};
 
 const defaultOptions = {
   colors: true,
@@ -1665,6 +1645,7 @@ let createValueNode;
       info: {
         let composite = false;
         let primitive = false;
+        let parts = [];
         let wellKnownPath;
         let subtype;
         let subtypeDisplayed;
@@ -1721,7 +1702,10 @@ let createValueNode;
         let canHaveUrlParts = false;
 
         if (value === ARRAY_EMPTY_VALUE) {
-          wellKnownPath = createValuePath(["empty"]);
+          wellKnownPath = createValuePath([
+            { type: "identifier", value: "empty" },
+          ]);
+          parts = wellKnownPath.parts;
           subtype = "empty";
         } else if (type === "entry") {
         }
@@ -1737,11 +1721,15 @@ let createValueNode;
           sourceCodeSymbol in value
         ) {
           isSourceCode = true;
+          parts = [{ type: "source_code", value }];
         } else {
           composite = isComposite(value);
           primitive = !composite;
           wellKnownPath = getWellKnownValuePath(value);
           if (composite) {
+            parts = wellKnownPath
+              ? wellKnownPath.parts
+              : [{ type: "value", value }];
             canHaveProps = true;
             if (Object.isFrozen(value)) {
               propsFrozen = true;
@@ -1855,13 +1843,16 @@ let createValueNode;
 
             if (isMapEntryKey) {
             } else if (isError) {
-              subtypeDisplayed = subtypeDisplayedWhenCollapsed =
-                value.constructor.name;
+              subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
+                { type: "identifier", value: value.constructor.name },
+              ];
             } else if (subtype === "Object" || subtype === "Array") {
               // prefer {} over Object {}
               // and [] over Array []
-              subtypeDisplayed = "";
-              subtypeDisplayedWhenCollapsed = subtype;
+              subtypeDisplayed = [];
+              subtypeDisplayedWhenCollapsed = [
+                { type: "value", value: subtype },
+              ];
             } else if (isFunctionPrototype) {
               // do not set subtypeDisplayed when function is displayed
               // ```
@@ -1876,7 +1867,9 @@ let createValueNode;
               // }
               // ```
             } else {
-              subtypeDisplayed = subtypeDisplayedWhenCollapsed = subtype;
+              subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
+                { type: "value", value: subtype },
+              ];
             }
 
             if (canHaveIndexedValues) {
@@ -1887,10 +1880,12 @@ let createValueNode;
               closeDelimiter = "}";
             }
           } else if (value === null) {
+            parts = [{ type: "value", value }];
             subtype = "null";
           } else {
             subtype = typeof value;
             if (subtype === "string") {
+              parts = [{ type: "value", value }];
               isString = true;
               canHaveIndexedValues = true;
               if (type === "line") {
@@ -1951,16 +1946,21 @@ let createValueNode;
               }
             } else if (subtype === "symbol") {
               isSymbol = true;
-              if (!wellKnownPath) {
+              if (wellKnownPath) {
+                parts = wellKnownPath.parts;
+              } else {
+                parts = [{ type: "value", value }];
                 symbolKey = Symbol.keyFor(value);
                 if (symbolKey) {
                   subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
-                    "Symbol",
-                    ".",
-                    "for",
+                    { type: "identifier", value: "Symbol" },
+                    { type: "property_dot", value: "." },
+                    { type: "property_identifier", value: "for" },
                   ];
                 } else {
-                  subtypeDisplayed = subtypeDisplayedWhenCollapsed = "Symbol";
+                  subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
+                    { type: "identifier", value: "Symbol" },
+                  ];
                   symbolDescription = symbolToDescription(value);
                 }
               }
@@ -1969,8 +1969,60 @@ let createValueNode;
               // eslint-disable-next-line no-self-compare
               if (value !== value) {
                 isNaN = true;
+                parts.push({
+                  type: "NaN",
+                  value: "NaN",
+                });
               } else if (getIsNegativeZero(value)) {
                 isNegativeZero = true;
+                parts.push({
+                  type: "number_sign",
+                  value: "-",
+                });
+                parts.push({
+                  type: "number",
+                  value: "0",
+                });
+              } else {
+                if (Math.sign(node.value) === -1) {
+                  parts.push({
+                    type: "number_sign",
+                    value: "-",
+                  });
+                } else {
+                  parts.push({
+                    type: "number_sign",
+                    value: "",
+                  });
+                }
+                if (value % 1 === 0) {
+                  parts.push({
+                    type: "integer",
+                    value: String(value),
+                  });
+                } else {
+                  const floatAsString = String(value);
+                  const integer = Math.floor(value);
+                  const integerAsString = String(integer);
+                  const separator = floatAsString[integerAsString.length];
+                  const decimalAsString = floatAsString.slice(
+                    integerAsString.length + 1,
+                  );
+                  parts.push(
+                    {
+                      type: "integer",
+                      value: integerAsString,
+                    },
+                    {
+                      type: "decimal_separator",
+                      value: separator,
+                    },
+                    {
+                      type: "decimal",
+                      value: decimalAsString,
+                    },
+                  );
+                }
               }
               if (isIndexedEntry && parent.parent.isTypedArray) {
                 isNumberForByte = true;
@@ -1978,6 +2030,8 @@ let createValueNode;
                   displayNumberAsShortHex = true;
                 }
               }
+            } else {
+              parts = [{ type: "value", value }];
             }
           }
         }
@@ -1985,10 +2039,9 @@ let createValueNode;
         if (type === "internal_value" && parent.isSet) {
           constructorCallOpenDelimiter = "";
           constructorCallCloseDelimiter = "";
-          subtypeDisplayed = "";
           // prefer Set(2)
           // over Set(Array(2))
-          subtypeDisplayedWhenCollapsed = "";
+          subtypeDisplayed = subtypeDisplayedWhenCollapsed = [];
         }
 
         let depth;
@@ -2019,6 +2072,7 @@ let createValueNode;
           valueOf: () => {
             throw new Error(`use ${name}.value`);
           },
+          parts,
 
           entryKey,
           isInternalEntry,
@@ -2091,7 +2145,6 @@ let createValueNode;
           propsFrozen,
           propsSealed,
           propsExtensionsPrevented,
-          wellKnownPath,
           wellKnownId: wellKnownPath ? wellKnownPath.toString() : "",
           valueSeparator,
           valueStartSeparator,
@@ -3163,9 +3216,7 @@ let writeDiff;
       }
 
       if (node.wellKnownId) {
-        valueDiff += writePathDiff(comparison, selfContext, (node) =>
-          node.wellKnownPath ? node.wellKnownPath.parts : undefined,
-        );
+        valueDiff += writeValueDiff(comparison, selfContext);
         break value;
       }
       if (node.isSourceCode) {
@@ -3218,62 +3269,13 @@ let writeDiff;
 
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
-        if (node.isNumber) {
-          valueDiff += writePathDiff(comparison, selfContext, (node) => {
-            if (!node.isNumber) {
-              return [node.value];
-            }
-            if (node.isNegativeZero) {
-              return ["-", 0];
-            }
-            if (node.isNaN) {
-              return [NaN];
-            }
-            let parts = [];
-            if (Math.sign(node.value) === -1) {
-              parts.push("-");
-            } else {
-              parts.push("");
-            }
-            let isInteger = node.value % 1 === 0;
-            if (isInteger) {
-              parts.push(createNumberPart(node.value));
-              return parts;
-            }
-            const floatAsString = String(node.value);
-            const integer = Math.floor(node.value);
-            const integerAsString = String(integer);
-            const separator = floatAsString[integerAsString.length];
-            const decimalAsString = floatAsString.slice(
-              integerAsString.length + 1,
-            );
-            parts.push(
-              createNumberPart(integerAsString),
-              separator,
-              createNumberPart(decimalAsString),
-            );
-            return parts;
-          });
-          break value;
-        }
-        if (node.isNegativeZero) {
-          break value;
-        }
-        if (node.isNaN) {
-          valueDiff += ANSI.color("NaN", valueColor);
-          break value;
-        }
-        if (value === Infinity) {
-          valueDiff += ANSI.color("Infinity", valueColor);
-          break value;
-        }
-        if (value === -Infinity) {
-          valueDiff += ANSI.color("-Infinity", valueColor);
-          break value;
-        }
         if (node.displayNumberAsShortHex) {
           const numberAsShortHex = value.toString(16).slice(-2);
           valueDiff += ANSI.color(numberAsShortHex, valueColor);
+          break value;
+        }
+        if (node.isNumber) {
+          valueDiff += writeValueDiff(comparison, selfContext);
           break value;
         }
 
@@ -3799,13 +3801,25 @@ let writeDiff;
       labelDiff && valueDiff && !node.isSet && !node.isFunction;
     const getObjectIntegrityCallPath = (node) => {
       if (node.propsFrozen) {
-        return ["Object", ".", "freeze"];
+        return [
+          { type: "identifier", value: "Object" },
+          { type: "property_dot", value: "." },
+          { type: "property_identifier", value: "freeze" },
+        ];
       }
       if (node.propsSealed) {
-        return ["Object", ".", "seal"];
+        return [
+          { type: "identifier", value: "Object" },
+          { type: "property_dot", value: "." },
+          { type: "property_identifier", value: "seal" },
+        ];
       }
       if (node.propsExtensionsPrevented) {
-        return ["Object", ".", "preventExtensions"];
+        return [
+          { type: "identifier", value: "Object" },
+          { type: "property_dot", value: "." },
+          { type: "property_identifier", value: "preventExtensions" },
+        ];
       }
       return [];
     };
@@ -3815,6 +3829,7 @@ let writeDiff;
         comparison,
         selfContext,
         getObjectIntegrityCallPath,
+        { preferSolorColor: true },
       );
       const objectIntegrityCallColor = pickColor(
         comparison,
@@ -3908,11 +3923,11 @@ let writeDiff;
       if (subtypeDisplayed === undefined) {
         return "";
       }
-      if (subtypeDisplayed) {
+      if (subtypeDisplayed.length > 0) {
         labelDiff += writePathDiff(comparison, context, (node) =>
           context.collapsed
-            ? node.subtypeDisplayedWhenCollapsed
-            : node.subtypeDisplayed,
+            ? node.subtypeDisplayedWhenCollapsed || []
+            : node.subtypeDisplayed || [],
         );
       }
     }
@@ -4772,8 +4787,8 @@ const symbolToDescription = (symbol) => {
 const createValuePath = (parts = []) => {
   return {
     parts,
-    toString: () => parts.join(""),
-    valueOf: () => parts.join(""),
+    toString: () => parts.map((part) => part.value).join(""),
+    valueOf: () => parts.map((part) => part.value).join(""),
     append: (
       property,
       { isIndexedEntry, isPropertyDescriptor, isMeta } = {},
@@ -4801,15 +4816,34 @@ const createValuePath = (parts = []) => {
         propertyKeyCanUseDot = true;
       }
       if (parts.length === 0) {
-        return createValuePath([propertyKey]);
+        return createValuePath([
+          {
+            type: "identifier",
+            value: propertyKey,
+          },
+        ]);
       }
       if (isPropertyDescriptor || isMeta) {
-        return createValuePath([...parts, "[[", propertyKey, "]]"]);
+        return createValuePath([
+          ...parts,
+          { type: "property_open_delimiter", value: "[[" },
+          { type: "property_identifier", value: propertyKey },
+          { type: "property_close_delimiter", value: "]]" },
+        ]);
       }
       if (propertyKeyCanUseDot) {
-        return createValuePath([...parts, ".", propertyKey]);
+        return createValuePath([
+          ...parts,
+          { type: "property_dot", value: "." },
+          { type: "property_identifier", value: propertyKey },
+        ]);
       }
-      return createValuePath([...parts, "[", propertyKey, "]"]);
+      return createValuePath([
+        ...parts,
+        { type: "property_open_delimiter", value: "[" },
+        { type: "property_identifier", value: propertyKey },
+        { type: "property_close_delimiter", value: "]" },
+      ]);
     },
   };
 };
@@ -4826,12 +4860,30 @@ let getWellKnownValuePath;
   getWellKnownValuePath = (value) => {
     if (!wellKnownWeakMap.size) {
       visitValue(global, createValuePath());
-      visitValue(AsyncFunction, createValuePath(["AsyncFunction"]));
+      visitValue(
+        AsyncFunction,
+        createValuePath([
+          {
+            type: "identifier",
+            value: "AsyncFunction",
+          },
+        ]),
+      );
 
-      visitValue(GeneratorFunction, createValuePath(["GeneratorFunction"]));
+      visitValue(
+        GeneratorFunction,
+        createValuePath([
+          {
+            type: "identifier",
+            value: "GeneratorFunction",
+          },
+        ]),
+      );
       visitValue(
         AsyncGeneratorFunction,
-        createValuePath(["AsyncGeneratorFunction"]),
+        createValuePath([
+          { type: "identifier", value: "AsyncGeneratorFunction" },
+        ]),
       );
     }
     if (typeof value === "symbol") {
@@ -4890,17 +4942,27 @@ const splitChars = (string) => {
   return splitter.splitGraphemes(string);
 };
 
-const writePathDiff = (comparison, context, getter) => {
+const writeValueDiff = (comparison, context) => {
+  return writePathDiff(comparison, context, (node) => node.parts);
+};
+
+const writePathDiff = (
+  comparison,
+  context,
+  getter,
+  { preferSolorColor } = {},
+) => {
   const node = comparison[context.resultType];
   const otherNode = comparison[context.otherResultType];
   let path = getter(node);
   let otherPath = otherNode ? getter(otherNode) : [];
-  let hasOtherPath = otherNode && otherPath !== undefined;
-  path = Array.isArray(path) ? path : [path];
-  otherPath = Array.isArray(otherPath) ? otherPath : [otherPath];
+  path = Array.isArray(path) ? path : [];
+  otherPath = Array.isArray(otherPath) ? otherPath : [];
 
   let pathDiff = "";
   let index = 0;
+  // as long as they have the same type we can consider solo
+  let sameType = otherPath.length > 0;
   while (index < path.length) {
     const part = path[index];
     const otherPart = otherPath[index];
@@ -4908,12 +4970,16 @@ const writePathDiff = (comparison, context, getter) => {
     if (context.removed || context.added) {
       partColor = context.resultColorWhenSolo;
     } else if (context.modified) {
-      if (index >= otherPath.length) {
+      if (!otherNode || index >= otherPath.length) {
         // other part does not exists
-        partColor = hasOtherPath
-          ? context.resultColorWhenSolo
-          : context.resultColor;
-      } else if (compareTwoValues(part, otherPart)) {
+        partColor =
+          preferSolorColor || sameType
+            ? context.resultColorWhenSolo
+            : context.resultColor;
+      } else if (part.type !== otherPart.type) {
+        sameType = false;
+        partColor = context.resultColor;
+      } else if (part.value === otherPart.value) {
         partColor = sameColor;
       } else {
         partColor = context.resultColor;
@@ -4921,20 +4987,10 @@ const writePathDiff = (comparison, context, getter) => {
     } else {
       partColor = sameColor;
     }
-    pathDiff += ANSI.color(part, partColor);
+    pathDiff += ANSI.color(part.value, partColor);
     index++;
   }
   return pathDiff;
-};
-
-const compareTwoValues = (left, right) => {
-  if (left && left[compareSymbol]) {
-    return left[compareSymbol](right);
-  }
-  if (right && right[compareSymbol]) {
-    return right[compareSymbol](left);
-  }
-  return left === right;
 };
 
 const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
