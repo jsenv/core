@@ -1689,7 +1689,6 @@ let createValueNode;
         let useQuotes = false;
         let canHaveChars = false;
         let chars = [];
-        let canHaveUrlParts = false;
 
         if (value === ARRAY_EMPTY_VALUE) {
           wellKnownPath = createValuePath([
@@ -1929,7 +1928,6 @@ let createValueNode;
 
                   if (!hidden && canParseUrl(value)) {
                     isStringForUrl = true;
-                    canHaveUrlParts = true;
                     canHaveInternalEntries = true;
                   }
                 }
@@ -2109,7 +2107,6 @@ let createValueNode;
           lines,
           canHaveChars,
           chars,
-          canHaveUrlParts,
           isObjectForString,
           isObjectForNumber,
           isFunction,
@@ -2455,8 +2452,8 @@ let createValueNode;
           }
         }
         // url special properties
-        else if (node.canHaveUrlParts) {
-          const urlParts = node.isUrl ? node.value : new URL(node.value);
+        else if (node.isStringForUrl) {
+          const urlParts = new URL(node.value);
           for (const urlInternalPropertyName of URL_INTERNAL_PROPERTY_NAMES) {
             const urlInternalPropertyValue = urlParts[urlInternalPropertyName];
             if (!urlInternalPropertyValue) {
@@ -3208,56 +3205,33 @@ let writeDiff;
         valueDiff += ANSI.color("[source code]", valueColor);
         break value;
       }
-      // if (
-      //   selfContext.collapsedWithOverview &&
-      //   node.type === "property_descriptor" &&
-      //   (node.descriptor === "get" || node.descriptor === "set")
-      // ) {
-      //   const propertyDescriptorNodes =
-      //     node.parent.childNodes.propertyDescriptors;
-      //   const getterNode = propertyDescriptorNodes.get;
-      //   const setterNode = propertyDescriptorNodes.set;
-      //   const hasGetter = getterNode && getterNode.value;
-      //   const hasSetter = setterNode && setterNode.value;
-      //   const valueColor = getValueColor(selfContext, comparison);
-      //   if (hasGetter && hasSetter) {
-      //     valueDiff += ANSI.color("[get/set]", valueColor);
-      //     break value;
-      //   }
-      //   if (hasGetter) {
-      //     valueDiff += ANSI.color("[get]", valueColor);
-      //     break value;
-      //   }
-      //   valueDiff += ANSI.color("[set]", valueColor);
-      //   break value;
-      // }
-      if (node.canHaveUrlParts) {
+      if (node.isStringForUrl) {
         valueDiff += writeUrlDiff(comparison, selfContext);
-      } else if (node.isPrimitive) {
-        if (node.canHaveLines) {
-          valueDiff += writeLinesDiff(comparison, selfContext);
-          break value;
-        }
-        if (node.type === "line") {
-          valueDiff += writeOneLineDiff(comparison, selfContext);
-          break value;
-        }
-        if (node.type === "char") {
-          valueDiff += writeCharDiff(comparison, selfContext);
-          break value;
-        }
-        if (node.isSymbol) {
-          // already in subtype
-          break value;
-        }
-
+        break value;
+      }
+      if (node.canHaveLines) {
+        valueDiff += writeLinesDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.type === "line") {
+        valueDiff += writeOneLineDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.type === "char") {
+        valueDiff += writeCharDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.isSymbol) {
+        // already in subtype
+        break value;
+      }
+      if (node.isNumber) {
+        valueDiff += writeValueDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.isPrimitive) {
         const value = node.value;
         const valueColor = pickValueColor(comparison, selfContext);
-        if (node.isNumber) {
-          valueDiff += writeValueDiff(comparison, selfContext);
-          break value;
-        }
-
         let valueDiffRaw =
           value === undefined
             ? "undefined"
@@ -3274,10 +3248,10 @@ let writeDiff;
           );
           valueDiffRaw += "…";
         }
-
         valueDiff += ANSI.color(valueDiffRaw, valueColor);
         break value;
       }
+
       if (selfContext.collapsed) {
         break value;
       }
@@ -3286,7 +3260,6 @@ let writeDiff;
         const expectCan = pickSelfOrInternalNode(comparison.expectNode, getter);
         return Boolean(actualCan && expectCan);
       };
-
       const canResetModifiedOnInternalEntry = pickCanReset(
         (node) => node.canHaveInternalEntries,
       );
@@ -3407,11 +3380,7 @@ let writeDiff;
         let shouldDisplayDelimiters;
         if (node.isClassPrototype) {
           shouldDisplayDelimiters = false;
-        } else if (
-          node.isString ||
-          node.isObjectForString ||
-          node.canHaveUrlParts
-        ) {
+        } else if (node.isString || node.isObjectForString) {
           shouldDisplayDelimiters = false;
         } else if (node.canHaveIndexedValues) {
           shouldDisplayDelimiters = true;
@@ -3700,7 +3669,7 @@ let writeDiff;
       };
 
       let insideDiff = "";
-      if (node.canHaveInternalEntries && !node.canHaveUrlParts) {
+      if (node.canHaveInternalEntries) {
         const internalEntryComparisons =
           createInternalEntryComparisonIterable(node);
         const internalEntriesDiff = writeNestedValueGroupDiff({
@@ -4600,11 +4569,11 @@ let writeDiff;
     const node = comparison[context.resultType];
     const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
       comparison.actualNode,
-      (node) => node.canHaveUrlParts,
+      (node) => node.isStringForUrl,
     );
     const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
       comparison.expectNode,
-      (node) => node.canHaveUrlParts,
+      (node) => node.isStringForUrl,
     );
     const canResetModifiedOnUrlPart = Boolean(
       actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
@@ -4641,7 +4610,7 @@ let writeDiff;
   const createInternalEntryComparisonIterable = (node) => {
     const internalEntryNodeMap = node.childNodes.internalEntryMap;
     let internalEntryKeys = Array.from(internalEntryNodeMap.keys());
-    if (node.canHaveUrlParts) {
+    if (node.isStringForUrl) {
       internalEntryKeys = internalEntryKeys.filter(
         (internalEntryKey) =>
           !URL_INTERNAL_PROPERTY_NAMES.includes(internalEntryKey),
@@ -5001,6 +4970,9 @@ const writePathDiff = (
           preferSolorColor || sameType
             ? context.resultColorWhenSolo
             : context.resultColor;
+        if (part.displayOnlyIfModified) {
+          partValue = "";
+        }
       } else if (part.type !== otherPart.type) {
         sameType = false;
         partColor = context.resultColor;

@@ -163,7 +163,7 @@ assert({
 
 ![img](<./number/-1.23456e15 and -1200000e5.svg>)
 
-# 1.8e307
+# 1.8e307 and 1.8e308
 
 ```js
 assert({
@@ -172,7 +172,7 @@ assert({
 });
 ```
 
-![img](<./number/1.8e307.svg>)
+![img](<./number/1.8e307 and 1.8e308.svg>)
 
 # special notations
 
