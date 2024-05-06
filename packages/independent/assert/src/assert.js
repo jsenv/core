@@ -1953,12 +1953,33 @@ let createValueNode;
               }
             } else if (subtype === "number") {
               isNumber = true;
+              if (wellKnownPath) {
+                parts = wellKnownPath.parts;
+              }
               // eslint-disable-next-line no-self-compare
-              if (value !== value) {
+              else if (value !== value) {
                 isNaN = true;
                 parts.push({
                   type: "NaN",
                   value: "NaN",
+                });
+              } else if (value === Infinity) {
+                parts.push({
+                  type: "number_sign",
+                  value: "",
+                });
+                parts.push({
+                  type: "integer",
+                  value: "Infinity",
+                });
+              } else if (value === -Infinity) {
+                parts.push({
+                  type: "number_sign",
+                  value: "-",
+                });
+                parts.push({
+                  type: "integer",
+                  value: "Infinity",
                 });
               } else if (getIsNegativeZero(value)) {
                 isNegativeZero = true;
@@ -4832,6 +4853,7 @@ const AsyncGeneratorFunction = async function* () {}.constructor;
 let getWellKnownValuePath;
 {
   const wellKnownWeakMap = new WeakMap();
+  const numberWellKnownMap = new Map();
   const symbolWellKnownMap = new Map();
   getWellKnownValuePath = (value) => {
     if (!wellKnownWeakMap.size) {
@@ -4845,7 +4867,6 @@ let getWellKnownValuePath;
           },
         ]),
       );
-
       visitValue(
         GeneratorFunction,
         createValuePath([
@@ -4861,9 +4882,45 @@ let getWellKnownValuePath;
           { type: "identifier", value: "AsyncGeneratorFunction" },
         ]),
       );
+      for (const numberOwnPropertyName of Object.getOwnPropertyNames(Number)) {
+        if (
+          numberOwnPropertyName === "MAX_VALUE" ||
+          numberOwnPropertyName === "MIN_VALUE" ||
+          numberOwnPropertyName === "MAX_SAFE_INTEGER" ||
+          numberOwnPropertyName === "MIN_SAFE_INTEGER" ||
+          numberOwnPropertyName === "EPSILON"
+        ) {
+          numberWellKnownMap.set(Number[numberOwnPropertyName], [
+            { type: "identifier", value: "Number" },
+            { type: "property_dot", value: "." },
+            { type: "property_identifier", value: numberOwnPropertyName },
+          ]);
+        }
+      }
+      for (const mathOwnPropertyName of Object.getOwnPropertyNames(Math)) {
+        if (
+          mathOwnPropertyName === "E" ||
+          mathOwnPropertyName === "LN2" ||
+          mathOwnPropertyName === "LN10" ||
+          mathOwnPropertyName === "LOG2E" ||
+          mathOwnPropertyName === "LOG10E" ||
+          mathOwnPropertyName === "PI" ||
+          mathOwnPropertyName === "SQRT1_2" ||
+          mathOwnPropertyName === "SQRT2"
+        ) {
+          numberWellKnownMap.set(Math[mathOwnPropertyName], [
+            { type: "identifier", value: "Math" },
+            { type: "property_dot", value: "." },
+            { type: "property_identifier", value: mathOwnPropertyName },
+          ]);
+        }
+      }
     }
     if (typeof value === "symbol") {
       return symbolWellKnownMap.get(value);
+    }
+    if (typeof value === "number") {
+      return numberWellKnownMap.get(value);
     }
     return wellKnownWeakMap.get(value);
   };
@@ -4908,6 +4965,12 @@ let getWellKnownValuePath;
     }
     for (const symbol of Object.getOwnPropertySymbols(value)) {
       visitProperty(symbol);
+    }
+    if (isComposite(value)) {
+      const protoValue = Object.getPrototypeOf(value);
+      if (protoValue && !wellKnownWeakMap.has(protoValue)) {
+        visitValue(protoValue, valuePath.append("__proto__"));
+      }
     }
   };
 }

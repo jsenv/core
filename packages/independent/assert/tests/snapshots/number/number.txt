@@ -1,6 +1,36 @@
+# -0 and 0
+AssertionError: actual and expect are different:
+
+actual: -0
+expect: 0
+
+# 1 and -0
+AssertionError: actual and expect are different:
+
+actual: 1
+expect: -0
+
+# -1 and 1
+AssertionError: actual and expect are different:
+
+actual: -1
+expect: 1
+
 # 10.45 and 10.456
 AssertionError: actual and expect are different:
 
 actual: 10.45
 expect: 10.456
+
+# -Infinity and Infinity
+AssertionError: actual and expect are different:
+
+actual: -Infinity
+expect: Infinity
+
+# NaN and Infinity
+AssertionError: actual and expect are different:
+
+actual: NaN
+expect: Infinity
 

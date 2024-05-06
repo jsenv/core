@@ -5,42 +5,42 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("number", {
-  // ["-0 and 0"]: () => {
-  //   assert({
-  //     actual: -0,
-  //     expect: +0,
-  //   });
-  // },
-  // ["1 and -0"]: () => {
-  //   assert({
-  //     actual: 1,
-  //     expect: -0,
-  //   });
-  // },
-  // ["-1 and 1"]: () => {
-  //   assert({
-  //     actual: -1,
-  //     expect: 1,
-  //   });
-  // },
+  ["-0 and 0"]: () => {
+    assert({
+      actual: -0,
+      expect: +0,
+    });
+  },
+  ["1 and -0"]: () => {
+    assert({
+      actual: 1,
+      expect: -0,
+    });
+  },
+  ["-1 and 1"]: () => {
+    assert({
+      actual: -1,
+      expect: 1,
+    });
+  },
   ["10.45 and 10.456"]: () => {
     assert({
       actual: 10.45,
       expect: 10.456,
     });
   },
-  // ["-Infinity and Infinity"]: () => {
-  //   assert({
-  //     actual: -Infinity,
-  //     expect: Infinity,
-  //   });
-  // },
-  // ["NaN and Infinity"]: () => {
-  //   assert({
-  //     actual: NaN,
-  //     expect: Infinity,
-  //   });
-  // },
+  ["-Infinity and Infinity"]: () => {
+    assert({
+      actual: -Infinity,
+      expect: Infinity,
+    });
+  },
+  ["NaN and Infinity"]: () => {
+    assert({
+      actual: NaN,
+      expect: Infinity,
+    });
+  },
   // ["1235 and 67_000"]: () => {
   //   assert({
   //     actual: 1235,
@@ -65,7 +65,7 @@ await startSnapshotTesting("number", {
   //     expect: -1_000_001,
   //   });
   // },
-  // ["-1.23456e+105 and -1200000e5"]: () => {
+  // ["-1.23456e105 and -1200000e5"]: () => {
   //   assert({
   //     actual: -1.23456e105,
   //     expect: -1200000e5,
