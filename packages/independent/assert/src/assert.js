@@ -3,7 +3,7 @@ import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 import { analyseFunction } from "./function_analysis.js";
-import { tokenizeFloat } from "./tokenize_float.js";
+import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
 
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;
@@ -1998,8 +1998,8 @@ let createValueNode;
                 }
                 if (value % 1 === 0) {
                   isInteger = true;
-                  const integerAsString = String(Math.abs(value));
-                  parts.push({ type: "integer", value: integerAsString });
+                  const { integer } = tokenizeInteger(Math.abs(value));
+                  parts.push({ type: "integer", value: integer });
                 } else {
                   isFloat = true;
                   const { integer, decimalSeparator, decimal } = tokenizeFloat(

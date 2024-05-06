@@ -58,3 +58,53 @@ AssertionError: actual and expect are different:
 actual: +10000000000000
 expect: -10000000000000
 
+# 1235 and 67_000
+AssertionError: actual and expect are different:
+
+actual: 1235
+expect: 67000
+
+# 149_600_000 and 1_464_301
+AssertionError: actual and expect are different:
+
+actual: 149600000
+expect: 1464301
+
+# 1234.56 and 12_345.67
+AssertionError: actual and expect are different:
+
+actual: 1234.56
+expect: 12345.67
+
+# -0.120123 and -1_000_001
+AssertionError: actual and expect are different:
+
+actual: -0.120123
+expect: -1000001
+
+# -1.23456e15 and -1200000e5
+AssertionError: actual and expect are different:
+
+actual: -1234560000000000
+expect: -120000000000
+
+# 1.8e307
+AssertionError: actual and expect are different:
+
+actual: 183070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+expect: Infinity
+
+# special notations
+AssertionError: actual and expect have 7 differences:
+
+actual: {
+  a: 3654320000000,
+  b: 10922,
+  c: 10922,
+  d: 262926349,
+  e: 11259375,
+  f: 1090785345,
+  g: 1090785345,
+}
+expect: {}
+
