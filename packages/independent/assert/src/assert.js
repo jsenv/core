@@ -1997,16 +1997,16 @@ let createValueNode;
                 if (value % 1 === 0) {
                   isInteger = true;
                   const { integer } = tokenizeInteger(Math.abs(value));
-                  parts.push({ type: "integer", value: integer });
+                  parts.push({ type: "integer", value: groupDigits(integer) });
                 } else {
                   isFloat = true;
                   const { integer, decimalSeparator, decimal } = tokenizeFloat(
                     Math.abs(value),
                   );
                   parts.push(
-                    { type: "integer", value: integer },
+                    { type: "integer", value: groupDigits(integer) },
                     { type: "decimal_separator", value: decimalSeparator },
-                    { type: "decimal", value: decimal },
+                    { type: "decimal", value: groupDigits(decimal) },
                   );
                 }
               }
@@ -5142,24 +5142,21 @@ const getIsNegativeZero = (value) => {
   return typeof value === "number" && 1 / value === -Infinity;
 };
 
+const groupDigits = (digitsAsString) => {
+  const digitCount = digitsAsString.length;
+  if (digitCount < 4) {
+    return digitsAsString;
+  }
+
+  let digitsWithSeparator = digitsAsString.slice(-3);
+  let remainingDigits = digitsAsString.slice(0, -3);
+  while (remainingDigits.length) {
+    const group = remainingDigits.slice(-3);
+    remainingDigits = remainingDigits.slice(0, -3);
+    digitsWithSeparator = `${group}_${digitsWithSeparator}`;
+  }
+  return digitsWithSeparator;
+};
+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_a_valid_code_point
 // const isValidCodePoint = (number) => number > 0 && number < 1_114_111;
-
-// const numberString = String(value);
-// if (!numericSeparator) {
-//   return numberString;
-// }
-// const {
-//   number,
-//   mark = "",
-//   sign = "",
-//   power = "",
-// } = numberString.match(
-//   /^(?<number>.*?)(?:(?<mark>e)(?<sign>[+-])?(?<power>\d+))?$/i,
-// ).groups;
-// const numberWithSeparators = formatNumber(number);
-// const powerWithSeparators = addSeparator(power, {
-//   minimumDigits: 5,
-//   groupLength: 3,
-// });
-// return `${numberWithSeparators}${mark}${sign}${powerWithSeparators}`;

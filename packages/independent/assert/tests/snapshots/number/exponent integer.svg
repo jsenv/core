@@ -48,10 +48,10 @@
         <text x="295.65" y="14.55"> are different:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="52.55" fill="#cd5555">10000000000000</text>
+        <text x="77.21" y="52.55" fill="#cd5555">10_000_000_000_000</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="71.55" fill="#11bc79">1000000000000</text>
+        <text x="77.21" y="71.55" fill="#11bc79">1_000_000_000_000</text>
       </g>
     </svg>
   </foreignObject>

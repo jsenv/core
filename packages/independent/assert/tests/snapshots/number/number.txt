@@ -37,74 +37,86 @@ expect: Infinity
 # decimals using exponent
 AssertionError: actual and expect are different:
 
-actual: 0.000002
-expect: 0.00000002
+actual: 0.000_002
+expect: 0.00_000_002
 
 # decimals using exponent v2
 AssertionError: actual and expect are different:
 
-actual: 0.00000002
-expect: 0.000000002
+actual: 0.00_000_002
+expect: 0.000_000_002
 
 # exponent integer
 AssertionError: actual and expect are different:
 
-actual: 10000000000000
-expect: 1000000000000
+actual: 10_000_000_000_000
+expect: 1_000_000_000_000
 
 # exponent negative integer
 AssertionError: actual and expect are different:
 
-actual: +10000000000000
-expect: -10000000000000
+actual: +10_000_000_000_000
+expect: -10_000_000_000_000
 
 # 1235 and 67_000
 AssertionError: actual and expect are different:
 
-actual: 1235
-expect: 67000
+actual: 1_235
+expect: 67_000
 
 # 149_600_000 and 1_464_301
 AssertionError: actual and expect are different:
 
-actual: 149600000
-expect: 1464301
+actual: 149_600_000
+expect: 1_464_301
+
+# 1_001 and 2_002
+AssertionError: actual and expect are different:
+
+actual: 1_001
+expect: 2_002
+
+# 2_200_002 and 1_100_001
+AssertionError: actual and expect are different:
+
+actual: 2_200_002
+expect: 1_100_001
 
 # 1234.56 and 12_345.67
 AssertionError: actual and expect are different:
 
-actual: 1234.56
-expect: 12345.67
+actual: 1_234.56
+expect: 12_345.67
 
-# -0.120123 and -1_000_001
+# -0.120_123 and -1_000_001
 AssertionError: actual and expect are different:
 
-actual: -0.120123
-expect: -1000001
+actual: -0.120_123
+expect: -1_000_001
 
 # -1.23456e15 and -1200000e5
 AssertionError: actual and expect are different:
 
-actual: -1234560000000000
-expect: -120000000000
+actual: -1_234_560_000_000_000
+expect: -120_000_000_000
 
 # 1.8e307 and 1.8e308
 AssertionError: actual and expect are different:
 
-actual: 183070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+actual: 183_070_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000
 expect: Infinity
 
 # special notations
 AssertionError: actual and expect have 7 differences:
 
 actual: {
-  a: 3654320000000,
-  b: 10922,
-  c: 10922,
-  d: 262926349,
-  e: 11259375,
-  f: 1090785345,
-  g: 1090785345,
+  a: 3_654_320_000_000,
+  b: 10_922,
+  c: 10_922,
+  d: 262_926_349,
+  e: 11_259_375,
+  f: 1_090_785_345,
+  g: 1_090_785_345,
 }
 expect: {}
 

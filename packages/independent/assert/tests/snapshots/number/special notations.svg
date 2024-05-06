@@ -51,32 +51,32 @@
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="71.55" fill="#DAA520">a</text>
         <text x="35.2" y="71.55" fill="#DAA520">:</text>
-        <text x="52.01" y="71.55" fill="#DAA520">3654320000000</text>
-        <text x="161.22" y="71.55" fill="#DAA520">,</text>
+        <text x="52.01" y="71.55" fill="#DAA520">3_654_320_000_000</text>
+        <text x="194.83" y="71.55" fill="#DAA520">,</text>
         <text x="26.8" y="90.55" fill="#DAA520">b</text>
         <text x="35.2" y="90.55" fill="#DAA520">:</text>
-        <text x="52.01" y="90.55" fill="#DAA520">10922</text>
-        <text x="94.01" y="90.55" fill="#DAA520">,</text>
+        <text x="52.01" y="90.55" fill="#DAA520">10_922</text>
+        <text x="102.42" y="90.55" fill="#DAA520">,</text>
         <text x="26.8" y="109.55" fill="#DAA520">c</text>
         <text x="35.2" y="109.55" fill="#DAA520">:</text>
-        <text x="52.01" y="109.55" fill="#DAA520">10922</text>
-        <text x="94.01" y="109.55" fill="#DAA520">,</text>
+        <text x="52.01" y="109.55" fill="#DAA520">10_922</text>
+        <text x="102.42" y="109.55" fill="#DAA520">,</text>
         <text x="26.8" y="128.55" fill="#DAA520">d</text>
         <text x="35.2" y="128.55" fill="#DAA520">:</text>
-        <text x="52.01" y="128.55" fill="#DAA520">262926349</text>
-        <text x="127.62" y="128.55" fill="#DAA520">,</text>
+        <text x="52.01" y="128.55" fill="#DAA520">262_926_349</text>
+        <text x="144.42" y="128.55" fill="#DAA520">,</text>
         <text x="26.8" y="147.55" fill="#DAA520">e</text>
         <text x="35.2" y="147.55" fill="#DAA520">:</text>
-        <text x="52.01" y="147.55" fill="#DAA520">11259375</text>
-        <text x="119.22" y="147.55" fill="#DAA520">,</text>
+        <text x="52.01" y="147.55" fill="#DAA520">11_259_375</text>
+        <text x="136.02" y="147.55" fill="#DAA520">,</text>
         <text x="26.8" y="166.55" fill="#DAA520">f</text>
         <text x="35.2" y="166.55" fill="#DAA520">:</text>
-        <text x="52.01" y="166.55" fill="#DAA520">1090785345</text>
-        <text x="136.02" y="166.55" fill="#DAA520">,</text>
+        <text x="52.01" y="166.55" fill="#DAA520">1_090_785_345</text>
+        <text x="161.22" y="166.55" fill="#DAA520">,</text>
         <text x="26.8" y="185.55" fill="#DAA520">g</text>
         <text x="35.2" y="185.55" fill="#DAA520">:</text>
-        <text x="52.01" y="185.55" fill="#DAA520">1090785345</text>
-        <text x="136.02" y="185.55" fill="#DAA520">,</text>
+        <text x="52.01" y="185.55" fill="#DAA520">1_090_785_345</text>
+        <text x="161.22" y="185.55" fill="#DAA520">,</text>
         <text x="10" y="204.55" fill="#7f7f7f">}</text>
         <text x="10" y="223.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="223.55" fill="#7f7f7f">:</text>
