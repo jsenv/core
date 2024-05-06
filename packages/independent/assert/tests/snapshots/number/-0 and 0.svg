@@ -52,7 +52,8 @@
         <text x="85.61" y="52.55" fill="#cd5555">0</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="71.55" fill="#11bc79">0</text>
+        <text x="77.21" y="71.55" fill="#11bc79">+</text>
+        <text x="85.61" y="71.55" fill="#11bc79">0</text>
       </g>
     </svg>
   </foreignObject>

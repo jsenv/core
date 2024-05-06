@@ -2,19 +2,19 @@
 AssertionError: actual and expect are different:
 
 actual: -0
-expect: 0
+expect: +0
 
 # 1 and -0
 AssertionError: actual and expect are different:
 
-actual: 1
+actual: +1
 expect: -0
 
 # -1 and 1
 AssertionError: actual and expect are different:
 
 actual: -1
-expect: 1
+expect: +1
 
 # 10.45 and 10.456
 AssertionError: actual and expect are different:
@@ -26,11 +26,35 @@ expect: 10.456
 AssertionError: actual and expect are different:
 
 actual: -Infinity
-expect: Infinity
+expect: +Infinity
 
 # NaN and Infinity
 AssertionError: actual and expect are different:
 
 actual: NaN
 expect: Infinity
+
+# decimals using exponent
+AssertionError: actual and expect are different:
+
+actual: 0.000002
+expect: 0.00000002
+
+# decimals using exponent v2
+AssertionError: actual and expect are different:
+
+actual: 0.00000002
+expect: 0.000000002
+
+# exponent integer
+AssertionError: actual and expect are different:
+
+actual: 10000000000000
+expect: 1000000000000
+
+# exponent negative integer
+AssertionError: actual and expect are different:
+
+actual: +10000000000000
+expect: -10000000000000
 

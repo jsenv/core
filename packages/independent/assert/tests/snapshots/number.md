@@ -64,3 +64,47 @@ assert({
 
 ![img](<./number/NaN and Infinity.svg>)
 
+# decimals using exponent
+
+```js
+assert({
+  actual: 2e-6,
+  expect: 2e-7,
+});
+```
+
+![img](<./number/decimals using exponent.svg>)
+
+# decimals using exponent v2
+
+```js
+assert({
+  actual: 2e-7,
+  expect: 2e-8,
+});
+```
+
+![img](<./number/decimals using exponent v2.svg>)
+
+# exponent integer
+
+```js
+assert({
+  actual: 10e12,
+  expect: 10e11,
+});
+```
+
+![img](<./number/exponent integer.svg>)
+
+# exponent negative integer
+
+```js
+assert({
+  actual: 10e12,
+  expect: -10e12,
+});
+```
+
+![img](<./number/exponent negative integer.svg>)
+

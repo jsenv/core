@@ -3,6 +3,7 @@ import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 import { analyseFunction } from "./function_analysis.js";
+import { tokenizeFloat } from "./tokenize_float.js";
 
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;
@@ -1649,6 +1650,8 @@ let createValueNode;
         let isObjectForString = false;
         let isNumber = false;
         let isObjectForNumber = false;
+        let isInteger = false;
+        let isFloat = false;
         let isUrl = false;
         let isStringForUrl = false;
         let isError = false;
@@ -1959,40 +1962,29 @@ let createValueNode;
               // eslint-disable-next-line no-self-compare
               else if (value !== value) {
                 isNaN = true;
-                parts.push({
-                  type: "NaN",
-                  value: "NaN",
-                });
+                parts.push({ type: "NaN", value: "NaN" });
               } else if (value === Infinity) {
-                parts.push({
-                  type: "number_sign",
-                  value: "",
-                });
-                parts.push({
-                  type: "integer",
-                  value: "Infinity",
-                });
+                parts.push(
+                  {
+                    type: "number_sign",
+                    value: "+",
+                    displayOnlyIfModified: true,
+                  },
+                  { type: "integer", value: "Infinity" },
+                );
               } else if (value === -Infinity) {
-                parts.push({
-                  type: "number_sign",
-                  value: "-",
-                });
-                parts.push({
-                  type: "integer",
-                  value: "Infinity",
-                });
+                parts.push(
+                  { type: "number_sign", value: "-" },
+                  { type: "integer", value: "Infinity" },
+                );
               } else if (getIsNegativeZero(value)) {
                 isNegativeZero = true;
-                parts.push({
-                  type: "number_sign",
-                  value: "-",
-                });
-                parts.push({
-                  type: "number",
-                  value: "0",
-                });
+                parts.push(
+                  { type: "number_sign", value: "-" },
+                  { type: "number", value: "0" },
+                );
               } else {
-                if (Math.sign(node.value) === -1) {
+                if (Math.sign(value) === -1) {
                   parts.push({
                     type: "number_sign",
                     value: "-",
@@ -2000,35 +1992,23 @@ let createValueNode;
                 } else {
                   parts.push({
                     type: "number_sign",
-                    value: "",
+                    value: "+",
+                    displayOnlyIfModified: true,
                   });
                 }
                 if (value % 1 === 0) {
-                  parts.push({
-                    type: "integer",
-                    value: String(value),
-                  });
+                  isInteger = true;
+                  const integerAsString = String(Math.abs(value));
+                  parts.push({ type: "integer", value: integerAsString });
                 } else {
-                  const floatAsString = String(value);
-                  const integer = Math.floor(value);
-                  const integerAsString = String(integer);
-                  const separator = floatAsString[integerAsString.length];
-                  const decimalAsString = floatAsString.slice(
-                    integerAsString.length + 1,
+                  isFloat = true;
+                  const { integer, decimalSeparator, decimal } = tokenizeFloat(
+                    Math.abs(value),
                   );
                   parts.push(
-                    {
-                      type: "integer",
-                      value: integerAsString,
-                    },
-                    {
-                      type: "decimal_separator",
-                      value: separator,
-                    },
-                    {
-                      type: "decimal",
-                      value: decimalAsString,
-                    },
+                    { type: "integer", value: integer },
+                    { type: "decimal_separator", value: decimalSeparator },
+                    { type: "decimal", value: decimal },
                   );
                 }
               }
@@ -2117,6 +2097,8 @@ let createValueNode;
           isNumberForByte,
           isNaN,
           isNegativeZero,
+          isInteger,
+          isFloat,
           isStringForUrl,
           isErrorMessageString,
           isMultiline,
@@ -5006,8 +4988,12 @@ const writePathDiff = (
     const part = path[index];
     const otherPart = otherPath[index];
     let partColor;
+    let partValue = part.value;
     if (context.removed || context.added) {
       partColor = context.resultColorWhenSolo;
+      if (part.displayOnlyIfModified) {
+        partValue = "";
+      }
     } else if (context.modified) {
       if (!otherNode || index >= otherPath.length) {
         // other part does not exists
@@ -5018,15 +5004,24 @@ const writePathDiff = (
       } else if (part.type !== otherPart.type) {
         sameType = false;
         partColor = context.resultColor;
+        if (part.displayOnlyIfModified) {
+          partValue = "";
+        }
       } else if (part.value === otherPart.value) {
         partColor = sameColor;
+        if (part.displayOnlyIfModified) {
+          partValue = "";
+        }
       } else {
         partColor = context.resultColor;
       }
     } else {
+      if (part.displayOnlyIfModified) {
+        partValue = "";
+      }
       partColor = sameColor;
     }
-    pathDiff += ANSI.color(part.value, partColor);
+    pathDiff += ANSI.color(partValue, partColor);
     index++;
   }
   return pathDiff;

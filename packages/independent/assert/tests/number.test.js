@@ -41,10 +41,34 @@ await startSnapshotTesting("number", {
       expect: Infinity,
     });
   },
+  ["decimals using exponent"]: () => {
+    assert({
+      actual: 2e-6,
+      expect: 2e-7,
+    });
+  },
+  ["decimals using exponent v2"]: () => {
+    assert({
+      actual: 2e-7,
+      expect: 2e-8,
+    });
+  },
+  ["exponent integer"]: () => {
+    assert({
+      actual: 10e12,
+      expect: 10e11,
+    });
+  },
+  ["exponent negative integer"]: () => {
+    assert({
+      actual: 10e12,
+      expect: -10e12,
+    });
+  },
   // ["1235 and 67_000"]: () => {
   //   assert({
   //     actual: 1235,
-  //     expect: 67000,
+  //     expect: 67_000,
   //   });
   // },
   // ["149_600_000 and 1_464_301"]: () => {
@@ -55,7 +79,7 @@ await startSnapshotTesting("number", {
   // },
   // ["1234.56 and 12_345.67"]: () => {
   //   assert({
-  //     actual: 11234.56,
+  //     actual: 1234.56,
   //     expect: 12_345.67,
   //   });
   // },
@@ -73,6 +97,7 @@ await startSnapshotTesting("number", {
   // },
   // ["special notations"]: () => {
   //   assert({
+  //     maxDiffPerObject: 10,
   //     actual: {
   //       a: 3.65432e12,
   //       b: 0b10101010101010, // binary
