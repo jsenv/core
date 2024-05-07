@@ -315,33 +315,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           ownerNode.comparison.expectNode.shouldExpand = true;
         }
       };
-      const getOwnerNode = (node) => {
-        if (node.type === "value") {
-          return node;
-        }
-        if (node.type === "entry") {
-          return node.parent;
-        }
-        if (node.isSetValue) {
-          return node.parent;
-        }
-        if (node.type === "entry_value") {
-          return node.parent.parent;
-        }
-        if (node.type === "line") {
-          return node.parent;
-        }
-        if (node.type === "char") {
-          return node.parent;
-        }
-        if (node.type === "prototype") {
-          return node.parent;
-        }
-        if (node.type === "internal_value") {
-          return node.parent;
-        }
-        return null;
-      };
 
       let nodePresent;
       let missingReason = "";
@@ -448,6 +421,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         break added_or_removed;
       }
+      comparison.nodePresent = nodePresent;
       comparison.missingReason = missingReason;
 
       const compareInside = (insideComparison, insideOptions = {}) => {
@@ -461,15 +435,35 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           );
           onNestedDiff(insideActualNode);
           onNestedDiff(insideExpectNode);
-        } else if (insideActualNode && insideExpectNode) {
-          const actualShouldHideBecauseNoDiff =
-            insideActualNode.showOnlyWhenDiff;
-          const expectShouldHideBecauseNoDiff =
-            insideExpectNode.showOnlyWhenDiff;
-          if (actualShouldHideBecauseNoDiff && expectShouldHideBecauseNoDiff) {
-            insideActualNode.hidden = true;
-            insideExpectNode.hidden = true;
-            insideComparison.hidden = true;
+        } else {
+          if (
+            insideComparison.nodePresent.isDateEntry &&
+            insideComparison.nodePresent.entryKey === "milliseconds"
+          ) {
+            if (insideActualNode) {
+              getOwnerNode(actualNode).childNodes.internalEntryMap.get(
+                "seconds",
+              ).valueEndSeparator = "Z";
+            }
+            if (insideExpectNode) {
+              getOwnerNode(expectNode).childNodes.internalEntryMap.get(
+                "seconds",
+              ).valueEndSeparator = "Z";
+            }
+          }
+          if (insideActualNode && insideExpectNode) {
+            const actualShouldHideBecauseNoDiff =
+              insideActualNode.showOnlyWhenDiff;
+            const expectShouldHideBecauseNoDiff =
+              insideExpectNode.showOnlyWhenDiff;
+            if (
+              actualShouldHideBecauseNoDiff &&
+              expectShouldHideBecauseNoDiff
+            ) {
+              insideActualNode.hidden = true;
+              insideExpectNode.hidden = true;
+              insideComparison.hidden = true;
+            }
           }
         }
       };
@@ -1604,6 +1598,7 @@ let createValueNode;
       isSetEntry,
       isMapEntry,
       isUrlEntry,
+      isDateEntry,
       isIndexedValue,
       isSetValue,
       isMapEntryKey,
@@ -1655,6 +1650,7 @@ let createValueNode;
         let isFloat = false;
         let isUrl = false;
         let isStringForUrl = false;
+        let isStringForDate = false;
         let isError = false;
         let isErrorMessageString = false;
         let isMap = false;
@@ -1886,7 +1882,7 @@ let createValueNode;
               } else if (type === "char") {
                 preserveLineBreaks = parent.preserveLineBreaks;
               } else {
-                if (isUrlEntry) {
+                if (isUrlEntry || isDateEntry) {
                   preserveLineBreaks = true;
                 } else {
                   preserveLineBreaks = preserveLineBreaksOption;
@@ -1918,6 +1914,7 @@ let createValueNode;
                   // no quote around multiline
                 } else if (isUrlEntry) {
                   // no quote around url property
+                } else if (isDateEntry) {
                 } else {
                   useQuotes = true;
                   quote =
@@ -1926,9 +1923,11 @@ let createValueNode;
                       : quoteOption;
                   openDelimiter = quote;
                   closeDelimiter = quote;
-
-                  if (!hidden && canParseUrl(value)) {
+                  if (canParseUrl(value)) {
                     isStringForUrl = true;
+                    canHaveInternalEntries = true;
+                  } else if (canParseDate(value)) {
+                    isStringForDate = true;
                     canHaveInternalEntries = true;
                   }
                 }
@@ -1957,9 +1956,7 @@ let createValueNode;
               isNumber = true;
               if (wellKnownPath) {
                 parts = wellKnownPath.parts;
-              }
-              // eslint-disable-next-line no-self-compare
-              else if (value !== value) {
+              } else if (getIsNan(value)) {
                 isNaN = true;
                 parts.push({ type: "NaN", value: "NaN" });
               } else if (value === Infinity) {
@@ -2000,7 +1997,10 @@ let createValueNode;
                   const { integer } = tokenizeInteger(Math.abs(value));
                   parts.push({
                     type: "integer",
-                    value: isUrlEntry ? integer : groupDigits(integer),
+                    value:
+                      isUrlEntry || isDateEntry
+                        ? integer
+                        : groupDigits(integer),
                   });
                 } else {
                   isFloat = true;
@@ -2044,7 +2044,7 @@ let createValueNode;
             } else {
               depth = parent.depth;
             }
-          } else if (isUrlEntry) {
+          } else if (isUrlEntry || isDateEntry) {
             depth = parent.depth;
           } else if (isClassPrototype) {
             depth = parent.depth;
@@ -2078,6 +2078,7 @@ let createValueNode;
           isSetEntry,
           isMapEntry,
           isUrlEntry,
+          isDateEntry,
           isIndexedValue,
           isSetValue,
           isMapEntryKey,
@@ -2106,6 +2107,7 @@ let createValueNode;
           isInteger,
           isFloat,
           isStringForUrl,
+          isStringForDate,
           isErrorMessageString,
           isMultiline,
           useLineNumbersOnTheLeft,
@@ -2209,7 +2211,7 @@ let createValueNode;
           valueSeparator: ":",
           value: prototypeValue,
           valueEndSeparator: ",",
-          showOnlyWhenDiff: "deep",
+          showOnlyWhenDiff: true,
           isPrototype: true,
         });
         childNodes.prototype = prototypeNode;
@@ -2477,15 +2479,6 @@ let createValueNode;
               valueSeparator: "",
               valueEndSeparator: "",
             };
-            if (
-              urlInternalPropertyName === "href" ||
-              urlInternalPropertyName === "host" ||
-              urlInternalPropertyName === "origin" ||
-              urlInternalPropertyName === "searchParams"
-            ) {
-              meta.shouldHide = true;
-            }
-
             if (urlInternalPropertyName === "protocol") {
               meta.valueEndSeparator = "//";
             } else if (urlInternalPropertyName === "username") {
@@ -2506,6 +2499,63 @@ let createValueNode;
             associatedValueMetaMap.set(urlInternalPropertyName, meta);
           }
         }
+        // date special properties
+        else if (node.isStringForDate) {
+          let date;
+          let dateString = node.value;
+          // if there is a timezone offset no need to specify it
+          if (/\+[0-9][0-9]\:[0-9][0-9]$/.test(dateString)) {
+            const dateTimestamp = Date.parse(dateString);
+            date = new Date(dateTimestamp);
+          } else {
+            let dateTimestamp = Date.parse(dateString);
+            const timezoneOffsetInMinutes = new Date(0).getTimezoneOffset();
+            const timezoneOffsetInMilliseconds =
+              timezoneOffsetInMinutes * 60_000;
+            dateTimestamp += timezoneOffsetInMilliseconds;
+            date = new Date(dateTimestamp);
+          }
+          const props = {
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            day: date.getDate(),
+            hours: date.getHours(),
+            minutes: date.getMinutes(),
+            seconds: date.getSeconds(),
+            milliseconds: date.getMilliseconds(),
+          };
+          for (const key of Object.keys(props)) {
+            const value = props[key];
+            const meta = {
+              isInternalEntry: true,
+              isDateEntry: true,
+              value,
+              valueSeparator: "",
+              valueEndSeparator: "",
+            };
+            if (key === "month") {
+              meta.valueStartSeparator = "-";
+              meta.value = String(value + 1).padStart(2, "0");
+            } else if (key === "day") {
+              meta.valueStartSeparator = "-";
+              meta.value = String(value).padStart(2, "0");
+            } else if (key === "hours") {
+              meta.valueStartSeparator = " ";
+              meta.value = String(value).padStart(2, "0");
+            } else if (key === "minutes") {
+              meta.valueStartSeparator = ":";
+              meta.value = String(value).padStart(2, "0");
+            } else if (key === "seconds") {
+              meta.valueStartSeparator = ":";
+              meta.value = String(value).padStart(2, "0");
+            } else if (key === "milliseconds") {
+              meta.valueStartSeparator = ".";
+              meta.valueEndSeparator = "Z";
+              meta.value = String(value).padStart(3, "0");
+            }
+            associatedValueMetaMap.set(key, meta);
+          }
+        }
 
         const internalEntryMap = childNodes.internalEntryMap;
         const indexedEntryMap = childNodes.indexedEntryMap;
@@ -2523,12 +2573,14 @@ let createValueNode;
             isSetEntry,
             isMapEntry,
             isUrlEntry,
+            isDateEntry,
             value,
             propertyDescriptor,
             valueSeparator,
             valueStartSeparator,
             valueEndSeparator,
             shouldHide,
+            showOnlyWhenDiff,
           },
         ] of associatedValueMetaMap) {
           if (isSetEntry) {
@@ -2551,7 +2603,6 @@ let createValueNode;
             continue;
           }
           let displayedIn;
-          let showOnlyWhenDiff = node.showOnlyWhenDiff === "deep" ? "deep" : "";
           if (entryKey === "name") {
             if (
               node.functionAnalysis.type === "classic" ||
@@ -2566,16 +2617,18 @@ let createValueNode;
               displayedIn = "label";
             }
           }
-          if (!showOnlyWhenDiff) {
+          let entryShowOnlyWhenDiff =
+            showOnlyWhenDiff || node.showOnlyWhenDiff === "deep";
+          if (!entryShowOnlyWhenDiff) {
             if (entryKey === "prototype") {
-              showOnlyWhenDiff = "deep";
+              entryShowOnlyWhenDiff = true;
             } else if (propertyDescriptor && !propertyDescriptor.enumerable) {
               if (entryKey === "message" && node.isError) {
               } else {
-                showOnlyWhenDiff = true;
+                entryShowOnlyWhenDiff = true;
               }
             } else if (typeof entryKey === "symbol") {
-              showOnlyWhenDiff = true;
+              entryShowOnlyWhenDiff = true;
             }
           }
 
@@ -2590,6 +2643,7 @@ let createValueNode;
             isSetEntry,
             isMapEntry,
             isUrlEntry,
+            isDateEntry,
             isPrototype: isPropertyEntry && entryKey === "prototype",
             isClassStaticProperty:
               isPropertyEntry && node.functionAnalysis.type === "class",
@@ -2607,7 +2661,7 @@ let createValueNode;
             type: "entry",
             value: null,
             ...entrySharedInfo,
-            showOnlyWhenDiff,
+            showOnlyWhenDiff: entryShowOnlyWhenDiff,
             hidden: hidden || shouldHide,
           });
           let needKeyNode;
@@ -2640,7 +2694,7 @@ let createValueNode;
             entryNode.childNodes.key = keyNode;
           }
 
-          if (isMapEntry || isUrlEntry) {
+          if (isMapEntry || isUrlEntry || isDateEntry) {
             const entryValueNode = _createValueNode({
               parent: entryNode,
               path: entryNode.path,
@@ -2700,7 +2754,7 @@ let createValueNode;
                 isPropertyDescriptor: true,
                 isPropertyValue,
                 isIndexedValue,
-                showOnlyWhenDiff: !isPropertyValue,
+                showOnlyWhenDiff: entryShowOnlyWhenDiff || !isPropertyValue,
                 valueSeparator:
                   valueSeparator === undefined
                     ? entryNode.isClassStaticProperty
@@ -2908,6 +2962,9 @@ let writeDiff;
         return "";
       }
       if (node.isUrlEntry) {
+        return "";
+      }
+      if (node.isDateEntry) {
         return "";
       }
       if (node.isSourceCode) {
@@ -3215,6 +3272,10 @@ let writeDiff;
       }
       if (node.isStringForUrl) {
         valueDiff += writeUrlDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.isStringForDate) {
+        valueDiff += writeDateDiff(comparison, selfContext);
         break value;
       }
       if (node.canHaveLines) {
@@ -3732,9 +3793,6 @@ let writeDiff;
           forceDelimitersWhenEmpty = true;
         }
         if (node.isClassPrototype) {
-          forceDelimitersWhenEmpty = false;
-        }
-        if (node.isStringForUrl) {
           forceDelimitersWhenEmpty = false;
         }
         let propsDiff = writeNestedValueGroupDiff({
@@ -4590,7 +4648,7 @@ let writeDiff;
     const canResetModifiedOnUrlPart = Boolean(
       actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
     );
-    const urlContext = {
+    const urlPartContext = {
       ...context,
       modified: canResetModifiedOnUrlPart ? false : context.modified,
     };
@@ -4602,11 +4660,11 @@ let writeDiff;
       }
       const urlPartComparison = urlPartNode.comparison;
       const urlPartValueComparison = urlPartComparison.childComparisons.value;
-      const urlPartDiff = writeDiff(urlPartValueComparison, urlContext);
+      const urlPartDiff = writeDiff(urlPartValueComparison, urlPartContext);
       return urlPartDiff;
     };
 
-    const delimitersColor = pickDelimitersColor(comparison, urlContext);
+    const delimitersColor = pickDelimitersColor(comparison, urlPartContext);
     urlDiff += ANSI.color(node.quote, delimitersColor);
     urlDiff += writeUrlPart("protocol");
     urlDiff += writeUrlPart("username");
@@ -4617,6 +4675,70 @@ let writeDiff;
     urlDiff += writeUrlPart("hash");
     urlDiff += ANSI.color(node.quote, delimitersColor);
     return urlDiff;
+  };
+  const writeDateDiff = (comparison, context) => {
+    let dateDiff = "";
+    const node = comparison[context.resultType];
+    const actualNodeWhoCanHaveDatePars = pickSelfOrInternalNode(
+      comparison.actualNode,
+      (node) => node.isStringForDate,
+    );
+    const expectNodeWhoCanHaveDateParts = pickSelfOrInternalNode(
+      comparison.expectNode,
+      (node) => node.isStringForDate,
+    );
+    const canResetModifiedOnDatePart = Boolean(
+      actualNodeWhoCanHaveDatePars && expectNodeWhoCanHaveDateParts,
+    );
+    const datePartContext = {
+      ...context,
+      modified: canResetModifiedOnDatePart ? false : context.modified,
+    };
+
+    const writeDatePart = (datePartName) => {
+      const datePartNode = node.childNodes.internalEntryMap.get(datePartName);
+      if (!datePartNode) {
+        return "";
+      }
+      const datePartComparison = datePartNode.comparison;
+      const datePartValueComparison = datePartComparison.childComparisons.value;
+      const datePartDiff = writeDiff(datePartValueComparison, datePartContext);
+      return datePartDiff;
+    };
+    const delimitersColor = pickDelimitersColor(comparison, datePartContext);
+    dateDiff += ANSI.color(node.quote, delimitersColor);
+    dateDiff += writeDatePart("year");
+    dateDiff += writeDatePart("month");
+    dateDiff += writeDatePart("day");
+    date_time: {
+      const timePartHasAnyDiff = (timePartName) => {
+        const timePartNode = node.childNodes.internalEntryMap.get(timePartName);
+        const timePartComparison = timePartNode.comparison;
+        const timePartValueComparison =
+          timePartComparison.childComparisons.value;
+        return timePartValueComparison.hasAnyDiff;
+      };
+      const timeHasAnyDiff = [
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+      ].some((timePartName) => {
+        return timePartHasAnyDiff(timePartName);
+      });
+      if (timeHasAnyDiff) {
+        dateDiff += writeDatePart("hours");
+        dateDiff += writeDatePart("minutes");
+        dateDiff += writeDatePart("seconds");
+        if (timePartHasAnyDiff("milliseconds")) {
+          dateDiff += writeDatePart("milliseconds");
+        } else {
+          dateDiff += "Z";
+        }
+      }
+    }
+    dateDiff += ANSI.color(node.quote, delimitersColor);
+    return dateDiff;
   };
 
   const createInternalEntryComparisonIterable = (node) => {
@@ -5085,6 +5207,34 @@ const pickColorAccordingToChild = (comparison, context, getter) => {
   return sameColor;
 };
 
+const getOwnerNode = (node) => {
+  if (node.type === "value") {
+    return node;
+  }
+  if (node.type === "entry") {
+    return node.parent;
+  }
+  if (node.isSetValue) {
+    return node.parent;
+  }
+  if (node.type === "entry_value") {
+    return node.parent.parent;
+  }
+  if (node.type === "line") {
+    return node.parent;
+  }
+  if (node.type === "char") {
+    return node.parent;
+  }
+  if (node.type === "prototype") {
+    return node.parent;
+  }
+  if (node.type === "internal_value") {
+    return node.parent;
+  }
+  return null;
+};
+
 const pickSelfOrInternalNode = (node, getter) => {
   if (!node) {
     return null;
@@ -5112,6 +5262,11 @@ const getFocusedCharIndex = (comparison, context) => {
   return -1;
   // const charNodes = comparison[context.resultType].charNodes;
   // return charNodes.length - 1;
+};
+
+const getIsNan = (value) => {
+  // eslint-disable-next-line no-self-compare
+  return value !== value;
 };
 
 const canParseUrl =
@@ -5142,6 +5297,24 @@ const URL_INTERNAL_PROPERTY_NAMES = [
   "origin",
   "searchParams",
 ];
+
+const canParseDate = (value) => {
+  // see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#non-standard_date_strings
+  if (/^[0-9]$/.test(value)) {
+    return false;
+  }
+  if (/^[0-9]{2}$/.test(value)) {
+    return false;
+  }
+  if (/^[0-9]{2}\//.test(value)) {
+    return false;
+  }
+  const returnValue = Date.parse(value);
+  if (getIsNan(returnValue)) {
+    return false;
+  }
+  return true;
+};
 
 // under some rare and odd circumstances firefox Object.is(-0, -0)
 // returns false making test fail.
