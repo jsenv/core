@@ -1656,6 +1656,7 @@ let createValueNode;
         let isFloat = false;
         let isUrl = false;
         let isStringForUrl = false;
+        let isDate = false;
         let isStringForDate = false;
         let isError = false;
         let isErrorMessageString = false;
@@ -1816,6 +1817,8 @@ let createValueNode;
                   isObjectForNumber = true;
                 } else if (parentConstructor.name === "URL") {
                   isUrl = true;
+                } else if (parentConstructor.name === "Date") {
+                  isDate = true;
                 } else if (parentConstructor.name === "Error") {
                   isError = true;
                 } else if (parentConstructor.name === "Map") {
@@ -2117,6 +2120,7 @@ let createValueNode;
           isInteger,
           isFloat,
           isStringForUrl,
+          isDate,
           isStringForDate,
           isErrorMessageString,
           isMultiline,
@@ -2270,6 +2274,16 @@ let createValueNode;
             parent: node,
             type: "internal_value",
             value: urlString,
+            displayedIn: "label",
+          });
+          node.constructorCall = true;
+          childNodes.internalValue = urlStringNode;
+        } else if (node.isDate) {
+          const dateString = node.value.toString();
+          const urlStringNode = createPropertyLikeNode("toString()", {
+            parent: node,
+            type: "internal_value",
+            value: dateString,
             displayedIn: "label",
           });
           node.constructorCall = true;

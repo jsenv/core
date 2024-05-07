@@ -52,6 +52,28 @@ AssertionError: actual and expect are different:
 actual: "1970-01-01 09:00:00Z"
 expect: "1970-01-01 10:00:00Z"
 
+# date objects
+AssertionError: actual and expect have 1 difference:
+
+actual: Date("1970-01-01 10:00:00Z")
+expect: Date("1970-01-01 08:00:00Z")
+
+# date object vs date string
+AssertionError: actual and expect are different:
+
+actual: Date("1970-01-01")
+expect: "1970-01-01"
+
+# date object prop
+AssertionError: actual and expect have 1 difference:
+
+actual: Date("1970-01-01") {
+  foo: true,
+}
+expect: Date("1970-01-01") {
+  foo: false,
+}
+
 # incorrect date string
 AssertionError: actual and expect are different:
 

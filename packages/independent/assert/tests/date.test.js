@@ -63,7 +63,24 @@ await startSnapshotTesting("date", {
       expect: "1970-01-01 10:00:00Z",
     });
   },
-  // TODO: date objects
+  ["date objects"]: () => {
+    assert({
+      actual: new Date("1970-01-01 10:00:00Z"),
+      expect: new Date("1970-01-01 8:00:00Z"),
+    });
+  },
+  ["date object vs date string"]: () => {
+    assert({
+      actual: new Date("1970-01-01 10:00:00Z"),
+      expect: "1970-01-01 10:00:00Z",
+    });
+  },
+  ["date object prop"]: () => {
+    assert({
+      actual: Object.assign(new Date("1970-01-01 10:00:00Z"), { foo: true }),
+      expect: Object.assign(new Date("1970-01-01 10:00:00Z"), { foo: false }),
+    });
+  },
   [`incorrect date string`]: () => {
     assert({
       actual: "0",

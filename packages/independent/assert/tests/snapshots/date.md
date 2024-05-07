@@ -98,6 +98,39 @@ assert({
 
 ![img](<./date/simplified date.svg>)
 
+# date objects
+
+```js
+assert({
+  actual: new Date("1970-01-01 10:00:00Z"),
+  expect: new Date("1970-01-01 8:00:00Z"),
+});
+```
+
+![img](<./date/date objects.svg>)
+
+# date object vs date string
+
+```js
+assert({
+  actual: new Date("1970-01-01 10:00:00Z"),
+  expect: "1970-01-01 10:00:00Z",
+});
+```
+
+![img](<./date/date object vs date string.svg>)
+
+# date object prop
+
+```js
+assert({
+  actual: Object.assign(new Date("1970-01-01 10:00:00Z"), { foo: true }),
+  expect: Object.assign(new Date("1970-01-01 10:00:00Z"), { foo: false }),
+});
+```
+
+![img](<./date/date object prop.svg>)
+
 # incorrect date string
 
 ```js
