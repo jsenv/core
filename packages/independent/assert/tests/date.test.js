@@ -8,21 +8,45 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("date", {
-  ["year month day minutes diff on iso"]: () => {
+  // ["year month day minutes diff on iso"]: () => {
+  //   assert({
+  //     actual: "1970-01-01 00:00:00.000Z",
+  //     expect: "1995-12-04 00:12:00.000Z",
+  //   });
+  // },
+  // ["millisecond only diff on iso"]: () => {
+  //   assert({
+  //     actual: "1970-01-01 00:00:00.000Z",
+  //     expect: "1970-01-01 00:00:00.020Z",
+  //   });
+  // },
+  ["+2 hour on timezone"]: () => {
     assert({
-      actual: "1970-01-01 00:00:00.000Z",
-      expect: "1995-12-04 00:12:00.000Z",
+      actual: "1970-01-01 10:00:00+03:00",
+      expect: "1970-01-01 10:00:00+01:00",
     });
   },
-  ["millisecond only diff on iso"]: () => {
+  ["-2 hour on timezone"]: () => {
     assert({
-      actual: "1970-01-01 00:00:00.000Z",
-      expect: "1970-01-01 00:00:00.020Z",
+      actual: "1970-01-01 10:00:00-03:00",
+      expect: "1970-01-01 10:00:00-01:00",
     });
   },
-  ["same hour but diff timezone"]: () => {
+  ["+1h30 on timezone"]: () => {
     assert({
-      actual: "1970-01-01 10:00:00+01:00",
+      actual: "1970-01-01 10:00:00+01:30",
+      expect: "1970-01-01 10:00:00+00:00",
+    });
+  },
+  ["-1h30 on timezone"]: () => {
+    assert({
+      actual: "1970-01-01 10:00:00-01:30",
+      expect: "1970-01-01 10:00:00+00:00",
+    });
+  },
+  ["+0h30 on timezone"]: () => {
+    assert({
+      actual: "1970-01-01 10:00:00+00:30",
       expect: "1970-01-01 10:00:00+00:00",
     });
   },

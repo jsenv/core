@@ -2511,20 +2511,38 @@ let createValueNode;
         }
         // date special properties
         else if (node.isStringForDate) {
-          let date;
+          const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
           let dateString = node.value;
+          let dateTimestamp = Date.parse(dateString);
+          let timezoneOffset = 0;
           // if there is a timezone offset no need to specify it
-          if (/\+[0-9][0-9]\:[0-9][0-9]$/.test(dateString)) {
-            const dateTimestamp = Date.parse(dateString);
-            date = new Date(dateTimestamp);
+          const match = dateString.match(/([\+\-])([0-9][0-9])\:([0-9][0-9])$/);
+          if (match) {
+            let [
+              ,
+              sign,
+              timezoneOffsetHoursDigits,
+              timezoneOffsetMinutesDigits,
+            ] = match;
+            if (timezoneOffsetHoursDigits !== "00") {
+              let timezoneOffsetHours = parseInt(timezoneOffsetHoursDigits);
+              if (sign === "-") {
+                timezoneOffsetHours = -timezoneOffsetHours;
+              }
+              timezoneOffset += timezoneOffsetHours * 3_600_000;
+            }
+            if (timezoneOffsetMinutesDigits !== "00") {
+              let timezoneOffsetMinutes = parseInt(timezoneOffsetMinutesDigits);
+              if (sign === "-") {
+                timezoneOffsetMinutes = -timezoneOffsetMinutes;
+              }
+              timezoneOffset += timezoneOffsetMinutes * 60_000;
+            }
+            timezoneOffset = localTimezoneOffset;
           } else {
-            let dateTimestamp = Date.parse(dateString);
-            const timezoneOffsetInMinutes = new Date(0).getTimezoneOffset();
-            const timezoneOffsetInMilliseconds =
-              timezoneOffsetInMinutes * 60_000;
-            dateTimestamp += timezoneOffsetInMilliseconds;
-            date = new Date(dateTimestamp);
+            timezoneOffset = localTimezoneOffset;
           }
+          const date = new Date(dateTimestamp + timezoneOffset);
           const props = {
             year: date.getFullYear(),
             month: date.getMonth(),

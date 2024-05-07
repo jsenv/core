@@ -49,15 +49,15 @@
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="52.55" fill="#cd5555">1970</text>
+        <text x="85.61" y="52.55" fill="#7f7f7f">1970</text>
         <text x="119.22" y="52.55" fill="#7f7f7f">-</text>
-        <text x="127.62" y="52.55" fill="#cd5555">01</text>
+        <text x="127.62" y="52.55" fill="#7f7f7f">01</text>
         <text x="144.42" y="52.55" fill="#7f7f7f">-</text>
-        <text x="152.82" y="52.55" fill="#cd5555">01</text>
+        <text x="152.82" y="52.55" fill="#7f7f7f">01</text>
         <text x="178.03" y="52.55" fill="#7f7f7f"> </text>
-        <text x="178.03" y="52.55" fill="#7f7f7f">00</text>
+        <text x="178.03" y="52.55" fill="#cd5555">09</text>
         <text x="194.83" y="52.55" fill="#7f7f7f">:</text>
-        <text x="203.23" y="52.55" fill="#cd5555">00</text>
+        <text x="203.23" y="52.55" fill="#cd5555">30</text>
         <text x="220.03" y="52.55" fill="#7f7f7f">:</text>
         <text x="228.44" y="52.55" fill="#7f7f7f">00</text>
         <text x="245.24" y="52.55" fill="#7f7f7f">Z</text>
@@ -65,15 +65,15 @@
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="71.55" fill="#11bc79">1995</text>
+        <text x="85.61" y="71.55" fill="#7f7f7f">1970</text>
         <text x="119.22" y="71.55" fill="#7f7f7f">-</text>
-        <text x="127.62" y="71.55" fill="#11bc79">12</text>
+        <text x="127.62" y="71.55" fill="#7f7f7f">01</text>
         <text x="144.42" y="71.55" fill="#7f7f7f">-</text>
-        <text x="152.82" y="71.55" fill="#11bc79">04</text>
+        <text x="152.82" y="71.55" fill="#7f7f7f">01</text>
         <text x="178.03" y="71.55" fill="#7f7f7f"> </text>
-        <text x="178.03" y="71.55" fill="#7f7f7f">00</text>
+        <text x="178.03" y="71.55" fill="#11bc79">10</text>
         <text x="194.83" y="71.55" fill="#7f7f7f">:</text>
-        <text x="203.23" y="71.55" fill="#11bc79">12</text>
+        <text x="203.23" y="71.55" fill="#11bc79">00</text>
         <text x="220.03" y="71.55" fill="#7f7f7f">:</text>
         <text x="228.44" y="71.55" fill="#7f7f7f">00</text>
         <text x="245.24" y="71.55" fill="#7f7f7f">Z</text>
