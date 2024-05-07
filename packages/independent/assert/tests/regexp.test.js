@@ -48,6 +48,10 @@ await startSnapshotTesting("regexp", {
       expect,
     });
   },
-  // TODO: a string representing a regex
-  // and a regex should not be considered as the same thing
+  ["regex and string representing the same regex"]: () => {
+    assert({
+      actual: /a/,
+      expect: "/a/",
+    });
+  },
 });

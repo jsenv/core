@@ -63,3 +63,14 @@ assert({
 
 ![img](<./regexp/last index.svg>)
 
+# regex and string representing the same regex
+
+```js
+assert({
+  actual: /a/,
+  expect: "/a/",
+});
+```
+
+![img](<./regexp/regex and string representing the same regex.svg>)
+

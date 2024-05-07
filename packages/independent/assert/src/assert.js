@@ -595,6 +595,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             expectNode.value[sourceCodeSymbol]
         ) {
           addSelfDiff("source_code_value");
+        } else if (
+          actualNode.isStringForRegExp !== expectNode.isStringForRegExp
+        ) {
+          addSelfDiff("category");
         } else if (actualNode.subtype !== expectNode.subtype) {
           if (
             actualNode.isFunctionPrototype &&
@@ -1076,6 +1080,20 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         mainNode = actualNode || expectNode;
       }
 
+      const actualIsRegExpLastIndex =
+        actualNode &&
+        actualNode.entryKey === "lastIndex" &&
+        actualNode.parent.isRegExp;
+      const expectIsRegExpLastIndex =
+        expectNode &&
+        expectNode.entryKey === "lastIndex" &&
+        expectNode.parent.isRegExp;
+      if (actualIsRegExpLastIndex && !expectIsRegExpLastIndex) {
+        actualNode.hidden = true;
+      }
+      if (!actualIsRegExpLastIndex && expectIsRegExpLastIndex) {
+        expectNode.hidden = true;
+      }
       let actualHidden;
       let expectHidden;
       if (actualNode) {

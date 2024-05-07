@@ -38,3 +38,9 @@ expect: /a/ {
   lastIndex: 10,
 }
 
+# regex and string representing the same regex
+AssertionError: actual and expect are different:
+
+actual: /a/
+expect: "/a/"
+
