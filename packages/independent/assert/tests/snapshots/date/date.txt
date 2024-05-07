@@ -1,3 +1,15 @@
+# year month day minutes diff on iso
+AssertionError: actual and expect are different:
+
+actual: "1970-01-01 00:00:00Z"
+expect: "1995-12-04 00:12:00Z"
+
+# millisecond only diff on iso
+AssertionError: actual and expect are different:
+
+actual: "1970-01-01 00:00:00.000Z"
+expect: "1970-01-01 00:00:00.020Z"
+
 # +2 hour on timezone
 AssertionError: actual and expect are different:
 
@@ -27,4 +39,22 @@ AssertionError: actual and expect are different:
 
 actual: "1970-01-01 09:30:00Z"
 expect: "1970-01-01 10:00:00Z"
+
+# GMT vs iso
+AssertionError: actual and expect are different:
+
+actual: "2024-05-07 10:27:04Z"
+expect: "1970-01-01 00:00:00Z"
+
+# simplified date
+AssertionError: actual and expect are different:
+
+actual: "1970-01-01 09:00:00Z"
+expect: "1970-01-01 10:00:00Z"
+
+# incorrect date string
+AssertionError: actual and expect are different:
+
+actual: "0"
+expect: "70/01/01"
 

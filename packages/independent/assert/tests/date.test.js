@@ -8,18 +8,18 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("date", {
-  // ["year month day minutes diff on iso"]: () => {
-  //   assert({
-  //     actual: "1970-01-01 00:00:00.000Z",
-  //     expect: "1995-12-04 00:12:00.000Z",
-  //   });
-  // },
-  // ["millisecond only diff on iso"]: () => {
-  //   assert({
-  //     actual: "1970-01-01 00:00:00.000Z",
-  //     expect: "1970-01-01 00:00:00.020Z",
-  //   });
-  // },
+  ["year month day minutes diff on iso"]: () => {
+    assert({
+      actual: "1970-01-01 00:00:00.000Z",
+      expect: "1995-12-04 00:12:00.000Z",
+    });
+  },
+  ["millisecond only diff on iso"]: () => {
+    assert({
+      actual: "1970-01-01 00:00:00.000Z",
+      expect: "1970-01-01 00:00:00.020Z",
+    });
+  },
   ["+2 hour on timezone"]: () => {
     assert({
       actual: "1970-01-01 10:00:00+03:00",
@@ -50,11 +50,24 @@ await startSnapshotTesting("date", {
       expect: "1970-01-01 10:00:00+00:00",
     });
   },
+  ["GMT vs iso"]: () => {
+    assert({
+      actual:
+        "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
+      expect: "1970-01-01 00:00:00Z",
+    });
+  },
+  ["simplified date"]: () => {
+    assert({
+      actual: "1970-01-01 10:00:00",
+      expect: "1970-01-01 10:00:00Z",
+    });
+  },
   // TODO: date objects
-  // [`"0" and 70/01/01`]: () => {
-  //   assert({
-  //     actual: "0",
-  //     expect: "70/01/01",
-  //   });
-  // },
+  [`incorrect date string`]: () => {
+    assert({
+      actual: "0",
+      expect: "70/01/01",
+    });
+  },
 });

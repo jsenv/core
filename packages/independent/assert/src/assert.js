@@ -2514,34 +2514,33 @@ let createValueNode;
           const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
           let dateString = node.value;
           let dateTimestamp = Date.parse(dateString);
-          let timezoneOffset = 0;
-          // if there is a timezone offset no need to specify it
-          const match = dateString.match(/([\+\-])([0-9][0-9])\:([0-9][0-9])$/);
-          if (match) {
-            let [
-              ,
-              sign,
-              timezoneOffsetHoursDigits,
-              timezoneOffsetMinutesDigits,
-            ] = match;
-            if (timezoneOffsetHoursDigits !== "00") {
-              let timezoneOffsetHours = parseInt(timezoneOffsetHoursDigits);
-              if (sign === "-") {
-                timezoneOffsetHours = -timezoneOffsetHours;
-              }
-              timezoneOffset += timezoneOffsetHours * 3_600_000;
-            }
-            if (timezoneOffsetMinutesDigits !== "00") {
-              let timezoneOffsetMinutes = parseInt(timezoneOffsetMinutesDigits);
-              if (sign === "-") {
-                timezoneOffsetMinutes = -timezoneOffsetMinutes;
-              }
-              timezoneOffset += timezoneOffsetMinutes * 60_000;
-            }
-            timezoneOffset = localTimezoneOffset;
-          } else {
-            timezoneOffset = localTimezoneOffset;
-          }
+          let timezoneOffset = localTimezoneOffset;
+          // const match = dateString.match(/([\+\-])([0-9][0-9])\:([0-9][0-9])$/);
+          // if (match) {
+          //   let [
+          //     ,
+          //     sign,
+          //     timezoneOffsetHoursDigits,
+          //     timezoneOffsetMinutesDigits,
+          //   ] = match;
+          //   if (timezoneOffsetHoursDigits !== "00") {
+          //     let timezoneOffsetHours = parseInt(timezoneOffsetHoursDigits);
+          //     if (sign === "-") {
+          //       timezoneOffsetHours = -timezoneOffsetHours;
+          //     }
+          //     timezoneOffset += timezoneOffsetHours * 3_600_000;
+          //   }
+          //   if (timezoneOffsetMinutesDigits !== "00") {
+          //     let timezoneOffsetMinutes = parseInt(timezoneOffsetMinutesDigits);
+          //     if (sign === "-") {
+          //       timezoneOffsetMinutes = -timezoneOffsetMinutes;
+          //     }
+          //     timezoneOffset += timezoneOffsetMinutes * 60_000;
+          //   }
+          //   timezoneOffset = localTimezoneOffset;
+          // } else {
+          //   timezoneOffset = localTimezoneOffset;
+          // }
           const date = new Date(dateTimestamp + timezoneOffset);
           const props = {
             year: date.getFullYear(),
