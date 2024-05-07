@@ -1658,6 +1658,8 @@ let createValueNode;
         let isStringForUrl = false;
         let isDate = false;
         let isStringForDate = false;
+        let isRegExp = false;
+        let isStringForRegExp = false;
         let isError = false;
         let isErrorMessageString = false;
         let isMap = false;
@@ -1819,6 +1821,10 @@ let createValueNode;
                   isUrl = true;
                 } else if (parentConstructor.name === "Date") {
                   isDate = true;
+                } else if (parentConstructor.name === "RegExp") {
+                  isRegExp = true;
+                  constructorCallOpenDelimiter = "";
+                  constructorCallCloseDelimiter = "";
                 } else if (parentConstructor.name === "Error") {
                   isError = true;
                 } else if (parentConstructor.name === "Map") {
@@ -1841,9 +1847,15 @@ let createValueNode;
               subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
                 { type: "identifier", value: value.constructor.name },
               ];
-            } else if (subtype === "Object" || subtype === "Array") {
-              // prefer {} over Object {}
-              // and [] over Array []
+            } else if (
+              subtype === "Object" ||
+              subtype === "Array" ||
+              subtype === "RegExp"
+            ) {
+              // prefer
+              // - {} over Object {}
+              // - [] over Array []
+              // - /a/ over Regexp(/a/)
               subtypeDisplayed = [];
               subtypeDisplayedWhenCollapsed = [
                 { type: "value", value: subtype },
@@ -1892,7 +1904,8 @@ let createValueNode;
                 preserveLineBreaks = parent.preserveLineBreaks;
               } else if (isDateEntry) {
               } else {
-                if (isUrlEntry || isDateEntry) {
+                isStringForRegExp = parent && parent.isRegExp;
+                if (isUrlEntry || isDateEntry || isStringForRegExp) {
                   preserveLineBreaks = true;
                 } else {
                   preserveLineBreaks = preserveLineBreaksOption;
@@ -1902,11 +1915,17 @@ let createValueNode;
                 isMultiline = lines.length > 1;
                 isErrorMessageString =
                   entryKey === "message" && parent.parent.isError;
-                if (isMultiline && !isErrorMessageString) {
+                if (
+                  isMultiline &&
+                  !isErrorMessageString &&
+                  !isStringForRegExp
+                ) {
                   useLineNumbersOnTheLeft = true;
                 }
                 if (isErrorMessageString) {
                   // no quote around error message (it is displayed in the "label diff")
+                } else if (isStringForRegExp) {
+                  // no quote around string source
                 } else if (type === "entry_key") {
                   if (
                     (isSpecialProperty ||
@@ -2122,6 +2141,8 @@ let createValueNode;
           isStringForUrl,
           isDate,
           isStringForDate,
+          isRegExp,
+          isStringForRegExp,
           isErrorMessageString,
           isMultiline,
           useLineNumbersOnTheLeft,
@@ -2288,6 +2309,16 @@ let createValueNode;
           });
           node.constructorCall = true;
           childNodes.internalValue = urlStringNode;
+        } else if (node.isRegExp) {
+          const regexpString = node.value.toString();
+          const regexStringNode = createPropertyLikeNode("toString()", {
+            parent: node,
+            type: "internal_value",
+            value: regexpString,
+            displayedIn: "label",
+          });
+          node.constructorCall = true;
+          childNodes.internalValue = regexStringNode;
         } else if (node.isSymbol) {
           const { symbolDescription, symbolKey } = node;
           if (symbolDescription) {
