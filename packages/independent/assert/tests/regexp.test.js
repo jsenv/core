@@ -8,10 +8,29 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("regexp", {
-  ["test"]: () => {
+  ["/a/ vs /b/"]: () => {
     assert({
       actual: /a/,
       expect: /b/,
+    });
+  },
+  ["i flag vs no flag"]: () => {
+    assert({
+      actual: /a/i,
+      expect: /a/,
+    });
+  },
+  ["gi flag vs ig flag"]: () => {
+    assert({
+      actual: {
+        a: /a/gi,
+        b: true,
+      },
+      expect: {
+        // prettier-ignore
+        a: /a/ig,
+        b: false,
+      },
     });
   },
 });
