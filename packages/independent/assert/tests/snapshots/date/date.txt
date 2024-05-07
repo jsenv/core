@@ -4,9 +4,15 @@ AssertionError: actual and expect are different:
 actual: "0"
 expect: "70/01/01"
 
-# 01 Jan 1970 00:00:00 GMT and 04 Dec 1995 00:12:00 GMT
+# year month day minutes diff on iso UTC
 AssertionError: actual and expect are different:
 
 actual: "1970-01-01 00:00:00Z"
 expect: "1995-12-04 00:12:00Z"
+
+# millisecond only diff on iso UTC
+AssertionError: actual and expect are different:
+
+actual: "1970-01-01 00:00:00Z.000Z"
+expect: "1970-01-01 00:00:00Z.020Z"
 

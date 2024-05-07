@@ -9,14 +9,25 @@ assert({
 
 ![img](<./date/"0" and 70/01/01.svg>)
 
-# 01 Jan 1970 00:00:00 GMT and 04 Dec 1995 00:12:00 GMT
+# year month day minutes diff on iso UTC
 
 ```js
 assert({
-  actual: "01 Jan 1970 00:00:00 GMT",
-  expect: "04 Dec 1995 00:12:00 GMT",
+  actual: "1970-01-01 00:00:00.000Z",
+  expect: "1995-12-04 00:12:00.000Z",
 });
 ```
 
-![img](<./date/01 Jan 1970 00:00:00 GMT and 04 Dec 1995 00:12:00 GMT.svg>)
+![img](<./date/year month day minutes diff on iso UTC.svg>)
+
+# millisecond only diff on iso UTC
+
+```js
+assert({
+  actual: "1970-01-01 00:00:00.000Z",
+  expect: "1970-01-01 00:00:00.020Z",
+});
+```
+
+![img](<./date/millisecond only diff on iso UTC.svg>)
 

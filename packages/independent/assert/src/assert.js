@@ -441,14 +441,18 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             insideComparison.nodePresent.entryKey === "milliseconds"
           ) {
             if (insideActualNode) {
-              getOwnerNode(actualNode).childNodes.internalEntryMap.get(
-                "seconds",
-              ).valueEndSeparator = "Z";
+              const actualSecondsEntryNode =
+                getOwnerNode(actualNode).childNodes.internalEntryMap.get(
+                  "seconds",
+                );
+              actualSecondsEntryNode.childNodes.value.valueEndSeparator = "Z";
             }
             if (insideExpectNode) {
-              getOwnerNode(expectNode).childNodes.internalEntryMap.get(
-                "seconds",
-              ).valueEndSeparator = "Z";
+              const expectSecondsEntryNode =
+                getOwnerNode(expectNode).childNodes.internalEntryMap.get(
+                  "seconds",
+                );
+              expectSecondsEntryNode.childNodes.value.valueEndSeparator = "Z";
             }
           }
           if (insideActualNode && insideExpectNode) {
@@ -1881,6 +1885,7 @@ let createValueNode;
                 preserveLineBreaks = parent.preserveLineBreaks;
               } else if (type === "char") {
                 preserveLineBreaks = parent.preserveLineBreaks;
+              } else if (isDateEntry) {
               } else {
                 if (isUrlEntry || isDateEntry) {
                   preserveLineBreaks = true;
@@ -1915,6 +1920,7 @@ let createValueNode;
                 } else if (isUrlEntry) {
                   // no quote around url property
                 } else if (isDateEntry) {
+                  // no quote around date property
                 } else {
                   useQuotes = true;
                   quote =
@@ -3311,6 +3317,9 @@ let writeDiff;
             : value === null
               ? "null"
               : JSON.stringify(value);
+        if (node.isString && !node.quote) {
+          valueDiffRaw = valueDiffRaw.slice(1, -1);
+        }
         if (
           valueDiffRaw.length >
           selfContext.maxColumns - selfContext.textIndent
@@ -4697,9 +4706,6 @@ let writeDiff;
 
     const writeDatePart = (datePartName) => {
       const datePartNode = node.childNodes.internalEntryMap.get(datePartName);
-      if (!datePartNode) {
-        return "";
-      }
       const datePartComparison = datePartNode.comparison;
       const datePartValueComparison = datePartComparison.childComparisons.value;
       const datePartDiff = writeDiff(datePartValueComparison, datePartContext);
@@ -4732,8 +4738,6 @@ let writeDiff;
         dateDiff += writeDatePart("seconds");
         if (timePartHasAnyDiff("milliseconds")) {
           dateDiff += writeDatePart("milliseconds");
-        } else {
-          dateDiff += "Z";
         }
       }
     }
