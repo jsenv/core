@@ -596,7 +596,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         ) {
           addSelfDiff("source_code_value");
         } else if (
-          actualNode.isStringForRegExp !== expectNode.isStringForRegExp
+          actualNode.isStringForRegExp !== expectNode.isStringForRegExp ||
+          actualNode.isRegExpLine !== expectNode.isRegExpLine ||
+          actualNode.isRegExpChar !== expectNode.isRegExpChar
         ) {
           addSelfDiff("category");
         } else if (actualNode.subtype !== expectNode.subtype) {
@@ -1678,6 +1680,7 @@ let createValueNode;
         let isStringForDate = false;
         let isRegExp = false;
         let isStringForRegExp = false;
+        let isRegExpLine = false;
         let isRegExpChar = false;
         let isError = false;
         let isErrorMessageString = false;
@@ -1911,22 +1914,37 @@ let createValueNode;
           } else {
             subtype = typeof value;
             if (subtype === "string") {
-              parts = [{ type: "value", value }];
               isString = true;
               canHaveIndexedValues = true;
               if (type === "line") {
+                if (parent.isStringForRegExp) {
+                  isRegExpLine = true;
+                }
+                parts = [
+                  { type: isRegExpLine ? "regexp_source_line" : "line", value },
+                ];
                 canHaveChars = true;
                 chars = splitChars(value);
-                openDelimiter = `${index + 1} | `;
+                openDelimiter = isRegExpLine ? "" : `${index + 1} | `;
                 preserveLineBreaks = parent.preserveLineBreaks;
               } else if (type === "char") {
-                preserveLineBreaks = parent.preserveLineBreaks;
-                if (parent.parent.isStringForRegExp) {
+                if (parent.isRegExpLine) {
                   isRegExpChar = true;
                 }
+                parts = [
+                  { type: isRegExpChar ? "regexp_source_char" : "char", value },
+                ];
+                preserveLineBreaks = parent.preserveLineBreaks;
               } else if (isDateEntry) {
+                parts = [{ type: "date_part", value }];
               } else {
                 isStringForRegExp = parent && parent.isRegExp;
+                parts = [
+                  {
+                    type: isStringForRegExp ? "regexp_source" : "string",
+                    value,
+                  },
+                ];
                 if (isUrlEntry || isDateEntry || isStringForRegExp) {
                   preserveLineBreaks = true;
                 } else {
@@ -2165,6 +2183,7 @@ let createValueNode;
           isStringForDate,
           isRegExp,
           isStringForRegExp,
+          isRegExpLine,
           isRegExpChar,
           isErrorMessageString,
           isMultiline,
@@ -4576,11 +4595,14 @@ let writeDiff;
     const charAfterArray = [];
     const actualNode = lineComparison.actualNode;
     const expectNode = lineComparison.expectNode;
-    const resetModified =
-      actualNode &&
-      actualNode.canHaveChars &&
-      expectNode &&
-      expectNode.canHaveChars;
+    let resetModified;
+    if (actualNode && expectNode) {
+      if (actualNode.canHaveChars && expectNode.canHaveChars) {
+        if (actualNode.isRegExpLine === expectNode.isRegExpLine) {
+          resetModified = true;
+        }
+      }
+    }
     const lineContext = {
       ...context,
       modified: resetModified ? false : context.modified,
@@ -4697,34 +4719,23 @@ let writeDiff;
     const node = charComparison[context.resultType];
     const { quotes } = context;
     const char = node.value;
-    const charColor = pickColor(charComparison, context, (node) => node.value);
-    if (node.preserveLineBreaks && (char === "\n" || char === "\r")) {
-      return ANSI.color(char, charColor);
+    if (quotes && char === quotes) {
+      node.parts[0].value = `\\${char}`;
+    } else if (node.preserveLineBreaks && (char === "\n" || char === "\r")) {
+    } else if (node.isRegExpChar && regExpSpecialCharSet.has(char)) {
+    } else {
+      const point = char.charCodeAt(0);
+      if (point === 8232) {
+        // line separator 1
+        node.parts[0].value = `\\u2028`;
+      } else if (point === 8233) {
+        // line separator 2
+        node.parts[0].value = `\\u2029`;
+      } else if (point === 92 || point < 32 || (point > 126 && point < 160)) {
+        node.parts[0].value = charMeta[point];
+      }
     }
-    if (node.isRegExpChar && regExpSpecialCharSet.has(char)) {
-      return ANSI.color(char, charColor);
-    }
-    const point = char.charCodeAt(0);
-    if (
-      (quotes && char === quotes) ||
-      point === 92 ||
-      point < 32 ||
-      (point > 126 && point < 160) ||
-      // line separators
-      point === 8232 ||
-      point === 8233
-    ) {
-      const replacement =
-        char === quotes
-          ? `\\${quotes}`
-          : point === 8232
-            ? "\\u2028"
-            : point === 8233
-              ? "\\u2029"
-              : charMeta[point];
-      return ANSI.color(replacement, charColor);
-    }
-    return ANSI.color(char, charColor);
+    return writeValueDiff(charComparison, context);
   };
   const regExpSpecialCharSet = new Set([
     "/",

@@ -132,3 +132,9 @@ AssertionError: actual and expect are different:
 actual: 1n
 expect: "1n"
 
+# 10 and "10"
+AssertionError: actual and expect are different:
+
+actual: 10
+expect: "10"
+

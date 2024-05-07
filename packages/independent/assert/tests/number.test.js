@@ -142,4 +142,10 @@ await startSnapshotTesting("number", {
       expect: "1n",
     });
   },
+  [`10 and "10"`]: () => {
+    assert({
+      actual: 10,
+      expect: "10",
+    });
+  },
 });

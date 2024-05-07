@@ -240,3 +240,14 @@ assert({
 
 ![img](<./number/BigInt(1) and "1n".svg>)
 
+# 10 and "10"
+
+```js
+assert({
+  actual: 10,
+  expect: "10",
+});
+```
+
+![img](<./number/10 and "10".svg>)
+
