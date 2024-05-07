@@ -437,7 +437,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           onNestedDiff(insideExpectNode);
         } else {
           if (
-            insideComparison.nodePresent.isDateEntry &&
+            insideComparison.nodePresent.isDateEntryValue &&
             insideComparison.nodePresent.entryKey === "milliseconds"
           ) {
             if (insideActualNode) {
@@ -1609,6 +1609,8 @@ let createValueNode;
       isMapEntryValue,
       isUrlEntryKey,
       isUrlEntryValue,
+      isDateEntryKey,
+      isDateEntryValue,
       isPrototype,
       isClassStaticProperty,
       isClassPrototype,
@@ -2091,6 +2093,8 @@ let createValueNode;
           isMapEntryValue,
           isUrlEntryKey,
           isUrlEntryValue,
+          isDateEntryKey,
+          isDateEntryValue,
           isPrototype,
           isClassStaticProperty,
           isClassPrototype,
@@ -2693,6 +2697,7 @@ let createValueNode;
               ...entrySharedInfo,
               isMapEntryKey: isMapEntry,
               isUrlEntryKey: isUrlEntry,
+              isDateEntryKey: isDateEntry,
               showOnlyWhenDiff: false,
               valueStartSeparator: typeof entryKey === "symbol" ? "[" : "",
               valueEndSeparator: typeof entryKey === "symbol" ? "]" : "",
@@ -2709,6 +2714,7 @@ let createValueNode;
               ...entrySharedInfo,
               isMapEntryValue: isMapEntry,
               isUrlEntryValue: isUrlEntry,
+              isDateEntryValue: isDateEntry,
               valueSeparator,
               valueStartSeparator,
               valueEndSeparator,

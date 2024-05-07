@@ -1,18 +1,18 @@
-# "0" and 70/01/01
-AssertionError: actual and expect are different:
-
-actual: "0"
-expect: "70/01/01"
-
-# year month day minutes diff on iso UTC
+# year month day minutes diff on iso
 AssertionError: actual and expect are different:
 
 actual: "1970-01-01 00:00:00Z"
 expect: "1995-12-04 00:12:00Z"
 
-# millisecond only diff on iso UTC
+# millisecond only diff on iso
 AssertionError: actual and expect are different:
 
-actual: "1970-01-01 00:00:00Z.000Z"
-expect: "1970-01-01 00:00:00Z.020Z"
+actual: "1970-01-01 00:00:00.000Z"
+expect: "1970-01-01 00:00:00.020Z"
+
+# same hour but diff timezone
+AssertionError: actual and expect are different:
+
+actual: "1970-01-01 10:00:00Z"
+expect: "1970-01-01 11:00:00Z"
 
