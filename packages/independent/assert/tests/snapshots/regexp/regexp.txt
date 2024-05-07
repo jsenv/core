@@ -1,4 +1,4 @@
-# /a/ vs /b/
+# a vs b
 AssertionError: actual and expect have 1 difference:
 
 actual: /a/
@@ -20,5 +20,21 @@ actual: {
 expect: {
   a: /a/gi,
   b: false,
+}
+
+# special char: parenthesis vs dot
+AssertionError: actual and expect have 1 difference:
+
+actual: /^\($/g
+expect: /^\.$/g
+
+# last index
+AssertionError: actual and expect have 1 difference:
+
+actual: /a/ {
+  lastIndex: 0,
+}
+expect: /a/ {
+  lastIndex: 10,
 }
 

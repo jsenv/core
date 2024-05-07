@@ -1660,6 +1660,7 @@ let createValueNode;
         let isStringForDate = false;
         let isRegExp = false;
         let isStringForRegExp = false;
+        let isRegExpChar = false;
         let isError = false;
         let isErrorMessageString = false;
         let isMap = false;
@@ -1902,6 +1903,9 @@ let createValueNode;
                 preserveLineBreaks = parent.preserveLineBreaks;
               } else if (type === "char") {
                 preserveLineBreaks = parent.preserveLineBreaks;
+                if (parent.parent.isStringForRegExp) {
+                  isRegExpChar = true;
+                }
               } else if (isDateEntry) {
               } else {
                 isStringForRegExp = parent && parent.isRegExp;
@@ -2143,6 +2147,7 @@ let createValueNode;
           isStringForDate,
           isRegExp,
           isStringForRegExp,
+          isRegExpChar,
           isErrorMessageString,
           isMultiline,
           useLineNumbersOnTheLeft,
@@ -2310,15 +2315,19 @@ let createValueNode;
           node.constructorCall = true;
           childNodes.internalValue = urlStringNode;
         } else if (node.isRegExp) {
-          const regexpString = node.value.toString();
-          const regexStringNode = createPropertyLikeNode("toString()", {
+          let regexpSource = node.value.source;
+          if (regexpSource === "(?:)") {
+            regexpSource = "";
+          }
+          regexpSource = `/${regexpSource}/${node.value.flags}`;
+          const regexSourceNode = createPropertyLikeNode("source", {
             parent: node,
             type: "internal_value",
-            value: regexpString,
+            value: regexpSource,
             displayedIn: "label",
           });
           node.constructorCall = true;
-          childNodes.internalValue = regexStringNode;
+          childNodes.internalValue = regexSourceNode;
         } else if (node.isSymbol) {
           const { symbolDescription, symbolKey } = node;
           if (symbolDescription) {
@@ -2699,6 +2708,8 @@ let createValueNode;
               } else {
                 entryShowOnlyWhenDiff = true;
               }
+            } else if (entryKey === "lastIndex" && node.isRegExp) {
+              entryShowOnlyWhenDiff = true;
             } else if (typeof entryKey === "symbol") {
               entryShowOnlyWhenDiff = true;
             }
@@ -4672,6 +4683,9 @@ let writeDiff;
     if (node.preserveLineBreaks && (char === "\n" || char === "\r")) {
       return ANSI.color(char, charColor);
     }
+    if (node.isRegExpChar && regExpSpecialCharSet.has(char)) {
+      return ANSI.color(char, charColor);
+    }
     const point = char.charCodeAt(0);
     if (
       (quotes && char === quotes) ||
@@ -4694,6 +4708,23 @@ let writeDiff;
     }
     return ANSI.color(char, charColor);
   };
+  const regExpSpecialCharSet = new Set([
+    "/",
+    "^",
+    "\\",
+    "[",
+    "]",
+    "(",
+    ")",
+    "{",
+    "}",
+    "?",
+    "+",
+    "*",
+    ".",
+    "|",
+    "$",
+  ]);
   // prettier-ignore
   const charMeta = [
     '\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07', // x07

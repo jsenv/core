@@ -1,4 +1,4 @@
-# /a/ vs /b/
+# a vs b
 
 ```js
 assert({
@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./regexp//a/ vs /b/.svg>)
+![img](<./regexp/a vs b.svg>)
 
 # i flag vs no flag
 
@@ -37,4 +37,29 @@ assert({
 ```
 
 ![img](<./regexp/gi flag vs ig flag.svg>)
+
+# special char: parenthesis vs dot
+
+```js
+assert({
+  actual: /^\($/g,
+  expect: /^\.$/g,
+});
+```
+
+![img](<./regexp/special char: parenthesis vs dot.svg>)
+
+# last index
+
+```js
+const actual = /a/;
+const expect = /a/;
+expect.lastIndex = 10;
+assert({
+  actual,
+  expect,
+});
+```
+
+![img](<./regexp/last index.svg>)
 

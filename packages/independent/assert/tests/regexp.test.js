@@ -8,7 +8,7 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("regexp", {
-  ["/a/ vs /b/"]: () => {
+  ["a vs b"]: () => {
     assert({
       actual: /a/,
       expect: /b/,
@@ -33,4 +33,21 @@ await startSnapshotTesting("regexp", {
       },
     });
   },
+  ["special char: parenthesis vs dot"]: () => {
+    assert({
+      actual: /^\($/g,
+      expect: /^\.$/g,
+    });
+  },
+  ["last index"]: () => {
+    const actual = /a/;
+    const expect = /a/;
+    expect.lastIndex = 10;
+    assert({
+      actual,
+      expect,
+    });
+  },
+  // TODO: a string representing a regex
+  // and a regex should not be considered as the same thing
 });
