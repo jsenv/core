@@ -9,6 +9,50 @@ assert({
 
 ![img](<./url/url port.svg>)
 
+# url search param modified
+
+```js
+assert({
+  actual: new URL("http://example.com?foo=a"),
+  expect: new URL("http://example.com?foo=b"),
+});
+```
+
+![img](<./url/url search param modified.svg>)
+
+# url search param added
+
+```js
+assert({
+  actual: new URL("http://example.com?foo=a"),
+  expect: new URL("http://example.com"),
+});
+```
+
+![img](<./url/url search param added.svg>)
+
+# url search param added 2
+
+```js
+assert({
+  actual: new URL("http://example.com?foo=a&bar=b"),
+  expect: new URL("http://example.com?foo=a"),
+});
+```
+
+![img](<./url/url search param added 2.svg>)
+
+# url search param removed
+
+```js
+assert({
+  actual: new URL("http://example.com"),
+  expect: new URL("http://example.com?foo=a"),
+});
+```
+
+![img](<./url/url search param removed.svg>)
+
 # url hash modified
 
 ```js

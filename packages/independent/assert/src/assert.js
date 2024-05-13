@@ -2602,17 +2602,6 @@ let createValueNode;
             associatedValueMetaMap.set(urlInternalPropertyName, meta);
           }
         }
-        // url "search"
-        // else if (node.isUrlEntryValue && node.entryKey === "search") {
-        //   const searchParams = new URLSearchParams(node.value);
-        //   for (const [key, value] of searchParams) {
-        //     associatedValueMetaMap.set(key, {
-        //       isInternalEntry: true,
-        //       isSearchParamEntry: true,
-        //       value,
-        //     });
-        //   }
-        // }
         // date special properties
         else if (node.isStringForDate) {
           const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;

@@ -10,9 +10,27 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com:8000"),
     });
   },
+  ["url search param modified"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a"),
+      expect: new URL("http://example.com?foo=b"),
+    });
+  },
   ["url search param added"]: () => {
     assert({
+      actual: new URL("http://example.com?foo=a"),
+      expect: new URL("http://example.com"),
+    });
+  },
+  ["url search param added 2"]: () => {
+    assert({
       actual: new URL("http://example.com?foo=a&bar=b"),
+      expect: new URL("http://example.com?foo=a"),
+    });
+  },
+  ["url search param removed"]: () => {
+    assert({
+      actual: new URL("http://example.com"),
       expect: new URL("http://example.com?foo=a"),
     });
   },

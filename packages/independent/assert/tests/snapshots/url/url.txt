@@ -4,6 +4,30 @@ AssertionError: actual and expect have 1 difference:
 actual: URL("http://example.com/")
 expect: URL("http://example.com:8000/")
 
+# url search param modified
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=b")
+
+# url search param added
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/")
+
+# url search param added 2
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/?foo=a&bar=b")
+expect: URL("http://example.com/?foo=a")
+
+# url search param removed
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/")
+expect: URL("http://example.com/?foo=a")
+
 # url hash modified
 AssertionError: actual and expect have 1 difference:
 
