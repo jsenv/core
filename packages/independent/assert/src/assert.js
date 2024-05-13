@@ -457,9 +457,9 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           if (insideActualNode && insideExpectNode) {
             const actualShouldHideBecauseNoDiff =
-              insideActualNode.showOnlyWhenDiff;
+              insideActualNode.shouldHideWhenSame;
             const expectShouldHideBecauseNoDiff =
-              insideExpectNode.showOnlyWhenDiff;
+              insideExpectNode.shouldHideWhenSame;
             if (
               actualShouldHideBecauseNoDiff &&
               expectShouldHideBecauseNoDiff
@@ -1623,6 +1623,7 @@ let createValueNode;
       isMapEntry,
       isUrlEntry,
       isDateEntry,
+      isSearchParamEntry,
       isIndexedValue,
       isSetValue,
       isMapEntryKey,
@@ -1641,7 +1642,7 @@ let createValueNode;
       valueStartSeparator,
       valueEndSeparator,
       displayedIn,
-      showOnlyWhenDiff = parent && parent.showOnlyWhenDiff === "deep"
+      shouldHideWhenSame = parent && parent.shouldHideWhenSame === "deep"
         ? "deep"
         : false,
       hidden = parent ? parent.hidden : false,
@@ -2149,6 +2150,7 @@ let createValueNode;
           isMapEntry,
           isUrlEntry,
           isDateEntry,
+          isSearchParamEntry,
           isIndexedValue,
           isSetValue,
           isMapEntryKey,
@@ -2228,7 +2230,7 @@ let createValueNode;
           quote,
           displayedIn,
           hidden,
-          showOnlyWhenDiff,
+          shouldHideWhenSame,
           reference,
           referenceFromOthersSet: new Set(),
         });
@@ -2269,7 +2271,7 @@ let createValueNode;
           value: property,
           entryKey: property,
           isSpecialProperty: property.endsWith("()"),
-          showOnlyWhenDiff: false,
+          shouldHideWhenSame: false,
         });
         propertyLikeNode.childNodes.key = keyNode;
         return propertyLikeNode;
@@ -2288,7 +2290,7 @@ let createValueNode;
           valueSeparator: ":",
           value: prototypeValue,
           valueEndSeparator: ",",
-          showOnlyWhenDiff: true,
+          shouldHideWhenSame: true,
           isPrototype: true,
         });
         childNodes.prototype = prototypeNode;
@@ -2600,6 +2602,17 @@ let createValueNode;
             associatedValueMetaMap.set(urlInternalPropertyName, meta);
           }
         }
+        // url "search"
+        // else if (node.isUrlEntryValue && node.entryKey === "search") {
+        //   const searchParams = new URLSearchParams(node.value);
+        //   for (const [key, value] of searchParams) {
+        //     associatedValueMetaMap.set(key, {
+        //       isInternalEntry: true,
+        //       isSearchParamEntry: true,
+        //       value,
+        //     });
+        //   }
+        // }
         // date special properties
         else if (node.isStringForDate) {
           const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
@@ -2692,13 +2705,14 @@ let createValueNode;
             isMapEntry,
             isUrlEntry,
             isDateEntry,
+            isSearchParamEntry,
             value,
             propertyDescriptor,
             valueSeparator,
             valueStartSeparator,
             valueEndSeparator,
             shouldHide,
-            showOnlyWhenDiff,
+            shouldHideWhenSame,
           },
         ] of associatedValueMetaMap) {
           if (isSetEntry) {
@@ -2735,20 +2749,20 @@ let createValueNode;
               displayedIn = "label";
             }
           }
-          let entryShowOnlyWhenDiff =
-            showOnlyWhenDiff || node.showOnlyWhenDiff === "deep";
-          if (!entryShowOnlyWhenDiff) {
+          let entryShouldHideWhenSame =
+            shouldHideWhenSame || node.shouldHideWhenSame === "deep";
+          if (!entryShouldHideWhenSame) {
             if (entryKey === "prototype") {
-              entryShowOnlyWhenDiff = true;
+              entryShouldHideWhenSame = true;
             } else if (propertyDescriptor && !propertyDescriptor.enumerable) {
               if (entryKey === "message" && node.isError) {
               } else {
-                entryShowOnlyWhenDiff = true;
+                entryShouldHideWhenSame = true;
               }
             } else if (entryKey === "lastIndex" && node.isRegExp) {
-              entryShowOnlyWhenDiff = true;
+              entryShouldHideWhenSame = true;
             } else if (typeof entryKey === "symbol") {
-              entryShowOnlyWhenDiff = true;
+              entryShouldHideWhenSame = true;
             }
           }
 
@@ -2764,6 +2778,7 @@ let createValueNode;
             isMapEntry,
             isUrlEntry,
             isDateEntry,
+            isSearchParamEntry,
             isPrototype: isPropertyEntry && entryKey === "prototype",
             isClassStaticProperty:
               isPropertyEntry && node.functionAnalysis.type === "class",
@@ -2781,7 +2796,7 @@ let createValueNode;
             type: "entry",
             value: null,
             ...entrySharedInfo,
-            showOnlyWhenDiff: entryShowOnlyWhenDiff,
+            shouldHideWhenSame: entryShouldHideWhenSame,
             hidden: hidden || shouldHide,
           });
           let needKeyNode;
@@ -2808,14 +2823,14 @@ let createValueNode;
               isMapEntryKey: isMapEntry,
               isUrlEntryKey: isUrlEntry,
               isDateEntryKey: isDateEntry,
-              showOnlyWhenDiff: false,
+              shouldHideWhenSame: false,
               valueStartSeparator: typeof entryKey === "symbol" ? "[" : "",
               valueEndSeparator: typeof entryKey === "symbol" ? "]" : "",
             });
             entryNode.childNodes.key = keyNode;
           }
 
-          if (isMapEntry || isUrlEntry || isDateEntry) {
+          if (isInternalEntry) {
             const entryValueNode = _createValueNode({
               parent: entryNode,
               path: entryNode.path,
@@ -2876,7 +2891,7 @@ let createValueNode;
                 isPropertyDescriptor: true,
                 isPropertyValue,
                 isIndexedValue,
-                showOnlyWhenDiff: entryShowOnlyWhenDiff || !isPropertyValue,
+                shouldHideWhenSame: entryShouldHideWhenSame || !isPropertyValue,
                 valueSeparator:
                   valueSeparator === undefined
                     ? entryNode.isClassStaticProperty
