@@ -4,6 +4,18 @@ AssertionError: actual and expect have 1 difference:
 actual: URL("http://example.com/")
 expect: URL("http://example.com:8000/")
 
+# url hash modified
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/#foo")
+expect: URL("http://example.com/#bar")
+
+# url hash removed
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/")
+expect: URL("http://example.com/#bar")
+
 # url string and url
 AssertionError: actual and expect are different:
 

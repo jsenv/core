@@ -9,6 +9,28 @@ assert({
 
 ![img](<./url/url port.svg>)
 
+# url hash modified
+
+```js
+assert({
+  actual: new URL("http://example.com#foo"),
+  expect: new URL("http://example.com#bar"),
+});
+```
+
+![img](<./url/url hash modified.svg>)
+
+# url hash removed
+
+```js
+assert({
+  actual: new URL("http://example.com"),
+  expect: new URL("http://example.com#bar"),
+});
+```
+
+![img](<./url/url hash removed.svg>)
+
 # url string and url
 
 ```js

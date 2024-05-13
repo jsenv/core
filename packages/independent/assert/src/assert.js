@@ -3012,6 +3012,9 @@ let createValueNode;
     if (name === "search") {
       return value.slice(1);
     }
+    if (name === "hash") {
+      return value.slice(1);
+    }
     return value;
   };
 
@@ -4000,7 +4003,7 @@ let writeDiff;
     if (valueStartSeparator) {
       const valueStartSeparatorColor = pickColor(
         comparison,
-        context,
+        selfContext,
         (node) => node.valueStartSeparator,
       );
       diff = ANSI.color(valueStartSeparator, valueStartSeparatorColor) + diff;
