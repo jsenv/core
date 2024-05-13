@@ -3262,258 +3262,6 @@ let writeDiff;
       displaySubtype = false;
     }
 
-    const relativeDepth = node.depth + selfContext.initialDepth;
-    let indent = "  ".repeat(relativeDepth);
-    let diffCount = 0;
-    let canResetTextIndent = !node.isClassPrototype;
-    const writeNestedValueDiff = (nestedComparison, { resetModified }) => {
-      const nestedContext = {
-        ...selfContext,
-        modified: resetModified ? false : selfContext.modified,
-      };
-      if (canResetTextIndent) {
-        nestedContext.textIndent = 0;
-        canResetTextIndent = false;
-      }
-      let nestedValueDiff = writeDiff(nestedComparison, nestedContext);
-      if (
-        nestedValueDiff &&
-        nestedComparison !== context.startComparison &&
-        !nestedComparison[context.resultType].isClassPrototype
-      ) {
-        nestedValueDiff += `\n`;
-        canResetTextIndent = true;
-      }
-      return nestedValueDiff;
-    };
-    const writeNestedValueGroupDiff = ({
-      nestedValueName,
-      nestedValueNamePlural,
-      openDelimiter,
-      closeDelimiter,
-      forceDelimitersWhenEmpty,
-      resetModified,
-      nestedComparisons,
-    }) => {
-      let groupDiff = "";
-      const entryBeforeDiffArray = [];
-      let skippedArray = [];
-      const maxDiff =
-        selfContext.modified || selfContext.added || selfContext.removed
-          ? selfContext.maxValueInsideDiff
-          : selfContext.maxDiffPerObject;
-      for (const nestedComparison of nestedComparisons) {
-        if (nestedComparison.hidden) {
-          continue;
-        }
-        const nestedNode = nestedComparison[context.resultType];
-        if (nestedNode.displayedIn === "label") {
-          continue;
-        }
-        if (!nestedComparison.hasAnyDiff) {
-          entryBeforeDiffArray.push(nestedComparison);
-          continue;
-        }
-        diffCount++;
-        // too many diff
-        if (diffCount > maxDiff) {
-          skippedArray.push(nestedComparison);
-          continue;
-        }
-        // not enough space remaining
-        // first write nested value (prop, value) before the diff
-        const entryBeforeDiffCount = entryBeforeDiffArray.length;
-        if (entryBeforeDiffCount) {
-          let beforeDiff = "";
-          let from =
-            entryBeforeDiffCount === selfContext.maxValueBeforeDiff
-              ? 0
-              : Math.max(
-                  entryBeforeDiffCount - selfContext.maxValueBeforeDiff + 1,
-                  0,
-                );
-          let to = entryBeforeDiffCount;
-          let index = from;
-          while (index !== to) {
-            const entryBeforeDiff = entryBeforeDiffArray[index];
-            beforeDiff += writeNestedValueDiff(entryBeforeDiff, {
-              resetModified,
-            });
-            index++;
-          }
-          skippedArray = entryBeforeDiffArray.slice(0, from);
-          entryBeforeDiffArray.length = 0;
-
-          let skipped = skippedArray.length;
-          if (skipped) {
-            let aboveSummary = "";
-            aboveSummary += `${skipped} ${nestedValueNamePlural}`;
-            groupDiff += `${indent}  `;
-            const arrowSign = diffCount > 1 ? `↕` : `↑`;
-            groupDiff += ANSI.color(
-              `${arrowSign} ${aboveSummary} ${arrowSign}`,
-              pickColor(comparison, selfContext),
-            );
-            groupDiff += "\n";
-          }
-          groupDiff += beforeDiff;
-          skippedArray.length = 0;
-        }
-        const nestedValueDiff = writeNestedValueDiff(nestedComparison, {
-          resetModified,
-        });
-        groupDiff += nestedValueDiff;
-      }
-
-      skippedArray.push(...entryBeforeDiffArray);
-      // now display the values after
-      const skippedCount = skippedArray.length;
-      if (skippedCount) {
-        const maxValueAfterDiff =
-          selfContext.modified || selfContext.added || selfContext.removed
-            ? selfContext.maxValueInsideDiff + 1
-            : selfContext.maxValueAfterDiff;
-        let from = 0;
-        let to =
-          skippedCount === maxValueAfterDiff
-            ? skippedCount
-            : Math.min(maxValueAfterDiff - 1, skippedCount);
-        let index = from;
-        while (index !== to) {
-          const nextComparison = skippedArray[index];
-          if (nextComparison.hasAnyDiff) {
-            // do not display when they come from maxDiffPerObject
-            break;
-          }
-          index++;
-          groupDiff += writeNestedValueDiff(nextComparison, {
-            resetModified,
-          });
-        }
-        skippedArray = skippedArray.slice(index);
-      }
-      remaining_summary: {
-        if (skippedArray.length === 0) {
-          break remaining_summary;
-        }
-        const skippedCounters = {
-          total: 0,
-          removed: 0,
-          added: 0,
-          modified: 0,
-        };
-        if (selfContext.added) {
-          skippedCounters.total = skippedCounters.added = skippedArray.length;
-        } else if (selfContext.removed) {
-          skippedCounters.total = skippedCounters.removed = skippedArray.length;
-        } else if (selfContext.modified) {
-          skippedCounters.total = skippedCounters.modified =
-            skippedArray.length;
-        } else {
-          for (const skippedComparison of skippedArray) {
-            skippedCounters.total++;
-            if (skippedComparison.selfHasAddition) {
-              selfContext.onComparisonDisplayed(skippedComparison, true);
-              skippedCounters.added++;
-              continue;
-            }
-            if (skippedComparison.selfHasRemoval) {
-              selfContext.onComparisonDisplayed(skippedComparison, true);
-              skippedCounters.removed++;
-              continue;
-            }
-            if (selfContext.modified || skippedComparison.hasAnyDiff) {
-              selfContext.onComparisonDisplayed(skippedComparison, true);
-              skippedCounters.modified++;
-              continue;
-            }
-            continue;
-          }
-        }
-        let markersColor;
-        let summaryColor;
-        let summaryDetails = [];
-
-        if (skippedCounters.removed === skippedCounters.total) {
-          markersColor = summaryColor = removedColor;
-        } else if (skippedCounters.added === skippedCounters.total) {
-          markersColor = summaryColor = addedColor;
-        } else if (skippedCounters.modified === skippedCounters.total) {
-          markersColor = summaryColor = selfContext.resultColor;
-        } else {
-          markersColor = pickColor(comparison, selfContext);
-          summaryColor = markersColor;
-          if (skippedCounters.removed) {
-            summaryDetails.push(
-              ANSI.color(`${skippedCounters.removed} removed`, removedColor),
-            );
-          }
-          if (skippedCounters.added) {
-            summaryDetails.push(
-              ANSI.color(`${skippedCounters.added} added`, addedColor),
-            );
-          }
-          if (skippedCounters.modified) {
-            summaryDetails.push(
-              ANSI.color(
-                `${skippedCounters.modified} modified`,
-                selfContext.resultColor,
-              ),
-            );
-          }
-        }
-        groupDiff += `${indent}  `;
-        groupDiff += ANSI.color(`↓`, markersColor);
-        groupDiff += " ";
-        groupDiff += ANSI.color(
-          skippedCounters.total === 1
-            ? `${skippedCounters.total} ${nestedValueName}`
-            : `${skippedCounters.total} ${nestedValueNamePlural}`,
-          summaryColor,
-        );
-        if (summaryDetails.length) {
-          groupDiff += ` `;
-          groupDiff += ANSI.color(`(`, markersColor);
-          groupDiff += summaryDetails.join(" ");
-          groupDiff += ANSI.color(`)`, markersColor);
-        }
-        groupDiff += " ";
-        groupDiff += ANSI.color(`↓`, markersColor);
-        groupDiff += "\n";
-      }
-      if (selfContext.signs) {
-        if (selfContext.resultType === "actualNode") {
-          if (context.added) {
-            groupDiff += ANSI.color(addedSign, addedSignColor);
-            indent = indent.slice(1);
-          } else if (context.modified) {
-            groupDiff += ANSI.color(unexpectSign, unexpectSignColor);
-            indent = indent.slice(1);
-          }
-        } else if (context.removed) {
-          groupDiff += ANSI.color(removedSign, removedSignColor);
-          indent = indent.slice(1);
-        }
-      }
-      if (groupDiff) {
-        if (node.isComposite) {
-          if (!node.isClassPrototype) {
-            groupDiff = `\n${groupDiff}`;
-          }
-          groupDiff += indent;
-        }
-      }
-      if (groupDiff.length > 0 || forceDelimitersWhenEmpty) {
-        let groupDiff2 = "";
-        const delimitersColor = pickDelimitersColor(comparison, selfContext);
-        groupDiff2 += ANSI.color(openDelimiter, delimitersColor);
-        groupDiff2 += groupDiff;
-        groupDiff2 += ANSI.color(closeDelimiter, delimitersColor);
-        return groupDiff2;
-      }
-      return groupDiff;
-    };
-
     let labelDiff = "";
     if (displaySubtype) {
       labelDiff = writeLabelDiff(comparison, selfContext);
@@ -3872,6 +3620,9 @@ let writeDiff;
         const internalEntryComparisons =
           createInternalEntryComparisonIterable(node);
         const internalEntriesDiff = writeNestedValueGroupDiff({
+          comparison,
+          context: selfContext,
+          parentContext: context,
           nestedValueName: "entry",
           nestedValueNamePlural: "entries",
           openDelimiter: "{",
@@ -3886,6 +3637,9 @@ let writeDiff;
         const indexedEntryComparisons =
           createIndexedEntryComparisonIterable(node);
         const indexedValuesDiff = writeNestedValueGroupDiff({
+          comparison,
+          context: selfContext,
+          parentContext: context,
           ...(node.isBuffer
             ? {
                 nestedValueName: "byte",
@@ -3922,6 +3676,9 @@ let writeDiff;
           forceDelimitersWhenEmpty = false;
         }
         let propsDiff = writeNestedValueGroupDiff({
+          comparison,
+          context: selfContext,
+          parentContext: context,
           nestedValueName: "prop",
           nestedValueNamePlural: "props",
           openDelimiter: node.isClassPrototype ? "" : "{",
@@ -4587,6 +4344,262 @@ let writeDiff;
       return diffLines.join(separator);
     }
   };
+  const writeNestedValueGroupDiff = ({
+    comparison,
+    context,
+    parentContext,
+    nestedValueName,
+    nestedValueNamePlural,
+    openDelimiter,
+    closeDelimiter,
+    forceDelimitersWhenEmpty,
+    resetModified,
+    nestedComparisons,
+  }) => {
+    const node = comparison[context.resultType];
+    const relativeDepth = node.depth + context.initialDepth;
+    let indent = "  ".repeat(relativeDepth);
+    let diffCount = 0;
+    let canResetTextIndent = !node.isClassPrototype;
+    const writeNestedValueDiff = (nestedComparison, { resetModified }) => {
+      const nestedContext = {
+        ...context,
+        modified: resetModified ? false : context.modified,
+      };
+      if (canResetTextIndent) {
+        nestedContext.textIndent = 0;
+        canResetTextIndent = false;
+      }
+      let nestedValueDiff = writeDiff(nestedComparison, nestedContext);
+      if (
+        nestedValueDiff &&
+        nestedComparison !== context.startComparison &&
+        !nestedComparison[context.resultType].isClassPrototype
+      ) {
+        nestedValueDiff += `\n`;
+        canResetTextIndent = true;
+      }
+      return nestedValueDiff;
+    };
+
+    let groupDiff = "";
+    const entryBeforeDiffArray = [];
+    let skippedArray = [];
+    const maxDiff =
+      context.modified || context.added || context.removed
+        ? context.maxValueInsideDiff
+        : context.maxDiffPerObject;
+    for (const nestedComparison of nestedComparisons) {
+      if (nestedComparison.hidden) {
+        continue;
+      }
+      const nestedNode = nestedComparison[context.resultType];
+      if (nestedNode.displayedIn === "label") {
+        continue;
+      }
+      if (!nestedComparison.hasAnyDiff) {
+        entryBeforeDiffArray.push(nestedComparison);
+        continue;
+      }
+      diffCount++;
+      // too many diff
+      if (diffCount > maxDiff) {
+        skippedArray.push(nestedComparison);
+        continue;
+      }
+      // not enough space remaining
+      // first write nested value (prop, value) before the diff
+      const entryBeforeDiffCount = entryBeforeDiffArray.length;
+      if (entryBeforeDiffCount) {
+        let beforeDiff = "";
+        let from =
+          entryBeforeDiffCount === context.maxValueBeforeDiff
+            ? 0
+            : Math.max(
+                entryBeforeDiffCount - context.maxValueBeforeDiff + 1,
+                0,
+              );
+        let to = entryBeforeDiffCount;
+        let index = from;
+        while (index !== to) {
+          const entryBeforeDiff = entryBeforeDiffArray[index];
+          beforeDiff += writeNestedValueDiff(entryBeforeDiff, {
+            resetModified,
+          });
+          index++;
+        }
+        skippedArray = entryBeforeDiffArray.slice(0, from);
+        entryBeforeDiffArray.length = 0;
+
+        let skipped = skippedArray.length;
+        if (skipped) {
+          let aboveSummary = "";
+          aboveSummary += `${skipped} ${nestedValueNamePlural}`;
+          groupDiff += `${indent}  `;
+          const arrowSign = diffCount > 1 ? `↕` : `↑`;
+          groupDiff += ANSI.color(
+            `${arrowSign} ${aboveSummary} ${arrowSign}`,
+            pickColor(comparison, context),
+          );
+          groupDiff += "\n";
+        }
+        groupDiff += beforeDiff;
+        skippedArray.length = 0;
+      }
+      const nestedValueDiff = writeNestedValueDiff(nestedComparison, {
+        resetModified,
+      });
+      groupDiff += nestedValueDiff;
+    }
+
+    skippedArray.push(...entryBeforeDiffArray);
+    // now display the values after
+    const skippedCount = skippedArray.length;
+    if (skippedCount) {
+      const maxValueAfterDiff =
+        context.modified || context.added || context.removed
+          ? context.maxValueInsideDiff + 1
+          : context.maxValueAfterDiff;
+      let from = 0;
+      let to =
+        skippedCount === maxValueAfterDiff
+          ? skippedCount
+          : Math.min(maxValueAfterDiff - 1, skippedCount);
+      let index = from;
+      while (index !== to) {
+        const nextComparison = skippedArray[index];
+        if (nextComparison.hasAnyDiff) {
+          // do not display when they come from maxDiffPerObject
+          break;
+        }
+        index++;
+        groupDiff += writeNestedValueDiff(nextComparison, {
+          resetModified,
+        });
+      }
+      skippedArray = skippedArray.slice(index);
+    }
+    remaining_summary: {
+      if (skippedArray.length === 0) {
+        break remaining_summary;
+      }
+      const skippedCounters = {
+        total: 0,
+        removed: 0,
+        added: 0,
+        modified: 0,
+      };
+      if (context.added) {
+        skippedCounters.total = skippedCounters.added = skippedArray.length;
+      } else if (context.removed) {
+        skippedCounters.total = skippedCounters.removed = skippedArray.length;
+      } else if (context.modified) {
+        skippedCounters.total = skippedCounters.modified = skippedArray.length;
+      } else {
+        for (const skippedComparison of skippedArray) {
+          skippedCounters.total++;
+          if (skippedComparison.selfHasAddition) {
+            context.onComparisonDisplayed(skippedComparison, true);
+            skippedCounters.added++;
+            continue;
+          }
+          if (skippedComparison.selfHasRemoval) {
+            context.onComparisonDisplayed(skippedComparison, true);
+            skippedCounters.removed++;
+            continue;
+          }
+          if (context.modified || skippedComparison.hasAnyDiff) {
+            context.onComparisonDisplayed(skippedComparison, true);
+            skippedCounters.modified++;
+            continue;
+          }
+          continue;
+        }
+      }
+      let markersColor;
+      let summaryColor;
+      let summaryDetails = [];
+
+      if (skippedCounters.removed === skippedCounters.total) {
+        markersColor = summaryColor = removedColor;
+      } else if (skippedCounters.added === skippedCounters.total) {
+        markersColor = summaryColor = addedColor;
+      } else if (skippedCounters.modified === skippedCounters.total) {
+        markersColor = summaryColor = context.resultColor;
+      } else {
+        markersColor = pickColor(comparison, context);
+        summaryColor = markersColor;
+        if (skippedCounters.removed) {
+          summaryDetails.push(
+            ANSI.color(`${skippedCounters.removed} removed`, removedColor),
+          );
+        }
+        if (skippedCounters.added) {
+          summaryDetails.push(
+            ANSI.color(`${skippedCounters.added} added`, addedColor),
+          );
+        }
+        if (skippedCounters.modified) {
+          summaryDetails.push(
+            ANSI.color(
+              `${skippedCounters.modified} modified`,
+              context.resultColor,
+            ),
+          );
+        }
+      }
+      groupDiff += `${indent}  `;
+      groupDiff += ANSI.color(`↓`, markersColor);
+      groupDiff += " ";
+      groupDiff += ANSI.color(
+        skippedCounters.total === 1
+          ? `${skippedCounters.total} ${nestedValueName}`
+          : `${skippedCounters.total} ${nestedValueNamePlural}`,
+        summaryColor,
+      );
+      if (summaryDetails.length) {
+        groupDiff += ` `;
+        groupDiff += ANSI.color(`(`, markersColor);
+        groupDiff += summaryDetails.join(" ");
+        groupDiff += ANSI.color(`)`, markersColor);
+      }
+      groupDiff += " ";
+      groupDiff += ANSI.color(`↓`, markersColor);
+      groupDiff += "\n";
+    }
+    if (context.signs) {
+      if (context.resultType === "actualNode") {
+        if (parentContext.added) {
+          groupDiff += ANSI.color(addedSign, addedSignColor);
+          indent = indent.slice(1);
+        } else if (parentContext.modified) {
+          groupDiff += ANSI.color(unexpectSign, unexpectSignColor);
+          indent = indent.slice(1);
+        }
+      } else if (parentContext.removed) {
+        groupDiff += ANSI.color(removedSign, removedSignColor);
+        indent = indent.slice(1);
+      }
+    }
+    if (groupDiff) {
+      if (node.isComposite) {
+        if (!node.isClassPrototype) {
+          groupDiff = `\n${groupDiff}`;
+        }
+        groupDiff += indent;
+      }
+    }
+    if (groupDiff.length > 0 || forceDelimitersWhenEmpty) {
+      let groupDiff2 = "";
+      const delimitersColor = pickDelimitersColor(comparison, context);
+      groupDiff2 += ANSI.color(openDelimiter, delimitersColor);
+      groupDiff2 += groupDiff;
+      groupDiff2 += ANSI.color(closeDelimiter, delimitersColor);
+      return groupDiff2;
+    }
+    return groupDiff;
+  };
+
   const writeBreakableDiff = ({
     comparison,
     context,
