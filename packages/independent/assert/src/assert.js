@@ -4687,12 +4687,12 @@ let writeDiff;
     let hasEndOverflow =
       focusedChildIndex + nextChildAttempt < childNodes.length - 1 ||
       context.overflowRight;
-    const overflowColor = pickColor(comparison, context);
+    const overflowColor = pickColor(comparison, childContext);
     if (hasStartOverflow) {
       breakableDiff += ANSI.color(overflowStartMarker, overflowColor);
     }
     if (openDelimiter) {
-      const delimiterColor = pickDelimitersColor(comparison, context);
+      const delimiterColor = pickDelimitersColor(comparison, childContext);
       breakableDiff += ANSI.color(openDelimiter, delimiterColor);
     }
     if (startDelimiter) {
@@ -4703,7 +4703,7 @@ let writeDiff;
     breakableDiff += afterDiffArray.join("");
 
     if (closeDelimiter) {
-      const delimiterColor = pickDelimitersColor(comparison, context);
+      const delimiterColor = pickDelimitersColor(comparison, childContext);
       breakableDiff += ANSI.color(closeDelimiter, delimiterColor);
     }
     if (hasEndOverflow) {
@@ -4813,46 +4813,44 @@ let writeDiff;
   ];
 
   const writeUrlDiff = (comparison, context) => {
-    let urlDiff = "";
     const node = comparison[context.resultType];
-    const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
-      comparison.actualNode,
-      (node) => node.isStringForUrl,
-    );
-    const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
-      comparison.expectNode,
-      (node) => node.isStringForUrl,
-    );
-    const canResetModifiedOnUrlPart = Boolean(
-      actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
-    );
-    const urlPartContext = {
-      ...context,
-      modified: canResetModifiedOnUrlPart ? false : context.modified,
-    };
-
-    const writeUrlPart = (urlPartName) => {
+    const childNodes = [];
+    for (const urlPartName of [
+      "protocol",
+      "username",
+      "hostname",
+      "port",
+      "pathname",
+      "search",
+      "hash",
+    ]) {
       const urlPartNode = node.childNodes.internalEntryMap.get(urlPartName);
-      if (!urlPartNode) {
-        return "";
+      if (urlPartNode) {
+        childNodes.push(urlPartNode);
       }
-      const urlPartComparison = urlPartNode.comparison;
-      const urlPartValueComparison = urlPartComparison.childComparisons.value;
-      const urlPartDiff = writeDiff(urlPartValueComparison, urlPartContext);
-      return urlPartDiff;
-    };
-
-    const delimitersColor = pickDelimitersColor(comparison, urlPartContext);
-    urlDiff += ANSI.color(node.quote, delimitersColor);
-    urlDiff += writeUrlPart("protocol");
-    urlDiff += writeUrlPart("username");
-    urlDiff += writeUrlPart("hostname");
-    urlDiff += writeUrlPart("port");
-    urlDiff += writeUrlPart("pathname");
-    urlDiff += writeUrlPart("search");
-    urlDiff += writeUrlPart("hash");
-    urlDiff += ANSI.color(node.quote, delimitersColor);
-    return urlDiff;
+    }
+    return writeBreakableDiff({
+      comparison,
+      context,
+      childNodes,
+      openDelimiter: node.quote,
+      closeDelimiter: node.quote,
+      overflowStartMarker: "…",
+      overflowEndMarker: "…",
+      resetModified: (() => {
+        const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
+          comparison.actualNode,
+          (node) => node.isStringForUrl,
+        );
+        const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
+          comparison.expectNode,
+          (node) => node.isStringForUrl,
+        );
+        return Boolean(
+          actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
+        );
+      })(),
+    });
   };
   const writeDateDiff = (comparison, context) => {
     let dateDiff = "";

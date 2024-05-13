@@ -25,8 +25,8 @@ expect: URL("http://example.com:8000/")
 # long url diff at end
 AssertionError: actual and expect are different:
 
-actual: "http://example_that_is_quite_long.com/dir/file.txt"
-expect: "http://example_that_is_quite_long.com/dir/file.js"
+actual: …"/dir/file.txt"
+expect: …"/dir/file.js"
 
 # url and url string
 AssertionError: actual and expect are different:
