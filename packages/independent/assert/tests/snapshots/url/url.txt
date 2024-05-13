@@ -10,6 +10,12 @@ AssertionError: actual and expect have 1 difference:
 actual: URL("http://example.com/?foo=a")
 expect: URL("http://example.com/?foo=b")
 
+# url search param modified, middle of long params
+AssertionError: actual and expect are different:
+
+actual: …"&foo=a"
+expect: …"&foo=b"
+
 # url search param added
 AssertionError: actual and expect have 1 difference:
 
@@ -27,6 +33,12 @@ AssertionError: actual and expect have 1 difference:
 
 actual: URL("http://example.com/")
 expect: URL("http://example.com/?foo=a")
+
+# url search param removed 2
+AssertionError: actual and expect have 1 difference:
+
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=a&bar=b")
 
 # url hash modified
 AssertionError: actual and expect have 1 difference:

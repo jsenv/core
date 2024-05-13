@@ -392,6 +392,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
         const otherOwnerNode = ownerNode.comparison[missingNodeName];
         if (!otherOwnerNode) {
+          if (ownerNode.isStringForUrlSearchParams) {
+            onMissing("search");
+            break added_or_removed;
+          }
           onNestedDiff(nodePresent);
           break added_or_removed;
         }
@@ -1623,7 +1627,7 @@ let createValueNode;
       isMapEntry,
       isUrlEntry,
       isDateEntry,
-      isSearchParamEntry,
+      isUrlSearchParamEntry,
       isIndexedValue,
       isSetValue,
       isMapEntryKey,
@@ -1677,6 +1681,7 @@ let createValueNode;
         let isFloat = false;
         let isUrl = false;
         let isStringForUrl = false;
+        let isStringForUrlSearchParams = false;
         let isDate = false;
         let isStringForDate = false;
         let isRegExp = false;
@@ -1967,6 +1972,8 @@ let createValueNode;
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (isStringForRegExp) {
                   // no quote around string source
+                } else if (isUrlSearchParamEntry) {
+                  // no quote around url search param key/value
                 } else if (type === "entry_key") {
                   if (
                     (isSpecialProperty ||
@@ -1984,6 +1991,10 @@ let createValueNode;
                   // no quote around multiline
                 } else if (isUrlEntry) {
                   // no quote around url property
+                  if (entryKey === "search") {
+                    isStringForUrlSearchParams = true;
+                    canHaveInternalEntries = true;
+                  }
                 } else if (isDateEntry) {
                   // no quote around date property
                 } else {
@@ -2150,7 +2161,7 @@ let createValueNode;
           isMapEntry,
           isUrlEntry,
           isDateEntry,
-          isSearchParamEntry,
+          isUrlSearchParamEntry,
           isIndexedValue,
           isSetValue,
           isMapEntryKey,
@@ -2181,6 +2192,7 @@ let createValueNode;
           isInteger,
           isFloat,
           isStringForUrl,
+          isStringForUrlSearchParams,
           isDate,
           isStringForDate,
           isRegExp,
@@ -2595,11 +2607,26 @@ let createValueNode;
             } else if (urlInternalPropertyName === "port") {
               meta.valueStartSeparator = ":";
             } else if (urlInternalPropertyName === "search") {
-              meta.valueStartSeparator = "?";
             } else if (urlInternalPropertyName === "hash") {
-              meta.valueStartSeparator = "#";
             }
             associatedValueMetaMap.set(urlInternalPropertyName, meta);
+          }
+        }
+        // url "search"
+        else if (node.isStringForUrlSearchParams) {
+          const searchParams = new URLSearchParams(node.value.slice(1));
+          let isFirst = true;
+          for (const [key, value] of searchParams) {
+            associatedValueMetaMap.set(key, {
+              isInternalEntry: true,
+              isUrlSearchParamEntry: true,
+              value,
+              valueStartSeparator: isFirst ? "?" : "&",
+              valueSeparator: "=",
+            });
+            if (isFirst) {
+              isFirst = false;
+            }
           }
         }
         // date special properties
@@ -2694,7 +2721,7 @@ let createValueNode;
             isMapEntry,
             isUrlEntry,
             isDateEntry,
-            isSearchParamEntry,
+            isUrlSearchParamEntry,
             value,
             propertyDescriptor,
             valueSeparator,
@@ -2767,7 +2794,7 @@ let createValueNode;
             isMapEntry,
             isUrlEntry,
             isDateEntry,
-            isSearchParamEntry,
+            isUrlSearchParamEntry,
             isPrototype: isPropertyEntry && entryKey === "prototype",
             isClassStaticProperty:
               isPropertyEntry && node.functionAnalysis.type === "class",
@@ -3014,10 +3041,10 @@ let createValueNode;
       return parseInt(value);
     }
     if (name === "search") {
-      return value.slice(1);
+      return value;
     }
     if (name === "hash") {
-      return value.slice(1);
+      return value;
     }
     return value;
   };
@@ -3166,7 +3193,11 @@ let writeDiff;
           }
         }
 
-        if (!node.isMapEntryKey) {
+        if (
+          !node.isMapEntryKey &&
+          !node.isUrlSearchParamEntry &&
+          !node.isStringForUrlSearchParams
+        ) {
           let indent = `  `.repeat(relativeDepth);
           if (selfContext.signs) {
             if (selfContext.removed) {
@@ -3219,18 +3250,25 @@ let writeDiff;
         valueSeparator &&
         comparison !== selfContext.startComparison
       ) {
+        const spacing = !node.isUrlSearchParamEntry;
         const valueSeparatorColor = pickColor(
           comparison,
           selfContext,
           (node) => node.valueSeparator,
         );
         if (valueSeparator === "=" || valueSeparator === "=>") {
-          diff += " ";
+          if (spacing) {
+            diff += " ";
+          }
           diff += ANSI.color(valueSeparator, valueSeparatorColor);
-          diff += " ";
+          if (spacing) {
+            diff += " ";
+          }
         } else {
           diff += ANSI.color(valueSeparator, valueSeparatorColor);
-          diff += " ";
+          if (spacing) {
+            diff += " ";
+          }
         }
       }
     }
@@ -4616,13 +4654,21 @@ let writeDiff;
     openDelimiter,
     closeDelimiter,
   }) => {
+    const node = comparison[context.resultType];
     const childContext = {
       ...context,
       modified: resetModified ? false : context.modified,
     };
+    // child can break
+    const inheritedMaxColumns = context.parentMaxColumns || context.maxColumns;
+    const allocatedWidth = inheritedMaxColumns - context.textIndent;
+    if (node.isStringForUrlSearchParams || node.isStringForUrl) {
+      childContext.maxColumns = Infinity;
+      childContext.parentMaxColumns = inheritedMaxColumns;
+    }
+    let remainingWidth = allocatedWidth;
     const beforeDiffArray = [];
     const afterDiffArray = [];
-    let remainingWidth = context.maxColumns - context.textIndent;
 
     let focusedChildNode = childNodes[focusedChildIndex];
     if (!focusedChildNode) {
@@ -4825,19 +4871,25 @@ let writeDiff;
   const writeUrlDiff = (comparison, context) => {
     const node = comparison[context.resultType];
     const childNodes = [];
-    for (const urlPartName of [
-      "protocol",
-      "username",
-      "hostname",
-      "port",
-      "pathname",
-      "search",
-      "hash",
-    ]) {
-      const urlPartNode = node.childNodes.internalEntryMap.get(urlPartName);
-      if (urlPartNode) {
-        childNodes.push(urlPartNode);
+    for (const [urlPartName, urlPartNode] of node.childNodes.internalEntryMap) {
+      if (
+        urlPartName === "href" ||
+        urlPartName === "host" ||
+        urlPartName === "origin" ||
+        urlPartName === "searchParams"
+      ) {
+        continue;
       }
+      if (urlPartName === "search") {
+        const searchParamsNode = urlPartNode.childNodes.value;
+        for (const [, searchParamValueNode] of searchParamsNode.childNodes
+          .internalEntryMap) {
+          childNodes.push(searchParamValueNode);
+        }
+        continue;
+      }
+
+      childNodes.push(urlPartNode);
     }
     const focusedUrlPartIndex = childNodes.findIndex((childNode) => {
       return childNode.comparison.hasAnyDiff;

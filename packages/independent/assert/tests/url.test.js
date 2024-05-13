@@ -16,6 +16,14 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com?foo=b"),
     });
   },
+  // TODO: test special chars in search param value
+  ["url search param modified, middle of long params"]: () => {
+    assert({
+      actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
+      expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
+      maxColumns: 30,
+    });
+  },
   ["url search param added"]: () => {
     assert({
       actual: new URL("http://example.com?foo=a"),
@@ -32,6 +40,12 @@ await startSnapshotTesting("url", {
     assert({
       actual: new URL("http://example.com"),
       expect: new URL("http://example.com?foo=a"),
+    });
+  },
+  ["url search param removed 2"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a"),
+      expect: new URL("http://example.com?foo=a&bar=b"),
     });
   },
   ["url hash modified"]: () => {

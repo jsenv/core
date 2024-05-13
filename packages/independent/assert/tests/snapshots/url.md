@@ -20,6 +20,18 @@ assert({
 
 ![img](<./url/url search param modified.svg>)
 
+# url search param modified, middle of long params
+
+```js
+assert({
+  actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
+  expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
+  maxColumns: 30,
+});
+```
+
+![img](<./url/url search param modified, middle of long params.svg>)
+
 # url search param added
 
 ```js
@@ -52,6 +64,17 @@ assert({
 ```
 
 ![img](<./url/url search param removed.svg>)
+
+# url search param removed 2
+
+```js
+assert({
+  actual: new URL("http://example.com?foo=a"),
+  expect: new URL("http://example.com?foo=a&bar=b"),
+});
+```
+
+![img](<./url/url search param removed 2.svg>)
 
 # url hash modified
 
