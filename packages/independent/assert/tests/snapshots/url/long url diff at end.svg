@@ -62,7 +62,7 @@
         <text x="169.63" y="52.55" fill="#7f7f7f">.</text>
         <text x="178.03" y="52.55" fill="#cd5555">t</text>
         <text x="186.43" y="52.55" fill="#cd5555">x</text>
-        <text x="194.83" y="52.55" fill="#DAA520">t</text>
+        <text x="194.83" y="52.55" fill="#cd5555">t</text>
         <text x="203.23" y="52.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
@@ -78,9 +78,10 @@
         <text x="152.82" y="71.55" fill="#7f7f7f">l</text>
         <text x="161.22" y="71.55" fill="#7f7f7f">e</text>
         <text x="169.63" y="71.55" fill="#7f7f7f">.</text>
-        <text x="178.03" y="71.55" fill="#11bc79">j</text>
+        <text x="178.03" y="71.55" fill="#11bc79">c</text>
         <text x="186.43" y="71.55" fill="#11bc79">s</text>
-        <text x="194.83" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="194.83" y="71.55" fill="#11bc79">s</text>
+        <text x="203.23" y="71.55" fill="#7f7f7f">&#x22;</text>
       </g>
     </svg>
   </foreignObject>

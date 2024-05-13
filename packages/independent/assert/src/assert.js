@@ -4162,7 +4162,7 @@ let writeDiff;
       quotes: stringNode.useQuotes ? stringNode.quote : null,
       useLineNumbersOnTheLeft: stringNode.useLineNumbersOnTheLeft,
       biggestLineIndex: undefined,
-      focusedChildIndex: undefined,
+      focusedCharIndex: undefined,
     };
 
     single_line: {
@@ -4170,7 +4170,7 @@ let writeDiff;
         break single_line;
       }
       const firstLineComparison = lineComparisons[0];
-      stringContext.focusedChildIndex = getFocusedCharIndex(
+      stringContext.focusedCharIndex = getFocusedCharIndex(
         firstLineComparison,
         stringContext,
       );
@@ -4184,7 +4184,7 @@ let writeDiff;
         focusedLineIndex = lineNodes.length - 1;
       }
       const focusedLineComparison = lineComparisons[focusedLineIndex];
-      stringContext.focusedChildIndex = getFocusedCharIndex(
+      stringContext.focusedCharIndex = getFocusedCharIndex(
         focusedLineComparison,
         context,
       );
@@ -4604,6 +4604,7 @@ let writeDiff;
     comparison,
     context,
     childNodes,
+    focusedChildIndex,
     resetModified,
     overflowStartMarker,
     overflowEndMarker,
@@ -4615,7 +4616,6 @@ let writeDiff;
       ...context,
       modified: resetModified ? false : context.modified,
     };
-    let { focusedChildIndex } = context;
     const beforeDiffArray = [];
     const afterDiffArray = [];
     let remainingWidth = context.maxColumns - context.textIndent;
@@ -4717,6 +4717,7 @@ let writeDiff;
       comparison,
       context,
       childNodes: comparison[context.resultType].childNodes.chars,
+      focusedChildIndex: context.focusedCharIndex,
       resetModified: (() => {
         const actualNode = comparison.actualNode;
         const expectNode = comparison.expectNode;
@@ -4833,6 +4834,9 @@ let writeDiff;
       comparison,
       context,
       childNodes,
+      focusedChildIndex: childNodes.findIndex((childNode) => {
+        return childNode.comparison.hasAnyDiff;
+      }),
       openDelimiter: node.quote,
       closeDelimiter: node.quote,
       overflowStartMarker: "…",

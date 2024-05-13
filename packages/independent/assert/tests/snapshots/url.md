@@ -47,12 +47,48 @@ assert({
 ```js
 assert({
   actual: "http://example_that_is_quite_long.com/dir/file.txt",
-  expect: "http://example_that_is_quite_long.com/dir/file.js",
+  expect: "http://example_that_is_quite_long.com/dir/file.css",
   maxColumns: 40,
 });
 ```
 
 ![img](<./url/long url diff at end.svg>)
+
+# long url diff at start
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "file://example_that_is_quite_long.com/dir/file.txt",
+  maxColumns: 40,
+});
+```
+
+![img](<./url/long url diff at start.svg>)
+
+# long url diff in the middle
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "http://example_that_AA_quite_long.com/dir/file.txt",
+  maxColumns: 40,
+});
+```
+
+![img](<./url/long url diff in the middle.svg>)
+
+# long url diff start middle end
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "file://example_that_AA_quite_long.com/dir/file.css",
+  maxColumns: 40,
+});
+```
+
+![img](<./url/long url diff start middle end.svg>)
 
 # url and url string
 
