@@ -28,6 +28,15 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com:8000"),
     });
   },
+  ["long url diff at end"]: () => {
+    assert({
+      actual: "http://example_that_is_quite_long.com/dir/file.txt",
+      expect: "http://example_that_is_quite_long.com/dir/file.js",
+      maxColumns: 40,
+    });
+  },
+  // TODO: long url diff at start
+  // long url diff in middle
   ["url and url string"]: () => {
     assert({
       actual: new URL("http://example.com"),

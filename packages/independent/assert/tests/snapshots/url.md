@@ -42,6 +42,18 @@ assert({
 
 ![img](<./url/url string and url.svg>)
 
+# long url diff at end
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "http://example_that_is_quite_long.com/dir/file.js",
+  maxColumns: 40,
+});
+```
+
+![img](<./url/long url diff at end.svg>)
+
 # url and url string
 
 ```js
