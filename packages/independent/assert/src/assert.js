@@ -4672,6 +4672,11 @@ let writeDiff;
         nextWidth += overflowEndWidth;
       }
       if (nextWidth >= remainingWidth) {
+        if (hasPreviousChild) {
+          previousChildAttempt--;
+        } else {
+          nextChildAttempt--;
+        }
         break;
       }
       if (childIndex < focusedChildIndex) {
@@ -4830,30 +4835,32 @@ let writeDiff;
         childNodes.push(urlPartNode);
       }
     }
+    const focusedUrlPartIndex = childNodes.findIndex((childNode) => {
+      return childNode.comparison.hasAnyDiff;
+    });
+    const resetModified = (() => {
+      const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
+        comparison.actualNode,
+        (node) => node.isStringForUrl,
+      );
+      const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
+        comparison.expectNode,
+        (node) => node.isStringForUrl,
+      );
+      return Boolean(
+        actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
+      );
+    })();
     return writeBreakableDiff({
       comparison,
       context,
       childNodes,
-      focusedChildIndex: childNodes.findIndex((childNode) => {
-        return childNode.comparison.hasAnyDiff;
-      }),
+      focusedChildIndex: focusedUrlPartIndex,
       openDelimiter: node.quote,
       closeDelimiter: node.quote,
       overflowStartMarker: "…",
       overflowEndMarker: "…",
-      resetModified: (() => {
-        const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
-          comparison.actualNode,
-          (node) => node.isStringForUrl,
-        );
-        const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
-          comparison.expectNode,
-          (node) => node.isStringForUrl,
-        );
-        return Boolean(
-          actualNodeWhoCanHaveUrlPars && expectNodeWhoCanHaveUrlParts,
-        );
-      })(),
+      resetModified,
     });
   };
   const writeDateDiff = (comparison, context) => {
