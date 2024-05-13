@@ -10,6 +10,12 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com:8000"),
     });
   },
+  ["url search param added"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a&bar=b"),
+      expect: new URL("http://example.com?foo=a"),
+    });
+  },
   ["url hash modified"]: () => {
     assert({
       actual: new URL("http://example.com#foo"),
