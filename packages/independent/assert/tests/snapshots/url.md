@@ -32,6 +32,40 @@ assert({
 
 ![img](<./url/url search param modified, middle of long params.svg>)
 
+# url search param + vs space
+
+```js
+assert({
+  actual: {
+    a: `http://example.com?a=+&b=1`,
+    b: true,
+  },
+  expect: {
+    a: `http://example.com?a= &b=1`,
+    b: false,
+  },
+});
+```
+
+![img](<./url/url search param + vs space.svg>)
+
+# url search param quotes
+
+```js
+assert({
+  actual: {
+    a: `http://example.com?name="dam"`,
+    b: true,
+  },
+  expect: {
+    a: `http://example.com?name="seb"`,
+    b: false,
+  },
+});
+```
+
+![img](<./url/url search param quotes.svg>)
+
 # url search param added
 
 ```js

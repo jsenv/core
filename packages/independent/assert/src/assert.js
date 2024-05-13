@@ -1636,6 +1636,7 @@ let createValueNode;
       isUrlEntryValue,
       isDateEntryKey,
       isDateEntryValue,
+      isUrlSearchParamEntryValue,
       isPrototype,
       isClassStaticProperty,
       isClassPrototype,
@@ -2170,6 +2171,7 @@ let createValueNode;
           isUrlEntryValue,
           isDateEntryKey,
           isDateEntryValue,
+          isUrlSearchParamEntryValue,
           isPrototype,
           isClassStaticProperty,
           isClassPrototype,
@@ -2614,13 +2616,16 @@ let createValueNode;
         }
         // url "search"
         else if (node.isStringForUrlSearchParams) {
-          const searchParams = new URLSearchParams(node.value.slice(1));
+          // we don't use new URLSearchParams to preserve plus signs, see
+          // see https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#preserving_plus_signs
+          const params = node.value.slice(1).split("&");
           let isFirst = true;
-          for (const [key, value] of searchParams) {
+          for (const param of params) {
+            const [key, value] = param.split("=");
             associatedValueMetaMap.set(key, {
               isInternalEntry: true,
               isUrlSearchParamEntry: true,
-              value,
+              value: decodeURIComponent(value),
               valueStartSeparator: isFirst ? "?" : "&",
               valueSeparator: "=",
             });
@@ -2856,6 +2861,7 @@ let createValueNode;
               isMapEntryValue: isMapEntry,
               isUrlEntryValue: isUrlEntry,
               isDateEntryValue: isDateEntry,
+              isUrlSearchParamEntryValue: isUrlSearchParamEntry,
               valueSeparator,
               valueStartSeparator,
               valueEndSeparator,
