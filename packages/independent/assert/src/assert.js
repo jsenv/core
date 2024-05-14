@@ -387,17 +387,6 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           break added_or_removed;
         }
-        if (nodePresent.isOneOfUrlSearchParamValue) {
-          const nodeComparedWithSearchParam =
-            nodePresent.parent.parent.parent.comparison[missingNodeName];
-          if (
-            nodeComparedWithSearchParam &&
-            nodeComparedWithSearchParam.isUrlEntry &&
-            nodeComparedWithSearchParam.entryKey === "search"
-          ) {
-            onMissing(`${nodePresent.entryKey}${nodePresent.index}`);
-          }
-        }
         const ownerNode = getOwnerNode(nodePresent);
         if (!ownerNode) {
           break added_or_removed;
@@ -431,7 +420,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           canBeAddedOrRemoved &&
           pickSelfOrInternalNode(otherOwnerNode, canBeAddedOrRemoved)
         ) {
-          onMissing(nodePresent.entryKey);
+          onMissing(nodePresent.pathPart || nodePresent.entryKey);
         } else {
           onNestedDiff(nodePresent);
         }
@@ -1635,6 +1624,7 @@ let createValueNode;
     const _createValueNode = ({
       parent,
       path,
+      pathPart,
       type,
       value,
 
@@ -2188,6 +2178,7 @@ let createValueNode;
             throw new Error(`use ${name}.value`);
           },
           parts,
+          pathPart,
 
           entryKey,
           isInternalEntry,
@@ -2562,6 +2553,7 @@ let createValueNode;
                 isIndexedEntry: true,
                 isArrayEntry: true,
                 isOneOfUrlSearchParamValue: true,
+                pathPart: `${node.entryKey}${index}`,
                 index,
                 value: node.value[index],
                 valueStartSeparator:
@@ -2573,10 +2565,11 @@ let createValueNode;
                 isIndexedEntry: true,
                 isArrayEntry: true,
                 isOneOfUrlSearchParamValue: true,
+                pathPart: `${node.entryKey}${index}`,
                 index,
                 value: node.value[index],
               });
-            } else if (node.type === "entry_value" && node.isHeadersEntry) {
+            } else if (node.parent?.isHeadersEntry) {
               associatedValueMetaMap.set(String(index), {
                 isIndexedEntry: true,
                 isArrayEntry: true,
@@ -2946,9 +2939,11 @@ let createValueNode;
           if (isOneOfUrlSearchParamValue || isHeaderValue) {
             const entryNode = _createValueNode({
               parent: node,
-              path: path.append(entryKey),
+              path: path.append(pathPart || entryKey),
+              pathPart,
               type: "entry_value",
               index,
+              isIndexedEntry,
               entryKey: node.parent.entryKey,
               isOneOfUrlSearchParamValue,
               isHeaderValue,
@@ -3293,19 +3288,84 @@ let writeDiff;
     context.onComparisonDisplayed(comparison);
 
     let diff = "";
-    const selfContext = createSelfContext(comparison, context);
+    if (node.type === "entry") {
+      if (context.collapsed) {
+        return "";
+      }
+      const propertyDescriptorComparisons = comparison.childComparisons;
+      if (context.collapsedWithOverview) {
+        const propertyGetterComparison = propertyDescriptorComparisons.get;
+        const propertySetterComparison = propertyDescriptorComparisons.set;
+        const propertyGetterNode = propertyGetterComparison
+          ? propertyGetterComparison[context.resultType]
+          : null;
+        const propertySetterNode = propertySetterComparison
+          ? propertySetterComparison[context.resultType]
+          : null;
+        if (propertyGetterNode && propertySetterNode) {
+          diff += writeDiff(propertyGetterComparison, context);
+          return diff;
+        }
+        if (propertyGetterNode) {
+          diff += writeDiff(propertyGetterComparison, context);
+          return diff;
+        }
+        if (propertySetterNode) {
+          diff += writeDiff(propertySetterComparison, context);
+          return diff;
+        }
+        const propertyValueComparison = propertyDescriptorComparisons.value;
+        diff += writeDiff(propertyValueComparison, context);
+        return diff;
+      }
+      let propertyDiff = "";
+      for (const propertyDescriptorName of [
+        "value",
+        "get",
+        "set",
+        "enumerable",
+        "configurable",
+        "writable",
+      ]) {
+        const propertyDescriptorComparison =
+          propertyDescriptorComparisons[propertyDescriptorName];
+        if (propertyDescriptorComparison === null) {
+          continue;
+        }
+        const propertyDescriptorNode =
+          propertyDescriptorComparison[context.resultType];
+        if (!propertyDescriptorNode) {
+          continue;
+        }
+        let propertyDescriptorDiff = "";
 
+        propertyDescriptorDiff += writeDiff(
+          propertyDescriptorComparison,
+          context,
+        );
+        if (propertyDescriptorDiff.trim()) {
+          if (propertyDiff) {
+            propertyDiff += "\n";
+            context.textIndent = 0;
+          }
+          propertyDiff += propertyDescriptorDiff;
+        }
+      }
+      diff += propertyDiff;
+      return diff;
+    }
     if (node.type === "entry_value" && node.isUrlSearchEntry) {
       for (const [, childNode] of node.childNodes.indexedEntryMap) {
-        diff += writeDiff(childNode.comparison, selfContext);
+        diff += writeDiff(childNode.comparison, context);
       }
       return diff;
     }
     if (node.type === "entry_value" && node.isHeadersEntry) {
-      diff += writeHeaderValueDiff(comparison, selfContext);
+      diff += writeHeaderValueDiff(comparison, context);
       return diff;
     }
 
+    const selfContext = createSelfContext(comparison, context);
     const getDisplayedKey = (node) => {
       if (node.type === "entry_key") {
         return "";
@@ -3520,72 +3580,6 @@ let writeDiff;
     }
     let valueDiff = "";
     value: {
-      if (node.type === "entry") {
-        if (selfContext.collapsed) {
-          break value;
-        }
-        const propertyDescriptorComparisons = comparison.childComparisons;
-        if (selfContext.collapsedWithOverview) {
-          const propertyGetterComparison = propertyDescriptorComparisons.get;
-          const propertySetterComparison = propertyDescriptorComparisons.set;
-          const propertyGetterNode = propertyGetterComparison
-            ? propertyGetterComparison[selfContext.resultType]
-            : null;
-          const propertySetterNode = propertySetterComparison
-            ? propertySetterComparison[selfContext.resultType]
-            : null;
-          if (propertyGetterNode && propertySetterNode) {
-            valueDiff += writeDiff(propertyGetterComparison, selfContext);
-            break value;
-          }
-          if (propertyGetterNode) {
-            valueDiff += writeDiff(propertyGetterComparison, selfContext);
-            break value;
-          }
-          if (propertySetterNode) {
-            valueDiff += writeDiff(propertySetterComparison, selfContext);
-            break value;
-          }
-          const propertyValueComparison = propertyDescriptorComparisons.value;
-          valueDiff += writeDiff(propertyValueComparison, selfContext);
-          break value;
-        }
-        let propertyDiff = "";
-        for (const propertyDescriptorName of [
-          "value",
-          "get",
-          "set",
-          "enumerable",
-          "configurable",
-          "writable",
-        ]) {
-          const propertyDescriptorComparison =
-            propertyDescriptorComparisons[propertyDescriptorName];
-          if (propertyDescriptorComparison === null) {
-            continue;
-          }
-          const propertyDescriptorNode =
-            propertyDescriptorComparison[context.resultType];
-          if (!propertyDescriptorNode) {
-            continue;
-          }
-          let propertyDescriptorDiff = "";
-
-          propertyDescriptorDiff += writeDiff(
-            propertyDescriptorComparison,
-            selfContext,
-          );
-          if (propertyDescriptorDiff.trim()) {
-            if (propertyDiff) {
-              propertyDiff += "\n";
-              selfContext.textIndent = 0;
-            }
-            propertyDiff += propertyDescriptorDiff;
-          }
-        }
-        valueDiff += propertyDiff;
-        break value;
-      }
       if (node.type === "entry_key") {
         if (node.isClassStaticProperty) {
           const staticColor = pickColor(
@@ -5716,6 +5710,12 @@ const getOwnerNode = (node) => {
   }
   if (node.isSetValue) {
     return node.parent;
+  }
+  if (node.isHeaderValue) {
+    return node.parent;
+  }
+  if (node.isOneOfUrlSearchParamValue) {
+    return node.parent.parent.parent;
   }
   if (node.type === "entry_value") {
     return node.parent.parent;
