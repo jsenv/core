@@ -2492,6 +2492,7 @@ let createValueNode;
                 node.value,
                 index,
               ),
+              valueEndSeparator: ",",
             });
             index++;
           }
@@ -2505,14 +2506,21 @@ let createValueNode;
                 isIndexedEntry: true,
                 isSetEntry: true,
                 value: node.value[index],
+                valueEndSeparator: ",",
               });
             } else {
+              const isOneOfUrlSearchParamValue =
+                node.parent &&
+                node.parent.isUrlSearchParamEntryValue &&
+                node.parent.isArray;
               associatedValueMetaMap.set(String(index), {
                 isIndexedEntry: true,
                 isArrayEntry: true,
                 propertyDescriptor: Object.hasOwn(node.value, index)
                   ? Object.getOwnPropertyDescriptor(node.value, index)
                   : createFacadePropertyDescriptor(ARRAY_EMPTY_VALUE),
+                valueSeparator: isOneOfUrlSearchParamValue ? "=" : "",
+                valueEndSeparator: isOneOfUrlSearchParamValue ? "" : ",",
               });
             }
             index++;
@@ -2526,9 +2534,24 @@ let createValueNode;
               node.value,
               propertySymbol,
             );
+            let isClassStaticProperty = false;
+            let valueSeparator = "";
+            let valueEndSeparator = "";
+            if (node.functionAnalysis.type === "class") {
+              isClassStaticProperty = true;
+              valueSeparator = "=";
+              valueEndSeparator = ";";
+            } else {
+              valueSeparator = ":";
+              valueEndSeparator = ",";
+            }
+
             associatedValueMetaMap.set(propertySymbol, {
               isPropertyEntry: true,
               propertyDescriptor,
+              isClassStaticProperty,
+              valueSeparator,
+              valueEndSeparator,
             });
           }
         }
@@ -2543,9 +2566,55 @@ let createValueNode;
               node.value,
               propertyName,
             );
+            let displayedIn;
+            let isPrototype = false;
+            let isClassPrototype = false;
+            let isClassStaticProperty = false;
+            let valueSeparator = "";
+            let valueEndSeparator = "";
+
+            if (node.isClassPrototype) {
+              valueSeparator = "=";
+              valueEndSeparator = "";
+            } else if (node.functionAnalysis.type === "class") {
+              isClassStaticProperty = true;
+              valueSeparator = "=";
+              valueEndSeparator = ";";
+            } else {
+              valueSeparator = ":";
+              valueEndSeparator = ",";
+            }
+            if (propertyName === "name") {
+              if (
+                node.functionAnalysis.type === "classic" ||
+                node.functionAnalysis.type === "class"
+              ) {
+                // function name or class name will be displayed in the "subtypeDiff"
+                displayedIn = "label";
+                valueSeparator = valueEndSeparator = "";
+              }
+            } else if (propertyName === "message") {
+              if (node.isError) {
+                displayedIn = "label";
+                valueSeparator = valueEndSeparator = "";
+              }
+            } else if (propertyName === "prototype") {
+              isPrototype = true;
+              if (isClassStaticProperty) {
+                isClassPrototype = true;
+                valueSeparator = valueEndSeparator = "";
+              }
+            }
+
             associatedValueMetaMap.set(propertyName, {
               isPropertyEntry: true,
               propertyDescriptor,
+              isPrototype,
+              isClassStaticProperty,
+              isClassPrototype,
+              valueSeparator,
+              valueEndSeparator,
+              displayedIn,
             });
           }
         }
@@ -2621,11 +2690,21 @@ let createValueNode;
           const params = node.value.slice(1).split("&");
           let isFirst = true;
           for (const param of params) {
-            const [key, value] = param.split("=");
+            let [key, value] = param.split("=");
+            value = decodeURIComponent(value);
+            const existingAssociation = associatedValueMetaMap.get(key);
+            if (existingAssociation) {
+              const prevValue = existingAssociation.value;
+              if (Array.isArray(prevValue)) {
+                value = [...prevValue, value];
+              } else {
+                value = [prevValue, value];
+              }
+            }
             associatedValueMetaMap.set(key, {
               isInternalEntry: true,
               isUrlSearchParamEntry: true,
-              value: decodeURIComponent(value),
+              value,
               valueStartSeparator: isFirst ? "?" : "&",
               valueSeparator: "=",
             });
@@ -2727,11 +2806,15 @@ let createValueNode;
             isUrlEntry,
             isDateEntry,
             isUrlSearchParamEntry,
+            isPrototype,
+            isClassStaticProperty,
+            isClassPrototype,
             value,
             propertyDescriptor,
             valueSeparator,
             valueStartSeparator,
             valueEndSeparator,
+            displayedIn,
             shouldHide,
             shouldHideWhenSame,
           },
@@ -2754,21 +2837,6 @@ let createValueNode;
               shouldIgnorePropertyEntry(node, entryKey, { propertyDescriptor }))
           ) {
             continue;
-          }
-          let displayedIn;
-          if (entryKey === "name") {
-            if (
-              node.functionAnalysis.type === "classic" ||
-              node.functionAnalysis.type === "class"
-            ) {
-              // function name or class name will be displayed in the "subtypeDiff"
-              displayedIn = "label";
-            }
-          }
-          if (entryKey === "message") {
-            if (node.isError) {
-              displayedIn = "label";
-            }
           }
           let entryShouldHideWhenSame =
             shouldHideWhenSame || node.shouldHideWhenSame === "deep";
@@ -2800,13 +2868,9 @@ let createValueNode;
             isUrlEntry,
             isDateEntry,
             isUrlSearchParamEntry,
-            isPrototype: isPropertyEntry && entryKey === "prototype",
-            isClassStaticProperty:
-              isPropertyEntry && node.functionAnalysis.type === "class",
-            isClassPrototype:
-              isPropertyEntry &&
-              entryKey === "prototype" &&
-              node.functionAnalysis.type === "class",
+            isPrototype,
+            isClassStaticProperty,
+            isClassPrototype,
             displayedIn,
           };
           const entryNode = _createValueNode({
@@ -2915,28 +2979,12 @@ let createValueNode;
                 isIndexedValue,
                 shouldHideWhenSame: entryShouldHideWhenSame || !isPropertyValue,
                 valueSeparator:
-                  valueSeparator === undefined
-                    ? entryNode.isClassStaticProperty
-                      ? "="
-                      : propertyDescriptorName === "get" ||
-                          propertyDescriptorName === "set"
-                        ? ""
-                        : entryNode.isIndexedEntry &&
-                            propertyDescriptorName === "value"
-                          ? ""
-                          : ":"
+                  propertyDescriptorName === "get" ||
+                  propertyDescriptorName === "set"
+                    ? ""
                     : valueSeparator,
                 valueStartSeparator,
-                valueEndSeparator:
-                  valueEndSeparator === undefined
-                    ? entryNode.displayedIn === "label"
-                      ? ""
-                      : entryNode.isClassPrototype || node.isClassPrototype
-                        ? ""
-                        : entryNode.isClassStaticProperty
-                          ? ";"
-                          : ","
-                    : valueEndSeparator,
+                valueEndSeparator,
               });
               entryNode.childNodes[propertyDescriptorName] =
                 propertyDescriptorNode;
@@ -3106,7 +3154,21 @@ let writeDiff;
     }
     context.onComparisonDisplayed(comparison);
 
+    let diff = "";
     const selfContext = createSelfContext(comparison, context);
+
+    const isUrlSearchParamOneOfMultipleValue =
+      node.parent &&
+      node.parent.isUrlSearchParamEntryValue &&
+      node.parent.isArray;
+
+    if (node.isUrlSearchParamEntryValue && node.isArray) {
+      for (const [, childNode] of node.childNodes.indexedEntryMap) {
+        diff += writeDiff(childNode.comparison, selfContext);
+      }
+      return diff;
+    }
+
     const getDisplayedKey = (node) => {
       if (node.type === "entry_key") {
         return "";
@@ -3150,7 +3212,6 @@ let writeDiff;
       return node.valueEndSeparator || "";
     };
 
-    let diff = "";
     let displayedKey = getDisplayedKey(node);
     let valueSeparator = node.valueSeparator;
     let valueStartSeparator = node.valueStartSeparator;
@@ -3159,7 +3220,8 @@ let writeDiff;
       : getNodeValueEndSeparator(node);
 
     let isValue = false;
-    if (node.type === "entry_key") {
+    if (isUrlSearchParamOneOfMultipleValue) {
+    } else if (node.type === "entry_key") {
       const maxColumns = selfContext.maxColumns;
       selfContext.maxColumns = Math.round(maxColumns * 0.5);
       if (node.isMapEntryKey) {

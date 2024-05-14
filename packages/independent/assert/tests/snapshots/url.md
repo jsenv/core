@@ -110,6 +110,17 @@ assert({
 
 ![img](<./url/url search param removed 2.svg>)
 
+# url search param multiple added
+
+```js
+assert({
+  actual: "http://example.com?foo=a&foo=b",
+  expect: "http://example.com?foo=a",
+});
+```
+
+![img](<./url/url search param multiple added.svg>)
+
 # url hash modified
 
 ```js
