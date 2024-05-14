@@ -1697,6 +1697,7 @@ let createValueNode;
         let isUrl = false;
         let isStringForUrl = false;
         let isStringForUrlSearchParams = false;
+        let isUrlSearchParams = false;
         let isDate = false;
         let isStringForDate = false;
         let isRegExp = false;
@@ -1862,6 +1863,9 @@ let createValueNode;
                   isObjectForNumber = true;
                 } else if (parentConstructor.name === "URL") {
                   isUrl = true;
+                } else if (parentConstructor.name === "URLSearchParams") {
+                  isUrlSearchParams = true;
+                  canHaveInternalEntries = true;
                 } else if (parentConstructor.name === "Date") {
                   isDate = true;
                 } else if (parentConstructor.name === "RegExp") {
@@ -1923,8 +1927,13 @@ let createValueNode;
             }
 
             if (canHaveIndexedValues) {
-              openDelimiter = "[";
-              closeDelimiter = "]";
+              if (parent?.parent?.isUrlSearchParams && value.length < 2) {
+                openDelimiter = "";
+                closeDelimiter = "";
+              } else {
+                openDelimiter = "[";
+                closeDelimiter = "]";
+              }
             } else {
               openDelimiter = "{";
               closeDelimiter = "}";
@@ -2235,6 +2244,7 @@ let createValueNode;
           isTypedArray,
           isSet,
           isUrl,
+          isUrlSearchParams,
           isError,
           isMap,
           isSymbol,
@@ -2536,6 +2546,14 @@ let createValueNode;
                   isFirstSearchParam && index === 0 ? "?" : "&",
                 valueSeparator: "=",
               });
+            } else if (node.parent && node.parent.isUrlSearchParams) {
+              associatedValueMetaMap.set(String(index), {
+                isIndexedEntry: true,
+                isArrayEntry: true,
+                isOneOfUrlSearchParamValue: true,
+                index,
+                value: node.value[index],
+              });
             } else {
               associatedValueMetaMap.set(String(index), {
                 isIndexedEntry: true,
@@ -2671,6 +2689,28 @@ let createValueNode;
             });
           }
         }
+        // url search params
+        else if (node.isUrlSearchParams) {
+          let index = 0;
+          for (const [urlSearchParamKey, urlSearchParamValue] of node.value) {
+            const meta = {
+              isInternalEntry: true,
+              valueSeparator: "=>",
+              valueEndSeparator: ",",
+            };
+            const existingAssociation =
+              associatedValueMetaMap.get(urlSearchParamKey);
+            if (existingAssociation) {
+              meta.index = existingAssociation.index;
+              meta.value = [...existingAssociation.value, urlSearchParamValue];
+            } else {
+              meta.index = index;
+              meta.value = [urlSearchParamValue];
+              index++;
+            }
+            associatedValueMetaMap.set(urlSearchParamKey, meta);
+          }
+        }
         // url special properties
         else if (node.isStringForUrl) {
           const urlParts = new URL(node.value);
@@ -2714,27 +2754,28 @@ let createValueNode;
           const params = node.value.slice(1).split("&");
           let index = 0;
           for (const param of params) {
-            let [key, value] = param.split("=");
-            value = decodeURIComponent(value);
+            let [urlSearchParamKey, urlSearchParamValue] = param.split("=");
+            urlSearchParamValue = decodeURIComponent(urlSearchParamValue);
             const meta = {
               isInternalEntry: true,
               isUrlSearchParamEntry: true,
-              value,
               valueStartSeparator: "?",
               valueSeparator: "=",
             };
-            const existingAssociation = associatedValueMetaMap.get(key);
+            const existingAssociation =
+              associatedValueMetaMap.get(urlSearchParamKey);
             if (existingAssociation) {
               meta.index = existingAssociation.index;
-              meta.value = [...existingAssociation.value, value];
+              meta.value = [...existingAssociation.value, urlSearchParamValue];
             } else {
               meta.index = index;
-              meta.value = [value];
+              meta.value = [urlSearchParamValue];
               index++;
             }
-            associatedValueMetaMap.set(key, meta);
+            associatedValueMetaMap.set(urlSearchParamKey, meta);
           }
         }
+
         // date special properties
         else if (node.isStringForDate) {
           const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
@@ -3805,8 +3846,8 @@ let writeDiff;
                   nestedValueName: "value",
                   nestedValueNamePlural: "values",
                 }),
-          openDelimiter: "[",
-          closeDelimiter: "]",
+          openDelimiter: node.openDelimiter,
+          closeDelimiter: node.closeDelimiter,
           forceDelimitersWhenEmpty: !node.isString && !node.isObjectForString,
           resetModified: canResetModifiedOnIndexedEntry,
           nestedComparisons: indexedEntryComparisons,
