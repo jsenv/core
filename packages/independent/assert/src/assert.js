@@ -2957,11 +2957,11 @@ let createValueNode;
               valueStartSeparator,
               valueEndSeparator,
             });
-            // if (isIndexedEntry) {
-            indexedEntryMap.set(entryKey, entryNode);
-            // } else {
-            // propertyEntryMap.set(entryKey, entryNode);
-            // }
+            if (isIndexedEntry) {
+              indexedEntryMap.set(entryKey, entryNode);
+            } else {
+              propertyEntryMap.set(entryKey, entryNode);
+            }
             continue;
           }
           if (
