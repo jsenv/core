@@ -64,11 +64,35 @@ AssertionError: actual and expect have 1 difference:
 actual: URL("http://example.com/?foo=a")
 expect: URL("http://example.com/?foo=a&bar=b")
 
-# url search param multiple added
+# multi search param 2nd value modified
 AssertionError: actual and expect are different:
 
-actual: "http://example.com/    "a",    "b","
+actual: "http://example.com/?foo=a&foo=b&foo=a"
+expect: "http://example.com/?foo=a&foo=a&foo=a"
+
+# adding multi search
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/?foo=a&foo=b"
 expect: "http://example.com/?foo=a"
+
+# multi search adding a 3rd param
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/?foo=a&foo=a&foo=a"
+expect: "http://example.com/?foo=a&foo=a"
+
+# multi search removing a 3rd param
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/?foo=a&foo=a"
+expect: "http://example.com/?foo=a&foo=a&foo=a"
+
+# removing multi search
+AssertionError: actual and expect are different:
+
+actual: "http://example.com/?foo=a"
+expect: "http://example.com/?foo=a&foo=b"
 
 # url hash modified
 AssertionError: actual and expect have 1 difference:

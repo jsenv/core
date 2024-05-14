@@ -386,6 +386,17 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           break added_or_removed;
         }
+        if (nodePresent.isOneOfUrlSearchParamValue) {
+          const nodeComparedWithSearchParam =
+            nodePresent.parent.parent.parent.comparison[missingNodeName];
+          if (
+            nodeComparedWithSearchParam &&
+            nodeComparedWithSearchParam.isUrlEntry &&
+            nodeComparedWithSearchParam.entryKey === "search"
+          ) {
+            onMissing(`${nodePresent.entryKey}${nodePresent.index}`);
+          }
+        }
         const ownerNode = getOwnerNode(nodePresent);
         if (!ownerNode) {
           break added_or_removed;
@@ -490,17 +501,19 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         comparison.childComparisons.key = keyComparison;
         compareInside(keyComparison);
       }
-      if (nodePresent.type === "entry" || nodePresent.isSetValue) {
+      if (
+        nodePresent.type === "entry" ||
+        nodePresent.isSetValue ||
+        nodePresent.isOneOfUrlSearchParamValue
+      ) {
         const getChildByName = (node, childName) => {
           if (!node) {
             return null;
           }
-          if (
-            node.isSetValue &&
+          const isDirectValue =
             childName === "value" &&
-            actualNode &&
-            expectNode
-          ) {
+            (node.isSetValue || node.isOneOfUrlSearchParamValue);
+          if (isDirectValue && actualNode && expectNode) {
             const otherNode = node === actualNode ? expectNode : actualNode;
             if (otherNode.type === "entry") {
               return node;
@@ -1626,8 +1639,10 @@ let createValueNode;
       isSetEntry,
       isMapEntry,
       isUrlEntry,
-      isDateEntry,
       isUrlSearchParamEntry,
+      isUrlSearchParamEntryKey,
+      isOneOfUrlSearchParamValue,
+      isDateEntry,
       isIndexedValue,
       isSetValue,
       isMapEntryKey,
@@ -1636,7 +1651,6 @@ let createValueNode;
       isUrlEntryValue,
       isDateEntryKey,
       isDateEntryValue,
-      isUrlSearchParamEntryValue,
       isPrototype,
       isClassStaticProperty,
       isClassPrototype,
@@ -1973,7 +1987,7 @@ let createValueNode;
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (isStringForRegExp) {
                   // no quote around string source
-                } else if (isUrlSearchParamEntry) {
+                } else if (isOneOfUrlSearchParamValue) {
                   // no quote around url search param key/value
                 } else if (type === "entry_key") {
                   if (
@@ -2161,17 +2175,18 @@ let createValueNode;
           isSetEntry,
           isMapEntry,
           isUrlEntry,
-          isDateEntry,
+          isDateEntryKey,
+          isDateEntryValue,
           isUrlSearchParamEntry,
+          isUrlSearchParamEntryKey,
+          isOneOfUrlSearchParamValue,
+          isDateEntry,
           isIndexedValue,
           isSetValue,
           isMapEntryKey,
           isMapEntryValue,
           isUrlEntryKey,
           isUrlEntryValue,
-          isDateEntryKey,
-          isDateEntryValue,
-          isUrlSearchParamEntryValue,
           isPrototype,
           isClassStaticProperty,
           isClassPrototype,
@@ -2488,6 +2503,7 @@ let createValueNode;
             associatedValueMetaMap.set(String(index), {
               isIndexedEntry: true,
               isTypedArrayEntry: true,
+              index,
               propertyDescriptor: Object.getOwnPropertyDescriptor(
                 node.value,
                 index,
@@ -2508,19 +2524,27 @@ let createValueNode;
                 value: node.value[index],
                 valueEndSeparator: ",",
               });
-            } else {
-              const isOneOfUrlSearchParamValue =
-                node.parent &&
-                node.parent.isUrlSearchParamEntryValue &&
-                node.parent.isArray;
+            } else if (node.parent && node.parent.isUrlSearchParamEntry) {
+              const isFirstSearchParam = node.index === 0;
               associatedValueMetaMap.set(String(index), {
                 isIndexedEntry: true,
                 isArrayEntry: true,
+                isOneOfUrlSearchParamValue: true,
+                index,
+                value: node.value[index],
+                valueStartSeparator:
+                  isFirstSearchParam && index === 0 ? "?" : "&",
+                valueSeparator: "=",
+              });
+            } else {
+              associatedValueMetaMap.set(String(index), {
+                isIndexedEntry: true,
+                isArrayEntry: true,
+                index,
                 propertyDescriptor: Object.hasOwn(node.value, index)
                   ? Object.getOwnPropertyDescriptor(node.value, index)
                   : createFacadePropertyDescriptor(ARRAY_EMPTY_VALUE),
-                valueSeparator: isOneOfUrlSearchParamValue ? "=" : "",
-                valueEndSeparator: isOneOfUrlSearchParamValue ? "" : ",",
+                valueEndSeparator: ",",
               });
             }
             index++;
@@ -2688,29 +2712,27 @@ let createValueNode;
           // we don't use new URLSearchParams to preserve plus signs, see
           // see https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#preserving_plus_signs
           const params = node.value.slice(1).split("&");
-          let isFirst = true;
+          let index = 0;
           for (const param of params) {
             let [key, value] = param.split("=");
             value = decodeURIComponent(value);
-            const existingAssociation = associatedValueMetaMap.get(key);
-            if (existingAssociation) {
-              const prevValue = existingAssociation.value;
-              if (Array.isArray(prevValue)) {
-                value = [...prevValue, value];
-              } else {
-                value = [prevValue, value];
-              }
-            }
-            associatedValueMetaMap.set(key, {
+            const meta = {
               isInternalEntry: true,
               isUrlSearchParamEntry: true,
               value,
-              valueStartSeparator: isFirst ? "?" : "&",
+              valueStartSeparator: "?",
               valueSeparator: "=",
-            });
-            if (isFirst) {
-              isFirst = false;
+            };
+            const existingAssociation = associatedValueMetaMap.get(key);
+            if (existingAssociation) {
+              meta.index = existingAssociation.index;
+              meta.value = [...existingAssociation.value, value];
+            } else {
+              meta.index = index;
+              meta.value = [value];
+              index++;
             }
+            associatedValueMetaMap.set(key, meta);
           }
         }
         // date special properties
@@ -2795,6 +2817,7 @@ let createValueNode;
           entryKey,
           {
             pathPart,
+            index,
             isIndexedEntry,
             isInternalEntry,
             isPropertyEntry,
@@ -2809,6 +2832,7 @@ let createValueNode;
             isPrototype,
             isClassStaticProperty,
             isClassPrototype,
+            isOneOfUrlSearchParamValue,
             value,
             propertyDescriptor,
             valueSeparator,
@@ -2826,9 +2850,25 @@ let createValueNode;
               type: "entry_value",
               value,
               isSetValue: true,
-              valueEndSeparator: ",",
+              valueEndSeparator,
             });
             indexedEntryMap.set(entryKey, setEntryNode);
+            continue;
+          }
+          if (isOneOfUrlSearchParamValue) {
+            const searchParamEntryNode = _createValueNode({
+              parent: node,
+              path: path.append(entryKey),
+              type: "entry_value",
+              index,
+              entryKey: node.parent.entryKey,
+              value,
+              isOneOfUrlSearchParamValue: true,
+              valueSeparator,
+              valueStartSeparator,
+              valueEndSeparator,
+            });
+            indexedEntryMap.set(entryKey, searchParamEntryNode);
             continue;
           }
           if (
@@ -2857,6 +2897,7 @@ let createValueNode;
 
           const entrySharedInfo = {
             entryKey,
+            index,
             isIndexedEntry,
             isInternalEntry,
             isPropertyEntry,
@@ -2871,6 +2912,7 @@ let createValueNode;
             isPrototype,
             isClassStaticProperty,
             isClassPrototype,
+            isOneOfUrlSearchParamValue,
             displayedIn,
           };
           const entryNode = _createValueNode({
@@ -2908,6 +2950,7 @@ let createValueNode;
               isMapEntryKey: isMapEntry,
               isUrlEntryKey: isUrlEntry,
               isDateEntryKey: isDateEntry,
+              isUrlSearchParamEntryKey: isUrlSearchParamEntry,
               shouldHideWhenSame: false,
               valueStartSeparator: typeof entryKey === "symbol" ? "[" : "",
               valueEndSeparator: typeof entryKey === "symbol" ? "]" : "",
@@ -2925,7 +2968,6 @@ let createValueNode;
               isMapEntryValue: isMapEntry,
               isUrlEntryValue: isUrlEntry,
               isDateEntryValue: isDateEntry,
-              isUrlSearchParamEntryValue: isUrlSearchParamEntry,
               valueSeparator,
               valueStartSeparator,
               valueEndSeparator,
@@ -3157,12 +3199,7 @@ let writeDiff;
     let diff = "";
     const selfContext = createSelfContext(comparison, context);
 
-    const isUrlSearchParamOneOfMultipleValue =
-      node.parent &&
-      node.parent.isUrlSearchParamEntryValue &&
-      node.parent.isArray;
-
-    if (node.isUrlSearchParamEntryValue && node.isArray) {
+    if (node.type === "entry_value" && node.isUrlSearchParamEntry) {
       for (const [, childNode] of node.childNodes.indexedEntryMap) {
         diff += writeDiff(childNode.comparison, selfContext);
       }
@@ -3220,8 +3257,7 @@ let writeDiff;
       : getNodeValueEndSeparator(node);
 
     let isValue = false;
-    if (isUrlSearchParamOneOfMultipleValue) {
-    } else if (node.type === "entry_key") {
+    if (node.type === "entry_key") {
       const maxColumns = selfContext.maxColumns;
       selfContext.maxColumns = Math.round(maxColumns * 0.5);
       if (node.isMapEntryKey) {
@@ -3263,7 +3299,7 @@ let writeDiff;
 
         if (
           !node.isMapEntryKey &&
-          !node.isUrlSearchParamEntry &&
+          !node.isOneOfUrlSearchParamValue &&
           !node.isStringForUrlSearchParams
         ) {
           let indent = `  `.repeat(relativeDepth);
@@ -3301,10 +3337,15 @@ let writeDiff;
           diff += ANSI.color(descriptorName, descriptorNameColor);
           diff += " ";
         }
-        const keyComparison =
-          node.type === "entry_value"
-            ? node.parent.childNodes.key.comparison
-            : node.childNodes.key.comparison;
+        let nodeHoldingKey;
+        if (node.isOneOfUrlSearchParamValue) {
+          nodeHoldingKey = node.parent.parent;
+        } else if (node.type === "entry_value") {
+          nodeHoldingKey = node.parent;
+        } else {
+          nodeHoldingKey = node;
+        }
+        const keyComparison = nodeHoldingKey.childNodes.key.comparison;
         const keyContext = {
           ...selfContext,
           modified: context.modified,
@@ -3318,7 +3359,7 @@ let writeDiff;
         valueSeparator &&
         comparison !== selfContext.startComparison
       ) {
-        const spacing = !node.isUrlSearchParamEntry;
+        const spacing = !node.isOneOfUrlSearchParamValue;
         const valueSeparatorColor = pickColor(
           comparison,
           selfContext,
@@ -5444,7 +5485,23 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
     return context.resultColorWhenSolo;
   }
   if (context.modified) {
-    const otherNode = comparison[context.otherResultType];
+    const node = comparison[context.resultType];
+    let otherNode = comparison[context.otherResultType];
+    if (!otherNode) {
+      if (node.isOneOfUrlSearchParamValue) {
+        // then the other node is:
+        // - not a url
+        // - a url without multi search param
+        const urlNode = node.parent.parent.parent;
+        const otherUrlNodeCandidate =
+          urlNode.comparison[context.otherResultType];
+        if (otherUrlNodeCandidate) {
+          otherNode = otherUrlNodeCandidate.childNodes.internalEntryMap.get(
+            node.entryKey,
+          )?.childNodes.value;
+        }
+      }
+    }
     if (!otherNode) {
       return preferSolorColor
         ? context.resultColorWhenSolo
@@ -5456,7 +5513,6 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
     if (!getter) {
       return sameColor;
     }
-    const node = comparison[context.resultType];
     const currentValue = getter(node, otherNode);
     const otherValue = getter(otherNode, node);
     if (

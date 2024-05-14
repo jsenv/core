@@ -110,7 +110,18 @@ assert({
 
 ![img](<./url/url search param removed 2.svg>)
 
-# url search param multiple added
+# multi search param 2nd value modified
+
+```js
+assert({
+  actual: "http://example.com?foo=a&foo=b&foo=a",
+  expect: "http://example.com?foo=a&foo=a&foo=a",
+});
+```
+
+![img](<./url/multi search param 2nd value modified.svg>)
+
+# adding multi search
 
 ```js
 assert({
@@ -119,7 +130,40 @@ assert({
 });
 ```
 
-![img](<./url/url search param multiple added.svg>)
+![img](<./url/adding multi search.svg>)
+
+# multi search adding a 3rd param
+
+```js
+assert({
+  actual: "http://example.com?foo=a&foo=a&foo=a",
+  expect: "http://example.com?foo=a&foo=a",
+});
+```
+
+![img](<./url/multi search adding a 3rd param.svg>)
+
+# multi search removing a 3rd param
+
+```js
+assert({
+  actual: "http://example.com?foo=a&foo=a",
+  expect: "http://example.com?foo=a&foo=a&foo=a",
+});
+```
+
+![img](<./url/multi search removing a 3rd param.svg>)
+
+# removing multi search
+
+```js
+assert({
+  actual: "http://example.com?foo=a",
+  expect: "http://example.com?foo=a&foo=b",
+});
+```
+
+![img](<./url/removing multi search.svg>)
 
 # url hash modified
 

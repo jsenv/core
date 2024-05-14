@@ -71,10 +71,34 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com?foo=a&bar=b"),
     });
   },
-  ["url search param multiple added"]: () => {
+  ["multi search param 2nd value modified"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=b&foo=a",
+      expect: "http://example.com?foo=a&foo=a&foo=a",
+    });
+  },
+  ["adding multi search"]: () => {
     assert({
       actual: "http://example.com?foo=a&foo=b",
       expect: "http://example.com?foo=a",
+    });
+  },
+  ["multi search adding a 3rd param"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=a&foo=a",
+      expect: "http://example.com?foo=a&foo=a",
+    });
+  },
+  ["multi search removing a 3rd param"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=a",
+      expect: "http://example.com?foo=a&foo=a&foo=a",
+    });
+  },
+  ["removing multi search"]: () => {
+    assert({
+      actual: "http://example.com?foo=a",
+      expect: "http://example.com?foo=a&foo=b",
     });
   },
   ["url hash modified"]: () => {
