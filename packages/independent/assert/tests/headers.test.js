@@ -5,14 +5,15 @@ import { createAssert } from "../src/assert.js";
 const assert = createAssert();
 
 await startSnapshotTesting("headers", {
-  // ["content-type added"]: () => {
-  //   assert({
-  //     actual: new Headers({
-  //       "content-type": "text/xml",
-  //     }),
-  //     expect: new Headers(),
-  //   });
-  // },
+  ["content-type added"]: () => {
+    assert({
+      colors: false,
+      actual: new Headers({
+        "content-type": "text/xml",
+      }),
+      expect: new Headers(),
+    });
+  },
   // ["content-type removed"]: () => {
   //   assert({
   //     actual: new Headers({}),
@@ -31,14 +32,14 @@ await startSnapshotTesting("headers", {
   //     }),
   //   });
   // },
-  ["content-type multi added"]: () => {
-    assert({
-      actual: new Headers({
-        "content-type": "text/xml, text/css",
-      }),
-      expect: new Headers({
-        "content-type": "text/xml",
-      }),
-    });
-  },
+  // ["content-type multi added"]: () => {
+  //   assert({
+  //     actual: new Headers({
+  //       "content-type": "text/xml, text/css",
+  //     }),
+  //     expect: new Headers({
+  //       "content-type": "text/xml",
+  //     }),
+  //   });
+  // },
 });

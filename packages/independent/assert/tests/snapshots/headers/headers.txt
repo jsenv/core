@@ -1,10 +1,8 @@
-# content-type multi added
+# content-type added
 AssertionError: actual and expect have 1 difference:
 
 actual: Headers {
-    "content-type" => "text/xml",    "content-type" => "text/css",
+  "content-type" => ["text/xml"],
 }
-expect: Headers {
-    "content-type" => "text/xml",
-}
+expect: Headers {}
 

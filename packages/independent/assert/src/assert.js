@@ -1628,20 +1628,20 @@ let createValueNode;
       type,
       value,
 
-      entryKey,
       isInternalEntry,
       isIndexedEntry,
-      index,
       isPropertyEntry,
-      descriptor,
-      isPropertyDescriptor,
-      isPropertyValue,
+
       isArrayEntry,
       isTypedArrayEntry,
       isStringEntry,
+      isPropertyDescriptor,
+      // isPropertyKey,
+      isPropertyValue,
       isSetEntry,
       isMapEntry,
       isHeadersEntry,
+      isHeaderKey,
       isHeaderValue,
       isUrlEntry,
       isUrlSearchEntry,
@@ -1656,11 +1656,16 @@ let createValueNode;
       isUrlEntryValue,
       isDateEntryKey,
       isDateEntryValue,
+
       isPrototype,
       isClassStaticProperty,
       isClassPrototype,
       isClassSourceCode,
       isSpecialProperty,
+
+      entryKey,
+      index,
+      descriptor,
 
       valueSeparator,
       valueStartSeparator,
@@ -2194,6 +2199,7 @@ let createValueNode;
           isSetEntry,
           isMapEntry,
           isHeadersEntry,
+          isHeaderKey,
           isHeaderValue,
           isUrlEntry,
           isDateEntryKey,
@@ -2906,6 +2912,7 @@ let createValueNode;
             isSetEntry,
             isMapEntry,
             isHeadersEntry,
+            isHeaderKey,
             isHeaderValue,
             isUrlEntry,
             isUrlSearchEntry,
@@ -2995,7 +3002,8 @@ let createValueNode;
             isStringEntry,
             isSetEntry,
             isMapEntry,
-            isHeadersEntry,
+            isHeaderKey,
+            isHeaderValue,
             isUrlEntry,
             isDateEntry,
             isUrlSearchEntry,
@@ -3003,7 +3011,6 @@ let createValueNode;
             isPrototype,
             isClassStaticProperty,
             isClassPrototype,
-            isHeaderValue,
             displayedIn,
           };
           const entryNode = _createValueNode({
@@ -3038,10 +3045,12 @@ let createValueNode;
               type: "entry_key",
               value: entryKey,
               ...entrySharedInfo,
+              isIndexedKey: isIndexedEntry,
               isMapEntryKey: isMapEntry,
               isUrlEntryKey: isUrlEntry,
               isDateEntryKey: isDateEntry,
               isUrlSearchEntryKey: isUrlSearchEntry,
+              isHeaderKey: isHeadersEntry,
               shouldHideWhenSame: false,
               valueStartSeparator: typeof entryKey === "symbol" ? "[" : "",
               valueEndSeparator: typeof entryKey === "symbol" ? "]" : "",
@@ -3360,10 +3369,6 @@ let writeDiff;
       }
       return diff;
     }
-    if (node.type === "entry_value" && node.isHeadersEntry) {
-      diff += writeHeaderValueDiff(comparison, context);
-      return diff;
-    }
 
     const selfContext = createSelfContext(comparison, context);
     const getDisplayedKey = (node) => {
@@ -3386,6 +3391,9 @@ let writeDiff;
         return "";
       }
       if (node.isDateEntry) {
+        return "";
+      }
+      if (node.isHeaderValue) {
         return "";
       }
       if (node.isSourceCode) {
@@ -3647,6 +3655,10 @@ let writeDiff;
       }
       if (node.isStringForDate) {
         valueDiff += writeDateDiff(comparison, selfContext);
+        break value;
+      }
+      if (node.isHeadersEntry) {
+        valueDiff += writeHeaderValueDiff(comparison, context);
         break value;
       }
       if (node.canHaveLines) {
