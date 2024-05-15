@@ -165,13 +165,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return;
       }
       if (comparison.type === "entry") {
-        // entry_value will do that
+        // value will do that
         return;
       }
-      if (comparison.type === "entry_key") {
+      if (comparison.type === "key") {
         return;
       }
-      if (comparison.type === "entry_value") {
+      if (comparison.type === "value" && comparison.parent) {
         const ownerComparison = comparison.parent.parent;
         if (!comparison.actualNode && !ownerComparison.actualNode) {
           return;
@@ -184,11 +184,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         return;
       }
       if (
-        comparison.type === "prototype" &&
         comparison.actualNode &&
-        comparison.actualNode.parent.isFunction &&
+        comparison.actualNode.parent?.isFunction &&
         comparison.expectNode &&
-        comparison.expectNode.parent.isFunction
+        comparison.expectNode.parent?.isFunction &&
+        comparison.actualNode.isPrototypeEntry
       ) {
         // when function prototype differ
         // the diff is already detected by isAsync/isGenerator
@@ -294,7 +294,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (!ownerNode) {
           return;
         }
-        if (node.type === "internal_value") {
+        if (node.isWrappedValueEntry) {
           if (ownerNode.isFunction) {
             return;
           }
@@ -302,7 +302,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             return;
           }
         }
-        if (node.type === "prototype") {
+        if (node.isPrototypeEntry) {
           // seulement si on affiche le proto
           // et on affiche le proto que si c'est Object le subtype
           if (node.subtype !== "Object" && node.subtype !== "Array") {
@@ -343,23 +343,23 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       added_or_removed: {
         if (actualNode && expectNode) {
           if (
-            actualNode.type === "internal_value" &&
-            expectNode.type !== "internal_value" &&
+            actualNode.isWrappedValueEntry &&
+            !expectNode.isWrappedValueEntry &&
             actualNode.parent.isSymbol
           ) {
             nodePresent = actualNode;
-            comparison["internal_value"] = true;
-            onAdded("internal_value");
+            comparison["wrapped_value"] = true;
+            onAdded("wrapped_value");
             break added_or_removed;
           }
           if (
-            actualNode.type !== "internal_value" &&
-            expectNode.type === "internal_value" &&
+            !actualNode.isWrappedValueEntry &&
+            expectNode.isWrappedValueEntry &&
             expectNode.parent.isSymbol
           ) {
             nodePresent = expectNode;
-            comparison["internal_value"] = true;
-            onRemoved("internal_value");
+            comparison["wrapped_value"] = true;
+            onRemoved("wrapped_value");
             break added_or_removed;
           }
           nodePresent = expectNode;
@@ -387,40 +387,42 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           }
           break added_or_removed;
         }
-        const ownerNode = getOwnerNode(nodePresent);
-        if (!ownerNode) {
+        let nodePresentEntry;
+        if (nodePresent.type === "key") {
+          nodePresentEntry = nodePresent.parent;
+        } else if (nodePresent.type === "value") {
+          nodePresentEntry = nodePresent.parent;
+        } else {
           break added_or_removed;
         }
-        const otherOwnerNode = ownerNode.comparison[missingNodeName];
+        const otherOwnerNode =
+          nodePresentEntry.parent.comparison[missingNodeName];
         if (!otherOwnerNode) {
-          if (ownerNode.isStringForUrlSearch) {
+          if (nodePresent.isStringForUrlSearch) {
             onMissing("search");
             break added_or_removed;
           }
           onNestedDiff(nodePresent);
           break added_or_removed;
         }
-        let canBeAddedOrRemoved;
-        if (nodePresent.isInternalEntry) {
-          canBeAddedOrRemoved = (node) => node.canHaveInternalEntries;
-        } else if (nodePresent.isIndexedEntry) {
-          canBeAddedOrRemoved = (node) => node.canHaveIndexedValues;
-        } else if (nodePresent.isPropertyEntry) {
-          canBeAddedOrRemoved = (node) => node.canHaveProps;
-        } else if (nodePresent.type === "line") {
-          canBeAddedOrRemoved = (node) => node.canHaveLines;
-        } else if (nodePresent.type === "char") {
-          canBeAddedOrRemoved = (node) => node.canHaveChars;
-        } else if (nodePresent.type === "prototype") {
-          canBeAddedOrRemoved = (node) => node.canHaveProps;
-        } else if (nodePresent.type === "internal_value") {
-          canBeAddedOrRemoved = (node) => node.childNodes.internalValue;
+        let canMiss;
+        if (nodePresentEntry.isPrototypeEntry) {
+          canMiss = (node) => node.canHaveProps;
+        } else if (nodePresentEntry.isWrappedValueEntry) {
+          canMiss = (node) => node.childNodes.wrappedValue;
+        } else if (nodePresentEntry.isInternalEntry) {
+          canMiss = (node) => node.canHaveInternalEntries;
+        } else if (nodePresentEntry.isIndexedEntry) {
+          canMiss = (node) => node.canHaveIndexedValues;
+        } else if (nodePresentEntry.isPropertyEntry) {
+          canMiss = (node) => node.canHaveProps;
+        } else if (nodePresentEntry.type === "line") {
+          canMiss = (node) => node.canHaveLines;
+        } else if (nodePresentEntry.type === "char") {
+          canMiss = (node) => node.canHaveChars;
         }
-        if (
-          canBeAddedOrRemoved &&
-          pickSelfOrInternalNode(otherOwnerNode, canBeAddedOrRemoved)
-        ) {
-          onMissing(nodePresent.pathPart || nodePresent.entryKey);
+        if (canMiss && pickSelfOrWrappedNode(otherOwnerNode, canMiss)) {
+          onMissing(nodePresent.pathPart || nodePresent.key);
         } else {
           onNestedDiff(nodePresent);
         }
@@ -443,7 +445,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         } else {
           if (
             insideComparison.nodePresent.isDateEntryValue &&
-            insideComparison.nodePresent.entryKey === "milliseconds"
+            insideComparison.nodePresent.key === "milliseconds"
           ) {
             if (insideActualNode) {
               const actualSecondsEntryNode =
@@ -567,7 +569,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       };
 
-      let ignoreInternalValueDiff = false;
+      let ignoreWrappedValueDiff = false;
       let ignoreCharsDiff =
         actualNode &&
         !actualNode.canHaveChars &&
@@ -659,12 +661,12 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           addSelfDiff("class_static");
         }
         if (
-          actualNode.type === "entry_key" &&
+          actualNode.type === "key" &&
           ((actualNode.isInternalEntry && !expectNode.isInternalEntry) ||
             (actualNode.isIndexedEntry && !expectNode.isIndexedEntry) ||
             (actualNode.isPropertyEntry && !expectNode.isPropertyEntry))
         ) {
-          addSelfDiff("entry_key_type");
+          addSelfDiff("key_type");
         }
 
         props_frozen_or_sealed_or_non_extensible: {
@@ -746,28 +748,27 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         }
       }
 
-      const actualInternalValueNode = actualNode
-        ? actualNode.childNodes.internalValue
+      const actualWrappedValueNode = actualNode
+        ? actualNode.childNodes.wrappedValue
         : null;
-      const expectInternalValueNode = expectNode
-        ? expectNode.childNodes.internalValue
+      const expectWrappedValueNode = expectNode
+        ? expectNode.childNodes.wrappedValue
         : null;
-      internal_value: {
-        if (ignoreInternalValueDiff) {
-          break internal_value;
+      wrapped_value: {
+        if (ignoreWrappedValueDiff) {
+          break wrapped_value;
         }
-        if (!actualInternalValueNode && !expectInternalValueNode) {
-          break internal_value;
+        if (!actualWrappedValueNode && !expectWrappedValueNode) {
+          break wrapped_value;
         }
-        let internalValueComparison;
-        const actualInternalOrSelfNode = actualInternalValueNode || actualNode;
-        const expectInternalOrSelfNode = expectInternalValueNode || expectNode;
-        internalValueComparison = createComparison(
-          actualInternalOrSelfNode,
-          expectInternalOrSelfNode,
+        const actualWrappedOrSelfNode = actualWrappedValueNode || actualNode;
+        const expectWrappedOrSelfNode = expectWrappedValueNode || expectNode;
+        const wrappedValueComparison = createComparison(
+          actualWrappedOrSelfNode,
+          expectWrappedOrSelfNode,
         );
-        comparison.childComparisons.internalValue = internalValueComparison;
-        compareInside(internalValueComparison);
+        comparison.childComparisons.wrappedValue = wrappedValueComparison;
+        compareInside(wrappedValueComparison);
       }
 
       inside: {
@@ -783,11 +784,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
               // but wrapper cannot
               break lines;
             }
-            const actualNodeWhoCanHaveLines = pickSelfOrInternalNode(
+            const actualNodeWhoCanHaveLines = pickSelfOrWrappedNode(
               actualNode,
               (node) => node.canHaveLines,
             );
-            const expectNodeWhoCanHaveLines = pickSelfOrInternalNode(
+            const expectNodeWhoCanHaveLines = pickSelfOrWrappedNode(
               expectNode,
               (node) => node.canHaveLines,
             );
@@ -827,11 +828,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             if (ignoreCharsDiff) {
               break chars;
             }
-            const actualNodeWhoCanHaveChars = pickSelfOrInternalNode(
+            const actualNodeWhoCanHaveChars = pickSelfOrWrappedNode(
               actualNode,
               (node) => node.canHaveChars,
             );
-            const expectNodeWhoCanHaveChars = pickSelfOrInternalNode(
+            const expectNodeWhoCanHaveChars = pickSelfOrWrappedNode(
               expectNode,
               (node) => node.canHaveChars,
             );
@@ -878,8 +879,8 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             // prevent to compare twice when internal can but wrapper cannot
             return [new Map(), new Map()];
           }
-          const actualWhoCan = pickSelfOrInternalNode(actualNode, canGetter);
-          const expectWhoCan = pickSelfOrInternalNode(expectNode, canGetter);
+          const actualWhoCan = pickSelfOrWrappedNode(actualNode, canGetter);
+          const expectWhoCan = pickSelfOrWrappedNode(expectNode, canGetter);
           return [
             actualWhoCan ? getter(actualWhoCan) : new Map(),
             expectWhoCan ? getter(expectWhoCan) : new Map(),
@@ -1080,24 +1081,24 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     };
     const createComparison = (actualNode, expectNode) => {
       let mainNode;
-      let fromInternalValue = false;
-      if (actualNode && actualNode.type === "internal_value") {
+      let fromWrappedValue = false;
+      if (actualNode && actualNode.isWrappedValueEntry) {
         mainNode = actualNode;
-        fromInternalValue = true;
-      } else if (expectNode && expectNode.type === "internal_value") {
+        fromWrappedValue = true;
+      } else if (expectNode && expectNode.isWrappedValueEntry) {
         mainNode = expectNode;
-        fromInternalValue = true;
+        fromWrappedValue = true;
       } else {
         mainNode = actualNode || expectNode;
       }
 
       const actualIsRegExpLastIndex =
         actualNode &&
-        actualNode.entryKey === "lastIndex" &&
+        actualNode.key === "lastIndex" &&
         actualNode.parent.isRegExp;
       const expectIsRegExpLastIndex =
         expectNode &&
-        expectNode.entryKey === "lastIndex" &&
+        expectNode.key === "lastIndex" &&
         expectNode.parent.isRegExp;
       if (actualIsRegExpLastIndex && !expectIsRegExpLastIndex) {
         actualNode.hidden = true;
@@ -1130,13 +1131,13 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         if (actualNode.isMultiline && !expectNode.isMultiline) {
           expectNode.isMultiline = true;
           expectNode.useQuotes = false;
-          if (!expectNode.isErrorMessageString) {
+          if (!expectNode.isErrorMessage) {
             expectNode.useLineNumbersOnTheLeft = true;
           }
         } else if (!actualNode.isMultiline && expectNode.isMultiline) {
           actualNode.isMultiline = true;
           actualNode.useQuotes = false;
-          if (!actualNode.isErrorMessageString) {
+          if (!actualNode.isErrorMessage) {
             actualNode.useLineNumbersOnTheLeft = true;
           }
         }
@@ -1199,7 +1200,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         hidden,
         childComparisons: {
           prototype: null,
-          internalValue: null,
+          wrappedValue: null,
           entryMap: new Map(),
           internalEntryMap: new Map(),
           key: null,
@@ -1214,11 +1215,11 @@ export const createAssert = ({ format = (v) => v } = {}) => {
         },
       };
 
-      if (fromInternalValue) {
-        if (actualNode && actualNode.type === "internal_value") {
+      if (fromWrappedValue) {
+        if (actualNode && actualNode.isWrappedValueEntry) {
           actualNode.comparison = comparison;
         }
-        if (expectNode && expectNode.type === "internal_value") {
+        if (expectNode && expectNode.isWrappedValueEntry) {
           expectNode.comparison = comparison;
         }
       } else {
@@ -1236,7 +1237,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
     const rootComparison = createComparison(actualNode, expectNode);
     compare(rootComparison);
     for (const causeComparison of causeSet) {
-      if (causeComparison.type === "entry_value") {
+      if (causeComparison.type === "value" && causeComparison.parent) {
         let current = causeComparison.parent.parent;
         while (current) {
           if (current.reasons.self.any.size) {
@@ -1275,8 +1276,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
       let startComparisonDepth = firstComparisonCausingDiff.depth - maxDepth;
       for (const comparison of comparisonsFromRootToTarget) {
         if (
-          (comparison.type === "entry_key" ||
-            comparison.type === "entry_value") &&
+          (comparison.type === "key" || comparison.type === "value") &&
           comparison.depth > startComparisonDepth
         ) {
           startComparison = comparison;
@@ -1438,159 +1438,6 @@ const shouldIgnorePrototype = (node) => {
   //   return true;
   // }
 };
-const shouldIgnorePropertyEntry = (
-  node,
-  propertyNameOrSymbol,
-  { propertyDescriptor },
-) => {
-  if (propertyNameOrSymbol === "prototype") {
-    if (!node.isFunction) {
-      return false;
-    }
-    // ignore prototype if it's the default prototype
-    // created by the runtime
-    if (!Object.hasOwn(propertyDescriptor, "value")) {
-      return false;
-    }
-    const prototypeValue = propertyDescriptor.value;
-    if (node.functionAnalysis.type === "arrow") {
-      return prototypeValue === undefined;
-    }
-    if (node.functionAnalysis.isAsync && !node.functionAnalysis.isGenerator) {
-      return prototypeValue === undefined;
-    }
-    const prototypeValueIsComposite = isComposite(prototypeValue);
-    if (!prototypeValueIsComposite) {
-      return false;
-    }
-    const constructorDescriptor = Object.getOwnPropertyDescriptor(
-      prototypeValue,
-      "constructor",
-    );
-    if (!constructorDescriptor) {
-      return false;
-    }
-    // the default prototype.constructor is
-    // configurable, writable, non enumerable and got a value
-    if (
-      !constructorDescriptor.configurable ||
-      !constructorDescriptor.writable ||
-      constructorDescriptor.enumerable ||
-      constructorDescriptor.set ||
-      constructorDescriptor.get
-    ) {
-      return false;
-    }
-    const constructorValue = constructorDescriptor.value;
-    if (constructorValue !== node.value) {
-      return false;
-    }
-    const propertyNames = Object.getOwnPropertyNames(prototypeValue);
-    return propertyNames.length === 1;
-  }
-  if (propertyNameOrSymbol === "constructor") {
-    return (
-      node.parent.entryKey === "prototype" &&
-      node.parent.parent.isFunction &&
-      Object.hasOwn(propertyDescriptor, "value") &&
-      propertyDescriptor.value === node.parent.parent.value
-    );
-  }
-  if (propertyNameOrSymbol === "length") {
-    return node.canHaveIndexedValues || node.isFunction;
-  }
-  if (propertyNameOrSymbol === "name") {
-    return node.isFunction;
-  }
-  if (propertyNameOrSymbol === "stack") {
-    return node.isError;
-  }
-  if (propertyNameOrSymbol === "valueOf") {
-    return (
-      node.childNodes.internalValue &&
-      node.childNodes.internalValue.entryKey === "valueOf()"
-    );
-  }
-  if (propertyNameOrSymbol === "toString") {
-    return (
-      node.childNodes.internalValue &&
-      node.childNodes.internalValue.entryKey === "toString()"
-    );
-  }
-  if (propertyNameOrSymbol === Symbol.toPrimitive) {
-    return (
-      node.childNodes.internalValue &&
-      node.childNodes.internalValue.entryKey === "Symbol.toPrimitive()"
-    );
-  }
-  if (propertyNameOrSymbol === Symbol.toStringTag) {
-    if (!Object.hasOwn(propertyDescriptor, "value")) {
-      return false;
-    }
-    // toStringTag is already reflected on subtype
-    return true;
-  }
-  if (typeof propertyNameOrSymbol === "symbol") {
-    if (
-      node.subtype === "Promise" &&
-      !Symbol.keyFor(propertyNameOrSymbol) &&
-      symbolToDescription(propertyNameOrSymbol) === "async_id_symbol"
-    ) {
-      // nodejs runtime puts a custom Symbol on promise
-      return true;
-    }
-    if (
-      node.isHeaders &&
-      !Symbol.keyFor(propertyNameOrSymbol) &&
-      ["guard", "headers list"].includes(
-        symbolToDescription(propertyNameOrSymbol),
-      )
-    ) {
-      // nodejs runtime put custom symbols on Headers
-      return true;
-    }
-  }
-  return false;
-};
-const shouldIgnorePropertyDescriptor = (
-  node,
-  propertyName,
-  propertyDescriptorName,
-  propertyDescriptorValue,
-) => {
-  /* eslint-disable no-unneeded-ternary */
-  if (propertyDescriptorName === "writable") {
-    const defaultValue =
-      propertyName === "prototype" && node.functionAnalysis.type === "class"
-        ? false
-        : true;
-    return propertyDescriptorValue === defaultValue;
-  }
-  if (propertyDescriptorName === "configurable") {
-    const defaultValue =
-      propertyName === "prototype" && node.isFunction ? false : true;
-    return propertyDescriptorValue === defaultValue;
-  }
-  if (propertyDescriptorName === "enumerable") {
-    const defaultValue =
-      (propertyName === "prototype" && node.isFunction) ||
-      (propertyName === "message" && node.isError) ||
-      node.isClassPrototype
-        ? false
-        : true;
-    return propertyDescriptorValue === defaultValue;
-  }
-  /* eslint-enable no-unneeded-ternary */
-  if (propertyDescriptorName === "get") {
-    const defaultValue = undefined;
-    return propertyDescriptorValue === defaultValue;
-  }
-  if (propertyDescriptorName === "set") {
-    const defaultValue = undefined;
-    return propertyDescriptorValue === defaultValue;
-  }
-  return false;
-};
 
 // const isDefaultDescriptor = (descriptorName, descriptorValue) => {
 //   if (descriptorName === "enumerable" && descriptorValue === true) {
@@ -1622,63 +1469,53 @@ let createValueNode;
     preserveLineBreaksOption,
   }) => {
     const _createValueNode = ({
+      type, // "value", "key", "entry",
       parent,
-      path,
+
+      key,
+      index,
+      descriptorKey,
+      isSpecialKey,
+      path = parent.path,
       pathPart,
-      type,
       value,
 
+      entryType,
+      isPrototypeEntry,
+      isWrappedValueEntry,
       isInternalEntry,
       isIndexedEntry,
       isPropertyEntry,
-
-      isArrayEntry,
-      isTypedArrayEntry,
-      isStringEntry,
-      isPropertyDescriptor,
-      // isPropertyKey,
-      isPropertyValue,
-      isSetEntry,
-      isMapEntry,
-      isHeadersEntry,
-      isHeaderKey,
-      isHeaderValue,
-      isUrlEntry,
-      isUrlSearchEntry,
-      isUrlSearchEntryKey,
-      isOneOfUrlSearchParamValue,
-      isDateEntry,
-      isIndexedValue,
-      isSetValue,
-      isMapEntryKey,
-      isMapEntryValue,
-      isUrlEntryKey,
-      isUrlEntryValue,
-      isDateEntryKey,
-      isDateEntryValue,
 
       isPrototype,
       isClassStaticProperty,
       isClassPrototype,
       isClassSourceCode,
-      isSpecialProperty,
+      isErrorMessage,
 
-      entryKey,
-      index,
-      descriptor,
+      isMapKey,
+      isMapValue,
+      isSetValue,
+      isOneOfUrlSearchParamValue,
+      isUrlPartKey,
+      isUrlPartValue,
+      isUrlSearchParamKey,
+      isUrlSearchParamValue,
+      isDatePartKey,
+      isDatePartValue,
 
       valueSeparator,
       valueStartSeparator,
       valueEndSeparator,
       displayedIn,
-      shouldHideWhenSame = parent && parent.shouldHideWhenSame === "deep"
-        ? "deep"
-        : false,
+      shouldHideWhenSame,
       hidden = parent ? parent.hidden : false,
     }) => {
       const node = {
         name,
         id: nodeId++,
+        type,
+        parent,
         path,
       };
 
@@ -1716,7 +1553,6 @@ let createValueNode;
         let isRegExpLine = false;
         let isRegExpChar = false;
         let isError = false;
-        let isErrorMessageString = false;
         let isMap = false;
         let isSymbol = false;
         let isSourceCode = false;
@@ -1817,8 +1653,8 @@ let createValueNode;
                 }
               }
             } else if (
-              type === "entry_value" &&
-              entryKey === "prototype" &&
+              type === "value" &&
+              key === "prototype" &&
               parent.parent.isFunction
             ) {
               isFunctionPrototype = true;
@@ -1903,7 +1739,7 @@ let createValueNode;
               constructorCallUseNew = true;
             }
 
-            if (isMapEntryKey) {
+            if (type === "key" && parent.entryType === "map_entry") {
             } else if (isError) {
               subtypeDisplayed = subtypeDisplayedWhenCollapsed = [
                 { type: "identifier", value: value.constructor.name },
@@ -1979,7 +1815,7 @@ let createValueNode;
                   { type: isRegExpChar ? "regexp_source_char" : "char", value },
                 ];
                 preserveLineBreaks = parent.preserveLineBreaks;
-              } else if (isDateEntry) {
+              } else if (entryType === "date") {
                 parts = [{ type: "date_part", value }];
               } else {
                 isStringForRegExp = parent && parent.isRegExp;
@@ -1989,7 +1825,11 @@ let createValueNode;
                     value,
                   },
                 ];
-                if (isUrlEntry || isDateEntry || isStringForRegExp) {
+                if (
+                  entryType === "url_part" ||
+                  entryType === "date" ||
+                  isStringForRegExp
+                ) {
                   preserveLineBreaks = true;
                 } else {
                   preserveLineBreaks = preserveLineBreaksOption;
@@ -1997,27 +1837,31 @@ let createValueNode;
                 canHaveLines = true;
                 lines = value.split(/\r?\n/);
                 isMultiline = lines.length > 1;
-                isErrorMessageString =
-                  entryKey === "message" && parent.parent.isError;
-                if (
-                  isMultiline &&
-                  !isErrorMessageString &&
-                  !isStringForRegExp
-                ) {
+
+                if (isMultiline && !isErrorMessage && !isStringForRegExp) {
                   useLineNumbersOnTheLeft = true;
                 }
-                if (isErrorMessageString) {
+                if (isErrorMessage) {
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (isStringForRegExp) {
                   // no quote around string source
-                } else if (isOneOfUrlSearchParamValue) {
+                } else if (isMapKey) {
+                  // no quote around map key
+                } else if (isSpecialKey) {
+                  // no quote around special key
+                } else if (isUrlPartKey) {
+                  // no quote around url internal properties
+                } else if (isUrlPartValue) {
+                  if (key === "search") {
+                    isStringForUrlSearch = true;
+                    canHaveInternalEntries = true;
+                  }
+                } else if (isUrlSearchParamKey || isUrlSearchParamValue) {
                   // no quote around url search param key/value
-                } else if (type === "entry_key") {
-                  if (
-                    (isSpecialProperty ||
-                      isValidPropertyIdentifier(entryKey)) &&
-                    !isMapEntryKey
-                  ) {
+                } else if (isDatePartKey || isDatePartValue) {
+                  // no quote around date internal properties
+                } else if (type === "key") {
+                  if (isValidPropertyIdentifier(value)) {
                     // this property does not require quotes
                   } else {
                     useQuotes = true;
@@ -2027,14 +1871,8 @@ let createValueNode;
                   }
                 } else if (isMultiline) {
                   // no quote around multiline
-                } else if (isUrlEntry) {
-                  // no quote around url property
-                  if (entryKey === "search") {
-                    isStringForUrlSearch = true;
-                    canHaveInternalEntries = true;
-                  }
-                } else if (isDateEntry) {
-                  // no quote around date property
+                  // (key multiline are truncated as be sure to keep this else if after
+                  // the if (type === "key"))
                 } else {
                   useQuotes = true;
                   quote =
@@ -2118,7 +1956,7 @@ let createValueNode;
                   parts.push({
                     type: "integer",
                     value:
-                      isUrlEntry || isDateEntry
+                      entryType === "url_entry" || entryType === "date_entry"
                         ? integer
                         : groupDigits(integer),
                   });
@@ -2146,7 +1984,7 @@ let createValueNode;
           }
         }
 
-        if (type === "internal_value" && parent.isSet) {
+        if (isWrappedValueEntry && parent.isSet) {
           constructorCallOpenDelimiter = "";
           constructorCallCloseDelimiter = "";
           // prefer Set(2)
@@ -2158,67 +1996,55 @@ let createValueNode;
         if (parent) {
           if (type === "entry") {
             depth = parent.depth;
-          } else if (type === "internal_value") {
-            if (displayedIn === "properties") {
-              depth = parent.depth + 1;
-            } else {
+          } else if (type === "key") {
+            depth = parent.depth;
+          } else if (type === "value") {
+            if (isClassPrototype) {
               depth = parent.depth;
+            } else if (parent.isWrappedValueEntry) {
+              if (displayedIn === "properties") {
+                depth = parent.depth + 1;
+              } else {
+                depth = parent.depth;
+              }
+            } else if (parent.isInternalEntry) {
+              depth = parent.depth;
+            } else {
+              depth = parent.depth + 1;
             }
-          } else if (isUrlEntry || isDateEntry) {
-            depth = parent.depth;
-          } else if (isClassPrototype) {
-            depth = parent.depth;
-          } else {
-            depth = parent.depth + 1;
           }
         } else {
           depth = 0;
         }
         Object.assign(node, {
-          parent,
           depth,
-          type,
           value,
           valueOf: () => {
             throw new Error(`use ${name}.value`);
           },
           parts,
           pathPart,
+          key,
+          descriptorKey,
+          index,
 
-          entryKey,
+          entryType,
+          isPrototypeEntry,
+          isWrappedValueEntry,
           isInternalEntry,
           isIndexedEntry,
-          index,
           isPropertyEntry,
-          isPropertyDescriptor,
-          descriptor,
-          isPropertyValue,
-          isArrayEntry,
-          isTypedArrayEntry,
-          isStringEntry,
-          isSetEntry,
-          isMapEntry,
-          isHeadersEntry,
-          isHeaderKey,
-          isHeaderValue,
-          isUrlEntry,
-          isDateEntryKey,
-          isDateEntryValue,
-          isUrlSearchEntry,
-          isUrlSearchEntryKey,
-          isOneOfUrlSearchParamValue,
-          isDateEntry,
-          isIndexedValue,
-          isSetValue,
-          isMapEntryKey,
-          isMapEntryValue,
-          isUrlEntryKey,
-          isUrlEntryValue,
+
           isPrototype,
           isClassStaticProperty,
           isClassPrototype,
           isClassSourceCode,
-          isSpecialProperty,
+          isErrorMessage,
+
+          isMapKey,
+          isMapValue,
+          isSetValue,
+          isOneOfUrlSearchParamValue,
 
           subtype,
           subtypeDisplayed,
@@ -2243,7 +2069,6 @@ let createValueNode;
           isStringForRegExp,
           isRegExpLine,
           isRegExpChar,
-          isErrorMessageString,
           isMultiline,
           useLineNumbersOnTheLeft,
           useQuotes,
@@ -2275,6 +2100,7 @@ let createValueNode;
           propsFrozen,
           propsSealed,
           propsExtensionsPrevented,
+
           wellKnownId: wellKnownPath ? wellKnownPath.toString() : "",
           valueSeparator,
           valueStartSeparator,
@@ -2296,7 +2122,7 @@ let createValueNode;
 
       const childNodes = {
         prototype: null,
-        internalValue: null,
+        wrappedValue: null,
         internalEntryMap: new Map(),
         indexedEntryMap: new Map(),
         propertyEntryMap: new Map(),
@@ -2316,24 +2142,184 @@ let createValueNode;
         return node;
       }
 
-      const createPropertyLikeNode = (property, params) => {
-        const propertyLikeNode = _createValueNode({
-          ...params,
-          path: path.append(property),
-          entryKey: property,
+      const internalEntryMap = childNodes.internalEntryMap;
+      const indexedEntryMap = childNodes.indexedEntryMap;
+      const propertyEntryMap = childNodes.propertyEntryMap;
+      const propertyNameToIgnoreSet = new Set();
+
+      const appendEntryNode = (entryType, { shared, key, value }) => {
+        let isPrototypeEntry = false;
+        let isWrappedValueEntry = false;
+        let isInternalEntry = false;
+        let isIndexedEntry = false;
+        let isPropertyEntry = false;
+        if (entryType === "prototype") {
+          isPrototypeEntry = true;
+        } else if (entryType === "wrapped_value") {
+          isWrappedValueEntry = true;
+        } else if (
+          [
+            "map_entry",
+            "url_entry",
+            "url_search_entry",
+            "url_search_params_entry",
+            "headers_entry",
+            "date_entry",
+          ].includes(entryType)
+        ) {
+          isInternalEntry = true;
+        } else if (
+          [
+            "string_entry",
+            "typed_array_entry",
+            "set_entry",
+            "url_search_param_value_entry",
+            "header_value_entry",
+            "array_entry",
+          ].includes(entryType)
+        ) {
+          isIndexedEntry = true;
+        } else if (
+          ["own_property_name", "own_property_symbol"].includes(entryType)
+        ) {
+          isPropertyEntry = true;
+        }
+
+        const entryNode = _createValueNode({
+          ...shared,
+          type: "entry",
+          parent: node,
+          entryType,
+          isPrototypeEntry,
+          isWrappedValueEntry,
+          isInternalEntry,
+          isIndexedEntry,
+          isPropertyEntry,
         });
-        const keyNode = _createValueNode({
-          parent: propertyLikeNode,
-          path: propertyLikeNode.path,
-          type: "entry_key",
-          value: property,
-          entryKey: property,
-          isSpecialProperty: property.endsWith("()"),
-          shouldHideWhenSame: false,
-        });
-        propertyLikeNode.childNodes.key = keyNode;
-        return propertyLikeNode;
+        // append key
+        const { value: keyValue, pathPart, ...keyMeta } = key;
+        {
+          let pathForKey;
+          if (pathPart) {
+            pathForKey = node.path.append(pathPart);
+          } else {
+            pathForKey = node.path.append(keyValue);
+          }
+          const keyNode = _createValueNode({
+            ...shared,
+            ...keyMeta,
+            type: "key",
+            parent: entryNode,
+            path: pathForKey,
+            pathPart,
+            value: keyValue,
+            valueStartSeparator: typeof keyValue === "symbol" ? "[" : "",
+            valueEndSeparator: typeof keyValue === "symbol" ? "]" : "",
+          });
+          entryNode.childNodes.key = keyNode;
+        }
+        // append value
+        {
+          const { descriptor, ...valueMeta } = value;
+          for (const descriptorKey of Object.keys(descriptor)) {
+            const descriptorValue = descriptor[descriptorKey];
+            ignore: {
+              /* eslint-disable no-unneeded-ternary */
+              if (descriptorKey === "writable") {
+                if (node.propsFrozen) {
+                  continue;
+                }
+                if (node.propsSealed) {
+                  continue;
+                }
+                const writableDefaultValue =
+                  key.value === "prototype" &&
+                  node.functionAnalysis.type === "class"
+                    ? false
+                    : true;
+                if (descriptorValue === writableDefaultValue) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (descriptorKey === "configurable") {
+                if (node.propsFrozen) {
+                  continue;
+                }
+                const configurableDefaultValue =
+                  key.value === "prototype" && node.isFunction ? false : true;
+                if (descriptorValue === configurableDefaultValue) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (descriptorKey === "enumerable") {
+                const enumerableDefaultValue =
+                  (key.value === "prototype" && node.isFunction) ||
+                  (key.value === "message" && node.isError) ||
+                  node.isClassPrototype
+                    ? false
+                    : true;
+                if (descriptorValue === enumerableDefaultValue) {
+                  continue;
+                }
+                break ignore;
+              }
+              /* eslint-enable no-unneeded-ternary */
+              if (descriptorKey === "get") {
+                if (descriptorValue === undefined) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (descriptorKey === "set") {
+                if (descriptorValue === undefined) {
+                  continue;
+                }
+                break ignore;
+              }
+            }
+            const descriptorValueNode = _createValueNode({
+              ...shared,
+              ...valueMeta,
+              type: "value",
+              parent: entryNode,
+              key: keyValue,
+              value: descriptorValue,
+              descriptorKey,
+              ...(descriptorKey === "value"
+                ? {}
+                : {
+                    shouldHideWhenSame: true,
+                    path: entryNode.path.append(descriptorKey, {
+                      isPropertyDescriptor: true,
+                    }),
+                  }),
+              ...(descriptorKey === "get" || descriptorKey === "set"
+                ? { valueSeparator: "" }
+                : {}),
+            });
+            entryNode.childNodes[descriptorKey] = descriptorValueNode;
+          }
+        }
+
+        if (isPrototypeEntry) {
+          childNodes.prototype = entryNode;
+        } else if (isWrappedValueEntry) {
+          childNodes.wrappedValue = entryNode;
+        } else if (isInternalEntry) {
+          internalEntryMap.set(key.value, entryNode);
+        } else if (isIndexedEntry) {
+          const indexAsString = String(key.value);
+          propertyNameToIgnoreSet.add(indexAsString);
+          indexedEntryMap.set(indexAsString, entryNode);
+        } else if (isPropertyEntry) {
+          propertyEntryMap.set(key.value, entryNode);
+        }
+
+        return entryNode;
       };
+
       prototype: {
         if (!node.isComposite) {
           break prototype;
@@ -2342,19 +2328,22 @@ let createValueNode;
         if (shouldIgnorePrototype(node, prototypeValue)) {
           break prototype;
         }
-        const prototypeNode = createPropertyLikeNode("__proto__", {
-          parent: node,
-          type: "prototype",
-          valueSeparator: ":",
-          value: prototypeValue,
-          valueEndSeparator: ",",
-          shouldHideWhenSame: true,
-          isPrototype: true,
+        appendEntryNode("prototype", {
+          shared: {
+            shouldHideWhenSame: true,
+          },
+          key: {
+            value: "__proto__",
+          },
+          value: {
+            descriptor: { value: prototypeValue },
+            valueSeparator: ":",
+            valueEndSeparator: ",",
+          },
         });
-        childNodes.prototype = prototypeNode;
       }
       // internal value (.valueOf(), .href, .toString())
-      internal_value: {
+      wrapped_value: {
         if (node.isFunction) {
           let argsAndBodySource = node.functionAnalysis.argsAndBodySource;
           if (node.functionAnalysis.type === "class") {
@@ -2364,87 +2353,118 @@ let createValueNode;
             const functionBody = createSourceCode(
               node.functionAnalysis.argsAndBodySource,
             );
-            const internalValueNode = createPropertyLikeNode("toString()", {
-              parent: node,
-              type: "internal_value",
-              value: functionBody,
-              displayedIn: "properties",
-              isSourceCode: true,
-              valueEndSeparator:
-                node.functionAnalysis.type === "class" ? ";" : ",",
+            appendEntryNode("wrapped_value", {
+              shared: {
+                displayedIn: "properties",
+                isSourceCode: true,
+              },
+              key: {
+                value: "toString()",
+                isSpecialKey: true,
+              },
+              value: {
+                descriptor: { value: functionBody },
+                valueEndSeparator:
+                  node.functionAnalysis.type === "class" ? ";" : ",",
+              },
             });
-            childNodes.internalValue = internalValueNode;
           }
         } else if (node.isSet) {
           const setValues = [];
           for (const setValue of node.value) {
             setValues.push(setValue);
           }
-          const setInternalValueNode = createPropertyLikeNode(
-            "Symbol.iterator()",
-            {
-              parent: node,
-              type: "internal_value",
-              value: setValues,
+          node.constructorCall = true;
+          appendEntryNode("wrapped_value", {
+            shared: {
               displayedIn: "label",
             },
-          );
-          node.constructorCall = true;
-          childNodes.internalValue = setInternalValueNode;
+            key: {
+              value: "Symbol.iterator()",
+              isSpecialKey: true,
+            },
+            value: {
+              descriptor: { value: setValues },
+            },
+          });
         } else if (node.isUrl) {
           const urlString = node.value.href;
-          const urlStringNode = createPropertyLikeNode("toString()", {
-            parent: node,
-            type: "internal_value",
-            value: urlString,
-            displayedIn: "label",
-          });
           node.constructorCall = true;
-          childNodes.internalValue = urlStringNode;
+          appendEntryNode("wrapped_value", {
+            shared: {
+              displayedIn: "label",
+            },
+            key: {
+              value: "toString()",
+              isSpecialKey: true,
+            },
+            value: {
+              descriptor: { value: urlString },
+            },
+          });
         } else if (node.isDate) {
           const dateString = node.value.toString();
-          const urlStringNode = createPropertyLikeNode("toString()", {
-            parent: node,
-            type: "internal_value",
-            value: dateString,
-            displayedIn: "label",
-          });
           node.constructorCall = true;
-          childNodes.internalValue = urlStringNode;
+          appendEntryNode("wrapped_value", {
+            shared: {
+              displayedIn: "label",
+            },
+            key: {
+              value: "toString()",
+              isSpecialKey: true,
+            },
+            value: {
+              descriptor: { value: dateString },
+            },
+          });
         } else if (node.isRegExp) {
           let regexpSource = node.value.source;
           if (regexpSource === "(?:)") {
             regexpSource = "";
           }
           regexpSource = `/${regexpSource}/${node.value.flags}`;
-          const regexSourceNode = createPropertyLikeNode("source", {
-            parent: node,
-            type: "internal_value",
-            value: regexpSource,
-            displayedIn: "label",
-          });
           node.constructorCall = true;
-          childNodes.internalValue = regexSourceNode;
+          appendEntryNode("wrapped_value", {
+            shared: {
+              displayedIn: "label",
+            },
+            key: {
+              value: "source",
+            },
+            value: {
+              descriptor: { value: regexpSource },
+            },
+          });
         } else if (node.isSymbol) {
           const { symbolDescription, symbolKey } = node;
           if (symbolDescription) {
-            const symbolDescriptionNode = createPropertyLikeNode("toString()", {
-              parent: node,
-              type: "internal_value",
-              value: symbolDescription,
-              displayedIn: "label",
-            });
             node.constructorCall = true;
-            childNodes.internalValue = symbolDescriptionNode;
+            appendEntryNode("wrapped_value", {
+              shared: {
+                displayedIn: "label",
+              },
+              key: {
+                value: "toString()",
+                isSpecialKey: true,
+              },
+              value: {
+                descriptor: { value: symbolDescription },
+              },
+            });
           } else if (symbolKey) {
-            const symbolKeyNode = createPropertyLikeNode("keyFor()", {
-              parent: node,
-              type: "internal_value",
-              value: symbolKey,
-              displayedIn: "label",
-            });
             node.constructorCall = true;
-            childNodes.internalValue = symbolKeyNode;
+            appendEntryNode("wrapped_value", {
+              shared: {
+                displayedIn: "label",
+              },
+              key: {
+                value: "keyFor()",
+                isSpecialKey: true,
+              },
+              value: {
+                descriptor: { value: symbolKey },
+              },
+            });
           } else {
             node.constructorCall = true;
           }
@@ -2457,18 +2477,20 @@ let createValueNode;
         ) {
           const toPrimitiveReturnValue =
             node.value[Symbol.toPrimitive]("string");
-          const internalValueNode = createPropertyLikeNode(
-            "Symbol.toPrimitive()",
-            {
-              parent: node,
-              type: "internal_value",
-              value: toPrimitiveReturnValue,
+          // node.constructorCall = true;
+          appendEntryNode("wrapped_value", {
+            shared: {
               displayedIn: "properties",
+            },
+            key: {
+              value: "Symbol.toPrimitive()",
+              isSpecialKey: true,
+            },
+            value: {
+              descriptor: { value: toPrimitiveReturnValue },
               valueSeparator: ":",
             },
-          );
-          // node.constructorCall = true;
-          childNodes.internalValue = internalValueNode;
+          });
         } else if (
           node.isComposite &&
           "valueOf" in node.value &&
@@ -2481,47 +2503,41 @@ let createValueNode;
             node.subtype === "Object" || node.subtype === "Array"
               ? "properties"
               : "label";
-          const internalValueNode = createPropertyLikeNode("valueOf()", {
-            parent: node,
-            type: "internal_value",
-            value: valueOfReturnValue,
-            displayedIn,
-            valueSeparator: ":",
-            valueEndSeparator: displayedIn === "label" ? "" : ",",
+          node.constructorCall = displayedIn === "label";
+          appendEntryNode("wrapped_value", {
+            shared: {
+              displayedIn,
+            },
+            key: {
+              value: "valueOf()",
+              isSpecialKey: true,
+            },
+            value: {
+              descriptor: { value: valueOfReturnValue },
+              valueSeparator: ":",
+              valueEndSeparator: displayedIn === "label" ? "" : ",",
+            },
           });
-          node.constructorCall = internalValueNode.displayedIn === "label";
-          childNodes.internalValue = internalValueNode;
         }
       }
 
       // key/value pairs
       // where key can be integers, string or symbols
       // aka "properties"
-      props: {
-        const createFacadePropertyDescriptor = (value) => {
-          return {
-            enumerable: true,
-            /* eslint-disable no-unneeded-ternary */
-            configurable: node.propsFrozen || node.propsSealed ? false : true,
-            writable: node.propsFrozen ? false : true,
-            /* eslint-enable no-unneeded-ternary */
-            value,
-          };
-        };
-
-        const associatedValueMetaMap = new Map();
+      entries: {
         // string chars
         if (node.isString || node.isObjectForString) {
           let index = 0;
           while (index < node.value.length) {
-            associatedValueMetaMap.set(String(index), {
-              isIndexedEntry: true,
-              isStringEntry: true,
-              propertyDescriptor: Object.getOwnPropertyDescriptor(
-                node.value,
-                index,
-              ),
-            });
+            propertyNameToIgnoreSet.add(String(index));
+            // appendIndexedEntry("string_entry", {
+            //   key: {
+            //     value: index,
+            //   },
+            //   value: {
+            //     descriptor: Object.getOwnPropertyDescriptor(node.value, index),
+            //   },
+            // });
             index++;
           }
         }
@@ -2529,15 +2545,14 @@ let createValueNode;
         else if (node.isTypedArray) {
           let index = 0;
           while (index < node.value.length) {
-            associatedValueMetaMap.set(String(index), {
-              isIndexedEntry: true,
-              isTypedArrayEntry: true,
-              index,
-              propertyDescriptor: Object.getOwnPropertyDescriptor(
-                node.value,
-                index,
-              ),
-              valueEndSeparator: ",",
+            appendEntryNode("typed_array_entry", {
+              key: {
+                value: index,
+              },
+              value: {
+                descriptor: Object.getOwnPropertyDescriptor(node.value, index),
+                valueEndSeparator: ",",
+              },
             });
             index++;
           }
@@ -2547,53 +2562,86 @@ let createValueNode;
           let index = 0;
           while (index < node.value.length) {
             if (node.parent?.isSet) {
-              associatedValueMetaMap.set(String(index), {
-                isIndexedEntry: true,
-                isSetEntry: true,
-                value: node.value[index],
-                valueEndSeparator: ",",
+              appendEntryNode("set_entry", {
+                key: {
+                  value: index,
+                },
+                value: {
+                  isSetValue: true,
+                  descriptor: Object.getOwnPropertyDescriptor(
+                    node.value,
+                    index,
+                  ),
+                  valueEndSeparator: ",",
+                },
               });
             } else if (node.parent?.isUrlSearchEntry) {
               const isFirstSearchParam = node.index === 0;
-              associatedValueMetaMap.set(String(index), {
-                isIndexedEntry: true,
-                isArrayEntry: true,
-                isOneOfUrlSearchParamValue: true,
-                pathPart: `${node.entryKey}${index}`,
-                index,
-                value: node.value[index],
-                valueStartSeparator:
-                  isFirstSearchParam && index === 0 ? "?" : "&",
-                valueSeparator: "=",
+              appendEntryNode("url_search_param_value_entry", {
+                key: {
+                  value: index,
+                  pathPart: `${node.key}${index}`,
+                },
+                value: {
+                  isOneOfUrlSearchParamValue: true,
+                  descriptor: Object.getOwnPropertyDescriptor(
+                    node.value,
+                    index,
+                  ),
+                  valueStartSeparator:
+                    isFirstSearchParam && index === 0 ? "?" : "&",
+                  valueSeparator: "=",
+                },
               });
             } else if (node.parent?.isUrlSearchParams) {
-              associatedValueMetaMap.set(String(index), {
-                isIndexedEntry: true,
-                isArrayEntry: true,
-                isOneOfUrlSearchParamValue: true,
-                pathPart: `${node.entryKey}${index}`,
-                index,
-                value: node.value[index],
+              appendEntryNode("url_search_param_value_entry", {
+                key: {
+                  value: index,
+                  pathPart: `${node.key}${index}`,
+                },
+                value: {
+                  isOneOfUrlSearchParamValue: true,
+                  descriptor: Object.getOwnPropertyDescriptor(
+                    node.value,
+                    index,
+                  ),
+                },
               });
             } else if (node.parent?.isHeadersEntry) {
-              associatedValueMetaMap.set(String(index), {
-                isIndexedEntry: true,
-                isArrayEntry: true,
-                isHeaderValue: true,
-                index,
-                value: node.value[index],
-                valueSeparator: "=>",
-                valueEndSeparator: ",",
+              appendEntryNode("header_value_entry", {
+                key: {
+                  value: index,
+                },
+                value: {
+                  isHeaderValue: true,
+                  descriptor: Object.getOwnPropertyDescriptor(
+                    node.value,
+                    index,
+                  ),
+                  valueSeparator: "=>",
+                  valueEndSeparator: ",",
+                },
               });
             } else {
-              associatedValueMetaMap.set(String(index), {
-                isIndexedEntry: true,
-                isArrayEntry: true,
-                index,
-                propertyDescriptor: Object.hasOwn(node.value, index)
-                  ? Object.getOwnPropertyDescriptor(node.value, index)
-                  : createFacadePropertyDescriptor(ARRAY_EMPTY_VALUE),
-                valueEndSeparator: ",",
+              appendEntryNode("array_entry", {
+                key: {
+                  index,
+                },
+                value: {
+                  isArrayValue: true,
+                  descriptor: Object.hasOwn(node.value, index)
+                    ? Object.getOwnPropertyDescriptor(node.value, index)
+                    : {
+                        enumerable: true,
+                        /* eslint-disable no-unneeded-ternary */
+                        configurable:
+                          node.propsFrozen || node.propsSealed ? false : true,
+                        writable: node.propsFrozen ? false : true,
+                        /* eslint-enable no-unneeded-ternary */
+                        value: ARRAY_EMPTY_VALUE,
+                      },
+                  valueEndSeparator: ",",
+                },
               });
             }
             index++;
@@ -2601,12 +2649,55 @@ let createValueNode;
         }
         // object own symbols
         if (node.isComposite) {
-          const propertySymbols = Object.getOwnPropertySymbols(node.value);
-          for (const propertySymbol of propertySymbols) {
-            const propertyDescriptor = Object.getOwnPropertyDescriptor(
+          const ownPropertySymbols = Object.getOwnPropertySymbols(node.value);
+          for (const ownPropertySymbol of ownPropertySymbols) {
+            const propertySymbolDescriptor = Object.getOwnPropertyDescriptor(
               node.value,
-              propertySymbol,
+              ownPropertySymbol,
             );
+            ignore: {
+              if (ownPropertySymbol === Symbol.toPrimitive) {
+                if (
+                  node.childNodes.wrappedValue &&
+                  node.childNodes.wrappedValue.key === "Symbol.toPrimitive()"
+                ) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertySymbol === Symbol.toStringTag) {
+                if (Object.hasOwn(propertySymbolDescriptor, "value")) {
+                  // toStringTag is already reflected on subtype
+                  continue;
+                }
+                break ignore;
+              }
+              if (node.subtype === "Promise") {
+                if (
+                  !Symbol.keyFor(ownPropertySymbol) &&
+                  symbolToDescription(ownPropertySymbol) === "async_id_symbol"
+                ) {
+                  // nodejs runtime puts a custom Symbol on promise
+                  continue;
+                }
+                break ignore;
+              }
+              if (node.isHeaders) {
+                if (
+                  !Symbol.keyFor(ownPropertySymbol) &&
+                  ["guard", "headers list"].includes(
+                    symbolToDescription(ownPropertySymbol),
+                  )
+                ) {
+                  // nodejs runtime put custom symbols on Headers
+                  continue;
+                }
+                break ignore;
+              }
+            }
+            if (node.canHaveInternalEntries || node.canHaveIndexedValues) {
+              node.shouldExpand = true;
+            }
             let isClassStaticProperty = false;
             let valueSeparator = "";
             let valueEndSeparator = "";
@@ -2618,34 +2709,151 @@ let createValueNode;
               valueSeparator = ":";
               valueEndSeparator = ",";
             }
-            associatedValueMetaMap.set(propertySymbol, {
-              isPropertyEntry: true,
-              isPropertySymbolEntry: true,
-              propertyDescriptor,
-              isClassStaticProperty,
-              valueSeparator,
-              valueEndSeparator,
+            appendEntryNode("own_property_symbol", {
+              shared: {
+                isClassStaticProperty,
+              },
+              key: {
+                value: ownPropertySymbol,
+              },
+              value: {
+                descriptor: propertySymbolDescriptor,
+                valueSeparator,
+                valueEndSeparator,
+              },
             });
           }
         }
         // object own properties
         if (node.isComposite) {
-          const propertyNames = Object.getOwnPropertyNames(node.value);
-          for (const propertyName of propertyNames) {
-            if (associatedValueMetaMap.has(propertyName)) {
+          const ownPropertyNames = Object.getOwnPropertyNames(node.value);
+          for (const ownPropertyName of ownPropertyNames) {
+            if (propertyNameToIgnoreSet.has(ownPropertyName)) {
               continue;
             }
-            const propertyDescriptor = Object.getOwnPropertyDescriptor(
+            const ownPropertyDescriptor = Object.getOwnPropertyDescriptor(
               node.value,
-              propertyName,
+              ownPropertyName,
             );
+            ignore: {
+              if (ownPropertyName === "prototype") {
+                if (node.isFunction) {
+                  break ignore;
+                }
+                // ignore prototype if it's the default prototype
+                // created by the runtime
+                if (!Object.hasOwn(ownPropertyDescriptor, "value")) {
+                  break ignore;
+                }
+                const prototypeValue = ownPropertyDescriptor.value;
+                if (node.functionAnalysis.type === "arrow") {
+                  if (prototypeValue === undefined) {
+                    continue;
+                  }
+                  break ignore;
+                }
+                if (
+                  node.functionAnalysis.isAsync &&
+                  !node.functionAnalysis.isGenerator
+                ) {
+                  if (prototypeValue === undefined) {
+                    continue;
+                  }
+                  break ignore;
+                }
+                const prototypeValueIsComposite = isComposite(prototypeValue);
+                if (!prototypeValueIsComposite) {
+                  break ignore;
+                }
+                const constructorDescriptor = Object.getOwnPropertyDescriptor(
+                  prototypeValue,
+                  "constructor",
+                );
+                if (!constructorDescriptor) {
+                  break ignore;
+                }
+                // the default prototype.constructor is
+                // configurable, writable, non enumerable and got a value
+                if (
+                  !constructorDescriptor.configurable ||
+                  !constructorDescriptor.writable ||
+                  constructorDescriptor.enumerable ||
+                  constructorDescriptor.set ||
+                  constructorDescriptor.get
+                ) {
+                  break ignore;
+                }
+                const constructorValue = constructorDescriptor.value;
+                if (constructorValue !== node.value) {
+                  break ignore;
+                }
+                const propertyNames =
+                  Object.getOwnPropertyNames(prototypeValue);
+                if (propertyNames.length === 1) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertyName === "constructor") {
+                if (
+                  node.parent.key === "prototype" &&
+                  node.parent.parent.isFunction &&
+                  Object.hasOwn(ownPropertyDescriptor, "value") &&
+                  ownPropertyDescriptor.value === node.parent.parent.value
+                ) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertyName === "length") {
+                if (node.canHaveIndexedValues || node.isFunction) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertyName === "name") {
+                if (node.isFunction) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertyName === "stack") {
+                if (node.isError) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertyName === "valueOf") {
+                if (
+                  node.childNodes.wrappedValue &&
+                  node.childNodes.wrappedValue.key === "valueOf()"
+                ) {
+                  continue;
+                }
+                break ignore;
+              }
+              if (ownPropertyName === "toString") {
+                if (
+                  node.childNodes.wrappedValue &&
+                  node.childNodes.wrappedValue.key === "toString()"
+                ) {
+                  continue;
+                }
+                break ignore;
+              }
+            }
+            if (node.canHaveInternalEntries || node.canHaveIndexedValues) {
+              node.shouldExpand = true;
+            }
+
             let displayedIn;
             let isPrototype = false;
             let isClassPrototype = false;
             let isClassStaticProperty = false;
+            let isErrorMessage = false;
             let valueSeparator = "";
             let valueEndSeparator = "";
-
+            let shouldHideWhenSame = false;
             if (node.isClassPrototype) {
               valueSeparator = "=";
               valueEndSeparator = "";
@@ -2657,7 +2865,7 @@ let createValueNode;
               valueSeparator = ":";
               valueEndSeparator = ",";
             }
-            if (propertyName === "name") {
+            if (ownPropertyName === "name") {
               if (
                 node.functionAnalysis.type === "classic" ||
                 node.functionAnalysis.type === "class"
@@ -2665,29 +2873,52 @@ let createValueNode;
                 // function name or class name will be displayed in the "subtypeDiff"
                 displayedIn = "label";
                 valueSeparator = valueEndSeparator = "";
+              } else {
+                shouldHideWhenSame = !ownPropertyDescriptor.enumerable;
               }
-            } else if (propertyName === "message") {
-              if (node.isError) {
-                displayedIn = "label";
-                valueSeparator = valueEndSeparator = "";
-              }
-            } else if (propertyName === "prototype") {
+            } else if (ownPropertyName === "prototype") {
+              shouldHideWhenSame = true;
               isPrototype = true;
               if (isClassStaticProperty) {
                 isClassPrototype = true;
                 valueSeparator = valueEndSeparator = "";
               }
+            } else if (ownPropertyName === "message") {
+              if (node.isError) {
+                displayedIn = "label";
+                valueSeparator = valueEndSeparator = "";
+                isErrorMessage = true;
+              } else {
+                shouldHideWhenSame = !ownPropertyDescriptor.enumerable;
+              }
+            } else if (ownPropertyName === "lastIndex") {
+              if (node.isRegExp) {
+                shouldHideWhenSame = true;
+              } else {
+                shouldHideWhenSame = !ownPropertyDescriptor.enumerable;
+              }
+            } else if (typeof ownPropertyName === "symbol") {
+              shouldHideWhenSame = true;
+            } else {
+              shouldHideWhenSame = !ownPropertyDescriptor.enumerable;
             }
-
-            associatedValueMetaMap.set(propertyName, {
-              isPropertyEntry: true,
-              propertyDescriptor,
-              isPrototype,
-              isClassStaticProperty,
-              isClassPrototype,
-              valueSeparator,
-              valueEndSeparator,
-              displayedIn,
+            appendEntryNode("own_property_name", {
+              shared: {
+                isPrototype,
+                isClassStaticProperty,
+                isClassPrototype,
+                displayedIn,
+              },
+              key: {
+                value: ownPropertyName,
+              },
+              value: {
+                descriptor: ownPropertyDescriptor,
+                valueSeparator,
+                valueEndSeparator,
+                shouldHideWhenSame,
+                isErrorMessage,
+              },
             });
           }
         }
@@ -2710,85 +2941,115 @@ let createValueNode;
             } else {
               pathPart = String(mapEntryKey);
             }
-            associatedValueMetaMap.set(mapEntryKey, {
-              isInternalEntry: true,
-              isMapEntry: true,
-              value: mapEntryValue,
-              valueSeparator: "=>",
-              valueEndSeparator: ",",
-              pathPart,
+            appendEntryNode("map_entry", {
+              key: {
+                value: mapEntryKey,
+                pathPart,
+                isMapKey: true,
+              },
+              value: {
+                descriptor: { value: mapEntryValue },
+                valueSeparator: "=>",
+                valueEndSeparator: ",",
+                isMapValue: true,
+              },
             });
           }
         }
         // headers
         else if (node.isHeaders) {
           for (const [headerKey, headerValue] of node.value) {
-            const value = tokenizeHeaderValue(headerValue, headerKey);
-            associatedValueMetaMap.set(headerKey, {
-              isInternalEntry: true,
-              isHeadersEntry: true,
-              value,
-              valueSeparator: "=>",
-              valueEndSeparator: ",",
+            const headerEntryValue = tokenizeHeaderValue(
+              headerValue,
+              headerKey,
+            );
+            appendEntryNode("headers_entry", {
+              key: {
+                value: headerKey,
+              },
+              value: {
+                descriptor: { value: headerEntryValue },
+                valueSeparator: "=>",
+                valueEndSeparator: ",",
+              },
             });
           }
         }
         // url search params
         else if (node.isUrlSearchParams) {
-          let index = 0;
-          for (const [urlSearchParamKey, urlSearchParamValue] of node.value) {
-            const meta = {
-              isInternalEntry: true,
-              valueSeparator: "=>",
-              valueEndSeparator: ",",
-            };
-            const existingAssociation =
-              associatedValueMetaMap.get(urlSearchParamKey);
-            if (existingAssociation) {
-              meta.index = existingAssociation.index;
-              meta.value = [...existingAssociation.value, urlSearchParamValue];
+          const paramMap = new Map();
+          for (let [urlSearchParamKey, urlSearchParamValue] of node.value) {
+            const existingUrlSearchParamValue = paramMap.get(urlSearchParamKey);
+            if (existingUrlSearchParamValue) {
+              urlSearchParamValue = [
+                ...existingUrlSearchParamValue,
+                urlSearchParamValue,
+              ];
             } else {
-              meta.index = index;
-              meta.value = [urlSearchParamValue];
-              index++;
+              urlSearchParamValue = [urlSearchParamValue];
             }
-            associatedValueMetaMap.set(urlSearchParamKey, meta);
+            paramMap.set(urlSearchParamKey, urlSearchParamValue);
+          }
+          let index = 0;
+          for (const [key, value] of paramMap) {
+            appendEntryNode("url_search_params_entry", {
+              shared: {
+                index,
+              },
+              key: {
+                isUrlSearchParamKey: true,
+                value: key,
+              },
+              value: {
+                isUrlSearchParamValue: true,
+                descriptor: { value },
+                valueSeparator: "=>",
+                valueEndSeparator: ",",
+              },
+            });
+            index++;
           }
         }
         // url special properties
         else if (node.isStringForUrl) {
           const urlParts = new URL(node.value);
-          for (const urlInternalPropertyName of URL_INTERNAL_PROPERTY_NAMES) {
-            const urlInternalPropertyValue = urlParts[urlInternalPropertyName];
-            if (!urlInternalPropertyValue) {
+          for (const urlEntryKey of URL_INTERNAL_PROPERTY_NAMES) {
+            let urlEntryValue = urlParts[urlEntryKey];
+            if (!urlEntryValue) {
               continue;
             }
-            const meta = {
-              isInternalEntry: true,
-              isUrlEntry: true,
-              value: normalizeUrlPart(
-                urlInternalPropertyName,
-                urlInternalPropertyValue,
-              ),
-              valueSeparator: "",
-              valueEndSeparator: "",
-            };
-            if (urlInternalPropertyName === "protocol") {
-              meta.valueEndSeparator = "//";
-            } else if (urlInternalPropertyName === "username") {
-              if (urlParts.password) {
-                meta.valueEndSeparator = ":";
-              } else {
-                meta.valueEndSeparator = "@";
+            if (urlEntryKey === "port") {
+              if (urlEntryValue !== "") {
+                urlEntryValue = parseInt(urlEntryValue);
               }
-            } else if (urlInternalPropertyName === "password") {
-              meta.valueEndSeparator = "@";
-            } else if (urlInternalPropertyName === "port") {
-              meta.valueStartSeparator = ":";
-            } else if (urlInternalPropertyName === "search") {
-            } else if (urlInternalPropertyName === "hash") {
             }
-            associatedValueMetaMap.set(urlInternalPropertyName, meta);
+            let valueEndSeparator;
+            if (urlEntryKey === "protocol") {
+              valueEndSeparator = "//";
+            } else if (urlEntryKey === "username") {
+              if (urlParts.password) {
+                valueEndSeparator = ":";
+              } else {
+                valueEndSeparator = "@";
+              }
+            } else if (urlEntryKey === "password") {
+              valueEndSeparator = "@";
+            } else if (urlEntryKey === "port") {
+              valueStartSeparator = ":";
+            } else if (urlEntryKey === "search") {
+            } else if (urlEntryKey === "hash") {
+            }
+            appendEntryNode("url_entry", {
+              key: {
+                isUrlPartKey: true,
+                value: urlEntryKey,
+              },
+              value: {
+                isUrlPartValue: true,
+                descriptor: { value: urlEntryValue },
+                valueEndSeparator,
+              },
+            });
           }
         }
         // url "search"
@@ -2796,27 +3057,40 @@ let createValueNode;
           // we don't use new URLSearchParams to preserve plus signs, see
           // see https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#preserving_plus_signs
           const params = node.value.slice(1).split("&");
-          let index = 0;
+          const paramsMap = new Map();
           for (const param of params) {
             let [urlSearchParamKey, urlSearchParamValue] = param.split("=");
             urlSearchParamValue = decodeURIComponent(urlSearchParamValue);
-            const meta = {
-              isInternalEntry: true,
-              isUrlSearchEntry: true,
-              valueStartSeparator: "?",
-              valueSeparator: "=",
-            };
-            const existingAssociation =
-              associatedValueMetaMap.get(urlSearchParamKey);
-            if (existingAssociation) {
-              meta.index = existingAssociation.index;
-              meta.value = [...existingAssociation.value, urlSearchParamValue];
+            const existingUrlSearchParamValue =
+              paramsMap.get(urlSearchParamKey);
+            if (existingUrlSearchParamValue) {
+              urlSearchParamValue = [
+                ...existingUrlSearchParamValue,
+                urlSearchParamValue,
+              ];
             } else {
-              meta.index = index;
-              meta.value = [urlSearchParamValue];
-              index++;
+              urlSearchParamValue = [urlSearchParamValue];
             }
-            associatedValueMetaMap.set(urlSearchParamKey, meta);
+            paramsMap.set(urlSearchParamKey, urlSearchParamValue);
+          }
+          let index = 0;
+          for (const [key, value] of paramsMap) {
+            appendEntryNode("url_search_entry", {
+              shared: {
+                index,
+              },
+              key: {
+                isUrlSearchParamKey: true,
+                value: key,
+              },
+              value: {
+                isUrlSearchParamValue: true,
+                descriptor: { value },
+                valueStartSeparator: "?",
+                valueSeparator: "=",
+              },
+            });
+            index++;
           }
         }
         // date special properties
@@ -2861,276 +3135,43 @@ let createValueNode;
             seconds: date.getSeconds(),
             milliseconds: date.getMilliseconds(),
           };
-          for (const key of Object.keys(props)) {
-            const value = props[key];
-            const meta = {
-              isInternalEntry: true,
-              isDateEntry: true,
-              value,
-              valueSeparator: "",
-              valueEndSeparator: "",
-            };
-            if (key === "month") {
-              meta.valueStartSeparator = "-";
-              meta.value = String(value + 1).padStart(2, "0");
-            } else if (key === "day") {
-              meta.valueStartSeparator = "-";
-              meta.value = String(value).padStart(2, "0");
-            } else if (key === "hours") {
-              meta.valueStartSeparator = " ";
-              meta.value = String(value).padStart(2, "0");
-            } else if (key === "minutes") {
-              meta.valueStartSeparator = ":";
-              meta.value = String(value).padStart(2, "0");
-            } else if (key === "seconds") {
-              meta.valueStartSeparator = ":";
-              meta.value = String(value).padStart(2, "0");
-            } else if (key === "milliseconds") {
-              meta.valueStartSeparator = ".";
-              meta.valueEndSeparator = "Z";
-              meta.value = String(value).padStart(3, "0");
-            }
-            associatedValueMetaMap.set(key, meta);
-          }
-        }
+          for (const dateEntryKey of Object.keys(props)) {
+            let dateEntryValue = props[dateEntryKey];
+            let valueSeparator;
+            let valueEndSeparator;
 
-        const internalEntryMap = childNodes.internalEntryMap;
-        const indexedEntryMap = childNodes.indexedEntryMap;
-        const propertyEntryMap = childNodes.propertyEntryMap;
-        for (const [
-          entryKey,
-          {
-            pathPart,
-            index,
-            isIndexedEntry,
-            isInternalEntry,
-            isPropertyEntry,
-            isPropertySymbolEntry,
-            isArrayEntry,
-            isTypedArrayEntry,
-            isStringEntry,
-            isSetEntry,
-            isMapEntry,
-            isHeadersEntry,
-            isHeaderKey,
-            isHeaderValue,
-            isUrlEntry,
-            isUrlSearchEntry,
-            isOneOfUrlSearchParamValue,
-            isDateEntry,
-            isPrototype,
-            isClassStaticProperty,
-            isClassPrototype,
-            value,
-            propertyDescriptor,
-            valueSeparator,
-            valueStartSeparator,
-            valueEndSeparator,
-            displayedIn,
-            shouldHide,
-            shouldHideWhenSame,
-          },
-        ] of associatedValueMetaMap) {
-          if (isSetEntry) {
-            const setEntryNode = _createValueNode({
-              parent: node,
-              path: path.append(entryKey, { isIndexedEntry: true }),
-              type: "entry_value",
-              value,
-              isSetValue: true,
-              valueEndSeparator,
-            });
-            indexedEntryMap.set(entryKey, setEntryNode);
-            continue;
-          }
-          if (isOneOfUrlSearchParamValue || isHeaderValue) {
-            const entryNode = _createValueNode({
-              parent: node,
-              path: path.append(pathPart || entryKey),
-              pathPart,
-              type: "entry_value",
-              index,
-              isIndexedEntry,
-              entryKey: node.parent.entryKey,
-              isOneOfUrlSearchParamValue,
-              isHeaderValue,
-              value,
-              valueSeparator,
-              valueStartSeparator,
-              valueEndSeparator,
-            });
-            if (isIndexedEntry) {
-              indexedEntryMap.set(entryKey, entryNode);
-            } else {
-              propertyEntryMap.set(entryKey, entryNode);
+            if (dateEntryKey === "month") {
+              valueStartSeparator = "-";
+              dateEntryValue = String(dateEntryValue + 1).padStart(2, "0");
+            } else if (dateEntryKey === "day") {
+              valueStartSeparator = "-";
+              dateEntryValue = String(dateEntryValue).padStart(2, "0");
+            } else if (dateEntryKey === "hours") {
+              valueStartSeparator = " ";
+              dateEntryValue = String(dateEntryValue).padStart(2, "0");
+            } else if (dateEntryKey === "minutes") {
+              valueStartSeparator = ":";
+              dateEntryValue = String(dateEntryValue).padStart(2, "0");
+            } else if (dateEntryKey === "seconds") {
+              valueStartSeparator = ":";
+              dateEntryValue = String(dateEntryValue).padStart(2, "0");
+            } else if (dateEntryKey === "milliseconds") {
+              valueStartSeparator = ".";
+              valueEndSeparator = "Z";
+              dateEntryValue = String(dateEntryValue).padStart(3, "0");
             }
-            continue;
-          }
-          if (
-            isStringEntry ||
-            (isPropertyEntry &&
-              shouldIgnorePropertyEntry(node, entryKey, { propertyDescriptor }))
-          ) {
-            continue;
-          }
-          let entryShouldHideWhenSame =
-            shouldHideWhenSame || node.shouldHideWhenSame === "deep";
-          if (!entryShouldHideWhenSame) {
-            if (entryKey === "prototype") {
-              entryShouldHideWhenSame = true;
-            } else if (propertyDescriptor && !propertyDescriptor.enumerable) {
-              if (entryKey === "message" && node.isError) {
-              } else {
-                entryShouldHideWhenSame = true;
-              }
-            } else if (entryKey === "lastIndex" && node.isRegExp) {
-              entryShouldHideWhenSame = true;
-            } else if (typeof entryKey === "symbol") {
-              entryShouldHideWhenSame = true;
-            }
-          }
-
-          const entrySharedInfo = {
-            entryKey,
-            index,
-            isIndexedEntry,
-            isInternalEntry,
-            isPropertySymbolEntry,
-            isPropertyEntry,
-            isArrayEntry,
-            isTypedArrayEntry,
-            isStringEntry,
-            isSetEntry,
-            isMapEntry,
-            isHeaderKey,
-            isHeaderValue,
-            isUrlEntry,
-            isDateEntry,
-            isUrlSearchEntry,
-            isOneOfUrlSearchParamValue,
-            isPrototype,
-            isClassStaticProperty,
-            isClassPrototype,
-            displayedIn,
-          };
-          const entryNode = _createValueNode({
-            parent: node,
-            path: path.append(pathPart || entryKey, {
-              isIndexedEntry,
-            }),
-            type: "entry",
-            value: null,
-            ...entrySharedInfo,
-            shouldHideWhenSame: entryShouldHideWhenSame,
-            hidden: hidden || shouldHide,
-          });
-          let needKeyNode;
-          if (isIndexedEntry) {
-            indexedEntryMap.set(entryKey, entryNode);
-          } else if (isInternalEntry) {
-            internalEntryMap.set(entryKey, entryNode);
-            needKeyNode = true;
-          } else {
-            // isPropertyEntry
-            if (node.canHaveInternalEntries || node.canHaveIndexedValues) {
-              node.shouldExpand = true;
-            }
-            propertyEntryMap.set(entryKey, entryNode);
-            needKeyNode = true;
-          }
-          if (needKeyNode) {
-            const keyNode = _createValueNode({
-              parent: entryNode,
-              path: entryNode.path,
-              type: "entry_key",
-              value: entryKey,
-              ...entrySharedInfo,
-              isIndexedKey: isIndexedEntry,
-              isMapEntryKey: isMapEntry,
-              isUrlEntryKey: isUrlEntry,
-              isDateEntryKey: isDateEntry,
-              isUrlSearchEntryKey: isUrlSearchEntry,
-              isHeaderKey: isHeadersEntry,
-              shouldHideWhenSame: false,
-              valueStartSeparator: typeof entryKey === "symbol" ? "[" : "",
-              valueEndSeparator: typeof entryKey === "symbol" ? "]" : "",
-            });
-            entryNode.childNodes.key = keyNode;
-          }
-
-          if (isInternalEntry) {
-            const entryValueNode = _createValueNode({
-              parent: entryNode,
-              path: entryNode.path,
-              type: "entry_value",
-              value,
-              ...entrySharedInfo,
-              isMapEntryValue: isMapEntry,
-              isUrlEntryValue: isUrlEntry,
-              isDateEntryValue: isDateEntry,
-              valueSeparator,
-              valueStartSeparator,
-              valueEndSeparator,
-            });
-            entryNode.childNodes.value = entryValueNode;
-          } else {
-            const useAccessor =
-              propertyDescriptor.get || propertyDescriptor.set;
-            const toVisitWhenFrozen = useAccessor
-              ? ["get", "set", "enumerable"]
-              : ["value", "enumerable"];
-            const toVisitWhenSealed = useAccessor
-              ? ["get", "set", "enumerable", "writable"]
-              : ["value", "enumerable", "writable"];
-            const toVisitOtherwise = useAccessor
-              ? ["get", "set", "enumerable", "configurable", "writable"]
-              : ["value", "enumerable", "configurable", "writable"];
-            const propertyDescriptorNames = node.propsFrozen
-              ? toVisitWhenFrozen
-              : node.propsSealed
-                ? toVisitWhenSealed
-                : toVisitOtherwise;
-            for (const propertyDescriptorName of propertyDescriptorNames) {
-              const propertyDescriptorValue =
-                propertyDescriptor[propertyDescriptorName];
-              if (
-                shouldIgnorePropertyDescriptor(
-                  node,
-                  entryKey,
-                  propertyDescriptorName,
-                  propertyDescriptorValue,
-                )
-              ) {
-                continue;
-              }
-              const isPropertyValue = propertyDescriptorName === "value";
-              const isIndexedValue = isIndexedEntry && isPropertyValue;
-              const propertyDescriptorNode = _createValueNode({
-                parent: entryNode,
-                path: propertyDescriptorValue
-                  ? entryNode.path
-                  : entryNode.path.append(propertyDescriptorName, {
-                      isPropertyDescriptor: true,
-                    }),
-                type: "entry_value",
-                value: propertyDescriptorValue,
-                ...entrySharedInfo,
-                descriptor: propertyDescriptorName,
-                isPropertyDescriptor: true,
-                isPropertyValue,
-                isIndexedValue,
-                shouldHideWhenSame: entryShouldHideWhenSame || !isPropertyValue,
-                valueSeparator:
-                  propertyDescriptorName === "get" ||
-                  propertyDescriptorName === "set"
-                    ? ""
-                    : valueSeparator,
-                valueStartSeparator,
+            appendEntryNode("date_entry", {
+              key: {
+                isDatePartKey: true,
+                value: dateEntryKey,
+              },
+              value: {
+                isDatePartValue: true,
+                descriptor: { value: dateEntryValue },
+                valueSeparator,
                 valueEndSeparator,
-              });
-              entryNode.childNodes[propertyDescriptorName] =
-                propertyDescriptorNode;
-            }
+              },
+            });
           }
         }
       }
@@ -3166,7 +3207,7 @@ let createValueNode;
             type: "char",
             value: char,
             index: charNodes.length,
-            entryKey: `${typeof node.parent.entryKey === "symbol" ? humanizeSymbol(node.parent.entryKey) : node.parent.entryKey}${charEntryKey}`,
+            entryKey: `${typeof node.parent.key === "symbol" ? humanizeSymbol(node.parent.key) : node.parent.key}${charEntryKey}`,
           });
           charNodes[charNode.index] = charNode;
         }
@@ -3229,22 +3270,6 @@ let createValueNode;
   const isUndetectableObject = (v) =>
     typeof v === "undefined" && v !== undefined;
 
-  const normalizeUrlPart = (name, value) => {
-    if (name === "port") {
-      if (value === "") {
-        return "";
-      }
-      return parseInt(value);
-    }
-    if (name === "search") {
-      return value;
-    }
-    if (name === "hash") {
-      return value;
-    }
-    return value;
-  };
-
   const DOUBLE_QUOTE = `"`;
   const SINGLE_QUOTE = `'`;
   const BACKTICK = "`";
@@ -3289,8 +3314,8 @@ let writeDiff;
       return "";
     }
     if (
-      comparison.type === "internal_value" &&
-      node.type !== "internal_value"
+      node.isWrappedValueEntry &&
+      !comparison[context.otherResultType]?.isWrappedValueEntry
     ) {
       return "";
     }
@@ -3363,7 +3388,7 @@ let writeDiff;
       diff += propertyDiff;
       return diff;
     }
-    if (node.type === "entry_value" && node.isUrlSearchEntry) {
+    if (node.type === "value" && node.isUrlSearchEntry) {
       for (const [, childNode] of node.childNodes.indexedEntryMap) {
         diff += writeDiff(childNode.comparison, context);
       }
@@ -3372,7 +3397,7 @@ let writeDiff;
 
     const selfContext = createSelfContext(comparison, context);
     const getDisplayedKey = (node) => {
-      if (node.type === "entry_key") {
+      if (node.type === "key") {
         return "";
       }
       if (node.displayedIn === "label") {
@@ -3399,7 +3424,7 @@ let writeDiff;
       if (node.isSourceCode) {
         return "";
       }
-      return node.entryKey;
+      return node.key;
     };
     const getNodeValueEndSeparator = (node) => {
       if (node.isMultiline) {
@@ -3425,19 +3450,21 @@ let writeDiff;
       : getNodeValueEndSeparator(node);
 
     let isValue = false;
-    if (node.type === "entry_key") {
+    if (node.type === "key") {
       const maxColumns = selfContext.maxColumns;
       selfContext.maxColumns = Math.round(maxColumns * 0.5);
-      if (node.isMapEntryKey) {
+      if (node.isMapKey) {
         isValue = true;
       }
-    } else if (node.type === "entry_value") {
-      if (node.displayedIn !== "label") {
-        isValue = true;
+    } else if (node.type === "value") {
+      if (node.parent) {
+        if (node.displayedIn !== "label") {
+          isValue = true;
+        }
       }
-    } else if (node.type === "prototype") {
+    } else if (node.isPrototypeEntry) {
       isValue = true;
-    } else if (node.type === "internal_value") {
+    } else if (node.isWrappedValueEntry) {
       if (node.displayedIn !== "label") {
         isValue = true;
       }
@@ -3459,14 +3486,14 @@ let writeDiff;
             selfContext.collapsedWithOverview = true;
             break auto_collapse_with_overview;
           }
-          if (node.isMapEntryKey) {
+          if (node.isMapKey) {
             selfContext.collapsedWithOverview = true;
             break auto_collapse_with_overview;
           }
         }
 
         if (
-          !node.isMapEntryKey &&
+          !node.isMapKey &&
           !node.isStringForUrlSearch &&
           !node.isOneOfUrlSearchParamValue
         ) {
@@ -3495,20 +3522,20 @@ let writeDiff;
     }
     if (isValue) {
       if (displayedKey && comparison !== selfContext.startComparison) {
-        if (node.descriptor && node.descriptor !== "value") {
-          const descriptorName = node.descriptor;
+        if (node.descriptorKey && node.descriptorKey !== "value") {
+          const descriptorKey = node.descriptorKey;
           const descriptorNameColor = pickColor(
             comparison,
             selfContext,
-            (node) => node.descriptor,
+            (node) => node.descriptorKey,
           );
-          diff += ANSI.color(descriptorName, descriptorNameColor);
+          diff += ANSI.color(descriptorKey, descriptorNameColor);
           diff += " ";
         }
         let nodeHoldingKey;
         if (node.isOneOfUrlSearchParamValue || node.isHeaderValue) {
           nodeHoldingKey = node.parent.parent;
-        } else if (node.type === "entry_value") {
+        } else if (node.type === "value") {
           nodeHoldingKey = node.parent;
         } else {
           nodeHoldingKey = node;
@@ -3518,7 +3545,7 @@ let writeDiff;
         const keyContext = {
           ...selfContext,
           modified: context.modified,
-          collapsedWithOverview: !node.isMapEntryValue,
+          collapsedWithOverview: !node.isMapValue,
         };
         const keyDiff = writeDiff(keyComparison, keyContext);
         diff += keyDiff;
@@ -3588,7 +3615,7 @@ let writeDiff;
     }
     let valueDiff = "";
     value: {
-      if (node.type === "entry_key") {
+      if (node.type === "key") {
         if (node.isClassStaticProperty) {
           const staticColor = pickColor(
             comparison,
@@ -3715,8 +3742,8 @@ let writeDiff;
         break value;
       }
       const pickCanReset = (getter) => {
-        const actualCan = pickSelfOrInternalNode(comparison.actualNode, getter);
-        const expectCan = pickSelfOrInternalNode(comparison.expectNode, getter);
+        const actualCan = pickSelfOrWrappedNode(comparison.actualNode, getter);
+        const expectCan = pickSelfOrWrappedNode(comparison.expectNode, getter);
         return Boolean(actualCan && expectCan);
       };
       const canResetModifiedOnInternalEntry = pickCanReset(
@@ -4035,11 +4062,11 @@ let writeDiff;
   const createSelfContext = (comparison, context) => {
     const selfContext = { ...context };
     const selfModified = context.modified || comparison.selfHasModification;
-    if (comparison.reasons.self.added.has("internal_value")) {
+    if (comparison.reasons.self.added.has("wrapped_value")) {
       selfContext.added = true;
       selfContext.removed = false;
       selfContext.modified = false;
-    } else if (comparison.reasons.self.removed.has("internal_value")) {
+    } else if (comparison.reasons.self.removed.has("wrapped_value")) {
       selfContext.added = false;
       selfContext.removed = false;
       selfContext.modified = true;
@@ -4112,22 +4139,12 @@ let writeDiff;
         labelDiff += writeDiff(messagePropertyComparison, context);
       }
     } else if (node.constructorCall) {
-      const internalValueNode = node.childNodes.internalValue;
-      let internalValueDiff = "";
-      internal_value: {
-        if (internalValueNode && internalValueNode.displayedIn === "label") {
-          const internalValueComparison = internalValueNode.comparison;
-          // const actualCanHaveInternalValue = Boolean(
-          //   internalValueComparison.actualNode &&
-          //     internalValueComparison.actualNode.type === "internal_value",
-          // );
-          // const expectCanHaveInternalValue = Boolean(
-          //   internalValueComparison.expectNode &&
-          //     internalValueComparison.expectNode.type === "internal_value",
-          // );
-          // const canResetModifiedOnInternalValue =
-          //   actualCanHaveInternalValue && expectCanHaveInternalValue;
-          internalValueDiff = writeDiff(internalValueComparison, {
+      const wrappedValueNode = node.childNodes.wrappedValue;
+      let wrappedValueDiff = "";
+      wrapped_value: {
+        if (wrappedValueNode && wrappedValueNode.displayedIn === "label") {
+          const wrappedValueComparison = wrappedValueNode.comparison;
+          wrappedValueDiff = writeDiff(wrappedValueComparison, {
             ...context,
             modified: false,
           });
@@ -4138,18 +4155,18 @@ let writeDiff;
           node.constructorCallOpenDelimiter,
           constructorCallDelimitersColor,
         );
-        labelDiff += internalValueDiff;
+        labelDiff += wrappedValueDiff;
         labelDiff += ANSI.color(
           node.constructorCallCloseDelimiter,
           constructorCallDelimitersColor,
         );
       } else {
-        labelDiff += internalValueDiff;
+        labelDiff += wrappedValueDiff;
       }
     }
 
     const shouldDisplayNestedValueCount =
-      context.collapsed && node.type !== "map_entry_key" && !node.isSourceCode;
+      context.collapsed && node.type !== "key" && !node.isSourceCode;
     if (!shouldDisplayNestedValueCount) {
       return labelDiff;
     }
@@ -4369,17 +4386,17 @@ let writeDiff;
       if (node.functionAnalysis.getterName) {
         functionLabelDiff += ANSI.color("get", beforeFunctionBodyColor);
         functionLabelDiff += " ";
-        functionLabelDiff += ANSI.color(node.entryKey, beforeFunctionBodyColor);
+        functionLabelDiff += ANSI.color(node.key, beforeFunctionBodyColor);
         functionLabelDiff += ANSI.color("()", beforeFunctionBodyColor);
         functionLabelDiff += " ";
       } else if (node.functionAnalysis.setterName) {
         functionLabelDiff += ANSI.color("set", beforeFunctionBodyColor);
         functionLabelDiff += " ";
-        functionLabelDiff += ANSI.color(node.entryKey, beforeFunctionBodyColor);
+        functionLabelDiff += ANSI.color(node.key, beforeFunctionBodyColor);
         functionLabelDiff += ANSI.color("()", beforeFunctionBodyColor);
         functionLabelDiff += " ";
       } else {
-        functionLabelDiff += ANSI.color(node.entryKey, beforeFunctionBodyColor);
+        functionLabelDiff += ANSI.color(node.key, beforeFunctionBodyColor);
         functionLabelDiff += ANSI.color("()", beforeFunctionBodyColor);
         functionLabelDiff += " ";
       }
@@ -4401,19 +4418,19 @@ let writeDiff;
     const lineComparisons = comparison.childComparisons.lines;
     // single line string (both actual and expect)
     const isSingleLine = lineComparisons.length === 1;
-    const actualSelfOrInternalNode = pickSelfOrInternalNode(
+    const actualSelfOrWrappedNode = pickSelfOrWrappedNode(
       comparison.actualNode,
       (node) => node.canHaveLines,
     );
-    const expectSelfOrInternalNode = pickSelfOrInternalNode(
+    const expectSelfOrWrappedNode = pickSelfOrWrappedNode(
       comparison.expectNode,
       (node) => node.canHaveLines,
     );
     const resetModified =
-      actualSelfOrInternalNode &&
-      actualSelfOrInternalNode.canHaveLines &&
-      expectSelfOrInternalNode &&
-      expectSelfOrInternalNode.canHaveLines;
+      actualSelfOrWrappedNode &&
+      actualSelfOrWrappedNode.canHaveLines &&
+      expectSelfOrWrappedNode &&
+      expectSelfOrWrappedNode.canHaveLines;
     const stringContext = {
       ...context,
       modified: resetModified ? false : context.modified,
@@ -4984,47 +5001,49 @@ let writeDiff;
   };
 
   const writeOneLineDiff = (comparison, context) => {
+    const resetModified = (() => {
+      const actualNode = comparison.actualNode;
+      const expectNode = comparison.expectNode;
+      if (actualNode && expectNode) {
+        if (actualNode.canHaveChars && expectNode.canHaveChars) {
+          if (actualNode.isRegExpLine === expectNode.isRegExpLine) {
+            return true;
+          }
+        }
+      }
+      return false;
+    })();
+    const startDelimiter = (() => {
+      if (context.collapsed) return "";
+      if (context.collapsedWithOverview) return "";
+      if (!context.useLineNumbersOnTheLeft) return "";
+
+      let linerNumberAside = "";
+      const lineNumberColor = pickColor(comparison, context);
+      const lineNumberString = String(comparison.index + 1);
+      if (
+        context.biggestLineIndex &&
+        String(context.biggestLineIndex + 1).length > lineNumberString.length
+      ) {
+        linerNumberAside += " ";
+      }
+      linerNumberAside += ANSI.color(lineNumberString, lineNumberColor);
+      // lineDiff += " ";
+      linerNumberAside += ANSI.color("|", lineNumberColor);
+      linerNumberAside += " ";
+      return linerNumberAside;
+    })();
     return writeBreakableDiff({
       comparison,
       context,
       childNodes: comparison[context.resultType].childNodes.chars,
       focusedChildIndex: context.focusedCharIndex,
-      resetModified: (() => {
-        const actualNode = comparison.actualNode;
-        const expectNode = comparison.expectNode;
-        if (actualNode && expectNode) {
-          if (actualNode.canHaveChars && expectNode.canHaveChars) {
-            if (actualNode.isRegExpLine === expectNode.isRegExpLine) {
-              return true;
-            }
-          }
-        }
-        return false;
-      })(),
+      resetModified,
       overflowStartMarker: "…",
       overflowEndMarker: "…",
       openDelimiter: context.quotes,
       closeDelimiter: context.quotes,
-      startDelimiter: (() => {
-        if (context.collapsed) return "";
-        if (context.collapsedWithOverview) return "";
-        if (!context.useLineNumbersOnTheLeft) return "";
-
-        let linerNumberAside = "";
-        const lineNumberColor = pickColor(comparison, context);
-        const lineNumberString = String(comparison.index + 1);
-        if (
-          context.biggestLineIndex &&
-          String(context.biggestLineIndex + 1).length > lineNumberString.length
-        ) {
-          linerNumberAside += " ";
-        }
-        linerNumberAside += ANSI.color(lineNumberString, lineNumberColor);
-        // lineDiff += " ";
-        linerNumberAside += ANSI.color("|", lineNumberColor);
-        linerNumberAside += " ";
-        return linerNumberAside;
-      })(),
+      startDelimiter,
     });
   };
   const writeCharDiff = (charComparison, context) => {
@@ -5111,11 +5130,11 @@ let writeDiff;
       return childNode.comparison.hasAnyDiff;
     });
     const resetModified = (() => {
-      const actualNodeWhoCanHaveUrlPars = pickSelfOrInternalNode(
+      const actualNodeWhoCanHaveUrlPars = pickSelfOrWrappedNode(
         comparison.actualNode,
         (node) => node.isStringForUrl,
       );
-      const expectNodeWhoCanHaveUrlParts = pickSelfOrInternalNode(
+      const expectNodeWhoCanHaveUrlParts = pickSelfOrWrappedNode(
         comparison.expectNode,
         (node) => node.isStringForUrl,
       );
@@ -5138,11 +5157,11 @@ let writeDiff;
   const writeDateDiff = (comparison, context) => {
     let dateDiff = "";
     const node = comparison[context.resultType];
-    const actualNodeWhoCanHaveDatePars = pickSelfOrInternalNode(
+    const actualNodeWhoCanHaveDatePars = pickSelfOrWrappedNode(
       comparison.actualNode,
       (node) => node.isStringForDate,
     );
-    const expectNodeWhoCanHaveDateParts = pickSelfOrInternalNode(
+    const expectNodeWhoCanHaveDateParts = pickSelfOrWrappedNode(
       comparison.expectNode,
       (node) => node.isStringForDate,
     );
@@ -5196,7 +5215,7 @@ let writeDiff;
   };
   const writeHeaderValueDiff = (comparison, context) => {
     const node = comparison[context.resultType];
-    // const headerName = node.entryKey;
+    // const headerName = node.key;
     const headerValueNodes = [];
     for (const [, childNode] of node.childNodes.indexedEntryMap) {
       headerValueNodes.push(childNode);
@@ -5207,11 +5226,11 @@ let writeDiff;
       },
     );
     const resetModified = (() => {
-      const actualNodeWhoHaveHeaderArray = pickSelfOrInternalNode(
+      const actualNodeWhoHaveHeaderArray = pickSelfOrWrappedNode(
         comparison.actualNode,
         (node) => node.isHeadersEntry,
       );
-      const expectNodeWhoHaveHeaderArray = pickSelfOrInternalNode(
+      const expectNodeWhoHaveHeaderArray = pickSelfOrWrappedNode(
         comparison.expectNode,
         (node) => node.isHeadersEntry,
       );
@@ -5258,10 +5277,10 @@ let writeDiff;
   const createPropertyEntryComparisonIterable = (node) => {
     const propertyEntryNodeMap = node.childNodes.propertyEntryMap;
     let propertyNames = Array.from(propertyEntryNodeMap.keys());
-    let internalValueNode = node.childNodes.internalValue;
-    let internalValueComparison;
-    if (internalValueNode && internalValueNode.displayedIn === "properties") {
-      internalValueComparison = internalValueNode.comparison;
+    let wrappedValueNode = node.childNodes.wrappedValue;
+    let wrappedValueComparison;
+    if (wrappedValueNode && wrappedValueNode.displayedIn === "properties") {
+      wrappedValueComparison = wrappedValueNode.comparison;
     }
 
     if (node.isFunction) {
@@ -5292,13 +5311,13 @@ let writeDiff;
 
     if (node.isClassPrototype || node.isFunctionPrototype) {
       return [
-        ...(internalValueComparison ? [internalValueComparison] : []),
+        ...(wrappedValueComparison ? [wrappedValueComparison] : []),
         ...propertyComparisons,
         ...(prototypeComparison ? [prototypeComparison] : []),
       ];
     }
     return [
-      ...(internalValueComparison ? [internalValueComparison] : []),
+      ...(wrappedValueComparison ? [wrappedValueComparison] : []),
       ...(prototypeComparison ? [prototypeComparison] : []),
       ...propertyComparisons,
     ];
@@ -5306,8 +5325,8 @@ let writeDiff;
 
   const pickValueColor = (comparison, context) => {
     return pickColor(comparison, context, (node) => {
-      return node.childNodes.internalValue
-        ? node.childNodes.internalValue.value
+      return node.childNodes.wrappedValue
+        ? node.childNodes.wrappedValue.value
         : node.value;
     });
   };
@@ -5641,7 +5660,7 @@ const pickColor = (comparison, context, getter, { preferSolorColor } = {}) => {
           urlNode.comparison[context.otherResultType];
         if (otherUrlNodeCandidate) {
           otherNode = otherUrlNodeCandidate.childNodes.internalEntryMap.get(
-            node.entryKey,
+            node.key,
           )?.childNodes.value;
         }
       }
@@ -5675,9 +5694,9 @@ const pickDelimitersColor = (comparison, context) => {
     if (comparison.reasons.self.modified.has("primitive")) {
       return node.openDelimiter;
     }
-    const internalNode = node.childNodes.internalValue;
-    if (internalNode) {
-      return internalNode.openDelimiter;
+    const wrappedValueNode = node.childNodes.wrappedValue;
+    if (wrappedValueNode) {
+      return wrappedValueNode.openDelimiter;
     }
     return node.openDelimiter;
   });
@@ -5714,23 +5733,29 @@ const pickColorAccordingToChild = (comparison, context, getter) => {
 };
 
 const getOwnerNode = (node) => {
-  if (node.type === "value") {
-    return node;
-  }
   if (node.type === "entry") {
+    if (node.isPrototypeEntry) {
+      return node.parent;
+    }
+    if (node.isWrappedValueEntry) {
+      return node.parent;
+    }
     return node.parent;
   }
-  if (node.isSetValue) {
-    return node.parent;
-  }
-  if (node.isHeaderValue) {
-    return node.parent;
-  }
-  if (node.isOneOfUrlSearchParamValue) {
-    return node.parent.parent.parent;
-  }
-  if (node.type === "entry_value") {
+  if (node.type === "key") {
     return node.parent.parent;
+  }
+  if (node.type === "value") {
+    if (node.isSetValue) {
+      return node.parent;
+    }
+    if (node.isHeaderValue) {
+      return node.parent;
+    }
+    if (node.isOneOfUrlSearchParamValue) {
+      return node.parent.parent.parent;
+    }
+    return node.parent ? node.parent.parent : null;
   }
   if (node.type === "line") {
     return node.parent;
@@ -5738,25 +5763,20 @@ const getOwnerNode = (node) => {
   if (node.type === "char") {
     return node.parent;
   }
-  if (node.type === "prototype") {
-    return node.parent;
-  }
-  if (node.type === "internal_value") {
-    return node.parent;
-  }
+
   return null;
 };
 
-const pickSelfOrInternalNode = (node, getter) => {
+const pickSelfOrWrappedNode = (node, getter) => {
   if (!node) {
     return null;
   }
   if (getter(node)) {
     return node;
   }
-  const internalValueNode = node.childNodes.internalValue;
-  if (internalValueNode && getter(internalValueNode)) {
-    return internalValueNode;
+  const wrappedValueNode = node.childNodes.wrappedValue;
+  if (wrappedValueNode && getter(wrappedValueNode)) {
+    return wrappedValueNode;
   }
   return null;
 };
