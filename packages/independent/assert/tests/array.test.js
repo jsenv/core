@@ -156,6 +156,7 @@ await startSnapshotTesting("array", {
   ["array subclass"]: () => {
     class MyArray extends Array {}
     assert({
+      colors: false,
       actual: [true],
       expect: new MyArray(true),
     });

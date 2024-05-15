@@ -2308,13 +2308,13 @@ let createValueNode;
         } else if (isWrappedValueEntry) {
           childNodes.wrappedValue = entryNode;
         } else if (isInternalEntry) {
-          internalEntryMap.set(key.value, entryNode);
+          internalEntryMap.set(keyValue, entryNode);
         } else if (isIndexedEntry) {
-          const indexAsString = String(key.value);
+          const indexAsString = String(keyValue);
           propertyNameToIgnoreSet.add(indexAsString);
           indexedEntryMap.set(indexAsString, entryNode);
         } else if (isPropertyEntry) {
-          propertyEntryMap.set(key.value, entryNode);
+          propertyEntryMap.set(keyValue, entryNode);
         }
 
         return entryNode;
@@ -2625,7 +2625,7 @@ let createValueNode;
             } else {
               appendEntryNode("array_entry", {
                 key: {
-                  index,
+                  value: index,
                 },
                 value: {
                   isArrayValue: true,
@@ -2795,15 +2795,15 @@ let createValueNode;
                 break ignore;
               }
               if (ownPropertyName === "constructor") {
-                if (
-                  node.parent.key === "prototype" &&
-                  node.parent.parent.isFunction &&
-                  Object.hasOwn(ownPropertyDescriptor, "value") &&
-                  ownPropertyDescriptor.value === node.parent.parent.value
-                ) {
-                  continue;
-                }
-                break ignore;
+                // if (
+                //   node.parent.key === "prototype" &&
+                //   node.parent.parent.isFunction &&
+                //   Object.hasOwn(ownPropertyDescriptor, "value") &&
+                //   ownPropertyDescriptor.value === node.parent.parent.value
+                // ) {
+                continue;
+                //  }
+                //  break ignore;
               }
               if (ownPropertyName === "length") {
                 if (node.canHaveIndexedValues || node.isFunction) {
@@ -3409,7 +3409,7 @@ let writeDiff;
       if (node.functionAnalysis.type === "method") {
         return "";
       }
-      if (node.isIndexedEntry && node.isPropertyValue) {
+      if (node.type === "value" && node.parent?.isIndexedEntry) {
         return "";
       }
       if (node.isUrlEntry) {

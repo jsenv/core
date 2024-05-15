@@ -168,6 +168,10 @@ expect: [
 # array subclass
 AssertionError: actual and expect are different:
 
-actual: [true]
-expect: MyArray [true]
+actual: [
+  true,
+]
+expect: MyArray [
+  true,
+]
 

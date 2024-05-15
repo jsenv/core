@@ -230,6 +230,7 @@ assert({
 ```js
 class MyArray extends Array {}
 assert({
+  colors: false,
   actual: [true],
   expect: new MyArray(true),
 });
