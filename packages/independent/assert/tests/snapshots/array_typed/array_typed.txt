@@ -117,8 +117,12 @@ expect: {
 # buffer.from vs Uint8Array.from
 AssertionError: actual and expect are different:
 
-actual: Buffer [97]
-expect: Uint8Array [97]
+actual: Buffer [
+  97,
+]
+expect: Uint8Array [
+  97,
+]
 
 # Uint8Array vs Array
 AssertionError: actual and expect are different:

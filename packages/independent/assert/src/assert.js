@@ -2345,6 +2345,7 @@ let createValueNode;
             value: "__proto__",
           },
           value: {
+            isPrototype: true,
             descriptor: { value: prototypeValue },
             valueSeparator: ":",
             valueEndSeparator: ",",
@@ -2914,7 +2915,6 @@ let createValueNode;
             }
             appendEntryNode("own_property_name", {
               shared: {
-                isPrototype,
                 isClassStaticProperty,
                 isClassPrototype,
                 displayedIn,
@@ -2923,6 +2923,7 @@ let createValueNode;
                 value: ownPropertyName,
               },
               value: {
+                isPrototype,
                 isErrorMessage,
                 descriptor: ownPropertyDescriptor,
                 valueSeparator,
