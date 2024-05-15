@@ -26,10 +26,16 @@ export const startSnapshotTesting = async (name, scenarios) => {
       await scenarioCallback();
     } catch (e) {
       fileContent += `# ${key}\n`;
-      if (e.name === "AssertionError") {
+      let errorSource;
+      if (typeof e === "string") {
+        fileContent += `${stripAnsi(e)}\n\n`;
+        errorSource = e;
+      } else if (e.name === "AssertionError") {
         fileContent += `${e.name}: ${stripAnsi(e.message)}\n\n`;
+        errorSource = `${e.name}: ${e.message}\n\n`;
       } else {
         fileContent += `${e.stack}\n\n`;
+        errorSource = `${e.stack}\n\n`;
       }
 
       if (generateMarkdown) {
@@ -43,7 +49,7 @@ export const startSnapshotTesting = async (name, scenarios) => {
             title: "Terminal",
           },
         });
-        await terminalRecorder.write(`${e.name}: ${e.message}\n\n`);
+        await terminalRecorder.write(errorSource);
         const result = await terminalRecorder.stop();
         const svg = await result.svg();
         const svgFileUrl = new URL(

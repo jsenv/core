@@ -1,4 +1,5 @@
 /*
+ *
  */
 
 import { ANSI } from "@jsenv/humanize";
@@ -14,13 +15,15 @@ const PLACEHOLDER_WHEN_NULL = { placeholder: true };
 
 export const assert = ({ actual, expect }) => {
   const rootActualNode = createNode({
-    type: "root",
     name: "actual",
+    type: "root",
+    depth: 0,
     value: actual,
   });
   const rootExpectNode = createNode({
-    type: "root",
     name: "expect",
+    type: "root",
+    depth: 0,
     value: expect,
   });
 
@@ -138,7 +141,10 @@ export const assert = ({ actual, expect }) => {
           expectOwnPropertyNode,
         ) => {
           appendDiff("\n");
-          appendDiff("  ");
+          const indent = "  ".repeat(
+            actualOwnPropertyNode.depth || expectOwnPropertyNode.depth,
+          );
+          appendDiff(indent);
           const propertyKeyComparison = compare(
             createNode({
               type: "own_property_key",
@@ -218,7 +224,19 @@ export const assert = ({ actual, expect }) => {
           expectOwnPropertyDescriptorNode,
         );
         if (actualOwnPropertyDescriptorNode.key === "value") {
-          appendDiff(propertyDescriptorComparison);
+          const actualPropertyIsEnumerable =
+            actualOwnPropertyDescriptorNode.parent.value.enumerable;
+          const expectPropertyIsEnumerable =
+            actualOwnPropertyDescriptorNode.parent.value.enumerable;
+          if (
+            !actualPropertyIsEnumerable &&
+            !expectPropertyIsEnumerable &&
+            !propertyDescriptorComparison.hasAnyDiff
+          ) {
+            // keep it hidden
+          } else {
+            appendDiff(propertyDescriptorComparison);
+          }
         } else if (propertyDescriptorComparison.hasAnyDiff) {
           const descriptorKeyComparison = appendDiff(
             createNode({
@@ -237,6 +255,15 @@ export const assert = ({ actual, expect }) => {
         }
       }
     };
+    const visitOne = (node) => {
+      if (node.type === "own_property") {
+        comparePropertyDescriptor();
+      } else if (node.isComposite) {
+        compareComposite();
+      } else {
+        comparePrimitive();
+      }
+    };
 
     visit: {
       // expect is removed or is expected to be missing
@@ -245,11 +272,7 @@ export const assert = ({ actual, expect }) => {
         expectNode === PLACEHOLDER_WHEN_NULL
       ) {
         currentExpectNode = PLACEHOLDER_WHEN_NULL;
-        if (actualNode.isComposite) {
-          compareComposite();
-        } else {
-          comparePrimitive();
-        }
+        visitOne(actualNode);
         currentExpectNode = expectNode;
         break visit;
       }
@@ -259,11 +282,7 @@ export const assert = ({ actual, expect }) => {
         actualNode === PLACEHOLDER_WHEN_NULL
       ) {
         currentActualNode = PLACEHOLDER_WHEN_NULL;
-        if (expectNode.isComposite) {
-          compareComposite();
-        } else {
-          comparePrimitive();
-        }
+        visitOne(expectNode);
         currentActualNode = actualNode;
         break visit;
       }
@@ -316,6 +335,9 @@ export const assert = ({ actual, expect }) => {
   };
 
   const rootComparison = compare(rootActualNode, rootExpectNode);
+  if (!rootComparison.hasAnyDiff) {
+    return;
+  }
 
   let diff = ``;
   diff += ANSI.color("actual:", sameColor);
@@ -325,7 +347,7 @@ export const assert = ({ actual, expect }) => {
   diff += ANSI.color("expect:", sameColor);
   diff += " ";
   diff += rootComparison.expectDiff;
-  return diff;
+  throw diff;
 };
 
 const settleReasons = (comparison) => {
@@ -352,7 +374,15 @@ const appendReasons = (reasonSet, ...otherReasonSets) => {
   }
 };
 
-const createNode = ({ type, parent, name = parent.name, key, value }) => {
+const createNode = ({
+  name,
+  type,
+  parent,
+  depth = parent.depth,
+  key,
+  value,
+}) => {
+  if (name === undefined) name = parent.name;
   let isPrimitive = false;
   let isComposite = false;
   let valueStartDelimiter;
@@ -362,6 +392,7 @@ const createNode = ({ type, parent, name = parent.name, key, value }) => {
 
   if (value === PLACEHOLDER_WHEN_NULL) {
   } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
+  } else if (type === "own_property") {
   } else if (typeof value === "object") {
     isComposite = true;
     valueStartDelimiter = "{";
@@ -375,6 +406,7 @@ const createNode = ({ type, parent, name = parent.name, key, value }) => {
   return {
     type,
     parent,
+    depth,
     name,
     key,
     value,
@@ -408,16 +440,13 @@ function* getOwnPropertyNodeIterator(node) {
           break ignore;
         }
         const prototypeValue = ownPropertyDescriptor.value;
-        if (node.functionAnalysis.type === "arrow") {
+        if (node.isArrowFunction) {
           if (prototypeValue === undefined) {
             continue;
           }
           break ignore;
         }
-        if (
-          node.functionAnalysis.isAsync &&
-          !node.functionAnalysis.isGenerator
-        ) {
+        if (node.isAsyncFunction && !node.isGeneratorFunction) {
           if (prototypeValue === undefined) {
             continue;
           }
@@ -506,12 +535,14 @@ function* getOwnPropertyNodeIterator(node) {
     yield createNode({
       type: "own_property",
       parent: node,
+      depth: node.depth + 1,
       key: ownPropertyName,
       value: ownPropertyDescriptor,
     });
   }
 }
 function* getOwnPropertyDescriptorNodeIterator(ownPropertyNode) {
+  if (ownPropertyNode.placeholder) return;
   for (const descriptorKey of [
     "value",
     "enumerable",
@@ -533,8 +564,7 @@ function* getOwnPropertyDescriptorNodeIterator(ownPropertyNode) {
           continue;
         }
         const writableDefaultValue =
-          ownPropertyNode.key.value === "prototype" &&
-          compositeNode.isClass === "class"
+          ownPropertyNode.key.value === "prototype" && compositeNode.isClass
             ? false
             : true;
         if (descriptorValue === writableDefaultValue) {
@@ -614,22 +644,3 @@ const pickColors = (actualNode, expectNode, getter) => {
   }
   return [unexpectColor, expectColor];
 };
-
-console.log(
-  assert({
-    actual: {
-      foo: true,
-    },
-    expect: {
-      foo: false,
-    },
-  }),
-);
-// console.log(
-//   assert({
-//     actual: {
-//       foo: true,
-//     },
-//     expect: true,
-//   }),
-// );
