@@ -1501,6 +1501,9 @@ let createValueNode;
       isMapValue,
       isSetValue,
       isOneOfUrlSearchParamValue,
+      isSymbolDescription,
+      isSymbolKeyFor,
+
       isUrlPartKey,
       isUrlPartValue,
       isUrlSearchParamKey,
@@ -2049,13 +2052,15 @@ let createValueNode;
           isMapValue,
           isSetValue,
           isOneOfUrlSearchParamValue,
+          isSourceCode,
+          isSymbolDescription,
+          isSymbolKeyFor,
 
           subtype,
           subtypeDisplayed,
           subtypeDisplayedWhenCollapsed,
           isComposite: composite,
           isPrimitive: primitive,
-          isSourceCode,
           isBuffer,
           isString,
           isNumber,
@@ -2452,6 +2457,7 @@ let createValueNode;
                 isSpecialKey: true,
               },
               value: {
+                isSymbolDescription: true,
                 descriptor: { value: symbolDescription },
               },
             });
@@ -2466,6 +2472,7 @@ let createValueNode;
                 isSpecialKey: true,
               },
               value: {
+                isSymbolKeyFor: true,
                 descriptor: { value: symbolKey },
               },
             });
@@ -2724,6 +2731,7 @@ let createValueNode;
                 descriptor: propertySymbolDescriptor,
                 valueSeparator,
                 valueEndSeparator,
+                shouldHideWhenSame: true,
               },
             });
           }
@@ -2901,8 +2909,6 @@ let createValueNode;
               } else {
                 shouldHideWhenSame = !ownPropertyDescriptor.enumerable;
               }
-            } else if (typeof ownPropertyName === "symbol") {
-              shouldHideWhenSame = true;
             } else {
               shouldHideWhenSame = !ownPropertyDescriptor.enumerable;
             }
@@ -2917,11 +2923,11 @@ let createValueNode;
                 value: ownPropertyName,
               },
               value: {
+                isErrorMessage,
                 descriptor: ownPropertyDescriptor,
                 valueSeparator,
                 valueEndSeparator,
                 shouldHideWhenSame,
-                isErrorMessage,
               },
             });
           }
@@ -3317,43 +3323,38 @@ let writeDiff;
     if (node.hidden) {
       return "";
     }
-    if (
-      node.isWrappedValueEntry &&
-      !comparison[context.otherResultType]?.isWrappedValueEntry
-    ) {
-      return "";
-    }
     context.onComparisonDisplayed(comparison);
+    const selfContext = createSelfContext(comparison, context);
 
     let diff = "";
     if (node.type === "entry") {
-      if (context.collapsed) {
+      if (selfContext.collapsed) {
         return "";
       }
       const propertyDescriptorComparisons = comparison.childComparisons;
-      if (context.collapsedWithOverview) {
+      if (selfContext.collapsedWithOverview) {
         const propertyGetterComparison = propertyDescriptorComparisons.get;
         const propertySetterComparison = propertyDescriptorComparisons.set;
         const propertyGetterNode = propertyGetterComparison
-          ? propertyGetterComparison[context.resultType]
+          ? propertyGetterComparison[selfContext.resultType]
           : null;
         const propertySetterNode = propertySetterComparison
-          ? propertySetterComparison[context.resultType]
+          ? propertySetterComparison[selfContext.resultType]
           : null;
         if (propertyGetterNode && propertySetterNode) {
-          diff += writeDiff(propertyGetterComparison, context);
+          diff += writeDiff(propertyGetterComparison, selfContext);
           return diff;
         }
         if (propertyGetterNode) {
-          diff += writeDiff(propertyGetterComparison, context);
+          diff += writeDiff(propertyGetterComparison, selfContext);
           return diff;
         }
         if (propertySetterNode) {
-          diff += writeDiff(propertySetterComparison, context);
+          diff += writeDiff(propertySetterComparison, selfContext);
           return diff;
         }
         const propertyValueComparison = propertyDescriptorComparisons.value;
-        diff += writeDiff(propertyValueComparison, context);
+        diff += writeDiff(propertyValueComparison, selfContext);
         return diff;
       }
       let propertyDiff = "";
@@ -3371,7 +3372,7 @@ let writeDiff;
           continue;
         }
         const propertyDescriptorNode =
-          propertyDescriptorComparison[context.resultType];
+          propertyDescriptorComparison[selfContext.resultType];
         if (!propertyDescriptorNode) {
           continue;
         }
@@ -3379,7 +3380,7 @@ let writeDiff;
 
         propertyDescriptorDiff += writeDiff(
           propertyDescriptorComparison,
-          context,
+          selfContext,
         );
         if (propertyDescriptorDiff.trim()) {
           if (propertyDiff) {
@@ -3399,7 +3400,6 @@ let writeDiff;
       return diff;
     }
 
-    const selfContext = createSelfContext(comparison, context);
     const getDisplayedKey = (node) => {
       if (node.type === "key") {
         return "";
