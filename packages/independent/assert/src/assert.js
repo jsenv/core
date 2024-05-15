@@ -2238,9 +2238,6 @@ let createValueNode;
                 if (node.propsFrozen) {
                   continue;
                 }
-                if (node.propsSealed) {
-                  continue;
-                }
                 const writableDefaultValue =
                   key.value === "prototype" &&
                   node.functionAnalysis.type === "class"
@@ -2253,6 +2250,9 @@ let createValueNode;
               }
               if (descriptorKey === "configurable") {
                 if (node.propsFrozen) {
+                  continue;
+                }
+                if (node.propsSealed) {
                   continue;
                 }
                 const configurableDefaultValue =
