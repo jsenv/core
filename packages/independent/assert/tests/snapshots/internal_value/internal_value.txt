@@ -5,10 +5,15 @@ actual: new String("a")
 expect: new String("b")
 
 # diff String object vs literal
-AssertionError: actual and expect are different:
-
-actual: new String("abc")
-expect: "a2"
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at diff String object vs literal (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:28:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # new String collapsed with overview
 AssertionError: actual and expect have 1 difference:
@@ -26,10 +31,10 @@ expect: {
 AssertionError: actual and expect have 2 differences:
 
 actual: {
-  foo: { a: new String("toto") },
+  foo: { a: new String() },
 }
 expect: {
-  bar: { a: new String("toto") },
+  bar: { a: new String() },
 }
 
 # new String prop
@@ -43,76 +48,116 @@ expect: new String("b") {
 }
 
 # signal(true) and signal(false)
-AssertionError: actual and expect have 1 difference:
+AssertionError: actual and expect have 2 differences:
 
-actual: Signal(true)
-expect: Signal(false)
+actual: Signal(true) {
+  valueOf: () => { [source code] },
+}
+expect: Signal(false) {
+  valueOf: () => { [source code] },
+}
 
 # signal(true) and true
-AssertionError: actual and expect are different:
-
-actual: Signal(true)
-expect: true
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at signal(true) and true (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:79:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # true and signal(true)
 AssertionError: actual and expect are different:
 
 actual: true
-expect: Signal(true)
+expect: Signal(true) {
+  valueOf: () => { [source code] },
+}
 
 # true and signal(false)
 AssertionError: actual and expect are different:
 
 actual: true
-expect: Signal(false)
+expect: Signal(false) {
+  valueOf: () => { [source code] },
+}
 
 # signal(true) and false
-AssertionError: actual and expect are different:
-
-actual: Signal(true)
-expect: false
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at signal(true) and false (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:106:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # signal(true) and 1
-AssertionError: actual and expect are different:
-
-actual: Signal(true)
-expect: 1
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at signal(true) and 1 (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:115:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # signal({ foo: true }) and signal({ foo: false })
-AssertionError: actual and expect have 1 difference:
+AssertionError: actual and expect have 2 differences:
 
 actual: Signal({
   foo: true,
-})
+}) {
+  valueOf: () => { [source code] },
+}
 expect: Signal({
   foo: false,
-})
+}) {
+  valueOf: () => { [source code] },
+}
 
 # signal([true]) and signal([false]) with props
-AssertionError: actual and expect have 2 differences:
+AssertionError: actual and expect have 3 differences:
 
 actual: Signal([
   true,
 ]) {
+  valueOf: () => { [source code] },
   a: true,
 }
 expect: Signal([
   false,
 ]) {
+  valueOf: () => { [source code] },
   a: false,
 }
 
 # signal([true]) and [true]
-AssertionError: actual and expect are different:
-
-actual: Signal([true])
-expect: [true]
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at signal([true]) and [true] (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:150:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # [true] and signal([true])
 AssertionError: actual and expect are different:
 
-actual: [true]
-expect: Signal([true])
+actual: [
+  true,
+]
+expect: Signal([
+  true,
+]) {
+  valueOf: () => { [source code] },
+}
 
 # [true] and signal([false])
 AssertionError: actual and expect are different:
@@ -122,75 +167,99 @@ actual: [
 ]
 expect: Signal([
   false,
-])
+]) {
+  valueOf: () => { [source code] },
+}
 
 # signal([true]) and [false]
-AssertionError: actual and expect are different:
-
-actual: Signal([
-  true,
-])
-expect: [
-  false,
-]
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at signal([true]) and [false] (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:177:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # signal(string) and signal(string)
-AssertionError: actual and expect have 1 difference:
+AssertionError: actual and expect have 2 differences:
 
-actual: Signal("ab")
-expect: Signal("a")
+actual: Signal("ab") {
+  valueOf: () => { [source code] },
+}
+expect: Signal("a") {
+  valueOf: () => { [source code] },
+}
 
 # signal(string) and string
-AssertionError: actual and expect are different:
-
-actual: Signal("a")
-expect: "a"
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at signal(string) and string (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:198:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # string and signal(string)
 AssertionError: actual and expect are different:
 
 actual: "a"
-expect: Signal("a")
+expect: Signal("a") {
+  valueOf: () => { [source code] },
+}
 
 # both valueOf return object itself
-AssertionError: actual and expect have 1 difference:
+AssertionError: actual and expect have 2 differences:
 
 actual: <ref #1> {
   valueOf(): <ref #1>,
   a: true,
+  valueOf: () => { [source code] },
 }
 expect: <ref #2> {
   valueOf(): <ref #2>,
   a: false,
+  valueOf: () => { [source code] },
 }
 
 # valueOf self and valueOf 10
-AssertionError: actual and expect have 1 difference:
+AssertionError: actual and expect have 2 differences:
 
 actual: <ref #1> {
   valueOf(): <ref #1>,
+  valueOf: () => { [source code] },
 }
 expect: {
   valueOf(): 10,
+  valueOf: () => { [source code] },
 }
 
 # valueOf 10 and valueOf self
-AssertionError: actual and expect have 1 difference:
+AssertionError: actual and expect have 2 differences:
 
 actual: {
   valueOf(): 10,
+  valueOf: () => { [source code] },
 }
 expect: <ref #1> {
   valueOf(): <ref #1>,
+  valueOf: () => { [source code] },
 }
 
 # Symbol.toPrimitive vs primitive
-AssertionError: actual and expect are different:
-
-actual: {
-  Symbol.toPrimitive(): "10"
-}
-expect: "10"
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeNestedValueDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4660:29)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4736:31)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3975:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at Symbol.toPrimitive vs primitive (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:246:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/internal_value.test.js:20:1
 
 # primitive vs Symbol.toPrimitive
 AssertionError: actual and expect are different:
@@ -198,5 +267,6 @@ AssertionError: actual and expect are different:
 actual: 10
 expect: {
   Symbol.toPrimitive(): "10"
+  [Symbol.toPrimitive]: () => { [source code] },
 }
 

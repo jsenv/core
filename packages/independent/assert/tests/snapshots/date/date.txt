@@ -61,7 +61,7 @@ expect: Date("1970-01-01 08:00:00Z")
 # date object vs date string
 AssertionError: actual and expect are different:
 
-actual: Date("1970-01-01")
+actual: Date()
 expect: "1970-01-01"
 
 # date object prop

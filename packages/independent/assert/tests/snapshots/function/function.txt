@@ -1,44 +1,66 @@
 # async arrow function vs arrow function
 AssertionError: actual and expect are different:
 
-actual: async () => { [source code] }
-expect: () => { [source code] }
+actual: async () => {
+  [source code],
+}
+expect: () => {
+  [source code],
+}
 
 # arrow function source modified, name same
 AssertionError: actual and expect have 1 difference:
 
-actual: () => { [source code] }
-expect: () => { [source code] }
+actual: () => {
+  [source code],
+}
+expect: () => {
+  [source code],
+}
 
 # async function vs function
 AssertionError: actual and expect are different:
 
-actual: async function () { [source code] }
-expect: function () { [source code] }
+actual: async function () {
+  [source code],
+}
+expect: function () {
+  [source code],
+  prototype: {},
+}
 
 # function vs arrow function
 AssertionError: actual and expect are different:
 
-actual: function () { [source code] }
-expect: () => { [source code] }
+actual: function () {
+  [source code],
+  prototype: {},
+}
+expect: () => {
+  [source code],
+}
 
 # function source modified, name same
 AssertionError: actual and expect have 1 difference:
 
-actual: function () { [source code] }
-expect: function () { [source code] }
+actual: function () {
+  [source code],
+}
+expect: function () {
+  [source code],
+}
 
 # function source same, name modified
 AssertionError: actual and expect are different:
 
-actual: function foo () { [source code] }
-expect: function bar () { [source code] }
+actual: function foo () { [source code],  }
+expect: function bar () { [source code],  }
 
 # anonymous function vs named function
 AssertionError: actual and expect are different:
 
-actual: function () { [source code] }
-expect: function foo () { [source code] }
+actual: function () { [source code],  }
+expect: function foo () { [source code],  }
 
 # number of diff when comparing async function and function
 AssertionError: actual and expect have 2 differences:
@@ -48,7 +70,7 @@ actual: {
   b: true,
 }
 expect: {
-  a: function () { [source code] },
+  a: function () { [source code], prototype:  },
   b: false,
 }
 
@@ -69,6 +91,7 @@ AssertionError: actual and expect are different:
 
 actual: function Foo () {
   [source code],
+  prototype: {},
 }
 expect: function Bar () {
   [source code],
@@ -81,6 +104,7 @@ AssertionError: actual and expect are different:
 actual: class actual {}
 expect: function expect () {
   [source code],
+  prototype: {},
 }
 
 # class Animal vs class Robot
@@ -95,10 +119,12 @@ AssertionError: actual and expect are different:
 actual: class Human extends Animal {
   [source code];
   static type = "human_actual";
+  __proto__: Animal,
 }
 expect: class Human extends Robot {
   [source code];
   static type = "human_expected";
+  __proto__: Robot,
 }
 
 # class static property modified
@@ -114,16 +140,19 @@ expect: class A {
 }
 
 # class static property added
-AssertionError: actual and expect have 2 differences:
-
-actual: class A {
-  [source code];
-  static a = true;
-}
-expect: class A {}
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeNestedValueDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4660:29)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4736:31)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3975:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at class static property added (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:184:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:25:1
 
 # class static property removed
-AssertionError: actual and expect have 2 differences:
+AssertionError: actual and expect have 1 difference:
 
 actual: class A {}
 expect: class A {
@@ -144,16 +173,19 @@ expect: class {
 }
 
 # class method added
-AssertionError: actual and expect have 2 differences:
-
-actual: class A {
-  [source code];
-  a() { [source code] }
-}
-expect: class A {}
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeNestedValueDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4660:29)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4736:31)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3975:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at class method added (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:220:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:25:1
 
 # class method removed
-AssertionError: actual and expect have 2 differences:
+AssertionError: actual and expect have 1 difference:
 
 actual: class A {}
 expect: class A {
@@ -164,8 +196,12 @@ expect: class A {
 # class constructor modified
 AssertionError: actual and expect are different:
 
-actual: class actual { [source code] }
-expect: class expect { [source code] }
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
 
 # arrow function source same, name modified
 AssertionError: actual and expect have 1 difference:
@@ -192,12 +228,16 @@ expect: {
 }
 
 # class constructor added
-AssertionError: actual and expect are different:
-
-actual: class actual {
-  [source code];
-}
-expect: class expect {}
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeNestedValueDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4660:29)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4736:31)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3975:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at class constructor added (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:282:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:25:1
 
 # class constructor removed
 AssertionError: actual and expect are different:
@@ -232,17 +272,16 @@ expect: class {
 }
 
 # class static property and object property
-AssertionError: actual and expect are different:
-
-actual: class actual {
-  [source code];
-  static a = true;
-  static b = true;
-}
-expect: {
-  a: true,
-  b: false,
-}
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeNestedValueDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4660:29)
+    at writeNestedValueGroupDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4736:31)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3975:25)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at class static property and object property (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:341:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/function.test.js:25:1
 
 # class static prop and function prop
 AssertionError: actual and expect are different:
@@ -254,6 +293,7 @@ actual: class actual {
 expect: function () {
   [source code],
   a: true,
+  prototype: {},
 }
 
 # class prototype method vs function prototype method
@@ -273,6 +313,11 @@ expect: function toto () {
 # class constructor vs function
 AssertionError: actual and expect are different:
 
-actual: class actual { [source code] }
-expect: function expect () { [source code] }
+actual: class actual {
+  [source code];
+}
+expect: function expect () {
+  [source code],
+  prototype: {},
+}
 

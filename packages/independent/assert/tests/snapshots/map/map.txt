@@ -82,6 +82,8 @@ actual: {
 }
 expect: Map {
   "a" => true,
+} {
+  a: true,
 }
 
 # map having cusom prop with object
@@ -89,6 +91,8 @@ AssertionError: actual and expect are different:
 
 actual: Map {
   "a" => true,
+} {
+  a: true,
 }
 expect: {
   a: false,

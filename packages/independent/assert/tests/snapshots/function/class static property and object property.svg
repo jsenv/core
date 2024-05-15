@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="290.45"
+  height="100.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="288.45"
+      height="98.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -26,33 +26,19 @@
     </g>
     <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
   </g>
-  <foreignObject
-    id="body"
-    y="40"
-    width="100%"
-    height="250.45"
-    overflow="hidden"
-  >
+  <foreignObject id="body" y="40" width="100%" height="60.45" overflow="hidden">
     <svg
-      width="423.27"
-      height="250.45"
+      width="566.09"
+      height="60.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
     >
       <g>
         <text x="10" y="14.55"
-          >AssertionError: actual and expect are different:</text
+          >TypeError: Cannot read properties of undefined (reading
+          &#x27;hidden&#x27;)</text
         >
-        <text x="10" y="52.55">actual: class actual {</text>
-        <text x="26.8" y="71.55"> [source code];</text>
-        <text x="26.8" y="90.55"> static a = true;</text>
-        <text x="26.8" y="109.55"> static b = true;</text>
-        <text x="10" y="128.55">}</text>
-        <text x="10" y="147.55">expect: {</text>
-        <text x="26.8" y="166.55"> a: true,</text>
-        <text x="26.8" y="185.55"> b: false,</text>
-        <text x="10" y="204.55">}</text>
       </g>
     </svg>
   </foreignObject>

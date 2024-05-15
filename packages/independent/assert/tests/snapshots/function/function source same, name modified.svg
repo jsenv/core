@@ -53,7 +53,8 @@
         <text x="186.43" y="52.55" fill="#7f7f7f">()</text>
         <text x="211.63" y="52.55" fill="#7f7f7f">{</text>
         <text x="228.44" y="52.55" fill="#cd5555">[source code]</text>
-        <text x="346.05" y="52.55" fill="#7f7f7f">}</text>
+        <text x="337.65" y="52.55" fill="#7f7f7f">,</text>
+        <text x="362.86" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">function</text>
@@ -61,7 +62,8 @@
         <text x="186.43" y="71.55" fill="#7f7f7f">()</text>
         <text x="211.63" y="71.55" fill="#7f7f7f">{</text>
         <text x="228.44" y="71.55" fill="#11bc79">[source code]</text>
-        <text x="346.05" y="71.55" fill="#7f7f7f">}</text>
+        <text x="337.65" y="71.55" fill="#7f7f7f">,</text>
+        <text x="362.86" y="71.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

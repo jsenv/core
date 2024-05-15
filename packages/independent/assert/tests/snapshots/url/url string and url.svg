@@ -48,26 +48,26 @@
         <text x="295.65" y="14.55"> are different:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="52.55" fill="#7f7f7f">h</text>
-        <text x="94.01" y="52.55" fill="#7f7f7f">t</text>
-        <text x="102.42" y="52.55" fill="#7f7f7f">t</text>
-        <text x="110.82" y="52.55" fill="#7f7f7f">p</text>
-        <text x="119.22" y="52.55" fill="#7f7f7f">:</text>
-        <text x="127.62" y="52.55" fill="#7f7f7f">//</text>
-        <text x="144.42" y="52.55" fill="#7f7f7f">e</text>
-        <text x="152.82" y="52.55" fill="#7f7f7f">x</text>
-        <text x="161.22" y="52.55" fill="#7f7f7f">a</text>
-        <text x="169.63" y="52.55" fill="#7f7f7f">m</text>
-        <text x="178.03" y="52.55" fill="#7f7f7f">p</text>
-        <text x="186.43" y="52.55" fill="#7f7f7f">l</text>
-        <text x="194.83" y="52.55" fill="#7f7f7f">e</text>
-        <text x="203.23" y="52.55" fill="#7f7f7f">.</text>
-        <text x="211.63" y="52.55" fill="#7f7f7f">c</text>
-        <text x="220.03" y="52.55" fill="#7f7f7f">o</text>
-        <text x="228.44" y="52.55" fill="#7f7f7f">m</text>
-        <text x="236.84" y="52.55" fill="#7f7f7f">/</text>
-        <text x="245.24" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="77.21" y="52.55" fill="#cd5555">&#x22;</text>
+        <text x="85.61" y="52.55" fill="#cd5555">h</text>
+        <text x="94.01" y="52.55" fill="#cd5555">t</text>
+        <text x="102.42" y="52.55" fill="#cd5555">t</text>
+        <text x="110.82" y="52.55" fill="#cd5555">p</text>
+        <text x="119.22" y="52.55" fill="#cd5555">:</text>
+        <text x="127.62" y="52.55" fill="#cd5555">//</text>
+        <text x="144.42" y="52.55" fill="#cd5555">e</text>
+        <text x="152.82" y="52.55" fill="#cd5555">x</text>
+        <text x="161.22" y="52.55" fill="#cd5555">a</text>
+        <text x="169.63" y="52.55" fill="#cd5555">m</text>
+        <text x="178.03" y="52.55" fill="#cd5555">p</text>
+        <text x="186.43" y="52.55" fill="#cd5555">l</text>
+        <text x="194.83" y="52.55" fill="#cd5555">e</text>
+        <text x="203.23" y="52.55" fill="#cd5555">.</text>
+        <text x="211.63" y="52.55" fill="#cd5555">c</text>
+        <text x="220.03" y="52.55" fill="#cd5555">o</text>
+        <text x="228.44" y="52.55" fill="#cd5555">m</text>
+        <text x="236.84" y="52.55" fill="#cd5555">/</text>
+        <text x="245.24" y="52.55" fill="#cd5555">&#x22;</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#11bc79">URL</text>
@@ -90,8 +90,8 @@
         <text x="245.24" y="71.55" fill="#7f7f7f">c</text>
         <text x="253.64" y="71.55" fill="#7f7f7f">o</text>
         <text x="262.04" y="71.55" fill="#7f7f7f">m</text>
-        <text x="270.44" y="71.55" fill="#DAA520">:</text>
-        <text x="278.84" y="71.55" fill="#DAA520">8000</text>
+        <text x="270.44" y="71.55" fill="#7f7f7f">:</text>
+        <text x="278.84" y="71.55" fill="#7f7f7f">8000</text>
         <text x="312.45" y="71.55" fill="#7f7f7f">/</text>
         <text x="320.85" y="71.55" fill="#7f7f7f">&#x22;</text>
         <text x="329.25" y="71.55" fill="#11bc79">)</text>

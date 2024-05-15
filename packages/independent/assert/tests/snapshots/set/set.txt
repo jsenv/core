@@ -1,5 +1,5 @@
 # set value added
-AssertionError: actual and expect have 2 differences:
+AssertionError: actual and expect have 3 differences:
 
 actual: Set([
   "a",
@@ -25,7 +25,7 @@ expect: Set([
 ])
 
 # set collapsed various cases
-AssertionError: actual and expect have 3 differences:
+AssertionError: actual and expect have 4 differences:
 
 actual: {
   a: true,
@@ -39,14 +39,14 @@ expect: {
 }
 
 # set collapsed deep
-AssertionError: actual and expect have 2 differences:
+AssertionError: actual and expect have 3 differences:
 
-ℹ to improve readability 2 diffs are completely hidden
+ℹ to improve readability 3 diffs are completely hidden
 
 actual: {
-  a: { set_without_diff: Set(2), set_with_added: Set(1) },
+  a: { set_without_diff: Set(), set_with_added: Set() },
 }
 expect: {
-  a: { set_without_diff: Set(2), set_with_added: Set(1) },
+  a: { set_without_diff: Set(), set_with_added: Set() },
 }
 

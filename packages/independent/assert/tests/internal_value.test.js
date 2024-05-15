@@ -1,5 +1,7 @@
 /* eslint-disable no-new-wrappers */
 
+// TODO: rename wrapped_value
+
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 import { createAssert } from "../src/assert.js";

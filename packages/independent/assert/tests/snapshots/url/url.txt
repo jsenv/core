@@ -20,11 +20,11 @@ expect: …"&foo=b"
 AssertionError: actual and expect have 2 differences:
 
 actual: {
-  a: "http://example.com/?a=+&b=1",
+  a: "http://example.com/Array(1)Array(1)",
   b: true,
 }
 expect: {
-  a: "http://example.com/?a= &b=1",
+  a: "http://example.com/Array(1)Array(1)",
   b: false,
 }
 
@@ -32,11 +32,11 @@ expect: {
 AssertionError: actual and expect have 2 differences:
 
 actual: {
-  a: 'http://example.com/?name="dam"',
+  a: 'http://example.com/Array(1)',
   b: true,
 }
 expect: {
-  a: 'http://example.com/?name="seb"',
+  a: 'http://example.com/Array(1)',
   b: false,
 }
 
@@ -137,10 +137,15 @@ actual: "http://"…
 expect: "file://"…
 
 # url and url string
-AssertionError: actual and expect are different:
-
-actual: URL("http://example.com/")
-expect: "http://example.com:8000/"
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at url and url string (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:151:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:6:1
 
 # url string and url string
 AssertionError: actual and expect are different:
@@ -149,10 +154,15 @@ actual: "http://example.com/"
 expect: "http://example.com:8000/"
 
 # url and non url string
-AssertionError: actual and expect are different:
-
-actual: URL("http://example.com/")
-expect: "totoabcexample.com"
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at url and non url string (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:163:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:6:1
 
 # non url string and url
 AssertionError: actual and expect are different:
@@ -161,10 +171,15 @@ actual: "totoabcexample.com"
 expect: URL("http://example.com/")
 
 # url and boolean
-AssertionError: actual and expect are different:
-
-actual: URL("http://example.com/")
-expect: true
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at url and boolean (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:175:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:6:1
 
 # url string inside a prop
 AssertionError: actual and expect have 1 difference:
@@ -187,12 +202,15 @@ expect: {
 }
 
 # url object port and object with port
-AssertionError: actual and expect are different:
-
-actual: URL("http://example.com:45/")
-expect: {
-  port: 45,
-}
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at url object port and object with port (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:201:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:6:1
 
 # file protocol vs http protocol
 AssertionError: actual and expect are different:
@@ -227,12 +245,19 @@ expect: {
 # internal string vs url object
 AssertionError: actual and expect are different:
 
-actual: Signal("toto")
+actual: Signal("toto") {
+  valueOf: () => { [source code] },
+}
 expect: URL("http://toto.com/")
 
 # internal url string vs url string
-AssertionError: actual and expect are different:
-
-actual: Signal("http://a.com/")
-expect: "http://b.com/"
+TypeError: Cannot read properties of undefined (reading 'hidden')
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3328:20)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3377:35)
+    at writeLabelDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:4159:30)
+    at writeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:3627:19)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert.js:1348:24)
+    at internal url string vs url string (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:248:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/url.test.js:6:1
 

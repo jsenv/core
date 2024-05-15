@@ -72,8 +72,19 @@
         <text x="127.62" y="147.55" fill="#7f7f7f">()</text>
         <text x="152.82" y="147.55" fill="#7f7f7f">{</text>
         <text x="169.63" y="147.55" fill="#11bc79">[source code]</text>
-        <text x="287.25" y="147.55" fill="#7f7f7f">}</text>
-        <text x="295.65" y="147.55" fill="#7f7f7f">,</text>
+        <text x="278.84" y="147.55" fill="#7f7f7f">,</text>
+        <text x="295.65" y="147.55" fill="#DAA520">p</text>
+        <text x="304.05" y="147.55" fill="#DAA520">r</text>
+        <text x="312.45" y="147.55" fill="#DAA520">o</text>
+        <text x="320.85" y="147.55" fill="#DAA520">t</text>
+        <text x="329.25" y="147.55" fill="#DAA520">o</text>
+        <text x="337.65" y="147.55" fill="#DAA520">t</text>
+        <text x="346.05" y="147.55" fill="#DAA520">y</text>
+        <text x="354.46" y="147.55" fill="#DAA520">p</text>
+        <text x="362.86" y="147.55" fill="#DAA520">e</text>
+        <text x="371.26" y="147.55" fill="#DAA520">:</text>
+        <text x="396.46" y="147.55" fill="#7f7f7f">}</text>
+        <text x="404.86" y="147.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="166.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="166.55" fill="#7f7f7f">:</text>
         <text x="52.01" y="166.55" fill="#11bc79">false</text>

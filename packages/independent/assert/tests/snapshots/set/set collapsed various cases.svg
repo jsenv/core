@@ -45,7 +45,7 @@
         <text x="144.42" y="14.55" fill="#cd5555">actual</text>
         <text x="203.23" y="14.55"> and </text>
         <text x="236.84" y="14.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="14.55"> have 3 differences:</text>
+        <text x="295.65" y="14.55"> have 4 differences:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
@@ -74,11 +74,11 @@
         <text x="203.23" y="90.55" fill="#7f7f7f">(</text>
         <text x="211.63" y="90.55" fill="#7f7f7f">[</text>
         <text x="220.03" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="228.44" y="90.55" fill="#7f7f7f">a</text>
+        <text x="228.44" y="90.55" fill="#cd5555">a</text>
         <text x="236.84" y="90.55" fill="#7f7f7f">&#x22;</text>
         <text x="245.24" y="90.55" fill="#7f7f7f">,</text>
         <text x="253.64" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="262.04" y="90.55" fill="#7f7f7f">b</text>
+        <text x="262.04" y="90.55" fill="#cd5555">b</text>
         <text x="270.44" y="90.55" fill="#7f7f7f">&#x22;</text>
         <text x="278.84" y="90.55" fill="#7f7f7f">]</text>
         <text x="287.25" y="90.55" fill="#7f7f7f">)</text>
@@ -101,9 +101,9 @@
         <text x="161.22" y="109.55" fill="#7f7f7f">Set</text>
         <text x="186.43" y="109.55" fill="#7f7f7f">(</text>
         <text x="194.83" y="109.55" fill="#7f7f7f">[</text>
-        <text x="203.23" y="109.55" fill="#DAA520">&#x22;</text>
-        <text x="211.63" y="109.55" fill="#DAA520">a</text>
-        <text x="220.03" y="109.55" fill="#DAA520">&#x22;</text>
+        <text x="203.23" y="109.55" fill="#7f7f7f">&#x22;</text>
+        <text x="211.63" y="109.55" fill="#cd5555">a</text>
+        <text x="220.03" y="109.55" fill="#7f7f7f">&#x22;</text>
         <text x="228.44" y="109.55" fill="#7f7f7f">]</text>
         <text x="236.84" y="109.55" fill="#7f7f7f">)</text>
         <text x="245.24" y="109.55" fill="#7f7f7f">,</text>
@@ -136,11 +136,11 @@
         <text x="203.23" y="185.55" fill="#7f7f7f">(</text>
         <text x="211.63" y="185.55" fill="#7f7f7f">[</text>
         <text x="220.03" y="185.55" fill="#7f7f7f">&#x22;</text>
-        <text x="228.44" y="185.55" fill="#7f7f7f">b</text>
+        <text x="228.44" y="185.55" fill="#11bc79">b</text>
         <text x="236.84" y="185.55" fill="#7f7f7f">&#x22;</text>
         <text x="245.24" y="185.55" fill="#7f7f7f">,</text>
         <text x="253.64" y="185.55" fill="#7f7f7f">&#x22;</text>
-        <text x="262.04" y="185.55" fill="#7f7f7f">a</text>
+        <text x="262.04" y="185.55" fill="#11bc79">a</text>
         <text x="270.44" y="185.55" fill="#7f7f7f">&#x22;</text>
         <text x="278.84" y="185.55" fill="#7f7f7f">]</text>
         <text x="287.25" y="185.55" fill="#7f7f7f">)</text>
@@ -163,9 +163,9 @@
         <text x="161.22" y="204.55" fill="#7f7f7f">Set</text>
         <text x="186.43" y="204.55" fill="#7f7f7f">(</text>
         <text x="194.83" y="204.55" fill="#7f7f7f">[</text>
-        <text x="203.23" y="204.55" fill="#DAA520">&#x22;</text>
-        <text x="211.63" y="204.55" fill="#DAA520">b</text>
-        <text x="220.03" y="204.55" fill="#DAA520">&#x22;</text>
+        <text x="203.23" y="204.55" fill="#7f7f7f">&#x22;</text>
+        <text x="211.63" y="204.55" fill="#11bc79">b</text>
+        <text x="220.03" y="204.55" fill="#7f7f7f">&#x22;</text>
         <text x="228.44" y="204.55" fill="#7f7f7f">]</text>
         <text x="236.84" y="204.55" fill="#7f7f7f">)</text>
         <text x="245.24" y="204.55" fill="#7f7f7f">,</text>

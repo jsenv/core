@@ -57,8 +57,8 @@
         <text x="77.21" y="71.55" fill="#7f7f7f">class</text>
         <text x="127.62" y="71.55" fill="#11bc79">expect</text>
         <text x="186.43" y="71.55" fill="#11bc79">{</text>
-        <text x="26.8" y="90.55" fill="#11bc79">[source code]</text>
-        <text x="136.02" y="90.55" fill="#11bc79">;</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">[source code]</text>
+        <text x="136.02" y="90.55" fill="#7f7f7f">;</text>
         <text x="10" y="109.55" fill="#11bc79">}</text>
       </g>
     </svg>

@@ -448,7 +448,7 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           onNestedDiff(insideExpectNode);
         } else {
           if (
-            insideComparison.nodePresent.isDateEntryValue &&
+            insideComparison.nodePresent.isDatePartValue &&
             insideComparison.nodePresent.key === "milliseconds"
           ) {
             if (insideActualNode) {
@@ -699,23 +699,27 @@ export const createAssert = ({ format = (v) => v } = {}) => {
             actualPrototypeNode,
             expectPrototypeNode,
           );
+
+          const isNullPrototype = (prototypeEntryNode) =>
+            prototypeEntryNode.childNodes.value.value === null;
+
           let prototypeCanBeInfered;
           if (!actualPrototypeNode) {
-            if (expectPrototypeNode.value === null) {
+            if (isNullPrototype(expectPrototypeNode)) {
             } else {
               prototypeCanBeInfered = true;
               expectPrototypeNode.hidden = true;
             }
           } else if (!expectPrototypeNode) {
-            if (actualPrototypeNode.value === null) {
+            if (isNullPrototype(actualPrototypeNode)) {
             } else {
               prototypeCanBeInfered = true;
               actualPrototypeNode.hidden = true;
             }
           } else if (actualPrototypeNode && expectPrototypeNode) {
-            if (actualPrototypeNode.value === null) {
+            if (isNullPrototype(actualPrototypeNode)) {
               prototypeCanBeInfered = false;
-            } else if (expectPrototypeNode.value === null) {
+            } else if (isNullPrototype(expectPrototypeNode)) {
               prototypeCanBeInfered = false;
             } else if (
               // prototype can be infered by
@@ -1496,14 +1500,12 @@ let createValueNode;
       isClassPrototype,
       isClassSourceCode,
       isErrorMessage,
-
       isMapKey,
       isMapValue,
       isSetValue,
       isOneOfUrlSearchParamValue,
       isSymbolDescription,
       isSymbolKeyFor,
-
       isUrlPartKey,
       isUrlPartValue,
       isUrlSearchParamKey,
@@ -1784,7 +1786,13 @@ let createValueNode;
             }
 
             if (canHaveIndexedValues) {
-              if (parent?.parent?.isUrlSearchParams && value.length < 2) {
+              if (parent?.parent?.isStringForUrlSearch) {
+                openDelimiter = "";
+                closeDelimiter = "";
+              } else if (
+                parent?.parent?.isUrlSearchParams &&
+                value.length < 2
+              ) {
                 openDelimiter = "";
                 closeDelimiter = "";
               } else {
@@ -1852,8 +1860,6 @@ let createValueNode;
                   // no quote around error message (it is displayed in the "label diff")
                 } else if (isStringForRegExp) {
                   // no quote around string source
-                } else if (isMapKey) {
-                  // no quote around map key
                 } else if (isSpecialKey) {
                   // no quote around special key
                 } else if (isUrlPartKey) {
@@ -1863,14 +1869,16 @@ let createValueNode;
                     isStringForUrlSearch = true;
                     canHaveInternalEntries = true;
                   }
-                } else if (isUrlSearchParamKey || isUrlSearchParamValue) {
+                } else if (
+                  isUrlSearchParamKey ||
+                  isUrlSearchParamValue ||
+                  isOneOfUrlSearchParamValue
+                ) {
                   // no quote around url search param key/value
                 } else if (isDatePartKey || isDatePartValue) {
                   // no quote around date internal properties
                 } else if (type === "key") {
-                  if (isValidPropertyIdentifier(value)) {
-                    // this property does not require quotes
-                  } else {
+                  if (isMapKey || !isValidPropertyIdentifier(value)) {
                     useQuotes = true;
                     quote = DOUBLE_QUOTE;
                     openDelimiter = quote;
@@ -1963,7 +1971,7 @@ let createValueNode;
                   parts.push({
                     type: "integer",
                     value:
-                      entryType === "url_entry" || entryType === "date_entry"
+                      isUrlPartValue || isDatePartValue
                         ? integer
                         : groupDigits(integer),
                   });
@@ -2015,7 +2023,7 @@ let createValueNode;
                 depth = parent.depth;
               }
             } else if (parent.isInternalEntry) {
-              depth = parent.depth;
+              depth = parent.depth + 1;
             } else {
               depth = parent.depth + 1;
             }
@@ -2047,14 +2055,19 @@ let createValueNode;
           isClassPrototype,
           isClassSourceCode,
           isErrorMessage,
-
           isMapKey,
           isMapValue,
           isSetValue,
           isOneOfUrlSearchParamValue,
-          isSourceCode,
           isSymbolDescription,
           isSymbolKeyFor,
+          isUrlPartKey,
+          isUrlPartValue,
+          isUrlSearchParamKey,
+          isUrlSearchParamValue,
+          isDatePartKey,
+          isDatePartValue,
+          isSourceCode,
 
           subtype,
           subtypeDisplayed,
@@ -2156,7 +2169,7 @@ let createValueNode;
       const propertyEntryMap = childNodes.propertyEntryMap;
       const propertyNameToIgnoreSet = new Set();
 
-      const appendEntryNode = (entryType, { shared, key, value }) => {
+      const appendEntryNode = (entryType, { entry, shared, key, value }) => {
         let isPrototypeEntry = false;
         let isWrappedValueEntry = false;
         let isInternalEntry = false;
@@ -2195,6 +2208,7 @@ let createValueNode;
         }
 
         const entryNode = _createValueNode({
+          ...entry,
           ...shared,
           type: "entry",
           parent: node,
@@ -2222,8 +2236,6 @@ let createValueNode;
             path: pathForKey,
             pathPart,
             value: keyValue,
-            valueStartSeparator: typeof keyValue === "symbol" ? "[" : "",
-            valueEndSeparator: typeof keyValue === "symbol" ? "]" : "",
           });
           entryNode.childNodes.key = keyNode;
         }
@@ -2338,15 +2350,17 @@ let createValueNode;
           break prototype;
         }
         appendEntryNode("prototype", {
-          shared: {
+          entry: {
             shouldHideWhenSame: true,
           },
+          shared: {},
           key: {
             value: "__proto__",
           },
           value: {
             isPrototype: true,
             descriptor: { value: prototypeValue },
+            shouldHideWhenSame: true,
             valueSeparator: ":",
             valueEndSeparator: ",",
           },
@@ -2580,15 +2594,13 @@ let createValueNode;
                 },
                 value: {
                   isSetValue: true,
-                  descriptor: Object.getOwnPropertyDescriptor(
-                    node.value,
-                    index,
-                  ),
+                  descriptor: { value: node.value[index] },
                   valueEndSeparator: ",",
                 },
               });
-            } else if (node.parent?.isUrlSearchEntry) {
+            } else if (node.parent?.entryType === "url_search_entry") {
               const isFirstSearchParam = node.index === 0;
+              const isFirstSearchParamValue = index === 0;
               appendEntryNode("url_search_param_value_entry", {
                 key: {
                   value: index,
@@ -2596,16 +2608,13 @@ let createValueNode;
                 },
                 value: {
                   isOneOfUrlSearchParamValue: true,
-                  descriptor: Object.getOwnPropertyDescriptor(
-                    node.value,
-                    index,
-                  ),
+                  descriptor: { value: node.value[index] },
                   valueStartSeparator:
-                    isFirstSearchParam && index === 0 ? "?" : "&",
+                    isFirstSearchParam && isFirstSearchParamValue ? "?" : "&",
                   valueSeparator: "=",
                 },
               });
-            } else if (node.parent?.isUrlSearchParams) {
+            } else if (node.parent?.entryType === "url_search_params_entry") {
               appendEntryNode("url_search_param_value_entry", {
                 key: {
                   value: index,
@@ -2613,23 +2622,17 @@ let createValueNode;
                 },
                 value: {
                   isOneOfUrlSearchParamValue: true,
-                  descriptor: Object.getOwnPropertyDescriptor(
-                    node.value,
-                    index,
-                  ),
+                  descriptor: { value: node.value[index] },
                 },
               });
-            } else if (node.parent?.isHeadersEntry) {
+            } else if (node.parent?.entryType === "headers_entry") {
               appendEntryNode("header_value_entry", {
                 key: {
                   value: index,
                 },
                 value: {
                   isHeaderValue: true,
-                  descriptor: Object.getOwnPropertyDescriptor(
-                    node.value,
-                    index,
-                  ),
+                  descriptor: { value: node.value[index] },
                   valueSeparator: "=>",
                   valueEndSeparator: ",",
                 },
@@ -2727,6 +2730,8 @@ let createValueNode;
               },
               key: {
                 value: ownPropertySymbol,
+                valueStartSeparator: "[",
+                valueEndSeparator: "]",
               },
               value: {
                 descriptor: propertySymbolDescriptor,
@@ -3025,6 +3030,9 @@ let createValueNode;
         else if (node.isStringForUrl) {
           const urlParts = new URL(node.value);
           for (const urlEntryKey of URL_INTERNAL_PROPERTY_NAMES) {
+            if (urlEntryKey === "searchParams") {
+              continue;
+            }
             let urlEntryValue = urlParts[urlEntryKey];
             if (!urlEntryValue) {
               continue;
@@ -3035,6 +3043,7 @@ let createValueNode;
               }
             }
             let valueEndSeparator;
+            let valueStartSeparator;
             if (urlEntryKey === "protocol") {
               valueEndSeparator = "//";
             } else if (urlEntryKey === "username") {
@@ -3058,6 +3067,7 @@ let createValueNode;
               value: {
                 isUrlPartValue: true,
                 descriptor: { value: urlEntryValue },
+                valueStartSeparator,
                 valueEndSeparator,
               },
             });
@@ -3097,8 +3107,6 @@ let createValueNode;
               value: {
                 isUrlSearchParamValue: true,
                 descriptor: { value },
-                valueStartSeparator: "?",
-                valueSeparator: "=",
               },
             });
             index++;
@@ -3150,7 +3158,6 @@ let createValueNode;
             let dateEntryValue = props[dateEntryKey];
             let valueSeparator;
             let valueEndSeparator;
-
             if (dateEntryKey === "month") {
               valueStartSeparator = "-";
               dateEntryValue = String(dateEntryValue + 1).padStart(2, "0");
@@ -3180,6 +3187,7 @@ let createValueNode;
                 isDatePartValue: true,
                 descriptor: { value: dateEntryValue },
                 valueSeparator,
+                valueStartSeparator,
                 valueEndSeparator,
               },
             });
@@ -3317,6 +3325,9 @@ let createValueNode;
 let writeDiff;
 {
   writeDiff = (comparison, context) => {
+    if (!comparison) {
+      debugger;
+    }
     if (comparison.hidden) {
       return "";
     }
@@ -3332,30 +3343,24 @@ let writeDiff;
       if (selfContext.collapsed) {
         return "";
       }
-      const propertyDescriptorComparisons = comparison.childComparisons;
+      const childNodes = node.childNodes;
       if (selfContext.collapsedWithOverview) {
-        const propertyGetterComparison = propertyDescriptorComparisons.get;
-        const propertySetterComparison = propertyDescriptorComparisons.set;
-        const propertyGetterNode = propertyGetterComparison
-          ? propertyGetterComparison[selfContext.resultType]
-          : null;
-        const propertySetterNode = propertySetterComparison
-          ? propertySetterComparison[selfContext.resultType]
-          : null;
+        const propertyGetterNode = childNodes.get;
+        const propertySetterNode = childNodes.set;
         if (propertyGetterNode && propertySetterNode) {
-          diff += writeDiff(propertyGetterComparison, selfContext);
+          diff += writeDiff(propertyGetterNode.comparison, selfContext);
           return diff;
         }
         if (propertyGetterNode) {
-          diff += writeDiff(propertyGetterComparison, selfContext);
+          diff += writeDiff(propertyGetterNode.comparison, selfContext);
           return diff;
         }
         if (propertySetterNode) {
-          diff += writeDiff(propertySetterComparison, selfContext);
+          diff += writeDiff(propertySetterNode.comparison, selfContext);
           return diff;
         }
-        const propertyValueComparison = propertyDescriptorComparisons.value;
-        diff += writeDiff(propertyValueComparison, selfContext);
+        const propertyValueNode = childNodes.value;
+        diff += writeDiff(propertyValueNode.comparison, selfContext);
         return diff;
       }
       let propertyDiff = "";
@@ -3367,18 +3372,15 @@ let writeDiff;
         "configurable",
         "writable",
       ]) {
-        const propertyDescriptorComparison =
-          propertyDescriptorComparisons[propertyDescriptorName];
-        if (propertyDescriptorComparison === null) {
-          continue;
-        }
-        const propertyDescriptorNode =
-          propertyDescriptorComparison[selfContext.resultType];
+        const propertyDescriptorNode = childNodes[propertyDescriptorName];
         if (!propertyDescriptorNode) {
           continue;
         }
+        const propertyDescriptorComparison = propertyDescriptorNode.comparison;
+        if (!propertyDescriptorComparison) {
+          continue;
+        }
         let propertyDescriptorDiff = "";
-
         propertyDescriptorDiff += writeDiff(
           propertyDescriptorComparison,
           selfContext,
@@ -3414,13 +3416,22 @@ let writeDiff;
       if (node.functionAnalysis.type === "method") {
         return "";
       }
+      if (node.isUrlSearchParamValue) {
+        if (node.parent.entryType === "url_search_entry") {
+          return "";
+        }
+        return node.key;
+      }
+      if (node.isOneOfUrlSearchParamValue) {
+        return node.parent.parent.key;
+      }
       if (node.type === "value" && node.parent?.isIndexedEntry) {
         return "";
       }
-      if (node.isUrlEntry) {
+      if (node.isUrlPartValue) {
         return "";
       }
-      if (node.isDateEntry) {
+      if (node.isDatePartValue) {
         return "";
       }
       if (node.isHeaderValue) {
@@ -3500,7 +3511,10 @@ let writeDiff;
         if (
           !node.isMapKey &&
           !node.isStringForUrlSearch &&
-          !node.isOneOfUrlSearchParamValue
+          !node.isOneOfUrlSearchParamValue &&
+          !node.isUrlPartValue &&
+          !node.isUrlSearchParamValue &&
+          !node.isDatePartValue
         ) {
           let indent = `  `.repeat(relativeDepth);
           if (selfContext.signs) {
@@ -3539,7 +3553,7 @@ let writeDiff;
         }
         let nodeHoldingKey;
         if (node.isOneOfUrlSearchParamValue || node.isHeaderValue) {
-          nodeHoldingKey = node.parent.parent;
+          nodeHoldingKey = node.parent.parent.parent;
         } else if (node.type === "value") {
           nodeHoldingKey = node.parent;
         } else {
@@ -3560,7 +3574,8 @@ let writeDiff;
         valueSeparator &&
         comparison !== selfContext.startComparison
       ) {
-        const spacing = !node.isOneOfUrlSearchParamValue;
+        const spacing =
+          !node.isOneOfUrlSearchParamValue && !node.isUrlSearchParamValue;
         const valueSeparatorColor = pickColor(
           comparison,
           selfContext,
@@ -3882,9 +3897,8 @@ let writeDiff;
         } else {
           shouldDisplayDelimiters = true;
         }
-        if (shouldDisplayDelimiters) {
+        if (shouldDisplayDelimiters && openDelimiter) {
           const delimitersColor = pickDelimitersColor(comparison, selfContext);
-
           let insideOverviewDiff = "";
           insideOverviewDiff += ANSI.color(openDelimiter, delimitersColor);
           if (insideOverview) {
@@ -5128,8 +5142,7 @@ let writeDiff;
         }
         continue;
       }
-
-      childNodes.push(urlPartNode);
+      childNodes.push(urlPartNode.childNodes.value);
     }
     const focusedUrlPartIndex = childNodes.findIndex((childNode) => {
       return childNode.comparison.hasAnyDiff;
@@ -5259,12 +5272,6 @@ let writeDiff;
   const createInternalEntryComparisonIterable = (node) => {
     const internalEntryNodeMap = node.childNodes.internalEntryMap;
     let internalEntryKeys = Array.from(internalEntryNodeMap.keys());
-    if (node.isStringForUrl) {
-      internalEntryKeys = internalEntryKeys.filter(
-        (internalEntryKey) =>
-          !URL_INTERNAL_PROPERTY_NAMES.includes(internalEntryKey),
-      );
-    }
     const internalEntryComparisons = internalEntryKeys.map(
       (internalEntryKey) =>
         internalEntryNodeMap.get(internalEntryKey).comparison,

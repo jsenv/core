@@ -2,7 +2,7 @@
 AssertionError: actual and expect have 1 difference:
 
 actual: URLSearchParams {
-  foo => "a",
+foo=>fooa,
 }
 expect: URLSearchParams {}
 
@@ -11,46 +11,46 @@ AssertionError: actual and expect have 1 difference:
 
 actual: URLSearchParams {}
 expect: URLSearchParams {
-  foo => "a",
+foo=>fooa,
 }
 
 # foo modified
 AssertionError: actual and expect have 1 difference:
 
 actual: URLSearchParams {
-  foo => "a",
+foo=>fooa,
 }
 expect: URLSearchParams {
-  foo => "b",
+foo=>foob,
 }
 
 # foo second value added
 AssertionError: actual and expect have 1 difference:
 
 actual: URLSearchParams {
-  foo => ["a","a"],
+foo=>[fooafooa],
 }
 expect: URLSearchParams {
-  foo => "a",
+foo=>fooa,
 }
 
 # foo second value removed
 AssertionError: actual and expect have 1 difference:
 
 actual: URLSearchParams {
-  foo => "a",
+foo=>fooa,
 }
 expect: URLSearchParams {
-  foo => ["a","a"],
+foo=>[fooafooa],
 }
 
 # foo second value modified
 AssertionError: actual and expect have 1 difference:
 
 actual: URLSearchParams {
-  foo => ["a","b"],
+foo=>[fooafoob],
 }
 expect: URLSearchParams {
-  foo => ["a","a"],
+foo=>[fooafooa],
 }
 

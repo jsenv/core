@@ -48,12 +48,12 @@
         <text x="295.65" y="14.55"> are different:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="52.55" fill="#7f7f7f">[</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="35.2" y="71.55" fill="#7f7f7f">a</text>
-        <text x="43.61" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="52.01" y="71.55" fill="#7f7f7f">,</text>
-        <text x="10" y="90.55" fill="#7f7f7f">]</text>
+        <text x="77.21" y="52.55" fill="#cd5555">[</text>
+        <text x="26.8" y="71.55" fill="#cd5555">&#x22;</text>
+        <text x="35.2" y="71.55" fill="#cd5555">a</text>
+        <text x="43.61" y="71.55" fill="#cd5555">&#x22;</text>
+        <text x="52.01" y="71.55" fill="#cd5555">,</text>
+        <text x="10" y="90.55" fill="#cd5555">]</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="109.55" fill="#11bc79">Set</text>

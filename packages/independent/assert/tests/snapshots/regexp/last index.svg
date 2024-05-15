@@ -48,10 +48,12 @@
         <text x="295.65" y="14.55"> have 1 difference:</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="52.55" fill="#7f7f7f">/</text>
-        <text x="85.61" y="52.55" fill="#7f7f7f">a</text>
-        <text x="94.01" y="52.55" fill="#7f7f7f">/</text>
-        <text x="110.82" y="52.55" fill="#7f7f7f">{</text>
+        <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="85.61" y="52.55" fill="#7f7f7f">/</text>
+        <text x="94.01" y="52.55" fill="#7f7f7f">a</text>
+        <text x="102.42" y="52.55" fill="#7f7f7f">/</text>
+        <text x="110.82" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="127.62" y="52.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="71.55" fill="#7f7f7f">l</text>
         <text x="35.2" y="71.55" fill="#7f7f7f">a</text>
         <text x="43.61" y="71.55" fill="#7f7f7f">s</text>
@@ -67,10 +69,12 @@
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="109.55" fill="#7f7f7f">:</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">/</text>
-        <text x="85.61" y="109.55" fill="#7f7f7f">a</text>
-        <text x="94.01" y="109.55" fill="#7f7f7f">/</text>
-        <text x="110.82" y="109.55" fill="#7f7f7f">{</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">&#x22;</text>
+        <text x="85.61" y="109.55" fill="#7f7f7f">/</text>
+        <text x="94.01" y="109.55" fill="#7f7f7f">a</text>
+        <text x="102.42" y="109.55" fill="#7f7f7f">/</text>
+        <text x="110.82" y="109.55" fill="#7f7f7f">&#x22;</text>
+        <text x="127.62" y="109.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="128.55" fill="#7f7f7f">l</text>
         <text x="35.2" y="128.55" fill="#7f7f7f">a</text>
         <text x="43.61" y="128.55" fill="#7f7f7f">s</text>

@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="157.45"
+  height="195.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="155.45"
+      height="193.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="117.45"
+    height="155.45"
     overflow="hidden"
   >
     <svg
       width="423.27"
-      height="117.45"
+      height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -56,20 +56,21 @@
         <text x="10" y="71.55" fill="#7f7f7f">expect</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
-        <text x="94.01" y="71.55" fill="#7f7f7f">m</text>
-        <text x="102.42" y="71.55" fill="#7f7f7f">e</text>
-        <text x="110.82" y="71.55" fill="#7f7f7f">s</text>
-        <text x="119.22" y="71.55" fill="#7f7f7f">s</text>
-        <text x="127.62" y="71.55" fill="#7f7f7f">a</text>
-        <text x="136.02" y="71.55" fill="#7f7f7f">g</text>
-        <text x="144.42" y="71.55" fill="#7f7f7f">e</text>
-        <text x="152.82" y="71.55" fill="#7f7f7f">:</text>
-        <text x="169.63" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="178.03" y="71.55" fill="#7f7f7f">f</text>
-        <text x="186.43" y="71.55" fill="#7f7f7f">o</text>
-        <text x="194.83" y="71.55" fill="#7f7f7f">o</text>
-        <text x="203.23" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="220.03" y="71.55" fill="#7f7f7f">}</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">m</text>
+        <text x="35.2" y="90.55" fill="#7f7f7f">e</text>
+        <text x="43.61" y="90.55" fill="#7f7f7f">s</text>
+        <text x="52.01" y="90.55" fill="#7f7f7f">s</text>
+        <text x="60.41" y="90.55" fill="#7f7f7f">a</text>
+        <text x="68.81" y="90.55" fill="#7f7f7f">g</text>
+        <text x="77.21" y="90.55" fill="#7f7f7f">e</text>
+        <text x="85.61" y="90.55" fill="#7f7f7f">:</text>
+        <text x="102.42" y="90.55" fill="#7f7f7f">&#x22;</text>
+        <text x="110.82" y="90.55" fill="#7f7f7f">f</text>
+        <text x="119.22" y="90.55" fill="#7f7f7f">o</text>
+        <text x="127.62" y="90.55" fill="#7f7f7f">o</text>
+        <text x="136.02" y="90.55" fill="#7f7f7f">&#x22;</text>
+        <text x="144.42" y="90.55" fill="#7f7f7f">,</text>
+        <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>
