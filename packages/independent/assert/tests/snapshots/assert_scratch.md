@@ -2,9 +2,13 @@
 
 ```js
 assert({
-  actual: true,
-  expect: {
+  actual: {
     a: true,
+  },
+  expect: {
+    a: {
+      b: true,
+    },
   },
 });
 ```

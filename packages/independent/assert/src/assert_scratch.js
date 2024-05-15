@@ -1,5 +1,7 @@
 /*
- *
+ * 1. wrapped value
+      on veut vérifier qu'on peut comparer wrapped value
+      en particulier entre primitive et composite
  */
 
 import { ANSI } from "@jsenv/humanize";
@@ -140,7 +142,6 @@ export const assert = ({ actual, expect }) => {
     const compareComposite = () => {
       own_properties: {
         appendDiff((node) => node.valueStartDelimiter);
-
         for (let [
           actualOwnPropertyDescriptorNode,
           expectOwnPropertyDescriptorNode,
@@ -206,11 +207,11 @@ export const assert = ({ actual, expect }) => {
           );
 
           appendDiff("\n");
-          const depth = actualOwnPropertyDescriptorNode.placeholder
-            ? expectOwnPropertyDescriptorNode.depth
-            : actualOwnPropertyDescriptorNode.depth;
-          const indent = "  ".repeat(depth);
-          appendDiff(indent);
+          const depth =
+            actualOwnPropertyDescriptorNode.depth ||
+            expectOwnPropertyDescriptorNode.depth;
+          const indentForProperty = "  ".repeat(depth);
+          appendDiff(indentForProperty);
           if (descriptorKey !== "value") {
             const descriptorKeyComparison = appendDiff(
               actualOwnPropertyDescriptorNode.placeholder
@@ -238,6 +239,9 @@ export const assert = ({ actual, expect }) => {
           appendDiff((node) => node.propertyEndDelimiter);
         }
         appendDiff("\n");
+        const depth = currentActualNode.depth || currentExpectNode.depth;
+        const indentForObject = "  ".repeat(depth);
+        appendDiff(indentForObject);
         appendDiff((node) => node.valueEndDelimiter);
       }
     };

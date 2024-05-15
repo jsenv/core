@@ -1,6 +1,10 @@
 # property are different
-actual: true
-expect: {
+actual: {
   "a": true,
+}
+expect: {
+  "a": {
+    "b": true,
+  },
 }
 
