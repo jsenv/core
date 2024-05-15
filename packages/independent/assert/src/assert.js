@@ -392,6 +392,10 @@ export const createAssert = ({ format = (v) => v } = {}) => {
           nodePresentEntry = nodePresent.parent;
         } else if (nodePresent.type === "value") {
           nodePresentEntry = nodePresent.parent;
+        } else if (nodePresent.type === "line") {
+          nodePresentEntry = nodePresent;
+        } else if (nodePresent.type === "char") {
+          nodePresentEntry = nodePresent;
         } else {
           break added_or_removed;
         }
