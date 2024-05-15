@@ -6,9 +6,7 @@ await startSnapshotTesting("assert_scratch", {
     assert({
       actual: true,
       expect: {
-        a: {
-          b: true,
-        },
+        a: true,
       },
     });
   },

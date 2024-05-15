@@ -1,6 +1,6 @@
 # property are different
 actual: true
 expect: {
-  "a": ,
+  "a": true,
 }
 

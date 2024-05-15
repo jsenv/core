@@ -4,9 +4,7 @@
 assert({
   actual: true,
   expect: {
-    a: {
-      b: true,
-    },
+    a: true,
   },
 });
 ```

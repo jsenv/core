@@ -33,7 +33,6 @@ export const assert = ({ actual, expect }) => {
   };
 
   const compare = (actualNode, expectNode) => {
-    const ownPropertyComparisonMap = new Map();
     const comparison = {
       isComparison: true,
       actualDiff: "",
@@ -60,7 +59,7 @@ export const assert = ({ actual, expect }) => {
           added: new Set(),
         },
       },
-      ownPropertyComparisonMap,
+      done: false,
     };
 
     let currentActualNode = actualNode;
@@ -116,17 +115,23 @@ export const assert = ({ actual, expect }) => {
 
     const onAdded = (reason) => {
       comparison.reasons.self.added.add(reason);
-      comparison.added = true;
     };
     const onRemoved = (reason) => {
       comparison.reasons.self.removed.add(reason);
-      comparison.removed = true;
     };
     const onSelfDiff = (reason) => {
       comparison.reasons.self.modified.add(reason);
       if (comparison.reasons.self.modified.size === 1) {
         addCause(comparison);
       }
+    };
+    const subcompare = (a, b) => {
+      const childComparison = compare(a, b);
+      appendReasonGroup(
+        comparison.reasons.inside,
+        childComparison.reasons.overall,
+      );
+      return childComparison;
     };
 
     const comparePrimitive = () => {
@@ -136,129 +141,108 @@ export const assert = ({ actual, expect }) => {
       own_properties: {
         appendDiff((node) => node.valueStartDelimiter);
 
-        const compareOwnProperty = (
-          actualOwnPropertyNode,
-          expectOwnPropertyNode,
-        ) => {
-          appendDiff("\n");
-          const indent = "  ".repeat(
-            actualOwnPropertyNode.depth || expectOwnPropertyNode.depth,
-          );
-          appendDiff(indent);
-          const propertyKeyComparison = compare(
-            createNode({
-              type: "own_property_key",
-              parent: actualOwnPropertyNode,
-              value: actualOwnPropertyNode.key,
-            }),
-            createNode({
-              type: "own_property_key",
-              parent: actualOwnPropertyNode,
-              value: expectOwnPropertyNode.key,
-            }),
-          );
-          appendDiff(propertyKeyComparison);
-          appendDiff((node) => node.propertyMiddleDelimiter);
-          appendDiff(" ");
-          const ownPropertyComparison = compare(
-            actualOwnPropertyNode,
-            expectOwnPropertyNode,
-          );
-          ownPropertyComparisonMap.set(
-            actualOwnPropertyNode.key,
-            ownPropertyComparison,
-          );
-          appendDiff(ownPropertyComparison);
-          appendDiff((node) => node.propertyEndDelimiter);
-        };
-        for (let [actualOwnPropertyNode, expectOwnPropertyNode] of allIterable([
-          getOwnPropertyNodeIterator(currentActualNode),
-          getOwnPropertyNodeIterator(currentExpectNode),
+        for (let [
+          actualOwnPropertyDescriptorNode,
+          expectOwnPropertyDescriptorNode,
+        ] of allIterable([
+          getOwnPropertyDescriptorNodeIterator(currentActualNode),
+          getOwnPropertyDescriptorNodeIterator(currentExpectNode),
         ])) {
-          if (!actualOwnPropertyNode) {
+          if (!actualOwnPropertyDescriptorNode) {
             if (currentActualNode === PLACEHOLDER_WHEN_NULL) {
-              actualOwnPropertyNode = PLACEHOLDER_WHEN_NULL;
+              actualOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_NULL;
             } else {
-              actualOwnPropertyNode = PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-              onRemoved(expectOwnPropertyNode);
+              actualOwnPropertyDescriptorNode =
+                PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
+              onRemoved(expectOwnPropertyDescriptorNode);
             }
-          } else if (!expectOwnPropertyNode) {
+          } else if (!expectOwnPropertyDescriptorNode) {
             if (currentExpectNode === PLACEHOLDER_WHEN_NULL) {
-              expectOwnPropertyNode = PLACEHOLDER_WHEN_NULL;
+              expectOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_NULL;
             } else {
-              expectOwnPropertyNode = PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-              onAdded(actualOwnPropertyNode);
+              expectOwnPropertyDescriptorNode =
+                PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
+              onAdded(actualOwnPropertyDescriptorNode);
             }
           }
-          compareOwnProperty(actualOwnPropertyNode, expectOwnPropertyNode);
+
+          const descriptorKey = actualOwnPropertyDescriptorNode.placeholder
+            ? expectOwnPropertyDescriptorNode.key
+            : actualOwnPropertyDescriptorNode.key;
+          const ownPropertyDescriptorComparison = subcompare(
+            actualOwnPropertyDescriptorNode,
+            expectOwnPropertyDescriptorNode,
+          );
+          if (descriptorKey === "value") {
+            const actualPropertyIsEnumerable =
+              actualOwnPropertyDescriptorNode.ownPropertyIsEnumerable;
+            const expectPropertyIsEnumerable =
+              expectOwnPropertyDescriptorNode.ownPropertyIsEnumerable;
+            if (
+              !actualPropertyIsEnumerable &&
+              !expectPropertyIsEnumerable &&
+              !ownPropertyDescriptorComparison.hasAnyDiff
+            ) {
+              // keep it hidden
+              continue;
+            }
+          }
+
+          const ownPropertyKeyComparison = subcompare(
+            actualOwnPropertyDescriptorNode.placeholder
+              ? actualOwnPropertyDescriptorNode
+              : createNode({
+                  type: "own_property_key",
+                  parent: actualOwnPropertyDescriptorNode,
+                  value: actualOwnPropertyDescriptorNode.ownPropertyKey,
+                }),
+            expectOwnPropertyDescriptorNode.placeholder
+              ? expectOwnPropertyDescriptorNode
+              : createNode({
+                  type: "own_property_key",
+                  parent: expectOwnPropertyDescriptorNode,
+                  value: expectOwnPropertyDescriptorNode.ownPropertyKey,
+                }),
+          );
+
+          appendDiff("\n");
+          const depth = actualOwnPropertyDescriptorNode.placeholder
+            ? expectOwnPropertyDescriptorNode.depth
+            : actualOwnPropertyDescriptorNode.depth;
+          const indent = "  ".repeat(depth);
+          appendDiff(indent);
+          if (descriptorKey !== "value") {
+            const descriptorKeyComparison = appendDiff(
+              actualOwnPropertyDescriptorNode.placeholder
+                ? actualOwnPropertyDescriptorNode
+                : createNode({
+                    type: "descriptor_key",
+                    parent: actualOwnPropertyDescriptorNode,
+                    value: descriptorKey,
+                  }),
+              expectOwnPropertyDescriptorNode.placeholder
+                ? expectOwnPropertyDescriptorNode
+                : createNode({
+                    type: "descriptor_key",
+                    parent: expectOwnPropertyDescriptorNode,
+                    value: descriptorKey,
+                  }),
+            );
+            appendDiff(descriptorKeyComparison);
+            appendDiff(" ");
+          }
+          appendDiff(ownPropertyKeyComparison);
+          appendDiff((node) => node.propertyMiddleDelimiter);
+          appendDiff(" ");
+          appendDiff(ownPropertyDescriptorComparison);
+          appendDiff((node) => node.propertyEndDelimiter);
         }
         appendDiff("\n");
         appendDiff((node) => node.valueEndDelimiter);
       }
     };
-    const comparePropertyDescriptor = () => {
-      for (let [
-        actualOwnPropertyDescriptorNode,
-        expectOwnPropertyDescriptorNode,
-      ] of allIterable([
-        getOwnPropertyDescriptorNodeIterator(currentActualNode),
-        getOwnPropertyDescriptorNodeIterator(currentExpectNode),
-      ])) {
-        if (!actualOwnPropertyDescriptorNode) {
-          if (currentActualNode === PLACEHOLDER_WHEN_NULL) {
-            actualOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_NULL;
-          } else {
-            actualOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-            onRemoved(expectOwnPropertyDescriptorNode);
-          }
-        } else if (!expectOwnPropertyDescriptorNode) {
-          if (currentExpectNode === PLACEHOLDER_WHEN_NULL) {
-            expectOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_NULL;
-          } else {
-            expectOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-            onAdded(actualOwnPropertyDescriptorNode);
-          }
-        }
-        const propertyDescriptorComparison = compare(
-          actualOwnPropertyDescriptorNode,
-          expectOwnPropertyDescriptorNode,
-        );
-        if (actualOwnPropertyDescriptorNode.key === "value") {
-          const actualPropertyIsEnumerable =
-            actualOwnPropertyDescriptorNode.parent.value.enumerable;
-          const expectPropertyIsEnumerable =
-            actualOwnPropertyDescriptorNode.parent.value.enumerable;
-          if (
-            !actualPropertyIsEnumerable &&
-            !expectPropertyIsEnumerable &&
-            !propertyDescriptorComparison.hasAnyDiff
-          ) {
-            // keep it hidden
-          } else {
-            appendDiff(propertyDescriptorComparison);
-          }
-        } else if (propertyDescriptorComparison.hasAnyDiff) {
-          const descriptorKeyComparison = appendDiff(
-            createNode({
-              type: "descriptor_key",
-              parent: actualOwnPropertyDescriptorNode,
-              value: actualOwnPropertyDescriptorNode.key,
-            }),
-            createNode({
-              type: "descriptor_key",
-              parent: actualOwnPropertyDescriptorNode,
-              value: actualOwnPropertyDescriptorNode.key,
-            }),
-          );
-          appendDiff(descriptorKeyComparison);
-          appendDiff(propertyDescriptorComparison);
-        }
-      }
-    };
     const visitOne = (node) => {
-      if (node.type === "own_property") {
-        comparePropertyDescriptor();
-      } else if (node.isComposite) {
+      if (node.isComposite) {
         compareComposite();
       } else {
         comparePrimitive();
@@ -287,10 +271,6 @@ export const assert = ({ actual, expect }) => {
         break visit;
       }
       // at this stage we are sure we got both actual and expect
-      if (actualNode.type === "own_property") {
-        comparePropertyDescriptor();
-        break visit;
-      }
       if (actualNode.isComposite && expectNode.isComposite) {
         if (actualNode.value === expectNode.value) {
           // we already know there will be no diff
@@ -373,6 +353,12 @@ const appendReasons = (reasonSet, ...otherReasonSets) => {
     }
   }
 };
+const appendReasonGroup = (reasonGroup, otherReasonGroup) => {
+  appendReasons(reasonGroup.any, otherReasonGroup.any);
+  appendReasons(reasonGroup.removed, otherReasonGroup.removed);
+  appendReasons(reasonGroup.added, otherReasonGroup.added);
+  appendReasons(reasonGroup.modified, otherReasonGroup.modified);
+};
 
 const createNode = ({
   name,
@@ -381,6 +367,8 @@ const createNode = ({
   depth = parent.depth,
   key,
   value,
+  ownPropertyKey,
+  ownPropertyIsEnumerable,
 }) => {
   if (name === undefined) name = parent.name;
   let isPrimitive = false;
@@ -392,7 +380,6 @@ const createNode = ({
 
   if (value === PLACEHOLDER_WHEN_NULL) {
   } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
-  } else if (type === "own_property") {
   } else if (typeof value === "object") {
     isComposite = true;
     valueStartDelimiter = "{";
@@ -410,6 +397,8 @@ const createNode = ({
     name,
     key,
     value,
+    ownPropertyKey,
+    ownPropertyIsEnumerable,
     // info
     isPrimitive,
     isComposite,
@@ -421,7 +410,7 @@ const createNode = ({
   };
 };
 
-function* getOwnPropertyNodeIterator(node) {
+function* getOwnPropertyDescriptorNodeIterator(node) {
   if (node.placeholder) return;
   const ownPropertyNames = Object.getOwnPropertyNames(node.value);
   for (const ownPropertyName of ownPropertyNames) {
@@ -532,95 +521,72 @@ function* getOwnPropertyNodeIterator(node) {
         break ignore;
       }
     }
-    yield createNode({
-      type: "own_property",
-      parent: node,
-      depth: node.depth + 1,
-      key: ownPropertyName,
-      value: ownPropertyDescriptor,
-    });
-  }
-}
-function* getOwnPropertyDescriptorNodeIterator(ownPropertyNode) {
-  if (ownPropertyNode.placeholder) return;
-  for (const descriptorKey of [
-    "value",
-    "enumerable",
-    "configurable",
-    "writable",
-    "get",
-    "set",
-  ]) {
-    const compositeNode = ownPropertyNode.parent;
-    const ownPropertyDescriptor = ownPropertyNode.value;
-    if (!Object.hasOwn(ownPropertyDescriptor, descriptorKey)) {
-      continue;
+
+    for (const descriptorKey of Object.keys(ownPropertyDescriptor)) {
+      const descriptorValue = ownPropertyDescriptor[descriptorKey];
+      ignore: {
+        /* eslint-disable no-unneeded-ternary */
+        if (descriptorKey === "writable") {
+          if (node.propsFrozen) {
+            continue;
+          }
+          const writableDefaultValue =
+            ownPropertyName === "prototype" && node.isClass ? false : true;
+          if (descriptorValue === writableDefaultValue) {
+            continue;
+          }
+          break ignore;
+        }
+        if (descriptorKey === "configurable") {
+          if (node.propsFrozen) {
+            continue;
+          }
+          if (node.propsSealed) {
+            continue;
+          }
+          const configurableDefaultValue =
+            ownPropertyName === "prototype" && node.isFunction ? false : true;
+          if (descriptorValue === configurableDefaultValue) {
+            continue;
+          }
+          break ignore;
+        }
+        if (descriptorKey === "enumerable") {
+          const enumerableDefaultValue =
+            (ownPropertyName === "prototype" && node.isFunction) ||
+            (ownPropertyName === "message" && node.isError) ||
+            node.isClassPrototype
+              ? false
+              : true;
+          if (descriptorValue === enumerableDefaultValue) {
+            continue;
+          }
+          break ignore;
+        }
+        /* eslint-enable no-unneeded-ternary */
+        if (descriptorKey === "get") {
+          if (descriptorValue === undefined) {
+            continue;
+          }
+          break ignore;
+        }
+        if (descriptorKey === "set") {
+          if (descriptorValue === undefined) {
+            continue;
+          }
+          break ignore;
+        }
+      }
+      yield createNode({
+        type: "own_property_descriptor",
+        parent: node,
+        depth: node.depth + 1,
+        key: descriptorKey,
+        value: descriptorValue,
+        ownPropertyKey: ownPropertyName,
+        ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
+      });
     }
-    const descriptorValue = ownPropertyDescriptor[descriptorKey];
-    ignore: {
-      /* eslint-disable no-unneeded-ternary */
-      if (descriptorKey === "writable") {
-        if (compositeNode.propsFrozen) {
-          continue;
-        }
-        const writableDefaultValue =
-          ownPropertyNode.key.value === "prototype" && compositeNode.isClass
-            ? false
-            : true;
-        if (descriptorValue === writableDefaultValue) {
-          continue;
-        }
-        break ignore;
-      }
-      if (descriptorKey === "configurable") {
-        if (compositeNode.propsFrozen) {
-          continue;
-        }
-        if (compositeNode.propsSealed) {
-          continue;
-        }
-        const configurableDefaultValue =
-          ownPropertyNode.key.value === "prototype" && compositeNode.isFunction
-            ? false
-            : true;
-        if (descriptorValue === configurableDefaultValue) {
-          continue;
-        }
-        break ignore;
-      }
-      if (descriptorKey === "enumerable") {
-        const enumerableDefaultValue =
-          (ownPropertyNode.key.value === "prototype" &&
-            compositeNode.isFunction) ||
-          (ownPropertyNode.key.value === "message" && compositeNode.isError) ||
-          compositeNode.isClassPrototype
-            ? false
-            : true;
-        if (descriptorValue === enumerableDefaultValue) {
-          continue;
-        }
-        break ignore;
-      }
-      /* eslint-enable no-unneeded-ternary */
-      if (descriptorKey === "get") {
-        if (descriptorValue === undefined) {
-          continue;
-        }
-        break ignore;
-      }
-      if (descriptorKey === "set") {
-        if (descriptorValue === undefined) {
-          continue;
-        }
-        break ignore;
-      }
-    }
-    yield createNode({
-      type: "own_property_descriptor",
-      parent: ownPropertyNode,
-      key: descriptorKey,
-      value: descriptorValue,
-    });
   }
 }
 
