@@ -530,6 +530,99 @@ function* createOwnPropertyDescriptorEntryDualIterator(actualNode, expectNode) {
 }
 function* createOwnPropertyDescriptorEntryIterator(node) {
   if (node.placeholder) return;
+
+  const shouldIgnorePropertyDescriptor = (
+    propertyKey,
+    descriptorKey,
+    descriptorValue,
+  ) => {
+    /* eslint-disable no-unneeded-ternary */
+    if (descriptorKey === "writable") {
+      if (node.propsFrozen) {
+        return true;
+      }
+      const writableDefaultValue =
+        propertyKey === "prototype" && node.isClass ? false : true;
+      return descriptorValue === writableDefaultValue;
+    }
+    if (descriptorKey === "configurable") {
+      if (node.propsFrozen) {
+        return true;
+      }
+      if (node.propsSealed) {
+        return true;
+      }
+      const configurableDefaultValue =
+        propertyKey === "prototype" && node.isFunction ? false : true;
+      return descriptorValue === configurableDefaultValue;
+    }
+    if (descriptorKey === "enumerable") {
+      const enumerableDefaultValue =
+        (propertyKey === "prototype" && node.isFunction) ||
+        (propertyKey === "message" && node.isError) ||
+        node.isClassPrototype
+          ? false
+          : true;
+      return descriptorValue === enumerableDefaultValue;
+    }
+    /* eslint-enable no-unneeded-ternary */
+    if (descriptorKey === "get") {
+      return descriptorValue === undefined;
+    }
+    if (descriptorKey === "set") {
+      return descriptorValue === undefined;
+    }
+    return false;
+  };
+
+  const ownPropertySymbols = Object.getOwnPropertySymbols(node.value);
+  let symbolIndex = 0;
+  for (const ownPropertySymbol of ownPropertySymbols) {
+    const ownPropertyDescriptor = Object.getOwnPropertyDescriptor(
+      node.value,
+      ownPropertySymbol,
+    );
+    ignore: {
+      // TODO
+    }
+    for (const descriptorKey of Object.keys(ownPropertyDescriptor)) {
+      const descriptorValue = ownPropertyDescriptor[descriptorKey];
+      if (
+        shouldIgnorePropertyDescriptor(
+          ownPropertySymbol,
+          descriptorKey,
+          descriptorValue,
+        )
+      ) {
+        continue;
+      }
+      symbolIndex++;
+      yield {
+        type: "own_property_descriptor",
+        key: `${descriptorKey} ${symbolIndex}`,
+        descriptorKeyNode: createNode({
+          type: "own_property_descriptor_key",
+          parent: node,
+          depth: node.depth + 1,
+          value: descriptorKey,
+        }),
+        ownPropertyKeyNode: createNode({
+          type: "own_property_symbol",
+          parent: node,
+          depth: node.depth + 1,
+          value: ownPropertySymbol,
+        }),
+        descriptorValueNode: createNode({
+          type: "own_property_descriptor_value",
+          parent: node,
+          depth: node.depth + 1,
+          value: descriptorValue,
+        }),
+        ownPropertyDescriptor,
+        ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
+      };
+    }
+  }
   const ownPropertyNames = Object.getOwnPropertyNames(node.value);
   for (const ownPropertyName of ownPropertyNames) {
     const ownPropertyDescriptor = Object.getOwnPropertyDescriptor(
@@ -639,61 +732,16 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
         break ignore;
       }
     }
-
     for (const descriptorKey of Object.keys(ownPropertyDescriptor)) {
       const descriptorValue = ownPropertyDescriptor[descriptorKey];
-      ignore: {
-        /* eslint-disable no-unneeded-ternary */
-        if (descriptorKey === "writable") {
-          if (node.propsFrozen) {
-            continue;
-          }
-          const writableDefaultValue =
-            ownPropertyName === "prototype" && node.isClass ? false : true;
-          if (descriptorValue === writableDefaultValue) {
-            continue;
-          }
-          break ignore;
-        }
-        if (descriptorKey === "configurable") {
-          if (node.propsFrozen) {
-            continue;
-          }
-          if (node.propsSealed) {
-            continue;
-          }
-          const configurableDefaultValue =
-            ownPropertyName === "prototype" && node.isFunction ? false : true;
-          if (descriptorValue === configurableDefaultValue) {
-            continue;
-          }
-          break ignore;
-        }
-        if (descriptorKey === "enumerable") {
-          const enumerableDefaultValue =
-            (ownPropertyName === "prototype" && node.isFunction) ||
-            (ownPropertyName === "message" && node.isError) ||
-            node.isClassPrototype
-              ? false
-              : true;
-          if (descriptorValue === enumerableDefaultValue) {
-            continue;
-          }
-          break ignore;
-        }
-        /* eslint-enable no-unneeded-ternary */
-        if (descriptorKey === "get") {
-          if (descriptorValue === undefined) {
-            continue;
-          }
-          break ignore;
-        }
-        if (descriptorKey === "set") {
-          if (descriptorValue === undefined) {
-            continue;
-          }
-          break ignore;
-        }
+      if (
+        shouldIgnorePropertyDescriptor(
+          ownPropertyName,
+          descriptorKey,
+          descriptorValue,
+        )
+      ) {
+        continue;
       }
       yield {
         type: "own_property_descriptor",
