@@ -1,13 +1,13 @@
 /*
- * - possibilité de s'arreter apres un certains nb de diff (et donc de stopper la boucle)
- * - possibilité de démarer le diff a une depth donnée (lorsque la diff est profonde)
- * 
- * 
- * 1. array entries (indexed)
- * 2. set entries
- * 3. internal entries
+ * - property symbols
+ * - map entries (internal)
+ * - array entries (indexed)
+ * - wrapped value entries (internal)
       on veut vérifier qu'on peut comparer wrapped value
       en particulier entre primitive et composite
+ * - set entries (internal) (do not consider it's an array)
+ * - possibilité de s'arreter apres un certains nb de diff (et donc de stopper la boucle)
+ * - possibilité de démarer le diff a une depth donnée (lorsque la diff est profonde)
  */
 
 import { ANSI } from "@jsenv/humanize";
@@ -191,19 +191,22 @@ export const assert = ({ actual, expect }) => {
 
     const comparePrimitive = () => {
       comparison.write((node) => node.valueStartDelimiter);
-      comparison.write((node) => JSON.stringify(node.value));
+      comparison.write((node) => {
+        if (node.isSymbol) return "Symbol()";
+        return JSON.stringify(node.value);
+      });
       comparison.write((node) => node.valueEndDelimiter);
     };
     const compareComposite = () => {
+      comparison.write((node) => node.valueStartDelimiter);
+      let actualHasAtLeastOneDisplayedOwnPropertyEntry = false;
+      let expectHasAtLeastOneDisplayedOwnPropertyEntry = false;
+      const ownPropertiesComparison = compare(
+        actualCurrentNode,
+        expectCurrentNode,
+        true,
+      );
       own_properties: {
-        comparison.write((node) => node.valueStartDelimiter);
-        let actualHasAtLeastOneDisplayedEntry = false;
-        let expectHasAtLeastOneDisplayedEntry = false;
-        const ownPropertiesComparison = compare(
-          actualCurrentNode,
-          expectCurrentNode,
-          true,
-        );
         for (const [
           actualOwnPropertyDescriptorEntry,
           expectOwnPropertyDescriptorEntry,
@@ -255,43 +258,46 @@ export const assert = ({ actual, expect }) => {
               continue;
             }
           }
-          const actualOwnPropertyNameNode =
-            actualOwnPropertyDescriptorEntry.placeholder
-              ? actualOwnPropertyDescriptorEntry
-              : actualOwnPropertyDescriptorEntry.ownPropertyNameNode;
-          const expectOwnProperyNameNode =
-            expectOwnPropertyDescriptorEntry.placeholder
-              ? expectOwnPropertyDescriptorEntry
-              : expectOwnPropertyDescriptorEntry.ownPropertyNameNode;
-          const ownPropertyNameComparison = subcompare(
-            actualOwnPropertyNameNode,
-            expectOwnProperyNameNode,
-          );
+          let ownPropertyKeyComparison;
+          own_property_key: {
+            const actualOwnPropertyKeyNode =
+              actualOwnPropertyDescriptorEntry.placeholder
+                ? actualOwnPropertyDescriptorEntry
+                : actualOwnPropertyDescriptorEntry.ownPropertyKeyNode;
+            const expectOwnProperyKeyNode =
+              expectOwnPropertyDescriptorEntry.placeholder
+                ? expectOwnPropertyDescriptorEntry
+                : expectOwnPropertyDescriptorEntry.ownPropertyKeyNode;
+            ownPropertyKeyComparison = subcompare(
+              actualOwnPropertyKeyNode,
+              expectOwnProperyKeyNode,
+            );
+            ownPropertyDescriptorComparison.write({
+              // eslint-disable-next-line no-loop-func
+              actual: () => {
+                let leftSpacing = "";
+                if (actualHasAtLeastOneDisplayedOwnPropertyEntry) {
+                  leftSpacing += "\n";
+                } else {
+                  actualHasAtLeastOneDisplayedOwnPropertyEntry = true;
+                }
+                leftSpacing += "  ".repeat(actualOwnPropertyKeyNode.depth);
+                return leftSpacing;
+              },
+              // eslint-disable-next-line no-loop-func
+              expect: () => {
+                let leftSpacing = "";
+                if (expectHasAtLeastOneDisplayedOwnPropertyEntry) {
+                  leftSpacing += "\n";
+                } else {
+                  expectHasAtLeastOneDisplayedOwnPropertyEntry = true;
+                }
+                leftSpacing += "  ".repeat(expectOwnProperyKeyNode.depth);
+                return leftSpacing;
+              },
+            });
+          }
 
-          ownPropertyDescriptorComparison.write({
-            // eslint-disable-next-line no-loop-func
-            actual: () => {
-              let leftSpacing = "";
-              if (actualHasAtLeastOneDisplayedEntry) {
-                leftSpacing += "\n";
-              } else {
-                actualHasAtLeastOneDisplayedEntry = true;
-              }
-              leftSpacing += "  ".repeat(actualOwnPropertyNameNode.depth);
-              return leftSpacing;
-            },
-            // eslint-disable-next-line no-loop-func
-            expect: () => {
-              let leftSpacing = "";
-              if (expectHasAtLeastOneDisplayedEntry) {
-                leftSpacing += "\n";
-              } else {
-                expectHasAtLeastOneDisplayedEntry = true;
-              }
-              leftSpacing += "  ".repeat(expectOwnProperyNameNode.depth);
-              return leftSpacing;
-            },
-          });
           if (descriptorKey !== "value") {
             const actualDescriptorKeyNode =
               actualOwnPropertyDescriptorEntry.placeholder
@@ -308,34 +314,35 @@ export const assert = ({ actual, expect }) => {
             ownPropertyDescriptorComparison.write(descriptorKeyComparison);
             ownPropertyDescriptorComparison.write(" ");
           }
-          ownPropertyDescriptorComparison.write(ownPropertyNameComparison);
+          ownPropertyDescriptorComparison.write(ownPropertyKeyComparison);
+          ownPropertyDescriptorComparison.write(() => ":");
           ownPropertyDescriptorComparison.write(" ");
           ownPropertyDescriptorComparison.write(descriptorValueComparison);
           ownPropertyDescriptorComparison.write(() => ",");
           ownPropertiesComparison.write(ownPropertyDescriptorComparison);
         }
-        comparison.write({
-          actual: () => {
-            if (!actualHasAtLeastOneDisplayedEntry) return "";
-            let ownPropertiesDiff = "";
-            ownPropertiesDiff += "\n";
-            ownPropertiesDiff += "  ".repeat(actualCurrentNode.depth);
-            ownPropertiesDiff += ownPropertiesComparison.actualDiff;
-            ownPropertiesDiff += "\n";
-            return ownPropertiesDiff;
-          },
-          expect: () => {
-            if (!expectHasAtLeastOneDisplayedEntry) return "";
-            let ownPropertiesDiff = "";
-            ownPropertiesDiff += "\n";
-            ownPropertiesDiff += "  ".repeat(expectCurrentNode.depth);
-            ownPropertiesDiff += ownPropertiesComparison.expectDiff;
-            ownPropertiesDiff += "\n";
-            return ownPropertiesDiff;
-          },
-        });
-        comparison.write((node) => node.valueEndDelimiter);
       }
+      comparison.write({
+        actual: () => {
+          if (!actualHasAtLeastOneDisplayedOwnPropertyEntry) return "";
+          let ownPropertiesDiff = "";
+          ownPropertiesDiff += "\n";
+          ownPropertiesDiff += "  ".repeat(actualCurrentNode.depth);
+          ownPropertiesDiff += ownPropertiesComparison.actualDiff;
+          ownPropertiesDiff += "\n";
+          return ownPropertiesDiff;
+        },
+        expect: () => {
+          if (!expectHasAtLeastOneDisplayedOwnPropertyEntry) return "";
+          let ownPropertiesDiff = "";
+          ownPropertiesDiff += "\n";
+          ownPropertiesDiff += "  ".repeat(expectCurrentNode.depth);
+          ownPropertiesDiff += ownPropertiesComparison.expectDiff;
+          ownPropertiesDiff += "\n";
+          return ownPropertiesDiff;
+        },
+      });
+      comparison.write((node) => node.valueEndDelimiter);
     };
 
     visit: {
@@ -452,6 +459,7 @@ const createNode = ({
   if (name === undefined) name = parent.name;
   let isPrimitive = false;
   let isComposite = false;
+  let isSymbol = false;
   let valueStartDelimiter = "";
   let valueEndDelimiter = "";
 
@@ -459,7 +467,9 @@ const createNode = ({
   } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
   } else if (type === "own_property_name") {
     isPrimitive = true;
-    valueEndDelimiter = ":";
+  } else if (type === "own_property_symbol") {
+    isPrimitive = true;
+    isSymbol = true;
   } else if (typeof value === "object") {
     isComposite = true;
     valueStartDelimiter = "{";
@@ -478,6 +488,7 @@ const createNode = ({
     // info
     isPrimitive,
     isComposite,
+    isSymbol,
     // render info
     valueStartDelimiter,
     valueEndDelimiter,
@@ -693,7 +704,7 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
           depth: node.depth + 1,
           value: descriptorKey,
         }),
-        ownPropertyNameNode: createNode({
+        ownPropertyKeyNode: createNode({
           type: "own_property_name",
           parent: node,
           depth: node.depth + 1,
