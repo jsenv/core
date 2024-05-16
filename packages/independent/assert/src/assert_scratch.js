@@ -1,5 +1,9 @@
 /*
- * 1. wrapped value
+ * - possibilité de s'arreter apres un certains nb de diff (et donc de stopper la boucle)
+ * 
+ * 1. array entries (indexed)
+ * 2. set entries
+ * 3. internal entries
       on veut vérifier qu'on peut comparer wrapped value
       en particulier entre primitive et composite
  */
@@ -12,20 +16,24 @@ const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.YELLOW;
 const unexpectColor = ANSI.RED;
 const expectColor = ANSI.GREEN;
-const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = { placeholder: true };
-const PLACEHOLDER_WHEN_NULL = { placeholder: true };
+const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
+  placeholder: "added_or_removed",
+  meta: {},
+};
+const PLACEHOLDER_FOR_NOTHING = {
+  placeholder: "nothing",
+  meta: {},
+};
 
 export const assert = ({ actual, expect }) => {
   const rootActualNode = createNode({
     name: "actual",
     type: "root",
-    depth: 0,
     value: actual,
   });
   const rootExpectNode = createNode({
     name: "expect",
     type: "root",
-    depth: 0,
     value: expect,
   });
 
@@ -41,26 +49,7 @@ export const assert = ({ actual, expect }) => {
       expectDiff: "",
       actualNode,
       expectNode,
-      reasons: {
-        overall: {
-          any: new Set(),
-          modified: new Set(),
-          removed: new Set(),
-          added: new Set(),
-        },
-        self: {
-          any: new Set(),
-          modified: new Set(),
-          removed: new Set(),
-          added: new Set(),
-        },
-        inside: {
-          any: new Set(),
-          modified: new Set(),
-          removed: new Set(),
-          added: new Set(),
-        },
-      },
+      reasons: createReasons(),
       done: false,
     };
 
@@ -114,7 +103,6 @@ export const assert = ({ actual, expect }) => {
         }
       }
     };
-
     const onAdded = (reason) => {
       comparison.reasons.self.added.add(reason);
     };
@@ -142,92 +130,115 @@ export const assert = ({ actual, expect }) => {
     const compareComposite = () => {
       own_properties: {
         appendDiff((node) => node.valueStartDelimiter);
-        for (let [
-          actualOwnPropertyDescriptorNode,
-          expectOwnPropertyDescriptorNode,
-        ] of allIterable([
-          getOwnPropertyDescriptorNodeIterator(currentActualNode),
-          getOwnPropertyDescriptorNodeIterator(currentExpectNode),
-        ])) {
-          if (!actualOwnPropertyDescriptorNode) {
-            if (currentActualNode === PLACEHOLDER_WHEN_NULL) {
-              actualOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_NULL;
-            } else {
-              actualOwnPropertyDescriptorNode =
-                PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-              onRemoved(expectOwnPropertyDescriptorNode);
-            }
-          } else if (!expectOwnPropertyDescriptorNode) {
-            if (currentExpectNode === PLACEHOLDER_WHEN_NULL) {
-              expectOwnPropertyDescriptorNode = PLACEHOLDER_WHEN_NULL;
-            } else {
-              expectOwnPropertyDescriptorNode =
-                PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-              onAdded(actualOwnPropertyDescriptorNode);
-            }
+        for (const [
+          actualOwnPropertyDescriptorEntry,
+          expectOwnPropertyDescriptorEntry,
+        ] of createOwnPropertyDescriptorEntryDualIterator(
+          currentActualNode,
+          currentExpectNode,
+        )) {
+          let descriptorKey;
+          if (
+            actualOwnPropertyDescriptorEntry ===
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED
+          ) {
+            onRemoved(expectOwnPropertyDescriptorEntry);
+            descriptorKey = expectOwnPropertyDescriptorEntry.meta.descriptorKey;
+          } else if (
+            expectOwnPropertyDescriptorEntry ===
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED
+          ) {
+            onAdded(actualOwnPropertyDescriptorEntry);
+            descriptorKey = actualOwnPropertyDescriptorEntry.meta.descriptorKey;
+          } else {
+            descriptorKey = actualOwnPropertyDescriptorEntry.meta.descriptorKey;
           }
-
-          const descriptorKey = actualOwnPropertyDescriptorNode.placeholder
-            ? expectOwnPropertyDescriptorNode.key
-            : actualOwnPropertyDescriptorNode.key;
-          const ownPropertyDescriptorComparison = subcompare(
-            actualOwnPropertyDescriptorNode,
-            expectOwnPropertyDescriptorNode,
+          const actualOwnPropertyDescriptorValueNode =
+            actualOwnPropertyDescriptorEntry.placeholder
+              ? actualOwnPropertyDescriptorEntry
+              : createNode({
+                  type: "own_property_descriptor_value",
+                  parent: currentActualNode,
+                  depth: currentExpectNode.depth + 1,
+                  value: actualOwnPropertyDescriptorEntry.value,
+                });
+          const expectOwnPropertyDescriptorValueNode =
+            expectOwnPropertyDescriptorEntry.placeholder
+              ? expectOwnPropertyDescriptorEntry
+              : createNode({
+                  type: "own_property_descriptor_value",
+                  parent: currentExpectNode,
+                  depth: currentActualNode.depth + 1,
+                  value: expectOwnPropertyDescriptorEntry.value,
+                });
+          const ownPropertyDescriptorValueComparison = subcompare(
+            actualOwnPropertyDescriptorValueNode,
+            expectOwnPropertyDescriptorValueNode,
           );
           if (descriptorKey === "value") {
-            const actualPropertyIsEnumerable =
-              actualOwnPropertyDescriptorNode.ownPropertyIsEnumerable;
-            const expectPropertyIsEnumerable =
-              expectOwnPropertyDescriptorNode.ownPropertyIsEnumerable;
+            const actualOwnPropertyIsEnumerable =
+              actualOwnPropertyDescriptorEntry.meta.ownPropertyIsEnumerable;
+            const expectOwnPropertyIsEnumerable =
+              expectOwnPropertyDescriptorEntry.meta.ownPropertyIsEnumerable;
             if (
-              !actualPropertyIsEnumerable &&
-              !expectPropertyIsEnumerable &&
-              !ownPropertyDescriptorComparison.hasAnyDiff
+              !actualOwnPropertyIsEnumerable &&
+              !expectOwnPropertyIsEnumerable &&
+              !ownPropertyDescriptorValueComparison.hasAnyDiff
             ) {
               // keep it hidden
               continue;
             }
           }
-
+          const actualOwnPropertyKeyNode =
+            actualOwnPropertyDescriptorEntry.placeholder
+              ? actualOwnPropertyDescriptorEntry
+              : createNode({
+                  type: "own_property_key",
+                  parent: currentActualNode,
+                  depth: currentExpectNode.depth + 1,
+                  value: actualOwnPropertyDescriptorEntry.meta.ownPropertyKey,
+                });
+          const expectOwnPropertyKeyNode =
+            expectOwnPropertyDescriptorEntry.placeholder
+              ? expectOwnPropertyDescriptorEntry
+              : createNode({
+                  type: "own_property_key",
+                  parent: currentExpectNode,
+                  depth: currentExpectNode.depth + 1,
+                  value: expectOwnPropertyDescriptorEntry.meta.ownPropertyKey,
+                });
           const ownPropertyKeyComparison = subcompare(
-            actualOwnPropertyDescriptorNode.placeholder
-              ? actualOwnPropertyDescriptorNode
-              : createNode({
-                  type: "own_property_key",
-                  parent: actualOwnPropertyDescriptorNode,
-                  value: actualOwnPropertyDescriptorNode.ownPropertyKey,
-                }),
-            expectOwnPropertyDescriptorNode.placeholder
-              ? expectOwnPropertyDescriptorNode
-              : createNode({
-                  type: "own_property_key",
-                  parent: expectOwnPropertyDescriptorNode,
-                  value: expectOwnPropertyDescriptorNode.ownPropertyKey,
-                }),
+            actualOwnPropertyKeyNode,
+            expectOwnPropertyKeyNode,
           );
 
           appendDiff("\n");
-          const depth =
-            actualOwnPropertyDescriptorNode.depth ||
-            expectOwnPropertyDescriptorNode.depth;
-          const indentForProperty = "  ".repeat(depth);
+          const propertyDepth =
+            actualOwnPropertyKeyNode.depth || expectOwnPropertyKeyNode.depth;
+          const indentForProperty = "  ".repeat(propertyDepth);
           appendDiff(indentForProperty);
           if (descriptorKey !== "value") {
+            const actualDescriptorKeyNode =
+              actualOwnPropertyDescriptorEntry.placeholder
+                ? actualOwnPropertyDescriptorEntry
+                : createNode({
+                    type: "descriptor_key",
+                    parent: actualNode,
+                    depth: actualNode.depth + 1,
+                    value: descriptorKey,
+                  });
+            const expectDescriptorKeyNode =
+              expectOwnPropertyDescriptorEntry.placeholder
+                ? expectOwnPropertyDescriptorEntry
+                : createNode({
+                    type: "descriptor_key",
+                    parent: expectNode,
+                    depth: expectNode.depth + 1,
+                    value: descriptorKey,
+                  });
             const descriptorKeyComparison = appendDiff(
-              actualOwnPropertyDescriptorNode.placeholder
-                ? actualOwnPropertyDescriptorNode
-                : createNode({
-                    type: "descriptor_key",
-                    parent: actualOwnPropertyDescriptorNode,
-                    value: descriptorKey,
-                  }),
-              expectOwnPropertyDescriptorNode.placeholder
-                ? expectOwnPropertyDescriptorNode
-                : createNode({
-                    type: "descriptor_key",
-                    parent: expectOwnPropertyDescriptorNode,
-                    value: descriptorKey,
-                  }),
+              actualDescriptorKeyNode,
+              expectDescriptorKeyNode,
             );
             appendDiff(descriptorKeyComparison);
             appendDiff(" ");
@@ -235,7 +246,7 @@ export const assert = ({ actual, expect }) => {
           appendDiff(ownPropertyKeyComparison);
           appendDiff((node) => node.propertyMiddleDelimiter);
           appendDiff(" ");
-          appendDiff(ownPropertyDescriptorComparison);
+          appendDiff(ownPropertyDescriptorValueComparison);
           appendDiff((node) => node.propertyEndDelimiter);
         }
         appendDiff("\n");
@@ -257,9 +268,9 @@ export const assert = ({ actual, expect }) => {
       // expect is removed or is expected to be missing
       if (
         expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
-        expectNode === PLACEHOLDER_WHEN_NULL
+        expectNode === PLACEHOLDER_FOR_NOTHING
       ) {
-        currentExpectNode = PLACEHOLDER_WHEN_NULL;
+        currentExpectNode = PLACEHOLDER_FOR_NOTHING;
         visitOne(actualNode);
         currentExpectNode = expectNode;
         break visit;
@@ -267,9 +278,9 @@ export const assert = ({ actual, expect }) => {
       // actual is added or expected to be missing
       if (
         actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
-        actualNode === PLACEHOLDER_WHEN_NULL
+        actualNode === PLACEHOLDER_FOR_NOTHING
       ) {
-        currentActualNode = PLACEHOLDER_WHEN_NULL;
+        currentActualNode = PLACEHOLDER_FOR_NOTHING;
         visitOne(expectNode);
         currentActualNode = actualNode;
         break visit;
@@ -295,26 +306,39 @@ export const assert = ({ actual, expect }) => {
       }
       if (actualNode.isPrimitive && expectNode.isComposite) {
         onSelfDiff("should_be_composite");
-        currentExpectNode = PLACEHOLDER_WHEN_NULL;
+        currentExpectNode = PLACEHOLDER_FOR_NOTHING;
         comparePrimitive();
         currentExpectNode = expectNode;
-        currentActualNode = PLACEHOLDER_WHEN_NULL;
+        currentActualNode = PLACEHOLDER_FOR_NOTHING;
         compareComposite();
         currentActualNode = actualNode;
         break visit;
       }
       if (actualNode.isComposite && expectNode.isPrimitive) {
         onSelfDiff("should_be_primitive");
-        currentExpectNode = PLACEHOLDER_WHEN_NULL;
+        currentExpectNode = PLACEHOLDER_FOR_NOTHING;
         compareComposite();
         currentExpectNode = expectNode;
-        currentActualNode = PLACEHOLDER_WHEN_NULL;
+        currentActualNode = PLACEHOLDER_FOR_NOTHING;
         comparePrimitive();
         currentActualNode = actualNode;
         break visit;
       }
     }
-    settleReasons(comparison);
+
+    const { self, inside, overall } = comparison.reasons;
+    appendReasons(self.any, self.modified, self.removed, self.added);
+    appendReasons(inside.any, inside.modified, inside.removed, inside.added);
+    appendReasons(overall.removed, self.removed, inside.removed);
+    appendReasons(overall.added, self.added, inside.added);
+    appendReasons(overall.modified, self.modified, inside.modified);
+    appendReasons(overall.any, self.any, inside.any);
+    comparison.selfHasRemoval = self.removed.size > 0;
+    comparison.selfHasAddition = self.added.size > 0;
+    comparison.selfHasModification = self.modified.size > 0;
+    comparison.hasAnyDiff = overall.any.size > 0;
+    comparison.done = true;
+
     return comparison;
   };
 
@@ -334,45 +358,13 @@ export const assert = ({ actual, expect }) => {
   throw diff;
 };
 
-const settleReasons = (comparison) => {
-  const { reasons } = comparison;
-  const { self, inside, overall } = reasons;
-  appendReasons(self.any, self.modified, self.removed, self.added);
-  appendReasons(inside.any, inside.modified, inside.removed, inside.added);
-  appendReasons(overall.removed, self.removed, inside.removed);
-  appendReasons(overall.added, self.added, inside.added);
-  appendReasons(overall.modified, self.modified, inside.modified);
-  appendReasons(overall.any, self.any, inside.any);
-
-  comparison.selfHasRemoval = self.removed.size > 0;
-  comparison.selfHasAddition = self.added.size > 0;
-  comparison.selfHasModification = self.modified.size > 0;
-  comparison.hasAnyDiff = overall.any.size > 0;
-  comparison.done = true;
-};
-const appendReasons = (reasonSet, ...otherReasonSets) => {
-  for (const otherReasonSet of otherReasonSets) {
-    for (const reason of otherReasonSet) {
-      reasonSet.add(reason);
-    }
-  }
-};
-const appendReasonGroup = (reasonGroup, otherReasonGroup) => {
-  appendReasons(reasonGroup.any, otherReasonGroup.any);
-  appendReasons(reasonGroup.removed, otherReasonGroup.removed);
-  appendReasons(reasonGroup.added, otherReasonGroup.added);
-  appendReasons(reasonGroup.modified, otherReasonGroup.modified);
-};
-
 const createNode = ({
   name,
   type,
   parent,
-  depth = parent.depth,
-  key,
   value,
-  ownPropertyKey,
-  ownPropertyIsEnumerable,
+  depth = parent ? parent.depth : 0,
+  meta = {},
 }) => {
   if (name === undefined) name = parent.name;
   let isPrimitive = false;
@@ -382,7 +374,7 @@ const createNode = ({
   let propertyMiddleDelimiter;
   let propertyEndDelimiter;
 
-  if (value === PLACEHOLDER_WHEN_NULL) {
+  if (value === PLACEHOLDER_FOR_NOTHING) {
   } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
   } else if (typeof value === "object") {
     isComposite = true;
@@ -399,10 +391,8 @@ const createNode = ({
     parent,
     depth,
     name,
-    key,
     value,
-    ownPropertyKey,
-    ownPropertyIsEnumerable,
+    meta,
     // info
     isPrimitive,
     isComposite,
@@ -414,7 +404,40 @@ const createNode = ({
   };
 };
 
-function* getOwnPropertyDescriptorNodeIterator(node) {
+function* createOwnPropertyDescriptorEntryDualIterator(actualNode, expectNode) {
+  for (let [
+    actualOwnPropertyDescriptorEntry,
+    expectOwnPropertyDescriptorEntry,
+  ] of allIterable([
+    createOwnPropertyDescriptorEntryIterator(actualNode),
+    createOwnPropertyDescriptorEntryIterator(expectNode),
+  ])) {
+    if (actualNode.placeholder) {
+      yield [actualNode, expectOwnPropertyDescriptorEntry];
+      continue;
+    }
+    if (expectNode.placeholder) {
+      yield [actualOwnPropertyDescriptorEntry, expectNode];
+      continue;
+    }
+    if (!actualOwnPropertyDescriptorEntry) {
+      yield [
+        PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+        expectOwnPropertyDescriptorEntry,
+      ];
+      continue;
+    }
+    if (!expectOwnPropertyDescriptorEntry) {
+      yield [
+        actualOwnPropertyDescriptorEntry,
+        PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+      ];
+      continue;
+    }
+    yield [actualOwnPropertyDescriptorEntry, expectOwnPropertyDescriptorEntry];
+  }
+}
+function* createOwnPropertyDescriptorEntryIterator(node) {
   if (node.placeholder) return;
   const ownPropertyNames = Object.getOwnPropertyNames(node.value);
   for (const ownPropertyName of ownPropertyNames) {
@@ -581,15 +604,17 @@ function* getOwnPropertyDescriptorNodeIterator(node) {
           break ignore;
         }
       }
-      yield createNode({
+      yield {
         type: "own_property_descriptor",
-        parent: node,
-        depth: node.depth + 1,
-        key: descriptorKey,
+        key: `${ownPropertyName} ${descriptorKey}`,
         value: descriptorValue,
-        ownPropertyKey: ownPropertyName,
-        ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
-      });
+        meta: {
+          ownPropertyKey: ownPropertyName,
+          descriptorKey,
+          ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
+          ownPropertyDescriptor,
+        },
+      };
     }
   }
 }
@@ -601,10 +626,10 @@ const pickColors = (actualNode, expectNode, getter) => {
   if (expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
     return [removedColor, null];
   }
-  if (actualNode && expectNode === PLACEHOLDER_WHEN_NULL) {
+  if (actualNode && expectNode === PLACEHOLDER_FOR_NOTHING) {
     return [unexpectColor, null];
   }
-  if (expectNode && actualNode === PLACEHOLDER_WHEN_NULL) {
+  if (expectNode && actualNode === PLACEHOLDER_FOR_NOTHING) {
     return [null, expectColor];
   }
   const actualValue = getter(actualNode);
@@ -613,4 +638,45 @@ const pickColors = (actualNode, expectNode, getter) => {
     return [sameColor, sameColor];
   }
   return [unexpectColor, expectColor];
+};
+
+const createReasons = () => {
+  const overall = {
+    any: new Set(),
+    modified: new Set(),
+    removed: new Set(),
+    added: new Set(),
+  };
+  const self = {
+    any: new Set(),
+    modified: new Set(),
+    removed: new Set(),
+    added: new Set(),
+  };
+  const inside = {
+    any: new Set(),
+    modified: new Set(),
+    removed: new Set(),
+    added: new Set(),
+  };
+
+  return {
+    overall,
+    self,
+    inside,
+  };
+};
+
+const appendReasons = (reasonSet, ...otherReasonSets) => {
+  for (const otherReasonSet of otherReasonSets) {
+    for (const reason of otherReasonSet) {
+      reasonSet.add(reason);
+    }
+  }
+};
+const appendReasonGroup = (reasonGroup, otherReasonGroup) => {
+  appendReasons(reasonGroup.any, otherReasonGroup.any);
+  appendReasons(reasonGroup.removed, otherReasonGroup.removed);
+  appendReasons(reasonGroup.added, otherReasonGroup.added);
+  appendReasons(reasonGroup.modified, otherReasonGroup.modified);
 };
