@@ -137,49 +137,37 @@ export const assert = ({ actual, expect }) => {
           currentActualNode,
           currentExpectNode,
         )) {
-          let descriptorKey;
           if (
             actualOwnPropertyDescriptorEntry ===
             PLACEHOLDER_WHEN_ADDED_OR_REMOVED
           ) {
             onRemoved(expectOwnPropertyDescriptorEntry);
-            descriptorKey = expectOwnPropertyDescriptorEntry.meta.descriptorKey;
           } else if (
             expectOwnPropertyDescriptorEntry ===
             PLACEHOLDER_WHEN_ADDED_OR_REMOVED
           ) {
             onAdded(actualOwnPropertyDescriptorEntry);
-            descriptorKey = actualOwnPropertyDescriptorEntry.meta.descriptorKey;
-          } else {
-            descriptorKey = actualOwnPropertyDescriptorEntry.meta.descriptorKey;
           }
+          const descriptorKey = actualOwnPropertyDescriptorEntry.placeholder
+            ? expectOwnPropertyDescriptorEntry.descriptorKeyNode.value
+            : actualOwnPropertyDescriptorEntry.descriptorKeyNode.value;
           const actualOwnPropertyDescriptorValueNode =
             actualOwnPropertyDescriptorEntry.placeholder
               ? actualOwnPropertyDescriptorEntry
-              : createNode({
-                  type: "own_property_descriptor_value",
-                  parent: currentActualNode,
-                  depth: currentExpectNode.depth + 1,
-                  value: actualOwnPropertyDescriptorEntry.value,
-                });
+              : actualOwnPropertyDescriptorEntry.descriptorValueNode;
           const expectOwnPropertyDescriptorValueNode =
             expectOwnPropertyDescriptorEntry.placeholder
               ? expectOwnPropertyDescriptorEntry
-              : createNode({
-                  type: "own_property_descriptor_value",
-                  parent: currentExpectNode,
-                  depth: currentActualNode.depth + 1,
-                  value: expectOwnPropertyDescriptorEntry.value,
-                });
+              : expectOwnPropertyDescriptorEntry.descriptorValueNode;
           const ownPropertyDescriptorValueComparison = subcompare(
             actualOwnPropertyDescriptorValueNode,
             expectOwnPropertyDescriptorValueNode,
           );
           if (descriptorKey === "value") {
             const actualOwnPropertyIsEnumerable =
-              actualOwnPropertyDescriptorEntry.meta.ownPropertyIsEnumerable;
+              actualOwnPropertyDescriptorEntry.ownPropertyIsEnumerable;
             const expectOwnPropertyIsEnumerable =
-              expectOwnPropertyDescriptorEntry.meta.ownPropertyIsEnumerable;
+              expectOwnPropertyDescriptorEntry.ownPropertyIsEnumerable;
             if (
               !actualOwnPropertyIsEnumerable &&
               !expectOwnPropertyIsEnumerable &&
@@ -192,21 +180,11 @@ export const assert = ({ actual, expect }) => {
           const actualOwnPropertyKeyNode =
             actualOwnPropertyDescriptorEntry.placeholder
               ? actualOwnPropertyDescriptorEntry
-              : createNode({
-                  type: "own_property_key",
-                  parent: currentActualNode,
-                  depth: currentExpectNode.depth + 1,
-                  value: actualOwnPropertyDescriptorEntry.meta.ownPropertyKey,
-                });
+              : actualOwnPropertyDescriptorEntry.ownPropertyKeyNode;
           const expectOwnPropertyKeyNode =
             expectOwnPropertyDescriptorEntry.placeholder
               ? expectOwnPropertyDescriptorEntry
-              : createNode({
-                  type: "own_property_key",
-                  parent: currentExpectNode,
-                  depth: currentExpectNode.depth + 1,
-                  value: expectOwnPropertyDescriptorEntry.meta.ownPropertyKey,
-                });
+              : expectOwnPropertyDescriptorEntry.ownPropertyKeyNode;
           const ownPropertyKeyComparison = subcompare(
             actualOwnPropertyKeyNode,
             expectOwnPropertyKeyNode,
@@ -221,21 +199,11 @@ export const assert = ({ actual, expect }) => {
             const actualDescriptorKeyNode =
               actualOwnPropertyDescriptorEntry.placeholder
                 ? actualOwnPropertyDescriptorEntry
-                : createNode({
-                    type: "descriptor_key",
-                    parent: actualNode,
-                    depth: actualNode.depth + 1,
-                    value: descriptorKey,
-                  });
+                : actualOwnPropertyDescriptorEntry.descriptorKeyNode;
             const expectDescriptorKeyNode =
               expectOwnPropertyDescriptorEntry.placeholder
                 ? expectOwnPropertyDescriptorEntry
-                : createNode({
-                    type: "descriptor_key",
-                    parent: expectNode,
-                    depth: expectNode.depth + 1,
-                    value: descriptorKey,
-                  });
+                : expectOwnPropertyDescriptorEntry.descriptorKeyNode;
             const descriptorKeyComparison = appendDiff(
               actualDescriptorKeyNode,
               expectDescriptorKeyNode,
@@ -606,14 +574,27 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
       }
       yield {
         type: "own_property_descriptor",
-        key: `${ownPropertyName} ${descriptorKey}`,
-        value: descriptorValue,
-        meta: {
-          ownPropertyKey: ownPropertyName,
-          descriptorKey,
-          ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
-          ownPropertyDescriptor,
-        },
+        key: `${descriptorKey} ${ownPropertyName}`,
+        descriptorKeyNode: createNode({
+          type: "own_property_descriptor_key",
+          parent: node,
+          depth: node.depth + 1,
+          value: descriptorKey,
+        }),
+        ownPropertyKeyNode: createNode({
+          type: "own_property_key",
+          parent: node,
+          depth: node.depth + 1,
+          value: ownPropertyName,
+        }),
+        descriptorValueNode: createNode({
+          type: "own_property_descriptor_value",
+          parent: node,
+          depth: node.depth + 1,
+          value: descriptorValue,
+        }),
+        ownPropertyDescriptor,
+        ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
       };
     }
   }
