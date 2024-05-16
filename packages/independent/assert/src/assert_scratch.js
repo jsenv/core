@@ -1,5 +1,7 @@
 /*
  * - possibilité de s'arreter apres un certains nb de diff (et donc de stopper la boucle)
+ * - possibilité de démarer le diff a une depth donnée (lorsque la diff est profonde)
+ * 
  * 
  * 1. array entries (indexed)
  * 2. set entries
@@ -16,13 +18,43 @@ const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.YELLOW;
 const unexpectColor = ANSI.RED;
 const expectColor = ANSI.GREEN;
-const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
-  placeholder: "added_or_removed",
-  meta: {},
-};
+/**
+ * When a js value CANNOT EXISTS in actual or expected
+ * the missing Node is set to PLACEHOLDER_FOR_NOTHING
+ * For example,
+ * - actual is a primitive, it cannot have properties
+ * - expect is a composite, it can have properties
+ * -> result into something like this
+ * actual: true {
+ *   <a>PLACEHOLDER_FOR_NOTHING
+ * }
+ * expect: {
+ *   <a>ownPropertyDescriptorEntry
+ * }
+ */
 const PLACEHOLDER_FOR_NOTHING = {
   placeholder: "nothing",
-  meta: {},
+};
+/**
+ * When a js value DOES NOT EXISTS ANYMORE in actual or expected
+ * the missing Node is set to PLACEHOLDER_WHEN_ADDED_OR_REMOVED
+ * For example,
+ * - actual has 2 properties: "a" and "b"
+ * - expect has 2 propertie: "a" and "c"
+ * -> result into something like this
+ * actual: {
+ *   <a>ownPropertyDescriptorEntry,
+ *   <b>ownPropertyDescriptorEntry,
+ *   <c>PLACEHOLDER_WHEN_ADDED_OR_REMOVED
+ * },
+ * expect: {
+ *   <a>ownPropertyDescriptorEntry,
+ *   <b>PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+ *   <c>ownPropertyDescriptorEntry
+ * }
+ */
+const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
+  placeholder: "added_or_removed",
 };
 
 export const assert = ({ actual, expect }) => {
@@ -42,67 +74,100 @@ export const assert = ({ actual, expect }) => {
     causeSet.add(comparison);
   };
 
-  const compare = (actualNode, expectNode) => {
+  /*
+   * Comparison are objects used to compare actualNode and expectNode
+   * It is used to visit all the entry a js value can have
+   * and progressively create a tree of node and comparison
+   * as the visit progresses a diff is generated
+   * In the process an other type of object is used called *Entry
+   * The following entry exists:
+   * - ownPropertyDescriptorEntry
+   * - ownPropertySymbolEntry
+   * - indexedEntry
+   *   - array values
+   *   - typed array values
+   *   - string values
+   * - internalEntry
+   *   - url internal props
+   *   - valueOf()
+   *   - Symbol.toPrimitive()
+   *   - function body
+   *   - map keys and values
+   *   - ....
+   * Entry represent something that can be found in the js value
+   * and can be associated with one or many node (js_value)
+   * For example ownPropertyDescriptorEntry have 3 nodes:
+   *   ownPropertyNameNode
+   *   descriptorKeyNode
+   *   descriptorValueNode
+   */
+  const compare = (actualNode, expectNode, isAbstract) => {
+    let actualCurrentNode = actualNode;
+    let expectCurrentNode = expectNode;
+
+    const reasons = createReasons();
     const comparison = {
       isComparison: true,
-      actualDiff: "",
-      expectDiff: "",
       actualNode,
       expectNode,
-      reasons: createReasons(),
+      reasons,
       done: false,
-    };
-
-    let currentActualNode = actualNode;
-    let currentExpectNode = expectNode;
-
-    const appendDiff = (value) => {
-      if (typeof value === "string") {
-        if (!currentActualNode.placeholder) {
-          comparison.actualDiff += value;
+      actualDiff: "",
+      expectDiff: "",
+      write: (value) => {
+        if (typeof value === "string") {
+          if (!actualNode.placeholder) {
+            comparison.actualDiff += value;
+          }
+          if (!expectNode.placeholder) {
+            comparison.expectDiff += value;
+          }
+          return;
         }
-        if (!currentExpectNode.placeholder) {
-          comparison.expectDiff += value;
-        }
-        return;
-      }
-      if (Array.isArray(value)) {
-        if (!currentActualNode.placeholder) {
-          comparison.actualDiff += value[0];
-        }
-        if (!currentExpectNode.placeholder) {
-          comparison.expectDiff += value[1];
-        }
-        return;
-      }
-      if (typeof value === "function") {
-        const [actualColor, expectColor] = pickColors(
-          currentActualNode,
-          currentExpectNode,
-          value,
-        );
-        if (!currentActualNode.placeholder) {
-          comparison.actualDiff += ANSI.color(
-            value(currentActualNode),
-            actualColor,
+        if (typeof value === "function") {
+          const [actualColor, expectColor] = pickColors(
+            actualCurrentNode,
+            expectCurrentNode,
+            value,
           );
+          if (!actualCurrentNode.placeholder) {
+            const actualValue = value(actualNode);
+            if (actualValue) {
+              comparison.actualDiff +=
+                actualValue.trim() === "" // cannot color blank chars
+                  ? actualValue
+                  : ANSI.color(actualValue, actualColor);
+            }
+          }
+          if (!expectNode.placeholder) {
+            const expectValue = value(expectNode);
+            if (expectValue) {
+              comparison.expectDiff +=
+                expectValue.trim() === "" // cannot color blank chars
+                  ? expectValue
+                  : ANSI.color(expectValue, expectColor);
+            }
+          }
         }
-        if (!currentExpectNode.placeholder) {
-          comparison.expectDiff += ANSI.color(
-            value(currentExpectNode),
-            expectColor,
-          );
+        if (value && typeof value === "object") {
+          if (value.isComparison) {
+            comparison.actualDiff += value.actualDiff;
+            comparison.expectDiff += value.expectDiff;
+          } else {
+            if (value.actual && !actualNode.placeholder) {
+              comparison.actualDiff += value.actual();
+            }
+            if (value.expect && !expectNode.placeholder) {
+              comparison.expectDiff += value.expect();
+            }
+          }
         }
-      }
-      if (value && value.isComparison) {
-        if (!currentActualNode.placeholder) {
-          comparison.actualDiff += value.actualDiff;
-        }
-        if (!currentExpectNode.placeholder) {
-          comparison.expectDiff += value.expectDiff;
-        }
-      }
+      },
     };
+    if (isAbstract) {
+      return comparison;
+    }
+
     const onAdded = (reason) => {
       comparison.reasons.self.added.add(reason);
     };
@@ -125,17 +190,26 @@ export const assert = ({ actual, expect }) => {
     };
 
     const comparePrimitive = () => {
-      appendDiff((node) => JSON.stringify(node.value));
+      comparison.write((node) => node.valueStartDelimiter);
+      comparison.write((node) => JSON.stringify(node.value));
+      comparison.write((node) => node.valueEndDelimiter);
     };
     const compareComposite = () => {
       own_properties: {
-        appendDiff((node) => node.valueStartDelimiter);
+        comparison.write((node) => node.valueStartDelimiter);
+        let actualHasAtLeastOneDisplayedEntry = false;
+        let expectHasAtLeastOneDisplayedEntry = false;
+        const ownPropertiesComparison = compare(
+          actualCurrentNode,
+          expectCurrentNode,
+          true,
+        );
         for (const [
           actualOwnPropertyDescriptorEntry,
           expectOwnPropertyDescriptorEntry,
         ] of createOwnPropertyDescriptorEntryDualIterator(
-          currentActualNode,
-          currentExpectNode,
+          actualCurrentNode,
+          expectCurrentNode,
         )) {
           if (
             actualOwnPropertyDescriptorEntry ===
@@ -148,20 +222,24 @@ export const assert = ({ actual, expect }) => {
           ) {
             onAdded(actualOwnPropertyDescriptorEntry);
           }
+          const ownPropertyDescriptorComparison = compare(
+            actualOwnPropertyDescriptorEntry,
+            expectOwnPropertyDescriptorEntry,
+          );
           const descriptorKey = actualOwnPropertyDescriptorEntry.placeholder
             ? expectOwnPropertyDescriptorEntry.descriptorKeyNode.value
             : actualOwnPropertyDescriptorEntry.descriptorKeyNode.value;
-          const actualOwnPropertyDescriptorValueNode =
+          const actualDescriptorValueNode =
             actualOwnPropertyDescriptorEntry.placeholder
               ? actualOwnPropertyDescriptorEntry
               : actualOwnPropertyDescriptorEntry.descriptorValueNode;
-          const expectOwnPropertyDescriptorValueNode =
+          const expectDescriptorValueNode =
             expectOwnPropertyDescriptorEntry.placeholder
               ? expectOwnPropertyDescriptorEntry
               : expectOwnPropertyDescriptorEntry.descriptorValueNode;
-          const ownPropertyDescriptorValueComparison = subcompare(
-            actualOwnPropertyDescriptorValueNode,
-            expectOwnPropertyDescriptorValueNode,
+          const descriptorValueComparison = subcompare(
+            actualDescriptorValueNode,
+            expectDescriptorValueNode,
           );
           if (descriptorKey === "value") {
             const actualOwnPropertyIsEnumerable =
@@ -171,30 +249,49 @@ export const assert = ({ actual, expect }) => {
             if (
               !actualOwnPropertyIsEnumerable &&
               !expectOwnPropertyIsEnumerable &&
-              !ownPropertyDescriptorValueComparison.hasAnyDiff
+              !descriptorValueComparison.hasAnyDiff
             ) {
               // keep it hidden
               continue;
             }
           }
-          const actualOwnPropertyKeyNode =
+          const actualOwnPropertyNameNode =
             actualOwnPropertyDescriptorEntry.placeholder
               ? actualOwnPropertyDescriptorEntry
-              : actualOwnPropertyDescriptorEntry.ownPropertyKeyNode;
-          const expectOwnPropertyKeyNode =
+              : actualOwnPropertyDescriptorEntry.ownPropertyNameNode;
+          const expectOwnProperyNameNode =
             expectOwnPropertyDescriptorEntry.placeholder
               ? expectOwnPropertyDescriptorEntry
-              : expectOwnPropertyDescriptorEntry.ownPropertyKeyNode;
-          const ownPropertyKeyComparison = subcompare(
-            actualOwnPropertyKeyNode,
-            expectOwnPropertyKeyNode,
+              : expectOwnPropertyDescriptorEntry.ownPropertyNameNode;
+          const ownPropertyNameComparison = subcompare(
+            actualOwnPropertyNameNode,
+            expectOwnProperyNameNode,
           );
 
-          appendDiff("\n");
-          const propertyDepth =
-            actualOwnPropertyKeyNode.depth || expectOwnPropertyKeyNode.depth;
-          const indentForProperty = "  ".repeat(propertyDepth);
-          appendDiff(indentForProperty);
+          ownPropertyDescriptorComparison.write({
+            // eslint-disable-next-line no-loop-func
+            actual: () => {
+              let leftSpacing = "";
+              if (actualHasAtLeastOneDisplayedEntry) {
+                leftSpacing += "\n";
+              } else {
+                actualHasAtLeastOneDisplayedEntry = true;
+              }
+              leftSpacing += "  ".repeat(actualOwnPropertyNameNode.depth);
+              return leftSpacing;
+            },
+            // eslint-disable-next-line no-loop-func
+            expect: () => {
+              let leftSpacing = "";
+              if (expectHasAtLeastOneDisplayedEntry) {
+                leftSpacing += "\n";
+              } else {
+                expectHasAtLeastOneDisplayedEntry = true;
+              }
+              leftSpacing += "  ".repeat(expectOwnProperyNameNode.depth);
+              return leftSpacing;
+            },
+          });
           if (descriptorKey !== "value") {
             const actualDescriptorKeyNode =
               actualOwnPropertyDescriptorEntry.placeholder
@@ -204,53 +301,60 @@ export const assert = ({ actual, expect }) => {
               expectOwnPropertyDescriptorEntry.placeholder
                 ? expectOwnPropertyDescriptorEntry
                 : expectOwnPropertyDescriptorEntry.descriptorKeyNode;
-            const descriptorKeyComparison = appendDiff(
+            const descriptorKeyComparison = subcompare(
               actualDescriptorKeyNode,
               expectDescriptorKeyNode,
             );
-            appendDiff(descriptorKeyComparison);
-            appendDiff(" ");
+            ownPropertyDescriptorComparison.write(descriptorKeyComparison);
+            ownPropertyDescriptorComparison.write(" ");
           }
-          appendDiff(ownPropertyKeyComparison);
-          appendDiff((node) => node.propertyMiddleDelimiter);
-          appendDiff(" ");
-          appendDiff(ownPropertyDescriptorValueComparison);
-          appendDiff((node) => node.propertyEndDelimiter);
+          ownPropertyDescriptorComparison.write(ownPropertyNameComparison);
+          ownPropertyDescriptorComparison.write(" ");
+          ownPropertyDescriptorComparison.write(descriptorValueComparison);
+          ownPropertyDescriptorComparison.write(() => ",");
+          ownPropertiesComparison.write(ownPropertyDescriptorComparison);
         }
-        appendDiff("\n");
-        const depth = currentActualNode.depth || currentExpectNode.depth;
-        const indentForObject = "  ".repeat(depth);
-        appendDiff(indentForObject);
-        appendDiff((node) => node.valueEndDelimiter);
-      }
-    };
-    const visitOne = (node) => {
-      if (node.isComposite) {
-        compareComposite();
-      } else {
-        comparePrimitive();
+        comparison.write({
+          actual: () => {
+            if (!actualHasAtLeastOneDisplayedEntry) return "";
+            let ownPropertiesDiff = "";
+            ownPropertiesDiff += "\n";
+            ownPropertiesDiff += "  ".repeat(actualCurrentNode.depth);
+            ownPropertiesDiff += ownPropertiesComparison.actualDiff;
+            ownPropertiesDiff += "\n";
+            return ownPropertiesDiff;
+          },
+          expect: () => {
+            if (!expectHasAtLeastOneDisplayedEntry) return "";
+            let ownPropertiesDiff = "";
+            ownPropertiesDiff += "\n";
+            ownPropertiesDiff += "  ".repeat(expectCurrentNode.depth);
+            ownPropertiesDiff += ownPropertiesComparison.expectDiff;
+            ownPropertiesDiff += "\n";
+            return ownPropertiesDiff;
+          },
+        });
+        comparison.write((node) => node.valueEndDelimiter);
       }
     };
 
     visit: {
       // expect is removed or is expected to be missing
-      if (
-        expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
-        expectNode === PLACEHOLDER_FOR_NOTHING
-      ) {
-        currentExpectNode = PLACEHOLDER_FOR_NOTHING;
-        visitOne(actualNode);
-        currentExpectNode = expectNode;
+      if (expectNode.placeholder) {
+        if (actualNode.isComposite) {
+          compareComposite();
+        } else {
+          comparePrimitive();
+        }
         break visit;
       }
       // actual is added or expected to be missing
-      if (
-        actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
-        actualNode === PLACEHOLDER_FOR_NOTHING
-      ) {
-        currentActualNode = PLACEHOLDER_FOR_NOTHING;
-        visitOne(expectNode);
-        currentActualNode = actualNode;
+      if (actualNode.placeholder) {
+        if (expectNode.isComposite) {
+          compareComposite();
+        } else {
+          comparePrimitive();
+        }
         break visit;
       }
       // at this stage we are sure we got both actual and expect
@@ -274,22 +378,20 @@ export const assert = ({ actual, expect }) => {
       }
       if (actualNode.isPrimitive && expectNode.isComposite) {
         onSelfDiff("should_be_composite");
-        currentExpectNode = PLACEHOLDER_FOR_NOTHING;
+        expectCurrentNode = PLACEHOLDER_FOR_NOTHING;
         comparePrimitive();
-        currentExpectNode = expectNode;
-        currentActualNode = PLACEHOLDER_FOR_NOTHING;
+        expectCurrentNode = expectNode;
+        actualCurrentNode = PLACEHOLDER_FOR_NOTHING;
         compareComposite();
-        currentActualNode = actualNode;
         break visit;
       }
       if (actualNode.isComposite && expectNode.isPrimitive) {
         onSelfDiff("should_be_primitive");
-        currentExpectNode = PLACEHOLDER_FOR_NOTHING;
+        expectCurrentNode = PLACEHOLDER_FOR_NOTHING;
         compareComposite();
-        currentExpectNode = expectNode;
-        currentActualNode = PLACEHOLDER_FOR_NOTHING;
+        expectCurrentNode = expectNode;
+        actualCurrentNode = PLACEHOLDER_FOR_NOTHING;
         comparePrimitive();
-        currentActualNode = actualNode;
         break visit;
       }
     }
@@ -326,6 +428,19 @@ export const assert = ({ actual, expect }) => {
   throw diff;
 };
 
+/*
+ * Node represent any js value.
+ * These js value are compared and converted to a readable string
+ * Node art part of a tree structure (parent/children) and contains many
+ * information about the value such as
+ * - Is it a primitive or a composite?
+ * - Where does the value come from?
+ *   - property key
+ *   - property value
+ *   - prototype value returned by Object.getPrototypeOf()
+ *   - a map entry key
+ * - And finally info useful to render the js value into a readable string
+ */
 const createNode = ({
   name,
   type,
@@ -337,19 +452,18 @@ const createNode = ({
   if (name === undefined) name = parent.name;
   let isPrimitive = false;
   let isComposite = false;
-  let valueStartDelimiter;
-  let valueEndDelimiter;
-  let propertyMiddleDelimiter;
-  let propertyEndDelimiter;
+  let valueStartDelimiter = "";
+  let valueEndDelimiter = "";
 
   if (value === PLACEHOLDER_FOR_NOTHING) {
   } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
+  } else if (type === "own_property_name") {
+    isPrimitive = true;
+    valueEndDelimiter = ":";
   } else if (typeof value === "object") {
     isComposite = true;
     valueStartDelimiter = "{";
     valueEndDelimiter = "}";
-    propertyMiddleDelimiter = ":";
-    propertyEndDelimiter = ",";
   } else {
     isPrimitive = true;
   }
@@ -367,8 +481,6 @@ const createNode = ({
     // render info
     valueStartDelimiter,
     valueEndDelimiter,
-    propertyMiddleDelimiter,
-    propertyEndDelimiter,
   };
 };
 
@@ -581,8 +693,8 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
           depth: node.depth + 1,
           value: descriptorKey,
         }),
-        ownPropertyKeyNode: createNode({
-          type: "own_property_key",
+        ownPropertyNameNode: createNode({
+          type: "own_property_name",
           parent: node,
           depth: node.depth + 1,
           value: ownPropertyName,
@@ -602,10 +714,10 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
 
 const pickColors = (actualNode, expectNode, getter) => {
   if (actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
-    return [addedColor, null];
+    return [null, removedColor];
   }
   if (expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
-    return [removedColor, null];
+    return [addedColor, null];
   }
   if (actualNode && expectNode === PLACEHOLDER_FOR_NOTHING) {
     return [unexpectColor, null];
@@ -620,7 +732,6 @@ const pickColors = (actualNode, expectNode, getter) => {
   }
   return [unexpectColor, expectColor];
 };
-
 const createReasons = () => {
   const overall = {
     any: new Set(),
@@ -647,7 +758,6 @@ const createReasons = () => {
     inside,
   };
 };
-
 const appendReasons = (reasonSet, ...otherReasonSets) => {
   for (const otherReasonSet of otherReasonSets) {
     for (const reason of otherReasonSet) {
