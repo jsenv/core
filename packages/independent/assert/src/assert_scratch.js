@@ -1,5 +1,40 @@
 /*
- * - property symbols
+ * property order should not matter
+ * so we should iterate actual and search inside expected
+ * then iterate expected and if not in actual it's removed
+ * and we can stop this iteration at any point
+ * so we need a function to create an entry from a prop
+ * instead of just iterating
+ * ET donc il faudras re-sort le diff de actual/expect 
+ * pour respecter l'order original des props
+ * on pourrai surement faire ça en mettre les diff des props dans un tableau
+ * qu'on réordonnera
+ * c'est plus compliqué que ça parce que si y'a bcp de props je veux cacher
+ * une partie pour focus sur le diff
+ * autrement dit actual/expect afficheront pas forcément la meme chose
+ * mais on veut bien avoir le diff sous les yeux
+ * CHAUD DUR
+ * 
+ * DONC AU FINAL:
+ * soit on itere que sur actual (parce que expected.placeholder)
+ * soit on ietre que sur expect (parce que actual.placeholder)
+ * 
+ * soit on itere sur les deux
+ * et dans ce cas on va dabord itérer sur actual et recup sur expected
+ * pour faire la comparison mais en updatant que le diff de actual
+ * et pour expected on update son diff aussi mais on le resort a la fin
+ * et on affichera qu'un sous ensemble
+ * 
+ * 
+ * -> on fera comme pour les url / ligne avec breakable diff
+ * l'idée c'est qu'on va se concentrer sur une seul diff pour le moment
+ * et afficher le contexte autour
+ * 
+ * (plus tard si on choisit d'affiche +d'1 diff on répetera l'opération pour chaque diff)
+ * et on recuperera du contexte autour du diff et on complete
+ * si le slot est deja pris (parce que une autre diff) existe et a render la prop
+ * alors on pourra skip
+ * 
  * - map entries (internal)
  * - array entries (indexed)
  * - wrapped value entries (internal)
@@ -58,12 +93,12 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 };
 
 export const assert = ({ actual, expect }) => {
-  const rootActualNode = createNode({
+  const rootActualNode = createRootNode({
     name: "actual",
     type: "root",
     value: actual,
   });
-  const rootExpectNode = createNode({
+  const rootExpectNode = createRootNode({
     name: "expect",
     type: "root",
     value: expect,
@@ -435,6 +470,8 @@ export const assert = ({ actual, expect }) => {
   throw diff;
 };
 
+let createRootNode;
+
 /*
  * Node represent any js value.
  * These js value are compared and converted to a readable string
@@ -448,52 +485,70 @@ export const assert = ({ actual, expect }) => {
  *   - a map entry key
  * - And finally info useful to render the js value into a readable string
  */
-const createNode = ({
-  name,
-  type,
-  parent,
-  value,
-  depth = parent ? parent.depth : 0,
-  meta = {},
-}) => {
-  if (name === undefined) name = parent.name;
-  let isPrimitive = false;
-  let isComposite = false;
-  let isSymbol = false;
-  let valueStartDelimiter = "";
-  let valueEndDelimiter = "";
+{
+  createRootNode = ({ name, type, value }) => {
+    const rootNode = createNode({
+      name,
+      type,
+      value,
+      parent: null,
+      depth: 0,
+      meta: {},
+    });
 
-  if (value === PLACEHOLDER_FOR_NOTHING) {
-  } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
-  } else if (type === "own_property_name") {
-    isPrimitive = true;
-  } else if (type === "own_property_symbol") {
-    isPrimitive = true;
-    isSymbol = true;
-  } else if (typeof value === "object") {
-    isComposite = true;
-    valueStartDelimiter = "{";
-    valueEndDelimiter = "}";
-  } else {
-    isPrimitive = true;
-  }
-
-  return {
-    type,
-    parent,
-    depth,
-    name,
-    value,
-    meta,
-    // info
-    isPrimitive,
-    isComposite,
-    isSymbol,
-    // render info
-    valueStartDelimiter,
-    valueEndDelimiter,
+    return rootNode;
   };
-};
+
+  const createNode = ({ name, parent, depth, type, value, meta = {} }) => {
+    let isPrimitive = false;
+    let isComposite = false;
+    let isSymbol = false;
+    let valueStartDelimiter = "";
+    let valueEndDelimiter = "";
+
+    if (value === PLACEHOLDER_FOR_NOTHING) {
+    } else if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
+    } else if (type === "own_property_name") {
+      isPrimitive = true;
+    } else if (type === "own_property_symbol") {
+      isPrimitive = true;
+      isSymbol = true;
+    } else if (typeof value === "object") {
+      isComposite = true;
+      valueStartDelimiter = "{";
+      valueEndDelimiter = "}";
+    } else {
+      isPrimitive = true;
+    }
+
+    const node = {
+      type,
+      parent,
+      depth,
+      name,
+      value,
+      meta,
+      // info
+      isPrimitive,
+      isComposite,
+      isSymbol,
+      // render info
+      valueStartDelimiter,
+      valueEndDelimiter,
+    };
+
+    node.appendChild = ({ type, value, depth = node.depth }) => {
+      return createNode({
+        parent: node,
+        type,
+        value,
+        depth,
+      });
+    };
+
+    return node;
+  };
+}
 
 function* createOwnPropertyDescriptorEntryDualIterator(actualNode, expectNode) {
   for (let [
@@ -600,23 +655,20 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
       yield {
         type: "own_property_descriptor",
         key: `${descriptorKey} ${symbolIndex}`,
-        descriptorKeyNode: createNode({
+        descriptorKeyNode: node.appendChild({
           type: "own_property_descriptor_key",
-          parent: node,
-          depth: node.depth + 1,
           value: descriptorKey,
+          depth: node.depth + 1,
         }),
-        ownPropertyKeyNode: createNode({
+        ownPropertyKeyNode: node.appendChild({
           type: "own_property_symbol",
-          parent: node,
-          depth: node.depth + 1,
           value: ownPropertySymbol,
-        }),
-        descriptorValueNode: createNode({
-          type: "own_property_descriptor_value",
-          parent: node,
           depth: node.depth + 1,
+        }),
+        descriptorValueNode: node.appendChild({
+          type: "own_property_descriptor_value",
           value: descriptorValue,
+          depth: node.depth + 1,
         }),
         ownPropertyDescriptor,
         ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
@@ -746,23 +798,20 @@ function* createOwnPropertyDescriptorEntryIterator(node) {
       yield {
         type: "own_property_descriptor",
         key: `${descriptorKey} ${ownPropertyName}`,
-        descriptorKeyNode: createNode({
+        descriptorKeyNode: node.appendChild({
           type: "own_property_descriptor_key",
-          parent: node,
-          depth: node.depth + 1,
           value: descriptorKey,
+          depth: node.depth + 1,
         }),
-        ownPropertyKeyNode: createNode({
+        ownPropertyKeyNode: node.appendChild({
           type: "own_property_name",
-          parent: node,
-          depth: node.depth + 1,
           value: ownPropertyName,
-        }),
-        descriptorValueNode: createNode({
-          type: "own_property_descriptor_value",
-          parent: node,
           depth: node.depth + 1,
+        }),
+        descriptorValueNode: node.appendChild({
+          type: "own_property_descriptor_value",
           value: descriptorValue,
+          depth: node.depth + 1,
         }),
         ownPropertyDescriptor,
         ownPropertyIsEnumerable: ownPropertyDescriptor.enumerable,
