@@ -95,11 +95,17 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 export const assert = ({ actual, expect }) => {
   const rootActualNode = createRootNode({
     name: "actual",
+    colorWhenSolo: addedColor,
+    colorWhenSame: sameColor,
+    colorWhenModified: unexpectColor,
     type: "root",
     value: actual,
   });
   const rootExpectNode = createRootNode({
     name: "expect",
+    colorWhenSolo: addedColor,
+    colorWhenSame: sameColor,
+    colorWhenModified: expectColor,
     type: "root",
     value: expect,
   });
@@ -486,9 +492,19 @@ let createRootNode;
  * - And finally info useful to render the js value into a readable string
  */
 {
-  createRootNode = ({ name, type, value }) => {
+  createRootNode = ({
+    name,
+    colorWhenSolo,
+    colorWhenSame,
+    colorWhenModified,
+    type,
+    value,
+  }) => {
     const rootNode = createNode({
       name,
+      colorWhenSolo,
+      colorWhenSame,
+      colorWhenModified,
       type,
       value,
       parent: null,
@@ -499,7 +515,17 @@ let createRootNode;
     return rootNode;
   };
 
-  const createNode = ({ name, parent, depth, type, value, meta = {} }) => {
+  const createNode = ({
+    name,
+    colorWhenSolo,
+    colorWhenSame,
+    colorWhenModified,
+    type,
+    value,
+    parent,
+    depth,
+    meta = {},
+  }) => {
     let isPrimitive = false;
     let isComposite = false;
     let isSymbol = false;
@@ -522,11 +548,14 @@ let createRootNode;
     }
 
     const node = {
+      name,
+      colorWhenSolo,
+      colorWhenSame,
+      colorWhenModified,
       type,
+      value,
       parent,
       depth,
-      name,
-      value,
       meta,
       // info
       isPrimitive,
@@ -539,6 +568,10 @@ let createRootNode;
 
     node.appendChild = ({ type, value, depth = node.depth }) => {
       return createNode({
+        name: node.name,
+        colorWhenSolo: node.colorWhenSolo,
+        colorWhenSame: node.colorWhenSame,
+        colorWhenModified: node.colorWhenModified,
         parent: node,
         type,
         value,
