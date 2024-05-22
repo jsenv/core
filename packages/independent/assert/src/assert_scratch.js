@@ -13,6 +13,7 @@
  *   - lorsque une diff porte sur un objet (modified, added, removed)
  *   alors on print l'objet mais cela a une limite assez basse pour que on ai
  *   juste un aperçu sans heurter la lisibilité
+ * - wrapped value
  *
  * -> il faut tout de meme créer un arbre de comparison MAIS
  * cet arbre est un sous ensemble de la réalité (pour perf + lisibilité)
@@ -161,41 +162,10 @@ export const assert = ({ actual, expect }) => {
     const renderPrimitiveDiff = (node) => {
       return JSON.stringify(node.value);
     };
-    const getIndexToDisplayArray = (diffIndexArray, names) => {
-      const MAX_PROP_BEFORE_DIFF = 2;
-      const MAX_PROP_AFTER_DIFF = 2;
-
-      const indexToDisplaySet = new Set();
-      for (const diffIndex of diffIndexArray) {
-        let beforeDiffIndex = diffIndex - 1;
-        let beforeCount = 0;
-        while (beforeDiffIndex > -1) {
-          if (beforeCount === MAX_PROP_BEFORE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(beforeDiffIndex);
-          beforeCount++;
-          beforeDiffIndex--;
-        }
-        indexToDisplaySet.add(diffIndex);
-        let afterDiffIndex = diffIndex + 1;
-        let afterCount = 0;
-        while (afterDiffIndex < names.length) {
-          if (afterCount === MAX_PROP_AFTER_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(afterDiffIndex);
-          afterCount++;
-          afterDiffIndex--;
-        }
-      }
-      return Array.from(indexToDisplaySet);
-    };
-    const renderPropertiesDiff = ({
+    const renderPropertiesDiff = (
       node,
-      indexToDisplayArray,
-      ownPropertyNodeMap,
-    }) => {
+      { indexToDisplayArray, ownPropertyNodeMap },
+    ) => {
       let atLeastOnePropertyDisplayed = false;
       let diff = "";
       let color = node.modified
@@ -228,7 +198,7 @@ export const assert = ({ actual, expect }) => {
       }
       return diff;
     };
-    const renderPropertiesWhenNoDiff = ({ node, ownPropertyNodeMap }) => {
+    const renderPropertiesWithoutDiff = (node, { ownPropertyNodeMap }) => {
       let diff = "";
       let propertiesDiff = "";
       let remainingWidth = 100;
@@ -261,36 +231,71 @@ export const assert = ({ actual, expect }) => {
       diff += setColor("}", color);
       return diff;
     };
-    const createRenderPropertiesWhenSolo = (node) => {
-      const indexToDisplayArray = [];
-      const ownPropertyNodeMap = new Map();
-      let index = 0;
-      for (const propName of node.ownPropertyNames) {
-        const ownPropertyNode = createOwnPropertyNode(node, propName);
-        ownPropertyNodeMap.set(propName, ownPropertyNode);
-        if (node.name === "actual") {
-          comparison.subcompare(ownPropertyNode, PLACEHOLDER_FOR_NOTHING);
-        } else {
-          comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertyNode);
+    const getIndexToDisplayArray = (diffIndexArray, names) => {
+      const MAX_PROP_BEFORE_DIFF = 2;
+      const MAX_PROP_AFTER_DIFF = 2;
+
+      const indexToDisplaySet = new Set();
+      for (const diffIndex of diffIndexArray) {
+        let beforeDiffIndex = diffIndex - 1;
+        let beforeCount = 0;
+        while (beforeDiffIndex > -1) {
+          if (beforeCount === MAX_PROP_BEFORE_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(beforeDiffIndex);
+          beforeCount++;
+          beforeDiffIndex--;
         }
-        indexToDisplayArray.push(index);
-        if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
-          break;
+        indexToDisplaySet.add(diffIndex);
+        let afterDiffIndex = diffIndex + 1;
+        let afterCount = 0;
+        while (afterDiffIndex < names.length) {
+          if (afterCount === MAX_PROP_AFTER_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(afterDiffIndex);
+          afterCount++;
+          afterDiffIndex--;
         }
-        index++;
       }
-      return () => {
-        return renderPropertiesDiff({
-          node,
-          indexToDisplayArray,
-          ownPropertyNodeMap,
-        });
-      };
+      return Array.from(indexToDisplaySet);
     };
 
-    visit: {
-      // comparing primitives
-      if (actualNode.isPrimitive && expectNode.isPrimitive) {
+    const visitSolo = (node) => {
+      if (node.isPrimitive) {
+        node.render = () => renderPrimitiveDiff(node);
+        return;
+      }
+      if (node.isComposite) {
+        const indexToDisplayArray = [];
+        const ownPropertyNodeMap = new Map();
+        let index = 0;
+        for (const propName of node.ownPropertyNames) {
+          const ownPropertyNode = createOwnPropertyNode(node, propName);
+          ownPropertyNodeMap.set(propName, ownPropertyNode);
+          if (node.name === "actual") {
+            comparison.subcompare(ownPropertyNode, PLACEHOLDER_FOR_NOTHING);
+          } else {
+            comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertyNode);
+          }
+          indexToDisplayArray.push(index);
+          if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
+            break;
+          }
+          index++;
+        }
+        node.render = () => {
+          return renderPropertiesDiff(node, {
+            indexToDisplayArray,
+            ownPropertyNodeMap,
+          });
+        };
+      }
+      throw new Error("wtf");
+    };
+    const visitDuo = () => {
+      if (actualNode.isPrimitive) {
         // comparing primitives
         if (actualNode.value === expectNode.value) {
           // we already know there will be no diff
@@ -298,16 +303,11 @@ export const assert = ({ actual, expect }) => {
         } else {
           onSelfDiff("primitive_value");
         }
-        actualNode.render = () => {
-          return renderPrimitiveDiff(actualNode);
-        };
-        expectNode.render = () => {
-          return renderPrimitiveDiff(expectNode);
-        };
-        break visit;
+        actualNode.render = () => renderPrimitiveDiff(actualNode);
+        expectNode.render = () => renderPrimitiveDiff(expectNode);
+        return;
       }
-      // comparing composites
-      if (actualNode.isComposite && expectNode.isComposite) {
+      if (actualNode.isComposite) {
         const actualOwnPropertyNames = actualNode.ownPropertyNames;
         const expectOwnPropertyNames = expectNode.ownPropertyNames;
         const actualOwnPropertyNodeMap = new Map();
@@ -354,61 +354,34 @@ export const assert = ({ actual, expect }) => {
           }
         }
         if (diffPropertyNameSet.size === 0) {
-          actualNode.render = () => {
-            return renderPropertiesWhenNoDiff({
-              node: actualNode,
+          actualNode.render = () =>
+            renderPropertiesWithoutDiff(actualNode, {
               ownPropertyNodeMap: actualOwnPropertyNodeMap,
             });
-          };
-          expectNode.render = () => {
-            return renderPropertiesWhenNoDiff({
-              node: expectNode,
+          expectNode.render = () =>
+            renderPropertiesWithoutDiff(expectNode, {
               ownPropertyNodeMap: expectOwnPropertyNodeMap,
             });
-          };
-          break visit;
+          return;
         }
-        actualNode.render = () => {
-          return renderPropertiesDiff({
-            node: actualNode,
+        actualNode.render = () =>
+          renderPropertiesDiff(actualNode, {
             indexToDisplayArray: getIndexToDisplayArray(
               actualDiffIndexArray.sort(),
               actualNode.ownPropertyNames,
             ),
             ownPropertyNodeMap: actualOwnPropertyNodeMap,
           });
-        };
-        expectNode.render = () => {
-          return renderPropertiesDiff({
-            node: expectNode,
+        expectNode.render = () =>
+          renderPropertiesDiff(expectNode, {
             indexToDisplayArray: getIndexToDisplayArray(
               expectDiffIndexArray.sort(),
               expectNode.ownPropertyNames,
             ),
             ownPropertyNodeMap: expectOwnPropertyNodeMap,
           });
-        };
-        break visit;
+        return;
       }
-      // primitive vs composite
-      if (actualNode.isPrimitive && expectNode.isComposite) {
-        onSelfDiff("should_be_composite");
-        actualNode.render = () => {
-          return renderPrimitiveDiff(actualNode);
-        };
-        expectNode.render = createRenderPropertiesWhenSolo(expectNode);
-        break visit;
-      }
-      // composite vs primitive
-      if (actualNode.isComposite && expectNode.isPrimitive) {
-        onSelfDiff("should_be_primitive");
-        actualNode.render = createRenderPropertiesWhenSolo(actualNode);
-        expectNode.render = () => {
-          return renderPrimitiveDiff(expectNode);
-        };
-        break visit;
-      }
-      // comparing own property (always compared together)
       if (actualNode.type === "own_property") {
         comparison.subcompare(
           actualNode.propertyNameNode,
@@ -430,24 +403,49 @@ export const assert = ({ actual, expect }) => {
           propertyDiff += ",";
           return propertyDiff;
         };
-        actualNode.render = () => {
-          return renderPropertyDiff(actualNode);
-        };
-        expectNode.render = () => {
-          return renderPropertyDiff(expectNode);
-        };
+        actualNode.render = () => renderPropertyDiff(actualNode);
+        expectNode.render = () => renderPropertyDiff(expectNode);
+        return;
+      }
+      throw new Error("wtf");
+    };
+
+    visit: {
+      // comparing primitives
+      if (actualNode.isPrimitive && expectNode.isPrimitive) {
+        visitDuo();
+        break visit;
+      }
+      // comparing composites
+      if (actualNode.isComposite && expectNode.isComposite) {
+        visitDuo();
+        break visit;
+      }
+      // comparing own property (always compared together)
+      if (actualNode.type === "own_property") {
+        visitDuo();
+        break visit;
+      }
+      // primitive vs composite
+      if (actualNode.isPrimitive && expectNode.isComposite) {
+        onSelfDiff("should_be_composite");
+        visitSolo(actualNode);
+        visitSolo(expectNode);
+        break visit;
+      }
+      // composite vs primitive
+      if (actualNode.isComposite && expectNode.isPrimitive) {
+        onSelfDiff("should_be_primitive");
+        visitSolo(actualNode);
+        visitSolo(expectNode);
         break visit;
       }
       if (expectNode.placeholder) {
-        actualNode.render = () => {
-          return "TODO: actual when ? solo ";
-        };
+        visitSolo(actualNode);
         break visit;
       }
       if (actualNode.placeholder) {
-        expectNode.render = () => {
-          return "TODO: expect when ? solo ";
-        };
+        visitSolo(expectNode);
         break visit;
       }
     }
