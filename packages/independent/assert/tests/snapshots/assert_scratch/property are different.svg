@@ -43,15 +43,15 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="33.55"> &#x22;a&#x22;: true,</text>
+        <text x="26.8" y="33.55"> &#x2191; 1 prop &#x2191;</text>
         <text x="26.8" y="52.55"> &#x22;b&#x22;: true,</text>
-        <text x="26.8" y="71.55"> &#x22;c&#x22;: true,</text>
+        <text x="26.8" y="71.55"> &#x2193; 1 prop &#x2193;</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="128.55"> &#x22;c&#x22;: true,</text>
+        <text x="26.8" y="128.55"> &#x2191; 1 prop &#x2191;</text>
         <text x="26.8" y="147.55"> &#x22;b&#x22;: false,</text>
-        <text x="26.8" y="166.55"> &#x22;a&#x22;: true,</text>
+        <text x="26.8" y="166.55"> &#x2193; 1 prop &#x2193;</text>
         <text x="10" y="185.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

@@ -77,6 +77,8 @@ const PLACEHOLDER_FOR_NOTHING = {
 const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
   placeholder: "added_or_removed",
 };
+const MAX_PROP_BEFORE_DIFF = 2;
+const MAX_PROP_AFTER_DIFF = 2;
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -184,17 +186,29 @@ export const assert = ({ actual, expect }) => {
           atLeastOnePropertyDisplayed = true;
         }
       };
+      const appendSkippedProps = (skipCount, sign) => {
+        let skippedPropDiff = "";
+        skippedPropDiff += "  ".repeat(node.depth + 1);
+        skippedPropDiff += sign;
+        skippedPropDiff += " ";
+        skippedPropDiff += skipCount;
+        skippedPropDiff += " ";
+        skippedPropDiff += skipCount === 1 ? "prop" : "props";
+        skippedPropDiff += " ";
+        skippedPropDiff += sign;
+        appendProperty(skippedPropDiff);
+      };
       let previousIndexDisplayed = -1;
       for (const indexToDisplay of indexToDisplayArray) {
         if (previousIndexDisplayed === -1) {
           if (indexToDisplay > 0) {
-            appendProperty(`↑ ${indexToDisplay} props ↑`);
+            appendSkippedProps(indexToDisplay, "↑");
           }
         } else {
           const intermediateSkippedCount =
             indexToDisplay - previousIndexDisplayed;
           if (intermediateSkippedCount) {
-            appendProperty(`↕ ${intermediateSkippedCount} props ↕`);
+            appendSkippedProps(intermediateSkippedCount, "↕");
           }
         }
         const propertyName = ownPropertyNames[indexToDisplay];
@@ -205,9 +219,9 @@ export const assert = ({ actual, expect }) => {
       const lastIndexDisplayed = previousIndexDisplayed;
       if (lastIndexDisplayed > -1) {
         const lastSkippedCount =
-          indexToDisplayArray.length - 1 - lastIndexDisplayed;
+          ownPropertyNames.length - 1 - lastIndexDisplayed;
         if (lastSkippedCount) {
-          appendProperty(`↓ ${lastSkippedCount} props ↓`);
+          appendSkippedProps(lastSkippedCount, `↓`);
         }
       }
       if (atLeastOnePropertyDisplayed) {
@@ -257,9 +271,6 @@ export const assert = ({ actual, expect }) => {
       return diff;
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
-      const MAX_PROP_BEFORE_DIFF = 2;
-      const MAX_PROP_AFTER_DIFF = 2;
-
       const indexToDisplaySet = new Set();
       for (const diffIndex of diffIndexArray) {
         let beforeDiffIndex = diffIndex - 1;

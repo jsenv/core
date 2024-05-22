@@ -1,12 +1,12 @@
 # property are different
 actual: {
-  "a": true,
+  ↑ 1 prop ↑
   "b": true,
-  "c": true,
+  ↓ 1 prop ↓
 }
 expect: {
-  "c": true,
+  ↑ 1 prop ↑
   "b": false,
-  "a": true,
+  ↓ 1 prop ↓
 }
 
