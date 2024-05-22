@@ -174,15 +174,40 @@ export const assert = ({ actual, expect }) => {
           ? node.colorWhenSolo
           : node.colorWhenSame;
       let propertiesDiff = "";
-      for (const indexToDisplay of indexToDisplayArray) {
-        const propertyName = node.ownPropertyNames[indexToDisplay];
-        const propertyNode = ownPropertyNodeMap.get(propertyName);
+      const ownPropertyNames = node.ownPropertyNames;
+      const appendProperty = (propertyDiff) => {
         if (atLeastOnePropertyDisplayed) {
           propertiesDiff += "\n";
-          propertiesDiff += propertyNode.render();
+          propertiesDiff += propertyDiff;
         } else {
-          propertiesDiff += propertyNode.render();
+          propertiesDiff += propertyDiff;
           atLeastOnePropertyDisplayed = true;
+        }
+      };
+      let previousIndexDisplayed = -1;
+      for (const indexToDisplay of indexToDisplayArray) {
+        if (previousIndexDisplayed === -1) {
+          if (indexToDisplay > 0) {
+            appendProperty(`↑ ${indexToDisplay} props ↑`);
+          }
+        } else {
+          const intermediateSkippedCount =
+            indexToDisplay - previousIndexDisplayed;
+          if (intermediateSkippedCount) {
+            appendProperty(`↕ ${intermediateSkippedCount} props ↕`);
+          }
+        }
+        const propertyName = ownPropertyNames[indexToDisplay];
+        const propertyNode = ownPropertyNodeMap.get(propertyName);
+        appendProperty(propertyNode.render());
+        previousIndexDisplayed = indexToDisplay;
+      }
+      const lastIndexDisplayed = previousIndexDisplayed;
+      if (lastIndexDisplayed > -1) {
+        const lastSkippedCount =
+          indexToDisplayArray.length - 1 - lastIndexDisplayed;
+        if (lastSkippedCount) {
+          appendProperty(`↓ ${lastSkippedCount} props ↓`);
         }
       }
       if (atLeastOnePropertyDisplayed) {
