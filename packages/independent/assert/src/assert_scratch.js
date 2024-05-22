@@ -163,6 +163,84 @@ export const assert = ({ actual, expect }) => {
     const renderPrimitiveDiff = (node) => {
       return JSON.stringify(node.value);
     };
+    const renderPropertiesWhenNoDiff = () => {
+      let diff = "";
+      diff += "TODO: properties diff compact mode";
+      return diff;
+    };
+    const getIndexToDisplayArray = (diffIndexArray, names) => {
+      const MAX_PROP_BEFORE_DIFF = 2;
+      const MAX_PROP_AFTER_DIFF = 2;
+
+      const indexToDisplaySet = new Set();
+      for (const diffIndex of diffIndexArray) {
+        let beforeDiffIndex = diffIndex - 1;
+        let beforeCount = 0;
+        while (beforeDiffIndex > -1) {
+          if (beforeCount === MAX_PROP_BEFORE_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(beforeDiffIndex);
+          beforeCount++;
+          beforeDiffIndex--;
+        }
+        indexToDisplaySet.add(diffIndex);
+        let afterDiffIndex = diffIndex + 1;
+        let afterCount = 0;
+        while (afterDiffIndex < names.length - 1) {
+          if (afterCount === MAX_PROP_AFTER_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(afterDiffIndex);
+          afterCount++;
+          afterDiffIndex--;
+        }
+      }
+      return Array.from(indexToDisplaySet);
+    };
+    const renderPropertiesDiff = ({
+      node,
+      diffIndexArray,
+      ownPropertyNames,
+      ownPropertyNodeMap,
+    }) => {
+      diffIndexArray.sort();
+      const indexToDisplayArray = getIndexToDisplayArray(
+        diffIndexArray,
+        ownPropertyNames,
+      );
+      let atLeastOnePropertyDisplayed = false;
+      let diff = "";
+      let color = node.modified
+        ? node.colorWhenModified
+        : node.solo
+          ? node.colorWhenSolo
+          : node.colorWhenSame;
+      let propertiesDiff = "";
+      for (const indexToDisplay of indexToDisplayArray) {
+        const propertyName = ownPropertyNames[indexToDisplay];
+        const propertyNode = ownPropertyNodeMap.get(propertyName);
+        if (atLeastOnePropertyDisplayed) {
+          propertiesDiff += "\n";
+          propertiesDiff += propertyNode.render();
+        } else {
+          propertiesDiff += propertyNode.render();
+          atLeastOnePropertyDisplayed = true;
+        }
+      }
+      if (atLeastOnePropertyDisplayed) {
+        diff += setColor("{", color);
+        diff += "\n";
+        diff += propertiesDiff;
+        diff += "\n";
+        diff += "  ".repeat(node.depth);
+        diff += setColor("}", color);
+      } else {
+        diff += setColor("{", color);
+        diff += setColor("}", color);
+      }
+      return diff;
+    };
 
     visit: {
       // comparing primitives
@@ -211,7 +289,6 @@ export const assert = ({ actual, expect }) => {
           propComparisonMap.set(propName, ownPropertyComparison);
           return ownPropertyComparison;
         };
-
         const MAX_DIFF_PER_OBJECT = 2;
         const diffPropertyNameSet = new Set();
         const actualDiffIndexArray = [];
@@ -232,85 +309,25 @@ export const assert = ({ actual, expect }) => {
             }
           }
         }
-        const getIndexToDisplayArray = (diffIndexArray, names) => {
-          const MAX_PROP_BEFORE_DIFF = 2;
-          const MAX_PROP_AFTER_DIFF = 2;
-
-          const indexToDisplaySet = new Set();
-          for (const diffIndex of diffIndexArray) {
-            let beforeDiffIndex = diffIndex - 1;
-            let beforeCount = 0;
-            while (beforeDiffIndex > -1) {
-              if (beforeCount === MAX_PROP_BEFORE_DIFF) {
-                break;
-              }
-              indexToDisplaySet.add(beforeDiffIndex);
-              beforeCount++;
-              beforeDiffIndex--;
-            }
-            indexToDisplaySet.add(diffIndex);
-            let afterDiffIndex = diffIndex + 1;
-            let afterCount = 0;
-            while (afterDiffIndex < names.length - 1) {
-              if (afterCount === MAX_PROP_AFTER_DIFF) {
-                break;
-              }
-              indexToDisplaySet.add(afterDiffIndex);
-              afterCount++;
-              afterDiffIndex--;
-            }
-          }
-          return Array.from(indexToDisplaySet);
-        };
-        const renderPropertiesDiff = ({
-          node,
-          diffIndexArray,
-          ownPropertyNames,
-          ownPropertyNodeMap,
-        }) => {
-          if (diffPropertyNameSet.size === 0) {
-            // (et si aucune diff on est en mode "oneLiner")
-            // pour le one liner il faut s'arreter lorsqu'on atteint max columns
-            // il faut aussi ne pas mettre \n a la fin des props
-            // et autre joyeuseté
-          }
-          diffIndexArray.sort();
-          const indexToDisplayArray = getIndexToDisplayArray(
-            diffIndexArray,
-            ownPropertyNames,
-          );
-          let atLeastOnePropertyDisplayed = false;
-          let diff = "";
-          let color = node.modified
-            ? node.colorWhenModified
-            : node.solo
-              ? node.colorWhenSolo
-              : node.colorWhenSame;
-          let propertiesDiff = "";
-          for (const indexToDisplay of indexToDisplayArray) {
-            const propertyName = ownPropertyNames[indexToDisplay];
-            const propertyNode = ownPropertyNodeMap.get(propertyName);
-            if (atLeastOnePropertyDisplayed) {
-              propertiesDiff += "\n";
-              propertiesDiff += propertyNode.render();
-            } else {
-              propertiesDiff += propertyNode.render();
-              atLeastOnePropertyDisplayed = true;
-            }
-          }
-          if (atLeastOnePropertyDisplayed) {
-            diff += setColor("{", color);
-            diff += "\n";
-            diff += propertiesDiff;
-            diff += "\n";
-            diff += "  ".repeat(node.depth);
-            diff += setColor("}", color);
-          } else {
-            diff += setColor("{", color);
-            diff += setColor("}", color);
-          }
-          return diff;
-        };
+        if (diffPropertyNameSet.size === 0) {
+          actualNode.render = () => {
+            return renderPropertiesWhenNoDiff({
+              node: actualNode,
+              diffIndexArray: actualDiffIndexArray,
+              ownPropertyNames: actualOwnPropertyNames,
+              ownPropertyNodeMap: actualOwnPropertyNodeMap,
+            });
+          };
+          expectNode.render = () => {
+            return renderPropertiesWhenNoDiff({
+              node: expectNode,
+              diffIndexArray: expectDiffIndexArray,
+              ownPropertyNames: expectOwnPropertyNames,
+              ownPropertyNodeMap: expectOwnPropertyNodeMap,
+            });
+          };
+          break visit;
+        }
         actualNode.render = () => {
           return renderPropertiesDiff({
             node: actualNode,
