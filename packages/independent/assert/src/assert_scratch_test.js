@@ -12,14 +12,14 @@ await startSnapshotTesting("assert_scratch", {
   ["property are different"]: () => {
     assert({
       actual: {
-        a: {
-          b: false,
-        },
+        a: true,
+        b: true,
+        c: true,
       },
       expect: {
-        a: {
-          b: true,
-        },
+        c: true,
+        b: false,
+        a: true,
       },
     });
   },

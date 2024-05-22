@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="146.02"
+      width="129.22"
       height="193.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -43,19 +43,15 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="33.55"> &#x22;a&#x22;: </text>
-        <text x="68.81" y="33.55" fill="#7f7f7f">{</text>
-        <text x="43.61" y="52.55"> &#x22;b&#x22;: false,</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">}</text>
-        <text x="35.2" y="71.55">,</text>
+        <text x="26.8" y="33.55"> &#x22;a&#x22;: true,</text>
+        <text x="26.8" y="52.55"> &#x22;b&#x22;: true,</text>
+        <text x="26.8" y="71.55"> &#x22;c&#x22;: true,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="128.55"> &#x22;a&#x22;: </text>
-        <text x="68.81" y="128.55" fill="#7f7f7f">{</text>
-        <text x="43.61" y="147.55"> &#x22;b&#x22;: true,</text>
-        <text x="26.8" y="166.55" fill="#7f7f7f">}</text>
-        <text x="35.2" y="166.55">,</text>
+        <text x="26.8" y="128.55"> &#x22;c&#x22;: true,</text>
+        <text x="26.8" y="147.55"> &#x22;b&#x22;: false,</text>
+        <text x="26.8" y="166.55"> &#x22;a&#x22;: true,</text>
         <text x="10" y="185.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

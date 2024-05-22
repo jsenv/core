@@ -132,11 +132,6 @@ export const assert = ({ actual, expect }) => {
    *   descriptorValueNode
    */
   const compare = (actualNode, expectNode, isAbstract) => {
-    // eslint-disable-next-line no-unused-vars
-    let actualCurrentNode;
-    // eslint-disable-next-line no-unused-vars
-    let expectCurrentNode;
-
     const reasons = createReasons();
     const comparison = {
       isComparison: true,
@@ -187,7 +182,7 @@ export const assert = ({ actual, expect }) => {
         indexToDisplaySet.add(diffIndex);
         let afterDiffIndex = diffIndex + 1;
         let afterCount = 0;
-        while (afterDiffIndex < names.length - 1) {
+        while (afterDiffIndex < names.length) {
           if (afterCount === MAX_PROP_AFTER_DIFF) {
             break;
           }
