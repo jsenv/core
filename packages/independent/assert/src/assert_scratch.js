@@ -30,6 +30,7 @@
  *
  */
 
+import stringWidth from "string-width";
 import { ANSI } from "@jsenv/humanize";
 
 const sameColor = ANSI.GREY;
@@ -152,16 +153,13 @@ export const assert = ({ actual, expect }) => {
       return comparison;
     }
 
+    const MAX_DIFF_PER_OBJECT = 2;
+
     const onSelfDiff = (reason) => {
       reasons.self.modified.add(reason);
     };
     const renderPrimitiveDiff = (node) => {
       return JSON.stringify(node.value);
-    };
-    const renderPropertiesWhenNoDiff = () => {
-      let diff = "";
-      diff += "TODO: properties diff compact mode";
-      return diff;
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
       const MAX_PROP_BEFORE_DIFF = 2;
@@ -195,15 +193,9 @@ export const assert = ({ actual, expect }) => {
     };
     const renderPropertiesDiff = ({
       node,
-      diffIndexArray,
-      ownPropertyNames,
+      indexToDisplayArray,
       ownPropertyNodeMap,
     }) => {
-      diffIndexArray.sort();
-      const indexToDisplayArray = getIndexToDisplayArray(
-        diffIndexArray,
-        ownPropertyNames,
-      );
       let atLeastOnePropertyDisplayed = false;
       let diff = "";
       let color = node.modified
@@ -213,7 +205,7 @@ export const assert = ({ actual, expect }) => {
           : node.colorWhenSame;
       let propertiesDiff = "";
       for (const indexToDisplay of indexToDisplayArray) {
-        const propertyName = ownPropertyNames[indexToDisplay];
+        const propertyName = node.ownPropertyNames[indexToDisplay];
         const propertyNode = ownPropertyNodeMap.get(propertyName);
         if (atLeastOnePropertyDisplayed) {
           propertiesDiff += "\n";
@@ -236,6 +228,65 @@ export const assert = ({ actual, expect }) => {
       }
       return diff;
     };
+    const renderPropertiesWhenNoDiff = ({ node, ownPropertyNodeMap }) => {
+      let diff = "";
+      let propertiesDiff = "";
+      let remainingWidth = 100;
+      let boilerplate = "{, ... }";
+      let atLeastOnePropertyDisplayed = false;
+      remainingWidth -= boilerplate.length;
+      const color = node.colorWhenSame;
+      while (remainingWidth) {
+        for (const ownPropertyName of node.ownPropertyNames) {
+          const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
+          const propertyDiff = ownPropertyNode.render();
+          const propertyDiffWidth = stringWidth(propertyDiff);
+          if (propertyDiffWidth > remainingWidth) {
+            if (atLeastOnePropertyDisplayed) {
+              diff += setColor("{", color);
+              diff += propertiesDiff;
+              diff += setColor(", ... }", color);
+              return diff;
+            }
+            diff += setColor("{ ... }", color);
+            return diff;
+          }
+          atLeastOnePropertyDisplayed = true;
+          propertiesDiff += propertyDiff;
+          remainingWidth -= propertyDiffWidth;
+        }
+      }
+      diff += setColor("{", color);
+      diff += propertiesDiff;
+      diff += setColor("}", color);
+      return diff;
+    };
+    const createRenderPropertiesWhenSolo = (node) => {
+      const indexToDisplayArray = [];
+      const ownPropertyNodeMap = new Map();
+      let index = 0;
+      for (const propName of node.ownPropertyNames) {
+        const ownPropertyNode = createOwnPropertyNode(node, propName);
+        ownPropertyNodeMap.set(propName, ownPropertyNode);
+        if (node.name === "actual") {
+          comparison.subcompare(ownPropertyNode, PLACEHOLDER_FOR_NOTHING);
+        } else {
+          comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertyNode);
+        }
+        indexToDisplayArray.push(index);
+        if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
+          break;
+        }
+        index++;
+      }
+      return () => {
+        return renderPropertiesDiff({
+          node,
+          indexToDisplayArray,
+          ownPropertyNodeMap,
+        });
+      };
+    };
 
     visit: {
       // comparing primitives
@@ -255,7 +306,6 @@ export const assert = ({ actual, expect }) => {
         };
         break visit;
       }
-
       // comparing composites
       if (actualNode.isComposite && expectNode.isComposite) {
         const actualOwnPropertyNames = actualNode.ownPropertyNames;
@@ -284,14 +334,13 @@ export const assert = ({ actual, expect }) => {
           propComparisonMap.set(propName, ownPropertyComparison);
           return ownPropertyComparison;
         };
-        const MAX_DIFF_PER_OBJECT = 2;
         const diffPropertyNameSet = new Set();
         const actualDiffIndexArray = [];
         const expectDiffIndexArray = [];
         for (const actualPropName of actualOwnPropertyNames) {
-          const propValueComparison = getPropComparison(actualPropName);
-          propComparisonMap.set(actualPropName, propValueComparison);
-          if (propValueComparison.hasAnyDiff) {
+          const propComparison = getPropComparison(actualPropName);
+          propComparisonMap.set(actualPropName, propComparison);
+          if (propComparison.hasAnyDiff) {
             actualDiffIndexArray.push(
               actualOwnPropertyNames.indexOf(actualPropName),
             );
@@ -308,16 +357,12 @@ export const assert = ({ actual, expect }) => {
           actualNode.render = () => {
             return renderPropertiesWhenNoDiff({
               node: actualNode,
-              diffIndexArray: actualDiffIndexArray,
-              ownPropertyNames: actualOwnPropertyNames,
               ownPropertyNodeMap: actualOwnPropertyNodeMap,
             });
           };
           expectNode.render = () => {
             return renderPropertiesWhenNoDiff({
               node: expectNode,
-              diffIndexArray: expectDiffIndexArray,
-              ownPropertyNames: expectOwnPropertyNames,
               ownPropertyNodeMap: expectOwnPropertyNodeMap,
             });
           };
@@ -326,48 +371,53 @@ export const assert = ({ actual, expect }) => {
         actualNode.render = () => {
           return renderPropertiesDiff({
             node: actualNode,
-            diffIndexArray: actualDiffIndexArray,
-            ownPropertyNames: actualOwnPropertyNames,
+            indexToDisplayArray: getIndexToDisplayArray(
+              actualDiffIndexArray.sort(),
+              actualNode.ownPropertyNames,
+            ),
             ownPropertyNodeMap: actualOwnPropertyNodeMap,
           });
         };
         expectNode.render = () => {
           return renderPropertiesDiff({
             node: expectNode,
-            diffIndexArray: expectDiffIndexArray,
-            ownPropertyNames: expectOwnPropertyNames,
+            indexToDisplayArray: getIndexToDisplayArray(
+              expectDiffIndexArray.sort(),
+              expectNode.ownPropertyNames,
+            ),
             ownPropertyNodeMap: expectOwnPropertyNodeMap,
           });
         };
         break visit;
       }
-
       // primitive vs composite
       if (actualNode.isPrimitive && expectNode.isComposite) {
         onSelfDiff("should_be_composite");
         actualNode.render = () => {
           return renderPrimitiveDiff(actualNode);
         };
-        expectNode.render = () => {
-          return "TODO: expect when composite solo";
-        };
+        expectNode.render = createRenderPropertiesWhenSolo(expectNode);
         break visit;
       }
-
       // composite vs primitive
       if (actualNode.isComposite && expectNode.isPrimitive) {
         onSelfDiff("should_be_primitive");
-        actualNode.render = () => {
-          return "TODO: actual when composite solo";
-        };
+        actualNode.render = createRenderPropertiesWhenSolo(actualNode);
         expectNode.render = () => {
           return renderPrimitiveDiff(expectNode);
         };
         break visit;
       }
-
       // comparing own property (always compared together)
       if (actualNode.type === "own_property") {
+        comparison.subcompare(
+          actualNode.propertyNameNode,
+          expectNode.propertyNameNode,
+        );
+        comparison.subcompare(
+          actualNode.propertyValueNode,
+          expectNode.propertyValueNode,
+        );
         const renderPropertyDiff = (node) => {
           let propertyDiff = "";
           const propertyNameNode = node.propertyNameNode;
@@ -386,24 +436,14 @@ export const assert = ({ actual, expect }) => {
         expectNode.render = () => {
           return renderPropertyDiff(expectNode);
         };
-        comparison.subcompare(
-          actualNode.propertyNameNode,
-          expectNode.propertyNameNode,
-        );
-        comparison.subcompare(
-          actualNode.propertyValueNode,
-          expectNode.propertyValueNode,
-        );
         break visit;
       }
-
       if (expectNode.placeholder) {
         actualNode.render = () => {
           return "TODO: actual when ? solo ";
         };
         break visit;
       }
-
       if (actualNode.placeholder) {
         expectNode.render = () => {
           return "TODO: expect when ? solo ";
