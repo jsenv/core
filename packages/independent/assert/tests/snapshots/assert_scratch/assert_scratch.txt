@@ -1,9 +1,12 @@
-# property should be there
+# property are different
 actual: {
-  "a": true,
+  "a": {
+    "b": false,
+  },
 }
 expect: {
-  "a": true,
-  "should_be_there": true,
+  "a": {
+    "b": true,
+  },
 }
 

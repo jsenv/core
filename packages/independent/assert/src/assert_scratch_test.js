@@ -9,6 +9,21 @@ import { startSnapshotTesting } from "../tests/start_snapshot_testing.js";
 import { assert } from "./assert_scratch.js";
 
 await startSnapshotTesting("assert_scratch", {
+  ["property are different"]: () => {
+    assert({
+      actual: {
+        a: {
+          b: false,
+        },
+      },
+      expect: {
+        a: {
+          b: true,
+        },
+      },
+    });
+  },
+
   // ["property are different"]: () => {
   //   assert({
   //     actual: {
@@ -33,17 +48,17 @@ await startSnapshotTesting("assert_scratch", {
   //     },
   //   });
   // },
-  ["property should be there"]: () => {
-    assert({
-      actual: {
-        a: true,
-      },
-      expect: {
-        a: true,
-        should_be_there: true,
-      },
-    });
-  },
+  // ["property should be there"]: () => {
+  //   assert({
+  //     actual: {
+  //       a: true,
+  //     },
+  //     expect: {
+  //       a: true,
+  //       should_be_there: true,
+  //     },
+  //   });
+  // },
   // ["property should not be there"]: () => {
   //   assert({
   //     actual: {

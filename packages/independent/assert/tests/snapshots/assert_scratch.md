@@ -1,16 +1,19 @@
-# property should be there
+# property are different
 
 ```js
 assert({
   actual: {
-    a: true,
+    a: {
+      b: false,
+    },
   },
   expect: {
-    a: true,
-    should_be_there: true,
+    a: {
+      b: true,
+    },
   },
 });
 ```
 
-![img](<./assert_scratch/property should be there.svg>)
+![img](<./assert_scratch/property are different.svg>)
 
