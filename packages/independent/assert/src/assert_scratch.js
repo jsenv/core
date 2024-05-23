@@ -176,39 +176,46 @@ export const assert = ({
       diff += JSON.stringify(node.value);
       return diff;
     };
-    const renderCompositeDiff = (node) => {
+    const renderCompositeDiff = (node, props) => {
       // it's here that at some point we'll compare more than just own properties
       // because composite also got a prototype
       // and a constructor that might differ
       let diff = "";
       const ownPropertiesNode = node.ownPropertiesNode;
-      // depth inside diff doit etre relative a la depth du parent ayant une diff
-      if (
-        node.diffType
-          ? node.depth > MAX_DEPTH_INSIDE_DIFF
-          : node.depth > MAX_DEPTH
-      ) {
+      let maxDepthReached = false;
+      if (node.diffType) {
+        if (typeof props.firstDiffDepth === "number") {
+          maxDepthReached =
+            node.depth + props.firstDiffDepth > MAX_DEPTH_INSIDE_DIFF;
+        } else {
+          props.firstDiffDepth = node.depth;
+          maxDepthReached = node.depth > MAX_DEPTH_INSIDE_DIFF;
+        }
+      } else {
+        maxDepthReached = node.depth > MAX_DEPTH;
+      }
+      if (maxDepthReached) {
         const propertyNameCount = ownPropertiesNode.value.length;
         diff += `Object(${propertyNameCount})`;
         return diff;
       }
-      const ownPropertiesDiff = ownPropertiesNode.render();
+      const ownPropertiesDiff = ownPropertiesNode.render(props);
       diff += ownPropertiesDiff;
       return diff;
     };
 
-    const renderProperties = (node, mode, options) => {
+    const renderProperties = (node, { mode, ...props }) => {
       if (mode === "multiline") {
-        return renderPropertiesMultiline(node, options);
+        return renderPropertiesMultiline(node, props);
       }
       if (mode === "one_liner" || mode === "without_diff") {
-        return renderPropertiesOneLiner(node, options);
+        return renderPropertiesOneLiner(node, props);
       }
       throw new Error(`cannot render properties with "${mode}" mode`);
     };
     const renderPropertiesMultiline = (
       node,
-      { ownPropertyNodeMap, indexToDisplayArray },
+      { ownPropertyNodeMap, indexToDisplayArray, ...props },
     ) => {
       let atLeastOnePropertyDisplayed = false;
       let diff = "";
@@ -257,7 +264,7 @@ export const assert = ({
         const propertyNode = ownPropertyNodeMap.get(propertyName);
         let propertyDiff = "";
         propertyDiff += "  ".repeat(getNodeDepth(propertyNode) + 1);
-        propertyDiff += propertyNode.render();
+        propertyDiff += propertyNode.render(props);
         propertyDiff += ",";
         appendProperty(propertyDiff);
         previousIndexDisplayed = indexToDisplay;
@@ -283,7 +290,10 @@ export const assert = ({
       }
       return diff;
     };
-    const renderPropertiesOneLiner = (node, { ownPropertyNodeMap }) => {
+    const renderPropertiesOneLiner = (
+      node,
+      { ownPropertyNodeMap, ...props },
+    ) => {
       const ownPropertyNames = node.value;
       if (ownPropertyNames.length === 0) {
         return "{}";
@@ -301,7 +311,7 @@ export const assert = ({
       }[node.diffType];
       for (const ownPropertyName of ownPropertyNames) {
         const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
-        const propertyDiff = ownPropertyNode.render();
+        const propertyDiff = ownPropertyNode.render(props);
         const propertyDiffWidth = stringWidth(propertyDiff);
         if (propertyDiffWidth > remainingWidth) {
           if (atLeastOnePropertyDisplayed) {
@@ -329,14 +339,14 @@ export const assert = ({
       diff += setColor("}", color);
       return diff;
     };
-    const renderPropertyDiff = (node) => {
+    const renderPropertyDiff = (node, props) => {
       let propertyDiff = "";
       const propertyNameNode = node.propertyNameNode;
-      propertyDiff += propertyNameNode.render();
+      propertyDiff += propertyNameNode.render(props);
       propertyDiff += ":";
       propertyDiff += " ";
       const propertyValueNode = node.propertyValueNode;
-      propertyDiff += propertyValueNode.render();
+      propertyDiff += propertyValueNode.render(props);
       return propertyDiff;
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
@@ -386,16 +396,16 @@ export const assert = ({
         } else {
           onSelfDiff("primitive_value");
         }
-        actualNode.render = () => renderPrimitiveDiff(actualNode);
-        expectNode.render = () => renderPrimitiveDiff(expectNode);
+        actualNode.render = (props) => renderPrimitiveDiff(actualNode, props);
+        expectNode.render = (props) => renderPrimitiveDiff(expectNode, props);
         return;
       }
       if (actualNode.isComposite) {
         const actualOwnPropertiesNode = createOwnPropertiesNode(actualNode);
         const expectOwnPropertiesNode = createOwnPropertiesNode(expectNode);
         subcompareDuo(actualOwnPropertiesNode, expectOwnPropertiesNode);
-        actualNode.render = () => renderCompositeDiff(actualNode);
-        expectNode.render = () => renderCompositeDiff(expectNode);
+        actualNode.render = (props) => renderCompositeDiff(actualNode, props);
+        expectNode.render = (props) => renderCompositeDiff(expectNode, props);
         return;
       }
       if (actualNode.type === "own_properties") {
@@ -494,26 +504,34 @@ export const assert = ({
           }
         }
         if (diffPropertyNameSet.size === 0) {
-          actualNode.render = () =>
-            renderProperties(actualNode, "without_diff", {
+          actualNode.render = (props) =>
+            renderProperties(actualNode, {
+              ...props,
+              mode: "without_diff",
               ownPropertyNodeMap: actualOwnPropertyNodeMap,
             });
-          expectNode.render = () =>
-            renderProperties(expectNode, "without_diff", {
+          expectNode.render = (props) =>
+            renderProperties(expectNode, {
+              ...props,
+              mode: "without_diff",
               ownPropertyNodeMap: expectOwnPropertyNodeMap,
             });
           return;
         }
-        actualNode.render = () =>
-          renderProperties(actualNode, "multiline", {
+        actualNode.render = (props) =>
+          renderProperties(actualNode, {
+            ...props,
+            mode: "multiline",
             indexToDisplayArray: getIndexToDisplayArray(
               actualDiffIndexArray.sort(),
               actualOwnPropertyNames,
             ),
             ownPropertyNodeMap: actualOwnPropertyNodeMap,
           });
-        expectNode.render = () =>
-          renderProperties(expectNode, "multiline", {
+        expectNode.render = (props) =>
+          renderProperties(expectNode, {
+            ...props,
+            mode: "multiline",
             indexToDisplayArray: getIndexToDisplayArray(
               expectDiffIndexArray.sort(),
               expectOwnPropertyNames,
@@ -528,21 +546,21 @@ export const assert = ({
           actualNode.propertyValueNode,
           expectNode.propertyValueNode,
         );
-        actualNode.render = () => renderPropertyDiff(actualNode);
-        expectNode.render = () => renderPropertyDiff(expectNode);
+        actualNode.render = (props) => renderPropertyDiff(actualNode, props);
+        expectNode.render = (props) => renderPropertyDiff(expectNode, props);
         return;
       }
       throw new Error("wtf");
     };
     const visitSolo = (node) => {
       if (node.isPrimitive) {
-        node.render = () => renderPrimitiveDiff(node);
+        node.render = (props) => renderPrimitiveDiff(node, props);
         return;
       }
       if (node.isComposite) {
         const ownPropertiesNode = createOwnPropertiesNode(node);
         subcompareSolo(ownPropertiesNode);
-        node.render = () => renderCompositeDiff(node);
+        node.render = (props) => renderCompositeDiff(node, props);
         return;
       }
       if (node.type === "own_properties") {
@@ -560,8 +578,10 @@ export const assert = ({
           }
           index++;
         }
-        node.render = () =>
-          renderProperties(node, "multiline", {
+        node.render = (props) =>
+          renderProperties(node, {
+            ...props,
+            mode: "multiline",
             indexToDisplayArray,
             ownPropertyNodeMap,
           });
@@ -570,7 +590,7 @@ export const assert = ({
       if (node.type === "own_property") {
         subcompareSolo(node.propertyNameNode);
         subcompareSolo(node.propertyValueNode);
-        node.render = () => renderPropertyDiff(node);
+        node.render = (props) => renderPropertyDiff(node, props);
         return;
       }
       throw new Error("wtf");
@@ -637,7 +657,6 @@ export const assert = ({
     } else if (comparison.selfHasModification) {
       actualNode.diffType = expectNode.diffType = "modified";
     }
-
     return comparison;
   };
 
