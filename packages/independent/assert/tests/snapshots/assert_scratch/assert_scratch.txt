@@ -2,7 +2,10 @@
 actual: {
   "a": true,
   "b": {
-    "a": true,
+    "a": {
+      "y": true,
+      "z": true,
+    },
   },
   "c": true,
 }

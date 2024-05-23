@@ -75,7 +75,7 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 const MAX_PROP_BEFORE_DIFF = 2;
 const MAX_PROP_AFTER_DIFF = 2;
 const MAX_DEPTH = 5;
-const MAX_DEPTH_INSIDE_DIFF = 2;
+const MAX_DEPTH_INSIDE_DIFF = 0;
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -167,7 +167,6 @@ export const assert = ({ actual, expect }) => {
     const MAX_DIFF_PER_OBJECT = 2;
 
     const onSelfDiff = (reason) => {
-      actualNode.modified = expectNode.modified = true;
       reasons.self.modified.add(reason);
       causeSet.add(comparison);
     };
@@ -303,6 +302,12 @@ export const assert = ({ actual, expect }) => {
       });
     };
     const renderPropertyDiff = (node) => {
+      // lorsqu'on atteint une certaine profondeur
+      // on veut arreter de render en gros
+      // on va juste render un truc comme {...} ou Object(5)
+      if (node.depth > MAX_DEPTH_INSIDE_DIFF) {
+        // debugger;
+      }
       let propertyDiff = "";
       const propertyNameNode = node.propertyNameNode;
       propertyDiff += "  ".repeat(getNodeDepth(propertyNameNode));
@@ -342,6 +347,16 @@ export const assert = ({ actual, expect }) => {
       return Array.from(indexToDisplaySet);
     };
 
+    const subcompareDuo = (actualChildNode, expectChildNode) => {
+      return comparison.subcompare(actualChildNode, expectChildNode);
+    };
+    const subcompareSolo = (childNode) => {
+      if (childNode.name === "actual") {
+        return comparison.subcompare(childNode, PLACEHOLDER_FOR_NOTHING);
+      }
+      return comparison.subcompare(PLACEHOLDER_FOR_NOTHING, childNode);
+    };
+
     const visitDuo = () => {
       if (actualNode.isPrimitive) {
         // comparing primitives
@@ -358,7 +373,7 @@ export const assert = ({ actual, expect }) => {
       if (actualNode.isComposite) {
         const actualOwnPropertiesNode = createOwnPropertiesNode(actualNode);
         const expectOwnPropertiesNode = createOwnPropertiesNode(expectNode);
-        comparison.subcompare(actualOwnPropertiesNode, expectOwnPropertiesNode);
+        subcompareDuo(actualOwnPropertiesNode, expectOwnPropertiesNode);
         actualNode.render = () => renderCompositeDiff(actualNode);
         expectNode.render = () => renderCompositeDiff(expectNode);
         return;
@@ -389,7 +404,7 @@ export const assert = ({ actual, expect }) => {
           actualOwnPropertyNode,
           expectOwnPropertyNode,
         ) => {
-          const ownPropertyComparison = comparison.subcompare(
+          const ownPropertyComparison = subcompareDuo(
             actualOwnPropertyNode,
             expectOwnPropertyNode,
           );
@@ -488,11 +503,8 @@ export const assert = ({ actual, expect }) => {
         return;
       }
       if (actualNode.type === "own_property") {
-        comparison.subcompare(
-          actualNode.propertyNameNode,
-          expectNode.propertyNameNode,
-        );
-        comparison.subcompare(
+        subcompareDuo(actualNode.propertyNameNode, expectNode.propertyNameNode);
+        subcompareDuo(
           actualNode.propertyValueNode,
           expectNode.propertyValueNode,
         );
@@ -509,27 +521,19 @@ export const assert = ({ actual, expect }) => {
       }
       if (node.isComposite) {
         const ownPropertiesNode = createOwnPropertiesNode(node);
-        if (node.name === "actual") {
-          comparison.subcompare(ownPropertiesNode, PLACEHOLDER_FOR_NOTHING);
-        } else {
-          comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertiesNode);
-        }
-        node.render = () => ownPropertiesNode.render();
+        subcompareSolo(ownPropertiesNode);
+        node.render = () => renderCompositeDiff(node);
         return;
       }
       if (node.type === "own_properties") {
-        const ownPropertyNames = node.vlaue;
+        const ownPropertyNames = node.value;
         const indexToDisplayArray = [];
         const ownPropertyNodeMap = new Map();
         let index = 0;
         for (const propName of ownPropertyNames) {
           const ownPropertyNode = createOwnPropertyNode(node, propName);
           ownPropertyNodeMap.set(propName, ownPropertyNode);
-          if (node.name === "actual") {
-            comparison.subcompare(ownPropertyNode, PLACEHOLDER_FOR_NOTHING);
-          } else {
-            comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertyNode);
-          }
+          subcompareSolo(ownPropertyNode);
           indexToDisplayArray.push(index);
           if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
             break;
@@ -544,6 +548,8 @@ export const assert = ({ actual, expect }) => {
         return;
       }
       if (node.type === "own_property") {
+        subcompareSolo(node.propertyNameNode);
+        subcompareSolo(node.propertyValueNode);
         node.render = () => renderPropertyDiff(node);
         return;
       }
@@ -603,6 +609,15 @@ export const assert = ({ actual, expect }) => {
     comparison.selfHasModification = self.modified.size > 0;
     comparison.hasAnyDiff = overall.any.size > 0;
     comparison.done = true;
+
+    if (actualNode.placeholder) {
+      expectNode.solo = true;
+    } else if (expectNode.placeholder) {
+      actualNode.solor = true;
+    } else {
+      actualNode.modified = comparison.selfHasModification;
+      expectNode.modified = comparison.selfHasModification;
+    }
 
     return comparison;
   };
@@ -763,7 +778,9 @@ let createRootNode;
       isComposite: false,
       isSymbol: false,
       // render info
-      render: () => {},
+      render: () => {
+        throw new Error(`render not implemented for ${type}`);
+      },
     };
 
     if (value === PLACEHOLDER_FOR_NOTHING) {
@@ -788,7 +805,6 @@ let createRootNode;
       node.isComposite = true;
       node.valueStartDelimiter = "{";
       node.valueEndDelimiter = "}";
-
       const ownPropertyNames = [];
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
         if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
@@ -797,14 +813,10 @@ let createRootNode;
         ownPropertyNames.push(ownPropertyName);
       }
       node.ownPropertyNames = ownPropertyNames;
-
       return node;
     }
 
     node.isPrimitive = true;
-    node.render = () => {
-      return JSON.stringify(value);
-    };
     return node;
   };
 }
