@@ -1,4 +1,4 @@
-# truncate property value
+# at property value
 actual: {
   foo: "abcdefghij…,
 }
@@ -6,7 +6,7 @@ expect: {
   foo: "ABCDEFGHIJ…,
 }
 
-# truncate property key
+# at property key
 actual: {
   "a quite long property key that will…,
 }
@@ -14,27 +14,51 @@ expect: {
   "a quite long property key that will…,
 }
 
-# truncate right after property name
+# at property name last char
 actual: {
-  abcdefghijkl,
+  abcdef…,
 }
 expect: {
-  abcdefghijkl,
+  abcdef…,
 }
 
-# truncate right after property separator
+# at property name separator
 actual: {
-  abcdefghijkl,
+  abcdefgh,
 }
 expect: {
-  abcdefghijkl,
+  abcdefgh,
 }
 
-# truncate exactly on first value column
+# at space after property name separator
 actual: {
-  abcdefghijkl,
+  abcdefgh,
 }
 expect: {
-  abcdefghijkl,
+  abcdefgh,
+}
+
+# at property value first char
+actual: {
+  abcdefgh,
+}
+expect: {
+  abcdefgh,
+}
+
+# at property value second char
+actual: {
+  abcdefgh: …,
+}
+expect: {
+  abcdefgh: …,
+}
+
+# at property value third char
+actual: {
+  abcdefgh: t…,
+}
+expect: {
+  abcdefgh: f…,
 }
 

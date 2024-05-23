@@ -1,20 +1,20 @@
-# truncate property value
+# at property value
 
 ```js
 assert({
   actual: {
-    foo: "abcdefghijk",
+    foo: "abcdefghijklmn",
   },
   expect: {
-    foo: "ABCDEFGHIJK",
+    foo: "ABCDEFGHIJKLMN",
   },
   MAX_COLUMNS: 20,
 });
 ```
 
-![img](<./max_columns/truncate property value.svg>)
+![img](<./max_columns/at property value.svg>)
 
-# truncate property key
+# at property key
 
 ```js
 assert({
@@ -28,53 +28,101 @@ assert({
 });
 ```
 
-![img](<./max_columns/truncate property key.svg>)
+![img](<./max_columns/at property key.svg>)
 
-# truncate right after property name
+# at property name last char
 
 ```js
 assert({
   actual: {
-    abcdefghijkl: true,
+    abcdefgh: true,
   },
   expect: {
-    abcdefghijkl: false,
+    abcdefgh: false,
+  },
+  MAX_COLUMNS: 10,
+});
+```
+
+![img](<./max_columns/at property name last char.svg>)
+
+# at property name separator
+
+```js
+assert({
+  actual: {
+    abcdefgh: true,
+  },
+  expect: {
+    abcdefgh: false,
+  },
+  MAX_COLUMNS: 11,
+});
+```
+
+![img](<./max_columns/at property name separator.svg>)
+
+# at space after property name separator
+
+```js
+assert({
+  actual: {
+    abcdefgh: true,
+  },
+  expect: {
+    abcdefgh: false,
+  },
+  MAX_COLUMNS: 12,
+});
+```
+
+![img](<./max_columns/at space after property name separator.svg>)
+
+# at property value first char
+
+```js
+assert({
+  actual: {
+    abcdefgh: true,
+  },
+  expect: {
+    abcdefgh: false,
+  },
+  MAX_COLUMNS: 13,
+});
+```
+
+![img](<./max_columns/at property value first char.svg>)
+
+# at property value second char
+
+```js
+assert({
+  actual: {
+    abcdefgh: true,
+  },
+  expect: {
+    abcdefgh: false,
+  },
+  MAX_COLUMNS: 14,
+});
+```
+
+![img](<./max_columns/at property value second char.svg>)
+
+# at property value third char
+
+```js
+assert({
+  actual: {
+    abcdefgh: true,
+  },
+  expect: {
+    abcdefgh: false,
   },
   MAX_COLUMNS: 15,
 });
 ```
 
-![img](<./max_columns/truncate right after property name.svg>)
-
-# truncate right after property separator
-
-```js
-assert({
-  actual: {
-    abcdefghijkl: true,
-  },
-  expect: {
-    abcdefghijkl: false,
-  },
-  MAX_COLUMNS: 16,
-});
-```
-
-![img](<./max_columns/truncate right after property separator.svg>)
-
-# truncate exactly on first value column
-
-```js
-assert({
-  actual: {
-    abcdefghijkl: true,
-  },
-  expect: {
-    abcdefghijkl: false,
-  },
-  MAX_COLUMNS: 16,
-});
-```
-
-![img](<./max_columns/truncate exactly on first value column.svg>)
+![img](<./max_columns/at property value third char.svg>)
 

@@ -180,6 +180,10 @@ export const assert = ({
     };
     const renderPrimitiveDiff = (node, { columnsRemaining }) => {
       let diff = "";
+      if (columnsRemaining < 2) {
+        diff = "…";
+        return diff;
+      }
       let valueDiff = JSON.stringify(node.value);
       if (node.isString && !node.useQuotes) {
         valueDiff = valueDiff.slice(1, -1);
@@ -291,9 +295,9 @@ export const assert = ({
         propertyDiff += propertyNode.render({
           ...props,
           // reset remaining width
-          columnsRemaining: MAX_COLUMNS - propertyDiff.length - ",".length,
+          columnsRemaining: MAX_COLUMNS - propertyDiff.length,
+          commaSeparator: true,
         });
-        propertyDiff += ",";
         appendProperty(propertyDiff);
         previousIndexDisplayed = indexToDisplay;
       }
@@ -343,7 +347,10 @@ export const assert = ({
       let atLeastOnePropertyDisplayed = false;
       for (const ownPropertyName of ownPropertyNames) {
         const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
-        const propertyDiff = ownPropertyNode.render(props);
+        const propertyDiff = ownPropertyNode.render({
+          ...props,
+          commaSeparator: false,
+        });
         const propertyDiffWidth = stringWidth(propertyDiff);
         if (propertyDiffWidth > columnsRemaining) {
           if (atLeastOnePropertyDisplayed) {
@@ -373,23 +380,33 @@ export const assert = ({
     };
     const renderPropertyDiff = (node, props) => {
       let propertyDiff = "";
+      const commaSeparator = props.commaSeparator;
       let columnsRemaining = props.columnsRemaining;
       const propertyNameNode = node.propertyNameNode;
+      if (commaSeparator) {
+        columnsRemaining -= ",".length;
+      }
       const propertyNameDiff = propertyNameNode.render({
         ...props,
         columnsRemaining,
       });
-      columnsRemaining -= stringWidth(propertyNameDiff);
       propertyDiff += propertyNameDiff;
-      if (columnsRemaining > ": ".length) {
+      let columnsRemainingForValue =
+        columnsRemaining - stringWidth(propertyNameDiff);
+      if (columnsRemainingForValue > ": ".length) {
         propertyDiff += ":";
         propertyDiff += " ";
-        columnsRemaining -= ": ".length;
+        columnsRemainingForValue -= ": ".length;
         const propertyValueNode = node.propertyValueNode;
         propertyDiff += propertyValueNode.render({
           ...props,
-          columnsRemaining,
+          columnsRemaining: columnsRemainingForValue,
         });
+        if (commaSeparator) {
+          propertyDiff += ",";
+        }
+      } else if (commaSeparator) {
+        propertyDiff += ",";
       }
       return propertyDiff;
     };

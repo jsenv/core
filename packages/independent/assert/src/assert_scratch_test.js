@@ -135,18 +135,18 @@ await startSnapshotTesting("assert_scratch", {
 });
 
 await startSnapshotTesting("max_columns", {
-  ["truncate property value"]: () => {
+  ["at property value"]: () => {
     assert({
       actual: {
-        foo: "abcdefghijk",
+        foo: "abcdefghijklmn",
       },
       expect: {
-        foo: "ABCDEFGHIJK",
+        foo: "ABCDEFGHIJKLMN",
       },
       MAX_COLUMNS: 20,
     });
   },
-  ["truncate property key"]: () => {
+  ["at property key"]: () => {
     assert({
       actual: {
         "a quite long property key that will be truncated": true,
@@ -157,37 +157,70 @@ await startSnapshotTesting("max_columns", {
       MAX_COLUMNS: 40,
     });
   },
-  ["truncate right after property name"]: () => {
+  ["at property name last char"]: () => {
     assert({
       actual: {
-        abcdefghijkl: true,
+        abcdefgh: true,
       },
       expect: {
-        abcdefghijkl: false,
+        abcdefgh: false,
+      },
+      MAX_COLUMNS: 10,
+    });
+  },
+  ["at property name separator"]: () => {
+    assert({
+      actual: {
+        abcdefgh: true,
+      },
+      expect: {
+        abcdefgh: false,
+      },
+      MAX_COLUMNS: 11,
+    });
+  },
+  ["at space after property name separator"]: () => {
+    assert({
+      actual: {
+        abcdefgh: true,
+      },
+      expect: {
+        abcdefgh: false,
+      },
+      MAX_COLUMNS: 12,
+    });
+  },
+  ["at property value first char"]: () => {
+    assert({
+      actual: {
+        abcdefgh: true,
+      },
+      expect: {
+        abcdefgh: false,
+      },
+      MAX_COLUMNS: 13,
+    });
+  },
+  ["at property value second char"]: () => {
+    assert({
+      actual: {
+        abcdefgh: true,
+      },
+      expect: {
+        abcdefgh: false,
+      },
+      MAX_COLUMNS: 14,
+    });
+  },
+  ["at property value third char"]: () => {
+    assert({
+      actual: {
+        abcdefgh: true,
+      },
+      expect: {
+        abcdefgh: false,
       },
       MAX_COLUMNS: 15,
-    });
-  },
-  ["truncate right after property separator"]: () => {
-    assert({
-      actual: {
-        abcdefghijkl: true,
-      },
-      expect: {
-        abcdefghijkl: false,
-      },
-      MAX_COLUMNS: 16,
-    });
-  },
-  ["truncate exactly on first value column"]: () => {
-    assert({
-      actual: {
-        abcdefghijkl: true,
-      },
-      expect: {
-        abcdefghijkl: false,
-      },
-      MAX_COLUMNS: 16,
     });
   },
 });
