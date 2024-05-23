@@ -1,16 +1,27 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - max depth
- *   lorsque la diff est tres profonde alors on skip ce qui est pareil pour afficher
- *   qu'a partir d'un certain point
- *   ça ça devrait etre facile en partant d'un point précis de l'arbre de comparaison
  * - map depth inside diff
  *   - lorsque une diff porte sur un objet (modified, added, removed)
  *   alors on print l'objet mais cela a une limite assez basse pour que on ai
  *   juste un aperçu sans heurter la lisibilité
+ * - shortcut lorsque la actual === expect
+ *   (en gros on a pas besoin de comparer inside)
+ *   pour les objet on auara besoin de découvrir X props pour les render
+ *   pour les primitives rien, on print la primitive tel quel
  * - wrapped value
+ *   - on va commencer avec Signal(true) Signal(false)
+ *   - puis Signal({ a: true }) Signal({ a: false })
+ *   - puis url object vs url string voir si on peut préserver cela
  * - added/removed prop
+ * - internal value
+ *   - set
+ *   - map
+ * - indexed value
+ * - le nom de l'objet avant les props
+ * - well known
+ * - associative array
+ * - property descriptors
  *
  */
 

@@ -1,10 +1,3 @@
-// add test for symbols
-// the goal is to ensure that missing symbol do not result
-// in properties mismatch because symbol and props should not
-// be compared together (not sure it's the case with current implem)
-// I think I would need two loops
-// put some in between props
-
 import { startSnapshotTesting } from "../tests/start_snapshot_testing.js";
 import { assert } from "./assert_scratch.js";
 
