@@ -1,10 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - restaurer plein de cas de test
- *   (notament celui des prop sur les objets)
- *   le but c'est de pouvoir a nouveau run les tests
- *   pour s'assurer qu'on casse rien quand on ajoute des choses
  * - maxColumns
  * - le nom de l'objet avant les props genre User { foo: "bar" }
  * - added/removed prop
@@ -23,6 +19,7 @@
  * - well known
  * - associative array
  * - property descriptors
+ * - colors
  *
  */
 
@@ -89,6 +86,8 @@ export const assert = ({
   MAX_PROP_AFTER_DIFF = 2,
   MAX_DEPTH = 5,
   MAX_DEPTH_INSIDE_DIFF = 1,
+  MAX_DIFF_PER_OBJECT = 2,
+  // MAX_COLUMNS = 100,
 }) => {
   const rootActualNode = createRootNode({
     colorWhenSolo: addedColor,
@@ -168,8 +167,6 @@ export const assert = ({
       return comparison;
     }
 
-    const MAX_DIFF_PER_OBJECT = 2;
-
     const onSelfDiff = (reason) => {
       reasons.self.modified.add(reason);
       causeSet.add(comparison);
@@ -185,6 +182,7 @@ export const assert = ({
       // and a constructor that might differ
       let diff = "";
       const ownPropertiesNode = node.ownPropertiesNode;
+      // depth inside diff doit etre relative a la depth du parent ayant une diff
       if (
         node.diffType
           ? node.depth > MAX_DEPTH_INSIDE_DIFF
