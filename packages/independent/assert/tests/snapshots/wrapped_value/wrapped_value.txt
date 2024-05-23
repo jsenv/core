@@ -6,3 +6,11 @@ expect: Object(10)
 actual: Object(10) 
 expect: 10
 
+# Object({ a: true }) vs { a: true }
+actual: Object({
+  a: true,
+}) 
+expect: {
+  a: false,
+}
+

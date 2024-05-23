@@ -177,6 +177,14 @@ export const assert = ({
       reasons.self.modified.add(reason);
       causeSet.add(comparison);
     };
+    const onAdded = (reason) => {
+      reasons.self.added.add(reason);
+      causeSet.add(comparison);
+    };
+    const onRemoved = (reason) => {
+      reasons.self.removed.add(reason);
+      causeSet.add(comparison);
+    };
     const renderPrimitiveDiff = (node, { columnsRemaining }) => {
       let diff = "";
       if (columnsRemaining < 2) {
@@ -483,11 +491,12 @@ export const assert = ({
       if (actualNode.isComposite) {
         const actualWrappedValueNode = getWrappedValueNode(actualNode);
         const expectWrappedValueNode = getWrappedValueNode(expectNode);
-        if (actualWrappedValueNode || expectWrappedValueNode) {
-          subcompareDuo(
-            actualWrappedValueNode || PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-            expectWrappedValueNode || PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-          );
+        if (actualWrappedValueNode && expectWrappedValueNode) {
+          subcompareDuo(actualWrappedValueNode, expectWrappedValueNode);
+        } else if (actualWrappedValueNode) {
+          subcompareSolo(actualWrappedValueNode);
+        } else if (expectWrappedValueNode) {
+          subcompareSolo(expectWrappedValueNode);
         }
         const actualOwnPropertiesNode = createOwnPropertiesNode(actualNode);
         const expectOwnPropertiesNode = createOwnPropertiesNode(expectNode);
@@ -729,10 +738,12 @@ export const assert = ({
         break visit;
       }
       if (expectNode.placeholder) {
+        onAdded("TODO");
         visitSolo(actualNode);
         break visit;
       }
       if (actualNode.placeholder) {
+        onRemoved("TODO");
         visitSolo(expectNode);
         break visit;
       }
@@ -970,6 +981,7 @@ let createRootNode;
           type: "value_of_return_value",
           value: valueOfReturnValue,
           path: path.append("valueOf()"),
+          depth: node.depth,
         });
       }
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {

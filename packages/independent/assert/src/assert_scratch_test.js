@@ -151,6 +151,16 @@ await startSnapshotTesting("wrapped_value", {
       expect: 10,
     });
   },
+  ["Object({ a: true }) vs { a: true }"]: () => {
+    assert({
+      actual: {
+        valueOf: () => {
+          return { a: true };
+        },
+      },
+      expect: { a: false },
+    });
+  },
 });
 
 // TODO: at property when rendered on single line
