@@ -5,14 +5,14 @@ await startSnapshotTesting("assert_scratch", {
   ["maxDepth on diff"]: () => {
     assert({
       actual: {
-        foo: { a: { b: {} }, b: { c: {} } },
-        b: true,
+        foo: { foo_a: { foo_a2: {} }, foo_b: { foo_b2: {} } },
+        bar: true,
       },
       expect: {
-        foo: { a: { b: {} }, b: { c: {} } },
-        b: { a: { b: {} } },
+        foo: { foo_a: { foo_a2: {} }, foo_b: { foo_b2: {} } },
+        bar: { bar_a: { bar_a2: {} } },
       },
-      MAX_DEPTH: 3,
+      MAX_DEPTH: 2,
       MAX_DEPTH_INSIDE_DIFF: 1,
     });
   },

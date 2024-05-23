@@ -1,12 +1,12 @@
 # maxDepth on diff
 actual: {
-  "foo": { "a": Object(1), "b": Object(1) },
-  "b": true,
+  "foo": { "foo_a": { "foo_a2": Object(0) }, "foo_b": { "foo_b2": Object(0) } },
+  "bar": true,
 }
 expect: {
-  "foo": { "a": Object(1), "b": Object(1) },
-  "b": {
-    "a": Object(1),
+  "foo": { "foo_a": { "foo_a2": Object(0) }, "foo_b": { "foo_b2": Object(0) } },
+  "bar": {
+    "bar_a": Object(1),
   },
 }
 

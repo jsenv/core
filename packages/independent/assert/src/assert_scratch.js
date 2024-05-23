@@ -185,7 +185,11 @@ export const assert = ({
       // and a constructor that might differ
       let diff = "";
       const ownPropertiesNode = node.ownPropertiesNode;
-      if (node.depth > MAX_DEPTH_INSIDE_DIFF) {
+      if (
+        node.diffType
+          ? node.depth > MAX_DEPTH_INSIDE_DIFF
+          : node.depth > MAX_DEPTH
+      ) {
         const propertyNameCount = ownPropertiesNode.value.length;
         diff += `Object(${propertyNameCount})`;
         return diff;
@@ -210,11 +214,11 @@ export const assert = ({
     ) => {
       let atLeastOnePropertyDisplayed = false;
       let diff = "";
-      let color = node.modified
-        ? node.colorWhenModified
-        : node.solo
-          ? node.colorWhenSolo
-          : node.colorWhenSame;
+      const color = {
+        solo: node.colorWhenSolo,
+        modified: node.colorWhenModified,
+        undefined: node.colorWhenSame,
+      }[node.diffType];
       let propertiesDiff = "";
       const ownPropertyNames = node.value;
       const appendProperty = (propertyDiff) => {
@@ -292,11 +296,11 @@ export const assert = ({
       let boilerplate = "{ ... }";
       let atLeastOnePropertyDisplayed = false;
       remainingWidth -= boilerplate.length;
-      let color = node.modified
-        ? node.colorWhenModified
-        : node.solo
-          ? node.colorWhenSolo
-          : node.colorWhenSame;
+      const color = {
+        solo: node.colorWhenSolo,
+        modified: node.colorWhenModified,
+        undefined: node.colorWhenSame,
+      }[node.diffType];
       for (const ownPropertyName of ownPropertyNames) {
         const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
         const propertyDiff = ownPropertyNode.render();
@@ -629,12 +633,11 @@ export const assert = ({
     comparison.done = true;
 
     if (actualNode.placeholder) {
-      expectNode.solo = true;
+      expectNode.diffType = "solo";
     } else if (expectNode.placeholder) {
-      actualNode.solor = true;
-    } else {
-      actualNode.modified = comparison.selfHasModification;
-      expectNode.modified = comparison.selfHasModification;
+      actualNode.diffType = "solo";
+    } else if (comparison.selfHasModification) {
+      actualNode.diffType = expectNode.diffType = "modified";
     }
 
     return comparison;
