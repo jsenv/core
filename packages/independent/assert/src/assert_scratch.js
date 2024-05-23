@@ -1,7 +1,9 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - maxColumns
+ * - many tests on max columns
+ *   comme si la clé a vraiment tres peu de place
+ *   si la valeur a tres peu de place
  * - le nom de l'objet avant les props genre User { foo: "bar" }
  * - added/removed prop
  * - internal value
@@ -87,7 +89,7 @@ export const assert = ({
   MAX_DEPTH = 5,
   MAX_DEPTH_INSIDE_DIFF = 1,
   MAX_DIFF_PER_OBJECT = 2,
-  // MAX_COLUMNS = 100,
+  MAX_COLUMNS = 100,
 }) => {
   const rootActualNode = createRootNode({
     colorWhenSolo: addedColor,
@@ -171,9 +173,15 @@ export const assert = ({
       reasons.self.modified.add(reason);
       causeSet.add(comparison);
     };
-    const renderPrimitiveDiff = (node) => {
+    const renderPrimitiveDiff = (node, { columnsRemaining }) => {
       let diff = "";
-      diff += JSON.stringify(node.value);
+      const valueDiff = JSON.stringify(node.value);
+      if (valueDiff.length > columnsRemaining) {
+        diff += valueDiff.slice(0, columnsRemaining - 1);
+        diff += "…";
+      } else {
+        diff += valueDiff;
+      }
       return diff;
     };
     const renderCompositeDiff = (node, props) => {
@@ -182,6 +190,15 @@ export const assert = ({
       // and a constructor that might differ
       let diff = "";
       const ownPropertiesNode = node.ownPropertiesNode;
+      const propertyNameCount = ownPropertiesNode.value.length;
+      if (propertyNameCount === 0) {
+        diff += "{}";
+        return diff;
+      }
+      if (props.columnsRemaining < 2) {
+        diff = "…";
+        return diff;
+      }
       let maxDepthReached = false;
       if (node.diffType) {
         if (typeof props.firstDiffDepth === "number") {
@@ -195,7 +212,6 @@ export const assert = ({
         maxDepthReached = node.depth > MAX_DEPTH;
       }
       if (maxDepthReached) {
-        const propertyNameCount = ownPropertiesNode.value.length;
         diff += `Object(${propertyNameCount})`;
         return diff;
       }
@@ -264,7 +280,11 @@ export const assert = ({
         const propertyNode = ownPropertyNodeMap.get(propertyName);
         let propertyDiff = "";
         propertyDiff += "  ".repeat(getNodeDepth(propertyNode) + 1);
-        propertyDiff += propertyNode.render(props);
+        propertyDiff += propertyNode.render({
+          ...props,
+          // reset remaining width
+          columnsRemaining: MAX_COLUMNS - propertyDiff.length - ",".length,
+        });
         propertyDiff += ",";
         appendProperty(propertyDiff);
         previousIndexDisplayed = indexToDisplay;
@@ -294,26 +314,30 @@ export const assert = ({
       node,
       { ownPropertyNodeMap, ...props },
     ) => {
-      const ownPropertyNames = node.value;
-      if (ownPropertyNames.length === 0) {
-        return "{}";
-      }
-      let diff = "";
-      let propertiesDiff = "";
-      let remainingWidth = 100;
-      let boilerplate = "{ ... }";
-      let atLeastOnePropertyDisplayed = false;
-      remainingWidth -= boilerplate.length;
       const color = {
         solo: node.colorWhenSolo,
         modified: node.colorWhenModified,
         undefined: node.colorWhenSame,
       }[node.diffType];
+      const ownPropertyNames = node.value;
+      if (ownPropertyNames.length === 0) {
+        return "{}";
+      }
+      let columnsRemaining = props.columnsRemaining;
+      let boilerplate = "{ ... }";
+      columnsRemaining -= boilerplate.length;
+      if (columnsRemaining < 5) {
+        // no room to display key/value
+        return setColor("{ ... }", color);
+      }
+      let diff = "";
+      let propertiesDiff = "";
+      let atLeastOnePropertyDisplayed = false;
       for (const ownPropertyName of ownPropertyNames) {
         const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
         const propertyDiff = ownPropertyNode.render(props);
         const propertyDiffWidth = stringWidth(propertyDiff);
-        if (propertyDiffWidth > remainingWidth) {
+        if (propertyDiffWidth > columnsRemaining) {
           if (atLeastOnePropertyDisplayed) {
             diff += setColor("{", color);
             diff += propertiesDiff;
@@ -330,7 +354,7 @@ export const assert = ({
           atLeastOnePropertyDisplayed = true;
         }
         propertiesDiff += propertyDiff;
-        remainingWidth -= propertyDiffWidth;
+        columnsRemaining -= propertyDiffWidth;
       }
       diff += setColor("{", color);
       diff += " ";
@@ -341,12 +365,24 @@ export const assert = ({
     };
     const renderPropertyDiff = (node, props) => {
       let propertyDiff = "";
+      let columnsRemaining = props.columnsRemaining;
       const propertyNameNode = node.propertyNameNode;
-      propertyDiff += propertyNameNode.render(props);
-      propertyDiff += ":";
-      propertyDiff += " ";
-      const propertyValueNode = node.propertyValueNode;
-      propertyDiff += propertyValueNode.render(props);
+      const propertyNameDiff = propertyNameNode.render({
+        ...props,
+        columnsRemaining,
+      });
+      columnsRemaining -= stringWidth(propertyNameDiff);
+      propertyDiff += propertyNameDiff;
+      if (columnsRemaining > ": ".length) {
+        propertyDiff += ":";
+        propertyDiff += " ";
+        columnsRemaining -= ": ".length;
+        const propertyValueNode = node.propertyValueNode;
+        propertyDiff += propertyValueNode.render({
+          ...props,
+          columnsRemaining,
+        });
+      }
       return propertyDiff;
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
@@ -717,11 +753,15 @@ export const assert = ({
 
   diff += ANSI.color("actual:", sameColor);
   diff += " ";
-  diff += startActualNode.render();
+  diff += startActualNode.render({
+    columnsRemaining: MAX_COLUMNS - "actual: ".length,
+  });
   diff += `\n`;
   diff += ANSI.color("expect:", sameColor);
   diff += " ";
-  diff += startExpectNode.render();
+  diff += startExpectNode.render({
+    columnsRemaining: MAX_COLUMNS - "expect: ".length,
+  });
   throw diff;
 };
 

@@ -17,11 +17,17 @@ await startSnapshotTesting("assert_scratch", {
   ["max depth inside diff"]: () => {
     assert({
       actual: {
-        foo: { foo_a: { foo_a2: {} }, foo_b: { foo_b2: {} } },
+        foo: {
+          foo_a: { foo_a2: { foo_a3: {} } },
+          foo_b: { foo_b2: { foo_b3: {} } },
+        },
         bar: true,
       },
       expect: {
-        foo: { foo_a: { foo_a2: {} }, foo_b: { foo_b2: {} } },
+        foo: {
+          foo_a: { foo_a2: { foo_a3: {} } },
+          foo_b: { foo_b2: { foo_b3: {} } },
+        },
         bar: { bar_a: { bar_a2: {} } },
       },
       MAX_DEPTH: 2,
@@ -64,18 +70,28 @@ await startSnapshotTesting("assert_scratch", {
       MAX_PROP_AFTER_DIFF: 0,
     });
   },
-  // ["property key truncated"]: () => {
-  //   assert({
-  //     actual: {
-  //       "a quite long property key that will be truncated": true,
-  //     },
-  //     expect: {
-  //       "a quite long property key that will be truncated": false,
-  //     },
-  //     MAX_COLUMNS: 40,
-  //   });
-  // },
-
+  ["property value truncated"]: () => {
+    assert({
+      actual: {
+        foo: "abcdefghijk",
+      },
+      expect: {
+        foo: "ABCDEFGHIJK",
+      },
+      MAX_COLUMNS: 20,
+    });
+  },
+  ["property key truncated"]: () => {
+    assert({
+      actual: {
+        "a quite long property key that will be truncated": true,
+      },
+      expect: {
+        "a quite long property key that will be truncated": false,
+      },
+      MAX_COLUMNS: 40,
+    });
+  },
   // ["property are different"]: () => {
   //   assert({
   //     actual: {

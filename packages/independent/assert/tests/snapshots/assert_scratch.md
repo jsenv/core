@@ -20,11 +20,17 @@ assert({
 ```js
 assert({
   actual: {
-    foo: { foo_a: { foo_a2: {} }, foo_b: { foo_b2: {} } },
+    foo: {
+      foo_a: { foo_a2: { foo_a3: {} } },
+      foo_b: { foo_b2: { foo_b3: {} } },
+    },
     bar: true,
   },
   expect: {
-    foo: { foo_a: { foo_a2: {} }, foo_b: { foo_b2: {} } },
+    foo: {
+      foo_a: { foo_a2: { foo_a3: {} } },
+      foo_b: { foo_b2: { foo_b3: {} } },
+    },
     bar: { bar_a: { bar_a2: {} } },
   },
   MAX_DEPTH: 2,
@@ -79,4 +85,36 @@ assert({
 ```
 
 ![img](<./assert_scratch/max prop around diff.svg>)
+
+# property value truncated
+
+```js
+assert({
+  actual: {
+    foo: "abcdefghijk",
+  },
+  expect: {
+    foo: "ABCDEFGHIJK",
+  },
+  MAX_COLUMNS: 20,
+});
+```
+
+![img](<./assert_scratch/property value truncated.svg>)
+
+# property key truncated
+
+```js
+assert({
+  actual: {
+    "a quite long property key that will be truncated": true,
+  },
+  expect: {
+    "a quite long property key that will be truncated": false,
+  },
+  MAX_COLUMNS: 40,
+});
+```
+
+![img](<./assert_scratch/property key truncated.svg>)
 

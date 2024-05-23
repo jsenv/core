@@ -10,11 +10,11 @@ expect: {
 
 # max depth inside diff
 actual: {
-  "foo": { "foo_a": { "foo_a2": Object(0) }, "foo_b": { "foo_b2": Object(0) } },
+  "foo": { "foo_a": { "foo_a2": Object(1) }, "foo_b": { "foo_b2": Object(1) } },
   "bar": true,
 }
 expect: {
-  "foo": { "foo_a": { "foo_a2": Object(0) }, "foo_b": { "foo_b2": Object(0) } },
+  "foo": { "foo_a": { "foo_a2": Object(1) }, "foo_b": { "foo_b2": Object(1) } },
   "bar": {
     "bar_a": Object(1),
   },
@@ -46,5 +46,21 @@ expect: {
   ↑ 1 prop ↑
   "b": false,
   ↓ 1 prop ↓
+}
+
+# property value truncated
+actual: {
+  "foo": "abcdefgh…,
+}
+expect: {
+  "foo": "ABCDEFGH…,
+}
+
+# property key truncated
+actual: {
+  "a quite long property key that will…,
+}
+expect: {
+  "a quite long property key that will…,
 }
 
