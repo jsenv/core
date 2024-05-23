@@ -134,6 +134,7 @@ await startSnapshotTesting("assert_scratch", {
   // },
 });
 
+// TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", {
   ["at property value"]: () => {
     assert({

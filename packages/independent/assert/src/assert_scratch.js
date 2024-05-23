@@ -1,15 +1,10 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - many tests on max columns
- *   comme si la clé a vraiment tres peu de place
- *   si la valeur a tres peu de place
- *   le maxColumns s'arrete pile sur ":"
- *   pile sur l'espace apres le ":"
- *   pile sur la premiere columns apres l'espace
- *   pile sur la nd columns apres l'espace
- * - le nom de l'objet avant les props genre User { foo: "bar" }
- * - added/removed prop
+ * - wrapped value
+ *   - on va commencer avec Signal(true) Signal(false)
+ *   - puis Signal({ a: true }) Signal({ a: false })
+ *   - puis url object vs url string voir si on peut préserver cela
  * - internal value
  *   - set
  *   - map
@@ -18,10 +13,12 @@
  *   (en gros on a pas besoin de comparer inside)
  *   pour les objet on auara besoin de découvrir X props pour les render
  *   pour les primitives rien, on print la primitive tel quel
- * - wrapped value
- *   - on va commencer avec Signal(true) Signal(false)
- *   - puis Signal({ a: true }) Signal({ a: false })
- *   - puis url object vs url string voir si on peut préserver cela
+ * - no need to break loop when max diff is reached
+ *   en fait si pour string par exemple on voudra s'arreter
+ *   mais pour un objet, un array un buffer on parourira tout
+ *   parce que on le fait de toute façon lorsqu'il n'y a pas de diff
+ * - le nom de l'objet avant les props genre User { foo: "bar" }
+ * - added/removed prop
  * - well known
  * - associative array
  * - property descriptors
@@ -338,10 +335,6 @@ export const assert = ({
       let columnsRemaining = props.columnsRemaining;
       let boilerplate = "{ ... }";
       columnsRemaining -= boilerplate.length;
-      if (columnsRemaining < 5) {
-        // no room to display key/value
-        return setColor("{ ... }", color);
-      }
       let diff = "";
       let propertiesDiff = "";
       let atLeastOnePropertyDisplayed = false;
@@ -349,6 +342,7 @@ export const assert = ({
         const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
         const propertyDiff = ownPropertyNode.render({
           ...props,
+          columnsRemaining,
           commaSeparator: false,
         });
         const propertyDiffWidth = stringWidth(propertyDiff);
