@@ -134,6 +134,25 @@ await startSnapshotTesting("assert_scratch", {
   // },
 });
 
+await startSnapshotTesting("wrapped_value", {
+  ["10 vs Object(10)"]: () => {
+    assert({
+      actual: 10,
+      expect: {
+        valueOf: () => 10,
+      },
+    });
+  },
+  ["Object(10) vs 10"]: () => {
+    assert({
+      actual: {
+        valueOf: () => 10,
+      },
+      expect: 10,
+    });
+  },
+});
+
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", {
   ["at property value"]: () => {
