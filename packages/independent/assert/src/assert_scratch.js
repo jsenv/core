@@ -203,7 +203,7 @@ export const assert = ({ actual, expect }) => {
           }
         } else {
           const intermediateSkippedCount =
-            indexToDisplay - previousIndexDisplayed;
+            indexToDisplay - previousIndexDisplayed - 1;
           if (intermediateSkippedCount) {
             appendSkippedProps(intermediateSkippedCount, "↕");
           }
