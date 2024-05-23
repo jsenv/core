@@ -1,24 +1,21 @@
-# property are different
+# maxDepth on diff
 
 ```js
 assert({
   actual: {
-    a: true,
-    b: {
-      a: {
-        y: true,
-        z: true,
-      },
-    },
-    c: true,
+    foo: { a: { b: {} }, b: { c: {} } },
+    b: true,
+    // bar: true,
   },
   expect: {
-    c: true,
-    b: { a: false },
-    a: true,
+    foo: { a: { b: {} }, b: { c: {} } },
+    b: { a: { b: {} } },
+    // bar: { a: { b: { c: {} } } },
   },
+  MAX_DEPTH: 3,
+  MAX_DEPTH_INSIDE_DIFF: 1,
 });
 ```
 
-![img](<./assert_scratch/property are different.svg>)
+![img](<./assert_scratch/maxDepth on diff.svg>)
 

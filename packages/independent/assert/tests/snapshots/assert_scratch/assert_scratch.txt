@@ -1,16 +1,12 @@
-# property are different
+# maxDepth on diff
 actual: {
-  "a": true,
-  "b": {
-    "a": Object(2),
-  },
-  "c": true,
+  "foo": { "a": Object(1), "b": Object(1) },
+  "b": true,
 }
 expect: {
-  "c": true,
+  "foo": { "a": Object(1), "b": Object(1) },
   "b": {
-    "a": false,
+    "a": Object(1),
   },
-  "a": true,
 }
 

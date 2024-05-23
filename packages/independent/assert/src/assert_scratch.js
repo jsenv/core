@@ -5,6 +5,7 @@
  *   (notament celui des prop sur les objets)
  *   le but c'est de pouvoir a nouveau run les tests
  *   pour s'assurer qu'on casse rien quand on ajoute des choses
+ * - maxColumns
  * - le nom de l'objet avant les props genre User { foo: "bar" }
  * - added/removed prop
  * - internal value
@@ -72,10 +73,6 @@ const PLACEHOLDER_FOR_NOTHING = {
 const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
   placeholder: "added_or_removed",
 };
-const MAX_PROP_BEFORE_DIFF = 2;
-const MAX_PROP_AFTER_DIFF = 2;
-const MAX_DEPTH = 5;
-const MAX_DEPTH_INSIDE_DIFF = 1;
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -85,7 +82,14 @@ const setColor = (text, color) => {
   return ANSI.color(text, color);
 };
 
-export const assert = ({ actual, expect }) => {
+export const assert = ({
+  actual,
+  expect,
+  MAX_PROP_BEFORE_DIFF = 2,
+  MAX_PROP_AFTER_DIFF = 2,
+  MAX_DEPTH = 5,
+  MAX_DEPTH_INSIDE_DIFF = 1,
+}) => {
   const rootActualNode = createRootNode({
     colorWhenSolo: addedColor,
     colorWhenSame: sameColor,
@@ -249,7 +253,11 @@ export const assert = ({ actual, expect }) => {
         }
         const propertyName = ownPropertyNames[indexToDisplay];
         const propertyNode = ownPropertyNodeMap.get(propertyName);
-        appendProperty(propertyNode.render());
+        let propertyDiff = "";
+        propertyDiff += "  ".repeat(getNodeDepth(propertyNode) + 1);
+        propertyDiff += propertyNode.render();
+        propertyDiff += ",";
+        appendProperty(propertyDiff);
         previousIndexDisplayed = indexToDisplay;
       }
       const lastIndexDisplayed = previousIndexDisplayed;
@@ -274,10 +282,14 @@ export const assert = ({ actual, expect }) => {
       return diff;
     };
     const renderPropertiesOneLiner = (node, { ownPropertyNodeMap }) => {
+      const ownPropertyNames = node.value;
+      if (ownPropertyNames.length === 0) {
+        return "{}";
+      }
       let diff = "";
       let propertiesDiff = "";
       let remainingWidth = 100;
-      let boilerplate = "{, ... }";
+      let boilerplate = "{ ... }";
       let atLeastOnePropertyDisplayed = false;
       remainingWidth -= boilerplate.length;
       let color = node.modified
@@ -285,42 +297,44 @@ export const assert = ({ actual, expect }) => {
         : node.solo
           ? node.colorWhenSolo
           : node.colorWhenSame;
-      const ownPropertyNames = node.value;
-      while (remainingWidth) {
-        for (const ownPropertyName of ownPropertyNames) {
-          const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
-          const propertyDiff = ownPropertyNode.render();
-          const propertyDiffWidth = stringWidth(propertyDiff);
-          if (propertyDiffWidth > remainingWidth) {
-            if (atLeastOnePropertyDisplayed) {
-              diff += setColor("{", color);
-              diff += propertiesDiff;
-              diff += setColor(", ... }", color);
-              return diff;
-            }
-            diff += setColor("{ ... }", color);
+      for (const ownPropertyName of ownPropertyNames) {
+        const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
+        const propertyDiff = ownPropertyNode.render();
+        const propertyDiffWidth = stringWidth(propertyDiff);
+        if (propertyDiffWidth > remainingWidth) {
+          if (atLeastOnePropertyDisplayed) {
+            diff += setColor("{", color);
+            diff += propertiesDiff;
+            diff += setColor(" ... }", color);
             return diff;
           }
-          atLeastOnePropertyDisplayed = true;
-          propertiesDiff += propertyDiff;
-          remainingWidth -= propertyDiffWidth;
+          diff += setColor("{ ... }", color);
+          return diff;
         }
+        if (atLeastOnePropertyDisplayed) {
+          propertiesDiff += ",";
+          propertiesDiff += " ";
+        } else {
+          atLeastOnePropertyDisplayed = true;
+        }
+        propertiesDiff += propertyDiff;
+        remainingWidth -= propertyDiffWidth;
       }
       diff += setColor("{", color);
+      diff += " ";
       diff += propertiesDiff;
+      diff += " ";
       diff += setColor("}", color);
       return diff;
     };
     const renderPropertyDiff = (node) => {
       let propertyDiff = "";
       const propertyNameNode = node.propertyNameNode;
-      propertyDiff += "  ".repeat(getNodeDepth(propertyNameNode));
       propertyDiff += propertyNameNode.render();
       propertyDiff += ":";
       propertyDiff += " ";
       const propertyValueNode = node.propertyValueNode;
       propertyDiff += propertyValueNode.render();
-      propertyDiff += ",";
       return propertyDiff;
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
