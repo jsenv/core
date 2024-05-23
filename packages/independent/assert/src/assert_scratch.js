@@ -4,6 +4,10 @@
  * - many tests on max columns
  *   comme si la clé a vraiment tres peu de place
  *   si la valeur a tres peu de place
+ *   le maxColumns s'arrete pile sur ":"
+ *   pile sur l'espace apres le ":"
+ *   pile sur la premiere columns apres l'espace
+ *   pile sur la nd columns apres l'espace
  * - le nom de l'objet avant les props genre User { foo: "bar" }
  * - added/removed prop
  * - internal value
@@ -27,6 +31,7 @@
 
 import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
+import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
 
 const sameColor = ANSI.GREY;
@@ -175,7 +180,10 @@ export const assert = ({
     };
     const renderPrimitiveDiff = (node, { columnsRemaining }) => {
       let diff = "";
-      const valueDiff = JSON.stringify(node.value);
+      let valueDiff = JSON.stringify(node.value);
+      if (node.isString && !node.useQuotes) {
+        valueDiff = valueDiff.slice(1, -1);
+      }
       if (valueDiff.length > columnsRemaining) {
         diff += valueDiff.slice(0, columnsRemaining - 1);
         diff += "…";
@@ -872,6 +880,12 @@ let createRootNode;
     }
     if (type === "own_property_name") {
       node.isPrimitive = true;
+      node.isString = true;
+      if (isValidPropertyIdentifier(value)) {
+        node.useQuotes = false;
+      } else {
+        node.useQuotes = true;
+      }
       return node;
     }
     if (type === "own_property_symbol") {
@@ -895,6 +909,10 @@ let createRootNode;
     }
 
     node.isPrimitive = true;
+    if (typeof value === "string") {
+      node.isString = true;
+      node.useQuotes = true;
+    }
     return node;
   };
 }

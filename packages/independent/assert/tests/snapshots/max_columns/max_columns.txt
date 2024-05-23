@@ -1,18 +1,40 @@
-# maxColumns respect actual prefix
-AssertionError: actual and expect are different:
-
-actual: …"ring"
-expect: …"ng_2"
-
-# maxColumns respect indent
-AssertionError: actual and expect have 1 difference:
-
+# truncate property value
 actual: {
-  a: …"ng",
-  b: fal…,
+  foo: "abcdefghij…,
 }
 expect: {
-  a: …"ng",
-  b: true,
+  foo: "ABCDEFGHIJ…,
+}
+
+# truncate property key
+actual: {
+  "a quite long property key that will…,
+}
+expect: {
+  "a quite long property key that will…,
+}
+
+# truncate right after property name
+actual: {
+  abcdefghijkl,
+}
+expect: {
+  abcdefghijkl,
+}
+
+# truncate right after property separator
+actual: {
+  abcdefghijkl,
+}
+expect: {
+  abcdefghijkl,
+}
+
+# truncate exactly on first value column
+actual: {
+  abcdefghijkl,
+}
+expect: {
+  abcdefghijkl,
 }
 

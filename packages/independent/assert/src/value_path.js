@@ -1,3 +1,5 @@
+import { isDotNotationAllowed } from "./property_identifier.js";
+
 export const createValuePath = (parts = []) => {
   return {
     parts,
@@ -62,12 +64,6 @@ export const createValuePath = (parts = []) => {
   };
 };
 
-const isDotNotationAllowed = (propertyName) => {
-  return (
-    /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) ||
-    /^[a-z_$]$/i.test(propertyName)
-  );
-};
 const humanizeSymbol = (symbol) => {
   const description = symbolToDescription(symbol);
   if (description) {

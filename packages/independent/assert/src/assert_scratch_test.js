@@ -70,28 +70,6 @@ await startSnapshotTesting("assert_scratch", {
       MAX_PROP_AFTER_DIFF: 0,
     });
   },
-  ["property value truncated"]: () => {
-    assert({
-      actual: {
-        foo: "abcdefghijk",
-      },
-      expect: {
-        foo: "ABCDEFGHIJK",
-      },
-      MAX_COLUMNS: 20,
-    });
-  },
-  ["property key truncated"]: () => {
-    assert({
-      actual: {
-        "a quite long property key that will be truncated": true,
-      },
-      expect: {
-        "a quite long property key that will be truncated": false,
-      },
-      MAX_COLUMNS: 40,
-    });
-  },
   // ["property are different"]: () => {
   //   assert({
   //     actual: {
@@ -154,4 +132,62 @@ await startSnapshotTesting("assert_scratch", {
   //     expect: false,
   //   });
   // },
+});
+
+await startSnapshotTesting("max_columns", {
+  ["truncate property value"]: () => {
+    assert({
+      actual: {
+        foo: "abcdefghijk",
+      },
+      expect: {
+        foo: "ABCDEFGHIJK",
+      },
+      MAX_COLUMNS: 20,
+    });
+  },
+  ["truncate property key"]: () => {
+    assert({
+      actual: {
+        "a quite long property key that will be truncated": true,
+      },
+      expect: {
+        "a quite long property key that will be truncated": false,
+      },
+      MAX_COLUMNS: 40,
+    });
+  },
+  ["truncate right after property name"]: () => {
+    assert({
+      actual: {
+        abcdefghijkl: true,
+      },
+      expect: {
+        abcdefghijkl: false,
+      },
+      MAX_COLUMNS: 15,
+    });
+  },
+  ["truncate right after property separator"]: () => {
+    assert({
+      actual: {
+        abcdefghijkl: true,
+      },
+      expect: {
+        abcdefghijkl: false,
+      },
+      MAX_COLUMNS: 16,
+    });
+  },
+  ["truncate exactly on first value column"]: () => {
+    assert({
+      actual: {
+        abcdefghijkl: true,
+      },
+      expect: {
+        abcdefghijkl: false,
+      },
+      MAX_COLUMNS: 16,
+    });
+  },
 });
