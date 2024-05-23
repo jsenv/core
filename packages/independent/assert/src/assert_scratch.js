@@ -1,10 +1,16 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - map depth inside diff
- *   - lorsque une diff porte sur un objet (modified, added, removed)
- *   alors on print l'objet mais cela a une limite assez basse pour que on ai
- *   juste un aperçu sans heurter la lisibilité
+ * - restaurer plein de cas de test
+ *   (notament celui des prop sur les objets)
+ *   le but c'est de pouvoir a nouveau run les tests
+ *   pour s'assurer qu'on casse rien quand on ajoute des choses
+ * - le nom de l'objet avant les props genre User { foo: "bar" }
+ * - added/removed prop
+ * - internal value
+ *   - set
+ *   - map
+ * - indexed value
  * - shortcut lorsque la actual === expect
  *   (en gros on a pas besoin de comparer inside)
  *   pour les objet on auara besoin de découvrir X props pour les render
@@ -13,12 +19,6 @@
  *   - on va commencer avec Signal(true) Signal(false)
  *   - puis Signal({ a: true }) Signal({ a: false })
  *   - puis url object vs url string voir si on peut préserver cela
- * - added/removed prop
- * - internal value
- *   - set
- *   - map
- * - indexed value
- * - le nom de l'objet avant les props
  * - well known
  * - associative array
  * - property descriptors
@@ -75,7 +75,7 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 const MAX_PROP_BEFORE_DIFF = 2;
 const MAX_PROP_AFTER_DIFF = 2;
 const MAX_DEPTH = 5;
-const MAX_DEPTH_INSIDE_DIFF = 0;
+const MAX_DEPTH_INSIDE_DIFF = 1;
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -181,13 +181,28 @@ export const assert = ({ actual, expect }) => {
       // and a constructor that might differ
       let diff = "";
       const ownPropertiesNode = node.ownPropertiesNode;
+      if (node.depth > MAX_DEPTH_INSIDE_DIFF) {
+        const propertyNameCount = ownPropertiesNode.value.length;
+        diff += `Object(${propertyNameCount})`;
+        return diff;
+      }
       const ownPropertiesDiff = ownPropertiesNode.render();
       diff += ownPropertiesDiff;
       return diff;
     };
-    const renderPropertiesDiff = (
+
+    const renderProperties = (node, mode, options) => {
+      if (mode === "multiline") {
+        return renderPropertiesMultiline(node, options);
+      }
+      if (mode === "one_liner" || mode === "without_diff") {
+        return renderPropertiesOneLiner(node, options);
+      }
+      throw new Error(`cannot render properties with "${mode}" mode`);
+    };
+    const renderPropertiesMultiline = (
       node,
-      { indexToDisplayArray, ownPropertyNodeMap },
+      { ownPropertyNodeMap, indexToDisplayArray },
     ) => {
       let atLeastOnePropertyDisplayed = false;
       let diff = "";
@@ -296,18 +311,7 @@ export const assert = ({ actual, expect }) => {
       diff += setColor("}", color);
       return diff;
     };
-    const renderPropertiesWithoutDiff = (node, { ownPropertyNodeMap }) => {
-      return renderPropertiesOneLiner(node, {
-        ownPropertyNodeMap,
-      });
-    };
     const renderPropertyDiff = (node) => {
-      // lorsqu'on atteint une certaine profondeur
-      // on veut arreter de render en gros
-      // on va juste render un truc comme {...} ou Object(5)
-      if (node.depth > MAX_DEPTH_INSIDE_DIFF) {
-        // debugger;
-      }
       let propertyDiff = "";
       const propertyNameNode = node.propertyNameNode;
       propertyDiff += "  ".repeat(getNodeDepth(propertyNameNode));
@@ -475,17 +479,17 @@ export const assert = ({ actual, expect }) => {
         }
         if (diffPropertyNameSet.size === 0) {
           actualNode.render = () =>
-            renderPropertiesWithoutDiff(actualNode, {
+            renderProperties(actualNode, "without_diff", {
               ownPropertyNodeMap: actualOwnPropertyNodeMap,
             });
           expectNode.render = () =>
-            renderPropertiesWithoutDiff(expectNode, {
+            renderProperties(expectNode, "without_diff", {
               ownPropertyNodeMap: expectOwnPropertyNodeMap,
             });
           return;
         }
         actualNode.render = () =>
-          renderPropertiesDiff(actualNode, {
+          renderProperties(actualNode, "multiline", {
             indexToDisplayArray: getIndexToDisplayArray(
               actualDiffIndexArray.sort(),
               actualOwnPropertyNames,
@@ -493,7 +497,7 @@ export const assert = ({ actual, expect }) => {
             ownPropertyNodeMap: actualOwnPropertyNodeMap,
           });
         expectNode.render = () =>
-          renderPropertiesDiff(expectNode, {
+          renderProperties(expectNode, "multiline", {
             indexToDisplayArray: getIndexToDisplayArray(
               expectDiffIndexArray.sort(),
               expectOwnPropertyNames,
@@ -541,7 +545,7 @@ export const assert = ({ actual, expect }) => {
           index++;
         }
         node.render = () =>
-          renderPropertiesDiff(node, {
+          renderProperties(node, "multiline", {
             indexToDisplayArray,
             ownPropertyNodeMap,
           });
