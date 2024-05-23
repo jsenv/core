@@ -13,12 +13,12 @@ await startSnapshotTesting("assert_scratch", {
     assert({
       actual: {
         a: true,
-        b: true,
+        b: { a: true },
         c: true,
       },
       expect: {
         c: true,
-        b: false,
+        b: { a: false },
         a: true,
       },
     });

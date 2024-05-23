@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="233.45"
+  height="385.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="231.45"
+      height="383.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,12 +30,12 @@
     id="body"
     y="40"
     width="100%"
-    height="193.45"
+    height="345.45"
     overflow="hidden"
   >
     <svg
-      width="129.22"
-      height="193.45"
+      width="146.02"
+      height="345.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -43,16 +43,28 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="33.55"> &#x2191; 1 prop &#x2191;</text>
-        <text x="26.8" y="52.55"> &#x22;b&#x22;: true,</text>
-        <text x="26.8" y="71.55"> &#x2193; 1 prop &#x2193;</text>
-        <text x="10" y="90.55" fill="#7f7f7f">}</text>
-        <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="128.55"> &#x2191; 1 prop &#x2191;</text>
-        <text x="26.8" y="147.55"> &#x22;b&#x22;: false,</text>
-        <text x="26.8" y="166.55"> &#x2193; 1 prop &#x2193;</text>
-        <text x="10" y="185.55" fill="#7f7f7f">}</text>
+        <text x="26.8" y="33.55"> &#x22;a&#x22;: true,</text>
+        <text x="26.8" y="52.55"> &#x2195; 1 prop &#x2195;</text>
+        <text x="26.8" y="71.55"> &#x22;b&#x22;: </text>
+        <text x="68.81" y="71.55" fill="#7f7f7f">{</text>
+        <text x="43.61" y="90.55"> &#x22;a&#x22;: true,</text>
+        <text x="26.8" y="109.55" fill="#7f7f7f">}</text>
+        <text x="35.2" y="109.55">,</text>
+        <text x="26.8" y="128.55"> &#x2195; 1 prop &#x2195;</text>
+        <text x="26.8" y="147.55"> &#x22;c&#x22;: true,</text>
+        <text x="10" y="166.55" fill="#7f7f7f">}</text>
+        <text x="10" y="185.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="185.55" fill="#7f7f7f">{</text>
+        <text x="26.8" y="204.55"> &#x22;c&#x22;: true,</text>
+        <text x="26.8" y="223.55"> &#x2195; 1 prop &#x2195;</text>
+        <text x="26.8" y="242.55"> &#x22;b&#x22;: </text>
+        <text x="68.81" y="242.55" fill="#7f7f7f">{</text>
+        <text x="43.61" y="261.55"> &#x22;a&#x22;: false,</text>
+        <text x="26.8" y="280.55" fill="#7f7f7f">}</text>
+        <text x="35.2" y="280.55">,</text>
+        <text x="26.8" y="299.55"> &#x2195; 1 prop &#x2195;</text>
+        <text x="26.8" y="318.55"> &#x22;a&#x22;: true,</text>
+        <text x="10" y="337.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

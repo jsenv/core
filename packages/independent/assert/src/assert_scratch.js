@@ -1,10 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - respecter ordre des props actual !== ordre props expected
- * - s'arreter au premier diff dans les props
- * - mode one liner lorsque pas de diff du tout
- * - donner du contexte autour du diff
  * - max depth
  *   lorsque la diff est tres profonde alors on skip ce qui est pareil pour afficher
  *   qu'a partir d'un certain point
@@ -14,25 +10,13 @@
  *   alors on print l'objet mais cela a une limite assez basse pour que on ai
  *   juste un aperçu sans heurter la lisibilité
  * - wrapped value
- *
- * -> il faut tout de meme créer un arbre de comparison MAIS
- * cet arbre est un sous ensemble de la réalité (pour perf + lisibilité)
- * donc on auras des trucs comme
- * - nodeForPreviousProps(2)
- * - nodeForNextProps(4)
- * pour gérer les props restantes par exemple
- *
- * donc il faut créer un AST pour la comparison
- * comparison: {
- *   actualNode: GHOST_NODE | ADDED_OR_REMOVED_NODE | valueNode,
- *   expectNode: GHOST_NODE | ADDED_OR_REMOVED_NODE | valueNode,
- *   ownPropertyComparisonMap: Map<comparison>
- * }
+ * - added/removed prop
  *
  */
 
 import stringWidth from "string-width";
-import { ANSI } from "@jsenv/humanize";
+import { ANSI, UNICODE } from "@jsenv/humanize";
+import { createValuePath } from "./value_path.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -79,6 +63,7 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 };
 const MAX_PROP_BEFORE_DIFF = 2;
 const MAX_PROP_AFTER_DIFF = 2;
+const MAX_DEPTH = 5;
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -107,6 +92,13 @@ export const assert = ({ actual, expect }) => {
     value: expect,
     otherValue: actual,
   });
+
+  const causeSet = new Set();
+  let startActualNode = rootActualNode;
+  let startExpectNode = rootExpectNode;
+  const getNodeDepth = (node) => {
+    return node.depth - startActualNode.depth;
+  };
 
   /*
    * Comparison are objects used to compare actualNode and expectNode
@@ -141,10 +133,14 @@ export const assert = ({ actual, expect }) => {
       isComparison: true,
       actualNode,
       expectNode,
+      depth: actualNode.depth || expectNode.depth,
+      isContainer: actualNode.isContainer || expectNode.isContainer,
+      parent: null,
       reasons,
       done: false,
       subcompare: (a, b, isAbstract) => {
         const childComparison = compare(a, b, isAbstract);
+        childComparison.parent = comparison;
         appendReasonGroup(
           comparison.reasons.inside,
           childComparison.reasons.overall,
@@ -160,6 +156,7 @@ export const assert = ({ actual, expect }) => {
 
     const onSelfDiff = (reason) => {
       reasons.self.modified.add(reason);
+      causeSet.add(comparison);
     };
     const renderPrimitiveDiff = (node) => {
       return JSON.stringify(node.value);
@@ -188,7 +185,7 @@ export const assert = ({ actual, expect }) => {
       };
       const appendSkippedProps = (skipCount, sign) => {
         let skippedPropDiff = "";
-        skippedPropDiff += "  ".repeat(node.depth + 1);
+        skippedPropDiff += "  ".repeat(getNodeDepth(node) + 1);
         skippedPropDiff += sign;
         skippedPropDiff += " ";
         skippedPropDiff += skipCount;
@@ -229,7 +226,7 @@ export const assert = ({ actual, expect }) => {
         diff += "\n";
         diff += propertiesDiff;
         diff += "\n";
-        diff += "  ".repeat(node.depth);
+        diff += "  ".repeat(getNodeDepth(node));
         diff += setColor("}", color);
       } else {
         diff += setColor("{", color);
@@ -430,7 +427,7 @@ export const assert = ({ actual, expect }) => {
         const renderPropertyDiff = (node) => {
           let propertyDiff = "";
           const propertyNameNode = node.propertyNameNode;
-          propertyDiff += "  ".repeat(propertyNameNode.depth);
+          propertyDiff += "  ".repeat(getNodeDepth(propertyNameNode));
           propertyDiff += propertyNameNode.render();
           propertyDiff += ":";
           propertyDiff += " ";
@@ -508,13 +505,62 @@ export const assert = ({ actual, expect }) => {
   }
 
   let diff = ``;
+  const infos = [];
+
+  start_on_max_depth: {
+    if (rootComparison.selfHasModification) {
+      break start_on_max_depth;
+    }
+    let topMostComparisonWithDiff = null;
+    for (const comparisonWithDiff of causeSet) {
+      if (
+        !topMostComparisonWithDiff ||
+        comparisonWithDiff.depth < topMostComparisonWithDiff.depth
+      ) {
+        topMostComparisonWithDiff = comparisonWithDiff;
+      }
+    }
+    if (topMostComparisonWithDiff.depth < MAX_DEPTH) {
+      break start_on_max_depth;
+    }
+    let currentComparison = topMostComparisonWithDiff;
+    let startDepth = topMostComparisonWithDiff.depth - MAX_DEPTH;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const parentComparison = currentComparison.parent;
+      if (parentComparison) {
+        if (
+          !parentComparison.isContainer &&
+          parentComparison.depth === startDepth
+        ) {
+          startActualNode = parentComparison.actualNode;
+          startExpectNode = parentComparison.expectNode;
+          const path = startActualNode.path || startExpectNode.path;
+          infos.push(`diff starts at ${ANSI.color(path, ANSI.YELLOW)}`);
+          break;
+        }
+        currentComparison = parentComparison;
+      } else {
+        break;
+      }
+    }
+  }
+
+  if (infos.length) {
+    for (const info of infos) {
+      diff += `${UNICODE.INFO} ${info}`;
+      diff += "\n";
+    }
+    diff += "\n";
+  }
+
   diff += ANSI.color("actual:", sameColor);
   diff += " ";
-  diff += rootComparison.actualNode.render();
+  diff += startActualNode.render();
   diff += `\n`;
   diff += ANSI.color("expect:", sameColor);
   diff += " ";
-  diff += rootComparison.expectNode.render();
+  diff += startExpectNode.render();
   throw diff;
 };
 
@@ -551,6 +597,7 @@ let createRootNode;
       value,
       parent: null,
       depth: 0,
+      path: createValuePath(),
       meta: {},
     });
 
@@ -566,6 +613,8 @@ let createRootNode;
     value,
     parent,
     depth,
+    path,
+    isContainer,
     meta = {},
   }) => {
     const node = {
@@ -577,9 +626,17 @@ let createRootNode;
       value,
       parent,
       depth,
+      path,
+      isContainer,
       meta,
-      appendChild: ({ type, value, depth = node.depth + 1 }) => {
-        return createNode({
+      appendChild: ({
+        type,
+        isContainer,
+        value,
+        depth = isContainer ? node.depth : node.depth + 1,
+        path = node.path,
+      }) => {
+        const childNode = createNode({
           colorWhenSolo: node.colorWhenSolo,
           colorWhenSame: node.colorWhenSame,
           colorWhenModified: node.colorWhenModified,
@@ -588,7 +645,10 @@ let createRootNode;
           value,
           parent: node,
           depth,
+          path,
+          isContainer,
         });
+        return childNode;
       },
       // info
       isPrimitive: false,
@@ -644,8 +704,8 @@ let createRootNode;
 const createOwnPropertyNode = (node, ownPropertyName) => {
   const ownPropertyNode = node.appendChild({
     type: "own_property",
-    value: "",
-    depth: node.depth,
+    isContainer: true,
+    path: node.path.append(ownPropertyName),
   });
   ownPropertyNode.propertyNameNode = ownPropertyNode.appendChild({
     type: "own_property_name",
