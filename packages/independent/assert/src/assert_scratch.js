@@ -172,7 +172,19 @@ export const assert = ({ actual, expect }) => {
       causeSet.add(comparison);
     };
     const renderPrimitiveDiff = (node) => {
-      return JSON.stringify(node.value);
+      let diff = "";
+      diff += JSON.stringify(node.value);
+      return diff;
+    };
+    const renderCompositeDiff = (node) => {
+      // it's here that at some point we'll compare more than just own properties
+      // because composite also got a prototype
+      // and a constructor that might differ
+      let diff = "";
+      const ownPropertiesNode = node.ownPropertiesNode;
+      const ownPropertiesDiff = ownPropertiesNode.render();
+      diff += ownPropertiesDiff;
+      return diff;
     };
     const renderPropertiesDiff = (
       node,
@@ -330,53 +342,6 @@ export const assert = ({ actual, expect }) => {
       return Array.from(indexToDisplaySet);
     };
 
-    const visitSolo = (node) => {
-      if (node.isPrimitive) {
-        node.render = () => renderPrimitiveDiff(node);
-        return;
-      }
-      if (node.isComposite) {
-        const ownPropertiesNode = createOwnPropertiesNode(node);
-        if (node.name === "actual") {
-          comparison.subcompare(ownPropertiesNode, PLACEHOLDER_FOR_NOTHING);
-        } else {
-          comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertiesNode);
-        }
-        node.render = () => ownPropertiesNode.render();
-        return;
-      }
-      if (node.type === "own_properties") {
-        const ownPropertyNames = node.vlaue;
-        const indexToDisplayArray = [];
-        const ownPropertyNodeMap = new Map();
-        let index = 0;
-        for (const propName of ownPropertyNames) {
-          const ownPropertyNode = createOwnPropertyNode(node, propName);
-          ownPropertyNodeMap.set(propName, ownPropertyNode);
-          if (node.name === "actual") {
-            comparison.subcompare(ownPropertyNode, PLACEHOLDER_FOR_NOTHING);
-          } else {
-            comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertyNode);
-          }
-          indexToDisplayArray.push(index);
-          if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
-            break;
-          }
-          index++;
-        }
-        node.render = () =>
-          renderPropertiesDiff(node, {
-            indexToDisplayArray,
-            ownPropertyNodeMap,
-          });
-        return;
-      }
-      if (node.type === "own_property") {
-        node.render = () => renderPropertyDiff(node);
-        return;
-      }
-      throw new Error("wtf");
-    };
     const visitDuo = () => {
       if (actualNode.isPrimitive) {
         // comparing primitives
@@ -394,8 +359,8 @@ export const assert = ({ actual, expect }) => {
         const actualOwnPropertiesNode = createOwnPropertiesNode(actualNode);
         const expectOwnPropertiesNode = createOwnPropertiesNode(expectNode);
         comparison.subcompare(actualOwnPropertiesNode, expectOwnPropertiesNode);
-        actualNode.render = () => actualOwnPropertiesNode.render();
-        expectNode.render = () => expectOwnPropertiesNode.render();
+        actualNode.render = () => renderCompositeDiff(actualNode);
+        expectNode.render = () => renderCompositeDiff(expectNode);
         return;
       }
       if (actualNode.type === "own_properties") {
@@ -533,6 +498,53 @@ export const assert = ({ actual, expect }) => {
         );
         actualNode.render = () => renderPropertyDiff(actualNode);
         expectNode.render = () => renderPropertyDiff(expectNode);
+        return;
+      }
+      throw new Error("wtf");
+    };
+    const visitSolo = (node) => {
+      if (node.isPrimitive) {
+        node.render = () => renderPrimitiveDiff(node);
+        return;
+      }
+      if (node.isComposite) {
+        const ownPropertiesNode = createOwnPropertiesNode(node);
+        if (node.name === "actual") {
+          comparison.subcompare(ownPropertiesNode, PLACEHOLDER_FOR_NOTHING);
+        } else {
+          comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertiesNode);
+        }
+        node.render = () => ownPropertiesNode.render();
+        return;
+      }
+      if (node.type === "own_properties") {
+        const ownPropertyNames = node.vlaue;
+        const indexToDisplayArray = [];
+        const ownPropertyNodeMap = new Map();
+        let index = 0;
+        for (const propName of ownPropertyNames) {
+          const ownPropertyNode = createOwnPropertyNode(node, propName);
+          ownPropertyNodeMap.set(propName, ownPropertyNode);
+          if (node.name === "actual") {
+            comparison.subcompare(ownPropertyNode, PLACEHOLDER_FOR_NOTHING);
+          } else {
+            comparison.subcompare(PLACEHOLDER_FOR_NOTHING, ownPropertyNode);
+          }
+          indexToDisplayArray.push(index);
+          if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
+            break;
+          }
+          index++;
+        }
+        node.render = () =>
+          renderPropertiesDiff(node, {
+            indexToDisplayArray,
+            ownPropertyNodeMap,
+          });
+        return;
+      }
+      if (node.type === "own_property") {
+        node.render = () => renderPropertyDiff(node);
         return;
       }
       throw new Error("wtf");
@@ -798,11 +810,13 @@ let createRootNode;
 }
 
 const createOwnPropertiesNode = (node) => {
-  return node.appendChild({
+  const ownPropertiesNode = node.appendChild({
     type: "own_properties",
     isContainer: true,
     value: node.ownPropertyNames,
   });
+  node.ownPropertiesNode = ownPropertiesNode;
+  return ownPropertiesNode;
 };
 const createOwnPropertyNode = (node, ownPropertyName) => {
   const ownPropertyNode = node.appendChild({
