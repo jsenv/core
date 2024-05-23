@@ -75,6 +75,7 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 const MAX_PROP_BEFORE_DIFF = 2;
 const MAX_PROP_AFTER_DIFF = 2;
 const MAX_DEPTH = 5;
+const MAX_DEPTH_INSIDE_DIFF = 2;
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -166,6 +167,7 @@ export const assert = ({ actual, expect }) => {
     const MAX_DIFF_PER_OBJECT = 2;
 
     const onSelfDiff = (reason) => {
+      actualNode.modified = expectNode.modified = true;
       reasons.self.modified.add(reason);
       causeSet.add(comparison);
     };
@@ -245,14 +247,18 @@ export const assert = ({ actual, expect }) => {
       }
       return diff;
     };
-    const renderPropertiesWithoutDiff = (node, { ownPropertyNodeMap }) => {
+    const renderPropertiesOneLiner = (node, { ownPropertyNodeMap }) => {
       let diff = "";
       let propertiesDiff = "";
       let remainingWidth = 100;
       let boilerplate = "{, ... }";
       let atLeastOnePropertyDisplayed = false;
       remainingWidth -= boilerplate.length;
-      const color = node.colorWhenSame;
+      let color = node.modified
+        ? node.colorWhenModified
+        : node.solo
+          ? node.colorWhenSolo
+          : node.colorWhenSame;
       while (remainingWidth) {
         for (const ownPropertyName of node.ownPropertyNames) {
           const ownPropertyNode = ownPropertyNodeMap.get(ownPropertyName);
@@ -277,6 +283,11 @@ export const assert = ({ actual, expect }) => {
       diff += propertiesDiff;
       diff += setColor("}", color);
       return diff;
+    };
+    const renderPropertiesWithoutDiff = (node, { ownPropertyNodeMap }) => {
+      return renderPropertiesOneLiner(node, {
+        ownPropertyNodeMap,
+      });
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
       const indexToDisplaySet = new Set();
@@ -356,21 +367,27 @@ export const assert = ({ actual, expect }) => {
         const expectOwnPropertyNames = expectNode.ownPropertyNames;
         const actualOwnPropertyNodeMap = new Map();
         const expectOwnPropertyNodeMap = new Map();
-        const propComparisonMap = new Map();
-        const getPropComparison = (propName) => {
-          if (propComparisonMap.has(propName)) {
-            return propComparisonMap.get(propName);
-          }
+        const getActualOwnPropertyNode = (propName) => {
           const actualOwnPropertyNode = createOwnPropertyNode(
             actualNode,
             propName,
           );
           actualOwnPropertyNodeMap.set(propName, actualOwnPropertyNode);
+          return actualOwnPropertyNode;
+        };
+        const getExpectOwnPropertyNode = (propName) => {
           const expectOwnPropertyNode = createOwnPropertyNode(
             expectNode,
             propName,
           );
           expectOwnPropertyNodeMap.set(propName, expectOwnPropertyNode);
+          return expectOwnPropertyNode;
+        };
+        const subcompareOwnPropertyNodes = (
+          propName,
+          actualOwnPropertyNode,
+          expectOwnPropertyNode,
+        ) => {
           const ownPropertyComparison = comparison.subcompare(
             actualOwnPropertyNode,
             expectOwnPropertyNode,
@@ -378,23 +395,66 @@ export const assert = ({ actual, expect }) => {
           propComparisonMap.set(propName, ownPropertyComparison);
           return ownPropertyComparison;
         };
+        const propComparisonMap = new Map();
         const diffPropertyNameSet = new Set();
         const actualDiffIndexArray = [];
         const expectDiffIndexArray = [];
         for (const actualPropName of actualOwnPropertyNames) {
-          const propComparison = getPropComparison(actualPropName);
-          propComparisonMap.set(actualPropName, propComparison);
-          if (propComparison.hasAnyDiff) {
-            actualDiffIndexArray.push(
-              actualOwnPropertyNames.indexOf(actualPropName),
+          const actualOwnPropertyIndex =
+            actualOwnPropertyNames.indexOf(actualPropName);
+          const expectOwnPropertyIndex =
+            expectOwnPropertyNames.indexOf(actualPropName);
+          if (expectOwnPropertyIndex === -1) {
+            const actualOwnPropertyNode =
+              getActualOwnPropertyNode(actualPropName);
+            subcompareOwnPropertyNodes(
+              actualPropName,
+              actualOwnPropertyNode,
+              PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
             );
-            expectDiffIndexArray.push(
-              expectOwnPropertyNames.indexOf(actualPropName),
-            );
+            actualDiffIndexArray.push(actualOwnPropertyIndex);
             diffPropertyNameSet.add(actualPropName);
             if (diffPropertyNameSet.size === MAX_DIFF_PER_OBJECT) {
               break;
             }
+            continue;
+          }
+          const actualOwnPropertyNode =
+            getActualOwnPropertyNode(actualPropName);
+          const expectOwnPropertyNode =
+            getExpectOwnPropertyNode(actualPropName);
+          const ownPropertyComparison = subcompareOwnPropertyNodes(
+            actualPropName,
+            actualOwnPropertyNode,
+            expectOwnPropertyNode,
+          );
+          propComparisonMap.set(actualPropName, ownPropertyComparison);
+          if (ownPropertyComparison.hasAnyDiff) {
+            actualDiffIndexArray.push(actualOwnPropertyIndex);
+            expectDiffIndexArray.push(expectOwnPropertyIndex);
+            diffPropertyNameSet.add(actualPropName);
+            if (diffPropertyNameSet.size === MAX_DIFF_PER_OBJECT) {
+              break;
+            }
+          }
+        }
+        for (const expectPropName of expectOwnPropertyNames) {
+          if (propComparisonMap.has(expectPropName)) {
+            continue;
+          }
+          const expectOwnPropertyIndex =
+            expectOwnPropertyNames.indexOf(expectPropName);
+          const expectOwnPropertyNode =
+            getExpectOwnPropertyNode(expectPropName);
+          subcompareOwnPropertyNodes(
+            expectPropName,
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+            expectOwnPropertyNode,
+          );
+          expectDiffIndexArray.push(expectOwnPropertyIndex);
+          diffPropertyNameSet.add(expectPropName);
+          if (diffPropertyNameSet.size === MAX_DIFF_PER_OBJECT) {
+            break;
           }
         }
         if (diffPropertyNameSet.size === 0) {
