@@ -37,14 +37,15 @@ expect: {
 }
 
 # max prop around diff
-actual: {
-  ↑ 1 prop ↑
-  b: true,
-  ↓ 1 prop ↓
-}
-expect: {
-  ↑ 1 prop ↑
-  b: false,
-  ↓ 1 prop ↓
-}
+TypeError: text.trim is not a function
+    at setColor (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:81:12)
+    at appendSkippedProps (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:286:28)
+    at renderPropertiesMultiline (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:300:13)
+    at renderProperties (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:257:16)
+    at actualNode.render (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:609:11)
+    at renderCompositeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:250:51)
+    at actualNode.render (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:494:40)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:840:27)
+    at max prop around diff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:58:5)
+    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
 

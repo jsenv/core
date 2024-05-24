@@ -43,11 +43,13 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="33.55"> abcdefgh,</text>
+        <text x="26.8" y="33.55" fill="#7f7f7f">abcdefgh</text>
+        <text x="94.01" y="33.55" fill="#7f7f7f">,</text>
         <text x="10" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="90.55"> abcdefgh,</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">abcdefgh</text>
+        <text x="94.01" y="90.55" fill="#7f7f7f">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

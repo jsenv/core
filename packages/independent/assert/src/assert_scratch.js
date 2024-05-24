@@ -1,9 +1,7 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - wrapped value
- *   - puis Signal({ a: true }) Signal({ a: false })
- *   - puis url object vs url string voir si on peut préserver cela
+ * - added/removed prop
  * - internal value
  *   - set
  *   - map
@@ -12,14 +10,19 @@
  *   (en gros on a pas besoin de comparer inside)
  *   pour les objet on auara besoin de découvrir X props pour les render
  *   pour les primitives rien, on print la primitive tel quel
+ * - le nom de l'objet avant les props genre User { foo: "bar" }
+ * - functions
+ * - strings avec mutiline
  * - no need to break loop when max diff is reached
  *   en fait si pour string par exemple on voudra s'arreter
- *   mais pour un objet, un array un buffer on parourira tout
+ *   mais pour un objet, un array un buffer on parcourira tout
  *   parce que on le fait de toute façon lorsqu'il n'y a pas de diff
- * - le nom de l'objet avant les props genre User { foo: "bar" }
- * - added/removed prop
- * - well known
+ *   aussi ici du coup lorsque les props sont skipped
+ *   le résumé doit etre de la bonne couleur en fonctio de ce qui se passe dedans
+ * - url string
+ * - url object
  * - associative array
+ * - well known
  * - property descriptors
  * - colors
  *
@@ -148,7 +151,7 @@ export const assert = ({
    *   descriptorKeyNode
    *   descriptorValueNode
    */
-  const compare = (actualNode, expectNode, isAbstract) => {
+  const compare = (actualNode, expectNode) => {
     const reasons = createReasons();
     const comparison = {
       isComparison: true,
@@ -159,19 +162,7 @@ export const assert = ({
       parent: null,
       reasons,
       done: false,
-      subcompare: (a, b, isAbstract) => {
-        const childComparison = compare(a, b, isAbstract);
-        childComparison.parent = comparison;
-        appendReasonGroup(
-          comparison.reasons.inside,
-          childComparison.reasons.overall,
-        );
-        return childComparison;
-      },
     };
-    if (isAbstract) {
-      return comparison;
-    }
 
     const onSelfDiff = (reason) => {
       reasons.self.modified.add(reason);
@@ -188,7 +179,7 @@ export const assert = ({
     const renderPrimitiveDiff = (node, { columnsRemaining }) => {
       let diff = "";
       if (columnsRemaining < 2) {
-        diff = "…";
+        diff = setColor("…", node.color);
         return diff;
       }
       let valueDiff;
@@ -203,10 +194,10 @@ export const assert = ({
         valueDiff = JSON.stringify(node.value);
       }
       if (valueDiff.length > columnsRemaining) {
-        diff += valueDiff.slice(0, columnsRemaining - 1);
-        diff += "…";
+        diff += setColor(valueDiff.slice(0, columnsRemaining - 1), node.color);
+        diff += setColor("…", node.color);
       } else {
-        diff += valueDiff;
+        diff += setColor(valueDiff, node.color);
       }
       return diff;
     };
@@ -218,7 +209,7 @@ export const assert = ({
       const ownPropertiesNode = node.ownPropertiesNode;
       const propertyNameCount = ownPropertiesNode.value.length;
       if (props.columnsRemaining < 2) {
-        diff = "…";
+        diff = setColor("…", node.color);
         return diff;
       }
       let maxDepthReached = false;
@@ -234,7 +225,7 @@ export const assert = ({
         maxDepthReached = node.depth > MAX_DEPTH;
       }
       if (maxDepthReached) {
-        diff += `Object(${propertyNameCount})`;
+        diff += setColor(`Object(${propertyNameCount})`, node.color);
         return diff;
       }
       const wrappedValueNode = getWrappedValueNode(node);
@@ -245,9 +236,9 @@ export const assert = ({
           ...props,
           columnsRemaining: columnsRemainingForWrappedValue,
         });
-        diff += "Object(";
+        diff += setColor("Object(", node.color);
         diff += wrappedValueDiff;
-        diff += ")";
+        diff += setColor(")", node.color);
         diff += " ";
         const ownPropertiesDiff = ownPropertiesNode.render({
           ...props,
@@ -276,11 +267,6 @@ export const assert = ({
     ) => {
       let atLeastOnePropertyDisplayed = false;
       let diff = "";
-      const color = {
-        solo: node.colorWhenSolo,
-        modified: node.colorWhenModified,
-        undefined: node.colorWhenSame,
-      }[node.diffType];
       let propertiesDiff = "";
       const ownPropertyNames = node.value;
       const appendProperty = (propertyDiff) => {
@@ -295,13 +281,16 @@ export const assert = ({
       const appendSkippedProps = (skipCount, sign) => {
         let skippedPropDiff = "";
         skippedPropDiff += "  ".repeat(getNodeDepth(node) + 1);
-        skippedPropDiff += sign;
+        skippedPropDiff += setColor(sign, node.color);
         skippedPropDiff += " ";
-        skippedPropDiff += skipCount;
+        skippedPropDiff += setColor(skipCount, node.color);
         skippedPropDiff += " ";
-        skippedPropDiff += skipCount === 1 ? "prop" : "props";
+        skippedPropDiff += setColor(
+          skipCount === 1 ? "prop" : "props",
+          node.color,
+        );
         skippedPropDiff += " ";
-        skippedPropDiff += sign;
+        skippedPropDiff += setColor(sign, node.color);
         appendProperty(skippedPropDiff);
       };
       let previousIndexDisplayed = -1;
@@ -339,16 +328,16 @@ export const assert = ({
         }
       }
       if (atLeastOnePropertyDisplayed) {
-        diff += setColor("{", color);
+        diff += setColor("{", node.color);
         diff += "\n";
         diff += propertiesDiff;
         diff += "\n";
         diff += "  ".repeat(getNodeDepth(node));
-        diff += setColor("}", color);
+        diff += setColor("}", node.color);
       } else if (props.hideDelimitersWhenEmpty) {
       } else {
-        diff += setColor("{", color);
-        diff += setColor("}", color);
+        diff += setColor("{", node.color);
+        diff += setColor("}", node.color);
       }
       return diff;
     };
@@ -356,11 +345,6 @@ export const assert = ({
       node,
       { ownPropertyNodeMap, ...props },
     ) => {
-      const color = {
-        solo: node.colorWhenSolo,
-        modified: node.colorWhenModified,
-        undefined: node.colorWhenSame,
-      }[node.diffType];
       const ownPropertyNames = node.value;
       if (ownPropertyNames.length === 0) {
         return "{}";
@@ -381,16 +365,16 @@ export const assert = ({
         const propertyDiffWidth = stringWidth(propertyDiff);
         if (propertyDiffWidth > columnsRemaining) {
           if (atLeastOnePropertyDisplayed) {
-            diff += setColor("{", color);
+            diff += setColor("{", node.color);
             diff += propertiesDiff;
-            diff += setColor(" ... }", color);
+            diff += setColor(" ... }", node.color);
             return diff;
           }
-          diff += setColor("{ ... }", color);
+          diff += setColor("{ ... }", node.color);
           return diff;
         }
         if (atLeastOnePropertyDisplayed) {
-          propertiesDiff += ",";
+          propertiesDiff += setColor(",", node.color);
           propertiesDiff += " ";
         } else {
           atLeastOnePropertyDisplayed = true;
@@ -398,11 +382,11 @@ export const assert = ({
         propertiesDiff += propertyDiff;
         columnsRemaining -= propertyDiffWidth;
       }
-      diff += setColor("{", color);
+      diff += setColor("{", node.color);
       diff += " ";
       diff += propertiesDiff;
       diff += " ";
-      diff += setColor("}", color);
+      diff += setColor("}", node.color);
       return diff;
     };
     const renderPropertyDiff = (node, props) => {
@@ -421,7 +405,7 @@ export const assert = ({
       let columnsRemainingForValue =
         columnsRemaining - stringWidth(propertyNameDiff);
       if (columnsRemainingForValue > ": ".length) {
-        propertyDiff += ":";
+        propertyDiff += setColor(":", node.color);
         propertyDiff += " ";
         columnsRemainingForValue -= ": ".length;
         const propertyValueNode = node.propertyValueNode;
@@ -430,10 +414,10 @@ export const assert = ({
           columnsRemaining: columnsRemainingForValue,
         });
         if (commaSeparator) {
-          propertyDiff += ",";
+          propertyDiff += setColor(",", node.color);
         }
       } else if (commaSeparator) {
-        propertyDiff += ",";
+        propertyDiff += setColor(",", node.color);
       }
       return propertyDiff;
     };
@@ -466,13 +450,19 @@ export const assert = ({
     };
 
     const subcompareDuo = (actualChildNode, expectChildNode) => {
-      return comparison.subcompare(actualChildNode, expectChildNode);
+      const childComparison = compare(actualChildNode, expectChildNode);
+      childComparison.parent = comparison;
+      appendReasonGroup(
+        comparison.reasons.inside,
+        childComparison.reasons.overall,
+      );
+      return childComparison;
     };
     const subcompareSolo = (childNode) => {
       if (childNode.name === "actual") {
-        return comparison.subcompare(childNode, PLACEHOLDER_FOR_NOTHING);
+        return subcompareDuo(childNode, PLACEHOLDER_FOR_NOTHING);
       }
-      return comparison.subcompare(PLACEHOLDER_FOR_NOTHING, childNode);
+      return subcompareDuo(PLACEHOLDER_FOR_NOTHING, childNode);
     };
 
     const visitDuo = (actualNode, expectNode) => {
@@ -738,12 +728,12 @@ export const assert = ({
         break visit;
       }
       if (expectNode.placeholder) {
-        onAdded("TODO");
+        onAdded(getAddedOrRemovedReason(actualNode));
         visitSolo(actualNode);
         break visit;
       }
       if (actualNode.placeholder) {
-        onRemoved("TODO");
+        onRemoved(getAddedOrRemovedReason(expectNode));
         visitSolo(expectNode);
         break visit;
       }
@@ -763,12 +753,29 @@ export const assert = ({
     comparison.hasAnyDiff = overall.any.size > 0;
     comparison.done = true;
 
+    const updateColor = (node) => {
+      node.color = {
+        solo: node.colorWhenSolo,
+        modified: node.colorWhenModified,
+        undefined: node.colorWhenSame,
+      }[node.diffType];
+    };
+
     if (actualNode.placeholder) {
-      expectNode.diffType = "solo";
+      expectNode.diffType =
+        actualNode === PLACEHOLDER_FOR_NOTHING ? "modified" : "solo";
+      updateColor(expectNode);
     } else if (expectNode.placeholder) {
-      actualNode.diffType = "solo";
+      actualNode.diffType =
+        expectNode === PLACEHOLDER_FOR_NOTHING ? "modified" : "solo";
+      updateColor(actualNode);
     } else if (comparison.selfHasModification) {
       actualNode.diffType = expectNode.diffType = "modified";
+      updateColor(actualNode);
+      updateColor(expectNode);
+    } else {
+      updateColor(actualNode);
+      updateColor(expectNode);
     }
     return comparison;
   };
@@ -977,12 +984,7 @@ let createRootNode;
         value.valueOf !== Object.prototype.valueOf
       ) {
         const valueOfReturnValue = value.valueOf();
-        node.valueOfReturnValueNode = node.appendChild({
-          type: "value_of_return_value",
-          value: valueOfReturnValue,
-          path: path.append("valueOf()"),
-          depth: node.depth,
-        });
+        createValueOfReturnValueNode(node, valueOfReturnValue);
       }
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
         if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
@@ -991,7 +993,6 @@ let createRootNode;
         ownPropertyNames.push(ownPropertyName);
       }
       node.ownPropertyNames = ownPropertyNames;
-
       return node;
     }
     if (typeofResult === "function") {
@@ -1009,6 +1010,21 @@ let createRootNode;
   };
 }
 
+const getAddedOrRemovedReason = (node) => {
+  if (node.type === "own_property") {
+    return getAddedOrRemovedReason(node.propertyNameNode);
+  }
+  if (node.type === "own_property_name") {
+    return node.value;
+  }
+  if (node.type === "own_property_value") {
+    return getAddedOrRemovedReason(node.parent);
+  }
+  if (node.type === "value_of_return_value") {
+    return "value_of_own_method";
+  }
+  return "unknown";
+};
 const asPrimitiveNode = (node) => {
   const wrappedValueNode = node.valueOfReturnValueNode;
   if (wrappedValueNode && wrappedValueNode.isPrimitive) {
@@ -1043,6 +1059,16 @@ const createOwnPropertyNode = (node, ownPropertyName) => {
     value: node.parent.value[ownPropertyName],
   });
   return ownPropertyNode;
+};
+const createValueOfReturnValueNode = (node, valueOfReturnValue) => {
+  const valueOfReturnValueNode = node.appendChild({
+    type: "value_of_return_value",
+    value: valueOfReturnValue,
+    path: node.path.append("valueOf()"),
+    depth: node.depth,
+  });
+  node.valueOfReturnValueNode = valueOfReturnValueNode;
+  return valueOfReturnValueNode;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
