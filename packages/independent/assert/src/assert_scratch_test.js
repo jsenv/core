@@ -14,6 +14,62 @@ await startSnapshotTesting("assert_scratch", {
       },
     });
   },
+  ["property removed"]: () => {
+    assert({
+      actual: {
+        a: true,
+      },
+      expect: {
+        a: true,
+        should_be_there: true,
+      },
+    });
+  },
+  ["property added"]: () => {
+    assert({
+      actual: {
+        a: true,
+        should_not_be_there: true,
+      },
+      expect: {
+        a: true,
+      },
+    });
+  },
+  ["false should be an object"]: () => {
+    assert({
+      actual: false,
+      expect: { foo: true },
+    });
+  },
+  ["object should be false"]: () => {
+    assert({
+      actual: {
+        foo: { a: {} },
+      },
+      expect: false,
+    });
+  },
+  ["false should be an object at property"]: () => {
+    assert({
+      actual: {
+        foo: false,
+      },
+      expect: {
+        foo: { a: true },
+      },
+    });
+  },
+  ["object should be false at property"]: () => {
+    assert({
+      actual: {
+        foo: { a: true },
+      },
+      expect: {
+        foo: false,
+      },
+    });
+  },
   ["max depth inside diff"]: () => {
     assert({
       actual: {
@@ -70,68 +126,45 @@ await startSnapshotTesting("assert_scratch", {
       MAX_PROP_AFTER_DIFF: 0,
     });
   },
-  // ["property are different"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //     },
-  //     expect: {
-  //       a: {
-  //         b: true,
-  //       },
-  //     },
-  //   });
-  // },
-  // ["property order"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: "a",
-  //       b: "b",
-  //     },
-  //     expect: {
-  //       b: "b",
-  //       a: "a",
-  //     },
-  //   });
-  // },
-  // ["property should be there"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //     },
-  //     expect: {
-  //       a: true,
-  //       should_be_there: true,
-  //     },
-  //   });
-  // },
-  // ["property should not be there"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //       should_not_be_there: true,
-  //     },
-  //     expect: {
-  //       a: true,
-  //     },
-  //   });
-  // },
-  // ["false should be an object"]: () => {
-  //   assert({
-  //     actual: false,
-  //     expect: { foo: true },
-  //   });
-  // },
-  // ["object should be false"]: () => {
-  //   assert({
-  //     actual: {
-  //       foo: {
-  //         a: {},
-  //       },
-  //     },
-  //     expect: false,
-  //   });
-  // },
+  ["property should be there and is big"]: () => {
+    assert({
+      actual: {
+        a: true,
+      },
+      expect: {
+        a: true,
+        should_be_there: {
+          a: true,
+          b: true,
+          item: { a: 1, b: 1, c: 1 },
+          c: true,
+          d: true,
+          e: true,
+          f: true,
+          g: true,
+        },
+      },
+      maxColumns: 100,
+    });
+  },
+  ["many props should not be there"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: { an_object: true, and: true },
+        d: true,
+        e: true,
+        f: true,
+        g: true,
+        h: true,
+      },
+      expect: {
+        a: true,
+        c: {},
+      },
+    });
+  },
 });
 
 await startSnapshotTesting("wrapped_value", {

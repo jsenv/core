@@ -1,7 +1,7 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - added/removed prop
+ * - le nom de l'objet avant les props genre User { foo: "bar" }
  * - internal value
  *   - set
  *   - map
@@ -10,7 +10,6 @@
  *   (en gros on a pas besoin de comparer inside)
  *   pour les objet on auara besoin de découvrir X props pour les render
  *   pour les primitives rien, on print la primitive tel quel
- * - le nom de l'objet avant les props genre User { foo: "bar" }
  * - functions
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
@@ -283,7 +282,7 @@ export const assert = ({
         skippedPropDiff += "  ".repeat(getNodeDepth(node) + 1);
         skippedPropDiff += setColor(sign, node.color);
         skippedPropDiff += " ";
-        skippedPropDiff += setColor(skipCount, node.color);
+        skippedPropDiff += setColor(String(skipCount), node.color);
         skippedPropDiff += " ";
         skippedPropDiff += setColor(
           skipCount === 1 ? "prop" : "props",
@@ -458,11 +457,11 @@ export const assert = ({
       );
       return childComparison;
     };
-    const subcompareSolo = (childNode) => {
+    const subcompareSolo = (childNode, placeholderNode) => {
       if (childNode.name === "actual") {
-        return subcompareDuo(childNode, PLACEHOLDER_FOR_NOTHING);
+        return subcompareDuo(childNode, placeholderNode);
       }
-      return subcompareDuo(PLACEHOLDER_FOR_NOTHING, childNode);
+      return subcompareDuo(placeholderNode, childNode);
     };
 
     const visitDuo = (actualNode, expectNode) => {
@@ -639,7 +638,7 @@ export const assert = ({
       }
       throw new Error("wtf");
     };
-    const visitSolo = (node) => {
+    const visitSolo = (node, placeholderNode) => {
       if (node.isPrimitive) {
         node.render = (props) => renderPrimitiveDiff(node, props);
         return;
@@ -647,10 +646,10 @@ export const assert = ({
       if (node.isComposite) {
         const wrappedValueNode = getWrappedValueNode(actualNode);
         if (wrappedValueNode) {
-          subcompareSolo(wrappedValueNode);
+          subcompareSolo(wrappedValueNode, placeholderNode);
         }
         const ownPropertiesNode = createOwnPropertiesNode(node);
-        subcompareSolo(ownPropertiesNode);
+        subcompareSolo(ownPropertiesNode, placeholderNode);
         node.render = (props) => renderCompositeDiff(node, props);
         return;
       }
@@ -662,7 +661,7 @@ export const assert = ({
         for (const propName of ownPropertyNames) {
           const ownPropertyNode = createOwnPropertyNode(node, propName);
           ownPropertyNodeMap.set(propName, ownPropertyNode);
-          subcompareSolo(ownPropertyNode);
+          subcompareSolo(ownPropertyNode, placeholderNode);
           indexToDisplayArray.push(index);
           if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
             break;
@@ -679,8 +678,8 @@ export const assert = ({
         return;
       }
       if (node.type === "own_property") {
-        subcompareSolo(node.propertyNameNode);
-        subcompareSolo(node.propertyValueNode);
+        subcompareSolo(node.propertyNameNode, placeholderNode);
+        subcompareSolo(node.propertyValueNode, placeholderNode);
         node.render = (props) => renderPropertyDiff(node, props);
         return;
       }
@@ -710,31 +709,31 @@ export const assert = ({
         if (expectAsPrimitiveNode) {
           visitDuo(actualNode, expectAsPrimitiveNode);
         } else {
-          visitSolo(actualNode);
+          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         }
-        visitSolo(expectNode);
+        visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         break visit;
       }
       // composite vs primitive
       if (actualNode.isComposite && expectNode.isPrimitive) {
         onSelfDiff("should_be_primitive");
-        visitSolo(actualNode);
+        visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
         if (actualAsPrimitiveNode) {
           visitDuo(actualAsPrimitiveNode, expectNode);
         } else {
-          visitSolo(expectNode);
+          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         }
         break visit;
       }
       if (expectNode.placeholder) {
         onAdded(getAddedOrRemovedReason(actualNode));
-        visitSolo(actualNode);
+        visitSolo(actualNode, expectNode);
         break visit;
       }
       if (actualNode.placeholder) {
         onRemoved(getAddedOrRemovedReason(expectNode));
-        visitSolo(expectNode);
+        visitSolo(expectNode, actualNode);
         break visit;
       }
       throw new Error("wtf");

@@ -8,6 +8,54 @@ expect: {
   },
 }
 
+# property removed
+actual: {}
+expect: {
+  a: true,
+  should_be_there: true,
+}
+
+# property added
+actual: {
+  a: true,
+  should_not_be_there: true,
+}
+expect: {}
+
+# false should be an object
+actual: false
+expect: {
+  foo: true,
+}
+
+# object should be false
+actual: {
+  foo: {
+    a: Object(0),
+  },
+}
+expect: false
+
+# false should be an object at property
+actual: {
+  foo: false,
+}
+expect: {
+  foo: {
+    a: true,
+  },
+}
+
+# object should be false at property
+actual: {
+  foo: {
+    a: true,
+  },
+}
+expect: {
+  foo: false,
+}
+
 # max depth inside diff
 actual: {
   foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
@@ -37,15 +85,39 @@ expect: {
 }
 
 # max prop around diff
-TypeError: text.trim is not a function
-    at setColor (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:81:12)
-    at appendSkippedProps (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:286:28)
-    at renderPropertiesMultiline (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:300:13)
+actual: {
+  ↑ 1 prop ↑
+  b: true,
+  ↓ 1 prop ↓
+}
+expect: {
+  ↑ 1 prop ↑
+  b: false,
+  ↓ 1 prop ↓
+}
+
+# property should be there and is big
+actual: {}
+expect: {
+  a: true,
+  should_be_there: {
+    a: true,
+    b: true,
+    item: Object(3),
+    ↓ 5 props ↓
+  },
+}
+
+# many props should not be there
+TypeError: Cannot read properties of undefined (reading 'name')
+    at getNodeDepth (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:121:14)
+    at renderPropertiesMultiline (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:312:37)
     at renderProperties (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:257:16)
     at actualNode.render (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:609:11)
     at renderCompositeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:250:51)
     at actualNode.render (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:494:40)
     at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:840:27)
-    at max prop around diff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:58:5)
+    at many props should not be there (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:151:5)
     at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:4:1
 
