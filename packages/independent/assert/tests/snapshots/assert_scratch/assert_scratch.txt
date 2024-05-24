@@ -109,15 +109,18 @@ expect: {
 }
 
 # many props should not be there
-TypeError: Cannot read properties of undefined (reading 'name')
-    at getNodeDepth (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:121:14)
-    at renderPropertiesMultiline (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:312:37)
-    at renderProperties (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:257:16)
-    at actualNode.render (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:609:11)
-    at renderCompositeDiff (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:250:51)
-    at actualNode.render (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:494:40)
-    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:840:27)
-    at many props should not be there (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:151:5)
-    at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
-    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:4:1
+actual: {
+  a: true,
+  b: true,
+  c: {
+    an_object: true,
+    and: true,
+  },
+  d: true,
+  ↓ 4 props ↓
+}
+expect: {
+  a: true,
+  c: {},
+}
 

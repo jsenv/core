@@ -422,7 +422,12 @@ export const assert = ({
     };
     const getIndexToDisplayArray = (diffIndexArray, names) => {
       const indexToDisplaySet = new Set();
+      let diffCount = 0;
       for (const diffIndex of diffIndexArray) {
+        if (diffCount >= MAX_DIFF_PER_OBJECT) {
+          break;
+        }
+        diffCount++;
         let beforeDiffIndex = diffIndex - 1;
         let beforeCount = 0;
         while (beforeDiffIndex > -1) {
@@ -546,9 +551,6 @@ export const assert = ({
             );
             actualDiffIndexArray.push(actualOwnPropertyIndex);
             diffPropertyNameSet.add(actualPropName);
-            if (diffPropertyNameSet.size === MAX_DIFF_PER_OBJECT) {
-              break;
-            }
             continue;
           }
           const actualOwnPropertyNode =
@@ -565,9 +567,6 @@ export const assert = ({
             actualDiffIndexArray.push(actualOwnPropertyIndex);
             expectDiffIndexArray.push(expectOwnPropertyIndex);
             diffPropertyNameSet.add(actualPropName);
-            if (diffPropertyNameSet.size === MAX_DIFF_PER_OBJECT) {
-              break;
-            }
           }
         }
         for (const expectPropName of expectOwnPropertyNames) {
@@ -585,9 +584,6 @@ export const assert = ({
           );
           expectDiffIndexArray.push(expectOwnPropertyIndex);
           diffPropertyNameSet.add(expectPropName);
-          if (diffPropertyNameSet.size === MAX_DIFF_PER_OBJECT) {
-            break;
-          }
         }
         if (diffPropertyNameSet.size === 0) {
           actualNode.render = (props) =>
@@ -659,13 +655,13 @@ export const assert = ({
         const ownPropertyNodeMap = new Map();
         let index = 0;
         for (const propName of ownPropertyNames) {
+          if (index >= MAX_DIFF_PER_OBJECT) {
+            break;
+          }
           const ownPropertyNode = createOwnPropertyNode(node, propName);
           ownPropertyNodeMap.set(propName, ownPropertyNode);
           subcompareSolo(ownPropertyNode, placeholderNode);
           indexToDisplayArray.push(index);
-          if (indexToDisplayArray.length > MAX_DIFF_PER_OBJECT) {
-            break;
-          }
           index++;
         }
         node.render = (props) =>

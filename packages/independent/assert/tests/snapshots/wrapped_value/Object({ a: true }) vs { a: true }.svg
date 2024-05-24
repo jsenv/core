@@ -47,31 +47,31 @@
         >
         <text x="43.61" y="33.55">
           at compare
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:160:45)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:159:45)</text
         >
         <text x="43.61" y="52.55">
           at subcompareDuo
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:453:31)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:457:31)</text
         >
         <text x="43.61" y="71.55">
           at subcompareSolo
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:463:16)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:467:16)</text
         >
         <text x="43.61" y="90.55">
           at visitDuo
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:487:11)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:491:11)</text
         >
         <text x="43.61" y="109.55">
           at compare
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:698:9)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:693:9)</text
         >
         <text x="43.61" y="128.55">
           at assert
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:783:26)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:778:26)</text
         >
         <text x="43.61" y="147.55">
           at Object({ a: true }) vs { a: true }
-          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:188:5)</text
+          (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:189:5)</text
         >
         <text x="43.61" y="166.55">
           at startSnapshotTesting
@@ -79,7 +79,7 @@
         >
         <text x="43.61" y="185.55">
           at async
-          file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:170:1</text
+          file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:171:1</text
         >
       </g>
     </svg>

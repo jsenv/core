@@ -192,7 +192,8 @@ assert({
       g: true,
     },
   },
-  maxColumns: 100,
+  MAX_COLUMNS: 100,
+  MAX_DIFF_PER_OBJECT: 3,
 });
 ```
 

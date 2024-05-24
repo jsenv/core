@@ -8,13 +8,13 @@ expect: 10
 
 # Object({ a: true }) vs { a: true }
 TypeError: Cannot read properties of undefined (reading 'depth')
-    at compare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:160:45)
-    at subcompareDuo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:453:31)
-    at subcompareSolo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:463:16)
-    at visitDuo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:487:11)
-    at compare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:698:9)
-    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:783:26)
-    at Object({ a: true }) vs { a: true } (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:188:5)
+    at compare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:159:45)
+    at subcompareDuo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:457:31)
+    at subcompareSolo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:467:16)
+    at visitDuo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:491:11)
+    at compare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:693:9)
+    at assert (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:778:26)
+    at Object({ a: true }) vs { a: true } (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:189:5)
     at startSnapshotTesting (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/tests/start_snapshot_testing.js:26:13)
-    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:170:1
+    at async file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch_test.js:171:1
 
