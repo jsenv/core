@@ -488,9 +488,15 @@ export const assert = ({
         if (actualWrappedValueNode && expectWrappedValueNode) {
           subcompareDuo(actualWrappedValueNode, expectWrappedValueNode);
         } else if (actualWrappedValueNode) {
-          subcompareSolo(actualWrappedValueNode);
+          subcompareSolo(
+            actualWrappedValueNode,
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+          );
         } else if (expectWrappedValueNode) {
-          subcompareSolo(expectWrappedValueNode);
+          subcompareSolo(
+            expectWrappedValueNode,
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+          );
         }
         const actualOwnPropertiesNode = createOwnPropertiesNode(actualNode);
         const expectOwnPropertiesNode = createOwnPropertiesNode(expectNode);
