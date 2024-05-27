@@ -2,6 +2,8 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - internal value
+ *   remove Diff suffix from renderers
+ *   likely merge internal entries with properties
  *   - set
  *   - map
  * - indexed value
@@ -22,6 +24,8 @@
  * - associative array
  * - well known
  * - property descriptors
+ * - valueOf dans le constructor call QUE si subtype pas object
+ *   sinon on le met comme une prop
  *
  */
 
@@ -206,6 +210,7 @@ export const assert = ({
       // because composite also got a prototype
       // and a constructor that might differ
       let diff = "";
+      const internalEntriesNode = node.childNodeMap.get("internal_entries");
       const ownPropertiesNode = node.childNodeMap.get("own_properties");
       const propertyNameCount = ownPropertiesNode.value.length;
       if (props.columnsRemaining < 2) {
@@ -249,6 +254,10 @@ export const assert = ({
         diff += " ";
         columnsRemaining -= " ".length;
       }
+      if (internalEntriesNode) {
+        diff += internalEntriesNode.render();
+        diff += " ";
+      }
       const ownPropertiesDiff = ownPropertiesNode.render({
         ...props,
         columnsRemaining,
@@ -256,6 +265,93 @@ export const assert = ({
       });
       diff += ownPropertiesDiff;
       return diff;
+    };
+
+    const renderInternalEntriesMultiline = (
+      node,
+      props,
+      { indexToDisplayArray },
+    ) => {
+      let atLeastOneEntryDisplayed = false;
+      let diff = "";
+      let entriesDiff = "";
+      const entryKeys = node.value;
+      const appendEntry = (entryDiff) => {
+        if (atLeastOneEntryDisplayed) {
+          entriesDiff += "\n";
+          entriesDiff += entryDiff;
+        } else {
+          entriesDiff += entryDiff;
+          atLeastOneEntryDisplayed = true;
+        }
+      };
+      const appendSkippedEntries = (skipCount, sign) => {
+        let skippedDiff = "";
+        skippedDiff += "  ".repeat(getNodeDepth(node) + 1);
+        skippedDiff += setColor(sign, node.color);
+        skippedDiff += " ";
+        skippedDiff += setColor(String(skipCount), node.color);
+        skippedDiff += " ";
+        skippedDiff += setColor(
+          skipCount === 1 ? "value" : "values",
+          node.color,
+        );
+        skippedDiff += " ";
+        skippedDiff += setColor(sign, node.color);
+        appendEntry(skippedDiff);
+      };
+      let previousIndexDisplayed = -1;
+      for (const indexToDisplay of indexToDisplayArray) {
+        if (previousIndexDisplayed === -1) {
+          if (indexToDisplay > 0) {
+            appendSkippedEntries(indexToDisplay, "↑");
+          }
+        } else {
+          const intermediateSkippedCount =
+            indexToDisplay - previousIndexDisplayed - 1;
+          if (intermediateSkippedCount) {
+            appendSkippedEntries(intermediateSkippedCount, "↕");
+          }
+        }
+        const entryKey = entryKeys[indexToDisplay];
+        const entryNode = node.childNodeMap.get(entryKey);
+        let entryDiff = "";
+        entryDiff += "  ".repeat(getNodeDepth(entryNode) + 1);
+        entryDiff += entryNode.render({
+          ...props,
+          // reset remaining width
+          columnsRemaining: MAX_COLUMNS - entryDiff.length,
+          commaSeparator: true,
+        });
+        appendEntry(entryDiff);
+        previousIndexDisplayed = indexToDisplay;
+      }
+      const lastIndexDisplayed = previousIndexDisplayed;
+      if (lastIndexDisplayed > -1) {
+        const lastSkippedCount = entryKeys.length - 1 - lastIndexDisplayed;
+        if (lastSkippedCount) {
+          appendSkippedEntries(lastSkippedCount, `↓`);
+        }
+      }
+      if (atLeastOneEntryDisplayed) {
+        diff += setColor(node.valueStartDelimiter, node.color);
+        diff += "\n";
+        diff += entriesDiff;
+        diff += "\n";
+        diff += "  ".repeat(getNodeDepth(node));
+        diff += setColor(node.valueEndDelimiter, node.color);
+      } else if (props.hideDelimitersWhenEmpty) {
+      } else {
+        diff += setColor(node.valueStartDelimiter, node.color);
+        diff += setColor(node.valueEndDelimiter, node.color);
+      }
+      return diff;
+    };
+    const renderInternalEntriesOneLiner = () => {
+      return "TODO";
+    };
+    const renderInternalEntryDiff = () => {
+      return "TODO";
     };
 
     const renderPropertiesMultiline = (
@@ -417,14 +513,14 @@ export const assert = ({
       return propertyDiff;
     };
     const getIndexToDisplayArray = (node, comparisonDiffMap) => {
-      const names = node.value;
+      const entryKeys = node.value;
       const diffIndexArray = [];
-      for (const [ownPropertyName] of comparisonDiffMap) {
-        const propertyIndex = names.indexOf(ownPropertyName);
-        if (propertyIndex === -1) {
+      for (const [entryKey] of comparisonDiffMap) {
+        const entryIndex = entryKeys.indexOf(entryKey);
+        if (entryIndex === -1) {
           // happens when removed/added
         } else {
-          diffIndexArray.push(propertyIndex);
+          diffIndexArray.push(entryIndex);
         }
       }
       diffIndexArray.sort();
@@ -448,7 +544,7 @@ export const assert = ({
         indexToDisplaySet.add(diffIndex);
         let afterDiffIndex = diffIndex + 1;
         let afterCount = 0;
-        while (afterDiffIndex < names.length) {
+        while (afterDiffIndex < entryKeys.length) {
           if (afterCount === MAX_PROP_AFTER_DIFF) {
             break;
           }
@@ -539,6 +635,35 @@ export const assert = ({
         expectNode.render = (props) => renderCompositeDiff(expectNode, props);
         return;
       }
+      if (actualNode.type === "internal_entries") {
+        const { comparisonDiffMap } = subcompareChilNodesDuo(
+          actualNode,
+          expectNode,
+        );
+        actualNode.render = (props) =>
+          renderInternalEntriesMultiline(actualNode, props, {
+            indexToDisplayArray: getIndexToDisplayArray(
+              actualNode,
+              comparisonDiffMap,
+            ),
+          });
+        expectNode.render = (props) =>
+          renderInternalEntriesMultiline(expectNode, props, {
+            indexToDisplayArray: getIndexToDisplayArray(
+              expectNode,
+              comparisonDiffMap,
+            ),
+          });
+        return;
+      }
+      if (actualNode.type === "internal_entry") {
+        subcompareChilNodesDuo(actualNode, expectNode);
+        actualNode.render = (props) =>
+          renderInternalEntryDiff(actualNode, props);
+        expectNode.render = (props) =>
+          renderInternalEntryDiff(expectNode, props);
+        return;
+      }
       if (actualNode.type === "own_properties") {
         const { comparisonDiffMap } = subcompareChilNodesDuo(
           actualNode,
@@ -584,6 +709,16 @@ export const assert = ({
       if (node.isComposite) {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderCompositeDiff(node, props);
+        return;
+      }
+      if (node.type === "internal_entries") {
+        subcompareChildNodesSolo(node, placeholderNode);
+        node.render = (props) => renderInternalEntriesMultiline(node, props);
+        return;
+      }
+      if (node.type === "internal_entry") {
+        subcompareChildNodesSolo(node, placeholderNode);
+        node.render = (props) => renderInternalEntryDiff(node, props);
         return;
       }
       if (node.type === "own_properties") {
@@ -896,6 +1031,11 @@ let createRootNode;
     if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
       return node;
     }
+    if (type === "internal_entries") {
+      node.valueStartDelimiter = "(";
+      node.valueEndDelimiter = ")";
+      return node;
+    }
     if (type === "own_properties") {
       node.valueStartDelimiter = "{";
       node.valueEndDelimiter = "}";
@@ -957,11 +1097,14 @@ let createRootNode;
       });
       if (node.isSet) {
         const internalEntryNode = appendInternalEntriesNode(node);
+        const internalEntryKeys = [];
         let index = 0;
         for (const [, setValue] of value) {
+          internalEntryKeys.push(index);
           appendInternalEntryNode(internalEntryNode, index, setValue);
           index++;
         }
+        internalEntryNode.value = internalEntryKeys;
       }
       // own properties
       const ownPropertyNames = [];
