@@ -590,17 +590,21 @@ export const assert = ({
           node,
           placeholderNode,
         );
-        const indexToDisplayArray = [];
-        for (const [ownPropertyName] of comparisonResultMap) {
-          if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
-            break;
-          }
-          const propertyIndex = node.value.indexOf(ownPropertyName);
-          indexToDisplayArray.push(propertyIndex);
-        }
-        indexToDisplayArray.sort();
         node.render = (props) =>
-          renderPropertiesMultiline(node, props, { indexToDisplayArray });
+          renderPropertiesMultiline(node, props, {
+            indexToDisplayArray: (() => {
+              const indexToDisplayArray = [];
+              for (const [ownPropertyName] of comparisonResultMap) {
+                if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
+                  break;
+                }
+                const propertyIndex = node.value.indexOf(ownPropertyName);
+                indexToDisplayArray.push(propertyIndex);
+              }
+              indexToDisplayArray.sort();
+              return indexToDisplayArray;
+            })(),
+          });
         return;
       }
       if (node.type === "own_property") {
