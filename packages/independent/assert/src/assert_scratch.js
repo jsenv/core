@@ -31,6 +31,7 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
+import { getObjectType } from "./object_type.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -205,7 +206,7 @@ export const assert = ({
       // because composite also got a prototype
       // and a constructor that might differ
       let diff = "";
-      const ownPropertiesNode = node.ownPropertiesNode;
+      const ownPropertiesNode = node.childNodeMap.get("own_properties");
       const propertyNameCount = ownPropertiesNode.value.length;
       if (props.columnsRemaining < 2) {
         diff = setColor("…", node.color);
@@ -392,7 +393,7 @@ export const assert = ({
       let propertyDiff = "";
       const commaSeparator = props.commaSeparator;
       let columnsRemaining = props.columnsRemaining;
-      const propertyNameNode = node.propertyNameNode;
+      const propertyNameNode = node.childNodeMap.get("own_property_name");
       if (commaSeparator) {
         columnsRemaining -= ",".length;
       }
@@ -407,7 +408,7 @@ export const assert = ({
         propertyDiff += setColor(":", node.color);
         propertyDiff += " ";
         columnsRemainingForValue -= ": ".length;
-        const propertyValueNode = node.propertyValueNode;
+        const propertyValueNode = node.childNodeMap.get("own_property_value");
         propertyDiff += propertyValueNode.render({
           ...props,
           columnsRemaining: columnsRemainingForValue,
@@ -468,9 +469,50 @@ export const assert = ({
       }
       return subcompareDuo(placeholderNode, childNode);
     };
+    const subcompareChilNodesDuo = () => {
+      const comparisonResultMap = new Map();
+      const childNameComparedSet = new Set();
+      for (let [childName, actualChildNode] of actualNode.childNodeMap) {
+        childNameComparedSet.add(childName);
+        const expectChildNode = expectNode.childNodeMap.get(childName);
+        if (actualChildNode && expectChildNode) {
+          const childComparison = subcompareDuo(
+            actualChildNode,
+            expectChildNode,
+          );
+          comparisonResultMap.set(childName, childComparison);
+        } else {
+          const addedChildComparison = subcompareSolo(
+            actualChildNode,
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+          );
+          comparisonResultMap.set(childName, addedChildComparison);
+        }
+      }
+      for (let [childName, expectChildNode] of expectNode.childNodeMap) {
+        if (comparisonResultMap.has(childName)) {
+          continue;
+        }
+        const removedChildComparison = subcompareSolo(
+          expectChildNode,
+          PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+        );
+        comparisonResultMap.set(childName, removedChildComparison);
+      }
+      return comparisonResultMap;
+    };
+    const subcompareChildNodesSolo = (node, placeholderNode) => {
+      const comparisonResultMap = new Map();
+      for (const [childName, childNode] of node.childNodeMap) {
+        const soloChildComparison = subcompareSolo(childNode, placeholderNode);
+        comparisonResultMap.set(childName, soloChildComparison);
+      }
+      return comparisonResultMap;
+    };
 
     const visitDuo = (actualNode, expectNode) => {
       if (actualNode.isPrimitive) {
+        subcompareChilNodesDuo(actualNode, expectNode);
         // comparing primitives
         if (actualNode.value === expectNode.value) {
           // we already know there will be no diff
@@ -483,24 +525,9 @@ export const assert = ({
         return;
       }
       if (actualNode.isComposite) {
-        const actualWrappedValueNode = getWrappedValueNode(actualNode);
-        const expectWrappedValueNode = getWrappedValueNode(expectNode);
-        if (actualWrappedValueNode && expectWrappedValueNode) {
-          subcompareDuo(actualWrappedValueNode, expectWrappedValueNode);
-        } else if (actualWrappedValueNode) {
-          subcompareSolo(
-            actualWrappedValueNode,
-            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-          );
-        } else if (expectWrappedValueNode) {
-          subcompareSolo(
-            expectWrappedValueNode,
-            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-          );
-        }
-        const actualOwnPropertiesNode = createOwnPropertiesNode(actualNode);
-        const expectOwnPropertiesNode = createOwnPropertiesNode(expectNode);
-        subcompareDuo(actualOwnPropertiesNode, expectOwnPropertiesNode);
+        appendOwnPropertiesNode(actualNode);
+        appendOwnPropertiesNode(expectNode);
+        subcompareChilNodesDuo(actualNode, expectNode);
         actualNode.render = (props) => renderCompositeDiff(actualNode, props);
         expectNode.render = (props) => renderCompositeDiff(expectNode, props);
         return;
@@ -511,7 +538,7 @@ export const assert = ({
         const actualOwnPropertyNodeMap = new Map();
         const expectOwnPropertyNodeMap = new Map();
         const getActualOwnPropertyNode = (propName) => {
-          const actualOwnPropertyNode = createOwnPropertyNode(
+          const actualOwnPropertyNode = appendOwnPropertyNode(
             actualNode,
             propName,
           );
@@ -519,7 +546,7 @@ export const assert = ({
           return actualOwnPropertyNode;
         };
         const getExpectOwnPropertyNode = (propName) => {
-          const expectOwnPropertyNode = createOwnPropertyNode(
+          const expectOwnPropertyNode = appendOwnPropertyNode(
             expectNode,
             propName,
           );
@@ -629,11 +656,7 @@ export const assert = ({
         return;
       }
       if (actualNode.type === "own_property") {
-        subcompareDuo(actualNode.propertyNameNode, expectNode.propertyNameNode);
-        subcompareDuo(
-          actualNode.propertyValueNode,
-          expectNode.propertyValueNode,
-        );
+        subcompareChilNodesDuo(actualNode, expectNode);
         actualNode.render = (props) => renderPropertyDiff(actualNode, props);
         expectNode.render = (props) => renderPropertyDiff(expectNode, props);
         return;
@@ -642,16 +665,13 @@ export const assert = ({
     };
     const visitSolo = (node, placeholderNode) => {
       if (node.isPrimitive) {
+        subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderPrimitiveDiff(node, props);
         return;
       }
       if (node.isComposite) {
-        const wrappedValueNode = getWrappedValueNode(actualNode);
-        if (wrappedValueNode) {
-          subcompareSolo(wrappedValueNode, placeholderNode);
-        }
-        const ownPropertiesNode = createOwnPropertiesNode(node);
-        subcompareSolo(ownPropertiesNode, placeholderNode);
+        appendOwnPropertiesNode(node);
+        subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderCompositeDiff(node, props);
         return;
       }
@@ -664,7 +684,7 @@ export const assert = ({
           if (index >= MAX_DIFF_PER_OBJECT) {
             break;
           }
-          const ownPropertyNode = createOwnPropertyNode(node, propName);
+          const ownPropertyNode = appendOwnPropertyNode(node, propName);
           ownPropertyNodeMap.set(propName, ownPropertyNode);
           subcompareSolo(ownPropertyNode, placeholderNode);
           indexToDisplayArray.push(index);
@@ -680,8 +700,7 @@ export const assert = ({
         return;
       }
       if (node.type === "own_property") {
-        subcompareSolo(node.propertyNameNode, placeholderNode);
-        subcompareSolo(node.propertyValueNode, placeholderNode);
+        subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderPropertyDiff(node, props);
         return;
       }
@@ -915,13 +934,17 @@ let createRootNode;
       path,
       isContainer,
       meta,
-      appendChild: ({
-        type,
-        isContainer,
-        value,
-        depth = isContainer ? node.depth : node.depth + 1,
-        path = node.path,
-      }) => {
+      childNodeMap: new Map(),
+      appendChild: (
+        name,
+        {
+          type,
+          isContainer,
+          value,
+          depth = isContainer ? node.depth : node.depth + 1,
+          path = node.path,
+        },
+      ) => {
         const childNode = createNode({
           colorWhenSolo: node.colorWhenSolo,
           colorWhenSame: node.colorWhenSame,
@@ -934,12 +957,14 @@ let createRootNode;
           path,
           isContainer,
         });
+        node.childNodeMap.set(name, childNode);
         return childNode;
       },
       // info
       isPrimitive: false,
       isComposite: false,
       isSymbol: false,
+      objectType: "",
       // render info
       render: () => {
         throw new Error(`render not implemented for ${type}`);
@@ -977,16 +1002,12 @@ let createRootNode;
     const typeofResult = typeof value;
     if (typeofResult === "object") {
       node.isComposite = true;
+      node.objectType = getObjectType(value);
       node.valueStartDelimiter = "{";
       node.valueEndDelimiter = "}";
       const ownPropertyNames = [];
-      if (
-        typeof value.valueOf === "function" &&
-        value.valueOf !== Object.prototype.valueOf
-      ) {
-        const valueOfReturnValue = value.valueOf();
-        createValueOfReturnValueNode(node, valueOfReturnValue);
-      }
+      appendValueOfReturnValueNode(node);
+
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
         if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
           continue;
@@ -1013,7 +1034,7 @@ let createRootNode;
 
 const getAddedOrRemovedReason = (node) => {
   if (node.type === "own_property") {
-    return getAddedOrRemovedReason(node.propertyNameNode);
+    return getAddedOrRemovedReason(node.childNodeMap.get("own_property_name"));
   }
   if (node.type === "own_property_name") {
     return node.value;
@@ -1027,49 +1048,54 @@ const getAddedOrRemovedReason = (node) => {
   return "unknown";
 };
 const asPrimitiveNode = (node) => {
-  const wrappedValueNode = node.valueOfReturnValueNode;
+  const wrappedValueNode = node.childNodeMap.get("value_of_return_value");
   if (wrappedValueNode && wrappedValueNode.isPrimitive) {
     return wrappedValueNode;
   }
   return null;
 };
 const getWrappedValueNode = (node) => {
-  return node.valueOfReturnValueNode;
+  return node.childNodeMap.get("value_of_return_value");
 };
-const createOwnPropertiesNode = (node) => {
-  const ownPropertiesNode = node.appendChild({
+const appendOwnPropertiesNode = (node) => {
+  const ownPropertiesNode = node.appendChild("own_properties", {
     type: "own_properties",
     isContainer: true,
     value: node.ownPropertyNames,
   });
-  node.ownPropertiesNode = ownPropertiesNode;
   return ownPropertiesNode;
 };
-const createOwnPropertyNode = (node, ownPropertyName) => {
-  const ownPropertyNode = node.appendChild({
+const appendOwnPropertyNode = (node, ownPropertyName) => {
+  const ownPropertyNode = node.appendChild("own_property", {
     type: "own_property",
     isContainer: true,
     path: node.path.append(ownPropertyName),
   });
-  ownPropertyNode.propertyNameNode = ownPropertyNode.appendChild({
+  ownPropertyNode.appendChild("own_property_name", {
     type: "own_property_name",
     value: ownPropertyName,
   });
-  ownPropertyNode.propertyValueNode = ownPropertyNode.appendChild({
+  ownPropertyNode.appendChild("own_property_value", {
     type: "own_property_value",
     value: node.parent.value[ownPropertyName],
   });
   return ownPropertyNode;
 };
-const createValueOfReturnValueNode = (node, valueOfReturnValue) => {
-  const valueOfReturnValueNode = node.appendChild({
-    type: "value_of_return_value",
-    value: valueOfReturnValue,
-    path: node.path.append("valueOf()"),
-    depth: node.depth,
-  });
-  node.valueOfReturnValueNode = valueOfReturnValueNode;
-  return valueOfReturnValueNode;
+const appendValueOfReturnValueNode = (node) => {
+  if (
+    typeof node.value.valueOf === "function" &&
+    node.value.valueOf !== Object.prototype.valueOf
+  ) {
+    const valueOfReturnValue = node.value.valueOf();
+    const valueOfReturnValueNode = node.appendChild("value_of_return_value", {
+      type: "value_of_return_value",
+      value: valueOfReturnValue,
+      path: node.path.append("valueOf()"),
+      depth: node.depth,
+    });
+    return valueOfReturnValueNode;
+  }
+  return null;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
@@ -1143,7 +1169,7 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
     return node.isError;
   }
   if (ownPropertyName === "valueOf") {
-    return Boolean(node.valueOfReturnValueNode);
+    return Boolean(node.childNodeMap.has("value_of_return_value"));
   }
   if (ownPropertyName === "toString") {
     return false;
