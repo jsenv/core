@@ -228,31 +228,32 @@ export const assert = ({
         diff += setColor(`Object(${propertyNameCount})`, node.color);
         return diff;
       }
-      const wrappedValueNode = getWrappedValueNode(node);
-      if (wrappedValueNode) {
-        let columnsRemainingForWrappedValue = props.columnsRemaining;
-        columnsRemainingForWrappedValue -= "Object() ".length;
-        const wrappedValueDiff = wrappedValueNode.render({
-          ...props,
-          columnsRemaining: columnsRemainingForWrappedValue,
-        });
-        diff += setColor("Object(", node.color);
-        diff += wrappedValueDiff;
-        diff += setColor(")", node.color);
-        diff += " ";
-        const ownPropertiesDiff = ownPropertiesNode.render({
-          ...props,
-          hideDelimitersWhenEmpty: true,
-        });
-        diff += ownPropertiesDiff;
-        return diff;
-      }
+      let columnsRemaining = props.columnsRemaining;
       const objectTypeNode = node.childNodeMap.get("object_type");
       if (objectTypeNode) {
         diff += objectTypeNode.render(props);
         diff += " ";
+        columnsRemaining -= stringWidth(diff);
       }
-      const ownPropertiesDiff = ownPropertiesNode.render(props);
+      const wrappedValueNode = getWrappedValueNode(node);
+      if (wrappedValueNode) {
+        columnsRemaining -= "()".length;
+        const wrappedValueDiff = wrappedValueNode.render({
+          ...props,
+          columnsRemaining,
+        });
+        columnsRemaining -= stringWidth(wrappedValueDiff); // TODO: take into "\n"
+        diff += setColor("(", node.color);
+        diff += wrappedValueDiff;
+        diff += setColor(")", node.color);
+        diff += " ";
+        columnsRemaining -= " ".length;
+      }
+      const ownPropertiesDiff = ownPropertiesNode.render({
+        ...props,
+        columnsRemaining,
+        hideDelimitersWhenEmpty: objectTypeNode || wrappedValueNode,
+      });
       diff += ownPropertiesDiff;
       return diff;
     };
@@ -945,15 +946,6 @@ let createRootNode;
         const valueOfReturnValue = value.valueOf();
         appendValueOfReturnValueNode(node, valueOfReturnValue);
       }
-      // own properties
-      const ownPropertyNames = [];
-      for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
-        if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
-          continue;
-        }
-        ownPropertyNames.push(ownPropertyName);
-      }
-      appendOwnPropertiesNode(node, ownPropertyNames);
       visitObjectPrototypes(value, (proto) => {
         const parentConstructor = proto.constructor;
         if (!parentConstructor) {
@@ -963,6 +955,23 @@ let createRootNode;
           node.isSet = true;
         }
       });
+      if (node.isSet) {
+        const internalEntryNode = appendInternalEntriesNode(node);
+        let index = 0;
+        for (const [, setValue] of value) {
+          appendInternalEntryNode(internalEntryNode, index, setValue);
+          index++;
+        }
+      }
+      // own properties
+      const ownPropertyNames = [];
+      for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
+        if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
+          continue;
+        }
+        ownPropertyNames.push(ownPropertyName);
+      }
+      appendOwnPropertiesNode(node, ownPropertyNames);
       return node;
     }
     if (typeofResult === "function") {
@@ -1012,6 +1021,47 @@ const asPrimitiveNode = (node) => {
 const getWrappedValueNode = (node) => {
   return node.childNodeMap.get("value_of_return_value");
 };
+const appendObjectTypeNode = (node, objectType) => {
+  const objectTypeNode = node.appendChild("object_type", {
+    type: "object_type",
+    value: objectType,
+    path: node.path.append("[[ObjectType]]"),
+    depth: node.depth,
+  });
+  return objectTypeNode;
+};
+const appendValueOfReturnValueNode = (node, valueOfReturnValue) => {
+  const valueOfReturnValueNode = node.appendChild("value_of_return_value", {
+    type: "value_of_return_value",
+    value: valueOfReturnValue,
+    path: node.path.append("valueOf()"),
+    depth: node.depth,
+  });
+  return valueOfReturnValueNode;
+};
+const appendInternalEntriesNode = (node) => {
+  const internalEntriesNode = node.appendChild("internal_entries", {
+    type: "internal_entries",
+    isContainer: true,
+  });
+  return internalEntriesNode;
+};
+const appendInternalEntryNode = (node, key, value) => {
+  const internalEntryNode = node.appendChild(key, {
+    type: "internal_entry",
+    isContainer: true,
+    path: node.path.append(key),
+  });
+  internalEntryNode.appendChild("internal_entry_key", {
+    type: "internal_entry_key",
+    value: key,
+  });
+  internalEntryNode.appendChild("internal_entry_value", {
+    type: "internal_entry_value",
+    value,
+  });
+  return internalEntryNode;
+};
 const appendOwnPropertiesNode = (node, ownPropertyNames) => {
   const ownPropertiesNode = node.appendChild("own_properties", {
     type: "own_properties",
@@ -1035,24 +1085,6 @@ const appendOwnPropertyNode = (node, ownPropertyName) => {
     value: node.parent.value[ownPropertyName],
   });
   return ownPropertyNode;
-};
-const appendValueOfReturnValueNode = (node, valueOfReturnValue) => {
-  const valueOfReturnValueNode = node.appendChild("value_of_return_value", {
-    type: "value_of_return_value",
-    value: valueOfReturnValue,
-    path: node.path.append("valueOf()"),
-    depth: node.depth,
-  });
-  return valueOfReturnValueNode;
-};
-const appendObjectTypeNode = (node, objectType) => {
-  const objectTypeNode = node.appendChild("object_type", {
-    type: "object_type",
-    value: objectType,
-    path: node.path.append("[[ObjectType]]"),
-    depth: node.depth,
-  });
-  return objectTypeNode;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
