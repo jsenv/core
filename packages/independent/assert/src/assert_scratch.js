@@ -29,7 +29,7 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
-import { getObjectType } from "./object_type.js";
+import { getObjectType, visitObjectPrototypes } from "./object_type.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -683,9 +683,9 @@ export const assert = ({
 
     const updateColor = (node) => {
       node.color = {
-        solo: node.colorWhenSolo,
-        modified: node.colorWhenModified,
-        undefined: node.colorWhenSame,
+        "solo": node.colorWhenSolo,
+        "modified": node.colorWhenModified,
+        "": node.colorWhenSame,
       }[node.diffType];
     };
 
@@ -871,13 +871,23 @@ let createRootNode;
       // info
       isPrimitive: false,
       isComposite: false,
+      // info/primitive
+      isString: false,
       isSymbol: false,
+      // info/composite
+      isSet: false,
       objectType: "",
       // render info
       render: () => {
         throw new Error(`render not implemented for ${type}`);
       },
+      diffType: "",
+      useQuotes: false,
+      valueStartDelimiter: "",
+      valueEndDelimiter: "",
+      color: "",
     };
+    Object.preventExtensions(node);
 
     if (value === PLACEHOLDER_FOR_NOTHING) {
       return node;
@@ -944,6 +954,15 @@ let createRootNode;
         ownPropertyNames.push(ownPropertyName);
       }
       appendOwnPropertiesNode(node, ownPropertyNames);
+      visitObjectPrototypes(value, (proto) => {
+        const parentConstructor = proto.constructor;
+        if (!parentConstructor) {
+          return;
+        }
+        if (parentConstructor.name === "Set") {
+          node.isSet = true;
+        }
+      });
       return node;
     }
     if (typeofResult === "function") {
