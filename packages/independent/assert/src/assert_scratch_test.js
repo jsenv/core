@@ -166,6 +166,14 @@ await startSnapshotTesting("assert_scratch", {
       },
     });
   },
+  ["object vs user"]: () => {
+    assert({
+      actual: {},
+      expect: {
+        [Symbol.toStringTag]: "User",
+      },
+    });
+  },
 });
 
 await startSnapshotTesting("wrapped_value", {

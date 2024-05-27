@@ -222,3 +222,16 @@ assert({
 
 ![img](<./assert_scratch/many props should not be there.svg>)
 
+# object vs user
+
+```js
+assert({
+  actual: {},
+  expect: {
+    [Symbol.toStringTag]: "User",
+  },
+});
+```
+
+![img](<./assert_scratch/object vs user.svg>)
+

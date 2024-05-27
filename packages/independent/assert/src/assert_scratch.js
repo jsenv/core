@@ -1,7 +1,9 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - le nom de l'objet avant les props genre User { foo: "bar" }
+ * - review compare solo/duo en partie l'exception qu'est la comparaison des props
+ *   j'ai l'impression qu'on pourrait faire en sorte de le faire
+ *   dans subcompareChildNodesDuo
  * - internal value
  *   - set
  *   - map
@@ -190,6 +192,8 @@ export const assert = ({
         }
       } else if (node.isFunction) {
         valueDiff = "function";
+      } else if (node.isUndefined) {
+        valueDiff = "undefined";
       } else {
         valueDiff = JSON.stringify(node.value);
       }
@@ -246,6 +250,11 @@ export const assert = ({
         });
         diff += ownPropertiesDiff;
         return diff;
+      }
+      const objectTypeNode = node.childNodeMap.get("object_type");
+      if (objectTypeNode) {
+        diff += objectTypeNode.render(props);
+        diff += " ";
       }
       const ownPropertiesDiff = ownPropertiesNode.render(props);
       diff += ownPropertiesDiff;
@@ -1007,6 +1016,13 @@ let createRootNode;
       node.valueEndDelimiter = "}";
       const ownPropertyNames = [];
       appendValueOfReturnValueNode(node);
+      if (
+        node.objectType &&
+        node.objectType !== "Object" &&
+        node.objectType !== "Array"
+      ) {
+        appendObjectTypeNode(node, node.objectType);
+      }
 
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
         if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
@@ -1026,7 +1042,14 @@ let createRootNode;
     node.isPrimitive = true;
     if (typeofResult === "string") {
       node.isString = true;
-      node.useQuotes = true;
+      if (type === "object_type") {
+        node.useQuotes = false;
+      } else {
+        node.useQuotes = true;
+      }
+    }
+    if (value === undefined) {
+      node.isUndefined = true;
     }
     return node;
   };
@@ -1096,6 +1119,15 @@ const appendValueOfReturnValueNode = (node) => {
     return valueOfReturnValueNode;
   }
   return null;
+};
+const appendObjectTypeNode = (node, objectType) => {
+  const objectTypeNode = node.appendChild("object_type", {
+    type: "object_type",
+    value: objectType,
+    path: node.path.append("[[ObjectType]]"),
+    depth: node.depth,
+  });
+  return objectTypeNode;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
