@@ -2,6 +2,8 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - functions
+ *   hum ça y est on arrive sur le truc ou
+ *   une entrée s'affiche parmi la liste des own properties
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
  *   en fait si pour string par exemple on voudra s'arreter
@@ -14,6 +16,7 @@
  * - property descriptors
  * - valueOf dans le constructor call QUE si subtype pas object
  *   sinon on le met comme une prop
+ * - prototype
  *
  */
 
@@ -22,6 +25,10 @@ import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
 import { getObjectType, visitObjectPrototypes } from "./object_type.js";
+import {
+  analyseFunction,
+  defaultFunctionAnalysis,
+} from "./function_analysis.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -182,7 +189,9 @@ export const assert = ({
         return diff;
       }
       let valueDiff;
-      if (node.isString) {
+      if (node.isSourceCode) {
+        valueDiff = "[source code]";
+      } else if (node.isString) {
         valueDiff = JSON.stringify(node.value);
         if (!node.useQuotes) {
           valueDiff = valueDiff.slice(1, -1);
@@ -209,7 +218,7 @@ export const assert = ({
       let diff = "";
       const internalEntriesNode = node.childNodeMap.get("internal_entries");
       const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
-      const ownPropertiesNode = node.childNodeMap.get("own_properties");
+      const propertyEntriesNode = node.childNodeMap.get("property_entries");
       if (props.columnsRemaining < 2) {
         diff = setColor("…", node.color);
         return diff;
@@ -232,33 +241,39 @@ export const assert = ({
           diff += setColor(`Array(${arrayLength})`, node.color);
           return diff;
         }
-        const propertyNameCount = ownPropertiesNode.value.length;
+        const propertyNameCount = propertyEntriesNode.value.length;
         diff += setColor(`Object(${propertyNameCount})`, node.color);
         return diff;
       }
       let columnsRemaining = props.columnsRemaining;
-      const objectTypeNode = node.childNodeMap.get("object_type");
-      if (objectTypeNode) {
-        const objectTypeDiff = objectTypeNode.render(props);
-        columnsRemaining -= measureLastLineColumns(objectTypeDiff);
-        diff += objectTypeDiff;
-      }
-      const constructorCallNode = node.childNodeMap.get("constructor_call");
-      if (constructorCallNode) {
-        if (diff) {
-          columnsRemaining -= " ".length;
-          diff += " ";
+      if (node.isFunction) {
+        const functionDiff = renderFunction(node, props);
+        columnsRemaining -= measureLastLineColumns(functionDiff);
+        diff += functionDiff;
+      } else {
+        const objectTypeNode = node.childNodeMap.get("object_type");
+        if (objectTypeNode) {
+          const objectTypeDiff = objectTypeNode.render(props);
+          columnsRemaining -= measureLastLineColumns(objectTypeDiff);
+          diff += objectTypeDiff;
         }
-        columnsRemaining -= "()".length;
-        const firstArgNode = constructorCallNode.childNodeMap.get("0");
-        const firstArgDiff = firstArgNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        columnsRemaining -= measureLastLineColumns(firstArgDiff);
-        diff += setColor("(", node.color);
-        diff += firstArgDiff;
-        diff += setColor(")", node.color);
+        const constructorCallNode = node.childNodeMap.get("constructor_call");
+        if (constructorCallNode) {
+          if (diff) {
+            columnsRemaining -= " ".length;
+            diff += " ";
+          }
+          columnsRemaining -= "()".length;
+          const firstArgNode = constructorCallNode.childNodeMap.get("0");
+          const firstArgDiff = firstArgNode.render({
+            ...props,
+            columnsRemaining,
+          });
+          columnsRemaining -= measureLastLineColumns(firstArgDiff);
+          diff += setColor("(", node.color);
+          diff += firstArgDiff;
+          diff += setColor(")", node.color);
+        }
       }
       if (internalEntriesNode) {
         const internalEntriesDiff = internalEntriesNode.render({
@@ -280,18 +295,58 @@ export const assert = ({
         columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
         diff += indexedEntriesDiff;
       }
-      if (ownPropertiesNode) {
-        const ownPropertiesDiff = ownPropertiesNode.render({
+      if (propertyEntriesNode) {
+        const propertiesDiff = propertyEntriesNode.render({
           ...props,
           columnsRemaining,
         });
-        if (ownPropertiesDiff) {
+        if (propertiesDiff) {
           if (diff) {
             columnsRemaining -= " ".length;
             diff += " ";
           }
-          diff += ownPropertiesDiff;
+          diff += propertiesDiff;
         }
+      }
+      return diff;
+    };
+    const renderFunction = (node, props) => {
+      let diff = "";
+      const classKeywordNode = node.childNodeMap.get("class_keyword");
+      if (classKeywordNode) {
+        diff += classKeywordNode.render(props);
+        diff += " ";
+      } else {
+        const asyncKeywordNode = node.childNodeMap.get(
+          "function_async_keyword",
+        );
+        if (asyncKeywordNode) {
+          diff += asyncKeywordNode.render(props);
+          diff += " ";
+        }
+      }
+      const functionKeywordNode = node.childNodeMap.get("function_keyword");
+      if (functionKeywordNode) {
+        diff += functionKeywordNode.render(props);
+        diff += " ";
+      }
+      const functionNameNode = node.childNodeMap.get("function_name");
+      if (functionNameNode) {
+        diff += functionNameNode.render(props);
+        diff += " ";
+      }
+      const classExtendedNameNode = node.childNodeMap.get(
+        "class_extended_name",
+      );
+      if (classExtendedNameNode) {
+        diff += classExtendedNameNode.render(props);
+        diff += " ";
+      }
+      const functionBodyPrefixNode = node.childNodeMap.get(
+        "function_body_prefix",
+      );
+      if (functionBodyPrefixNode) {
+        diff += functionBodyPrefixNode.render(props);
       }
       return diff;
     };
@@ -537,12 +592,12 @@ export const assert = ({
     };
     const getIndexToDisplayArraySolo = (node, comparisonResultMap) => {
       const indexToDisplayArray = [];
-      for (const [ownPropertyName] of comparisonResultMap) {
+      for (const [entryKey] of comparisonResultMap) {
         if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
           break;
         }
-        const propertyIndex = node.value.indexOf(ownPropertyName);
-        indexToDisplayArray.push(propertyIndex);
+        const entryIndex = node.value.indexOf(entryKey);
+        indexToDisplayArray.push(entryIndex);
       }
       indexToDisplayArray.sort();
       return indexToDisplayArray;
@@ -683,7 +738,7 @@ export const assert = ({
       if (
         actualNode.type === "internal_entries" ||
         actualNode.type === "indexed_entries" ||
-        actualNode.type === "own_properties"
+        actualNode.type === "property_entries"
       ) {
         if (
           actualNode.hideSeparatorsWhenEmpty !==
@@ -722,7 +777,7 @@ export const assert = ({
       if (
         actualNode.type === "internal_entry" ||
         actualNode.type === "indexed_entry" ||
-        actualNode.type === "own_property"
+        actualNode.type === "property_entry"
       ) {
         subcompareChilNodesDuo(actualNode, expectNode);
         actualNode.render = (props) => renderEntry(actualNode, props);
@@ -749,7 +804,7 @@ export const assert = ({
       if (
         node.type === "internal_entries" ||
         node.type === "indexed_entries" ||
-        node.type === "own_properties"
+        node.type === "property_entries"
       ) {
         const comparisonResultMap = subcompareChildNodesSolo(
           node,
@@ -767,7 +822,7 @@ export const assert = ({
       if (
         node.type === "internal_entry" ||
         node.type === "indexed_entry" ||
-        node.type === "own_property"
+        node.type === "property_entry"
       ) {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderEntry(node, props);
@@ -1039,11 +1094,13 @@ let createRootNode;
       // info/primitive
       isUndefined: false,
       isString: false,
+      isSourceCode: false,
       isNumber: false,
       isSymbol: false,
       // info/composite
       objectType: "",
       isFunction: false,
+      functionAnalysis: defaultFunctionAnalysis,
       isArray: false,
       isMap: false,
       isSet: false,
@@ -1079,7 +1136,7 @@ let createRootNode;
       node.endSeparator = "]";
       return node;
     }
-    if (type === "own_properties") {
+    if (type === "property_entries") {
       node.startSeparator = "{";
       node.endSeparator = "}";
       node.entriesSpacing = true;
@@ -1094,7 +1151,7 @@ let createRootNode;
       node.endSeparator = ",";
       return node;
     }
-    if (type === "own_property") {
+    if (type === "property_entry") {
       node.middleSeparator = ": ";
       node.endSeparator = ",";
       return node;
@@ -1112,37 +1169,112 @@ let createRootNode;
       node.isNumber = true;
       return node;
     }
-    if (type === "own_property_name") {
-      node.isPrimitive = true;
-      node.isString = true;
-      if (isValidPropertyIdentifier(value)) {
-        node.useQuotes = false;
-      } else {
-        node.useQuotes = true;
-      }
-      return node;
-    }
-    if (type === "own_property_symbol") {
-      node.isPrimitive = true;
-      node.isSymbol = true;
-      return node;
-    }
     if (value === null) {
       node.isPrimitive = true;
       return node;
     }
     const typeofResult = typeof value;
-    if (typeofResult === "object") {
+    const isObject = typeofResult === "object";
+    const isFunction = typeofResult === "function";
+    if (isObject || isFunction) {
       node.isComposite = true;
       // object type
-      node.objectType = getObjectType(value);
-      if (
-        node.objectType &&
-        node.objectType !== "Object" &&
-        node.objectType !== "Array"
-      ) {
-        appendObjectTypeNode(node, node.objectType);
+      if (isFunction) {
+        node.isFunction = true;
+        node.functionAnalysis = analyseFunction(value);
+        // if (node.functionAnalysis.type === "arrow") {
+        //   if (node.functionAnalysis.isAsync) {
+        //     node.objectType = node.functionAnalysis.isGenerator
+        //       ? "AsyncArrowFunction"
+        //       : "ArrowFunction";
+        //   } else {
+        //     node.objectType = node.functionAnalysis.isGenerator
+        //       ? "GeneratorArrowFunction"
+        //       : "ArrowFunction";
+        //   }
+        // } else if (node.functionAnalysis.isAsync) {
+        //   node.objectType = node.functionAnalysis.isGenerator
+        //     ? "AsyncGeneratorFunction"
+        //     : "AsyncFunction";
+        // } else {
+        //   node.objectType = node.functionAnalysis.isGenerator
+        //     ? "GeneratorFunction"
+        //     : "Function";
+        // }
+
+        if (node.functionAnalysis.type === "class") {
+          node.appendChild("class_keyword", {
+            type: "class_keyword",
+            value: "class",
+          });
+          const extendedClassName = node.functionAnalysis.extendedClassName;
+          if (extendedClassName) {
+            node.appendChild("class_extended_name", {
+              type: "class_extended_name",
+              value: node.functionAnalysis.extendedClassName,
+            });
+          }
+        }
+        if (node.functionAnalysis.isAsync) {
+          node.appendChild("function_async_keyword", {
+            type: "function_async_keyword",
+            value: "async",
+          });
+        }
+        if (node.functionAnalysis.type === "classic") {
+          node.appendChild("function_keyword", {
+            type: "function_keyword",
+            value: node.functionAnalysis.isGenerator ? "function*" : "function",
+          });
+        }
+        if (node.functionAnalysis.name) {
+          node.appendChild("function_name", {
+            type: "function_name",
+            value: node.functionAnalysis.nam,
+          });
+        }
+        if (node.functionAnalysis.type === "arrow") {
+          node.appendChild("function_body_prefix", {
+            type: "function_body_prefix",
+            value: "() =>",
+          });
+        } else if (node.functionAnalysis.type === "method") {
+          if (node.functionAnalysis.getterName) {
+            node.appendChild("function_body_prefix", {
+              type: "function_body_prefix",
+              value: `get ${"toto"}()`, // TODO: should not be "toto" but the method name
+              // that can be found in node parent(s)
+            });
+          } else if (node.functionAnalysis.setterName) {
+            node.appendChild("function_body_prefix", {
+              type: "function_body_prefix",
+              value: `set ${"toto"}()`, // TODO: should not be "toto" but the method name
+              // that can be found in node parent(s)
+            });
+          } else {
+            node.appendChild("function_body_prefix", {
+              type: "function_body_prefix",
+              value: `${"toto"}()`, // TODO: should not be "toto" but the method name
+              // that can be found in node parent(s)
+            });
+          }
+        } else if (node.functionAnalysis.type === "classic") {
+          node.appendChild("function_body_prefix", {
+            type: "function_body_prefix",
+            value: `()`,
+          });
+        }
+      } else {
+        node.objectType = getObjectType(value);
+        if (
+          node.objectType &&
+          node.objectType !== "Object" &&
+          node.objectType !== "Array"
+        ) {
+          appendObjectTypeNode(node, node.objectType);
+        }
       }
+
       // valueOf()
       if (
         typeof value.valueOf === "function" &&
@@ -1168,11 +1300,10 @@ let createRootNode;
           node.isMap = true;
           const mapInternalEntriesNode = appendInternalEntriesNode(node);
           for (const [mapEntryKey, mapEntryValue] of value) {
-            appendInternalEntryNode(
-              mapInternalEntriesNode,
-              mapEntryKey,
-              mapEntryValue,
-            );
+            appendInternalEntryNode(mapInternalEntriesNode, {
+              key: mapEntryKey,
+              value: mapEntryValue,
+            });
           }
           return;
         }
@@ -1196,13 +1327,11 @@ let createRootNode;
           const setInternalEntriesNode = appendInternalEntriesNode(node);
           let index = 0;
           for (const [setValue] of value) {
-            const setEntryNode = appendInternalEntryNode(
-              setInternalEntriesNode,
-              index,
-              setValue,
-            );
-            const setEntryKeyNode = setEntryNode.childNodeMap.get("entry_key");
-            setEntryKeyNode.hidden = true;
+            appendInternalEntryNode(setInternalEntriesNode, {
+              key: index,
+              keyHidden: true,
+              value: setValue,
+            });
             index++;
           }
           return;
@@ -1219,35 +1348,48 @@ let createRootNode;
       );
       const canHaveIndexedEntries = node.childNodeMap.has("indexed_entries");
       if (canHaveIndexedEntries && ownPropertyNames.length === 0) {
-        // skip entirely own properties
+        // skip entirely property_entries
       } else {
-        const ownPropertiesNode = appendOwnPropertiesNode(node);
-        ownPropertiesNode.hideSeparatorsWhenEmpty =
+        const propertyEntriesNode = appendPropertyEntriesNode(node);
+        propertyEntriesNode.hideSeparatorsWhenEmpty =
           node.childNodeMap.has("object_type") ||
           node.childNodeMap.has("constructor_call") ||
           node.childNodeMap.has("internal_entries") ||
           canHaveIndexedEntries;
         for (const ownPropertyName of ownPropertyNames) {
-          appendOwnPropertyNode(
-            ownPropertiesNode,
-            ownPropertyName,
-            value[ownPropertyName],
-          );
+          appendPropertyEntryNode(propertyEntriesNode, {
+            key: ownPropertyName,
+            value: value[ownPropertyName],
+          });
+        }
+        if (node.isFunction) {
+          appendPropertyEntryNode(propertyEntriesNode, {
+            key: "[[source code]]",
+            keyHidden: true,
+            value: node.functionAnalysis.argsAndBodySource,
+            valueIsSourceCode: true,
+          });
         }
       }
 
-      return node;
-    }
-    if (typeofResult === "function") {
-      node.isPrimitive = true; // not really but for now yes
-      node.isFunction = true;
       return node;
     }
 
     node.isPrimitive = true;
     if (typeofResult === "string") {
       node.isString = true;
-      if (type === "object_type") {
+      if (
+        type === "object_type" ||
+        type === "function_async_keyword" ||
+        type === "function_body_prefix" ||
+        type === "function_name" ||
+        type === "class_extended_name"
+      ) {
+        node.useQuotes = false;
+      } else if (
+        type === "property_entry_key" &&
+        isValidPropertyIdentifier(value)
+      ) {
         node.useQuotes = false;
       } else {
         node.useQuotes = true;
@@ -1256,6 +1398,7 @@ let createRootNode;
     if (value === undefined) {
       node.isUndefined = true;
     }
+
     return node;
   };
 }
@@ -1264,21 +1407,21 @@ const getAddedOrRemovedReason = (node) => {
   if (
     node.type === "internal_entry" ||
     node.type === "indexed_entry" ||
-    node.type === "own_property"
+    node.type === "property_entry"
   ) {
     return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
   }
   if (
     node.type === "internal_entry_key" ||
     node.type === "indexed_entry_key" ||
-    node.type === "own_property_name"
+    node.type === "property_entry_key"
   ) {
     return node.value;
   }
   if (
     node.type === "internal_entry_value" ||
     node.type === "indexed_entry_value" ||
-    node.type === "own_property_value"
+    node.type === "property_entry_value"
   ) {
     return getAddedOrRemovedReason(node.parent);
   }
@@ -1320,17 +1463,20 @@ const appendInternalEntriesNode = (node) => {
   });
   return internalEntriesNode;
 };
-const appendInternalEntryNode = (node, key, value) => {
+const appendInternalEntryNode = (node, { key, keyHidden, value }) => {
   node.value.push(key);
   const internalEntryNode = node.appendChild(key, {
     type: "internal_entry",
     isContainer: true,
     path: node.path.append(key),
   });
-  internalEntryNode.appendChild("entry_key", {
+  const internalEntryKeyNode = internalEntryNode.appendChild("entry_key", {
     type: "internal_entry_key",
     value: key,
   });
+  if (keyHidden) {
+    internalEntryKeyNode.hidden = true;
+  }
   internalEntryNode.appendChild("entry_value", {
     type: "internal_entry_value",
     value,
@@ -1363,30 +1509,39 @@ const appendIndexedEntryNode = (node, index, value) => {
   });
   return indexedEntryNode;
 };
-const appendOwnPropertiesNode = (node) => {
-  const ownPropertiesNode = node.appendChild("own_properties", {
-    type: "own_properties",
+const appendPropertyEntriesNode = (node) => {
+  const propertyEntriesNode = node.appendChild("property_entries", {
+    type: "property_entries",
     isContainer: true,
     value: [],
   });
-  return ownPropertiesNode;
+  return propertyEntriesNode;
 };
-const appendOwnPropertyNode = (node, ownPropertyName, ownPropertyValue) => {
-  node.value.push(ownPropertyName);
-  const ownPropertyNode = node.appendChild(ownPropertyName, {
-    type: "own_property",
+const appendPropertyEntryNode = (
+  node,
+  { key, keyHidden, value, valueIsSourceCode },
+) => {
+  node.value.push(key);
+  const propertyEntryNode = node.appendChild(key, {
+    type: "property_entry",
     isContainer: true,
-    path: node.path.append(ownPropertyName),
+    path: node.path.append(key),
   });
-  ownPropertyNode.appendChild("entry_key", {
-    type: "own_property_name",
-    value: ownPropertyName,
+  const propertyEntryKeyNode = propertyEntryNode.appendChild("entry_key", {
+    type: "property_entry_key",
+    value: key,
   });
-  ownPropertyNode.appendChild("entry_value", {
-    type: "own_property_value",
-    value: ownPropertyValue,
+  if (keyHidden) {
+    propertyEntryKeyNode.hidden = true;
+  }
+  const propertyEntryValueNode = propertyEntryNode.appendChild("entry_value", {
+    type: "property_entry_value",
+    value,
   });
-  return ownPropertyNode;
+  if (valueIsSourceCode) {
+    propertyEntryValueNode.isSourceCode = true;
+  }
+  return propertyEntryNode;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {

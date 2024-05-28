@@ -4,7 +4,7 @@ export const analyseFunction = (fn) => {
   arrow: {
     if (fnSource.startsWith("(")) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "arrow",
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
       };
@@ -12,7 +12,7 @@ export const analyseFunction = (fn) => {
     const arrowAsyncMatch = fnSource.match(/^async\s+\(/);
     if (arrowAsyncMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "arrow",
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
         isAsync: true,
@@ -21,10 +21,16 @@ export const analyseFunction = (fn) => {
   }
   classes: {
     if (fnSource.startsWith("class ")) {
+      let extendedClassName = "";
+      const prototype = Object.getPrototypeOf(fn);
+      if (prototype && prototype !== Function.prototype) {
+        extendedClassName = prototype.name;
+      }
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "class",
         name: fn.name,
+        extendedClassName,
         argsAndBodySource: fnSource.slice(fnSource.indexOf("{")),
       };
     }
@@ -33,7 +39,7 @@ export const analyseFunction = (fn) => {
     const classicAsyncGeneratorMatch = fnSource.match(/^async\s+function\s*\*/);
     if (classicAsyncGeneratorMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "classic",
         name: fn.name,
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
@@ -44,7 +50,7 @@ export const analyseFunction = (fn) => {
     const classicAsyncMatch = fnSource.match(/^async\s+function/);
     if (classicAsyncMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "classic",
         name: fn.name,
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
@@ -54,7 +60,7 @@ export const analyseFunction = (fn) => {
     const classicGeneratorMatch = fnSource.match(/^function\s*\*/);
     if (classicGeneratorMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "classic",
         name: fn.name,
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
@@ -63,7 +69,7 @@ export const analyseFunction = (fn) => {
     }
     if (fnSource.startsWith("function")) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "classic",
         name: fn.name,
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
@@ -73,7 +79,7 @@ export const analyseFunction = (fn) => {
   method: {
     if (fnSource.startsWith("get ")) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         getterName: fn.name.slice("get ".length),
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
@@ -81,7 +87,7 @@ export const analyseFunction = (fn) => {
     }
     if (fnSource.startsWith("set ")) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         setterName: fn.name.slice("set ".length),
         argsAndBodySource: fnSource.slice(fnSource.indexOf("(")),
@@ -92,7 +98,7 @@ export const analyseFunction = (fn) => {
     );
     if (methodComputedAsyncGeneratorMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodNameIsComputed: true,
         methodName: methodComputedAsyncGeneratorMatch[1],
@@ -108,7 +114,7 @@ export const analyseFunction = (fn) => {
     );
     if (methodComputedAsyncMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodNameIsComputed: true,
         methodName: methodComputedAsyncMatch[1],
@@ -121,7 +127,7 @@ export const analyseFunction = (fn) => {
     const methodComputedMatch = fnSource.match(/^\[([\s\S]*?)\]\s*\(/);
     if (methodComputedMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodNameIsComputed: true,
         methodName: methodComputedMatch[1],
@@ -133,7 +139,7 @@ export const analyseFunction = (fn) => {
     );
     if (methodAsyncGeneratorMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodName: methodAsyncGeneratorMatch[1],
         argsAndBodySource: fnSource.slice(
@@ -146,7 +152,7 @@ export const analyseFunction = (fn) => {
     const methodAsyncMatch = fnSource.match(/^async\s+([\S]+)\s*\(/);
     if (methodAsyncMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodName: methodAsyncMatch[1],
         argsAndBodySource: fnSource.slice(methodAsyncMatch[0].length - 1),
@@ -157,7 +163,7 @@ export const analyseFunction = (fn) => {
     const methodGeneratorMatch = fnSource.match(/^\*\s*([\S]+)\s*\(/);
     if (methodGeneratorMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodName: methodGeneratorMatch[1],
         argsAndBodySource: fnSource.slice(methodGeneratorMatch[0].length - 1),
@@ -167,7 +173,7 @@ export const analyseFunction = (fn) => {
     const methodMatch = fnSource.match(/^([\S]+)\s*\(/);
     if (methodMatch) {
       return {
-        ...defaultResult,
+        ...defaultFunctionAnalysis,
         type: "method",
         methodName: methodMatch[1],
         argsAndBodySource: fnSource.slice(methodMatch[0].length - 1),
@@ -175,12 +181,13 @@ export const analyseFunction = (fn) => {
     }
   }
 
-  return defaultResult;
+  return defaultFunctionAnalysis;
 };
 
-const defaultResult = {
+export const defaultFunctionAnalysis = {
   type: "", // "classic", "method", "arrow", "class"
   name: "",
+  extendedClassName: "",
   methodNameIsComputed: false,
   methodName: "",
   getterName: "",
