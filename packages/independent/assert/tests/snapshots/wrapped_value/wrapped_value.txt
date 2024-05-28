@@ -9,7 +9,7 @@ expect: 10
 # Object({ a: true }) vs { a: true }
 actual: ({
   a: true,
-})
+}) {}
 expect: {
   a: false,
 }

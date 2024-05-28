@@ -50,6 +50,8 @@
         <text x="85.61" y="33.55" fill="#DAA520">,</text>
         <text x="10" y="52.55" fill="#DAA520">}</text>
         <text x="18.4" y="52.55" fill="#7f7f7f">)</text>
+        <text x="35.2" y="52.55" fill="#7f7f7f">{</text>
+        <text x="43.61" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="90.55" fill="#DAA520">a</text>

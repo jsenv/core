@@ -273,9 +273,6 @@ export const assert = ({
       const ownPropertiesDiff = ownPropertiesNode.render({
         ...props,
         columnsRemaining,
-        hideSeparatorsWhenEmpty: Boolean(
-          objectTypeNode || constructorCallNode || internalEntriesNode,
-        ),
       });
       if (ownPropertiesDiff) {
         if (diff) {
@@ -292,7 +289,7 @@ export const assert = ({
 
       const entryKeys = node.value;
       if (entryKeys.length === 0) {
-        if (props.hideSeparatorsWhenEmpty) {
+        if (node.hideSeparatorsWhenEmpty) {
           return "";
         }
         return setColor(`${startSeparator}${endSeparator}`, node.color);
@@ -421,7 +418,7 @@ export const assert = ({
         diff += "\n";
         diff += "  ".repeat(getNodeDepth(node));
         diff += setColor(endSeparator, node.color);
-      } else if (props.hideSeparatorsWhenEmpty) {
+      } else if (node.hideSeparatorsWhenEmpty) {
       } else {
         diff += setColor(startSeparator, node.color);
         diff += setColor(endSeparator, node.color);
@@ -611,6 +608,14 @@ export const assert = ({
         actualNode.type === "internal_entries" ||
         actualNode.type === "own_properties"
       ) {
+        if (
+          actualNode.hideSeparatorsWhenEmpty !==
+          expectNode.hideSeparatorsWhenEmpty
+        ) {
+          actualNode.hideSeparatorsWhenEmpty =
+            expectNode.hideSeparatorsWhenEmpty = false;
+        }
+
         const { comparisonDiffMap } = subcompareChilNodesDuo(
           actualNode,
           expectNode,
@@ -963,6 +968,7 @@ let createRootNode;
       startSeparator: "",
       middleSeparator: "",
       endSeparator: "",
+      hideSeparatorsWhenEmpty: false,
       color: "",
     };
     Object.preventExtensions(node);
@@ -1076,6 +1082,10 @@ let createRootNode;
       });
       // own properties
       const ownPropertiesNode = appendOwnPropertiesNode(node);
+      ownPropertiesNode.hideSeparatorsWhenEmpty =
+        node.childNodeMap.has("object_type") ||
+        node.childNodeMap.has("constructor_call") ||
+        node.childNodeMap.has("internal_entries");
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
         if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
           continue;
