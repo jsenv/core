@@ -339,9 +339,12 @@ export const assert = ({
         "class_extended_name",
       );
       if (classExtendedNameNode) {
-        if (diff) {
-          diff += " ";
-        }
+        const classExtendsKeywordNode = node.childNodeMap.get(
+          "class_extends_keyword",
+        );
+        diff += " ";
+        diff += classExtendsKeywordNode.render(props);
+        diff += " ";
         diff += classExtendedNameNode.render(props);
       }
       const functionBodyPrefixNode = node.childNodeMap.get(
@@ -1215,6 +1218,10 @@ let createRootNode;
           });
           const extendedClassName = node.functionAnalysis.extendedClassName;
           if (extendedClassName) {
+            node.appendChild("class_extends_keyword", {
+              type: "class_extends_keyword",
+              value: "extends",
+            });
             node.appendChild("class_extended_name", {
               type: "class_extended_name",
               value: node.functionAnalysis.extendedClassName,
@@ -1397,6 +1404,7 @@ let createRootNode;
         type === "function_name" ||
         type === "function_body_prefix" ||
         type === "class_keyword" ||
+        type === "class_extends_keyword" ||
         type === "class_extended_name"
       ) {
         node.useQuotes = false;

@@ -146,28 +146,28 @@ await startSnapshotTesting("function", {
       expect: function () {},
     });
   },
-  // ["class Animal vs class Robot"]: () => {
-  //   assert({
-  //     actual: class Animal {},
-  //     expect: class Robot {},
-  //   });
-  // },
-  // ["extends Animal vs extend Robot"]: () => {
-  //   class Animal {
-  //     static type = "animal";
-  //   }
-  //   class Robot {
-  //     static type = "robot";
-  //   }
-  //   assert({
-  //     actual: class Human extends Animal {
-  //       static type = "human_actual";
-  //     },
-  //     expect: class Human extends Robot {
-  //       static type = "human_expected";
-  //     },
-  //   });
-  // },
+  ["class Animal vs class Robot"]: () => {
+    assert({
+      actual: class Animal {},
+      expect: class Robot {},
+    });
+  },
+  ["extends Animal vs extend Robot"]: () => {
+    class Animal {
+      static type = "animal";
+    }
+    class Robot {
+      static type = "robot";
+    }
+    assert({
+      actual: class Human extends Animal {
+        static type = "human_actual";
+      },
+      expect: class Human extends Robot {
+        static type = "human_expected";
+      },
+    });
+  },
   // ["class static property modified"]: () => {
   //   assert({
   //     actual: class A {

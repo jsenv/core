@@ -178,3 +178,35 @@ assert({
 
 ![img](<./function/class vs function.svg>)
 
+# class Animal vs class Robot
+
+```js
+assert({
+  actual: class Animal {},
+  expect: class Robot {},
+});
+```
+
+![img](<./function/class Animal vs class Robot.svg>)
+
+# extends Animal vs extend Robot
+
+```js
+class Animal {
+  static type = "animal";
+}
+class Robot {
+  static type = "robot";
+}
+assert({
+  actual: class Human extends Animal {
+    static type = "human_actual";
+  },
+  expect: class Human extends Robot {
+    static type = "human_expected";
+  },
+});
+```
+
+![img](<./function/extends Animal vs extend Robot.svg>)
+

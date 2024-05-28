@@ -83,3 +83,17 @@ expect: function expect () {
   [source code],
 }
 
+# class Animal vs class Robot
+actual: class Animal { [source code] }
+expect: class Robot { [source code] }
+
+# extends Animal vs extend Robot
+actual: class Human extends Animal {
+  type: "human_actual",
+  [source code],
+}
+expect: class Human extends Robot {
+  type: "human_expected",
+  [source code],
+}
+
