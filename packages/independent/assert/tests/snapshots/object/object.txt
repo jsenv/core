@@ -1,321 +1,130 @@
 # property are different
-AssertionError: actual and expect have 1 difference:
-
 actual: {
   a: true,
 }
 expect: {
-  a: { b: true },
+  a: {
+    b: true,
+  },
 }
 
-# property should be there
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  a: true,
-}
+# property removed
+actual: { a: true }
 expect: {
   a: true,
   should_be_there: true,
 }
 
-# property should not be there
-AssertionError: actual and expect have 1 difference:
-
+# property added
 actual: {
   a: true,
   should_not_be_there: true,
 }
-expect: {
-  a: true,
-}
+expect: { a: true }
 
 # false should be an object
-AssertionError: actual and expect are different:
-
 actual: false
 expect: {
   foo: true,
 }
 
 # object should be false
-AssertionError: actual and expect are different:
-
 actual: {
-  foo: { a: Object(0) },
+  foo: {
+    a: Object(0),
+  },
 }
 expect: false
 
 # false should be an object at property
-AssertionError: actual and expect have 1 difference:
-
 actual: {
   foo: false,
 }
 expect: {
-  foo: { a: true },
+  foo: {
+    a: true,
+  },
 }
 
 # object should be false at property
-AssertionError: actual and expect have 1 difference:
-
 actual: {
-  foo: { a: true },
+  foo: {
+    a: true,
+  },
 }
 expect: {
   foo: false,
 }
 
-# object should be false at deep property truncated
-AssertionError: actual and expect are different:
-
+# max depth inside diff
 actual: {
-  the: { nesting: Object(1) },
-  toto: "actual",
-}
-expect: false
-
-# object should be false at deep property
-AssertionError: actual and expect have 2 differences:
-
-ℹ to improve readability 1 diff is completely hidden
-ℹ diff starts at undefined
-
-actual: {
-  in: {
-    this: {
-      one: {
-        foo: {
-          a: true,
-          tata: { test: true, bar: Object(1) },
-        },
-      },
-    },
-  },
+  foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
+  bar: true,
 }
 expect: {
-  in: {
-    this: {
-      one: {
-        foo: false,
-      },
-    },
+  foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
+  bar: {
+    bar_a: Object(1),
   },
 }
 
-# maxDepth on diff
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  foo: { a: Object(1) },
-}
-expect: {
-  foo: { a: true },
-}
-
-# collapsed with overview when no diff
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  a: { foo: true, bar: true, baz: Object(1) },
-  b: true,
-}
-expect: {
-  a: { foo: true, bar: true, baz: Object(1) },
-  b: false,
-}
-
-# max 2 props above prop diff
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  ↑ 2 props ↑
-  c: true,
-  d: true,
-}
-expect: {
-  ↑ 2 props ↑
-  c: true,
-  d: false,
-}
-
-# max 2 props above prop diff and there is exactly 2
-AssertionError: actual and expect have 1 difference:
-
+# max diff per object
 actual: {
   a: true,
-  b: true,
+  b: {
+    a: Object(2),
+  },
   c: true,
-  d: true,
 }
 expect: {
-  a: true,
-  b: true,
-  c: false,
-  d: true,
-}
-
-# max 2 props after prop diff
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  a: true,
-  b: true,
-  ↓ 2 props ↓
-}
-expect: {
-  a: false,
-  b: true,
-  ↓ 2 props ↓
-}
-
-# max 2 props above after diff and there is exactly 2
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  a: true,
-  b: true,
   c: true,
-  d: true,
-}
-expect: {
+  b: {
+    a: false,
+  },
   a: true,
-  b: false,
-  c: true,
-  d: true,
 }
 
-# max 2 props around prop diff
-AssertionError: actual and expect have 3 differences:
-
+# max prop around diff
 actual: {
-  ↑ 2 props ↑
-  c: true,
-  d: true,
-  ↕ 2 props ↕
-  g: true,
-  h: true,
-  ↕ 2 props ↕
-  k: true,
-  l: true,
-  m: true,
-  ↓ 2 props ↓
-}
-expect: {
-  ↑ 2 props ↑
-  c: true,
-  d: false,
-  ↕ 2 props ↕
-  g: true,
-  h: false,
-  ↕ 2 props ↕
-  k: true,
-  l: false,
-  m: true,
-  ↓ 2 props ↓
-}
-
-# max X diff per object
-AssertionError: actual and expect have 3 differences:
-
-actual: {
-  a: true,
+  ↑ 1 prop ↑
   b: true,
   ↓ 1 prop ↓
 }
 expect: {
-  a: false,
+  ↑ 1 prop ↑
   b: false,
   ↓ 1 prop ↓
 }
 
 # property should be there and is big
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  a: true,
-}
+actual: { a: true }
 expect: {
   a: true,
-  should_be_there: Object(8) { a: true, b: true, item: Object(3), c: true, d: true, e: true, ... },
+  should_be_there: {
+    a: true,
+    b: true,
+    item: Object(3),
+    ↓ 5 props ↓
+  },
 }
 
 # many props should not be there
-AssertionError: actual and expect have 8 differences:
-
 actual: {
   a: true,
   b: true,
-  c: { an_object: true, and: true },
+  c: {
+    an_object: true,
+    and: true,
+  },
   d: true,
-  e: true,
-  f: true,
-  ↓ 2 props ↓
+  ↓ 4 props ↓
 }
 expect: {
   a: true,
   c: {},
 }
 
-# max prop in diff
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  foo: { a: true, b: true, c: true, d: true, e: true },
-}
-expect: {
-  foo: false,
-}
-
-# props order
-AssertionError: actual and expect have 2 differences:
-
-actual: {
-  b: true,
-  a: false,
-}
-expect: {
-  a: true,
-  b: false,
-}
-
-# property key truncated
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  …"will be truncated": true,
-}
-expect: {
-  …"will be truncated": false,
-}
-
-# property key multiline
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  …"s quite long": true,
-}
-expect: {
-  …"s quite long": false,
-}
-
-# nested object becomes false
-AssertionError: actual and expect are different:
-
-actual: false
-expect: {
-  a: true,
-  b: { toto: true },
-  c: true,
-}
-
-# osc becomes dam at property value nested
-AssertionError: actual and expect have 1 difference:
-
-actual: {
-  user: { name: "dam" },
-}
-expect: {
-  user: { name: "osc" },
-}
+# object vs user
+actual: {}
+expect: User {}
 

@@ -15,7 +15,7 @@ assert({
 
 ![img](<./object/property are different.svg>)
 
-# property should be there
+# property removed
 
 ```js
 assert({
@@ -29,9 +29,9 @@ assert({
 });
 ```
 
-![img](<./object/property should be there.svg>)
+![img](<./object/property removed.svg>)
 
-# property should not be there
+# property added
 
 ```js
 assert({
@@ -45,7 +45,7 @@ assert({
 });
 ```
 
-![img](<./object/property should not be there.svg>)
+![img](<./object/property added.svg>)
 
 # false should be an object
 
@@ -63,9 +63,7 @@ assert({
 ```js
 assert({
   actual: {
-    foo: {
-      a: {},
-    },
+    foo: { a: {} },
   },
   expect: false,
 });
@@ -103,257 +101,76 @@ assert({
 
 ![img](<./object/object should be false at property.svg>)
 
-# object should be false at deep property truncated
-
-```js
-assert({
-  actual: {
-    the: { nesting: { is: {} } },
-    toto: "actual",
-  },
-  expect: false,
-  maxDepth: 0,
-});
-```
-
-![img](<./object/object should be false at deep property truncated.svg>)
-
-# object should be false at deep property
-
-```js
-assert({
-  actual: {
-    the: {
-      nesting: {
-        is: {
-          very: {
-            deep: {
-              in: {
-                this: {
-                  one: {
-                    foo: {
-                      a: true,
-                      tata: { test: true, bar: { a: "1" } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    toto: "actual",
-  },
-  expect: {
-    the: {
-      nesting: {
-        is: {
-          very: {
-            deep: {
-              in: {
-                this: {
-                  one: {
-                    foo: false,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    toto: "expect",
-  },
-  maxDepth: 5,
-});
-```
-
-![img](<./object/object should be false at deep property.svg>)
-
-# maxDepth on diff
+# max depth inside diff
 
 ```js
 assert({
   actual: {
     foo: {
-      a: { b: { c: { d: { e: { f: {} } } } } },
+      foo_a: { foo_a2: { foo_a3: {} } },
+      foo_b: { foo_b2: { foo_b3: {} } },
     },
+    bar: true,
   },
   expect: {
     foo: {
-      a: true,
+      foo_a: { foo_a2: { foo_a3: {} } },
+      foo_b: { foo_b2: { foo_b3: {} } },
     },
+    bar: { bar_a: { bar_a2: {} } },
   },
-  maxDepth: 5,
+  MAX_DEPTH: 2,
+  MAX_DEPTH_INSIDE_DIFF: 1,
 });
 ```
 
-![img](<./object/maxDepth on diff.svg>)
+![img](<./object/max depth inside diff.svg>)
 
-# collapsed with overview when no diff
+# max diff per object
 
 ```js
 assert({
   actual: {
-    a: { foo: true, bar: true, baz: { t: 1 } },
-    b: true,
+    a: true,
+    b: {
+      a: {
+        y: true,
+        z: true,
+      },
+    },
+    c: true,
   },
   expect: {
-    a: { foo: true, bar: true, baz: { t: 1 } },
+    c: true,
+    b: { a: false },
+    a: true,
+  },
+  MAX_DIFF_PER_OBJECT: 2,
+});
+```
+
+![img](<./object/max diff per object.svg>)
+
+# max prop around diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+  },
+  expect: {
+    c: true,
     b: false,
+    a: true,
   },
+  MAX_PROP_BEFORE_DIFF: 0,
+  MAX_PROP_AFTER_DIFF: 0,
 });
 ```
 
-![img](<./object/collapsed with overview when no diff.svg>)
-
-# max 2 props above prop diff
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-    d: true,
-  },
-  expect: {
-    a: true,
-    b: true,
-    c: true,
-    d: false,
-  },
-});
-```
-
-![img](<./object/max 2 props above prop diff.svg>)
-
-# max 2 props above prop diff and there is exactly 2
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-    d: true,
-  },
-  expect: {
-    a: true,
-    b: true,
-    c: false,
-    d: true,
-  },
-});
-```
-
-![img](<./object/max 2 props above prop diff and there is exactly 2.svg>)
-
-# max 2 props after prop diff
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-    d: true,
-  },
-  expect: {
-    a: false,
-    b: true,
-    c: true,
-    d: true,
-  },
-});
-```
-
-![img](<./object/max 2 props after prop diff.svg>)
-
-# max 2 props above after diff and there is exactly 2
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-    d: true,
-  },
-  expect: {
-    a: true,
-    b: false,
-    c: true,
-    d: true,
-  },
-});
-```
-
-![img](<./object/max 2 props above after diff and there is exactly 2.svg>)
-
-# max 2 props around prop diff
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-    d: true,
-    e: true,
-    f: true,
-    g: true,
-    h: true,
-    i: true,
-    j: true,
-    k: true,
-    l: true,
-    m: true,
-    n: true,
-    o: true,
-  },
-  expect: {
-    a: true,
-    b: true,
-    c: true,
-    d: false,
-    e: true,
-    f: true,
-    g: true,
-    h: false,
-    i: true,
-    j: true,
-    k: true,
-    l: false,
-    m: true,
-    n: true,
-    o: true,
-  },
-});
-```
-
-![img](<./object/max 2 props around prop diff.svg>)
-
-# max X diff per object
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-  },
-  expect: {
-    a: false,
-    b: false,
-    c: false,
-  },
-  maxDiffPerObject: 2,
-});
-```
-
-![img](<./object/max X diff per object.svg>)
+![img](<./object/max prop around diff.svg>)
 
 # property should be there and is big
 
@@ -375,7 +192,8 @@ assert({
       g: true,
     },
   },
-  maxColumns: 100,
+  MAX_COLUMNS: 100,
+  MAX_DIFF_PER_OBJECT: 3,
 });
 ```
 
@@ -404,104 +222,16 @@ assert({
 
 ![img](<./object/many props should not be there.svg>)
 
-# max prop in diff
+# object vs user
 
 ```js
 assert({
-  actual: {
-    foo: {
-      a: true,
-      b: true,
-      c: true,
-      d: true,
-      e: true,
-    },
-  },
+  actual: {},
   expect: {
-    foo: false,
-  },
-  maxValueInsideDiff: 2,
-});
-```
-
-![img](<./object/max prop in diff.svg>)
-
-# props order
-
-```js
-assert({
-  actual: {
-    b: true,
-    a: false,
-  },
-  expect: {
-    a: true,
-    b: false,
+    [Symbol.toStringTag]: "User",
   },
 });
 ```
 
-![img](<./object/props order.svg>)
-
-# property key truncated
-
-```js
-assert({
-  actual: {
-    "a quite long property key that will be truncated": true,
-  },
-  expect: {
-    "a quite long property key that will be truncated": false,
-  },
-  maxColumns: 40,
-});
-```
-
-![img](<./object/property key truncated.svg>)
-
-# property key multiline
-
-```js
-assert({
-  actual: {
-    "first\nsecond that is quite long": true,
-  },
-  expect: {
-    "first\nsecond that is quite long": false,
-  },
-  maxColumns: 30,
-});
-```
-
-![img](<./object/property key multiline.svg>)
-
-# nested object becomes false
-
-```js
-assert({
-  actual: false,
-  expect: {
-    a: true,
-    b: { toto: true },
-    c: true,
-  },
-});
-```
-
-![img](<./object/nested object becomes false.svg>)
-
-# osc becomes dam at property value nested
-
-```js
-assert({
-  actual: {
-    user: { name: "dam" },
-  },
-  expect: {
-    user: { name: "osc" },
-  },
-});
-```
-
-![img](<./object/osc becomes dam at property value nested.svg>)
+![img](<./object/object vs user.svg>)
 
