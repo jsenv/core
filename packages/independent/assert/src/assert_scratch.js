@@ -4,10 +4,6 @@
  * - internal value
  *   - set
  * - indexed value
- * - shortcut lorsque la actual === expect
- *   (en gros on a pas besoin de comparer inside)
- *   pour les objet on auara besoin de découvrir X props pour les render
- *   pour les primitives rien, on print la primitive tel quel
  * - functions
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
@@ -183,7 +179,7 @@ export const assert = ({
       reasons.self.removed.add(reason);
       causeSet.add(comparison);
     };
-    const renderPrimitiveDiff = (node, { columnsRemaining }) => {
+    const renderPrimitive = (node, { columnsRemaining }) => {
       let diff = "";
       if (columnsRemaining < 2) {
         diff = setColor("…", node.color);
@@ -210,7 +206,7 @@ export const assert = ({
       }
       return diff;
     };
-    const renderCompositeDiff = (node, props) => {
+    const renderComposite = (node, props) => {
       // it's here that at some point we'll compare more than just own properties
       // because composite also got a prototype
       // and a constructor that might differ
@@ -594,14 +590,14 @@ export const assert = ({
         } else {
           onSelfDiff("primitive_value");
         }
-        actualNode.render = (props) => renderPrimitiveDiff(actualNode, props);
-        expectNode.render = (props) => renderPrimitiveDiff(expectNode, props);
+        actualNode.render = (props) => renderPrimitive(actualNode, props);
+        expectNode.render = (props) => renderPrimitive(expectNode, props);
         return;
       }
       if (actualNode.isComposite) {
         subcompareChilNodesDuo(actualNode, expectNode);
-        actualNode.render = (props) => renderCompositeDiff(actualNode, props);
-        expectNode.render = (props) => renderCompositeDiff(expectNode, props);
+        actualNode.render = (props) => renderComposite(actualNode, props);
+        expectNode.render = (props) => renderComposite(expectNode, props);
         return;
       }
       if (
@@ -661,12 +657,12 @@ export const assert = ({
     const visitSolo = (node, placeholderNode) => {
       if (node.isPrimitive) {
         subcompareChildNodesSolo(node, placeholderNode);
-        node.render = (props) => renderPrimitiveDiff(node, props);
+        node.render = (props) => renderPrimitive(node, props);
         return;
       }
       if (node.isComposite) {
         subcompareChildNodesSolo(node, placeholderNode);
-        node.render = (props) => renderCompositeDiff(node, props);
+        node.render = (props) => renderComposite(node, props);
         return;
       }
       if (node.type === "internal_entries" || node.type === "own_properties") {
