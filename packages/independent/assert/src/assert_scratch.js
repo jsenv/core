@@ -515,7 +515,9 @@ export const assert = ({
           afterDiffIndex--;
         }
       }
-      return Array.from(indexToDisplaySet);
+      const indexToDisplayArray = Array.from(indexToDisplaySet);
+      indexToDisplayArray.sort();
+      return indexToDisplayArray;
     };
     const getIndexToDisplayArraySolo = (node, comparisonResultMap) => {
       const indexToDisplayArray = [];
@@ -551,9 +553,21 @@ export const assert = ({
         expectNode.type === "internal_entries" &&
         actualNode.parent.isSet &&
         expectNode.parent.isSet;
+      const isSetEntryComparison =
+        actualNode.type === "internal_entry" &&
+        expectNode.type === "internal_entry" &&
+        actualNode.parent.parent.isSet &&
+        expectNode.parent.parent.isSet;
+
       const comparisonResultMap = new Map();
       const comparisonDiffMap = new Map();
       for (let [childName, actualChildNode] of actualNode.childNodeMap) {
+        if (isSetEntryComparison) {
+          if (childName === "entry_key") {
+            continue;
+          }
+        }
+
         let expectChildNode;
         if (isSetEntriesComparison) {
           const actualSetValueNode =
@@ -588,6 +602,12 @@ export const assert = ({
         }
       }
       for (let [childName, expectChildNode] of expectNode.childNodeMap) {
+        if (isSetEntryComparison) {
+          if (childName === "entry_key") {
+            continue;
+          }
+        }
+
         if (isSetEntriesComparison) {
           const expectSetValueNode =
             expectChildNode.childNodeMap.get("entry_value");
@@ -655,7 +675,6 @@ export const assert = ({
           actualNode.hideSeparatorsWhenEmpty =
             expectNode.hideSeparatorsWhenEmpty = false;
         }
-
         const { comparisonDiffMap } = subcompareChilNodesDuo(
           actualNode,
           expectNode,

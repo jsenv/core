@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="120.82"
+      width="137.62"
       height="231.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -44,11 +44,13 @@
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">Set</text>
         <text x="102.42" y="14.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="33.55" fill="#7f7f7f">&#x22;a&#x22;</text>
-        <text x="52.01" y="33.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="52.55" fill="#7f7f7f">&#x22;b&#x22;</text>
+        <text x="26.8" y="33.55" fill="#7f7f7f">&#x2191;</text>
+        <text x="43.61" y="33.55" fill="#7f7f7f">2</text>
+        <text x="60.41" y="33.55" fill="#7f7f7f">values</text>
+        <text x="119.22" y="33.55" fill="#7f7f7f">&#x2191;</text>
+        <text x="26.8" y="52.55" fill="#7f7f7f">&#x22;c&#x22;</text>
         <text x="52.01" y="52.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">&#x22;c&#x22;</text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">&#x22;d&#x22;</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="90.55" fill="#DAA520">&#x22;Y&#x22;</text>
         <text x="52.01" y="90.55" fill="#DAA520">,</text>
@@ -56,9 +58,11 @@
         <text x="10" y="128.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="128.55" fill="#7f7f7f">Set</text>
         <text x="102.42" y="128.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="147.55" fill="#7f7f7f">&#x22;b&#x22;</text>
-        <text x="52.01" y="147.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="166.55" fill="#7f7f7f">&#x22;a&#x22;</text>
+        <text x="26.8" y="147.55" fill="#7f7f7f">&#x2191;</text>
+        <text x="43.61" y="147.55" fill="#7f7f7f">2</text>
+        <text x="60.41" y="147.55" fill="#7f7f7f">values</text>
+        <text x="119.22" y="147.55" fill="#7f7f7f">&#x2191;</text>
+        <text x="26.8" y="166.55" fill="#7f7f7f">&#x22;d&#x22;</text>
         <text x="52.01" y="166.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="185.55" fill="#7f7f7f">&#x22;c&#x22;</text>
         <text x="52.01" y="185.55" fill="#7f7f7f">,</text>

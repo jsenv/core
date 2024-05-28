@@ -1,13 +1,13 @@
 # set value added
 actual: Set(
-  "a",
-  "b",
+  ↑ 2 values ↑
   "c",
+  "d",
   "Y",
 )
 expect: Set(
-  "b",
-  "a",
+  ↑ 2 values ↑
+  "d",
   "c",
   "Z",
 )
@@ -28,20 +28,14 @@ expect: Set(
 # set collapsed various cases
 actual: {
   a: true,
-  set_without_diff: Set(
-    "a",
-    "b",
-  ),
+  set_without_diff: Set("a", "b"),
   set_with_added: Set(
     "a",
   ),
 }
 expect: {
   a: false,
-  set_without_diff: Set(
-    "b",
-    "a",
-  ),
+  set_without_diff: Set("b", "a"),
   set_with_added: Set(
     "b",
   ),
@@ -50,10 +44,7 @@ expect: {
 # set collapsed deep
 actual: {
   a: {
-    set_without_diff: Set(
-      "a",
-      "b",
-    ),
+    set_without_diff: Set("a", "b"),
     set_with_added: Set(
       "a",
     ),
@@ -61,10 +52,7 @@ actual: {
 }
 expect: {
   a: {
-    set_without_diff: Set(
-      "b",
-      "a",
-    ),
+    set_without_diff: Set("b", "a"),
     set_with_added: Set(
       "b",
     ),

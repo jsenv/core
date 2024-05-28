@@ -6,17 +6,20 @@ assert({
     "a",
     "b",
     "c",
+    "d",
     // new
     "Y",
   ]),
   expect: new Set([
     "b",
     "a",
+    "d",
     "c",
     // new
     "Z",
   ]),
   MAX_DIFF_PER_OBJECT: 4,
+  MAX_PROP_BEFORE_DIFF: 2,
 });
 ```
 
@@ -58,7 +61,6 @@ assert({
     set_without_diff: new Set(["b", "a"]),
     set_with_added: new Set(["b"]),
   },
-  maxDepthInsideDiff: 0,
 });
 ```
 
@@ -80,7 +82,6 @@ assert({
       set_with_added: new Set(["b"]),
     },
   },
-  maxDepthInsideDiff: 0,
 });
 ```
 

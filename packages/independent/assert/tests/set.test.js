@@ -8,17 +8,20 @@ await startSnapshotTesting("set", {
         "a",
         "b",
         "c",
+        "d",
         // new
         "Y",
       ]),
       expect: new Set([
         "b",
         "a",
+        "d",
         "c",
         // new
         "Z",
       ]),
       MAX_DIFF_PER_OBJECT: 4,
+      MAX_PROP_BEFORE_DIFF: 2,
     });
   },
   ["compare set and map"]: () => {
@@ -45,7 +48,6 @@ await startSnapshotTesting("set", {
         set_without_diff: new Set(["b", "a"]),
         set_with_added: new Set(["b"]),
       },
-      maxDepthInsideDiff: 0,
     });
   },
   ["set collapsed deep"]: () => {
@@ -62,7 +64,6 @@ await startSnapshotTesting("set", {
           set_with_added: new Set(["b"]),
         },
       },
-      maxDepthInsideDiff: 0,
     });
   },
 });
