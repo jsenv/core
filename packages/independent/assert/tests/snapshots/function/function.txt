@@ -2,3 +2,47 @@
 actual: async () => { [source code] }
 expect: () => { [source code] }
 
+# arrow function source modified, name same
+actual: () => {
+  [source code],
+}
+expect: () => {
+  [source code],
+}
+
+# async function vs function
+actual: async function () {
+  [source code],
+}
+expect: function () {
+  prototype: {},
+  [source code],
+}
+
+# function vs arrow function
+actual: function () {
+  prototype: {},
+  [source code],
+}
+expect: () => {
+  [source code],
+}
+
+# function source modified, name same
+actual: function () {
+  prototype: {},
+  [source code],
+}
+expect: function () {
+  prototype: {},
+  [source code],
+}
+
+# function source same, name modified
+actual: function foo () { prototype: {}, [source code] }
+expect: function bar () { prototype: {}, [source code] }
+
+# anonymous function vs named function
+actual: function () { prototype: {}, [source code] }
+expect: function foo () { prototype: {}, [source code] }
+

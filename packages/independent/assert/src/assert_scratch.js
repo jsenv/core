@@ -2,8 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - functions
- *   hum ça y est on arrive sur le truc ou
- *   une entrée s'affiche parmi la liste des own properties
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
  *   en fait si pour string par exemple on voudra s'arreter
@@ -1104,6 +1102,7 @@ let createRootNode;
       isArray: false,
       isMap: false,
       isSet: false,
+      isFunctionPrototype: false,
       // render info
       render: () => {
         throw new Error(`render not implemented for ${type}`);
@@ -1230,7 +1229,7 @@ let createRootNode;
         if (node.functionAnalysis.name) {
           node.appendChild("function_name", {
             type: "function_name",
-            value: node.functionAnalysis.nam,
+            value: node.functionAnalysis.name,
           });
         }
         if (node.functionAnalysis.type === "arrow") {
@@ -1266,10 +1265,15 @@ let createRootNode;
         }
       } else {
         node.objectType = getObjectType(value);
+        node.isFunctionPrototype =
+          type === "property_entry_value" &&
+          parent.childNodeMap.get("entry_key").value === "prototype" &&
+          parent.parent.parent.isFunction;
         if (
           node.objectType &&
           node.objectType !== "Object" &&
-          node.objectType !== "Array"
+          node.objectType !== "Array" &&
+          !node.isFunctionPrototype
         ) {
           appendObjectTypeNode(node, node.objectType);
         }
@@ -1381,8 +1385,10 @@ let createRootNode;
       if (
         type === "object_type" ||
         type === "function_async_keyword" ||
-        type === "function_body_prefix" ||
+        type === "function_keyword" ||
         type === "function_name" ||
+        type === "function_body_prefix" ||
+        type === "class_keyword" ||
         type === "class_extended_name"
       ) {
         node.useQuotes = false;

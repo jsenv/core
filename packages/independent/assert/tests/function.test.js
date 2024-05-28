@@ -33,74 +33,74 @@ await startSnapshotTesting("function", {
       expect: anonymousArrowFunction,
     });
   },
-  // ["arrow function source modified, name same"]: () => {
-  //   const anonymousArrowReturningTrue = (function () {
-  //     return () => true;
-  //   })();
-  //   const anonymousArrowReturningFalse = (function () {
-  //     return () => false;
-  //   })();
-  //   assert({
-  //     actual: anonymousArrowReturningTrue,
-  //     expect: anonymousArrowReturningFalse,
-  //   });
-  // },
-  // ["async function vs function"]: () => {
-  //   const anonymousAsyncFunction = (function () {
-  //     return async function () {};
-  //   })();
-  //   const anonymousFunction = (function () {
-  //     return function () {};
-  //   })();
-  //   assert({
-  //     actual: anonymousAsyncFunction,
-  //     expect: anonymousFunction,
-  //   });
-  // },
-  // ["function vs arrow function"]: () => {
-  //   const anonymousFunction = (function () {
-  //     return function () {};
-  //   })();
-  //   const anonymousArrowFunction = (function () {
-  //     return () => {};
-  //   })();
-  //   assert({
-  //     actual: anonymousFunction,
-  //     expect: anonymousArrowFunction,
-  //   });
-  // },
-  // ["function source modified, name same"]: () => {
-  //   const anonymousFunctionReturningTrue = (function () {
-  //     return function () {
-  //       return true;
-  //     };
-  //   })();
-  //   const anonymousFunctionReturningFalse = (function () {
-  //     return function () {
-  //       return false;
-  //     };
-  //   })();
-  //   assert({
-  //     actual: anonymousFunctionReturningTrue,
-  //     expect: anonymousFunctionReturningFalse,
-  //   });
-  // },
-  // ["function source same, name modified"]: () => {
-  //   assert({
-  //     actual: function foo() {},
-  //     expect: function bar() {},
-  //   });
-  // },
-  // ["anonymous function vs named function"]: () => {
-  //   const anonymousFunction = (function () {
-  //     return function () {};
-  //   })();
-  //   function foo() {}
-  //   assert({
-  //     actual: anonymousFunction,
-  //     expect: foo,
-  //   });
-  // },
+  ["arrow function source modified, name same"]: () => {
+    const anonymousArrowReturningTrue = (function () {
+      return () => true;
+    })();
+    const anonymousArrowReturningFalse = (function () {
+      return () => false;
+    })();
+    assert({
+      actual: anonymousArrowReturningTrue,
+      expect: anonymousArrowReturningFalse,
+    });
+  },
+  ["async function vs function"]: () => {
+    const anonymousAsyncFunction = (function () {
+      return async function () {};
+    })();
+    const anonymousFunction = (function () {
+      return function () {};
+    })();
+    assert({
+      actual: anonymousAsyncFunction,
+      expect: anonymousFunction,
+    });
+  },
+  ["function vs arrow function"]: () => {
+    const anonymousFunction = (function () {
+      return function () {};
+    })();
+    const anonymousArrowFunction = (function () {
+      return () => {};
+    })();
+    assert({
+      actual: anonymousFunction,
+      expect: anonymousArrowFunction,
+    });
+  },
+  ["function source modified, name same"]: () => {
+    const anonymousFunctionReturningTrue = (function () {
+      return function () {
+        return true;
+      };
+    })();
+    const anonymousFunctionReturningFalse = (function () {
+      return function () {
+        return false;
+      };
+    })();
+    assert({
+      actual: anonymousFunctionReturningTrue,
+      expect: anonymousFunctionReturningFalse,
+    });
+  },
+  ["function source same, name modified"]: () => {
+    assert({
+      actual: function foo() {},
+      expect: function bar() {},
+    });
+  },
+  ["anonymous function vs named function"]: () => {
+    const anonymousFunction = (function () {
+      return function () {};
+    })();
+    function foo() {}
+    assert({
+      actual: anonymousFunction,
+      expect: foo,
+    });
+  },
   // ["number of diff when comparing async function and function"]: () => {
   //   const anonymousAsyncFunction = (function () {
   //     return async function () {};
