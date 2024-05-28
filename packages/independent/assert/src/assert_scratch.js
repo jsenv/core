@@ -267,18 +267,12 @@ export const assert = ({
       return diff;
     };
 
-    const renderEntryArray = (node, props, { indexToDisplayArray }) => {
-      if (indexToDisplayArray.length === 0) {
-        return renderEntryArrayOneLiner(node, props);
-      }
-      return renderEntryArrayMultiline(node, props, { indexToDisplayArray });
-    };
     const renderEntryArrayOneLiner = (node, props) => {
       const { startSeparator, endSeparator } = node;
 
       const entryKeys = node.value;
       if (entryKeys.length === 0) {
-        return `${startSeparator}${endSeparator}`;
+        return setColor(`${startSeparator}${endSeparator}`, node.color);
       }
       let columnsRemaining = props.columnsRemaining;
       let boilerplate = `${startSeparator} ... ${endSeparator}`;
@@ -393,17 +387,18 @@ export const assert = ({
           appendSkippedEntries(lastSkippedCount, `↓`);
         }
       }
+      const { startSeparator, endSeparator } = node;
       if (atLeastOneEntryDisplayed) {
-        diff += setColor(node.startSeparator, node.color);
+        diff += setColor(startSeparator, node.color);
         diff += "\n";
         diff += entriesDiff;
         diff += "\n";
         diff += "  ".repeat(getNodeDepth(node));
-        diff += setColor(node.endSeparator, node.color);
+        diff += setColor(endSeparator, node.color);
       } else if (props.hideSeparatorsWhenEmpty) {
       } else {
-        diff += setColor(node.startSeparator, node.color);
-        diff += setColor(node.endSeparator, node.color);
+        diff += setColor(startSeparator, node.color);
+        diff += setColor(endSeparator, node.color);
       }
       return diff;
     };
@@ -444,6 +439,9 @@ export const assert = ({
         return [];
       }
       const entryKeys = node.value;
+      if (entryKeys.length === 0) {
+        return [];
+      }
       const diffIndexArray = [];
       for (const [entryKey] of comparisonDiffMap) {
         const entryIndex = entryKeys.indexOf(entryKey);
@@ -452,6 +450,11 @@ export const assert = ({
         } else {
           diffIndexArray.push(entryIndex);
         }
+      }
+      if (diffIndexArray.length === 0) {
+        // happens when one node got no diff in itself
+        // it's the other that has a diff (added or removed)
+        return [0];
       }
       diffIndexArray.sort();
       const indexToDisplaySet = new Set();
@@ -585,15 +588,22 @@ export const assert = ({
           actualNode,
           expectNode,
         );
+        if (comparisonDiffMap.size === 0) {
+          actualNode.render = (props) =>
+            renderEntryArrayOneLiner(actualNode, props);
+          expectNode.render = (props) =>
+            renderEntryArrayOneLiner(expectNode, props);
+          return;
+        }
         actualNode.render = (props) =>
-          renderEntryArray(actualNode, props, {
+          renderEntryArrayMultiline(actualNode, props, {
             indexToDisplayArray: getIndexToDisplayArrayDuo(
               actualNode,
               comparisonDiffMap,
             ),
           });
         expectNode.render = (props) =>
-          renderEntryArray(expectNode, props, {
+          renderEntryArrayMultiline(expectNode, props, {
             indexToDisplayArray: getIndexToDisplayArrayDuo(
               expectNode,
               comparisonDiffMap,
@@ -629,7 +639,7 @@ export const assert = ({
           placeholderNode,
         );
         node.render = (props) =>
-          renderEntryArray(node, props, {
+          renderEntryArrayMultiline(node, props, {
             indexToDisplayArray: getIndexToDisplayArraySolo(
               node,
               comparisonResultMap,
@@ -934,9 +944,6 @@ let createRootNode;
     if (type === "own_properties") {
       node.startSeparator = "{";
       node.endSeparator = "}";
-      for (const ownPropertyName of value) {
-        appendOwnPropertyNode(node, ownPropertyName);
-      }
       return node;
     }
     if (type === "internal_entry") {
@@ -998,28 +1005,26 @@ let createRootNode;
         }
         if (parentConstructor.name === "Set") {
           node.isSet = true;
+          const setInternalEntriesNode = appendInternalEntriesNode(node);
+          let index = 0;
+          for (const [, setValue] of value) {
+            appendInternalEntryNode(setInternalEntriesNode, index, setValue);
+            index++;
+          }
         }
       });
-      if (node.isSet) {
-        const internalEntryNode = appendInternalEntriesNode(node);
-        const internalEntryKeys = [];
-        let index = 0;
-        for (const [, setValue] of value) {
-          internalEntryKeys.push(index);
-          appendInternalEntryNode(internalEntryNode, index, setValue);
-          index++;
-        }
-        internalEntryNode.value = internalEntryKeys;
-      }
       // own properties
-      const ownPropertyNames = [];
+      const ownPropertiesNode = appendOwnPropertiesNode(node);
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
         if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
           continue;
         }
-        ownPropertyNames.push(ownPropertyName);
+        appendOwnPropertyNode(
+          ownPropertiesNode,
+          ownPropertyName,
+          value[ownPropertyName],
+        );
       }
-      appendOwnPropertiesNode(node, ownPropertyNames);
       return node;
     }
     if (typeofResult === "function") {
@@ -1094,10 +1099,12 @@ const appendInternalEntriesNode = (node) => {
   const internalEntriesNode = node.appendChild("internal_entries", {
     type: "internal_entries",
     isContainer: true,
+    value: [],
   });
   return internalEntriesNode;
 };
 const appendInternalEntryNode = (node, key, value) => {
+  node.value.push(key);
   const internalEntryNode = node.appendChild(key, {
     type: "internal_entry",
     isContainer: true,
@@ -1113,15 +1120,16 @@ const appendInternalEntryNode = (node, key, value) => {
   });
   return internalEntryNode;
 };
-const appendOwnPropertiesNode = (node, ownPropertyNames) => {
+const appendOwnPropertiesNode = (node) => {
   const ownPropertiesNode = node.appendChild("own_properties", {
     type: "own_properties",
     isContainer: true,
-    value: ownPropertyNames,
+    value: [],
   });
   return ownPropertiesNode;
 };
-const appendOwnPropertyNode = (node, ownPropertyName) => {
+const appendOwnPropertyNode = (node, ownPropertyName, ownPropertyValue) => {
+  node.value.push(ownPropertyName);
   const ownPropertyNode = node.appendChild(ownPropertyName, {
     type: "own_property",
     isContainer: true,
@@ -1133,7 +1141,7 @@ const appendOwnPropertyNode = (node, ownPropertyName) => {
   });
   ownPropertyNode.appendChild("entry_value", {
     type: "own_property_value",
-    value: node.parent.value[ownPropertyName],
+    value: ownPropertyValue,
   });
   return ownPropertyNode;
 };

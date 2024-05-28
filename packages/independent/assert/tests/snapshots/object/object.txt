@@ -9,7 +9,9 @@ expect: {
 }
 
 # property removed
-actual: { a: true }
+actual: {
+  a: true,
+}
 expect: {
   a: true,
   should_be_there: true,
@@ -20,7 +22,9 @@ actual: {
   a: true,
   should_not_be_there: true,
 }
-expect: { a: true }
+expect: {
+  a: true,
+}
 
 # false should be an object
 actual: false
@@ -97,7 +101,9 @@ expect: {
 }
 
 # property should be there and is big
-actual: { a: true }
+actual: {
+  a: true,
+}
 expect: {
   a: true,
   should_be_there: {
