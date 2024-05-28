@@ -2,8 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - internal value
- *   remove Diff suffix from renderers
- *   likely merge internal entries with properties
  *   - set
  *   - map
  * - indexed value
@@ -85,6 +83,14 @@ const setColor = (text, color) => {
     return text;
   }
   return ANSI.color(text, color);
+};
+const measureLastLineColumns = (string) => {
+  if (string.includes("\n")) {
+    const lines = string.split("\n");
+    const lastLine = lines[lines.length - 1];
+    return stringWidth(lastLine);
+  }
+  return stringWidth(string);
 };
 
 export const assert = ({
@@ -238,30 +244,34 @@ export const assert = ({
       if (objectTypeNode) {
         diff += objectTypeNode.render(props);
         diff += " ";
-        columnsRemaining -= stringWidth(diff);
+        columnsRemaining -= measureLastLineColumns(diff);
       }
-      const wrappedValueNode = getWrappedValueNode(node);
-      if (wrappedValueNode) {
+      const constructorCallNode = node.childNodeMap.get("constructor_call");
+      if (constructorCallNode) {
         columnsRemaining -= "()".length;
-        const wrappedValueDiff = wrappedValueNode.render({
+        const firstArgNode = constructorCallNode.childNodeMap.get("0");
+        const firstArgDiff = firstArgNode.render({
           ...props,
           columnsRemaining,
         });
-        columnsRemaining -= stringWidth(wrappedValueDiff); // TODO: take into "\n"
+        columnsRemaining -= measureLastLineColumns(firstArgDiff);
         diff += setColor("(", node.color);
-        diff += wrappedValueDiff;
+        diff += firstArgDiff;
         diff += setColor(")", node.color);
         diff += " ";
         columnsRemaining -= " ".length;
       }
       if (internalEntriesNode) {
-        diff += internalEntriesNode.render();
+        diff += internalEntriesNode.render({
+          ...props,
+          columnsRemaining,
+        });
         diff += " ";
       }
       const ownPropertiesDiff = ownPropertiesNode.render({
         ...props,
         columnsRemaining,
-        hideSeparatorsWhenEmpty: objectTypeNode || wrappedValueNode,
+        hideSeparatorsWhenEmpty: objectTypeNode || constructorCallNode,
       });
       diff += ownPropertiesDiff;
       return diff;
@@ -289,7 +299,7 @@ export const assert = ({
           columnsRemaining,
         });
         entryNode.endSeparator = entryEndSeparator;
-        const entryDiffWidth = stringWidth(entryDiff);
+        const entryDiffWidth = measureLastLineColumns(entryDiff);
         if (entryDiffWidth > columnsRemaining) {
           if (lastEntryDisplayed) {
             diff += setColor(startSeparator, node.color);
@@ -323,6 +333,9 @@ export const assert = ({
       props,
       { indexToDisplayArray },
     ) => {
+      if (!props) {
+        debugger;
+      }
       let atLeastOneEntryDisplayed = false;
       let diff = "";
       let entriesDiff = "";
@@ -416,7 +429,7 @@ export const assert = ({
       });
       entryDiff += entryNameDiff;
       let columnsRemainingForValue =
-        columnsRemaining - stringWidth(entryNameDiff);
+        columnsRemaining - measureLastLineColumns(entryNameDiff);
       if (columnsRemainingForValue > `${middleSeparator} `.length) {
         entryDiff += setColor(middleSeparator, node.color);
         entryDiff += " ";
@@ -620,6 +633,10 @@ export const assert = ({
         expectNode.render = (props) => renderEntry(expectNode, props);
         return;
       }
+      if (actualNode.isContainer) {
+        subcompareChilNodesDuo(actualNode, expectNode);
+        return;
+      }
       throw new Error("wtf");
     };
     const visitSolo = (node, placeholderNode) => {
@@ -650,6 +667,10 @@ export const assert = ({
       if (node.type === "internal_entry" || node.type === "own_property") {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderEntry(node, props);
+        return;
+      }
+      if (node.isContainer) {
+        subcompareChildNodesSolo(node, placeholderNode);
         return;
       }
       throw new Error("wtf");
@@ -915,8 +936,10 @@ let createRootNode;
       isString: false,
       isSymbol: false,
       // info/composite
-      isSet: false,
       objectType: "",
+      isFunction: false,
+      isMap: false,
+      isSet: false,
       // render info
       render: () => {
         throw new Error(`render not implemented for ${type}`);
@@ -954,6 +977,11 @@ let createRootNode;
     if (type === "own_property") {
       node.middleSeparator = ":";
       node.endSeparator = ",";
+      return node;
+    }
+    if (type === "constructor_call") {
+      node.startSeparator = "(";
+      node.endSeparator = ")";
       return node;
     }
     if (isContainer) {
@@ -995,12 +1023,30 @@ let createRootNode;
         typeof value.valueOf === "function" &&
         value.valueOf !== Object.prototype.valueOf
       ) {
+        const constructorCallNode = appendConstructorCallNode(node);
         const valueOfReturnValue = value.valueOf();
-        appendValueOfReturnValueNode(node, valueOfReturnValue);
+        constructorCallNode.appendChild("0", {
+          type: "value_of_return_value",
+          value: valueOfReturnValue,
+          path: node.path.append("valueOf()"),
+          depth: node.depth,
+        });
       }
       visitObjectPrototypes(value, (proto) => {
         const parentConstructor = proto.constructor;
         if (!parentConstructor) {
+          return;
+        }
+        if (parentConstructor.name === "Map") {
+          node.isMap = true;
+          const mapInternalEntriesNode = appendInternalEntriesNode(node);
+          for (const [mapEntryKey, mapEntryValue] of value) {
+            appendInternalEntryNode(
+              mapInternalEntriesNode,
+              mapEntryKey,
+              mapEntryValue,
+            );
+          }
           return;
         }
         if (parentConstructor.name === "Set") {
@@ -1011,6 +1057,7 @@ let createRootNode;
             appendInternalEntryNode(setInternalEntriesNode, index, setValue);
             index++;
           }
+          return;
         }
       });
       // own properties
@@ -1074,9 +1121,6 @@ const asPrimitiveNode = (node) => {
   }
   return null;
 };
-const getWrappedValueNode = (node) => {
-  return node.childNodeMap.get("value_of_return_value");
-};
 const appendObjectTypeNode = (node, objectType) => {
   const objectTypeNode = node.appendChild("object_type", {
     type: "object_type",
@@ -1086,15 +1130,15 @@ const appendObjectTypeNode = (node, objectType) => {
   });
   return objectTypeNode;
 };
-const appendValueOfReturnValueNode = (node, valueOfReturnValue) => {
-  const valueOfReturnValueNode = node.appendChild("value_of_return_value", {
-    type: "value_of_return_value",
-    value: valueOfReturnValue,
-    path: node.path.append("valueOf()"),
+const appendConstructorCallNode = (node) => {
+  return node.appendChild("constructor_call", {
+    type: "constructor_call",
+    isContainer: true,
+    path: node.path,
     depth: node.depth,
   });
-  return valueOfReturnValueNode;
 };
+
 const appendInternalEntriesNode = (node) => {
   const internalEntriesNode = node.appendChild("internal_entries", {
     type: "internal_entries",
@@ -1217,7 +1261,8 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
     return node.isError;
   }
   if (ownPropertyName === "valueOf") {
-    return Boolean(node.childNodeMap.has("value_of_return_value"));
+    const constructorCallNode = node.childNodeMap.get("constructor_call");
+    return constructorCallNode && constructorCallNode.childNodeMap.has("0");
   }
   if (ownPropertyName === "toString") {
     return false;
