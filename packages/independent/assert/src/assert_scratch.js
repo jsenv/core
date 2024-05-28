@@ -3,7 +3,6 @@
  *
  * - internal value
  *   - set
- *   - map
  * - indexed value
  * - shortcut lorsque la actual === expect
  *   (en gros on a pas besoin de comparer inside)
@@ -243,18 +242,18 @@ export const assert = ({
       const objectTypeNode = node.childNodeMap.get("object_type");
       if (objectTypeNode) {
         diff += objectTypeNode.render(props);
-        diff += " ";
         columnsRemaining -= measureLastLineColumns(diff);
       }
       const constructorCallNode = node.childNodeMap.get("constructor_call");
       if (constructorCallNode) {
-        columnsRemaining -= "()".length;
+        columnsRemaining -= " ()".length;
         const firstArgNode = constructorCallNode.childNodeMap.get("0");
         const firstArgDiff = firstArgNode.render({
           ...props,
           columnsRemaining,
         });
         columnsRemaining -= measureLastLineColumns(firstArgDiff);
+        diff += " ";
         diff += setColor("(", node.color);
         diff += firstArgDiff;
         diff += setColor(")", node.color);
@@ -262,16 +261,21 @@ export const assert = ({
         columnsRemaining -= " ".length;
       }
       if (internalEntriesNode) {
-        diff += internalEntriesNode.render({
+        const internalEntriesDiff = internalEntriesNode.render({
           ...props,
           columnsRemaining,
         });
+        diff += internalEntriesDiff;
+        columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
         diff += " ";
+        columnsRemaining -= " ".length;
       }
       const ownPropertiesDiff = ownPropertiesNode.render({
         ...props,
         columnsRemaining,
-        hideSeparatorsWhenEmpty: objectTypeNode || constructorCallNode,
+        hideSeparatorsWhenEmpty: Boolean(
+          objectTypeNode || constructorCallNode || internalEntriesNode,
+        ),
       });
       diff += ownPropertiesDiff;
       return diff;
@@ -282,6 +286,9 @@ export const assert = ({
 
       const entryKeys = node.value;
       if (entryKeys.length === 0) {
+        if (props.hideSeparatorsWhenEmpty) {
+          return "";
+        }
         return setColor(`${startSeparator}${endSeparator}`, node.color);
       }
       let columnsRemaining = props.columnsRemaining;
@@ -416,7 +423,7 @@ export const assert = ({
       return diff;
     };
     const renderEntry = (node, props) => {
-      const { middleSeparator, endSeparator } = node;
+      const { endSeparator } = node;
       let entryDiff = "";
       let columnsRemaining = props.columnsRemaining;
       const entryKeyNode = node.childNodeMap.get("entry_key");
@@ -430,10 +437,11 @@ export const assert = ({
       entryDiff += entryNameDiff;
       let columnsRemainingForValue =
         columnsRemaining - measureLastLineColumns(entryNameDiff);
-      if (columnsRemainingForValue > `${middleSeparator} `.length) {
+      const { middleSeparator } = node;
+
+      if (columnsRemainingForValue > middleSeparator.length) {
         entryDiff += setColor(middleSeparator, node.color);
-        entryDiff += " ";
-        columnsRemainingForValue -= `${middleSeparator} `.length;
+        columnsRemainingForValue -= middleSeparator.length;
         const entryValueNode = node.childNodeMap.get("entry_value");
         entryDiff += entryValueNode.render({
           ...props,
@@ -970,12 +978,12 @@ let createRootNode;
       return node;
     }
     if (type === "internal_entry") {
-      node.middleSeparator = "=>";
+      node.middleSeparator = " => ";
       node.endSeparator = ",";
       return node;
     }
     if (type === "own_property") {
-      node.middleSeparator = ":";
+      node.middleSeparator = ": ";
       node.endSeparator = ",";
       return node;
     }
