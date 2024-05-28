@@ -1,15 +1,15 @@
 # 10 vs Object(10)
 actual: 10
-expect: (10) 
+expect: (10)
 
 # Object(10) vs 10
-actual: (10) 
+actual: (10)
 expect: 10
 
 # Object({ a: true }) vs { a: true }
 actual: ({
   a: true,
-}) 
+})
 expect: {
   a: false,
 }

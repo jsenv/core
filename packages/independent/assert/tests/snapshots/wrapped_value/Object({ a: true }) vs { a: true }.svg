@@ -45,7 +45,7 @@
         <text x="77.21" y="14.55" fill="#7f7f7f">(</text>
         <text x="85.61" y="14.55" fill="#DAA520">{</text>
         <text x="26.8" y="33.55" fill="#DAA520">a</text>
-        <text x="35.2" y="33.55" fill="#DAA520">:</text>
+        <text x="35.2" y="33.55" fill="#DAA520">: </text>
         <text x="52.01" y="33.55" fill="#DAA520">true</text>
         <text x="85.61" y="33.55" fill="#DAA520">,</text>
         <text x="10" y="52.55" fill="#DAA520">}</text>
@@ -53,7 +53,7 @@
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="90.55" fill="#DAA520">a</text>
-        <text x="35.2" y="90.55" fill="#DAA520">:</text>
+        <text x="35.2" y="90.55" fill="#DAA520">: </text>
         <text x="52.01" y="90.55" fill="#DAA520">false</text>
         <text x="94.01" y="90.55" fill="#DAA520">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>

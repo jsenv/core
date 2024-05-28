@@ -241,34 +241,34 @@ export const assert = ({
       let columnsRemaining = props.columnsRemaining;
       const objectTypeNode = node.childNodeMap.get("object_type");
       if (objectTypeNode) {
-        diff += objectTypeNode.render(props);
-        columnsRemaining -= measureLastLineColumns(diff);
+        const objectTypeDiff = objectTypeNode.render(props);
+        columnsRemaining -= measureLastLineColumns(objectTypeDiff);
+        diff += objectTypeDiff;
       }
       const constructorCallNode = node.childNodeMap.get("constructor_call");
       if (constructorCallNode) {
-        columnsRemaining -= " ()".length;
+        if (diff) {
+          columnsRemaining -= " ".length;
+          diff += " ";
+        }
+        columnsRemaining -= "()".length;
         const firstArgNode = constructorCallNode.childNodeMap.get("0");
         const firstArgDiff = firstArgNode.render({
           ...props,
           columnsRemaining,
         });
         columnsRemaining -= measureLastLineColumns(firstArgDiff);
-        diff += " ";
         diff += setColor("(", node.color);
         diff += firstArgDiff;
         diff += setColor(")", node.color);
-        diff += " ";
-        columnsRemaining -= " ".length;
       }
       if (internalEntriesNode) {
         const internalEntriesDiff = internalEntriesNode.render({
           ...props,
           columnsRemaining,
         });
-        diff += internalEntriesDiff;
         columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
-        diff += " ";
-        columnsRemaining -= " ".length;
+        diff += internalEntriesDiff;
       }
       const ownPropertiesDiff = ownPropertiesNode.render({
         ...props,
@@ -277,7 +277,13 @@ export const assert = ({
           objectTypeNode || constructorCallNode || internalEntriesNode,
         ),
       });
-      diff += ownPropertiesDiff;
+      if (ownPropertiesDiff) {
+        if (diff) {
+          columnsRemaining -= " ".length;
+          diff += " ";
+        }
+        diff += ownPropertiesDiff;
+      }
       return diff;
     };
 

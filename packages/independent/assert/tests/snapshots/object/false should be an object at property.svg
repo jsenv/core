@@ -44,17 +44,17 @@
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="33.55" fill="#7f7f7f">foo</text>
-        <text x="52.01" y="33.55" fill="#7f7f7f">:</text>
+        <text x="52.01" y="33.55" fill="#7f7f7f">: </text>
         <text x="68.81" y="33.55" fill="#cd5555">false</text>
         <text x="110.82" y="33.55" fill="#7f7f7f">,</text>
         <text x="10" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="90.55" fill="#7f7f7f">foo</text>
-        <text x="52.01" y="90.55" fill="#7f7f7f">:</text>
+        <text x="52.01" y="90.55" fill="#7f7f7f">: </text>
         <text x="68.81" y="90.55" fill="#11bc79">{</text>
         <text x="43.61" y="109.55" fill="#11bc79">a</text>
-        <text x="52.01" y="109.55" fill="#11bc79">:</text>
+        <text x="52.01" y="109.55" fill="#11bc79">: </text>
         <text x="68.81" y="109.55" fill="#11bc79">true</text>
         <text x="102.42" y="109.55" fill="#11bc79">,</text>
         <text x="26.8" y="128.55" fill="#11bc79">}</text>
