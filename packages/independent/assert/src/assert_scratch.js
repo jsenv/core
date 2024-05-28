@@ -1361,9 +1361,10 @@ let createRootNode;
           node.childNodeMap.has("internal_entries") ||
           canHaveIndexedEntries;
         for (const ownPropertyName of ownPropertyNames) {
+          const ownPropertyValue = value[ownPropertyName];
           appendPropertyEntryNode(propertyEntriesNode, {
             key: ownPropertyName,
-            value: value[ownPropertyName],
+            value: ownPropertyValue,
           });
         }
         if (node.isFunction) {
@@ -1552,9 +1553,6 @@ const appendPropertyEntryNode = (
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
   if (ownPropertyName === "prototype") {
-    if (node.isFunction) {
-      return false;
-    }
     // ignore prototype if it's the default prototype
     // created by the runtime
     const ownPropertyDescriptor = Object.getOwnPropertyDescriptor(

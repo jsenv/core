@@ -11,17 +11,11 @@ expect: () => {
 }
 
 # async function vs function
-actual: async function () {
-  [source code],
-}
-expect: function () {
-  prototype: {},
-  [source code],
-}
+actual: async function () { [source code] }
+expect: function () { [source code] }
 
 # function vs arrow function
 actual: function () {
-  prototype: {},
   [source code],
 }
 expect: () => {
@@ -30,19 +24,54 @@ expect: () => {
 
 # function source modified, name same
 actual: function () {
-  prototype: {},
   [source code],
 }
 expect: function () {
-  prototype: {},
   [source code],
 }
 
 # function source same, name modified
-actual: function foo () { prototype: {}, [source code] }
-expect: function bar () { prototype: {}, [source code] }
+actual: function foo () { [source code] }
+expect: function bar () { [source code] }
 
 # anonymous function vs named function
-actual: function () { prototype: {}, [source code] }
-expect: function foo () { prototype: {}, [source code] }
+actual: function () { [source code] }
+expect: function foo () { [source code] }
+
+# number of diff when comparing async function and function
+actual: {
+  a: async function () { [source code] },
+  b: true,
+}
+expect: {
+  a: function () { [source code] },
+  b: false,
+}
+
+# function prototype modified
+actual: function Foo () {
+  prototype: {
+    a: true,
+    b: false,
+  },
+  [source code],
+}
+expect: function Bar () {
+  prototype: {
+    a: true,
+    b: true,
+  },
+  [source code],
+}
+
+# function prototype added
+actual: function Foo () {
+  [source code],
+}
+expect: function Bar () {
+  prototype: {
+    a: true,
+  },
+  [source code],
+}
 

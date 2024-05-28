@@ -101,45 +101,45 @@ await startSnapshotTesting("function", {
       expect: foo,
     });
   },
-  // ["number of diff when comparing async function and function"]: () => {
-  //   const anonymousAsyncFunction = (function () {
-  //     return async function () {};
-  //   })();
-  //   const anonymousFunction = (function () {
-  //     return function () {};
-  //   })();
-  //   assert({
-  //     actual: {
-  //       a: anonymousAsyncFunction,
-  //       b: true,
-  //     },
-  //     expect: {
-  //       a: anonymousFunction,
-  //       b: false,
-  //     },
-  //   });
-  // },
-  // ["function prototype modified"]: () => {
-  //   function Foo() {}
-  //   Foo.prototype.a = true;
-  //   Foo.prototype.b = false;
-  //   function Bar() {}
-  //   Bar.prototype.a = true;
-  //   Bar.prototype.b = true;
-  //   assert({
-  //     actual: Foo,
-  //     expect: Bar,
-  //   });
-  // },
-  // ["function prototype added"]: () => {
-  //   function Foo() {}
-  //   function Bar() {}
-  //   Bar.prototype.a = true;
-  //   assert({
-  //     actual: Foo,
-  //     expect: Bar,
-  //   });
-  // },
+  ["number of diff when comparing async function and function"]: () => {
+    const anonymousAsyncFunction = (function () {
+      return async function () {};
+    })();
+    const anonymousFunction = (function () {
+      return function () {};
+    })();
+    assert({
+      actual: {
+        a: anonymousAsyncFunction,
+        b: true,
+      },
+      expect: {
+        a: anonymousFunction,
+        b: false,
+      },
+    });
+  },
+  ["function prototype modified"]: () => {
+    function Foo() {}
+    Foo.prototype.a = true;
+    Foo.prototype.b = false;
+    function Bar() {}
+    Bar.prototype.a = true;
+    Bar.prototype.b = true;
+    assert({
+      actual: Foo,
+      expect: Bar,
+    });
+  },
+  ["function prototype added"]: () => {
+    function Foo() {}
+    function Bar() {}
+    Bar.prototype.a = true;
+    assert({
+      actual: Foo,
+      expect: Bar,
+    });
+  },
   // ["class vs function"]: () => {
   //   assert({
   //     actual: class {},

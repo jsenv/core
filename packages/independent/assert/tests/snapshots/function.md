@@ -113,3 +113,57 @@ assert({
 
 ![img](<./function/anonymous function vs named function.svg>)
 
+# number of diff when comparing async function and function
+
+```js
+const anonymousAsyncFunction = (function () {
+  return async function () {};
+})();
+const anonymousFunction = (function () {
+  return function () {};
+})();
+assert({
+  actual: {
+    a: anonymousAsyncFunction,
+    b: true,
+  },
+  expect: {
+    a: anonymousFunction,
+    b: false,
+  },
+});
+```
+
+![img](<./function/number of diff when comparing async function and function.svg>)
+
+# function prototype modified
+
+```js
+function Foo() {}
+Foo.prototype.a = true;
+Foo.prototype.b = false;
+function Bar() {}
+Bar.prototype.a = true;
+Bar.prototype.b = true;
+assert({
+  actual: Foo,
+  expect: Bar,
+});
+```
+
+![img](<./function/function prototype modified.svg>)
+
+# function prototype added
+
+```js
+function Foo() {}
+function Bar() {}
+Bar.prototype.a = true;
+assert({
+  actual: Foo,
+  expect: Bar,
+});
+```
+
+![img](<./function/function prototype added.svg>)
+
