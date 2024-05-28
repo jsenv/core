@@ -1,9 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - internal value
- *   - set
- * - indexed value
  * - functions
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
@@ -71,6 +68,7 @@ const PLACEHOLDER_FOR_NOTHING = {
 const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
   placeholder: "added_or_removed",
 };
+const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -212,6 +210,7 @@ export const assert = ({
       // and a constructor that might differ
       let diff = "";
       const internalEntriesNode = node.childNodeMap.get("internal_entries");
+      const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
       const ownPropertiesNode = node.childNodeMap.get("own_properties");
       const propertyNameCount = ownPropertiesNode.value.length;
       if (props.columnsRemaining < 2) {
@@ -265,6 +264,18 @@ export const assert = ({
         });
         columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
         diff += internalEntriesDiff;
+      }
+      if (indexedEntriesNode) {
+        if (diff) {
+          columnsRemaining -= " ".length;
+          diff += " ";
+        }
+        const indexedEntriesDiff = indexedEntriesNode.render({
+          ...props,
+          columnsRemaining,
+        });
+        columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
+        diff += indexedEntriesDiff;
       }
       const ownPropertiesDiff = ownPropertiesNode.render({
         ...props,
@@ -666,6 +677,7 @@ export const assert = ({
       }
       if (
         actualNode.type === "internal_entries" ||
+        actualNode.type === "indexed_entries" ||
         actualNode.type === "own_properties"
       ) {
         if (
@@ -704,6 +716,7 @@ export const assert = ({
       }
       if (
         actualNode.type === "internal_entry" ||
+        actualNode.type === "indexed_entry" ||
         actualNode.type === "own_property"
       ) {
         subcompareChilNodesDuo(actualNode, expectNode);
@@ -728,7 +741,11 @@ export const assert = ({
         node.render = (props) => renderComposite(node, props);
         return;
       }
-      if (node.type === "internal_entries" || node.type === "own_properties") {
+      if (
+        node.type === "internal_entries" ||
+        node.type === "indexed_entries" ||
+        node.type === "own_properties"
+      ) {
         const comparisonResultMap = subcompareChildNodesSolo(
           node,
           placeholderNode,
@@ -742,7 +759,11 @@ export const assert = ({
           });
         return;
       }
-      if (node.type === "internal_entry" || node.type === "own_property") {
+      if (
+        node.type === "internal_entry" ||
+        node.type === "indexed_entry" ||
+        node.type === "own_property"
+      ) {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderEntry(node, props);
         return;
@@ -1013,10 +1034,12 @@ let createRootNode;
       // info/primitive
       isUndefined: false,
       isString: false,
+      isNumber: false,
       isSymbol: false,
       // info/composite
       objectType: "",
       isFunction: false,
+      isArray: false,
       isMap: false,
       isSet: false,
       // render info
@@ -1046,6 +1069,11 @@ let createRootNode;
       node.endSeparator = ")";
       return node;
     }
+    if (type === "indexed_entries") {
+      node.startSeparator = "[";
+      node.endSeparator = "]";
+      return node;
+    }
     if (type === "own_properties") {
       node.startSeparator = "{";
       node.endSeparator = "}";
@@ -1054,6 +1082,10 @@ let createRootNode;
     }
     if (type === "internal_entry") {
       node.middleSeparator = " => ";
+      node.endSeparator = ",";
+      return node;
+    }
+    if (type === "indexed_entry") {
       node.endSeparator = ",";
       return node;
     }
@@ -1068,6 +1100,11 @@ let createRootNode;
       return node;
     }
     if (isContainer) {
+      return node;
+    }
+    if (type === "indexed_entry_key") {
+      node.isPrimitive = true;
+      node.isNumber = true;
       return node;
     }
     if (type === "own_property_name") {
@@ -1115,6 +1152,8 @@ let createRootNode;
           depth: node.depth,
         });
       }
+      const propertyNameToIgnoreSet = new Set();
+      // internal and indexed entries
       visitObjectPrototypes(value, (proto) => {
         const parentConstructor = proto.constructor;
         if (!parentConstructor) {
@@ -1129,6 +1168,21 @@ let createRootNode;
               mapEntryKey,
               mapEntryValue,
             );
+          }
+          return;
+        }
+        if (parentConstructor.name === "Array") {
+          node.isArray = true;
+          const arrayIndexedEntriesNode = appendIndexedEntriesNode(node);
+          let index = 0;
+          while (index < value.length) {
+            propertyNameToIgnoreSet.add(String(index));
+            appendIndexedEntryNode(
+              arrayIndexedEntriesNode,
+              index,
+              Object.hasOwn(value, index) ? value[index] : ARRAY_EMPTY_VALUE,
+            );
+            index++;
           }
           return;
         }
@@ -1154,9 +1208,13 @@ let createRootNode;
       ownPropertiesNode.hideSeparatorsWhenEmpty =
         node.childNodeMap.has("object_type") ||
         node.childNodeMap.has("constructor_call") ||
-        node.childNodeMap.has("internal_entries");
+        node.childNodeMap.has("internal_entries") ||
+        node.childNodeMap.has("indexed_entries");
       for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
-        if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
+        if (
+          propertyNameToIgnoreSet.has(ownPropertyName) ||
+          shouldIgnoreOwnPropertyName(node, ownPropertyName)
+        ) {
           continue;
         }
         appendOwnPropertyNode(
@@ -1190,14 +1248,23 @@ let createRootNode;
 }
 
 const getAddedOrRemovedReason = (node) => {
-  if (node.type === "internal_entry" || node.type === "own_property") {
+  if (
+    node.type === "internal_entry" ||
+    node.type === "indexed_entry" ||
+    node.type === "own_property"
+  ) {
     return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
   }
-  if (node.type === "internal_entry_key" || node.type === "own_property_name") {
+  if (
+    node.type === "internal_entry_key" ||
+    node.type === "indexed_entry_key" ||
+    node.type === "own_property_name"
+  ) {
     return node.value;
   }
   if (
     node.type === "internal_entry_value" ||
+    node.type === "indexed_entry_value" ||
     node.type === "own_property_value"
   ) {
     return getAddedOrRemovedReason(node.parent);
@@ -1256,6 +1323,32 @@ const appendInternalEntryNode = (node, key, value) => {
     value,
   });
   return internalEntryNode;
+};
+const appendIndexedEntriesNode = (node) => {
+  const indexedEntriesNode = node.appendChild("indexed_entries", {
+    type: "indexed_entries",
+    isContainer: true,
+    value: [],
+  });
+  return indexedEntriesNode;
+};
+const appendIndexedEntryNode = (node, index, value) => {
+  node.value.push(index);
+  const indexedEntryNode = node.appendChild(index, {
+    type: "indexed_entry",
+    isContainer: true,
+    path: node.path.append(index, { isIndexedEntry: true }),
+  });
+  const indexedEntryKeyNode = indexedEntryNode.appendChild("entry_key", {
+    type: "indexed_entry_key",
+    value: index,
+  });
+  indexedEntryKeyNode.hidden = true;
+  indexedEntryNode.appendChild("entry_value", {
+    type: "indexed_entry_value",
+    value,
+  });
+  return indexedEntryNode;
 };
 const appendOwnPropertiesNode = (node) => {
   const ownPropertiesNode = node.appendChild("own_properties", {
@@ -1345,7 +1438,7 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
     //  break ignore;
   }
   if (ownPropertyName === "length") {
-    return node.canHaveIndexedValues || node.isFunction;
+    return node.isArray || node.isFunction;
   }
   if (ownPropertyName === "name") {
     return node.isFunction;
