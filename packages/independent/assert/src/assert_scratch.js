@@ -8,10 +8,8 @@
  *   mais pour un objet, un array un buffer on parcourira tout
  *   parce que on le fait de toute façon lorsqu'il n'y a pas de diff
  *   aussi ici du coup lorsque les props sont skipped
- *   le résumé doit etre de la bonne couleur en fonctio de ce qui se passe dedans
- * - url string
- * - url object
- * - associative array
+ *   le résumé doit etre de la bonne couleur en fonction de ce qui se passe dedans
+ * - url string and url object
  * - well known
  * - property descriptors
  * - valueOf dans le constructor call QUE si subtype pas object
@@ -212,7 +210,6 @@ export const assert = ({
       const internalEntriesNode = node.childNodeMap.get("internal_entries");
       const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
       const ownPropertiesNode = node.childNodeMap.get("own_properties");
-      const propertyNameCount = ownPropertiesNode.value.length;
       if (props.columnsRemaining < 2) {
         diff = setColor("…", node.color);
         return diff;
@@ -230,6 +227,12 @@ export const assert = ({
         maxDepthReached = node.depth > MAX_DEPTH;
       }
       if (maxDepthReached) {
+        if (indexedEntriesNode) {
+          const arrayLength = indexedEntriesNode.value.length;
+          diff += setColor(`Array(${arrayLength})`, node.color);
+          return diff;
+        }
+        const propertyNameCount = ownPropertiesNode.value.length;
         diff += setColor(`Object(${propertyNameCount})`, node.color);
         return diff;
       }
@@ -277,16 +280,18 @@ export const assert = ({
         columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
         diff += indexedEntriesDiff;
       }
-      const ownPropertiesDiff = ownPropertiesNode.render({
-        ...props,
-        columnsRemaining,
-      });
-      if (ownPropertiesDiff) {
-        if (diff) {
-          columnsRemaining -= " ".length;
-          diff += " ";
+      if (ownPropertiesNode) {
+        const ownPropertiesDiff = ownPropertiesNode.render({
+          ...props,
+          columnsRemaining,
+        });
+        if (ownPropertiesDiff) {
+          if (diff) {
+            columnsRemaining -= " ".length;
+            diff += " ";
+          }
+          diff += ownPropertiesDiff;
         }
-        diff += ownPropertiesDiff;
       }
       return diff;
     };
@@ -1204,25 +1209,33 @@ let createRootNode;
         }
       });
       // own properties
-      const ownPropertiesNode = appendOwnPropertiesNode(node);
-      ownPropertiesNode.hideSeparatorsWhenEmpty =
-        node.childNodeMap.has("object_type") ||
-        node.childNodeMap.has("constructor_call") ||
-        node.childNodeMap.has("internal_entries") ||
-        node.childNodeMap.has("indexed_entries");
-      for (const ownPropertyName of Object.getOwnPropertyNames(value)) {
-        if (
-          propertyNameToIgnoreSet.has(ownPropertyName) ||
-          shouldIgnoreOwnPropertyName(node, ownPropertyName)
-        ) {
-          continue;
+      const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
+        (ownPropertyName) => {
+          return (
+            !propertyNameToIgnoreSet.has(ownPropertyName) &&
+            !shouldIgnoreOwnPropertyName(node, ownPropertyName)
+          );
+        },
+      );
+      const canHaveIndexedEntries = node.childNodeMap.has("indexed_entries");
+      if (canHaveIndexedEntries && ownPropertyNames.length === 0) {
+        // skip entirely own properties
+      } else {
+        const ownPropertiesNode = appendOwnPropertiesNode(node);
+        ownPropertiesNode.hideSeparatorsWhenEmpty =
+          node.childNodeMap.has("object_type") ||
+          node.childNodeMap.has("constructor_call") ||
+          node.childNodeMap.has("internal_entries") ||
+          canHaveIndexedEntries;
+        for (const ownPropertyName of ownPropertyNames) {
+          appendOwnPropertyNode(
+            ownPropertiesNode,
+            ownPropertyName,
+            value[ownPropertyName],
+          );
         }
-        appendOwnPropertyNode(
-          ownPropertiesNode,
-          ownPropertyName,
-          value[ownPropertyName],
-        );
       }
+
       return node;
     }
     if (typeofResult === "function") {

@@ -8,5 +8,5 @@ expect: [
 
 # array expect, object received
 actual: {}
-expect: [] {}
+expect: []
 
