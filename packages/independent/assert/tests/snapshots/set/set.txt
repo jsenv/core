@@ -17,13 +17,12 @@ actual: Map(0 => "a")
 expect: Set("a")
 
 # compare set and array
-actual: {
-  0: "a",
-  length: 1,
-}
+actual: [
+  "a",
+]
 expect: Set(
   "a",
-) {}
+)
 
 # set collapsed various cases
 actual: {
