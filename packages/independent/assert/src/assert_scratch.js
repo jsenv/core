@@ -313,37 +313,44 @@ export const assert = ({
       const classKeywordNode = node.childNodeMap.get("class_keyword");
       if (classKeywordNode) {
         diff += classKeywordNode.render(props);
-        diff += " ";
       } else {
         const asyncKeywordNode = node.childNodeMap.get(
           "function_async_keyword",
         );
         if (asyncKeywordNode) {
           diff += asyncKeywordNode.render(props);
-          diff += " ";
         }
       }
       const functionKeywordNode = node.childNodeMap.get("function_keyword");
       if (functionKeywordNode) {
+        if (diff) {
+          diff += " ";
+        }
         diff += functionKeywordNode.render(props);
-        diff += " ";
       }
       const functionNameNode = node.childNodeMap.get("function_name");
       if (functionNameNode) {
+        if (diff) {
+          diff += " ";
+        }
         diff += functionNameNode.render(props);
-        diff += " ";
       }
       const classExtendedNameNode = node.childNodeMap.get(
         "class_extended_name",
       );
       if (classExtendedNameNode) {
+        if (diff) {
+          diff += " ";
+        }
         diff += classExtendedNameNode.render(props);
-        diff += " ";
       }
       const functionBodyPrefixNode = node.childNodeMap.get(
         "function_body_prefix",
       );
       if (functionBodyPrefixNode) {
+        if (diff) {
+          diff += " ";
+        }
         diff += functionBodyPrefixNode.render(props);
       }
       return diff;

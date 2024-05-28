@@ -75,3 +75,11 @@ expect: function Bar () {
   [source code],
 }
 
+# class vs function
+actual: class actual {
+  [source code],
+}
+expect: function expect () {
+  [source code],
+}
+

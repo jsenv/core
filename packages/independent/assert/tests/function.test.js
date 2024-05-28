@@ -140,12 +140,12 @@ await startSnapshotTesting("function", {
       expect: Bar,
     });
   },
-  // ["class vs function"]: () => {
-  //   assert({
-  //     actual: class {},
-  //     expect: function () {},
-  //   });
-  // },
+  ["class vs function"]: () => {
+    assert({
+      actual: class {},
+      expect: function () {},
+    });
+  },
   // ["class Animal vs class Robot"]: () => {
   //   assert({
   //     actual: class Animal {},

@@ -167,3 +167,14 @@ assert({
 
 ![img](<./function/function prototype added.svg>)
 
+# class vs function
+
+```js
+assert({
+  actual: class {},
+  expect: function () {},
+});
+```
+
+![img](<./function/class vs function.svg>)
+
