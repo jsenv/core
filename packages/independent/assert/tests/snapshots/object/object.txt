@@ -134,3 +134,13 @@ expect: {
 actual: {}
 expect: User {}
 
+# collapsed with overview when no diff
+actual: {
+  a: { foo: true, bar: true, baz: { t: 1 } },
+  b: true,
+}
+expect: {
+  a: { foo: true, bar: true, baz: { t: 1 } },
+  b: false,
+}
+

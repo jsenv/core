@@ -174,6 +174,18 @@ await startSnapshotTesting("object", {
       },
     });
   },
+  ["collapsed with overview when no diff"]: () => {
+    assert({
+      actual: {
+        a: { foo: true, bar: true, baz: { t: 1 } },
+        b: true,
+      },
+      expect: {
+        a: { foo: true, bar: true, baz: { t: 1 } },
+        b: false,
+      },
+    });
+  },
 });
 
 // await startSnapshotTesting("object", {
@@ -318,18 +330,6 @@ await startSnapshotTesting("object", {
 //         },
 //       },
 //       maxDepth: 5,
-//     });
-//   },
-//   ["collapsed with overview when no diff"]: () => {
-//     assert({
-//       actual: {
-//         a: { foo: true, bar: true, baz: { t: 1 } },
-//         b: true,
-//       },
-//       expect: {
-//         a: { foo: true, bar: true, baz: { t: 1 } },
-//         b: false,
-//       },
 //     });
 //   },
 //   ["max 2 props above prop diff"]: () => {

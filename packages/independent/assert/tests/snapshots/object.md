@@ -235,3 +235,20 @@ assert({
 
 ![img](<./object/object vs user.svg>)
 
+# collapsed with overview when no diff
+
+```js
+assert({
+  actual: {
+    a: { foo: true, bar: true, baz: { t: 1 } },
+    b: true,
+  },
+  expect: {
+    a: { foo: true, bar: true, baz: { t: 1 } },
+    b: false,
+  },
+});
+```
+
+![img](<./object/collapsed with overview when no diff.svg>)
+
