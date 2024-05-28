@@ -1,52 +1,73 @@
 # set value added
-AssertionError: actual and expect have 3 differences:
-
-actual: Set([
+actual: Set(
   "a",
   "b",
   "c",
   "Y",
-])
-expect: Set([
+)
+expect: Set(
   "b",
   "a",
   "c",
   "Z",
-])
+)
+
+# compare set and map
+actual: Map(0 => "a")
+expect: Set("a")
 
 # compare set and array
-AssertionError: actual and expect are different:
-
-actual: [
+actual: {
+  0: "a",
+  length: 1,
+}
+expect: Set(
   "a",
-]
-expect: Set([
-  "a",
-])
+) {}
 
 # set collapsed various cases
-AssertionError: actual and expect have 4 differences:
-
 actual: {
   a: true,
-  set_without_diff: Set(["a","b"]),
-  set_with_added: Set(["a"]),
+  set_without_diff: Set(
+    "a",
+    "b",
+  ),
+  set_with_added: Set(
+    "a",
+  ),
 }
 expect: {
   a: false,
-  set_without_diff: Set(["b","a"]),
-  set_with_added: Set(["b"]),
+  set_without_diff: Set(
+    "b",
+    "a",
+  ),
+  set_with_added: Set(
+    "b",
+  ),
 }
 
 # set collapsed deep
-AssertionError: actual and expect have 3 differences:
-
-ℹ to improve readability 3 diffs are completely hidden
-
 actual: {
-  a: { set_without_diff: Set(), set_with_added: Set() },
+  a: {
+    set_without_diff: Set(
+      "a",
+      "b",
+    ),
+    set_with_added: Set(
+      "a",
+    ),
+  },
 }
 expect: {
-  a: { set_without_diff: Set(), set_with_added: Set() },
+  a: {
+    set_without_diff: Set(
+      "b",
+      "a",
+    ),
+    set_with_added: Set(
+      "b",
+    ),
+  },
 }
 

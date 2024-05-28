@@ -18,7 +18,13 @@ await startSnapshotTesting("set", {
         // new
         "Z",
       ]),
-      maxValueAroundDiff: 4,
+      MAX_DIFF_PER_OBJECT: 4,
+    });
+  },
+  ["compare set and map"]: () => {
+    assert({
+      actual: new Map([[0, "a"]]),
+      expect: new Set(["a"]),
     });
   },
   ["compare set and array"]: () => {

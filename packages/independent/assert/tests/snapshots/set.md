@@ -16,11 +16,22 @@ assert({
     // new
     "Z",
   ]),
-  maxValueAroundDiff: 4,
+  MAX_DIFF_PER_OBJECT: 4,
 });
 ```
 
 ![img](<./set/set value added.svg>)
+
+# compare set and map
+
+```js
+assert({
+  actual: new Map([[0, "a"]]),
+  expect: new Set(["a"]),
+});
+```
+
+![img](<./set/compare set and map.svg>)
 
 # compare set and array
 

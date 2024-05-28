@@ -328,9 +328,13 @@ export const assert = ({
         columnsRemaining -= entryDiffWidth;
       }
       diff += setColor(startSeparator, node.color);
-      diff += " ";
+      if (node.entriesSpacing) {
+        diff += " ";
+      }
       diff += entriesDiff;
-      diff += " ";
+      if (node.entriesSpacing) {
+        diff += " ";
+      }
       diff += setColor(endSeparator, node.color);
       return diff;
     };
@@ -429,18 +433,23 @@ export const assert = ({
       if (endSeparator) {
         columnsRemaining -= endSeparator.length;
       }
-      const entryNameDiff = entryKeyNode.render({
-        ...props,
-        columnsRemaining,
-      });
-      entryDiff += entryNameDiff;
-      let columnsRemainingForValue =
-        columnsRemaining - measureLastLineColumns(entryNameDiff);
-      const { middleSeparator } = node;
-
-      if (columnsRemainingForValue > middleSeparator.length) {
-        entryDiff += setColor(middleSeparator, node.color);
-        columnsRemainingForValue -= middleSeparator.length;
+      let columnsRemainingForValue = columnsRemaining;
+      if (!entryKeyNode.hidden) {
+        const entryNameDiff = entryKeyNode.render({
+          ...props,
+          columnsRemaining,
+        });
+        columnsRemainingForValue -= measureLastLineColumns(entryNameDiff);
+        entryDiff += entryNameDiff;
+        const { middleSeparator } = node;
+        if (columnsRemainingForValue > middleSeparator.length) {
+          columnsRemainingForValue -= middleSeparator.length;
+          entryDiff += setColor(middleSeparator, node.color);
+        } else {
+          columnsRemainingForValue = 0;
+        }
+      }
+      if (columnsRemainingForValue > 0) {
         const entryValueNode = node.childNodeMap.get("entry_value");
         entryDiff += entryValueNode.render({
           ...props,
@@ -537,10 +546,29 @@ export const assert = ({
       return subcompareDuo(placeholderNode, childNode);
     };
     const subcompareChilNodesDuo = () => {
+      const isSetEntriesComparison =
+        actualNode.type === "internal_entries" &&
+        expectNode.type === "internal_entries" &&
+        actualNode.parent.isSet &&
+        expectNode.parent.isSet;
       const comparisonResultMap = new Map();
       const comparisonDiffMap = new Map();
       for (let [childName, actualChildNode] of actualNode.childNodeMap) {
-        const expectChildNode = expectNode.childNodeMap.get(childName);
+        let expectChildNode;
+        if (isSetEntriesComparison) {
+          const actualSetValueNode =
+            actualChildNode.childNodeMap.get("entry_value");
+          for (const [, expectSetEntryNode] of expectNode.childNodeMap) {
+            const expectSetValueNode =
+              expectSetEntryNode.childNodeMap.get("entry_value");
+            if (expectSetValueNode.value === actualSetValueNode.value) {
+              expectChildNode = expectSetEntryNode;
+              break;
+            }
+          }
+        } else {
+          expectChildNode = expectNode.childNodeMap.get(childName);
+        }
         if (actualChildNode && expectChildNode) {
           const childComparison = subcompareDuo(
             actualChildNode,
@@ -560,14 +588,30 @@ export const assert = ({
         }
       }
       for (let [childName, expectChildNode] of expectNode.childNodeMap) {
-        if (!comparisonResultMap.has(childName)) {
-          const removedChildComparison = subcompareSolo(
-            expectChildNode,
-            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-          );
-          comparisonResultMap.set(childName, removedChildComparison);
-          comparisonDiffMap.set(childName, removedChildComparison);
+        if (isSetEntriesComparison) {
+          const expectSetValueNode =
+            expectChildNode.childNodeMap.get("entry_value");
+          let hasEntry;
+          for (const [, actualSetEntryNode] of actualNode.childNodeMap) {
+            const actualSetValueNode =
+              actualSetEntryNode.childNodeMap.get("entry_value");
+            if (actualSetValueNode.value === expectSetValueNode.value) {
+              hasEntry = true;
+              break;
+            }
+          }
+          if (hasEntry) {
+            continue;
+          }
+        } else if (comparisonResultMap.has(childName)) {
+          continue;
         }
+        const removedChildComparison = subcompareSolo(
+          expectChildNode,
+          PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+        );
+        comparisonResultMap.set(childName, removedChildComparison);
+        comparisonDiffMap.set(childName, removedChildComparison);
       }
       return { comparisonResultMap, comparisonDiffMap };
     };
@@ -948,6 +992,7 @@ let createRootNode;
       isPrimitive: false,
       isComposite: false,
       // info/primitive
+      isUndefined: false,
       isString: false,
       isSymbol: false,
       // info/composite
@@ -959,11 +1004,13 @@ let createRootNode;
       render: () => {
         throw new Error(`render not implemented for ${type}`);
       },
+      hidden: false,
       diffType: "",
       useQuotes: false,
       startSeparator: "",
       middleSeparator: "",
       endSeparator: "",
+      entriesSpacing: false,
       hideSeparatorsWhenEmpty: false,
       color: "",
     };
@@ -983,6 +1030,7 @@ let createRootNode;
     if (type === "own_properties") {
       node.startSeparator = "{";
       node.endSeparator = "}";
+      node.entriesSpacing = true;
       return node;
     }
     if (type === "internal_entry") {
@@ -1069,8 +1117,14 @@ let createRootNode;
           node.isSet = true;
           const setInternalEntriesNode = appendInternalEntriesNode(node);
           let index = 0;
-          for (const [, setValue] of value) {
-            appendInternalEntryNode(setInternalEntriesNode, index, setValue);
+          for (const [setValue] of value) {
+            const setEntryNode = appendInternalEntryNode(
+              setInternalEntriesNode,
+              index,
+              setValue,
+            );
+            const setEntryKeyNode = setEntryNode.childNodeMap.get("entry_key");
+            setEntryKeyNode.hidden = true;
             index++;
           }
           return;
