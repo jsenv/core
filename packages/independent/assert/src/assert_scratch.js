@@ -1070,7 +1070,9 @@ let createRootNode;
     isContainer,
     isGrammar,
     isSourceCode = false,
+    isFunctionPrototype = false,
     isClassStaticProperty = false,
+    methodName = "",
     isHidden = false,
   }) => {
     const node = {
@@ -1086,7 +1088,6 @@ let createRootNode;
       isContainer,
       isGrammar,
       isSourceCode,
-      isClassStaticProperty,
       childNodeMap: new Map(),
       appendChild: (
         name,
@@ -1098,7 +1099,9 @@ let createRootNode;
           depth = isContainer || isGrammar ? node.depth : node.depth + 1,
           path = node.path,
           isSourceCode,
+          isFunctionPrototype,
           isClassStaticProperty,
+          methodName,
           isHidden,
         },
       ) => {
@@ -1115,7 +1118,9 @@ let createRootNode;
           isContainer,
           isGrammar,
           isSourceCode,
+          isFunctionPrototype,
           isClassStaticProperty,
+          methodName,
           isHidden,
         });
         node.childNodeMap.set(name, childNode);
@@ -1136,11 +1141,11 @@ let createRootNode;
       isArray: false,
       isMap: false,
       isSet: false,
-      isFunctionPrototype: false,
       // render info
       render: () => {
         throw new Error(`render not implemented for ${type}`);
       },
+      methodName,
       isHidden,
       diffType: "",
       useQuotes: false,
@@ -1296,22 +1301,19 @@ let createRootNode;
             node.appendChild("function_body_prefix", {
               isGrammar: true,
               type: "function_body_prefix",
-              value: `get ${"toto"}()`, // TODO: should not be "toto" but the method name
-              // that can be found in node parent(s)
+              value: `get ${methodName}()`,
             });
           } else if (node.functionAnalysis.setterName) {
             node.appendChild("function_body_prefix", {
               isGrammar: true,
               type: "function_body_prefix",
-              value: `set ${"toto"}()`, // TODO: should not be "toto" but the method name
-              // that can be found in node parent(s)
+              value: `set ${methodName}()`,
             });
           } else {
             node.appendChild("function_body_prefix", {
               isGrammar: true,
               type: "function_body_prefix",
-              value: `${"toto"}()`, // TODO: should not be "toto" but the method name
-              // that can be found in node parent(s)
+              value: `${methodName}()`,
             });
           }
         } else if (node.functionAnalysis.type === "classic") {
@@ -1323,15 +1325,11 @@ let createRootNode;
         }
       } else {
         node.objectType = getObjectType(value);
-        node.isFunctionPrototype =
-          type === "property_entry_value" &&
-          parent.childNodeMap.get("entry_key").value === "prototype" &&
-          parent.parent.parent.isFunction;
         if (
           node.objectType &&
           node.objectType !== "Object" &&
           node.objectType !== "Array" &&
-          !node.isFunctionPrototype
+          !isFunctionPrototype
         ) {
           appendObjectTypeNode(node, node.objectType);
         }
@@ -1423,6 +1421,8 @@ let createRootNode;
           const ownPropertyValue = value[ownPropertyName];
           appendPropertyEntryNode(propertyEntriesNode, {
             isClassStaticProperty: node.functionAnalysis.type === "class",
+            isFunctionPrototype:
+              ownPropertyName === "prototype" && node.isFunction,
             key: ownPropertyName,
             value: ownPropertyValue,
           });
@@ -1445,11 +1445,10 @@ let createRootNode;
       node.isString = true;
       if (isGrammar) {
         node.useQuotes = false;
-      } else if (
-        type === "property_entry_key" &&
-        isValidPropertyIdentifier(value)
-      ) {
-        node.useQuotes = false;
+      } else if (type === "property_entry_key") {
+        if (!isValidPropertyIdentifier(value)) {
+          node.useQuotes = true;
+        }
       } else {
         node.useQuotes = true;
       }
@@ -1574,19 +1573,30 @@ const appendPropertyEntriesNode = (node) => {
 };
 const appendPropertyEntryNode = (
   node,
-  { isSourceCode, isClassStaticProperty, key, value },
+  { isSourceCode, isFunctionPrototype, isClassStaticProperty, key, value },
 ) => {
   node.value.push(key);
   const propertyEntryNode = node.appendChild(key, {
     isContainer: true,
     isClassStaticProperty,
+    isFunctionPrototype,
     type: "property_entry",
     path: node.path.append(key),
+  });
+
+  const propertyEntryValueNode = propertyEntryNode.appendChild("entry_value", {
+    type: "property_entry_value",
+    value,
+    isSourceCode,
+    isFunctionPrototype,
+    methodName: key,
   });
   if (isClassStaticProperty) {
     propertyEntryNode.appendChild("static_keyword", {
       isGrammar: true,
-      isHidden: isSourceCode,
+      isHidden:
+        isSourceCode ||
+        propertyEntryValueNode.functionAnalysis.type === "method",
       type: "class_property_static_keyword",
       value: "static",
     });
@@ -1594,12 +1604,8 @@ const appendPropertyEntryNode = (
   propertyEntryNode.appendChild("entry_key", {
     type: "property_entry_key",
     value: key,
-    isHidden: isSourceCode,
-  });
-  propertyEntryNode.appendChild("entry_value", {
-    type: "property_entry_value",
-    value,
-    isSourceCode,
+    isHidden:
+      isSourceCode || propertyEntryValueNode.functionAnalysis.type === "method",
   });
   return propertyEntryNode;
 };

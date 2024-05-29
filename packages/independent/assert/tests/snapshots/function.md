@@ -251,3 +251,28 @@ assert({
 
 ![img](<./function/class static property removed.svg>)
 
+# class method diff source
+
+```js
+const anonymousActualClass = (function () {
+  return class {
+    a() {
+      return true;
+    }
+  };
+})();
+const anonymousExpectClass = (function () {
+  return class {
+    a() {
+      return false;
+    }
+  };
+})();
+assert({
+  actual: anonymousActualClass,
+  expect: anonymousExpectClass,
+});
+```
+
+![img](<./function/class method diff source.svg>)
+

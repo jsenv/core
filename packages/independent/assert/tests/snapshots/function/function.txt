@@ -125,3 +125,21 @@ expect: class A {
   [source code];
 }
 
+# class method diff source
+actual: class {
+  static prototype = {
+    a() {
+      [source code],
+    },
+  };
+  [source code];
+}
+expect: class {
+  static prototype = {
+    a() {
+      [source code],
+    },
+  };
+  [source code];
+}
+

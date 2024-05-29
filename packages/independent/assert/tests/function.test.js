@@ -194,26 +194,26 @@ await startSnapshotTesting("function", {
       },
     });
   },
-  // ["class method diff source"]: () => {
-  //   const anonymousActualClass = (function () {
-  //     return class {
-  //       a() {
-  //         return true;
-  //       }
-  //     };
-  //   })();
-  //   const anonymousExpectClass = (function () {
-  //     return class {
-  //       a() {
-  //         return false;
-  //       }
-  //     };
-  //   })();
-  //   assert({
-  //     actual: anonymousActualClass,
-  //     expect: anonymousExpectClass,
-  //   });
-  // },
+  ["class method diff source"]: () => {
+    const anonymousActualClass = (function () {
+      return class {
+        a() {
+          return true;
+        }
+      };
+    })();
+    const anonymousExpectClass = (function () {
+      return class {
+        a() {
+          return false;
+        }
+      };
+    })();
+    assert({
+      actual: anonymousActualClass,
+      expect: anonymousExpectClass,
+    });
+  },
   // ["class method added"]: () => {
   //   assert({
   //     actual: class A {
