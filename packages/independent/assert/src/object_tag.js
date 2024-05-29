@@ -1,4 +1,4 @@
-export const getObjectType = (obj) => {
+export const getObjectTag = (obj) => {
   // https://github.com/nodejs/node/blob/384fd1787634c13b3e5d2f225076d2175dc3b96b/lib/internal/util/inspect.js#L859
   while (obj || isUndetectableObject(obj)) {
     const constructorDescriptor = Object.getOwnPropertyDescriptor(

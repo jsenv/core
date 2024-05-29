@@ -1,6 +1,9 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - valueOf dans le constructor call QUE si subtype pas object
+ *   sinon on le met comme une prop
+ * - Symbol.toPrimitive
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
  *   en fait si pour string par exemple on voudra s'arreter
@@ -11,8 +14,6 @@
  * - url string and url object
  * - well known
  * - property descriptors
- * - valueOf dans le constructor call QUE si subtype pas object
- *   sinon on le met comme une prop
  * - prototype
  *
  */
@@ -21,7 +22,7 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
-import { getObjectType, visitObjectPrototypes } from "./object_type.js";
+import { getObjectTag, visitObjectPrototypes } from "./object_tag.js";
 import {
   analyseFunction,
   defaultFunctionAnalysis,
@@ -249,11 +250,11 @@ export const assert = ({
         columnsRemaining -= measureLastLineColumns(functionDiff);
         diff += functionDiff;
       } else {
-        const objectTypeNode = node.childNodeMap.get("object_type");
-        if (objectTypeNode) {
-          const objectTypeDiff = objectTypeNode.render(props);
-          columnsRemaining -= measureLastLineColumns(objectTypeDiff);
-          diff += objectTypeDiff;
+        const objectTagNode = node.childNodeMap.get("object_tag");
+        if (objectTagNode) {
+          const objectTagDiff = objectTagNode.render(props);
+          columnsRemaining -= measureLastLineColumns(objectTagDiff);
+          diff += objectTagDiff;
         }
         const constructorCallNode = node.childNodeMap.get("constructor_call");
         if (constructorCallNode) {
@@ -1151,7 +1152,6 @@ let createRootNode;
       isNumber: false,
       isSymbol: false,
       // info/composite
-      objectType: "",
       isFunction: false,
       functionAnalysis: defaultFunctionAnalysis,
       isArray: false,
@@ -1352,14 +1352,14 @@ let createRootNode;
           });
         }
       } else {
-        node.objectType = getObjectType(value);
+        const objectTag = getObjectTag(value);
         if (
-          node.objectType &&
-          node.objectType !== "Object" &&
-          node.objectType !== "Array" &&
+          objectTag &&
+          objectTag !== "Object" &&
+          objectTag !== "Array" &&
           !isFunctionPrototype
         ) {
-          appendObjectTypeNode(node, node.objectType);
+          appendObjectTagNode(node, objectTag);
         }
       }
 
@@ -1441,7 +1441,7 @@ let createRootNode;
       } else {
         const propertyEntriesNode = appendPropertyEntriesNode(node, {
           hasSeparatorsWhenEmpty:
-            !node.childNodeMap.has("object_type") &&
+            !node.childNodeMap.has("object_tag") &&
             !node.childNodeMap.has("constructor_call") &&
             !node.childNodeMap.has("internal_entries") &&
             !canHaveIndexedEntries,
@@ -1526,14 +1526,14 @@ const asPrimitiveNode = (node) => {
   }
   return null;
 };
-const appendObjectTypeNode = (node, objectType) => {
-  const objectTypeNode = node.appendChild("object_type", {
+const appendObjectTagNode = (node, objectTag) => {
+  const objectTagNode = node.appendChild("object_tag", {
     isGrammar: true,
-    type: "object_type",
-    value: objectType,
-    path: node.path.append("[[ObjectType]]"),
+    type: "object_tag",
+    value: objectTag,
+    path: node.path.append("[[ObjectTag]]"),
   });
-  return objectTypeNode;
+  return objectTagNode;
 };
 const appendConstructorCallNode = (node) => {
   return node.appendChild("constructor_call", {
