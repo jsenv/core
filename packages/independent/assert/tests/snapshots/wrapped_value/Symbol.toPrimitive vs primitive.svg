@@ -39,7 +39,7 @@
         <text x="77.21" y="14.55" fill="#cd5555">{</text>
         <text x="26.8" y="33.55" fill="#cd5555">[Symbol.toPrimitive()]</text>
         <text x="211.63" y="33.55" fill="#cd5555">: </text>
-        <text x="228.44" y="33.55" fill="#7f7f7f">&#x22;10&#x22;</text>
+        <text x="228.44" y="33.55">&#x22;10&#x22;</text>
         <text x="262.04" y="33.55" fill="#cd5555">,</text>
         <text x="10" y="52.55" fill="#cd5555">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>

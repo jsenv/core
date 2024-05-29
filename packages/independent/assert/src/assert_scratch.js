@@ -875,8 +875,6 @@ export const assert = ({
       throw new Error("wtf");
     };
 
-    let actualSkipSettle;
-    let expectSkipSettle;
     visit: {
       // comparing primitives
       if (actualNode.isPrimitive && expectNode.isPrimitive) {
@@ -898,7 +896,6 @@ export const assert = ({
         onSelfDiff("should_be_composite");
         const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
         if (expectAsPrimitiveNode) {
-          actualSkipSettle = true;
           visitDuo(actualNode, expectAsPrimitiveNode);
         } else {
           visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
@@ -912,7 +909,6 @@ export const assert = ({
         const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
         visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         if (actualAsPrimitiveNode) {
-          expectSkipSettle = true;
           visitDuo(actualAsPrimitiveNode, expectNode);
         } else {
           visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
@@ -921,9 +917,11 @@ export const assert = ({
       }
       if (expectNode.placeholder) {
         if (actualNode.isAsPrimitiveValue) {
-          expectNode = getOtherNodeHoldingPrimitive(actualNode, comparison);
-          visitDuo(actualNode, expectNode);
-          break visit;
+          expectNode = getOtherNodeHoldingSomething(actualNode, comparison);
+          if (expectNode && expectNode.isPrimitive) {
+            // already compared
+            return comparison;
+          }
         }
         onAdded(getAddedOrRemovedReason(actualNode));
         visitSolo(actualNode, expectNode);
@@ -931,9 +929,11 @@ export const assert = ({
       }
       if (actualNode.placeholder) {
         if (expectNode.isAsPrimitiveValue) {
-          actualNode = getOtherNodeHoldingPrimitive(expectNode, comparison);
-          visitDuo(actualNode, expectNode);
-          break visit;
+          actualNode = getOtherNodeHoldingSomething(expectNode, comparison);
+          if (actualNode && actualNode.isPrimitive) {
+            // already compared
+            return comparison;
+          }
         }
         onRemoved(getAddedOrRemovedReason(expectNode));
         visitSolo(expectNode, actualNode);
@@ -972,12 +972,8 @@ export const assert = ({
         expectNode === PLACEHOLDER_FOR_NOTHING ? "modified" : "solo";
       updateColor(actualNode);
     } else if (comparison.selfHasModification) {
-      if (!actualSkipSettle) {
-        actualNode.diffType = "modified";
-      }
-      if (!expectSkipSettle) {
-        expectNode.diffType = "modified";
-      }
+      actualNode.diffType = "modified";
+      expectNode.diffType = "modified";
       updateColor(actualNode);
       updateColor(expectNode);
     } else {
@@ -1606,19 +1602,18 @@ const asPrimitiveNode = (node) => {
   }
   return null;
 };
-const getOtherNodeHoldingPrimitive = (node, comparison) => {
-  let comparisonHoldingPrimitive;
+const getOtherNodeHoldingSomething = (node, comparison) => {
+  let comparisonHoldingSomething;
   if (node.parent.type === "constructor_call") {
-    comparisonHoldingPrimitive = comparison.parent.parent;
+    comparisonHoldingSomething = comparison.parent.parent;
   } else {
     // type === "property_entry_value"
-    comparisonHoldingPrimitive = comparison.parent.parent.parent;
+    comparisonHoldingSomething = comparison.parent.parent.parent;
   }
-
   if (node.name === "actual") {
-    return comparisonHoldingPrimitive.expectNode;
+    return comparisonHoldingSomething.expectNode;
   }
-  return comparisonHoldingPrimitive.actualNode;
+  return comparisonHoldingSomething.actualNode;
 };
 const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");

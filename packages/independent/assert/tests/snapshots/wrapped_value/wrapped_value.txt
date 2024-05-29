@@ -1,3 +1,37 @@
+# Symbol.toPrimitive added
+actual: {
+  [Symbol.toPrimitive()]: "10",
+}
+expect: {}
+
+# Symbol.toPrimitive removed
+actual: {}
+expect: {
+  [Symbol.toPrimitive()]: "10",
+}
+
+# Symbol.toPrimitive vs primitive
+actual: {
+  [Symbol.toPrimitive()]: "10",
+}
+expect: "10"
+
+# primitive vs Symbol.toPrimitive
+actual: "10"
+expect: {
+  [Symbol.toPrimitive()]: "10",
+}
+
+# valueOf({ a: true }) vs { a: true }
+actual: {
+  valueOf(): {
+    a: true,
+  },
+}
+expect: {
+  a: false,
+}
+
 # 10 vs valueOf(10)
 actual: 10
 expect: {
@@ -28,29 +62,7 @@ expect: {
   valueOf(): 10,
 }
 
-# valueOf({ a: true }) vs { a: true }
-actual: {
-  valueOf(): {
-    a: true,
-  },
-}
-expect: {
-  a: false,
-}
-
 # valueOf with object tag
 actual: Signal(10)
 expect: false
-
-# Symbol.toPrimitive vs primitive
-actual: {
-  [Symbol.toPrimitive()]: "10",
-}
-expect: "10"
-
-# primitive vs Symbol.toPrimitive
-actual: "10"
-expect: {
-  [Symbol.toPrimitive()]: "10",
-}
 
