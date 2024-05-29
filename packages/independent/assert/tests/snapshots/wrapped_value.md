@@ -70,3 +70,33 @@ assert({
 
 ![img](<./wrapped_value/valueOf with object tag.svg>)
 
+# Symbol.toPrimitive vs primitive
+
+```js
+assert({
+  actual: {
+    [Symbol.toPrimitive]: () => {
+      return "10";
+    },
+  },
+  expect: "10",
+});
+```
+
+![img](<./wrapped_value/Symbol.toPrimitive vs primitive.svg>)
+
+# primitive vs Symbol.toPrimitive
+
+```js
+assert({
+  actual: 10,
+  expect: {
+    [Symbol.toPrimitive]: () => {
+      return "10";
+    },
+  },
+});
+```
+
+![img](<./wrapped_value/primitive vs Symbol.toPrimitive.svg>)
+

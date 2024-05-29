@@ -49,4 +49,24 @@ await startSnapshotTesting("wrapped_value", {
       expect: false,
     });
   },
+  ["Symbol.toPrimitive vs primitive"]: () => {
+    assert({
+      actual: {
+        [Symbol.toPrimitive]: () => {
+          return "10";
+        },
+      },
+      expect: "10",
+    });
+  },
+  ["primitive vs Symbol.toPrimitive"]: () => {
+    assert({
+      actual: 10,
+      expect: {
+        [Symbol.toPrimitive]: () => {
+          return "10";
+        },
+      },
+    });
+  },
 });

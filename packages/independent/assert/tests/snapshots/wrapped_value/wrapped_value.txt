@@ -1,26 +1,26 @@
 # 10 vs Object(10)
 actual: 10
 expect: {
-  [valueOf()]: 10,
+  valueOf(): 10,
 }
 
 # Object(10) vs 10
 actual: {
-  [valueOf()]: 10,
+  valueOf(): 10,
 }
 expect: 10
 
 # Object(10) vs Object(11)
 actual: {
-  [valueOf()]: 10,
+  valueOf(): 10,
 }
 expect: {
-  [valueOf()]: 11,
+  valueOf(): 11,
 }
 
 # Object({ a: true }) vs { a: true }
 actual: {
-  [valueOf()]: {
+  valueOf(): {
     a: true,
   },
 }
@@ -31,4 +31,16 @@ expect: {
 # valueOf with object tag
 actual: Signal(10)
 expect: false
+
+# Symbol.toPrimitive vs primitive
+actual: {
+  [Symbol.toPrimitive()]: "10",
+}
+expect: "10"
+
+# primitive vs Symbol.toPrimitive
+actual: 10
+expect: {
+  [Symbol.toPrimitive()]: "10",
+}
 

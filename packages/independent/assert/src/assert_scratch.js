@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - Symbol.toPrimitive
  * - strings avec mutiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
@@ -77,6 +76,9 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
 const VALUE_OF_RETURN_VALUE_ENTRY_KEY = { key: "valueOf()" };
+const SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY = {
+  key: "Symbol.toPrimitive()",
+};
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -199,7 +201,9 @@ export const assert = ({
       if (node.isSourceCode) {
         valueDiff = "[source code]";
       } else if (node.value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
-        valueDiff = "[valueOf()]";
+        valueDiff = "valueOf()";
+      } else if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
+        valueDiff = "[Symbol.toPrimitive()]";
       } else if (node.isString) {
         valueDiff = JSON.stringify(node.value);
         if (!node.hasQuotes) {
@@ -269,7 +273,7 @@ export const assert = ({
         const constructorCallNode = node.childNodeMap.get("constructor_call");
         if (constructorCallNode) {
           columnsRemaining -= "()".length;
-          const firstArgNode = constructorCallNode.childNodeMap.get("0");
+          const firstArgNode = constructorCallNode.childNodeMap.get(0);
           const firstArgDiff = firstArgNode.render({
             ...props,
             columnsRemaining,
@@ -1188,11 +1192,11 @@ let createRootNode;
     if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
       return node;
     }
-    if (value === SOURCE_CODE_ENTRY_KEY) {
-      node.isPrimitive = true;
-      return node;
-    }
-    if (value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
+    if (
+      value === SOURCE_CODE_ENTRY_KEY ||
+      value === VALUE_OF_RETURN_VALUE_ENTRY_KEY ||
+      value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY
+    ) {
       node.isPrimitive = true;
       return node;
     }
@@ -1374,7 +1378,20 @@ let createRootNode;
       }
 
       const ownPropertyNameToIgnoreSet = new Set();
+      const ownPropertSymbolToIgnoreSet = new Set();
       const propertyLikeSet = new Set();
+      // Symbol.toPrimitive
+      if (
+        Symbol.toPrimitive in value &&
+        typeof value[Symbol.toPrimitive] === "function"
+      ) {
+        ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
+        const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
+        propertyLikeSet.add({
+          key: SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+          value: toPrimitiveReturnValue,
+        });
+      }
       // valueOf()
       if (
         typeof value.valueOf === "function" &&
@@ -1385,7 +1402,7 @@ let createRootNode;
 
         if (node.childNodeMap.has("object_tag")) {
           const constructorCallNode = appendConstructorCallNode(node);
-          constructorCallNode.appendChild("0", {
+          constructorCallNode.appendChild(0, {
             type: "value_of_return_value",
             value: valueOfReturnValue,
             path: node.path.append("valueOf()"),
@@ -1544,11 +1561,20 @@ const getAddedOrRemovedReason = (node) => {
   return "unknown";
 };
 const asPrimitiveNode = (node) => {
-  const wrappedValueNode = node.childNodeMap.get("value_of_return_value");
-  if (wrappedValueNode && wrappedValueNode.isPrimitive) {
-    return wrappedValueNode;
+  const propertyEntriesNode = node.childNodeMap.get("property_entries");
+  if (!propertyEntriesNode) {
+    return null;
   }
-  return null;
+  const symbolToPrimitiveReturnValuePropertyNode =
+    propertyEntriesNode.childNodeMap.get(
+      SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+    );
+  if (!symbolToPrimitiveReturnValuePropertyNode) {
+    return null;
+  }
+  return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
+    "entry_value",
+  );
 };
 const appendObjectTagNode = (node, objectTag) => {
   const objectTagNode = node.appendChild("object_tag", {
