@@ -920,10 +920,9 @@ export const assert = ({
         break visit;
       }
       if (expectNode.placeholder) {
-        if (actualNode.isSymbolToPrimitiveReturnValue) {
-          const comparisonHoldingComposite = comparison.parent.parent.parent;
-          expectNode = comparisonHoldingComposite.expectNode;
-          visitDuo(actualNode, comparisonHoldingComposite.expectNode);
+        if (actualNode.isAsPrimitiveValue) {
+          expectNode = getOtherNodeHoldingPrimitive(actualNode, comparison);
+          visitDuo(actualNode, expectNode);
           break visit;
         }
         onAdded(getAddedOrRemovedReason(actualNode));
@@ -931,9 +930,8 @@ export const assert = ({
         break visit;
       }
       if (actualNode.placeholder) {
-        if (expectNode.isSymbolToPrimitiveReturnValue) {
-          const comparisonHoldingComposite = comparison.parent.parent.parent;
-          actualNode = comparisonHoldingComposite.actualNode;
+        if (expectNode.isAsPrimitiveValue) {
+          actualNode = getOtherNodeHoldingPrimitive(expectNode, comparison);
           visitDuo(actualNode, expectNode);
           break visit;
         }
@@ -1113,7 +1111,7 @@ let createRootNode;
     isFunctionPrototype = false,
     isClassPrototype = false,
     isClassStaticProperty = false,
-    isSymbolToPrimitiveReturnValue = false,
+    isAsPrimitiveValue = false,
     methodName = "",
     isHidden = false,
     hasSeparatorsWhenEmpty = false,
@@ -1132,7 +1130,7 @@ let createRootNode;
       isGrammar,
       isSourceCode,
       isClassPrototype,
-      isSymbolToPrimitiveReturnValue,
+      isAsPrimitiveValue,
       childNodeMap: new Map(),
       appendChild: (
         name,
@@ -1143,7 +1141,7 @@ let createRootNode;
           isFunctionPrototype,
           isClassPrototype,
           isClassStaticProperty,
-          isSymbolToPrimitiveReturnValue,
+          isAsPrimitiveValue,
           methodName,
           isHidden,
           hasSeparatorsWhenEmpty,
@@ -1165,7 +1163,7 @@ let createRootNode;
           isFunctionPrototype,
           isClassPrototype,
           isClassStaticProperty,
-          isSymbolToPrimitiveReturnValue,
+          isAsPrimitiveValue,
           methodName,
           isHidden,
           hasSeparatorsWhenEmpty,
@@ -1417,7 +1415,7 @@ let createRootNode;
         ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
         const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
         propertyLikeSet.add({
-          isSymbolToPrimitiveReturnValue: true,
+          isAsPrimitiveValue: true,
           key: SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
           value: toPrimitiveReturnValue,
         });
@@ -1429,10 +1427,15 @@ let createRootNode;
       ) {
         ownPropertyNameToIgnoreSet.add("valueOf");
         const valueOfReturnValue = value.valueOf();
+        const isAsPrimitiveValue =
+          valueOfReturnValue &&
+          typeof valueOfReturnValue !== "object" &&
+          typeof valueOfReturnValue !== "function";
 
         if (node.childNodeMap.has("object_tag")) {
           const constructorCallNode = appendConstructorCallNode(node);
           constructorCallNode.appendChild(0, {
+            isAsPrimitiveValue,
             type: "value_of_return_value",
             value: valueOfReturnValue,
             path: node.path.append("valueOf()"),
@@ -1440,6 +1443,7 @@ let createRootNode;
           });
         } else {
           propertyLikeSet.add({
+            isAsPrimitiveValue,
             key: VALUE_OF_RETURN_VALUE_ENTRY_KEY,
             value: valueOfReturnValue,
           });
@@ -1602,6 +1606,20 @@ const asPrimitiveNode = (node) => {
   }
   return null;
 };
+const getOtherNodeHoldingPrimitive = (node, comparison) => {
+  let comparisonHoldingPrimitive;
+  if (node.parent.type === "constructor_call") {
+    comparisonHoldingPrimitive = comparison.parent.parent;
+  } else {
+    // type === "property_entry_value"
+    comparisonHoldingPrimitive = comparison.parent.parent.parent;
+  }
+
+  if (node.name === "actual") {
+    return comparisonHoldingPrimitive.expectNode;
+  }
+  return comparisonHoldingPrimitive.actualNode;
+};
 const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");
   if (!propertyEntriesNode) {
@@ -1724,7 +1742,7 @@ const appendPropertyEntryNode = (
     isFunctionPrototype,
     isClassPrototype,
     isClassStaticProperty,
-    isSymbolToPrimitiveReturnValue,
+    isAsPrimitiveValue,
     key,
     value,
   },
@@ -1745,7 +1763,7 @@ const appendPropertyEntryNode = (
     isSourceCode,
     isFunctionPrototype,
     isClassPrototype,
-    isSymbolToPrimitiveReturnValue,
+    isAsPrimitiveValue,
     methodName: key,
   });
   if (isClassStaticProperty && !isClassPrototype) {

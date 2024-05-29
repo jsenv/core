@@ -1,4 +1,4 @@
-# 10 vs Object(10)
+# 10 vs valueOf(10)
 
 ```js
 assert({
@@ -9,9 +9,9 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/10 vs Object(10).svg>)
+![img](<./wrapped_value/10 vs valueOf(10).svg>)
 
-# Object(10) vs 10
+# valueOf(10) vs 10
 
 ```js
 assert({
@@ -22,9 +22,9 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/Object(10) vs 10.svg>)
+![img](<./wrapped_value/valueOf(10) vs 10.svg>)
 
-# Object(10) vs Object(11)
+# valueOf(10) vs valueOf(11)
 
 ```js
 assert({
@@ -37,9 +37,26 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/Object(10) vs Object(11).svg>)
+![img](<./wrapped_value/valueOf(10) vs valueOf(11).svg>)
 
-# Object({ a: true }) vs { a: true }
+# valueOf(10) vs valueOf(10)
+
+```js
+assert({
+  actual: {
+    a: true,
+    valueOf: () => 10,
+  },
+  expect: {
+    b: false,
+    valueOf: () => 10,
+  },
+});
+```
+
+![img](<./wrapped_value/valueOf(10) vs valueOf(10).svg>)
+
+# valueOf({ a: true }) vs { a: true }
 
 ```js
 assert({
@@ -52,7 +69,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/Object({ a: true }) vs { a: true }.svg>)
+![img](<./wrapped_value/valueOf({ a: true }) vs { a: true }.svg>)
 
 # valueOf with object tag
 

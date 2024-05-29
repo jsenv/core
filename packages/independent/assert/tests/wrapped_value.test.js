@@ -2,7 +2,7 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("wrapped_value", {
-  ["10 vs Object(10)"]: () => {
+  ["10 vs valueOf(10)"]: () => {
     assert({
       actual: 10,
       expect: {
@@ -10,7 +10,7 @@ await startSnapshotTesting("wrapped_value", {
       },
     });
   },
-  ["Object(10) vs 10"]: () => {
+  ["valueOf(10) vs 10"]: () => {
     assert({
       actual: {
         valueOf: () => 10,
@@ -18,7 +18,7 @@ await startSnapshotTesting("wrapped_value", {
       expect: 10,
     });
   },
-  ["Object(10) vs Object(11)"]: () => {
+  ["valueOf(10) vs valueOf(11)"]: () => {
     assert({
       actual: {
         valueOf: () => 10,
@@ -28,7 +28,19 @@ await startSnapshotTesting("wrapped_value", {
       },
     });
   },
-  ["Object({ a: true }) vs { a: true }"]: () => {
+  ["valueOf(10) vs valueOf(10)"]: () => {
+    assert({
+      actual: {
+        a: true,
+        valueOf: () => 10,
+      },
+      expect: {
+        b: false,
+        valueOf: () => 10,
+      },
+    });
+  },
+  ["valueOf({ a: true }) vs { a: true }"]: () => {
     assert({
       actual: {
         valueOf: () => {
