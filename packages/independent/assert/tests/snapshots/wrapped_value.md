@@ -89,7 +89,7 @@ assert({
 
 ```js
 assert({
-  actual: 10,
+  actual: "10",
   expect: {
     [Symbol.toPrimitive]: () => {
       return "10";

@@ -39,7 +39,7 @@ actual: {
 expect: "10"
 
 # primitive vs Symbol.toPrimitive
-actual: 10
+actual: "10"
 expect: {
   [Symbol.toPrimitive()]: "10",
 }

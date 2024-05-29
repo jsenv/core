@@ -166,7 +166,7 @@ export const assert = ({
    *   descriptorKeyNode
    *   descriptorValueNode
    */
-  const compare = (actualNode, expectNode) => {
+  const compare = (actualNode, expectNode, parent = null) => {
     const reasons = createReasons();
     const comparison = {
       isComparison: true,
@@ -174,7 +174,7 @@ export const assert = ({
       expectNode,
       depth: actualNode.depth || expectNode.depth,
       isContainer: actualNode.isContainer || expectNode.isContainer,
-      parent: null,
+      parent,
       reasons,
       done: false,
     };
@@ -640,7 +640,11 @@ export const assert = ({
     };
 
     const subcompareDuo = (actualChildNode, expectChildNode) => {
-      const childComparison = compare(actualChildNode, expectChildNode);
+      const childComparison = compare(
+        actualChildNode,
+        expectChildNode,
+        comparison,
+      );
       childComparison.parent = comparison;
       appendReasonGroup(
         comparison.reasons.inside,
@@ -654,7 +658,7 @@ export const assert = ({
       }
       return subcompareDuo(placeholderNode, childNode);
     };
-    const subcompareChilNodesDuo = () => {
+    const subcompareChilNodesDuo = (actualNode, expectNode) => {
       const isSetEntriesComparison =
         actualNode.type === "internal_entries" &&
         expectNode.type === "internal_entries" &&
@@ -871,6 +875,8 @@ export const assert = ({
       throw new Error("wtf");
     };
 
+    let actualSkipSettle;
+    let expectSkipSettle;
     visit: {
       // comparing primitives
       if (actualNode.isPrimitive && expectNode.isPrimitive) {
@@ -892,6 +898,7 @@ export const assert = ({
         onSelfDiff("should_be_composite");
         const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
         if (expectAsPrimitiveNode) {
+          actualSkipSettle = true;
           visitDuo(actualNode, expectAsPrimitiveNode);
         } else {
           visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
@@ -902,9 +909,10 @@ export const assert = ({
       // composite vs primitive
       if (actualNode.isComposite && expectNode.isPrimitive) {
         onSelfDiff("should_be_primitive");
-        visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
+        visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         if (actualAsPrimitiveNode) {
+          expectSkipSettle = true;
           visitDuo(actualAsPrimitiveNode, expectNode);
         } else {
           visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
@@ -912,11 +920,23 @@ export const assert = ({
         break visit;
       }
       if (expectNode.placeholder) {
+        if (actualNode.isSymbolToPrimitiveReturnValue) {
+          const comparisonHoldingComposite = comparison.parent.parent.parent;
+          expectNode = comparisonHoldingComposite.expectNode;
+          visitDuo(actualNode, comparisonHoldingComposite.expectNode);
+          break visit;
+        }
         onAdded(getAddedOrRemovedReason(actualNode));
         visitSolo(actualNode, expectNode);
         break visit;
       }
       if (actualNode.placeholder) {
+        if (expectNode.isSymbolToPrimitiveReturnValue) {
+          const comparisonHoldingComposite = comparison.parent.parent.parent;
+          actualNode = comparisonHoldingComposite.actualNode;
+          visitDuo(actualNode, expectNode);
+          break visit;
+        }
         onRemoved(getAddedOrRemovedReason(expectNode));
         visitSolo(expectNode, actualNode);
         break visit;
@@ -954,7 +974,12 @@ export const assert = ({
         expectNode === PLACEHOLDER_FOR_NOTHING ? "modified" : "solo";
       updateColor(actualNode);
     } else if (comparison.selfHasModification) {
-      actualNode.diffType = expectNode.diffType = "modified";
+      if (!actualSkipSettle) {
+        actualNode.diffType = "modified";
+      }
+      if (!expectSkipSettle) {
+        expectNode.diffType = "modified";
+      }
       updateColor(actualNode);
       updateColor(expectNode);
     } else {
@@ -1088,6 +1113,7 @@ let createRootNode;
     isFunctionPrototype = false,
     isClassPrototype = false,
     isClassStaticProperty = false,
+    isSymbolToPrimitiveReturnValue = false,
     methodName = "",
     isHidden = false,
     hasSeparatorsWhenEmpty = false,
@@ -1106,6 +1132,7 @@ let createRootNode;
       isGrammar,
       isSourceCode,
       isClassPrototype,
+      isSymbolToPrimitiveReturnValue,
       childNodeMap: new Map(),
       appendChild: (
         name,
@@ -1116,6 +1143,7 @@ let createRootNode;
           isFunctionPrototype,
           isClassPrototype,
           isClassStaticProperty,
+          isSymbolToPrimitiveReturnValue,
           methodName,
           isHidden,
           hasSeparatorsWhenEmpty,
@@ -1137,6 +1165,7 @@ let createRootNode;
           isFunctionPrototype,
           isClassPrototype,
           isClassStaticProperty,
+          isSymbolToPrimitiveReturnValue,
           methodName,
           isHidden,
           hasSeparatorsWhenEmpty,
@@ -1388,6 +1417,7 @@ let createRootNode;
         ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
         const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
         propertyLikeSet.add({
+          isSymbolToPrimitiveReturnValue: true,
           key: SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
           value: toPrimitiveReturnValue,
         });
@@ -1561,6 +1591,18 @@ const getAddedOrRemovedReason = (node) => {
   return "unknown";
 };
 const asPrimitiveNode = (node) => {
+  const symbolToPrimitiveReturnValueNode =
+    getSymbolToPrimitiveReturnValueNode(node);
+  if (symbolToPrimitiveReturnValueNode) {
+    return symbolToPrimitiveReturnValueNode;
+  }
+  const valueOfReturnValueNode = getValueOfReturnValueNode(node);
+  if (valueOfReturnValueNode && valueOfReturnValueNode.isPrimitive) {
+    return valueOfReturnValueNode;
+  }
+  return null;
+};
+const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");
   if (!propertyEntriesNode) {
     return null;
@@ -1575,6 +1617,26 @@ const asPrimitiveNode = (node) => {
   return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
     "entry_value",
   );
+};
+const getValueOfReturnValueNode = (node) => {
+  const constructorCallNode = node.childNodeMap.get("constructor_call");
+  if (constructorCallNode) {
+    const firstArgNode = constructorCallNode.childNodeMap.get(0);
+    if (firstArgNode && firstArgNode.type === "value_of_return_value") {
+      return firstArgNode;
+    }
+  }
+  const propertyEntriesNode = node.childNodeMap.get("property_entries");
+  if (!propertyEntriesNode) {
+    return null;
+  }
+  const valueOfReturnValuePropertyNode = propertyEntriesNode.childNodeMap.get(
+    VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+  );
+  if (!valueOfReturnValuePropertyNode) {
+    return null;
+  }
+  return valueOfReturnValuePropertyNode.childNodeMap.get("entry_value");
 };
 const appendObjectTagNode = (node, objectTag) => {
   const objectTagNode = node.appendChild("object_tag", {
@@ -1662,6 +1724,7 @@ const appendPropertyEntryNode = (
     isFunctionPrototype,
     isClassPrototype,
     isClassStaticProperty,
+    isSymbolToPrimitiveReturnValue,
     key,
     value,
   },
@@ -1669,9 +1732,9 @@ const appendPropertyEntryNode = (
   node.value.push(key);
   const propertyEntryNode = node.appendChild(key, {
     isContainer: true,
+    isFunctionPrototype,
     isClassStaticProperty,
     isClassPrototype,
-    isFunctionPrototype,
     type: "property_entry",
     path: node.path.append(key),
   });
@@ -1682,6 +1745,7 @@ const appendPropertyEntryNode = (
     isSourceCode,
     isFunctionPrototype,
     isClassPrototype,
+    isSymbolToPrimitiveReturnValue,
     methodName: key,
   });
   if (isClassStaticProperty && !isClassPrototype) {
