@@ -1056,6 +1056,7 @@ let createRootNode;
     depth,
     path,
     isContainer,
+    isGrammar,
     isSourceCode = false,
     isClassStaticProperty = false,
     isHidden = false,
@@ -1071,16 +1072,18 @@ let createRootNode;
       depth,
       path,
       isContainer,
+      isGrammar,
       isSourceCode,
       isClassStaticProperty,
       childNodeMap: new Map(),
       appendChild: (
         name,
         {
-          type,
           isContainer,
+          isGrammar,
+          type,
           value,
-          depth = isContainer ? node.depth : node.depth + 1,
+          depth = isContainer || isGrammar ? node.depth : node.depth + 1,
           path = node.path,
           isSourceCode,
           isClassStaticProperty,
@@ -1098,6 +1101,7 @@ let createRootNode;
           depth,
           path,
           isContainer,
+          isGrammar,
           isSourceCode,
           isClassStaticProperty,
           isHidden,
@@ -1173,8 +1177,13 @@ let createRootNode;
       return node;
     }
     if (type === "property_entry") {
-      node.middleSeparator = ": ";
-      node.endSeparator = ",";
+      if (isClassStaticProperty) {
+        node.middleSeparator = " = ";
+        node.endSeparator = ";";
+      } else {
+        node.middleSeparator = ": ";
+        node.endSeparator = ",";
+      }
       return node;
     }
     if (type === "constructor_call") {
@@ -1225,16 +1234,19 @@ let createRootNode;
 
         if (node.functionAnalysis.type === "class") {
           node.appendChild("class_keyword", {
+            isGrammar: true,
             type: "class_keyword",
             value: "class",
           });
           const extendedClassName = node.functionAnalysis.extendedClassName;
           if (extendedClassName) {
             node.appendChild("class_extends_keyword", {
+              isGrammar: true,
               type: "class_extends_keyword",
               value: "extends",
             });
             node.appendChild("class_extended_name", {
+              isGrammar: true,
               type: "class_extended_name",
               value: node.functionAnalysis.extendedClassName,
             });
@@ -1244,40 +1256,47 @@ let createRootNode;
           node.appendChild("function_async_keyword", {
             type: "function_async_keyword",
             value: "async",
+            isGrammar: true,
           });
         }
         if (node.functionAnalysis.type === "classic") {
           node.appendChild("function_keyword", {
             type: "function_keyword",
             value: node.functionAnalysis.isGenerator ? "function*" : "function",
+            isGrammar: true,
           });
         }
         if (node.functionAnalysis.name) {
           node.appendChild("function_name", {
+            isGrammar: true,
             type: "function_name",
             value: node.functionAnalysis.name,
           });
         }
         if (node.functionAnalysis.type === "arrow") {
           node.appendChild("function_body_prefix", {
+            isGrammar: true,
             type: "function_body_prefix",
             value: "() =>",
           });
         } else if (node.functionAnalysis.type === "method") {
           if (node.functionAnalysis.getterName) {
             node.appendChild("function_body_prefix", {
+              isGrammar: true,
               type: "function_body_prefix",
               value: `get ${"toto"}()`, // TODO: should not be "toto" but the method name
               // that can be found in node parent(s)
             });
           } else if (node.functionAnalysis.setterName) {
             node.appendChild("function_body_prefix", {
+              isGrammar: true,
               type: "function_body_prefix",
               value: `set ${"toto"}()`, // TODO: should not be "toto" but the method name
               // that can be found in node parent(s)
             });
           } else {
             node.appendChild("function_body_prefix", {
+              isGrammar: true,
               type: "function_body_prefix",
               value: `${"toto"}()`, // TODO: should not be "toto" but the method name
               // that can be found in node parent(s)
@@ -1285,6 +1304,7 @@ let createRootNode;
           }
         } else if (node.functionAnalysis.type === "classic") {
           node.appendChild("function_body_prefix", {
+            isGrammar: true,
             type: "function_body_prefix",
             value: `()`,
           });
@@ -1410,16 +1430,7 @@ let createRootNode;
     node.isPrimitive = true;
     if (typeofResult === "string") {
       node.isString = true;
-      if (
-        type === "object_type" ||
-        type === "function_async_keyword" ||
-        type === "function_keyword" ||
-        type === "function_name" ||
-        type === "function_body_prefix" ||
-        type === "class_keyword" ||
-        type === "class_extends_keyword" ||
-        type === "class_extended_name"
-      ) {
+      if (isGrammar) {
         node.useQuotes = false;
       } else if (
         type === "property_entry_key" &&
@@ -1474,26 +1485,24 @@ const asPrimitiveNode = (node) => {
 };
 const appendObjectTypeNode = (node, objectType) => {
   const objectTypeNode = node.appendChild("object_type", {
+    isGrammar: true,
     type: "object_type",
     value: objectType,
     path: node.path.append("[[ObjectType]]"),
-    depth: node.depth,
   });
   return objectTypeNode;
 };
 const appendConstructorCallNode = (node) => {
   return node.appendChild("constructor_call", {
-    type: "constructor_call",
     isContainer: true,
-    path: node.path,
-    depth: node.depth,
+    type: "constructor_call",
   });
 };
 
 const appendInternalEntriesNode = (node) => {
   const internalEntriesNode = node.appendChild("internal_entries", {
-    type: "internal_entries",
     isContainer: true,
+    type: "internal_entries",
     value: [],
   });
   return internalEntriesNode;
@@ -1501,8 +1510,8 @@ const appendInternalEntriesNode = (node) => {
 const appendInternalEntryNode = (node, { isSetEntry, key, value }) => {
   node.value.push(key);
   const internalEntryNode = node.appendChild(key, {
-    type: "internal_entry",
     isContainer: true,
+    type: "internal_entry",
     path: node.path.append(key),
   });
   internalEntryNode.appendChild("entry_key", {
@@ -1518,8 +1527,8 @@ const appendInternalEntryNode = (node, { isSetEntry, key, value }) => {
 };
 const appendIndexedEntriesNode = (node) => {
   const indexedEntriesNode = node.appendChild("indexed_entries", {
-    type: "indexed_entries",
     isContainer: true,
+    type: "indexed_entries",
     value: [],
   });
   return indexedEntriesNode;
@@ -1527,8 +1536,8 @@ const appendIndexedEntriesNode = (node) => {
 const appendIndexedEntryNode = (node, { key, value }) => {
   node.value.push(key);
   const indexedEntryNode = node.appendChild(key, {
-    type: "indexed_entry",
     isContainer: true,
+    type: "indexed_entry",
     path: node.path.append(key, { isIndexedEntry: true }),
   });
   indexedEntryNode.appendChild("entry_key", {
@@ -1544,8 +1553,8 @@ const appendIndexedEntryNode = (node, { key, value }) => {
 };
 const appendPropertyEntriesNode = (node) => {
   const propertyEntriesNode = node.appendChild("property_entries", {
-    type: "property_entries",
     isContainer: true,
+    type: "property_entries",
     value: [],
   });
   return propertyEntriesNode;
@@ -1556,16 +1565,23 @@ const appendPropertyEntryNode = (
 ) => {
   node.value.push(key);
   const propertyEntryNode = node.appendChild(key, {
-    type: "property_entry",
     isContainer: true,
+    type: "property_entry",
     path: node.path.append(key),
   });
-  propertyEntryNode.appendChild("entry_key", {
+  const propertyEntryKeyNode = propertyEntryNode.appendChild("entry_key", {
     type: "property_entry_key",
     value: key,
     isClassStaticProperty,
     isHidden: isSourceCode,
   });
+  if (isClassStaticProperty) {
+    propertyEntryKeyNode.appendChild("static", {
+      isGrammar: true,
+      type: "class_property_static_keyword",
+      value: "static",
+    });
+  }
   propertyEntryNode.appendChild("entry_value", {
     type: "property_entry_value",
     value,
