@@ -376,6 +376,7 @@ export const assert = ({
       let diff = "";
       let entriesDiff = "";
       let lastEntryDisplayed = null;
+      node.hasIndentBeforeEntries = false;
       for (const entryKey of entryKeys) {
         const entryNode = node.childNodeMap.get(entryKey);
         const entryEndSeparator = entryNode.endSeparator;
@@ -470,12 +471,10 @@ export const assert = ({
         }
         const entryKey = entryKeys[indexToDisplay];
         const entryNode = node.childNodeMap.get(entryKey);
-        let entryDiff = "";
-        entryDiff += "  ".repeat(getNodeDepth(entryNode) + 1);
-        entryDiff += entryNode.render({
+        const entryDiff = entryNode.render({
           ...props,
           // reset remaining width
-          columnsRemaining: MAX_COLUMNS - entryDiff.length,
+          columnsRemaining: MAX_COLUMNS,
         });
         appendEntry(entryDiff);
         previousIndexDisplayed = indexToDisplay;
@@ -506,9 +505,15 @@ export const assert = ({
       return diff;
     };
     const renderEntry = (node, props) => {
+      const hasIndentBeforeEntries = node.parent.hasIndentBeforeEntries;
       const { endSeparator } = node;
       let entryDiff = "";
       let columnsRemaining = props.columnsRemaining;
+      if (hasIndentBeforeEntries) {
+        const indent = "  ".repeat(getNodeDepth(node) + 1);
+        columnsRemaining -= stringWidth(indent);
+        entryDiff += indent;
+      }
       const entryKeyNode = node.childNodeMap.get("entry_key");
       if (endSeparator) {
         columnsRemaining -= endSeparator.length;
@@ -1166,6 +1171,7 @@ let createRootNode;
       endSeparator: "",
       hasSpacingAroundEntries: false,
       hasNewLineAroundEntries: false,
+      hasIndentBeforeEntries: false,
       hasSeparatorsWhenEmpty,
       color: "",
     };
@@ -1185,12 +1191,14 @@ let createRootNode;
       node.startSeparator = "(";
       node.endSeparator = ")";
       node.hasNewLineAroundEntries = true;
+      node.hasIndentBeforeEntries = true;
       return node;
     }
     if (type === "indexed_entries") {
       node.startSeparator = "[";
       node.endSeparator = "]";
       node.hasNewLineAroundEntries = true;
+      node.hasIndentBeforeEntries = true;
       return node;
     }
     if (type === "property_entries") {
@@ -1200,6 +1208,7 @@ let createRootNode;
         node.endSeparator = "}";
         node.hasSpacingAroundEntries = true;
         node.hasNewLineAroundEntries = true;
+        node.hasIndentBeforeEntries = true;
       }
       return node;
     }
@@ -1438,6 +1447,14 @@ let createRootNode;
             !node.childNodeMap.has("internal_entries") &&
             !canHaveIndexedEntries,
         });
+        if (node.isFunction) {
+          appendPropertyEntryNode(propertyEntriesNode, {
+            isSourceCode: true,
+            isClassStaticProperty: node.functionAnalysis.type === "class",
+            key: SOURCE_CODE_ENTRY_KEY,
+            value: node.functionAnalysis.argsAndBodySource,
+          });
+        }
         for (const ownPropertyName of ownPropertyNames) {
           const ownPropertyValue = value[ownPropertyName];
           appendPropertyEntryNode(propertyEntriesNode, {
@@ -1449,14 +1466,6 @@ let createRootNode;
               node.functionAnalysis.type === "class",
             key: ownPropertyName,
             value: ownPropertyValue,
-          });
-        }
-        if (node.isFunction) {
-          appendPropertyEntryNode(propertyEntriesNode, {
-            isSourceCode: true,
-            isClassStaticProperty: node.functionAnalysis.type === "class",
-            key: SOURCE_CODE_ENTRY_KEY,
-            value: node.functionAnalysis.argsAndBodySource,
           });
         }
       }

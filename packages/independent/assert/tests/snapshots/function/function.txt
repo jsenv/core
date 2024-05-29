@@ -50,18 +50,18 @@ expect: {
 
 # function prototype modified
 actual: function Foo () {
+  [source code],
   prototype: {
     a: true,
     b: false,
   },
-  [source code],
 }
 expect: function Bar () {
+  [source code],
   prototype: {
     a: true,
     b: true,
   },
-  [source code],
 }
 
 # function prototype added
@@ -69,10 +69,10 @@ actual: function Foo () {
   [source code],
 }
 expect: function Bar () {
+  [source code],
   prototype: {
     a: true,
   },
-  [source code],
 }
 
 # class vs function
@@ -89,28 +89,28 @@ expect: class Robot { [source code] }
 
 # extends Animal vs extend Robot
 actual: class Human extends Animal {
-  static type = "human_actual";
   [source code];
+  static type = "human_actual";
 }
 expect: class Human extends Robot {
-  static type = "human_expected";
   [source code];
+  static type = "human_expected";
 }
 
 # class static property modified
 actual: class A {
-  static a = true;
   [source code];
+  static a = true;
 }
 expect: class A {
-  static a = false;
   [source code];
+  static a = false;
 }
 
 # class static property added
 actual: class A {
-  static a = true;
   [source code];
+  static a = true;
 }
 expect: class A {
   [source code];
@@ -121,21 +121,21 @@ actual: class A {
   [source code];
 }
 expect: class A {
-  static a = false;
   [source code];
+  static a = false;
 }
 
 # class method diff source
 actual: class {
-    a() {
+  [source code];
+  a() {
     [source code],
   };
-  [source code];
 }
 expect: class {
-    a() {
+  [source code];
+  a() {
     [source code],
   };
-  [source code];
 }
 
