@@ -1,10 +1,10 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - valueOf dans le constructor call QUE si subtype pas object
- *   sinon on le met comme une prop
  * - Symbol.toPrimitive
  * - strings avec mutiline
+ *   souligne les chars ayant des diffs?
+ *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
  * - no need to break loop when max diff is reached
  *   en fait si pour string par exemple on voudra s'arreter
  *   mais pour un objet, un array un buffer on parcourira tout
@@ -14,7 +14,10 @@
  * - url string and url object
  * - well known
  * - property descriptors
+ * - errors
  * - prototype
+ * - symbols
+ * - numbers
  *
  */
 
@@ -73,13 +76,18 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 };
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
+const VALUE_OF_RETURN_VALUE_ENTRY_KEY = { key: "valueOf()" };
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
     // cannot set color of blank chars
     return text;
   }
-  return ANSI.color(text, color);
+  const textColored = ANSI.color(text, color);
+  // if (color === ANSI.RED || color === ANSI.GREEN) {
+  //   return ANSI.effect(textColored, ANSI.UNDERLINE);
+  // }
+  return textColored;
 };
 const measureLastLineColumns = (string) => {
   if (string.includes("\n")) {
@@ -190,6 +198,8 @@ export const assert = ({
       let valueDiff;
       if (node.isSourceCode) {
         valueDiff = "[source code]";
+      } else if (node.value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
+        valueDiff = "[valueOf()]";
       } else if (node.isString) {
         valueDiff = JSON.stringify(node.value);
         if (!node.hasQuotes) {
@@ -258,10 +268,6 @@ export const assert = ({
         }
         const constructorCallNode = node.childNodeMap.get("constructor_call");
         if (constructorCallNode) {
-          if (diff) {
-            columnsRemaining -= " ".length;
-            diff += " ";
-          }
           columnsRemaining -= "()".length;
           const firstArgNode = constructorCallNode.childNodeMap.get("0");
           const firstArgDiff = firstArgNode.render({
@@ -1186,6 +1192,10 @@ let createRootNode;
       node.isPrimitive = true;
       return node;
     }
+    if (value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
+      node.isPrimitive = true;
+      return node;
+    }
     if (type === "internal_entries") {
       node.startSeparator = "(";
       node.endSeparator = ")";
@@ -1363,21 +1373,32 @@ let createRootNode;
         }
       }
 
+      const ownPropertyNameToIgnoreSet = new Set();
+      const propertyLikeSet = new Set();
       // valueOf()
       if (
         typeof value.valueOf === "function" &&
         value.valueOf !== Object.prototype.valueOf
       ) {
-        const constructorCallNode = appendConstructorCallNode(node);
+        ownPropertyNameToIgnoreSet.add("valueOf");
         const valueOfReturnValue = value.valueOf();
-        constructorCallNode.appendChild("0", {
-          type: "value_of_return_value",
-          value: valueOfReturnValue,
-          path: node.path.append("valueOf()"),
-          depth: node.depth,
-        });
+
+        if (node.childNodeMap.has("object_tag")) {
+          const constructorCallNode = appendConstructorCallNode(node);
+          constructorCallNode.appendChild("0", {
+            type: "value_of_return_value",
+            value: valueOfReturnValue,
+            path: node.path.append("valueOf()"),
+            depth: node.depth,
+          });
+        } else {
+          propertyLikeSet.add({
+            key: VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+            value: valueOfReturnValue,
+          });
+        }
       }
-      const propertyNameToIgnoreSet = new Set();
+
       // internal and indexed entries
       visitObjectPrototypes(value, (proto) => {
         const parentConstructor = proto.constructor;
@@ -1400,7 +1421,7 @@ let createRootNode;
           const arrayIndexedEntriesNode = appendIndexedEntriesNode(node);
           let index = 0;
           while (index < value.length) {
-            propertyNameToIgnoreSet.add(String(index));
+            ownPropertyNameToIgnoreSet.add(String(index));
             appendIndexedEntryNode(arrayIndexedEntriesNode, {
               key: index,
               value: Object.hasOwn(value, index)
@@ -1430,7 +1451,7 @@ let createRootNode;
       const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
         (ownPropertyName) => {
           return (
-            !propertyNameToIgnoreSet.has(ownPropertyName) &&
+            !ownPropertyNameToIgnoreSet.has(ownPropertyName) &&
             !shouldIgnoreOwnPropertyName(node, ownPropertyName)
           );
         },
@@ -1466,6 +1487,9 @@ let createRootNode;
             key: ownPropertyName,
             value: ownPropertyValue,
           });
+        }
+        for (const propertyLike of propertyLikeSet) {
+          appendPropertyEntryNode(propertyEntriesNode, propertyLike);
         }
       }
 
@@ -1721,17 +1745,6 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
   }
   if (ownPropertyName === "stack") {
     return node.isError;
-  }
-  if (ownPropertyName === "valueOf") {
-    const constructorCallNode = node.childNodeMap.get("constructor_call");
-    return constructorCallNode && constructorCallNode.childNodeMap.has("0");
-  }
-  if (ownPropertyName === "toString") {
-    return false;
-    // return (
-    //   node.childNodes.wrappedValue &&
-    //   node.childNodes.wrappedValue.key === "toString()"
-    // );
   }
   return false;
 };

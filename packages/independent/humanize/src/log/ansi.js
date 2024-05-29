@@ -20,6 +20,8 @@ export const ANSI = {
   },
 
   BOLD: "\x1b[1m",
+  UNDERLINE: "\x1b[4m",
+  STRIKE: "\x1b[9m",
   effect: (text, ANSI_EFFECT) => {
     return ANSI.supported && ANSI_EFFECT
       ? `${ANSI_EFFECT}${text}${RESET}`

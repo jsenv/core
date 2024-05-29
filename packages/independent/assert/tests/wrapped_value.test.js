@@ -18,6 +18,16 @@ await startSnapshotTesting("wrapped_value", {
       expect: 10,
     });
   },
+  ["Object(10) vs Object(11)"]: () => {
+    assert({
+      actual: {
+        valueOf: () => 10,
+      },
+      expect: {
+        valueOf: () => 11,
+      },
+    });
+  },
   ["Object({ a: true }) vs { a: true }"]: () => {
     assert({
       actual: {
@@ -26,6 +36,17 @@ await startSnapshotTesting("wrapped_value", {
         },
       },
       expect: { a: false },
+    });
+  },
+  ["valueOf with object tag"]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => {
+          return 10;
+        },
+      },
+      expect: false,
     });
   },
 });

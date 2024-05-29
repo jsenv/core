@@ -24,6 +24,21 @@ assert({
 
 ![img](<./wrapped_value/Object(10) vs 10.svg>)
 
+# Object(10) vs Object(11)
+
+```js
+assert({
+  actual: {
+    valueOf: () => 10,
+  },
+  expect: {
+    valueOf: () => 11,
+  },
+});
+```
+
+![img](<./wrapped_value/Object(10) vs Object(11).svg>)
+
 # Object({ a: true }) vs { a: true }
 
 ```js
@@ -38,4 +53,20 @@ assert({
 ```
 
 ![img](<./wrapped_value/Object({ a: true }) vs { a: true }.svg>)
+
+# valueOf with object tag
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => {
+      return 10;
+    },
+  },
+  expect: false,
+});
+```
+
+![img](<./wrapped_value/valueOf with object tag.svg>)
 
