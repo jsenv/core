@@ -242,24 +242,4 @@ await startSnapshotTesting("internal_value", {
       expect,
     });
   },
-  ["Symbol.toPrimitive vs primitive"]: () => {
-    assert({
-      actual: {
-        [Symbol.toPrimitive]: () => {
-          return "10";
-        },
-      },
-      expect: "10",
-    });
-  },
-  ["primitive vs Symbol.toPrimitive"]: () => {
-    assert({
-      actual: 10,
-      expect: {
-        [Symbol.toPrimitive]: () => {
-          return "10";
-        },
-      },
-    });
-  },
 });

@@ -1,7 +1,7 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - strings avec mutiline
+ * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
  * - no need to break loop when max diff is reached
@@ -927,7 +927,6 @@ export const assert = ({
           );
           if (otherNode && otherNode.isPrimitive) {
             expectNode = otherNode;
-
             break visit;
           }
         }
