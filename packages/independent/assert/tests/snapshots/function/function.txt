@@ -107,3 +107,21 @@ expect: class A {
   [source code];
 }
 
+# class static property added
+actual: class A {
+  static a = true;
+  [source code];
+}
+expect: class A {
+  [source code];
+}
+
+# class static property removed
+actual: class A {
+  [source code];
+}
+expect: class A {
+  static a = false;
+  [source code];
+}
+

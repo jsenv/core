@@ -225,3 +225,29 @@ assert({
 
 ![img](<./function/class static property modified.svg>)
 
+# class static property added
+
+```js
+assert({
+  actual: class A {
+    static a = true;
+  },
+  expect: class A {},
+});
+```
+
+![img](<./function/class static property added.svg>)
+
+# class static property removed
+
+```js
+assert({
+  actual: class A {},
+  expect: class A {
+    static a = false;
+  },
+});
+```
+
+![img](<./function/class static property removed.svg>)
+

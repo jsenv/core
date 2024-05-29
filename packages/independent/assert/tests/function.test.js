@@ -178,22 +178,22 @@ await startSnapshotTesting("function", {
       },
     });
   },
-  // ["class static property added"]: () => {
-  //   assert({
-  //     actual: class A {
-  //       static a = true;
-  //     },
-  //     expect: class A {},
-  //   });
-  // },
-  // ["class static property removed"]: () => {
-  //   assert({
-  //     actual: class A {},
-  //     expect: class A {
-  //       static a = false;
-  //     },
-  //   });
-  // },
+  ["class static property added"]: () => {
+    assert({
+      actual: class A {
+        static a = true;
+      },
+      expect: class A {},
+    });
+  },
+  ["class static property removed"]: () => {
+    assert({
+      actual: class A {},
+      expect: class A {
+        static a = false;
+      },
+    });
+  },
   // ["class method diff source"]: () => {
   //   const anonymousActualClass = (function () {
   //     return class {
