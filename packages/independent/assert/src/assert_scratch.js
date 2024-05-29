@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - functions
  * - strings avec mutiline
  * - no need to break loop when max diff is reached
  *   en fait si pour string par exemple on voudra s'arreter

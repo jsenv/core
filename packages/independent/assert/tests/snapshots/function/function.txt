@@ -139,3 +139,140 @@ expect: class {
   };
 }
 
+# class method added
+actual: class A {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+expect: class A {
+  [source code];
+}
+
+# class method removed
+actual: class A {
+  [source code];
+}
+expect: class A {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+
+# class constructor modified
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
+
+# arrow function source same, name modified
+actual: {
+  a: () => { [source code] },
+  b: true,
+}
+expect: {
+  a: () => { [source code] },
+  b: false,
+}
+
+# arrow function source same, name same
+actual: {
+  a: () => { [source code] },
+  b: true,
+}
+expect: {
+  a: () => { [source code] },
+  b: false,
+}
+
+# class constructor added
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
+
+# class constructor removed
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
+
+# static property value modified
+actual: class {
+  [source code];
+  static a = "a_static";
+}
+expect: class {
+  [source code];
+  static a = "a_static_2";
+}
+
+# static method return value modified
+actual: class {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+expect: class {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+
+# class static property and object property
+actual: class actual {
+  [source code];
+  static a = true;
+  static b = true;
+}
+expect: {
+  a: true,
+  b: false,
+}
+
+# class static prop and function prop
+actual: class actual {
+  [source code];
+  static a = true;
+}
+expect: function () {
+  [source code],
+  a: true,
+}
+
+# class prototype method vs function prototype method
+actual: class actual {
+  [source code];
+  b() {
+    [source code],
+  };
+  static a = true;
+}
+expect: function toto () {
+  [source code],
+  prototype: {
+    b: () => {
+      [source code],
+    },
+  },
+  a: true,
+}
+
+# class constructor vs function
+actual: class actual {
+  [source code];
+}
+expect: function expect () {
+  [source code],
+}
+

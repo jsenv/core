@@ -276,3 +276,230 @@ assert({
 
 ![img](<./function/class method diff source.svg>)
 
+# class method added
+
+```js
+assert({
+  actual: class A {
+    a() {}
+  },
+  expect: class A {},
+});
+```
+
+![img](<./function/class method added.svg>)
+
+# class method removed
+
+```js
+assert({
+  actual: class A {},
+  expect: class A {
+    a() {}
+  },
+});
+```
+
+![img](<./function/class method removed.svg>)
+
+# class constructor modified
+
+```js
+assert({
+  actual: class {
+    constructor() {
+      console.log("actual");
+    }
+  },
+  expect: class {
+    constructor() {
+      console.log("expect");
+    }
+  },
+});
+```
+
+![img](<./function/class constructor modified.svg>)
+
+# arrow function source same, name modified
+
+```js
+const foo = () => {};
+const bar = () => {};
+assert({
+  actual: {
+    a: foo,
+    b: true,
+  },
+  expect: {
+    a: bar,
+    b: false,
+  },
+});
+```
+
+![img](<./function/arrow function source same, name modified.svg>)
+
+# arrow function source same, name same
+
+```js
+const fn = () => {};
+assert({
+  actual: {
+    a: fn,
+    b: true,
+  },
+  expect: {
+    a: fn,
+    b: false,
+  },
+});
+```
+
+![img](<./function/arrow function source same, name same.svg>)
+
+# class constructor added
+
+```js
+assert({
+  actual: class {
+    constructor() {
+      console.log("actual");
+    }
+  },
+  expect: class {},
+});
+```
+
+![img](<./function/class constructor added.svg>)
+
+# class constructor removed
+
+```js
+assert({
+  actual: class {},
+  expect: class {
+    constructor() {
+      console.log("expect");
+    }
+  },
+});
+```
+
+![img](<./function/class constructor removed.svg>)
+
+# static property value modified
+
+```js
+const anonymousActualClass = (function () {
+  return class {
+    a = "a_prop"; // class properties cannot be listed so it won't be catched
+    static a = "a_static";
+  };
+})();
+const anonymousExpectClass = (function () {
+  return class {
+    a = "a_prop_2";
+    static a = "a_static_2";
+  };
+})();
+assert({
+  actual: anonymousActualClass,
+  expect: anonymousExpectClass,
+});
+```
+
+![img](<./function/static property value modified.svg>)
+
+# static method return value modified
+
+```js
+const anonymousActualClass = (function () {
+  return class {
+    static a() {
+      return true;
+    }
+  };
+})();
+const anonymousExpectClass = (function () {
+  return class {
+    static a() {
+      return false;
+    }
+  };
+})();
+assert({
+  colors: false,
+  actual: anonymousActualClass,
+  expect: anonymousExpectClass,
+});
+```
+
+![img](<./function/static method return value modified.svg>)
+
+# class static property and object property
+
+```js
+assert({
+  actual: class {
+    static a = true;
+    static b = true;
+  },
+  expect: {
+    a: true,
+    b: false,
+  },
+});
+```
+
+![img](<./function/class static property and object property.svg>)
+
+# class static prop and function prop
+
+```js
+assert({
+  actual: class {
+    static a = true;
+  },
+  expect: Object.assign(function () {}, {
+    a: true,
+  }),
+});
+```
+
+![img](<./function/class static prop and function prop.svg>)
+
+# class prototype method vs function prototype method
+
+```js
+const toto = function () {};
+toto.a = true;
+toto.prototype.b = () => {};
+assert({
+  actual: class {
+    static a = true;
+    b() {}
+  },
+  expect: toto,
+});
+```
+
+![img](<./function/class prototype method vs function prototype method.svg>)
+
+# class constructor vs function
+
+```js
+assert({
+  actual: class {
+    constructor() {
+      console.log("actual");
+    }
+  },
+  expect: function () {
+    console.log("expect");
+  },
+});
+```
+
+![img](<./function/class constructor vs function.svg>)
+
