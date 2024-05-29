@@ -210,3 +210,18 @@ assert({
 
 ![img](<./function/extends Animal vs extend Robot.svg>)
 
+# class static property modified
+
+```js
+assert({
+  actual: class A {
+    static a = true;
+  },
+  expect: class A {
+    static a = false;
+  },
+});
+```
+
+![img](<./function/class static property modified.svg>)
+

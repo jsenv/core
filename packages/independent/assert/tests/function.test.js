@@ -168,16 +168,16 @@ await startSnapshotTesting("function", {
       },
     });
   },
-  // ["class static property modified"]: () => {
-  //   assert({
-  //     actual: class A {
-  //       static a = true;
-  //     },
-  //     expect: class A {
-  //       static a = false;
-  //     },
-  //   });
-  // },
+  ["class static property modified"]: () => {
+    assert({
+      actual: class A {
+        static a = true;
+      },
+      expect: class A {
+        static a = false;
+      },
+    });
+  },
   // ["class static property added"]: () => {
   //   assert({
   //     actual: class A {

@@ -514,13 +514,25 @@ export const assert = ({
         columnsRemaining -= endSeparator.length;
       }
       let columnsRemainingForValue = columnsRemaining;
-      if (!entryKeyNode.isHidden) {
-        const entryNameDiff = entryKeyNode.render({
+
+      const staticKeywordNode = node.childNodeMap.get("static_keyword");
+      if (staticKeywordNode && !staticKeywordNode.isHidden) {
+        const staticKeywordDiff = staticKeywordNode.render({
           ...props,
           columnsRemaining,
         });
-        columnsRemainingForValue -= measureLastLineColumns(entryNameDiff);
-        entryDiff += entryNameDiff;
+        columnsRemaining -= measureLastLineColumns(staticKeywordDiff);
+        columnsRemaining -= " ".length;
+        entryDiff += staticKeywordDiff;
+        entryDiff += " ";
+      }
+      if (!entryKeyNode.isHidden) {
+        const entryKeyDiff = entryKeyNode.render({
+          ...props,
+          columnsRemaining,
+        });
+        columnsRemainingForValue -= measureLastLineColumns(entryKeyDiff);
+        entryDiff += entryKeyDiff;
         const { middleSeparator } = node;
         if (columnsRemainingForValue > middleSeparator.length) {
           columnsRemainingForValue -= middleSeparator.length;
@@ -1410,7 +1422,7 @@ let createRootNode;
         for (const ownPropertyName of ownPropertyNames) {
           const ownPropertyValue = value[ownPropertyName];
           appendPropertyEntryNode(propertyEntriesNode, {
-            isClassStaticProperty: node.isClass,
+            isClassStaticProperty: node.functionAnalysis.type === "class",
             key: ownPropertyName,
             value: ownPropertyValue,
           });
@@ -1418,6 +1430,7 @@ let createRootNode;
         if (node.isFunction) {
           appendPropertyEntryNode(propertyEntriesNode, {
             isSourceCode: true,
+            isClassStaticProperty: node.functionAnalysis.type === "class",
             key: SOURCE_CODE_ENTRY_KEY,
             value: node.functionAnalysis.argsAndBodySource,
           });
@@ -1566,22 +1579,23 @@ const appendPropertyEntryNode = (
   node.value.push(key);
   const propertyEntryNode = node.appendChild(key, {
     isContainer: true,
+    isClassStaticProperty,
     type: "property_entry",
     path: node.path.append(key),
   });
-  const propertyEntryKeyNode = propertyEntryNode.appendChild("entry_key", {
-    type: "property_entry_key",
-    value: key,
-    isClassStaticProperty,
-    isHidden: isSourceCode,
-  });
   if (isClassStaticProperty) {
-    propertyEntryKeyNode.appendChild("static", {
+    propertyEntryNode.appendChild("static_keyword", {
       isGrammar: true,
+      isHidden: isSourceCode,
       type: "class_property_static_keyword",
       value: "static",
     });
   }
+  propertyEntryNode.appendChild("entry_key", {
+    type: "property_entry_key",
+    value: key,
+    isHidden: isSourceCode,
+  });
   propertyEntryNode.appendChild("entry_value", {
     type: "property_entry_value",
     value,

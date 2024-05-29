@@ -77,7 +77,7 @@ expect: function Bar () {
 
 # class vs function
 actual: class actual {
-  [source code],
+  [source code];
 }
 expect: function expect () {
   [source code],
@@ -89,11 +89,21 @@ expect: class Robot { [source code] }
 
 # extends Animal vs extend Robot
 actual: class Human extends Animal {
-  type: "human_actual",
-  [source code],
+  static type = "human_actual";
+  [source code];
 }
 expect: class Human extends Robot {
-  type: "human_expected",
-  [source code],
+  static type = "human_expected";
+  [source code];
+}
+
+# class static property modified
+actual: class A {
+  static a = true;
+  [source code];
+}
+expect: class A {
+  static a = false;
+  [source code];
 }
 
