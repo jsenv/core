@@ -514,7 +514,7 @@ export const assert = ({
         columnsRemaining -= endSeparator.length;
       }
       let columnsRemainingForValue = columnsRemaining;
-      if (!entryKeyNode.hidden) {
+      if (!entryKeyNode.isHidden) {
         const entryNameDiff = entryKeyNode.render({
           ...props,
           columnsRemaining,
@@ -1040,7 +1040,6 @@ let createRootNode;
       parent: null,
       depth: 0,
       path: createValuePath(),
-      meta: {},
     });
 
     return rootNode;
@@ -1057,7 +1056,9 @@ let createRootNode;
     depth,
     path,
     isContainer,
-    meta = {},
+    isSourceCode = false,
+    isClassStaticProperty = false,
+    isHidden = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1070,7 +1071,8 @@ let createRootNode;
       depth,
       path,
       isContainer,
-      meta,
+      isSourceCode,
+      isClassStaticProperty,
       childNodeMap: new Map(),
       appendChild: (
         name,
@@ -1080,6 +1082,9 @@ let createRootNode;
           value,
           depth = isContainer ? node.depth : node.depth + 1,
           path = node.path,
+          isSourceCode,
+          isClassStaticProperty,
+          isHidden,
         },
       ) => {
         const childNode = createNode({
@@ -1093,6 +1098,9 @@ let createRootNode;
           depth,
           path,
           isContainer,
+          isSourceCode,
+          isClassStaticProperty,
+          isHidden,
         });
         node.childNodeMap.set(name, childNode);
         return childNode;
@@ -1103,7 +1111,6 @@ let createRootNode;
       // info/primitive
       isUndefined: false,
       isString: false,
-      isSourceCode: false,
       isNumber: false,
       isSymbol: false,
       // info/composite
@@ -1118,7 +1125,7 @@ let createRootNode;
       render: () => {
         throw new Error(`render not implemented for ${type}`);
       },
-      hidden: false,
+      isHidden,
       diffType: "",
       useQuotes: false,
       startSeparator: "",
@@ -1336,11 +1343,12 @@ let createRootNode;
           let index = 0;
           while (index < value.length) {
             propertyNameToIgnoreSet.add(String(index));
-            appendIndexedEntryNode(
-              arrayIndexedEntriesNode,
-              index,
-              Object.hasOwn(value, index) ? value[index] : ARRAY_EMPTY_VALUE,
-            );
+            appendIndexedEntryNode(arrayIndexedEntriesNode, {
+              key: index,
+              value: Object.hasOwn(value, index)
+                ? value[index]
+                : ARRAY_EMPTY_VALUE,
+            });
             index++;
           }
           return;
@@ -1351,8 +1359,8 @@ let createRootNode;
           let index = 0;
           for (const [setValue] of value) {
             appendInternalEntryNode(setInternalEntriesNode, {
+              isSetEntry: true,
               key: index,
-              keyHidden: true,
               value: setValue,
             });
             index++;
@@ -1382,16 +1390,16 @@ let createRootNode;
         for (const ownPropertyName of ownPropertyNames) {
           const ownPropertyValue = value[ownPropertyName];
           appendPropertyEntryNode(propertyEntriesNode, {
+            isClassStaticProperty: node.isClass,
             key: ownPropertyName,
             value: ownPropertyValue,
           });
         }
         if (node.isFunction) {
           appendPropertyEntryNode(propertyEntriesNode, {
+            isSourceCode: true,
             key: SOURCE_CODE_ENTRY_KEY,
-            keyHidden: true,
             value: node.functionAnalysis.argsAndBodySource,
-            valueIsSourceCode: true,
           });
         }
       }
@@ -1490,20 +1498,18 @@ const appendInternalEntriesNode = (node) => {
   });
   return internalEntriesNode;
 };
-const appendInternalEntryNode = (node, { key, keyHidden, value }) => {
+const appendInternalEntryNode = (node, { isSetEntry, key, value }) => {
   node.value.push(key);
   const internalEntryNode = node.appendChild(key, {
     type: "internal_entry",
     isContainer: true,
     path: node.path.append(key),
   });
-  const internalEntryKeyNode = internalEntryNode.appendChild("entry_key", {
+  internalEntryNode.appendChild("entry_key", {
     type: "internal_entry_key",
     value: key,
+    isHidden: isSetEntry,
   });
-  if (keyHidden) {
-    internalEntryKeyNode.hidden = true;
-  }
   internalEntryNode.appendChild("entry_value", {
     type: "internal_entry_value",
     value,
@@ -1518,18 +1524,18 @@ const appendIndexedEntriesNode = (node) => {
   });
   return indexedEntriesNode;
 };
-const appendIndexedEntryNode = (node, index, value) => {
-  node.value.push(index);
-  const indexedEntryNode = node.appendChild(index, {
+const appendIndexedEntryNode = (node, { key, value }) => {
+  node.value.push(key);
+  const indexedEntryNode = node.appendChild(key, {
     type: "indexed_entry",
     isContainer: true,
-    path: node.path.append(index, { isIndexedEntry: true }),
+    path: node.path.append(key, { isIndexedEntry: true }),
   });
-  const indexedEntryKeyNode = indexedEntryNode.appendChild("entry_key", {
+  indexedEntryNode.appendChild("entry_key", {
     type: "indexed_entry_key",
-    value: index,
+    value: key,
+    isHidden: true,
   });
-  indexedEntryKeyNode.hidden = true;
   indexedEntryNode.appendChild("entry_value", {
     type: "indexed_entry_value",
     value,
@@ -1546,7 +1552,7 @@ const appendPropertyEntriesNode = (node) => {
 };
 const appendPropertyEntryNode = (
   node,
-  { key, keyHidden, value, valueIsSourceCode },
+  { isSourceCode, isClassStaticProperty, key, value },
 ) => {
   node.value.push(key);
   const propertyEntryNode = node.appendChild(key, {
@@ -1554,20 +1560,17 @@ const appendPropertyEntryNode = (
     isContainer: true,
     path: node.path.append(key),
   });
-  const propertyEntryKeyNode = propertyEntryNode.appendChild("entry_key", {
+  propertyEntryNode.appendChild("entry_key", {
     type: "property_entry_key",
     value: key,
+    isClassStaticProperty,
+    isHidden: isSourceCode,
   });
-  if (keyHidden) {
-    propertyEntryKeyNode.hidden = true;
-  }
-  const propertyEntryValueNode = propertyEntryNode.appendChild("entry_value", {
+  propertyEntryNode.appendChild("entry_value", {
     type: "property_entry_value",
     value,
+    isSourceCode,
   });
-  if (valueIsSourceCode) {
-    propertyEntryValueNode.isSourceCode = true;
-  }
   return propertyEntryNode;
 };
 
