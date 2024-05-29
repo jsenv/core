@@ -192,7 +192,7 @@ export const assert = ({
         valueDiff = "[source code]";
       } else if (node.isString) {
         valueDiff = JSON.stringify(node.value);
-        if (!node.useQuotes) {
+        if (!node.hasQuotes) {
           valueDiff = valueDiff.slice(1, -1);
         }
       } else if (node.isFunction) {
@@ -365,10 +365,10 @@ export const assert = ({
 
       const entryKeys = node.value;
       if (entryKeys.length === 0) {
-        if (node.hideSeparatorsWhenEmpty) {
-          return "";
+        if (node.hasSeparatorsWhenEmpty) {
+          return setColor(`${startSeparator}${endSeparator}`, node.color);
         }
-        return setColor(`${startSeparator}${endSeparator}`, node.color);
+        return "";
       }
       let columnsRemaining = props.columnsRemaining;
       let boilerplate = `${startSeparator} ... ${endSeparator}`;
@@ -408,11 +408,11 @@ export const assert = ({
         columnsRemaining -= entryDiffWidth;
       }
       diff += setColor(startSeparator, node.color);
-      if (node.entriesSpacing) {
+      if (node.hasSpacingAroundEntries) {
         diff += " ";
       }
       diff += entriesDiff;
-      if (node.entriesSpacing) {
+      if (node.hasSpacingAroundEntries) {
         diff += " ";
       }
       diff += setColor(endSeparator, node.color);
@@ -423,9 +423,6 @@ export const assert = ({
       props,
       { indexToDisplayArray },
     ) => {
-      if (!props) {
-        debugger;
-      }
       let atLeastOneEntryDisplayed = false;
       let diff = "";
       let entriesDiff = "";
@@ -493,13 +490,16 @@ export const assert = ({
       const { startSeparator, endSeparator } = node;
       if (atLeastOneEntryDisplayed) {
         diff += setColor(startSeparator, node.color);
-        diff += "\n";
+        if (node.hasNewLineAroundEntries) {
+          diff += "\n";
+        }
         diff += entriesDiff;
-        diff += "\n";
+        if (node.hasNewLineAroundEntries) {
+          diff += "\n";
+        }
         diff += "  ".repeat(getNodeDepth(node));
         diff += setColor(endSeparator, node.color);
-      } else if (node.hideSeparatorsWhenEmpty) {
-      } else {
+      } else if (node.hasSeparatorsWhenEmpty) {
         diff += setColor(startSeparator, node.color);
         diff += setColor(endSeparator, node.color);
       }
@@ -762,11 +762,11 @@ export const assert = ({
         actualNode.type === "property_entries"
       ) {
         if (
-          actualNode.hideSeparatorsWhenEmpty !==
-          expectNode.hideSeparatorsWhenEmpty
+          actualNode.hasSeparatorsWhenEmpty !==
+          expectNode.hasSeparatorsWhenEmpty
         ) {
-          actualNode.hideSeparatorsWhenEmpty =
-            expectNode.hideSeparatorsWhenEmpty = false;
+          actualNode.hasSeparatorsWhenEmpty =
+            expectNode.hasSeparatorsWhenEmpty = true;
         }
         const { comparisonDiffMap } = subcompareChilNodesDuo(
           actualNode,
@@ -1071,9 +1071,11 @@ let createRootNode;
     isGrammar,
     isSourceCode = false,
     isFunctionPrototype = false,
+    isClassPrototype = false,
     isClassStaticProperty = false,
     methodName = "",
     isHidden = false,
+    hasSeparatorsWhenEmpty = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1088,24 +1090,41 @@ let createRootNode;
       isContainer,
       isGrammar,
       isSourceCode,
+      isClassPrototype,
       childNodeMap: new Map(),
       appendChild: (
         name,
         {
           isContainer,
           isGrammar,
-          type,
-          value,
-          depth = isContainer || isGrammar ? node.depth : node.depth + 1,
-          path = node.path,
           isSourceCode,
           isFunctionPrototype,
+          isClassPrototype,
           isClassStaticProperty,
           methodName,
           isHidden,
+          hasSeparatorsWhenEmpty,
+          type,
+          value,
+          depth = isContainer ||
+          isGrammar ||
+          isClassPrototype ||
+          parent.isClassPrototype
+            ? node.depth
+            : node.depth + 1,
+          path = node.path,
         },
       ) => {
         const childNode = createNode({
+          isContainer,
+          isGrammar,
+          isSourceCode,
+          isFunctionPrototype,
+          isClassPrototype,
+          isClassStaticProperty,
+          methodName,
+          isHidden,
+          hasSeparatorsWhenEmpty,
           colorWhenSolo: node.colorWhenSolo,
           colorWhenSame: node.colorWhenSame,
           colorWhenModified: node.colorWhenModified,
@@ -1115,13 +1134,6 @@ let createRootNode;
           parent: node,
           depth,
           path,
-          isContainer,
-          isGrammar,
-          isSourceCode,
-          isFunctionPrototype,
-          isClassStaticProperty,
-          methodName,
-          isHidden,
         });
         node.childNodeMap.set(name, childNode);
         return childNode;
@@ -1148,12 +1160,13 @@ let createRootNode;
       methodName,
       isHidden,
       diffType: "",
-      useQuotes: false,
+      hasQuotes: false,
       startSeparator: "",
       middleSeparator: "",
       endSeparator: "",
-      entriesSpacing: false,
-      hideSeparatorsWhenEmpty: false,
+      hasSpacingAroundEntries: false,
+      hasNewLineAroundEntries: false,
+      hasSeparatorsWhenEmpty,
       color: "",
     };
     Object.preventExtensions(node);
@@ -1171,17 +1184,23 @@ let createRootNode;
     if (type === "internal_entries") {
       node.startSeparator = "(";
       node.endSeparator = ")";
+      node.hasNewLineAroundEntries = true;
       return node;
     }
     if (type === "indexed_entries") {
       node.startSeparator = "[";
       node.endSeparator = "]";
+      node.hasNewLineAroundEntries = true;
       return node;
     }
     if (type === "property_entries") {
-      node.startSeparator = "{";
-      node.endSeparator = "}";
-      node.entriesSpacing = true;
+      if (node.parent.isClassPrototype) {
+      } else {
+        node.startSeparator = "{";
+        node.endSeparator = "}";
+        node.hasSpacingAroundEntries = true;
+        node.hasNewLineAroundEntries = true;
+      }
       return node;
     }
     if (type === "internal_entry") {
@@ -1194,7 +1213,8 @@ let createRootNode;
       return node;
     }
     if (type === "property_entry") {
-      if (isClassStaticProperty) {
+      if (node.parent.parent.isClassPrototype) {
+      } else if (isClassStaticProperty) {
         node.middleSeparator = " = ";
         node.endSeparator = ";";
       } else {
@@ -1411,18 +1431,22 @@ let createRootNode;
       if (canHaveIndexedEntries && ownPropertyNames.length === 0) {
         // skip entirely property_entries
       } else {
-        const propertyEntriesNode = appendPropertyEntriesNode(node);
-        propertyEntriesNode.hideSeparatorsWhenEmpty =
-          node.childNodeMap.has("object_type") ||
-          node.childNodeMap.has("constructor_call") ||
-          node.childNodeMap.has("internal_entries") ||
-          canHaveIndexedEntries;
+        const propertyEntriesNode = appendPropertyEntriesNode(node, {
+          hasSeparatorsWhenEmpty:
+            !node.childNodeMap.has("object_type") &&
+            !node.childNodeMap.has("constructor_call") &&
+            !node.childNodeMap.has("internal_entries") &&
+            !canHaveIndexedEntries,
+        });
         for (const ownPropertyName of ownPropertyNames) {
           const ownPropertyValue = value[ownPropertyName];
           appendPropertyEntryNode(propertyEntriesNode, {
             isClassStaticProperty: node.functionAnalysis.type === "class",
             isFunctionPrototype:
               ownPropertyName === "prototype" && node.isFunction,
+            isClassPrototype:
+              ownPropertyName === "prototype" &&
+              node.functionAnalysis.type === "class",
             key: ownPropertyName,
             value: ownPropertyValue,
           });
@@ -1444,13 +1468,12 @@ let createRootNode;
     if (typeofResult === "string") {
       node.isString = true;
       if (isGrammar) {
-        node.useQuotes = false;
       } else if (type === "property_entry_key") {
         if (!isValidPropertyIdentifier(value)) {
-          node.useQuotes = true;
+          node.hasQuotes = true;
         }
       } else {
-        node.useQuotes = true;
+        node.hasQuotes = true;
       }
     }
     if (value === undefined) {
@@ -1516,6 +1539,7 @@ const appendInternalEntriesNode = (node) => {
     isContainer: true,
     type: "internal_entries",
     value: [],
+    hasSeparatorsWhenEmpty: true,
   });
   return internalEntriesNode;
 };
@@ -1542,6 +1566,7 @@ const appendIndexedEntriesNode = (node) => {
     isContainer: true,
     type: "indexed_entries",
     value: [],
+    hasSeparatorsWhenEmpty: true,
   });
   return indexedEntriesNode;
 };
@@ -1563,22 +1588,31 @@ const appendIndexedEntryNode = (node, { key, value }) => {
   });
   return indexedEntryNode;
 };
-const appendPropertyEntriesNode = (node) => {
+const appendPropertyEntriesNode = (node, { hasSeparatorsWhenEmpty }) => {
   const propertyEntriesNode = node.appendChild("property_entries", {
     isContainer: true,
     type: "property_entries",
     value: [],
+    hasSeparatorsWhenEmpty,
   });
   return propertyEntriesNode;
 };
 const appendPropertyEntryNode = (
   node,
-  { isSourceCode, isFunctionPrototype, isClassStaticProperty, key, value },
+  {
+    isSourceCode,
+    isFunctionPrototype,
+    isClassPrototype,
+    isClassStaticProperty,
+    key,
+    value,
+  },
 ) => {
   node.value.push(key);
   const propertyEntryNode = node.appendChild(key, {
     isContainer: true,
     isClassStaticProperty,
+    isClassPrototype,
     isFunctionPrototype,
     type: "property_entry",
     path: node.path.append(key),
@@ -1589,9 +1623,10 @@ const appendPropertyEntryNode = (
     value,
     isSourceCode,
     isFunctionPrototype,
+    isClassPrototype,
     methodName: key,
   });
-  if (isClassStaticProperty) {
+  if (isClassStaticProperty && !isClassPrototype) {
     propertyEntryNode.appendChild("static_keyword", {
       isGrammar: true,
       isHidden:
@@ -1605,7 +1640,9 @@ const appendPropertyEntryNode = (
     type: "property_entry_key",
     value: key,
     isHidden:
-      isSourceCode || propertyEntryValueNode.functionAnalysis.type === "method",
+      isSourceCode ||
+      propertyEntryValueNode.functionAnalysis.type === "method" ||
+      isClassPrototype,
   });
   return propertyEntryNode;
 };
