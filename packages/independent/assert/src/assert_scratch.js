@@ -72,6 +72,7 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
   placeholder: "added_or_removed",
 };
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
+const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
 
 const setColor = (text, color) => {
   if (text.trim() === "") {
@@ -1135,6 +1136,10 @@ let createRootNode;
     if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
       return node;
     }
+    if (value === SOURCE_CODE_ENTRY_KEY) {
+      node.isPrimitive = true;
+      return node;
+    }
     if (type === "internal_entries") {
       node.startSeparator = "(";
       node.endSeparator = ")";
@@ -1383,7 +1388,7 @@ let createRootNode;
         }
         if (node.isFunction) {
           appendPropertyEntryNode(propertyEntriesNode, {
-            key: "[[source code]]",
+            key: SOURCE_CODE_ENTRY_KEY,
             keyHidden: true,
             value: node.functionAnalysis.argsAndBodySource,
             valueIsSourceCode: true,
