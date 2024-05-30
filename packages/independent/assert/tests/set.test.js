@@ -21,7 +21,7 @@ await startSnapshotTesting("set", {
         "Z",
       ]),
       MAX_DIFF_PER_OBJECT: 4,
-      MAX_PROP_BEFORE_DIFF: 2,
+      MAX_ENTRY_BEFORE_MULTILINE_DIFF: 2,
     });
   },
   ["compare set and map"]: () => {

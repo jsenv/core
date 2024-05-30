@@ -122,8 +122,8 @@ await startSnapshotTesting("object", {
         b: false,
         a: true,
       },
-      MAX_PROP_BEFORE_DIFF: 0,
-      MAX_PROP_AFTER_DIFF: 0,
+      MAX_ENTRY_BEFORE_MULTILINE_DIFF: 0,
+      MAX_ENTRY_AFTER_MULTILINE_DIFF: 0,
     });
   },
   ["property should be there and is big"]: () => {

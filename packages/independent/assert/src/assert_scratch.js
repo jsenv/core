@@ -29,6 +29,7 @@ import {
   analyseFunction,
   defaultFunctionAnalysis,
 } from "./function_analysis.js";
+import { tokenizeLine } from "./tokenize_line.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -103,8 +104,8 @@ const measureLastLineColumns = (string) => {
 export const assert = ({
   actual,
   expect,
-  MAX_PROP_BEFORE_DIFF = 2,
-  MAX_PROP_AFTER_DIFF = 2,
+  MAX_ENTRY_BEFORE_MULTILINE_DIFF = 2,
+  MAX_ENTRY_AFTER_MULTILINE_DIFF = 2,
   MAX_DEPTH = 5,
   MAX_DEPTH_INSIDE_DIFF = 1,
   MAX_DIFF_PER_OBJECT = 2,
@@ -370,7 +371,7 @@ export const assert = ({
       return diff;
     };
 
-    const renderEntryArrayOneLiner = (node, props) => {
+    const renderEntriesOneLiner = (node, props) => {
       const { startSeparator, endSeparator } = node;
 
       const entryKeys = node.value;
@@ -429,11 +430,7 @@ export const assert = ({
       diff += setColor(endSeparator, node.color);
       return diff;
     };
-    const renderEntryArrayMultiline = (
-      node,
-      props,
-      { indexToDisplayArray },
-    ) => {
+    const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
       let atLeastOneEntryDisplayed = false;
       let diff = "";
       let entriesDiff = "";
@@ -603,7 +600,7 @@ export const assert = ({
         let beforeDiffIndex = diffIndex - 1;
         let beforeCount = 0;
         while (beforeDiffIndex > -1) {
-          if (beforeCount === MAX_PROP_BEFORE_DIFF) {
+          if (beforeCount === MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
             break;
           }
           indexToDisplaySet.add(beforeDiffIndex);
@@ -614,7 +611,7 @@ export const assert = ({
         let afterDiffIndex = diffIndex + 1;
         let afterCount = 0;
         while (afterDiffIndex < entryKeys.length) {
-          if (afterCount === MAX_PROP_AFTER_DIFF) {
+          if (afterCount === MAX_ENTRY_AFTER_MULTILINE_DIFF) {
             break;
           }
           indexToDisplaySet.add(afterDiffIndex);
@@ -778,7 +775,9 @@ export const assert = ({
       if (
         actualNode.type === "internal_entries" ||
         actualNode.type === "indexed_entries" ||
-        actualNode.type === "property_entries"
+        actualNode.type === "property_entries" ||
+        actualNode.type === "line_entries" ||
+        actualNode.type === "char_entries"
       ) {
         if (
           actualNode.hasSeparatorsWhenEmpty !==
@@ -793,20 +792,20 @@ export const assert = ({
         );
         if (comparisonDiffMap.size === 0) {
           actualNode.render = (props) =>
-            renderEntryArrayOneLiner(actualNode, props);
+            renderEntriesOneLiner(actualNode, props);
           expectNode.render = (props) =>
-            renderEntryArrayOneLiner(expectNode, props);
+            renderEntriesOneLiner(expectNode, props);
           return;
         }
         actualNode.render = (props) =>
-          renderEntryArrayMultiline(actualNode, props, {
+          renderEntriesMultiline(actualNode, props, {
             indexToDisplayArray: getIndexToDisplayArrayDuo(
               actualNode,
               comparisonDiffMap,
             ),
           });
         expectNode.render = (props) =>
-          renderEntryArrayMultiline(expectNode, props, {
+          renderEntriesMultiline(expectNode, props, {
             indexToDisplayArray: getIndexToDisplayArrayDuo(
               expectNode,
               comparisonDiffMap,
@@ -817,7 +816,9 @@ export const assert = ({
       if (
         actualNode.type === "internal_entry" ||
         actualNode.type === "indexed_entry" ||
-        actualNode.type === "property_entry"
+        actualNode.type === "property_entry" ||
+        actualNode.type === "line_entry" ||
+        actualNode.type === "char_entry"
       ) {
         subcompareChilNodesDuo(actualNode, expectNode);
         actualNode.render = (props) => renderEntry(actualNode, props);
@@ -828,7 +829,9 @@ export const assert = ({
         subcompareChilNodesDuo(actualNode, expectNode);
         return;
       }
-      throw new Error("wtf");
+      throw new Error(
+        `visitDuo not implemented for "${actualNode.type}" node type`,
+      );
     };
     const visitSolo = (node, placeholderNode) => {
       if (node.isPrimitive) {
@@ -844,14 +847,16 @@ export const assert = ({
       if (
         node.type === "internal_entries" ||
         node.type === "indexed_entries" ||
-        node.type === "property_entries"
+        node.type === "property_entries" ||
+        node.type === "line_entries" ||
+        node.type === "char_entries"
       ) {
         const comparisonResultMap = subcompareChildNodesSolo(
           node,
           placeholderNode,
         );
         node.render = (props) =>
-          renderEntryArrayMultiline(node, props, {
+          renderEntriesMultiline(node, props, {
             indexToDisplayArray: getIndexToDisplayArraySolo(
               node,
               comparisonResultMap,
@@ -862,7 +867,9 @@ export const assert = ({
       if (
         node.type === "internal_entry" ||
         node.type === "indexed_entry" ||
-        node.type === "property_entry"
+        node.type === "property_entry" ||
+        node.type === "line_entry" ||
+        node.type === "char_entry"
       ) {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderEntry(node, props);
@@ -872,7 +879,7 @@ export const assert = ({
         subcompareChildNodesSolo(node, placeholderNode);
         return;
       }
-      throw new Error("wtf");
+      throw new Error(`visitSolo not implemented for "${node.type}" node type`);
     };
 
     let actualSkipSettle = false;
@@ -1283,6 +1290,23 @@ let createRootNode;
       }
       return node;
     }
+    if (type === "line_entry_value") {
+      node.isPrimitive = true;
+      node.isString = true;
+      const charEntriesNode = appendCharEntriesNode(node);
+      const chars = tokenizeLine(value);
+      let charIndex = 0;
+      for (const char of chars) {
+        appendCharEntryNode(charEntriesNode, { key: charIndex, value: char });
+        charIndex++;
+      }
+      return node;
+    }
+    if (type === "char_entry_value") {
+      node.isPrimitive = true;
+      node.isString = true;
+      return node;
+    }
     if (type === "constructor_call") {
       node.startSeparator = "(";
       node.endSeparator = ")";
@@ -1291,7 +1315,11 @@ let createRootNode;
     if (isContainer) {
       return node;
     }
-    if (type === "indexed_entry_key") {
+    if (
+      type === "indexed_entry_key" ||
+      type === "line_entry_key" ||
+      type === "char_entry_key"
+    ) {
       node.isPrimitive = true;
       node.isNumber = true;
       return node;
@@ -1562,12 +1590,21 @@ let createRootNode;
     if (typeofResult === "string") {
       node.isString = true;
       if (isGrammar) {
-      } else if (type === "property_entry_key") {
-        if (!isValidPropertyIdentifier(value)) {
+      } else {
+        if (type === "property_entry_key") {
+          if (!isValidPropertyIdentifier(value)) {
+            node.hasQuotes = true;
+          }
+        } else {
           node.hasQuotes = true;
         }
-      } else {
-        node.hasQuotes = true;
+        const lineEntriesNode = appendLineEntriesNode(node);
+        const lines = value.split(/\r?\n/);
+        let lineIndex = 0;
+        for (const line of lines) {
+          appendLineEntryNode(lineEntriesNode, { key: lineIndex, value: line });
+          lineIndex++;
+        }
       }
     }
     if (value === undefined) {
@@ -1582,21 +1619,27 @@ const getAddedOrRemovedReason = (node) => {
   if (
     node.type === "internal_entry" ||
     node.type === "indexed_entry" ||
-    node.type === "property_entry"
+    node.type === "property_entry" ||
+    node.type === "line_entry" ||
+    node.type === "char_entry"
   ) {
     return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
   }
   if (
     node.type === "internal_entry_key" ||
     node.type === "indexed_entry_key" ||
-    node.type === "property_entry_key"
+    node.type === "property_entry_key" ||
+    node.type === "line_entry_key" ||
+    node.type === "char_entry_key"
   ) {
     return node.value;
   }
   if (
     node.type === "internal_entry_value" ||
     node.type === "indexed_entry_value" ||
-    node.type === "property_entry_value"
+    node.type === "property_entry_value" ||
+    node.type === "line_entry_value" ||
+    node.type === "char_entry_value"
   ) {
     return getAddedOrRemovedReason(node.parent);
   }
@@ -1795,6 +1838,58 @@ const appendPropertyEntryNode = (
       isClassPrototype,
   });
   return propertyEntryNode;
+};
+const appendLineEntriesNode = (node) => {
+  const lineEntriesNode = node.appendChild("line_entries", {
+    isContainer: true,
+    type: "line_entries",
+    value: [],
+  });
+  return lineEntriesNode;
+};
+const appendLineEntryNode = (node, { key, value }) => {
+  node.value.push(key);
+  const lineEntryNode = node.appendChild(key, {
+    isContainer: true,
+    type: "line_entry",
+    path: node.path.append(`#L${key + 1}`),
+  });
+  lineEntryNode.appendChild("entry_key", {
+    type: "line_entry_key",
+    value: key,
+    isHidden: true,
+  });
+  lineEntryNode.appendChild("entry_value", {
+    type: "line_entry_value",
+    value,
+  });
+  return lineEntryNode;
+};
+const appendCharEntriesNode = (node) => {
+  const charEntriesNode = node.appendChild("char_entries", {
+    isContainer: true,
+    type: "char_entries",
+    value: [],
+  });
+  return charEntriesNode;
+};
+const appendCharEntryNode = (node, { key, value }) => {
+  node.value.push(key);
+  const charEntryNode = node.appendChild(key, {
+    isContainer: true,
+    type: "char_entry",
+    path: node.path.append(`C${key + 1}`),
+  });
+  charEntryNode.appendChild("entry_key", {
+    type: "char_entry_key",
+    value: key,
+    isHidden: true,
+  });
+  charEntryNode.appendChild("entry_value", {
+    type: "char_entry_value",
+    value,
+  });
+  return charEntryNode;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
