@@ -211,12 +211,24 @@ export const assert = ({
         if (lineEntriesNode) {
           return lineEntriesNode.render(props);
         }
-        valueDiff = JSON.stringify(node.value);
-        if (!node.hasQuotes) {
-          valueDiff = valueDiff.slice(1, -1);
+        if (node.type === "char_entry_value") {
+          const char = node.value;
+          if (char === node.parent.parent.parent.parent.startMarker) {
+            valueDiff = `\\${char}`;
+          } else {
+            const point = char.charCodeAt(0);
+            if (point === 92 || point < 32 || (point > 126 && point < 160)) {
+              valueDiff = CHAR_TO_ESCAPED_CHAR[point];
+            } else {
+              valueDiff = char;
+            }
+          }
+        } else {
+          valueDiff = JSON.stringify(node.value);
+          if (!node.hasQuotes) {
+            valueDiff = valueDiff.slice(1, -1);
+          }
         }
-      } else if (node.isFunction) {
-        valueDiff = "function";
       } else if (node.isUndefined) {
         valueDiff = "undefined";
       } else {
@@ -2236,3 +2248,21 @@ const appendReasonGroup = (reasonGroup, otherReasonGroup) => {
   appendReasons(reasonGroup.added, otherReasonGroup.added);
   appendReasons(reasonGroup.modified, otherReasonGroup.modified);
 };
+
+// prettier-ignore
+const CHAR_TO_ESCAPED_CHAR = [
+  '\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07', // x07
+  '\\b', '\\t', '\\n', '\\x0B', '\\f', '\\r', '\\x0E', '\\x0F',           // x0F
+  '\\x10', '\\x11', '\\x12', '\\x13', '\\x14', '\\x15', '\\x16', '\\x17', // x17
+  '\\x18', '\\x19', '\\x1A', '\\x1B', '\\x1C', '\\x1D', '\\x1E', '\\x1F', // x1F
+  '', '', '', '', '', '', '', "\\'", '', '', '', '', '', '', '', '',      // x2F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x3F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x4F
+  '', '', '', '', '', '', '', '', '', '', '', '', '\\\\', '', '', '',     // x5F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x6F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '\\x7F',    // x7F
+  '\\x80', '\\x81', '\\x82', '\\x83', '\\x84', '\\x85', '\\x86', '\\x87', // x87
+  '\\x88', '\\x89', '\\x8A', '\\x8B', '\\x8C', '\\x8D', '\\x8E', '\\x8F', // x8F
+  '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
+  '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
+];
