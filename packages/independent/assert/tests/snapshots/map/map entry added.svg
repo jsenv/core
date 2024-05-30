@@ -38,7 +38,9 @@
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">Map</text>
         <text x="102.42" y="14.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="33.55" fill="#DAA520">&#x22;a&#x22;</text>
+        <text x="26.8" y="33.55" fill="#DAA520">&#x22;</text>
+        <text x="35.2" y="33.55" fill="#DAA520">a</text>
+        <text x="43.61" y="33.55" fill="#DAA520">&#x22;</text>
         <text x="60.41" y="33.55" fill="#DAA520"> =&#x3E; </text>
         <text x="85.61" y="33.55" fill="#DAA520">true</text>
         <text x="119.22" y="33.55" fill="#DAA520">,</text>

@@ -50,11 +50,25 @@
         <text x="26.8" y="33.55" fill="#cd5555">[source code]</text>
         <text x="136.02" y="33.55" fill="#7f7f7f">;</text>
         <text x="26.8" y="52.55" fill="#7f7f7f">static</text>
-        <text x="85.61" y="52.55" fill="#7f7f7f">type</text>
+        <text x="85.61" y="52.55" fill="#7f7f7f">t</text>
+        <text x="94.01" y="52.55" fill="#7f7f7f">y</text>
+        <text x="102.42" y="52.55" fill="#7f7f7f">p</text>
+        <text x="110.82" y="52.55" fill="#7f7f7f">e</text>
         <text x="127.62" y="52.55" fill="#7f7f7f"> = </text>
-        <text x="144.42" y="52.55" fill="#cd5555"
-          >&#x22;human_actual&#x22;</text
-        >
+        <text x="144.42" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="152.82" y="52.55" fill="#7f7f7f">h</text>
+        <text x="161.22" y="52.55" fill="#7f7f7f">u</text>
+        <text x="169.63" y="52.55" fill="#7f7f7f">m</text>
+        <text x="178.03" y="52.55" fill="#7f7f7f">a</text>
+        <text x="186.43" y="52.55" fill="#7f7f7f">n</text>
+        <text x="194.83" y="52.55" fill="#7f7f7f">_</text>
+        <text x="203.23" y="52.55" fill="#cd5555">a</text>
+        <text x="211.63" y="52.55" fill="#cd5555">c</text>
+        <text x="220.03" y="52.55" fill="#cd5555">t</text>
+        <text x="228.44" y="52.55" fill="#cd5555">u</text>
+        <text x="236.84" y="52.55" fill="#cd5555">a</text>
+        <text x="245.24" y="52.55" fill="#cd5555">l</text>
+        <text x="253.64" y="52.55" fill="#7f7f7f">&#x22;</text>
         <text x="262.04" y="52.55" fill="#7f7f7f">;</text>
         <text x="10" y="71.55" fill="#7f7f7f">}</text>
         <text x="10" y="90.55" fill="#7f7f7f">expect:</text>
@@ -66,11 +80,27 @@
         <text x="26.8" y="109.55" fill="#11bc79">[source code]</text>
         <text x="136.02" y="109.55" fill="#7f7f7f">;</text>
         <text x="26.8" y="128.55" fill="#7f7f7f">static</text>
-        <text x="85.61" y="128.55" fill="#7f7f7f">type</text>
+        <text x="85.61" y="128.55" fill="#7f7f7f">t</text>
+        <text x="94.01" y="128.55" fill="#7f7f7f">y</text>
+        <text x="102.42" y="128.55" fill="#7f7f7f">p</text>
+        <text x="110.82" y="128.55" fill="#7f7f7f">e</text>
         <text x="127.62" y="128.55" fill="#7f7f7f"> = </text>
-        <text x="144.42" y="128.55" fill="#11bc79"
-          >&#x22;human_expected&#x22;</text
-        >
+        <text x="144.42" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="152.82" y="128.55" fill="#7f7f7f">h</text>
+        <text x="161.22" y="128.55" fill="#7f7f7f">u</text>
+        <text x="169.63" y="128.55" fill="#7f7f7f">m</text>
+        <text x="178.03" y="128.55" fill="#7f7f7f">a</text>
+        <text x="186.43" y="128.55" fill="#7f7f7f">n</text>
+        <text x="194.83" y="128.55" fill="#7f7f7f">_</text>
+        <text x="203.23" y="128.55" fill="#11bc79">e</text>
+        <text x="211.63" y="128.55" fill="#11bc79">x</text>
+        <text x="220.03" y="128.55" fill="#11bc79">p</text>
+        <text x="228.44" y="128.55" fill="#11bc79">e</text>
+        <text x="236.84" y="128.55" fill="#11bc79">c</text>
+        <text x="245.24" y="128.55" fill="#11bc79">t</text>
+        <text x="253.64" y="128.55" fill="#DAA520">e</text>
+        <text x="262.04" y="128.55" fill="#DAA520">d</text>
+        <text x="270.44" y="128.55" fill="#7f7f7f">&#x22;</text>
         <text x="278.84" y="128.55" fill="#7f7f7f">;</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>

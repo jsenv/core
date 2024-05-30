@@ -43,7 +43,14 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="33.55" fill="#7f7f7f">abcdefgh</text>
+        <text x="26.8" y="33.55" fill="#7f7f7f">a</text>
+        <text x="35.2" y="33.55" fill="#7f7f7f">b</text>
+        <text x="43.61" y="33.55" fill="#7f7f7f">c</text>
+        <text x="52.01" y="33.55" fill="#7f7f7f">d</text>
+        <text x="60.41" y="33.55" fill="#7f7f7f">e</text>
+        <text x="68.81" y="33.55" fill="#7f7f7f">f</text>
+        <text x="77.21" y="33.55" fill="#7f7f7f">g</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">h</text>
         <text x="94.01" y="33.55" fill="#7f7f7f">: </text>
         <text x="110.82" y="33.55" fill="#cd5555">t</text>
         <text x="119.22" y="33.55" fill="#cd5555">&#x2026;</text>
@@ -51,7 +58,14 @@
         <text x="10" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">abcdefgh</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">a</text>
+        <text x="35.2" y="90.55" fill="#7f7f7f">b</text>
+        <text x="43.61" y="90.55" fill="#7f7f7f">c</text>
+        <text x="52.01" y="90.55" fill="#7f7f7f">d</text>
+        <text x="60.41" y="90.55" fill="#7f7f7f">e</text>
+        <text x="68.81" y="90.55" fill="#7f7f7f">f</text>
+        <text x="77.21" y="90.55" fill="#7f7f7f">g</text>
+        <text x="85.61" y="90.55" fill="#7f7f7f">h</text>
         <text x="94.01" y="90.55" fill="#7f7f7f">: </text>
         <text x="110.82" y="90.55" fill="#11bc79">f</text>
         <text x="119.22" y="90.55" fill="#11bc79">&#x2026;</text>

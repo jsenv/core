@@ -48,11 +48,17 @@
         <text x="43.61" y="33.55" fill="#7f7f7f">2</text>
         <text x="60.41" y="33.55" fill="#7f7f7f">values</text>
         <text x="119.22" y="33.55" fill="#7f7f7f">&#x2191;</text>
-        <text x="26.8" y="52.55" fill="#7f7f7f">&#x22;c&#x22;</text>
+        <text x="26.8" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="52.55" fill="#7f7f7f">c</text>
+        <text x="43.61" y="52.55" fill="#7f7f7f">&#x22;</text>
         <text x="52.01" y="52.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">&#x22;d&#x22;</text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="71.55" fill="#7f7f7f">d</text>
+        <text x="43.61" y="71.55" fill="#7f7f7f">&#x22;</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="90.55" fill="#DAA520">&#x22;Y&#x22;</text>
+        <text x="26.8" y="90.55" fill="#DAA520">&#x22;</text>
+        <text x="35.2" y="90.55" fill="#DAA520">Y</text>
+        <text x="43.61" y="90.55" fill="#DAA520">&#x22;</text>
         <text x="52.01" y="90.55" fill="#DAA520">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">)</text>
         <text x="10" y="128.55" fill="#7f7f7f">expect:</text>
@@ -62,11 +68,17 @@
         <text x="43.61" y="147.55" fill="#7f7f7f">2</text>
         <text x="60.41" y="147.55" fill="#7f7f7f">values</text>
         <text x="119.22" y="147.55" fill="#7f7f7f">&#x2191;</text>
-        <text x="26.8" y="166.55" fill="#7f7f7f">&#x22;d&#x22;</text>
+        <text x="26.8" y="166.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="166.55" fill="#7f7f7f">d</text>
+        <text x="43.61" y="166.55" fill="#7f7f7f">&#x22;</text>
         <text x="52.01" y="166.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="185.55" fill="#7f7f7f">&#x22;c&#x22;</text>
+        <text x="26.8" y="185.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="185.55" fill="#7f7f7f">c</text>
+        <text x="43.61" y="185.55" fill="#7f7f7f">&#x22;</text>
         <text x="52.01" y="185.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="204.55" fill="#DAA520">&#x22;Z&#x22;</text>
+        <text x="26.8" y="204.55" fill="#DAA520">&#x22;</text>
+        <text x="35.2" y="204.55" fill="#DAA520">Z</text>
+        <text x="43.61" y="204.55" fill="#DAA520">&#x22;</text>
         <text x="52.01" y="204.55" fill="#DAA520">,</text>
         <text x="10" y="223.55" fill="#7f7f7f">)</text>
       </g>

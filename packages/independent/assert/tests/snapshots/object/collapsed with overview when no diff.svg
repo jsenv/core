@@ -46,15 +46,21 @@
         <text x="26.8" y="33.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="33.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="33.55" fill="#7f7f7f">{</text>
-        <text x="68.81" y="33.55" fill="#7f7f7f">foo</text>
+        <text x="68.81" y="33.55" fill="#7f7f7f">f</text>
+        <text x="77.21" y="33.55" fill="#7f7f7f">o</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">o</text>
         <text x="94.01" y="33.55" fill="#7f7f7f">: </text>
         <text x="110.82" y="33.55" fill="#7f7f7f">true</text>
         <text x="144.42" y="33.55" fill="#7f7f7f">,</text>
-        <text x="161.22" y="33.55" fill="#7f7f7f">bar</text>
+        <text x="161.22" y="33.55" fill="#7f7f7f">b</text>
+        <text x="169.63" y="33.55" fill="#7f7f7f">a</text>
+        <text x="178.03" y="33.55" fill="#7f7f7f">r</text>
         <text x="186.43" y="33.55" fill="#7f7f7f">: </text>
         <text x="203.23" y="33.55" fill="#7f7f7f">true</text>
         <text x="236.84" y="33.55" fill="#7f7f7f">,</text>
-        <text x="253.64" y="33.55" fill="#7f7f7f">baz</text>
+        <text x="253.64" y="33.55" fill="#7f7f7f">b</text>
+        <text x="262.04" y="33.55" fill="#7f7f7f">a</text>
+        <text x="270.44" y="33.55" fill="#7f7f7f">z</text>
         <text x="278.84" y="33.55" fill="#7f7f7f">: </text>
         <text x="295.65" y="33.55" fill="#7f7f7f">{</text>
         <text x="312.45" y="33.55" fill="#7f7f7f">t</text>
@@ -73,15 +79,21 @@
         <text x="26.8" y="109.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="109.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="109.55" fill="#7f7f7f">{</text>
-        <text x="68.81" y="109.55" fill="#7f7f7f">foo</text>
+        <text x="68.81" y="109.55" fill="#7f7f7f">f</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">o</text>
+        <text x="85.61" y="109.55" fill="#7f7f7f">o</text>
         <text x="94.01" y="109.55" fill="#7f7f7f">: </text>
         <text x="110.82" y="109.55" fill="#7f7f7f">true</text>
         <text x="144.42" y="109.55" fill="#7f7f7f">,</text>
-        <text x="161.22" y="109.55" fill="#7f7f7f">bar</text>
+        <text x="161.22" y="109.55" fill="#7f7f7f">b</text>
+        <text x="169.63" y="109.55" fill="#7f7f7f">a</text>
+        <text x="178.03" y="109.55" fill="#7f7f7f">r</text>
         <text x="186.43" y="109.55" fill="#7f7f7f">: </text>
         <text x="203.23" y="109.55" fill="#7f7f7f">true</text>
         <text x="236.84" y="109.55" fill="#7f7f7f">,</text>
-        <text x="253.64" y="109.55" fill="#7f7f7f">baz</text>
+        <text x="253.64" y="109.55" fill="#7f7f7f">b</text>
+        <text x="262.04" y="109.55" fill="#7f7f7f">a</text>
+        <text x="270.44" y="109.55" fill="#7f7f7f">z</text>
         <text x="278.84" y="109.55" fill="#7f7f7f">: </text>
         <text x="295.65" y="109.55" fill="#7f7f7f">{</text>
         <text x="312.45" y="109.55" fill="#7f7f7f">t</text>

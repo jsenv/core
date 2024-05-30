@@ -43,57 +43,105 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="33.55" fill="#7f7f7f">foo</text>
+        <text x="26.8" y="33.55" fill="#7f7f7f">f</text>
+        <text x="35.2" y="33.55" fill="#7f7f7f">o</text>
+        <text x="43.61" y="33.55" fill="#7f7f7f">o</text>
         <text x="52.01" y="33.55" fill="#7f7f7f">: </text>
         <text x="68.81" y="33.55" fill="#7f7f7f">{</text>
-        <text x="85.61" y="33.55" fill="#7f7f7f">foo_a</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">f</text>
+        <text x="94.01" y="33.55" fill="#7f7f7f">o</text>
+        <text x="102.42" y="33.55" fill="#7f7f7f">o</text>
+        <text x="110.82" y="33.55" fill="#7f7f7f">_</text>
+        <text x="119.22" y="33.55" fill="#7f7f7f">a</text>
         <text x="127.62" y="33.55" fill="#7f7f7f">: </text>
         <text x="144.42" y="33.55" fill="#7f7f7f">{</text>
-        <text x="161.22" y="33.55" fill="#7f7f7f">foo_a2</text>
+        <text x="161.22" y="33.55" fill="#7f7f7f">f</text>
+        <text x="169.63" y="33.55" fill="#7f7f7f">o</text>
+        <text x="178.03" y="33.55" fill="#7f7f7f">o</text>
+        <text x="186.43" y="33.55" fill="#7f7f7f">_</text>
+        <text x="194.83" y="33.55" fill="#7f7f7f">a</text>
+        <text x="203.23" y="33.55" fill="#7f7f7f">2</text>
         <text x="211.63" y="33.55" fill="#7f7f7f">: </text>
         <text x="228.44" y="33.55" fill="#7f7f7f">Object(1)</text>
         <text x="312.45" y="33.55" fill="#7f7f7f">}</text>
         <text x="320.85" y="33.55" fill="#7f7f7f">,</text>
-        <text x="337.65" y="33.55" fill="#7f7f7f">foo_b</text>
+        <text x="337.65" y="33.55" fill="#7f7f7f">f</text>
+        <text x="346.05" y="33.55" fill="#7f7f7f">o</text>
+        <text x="354.46" y="33.55" fill="#7f7f7f">o</text>
+        <text x="362.86" y="33.55" fill="#7f7f7f">_</text>
+        <text x="371.26" y="33.55" fill="#7f7f7f">b</text>
         <text x="379.66" y="33.55" fill="#7f7f7f">: </text>
         <text x="396.46" y="33.55" fill="#7f7f7f">{</text>
-        <text x="413.27" y="33.55" fill="#7f7f7f">foo_b2</text>
+        <text x="413.27" y="33.55" fill="#7f7f7f">f</text>
+        <text x="421.67" y="33.55" fill="#7f7f7f">o</text>
+        <text x="430.07" y="33.55" fill="#7f7f7f">o</text>
+        <text x="438.47" y="33.55" fill="#7f7f7f">_</text>
+        <text x="446.87" y="33.55" fill="#7f7f7f">b</text>
+        <text x="455.27" y="33.55" fill="#7f7f7f">2</text>
         <text x="463.67" y="33.55" fill="#7f7f7f">: </text>
         <text x="480.48" y="33.55" fill="#7f7f7f">Object(1)</text>
         <text x="564.49" y="33.55" fill="#7f7f7f">}</text>
         <text x="581.29" y="33.55" fill="#7f7f7f">}</text>
         <text x="589.69" y="33.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="52.55" fill="#7f7f7f">bar</text>
+        <text x="26.8" y="52.55" fill="#7f7f7f">b</text>
+        <text x="35.2" y="52.55" fill="#7f7f7f">a</text>
+        <text x="43.61" y="52.55" fill="#7f7f7f">r</text>
         <text x="52.01" y="52.55" fill="#7f7f7f">: </text>
         <text x="68.81" y="52.55" fill="#cd5555">true</text>
         <text x="102.42" y="52.55" fill="#7f7f7f">,</text>
         <text x="10" y="71.55" fill="#7f7f7f">}</text>
         <text x="10" y="90.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="90.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="109.55" fill="#7f7f7f">foo</text>
+        <text x="26.8" y="109.55" fill="#7f7f7f">f</text>
+        <text x="35.2" y="109.55" fill="#7f7f7f">o</text>
+        <text x="43.61" y="109.55" fill="#7f7f7f">o</text>
         <text x="52.01" y="109.55" fill="#7f7f7f">: </text>
         <text x="68.81" y="109.55" fill="#7f7f7f">{</text>
-        <text x="85.61" y="109.55" fill="#7f7f7f">foo_a</text>
+        <text x="85.61" y="109.55" fill="#7f7f7f">f</text>
+        <text x="94.01" y="109.55" fill="#7f7f7f">o</text>
+        <text x="102.42" y="109.55" fill="#7f7f7f">o</text>
+        <text x="110.82" y="109.55" fill="#7f7f7f">_</text>
+        <text x="119.22" y="109.55" fill="#7f7f7f">a</text>
         <text x="127.62" y="109.55" fill="#7f7f7f">: </text>
         <text x="144.42" y="109.55" fill="#7f7f7f">{</text>
-        <text x="161.22" y="109.55" fill="#7f7f7f">foo_a2</text>
+        <text x="161.22" y="109.55" fill="#7f7f7f">f</text>
+        <text x="169.63" y="109.55" fill="#7f7f7f">o</text>
+        <text x="178.03" y="109.55" fill="#7f7f7f">o</text>
+        <text x="186.43" y="109.55" fill="#7f7f7f">_</text>
+        <text x="194.83" y="109.55" fill="#7f7f7f">a</text>
+        <text x="203.23" y="109.55" fill="#7f7f7f">2</text>
         <text x="211.63" y="109.55" fill="#7f7f7f">: </text>
         <text x="228.44" y="109.55" fill="#7f7f7f">Object(1)</text>
         <text x="312.45" y="109.55" fill="#7f7f7f">}</text>
         <text x="320.85" y="109.55" fill="#7f7f7f">,</text>
-        <text x="337.65" y="109.55" fill="#7f7f7f">foo_b</text>
+        <text x="337.65" y="109.55" fill="#7f7f7f">f</text>
+        <text x="346.05" y="109.55" fill="#7f7f7f">o</text>
+        <text x="354.46" y="109.55" fill="#7f7f7f">o</text>
+        <text x="362.86" y="109.55" fill="#7f7f7f">_</text>
+        <text x="371.26" y="109.55" fill="#7f7f7f">b</text>
         <text x="379.66" y="109.55" fill="#7f7f7f">: </text>
         <text x="396.46" y="109.55" fill="#7f7f7f">{</text>
-        <text x="413.27" y="109.55" fill="#7f7f7f">foo_b2</text>
+        <text x="413.27" y="109.55" fill="#7f7f7f">f</text>
+        <text x="421.67" y="109.55" fill="#7f7f7f">o</text>
+        <text x="430.07" y="109.55" fill="#7f7f7f">o</text>
+        <text x="438.47" y="109.55" fill="#7f7f7f">_</text>
+        <text x="446.87" y="109.55" fill="#7f7f7f">b</text>
+        <text x="455.27" y="109.55" fill="#7f7f7f">2</text>
         <text x="463.67" y="109.55" fill="#7f7f7f">: </text>
         <text x="480.48" y="109.55" fill="#7f7f7f">Object(1)</text>
         <text x="564.49" y="109.55" fill="#7f7f7f">}</text>
         <text x="581.29" y="109.55" fill="#7f7f7f">}</text>
         <text x="589.69" y="109.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">bar</text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">b</text>
+        <text x="35.2" y="128.55" fill="#7f7f7f">a</text>
+        <text x="43.61" y="128.55" fill="#7f7f7f">r</text>
         <text x="52.01" y="128.55" fill="#7f7f7f">: </text>
         <text x="68.81" y="128.55" fill="#11bc79">{</text>
-        <text x="43.61" y="147.55" fill="#11bc79">bar_a</text>
+        <text x="43.61" y="147.55" fill="#11bc79">b</text>
+        <text x="52.01" y="147.55" fill="#11bc79">a</text>
+        <text x="60.41" y="147.55" fill="#11bc79">r</text>
+        <text x="68.81" y="147.55" fill="#11bc79">_</text>
+        <text x="77.21" y="147.55" fill="#11bc79">a</text>
         <text x="85.61" y="147.55" fill="#11bc79">: </text>
         <text x="102.42" y="147.55" fill="#11bc79">Object(1)</text>
         <text x="178.03" y="147.55" fill="#11bc79">,</text>

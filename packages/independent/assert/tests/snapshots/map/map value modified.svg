@@ -44,7 +44,9 @@
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">Map</text>
         <text x="102.42" y="14.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="33.55" fill="#7f7f7f">&#x22;a&#x22;</text>
+        <text x="26.8" y="33.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="33.55" fill="#7f7f7f">a</text>
+        <text x="43.61" y="33.55" fill="#7f7f7f">&#x22;</text>
         <text x="60.41" y="33.55" fill="#7f7f7f"> =&#x3E; </text>
         <text x="85.61" y="33.55" fill="#cd5555">true</text>
         <text x="119.22" y="33.55" fill="#7f7f7f">,</text>
@@ -52,7 +54,9 @@
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Map</text>
         <text x="102.42" y="71.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">&#x22;a&#x22;</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="90.55" fill="#7f7f7f">a</text>
+        <text x="43.61" y="90.55" fill="#7f7f7f">&#x22;</text>
         <text x="60.41" y="90.55" fill="#7f7f7f"> =&#x3E; </text>
         <text x="85.61" y="90.55" fill="#11bc79">false</text>
         <text x="127.62" y="90.55" fill="#7f7f7f">,</text>

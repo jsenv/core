@@ -1,6 +1,7 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - rename *separator into *marker
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
@@ -192,8 +193,9 @@ export const assert = ({
       reasons.self.removed.add(reason);
       causeSet.add(comparison);
     };
-    const renderPrimitive = (node, { columnsRemaining }) => {
+    const renderPrimitive = (node, props) => {
       let diff = "";
+      const { columnsRemaining } = props;
       if (columnsRemaining < 2) {
         diff = setColor("…", node.color);
         return diff;
@@ -206,6 +208,10 @@ export const assert = ({
       } else if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
         valueDiff = "[Symbol.toPrimitive()]";
       } else if (node.isString) {
+        const lineEntriesNode = node.childNodeMap.get("line_entries");
+        if (lineEntriesNode) {
+          return lineEntriesNode.render(props);
+        }
         valueDiff = JSON.stringify(node.value);
         if (!node.hasQuotes) {
           valueDiff = valueDiff.slice(1, -1);
@@ -320,6 +326,13 @@ export const assert = ({
       }
       return diff;
     };
+    const renderContainer = (node, props) => {
+      if (node.type === "line_entry_value") {
+        const charEntriesNode = node.childNodeMap.get("char_entries");
+        return charEntriesNode.render(props);
+      }
+      throw new Error(`render container not implemented for ${node.type}`);
+    };
     const renderFunction = (node, props) => {
       let diff = "";
       const classKeywordNode = node.childNodeMap.get("class_keyword");
@@ -373,8 +386,7 @@ export const assert = ({
 
     const renderEntries = (node, props, { comparisonDiffMap, isSolo }) => {
       if (!node.isCompatibleWithMultilineDiff) {
-        // TODO
-        return "TODO";
+        return renderEntriesOneLiner(node, props);
       }
       if (isSolo) {
         const indexToDisplayArray = getIndexToDisplayArraySolo(
@@ -391,6 +403,177 @@ export const assert = ({
         return renderEntriesMultiline(node, props, { indexToDisplayArray });
       }
       return renderEntriesWithoutDiffOneLiner(node, props);
+    };
+    const getIndexToDisplayArrayDuo = (node, comparisonDiffMap) => {
+      if (comparisonDiffMap.size === 0) {
+        return [];
+      }
+      const entryKeys = node.value;
+      if (entryKeys.length === 0) {
+        return [];
+      }
+      const diffIndexArray = [];
+      for (const [entryKey] of comparisonDiffMap) {
+        const entryIndex = entryKeys.indexOf(entryKey);
+        if (entryIndex === -1) {
+          // happens when removed/added
+        } else {
+          diffIndexArray.push(entryIndex);
+        }
+      }
+      if (diffIndexArray.length === 0) {
+        // happens when one node got no diff in itself
+        // it's the other that has a diff (added or removed)
+        return [0];
+      }
+      diffIndexArray.sort();
+      const indexToDisplaySet = new Set();
+      let diffCount = 0;
+      for (const diffIndex of diffIndexArray) {
+        if (diffCount >= MAX_DIFF_PER_OBJECT) {
+          break;
+        }
+        diffCount++;
+        let beforeDiffIndex = diffIndex - 1;
+        let beforeCount = 0;
+        while (beforeDiffIndex > -1) {
+          if (beforeCount === MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(beforeDiffIndex);
+          beforeCount++;
+          beforeDiffIndex--;
+        }
+        indexToDisplaySet.add(diffIndex);
+        let afterDiffIndex = diffIndex + 1;
+        let afterCount = 0;
+        while (afterDiffIndex < entryKeys.length) {
+          if (afterCount === MAX_ENTRY_AFTER_MULTILINE_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(afterDiffIndex);
+          afterCount++;
+          afterDiffIndex--;
+        }
+      }
+      const indexToDisplayArray = Array.from(indexToDisplaySet);
+      indexToDisplayArray.sort();
+      return indexToDisplayArray;
+    };
+    const getIndexToDisplayArraySolo = (node, comparisonResultMap) => {
+      const indexToDisplayArray = [];
+      for (const [entryKey] of comparisonResultMap) {
+        if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
+          break;
+        }
+        const entryIndex = node.value.indexOf(entryKey);
+        indexToDisplayArray.push(entryIndex);
+      }
+      indexToDisplayArray.sort();
+      return indexToDisplayArray;
+    };
+    const renderEntriesOneLiner = (
+      node,
+      props,
+      { overflowStart, overflowEnd } = {},
+    ) => {
+      let columnsRemaining = props.columnsRemaining;
+      let focusedEntryIndex = -1; // TODO: take first one with a diff
+      const entryKeys = node.value;
+      const { startSeparator, endSeparator } = node;
+      const { overflowStartSeparator, overflowEndSeparator } = node;
+      // columnsRemaining -= overflowStartSeparator;
+      // columnsRemaining -= overflowEndSeparator;
+      columnsRemaining -= startSeparator.length;
+      columnsRemaining -= endSeparator.length;
+
+      let focusedEntry = entryKeys[focusedEntryIndex];
+      if (!focusedEntry) {
+        focusedEntryIndex = entryKeys.length - 1;
+        focusedEntry = node.childNodeMap.get(entryKeys[focusedEntryIndex]);
+      }
+      let focusedEntryDiff = "";
+      if (focusedEntry) {
+        focusedEntryDiff = focusedEntry.render(props);
+        columnsRemaining -= stringWidth(focusedEntryDiff);
+      }
+
+      const overflowStartWidth = overflowStartSeparator.length;
+      const overflowEndWidth = overflowEndSeparator.length;
+      const overflowWidth = overflowStartWidth + overflowEndWidth;
+      let tryBeforeFirst = true;
+      let previousChildAttempt = 0;
+      let nextChildAttempt = 0;
+      const beforeDiffArray = [];
+      const afterDiffArray = [];
+      let hasStartOverflow;
+      let hasEndOverflow;
+      while (columnsRemaining) {
+        const previousEntryIndex = focusedEntryIndex - previousChildAttempt - 1;
+        const nextEntryIndex = focusedEntryIndex + nextChildAttempt + 1;
+        let hasPreviousEntry = previousEntryIndex >= 0;
+        const hasNextEntry = nextEntryIndex < entryKeys.length;
+        if (!hasPreviousEntry && !hasNextEntry) {
+          break;
+        }
+        if (!tryBeforeFirst && hasNextEntry) {
+          hasPreviousEntry = false;
+        }
+        let entryIndex;
+        if (hasPreviousEntry) {
+          previousChildAttempt++;
+          entryIndex = previousEntryIndex;
+        } else if (hasNextEntry) {
+          nextChildAttempt++;
+          entryIndex = nextEntryIndex;
+        }
+        const entryKey = entryKeys[entryIndex];
+        const entryNode = node.childNodeMap.get(entryKey);
+        if (!entryNode) {
+          debugger;
+          continue;
+        }
+        if (tryBeforeFirst && hasPreviousEntry) {
+          tryBeforeFirst = false;
+        }
+        const entryDiff = entryNode.render(props);
+        const entryDiffWidth = measureLastLineColumns(entryDiff);
+        let nextWidth = entryDiffWidth;
+        if (nextWidth >= columnsRemaining) {
+          if (hasPreviousEntry) {
+            previousChildAttempt--;
+          } else {
+            nextChildAttempt--;
+          }
+          hasStartOverflow = focusedEntryIndex - previousChildAttempt > 0;
+          hasEndOverflow =
+            focusedEntryIndex + nextChildAttempt < entryKeys.length - 1;
+          break;
+        }
+        columnsRemaining -= entryDiffWidth;
+        if (entryIndex < focusedEntryIndex) {
+          beforeDiffArray.push(entryDiff);
+        } else {
+          afterDiffArray.push(entryDiff);
+        }
+      }
+      let diff = "";
+      if (hasStartOverflow) {
+        diff += setColor(overflowStartSeparator, node.color);
+      }
+      if (startSeparator) {
+        diff += setColor(startSeparator, node.color);
+      }
+      diff += beforeDiffArray.reverse().join("");
+      diff += focusedEntryDiff;
+      diff += afterDiffArray.join("");
+      if (endSeparator) {
+        diff += setColor(endSeparator, node.color);
+      }
+      if (hasEndOverflow) {
+        diff += setColor(overflowEndSeparator, node.color);
+      }
+      return diff;
     };
     const renderEntriesWithoutDiffOneLiner = (node, props) => {
       const { startSeparator, endSeparator } = node;
@@ -600,74 +783,6 @@ export const assert = ({
       }
       return entryDiff;
     };
-    const getIndexToDisplayArrayDuo = (node, comparisonDiffMap) => {
-      if (comparisonDiffMap.size === 0) {
-        return [];
-      }
-      const entryKeys = node.value;
-      if (entryKeys.length === 0) {
-        return [];
-      }
-      const diffIndexArray = [];
-      for (const [entryKey] of comparisonDiffMap) {
-        const entryIndex = entryKeys.indexOf(entryKey);
-        if (entryIndex === -1) {
-          // happens when removed/added
-        } else {
-          diffIndexArray.push(entryIndex);
-        }
-      }
-      if (diffIndexArray.length === 0) {
-        // happens when one node got no diff in itself
-        // it's the other that has a diff (added or removed)
-        return [0];
-      }
-      diffIndexArray.sort();
-      const indexToDisplaySet = new Set();
-      let diffCount = 0;
-      for (const diffIndex of diffIndexArray) {
-        if (diffCount >= MAX_DIFF_PER_OBJECT) {
-          break;
-        }
-        diffCount++;
-        let beforeDiffIndex = diffIndex - 1;
-        let beforeCount = 0;
-        while (beforeDiffIndex > -1) {
-          if (beforeCount === MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(beforeDiffIndex);
-          beforeCount++;
-          beforeDiffIndex--;
-        }
-        indexToDisplaySet.add(diffIndex);
-        let afterDiffIndex = diffIndex + 1;
-        let afterCount = 0;
-        while (afterDiffIndex < entryKeys.length) {
-          if (afterCount === MAX_ENTRY_AFTER_MULTILINE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(afterDiffIndex);
-          afterCount++;
-          afterDiffIndex--;
-        }
-      }
-      const indexToDisplayArray = Array.from(indexToDisplaySet);
-      indexToDisplayArray.sort();
-      return indexToDisplayArray;
-    };
-    const getIndexToDisplayArraySolo = (node, comparisonResultMap) => {
-      const indexToDisplayArray = [];
-      for (const [entryKey] of comparisonResultMap) {
-        if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
-          break;
-        }
-        const entryIndex = node.value.indexOf(entryKey);
-        indexToDisplayArray.push(entryIndex);
-      }
-      indexToDisplayArray.sort();
-      return indexToDisplayArray;
-    };
 
     const subcompareDuo = (actualChildNode, expectChildNode) => {
       const childComparison = compare(
@@ -843,6 +958,8 @@ export const assert = ({
       }
       if (actualNode.isContainer) {
         subcompareChilNodesDuo(actualNode, expectNode);
+        actualNode.render = (props) => renderContainer(actualNode, props);
+        expectNode.render = (props) => renderContainer(expectNode, props);
         return;
       }
       throw new Error(
@@ -888,6 +1005,7 @@ export const assert = ({
       }
       if (node.isContainer) {
         subcompareChildNodesSolo(node, placeholderNode);
+        node.render = (props) => renderContainer(node, props);
         return;
       }
       throw new Error(`visitSolo not implemented for "${node.type}" node type`);
@@ -968,7 +1086,9 @@ export const assert = ({
         visitSolo(expectNode, actualNode);
         break visit;
       }
-      throw new Error("wtf");
+      throw new Error(
+        `compare not implemented for ${actualNode.type} and ${expectNode.type}`,
+      );
     }
 
     const { self, inside, overall } = comparison.reasons;
@@ -1234,6 +1354,8 @@ let createRootNode;
       startSeparator: "",
       middleSeparator: "",
       endSeparator: "",
+      overflowStartSeparator: "",
+      overflowEndSeparator: "",
       isCompatibleWithMultilineDiff: false,
       skippedEntrySummary: null,
       hasSpacingAroundEntries: false,
@@ -1302,6 +1424,30 @@ let createRootNode;
       }
       return node;
     }
+    if (type === "line_entry_value") {
+      const charEntriesNode = appendCharEntriesNode(node);
+      const chars = tokenizeLine(value);
+      let charIndex = 0;
+      for (const char of chars) {
+        appendCharEntryNode(charEntriesNode, { key: charIndex, value: char });
+        charIndex++;
+      }
+      return node;
+    }
+    if (type === "char_entries") {
+      if (node.parent.parent.parent.parent.hasQuotes) {
+        node.startSeparator = '"';
+        node.endSeparator = '"';
+      }
+      node.overflowStartSeparator = "…";
+      node.overflowEndSeparator = "…";
+      return node;
+    }
+    if (type === "char_entry_value") {
+      node.isPrimitive = true;
+      node.isString = true;
+      return node;
+    }
     if (type === "internal_entry") {
       node.middleSeparator = " => ";
       node.endSeparator = ",";
@@ -1320,21 +1466,6 @@ let createRootNode;
         node.middleSeparator = ": ";
         node.endSeparator = ",";
       }
-      return node;
-    }
-    if (type === "line_entry_value") {
-      const charEntriesNode = appendCharEntriesNode(node);
-      const chars = tokenizeLine(value);
-      let charIndex = 0;
-      for (const char of chars) {
-        appendCharEntryNode(charEntriesNode, { key: charIndex, value: char });
-        charIndex++;
-      }
-      return node;
-    }
-    if (type === "char_entry_value") {
-      node.isPrimitive = true;
-      node.isString = true;
       return node;
     }
     if (type === "constructor_call") {
@@ -1893,6 +2024,7 @@ const appendLineEntryNode = (node, { key, value }) => {
     isHidden: true,
   });
   lineEntryNode.appendChild("entry_value", {
+    isContainer: true,
     type: "line_entry_value",
     value,
   });

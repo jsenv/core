@@ -1,33 +1,33 @@
 # at property value
 actual: {
-  foo: "abcdefghij…,
+  foo: …"fghijklmn",
 }
 expect: {
-  foo: "ABCDEFGHIJ…,
+  foo: …"FGHIJKLMN",
 }
 
 # at property key
 actual: {
-  "a quite long property key that will…,
+  …"roperty key that will be truncated",
 }
 expect: {
-  "a quite long property key that will…,
+  …"roperty key that will be truncated",
 }
 
 # at property name last char
 actual: {
-  abcdef…,
+  …cdefgh,
 }
 expect: {
-  abcdef…,
+  …cdefgh,
 }
 
 # at property name separator
 actual: {
-  abcdefgh,
+  …bcdefgh,
 }
 expect: {
-  abcdefgh,
+  …bcdefgh,
 }
 
 # at space after property name separator
