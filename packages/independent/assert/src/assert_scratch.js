@@ -587,13 +587,13 @@ export const assert = ({
       node.hasIndentBeforeEntries = false;
       for (const entryKey of entryKeys) {
         const entryNode = node.childNodeMap.get(entryKey);
-        const entryendMarker = entryNode.endMarker;
+        const entryNodeEndMarker = entryNode.endMarker;
         entryNode.endMarker = "";
         const entryDiff = entryNode.render({
           ...props,
           columnsRemaining,
         });
-        entryNode.endMarker = entryendMarker;
+        entryNode.endMarker = entryNodeEndMarker;
         const entryDiffWidth = measureLastLineColumns(entryDiff);
         if (entryDiffWidth > columnsRemaining) {
           if (lastEntryDisplayed) {
