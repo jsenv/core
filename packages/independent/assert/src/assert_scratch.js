@@ -472,11 +472,7 @@ export const assert = ({
       indexToDisplayArray.sort();
       return indexToDisplayArray;
     };
-    const renderEntriesOneLiner = (
-      node,
-      props,
-      { overflowStart, overflowEnd } = {},
-    ) => {
+    const renderEntriesOneLiner = (node, props) => {
       let columnsRemaining = props.columnsRemaining;
       let focusedEntryIndex = -1; // TODO: take first one with a diff
       const entryKeys = node.value;
@@ -500,7 +496,6 @@ export const assert = ({
 
       const overflowStartWidth = overflowStartSeparator.length;
       const overflowEndWidth = overflowEndSeparator.length;
-      const overflowWidth = overflowStartWidth + overflowEndWidth;
       let tryBeforeFirst = true;
       let previousChildAttempt = 0;
       let nextChildAttempt = 0;
@@ -539,15 +534,21 @@ export const assert = ({
         const entryDiff = entryNode.render(props);
         const entryDiffWidth = measureLastLineColumns(entryDiff);
         let nextWidth = entryDiffWidth;
-        if (nextWidth >= columnsRemaining) {
+        hasStartOverflow = focusedEntryIndex - previousChildAttempt > 0;
+        hasEndOverflow =
+          focusedEntryIndex + nextChildAttempt < entryKeys.length - 1;
+        if (hasStartOverflow) {
+          nextWidth += overflowStartWidth;
+        }
+        if (hasEndOverflow) {
+          nextWidth += overflowEndWidth;
+        }
+        if (nextWidth > columnsRemaining) {
           if (hasPreviousEntry) {
             previousChildAttempt--;
           } else {
             nextChildAttempt--;
           }
-          hasStartOverflow = focusedEntryIndex - previousChildAttempt > 0;
-          hasEndOverflow =
-            focusedEntryIndex + nextChildAttempt < entryKeys.length - 1;
           break;
         }
         columnsRemaining -= entryDiffWidth;

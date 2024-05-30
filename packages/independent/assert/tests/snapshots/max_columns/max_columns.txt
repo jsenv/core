@@ -24,10 +24,10 @@ expect: {
 
 # at property name separator
 actual: {
-  …bcdefgh,
+  abcdefgh,
 }
 expect: {
-  …bcdefgh,
+  abcdefgh,
 }
 
 # at space after property name separator
