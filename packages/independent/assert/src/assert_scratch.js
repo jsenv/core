@@ -402,10 +402,20 @@ export const assert = ({
           if (lastEntryDisplayed) {
             diff += setColor(startSeparator, node.color);
             diff += entriesDiff;
-            diff += setColor(` ... ${endSeparator}`, node.color);
+            diff += setColor(
+              node.hasSpacingAroundEntries
+                ? ` ... ${endSeparator}`
+                : ` ...${endSeparator}`,
+              node.color,
+            );
             return diff;
           }
-          diff += setColor(`${startSeparator} ... ${endSeparator}`, node.color);
+          diff += setColor(
+            node.hasSpacingAroundEntries
+              ? `${startSeparator} ... ${endSeparator}`
+              : `${startSeparator}...${endSeparator}`,
+            node.color,
+          );
           return diff;
         }
         if (lastEntryDisplayed) {
@@ -790,27 +800,28 @@ export const assert = ({
           actualNode,
           expectNode,
         );
-        if (comparisonDiffMap.size === 0) {
+        if (
+          actualNode.isCompatibleWithMultilineDiff &&
+          comparisonDiffMap.size > 0
+        ) {
           actualNode.render = (props) =>
-            renderEntriesOneLiner(actualNode, props);
+            renderEntriesMultiline(actualNode, props, {
+              indexToDisplayArray: getIndexToDisplayArrayDuo(
+                actualNode,
+                comparisonDiffMap,
+              ),
+            });
           expectNode.render = (props) =>
-            renderEntriesOneLiner(expectNode, props);
+            renderEntriesMultiline(expectNode, props, {
+              indexToDisplayArray: getIndexToDisplayArrayDuo(
+                expectNode,
+                comparisonDiffMap,
+              ),
+            });
           return;
         }
-        actualNode.render = (props) =>
-          renderEntriesMultiline(actualNode, props, {
-            indexToDisplayArray: getIndexToDisplayArrayDuo(
-              actualNode,
-              comparisonDiffMap,
-            ),
-          });
-        expectNode.render = (props) =>
-          renderEntriesMultiline(expectNode, props, {
-            indexToDisplayArray: getIndexToDisplayArrayDuo(
-              expectNode,
-              comparisonDiffMap,
-            ),
-          });
+        actualNode.render = (props) => renderEntriesOneLiner(actualNode, props);
+        expectNode.render = (props) => renderEntriesOneLiner(expectNode, props);
         return;
       }
       if (
@@ -1223,6 +1234,7 @@ let createRootNode;
       startSeparator: "",
       middleSeparator: "",
       endSeparator: "",
+      isCompatibleWithMultilineDiff: false,
       hasSpacingAroundEntries: false,
       hasNewLineAroundEntries: false,
       hasIndentBeforeEntries: false,
@@ -1248,6 +1260,7 @@ let createRootNode;
     if (type === "internal_entries") {
       node.startSeparator = "(";
       node.endSeparator = ")";
+      node.isCompatibleWithMultilineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
       return node;
@@ -1255,11 +1268,13 @@ let createRootNode;
     if (type === "indexed_entries") {
       node.startSeparator = "[";
       node.endSeparator = "]";
+      node.isCompatibleWithMultilineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
       return node;
     }
     if (type === "property_entries") {
+      node.isCompatibleWithMultilineDiff = true;
       if (node.parent.isClassPrototype) {
       } else {
         node.startSeparator = "{";
@@ -1267,6 +1282,13 @@ let createRootNode;
         node.hasSpacingAroundEntries = true;
         node.hasNewLineAroundEntries = true;
         node.hasIndentBeforeEntries = true;
+      }
+      return node;
+    }
+    if (type === "line_entries") {
+      if (node.hasSpacingAroundEntries) {
+        node.startSeparator = `"`;
+        node.endSeparator = `"`;
       }
       return node;
     }
@@ -1598,8 +1620,10 @@ let createRootNode;
         } else {
           node.hasQuotes = true;
         }
-        const lineEntriesNode = appendLineEntriesNode(node);
         const lines = value.split(/\r?\n/);
+        const lineEntriesNode = appendLineEntriesNode(node, {
+          hasSeparatorsWhenEmpty: lines.length < 2,
+        });
         let lineIndex = 0;
         for (const line of lines) {
           appendLineEntryNode(lineEntriesNode, { key: lineIndex, value: line });
@@ -1839,11 +1863,12 @@ const appendPropertyEntryNode = (
   });
   return propertyEntryNode;
 };
-const appendLineEntriesNode = (node) => {
+const appendLineEntriesNode = (node, { hasSeparatorsWhenEmpty }) => {
   const lineEntriesNode = node.appendChild("line_entries", {
     isContainer: true,
     type: "line_entries",
     value: [],
+    hasSeparatorsWhenEmpty,
   });
   return lineEntriesNode;
 };
