@@ -1411,20 +1411,12 @@ let createRootNode;
       return node;
     }
     if (type === "line_entries") {
-      if (node.hasSpacingAroundEntries) {
-        node.startMarker = `"`;
-        node.endMarker = `"`;
-      }
       return node;
     }
     if (type === "line_entry_value") {
       return node;
     }
     if (type === "char_entries") {
-      if (node.parent.parent.parent.hasQuotes) {
-        node.startMarker = '"';
-        node.endMarker = '"';
-      }
       node.overflowStartMarker = "…";
       node.overflowEndMarker = "…";
       return node;
@@ -1748,12 +1740,18 @@ let createRootNode;
         const lineEntriesNode = appendLineEntriesNode(node);
         let lineIndex = 0;
         let columnIndex = 0;
-        let currentLineNode = appendLineEntryNode(lineEntriesNode, {
+        const firstLineNode = appendLineEntryNode(lineEntriesNode, {
           key: lineIndex,
         });
+        const firstCharEntriesNode =
+          firstLineNode.childNodeMap.get("entry_value");
+        const chars = tokenizeString(value);
+        let doubleQuoteCount = 0;
+        let singleQuoteCount = 0;
+        let backtickCount = 0;
+        let currentLineNode = firstLineNode;
         let currentCharEntriesNode =
           currentLineNode.childNodeMap.get("entry_value");
-        const chars = tokenizeString(value);
         for (const char of chars) {
           if (char === "\n") {
             lineIndex++;
@@ -1765,13 +1763,42 @@ let createRootNode;
               currentLineNode.childNodeMap.get("entry_value");
             continue;
           }
+          if (char === DOUBLE_QUOTE) {
+            doubleQuoteCount++;
+          } else if (char === SINGLE_QUOTE) {
+            singleQuoteCount++;
+          } else if (char === BACKTICK) {
+            backtickCount++;
+          }
           appendCharEntryNode(currentCharEntriesNode, {
             key: columnIndex,
             value: char,
           });
           columnIndex++;
         }
-        lineEntriesNode.hasMarkersWhenEmpty = lineIndex < 2;
+        const isSingleLine = lineIndex < 1;
+        if (isSingleLine) {
+          if (node.hasQuotes) {
+            let bestQuote;
+            if (doubleQuoteCount === 0) {
+              bestQuote = DOUBLE_QUOTE;
+            } else if (singleQuoteCount === 0) {
+              bestQuote = SINGLE_QUOTE;
+            } else if (backtickCount === 0) {
+              bestQuote = BACKTICK;
+            } else if (singleQuoteCount > doubleQuoteCount) {
+              bestQuote = DOUBLE_QUOTE;
+            } else if (doubleQuoteCount > singleQuoteCount) {
+              bestQuote = SINGLE_QUOTE;
+            } else {
+              bestQuote = DOUBLE_QUOTE;
+            }
+            firstCharEntriesNode.startMarker = firstCharEntriesNode.endMarker =
+              bestQuote;
+          }
+          lineEntriesNode.hasMarkersWhenEmpty = true;
+        } else {
+        }
       }
     }
     if (value === undefined) {
@@ -1781,6 +1808,10 @@ let createRootNode;
     return node;
   };
 }
+
+const DOUBLE_QUOTE = `"`;
+const SINGLE_QUOTE = `'`;
+const BACKTICK = "`";
 
 const getAddedOrRemovedReason = (node) => {
   if (
