@@ -29,7 +29,7 @@ import {
   analyseFunction,
   defaultFunctionAnalysis,
 } from "./function_analysis.js";
-import { tokenizeLine } from "./tokenize_line.js";
+import { tokenizeString } from "./tokenize_string.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -325,11 +325,7 @@ export const assert = ({
       }
       return diff;
     };
-    const renderContainer = (node, props) => {
-      if (node.type === "line_entry_value") {
-        const charEntriesNode = node.childNodeMap.get("char_entries");
-        return charEntriesNode.render(props);
-      }
+    const renderContainer = (node) => {
       throw new Error(`render container not implemented for ${node.type}`);
     };
     const renderFunction = (node, props) => {
@@ -1422,17 +1418,10 @@ let createRootNode;
       return node;
     }
     if (type === "line_entry_value") {
-      const charEntriesNode = appendCharEntriesNode(node);
-      const chars = tokenizeLine(value);
-      let charIndex = 0;
-      for (const char of chars) {
-        appendCharEntryNode(charEntriesNode, { key: charIndex, value: char });
-        charIndex++;
-      }
       return node;
     }
     if (type === "char_entries") {
-      if (node.parent.parent.parent.parent.hasQuotes) {
+      if (node.parent.parent.parent.hasQuotes) {
         node.startMarker = '"';
         node.endMarker = '"';
       }
@@ -1756,15 +1745,33 @@ let createRootNode;
         } else {
           node.hasQuotes = true;
         }
-        const lines = value.split(/\r?\n/);
-        const lineEntriesNode = appendLineEntriesNode(node, {
-          hasMarkersWhenEmpty: lines.length < 2,
-        });
+        const lineEntriesNode = appendLineEntriesNode(node);
         let lineIndex = 0;
-        for (const line of lines) {
-          appendLineEntryNode(lineEntriesNode, { key: lineIndex, value: line });
-          lineIndex++;
+        let columnIndex = 0;
+        let currentLineNode = appendLineEntryNode(lineEntriesNode, {
+          key: lineIndex,
+        });
+        let currentCharEntriesNode =
+          currentLineNode.childNodeMap.get("entry_value");
+        const chars = tokenizeString(value);
+        for (const char of chars) {
+          if (char === "\n") {
+            lineIndex++;
+            columnIndex = 0;
+            currentLineNode = appendLineEntryNode(lineEntriesNode, {
+              key: lineIndex,
+            });
+            currentCharEntriesNode =
+              currentLineNode.childNodeMap.get("entry_value");
+            continue;
+          }
+          appendCharEntryNode(currentCharEntriesNode, {
+            key: columnIndex,
+            value: char,
+          });
+          columnIndex++;
         }
+        lineEntriesNode.hasMarkersWhenEmpty = lineIndex < 2;
       }
     }
     if (value === undefined) {
@@ -1999,16 +2006,15 @@ const appendPropertyEntryNode = (
   });
   return propertyEntryNode;
 };
-const appendLineEntriesNode = (node, { hasMarkersWhenEmpty }) => {
+const appendLineEntriesNode = (node) => {
   const lineEntriesNode = node.appendChild("line_entries", {
     isContainer: true,
     type: "line_entries",
     value: [],
-    hasMarkersWhenEmpty,
   });
   return lineEntriesNode;
 };
-const appendLineEntryNode = (node, { key, value }) => {
+const appendLineEntryNode = (node, { key }) => {
   node.value.push(key);
   const lineEntryNode = node.appendChild(key, {
     isContainer: true,
@@ -2022,18 +2028,10 @@ const appendLineEntryNode = (node, { key, value }) => {
   });
   lineEntryNode.appendChild("entry_value", {
     isContainer: true,
-    type: "line_entry_value",
-    value,
-  });
-  return lineEntryNode;
-};
-const appendCharEntriesNode = (node) => {
-  const charEntriesNode = node.appendChild("char_entries", {
-    isContainer: true,
     type: "char_entries",
     value: [],
   });
-  return charEntriesNode;
+  return lineEntryNode;
 };
 const appendCharEntryNode = (node, { key, value }) => {
   node.value.push(key);
