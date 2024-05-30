@@ -1323,8 +1323,6 @@ let createRootNode;
       return node;
     }
     if (type === "line_entry_value") {
-      node.isPrimitive = true;
-      node.isString = true;
       const charEntriesNode = appendCharEntriesNode(node);
       const chars = tokenizeLine(value);
       let charIndex = 0;

@@ -1,8 +1,5 @@
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
-
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
 
 await startSnapshotTesting("string", {
   ["string single char"]: () => {
