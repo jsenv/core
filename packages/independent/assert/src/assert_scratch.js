@@ -409,12 +409,14 @@ export const assert = ({
         );
         return renderEntriesMultiline(node, props, { indexToDisplayArray });
       }
+      if (!node.isCompatibleWithSingleLineDiff) {
+        return renderEntriesMultiline(node, props, {
+          indexToDisplayArray: [0],
+        });
+      }
       return renderEntriesWithoutDiffOneLiner(node, props);
     };
     const getIndexToDisplayArrayDuo = (node, comparisonDiffMap) => {
-      if (comparisonDiffMap.size === 0) {
-        return [];
-      }
       const entryKeys = node.value;
       if (entryKeys.length === 0) {
         return [];
@@ -689,6 +691,7 @@ export const assert = ({
         }
       };
       let previousIndexDisplayed = -1;
+      let canResetMaxColumns = node.hasNewLineAroundEntries;
       for (const indexToDisplay of indexToDisplayArray) {
         if (previousIndexDisplayed === -1) {
           if (indexToDisplay > 0) {
@@ -705,8 +708,11 @@ export const assert = ({
         const entryNode = node.childNodeMap.get(entryKey);
         const entryDiff = entryNode.render({
           ...props,
-          columnsRemaining: MAX_COLUMNS,
+          columnsRemaining: canResetMaxColumns
+            ? MAX_COLUMNS
+            : props.columnsRemaining,
         });
+        canResetMaxColumns = true; // because we'll append \n on next entry
         appendEntry(entryDiff);
         previousIndexDisplayed = indexToDisplay;
       }
@@ -730,8 +736,8 @@ export const assert = ({
       diff += entriesDiff;
       if (node.hasNewLineAroundEntries) {
         diff += "\n";
+        diff += "  ".repeat(getNodeDepth(node));
       }
-      diff += "  ".repeat(getNodeDepth(node));
       diff += setColor(endMarker, node.color);
       return diff;
     };
@@ -1362,6 +1368,7 @@ let createRootNode;
       overflowStartMarker: "",
       overflowEndMarker: "",
       isCompatibleWithMultilineDiff: false,
+      isCompatibleWithSingleLineDiff: false,
       skippedEntrySummary: null,
       hasSpacingAroundEntries: false,
       hasNewLineAroundEntries: false,
@@ -1389,6 +1396,7 @@ let createRootNode;
       node.startMarker = "(";
       node.endMarker = ")";
       node.isCompatibleWithMultilineDiff = true;
+      node.isCompatibleWithSingleLineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
       node.skippedEntrySummary = {
@@ -1400,6 +1408,7 @@ let createRootNode;
       node.startMarker = "[";
       node.endMarker = "]";
       node.isCompatibleWithMultilineDiff = true;
+      node.isCompatibleWithSingleLineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
       node.skippedEntrySummary = {
@@ -1409,6 +1418,7 @@ let createRootNode;
     }
     if (type === "property_entries") {
       node.isCompatibleWithMultilineDiff = true;
+      node.isCompatibleWithSingleLineDiff = true;
       node.skippedEntrySummary = {
         skippedEntryNames: ["prop", "props"],
       };
@@ -1423,6 +1433,10 @@ let createRootNode;
       return node;
     }
     if (type === "line_entries") {
+      node.isCompatibleWithMultilineDiff = true;
+      node.skippedEntrySummary = {
+        skippedEntryNames: ["line", "lines"],
+      };
       return node;
     }
     if (type === "line_entry_value") {
