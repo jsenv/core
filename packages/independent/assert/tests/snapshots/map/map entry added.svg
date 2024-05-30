@@ -45,8 +45,7 @@
         <text x="10" y="52.55" fill="#7f7f7f">)</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Map</text>
-        <text x="102.42" y="71.55" fill="#7f7f7f">(</text>
-        <text x="110.82" y="71.55" fill="#7f7f7f">)</text>
+        <text x="102.42" y="71.55" fill="#7f7f7f">()</text>
       </g>
     </svg>
   </foreignObject>

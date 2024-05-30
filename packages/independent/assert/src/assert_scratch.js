@@ -371,16 +371,30 @@ export const assert = ({
       return diff;
     };
 
-    const renderEntriesOneLiner = (node, props) => {
-      const { startSeparator, endSeparator } = node;
-
-      const entryKeys = node.value;
-      if (entryKeys.length === 0) {
-        if (node.hasSeparatorsWhenEmpty) {
-          return setColor(`${startSeparator}${endSeparator}`, node.color);
-        }
-        return "";
+    const renderEntries = (node, props, { comparisonDiffMap, isSolo }) => {
+      if (!node.isCompatibleWithMultilineDiff) {
+        // TODO
+        return "TODO";
       }
+      if (isSolo) {
+        const indexToDisplayArray = getIndexToDisplayArraySolo(
+          node,
+          comparisonDiffMap,
+        );
+        return renderEntriesMultiline(node, props, { indexToDisplayArray });
+      }
+      if (comparisonDiffMap.size > 0) {
+        const indexToDisplayArray = getIndexToDisplayArrayDuo(
+          node,
+          comparisonDiffMap,
+        );
+        return renderEntriesMultiline(node, props, { indexToDisplayArray });
+      }
+      return renderEntriesWithoutDiffOneLiner(node, props);
+    };
+    const renderEntriesWithoutDiffOneLiner = (node, props) => {
+      const { startSeparator, endSeparator } = node;
+      const entryKeys = node.value;
       let columnsRemaining = props.columnsRemaining;
       let boilerplate = `${startSeparator} ... ${endSeparator}`;
       columnsRemaining -= boilerplate.length;
@@ -429,6 +443,12 @@ export const assert = ({
         entriesDiff += entryDiff;
         columnsRemaining -= entryDiffWidth;
       }
+      if (!lastEntryDisplayed) {
+        if (node.hasSeparatorsWhenEmpty) {
+          return setColor(`${startSeparator}${endSeparator}`, node.color);
+        }
+        return "";
+      }
       diff += setColor(startSeparator, node.color);
       if (node.hasSpacingAroundEntries) {
         diff += " ";
@@ -441,10 +461,11 @@ export const assert = ({
       return diff;
     };
     const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
-      let atLeastOneEntryDisplayed = false;
+      const entryKeys = node.value;
+      const { startSeparator, endSeparator } = node;
+      let atLeastOneEntryDisplayed = null;
       let diff = "";
       let entriesDiff = "";
-      const entryKeys = node.value;
       const appendEntry = (entryDiff) => {
         if (atLeastOneEntryDisplayed) {
           entriesDiff += "\n";
@@ -454,43 +475,45 @@ export const assert = ({
           atLeastOneEntryDisplayed = true;
         }
       };
-      const appendSkippedEntries = (skipCount, sign) => {
+      const appendSkippedEntries = (skipCount, skipPosition) => {
         let skippedDiff = "";
-        skippedDiff += "  ".repeat(getNodeDepth(node) + 1);
-        skippedDiff += setColor(sign, node.color);
-        skippedDiff += " ";
-        skippedDiff += setColor(String(skipCount), node.color);
-        skippedDiff += " ";
-        const valueNames =
-          node.type === "internal_entries"
-            ? ["value", "values"]
-            : ["prop", "props"];
-        skippedDiff += setColor(
-          skipCount === 1 ? valueNames[0] : valueNames[1],
-          node.color,
-        );
-        skippedDiff += " ";
-        skippedDiff += setColor(sign, node.color);
-        appendEntry(skippedDiff);
+        if (node.hasIndentBeforeEntries) {
+          skippedDiff += "  ".repeat(getNodeDepth(node) + 1);
+        }
+        if (node.skippedEntrySummary) {
+          const { skippedEntryNames } = node.skippedEntrySummary;
+          const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
+          skippedDiff += setColor(sign, node.color);
+          skippedDiff += " ";
+          skippedDiff += setColor(String(skipCount), node.color);
+          skippedDiff += " ";
+          skippedDiff += setColor(
+            skippedEntryNames[skipCount === 1 ? 0 : 1],
+            node.color,
+          );
+          skippedDiff += " ";
+          skippedDiff += setColor(sign, node.color);
+          appendEntry(skippedDiff);
+          return;
+        }
       };
       let previousIndexDisplayed = -1;
       for (const indexToDisplay of indexToDisplayArray) {
         if (previousIndexDisplayed === -1) {
           if (indexToDisplay > 0) {
-            appendSkippedEntries(indexToDisplay, "↑");
+            appendSkippedEntries(indexToDisplay, "start");
           }
         } else {
           const intermediateSkippedCount =
             indexToDisplay - previousIndexDisplayed - 1;
           if (intermediateSkippedCount) {
-            appendSkippedEntries(intermediateSkippedCount, "↕");
+            appendSkippedEntries(intermediateSkippedCount, "between");
           }
         }
         const entryKey = entryKeys[indexToDisplay];
         const entryNode = node.childNodeMap.get(entryKey);
         const entryDiff = entryNode.render({
           ...props,
-          // reset remaining width
           columnsRemaining: MAX_COLUMNS,
         });
         appendEntry(entryDiff);
@@ -500,25 +523,25 @@ export const assert = ({
       if (lastIndexDisplayed > -1) {
         const lastSkippedCount = entryKeys.length - 1 - lastIndexDisplayed;
         if (lastSkippedCount) {
-          appendSkippedEntries(lastSkippedCount, `↓`);
+          appendSkippedEntries(lastSkippedCount, "end");
         }
       }
-      const { startSeparator, endSeparator } = node;
-      if (atLeastOneEntryDisplayed) {
-        diff += setColor(startSeparator, node.color);
-        if (node.hasNewLineAroundEntries) {
-          diff += "\n";
+      if (!atLeastOneEntryDisplayed) {
+        if (node.hasSeparatorsWhenEmpty) {
+          return setColor(`${startSeparator}${endSeparator}`, node.color);
         }
-        diff += entriesDiff;
-        if (node.hasNewLineAroundEntries) {
-          diff += "\n";
-        }
-        diff += "  ".repeat(getNodeDepth(node));
-        diff += setColor(endSeparator, node.color);
-      } else if (node.hasSeparatorsWhenEmpty) {
-        diff += setColor(startSeparator, node.color);
-        diff += setColor(endSeparator, node.color);
+        return "";
       }
+      diff += setColor(startSeparator, node.color);
+      if (node.hasNewLineAroundEntries) {
+        diff += "\n";
+      }
+      diff += entriesDiff;
+      if (node.hasNewLineAroundEntries) {
+        diff += "\n";
+      }
+      diff += "  ".repeat(getNodeDepth(node));
+      diff += setColor(endSeparator, node.color);
       return diff;
     };
     const renderEntry = (node, props) => {
@@ -751,15 +774,15 @@ export const assert = ({
         comparisonResultMap.set(childName, removedChildComparison);
         comparisonDiffMap.set(childName, removedChildComparison);
       }
-      return { comparisonResultMap, comparisonDiffMap };
+      return { comparisonDiffMap };
     };
     const subcompareChildNodesSolo = (node, placeholderNode) => {
-      const comparisonResultMap = new Map();
+      const comparisonDiffMap = new Map();
       for (const [childName, childNode] of node.childNodeMap) {
         const soloChildComparison = subcompareSolo(childNode, placeholderNode);
-        comparisonResultMap.set(childName, soloChildComparison);
+        comparisonDiffMap.set(childName, soloChildComparison);
       }
-      return comparisonResultMap;
+      return { comparisonDiffMap };
     };
 
     const visitDuo = (actualNode, expectNode) => {
@@ -800,28 +823,10 @@ export const assert = ({
           actualNode,
           expectNode,
         );
-        if (
-          actualNode.isCompatibleWithMultilineDiff &&
-          comparisonDiffMap.size > 0
-        ) {
-          actualNode.render = (props) =>
-            renderEntriesMultiline(actualNode, props, {
-              indexToDisplayArray: getIndexToDisplayArrayDuo(
-                actualNode,
-                comparisonDiffMap,
-              ),
-            });
-          expectNode.render = (props) =>
-            renderEntriesMultiline(expectNode, props, {
-              indexToDisplayArray: getIndexToDisplayArrayDuo(
-                expectNode,
-                comparisonDiffMap,
-              ),
-            });
-          return;
-        }
-        actualNode.render = (props) => renderEntriesOneLiner(actualNode, props);
-        expectNode.render = (props) => renderEntriesOneLiner(expectNode, props);
+        actualNode.render = (props) =>
+          renderEntries(actualNode, props, { comparisonDiffMap });
+        expectNode.render = (props) =>
+          renderEntries(expectNode, props, { comparisonDiffMap });
         return;
       }
       if (
@@ -862,17 +867,12 @@ export const assert = ({
         node.type === "line_entries" ||
         node.type === "char_entries"
       ) {
-        const comparisonResultMap = subcompareChildNodesSolo(
+        const { comparisonDiffMap } = subcompareChildNodesSolo(
           node,
           placeholderNode,
         );
         node.render = (props) =>
-          renderEntriesMultiline(node, props, {
-            indexToDisplayArray: getIndexToDisplayArraySolo(
-              node,
-              comparisonResultMap,
-            ),
-          });
+          renderEntries(node, props, { comparisonDiffMap, isSolo: true });
         return;
       }
       if (
@@ -1235,6 +1235,7 @@ let createRootNode;
       middleSeparator: "",
       endSeparator: "",
       isCompatibleWithMultilineDiff: false,
+      skippedEntrySummary: null,
       hasSpacingAroundEntries: false,
       hasNewLineAroundEntries: false,
       hasIndentBeforeEntries: false,
@@ -1263,6 +1264,9 @@ let createRootNode;
       node.isCompatibleWithMultilineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
+      node.skippedEntrySummary = {
+        skippedEntryNames: ["value", "values"],
+      };
       return node;
     }
     if (type === "indexed_entries") {
@@ -1271,10 +1275,16 @@ let createRootNode;
       node.isCompatibleWithMultilineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
+      node.skippedEntrySummary = {
+        skippedEntryNames: ["value", "values"],
+      };
       return node;
     }
     if (type === "property_entries") {
       node.isCompatibleWithMultilineDiff = true;
+      node.skippedEntrySummary = {
+        skippedEntryNames: ["prop", "props"],
+      };
       if (node.parent.isClassPrototype) {
       } else {
         node.startSeparator = "{";
