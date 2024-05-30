@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - rename *separator into *marker
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
@@ -476,12 +475,12 @@ export const assert = ({
       let columnsRemaining = props.columnsRemaining;
       let focusedEntryIndex = -1; // TODO: take first one with a diff
       const entryKeys = node.value;
-      const { startSeparator, endSeparator } = node;
-      const { overflowStartSeparator, overflowEndSeparator } = node;
-      // columnsRemaining -= overflowStartSeparator;
-      // columnsRemaining -= overflowEndSeparator;
-      columnsRemaining -= startSeparator.length;
-      columnsRemaining -= endSeparator.length;
+      const { startMarker, endMarker } = node;
+      const { overflowStartMarker, overflowEndMarker } = node;
+      // columnsRemaining -= overflowStartMarker;
+      // columnsRemaining -= overflowEndMarker;
+      columnsRemaining -= startMarker.length;
+      columnsRemaining -= endMarker.length;
 
       let focusedEntry = entryKeys[focusedEntryIndex];
       if (!focusedEntry) {
@@ -494,8 +493,8 @@ export const assert = ({
         columnsRemaining -= stringWidth(focusedEntryDiff);
       }
 
-      const overflowStartWidth = overflowStartSeparator.length;
-      const overflowEndWidth = overflowEndSeparator.length;
+      const overflowStartWidth = overflowStartMarker.length;
+      const overflowEndWidth = overflowEndMarker.length;
       let tryBeforeFirst = true;
       let previousChildAttempt = 0;
       let nextChildAttempt = 0;
@@ -560,27 +559,27 @@ export const assert = ({
       }
       let diff = "";
       if (hasStartOverflow) {
-        diff += setColor(overflowStartSeparator, node.color);
+        diff += setColor(overflowStartMarker, node.color);
       }
-      if (startSeparator) {
-        diff += setColor(startSeparator, node.color);
+      if (startMarker) {
+        diff += setColor(startMarker, node.color);
       }
       diff += beforeDiffArray.reverse().join("");
       diff += focusedEntryDiff;
       diff += afterDiffArray.join("");
-      if (endSeparator) {
-        diff += setColor(endSeparator, node.color);
+      if (endMarker) {
+        diff += setColor(endMarker, node.color);
       }
       if (hasEndOverflow) {
-        diff += setColor(overflowEndSeparator, node.color);
+        diff += setColor(overflowEndMarker, node.color);
       }
       return diff;
     };
     const renderEntriesWithoutDiffOneLiner = (node, props) => {
-      const { startSeparator, endSeparator } = node;
+      const { startMarker, endMarker } = node;
       const entryKeys = node.value;
       let columnsRemaining = props.columnsRemaining;
-      let boilerplate = `${startSeparator} ... ${endSeparator}`;
+      let boilerplate = `${startMarker} ... ${endMarker}`;
       columnsRemaining -= boilerplate.length;
       let diff = "";
       let entriesDiff = "";
@@ -588,37 +587,37 @@ export const assert = ({
       node.hasIndentBeforeEntries = false;
       for (const entryKey of entryKeys) {
         const entryNode = node.childNodeMap.get(entryKey);
-        const entryEndSeparator = entryNode.endSeparator;
-        entryNode.endSeparator = "";
+        const entryendMarker = entryNode.endMarker;
+        entryNode.endMarker = "";
         const entryDiff = entryNode.render({
           ...props,
           columnsRemaining,
         });
-        entryNode.endSeparator = entryEndSeparator;
+        entryNode.endMarker = entryendMarker;
         const entryDiffWidth = measureLastLineColumns(entryDiff);
         if (entryDiffWidth > columnsRemaining) {
           if (lastEntryDisplayed) {
-            diff += setColor(startSeparator, node.color);
+            diff += setColor(startMarker, node.color);
             diff += entriesDiff;
             diff += setColor(
               node.hasSpacingAroundEntries
-                ? ` ... ${endSeparator}`
-                : ` ...${endSeparator}`,
+                ? ` ... ${endMarker}`
+                : ` ...${endMarker}`,
               node.color,
             );
             return diff;
           }
           diff += setColor(
             node.hasSpacingAroundEntries
-              ? `${startSeparator} ... ${endSeparator}`
-              : `${startSeparator}...${endSeparator}`,
+              ? `${startMarker} ... ${endMarker}`
+              : `${startMarker}...${endMarker}`,
             node.color,
           );
           return diff;
         }
         if (lastEntryDisplayed) {
           entriesDiff += setColor(
-            lastEntryDisplayed.endSeparator,
+            lastEntryDisplayed.endMarker,
             lastEntryDisplayed.color,
           );
           entriesDiff += " ";
@@ -628,12 +627,12 @@ export const assert = ({
         columnsRemaining -= entryDiffWidth;
       }
       if (!lastEntryDisplayed) {
-        if (node.hasSeparatorsWhenEmpty) {
-          return setColor(`${startSeparator}${endSeparator}`, node.color);
+        if (node.hasMarkersWhenEmpty) {
+          return setColor(`${startMarker}${endMarker}`, node.color);
         }
         return "";
       }
-      diff += setColor(startSeparator, node.color);
+      diff += setColor(startMarker, node.color);
       if (node.hasSpacingAroundEntries) {
         diff += " ";
       }
@@ -641,12 +640,12 @@ export const assert = ({
       if (node.hasSpacingAroundEntries) {
         diff += " ";
       }
-      diff += setColor(endSeparator, node.color);
+      diff += setColor(endMarker, node.color);
       return diff;
     };
     const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
       const entryKeys = node.value;
-      const { startSeparator, endSeparator } = node;
+      const { startMarker, endMarker } = node;
       let atLeastOneEntryDisplayed = null;
       let diff = "";
       let entriesDiff = "";
@@ -711,12 +710,12 @@ export const assert = ({
         }
       }
       if (!atLeastOneEntryDisplayed) {
-        if (node.hasSeparatorsWhenEmpty) {
-          return setColor(`${startSeparator}${endSeparator}`, node.color);
+        if (node.hasMarkersWhenEmpty) {
+          return setColor(`${startMarker}${endMarker}`, node.color);
         }
         return "";
       }
-      diff += setColor(startSeparator, node.color);
+      diff += setColor(startMarker, node.color);
       if (node.hasNewLineAroundEntries) {
         diff += "\n";
       }
@@ -725,12 +724,12 @@ export const assert = ({
         diff += "\n";
       }
       diff += "  ".repeat(getNodeDepth(node));
-      diff += setColor(endSeparator, node.color);
+      diff += setColor(endMarker, node.color);
       return diff;
     };
     const renderEntry = (node, props) => {
       const hasIndentBeforeEntries = node.parent.hasIndentBeforeEntries;
-      const { endSeparator } = node;
+      const { endMarker } = node;
       let entryDiff = "";
       let columnsRemaining = props.columnsRemaining;
       if (hasIndentBeforeEntries) {
@@ -739,8 +738,8 @@ export const assert = ({
         entryDiff += indent;
       }
       const entryKeyNode = node.childNodeMap.get("entry_key");
-      if (endSeparator) {
-        columnsRemaining -= endSeparator.length;
+      if (endMarker) {
+        columnsRemaining -= endMarker.length;
       }
       let columnsRemainingForValue = columnsRemaining;
 
@@ -762,10 +761,10 @@ export const assert = ({
         });
         columnsRemainingForValue -= measureLastLineColumns(entryKeyDiff);
         entryDiff += entryKeyDiff;
-        const { middleSeparator } = node;
-        if (columnsRemainingForValue > middleSeparator.length) {
-          columnsRemainingForValue -= middleSeparator.length;
-          entryDiff += setColor(middleSeparator, node.color);
+        const { middleMarker } = node;
+        if (columnsRemainingForValue > middleMarker.length) {
+          columnsRemainingForValue -= middleMarker.length;
+          entryDiff += setColor(middleMarker, node.color);
         } else {
           columnsRemainingForValue = 0;
         }
@@ -776,11 +775,11 @@ export const assert = ({
           ...props,
           columnsRemaining: columnsRemainingForValue,
         });
-        if (endSeparator) {
-          entryDiff += setColor(endSeparator, node.color);
+        if (endMarker) {
+          entryDiff += setColor(endMarker, node.color);
         }
-      } else if (endSeparator) {
-        entryDiff += setColor(endSeparator, node.color);
+      } else if (endMarker) {
+        entryDiff += setColor(endMarker, node.color);
       }
       return entryDiff;
     };
@@ -928,12 +927,9 @@ export const assert = ({
         actualNode.type === "line_entries" ||
         actualNode.type === "char_entries"
       ) {
-        if (
-          actualNode.hasSeparatorsWhenEmpty !==
-          expectNode.hasSeparatorsWhenEmpty
-        ) {
-          actualNode.hasSeparatorsWhenEmpty =
-            expectNode.hasSeparatorsWhenEmpty = true;
+        if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
+          actualNode.hasMarkersWhenEmpty =
+            expectNode.hasMarkersWhenEmpty = true;
         }
         const { comparisonDiffMap } = subcompareChilNodesDuo(
           actualNode,
@@ -1264,7 +1260,7 @@ let createRootNode;
     isAsPrimitiveValue = false,
     methodName = "",
     isHidden = false,
-    hasSeparatorsWhenEmpty = false,
+    hasMarkersWhenEmpty = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1294,7 +1290,7 @@ let createRootNode;
           isAsPrimitiveValue,
           methodName,
           isHidden,
-          hasSeparatorsWhenEmpty,
+          hasMarkersWhenEmpty,
           type,
           value,
           depth = isContainer ||
@@ -1316,7 +1312,7 @@ let createRootNode;
           isAsPrimitiveValue,
           methodName,
           isHidden,
-          hasSeparatorsWhenEmpty,
+          hasMarkersWhenEmpty,
           colorWhenSolo: node.colorWhenSolo,
           colorWhenSame: node.colorWhenSame,
           colorWhenModified: node.colorWhenModified,
@@ -1352,17 +1348,17 @@ let createRootNode;
       isHidden,
       diffType: "",
       hasQuotes: false,
-      startSeparator: "",
-      middleSeparator: "",
-      endSeparator: "",
-      overflowStartSeparator: "",
-      overflowEndSeparator: "",
+      startMarker: "",
+      middleMarker: "",
+      endMarker: "",
+      overflowStartMarker: "",
+      overflowEndMarker: "",
       isCompatibleWithMultilineDiff: false,
       skippedEntrySummary: null,
       hasSpacingAroundEntries: false,
       hasNewLineAroundEntries: false,
       hasIndentBeforeEntries: false,
-      hasSeparatorsWhenEmpty,
+      hasMarkersWhenEmpty,
       color: "",
     };
     Object.preventExtensions(node);
@@ -1382,8 +1378,8 @@ let createRootNode;
       return node;
     }
     if (type === "internal_entries") {
-      node.startSeparator = "(";
-      node.endSeparator = ")";
+      node.startMarker = "(";
+      node.endMarker = ")";
       node.isCompatibleWithMultilineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
@@ -1393,8 +1389,8 @@ let createRootNode;
       return node;
     }
     if (type === "indexed_entries") {
-      node.startSeparator = "[";
-      node.endSeparator = "]";
+      node.startMarker = "[";
+      node.endMarker = "]";
       node.isCompatibleWithMultilineDiff = true;
       node.hasNewLineAroundEntries = true;
       node.hasIndentBeforeEntries = true;
@@ -1410,8 +1406,8 @@ let createRootNode;
       };
       if (node.parent.isClassPrototype) {
       } else {
-        node.startSeparator = "{";
-        node.endSeparator = "}";
+        node.startMarker = "{";
+        node.endMarker = "}";
         node.hasSpacingAroundEntries = true;
         node.hasNewLineAroundEntries = true;
         node.hasIndentBeforeEntries = true;
@@ -1420,8 +1416,8 @@ let createRootNode;
     }
     if (type === "line_entries") {
       if (node.hasSpacingAroundEntries) {
-        node.startSeparator = `"`;
-        node.endSeparator = `"`;
+        node.startMarker = `"`;
+        node.endMarker = `"`;
       }
       return node;
     }
@@ -1437,11 +1433,11 @@ let createRootNode;
     }
     if (type === "char_entries") {
       if (node.parent.parent.parent.parent.hasQuotes) {
-        node.startSeparator = '"';
-        node.endSeparator = '"';
+        node.startMarker = '"';
+        node.endMarker = '"';
       }
-      node.overflowStartSeparator = "…";
-      node.overflowEndSeparator = "…";
+      node.overflowStartMarker = "…";
+      node.overflowEndMarker = "…";
       return node;
     }
     if (type === "char_entry_value") {
@@ -1450,28 +1446,28 @@ let createRootNode;
       return node;
     }
     if (type === "internal_entry") {
-      node.middleSeparator = " => ";
-      node.endSeparator = ",";
+      node.middleMarker = " => ";
+      node.endMarker = ",";
       return node;
     }
     if (type === "indexed_entry") {
-      node.endSeparator = ",";
+      node.endMarker = ",";
       return node;
     }
     if (type === "property_entry") {
       if (node.parent.parent.isClassPrototype) {
       } else if (isClassStaticProperty) {
-        node.middleSeparator = " = ";
-        node.endSeparator = ";";
+        node.middleMarker = " = ";
+        node.endMarker = ";";
       } else {
-        node.middleSeparator = ": ";
-        node.endSeparator = ",";
+        node.middleMarker = ": ";
+        node.endMarker = ",";
       }
       return node;
     }
     if (type === "constructor_call") {
-      node.startSeparator = "(";
-      node.endSeparator = ")";
+      node.startMarker = "(";
+      node.endMarker = ")";
       return node;
     }
     if (isContainer) {
@@ -1713,7 +1709,7 @@ let createRootNode;
         // skip entirely property_entries
       } else {
         const propertyEntriesNode = appendPropertyEntriesNode(node, {
-          hasSeparatorsWhenEmpty:
+          hasMarkersWhenEmpty:
             !node.childNodeMap.has("object_tag") &&
             !node.childNodeMap.has("constructor_call") &&
             !node.childNodeMap.has("internal_entries") &&
@@ -1762,7 +1758,7 @@ let createRootNode;
         }
         const lines = value.split(/\r?\n/);
         const lineEntriesNode = appendLineEntriesNode(node, {
-          hasSeparatorsWhenEmpty: lines.length < 2,
+          hasMarkersWhenEmpty: lines.length < 2,
         });
         let lineIndex = 0;
         for (const line of lines) {
@@ -1894,7 +1890,7 @@ const appendInternalEntriesNode = (node) => {
     isContainer: true,
     type: "internal_entries",
     value: [],
-    hasSeparatorsWhenEmpty: true,
+    hasMarkersWhenEmpty: true,
   });
   return internalEntriesNode;
 };
@@ -1921,7 +1917,7 @@ const appendIndexedEntriesNode = (node) => {
     isContainer: true,
     type: "indexed_entries",
     value: [],
-    hasSeparatorsWhenEmpty: true,
+    hasMarkersWhenEmpty: true,
   });
   return indexedEntriesNode;
 };
@@ -1943,12 +1939,12 @@ const appendIndexedEntryNode = (node, { key, value }) => {
   });
   return indexedEntryNode;
 };
-const appendPropertyEntriesNode = (node, { hasSeparatorsWhenEmpty }) => {
+const appendPropertyEntriesNode = (node, { hasMarkersWhenEmpty }) => {
   const propertyEntriesNode = node.appendChild("property_entries", {
     isContainer: true,
     type: "property_entries",
     value: [],
-    hasSeparatorsWhenEmpty,
+    hasMarkersWhenEmpty,
   });
   return propertyEntriesNode;
 };
@@ -2003,12 +1999,12 @@ const appendPropertyEntryNode = (
   });
   return propertyEntryNode;
 };
-const appendLineEntriesNode = (node, { hasSeparatorsWhenEmpty }) => {
+const appendLineEntriesNode = (node, { hasMarkersWhenEmpty }) => {
   const lineEntriesNode = node.appendChild("line_entries", {
     isContainer: true,
     type: "line_entries",
     value: [],
-    hasSeparatorsWhenEmpty,
+    hasMarkersWhenEmpty,
   });
   return lineEntriesNode;
 };
