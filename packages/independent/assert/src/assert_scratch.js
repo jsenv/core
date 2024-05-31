@@ -1,15 +1,10 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - shortcut sur actual === expect
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
- * - no need to break loop when max diff is reached
- *   en fait si pour string par exemple on voudra s'arreter
- *   mais pour un objet, un array un buffer on parcourira tout
- *   parce que on le fait de toute façon lorsqu'il n'y a pas de diff
- *   aussi ici du coup lorsque les props sont skipped
- *   le résumé doit etre de la bonne couleur en fonction de ce qui se passe dedans
  * - url string and url object
  * - well known
  * - property descriptors
@@ -24,12 +19,13 @@ import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
-import { getObjectTag, visitObjectPrototypes } from "./object_tag.js";
+import { getObjectTag, objectPrototypeChainGenerator } from "./object_tag.js";
 import {
   analyseFunction,
   defaultFunctionAnalysis,
 } from "./function_analysis.js";
 import { tokenizeString } from "./tokenize_string.js";
+import { defineObjectPropertyLazyGetter } from "./lazy.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -837,7 +833,6 @@ export const assert = ({
             continue;
           }
         }
-
         let expectChildNode;
         if (isSetEntriesComparison) {
           const actualSetValueNode =
@@ -877,7 +872,6 @@ export const assert = ({
             continue;
           }
         }
-
         if (isSetEntriesComparison) {
           const expectSetValueNode =
             expectChildNode.childNodeMap.get("entry_value");
@@ -916,7 +910,6 @@ export const assert = ({
 
     const visitDuo = (actualNode, expectNode) => {
       if (actualNode.isPrimitive) {
-        subcompareChilNodesDuo(actualNode, expectNode);
         // comparing primitives
         if (actualNode.value === expectNode.value) {
           // we already know there will be no diff
@@ -924,6 +917,7 @@ export const assert = ({
         } else {
           onSelfDiff("primitive_value");
         }
+        subcompareChilNodesDuo(actualNode, expectNode);
         actualNode.render = (props) => renderPrimitive(actualNode, props);
         expectNode.render = (props) => renderPrimitive(expectNode, props);
         return;
@@ -1260,11 +1254,13 @@ let createRootNode;
     colorWhenSame,
     colorWhenModified,
     name,
-    type,
+    key,
     value,
+    type = key,
     parent,
     depth,
     path,
+    childGenerator,
     isContainer,
     isGrammar,
     isSourceCode = false,
@@ -1281,8 +1277,12 @@ let createRootNode;
       colorWhenSame,
       colorWhenModified,
       name,
-      type,
+      key,
       value,
+      childGenerator,
+      childNodeMap: new Map(),
+      appendChild: (params) => appendChildNodeGeneric(node, params),
+      type,
       parent,
       depth,
       path,
@@ -1291,55 +1291,6 @@ let createRootNode;
       isSourceCode,
       isClassPrototype,
       isAsPrimitiveValue,
-      childNodeMap: new Map(),
-      appendChild: (
-        name,
-        {
-          isContainer,
-          isGrammar,
-          isSourceCode,
-          isFunctionPrototype,
-          isClassPrototype,
-          isClassStaticProperty,
-          isAsPrimitiveValue,
-          methodName,
-          isHidden,
-          hasMarkersWhenEmpty,
-          type,
-          value,
-          depth = isContainer ||
-          isGrammar ||
-          isClassPrototype ||
-          parent.isClassPrototype
-            ? node.depth
-            : node.depth + 1,
-          path = node.path,
-        },
-      ) => {
-        const childNode = createNode({
-          isContainer,
-          isGrammar,
-          isSourceCode,
-          isFunctionPrototype,
-          isClassPrototype,
-          isClassStaticProperty,
-          isAsPrimitiveValue,
-          methodName,
-          isHidden,
-          hasMarkersWhenEmpty,
-          colorWhenSolo: node.colorWhenSolo,
-          colorWhenSame: node.colorWhenSame,
-          colorWhenModified: node.colorWhenModified,
-          name: node.name,
-          type,
-          value,
-          parent: node,
-          depth,
-          path,
-        });
-        node.childNodeMap.set(name, childNode);
-        return childNode;
-      },
       // info
       isPrimitive: false,
       isComposite: false,
@@ -1498,256 +1449,393 @@ let createRootNode;
     const isFunction = typeofResult === "function";
     if (isObject || isFunction) {
       node.isComposite = true;
-      // object type
       if (isFunction) {
         node.isFunction = true;
         node.functionAnalysis = analyseFunction(value);
-        // if (node.functionAnalysis.type === "arrow") {
-        //   if (node.functionAnalysis.isAsync) {
-        //     node.objectType = node.functionAnalysis.isGenerator
-        //       ? "AsyncArrowFunction"
-        //       : "ArrowFunction";
-        //   } else {
-        //     node.objectType = node.functionAnalysis.isGenerator
-        //       ? "GeneratorArrowFunction"
-        //       : "ArrowFunction";
-        //   }
-        // } else if (node.functionAnalysis.isAsync) {
-        //   node.objectType = node.functionAnalysis.isGenerator
-        //     ? "AsyncGeneratorFunction"
-        //     : "AsyncFunction";
-        // } else {
-        //   node.objectType = node.functionAnalysis.isGenerator
-        //     ? "GeneratorFunction"
-        //     : "Function";
-        // }
-
-        if (node.functionAnalysis.type === "class") {
-          node.appendChild("class_keyword", {
-            isGrammar: true,
-            type: "class_keyword",
-            value: "class",
-          });
-          const extendedClassName = node.functionAnalysis.extendedClassName;
-          if (extendedClassName) {
-            node.appendChild("class_extends_keyword", {
-              isGrammar: true,
-              type: "class_extends_keyword",
-              value: "extends",
-            });
-            node.appendChild("class_extended_name", {
-              isGrammar: true,
-              type: "class_extended_name",
-              value: node.functionAnalysis.extendedClassName,
-            });
-          }
-        }
-        if (node.functionAnalysis.isAsync) {
-          node.appendChild("function_async_keyword", {
-            type: "function_async_keyword",
-            value: "async",
-            isGrammar: true,
-          });
-        }
-        if (node.functionAnalysis.type === "classic") {
-          node.appendChild("function_keyword", {
-            type: "function_keyword",
-            value: node.functionAnalysis.isGenerator ? "function*" : "function",
-            isGrammar: true,
-          });
-        }
-        if (node.functionAnalysis.name) {
-          node.appendChild("function_name", {
-            isGrammar: true,
-            type: "function_name",
-            value: node.functionAnalysis.name,
-          });
-        }
-        if (node.functionAnalysis.type === "arrow") {
-          node.appendChild("function_body_prefix", {
-            isGrammar: true,
-            type: "function_body_prefix",
-            value: "() =>",
-          });
-        } else if (node.functionAnalysis.type === "method") {
-          if (node.functionAnalysis.getterName) {
-            node.appendChild("function_body_prefix", {
-              isGrammar: true,
-              type: "function_body_prefix",
-              value: `get ${methodName}()`,
-            });
-          } else if (node.functionAnalysis.setterName) {
-            node.appendChild("function_body_prefix", {
-              isGrammar: true,
-              type: "function_body_prefix",
-              value: `set ${methodName}()`,
-            });
-          } else {
-            node.appendChild("function_body_prefix", {
-              isGrammar: true,
-              type: "function_body_prefix",
-              value: `${methodName}()`,
-            });
-          }
-        } else if (node.functionAnalysis.type === "classic") {
-          node.appendChild("function_body_prefix", {
-            isGrammar: true,
-            type: "function_body_prefix",
-            value: `()`,
-          });
-        }
-      } else {
-        const objectTag = getObjectTag(value);
-        if (
-          objectTag &&
-          objectTag !== "Object" &&
-          objectTag !== "Array" &&
-          !isFunctionPrototype
-        ) {
-          appendObjectTagNode(node, objectTag);
-        }
       }
-
-      const ownPropertyNameToIgnoreSet = new Set();
-      const ownPropertSymbolToIgnoreSet = new Set();
-      const propertyLikeSet = new Set();
-      // Symbol.toPrimitive
-      if (
-        Symbol.toPrimitive in value &&
-        typeof value[Symbol.toPrimitive] === "function"
-      ) {
-        ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
-        const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
-        propertyLikeSet.add({
-          isAsPrimitiveValue: true,
-          key: SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
-          value: toPrimitiveReturnValue,
-        });
-      }
-      // valueOf()
-      if (
-        typeof value.valueOf === "function" &&
-        value.valueOf !== Object.prototype.valueOf
-      ) {
-        ownPropertyNameToIgnoreSet.add("valueOf");
-        const valueOfReturnValue = value.valueOf();
-        const isAsPrimitiveValue =
-          valueOfReturnValue &&
-          typeof valueOfReturnValue !== "object" &&
-          typeof valueOfReturnValue !== "function";
-
-        if (node.childNodeMap.has("object_tag")) {
-          const constructorCallNode = appendConstructorCallNode(node);
-          constructorCallNode.appendChild(0, {
-            isAsPrimitiveValue,
-            type: "value_of_return_value",
-            value: valueOfReturnValue,
-            path: node.path.append("valueOf()"),
-            depth: node.depth,
-          });
-        } else {
-          propertyLikeSet.add({
-            isAsPrimitiveValue,
-            key: VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-            value: valueOfReturnValue,
-          });
-        }
-      }
-
-      // internal and indexed entries
-      visitObjectPrototypes(value, (proto) => {
+      for (const proto of objectPrototypeChainGenerator(value)) {
         const parentConstructor = proto.constructor;
         if (!parentConstructor) {
-          return;
+          continue;
         }
         if (parentConstructor.name === "Map") {
           node.isMap = true;
-          const mapInternalEntriesNode = appendInternalEntriesNode(node);
-          for (const [mapEntryKey, mapEntryValue] of value) {
-            appendInternalEntryNode(mapInternalEntriesNode, {
-              key: mapEntryKey,
-              value: mapEntryValue,
-            });
-          }
-          return;
+          continue;
         }
         if (parentConstructor.name === "Array") {
           node.isArray = true;
-          const arrayIndexedEntriesNode = appendIndexedEntriesNode(node);
-          let index = 0;
-          while (index < value.length) {
-            ownPropertyNameToIgnoreSet.add(String(index));
-            appendIndexedEntryNode(arrayIndexedEntriesNode, {
-              key: index,
-              value: Object.hasOwn(value, index)
-                ? value[index]
-                : ARRAY_EMPTY_VALUE,
-            });
-            index++;
-          }
-          return;
+          continue;
         }
         if (parentConstructor.name === "Set") {
           node.isSet = true;
-          const setInternalEntriesNode = appendInternalEntriesNode(node);
-          let index = 0;
-          for (const [setValue] of value) {
-            appendInternalEntryNode(setInternalEntriesNode, {
-              isSetEntry: true,
-              key: index,
-              value: setValue,
-            });
-            index++;
-          }
-          return;
-        }
-      });
-      // own properties
-      const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
-        (ownPropertyName) => {
-          return (
-            !ownPropertyNameToIgnoreSet.has(ownPropertyName) &&
-            !shouldIgnoreOwnPropertyName(node, ownPropertyName)
-          );
-        },
-      );
-      const canHaveIndexedEntries = node.childNodeMap.has("indexed_entries");
-      if (canHaveIndexedEntries && ownPropertyNames.length === 0) {
-        // skip entirely property_entries
-      } else {
-        const propertyEntriesNode = appendPropertyEntriesNode(node, {
-          hasMarkersWhenEmpty:
-            !node.childNodeMap.has("object_tag") &&
-            !node.childNodeMap.has("constructor_call") &&
-            !node.childNodeMap.has("internal_entries") &&
-            !canHaveIndexedEntries,
-        });
-        if (node.isFunction) {
-          appendPropertyEntryNode(propertyEntriesNode, {
-            isSourceCode: true,
-            isClassStaticProperty: node.functionAnalysis.type === "class",
-            key: SOURCE_CODE_ENTRY_KEY,
-            value: node.functionAnalysis.argsAndBodySource,
-          });
-        }
-        for (const ownPropertyName of ownPropertyNames) {
-          const ownPropertyValue = value[ownPropertyName];
-          appendPropertyEntryNode(propertyEntriesNode, {
-            isClassStaticProperty: node.functionAnalysis.type === "class",
-            isFunctionPrototype:
-              ownPropertyName === "prototype" && node.isFunction,
-            isClassPrototype:
-              ownPropertyName === "prototype" &&
-              node.functionAnalysis.type === "class",
-            key: ownPropertyName,
-            value: ownPropertyValue,
-          });
-        }
-        for (const propertyLike of propertyLikeSet) {
-          appendPropertyEntryNode(propertyEntriesNode, propertyLike);
+          continue;
         }
       }
-
+      node.childGenerator = function (appendChild) {
+        // function child nodes
+        if (node.isFunction) {
+          if (node.functionAnalysis.type === "class") {
+            node.appendChild({
+              key: "class_keyword",
+              value: "class",
+              isGrammar: true,
+            });
+            const extendedClassName = node.functionAnalysis.extendedClassName;
+            if (extendedClassName) {
+              node.appendChild({
+                key: "class_extends_keyword",
+                value: "extends",
+                isGrammar: true,
+              });
+              node.appendChild({
+                key: "class_extended_name",
+                value: extendedClassName,
+                isGrammar: true,
+              });
+            }
+          }
+          if (node.functionAnalysis.isAsync) {
+            node.appendChild({
+              key: "function_async_keyword",
+              value: "async",
+              isGrammar: true,
+            });
+          }
+          if (node.functionAnalysis.type === "classic") {
+            node.appendChild({
+              key: "function_keyword",
+              value: node.functionAnalysis.isGenerator
+                ? "function*"
+                : "function",
+              isGrammar: true,
+            });
+          }
+          if (node.functionAnalysis.name) {
+            node.appendChild({
+              key: "function_name",
+              value: node.functionAnalysis.name,
+              isGrammar: true,
+            });
+          }
+          function_body_prefix: {
+            if (node.functionAnalysis.type === "arrow") {
+              node.appendChild({
+                key: "function_body_prefix",
+                value: "() =>",
+                isGrammar: true,
+              });
+            } else if (node.functionAnalysis.type === "method") {
+              if (node.functionAnalysis.getterName) {
+                node.appendChild({
+                  key: "function_body_prefix",
+                  value: `get ${methodName}()`,
+                  isGrammar: true,
+                });
+              }
+              if (node.functionAnalysis.setterName) {
+                node.appendChild({
+                  key: "function_body_prefix",
+                  value: `set ${methodName}()`,
+                  isGrammar: true,
+                });
+              }
+              node.appendChild({
+                key: "function_body_prefix",
+                value: `${methodName}()`,
+                isGrammar: true,
+              });
+            } else if (node.functionAnalysis.type === "classic") {
+              node.appendChild({
+                key: "function_body_prefix",
+                value: "()",
+                isGrammar: true,
+              });
+            }
+          }
+        }
+        let hasObjectTag = false;
+        // object_tag
+        if (!node.isFunction && !isFunctionPrototype) {
+          const objectTag = getObjectTag(value);
+          if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
+            hasObjectTag = true;
+            node.appendChild({
+              key: "object_tag",
+              value: objectTag,
+              path: node.path.append("[[ObjectTag]]"),
+              isGrammar: true,
+            });
+          }
+        }
+        let canHaveInternalEntries = false;
+        internal_entries: {
+          if (node.isMap) {
+            canHaveInternalEntries = true;
+            const mapInternalEntriesNode = node.appendChild({
+              key: "internal_entries",
+              value: [],
+              isContainer: true,
+              hasMarkersWhenEmpty: true,
+              childGenerator: () => {
+                for (const [mapEntryKey, mapEntryValue] of value) {
+                  mapInternalEntriesNode.value.push(mapEntryKey);
+                  const mapInternalEntryNode =
+                    mapInternalEntriesNode.appendChild({
+                      key: "internal_entry",
+                      isContainer: true,
+                      // TODO: map path
+                    });
+                  mapInternalEntryNode.appendChild({
+                    key: "entry_key",
+                    value: mapEntryKey,
+                    type: "internal_entry_key",
+                  });
+                  mapInternalEntryNode.appendChild({
+                    key: "entry_value",
+                    value: mapEntryValue,
+                    type: "internal_entry_value",
+                  });
+                }
+              },
+            });
+          }
+          if (node.isSet) {
+            canHaveInternalEntries = true;
+            const setInternalEntriesNode = node.appendChild({
+              key: "internal_entries",
+              value: [],
+              isContainer: true,
+              hasMarkersWhenEmpty: true,
+              childGenerator: () => {
+                let index = 0;
+                for (const [setValue] of value) {
+                  setInternalEntriesNode.value.push(index);
+                  const setInternalEntryNode =
+                    setInternalEntriesNode.appendChild({
+                      key: "internal_entry",
+                      isContainer: true,
+                      path: setInternalEntriesNode.path.append(index, {
+                        isIndexedEntry: true,
+                      }),
+                    });
+                  setInternalEntryNode.appendChild({
+                    key: "entry_key",
+                    value: index,
+                  });
+                  setInternalEntryNode.appendChild({
+                    key: "entry_value",
+                    value: setValue,
+                  });
+                  index++;
+                }
+              },
+            });
+          }
+        }
+        const ownPropertyNameToIgnoreSet = new Set();
+        const ownPropertSymbolToIgnoreSet = new Set();
+        let canHaveIndexedEntries = false;
+        indexed_entries: {
+          if (node.isArray) {
+            canHaveIndexedEntries = true;
+            const arrayIndexedEntriesNode = appendChild({
+              type: "indexed_entries",
+              value: [],
+              isContainer: true,
+              hasMarkersWhenEmpty: true,
+              childGenerator: () => {
+                let index = 0;
+                while (index < value.length) {
+                  ownPropertyNameToIgnoreSet.add(String(index));
+                  const arrayIndexedEntryNode =
+                    arrayIndexedEntriesNode.appendChild({
+                      key: "indexed_entry",
+                      isContainer: true,
+                      path: arrayIndexedEntriesNode.path.append(key, {
+                        isIndexedEntry: true,
+                      }),
+                    });
+                  arrayIndexedEntryNode.appendChild({
+                    key: "entry_key",
+                    value: index,
+                    type: "indexed_entry_key",
+                  });
+                  arrayIndexedEntryNode.appendChild({
+                    key: "entry_value",
+                    value: Object.hasOwn(value, index)
+                      ? value[index]
+                      : ARRAY_EMPTY_VALUE,
+                    type: "indexed_entry_value",
+                  });
+                  index++;
+                }
+              },
+            });
+          }
+        }
+        let hasConstructorCall;
+        const propertyLikeSet = new Set();
+        symbol_to_primitive: {
+          if (
+            Symbol.toPrimitive in value &&
+            typeof value[Symbol.toPrimitive] === "function"
+          ) {
+            ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
+            const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
+            propertyLikeSet.add({
+              key: SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+              value: toPrimitiveReturnValue,
+              params: {
+                isAsPrimitiveValue: true,
+              },
+            });
+          }
+        }
+        value_of: {
+          if (
+            typeof value.valueOf === "function" &&
+            value.valueOf !== Object.prototype.valueOf
+          ) {
+            ownPropertyNameToIgnoreSet.add("valueOf");
+            const valueOfReturnValue = value.valueOf();
+            const isAsPrimitiveValue =
+              valueOfReturnValue &&
+              typeof valueOfReturnValue !== "object" &&
+              typeof valueOfReturnValue !== "function";
+            if (hasObjectTag) {
+              hasConstructorCall = true;
+              const constructorCallNode = node.appendChild({
+                key: "constructor_call",
+                isContainer: true,
+                childGenerator: () => {
+                  constructorCallNode.appendChild({
+                    key: 0,
+                    value: valueOfReturnValue,
+                    type: "value_of_return_value",
+                    path: node.path.append("valueOf()"),
+                    depth: node.depth,
+                    isAsPrimitiveValue,
+                  });
+                },
+              });
+            } else {
+              propertyLikeSet.add({
+                key: VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+                value: valueOfReturnValue,
+                params: {
+                  isAsPrimitiveValue,
+                },
+              });
+            }
+          }
+        }
+        own_properties: {
+          const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
+            (ownPropertyName) => {
+              return (
+                !ownPropertyNameToIgnoreSet.has(ownPropertyName) &&
+                !shouldIgnoreOwnPropertyName(node, ownPropertyName)
+              );
+            },
+          );
+          const skipOwnProperties =
+            canHaveIndexedEntries &&
+            ownPropertyNames.length === 0 &&
+            propertyLikeSet.size === 0;
+          if (skipOwnProperties) {
+            break own_properties;
+          }
+          const hasMarkersWhenEmpty =
+            !hasObjectTag &&
+            !hasConstructorCall &&
+            !canHaveInternalEntries &&
+            !canHaveIndexedEntries;
+          const appendPropertyEntryNode = ({
+            key,
+            value,
+            isSourceCode,
+            isClassStaticProperty,
+            isFunctionPrototype,
+            isClassPrototype,
+          }) => {
+            propertyEntriesNode.value.push(key);
+            const propertyEntryNode = node.appendChild(propertyEntriesNode, {
+              key,
+              type: "property_entry",
+              isContainer: true,
+              isFunctionPrototype,
+              isClassStaticProperty,
+              isClassPrototype,
+              path: node.path.append(key),
+              childGenerator: () => {
+                const propertyEntryValueNode = propertyEntryNode.appendChild({
+                  key: "entry_value",
+                  value,
+                  type: "property_entry_value",
+                  isSourceCode,
+                  isFunctionPrototype,
+                  isClassPrototype,
+                  isAsPrimitiveValue,
+                  methodName: key,
+                });
+                if (isClassStaticProperty && !isClassPrototype) {
+                  propertyEntryNode.appendChild({
+                    key: "static_keyword",
+                    value: "static",
+                    type: "class_property_static_keyword",
+                    isGrammar: true,
+                    isHidden:
+                      isSourceCode ||
+                      propertyEntryValueNode.functionAnalysis.type === "method",
+                  });
+                }
+                propertyEntryNode.appendChild({
+                  key: "entry_key",
+                  value: key,
+                  type: "property_entry_key",
+                  isHidden:
+                    isSourceCode ||
+                    propertyEntryValueNode.functionAnalysis.type === "method" ||
+                    isClassPrototype,
+                });
+              },
+            });
+            return propertyEntryNode;
+          };
+          const propertyEntriesNode = appendChild({
+            key: "property_entries",
+            value: [],
+            isContainer: true,
+            hasMarkersWhenEmpty,
+            childGenerator: () => {
+              if (node.isFunction) {
+                appendPropertyEntryNode({
+                  key: SOURCE_CODE_ENTRY_KEY,
+                  value: node.functionAnalysis.argsAndBodySource,
+                  isSourceCode: true,
+                  isClassStaticProperty: node.functionAnalysis.type === "class",
+                });
+              }
+              for (const ownPropertyName of ownPropertyNames) {
+                const ownPropertyValue = node.value[ownPropertyName];
+                appendPropertyEntryNode({
+                  key: ownPropertyName,
+                  value: ownPropertyValue,
+                  isClassStaticProperty: node.functionAnalysis.type === "class",
+                  isFunctionPrototype:
+                    ownPropertyName === "prototype" && node.isFunction,
+                  isClassPrototype:
+                    ownPropertyName === "prototype" &&
+                    node.functionAnalysis.type === "class",
+                });
+              }
+              for (const propertyLike of propertyLikeSet) {
+                appendPropertyEntryNode(propertyLike);
+              }
+            },
+          });
+        }
+      };
       return node;
     }
 
@@ -1763,68 +1851,137 @@ let createRootNode;
         } else {
           node.hasQuotes = true;
         }
-        const lineEntriesNode = appendLineEntriesNode(node);
-        let lineIndex = 0;
-        let columnIndex = 0;
-        const firstLineNode = appendLineEntryNode(lineEntriesNode, {
-          key: lineIndex,
-        });
-        const firstCharEntriesNode =
-          firstLineNode.childNodeMap.get("entry_value");
-        const chars = tokenizeString(value);
-        let doubleQuoteCount = 0;
-        let singleQuoteCount = 0;
-        let backtickCount = 0;
-        let currentLineNode = firstLineNode;
-        let currentCharEntriesNode =
-          currentLineNode.childNodeMap.get("entry_value");
-        for (const char of chars) {
-          if (char === "\n") {
-            lineIndex++;
-            columnIndex = 0;
-            currentLineNode = appendLineEntryNode(lineEntriesNode, {
-              key: lineIndex,
-            });
-            currentCharEntriesNode =
-              currentLineNode.childNodeMap.get("entry_value");
-            continue;
-          }
-          if (char === DOUBLE_QUOTE) {
-            doubleQuoteCount++;
-          } else if (char === SINGLE_QUOTE) {
-            singleQuoteCount++;
-          } else if (char === BACKTICK) {
-            backtickCount++;
-          }
-          appendCharEntryNode(currentCharEntriesNode, {
-            key: columnIndex,
-            value: char,
+        node.childLazy = true;
+        node.childGenerator = () => {
+          const lineEntriesNode = node.appendChild({
+            key: "line_entries",
+            value: [],
+            isContainer: true,
+            childGenerator: () => {
+              const appendLineEntry = (lineIndex) => {
+                const lineEntryNode = lineEntriesNode.appendChild({
+                  key: "line_entry",
+                  isContainer: true,
+                });
+                const lineIndexNode = lineEntryNode.appendChild({
+                  key: "entry_key",
+                  value: lineIndex,
+                  type: "line_entry_key",
+                });
+                const lineCharEntriesNode = lineEntryNode.appendChild({
+                  key: "entry_value",
+                  value: [],
+                  type: "line_char_entries",
+                  isContainer: true,
+                });
+                const appendCharEntry = (charIndex, char) => {
+                  lineCharEntriesNode.value.push(charIndex);
+                  const charEntryNode = lineEntryNode.appendChild({
+                    key: "char_entry",
+                    isContainer: true,
+                  });
+                  const charIndexNode = charEntryNode.appendChild({
+                    key: "entry_key",
+                    value: charIndex,
+                    type: "char_entry_key",
+                  });
+                  const charValueNode = charEntryNode.appendChild({
+                    key: "entry_value",
+                    value: char,
+                    type: "char_entry_value",
+                  });
+                  return [charEntryNode, charIndexNode, charValueNode];
+                };
+
+                return {
+                  lineEntryNode,
+                  lineIndexNode,
+                  lineCharEntriesNode,
+                  appendCharEntry,
+                };
+              };
+
+              let isDone = false;
+              let firstLineCharIndex = 0;
+              let doubleQuoteCount = 0;
+              let singleQuoteCount = 0;
+              let backtickCount = 0;
+              const chars = tokenizeString(node.value);
+              const charIterator = chars[Symbol.iterator]();
+              function* charGeneratorUntilNewLine() {
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                  const charIteratorResult = charIterator.next();
+                  if (charIteratorResult.done) {
+                    isDone = true;
+                    return;
+                  }
+                  const char = charIteratorResult.value;
+                  if (char === "\n") {
+                    break;
+                  }
+                  yield char;
+                }
+              }
+
+              // first line
+              const {
+                lineEntryNode: firstLineEntryNode,
+                appendCharEntry: appendFirstLineCharEntry,
+              } = appendLineEntry(0);
+              for (const char of charGeneratorUntilNewLine()) {
+                firstLineCharIndex++;
+                if (char === DOUBLE_QUOTE) {
+                  doubleQuoteCount++;
+                } else if (char === SINGLE_QUOTE) {
+                  singleQuoteCount++;
+                } else if (char === BACKTICK) {
+                  backtickCount++;
+                }
+                appendFirstLineCharEntry(firstLineCharIndex, char);
+              }
+
+              if (isDone) {
+                // single line
+                if (node.hasQuotes) {
+                  let bestQuote;
+                  if (doubleQuoteCount === 0) {
+                    bestQuote = DOUBLE_QUOTE;
+                  } else if (singleQuoteCount === 0) {
+                    bestQuote = SINGLE_QUOTE;
+                  } else if (backtickCount === 0) {
+                    bestQuote = BACKTICK;
+                  } else if (singleQuoteCount > doubleQuoteCount) {
+                    bestQuote = DOUBLE_QUOTE;
+                  } else if (doubleQuoteCount > singleQuoteCount) {
+                    bestQuote = SINGLE_QUOTE;
+                  } else {
+                    bestQuote = DOUBLE_QUOTE;
+                  }
+                  firstLineEntryNode.startMarker =
+                    firstLineEntryNode.endMarker = bestQuote;
+                }
+                lineEntriesNode.hasMarkersWhenEmpty = true;
+                return;
+              }
+              // remaining lines
+              let lineIndex = 1;
+              // eslint-disable-next-line no-constant-condition
+              while (true) {
+                const { appendCharEntry } = appendLineEntry(lineIndex);
+                let columnIndex = 0;
+                for (const char of charGeneratorUntilNewLine()) {
+                  appendCharEntry(columnIndex, char);
+                  columnIndex++;
+                }
+                if (isDone) {
+                  break;
+                }
+                lineIndex++;
+              }
+            },
           });
-          columnIndex++;
-        }
-        const isSingleLine = lineIndex < 1;
-        if (isSingleLine) {
-          if (node.hasQuotes) {
-            let bestQuote;
-            if (doubleQuoteCount === 0) {
-              bestQuote = DOUBLE_QUOTE;
-            } else if (singleQuoteCount === 0) {
-              bestQuote = SINGLE_QUOTE;
-            } else if (backtickCount === 0) {
-              bestQuote = BACKTICK;
-            } else if (singleQuoteCount > doubleQuoteCount) {
-              bestQuote = DOUBLE_QUOTE;
-            } else if (doubleQuoteCount > singleQuoteCount) {
-              bestQuote = SINGLE_QUOTE;
-            } else {
-              bestQuote = DOUBLE_QUOTE;
-            }
-            firstCharEntriesNode.startMarker = firstCharEntriesNode.endMarker =
-              bestQuote;
-          }
-          lineEntriesNode.hasMarkersWhenEmpty = true;
-        } else {
-        }
+        };
       }
     }
     if (value === undefined) {
@@ -1832,6 +1989,69 @@ let createRootNode;
     }
 
     return node;
+  };
+
+  const appendChildNodeGeneric = (
+    node,
+    {
+      key,
+      value,
+      childGenerator,
+      type,
+      isContainer,
+      isGrammar,
+      isSourceCode,
+      isFunctionPrototype,
+      isClassPrototype,
+      isClassStaticProperty,
+      isAsPrimitiveValue,
+      methodName,
+      isHidden,
+      hasMarkersWhenEmpty,
+      depth,
+      path = node.path,
+    },
+  ) => {
+    if (depth === undefined) {
+      if (
+        isContainer ||
+        isGrammar ||
+        isClassPrototype ||
+        node.parent?.isClassPrototype
+      ) {
+        depth = node.depth;
+      } else {
+        depth = node.depth + 1;
+      }
+    }
+    const childNode = createNode({
+      key,
+      value,
+      childGenerator,
+      type,
+      parent: node,
+      depth,
+      path,
+      isContainer,
+      isGrammar,
+      isSourceCode,
+      isFunctionPrototype,
+      isClassPrototype,
+      isClassStaticProperty,
+      isAsPrimitiveValue,
+      methodName,
+      isHidden,
+      hasMarkersWhenEmpty,
+      colorWhenSolo: node.colorWhenSolo,
+      colorWhenSame: node.colorWhenSame,
+      colorWhenModified: node.colorWhenModified,
+      name: node.name,
+    });
+    node.childNodeMap.set(key, childNode);
+    if (!node.childLazy) {
+      node.childGenerator();
+    }
+    return childNode;
   };
 }
 
@@ -1932,181 +2152,6 @@ const getValueOfReturnValueNode = (node) => {
     return null;
   }
   return valueOfReturnValuePropertyNode.childNodeMap.get("entry_value");
-};
-const appendObjectTagNode = (node, objectTag) => {
-  const objectTagNode = node.appendChild("object_tag", {
-    isGrammar: true,
-    type: "object_tag",
-    value: objectTag,
-    path: node.path.append("[[ObjectTag]]"),
-  });
-  return objectTagNode;
-};
-const appendConstructorCallNode = (node) => {
-  return node.appendChild("constructor_call", {
-    isContainer: true,
-    type: "constructor_call",
-  });
-};
-
-const appendInternalEntriesNode = (node) => {
-  const internalEntriesNode = node.appendChild("internal_entries", {
-    isContainer: true,
-    type: "internal_entries",
-    value: [],
-    hasMarkersWhenEmpty: true,
-  });
-  return internalEntriesNode;
-};
-const appendInternalEntryNode = (node, { isSetEntry, key, value }) => {
-  node.value.push(key);
-  const internalEntryNode = node.appendChild(key, {
-    isContainer: true,
-    type: "internal_entry",
-    path: node.path.append(key),
-  });
-  internalEntryNode.appendChild("entry_key", {
-    type: "internal_entry_key",
-    value: key,
-    isHidden: isSetEntry,
-  });
-  internalEntryNode.appendChild("entry_value", {
-    type: "internal_entry_value",
-    value,
-  });
-  return internalEntryNode;
-};
-const appendIndexedEntriesNode = (node) => {
-  const indexedEntriesNode = node.appendChild("indexed_entries", {
-    isContainer: true,
-    type: "indexed_entries",
-    value: [],
-    hasMarkersWhenEmpty: true,
-  });
-  return indexedEntriesNode;
-};
-const appendIndexedEntryNode = (node, { key, value }) => {
-  node.value.push(key);
-  const indexedEntryNode = node.appendChild(key, {
-    isContainer: true,
-    type: "indexed_entry",
-    path: node.path.append(key, { isIndexedEntry: true }),
-  });
-  indexedEntryNode.appendChild("entry_key", {
-    type: "indexed_entry_key",
-    value: key,
-    isHidden: true,
-  });
-  indexedEntryNode.appendChild("entry_value", {
-    type: "indexed_entry_value",
-    value,
-  });
-  return indexedEntryNode;
-};
-const appendPropertyEntriesNode = (node, { hasMarkersWhenEmpty }) => {
-  const propertyEntriesNode = node.appendChild("property_entries", {
-    isContainer: true,
-    type: "property_entries",
-    value: [],
-    hasMarkersWhenEmpty,
-  });
-  return propertyEntriesNode;
-};
-const appendPropertyEntryNode = (
-  node,
-  {
-    isSourceCode,
-    isFunctionPrototype,
-    isClassPrototype,
-    isClassStaticProperty,
-    isAsPrimitiveValue,
-    key,
-    value,
-  },
-) => {
-  node.value.push(key);
-  const propertyEntryNode = node.appendChild(key, {
-    isContainer: true,
-    isFunctionPrototype,
-    isClassStaticProperty,
-    isClassPrototype,
-    type: "property_entry",
-    path: node.path.append(key),
-  });
-
-  const propertyEntryValueNode = propertyEntryNode.appendChild("entry_value", {
-    type: "property_entry_value",
-    value,
-    isSourceCode,
-    isFunctionPrototype,
-    isClassPrototype,
-    isAsPrimitiveValue,
-    methodName: key,
-  });
-  if (isClassStaticProperty && !isClassPrototype) {
-    propertyEntryNode.appendChild("static_keyword", {
-      isGrammar: true,
-      isHidden:
-        isSourceCode ||
-        propertyEntryValueNode.functionAnalysis.type === "method",
-      type: "class_property_static_keyword",
-      value: "static",
-    });
-  }
-  propertyEntryNode.appendChild("entry_key", {
-    type: "property_entry_key",
-    value: key,
-    isHidden:
-      isSourceCode ||
-      propertyEntryValueNode.functionAnalysis.type === "method" ||
-      isClassPrototype,
-  });
-  return propertyEntryNode;
-};
-const appendLineEntriesNode = (node) => {
-  const lineEntriesNode = node.appendChild("line_entries", {
-    isContainer: true,
-    type: "line_entries",
-    value: [],
-  });
-  return lineEntriesNode;
-};
-const appendLineEntryNode = (node, { key }) => {
-  node.value.push(key);
-  const lineEntryNode = node.appendChild(key, {
-    isContainer: true,
-    type: "line_entry",
-    path: node.path.append(`#L${key + 1}`),
-  });
-  lineEntryNode.appendChild("entry_key", {
-    type: "line_entry_key",
-    value: key,
-    isHidden: true,
-  });
-  lineEntryNode.appendChild("entry_value", {
-    isContainer: true,
-    type: "char_entries",
-    value: [],
-  });
-  return lineEntryNode;
-};
-const appendCharEntryNode = (node, { key, value }) => {
-  node.value.push(key);
-  const charEntryNode = node.appendChild(key, {
-    isContainer: true,
-    type: "char_entry",
-    path: node.path.append(`C${key + 1}`),
-  });
-  charEntryNode.appendChild("entry_key", {
-    type: "char_entry_key",
-    value: key,
-    isHidden: true,
-  });
-  charEntryNode.appendChild("entry_value", {
-    type: "char_entry_value",
-    value,
-  });
-  return charEntryNode;
 };
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {

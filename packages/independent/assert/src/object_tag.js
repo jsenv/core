@@ -31,15 +31,15 @@ export const getObjectTag = (obj) => {
   return "";
 };
 
-export const visitObjectPrototypes = (obj, callback) => {
+export function* objectPrototypeChainGenerator(obj) {
   while (obj || isUndetectableObject(obj)) {
     const proto = Object.getPrototypeOf(obj);
     if (!proto) {
       break;
     }
-    callback(proto);
+    yield proto;
     obj = proto;
   }
-};
+}
 
 const isUndetectableObject = (v) => typeof v === "undefined" && v !== undefined;
