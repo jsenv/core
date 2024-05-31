@@ -285,16 +285,12 @@ export const assert = ({
         }
         const constructorCallNode = node.childNodeMap.get("constructor_call");
         if (constructorCallNode) {
-          columnsRemaining -= "()".length;
-          const firstArgNode = constructorCallNode.childNodeMap.get(0);
-          const firstArgDiff = firstArgNode.render({
+          const constructorCallDiff = constructorCallNode.render({
             ...props,
             columnsRemaining,
           });
-          columnsRemaining -= measureLastLineColumns(firstArgDiff);
-          diff += setColor("(", node.color);
-          diff += firstArgDiff;
-          diff += setColor(")", node.color);
+          columnsRemaining -= measureLastLineColumns(constructorCallDiff);
+          diff += constructorCallDiff;
         }
       }
       if (internalEntriesNode) {
@@ -492,6 +488,12 @@ export const assert = ({
       const focusedEntry = node.childNodeMap.get(focusedEntryKey);
       let focusedEntryDiff = "";
       if (focusedEntry) {
+        if (entryKeys.length === 1) {
+          // TODO: ideally something better as in oneLinerWithoutDiff
+          // where we restore endMarker + append it when we got
+          // many
+          focusedEntry.endMarker = "";
+        }
         focusedEntryDiff = focusedEntry.render(props);
         columnsRemaining -= stringWidth(focusedEntryDiff);
       }
@@ -927,10 +929,6 @@ export const assert = ({
         expectNode.render = (props) => renderComposite(expectNode, props);
         return;
       }
-      if (actualNode.subgroup === "constructor_call") {
-        subcompareChildNodesSolo(actualNode, expectNode);
-        return;
-      }
       if (actualNode.group === "entries") {
         if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
           actualNode.hasMarkersWhenEmpty =
@@ -965,10 +963,6 @@ export const assert = ({
       if (node.isComposite) {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderComposite(node, props);
-        return;
-      }
-      if (node.subgroup === "constructor_call") {
-        subcompareChildNodesSolo(node, placeholderNode);
         return;
       }
       if (node.group === "entries") {
@@ -1242,6 +1236,7 @@ let createRootNode;
     isClassPrototype = false,
     isClassStaticProperty = false,
     isAsPrimitiveValue = false,
+    isValueOfReturnValue = false,
     methodName = "",
     isHidden = false,
     hasMarkersWhenEmpty = false,
@@ -1264,6 +1259,7 @@ let createRootNode;
       isSourceCode,
       isClassPrototype,
       isAsPrimitiveValue,
+      isValueOfReturnValue,
       // info
       isPrimitive: false,
       isComposite: false,
@@ -1388,6 +1384,10 @@ let createRootNode;
       node.endMarker = ",";
       return node;
     }
+    if (subgroup === "constructor_call_entry") {
+      node.endMarker = ",";
+      return node;
+    }
     if (subgroup === "property_entry") {
       if (node.parent.parent.isClassPrototype) {
       } else if (isClassStaticProperty) {
@@ -1407,7 +1407,8 @@ let createRootNode;
     if (
       subgroup === "array_entry_key" ||
       subgroup === "line_entry_key" ||
-      subgroup === "char_entry_key"
+      subgroup === "char_entry_key" ||
+      subgroup === "constructor_call_entry_key"
     ) {
       node.isPrimitive = true;
       node.isNumber = true;
@@ -1684,10 +1685,38 @@ let createRootNode;
               const constructorCallNode = node.appendChild("constructor_call", {
                 group: "entries",
                 subgroup: "constructor_call",
+                value: [],
                 childGenerator: () => {
-                  constructorCallNode.appendChild(0, {
-                    group: "value_of_return_value",
-                    value: valueOfReturnValue,
+                  const appendArgEntry = (
+                    argIndex,
+                    argValue,
+                    { path, depth, isAsPrimitiveValue },
+                  ) => {
+                    constructorCallNode.value.push(argIndex);
+                    const argEntryNode = constructorCallNode.appendChild(
+                      argIndex,
+                      {
+                        group: "entry",
+                        subgroup: "constructor_call_entry",
+                      },
+                    );
+                    argEntryNode.appendChild("entry_key", {
+                      group: "entry_key",
+                      subgroup: "constructor_call_entry_key",
+                      value: argIndex,
+                      isHidden: true,
+                    });
+                    argEntryNode.appendChild("entry_value", {
+                      group: "entry_value",
+                      subgroup: "constructor_call_entry_value",
+                      value: argValue,
+                      path,
+                      depth,
+                      isAsPrimitiveValue,
+                      isValueOfReturnValue: true,
+                    });
+                  };
+                  appendArgEntry(0, valueOfReturnValue, {
                     path: node.path.append("valueOf()"),
                     depth: node.depth,
                     isAsPrimitiveValue,
@@ -1999,6 +2028,7 @@ let createRootNode;
       isClassPrototype,
       isClassStaticProperty,
       isAsPrimitiveValue,
+      isValueOfReturnValue,
       methodName,
       isHidden,
       hasMarkersWhenEmpty,
@@ -2032,6 +2062,7 @@ let createRootNode;
       isClassPrototype,
       isClassStaticProperty,
       isAsPrimitiveValue,
+      isValueOfReturnValue,
       methodName,
       isHidden,
       hasMarkersWhenEmpty,
@@ -2114,9 +2145,12 @@ const getSymbolToPrimitiveReturnValueNode = (node) => {
 const getValueOfReturnValueNode = (node) => {
   const constructorCallNode = node.childNodeMap.get("constructor_call");
   if (constructorCallNode) {
-    const firstArgNode = constructorCallNode.childNodeMap.get(0);
-    if (firstArgNode && firstArgNode.subgroup === "value_of_return_value") {
-      return firstArgNode;
+    const firstArgEntryNode = constructorCallNode.childNodeMap.get(0);
+    if (
+      firstArgEntryNode &&
+      firstArgEntryNode.childNodeMap.get("entry_value").isValueOfReturnValue
+    ) {
+      return firstArgEntryNode.childNodeMap.get("entry_value");
     }
   }
   const propertyEntriesNode = node.childNodeMap.get("property_entries");
