@@ -34,10 +34,10 @@ assert({
 assert({
   actual: {
     [Symbol.toPrimitive]: () => {
-      return "10";
+      return 10;
     },
   },
-  expect: "10",
+  expect: 10,
 });
 ```
 

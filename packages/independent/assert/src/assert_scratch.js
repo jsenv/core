@@ -1741,6 +1741,7 @@ let createRootNode;
                   isClassStaticProperty,
                   isFunctionPrototype,
                   isClassPrototype,
+                  isAsPrimitiveValue,
                 },
               ) => {
                 propertyEntriesNode.value.push(key);

@@ -26,10 +26,10 @@ await startSnapshotTesting("wrapped_value", {
     assert({
       actual: {
         [Symbol.toPrimitive]: () => {
-          return "10";
+          return 10;
         },
       },
-      expect: "10",
+      expect: 10,
     });
   },
   ["primitive vs Symbol.toPrimitive"]: () => {
