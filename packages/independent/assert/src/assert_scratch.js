@@ -790,6 +790,13 @@ export const assert = ({
       return entryDiff;
     };
 
+    const callChildGeneratorIfNeeded = (node) => {
+      if (node.childGenerator) {
+        node.childGenerator();
+        node.childGenerator = null;
+      }
+    };
+
     const subcompareDuo = (actualChildNode, expectChildNode) => {
       const childComparison = compare(
         actualChildNode,
@@ -810,14 +817,8 @@ export const assert = ({
       return subcompareDuo(placeholderNode, childNode);
     };
     const subcompareChilNodesDuo = (actualNode, expectNode) => {
-      if (actualNode.childGenerator) {
-        actualNode.childGenerator();
-        actualNode.childGenerator = null;
-      }
-      if (expectNode.childGenerator) {
-        expectNode.childGenerator();
-        expectNode.childGenerator = null;
-      }
+      callChildGeneratorIfNeeded(actualNode);
+      callChildGeneratorIfNeeded(expectNode);
 
       const isSetEntriesComparison =
         actualNode.subgroup === "set_entries" &&
@@ -902,10 +903,7 @@ export const assert = ({
       return { comparisonDiffMap };
     };
     const subcompareChildNodesSolo = (node, placeholderNode) => {
-      if (node.childGenerator) {
-        node.childGenerator();
-        node.childGenerator = null;
-      }
+      callChildGeneratorIfNeeded(node);
       const comparisonDiffMap = new Map();
       for (const [childName, childNode] of node.childNodeMap) {
         const soloChildComparison = subcompareSolo(childNode, placeholderNode);
@@ -1541,73 +1539,65 @@ let createRootNode;
         internal_entries: {
           if (node.isMap) {
             canHaveInternalEntries = true;
-            const mapInternalEntriesNode = node.appendChild(
-              "internal_entries",
-              {
-                group: "entries",
-                subgroup: "map_entries",
-                value: [],
-                hasMarkersWhenEmpty: true,
-                childGenerator: () => {
-                  for (const [mapEntryKey, mapEntryValue] of value) {
-                    mapInternalEntriesNode.value.push(mapEntryKey);
-                    const mapInternalEntryNode =
-                      mapInternalEntriesNode.appendChild(mapEntryKey, {
-                        group: "entry",
-                        subgroup: "map_entry",
-                        // TODO: map path
-                      });
-                    mapInternalEntryNode.appendChild("entry_key", {
-                      group: "entry_key",
-                      subgroup: "map_entry_key",
-                      value: mapEntryKey,
-                    });
-                    mapInternalEntryNode.appendChild("entry_value", {
-                      childType: "entry_value",
-                      subgroup: "map_entry_value",
-                      value: mapEntryValue,
-                    });
-                  }
-                },
+            const mapEntriesNode = node.appendChild("internal_entries", {
+              group: "entries",
+              subgroup: "map_entries",
+              value: [],
+              hasMarkersWhenEmpty: true,
+              childGenerator: () => {
+                for (const [mapEntryKey, mapEntryValue] of value) {
+                  mapEntriesNode.value.push(mapEntryKey);
+                  const mapEntryNode = mapEntriesNode.appendChild(mapEntryKey, {
+                    group: "entry",
+                    subgroup: "map_entry",
+                    // TODO: map path
+                  });
+                  mapEntryNode.appendChild("entry_key", {
+                    group: "entry_key",
+                    subgroup: "map_entry_key",
+                    value: mapEntryKey,
+                  });
+                  mapEntryNode.appendChild("entry_value", {
+                    childType: "entry_value",
+                    subgroup: "map_entry_value",
+                    value: mapEntryValue,
+                  });
+                }
               },
-            );
+            });
           }
           if (node.isSet) {
             canHaveInternalEntries = true;
-            const setInternalEntriesNode = node.appendChild(
-              "internal_entries",
-              {
-                group: "entries",
-                subgroup: "set_entries",
-                value: [],
-                hasMarkersWhenEmpty: true,
-                childGenerator: () => {
-                  let index = 0;
-                  for (const [setValue] of value) {
-                    setInternalEntriesNode.value.push(index);
-                    const setInternalEntryNode =
-                      setInternalEntriesNode.appendChild(index, {
-                        group: "entry",
-                        subgroup: "set_entry",
-                        path: setInternalEntriesNode.path.append(index, {
-                          isIndexedEntry: true,
-                        }),
-                      });
-                    setInternalEntryNode.appendChild("entry_key", {
-                      group: "entry_key",
-                      subgroup: "set_entry_key",
-                      value: index,
-                    });
-                    setInternalEntryNode.appendChild("entry_value", {
-                      group: "entry_value",
-                      subgroup: "set_entry_value",
-                      value: setValue,
-                    });
-                    index++;
-                  }
-                },
+            const setEntriesNode = node.appendChild("internal_entries", {
+              group: "entries",
+              subgroup: "set_entries",
+              value: [],
+              hasMarkersWhenEmpty: true,
+              childGenerator: () => {
+                let index = 0;
+                for (const [setValue] of value) {
+                  setEntriesNode.value.push(index);
+                  const setEntryNode = setEntriesNode.appendChild(index, {
+                    group: "entry",
+                    subgroup: "set_entry",
+                    path: setEntriesNode.path.append(index, {
+                      isIndexedEntry: true,
+                    }),
+                  });
+                  setEntryNode.appendChild("entry_key", {
+                    group: "entry_key",
+                    subgroup: "set_entry_key",
+                    value: index,
+                  });
+                  setEntryNode.appendChild("entry_value", {
+                    group: "entry_value",
+                    subgroup: "set_entry_value",
+                    value: setValue,
+                  });
+                  index++;
+                }
               },
-            );
+            });
           }
         }
         const ownPropertyNameToIgnoreSet = new Set();
@@ -1616,45 +1606,42 @@ let createRootNode;
         indexed_entries: {
           if (node.isArray) {
             canHaveIndexedEntries = true;
-            const arrayIndexedEntriesNode = node.appendChild(
-              "indexed_entries",
-              {
-                group: "entries",
-                subgroup: "array_entries",
-                value: [],
-                hasMarkersWhenEmpty: true,
-                childGenerator: () => {
-                  let index = 0;
-                  while (index < value.length) {
-                    ownPropertyNameToIgnoreSet.add(String(index));
-                    arrayIndexedEntriesNode.value.push(index);
-                    const arrayEntryNode = arrayIndexedEntriesNode.appendChild(
-                      index,
-                      {
-                        group: "entry",
-                        subgroup: "array_entry",
-                        path: arrayIndexedEntriesNode.path.append(index, {
-                          isIndexedEntry: true,
-                        }),
-                      },
-                    );
-                    arrayEntryNode.appendChild("entry_key", {
-                      group: "entry_key",
-                      subgroup: "array_entry_key",
-                      value: index,
-                    });
-                    arrayEntryNode.appendChild("entry_value", {
-                      group: "entry_value",
-                      subgroup: "array_entry_value",
-                      value: Object.hasOwn(value, index)
-                        ? value[index]
-                        : ARRAY_EMPTY_VALUE,
-                    });
-                    index++;
-                  }
-                },
+            const arrayEntriesNode = node.appendChild("indexed_entries", {
+              group: "entries",
+              subgroup: "array_entries",
+              value: [],
+              hasMarkersWhenEmpty: true,
+              childGenerator: () => {
+                let index = 0;
+                while (index < value.length) {
+                  ownPropertyNameToIgnoreSet.add(String(index));
+                  arrayEntriesNode.value.push(index);
+                  const arrayEntryNode = arrayEntriesNode.appendChild(index, {
+                    group: "entry",
+                    subgroup: "array_entry",
+                    path: arrayEntriesNode.path.append(index, {
+                      isIndexedEntry: true,
+                    }),
+                  });
+                  arrayEntryNode.appendChild("entry_key", {
+                    group: "entry_key",
+                    subgroup: "array_entry_key",
+                    value: index,
+                    isHidden: true,
+                  });
+                  arrayEntryNode.appendChild("entry_value", {
+                    group: "entry_value",
+                    subgroup: "array_entry_value",
+                    value: Object.hasOwn(value, index)
+                      ? value[index]
+                      : ARRAY_EMPTY_VALUE,
+                  });
+                  index++;
+                }
               },
-            );
+            });
+            arrayEntriesNode.childGenerator();
+            arrayEntriesNode.childGenerator = null;
           }
         }
         let hasConstructorCall;
@@ -1842,17 +1829,20 @@ let createRootNode;
             childGenerator: () => {
               const appendLineEntry = (lineIndex) => {
                 lineEntriesNode.value.push(lineIndex);
-                const lineEntryNode = lineEntriesNode.appendChild("entry", {
+                const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
                   group: "entry",
                   subgroup: "line_entry",
                 });
-                const lineIndexNode = lineEntryNode.appendChild("entry_key", {
-                  group: "entry_key",
-                  subgroup: "line_entry_key",
-                  value: lineIndex,
-                  isHidden: true,
-                });
-                const lineCharEntriesNode = lineEntryNode.appendChild(
+                const lineEntryKeyNode = lineEntryNode.appendChild(
+                  "entry_key",
+                  {
+                    group: "entry_key",
+                    subgroup: "line_entry_key",
+                    value: lineIndex,
+                    isHidden: true,
+                  },
+                );
+                const lineEntryValueNode = lineEntryNode.appendChild(
                   "entry_value",
                   {
                     group: "entries",
@@ -1861,31 +1851,27 @@ let createRootNode;
                   },
                 );
                 const appendCharEntry = (charIndex, char) => {
-                  lineCharEntriesNode.value.push(charIndex);
+                  lineEntryValueNode.value.push(charIndex);
                   const charEntryNode = lineEntryNode.appendChild("entry", {
                     group: "entry",
                     subgroup: "char_entry",
                   });
-                  const charIndexNode = charEntryNode.appendChild("entry_key", {
+                  charEntryNode.appendChild("entry_key", {
                     group: "entry_key",
                     subgroup: "char_entry_key",
                     value: charIndex,
                   });
-                  const charValueNode = charEntryNode.appendChild(
-                    "entry_value",
-                    {
-                      group: "entry_value",
-                      subgroup: "char_entry_value",
-                      value: char,
-                    },
-                  );
-                  return [charEntryNode, charIndexNode, charValueNode];
+                  charEntryNode.appendChild("entry_value", {
+                    group: "entry_value",
+                    subgroup: "char_entry_value",
+                    value: char,
+                  });
                 };
 
                 return {
                   lineEntryNode,
-                  lineIndexNode,
-                  lineCharEntriesNode,
+                  lineEntryKeyNode,
+                  lineEntryValueNode,
                   appendCharEntry,
                 };
               };
