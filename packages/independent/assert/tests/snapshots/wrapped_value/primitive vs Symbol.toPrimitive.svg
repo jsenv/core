@@ -44,10 +44,10 @@
         <text x="77.21" y="33.55" fill="#11bc79">{</text>
         <text x="26.8" y="52.55" fill="#11bc79">[Symbol.toPrimitive()]</text>
         <text x="211.63" y="52.55" fill="#11bc79">: </text>
-        <text x="228.44" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="236.84" y="52.55" fill="#7f7f7f">1</text>
-        <text x="245.24" y="52.55" fill="#7f7f7f">0</text>
-        <text x="253.64" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="228.44" y="52.55" fill="#11bc79">&#x22;</text>
+        <text x="236.84" y="52.55" fill="#11bc79">1</text>
+        <text x="245.24" y="52.55" fill="#11bc79">0</text>
+        <text x="253.64" y="52.55" fill="#11bc79">&#x22;</text>
         <text x="262.04" y="52.55" fill="#11bc79">,</text>
         <text x="10" y="71.55" fill="#11bc79">}</text>
       </g>

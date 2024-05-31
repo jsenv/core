@@ -206,7 +206,7 @@ export const assert = ({
         if (lineEntriesNode) {
           return lineEntriesNode.render(props);
         }
-        if (node.origin === "char") {
+        if (node.subgroup === "char_entry_value") {
           const char = node.value;
           if (char === node.parent.parent.parent.parent.startMarker) {
             valueDiff = `\\${char}`;
@@ -484,11 +484,12 @@ export const assert = ({
       columnsRemaining -= startMarker.length;
       columnsRemaining -= endMarker.length;
 
-      let focusedEntry = entryKeys[focusedEntryIndex];
-      if (!focusedEntry) {
+      let focusedEntryKey = entryKeys[focusedEntryIndex];
+      if (!focusedEntryKey) {
         focusedEntryIndex = entryKeys.length - 1;
-        focusedEntry = node.childNodeMap.get(entryKeys[focusedEntryIndex]);
+        focusedEntryKey = entryKeys[focusedEntryIndex];
       }
+      const focusedEntry = node.childNodeMap.get(focusedEntryKey);
       let focusedEntryDiff = "";
       if (focusedEntry) {
         focusedEntryDiff = focusedEntry.render(props);
@@ -526,7 +527,8 @@ export const assert = ({
         const entryKey = entryKeys[entryIndex];
         const entryNode = node.childNodeMap.get(entryKey);
         if (!entryNode) {
-          debugger;
+          debugger; // to keep to see if that is hit while running all of string.test.js
+          // if not remove it
           continue;
         }
         if (tryBeforeFirst && hasPreviousEntry) {
@@ -790,13 +792,6 @@ export const assert = ({
       return entryDiff;
     };
 
-    const callChildGeneratorIfNeeded = (node) => {
-      if (node.childGenerator) {
-        node.childGenerator();
-        node.childGenerator = null;
-      }
-    };
-
     const subcompareDuo = (actualChildNode, expectChildNode) => {
       const childComparison = compare(
         actualChildNode,
@@ -932,6 +927,10 @@ export const assert = ({
         expectNode.render = (props) => renderComposite(expectNode, props);
         return;
       }
+      if (actualNode.subgroup === "constructor_call") {
+        subcompareChildNodesSolo(actualNode, expectNode);
+        return;
+      }
       if (actualNode.group === "entries") {
         if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
           actualNode.hasMarkersWhenEmpty =
@@ -966,6 +965,10 @@ export const assert = ({
       if (node.isComposite) {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderComposite(node, props);
+        return;
+      }
+      if (node.subgroup === "constructor_call") {
+        subcompareChildNodesSolo(node, placeholderNode);
         return;
       }
       if (node.group === "entries") {
@@ -1046,8 +1049,8 @@ export const assert = ({
             break visit;
           }
         }
-        onAdded(getAddedOrRemovedReason(actualNode));
         visitSolo(actualNode, expectNode);
+        onAdded(getAddedOrRemovedReason(actualNode));
         break visit;
       }
       if (actualNode.placeholder) {
@@ -1058,12 +1061,11 @@ export const assert = ({
           );
           if (otherNode && otherNode.isPrimitive) {
             actualNode = otherNode;
-
             break visit;
           }
         }
-        onRemoved(getAddedOrRemovedReason(expectNode));
         visitSolo(expectNode, actualNode);
+        onRemoved(getAddedOrRemovedReason(expectNode));
         break visit;
       }
       throw new Error(
@@ -1361,12 +1363,15 @@ let createRootNode;
       };
       return node;
     }
-    if (subgroup === "line_entry_value") {
+    if (subgroup === "line_entry") {
       return node;
     }
-    if (subgroup === "char_entries") {
+    if (subgroup === "line_entry_value") {
       node.overflowStartMarker = "…";
       node.overflowEndMarker = "…";
+      return node;
+    }
+    if (subgroup === "char_entry") {
       return node;
     }
     if (subgroup === "char_entry_value") {
@@ -1565,6 +1570,7 @@ let createRootNode;
                 }
               },
             });
+            callChildGeneratorIfNeeded(mapEntriesNode);
           }
           if (node.isSet) {
             canHaveInternalEntries = true;
@@ -1588,6 +1594,7 @@ let createRootNode;
                     group: "entry_key",
                     subgroup: "set_entry_key",
                     value: index,
+                    isHidden: true,
                   });
                   setEntryNode.appendChild("entry_value", {
                     group: "entry_value",
@@ -1598,6 +1605,7 @@ let createRootNode;
                 }
               },
             });
+            callChildGeneratorIfNeeded(setEntriesNode);
           }
         }
         const ownPropertyNameToIgnoreSet = new Set();
@@ -1640,8 +1648,7 @@ let createRootNode;
                 }
               },
             });
-            arrayEntriesNode.childGenerator();
-            arrayEntriesNode.childGenerator = null;
+            callChildGeneratorIfNeeded(arrayEntriesNode);
           }
         }
         let hasConstructorCall;
@@ -1675,7 +1682,8 @@ let createRootNode;
             if (hasObjectTag) {
               hasConstructorCall = true;
               const constructorCallNode = node.appendChild("constructor_call", {
-                group: "constructor_call",
+                group: "entries",
+                subgroup: "constructor_call",
                 childGenerator: () => {
                   constructorCallNode.appendChild(0, {
                     group: "value_of_return_value",
@@ -1686,6 +1694,7 @@ let createRootNode;
                   });
                 },
               });
+              callChildGeneratorIfNeeded(constructorCallNode);
             } else {
               propertyLikeCallbackSet.add((appendPropertyNode) => {
                 appendPropertyNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
@@ -1777,6 +1786,7 @@ let createRootNode;
                     });
                   },
                 });
+                callChildGeneratorIfNeeded(propertyEntryNode);
                 return propertyEntryNode;
               };
 
@@ -1804,8 +1814,10 @@ let createRootNode;
               }
             },
           });
+          callChildGeneratorIfNeeded(propertyEntriesNode);
         }
       };
+      callChildGeneratorIfNeeded(node);
       return node;
     }
 
@@ -1846,20 +1858,24 @@ let createRootNode;
                   "entry_value",
                   {
                     group: "entries",
-                    subgroup: "char_entries",
+                    subgroup: "line_entry_value",
                     value: [],
                   },
                 );
                 const appendCharEntry = (charIndex, char) => {
                   lineEntryValueNode.value.push(charIndex);
-                  const charEntryNode = lineEntryNode.appendChild("entry", {
-                    group: "entry",
-                    subgroup: "char_entry",
-                  });
+                  const charEntryNode = lineEntryValueNode.appendChild(
+                    charIndex,
+                    {
+                      group: "entry",
+                      subgroup: "char_entry",
+                    },
+                  );
                   charEntryNode.appendChild("entry_key", {
                     group: "entry_key",
                     subgroup: "char_entry_key",
                     value: charIndex,
+                    isHidden: true,
                   });
                   charEntryNode.appendChild("entry_value", {
                     group: "entry_value",
@@ -1901,11 +1917,10 @@ let createRootNode;
 
               // first line
               const {
-                lineEntryNode: firstLineEntryNode,
+                lineEntryValueNode: firstLineEntryValueNode,
                 appendCharEntry: appendFirstLineCharEntry,
               } = appendLineEntry(0);
               for (const char of charGeneratorUntilNewLine()) {
-                firstLineCharIndex++;
                 if (char === DOUBLE_QUOTE) {
                   doubleQuoteCount++;
                 } else if (char === SINGLE_QUOTE) {
@@ -1914,6 +1929,7 @@ let createRootNode;
                   backtickCount++;
                 }
                 appendFirstLineCharEntry(firstLineCharIndex, char);
+                firstLineCharIndex++;
               }
 
               if (isDone) {
@@ -1933,8 +1949,9 @@ let createRootNode;
                   } else {
                     bestQuote = DOUBLE_QUOTE;
                   }
-                  firstLineEntryNode.startMarker =
-                    firstLineEntryNode.endMarker = bestQuote;
+                  firstLineEntryValueNode.startMarker =
+                    firstLineEntryValueNode.endMarker = bestQuote;
+                  lineEntriesNode.hasMarkersWhenEmpty = true;
                 }
                 lineEntriesNode.hasMarkersWhenEmpty = true;
                 return;
@@ -1956,7 +1973,9 @@ let createRootNode;
               }
             },
           });
+          callChildGeneratorIfNeeded(lineEntriesNode);
         };
+        callChildGeneratorIfNeeded(node);
       }
     }
     if (value === undefined) {
@@ -2068,6 +2087,12 @@ const getOtherNodeHoldingSomething = (node, comparison) => {
     return comparisonHoldingSomething.expectNode;
   }
   return comparisonHoldingSomething.actualNode;
+};
+const callChildGeneratorIfNeeded = (node) => {
+  if (node.childGenerator) {
+    node.childGenerator();
+    node.childGenerator = null;
+  }
 };
 const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");
