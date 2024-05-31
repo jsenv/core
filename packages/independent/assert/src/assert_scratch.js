@@ -25,7 +25,6 @@ import {
   defaultFunctionAnalysis,
 } from "./function_analysis.js";
 import { tokenizeString } from "./tokenize_string.js";
-import { defineObjectPropertyLazyGetter } from "./lazy.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -112,7 +111,7 @@ export const assert = ({
     colorWhenSame: sameColor,
     colorWhenModified: unexpectColor,
     name: "actual",
-    type: "root",
+    origin: "actual",
     value: actual,
     otherValue: expect,
   });
@@ -121,7 +120,7 @@ export const assert = ({
     colorWhenSame: sameColor,
     colorWhenModified: expectColor,
     name: "expect",
-    type: "root",
+    origin: "expect",
     value: expect,
     otherValue: actual,
   });
@@ -170,7 +169,7 @@ export const assert = ({
       actualNode,
       expectNode,
       depth: actualNode.depth || expectNode.depth,
-      isContainer: actualNode.isContainer || expectNode.isContainer,
+      group: actualNode.group || expectNode.group,
       parent,
       reasons,
       done: false,
@@ -207,7 +206,7 @@ export const assert = ({
         if (lineEntriesNode) {
           return lineEntriesNode.render(props);
         }
-        if (node.type === "char_entry_value") {
+        if (node.origin === "char") {
           const char = node.value;
           if (char === node.parent.parent.parent.parent.startMarker) {
             valueDiff = `\\${char}`;
@@ -332,9 +331,6 @@ export const assert = ({
         }
       }
       return diff;
-    };
-    const renderContainer = (node) => {
-      throw new Error(`render container not implemented for ${node.type}`);
     };
     const renderFunction = (node, props) => {
       let diff = "";
@@ -814,16 +810,22 @@ export const assert = ({
       return subcompareDuo(placeholderNode, childNode);
     };
     const subcompareChilNodesDuo = (actualNode, expectNode) => {
+      if (actualNode.childGenerator) {
+        actualNode.childGenerator();
+        actualNode.childGenerator = null;
+      }
+      if (expectNode.childGenerator) {
+        expectNode.childGenerator();
+        expectNode.childGenerator = null;
+      }
+
       const isSetEntriesComparison =
-        actualNode.type === "internal_entries" &&
-        expectNode.type === "internal_entries" &&
-        actualNode.parent.isSet &&
-        expectNode.parent.isSet;
+        actualNode.subgroup === "set_entries" &&
+        expectNode.subgroup === "set_entries";
+
       const isSetEntryComparison =
-        actualNode.type === "internal_entry" &&
-        expectNode.type === "internal_entry" &&
-        actualNode.parent.parent.isSet &&
-        expectNode.parent.parent.isSet;
+        actualNode.subgroup === "set_entry" &&
+        expectNode.subgroup === "set_entry";
 
       const comparisonResultMap = new Map();
       const comparisonDiffMap = new Map();
@@ -900,6 +902,10 @@ export const assert = ({
       return { comparisonDiffMap };
     };
     const subcompareChildNodesSolo = (node, placeholderNode) => {
+      if (node.childGenerator) {
+        node.childGenerator();
+        node.childGenerator = null;
+      }
       const comparisonDiffMap = new Map();
       for (const [childName, childNode] of node.childNodeMap) {
         const soloChildComparison = subcompareSolo(childNode, placeholderNode);
@@ -928,13 +934,7 @@ export const assert = ({
         expectNode.render = (props) => renderComposite(expectNode, props);
         return;
       }
-      if (
-        actualNode.type === "internal_entries" ||
-        actualNode.type === "indexed_entries" ||
-        actualNode.type === "property_entries" ||
-        actualNode.type === "line_entries" ||
-        actualNode.type === "char_entries"
-      ) {
+      if (actualNode.group === "entries") {
         if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
           actualNode.hasMarkersWhenEmpty =
             expectNode.hasMarkersWhenEmpty = true;
@@ -949,26 +949,14 @@ export const assert = ({
           renderEntries(expectNode, props, { comparisonDiffMap });
         return;
       }
-      if (
-        actualNode.type === "internal_entry" ||
-        actualNode.type === "indexed_entry" ||
-        actualNode.type === "property_entry" ||
-        actualNode.type === "line_entry" ||
-        actualNode.type === "char_entry"
-      ) {
+      if (actualNode.group === "entry") {
         subcompareChilNodesDuo(actualNode, expectNode);
         actualNode.render = (props) => renderEntry(actualNode, props);
         expectNode.render = (props) => renderEntry(expectNode, props);
         return;
       }
-      if (actualNode.isContainer) {
-        subcompareChilNodesDuo(actualNode, expectNode);
-        actualNode.render = (props) => renderContainer(actualNode, props);
-        expectNode.render = (props) => renderContainer(expectNode, props);
-        return;
-      }
       throw new Error(
-        `visitDuo not implemented for "${actualNode.type}" node type`,
+        `visitDuo not implemented for "${actualNode.subgroup}" node type`,
       );
     };
     const visitSolo = (node, placeholderNode) => {
@@ -982,13 +970,7 @@ export const assert = ({
         node.render = (props) => renderComposite(node, props);
         return;
       }
-      if (
-        node.type === "internal_entries" ||
-        node.type === "indexed_entries" ||
-        node.type === "property_entries" ||
-        node.type === "line_entries" ||
-        node.type === "char_entries"
-      ) {
+      if (node.group === "entries") {
         const { comparisonDiffMap } = subcompareChildNodesSolo(
           node,
           placeholderNode,
@@ -997,23 +979,14 @@ export const assert = ({
           renderEntries(node, props, { comparisonDiffMap, isSolo: true });
         return;
       }
-      if (
-        node.type === "internal_entry" ||
-        node.type === "indexed_entry" ||
-        node.type === "property_entry" ||
-        node.type === "line_entry" ||
-        node.type === "char_entry"
-      ) {
+      if (node.group === "entry") {
         subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderEntry(node, props);
         return;
       }
-      if (node.isContainer) {
-        subcompareChildNodesSolo(node, placeholderNode);
-        node.render = (props) => renderContainer(node, props);
-        return;
-      }
-      throw new Error(`visitSolo not implemented for "${node.type}" node type`);
+      throw new Error(
+        `visitSolo not implemented for "${node.subgroup}" node subgroup`,
+      );
     };
 
     let actualSkipSettle = false;
@@ -1029,8 +1002,12 @@ export const assert = ({
         visitDuo(actualNode, expectNode);
         break visit;
       }
-      // comparing containers
-      if (actualNode.isContainer && expectNode.isContainer) {
+      // comparing entries/entry
+      if (actualNode.group === "entries" && expectNode.group === "entries") {
+        visitDuo(actualNode, expectNode);
+        break visit;
+      }
+      if (actualNode.group === "entry" && expectNode.group === "entry") {
         visitDuo(actualNode, expectNode);
         break visit;
       }
@@ -1092,7 +1069,7 @@ export const assert = ({
         break visit;
       }
       throw new Error(
-        `compare not implemented for ${actualNode.type} and ${expectNode.type}`,
+        `compare not implemented for ${actualNode.subgroup} and ${expectNode.subgroup}`,
       );
     }
 
@@ -1231,7 +1208,6 @@ let createRootNode;
     colorWhenSame,
     colorWhenModified,
     name,
-    type,
     value,
   }) => {
     const rootNode = createNode({
@@ -1239,7 +1215,7 @@ let createRootNode;
       colorWhenSame,
       colorWhenModified,
       name,
-      type,
+      group: "root",
       value,
       parent: null,
       depth: 0,
@@ -1254,15 +1230,13 @@ let createRootNode;
     colorWhenSame,
     colorWhenModified,
     name,
-    key,
+    group,
+    subgroup = group,
     value,
-    type = key,
     parent,
     depth,
     path,
     childGenerator,
-    isContainer,
-    isGrammar,
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
@@ -1277,17 +1251,16 @@ let createRootNode;
       colorWhenSame,
       colorWhenModified,
       name,
-      key,
+      group,
+      subgroup,
       value,
       childGenerator,
       childNodeMap: new Map(),
-      appendChild: (params) => appendChildNodeGeneric(node, params),
-      type,
+      appendChild: (childKey, params) =>
+        appendChildNodeGeneric(node, childKey, params),
       parent,
       depth,
       path,
-      isContainer,
-      isGrammar,
       isSourceCode,
       isClassPrototype,
       isAsPrimitiveValue,
@@ -1307,7 +1280,7 @@ let createRootNode;
       isSet: false,
       // render info
       render: () => {
-        throw new Error(`render not implemented for ${type}`);
+        throw new Error(`render not implemented for ${subgroup}`);
       },
       methodName,
       isHidden,
@@ -1343,7 +1316,7 @@ let createRootNode;
       node.isPrimitive = true;
       return node;
     }
-    if (type === "internal_entries") {
+    if (subgroup === "set_entries" || subgroup === "map_entries") {
       node.startMarker = "(";
       node.endMarker = ")";
       node.isCompatibleWithMultilineDiff = true;
@@ -1355,7 +1328,7 @@ let createRootNode;
       };
       return node;
     }
-    if (type === "indexed_entries") {
+    if (subgroup === "array_entries") {
       node.startMarker = "[";
       node.endMarker = "]";
       node.isCompatibleWithMultilineDiff = true;
@@ -1367,7 +1340,7 @@ let createRootNode;
       };
       return node;
     }
-    if (type === "property_entries") {
+    if (subgroup === "property_entries") {
       node.isCompatibleWithMultilineDiff = true;
       node.isCompatibleWithSingleLineDiff = true;
       node.skippedEntrySummary = {
@@ -1383,36 +1356,36 @@ let createRootNode;
       }
       return node;
     }
-    if (type === "line_entries") {
+    if (subgroup === "line_entries") {
       node.isCompatibleWithMultilineDiff = true;
       node.skippedEntrySummary = {
         skippedEntryNames: ["line", "lines"],
       };
       return node;
     }
-    if (type === "line_entry_value") {
+    if (subgroup === "line_entry_value") {
       return node;
     }
-    if (type === "char_entries") {
+    if (subgroup === "char_entries") {
       node.overflowStartMarker = "…";
       node.overflowEndMarker = "…";
       return node;
     }
-    if (type === "char_entry_value") {
+    if (subgroup === "char_entry_value") {
       node.isPrimitive = true;
       node.isString = true;
       return node;
     }
-    if (type === "internal_entry") {
+    if (subgroup === "set_entry" || subgroup === "map_entry") {
       node.middleMarker = " => ";
       node.endMarker = ",";
       return node;
     }
-    if (type === "indexed_entry") {
+    if (subgroup === "array_entry") {
       node.endMarker = ",";
       return node;
     }
-    if (type === "property_entry") {
+    if (subgroup === "property_entry") {
       if (node.parent.parent.isClassPrototype) {
       } else if (isClassStaticProperty) {
         node.middleMarker = " = ";
@@ -1423,18 +1396,15 @@ let createRootNode;
       }
       return node;
     }
-    if (type === "constructor_call") {
+    if (subgroup === "constructor_call") {
       node.startMarker = "(";
       node.endMarker = ")";
       return node;
     }
-    if (isContainer) {
-      return node;
-    }
     if (
-      type === "indexed_entry_key" ||
-      type === "line_entry_key" ||
-      type === "char_entry_key"
+      subgroup === "array_entry_key" ||
+      subgroup === "line_entry_key" ||
+      subgroup === "char_entry_key"
     ) {
       node.isPrimitive = true;
       node.isNumber = true;
@@ -1471,84 +1441,84 @@ let createRootNode;
           continue;
         }
       }
-      node.childGenerator = function (appendChild) {
+      node.childGenerator = function () {
         // function child nodes
         if (node.isFunction) {
           if (node.functionAnalysis.type === "class") {
-            node.appendChild({
-              key: "class_keyword",
+            node.appendChild("class_keyword", {
+              group: "grammar",
+              subgroup: "class_keyword",
               value: "class",
-              isGrammar: true,
             });
             const extendedClassName = node.functionAnalysis.extendedClassName;
             if (extendedClassName) {
-              node.appendChild({
-                key: "class_extends_keyword",
+              node.appendChild("class_extends_keyword", {
+                group: "grammar",
+                subgroup: "class_extends_keyword",
                 value: "extends",
-                isGrammar: true,
               });
-              node.appendChild({
-                key: "class_extended_name",
+              node.appendChild("class_extended_name", {
+                group: "grammar",
+                subgroup: "class_extended_name",
                 value: extendedClassName,
-                isGrammar: true,
               });
             }
           }
           if (node.functionAnalysis.isAsync) {
-            node.appendChild({
-              key: "function_async_keyword",
+            node.appendChild("function_async_keyword", {
+              group: "grammar",
+              subgroup: "function_async_keyword",
               value: "async",
-              isGrammar: true,
             });
           }
           if (node.functionAnalysis.type === "classic") {
-            node.appendChild({
-              key: "function_keyword",
+            node.appendChild("function_keyword", {
+              group: "grammar",
+              subgroup: "function_keyword",
               value: node.functionAnalysis.isGenerator
                 ? "function*"
                 : "function",
-              isGrammar: true,
             });
           }
           if (node.functionAnalysis.name) {
-            node.appendChild({
-              key: "function_name",
+            node.appendChild("function_name", {
+              group: "grammar",
+              subgroup: "function_name",
               value: node.functionAnalysis.name,
-              isGrammar: true,
             });
           }
           function_body_prefix: {
             if (node.functionAnalysis.type === "arrow") {
-              node.appendChild({
-                key: "function_body_prefix",
+              node.appendChild("function_body_prefix", {
+                group: "grammar",
+                subgroup: "function_body_prefix",
                 value: "() =>",
-                isGrammar: true,
               });
             } else if (node.functionAnalysis.type === "method") {
               if (node.functionAnalysis.getterName) {
-                node.appendChild({
-                  key: "function_body_prefix",
+                node.appendChild("function_body_prefix", {
+                  group: "grammar",
+                  subgroup: "function_body_prefix",
                   value: `get ${methodName}()`,
-                  isGrammar: true,
                 });
               }
               if (node.functionAnalysis.setterName) {
-                node.appendChild({
-                  key: "function_body_prefix",
+                node.appendChild("function_body_prefix", {
+                  group: "grammar",
+                  subgroup: "function_body_prefix",
                   value: `set ${methodName}()`,
-                  isGrammar: true,
                 });
               }
-              node.appendChild({
-                key: "function_body_prefix",
+              node.appendChild("function_body_prefix", {
+                group: "grammar",
+                subgroup: "function_body_prefix",
                 value: `${methodName}()`,
-                isGrammar: true,
               });
             } else if (node.functionAnalysis.type === "classic") {
-              node.appendChild({
-                key: "function_body_prefix",
+              node.appendChild("function_body_prefix", {
+                group: "grammar",
+                subgroup: "function_body_prefix",
                 value: "()",
-                isGrammar: true,
               });
             }
           }
@@ -1559,11 +1529,11 @@ let createRootNode;
           const objectTag = getObjectTag(value);
           if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
             hasObjectTag = true;
-            node.appendChild({
-              key: "object_tag",
+            node.appendChild("object_tag", {
+              group: "grammar",
+              subgroup: "object_tag",
               value: objectTag,
               path: node.path.append("[[ObjectTag]]"),
-              isGrammar: true,
             });
           }
         }
@@ -1571,65 +1541,73 @@ let createRootNode;
         internal_entries: {
           if (node.isMap) {
             canHaveInternalEntries = true;
-            const mapInternalEntriesNode = node.appendChild({
-              key: "internal_entries",
-              value: [],
-              isContainer: true,
-              hasMarkersWhenEmpty: true,
-              childGenerator: () => {
-                for (const [mapEntryKey, mapEntryValue] of value) {
-                  mapInternalEntriesNode.value.push(mapEntryKey);
-                  const mapInternalEntryNode =
-                    mapInternalEntriesNode.appendChild({
-                      key: "internal_entry",
-                      isContainer: true,
-                      // TODO: map path
+            const mapInternalEntriesNode = node.appendChild(
+              "internal_entries",
+              {
+                group: "entries",
+                subgroup: "map_entries",
+                value: [],
+                hasMarkersWhenEmpty: true,
+                childGenerator: () => {
+                  for (const [mapEntryKey, mapEntryValue] of value) {
+                    mapInternalEntriesNode.value.push(mapEntryKey);
+                    const mapInternalEntryNode =
+                      mapInternalEntriesNode.appendChild(mapEntryKey, {
+                        group: "entry",
+                        subgroup: "map_entry",
+                        // TODO: map path
+                      });
+                    mapInternalEntryNode.appendChild("entry_key", {
+                      group: "entry_key",
+                      subgroup: "map_entry_key",
+                      value: mapEntryKey,
                     });
-                  mapInternalEntryNode.appendChild({
-                    key: "entry_key",
-                    value: mapEntryKey,
-                    type: "internal_entry_key",
-                  });
-                  mapInternalEntryNode.appendChild({
-                    key: "entry_value",
-                    value: mapEntryValue,
-                    type: "internal_entry_value",
-                  });
-                }
+                    mapInternalEntryNode.appendChild("entry_value", {
+                      childType: "entry_value",
+                      subgroup: "map_entry_value",
+                      value: mapEntryValue,
+                    });
+                  }
+                },
               },
-            });
+            );
           }
           if (node.isSet) {
             canHaveInternalEntries = true;
-            const setInternalEntriesNode = node.appendChild({
-              key: "internal_entries",
-              value: [],
-              isContainer: true,
-              hasMarkersWhenEmpty: true,
-              childGenerator: () => {
-                let index = 0;
-                for (const [setValue] of value) {
-                  setInternalEntriesNode.value.push(index);
-                  const setInternalEntryNode =
-                    setInternalEntriesNode.appendChild({
-                      key: "internal_entry",
-                      isContainer: true,
-                      path: setInternalEntriesNode.path.append(index, {
-                        isIndexedEntry: true,
-                      }),
+            const setInternalEntriesNode = node.appendChild(
+              "internal_entries",
+              {
+                group: "entries",
+                subgroup: "set_entries",
+                value: [],
+                hasMarkersWhenEmpty: true,
+                childGenerator: () => {
+                  let index = 0;
+                  for (const [setValue] of value) {
+                    setInternalEntriesNode.value.push(index);
+                    const setInternalEntryNode =
+                      setInternalEntriesNode.appendChild(index, {
+                        group: "entry",
+                        subgroup: "set_entry",
+                        path: setInternalEntriesNode.path.append(index, {
+                          isIndexedEntry: true,
+                        }),
+                      });
+                    setInternalEntryNode.appendChild("entry_key", {
+                      group: "entry_key",
+                      subgroup: "set_entry_key",
+                      value: index,
                     });
-                  setInternalEntryNode.appendChild({
-                    key: "entry_key",
-                    value: index,
-                  });
-                  setInternalEntryNode.appendChild({
-                    key: "entry_value",
-                    value: setValue,
-                  });
-                  index++;
-                }
+                    setInternalEntryNode.appendChild("entry_value", {
+                      group: "entry_value",
+                      subgroup: "set_entry_value",
+                      value: setValue,
+                    });
+                    index++;
+                  }
+                },
               },
-            });
+            );
           }
         }
         const ownPropertyNameToIgnoreSet = new Set();
@@ -1638,43 +1616,49 @@ let createRootNode;
         indexed_entries: {
           if (node.isArray) {
             canHaveIndexedEntries = true;
-            const arrayIndexedEntriesNode = appendChild({
-              type: "indexed_entries",
-              value: [],
-              isContainer: true,
-              hasMarkersWhenEmpty: true,
-              childGenerator: () => {
-                let index = 0;
-                while (index < value.length) {
-                  ownPropertyNameToIgnoreSet.add(String(index));
-                  const arrayIndexedEntryNode =
-                    arrayIndexedEntriesNode.appendChild({
-                      key: "indexed_entry",
-                      isContainer: true,
-                      path: arrayIndexedEntriesNode.path.append(key, {
-                        isIndexedEntry: true,
-                      }),
+            const arrayIndexedEntriesNode = node.appendChild(
+              "indexed_entries",
+              {
+                group: "entries",
+                subgroup: "array_entries",
+                value: [],
+                hasMarkersWhenEmpty: true,
+                childGenerator: () => {
+                  let index = 0;
+                  while (index < value.length) {
+                    ownPropertyNameToIgnoreSet.add(String(index));
+                    arrayIndexedEntriesNode.value.push(index);
+                    const arrayEntryNode = arrayIndexedEntriesNode.appendChild(
+                      index,
+                      {
+                        group: "entry",
+                        subgroup: "array_entry",
+                        path: arrayIndexedEntriesNode.path.append(index, {
+                          isIndexedEntry: true,
+                        }),
+                      },
+                    );
+                    arrayEntryNode.appendChild("entry_key", {
+                      group: "entry_key",
+                      subgroup: "array_entry_key",
+                      value: index,
                     });
-                  arrayIndexedEntryNode.appendChild({
-                    key: "entry_key",
-                    value: index,
-                    type: "indexed_entry_key",
-                  });
-                  arrayIndexedEntryNode.appendChild({
-                    key: "entry_value",
-                    value: Object.hasOwn(value, index)
-                      ? value[index]
-                      : ARRAY_EMPTY_VALUE,
-                    type: "indexed_entry_value",
-                  });
-                  index++;
-                }
+                    arrayEntryNode.appendChild("entry_value", {
+                      group: "entry_value",
+                      subgroup: "array_entry_value",
+                      value: Object.hasOwn(value, index)
+                        ? value[index]
+                        : ARRAY_EMPTY_VALUE,
+                    });
+                    index++;
+                  }
+                },
               },
-            });
+            );
           }
         }
         let hasConstructorCall;
-        const propertyLikeSet = new Set();
+        const propertyLikeCallbackSet = new Set();
         symbol_to_primitive: {
           if (
             Symbol.toPrimitive in value &&
@@ -1682,12 +1666,11 @@ let createRootNode;
           ) {
             ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
             const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
-            propertyLikeSet.add({
-              key: SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
-              value: toPrimitiveReturnValue,
-              params: {
+            propertyLikeCallbackSet.add((appendPropertyNode) => {
+              appendPropertyNode(SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY, {
+                value: toPrimitiveReturnValue,
                 isAsPrimitiveValue: true,
-              },
+              });
             });
           }
         }
@@ -1704,14 +1687,12 @@ let createRootNode;
               typeof valueOfReturnValue !== "function";
             if (hasObjectTag) {
               hasConstructorCall = true;
-              const constructorCallNode = node.appendChild({
-                key: "constructor_call",
-                isContainer: true,
+              const constructorCallNode = node.appendChild("constructor_call", {
+                group: "constructor_call",
                 childGenerator: () => {
-                  constructorCallNode.appendChild({
-                    key: 0,
+                  constructorCallNode.appendChild(0, {
+                    group: "value_of_return_value",
                     value: valueOfReturnValue,
-                    type: "value_of_return_value",
                     path: node.path.append("valueOf()"),
                     depth: node.depth,
                     isAsPrimitiveValue,
@@ -1719,12 +1700,11 @@ let createRootNode;
                 },
               });
             } else {
-              propertyLikeSet.add({
-                key: VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-                value: valueOfReturnValue,
-                params: {
+              propertyLikeCallbackSet.add((appendPropertyNode) => {
+                appendPropertyNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
+                  value: valueOfReturnValue,
                   isAsPrimitiveValue,
-                },
+                });
               });
             }
           }
@@ -1741,7 +1721,7 @@ let createRootNode;
           const skipOwnProperties =
             canHaveIndexedEntries &&
             ownPropertyNames.length === 0 &&
-            propertyLikeSet.size === 0;
+            propertyLikeCallbackSet.size === 0;
           if (skipOwnProperties) {
             break own_properties;
           }
@@ -1750,67 +1730,71 @@ let createRootNode;
             !hasConstructorCall &&
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
-          const appendPropertyEntryNode = ({
-            key,
-            value,
-            isSourceCode,
-            isClassStaticProperty,
-            isFunctionPrototype,
-            isClassPrototype,
-          }) => {
-            propertyEntriesNode.value.push(key);
-            const propertyEntryNode = node.appendChild(propertyEntriesNode, {
-              key,
-              type: "property_entry",
-              isContainer: true,
-              isFunctionPrototype,
-              isClassStaticProperty,
-              isClassPrototype,
-              path: node.path.append(key),
-              childGenerator: () => {
-                const propertyEntryValueNode = propertyEntryNode.appendChild({
-                  key: "entry_value",
-                  value,
-                  type: "property_entry_value",
-                  isSourceCode,
-                  isFunctionPrototype,
-                  isClassPrototype,
-                  isAsPrimitiveValue,
-                  methodName: key,
-                });
-                if (isClassStaticProperty && !isClassPrototype) {
-                  propertyEntryNode.appendChild({
-                    key: "static_keyword",
-                    value: "static",
-                    type: "class_property_static_keyword",
-                    isGrammar: true,
-                    isHidden:
-                      isSourceCode ||
-                      propertyEntryValueNode.functionAnalysis.type === "method",
-                  });
-                }
-                propertyEntryNode.appendChild({
-                  key: "entry_key",
-                  value: key,
-                  type: "property_entry_key",
-                  isHidden:
-                    isSourceCode ||
-                    propertyEntryValueNode.functionAnalysis.type === "method" ||
-                    isClassPrototype,
-                });
-              },
-            });
-            return propertyEntryNode;
-          };
-          const propertyEntriesNode = appendChild({
-            key: "property_entries",
+
+          const propertyEntriesNode = node.appendChild("property_entries", {
+            group: "entries",
+            subgroup: "property_entries",
             value: [],
-            isContainer: true,
             hasMarkersWhenEmpty,
             childGenerator: () => {
+              const appendPropertyEntryNode = (
+                key,
+                {
+                  value,
+                  isSourceCode,
+                  isClassStaticProperty,
+                  isFunctionPrototype,
+                  isClassPrototype,
+                },
+              ) => {
+                propertyEntriesNode.value.push(key);
+                const propertyEntryNode = propertyEntriesNode.appendChild(key, {
+                  group: "entry",
+                  subgroup: "property_entry",
+                  isFunctionPrototype,
+                  isClassStaticProperty,
+                  isClassPrototype,
+                  path: node.path.append(key),
+                  childGenerator: () => {
+                    const propertyEntryValueNode =
+                      propertyEntryNode.appendChild("entry_value", {
+                        group: "entry_value",
+                        subgroup: "property_entry_value",
+                        value,
+                        isSourceCode,
+                        isFunctionPrototype,
+                        isClassPrototype,
+                        isAsPrimitiveValue,
+                        methodName: key,
+                      });
+                    if (isClassStaticProperty && !isClassPrototype) {
+                      propertyEntryNode.appendChild("static_keyword", {
+                        group: "grammar",
+                        subgroup: "static_keyword",
+                        value: "static",
+                        isHidden:
+                          isSourceCode ||
+                          propertyEntryValueNode.functionAnalysis.type ===
+                            "method",
+                      });
+                    }
+                    propertyEntryNode.appendChild("entry_key", {
+                      group: "entry_key",
+                      subgroup: "property_entry_key",
+                      value: key,
+                      isHidden:
+                        isSourceCode ||
+                        propertyEntryValueNode.functionAnalysis.type ===
+                          "method" ||
+                        isClassPrototype,
+                    });
+                  },
+                });
+                return propertyEntryNode;
+              };
+
               if (node.isFunction) {
-                appendPropertyEntryNode({
-                  key: SOURCE_CODE_ENTRY_KEY,
+                appendPropertyEntryNode(SOURCE_CODE_ENTRY_KEY, {
                   value: node.functionAnalysis.argsAndBodySource,
                   isSourceCode: true,
                   isClassStaticProperty: node.functionAnalysis.type === "class",
@@ -1818,8 +1802,7 @@ let createRootNode;
               }
               for (const ownPropertyName of ownPropertyNames) {
                 const ownPropertyValue = node.value[ownPropertyName];
-                appendPropertyEntryNode({
-                  key: ownPropertyName,
+                appendPropertyEntryNode(ownPropertyName, {
                   value: ownPropertyValue,
                   isClassStaticProperty: node.functionAnalysis.type === "class",
                   isFunctionPrototype:
@@ -1829,8 +1812,8 @@ let createRootNode;
                     node.functionAnalysis.type === "class",
                 });
               }
-              for (const propertyLike of propertyLikeSet) {
-                appendPropertyEntryNode(propertyLike);
+              for (const propertyLikeCallback of propertyLikeCallbackSet) {
+                propertyLikeCallback(appendPropertyEntryNode);
               }
             },
           });
@@ -1842,54 +1825,60 @@ let createRootNode;
     node.isPrimitive = true;
     if (typeofResult === "string") {
       node.isString = true;
-      if (isGrammar) {
+      if (group === "grammar") {
       } else {
-        if (type === "property_entry_key") {
+        if (subgroup === "property_entry_key") {
           if (!isValidPropertyIdentifier(value)) {
             node.hasQuotes = true;
           }
         } else {
           node.hasQuotes = true;
         }
-        node.childLazy = true;
         node.childGenerator = () => {
-          const lineEntriesNode = node.appendChild({
-            key: "line_entries",
+          const lineEntriesNode = node.appendChild("line_entries", {
+            group: "entries",
+            subgroup: "line_entries",
             value: [],
-            isContainer: true,
             childGenerator: () => {
               const appendLineEntry = (lineIndex) => {
-                const lineEntryNode = lineEntriesNode.appendChild({
-                  key: "line_entry",
-                  isContainer: true,
+                lineEntriesNode.value.push(lineIndex);
+                const lineEntryNode = lineEntriesNode.appendChild("entry", {
+                  group: "entry",
+                  subgroup: "line_entry",
                 });
-                const lineIndexNode = lineEntryNode.appendChild({
-                  key: "entry_key",
+                const lineIndexNode = lineEntryNode.appendChild("entry_key", {
+                  group: "entry_key",
+                  subgroup: "line_entry_key",
                   value: lineIndex,
-                  type: "line_entry_key",
+                  isHidden: true,
                 });
-                const lineCharEntriesNode = lineEntryNode.appendChild({
-                  key: "entry_value",
-                  value: [],
-                  type: "line_char_entries",
-                  isContainer: true,
-                });
+                const lineCharEntriesNode = lineEntryNode.appendChild(
+                  "entry_value",
+                  {
+                    group: "entries",
+                    subgroup: "char_entries",
+                    value: [],
+                  },
+                );
                 const appendCharEntry = (charIndex, char) => {
                   lineCharEntriesNode.value.push(charIndex);
-                  const charEntryNode = lineEntryNode.appendChild({
-                    key: "char_entry",
-                    isContainer: true,
+                  const charEntryNode = lineEntryNode.appendChild("entry", {
+                    group: "entry",
+                    subgroup: "char_entry",
                   });
-                  const charIndexNode = charEntryNode.appendChild({
-                    key: "entry_key",
+                  const charIndexNode = charEntryNode.appendChild("entry_key", {
+                    group: "entry_key",
+                    subgroup: "char_entry_key",
                     value: charIndex,
-                    type: "char_entry_key",
                   });
-                  const charValueNode = charEntryNode.appendChild({
-                    key: "entry_value",
-                    value: char,
-                    type: "char_entry_value",
-                  });
+                  const charValueNode = charEntryNode.appendChild(
+                    "entry_value",
+                    {
+                      group: "entry_value",
+                      subgroup: "char_entry_value",
+                      value: char,
+                    },
+                  );
                   return [charEntryNode, charIndexNode, charValueNode];
                 };
 
@@ -1993,13 +1982,12 @@ let createRootNode;
 
   const appendChildNodeGeneric = (
     node,
+    childKey,
     {
-      key,
+      group,
+      subgroup,
       value,
       childGenerator,
-      type,
-      isContainer,
-      isGrammar,
       isSourceCode,
       isFunctionPrototype,
       isClassPrototype,
@@ -2014,8 +2002,9 @@ let createRootNode;
   ) => {
     if (depth === undefined) {
       if (
-        isContainer ||
-        isGrammar ||
+        group === "entries" ||
+        group === "entry" ||
+        group === "grammar" ||
         isClassPrototype ||
         node.parent?.isClassPrototype
       ) {
@@ -2025,15 +2014,13 @@ let createRootNode;
       }
     }
     const childNode = createNode({
-      key,
+      group,
+      subgroup,
       value,
       childGenerator,
-      type,
       parent: node,
       depth,
       path,
-      isContainer,
-      isGrammar,
       isSourceCode,
       isFunctionPrototype,
       isClassPrototype,
@@ -2047,10 +2034,7 @@ let createRootNode;
       colorWhenModified: node.colorWhenModified,
       name: node.name,
     });
-    node.childNodeMap.set(key, childNode);
-    if (!node.childLazy) {
-      node.childGenerator();
-    }
+    node.childNodeMap.set(childKey, childNode);
     return childNode;
   };
 }
@@ -2060,34 +2044,16 @@ const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
 
 const getAddedOrRemovedReason = (node) => {
-  if (
-    node.type === "internal_entry" ||
-    node.type === "indexed_entry" ||
-    node.type === "property_entry" ||
-    node.type === "line_entry" ||
-    node.type === "char_entry"
-  ) {
+  if (node.group === "entry") {
     return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
   }
-  if (
-    node.type === "internal_entry_key" ||
-    node.type === "indexed_entry_key" ||
-    node.type === "property_entry_key" ||
-    node.type === "line_entry_key" ||
-    node.type === "char_entry_key"
-  ) {
+  if (node.group === "entry_key") {
     return node.value;
   }
-  if (
-    node.type === "internal_entry_value" ||
-    node.type === "indexed_entry_value" ||
-    node.type === "property_entry_value" ||
-    node.type === "line_entry_value" ||
-    node.type === "char_entry_value"
-  ) {
+  if (node.group === "entry_value") {
     return getAddedOrRemovedReason(node.parent);
   }
-  if (node.type === "value_of_return_value") {
+  if (node.subgroup === "value_of_return_value") {
     return "value_of_own_method";
   }
   return "unknown";
@@ -2106,7 +2072,7 @@ const asPrimitiveNode = (node) => {
 };
 const getOtherNodeHoldingSomething = (node, comparison) => {
   let comparisonHoldingSomething;
-  if (node.parent.type === "constructor_call") {
+  if (node.parent.subgroup === "constructor_call") {
     comparisonHoldingSomething = comparison.parent.parent;
   } else {
     // type === "property_entry_value"
@@ -2137,7 +2103,7 @@ const getValueOfReturnValueNode = (node) => {
   const constructorCallNode = node.childNodeMap.get("constructor_call");
   if (constructorCallNode) {
     const firstArgNode = constructorCallNode.childNodeMap.get(0);
-    if (firstArgNode && firstArgNode.type === "value_of_return_value") {
+    if (firstArgNode && firstArgNode.subgroup === "value_of_return_value") {
       return firstArgNode;
     }
   }
