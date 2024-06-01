@@ -1,7 +1,16 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * startMarker endMarker etc on le met pas dans createNode
+ * render fait partie des props et pour rootNode ce sera renderValue
+ * qui check si c'est un primitive/composite
+ *
  * - shortcut sur actual === expect
+ *   -> on peut le faire pour tout en fait
+ *   donc childGenerator on l'apelle vraiment tard c'est mieux
+ *   reverif pk on a besoin de calculer indexed avant props
+ *   normalement le generator est appelé avant puisque register avant
+ * - assert.not()
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
@@ -397,12 +406,12 @@ export const assert = ({
         );
         return renderEntriesMultiline(node, props, { indexToDisplayArray });
       }
-      if (!node.isCompatibleWithSingleLineDiff) {
-        return renderEntriesMultiline(node, props, {
-          indexToDisplayArray: [0],
-        });
+      if (node.isCompatibleWithSingleLineDiff) {
+        return renderEntriesWithoutDiffOneLiner(node, props);
       }
-      return renderEntriesWithoutDiffOneLiner(node, props);
+      return renderEntriesMultiline(node, props, {
+        indexToDisplayArray: [0],
+      });
     };
     const getIndexToDisplayArrayDuo = (node, comparisonDiffMap) => {
       const entryKeys = node.value;
@@ -1234,12 +1243,22 @@ let createRootNode;
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
-    isClassStaticProperty = false,
     isAsPrimitiveValue = false,
     isValueOfReturnValue = false,
     methodName = "",
     isHidden = false,
+    startMarker = "",
+    middleMarker = "",
+    endMarker = "",
+    overflowStartMarker = "",
+    overflowEndMarker = "",
+    isCompatibleWithMultilineDiff = false,
+    isCompatibleWithSingleLineDiff = false,
+    skippedEntrySummary = null,
     hasMarkersWhenEmpty = false,
+    hasNewLineAroundEntries = false,
+    hasSpacingAroundEntries = false,
+    hasIndentBeforeEntries = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1282,18 +1301,18 @@ let createRootNode;
       isHidden,
       diffType: "",
       hasQuotes: false,
-      startMarker: "",
-      middleMarker: "",
-      endMarker: "",
-      overflowStartMarker: "",
-      overflowEndMarker: "",
-      isCompatibleWithMultilineDiff: false,
-      isCompatibleWithSingleLineDiff: false,
-      skippedEntrySummary: null,
-      hasSpacingAroundEntries: false,
-      hasNewLineAroundEntries: false,
-      hasIndentBeforeEntries: false,
+      startMarker,
+      middleMarker,
+      endMarker,
+      overflowStartMarker,
+      overflowEndMarker,
+      isCompatibleWithMultilineDiff,
+      isCompatibleWithSingleLineDiff,
+      skippedEntrySummary,
       hasMarkersWhenEmpty,
+      hasNewLineAroundEntries,
+      hasSpacingAroundEntries,
+      hasIndentBeforeEntries,
       color: "",
     };
     Object.preventExtensions(node);
@@ -1313,58 +1332,21 @@ let createRootNode;
       return node;
     }
     if (subgroup === "set_entries" || subgroup === "map_entries") {
-      node.startMarker = "(";
-      node.endMarker = ")";
-      node.isCompatibleWithMultilineDiff = true;
-      node.isCompatibleWithSingleLineDiff = true;
-      node.hasNewLineAroundEntries = true;
-      node.hasIndentBeforeEntries = true;
-      node.skippedEntrySummary = {
-        skippedEntryNames: ["value", "values"],
-      };
       return node;
     }
     if (subgroup === "array_entries") {
-      node.startMarker = "[";
-      node.endMarker = "]";
-      node.isCompatibleWithMultilineDiff = true;
-      node.isCompatibleWithSingleLineDiff = true;
-      node.hasNewLineAroundEntries = true;
-      node.hasIndentBeforeEntries = true;
-      node.skippedEntrySummary = {
-        skippedEntryNames: ["value", "values"],
-      };
       return node;
     }
     if (subgroup === "property_entries") {
-      node.isCompatibleWithMultilineDiff = true;
-      node.isCompatibleWithSingleLineDiff = true;
-      node.skippedEntrySummary = {
-        skippedEntryNames: ["prop", "props"],
-      };
-      if (node.parent.isClassPrototype) {
-      } else {
-        node.startMarker = "{";
-        node.endMarker = "}";
-        node.hasSpacingAroundEntries = true;
-        node.hasNewLineAroundEntries = true;
-        node.hasIndentBeforeEntries = true;
-      }
       return node;
     }
     if (subgroup === "line_entries") {
-      node.isCompatibleWithMultilineDiff = true;
-      node.skippedEntrySummary = {
-        skippedEntryNames: ["line", "lines"],
-      };
       return node;
     }
     if (subgroup === "line_entry") {
       return node;
     }
     if (subgroup === "line_entry_value") {
-      node.overflowStartMarker = "…";
-      node.overflowEndMarker = "…";
       return node;
     }
     if (subgroup === "char_entry") {
@@ -1376,32 +1358,18 @@ let createRootNode;
       return node;
     }
     if (subgroup === "set_entry" || subgroup === "map_entry") {
-      node.middleMarker = " => ";
-      node.endMarker = ",";
       return node;
     }
     if (subgroup === "array_entry") {
-      node.endMarker = ",";
       return node;
     }
     if (subgroup === "constructor_call_entry") {
-      node.endMarker = ",";
       return node;
     }
     if (subgroup === "property_entry") {
-      if (node.parent.parent.isClassPrototype) {
-      } else if (isClassStaticProperty) {
-        node.middleMarker = " = ";
-        node.endMarker = ";";
-      } else {
-        node.middleMarker = ": ";
-        node.endMarker = ",";
-      }
       return node;
     }
     if (subgroup === "constructor_call") {
-      node.startMarker = "(";
-      node.endMarker = ")";
       return node;
     }
     if (
@@ -1543,13 +1511,26 @@ let createRootNode;
         }
         let canHaveInternalEntries = false;
         internal_entries: {
+          const internalEntriesParams = {
+            group: "entries",
+            value: [],
+            startMarker: "(",
+            endMarker: ")",
+            isCompatibleWithMultilineDiff: true,
+            isCompatibleWithSingleLineDiff: true,
+            hasMarkersWhenEmpty: true,
+            hasNewLineAroundEntries: true,
+            hasIndentBeforeEntries: true,
+            skippedEntrySummary: {
+              skippedEntryNames: ["value", "values"],
+            },
+          };
+
           if (node.isMap) {
             canHaveInternalEntries = true;
             const mapEntriesNode = node.appendChild("internal_entries", {
-              group: "entries",
+              ...internalEntriesParams,
               subgroup: "map_entries",
-              value: [],
-              hasMarkersWhenEmpty: true,
               childGenerator: () => {
                 for (const [mapEntryKey, mapEntryValue] of value) {
                   mapEntriesNode.value.push(mapEntryKey);
@@ -1557,6 +1538,8 @@ let createRootNode;
                     group: "entry",
                     subgroup: "map_entry",
                     // TODO: map path
+                    middleMarker: " => ",
+                    endMarker: ",",
                   });
                   mapEntryNode.appendChild("entry_key", {
                     group: "entry_key",
@@ -1576,10 +1559,8 @@ let createRootNode;
           if (node.isSet) {
             canHaveInternalEntries = true;
             const setEntriesNode = node.appendChild("internal_entries", {
-              group: "entries",
+              ...internalEntriesParams,
               subgroup: "set_entries",
-              value: [],
-              hasMarkersWhenEmpty: true,
               childGenerator: () => {
                 let index = 0;
                 for (const [setValue] of value) {
@@ -1590,6 +1571,8 @@ let createRootNode;
                     path: setEntriesNode.path.append(index, {
                       isIndexedEntry: true,
                     }),
+                    middleMarker: " => ",
+                    endMarker: ",",
                   });
                   setEntryNode.appendChild("entry_key", {
                     group: "entry_key",
@@ -1619,7 +1602,16 @@ let createRootNode;
               group: "entries",
               subgroup: "array_entries",
               value: [],
+              startMarker: "[",
+              endMarker: "]",
               hasMarkersWhenEmpty: true,
+              isCompatibleWithMultilineDiff: true,
+              isCompatibleWithSingleLineDiff: true,
+              hasNewLineAroundEntries: true,
+              hasIndentBeforeEntries: true,
+              skippedEntrySummary: {
+                skippedEntryNames: ["value", "values"],
+              },
               childGenerator: () => {
                 let index = 0;
                 while (index < value.length) {
@@ -1631,6 +1623,7 @@ let createRootNode;
                     path: arrayEntriesNode.path.append(index, {
                       isIndexedEntry: true,
                     }),
+                    endMarker: ",",
                   });
                   arrayEntryNode.appendChild("entry_key", {
                     group: "entry_key",
@@ -1686,6 +1679,8 @@ let createRootNode;
                 group: "entries",
                 subgroup: "constructor_call",
                 value: [],
+                startMarker: "(",
+                endMarker: ")",
                 childGenerator: () => {
                   const appendArgEntry = (
                     argIndex,
@@ -1698,6 +1693,7 @@ let createRootNode;
                       {
                         group: "entry",
                         subgroup: "constructor_call_entry",
+                        endMarker: ",",
                       },
                     );
                     argEntryNode.appendChild("entry_key", {
@@ -1755,11 +1751,24 @@ let createRootNode;
             !hasConstructorCall &&
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
-
           const propertyEntriesNode = node.appendChild("property_entries", {
             group: "entries",
             subgroup: "property_entries",
             value: [],
+            isCompatibleWithMultilineDiff: true,
+            isCompatibleWithSingleLineDiff: true,
+            skippedEntrySummary: {
+              skippedEntryNames: ["prop", "props"],
+            },
+            ...(node.isClassPrototype
+              ? {}
+              : {
+                  startMarker: "{",
+                  endMarker: "}",
+                  hasSpacingAroundEntries: true,
+                  hasNewLineAroundEntries: true,
+                  hasIndentBeforeEntries: true,
+                }),
             hasMarkersWhenEmpty,
             childGenerator: () => {
               const appendPropertyEntryNode = (
@@ -1777,10 +1786,20 @@ let createRootNode;
                 const propertyEntryNode = propertyEntriesNode.appendChild(key, {
                   group: "entry",
                   subgroup: "property_entry",
-                  isFunctionPrototype,
-                  isClassStaticProperty,
-                  isClassPrototype,
                   path: node.path.append(key),
+                  isFunctionPrototype,
+                  isClassPrototype,
+                  ...(node.isClassPrototype
+                    ? {}
+                    : isClassStaticProperty
+                      ? {
+                          middleMarker: " = ",
+                          endMarker: ";",
+                        }
+                      : {
+                          middleMarker: ": ",
+                          endMarker: ",",
+                        }),
                   childGenerator: () => {
                     const propertyEntryValueNode =
                       propertyEntryNode.appendChild("entry_value", {
@@ -1868,6 +1887,10 @@ let createRootNode;
             group: "entries",
             subgroup: "line_entries",
             value: [],
+            isCompatibleWithMultilineDiff: true,
+            skippedEntrySummary: {
+              skippedEntryNames: ["line", "lines"],
+            },
             childGenerator: () => {
               const appendLineEntry = (lineIndex) => {
                 lineEntriesNode.value.push(lineIndex);
@@ -1890,6 +1913,8 @@ let createRootNode;
                     group: "entries",
                     subgroup: "line_entry_value",
                     value: [],
+                    overflowStartMarker: "…",
+                    overflowEndMarker: "…",
                   },
                 );
                 const appendCharEntry = (charIndex, char) => {
@@ -2015,61 +2040,23 @@ let createRootNode;
     return node;
   };
 
-  const appendChildNodeGeneric = (
-    node,
-    childKey,
-    {
-      group,
-      subgroup,
-      value,
-      childGenerator,
-      isSourceCode,
-      isFunctionPrototype,
-      isClassPrototype,
-      isClassStaticProperty,
-      isAsPrimitiveValue,
-      isValueOfReturnValue,
-      methodName,
-      isHidden,
-      hasMarkersWhenEmpty,
-      depth,
-      path = node.path,
-    },
-  ) => {
-    if (depth === undefined) {
-      if (
-        group === "entries" ||
-        group === "entry" ||
-        group === "grammar" ||
-        isClassPrototype ||
-        node.parent?.isClassPrototype
-      ) {
-        depth = node.depth;
-      } else {
-        depth = node.depth + 1;
-      }
-    }
+  const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
-      group,
-      subgroup,
-      value,
-      childGenerator,
-      parent: node,
-      depth,
-      path,
-      isSourceCode,
-      isFunctionPrototype,
-      isClassPrototype,
-      isClassStaticProperty,
-      isAsPrimitiveValue,
-      isValueOfReturnValue,
-      methodName,
-      isHidden,
-      hasMarkersWhenEmpty,
       colorWhenSolo: node.colorWhenSolo,
       colorWhenSame: node.colorWhenSame,
       colorWhenModified: node.colorWhenModified,
       name: node.name,
+      parent: node,
+      path: node.path,
+      depth:
+        params.group === "entries" ||
+        params.group === "entry" ||
+        params.group === "grammar" ||
+        params.isClassPrototype ||
+        node.parent?.isClassPrototype
+          ? node.depth
+          : node.depth + 1,
+      ...params,
     });
     node.childNodeMap.set(childKey, childNode);
     return childNode;
