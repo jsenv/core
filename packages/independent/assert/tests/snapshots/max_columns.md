@@ -110,6 +110,22 @@ assert({
 
 ![img](<./max_columns/at property value second char.svg>)
 
+# at property value second char (and value width is 1)
+
+```js
+assert({
+  actual: {
+    abcdefgh: 0,
+  },
+  expect: {
+    abcdefgh: 1,
+  },
+  MAX_COLUMNS: 14,
+});
+```
+
+![img](<./max_columns/at property value second char (and value width is 1).svg>)
+
 # at property value third char
 
 ```js

@@ -54,6 +54,14 @@ expect: {
   abcdefgh: …,
 }
 
+# at property value second char (and value width is 1)
+actual: {
+  abcdefgh: 0,
+}
+expect: {
+  abcdefgh: 1,
+}
+
 # at property value third char
 actual: {
   abcdefgh: t…,

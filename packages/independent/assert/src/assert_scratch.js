@@ -1,15 +1,8 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * startMarker endMarker etc on le met pas dans createNode
- * render fait partie des props et pour rootNode ce sera renderValue
- * qui check si c'est un primitive/composite
- *
- * - shortcut sur actual === expect
- *   -> on peut le faire pour tout en fait
- *   donc childGenerator on l'apelle vraiment tard c'est mieux
- *   reverif pk on a besoin de calculer indexed avant props
- *   normalement le generator est appelé avant puisque register avant
+ * - render fait partie des props et pour rootNode ce sera renderValue
+ *   qui check si c'est un primitive/composite
  * - assert.not()
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
@@ -199,7 +192,7 @@ export const assert = ({
     const renderPrimitive = (node, props) => {
       let diff = "";
       const { columnsRemaining } = props;
-      if (columnsRemaining < 2) {
+      if (columnsRemaining < 1) {
         diff = setColor("…", node.color);
         return diff;
       }
@@ -388,22 +381,16 @@ export const assert = ({
       return diff;
     };
 
-    const renderEntries = (node, props, { comparisonDiffMap, isSolo }) => {
+    const renderEntries = (node, props) => {
       if (!node.isCompatibleWithMultilineDiff) {
         return renderEntriesOneLiner(node, props);
       }
-      if (isSolo) {
-        const indexToDisplayArray = getIndexToDisplayArraySolo(
-          node,
-          comparisonDiffMap,
-        );
+      if (node.diffType === "solo") {
+        const indexToDisplayArray = getIndexToDisplayArraySolo(node);
         return renderEntriesMultiline(node, props, { indexToDisplayArray });
       }
-      if (comparisonDiffMap.size > 0) {
-        const indexToDisplayArray = getIndexToDisplayArrayDuo(
-          node,
-          comparisonDiffMap,
-        );
+      if (node.comparisonDiffMap.size > 0) {
+        const indexToDisplayArray = getIndexToDisplayArrayDuo(node);
         return renderEntriesMultiline(node, props, { indexToDisplayArray });
       }
       if (node.isCompatibleWithSingleLineDiff) {
@@ -413,13 +400,13 @@ export const assert = ({
         indexToDisplayArray: [0],
       });
     };
-    const getIndexToDisplayArrayDuo = (node, comparisonDiffMap) => {
+    const getIndexToDisplayArrayDuo = (node) => {
       const entryKeys = node.value;
       if (entryKeys.length === 0) {
         return [];
       }
       const diffIndexArray = [];
-      for (const [entryKey] of comparisonDiffMap) {
+      for (const [entryKey] of node.comparisonDiffMap) {
         const entryIndex = entryKeys.indexOf(entryKey);
         if (entryIndex === -1) {
           // happens when removed/added
@@ -466,9 +453,9 @@ export const assert = ({
       indexToDisplayArray.sort();
       return indexToDisplayArray;
     };
-    const getIndexToDisplayArraySolo = (node, comparisonResultMap) => {
+    const getIndexToDisplayArraySolo = (node) => {
       const indexToDisplayArray = [];
-      for (const [entryKey] of comparisonResultMap) {
+      for (const [entryKey] of node.comparisonDiffMap) {
         if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
           break;
         }
@@ -824,17 +811,12 @@ export const assert = ({
       return subcompareDuo(placeholderNode, childNode);
     };
     const subcompareChilNodesDuo = (actualNode, expectNode) => {
-      callChildGeneratorIfNeeded(actualNode);
-      callChildGeneratorIfNeeded(expectNode);
-
       const isSetEntriesComparison =
         actualNode.subgroup === "set_entries" &&
         expectNode.subgroup === "set_entries";
-
       const isSetEntryComparison =
         actualNode.subgroup === "set_entry" &&
         expectNode.subgroup === "set_entry";
-
       const comparisonResultMap = new Map();
       const comparisonDiffMap = new Map();
       for (let [childName, actualChildNode] of actualNode.childNodeMap) {
@@ -907,36 +889,68 @@ export const assert = ({
         comparisonResultMap.set(childName, removedChildComparison);
         comparisonDiffMap.set(childName, removedChildComparison);
       }
-      return { comparisonDiffMap };
+      actualNode.comparisonDiffMap = comparisonDiffMap;
+      expectNode.comparisonDiffMap = comparisonDiffMap;
     };
     const subcompareChildNodesSolo = (node, placeholderNode) => {
-      callChildGeneratorIfNeeded(node);
       const comparisonDiffMap = new Map();
       for (const [childName, childNode] of node.childNodeMap) {
         const soloChildComparison = subcompareSolo(childNode, placeholderNode);
         comparisonDiffMap.set(childName, soloChildComparison);
       }
-      return { comparisonDiffMap };
+      node.comparisonDiffMap = comparisonDiffMap;
     };
 
     const visitDuo = (actualNode, expectNode) => {
       if (actualNode.isPrimitive) {
-        // comparing primitives
         if (actualNode.value === expectNode.value) {
-          // we already know there will be no diff
-          // but for now we'll still visit the primitive constituents
+          let compared = false;
+          actualNode.render = (props) => {
+            if (!compared) {
+              compared = true;
+              subcompareChilNodesDuo(actualNode, expectNode);
+            }
+            return renderPrimitive(actualNode, props);
+          };
+          expectNode.render = (props) => {
+            if (!compared) {
+              compared = true;
+              subcompareChilNodesDuo(actualNode, expectNode);
+            }
+            return renderPrimitive(expectNode, props);
+          };
         } else {
           onSelfDiff("primitive_value");
+          subcompareChilNodesDuo(actualNode, expectNode);
+          actualNode.render = (props) => renderPrimitive(actualNode, props);
+          expectNode.render = (props) => renderPrimitive(expectNode, props);
         }
-        subcompareChilNodesDuo(actualNode, expectNode);
-        actualNode.render = (props) => renderPrimitive(actualNode, props);
-        expectNode.render = (props) => renderPrimitive(expectNode, props);
+
         return;
       }
       if (actualNode.isComposite) {
-        subcompareChilNodesDuo(actualNode, expectNode);
-        actualNode.render = (props) => renderComposite(actualNode, props);
-        expectNode.render = (props) => renderComposite(expectNode, props);
+        let compared = false;
+        if (actualNode.value === expectNode.value) {
+          actualNode.render = (props) => {
+            if (!compared) {
+              compared = true;
+              subcompareChilNodesDuo(actualNode, expectNode);
+            }
+            return renderComposite(actualNode, props);
+          };
+          expectNode.render = (props) => {
+            if (!compared) {
+              compared = true;
+              subcompareChilNodesDuo(actualNode, expectNode);
+            }
+            return renderComposite(expectNode, props);
+          };
+        } else {
+          subcompareChilNodesDuo(actualNode, expectNode);
+          actualNode.render = (props) => renderComposite(actualNode, props);
+          expectNode.render = (props) => renderComposite(expectNode, props);
+        }
+
         return;
       }
       if (actualNode.group === "entries") {
@@ -944,14 +958,9 @@ export const assert = ({
           actualNode.hasMarkersWhenEmpty =
             expectNode.hasMarkersWhenEmpty = true;
         }
-        const { comparisonDiffMap } = subcompareChilNodesDuo(
-          actualNode,
-          expectNode,
-        );
-        actualNode.render = (props) =>
-          renderEntries(actualNode, props, { comparisonDiffMap });
-        expectNode.render = (props) =>
-          renderEntries(expectNode, props, { comparisonDiffMap });
+        subcompareChilNodesDuo(actualNode, expectNode);
+        actualNode.render = (props) => renderEntries(actualNode, props);
+        expectNode.render = (props) => renderEntries(expectNode, props);
         return;
       }
       if (actualNode.group === "entry") {
@@ -965,27 +974,20 @@ export const assert = ({
       );
     };
     const visitSolo = (node, placeholderNode) => {
+      subcompareChildNodesSolo(node, placeholderNode);
       if (node.isPrimitive) {
-        subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderPrimitive(node, props);
         return;
       }
       if (node.isComposite) {
-        subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderComposite(node, props);
         return;
       }
       if (node.group === "entries") {
-        const { comparisonDiffMap } = subcompareChildNodesSolo(
-          node,
-          placeholderNode,
-        );
-        node.render = (props) =>
-          renderEntries(node, props, { comparisonDiffMap, isSolo: true });
+        node.render = (props) => renderEntries(node, props);
         return;
       }
       if (node.group === "entry") {
-        subcompareChildNodesSolo(node, placeholderNode);
         node.render = (props) => renderEntry(node, props);
         return;
       }
@@ -1270,7 +1272,7 @@ let createRootNode;
       subgroup,
       value,
       childGenerator,
-      childNodeMap: new Map(),
+      childNodeMap: null,
       appendChild: (childKey, params) =>
         appendChildNodeGeneric(node, childKey, params),
       parent,
@@ -1300,7 +1302,10 @@ let createRootNode;
       },
       methodName,
       isHidden,
+      // START will be set by comparison
+      comparisonDiffMap: null,
       diffType: "",
+      // END will be set by comparison
       hasQuotes: false,
       startMarker,
       middleMarker,
@@ -1316,14 +1321,44 @@ let createRootNode;
       hasIndentBeforeEntries,
       color: "",
     };
-    Object.preventExtensions(node);
-
     if (value === PLACEHOLDER_FOR_NOTHING) {
       return node;
     }
     if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
       return node;
     }
+    child_node_map: {
+      const childNodeMap = new Map();
+      let childrenGenerated = false;
+      const generateChildren = () => {
+        if (childrenGenerated) {
+          return;
+        }
+        childrenGenerated = true;
+        if (!node.childGenerator) {
+          return;
+        }
+        node.childGenerator();
+        node.childGenerator = null;
+      };
+      node.childNodeMap = new Proxy(childNodeMap, {
+        has: (target, prop, receiver) => {
+          if (!childrenGenerated) {
+            generateChildren();
+          }
+          let value = Reflect.has(target, prop, receiver);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+        get: (target, prop, receiver) => {
+          if (!childrenGenerated) {
+            generateChildren();
+          }
+          let value = Reflect.get(target, prop, receiver);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    }
+    Object.preventExtensions(node);
     if (
       value === SOURCE_CODE_ENTRY_KEY ||
       value === VALUE_OF_RETURN_VALUE_ENTRY_KEY ||
@@ -1525,7 +1560,6 @@ let createRootNode;
                 }
               },
             });
-            callChildGeneratorIfNeeded(mapEntriesNode);
           }
           if (node.isSet) {
             canHaveInternalEntries = true;
@@ -1560,7 +1594,6 @@ let createRootNode;
                 }
               },
             });
-            callChildGeneratorIfNeeded(setEntriesNode);
           }
         }
         const ownPropertyNameToIgnoreSet = new Set();
@@ -1583,37 +1616,37 @@ let createRootNode;
               skippedEntrySummary: {
                 skippedEntryNames: ["value", "values"],
               },
-              childGenerator: () => {
-                let index = 0;
-                while (index < value.length) {
-                  ownPropertyNameToIgnoreSet.add(String(index));
-                  arrayEntriesNode.value.push(index);
-                  const arrayEntryNode = arrayEntriesNode.appendChild(index, {
-                    group: "entry",
-                    subgroup: "array_entry",
-                    path: arrayEntriesNode.path.append(index, {
-                      isIndexedEntry: true,
-                    }),
-                    endMarker: ",",
-                  });
-                  arrayEntryNode.appendChild("entry_key", {
-                    group: "entry_key",
-                    subgroup: "array_entry_key",
-                    value: index,
-                    isHidden: true,
-                  });
-                  arrayEntryNode.appendChild("entry_value", {
-                    group: "entry_value",
-                    subgroup: "array_entry_value",
-                    value: Object.hasOwn(value, index)
-                      ? value[index]
-                      : ARRAY_EMPTY_VALUE,
-                  });
-                  index++;
-                }
-              },
             });
-            callChildGeneratorIfNeeded(arrayEntriesNode);
+            const arrayEntyGenerator = () => {
+              let index = 0;
+              while (index < value.length) {
+                ownPropertyNameToIgnoreSet.add(String(index));
+                arrayEntriesNode.value.push(index);
+                const arrayEntryNode = arrayEntriesNode.appendChild(index, {
+                  group: "entry",
+                  subgroup: "array_entry",
+                  path: arrayEntriesNode.path.append(index, {
+                    isIndexedEntry: true,
+                  }),
+                  endMarker: ",",
+                });
+                arrayEntryNode.appendChild("entry_key", {
+                  group: "entry_key",
+                  subgroup: "array_entry_key",
+                  value: index,
+                  isHidden: true,
+                });
+                arrayEntryNode.appendChild("entry_value", {
+                  group: "entry_value",
+                  subgroup: "array_entry_value",
+                  value: Object.hasOwn(value, index)
+                    ? value[index]
+                    : ARRAY_EMPTY_VALUE,
+                });
+                index++;
+              }
+            };
+            arrayEntyGenerator();
           }
         }
         let hasConstructorCall;
@@ -1694,7 +1727,6 @@ let createRootNode;
                   });
                 },
               });
-              callChildGeneratorIfNeeded(constructorCallNode);
             } else {
               propertyLikeCallbackSet.add((appendPropertyNode) => {
                 appendPropertyNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
@@ -1810,7 +1842,6 @@ let createRootNode;
                     });
                   },
                 });
-                callChildGeneratorIfNeeded(propertyEntryNode);
                 return propertyEntryNode;
               };
 
@@ -1838,10 +1869,8 @@ let createRootNode;
               }
             },
           });
-          callChildGeneratorIfNeeded(propertyEntriesNode);
         }
       };
-      callChildGeneratorIfNeeded(node);
       return node;
     }
 
@@ -2003,9 +2032,7 @@ let createRootNode;
               }
             },
           });
-          callChildGeneratorIfNeeded(lineEntriesNode);
         };
-        callChildGeneratorIfNeeded(node);
       }
     }
     if (value === undefined) {
@@ -2081,12 +2108,6 @@ const getOtherNodeHoldingSomething = (node, comparison) => {
     return comparisonHoldingSomething.expectNode;
   }
   return comparisonHoldingSomething.actualNode;
-};
-const callChildGeneratorIfNeeded = (node) => {
-  if (node.childGenerator) {
-    node.childGenerator();
-    node.childGenerator = null;
-  }
 };
 const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");

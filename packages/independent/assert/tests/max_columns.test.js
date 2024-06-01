@@ -80,6 +80,17 @@ await startSnapshotTesting("max_columns", {
       MAX_COLUMNS: 14,
     });
   },
+  ["at property value second char (and value width is 1)"]: () => {
+    assert({
+      actual: {
+        abcdefgh: 0,
+      },
+      expect: {
+        abcdefgh: 1,
+      },
+      MAX_COLUMNS: 14,
+    });
+  },
   ["at property value third char"]: () => {
     assert({
       actual: {
