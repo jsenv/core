@@ -1,19 +1,19 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - render fait partie des props et pour rootNode ce sera renderValue
- *   qui check si c'est un primitive/composite
  * - assert.not()
+ * - assert.any()
+ * - ref
+ * - url string and url object
+ * - well known
+ * - symbols
+ * - numbers
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
- * - url string and url object
- * - well known
  * - property descriptors
  * - errors
  * - prototype
- * - symbols
- * - numbers
  *
  */
 
@@ -115,7 +115,8 @@ export const assert = ({
     name: "actual",
     origin: "actual",
     value: actual,
-    otherValue: expect,
+    // otherValue: expect,
+    render: renderValue,
   });
   const rootExpectNode = createRootNode({
     colorWhenSolo: removedColor,
@@ -124,18 +125,13 @@ export const assert = ({
     name: "expect",
     origin: "expect",
     value: expect,
-    otherValue: actual,
+    // otherValue: actual,
+    render: renderValue,
   });
 
   const causeSet = new Set();
   let startActualNode = rootActualNode;
   let startExpectNode = rootExpectNode;
-  const getNodeDepth = (node) => {
-    if (node.name === "actual") {
-      return node.depth - startActualNode.depth;
-    }
-    return node.depth - startExpectNode.depth;
-  };
 
   /*
    * Comparison are objects used to compare actualNode and expectNode
@@ -188,607 +184,6 @@ export const assert = ({
     const onRemoved = (reason) => {
       reasons.self.removed.add(reason);
       causeSet.add(comparison);
-    };
-    const renderPrimitive = (node, props) => {
-      let diff = "";
-      const { columnsRemaining } = props;
-      if (columnsRemaining < 1) {
-        diff = setColor("…", node.color);
-        return diff;
-      }
-      let valueDiff;
-      if (node.isSourceCode) {
-        valueDiff = "[source code]";
-      } else if (node.value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
-        valueDiff = "valueOf()";
-      } else if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
-        valueDiff = "[Symbol.toPrimitive()]";
-      } else if (node.isString) {
-        const lineEntriesNode = node.childNodeMap.get("line_entries");
-        if (lineEntriesNode) {
-          return lineEntriesNode.render(props);
-        }
-        if (node.subgroup === "char_entry_value") {
-          const char = node.value;
-          if (char === node.parent.parent.parent.parent.startMarker) {
-            valueDiff = `\\${char}`;
-          } else {
-            const point = char.charCodeAt(0);
-            if (point === 92 || point < 32 || (point > 126 && point < 160)) {
-              valueDiff = CHAR_TO_ESCAPED_CHAR[point];
-            } else {
-              valueDiff = char;
-            }
-          }
-        } else {
-          valueDiff = JSON.stringify(node.value);
-          if (!node.hasQuotes) {
-            valueDiff = valueDiff.slice(1, -1);
-          }
-        }
-      } else if (node.isUndefined) {
-        valueDiff = "undefined";
-      } else {
-        valueDiff = JSON.stringify(node.value);
-      }
-      if (valueDiff.length > columnsRemaining) {
-        diff += setColor(valueDiff.slice(0, columnsRemaining - 1), node.color);
-        diff += setColor("…", node.color);
-      } else {
-        diff += setColor(valueDiff, node.color);
-      }
-      return diff;
-    };
-    const renderComposite = (node, props) => {
-      // it's here that at some point we'll compare more than just own properties
-      // because composite also got a prototype
-      // and a constructor that might differ
-      let diff = "";
-      const internalEntriesNode = node.childNodeMap.get("internal_entries");
-      const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
-      const propertyEntriesNode = node.childNodeMap.get("property_entries");
-      if (props.columnsRemaining < 2) {
-        diff = setColor("…", node.color);
-        return diff;
-      }
-      let maxDepthReached = false;
-      if (node.diffType) {
-        if (typeof props.firstDiffDepth === "number") {
-          maxDepthReached =
-            node.depth + props.firstDiffDepth > MAX_DEPTH_INSIDE_DIFF;
-        } else {
-          props.firstDiffDepth = node.depth;
-          maxDepthReached = node.depth > MAX_DEPTH_INSIDE_DIFF;
-        }
-      } else {
-        maxDepthReached = node.depth > MAX_DEPTH;
-      }
-      if (maxDepthReached) {
-        if (indexedEntriesNode) {
-          const arrayLength = indexedEntriesNode.value.length;
-          diff += setColor(`Array(${arrayLength})`, node.color);
-          return diff;
-        }
-        const propertyNameCount = propertyEntriesNode.value.length;
-        diff += setColor(`Object(${propertyNameCount})`, node.color);
-        return diff;
-      }
-      let columnsRemaining = props.columnsRemaining;
-      if (node.isFunction) {
-        const functionDiff = renderFunction(node, props);
-        columnsRemaining -= measureLastLineColumns(functionDiff);
-        diff += functionDiff;
-      } else {
-        const objectTagNode = node.childNodeMap.get("object_tag");
-        if (objectTagNode) {
-          const objectTagDiff = objectTagNode.render(props);
-          columnsRemaining -= measureLastLineColumns(objectTagDiff);
-          diff += objectTagDiff;
-        }
-        const constructorCallNode = node.childNodeMap.get("constructor_call");
-        if (constructorCallNode) {
-          const constructorCallDiff = constructorCallNode.render({
-            ...props,
-            columnsRemaining,
-          });
-          columnsRemaining -= measureLastLineColumns(constructorCallDiff);
-          diff += constructorCallDiff;
-        }
-      }
-      if (internalEntriesNode) {
-        const internalEntriesDiff = internalEntriesNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
-        diff += internalEntriesDiff;
-      }
-      if (indexedEntriesNode) {
-        if (diff) {
-          columnsRemaining -= " ".length;
-          diff += " ";
-        }
-        const indexedEntriesDiff = indexedEntriesNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
-        diff += indexedEntriesDiff;
-      }
-      if (propertyEntriesNode) {
-        const propertiesDiff = propertyEntriesNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        if (propertiesDiff) {
-          if (diff) {
-            columnsRemaining -= " ".length;
-            diff += " ";
-          }
-          diff += propertiesDiff;
-        }
-      }
-      return diff;
-    };
-    const renderFunction = (node, props) => {
-      let diff = "";
-      const classKeywordNode = node.childNodeMap.get("class_keyword");
-      if (classKeywordNode) {
-        diff += classKeywordNode.render(props);
-      } else {
-        const asyncKeywordNode = node.childNodeMap.get(
-          "function_async_keyword",
-        );
-        if (asyncKeywordNode) {
-          diff += asyncKeywordNode.render(props);
-        }
-      }
-      const functionKeywordNode = node.childNodeMap.get("function_keyword");
-      if (functionKeywordNode) {
-        if (diff) {
-          diff += " ";
-        }
-        diff += functionKeywordNode.render(props);
-      }
-      const functionNameNode = node.childNodeMap.get("function_name");
-      if (functionNameNode) {
-        if (diff) {
-          diff += " ";
-        }
-        diff += functionNameNode.render(props);
-      }
-      const classExtendedNameNode = node.childNodeMap.get(
-        "class_extended_name",
-      );
-      if (classExtendedNameNode) {
-        const classExtendsKeywordNode = node.childNodeMap.get(
-          "class_extends_keyword",
-        );
-        diff += " ";
-        diff += classExtendsKeywordNode.render(props);
-        diff += " ";
-        diff += classExtendedNameNode.render(props);
-      }
-      const functionBodyPrefixNode = node.childNodeMap.get(
-        "function_body_prefix",
-      );
-      if (functionBodyPrefixNode) {
-        if (diff) {
-          diff += " ";
-        }
-        diff += functionBodyPrefixNode.render(props);
-      }
-      return diff;
-    };
-
-    const renderEntries = (node, props) => {
-      if (!node.isCompatibleWithMultilineDiff) {
-        return renderEntriesOneLiner(node, props);
-      }
-      if (node.diffType === "solo") {
-        const indexToDisplayArray = getIndexToDisplayArraySolo(node);
-        return renderEntriesMultiline(node, props, { indexToDisplayArray });
-      }
-      if (node.comparisonDiffMap.size > 0) {
-        const indexToDisplayArray = getIndexToDisplayArrayDuo(node);
-        return renderEntriesMultiline(node, props, { indexToDisplayArray });
-      }
-      if (node.isCompatibleWithSingleLineDiff) {
-        return renderEntriesWithoutDiffOneLiner(node, props);
-      }
-      return renderEntriesMultiline(node, props, {
-        indexToDisplayArray: [0],
-      });
-    };
-    const getIndexToDisplayArrayDuo = (node) => {
-      const entryKeys = node.value;
-      if (entryKeys.length === 0) {
-        return [];
-      }
-      const diffIndexArray = [];
-      for (const [entryKey] of node.comparisonDiffMap) {
-        const entryIndex = entryKeys.indexOf(entryKey);
-        if (entryIndex === -1) {
-          // happens when removed/added
-        } else {
-          diffIndexArray.push(entryIndex);
-        }
-      }
-      if (diffIndexArray.length === 0) {
-        // happens when one node got no diff in itself
-        // it's the other that has a diff (added or removed)
-        return [0];
-      }
-      diffIndexArray.sort();
-      const indexToDisplaySet = new Set();
-      let diffCount = 0;
-      for (const diffIndex of diffIndexArray) {
-        if (diffCount >= MAX_DIFF_PER_OBJECT) {
-          break;
-        }
-        diffCount++;
-        let beforeDiffIndex = diffIndex - 1;
-        let beforeCount = 0;
-        while (beforeDiffIndex > -1) {
-          if (beforeCount === MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(beforeDiffIndex);
-          beforeCount++;
-          beforeDiffIndex--;
-        }
-        indexToDisplaySet.add(diffIndex);
-        let afterDiffIndex = diffIndex + 1;
-        let afterCount = 0;
-        while (afterDiffIndex < entryKeys.length) {
-          if (afterCount === MAX_ENTRY_AFTER_MULTILINE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(afterDiffIndex);
-          afterCount++;
-          afterDiffIndex--;
-        }
-      }
-      const indexToDisplayArray = Array.from(indexToDisplaySet);
-      indexToDisplayArray.sort();
-      return indexToDisplayArray;
-    };
-    const getIndexToDisplayArraySolo = (node) => {
-      const indexToDisplayArray = [];
-      for (const [entryKey] of node.comparisonDiffMap) {
-        if (indexToDisplayArray.length >= MAX_DIFF_PER_OBJECT) {
-          break;
-        }
-        const entryIndex = node.value.indexOf(entryKey);
-        indexToDisplayArray.push(entryIndex);
-      }
-      indexToDisplayArray.sort();
-      return indexToDisplayArray;
-    };
-    const renderEntriesOneLiner = (node, props) => {
-      node.hasIndentBeforeEntries = false;
-      let columnsRemaining = props.columnsRemaining;
-      let focusedEntryIndex = -1; // TODO: take first one with a diff
-      const entryKeys = node.value;
-      const { startMarker, endMarker } = node;
-      const { overflowStartMarker, overflowEndMarker } = node;
-      // columnsRemaining -= overflowStartMarker;
-      // columnsRemaining -= overflowEndMarker;
-      columnsRemaining -= startMarker.length;
-      columnsRemaining -= endMarker.length;
-
-      let focusedEntryKey = entryKeys[focusedEntryIndex];
-      if (!focusedEntryKey) {
-        focusedEntryIndex = entryKeys.length - 1;
-        focusedEntryKey = entryKeys[focusedEntryIndex];
-      }
-      const focusedEntry = node.childNodeMap.get(focusedEntryKey);
-      let focusedEntryDiff = "";
-      if (focusedEntry) {
-        if (entryKeys.length === 1) {
-          // TODO: ideally something better as in oneLinerWithoutDiff
-          // where we restore endMarker + append it when we got
-          // many
-          focusedEntry.endMarker = "";
-        }
-        focusedEntryDiff = focusedEntry.render(props);
-        columnsRemaining -= stringWidth(focusedEntryDiff);
-      }
-
-      const overflowStartWidth = overflowStartMarker.length;
-      const overflowEndWidth = overflowEndMarker.length;
-      let tryBeforeFirst = true;
-      let previousChildAttempt = 0;
-      let nextChildAttempt = 0;
-      const beforeDiffArray = [];
-      const afterDiffArray = [];
-      let hasStartOverflow;
-      let hasEndOverflow;
-      while (columnsRemaining) {
-        const previousEntryIndex = focusedEntryIndex - previousChildAttempt - 1;
-        const nextEntryIndex = focusedEntryIndex + nextChildAttempt + 1;
-        let hasPreviousEntry = previousEntryIndex >= 0;
-        const hasNextEntry = nextEntryIndex < entryKeys.length;
-        if (!hasPreviousEntry && !hasNextEntry) {
-          break;
-        }
-        if (!tryBeforeFirst && hasNextEntry) {
-          hasPreviousEntry = false;
-        }
-        let entryIndex;
-        if (hasPreviousEntry) {
-          previousChildAttempt++;
-          entryIndex = previousEntryIndex;
-        } else if (hasNextEntry) {
-          nextChildAttempt++;
-          entryIndex = nextEntryIndex;
-        }
-        const entryKey = entryKeys[entryIndex];
-        const entryNode = node.childNodeMap.get(entryKey);
-        if (!entryNode) {
-          debugger; // to keep to see if that is hit while running all of string.test.js
-          // if not remove it
-          continue;
-        }
-        if (tryBeforeFirst && hasPreviousEntry) {
-          tryBeforeFirst = false;
-        }
-        const entryDiff = entryNode.render(props);
-        const entryDiffWidth = measureLastLineColumns(entryDiff);
-        let nextWidth = entryDiffWidth;
-        hasStartOverflow = focusedEntryIndex - previousChildAttempt > 0;
-        hasEndOverflow =
-          focusedEntryIndex + nextChildAttempt < entryKeys.length - 1;
-        if (hasStartOverflow) {
-          nextWidth += overflowStartWidth;
-        }
-        if (hasEndOverflow) {
-          nextWidth += overflowEndWidth;
-        }
-        if (nextWidth > columnsRemaining) {
-          if (hasPreviousEntry) {
-            previousChildAttempt--;
-          } else {
-            nextChildAttempt--;
-          }
-          break;
-        }
-        columnsRemaining -= entryDiffWidth;
-        if (entryIndex < focusedEntryIndex) {
-          beforeDiffArray.push(entryDiff);
-        } else {
-          afterDiffArray.push(entryDiff);
-        }
-      }
-      let diff = "";
-      if (hasStartOverflow) {
-        diff += setColor(overflowStartMarker, node.color);
-      }
-      if (startMarker) {
-        diff += setColor(startMarker, node.color);
-      }
-      diff += beforeDiffArray.reverse().join("");
-      diff += focusedEntryDiff;
-      diff += afterDiffArray.join("");
-      if (endMarker) {
-        diff += setColor(endMarker, node.color);
-      }
-      if (hasEndOverflow) {
-        diff += setColor(overflowEndMarker, node.color);
-      }
-      return diff;
-    };
-    const renderEntriesWithoutDiffOneLiner = (node, props) => {
-      const { startMarker, endMarker } = node;
-      const entryKeys = node.value;
-      let columnsRemaining = props.columnsRemaining;
-      let boilerplate = `${startMarker} ... ${endMarker}`;
-      columnsRemaining -= boilerplate.length;
-      let diff = "";
-      let entriesDiff = "";
-      let lastEntryDisplayed = null;
-      node.hasIndentBeforeEntries = false;
-      for (const entryKey of entryKeys) {
-        const entryNode = node.childNodeMap.get(entryKey);
-        const entryNodeEndMarker = entryNode.endMarker;
-        entryNode.endMarker = "";
-        const entryDiff = entryNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        entryNode.endMarker = entryNodeEndMarker;
-        const entryDiffWidth = measureLastLineColumns(entryDiff);
-        if (entryDiffWidth > columnsRemaining) {
-          if (lastEntryDisplayed) {
-            diff += setColor(startMarker, node.color);
-            diff += entriesDiff;
-            diff += setColor(
-              node.hasSpacingAroundEntries
-                ? ` ... ${endMarker}`
-                : ` ...${endMarker}`,
-              node.color,
-            );
-            return diff;
-          }
-          diff += setColor(
-            node.hasSpacingAroundEntries
-              ? `${startMarker} ... ${endMarker}`
-              : `${startMarker}...${endMarker}`,
-            node.color,
-          );
-          return diff;
-        }
-        if (lastEntryDisplayed) {
-          entriesDiff += setColor(
-            lastEntryDisplayed.endMarker,
-            lastEntryDisplayed.color,
-          );
-          entriesDiff += " ";
-        }
-        lastEntryDisplayed = entryNode;
-        entriesDiff += entryDiff;
-        columnsRemaining -= entryDiffWidth;
-      }
-      if (!lastEntryDisplayed) {
-        if (node.hasMarkersWhenEmpty) {
-          return setColor(`${startMarker}${endMarker}`, node.color);
-        }
-        return "";
-      }
-      diff += setColor(startMarker, node.color);
-      if (node.hasSpacingAroundEntries) {
-        diff += " ";
-      }
-      diff += entriesDiff;
-      if (node.hasSpacingAroundEntries) {
-        diff += " ";
-      }
-      diff += setColor(endMarker, node.color);
-      return diff;
-    };
-    const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
-      const entryKeys = node.value;
-      const { startMarker, endMarker } = node;
-      let atLeastOneEntryDisplayed = null;
-      let diff = "";
-      let entriesDiff = "";
-      const appendEntry = (entryDiff) => {
-        if (atLeastOneEntryDisplayed) {
-          entriesDiff += "\n";
-          entriesDiff += entryDiff;
-        } else {
-          entriesDiff += entryDiff;
-          atLeastOneEntryDisplayed = true;
-        }
-      };
-      const appendSkippedEntries = (skipCount, skipPosition) => {
-        let skippedDiff = "";
-        if (node.hasIndentBeforeEntries) {
-          skippedDiff += "  ".repeat(getNodeDepth(node) + 1);
-        }
-        if (node.skippedEntrySummary) {
-          const { skippedEntryNames } = node.skippedEntrySummary;
-          const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
-          skippedDiff += setColor(sign, node.color);
-          skippedDiff += " ";
-          skippedDiff += setColor(String(skipCount), node.color);
-          skippedDiff += " ";
-          skippedDiff += setColor(
-            skippedEntryNames[skipCount === 1 ? 0 : 1],
-            node.color,
-          );
-          skippedDiff += " ";
-          skippedDiff += setColor(sign, node.color);
-          appendEntry(skippedDiff);
-          return;
-        }
-      };
-      let previousIndexDisplayed = -1;
-      let canResetMaxColumns = node.hasNewLineAroundEntries;
-      for (const indexToDisplay of indexToDisplayArray) {
-        if (previousIndexDisplayed === -1) {
-          if (indexToDisplay > 0) {
-            appendSkippedEntries(indexToDisplay, "start");
-          }
-        } else {
-          const intermediateSkippedCount =
-            indexToDisplay - previousIndexDisplayed - 1;
-          if (intermediateSkippedCount) {
-            appendSkippedEntries(intermediateSkippedCount, "between");
-          }
-        }
-        const entryKey = entryKeys[indexToDisplay];
-        const entryNode = node.childNodeMap.get(entryKey);
-        const entryDiff = entryNode.render({
-          ...props,
-          columnsRemaining: canResetMaxColumns
-            ? MAX_COLUMNS
-            : props.columnsRemaining,
-        });
-        canResetMaxColumns = true; // because we'll append \n on next entry
-        appendEntry(entryDiff);
-        previousIndexDisplayed = indexToDisplay;
-      }
-      const lastIndexDisplayed = previousIndexDisplayed;
-      if (lastIndexDisplayed > -1) {
-        const lastSkippedCount = entryKeys.length - 1 - lastIndexDisplayed;
-        if (lastSkippedCount) {
-          appendSkippedEntries(lastSkippedCount, "end");
-        }
-      }
-      if (!atLeastOneEntryDisplayed) {
-        if (node.hasMarkersWhenEmpty) {
-          return setColor(`${startMarker}${endMarker}`, node.color);
-        }
-        return "";
-      }
-      diff += setColor(startMarker, node.color);
-      if (node.hasNewLineAroundEntries) {
-        diff += "\n";
-      }
-      diff += entriesDiff;
-      if (node.hasNewLineAroundEntries) {
-        diff += "\n";
-        diff += "  ".repeat(getNodeDepth(node));
-      }
-      diff += setColor(endMarker, node.color);
-      return diff;
-    };
-    const renderEntry = (node, props) => {
-      const hasIndentBeforeEntries = node.parent.hasIndentBeforeEntries;
-      const { endMarker } = node;
-      let entryDiff = "";
-      let columnsRemaining = props.columnsRemaining;
-      if (hasIndentBeforeEntries) {
-        const indent = "  ".repeat(getNodeDepth(node) + 1);
-        columnsRemaining -= stringWidth(indent);
-        entryDiff += indent;
-      }
-      const entryKeyNode = node.childNodeMap.get("entry_key");
-      if (endMarker) {
-        columnsRemaining -= endMarker.length;
-      }
-      let columnsRemainingForValue = columnsRemaining;
-
-      const staticKeywordNode = node.childNodeMap.get("static_keyword");
-      if (staticKeywordNode && !staticKeywordNode.isHidden) {
-        const staticKeywordDiff = staticKeywordNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        columnsRemaining -= measureLastLineColumns(staticKeywordDiff);
-        columnsRemaining -= " ".length;
-        entryDiff += staticKeywordDiff;
-        entryDiff += " ";
-      }
-      if (!entryKeyNode.isHidden) {
-        const entryKeyDiff = entryKeyNode.render({
-          ...props,
-          columnsRemaining,
-        });
-        columnsRemainingForValue -= measureLastLineColumns(entryKeyDiff);
-        entryDiff += entryKeyDiff;
-        const { middleMarker } = node;
-        if (columnsRemainingForValue > middleMarker.length) {
-          columnsRemainingForValue -= middleMarker.length;
-          entryDiff += setColor(middleMarker, node.color);
-        } else {
-          columnsRemainingForValue = 0;
-        }
-      }
-      if (columnsRemainingForValue > 0) {
-        const entryValueNode = node.childNodeMap.get("entry_value");
-        entryDiff += entryValueNode.render({
-          ...props,
-          columnsRemaining: columnsRemainingForValue,
-        });
-        if (endMarker) {
-          entryDiff += setColor(endMarker, node.color);
-        }
-      } else if (endMarker) {
-        entryDiff += setColor(endMarker, node.color);
-      }
-      return entryDiff;
     };
 
     const subcompareDuo = (actualChildNode, expectChildNode) => {
@@ -922,8 +317,6 @@ export const assert = ({
         } else {
           onSelfDiff("primitive_value");
           subcompareChilNodesDuo(actualNode, expectNode);
-          actualNode.render = (props) => renderPrimitive(actualNode, props);
-          expectNode.render = (props) => renderPrimitive(expectNode, props);
         }
 
         return;
@@ -947,10 +340,7 @@ export const assert = ({
           };
         } else {
           subcompareChilNodesDuo(actualNode, expectNode);
-          actualNode.render = (props) => renderComposite(actualNode, props);
-          expectNode.render = (props) => renderComposite(expectNode, props);
         }
-
         return;
       }
       if (actualNode.group === "entries") {
@@ -958,42 +348,11 @@ export const assert = ({
           actualNode.hasMarkersWhenEmpty =
             expectNode.hasMarkersWhenEmpty = true;
         }
-        subcompareChilNodesDuo(actualNode, expectNode);
-        actualNode.render = (props) => renderEntries(actualNode, props);
-        expectNode.render = (props) => renderEntries(expectNode, props);
-        return;
       }
-      if (actualNode.group === "entry") {
-        subcompareChilNodesDuo(actualNode, expectNode);
-        actualNode.render = (props) => renderEntry(actualNode, props);
-        expectNode.render = (props) => renderEntry(expectNode, props);
-        return;
-      }
-      throw new Error(
-        `visitDuo not implemented for "${actualNode.subgroup}" node type`,
-      );
+      subcompareChilNodesDuo(actualNode, expectNode);
     };
     const visitSolo = (node, placeholderNode) => {
       subcompareChildNodesSolo(node, placeholderNode);
-      if (node.isPrimitive) {
-        node.render = (props) => renderPrimitive(node, props);
-        return;
-      }
-      if (node.isComposite) {
-        node.render = (props) => renderComposite(node, props);
-        return;
-      }
-      if (node.group === "entries") {
-        node.render = (props) => renderEntries(node, props);
-        return;
-      }
-      if (node.group === "entry") {
-        node.render = (props) => renderEntry(node, props);
-        return;
-      }
-      throw new Error(
-        `visitSolo not implemented for "${node.subgroup}" node subgroup`,
-      );
     };
 
     let actualSkipSettle = false;
@@ -1182,19 +541,34 @@ export const assert = ({
   diff += ANSI.color("actual:", sameColor);
   diff += " ";
   diff += startActualNode.render({
+    MAX_ENTRY_BEFORE_MULTILINE_DIFF,
+    MAX_ENTRY_AFTER_MULTILINE_DIFF,
+    MAX_DEPTH,
+    MAX_DEPTH_INSIDE_DIFF,
+    MAX_DIFF_PER_OBJECT,
+    MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "actual: ".length,
+    startActualNode,
+    startExpectNode,
   });
   diff += `\n`;
   diff += ANSI.color("expect:", sameColor);
   diff += " ";
   diff += startExpectNode.render({
+    MAX_ENTRY_BEFORE_MULTILINE_DIFF,
+    MAX_ENTRY_AFTER_MULTILINE_DIFF,
+    MAX_DEPTH,
+    MAX_DEPTH_INSIDE_DIFF,
+    MAX_DIFF_PER_OBJECT,
+    MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "expect: ".length,
+    startActualNode,
+    startExpectNode,
   });
   throw diff;
 };
 
 let createRootNode;
-
 /*
  * Node represent any js value.
  * These js value are compared and converted to a readable string
@@ -1215,6 +589,7 @@ let createRootNode;
     colorWhenModified,
     name,
     value,
+    render,
   }) => {
     const rootNode = createNode({
       colorWhenSolo,
@@ -1226,6 +601,7 @@ let createRootNode;
       parent: null,
       depth: 0,
       path: createValuePath(),
+      render,
     });
 
     return rootNode;
@@ -1248,6 +624,7 @@ let createRootNode;
     isClassPrototype = false,
     isAsPrimitiveValue = false,
     isValueOfReturnValue = false,
+    render,
     methodName = "",
     isHidden = false,
     startMarker = "",
@@ -1297,9 +674,7 @@ let createRootNode;
       isMap: false,
       isSet: false,
       // render info
-      render: () => {
-        throw new Error(`render not implemented for ${subgroup}`);
-      },
+      render: (props) => render(node, props),
       methodName,
       isHidden,
       // START will be set by comparison
@@ -1365,6 +740,7 @@ let createRootNode;
       value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY
     ) {
       node.isPrimitive = true;
+      node.isString = true;
       return node;
     }
     if (group === "entries") {
@@ -1424,6 +800,7 @@ let createRootNode;
         if (node.isFunction) {
           if (node.functionAnalysis.type === "class") {
             node.appendChild("class_keyword", {
+              render: renderGrammar,
               group: "grammar",
               subgroup: "class_keyword",
               value: "class",
@@ -1431,11 +808,13 @@ let createRootNode;
             const extendedClassName = node.functionAnalysis.extendedClassName;
             if (extendedClassName) {
               node.appendChild("class_extends_keyword", {
+                render: renderGrammar,
                 group: "grammar",
                 subgroup: "class_extends_keyword",
                 value: "extends",
               });
               node.appendChild("class_extended_name", {
+                render: renderGrammar,
                 group: "grammar",
                 subgroup: "class_extended_name",
                 value: extendedClassName,
@@ -1444,6 +823,7 @@ let createRootNode;
           }
           if (node.functionAnalysis.isAsync) {
             node.appendChild("function_async_keyword", {
+              render: renderGrammar,
               group: "grammar",
               subgroup: "function_async_keyword",
               value: "async",
@@ -1451,6 +831,7 @@ let createRootNode;
           }
           if (node.functionAnalysis.type === "classic") {
             node.appendChild("function_keyword", {
+              render: renderGrammar,
               group: "grammar",
               subgroup: "function_keyword",
               value: node.functionAnalysis.isGenerator
@@ -1460,42 +841,43 @@ let createRootNode;
           }
           if (node.functionAnalysis.name) {
             node.appendChild("function_name", {
+              render: renderGrammar,
               group: "grammar",
               subgroup: "function_name",
               value: node.functionAnalysis.name,
             });
           }
           function_body_prefix: {
+            const functionBodyPrefixParams = {
+              render: renderGrammar,
+              group: "grammar",
+              subgroup: "function_body_prefix",
+            };
             if (node.functionAnalysis.type === "arrow") {
               node.appendChild("function_body_prefix", {
-                group: "grammar",
-                subgroup: "function_body_prefix",
+                ...functionBodyPrefixParams,
                 value: "() =>",
               });
             } else if (node.functionAnalysis.type === "method") {
               if (node.functionAnalysis.getterName) {
                 node.appendChild("function_body_prefix", {
-                  group: "grammar",
-                  subgroup: "function_body_prefix",
+                  ...functionBodyPrefixParams,
                   value: `get ${methodName}()`,
                 });
               }
               if (node.functionAnalysis.setterName) {
                 node.appendChild("function_body_prefix", {
-                  group: "grammar",
-                  subgroup: "function_body_prefix",
+                  ...functionBodyPrefixParams,
                   value: `set ${methodName}()`,
                 });
               }
               node.appendChild("function_body_prefix", {
-                group: "grammar",
-                subgroup: "function_body_prefix",
+                ...functionBodyPrefixParams,
                 value: `${methodName}()`,
               });
             } else if (node.functionAnalysis.type === "classic") {
               node.appendChild("function_body_prefix", {
-                group: "grammar",
-                subgroup: "function_body_prefix",
+                ...functionBodyPrefixParams,
                 value: "()",
               });
             }
@@ -1508,6 +890,7 @@ let createRootNode;
           if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
             hasObjectTag = true;
             node.appendChild("object_tag", {
+              render: renderGrammar,
               group: "grammar",
               subgroup: "object_tag",
               value: objectTag,
@@ -1518,6 +901,7 @@ let createRootNode;
         let canHaveInternalEntries = false;
         internal_entries: {
           const internalEntriesParams = {
+            render: renderEntries,
             group: "entries",
             value: [],
             startMarker: "(",
@@ -1541,6 +925,7 @@ let createRootNode;
                 for (const [mapEntryKey, mapEntryValue] of value) {
                   mapEntriesNode.value.push(mapEntryKey);
                   const mapEntryNode = mapEntriesNode.appendChild(mapEntryKey, {
+                    render: renderEntry,
                     group: "entry",
                     subgroup: "map_entry",
                     // TODO: map path
@@ -1548,11 +933,13 @@ let createRootNode;
                     endMarker: ",",
                   });
                   mapEntryNode.appendChild("entry_key", {
+                    render: renderValue,
                     group: "entry_key",
                     subgroup: "map_entry_key",
                     value: mapEntryKey,
                   });
                   mapEntryNode.appendChild("entry_value", {
+                    render: renderValue,
                     childType: "entry_value",
                     subgroup: "map_entry_value",
                     value: mapEntryValue,
@@ -1571,6 +958,7 @@ let createRootNode;
                 for (const [setValue] of value) {
                   setEntriesNode.value.push(index);
                   const setEntryNode = setEntriesNode.appendChild(index, {
+                    render: renderEntry,
                     group: "entry",
                     subgroup: "set_entry",
                     path: setEntriesNode.path.append(index, {
@@ -1580,12 +968,14 @@ let createRootNode;
                     endMarker: ",",
                   });
                   setEntryNode.appendChild("entry_key", {
+                    render: renderInteger,
                     group: "entry_key",
                     subgroup: "set_entry_key",
                     value: index,
                     isHidden: true,
                   });
                   setEntryNode.appendChild("entry_value", {
+                    render: renderValue,
                     group: "entry_value",
                     subgroup: "set_entry_value",
                     value: setValue,
@@ -1603,6 +993,7 @@ let createRootNode;
           if (node.isArray) {
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
+              render: renderEntries,
               group: "entries",
               subgroup: "array_entries",
               value: [],
@@ -1623,6 +1014,7 @@ let createRootNode;
                 ownPropertyNameToIgnoreSet.add(String(index));
                 arrayEntriesNode.value.push(index);
                 const arrayEntryNode = arrayEntriesNode.appendChild(index, {
+                  render: renderEntry,
                   group: "entry",
                   subgroup: "array_entry",
                   path: arrayEntriesNode.path.append(index, {
@@ -1631,12 +1023,14 @@ let createRootNode;
                   endMarker: ",",
                 });
                 arrayEntryNode.appendChild("entry_key", {
+                  render: renderInteger,
                   group: "entry_key",
                   subgroup: "array_entry_key",
                   value: index,
                   isHidden: true,
                 });
                 arrayEntryNode.appendChild("entry_value", {
+                  render: renderValue,
                   group: "entry_value",
                   subgroup: "array_entry_value",
                   value: Object.hasOwn(value, index)
@@ -1680,6 +1074,7 @@ let createRootNode;
             if (hasObjectTag) {
               hasConstructorCall = true;
               const constructorCallNode = node.appendChild("constructor_call", {
+                render: renderEntries,
                 group: "entries",
                 subgroup: "constructor_call",
                 value: [],
@@ -1699,18 +1094,21 @@ let createRootNode;
                     const argEntryNode = constructorCallNode.appendChild(
                       argIndex,
                       {
+                        render: renderEntry,
                         group: "entry",
                         subgroup: "constructor_call_entry",
                         endMarker: ",",
                       },
                     );
                     argEntryNode.appendChild("entry_key", {
+                      render: renderInteger,
                       group: "entry_key",
                       subgroup: "constructor_call_entry_key",
                       value: argIndex,
                       isHidden: true,
                     });
                     argEntryNode.appendChild("entry_value", {
+                      render: renderValue,
                       group: "entry_value",
                       subgroup: "constructor_call_entry_value",
                       value: argValue,
@@ -1759,6 +1157,7 @@ let createRootNode;
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const propertyEntriesNode = node.appendChild("property_entries", {
+            render: renderEntries,
             group: "entries",
             subgroup: "property_entries",
             value: [],
@@ -1791,6 +1190,7 @@ let createRootNode;
               ) => {
                 propertyEntriesNode.value.push(key);
                 const propertyEntryNode = propertyEntriesNode.appendChild(key, {
+                  render: renderEntry,
                   group: "entry",
                   subgroup: "property_entry",
                   path: node.path.append(key),
@@ -1810,6 +1210,7 @@ let createRootNode;
                   childGenerator: () => {
                     const propertyEntryValueNode =
                       propertyEntryNode.appendChild("entry_value", {
+                        render: renderValue,
                         group: "entry_value",
                         subgroup: "property_entry_value",
                         value,
@@ -1821,6 +1222,7 @@ let createRootNode;
                       });
                     if (isClassStaticProperty && !isClassPrototype) {
                       propertyEntryNode.appendChild("static_keyword", {
+                        render: renderGrammar,
                         group: "grammar",
                         subgroup: "static_keyword",
                         value: "static",
@@ -1831,6 +1233,7 @@ let createRootNode;
                       });
                     }
                     propertyEntryNode.appendChild("entry_key", {
+                      render: renderString,
                       group: "entry_key",
                       subgroup: "property_entry_key",
                       value: key,
@@ -1888,6 +1291,7 @@ let createRootNode;
         }
         node.childGenerator = () => {
           const lineEntriesNode = node.appendChild("line_entries", {
+            render: renderEntries,
             group: "entries",
             subgroup: "line_entries",
             value: [],
@@ -1899,12 +1303,14 @@ let createRootNode;
               const appendLineEntry = (lineIndex) => {
                 lineEntriesNode.value.push(lineIndex);
                 const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+                  render: renderEntry,
                   group: "entry",
                   subgroup: "line_entry",
                 });
                 const lineEntryKeyNode = lineEntryNode.appendChild(
                   "entry_key",
                   {
+                    render: renderInteger,
                     group: "entry_key",
                     subgroup: "line_entry_key",
                     value: lineIndex,
@@ -1914,6 +1320,7 @@ let createRootNode;
                 const lineEntryValueNode = lineEntryNode.appendChild(
                   "entry_value",
                   {
+                    render: renderEntries,
                     group: "entries",
                     subgroup: "line_entry_value",
                     value: [],
@@ -1926,17 +1333,20 @@ let createRootNode;
                   const charEntryNode = lineEntryValueNode.appendChild(
                     charIndex,
                     {
+                      render: renderEntry,
                       group: "entry",
                       subgroup: "char_entry",
                     },
                   );
                   charEntryNode.appendChild("entry_key", {
+                    render: renderInteger,
                     group: "entry_key",
                     subgroup: "char_entry_key",
                     value: charIndex,
                     isHidden: true,
                   });
                   charEntryNode.appendChild("entry_value", {
+                    render: renderChar,
                     group: "entry_value",
                     subgroup: "char_entry_value",
                     value: char,
@@ -2064,6 +1474,627 @@ let createRootNode;
     return childNode;
   };
 }
+
+const renderValue = (node, props) => {
+  if (node.isPrimitive) {
+    return renderPrimitive(node, props);
+  }
+  return renderComposite(node, props);
+};
+const renderPrimitive = (node, props) => {
+  if (props.columnsRemaining < 1) {
+    return setColor("…", node.color);
+  }
+  if (node.isSourceCode) {
+    return truncateAndAppyColor("[source code]", node, props);
+  }
+  if (node.isUndefined) {
+    return truncateAndAppyColor("undefined", node, props);
+  }
+  if (node.isString) {
+    return renderString(node, props);
+  }
+  return truncateAndAppyColor(JSON.stringify(node.value), node, props);
+};
+const renderString = (node, props) => {
+  if (node.value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
+    return truncateAndAppyColor("valueOf()", node, props);
+  }
+  if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
+    return truncateAndAppyColor("[Symbol.toPrimitive()]", node, props);
+  }
+  const lineEntriesNode = node.childNodeMap.get("line_entries");
+  if (lineEntriesNode) {
+    return lineEntriesNode.render(props);
+  }
+  let diff = JSON.stringify(node.value);
+  if (node.hasQuotes) {
+    return truncateAndAppyColor(diff, node, props);
+  }
+  return truncateAndAppyColor(diff.slice(1, -1), node, props);
+};
+const renderChar = (node, props) => {
+  let diff = "";
+  const char = node.value;
+  if (char === node.parent.parent.parent.parent.startMarker) {
+    diff = `\\${char}`;
+  } else {
+    const point = char.charCodeAt(0);
+    if (point === 92 || point < 32 || (point > 126 && point < 160)) {
+      diff = CHAR_TO_ESCAPED_CHAR[point];
+    } else {
+      diff = char;
+    }
+  }
+  return truncateAndAppyColor(diff, node, props);
+};
+const renderInteger = (node, props) => {
+  let diff = JSON.stringify(node.value);
+  return truncateAndAppyColor(diff, node, props);
+};
+const renderGrammar = (node, props) => {
+  let diff = JSON.stringify(node.value);
+  diff = diff.slice(1, -1);
+  return truncateAndAppyColor(diff, node, props);
+};
+const truncateAndAppyColor = (diff, node, props) => {
+  if (diff.length > props.columnsRemaining) {
+    diff = setColor(diff.slice(0, props.columnsRemaining - 1), node.color);
+    diff += setColor("…", node.color);
+    return diff;
+  }
+  return setColor(diff, node.color);
+};
+
+const renderComposite = (node, props) => {
+  // it's here that at some point we'll compare more than just own properties
+  // because composite also got a prototype
+  // and a constructor that might differ
+  let diff = "";
+  const internalEntriesNode = node.childNodeMap.get("internal_entries");
+  const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
+  const propertyEntriesNode = node.childNodeMap.get("property_entries");
+  if (props.columnsRemaining < 2) {
+    diff = setColor("…", node.color);
+    return diff;
+  }
+  let maxDepthReached = false;
+  if (node.diffType) {
+    if (typeof props.firstDiffDepth === "number") {
+      maxDepthReached =
+        node.depth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
+    } else {
+      props.firstDiffDepth = node.depth;
+      maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
+    }
+  } else {
+    maxDepthReached = node.depth > props.MAX_DEPTH;
+  }
+  if (maxDepthReached) {
+    if (indexedEntriesNode) {
+      const arrayLength = indexedEntriesNode.value.length;
+      diff += setColor(`Array(${arrayLength})`, node.color);
+      return diff;
+    }
+    const propertyNameCount = propertyEntriesNode.value.length;
+    diff += setColor(`Object(${propertyNameCount})`, node.color);
+    return diff;
+  }
+  let columnsRemaining = props.columnsRemaining;
+  if (node.isFunction) {
+    const functionDiff = renderFunction(node, props);
+    columnsRemaining -= measureLastLineColumns(functionDiff);
+    diff += functionDiff;
+  } else {
+    const objectTagNode = node.childNodeMap.get("object_tag");
+    if (objectTagNode) {
+      const objectTagDiff = objectTagNode.render(props);
+      columnsRemaining -= measureLastLineColumns(objectTagDiff);
+      diff += objectTagDiff;
+    }
+    const constructorCallNode = node.childNodeMap.get("constructor_call");
+    if (constructorCallNode) {
+      const constructorCallDiff = constructorCallNode.render({
+        ...props,
+        columnsRemaining,
+      });
+      columnsRemaining -= measureLastLineColumns(constructorCallDiff);
+      diff += constructorCallDiff;
+    }
+  }
+  if (internalEntriesNode) {
+    const internalEntriesDiff = internalEntriesNode.render({
+      ...props,
+      columnsRemaining,
+    });
+    columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
+    diff += internalEntriesDiff;
+  }
+  if (indexedEntriesNode) {
+    if (diff) {
+      columnsRemaining -= " ".length;
+      diff += " ";
+    }
+    const indexedEntriesDiff = indexedEntriesNode.render({
+      ...props,
+      columnsRemaining,
+    });
+    columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
+    diff += indexedEntriesDiff;
+  }
+  if (propertyEntriesNode) {
+    const propertiesDiff = propertyEntriesNode.render({
+      ...props,
+      columnsRemaining,
+    });
+    if (propertiesDiff) {
+      if (diff) {
+        columnsRemaining -= " ".length;
+        diff += " ";
+      }
+      diff += propertiesDiff;
+    }
+  }
+  return diff;
+};
+const renderFunction = (node, props) => {
+  let diff = "";
+  const classKeywordNode = node.childNodeMap.get("class_keyword");
+  if (classKeywordNode) {
+    diff += classKeywordNode.render(props);
+  } else {
+    const asyncKeywordNode = node.childNodeMap.get("function_async_keyword");
+    if (asyncKeywordNode) {
+      diff += asyncKeywordNode.render(props);
+    }
+  }
+  const functionKeywordNode = node.childNodeMap.get("function_keyword");
+  if (functionKeywordNode) {
+    if (diff) {
+      diff += " ";
+    }
+    diff += functionKeywordNode.render(props);
+  }
+  const functionNameNode = node.childNodeMap.get("function_name");
+  if (functionNameNode) {
+    if (diff) {
+      diff += " ";
+    }
+    diff += functionNameNode.render(props);
+  }
+  const classExtendedNameNode = node.childNodeMap.get("class_extended_name");
+  if (classExtendedNameNode) {
+    const classExtendsKeywordNode = node.childNodeMap.get(
+      "class_extends_keyword",
+    );
+    diff += " ";
+    diff += classExtendsKeywordNode.render(props);
+    diff += " ";
+    diff += classExtendedNameNode.render(props);
+  }
+  const functionBodyPrefixNode = node.childNodeMap.get("function_body_prefix");
+  if (functionBodyPrefixNode) {
+    if (diff) {
+      diff += " ";
+    }
+    diff += functionBodyPrefixNode.render(props);
+  }
+  return diff;
+};
+const renderEntries = (node, props) => {
+  if (!node.isCompatibleWithMultilineDiff) {
+    return renderEntriesOneLiner(node, props);
+  }
+  if (node.diffType === "solo") {
+    const indexToDisplayArray = [];
+    for (const [entryKey] of node.comparisonDiffMap) {
+      if (indexToDisplayArray.length >= props.MAX_DIFF_PER_OBJECT) {
+        break;
+      }
+      const entryIndex = node.value.indexOf(entryKey);
+      indexToDisplayArray.push(entryIndex);
+    }
+    indexToDisplayArray.sort();
+    return renderEntriesMultiline(node, props, { indexToDisplayArray });
+  }
+  if (node.comparisonDiffMap.size > 0) {
+    const indexToDisplayArray = [];
+    index_to_display: {
+      const entryKeys = node.value;
+      if (entryKeys.length === 0) {
+        break index_to_display;
+      }
+      const diffIndexArray = [];
+      for (const [entryKey] of node.comparisonDiffMap) {
+        const entryIndex = entryKeys.indexOf(entryKey);
+        if (entryIndex === -1) {
+          // happens when removed/added
+        } else {
+          diffIndexArray.push(entryIndex);
+        }
+      }
+      if (diffIndexArray.length === 0) {
+        // happens when one node got no diff in itself
+        // it's the other that has a diff (added or removed)
+        indexToDisplayArray.push(0);
+        break index_to_display;
+      }
+      diffIndexArray.sort();
+      const indexToDisplaySet = new Set();
+      let diffCount = 0;
+      for (const diffIndex of diffIndexArray) {
+        if (diffCount >= props.MAX_DIFF_PER_OBJECT) {
+          break;
+        }
+        diffCount++;
+        let beforeDiffIndex = diffIndex - 1;
+        let beforeCount = 0;
+        while (beforeDiffIndex > -1) {
+          if (beforeCount === props.MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(beforeDiffIndex);
+          beforeCount++;
+          beforeDiffIndex--;
+        }
+        indexToDisplaySet.add(diffIndex);
+        let afterDiffIndex = diffIndex + 1;
+        let afterCount = 0;
+        while (afterDiffIndex < entryKeys.length) {
+          if (afterCount === props.MAX_ENTRY_AFTER_MULTILINE_DIFF) {
+            break;
+          }
+          indexToDisplaySet.add(afterDiffIndex);
+          afterCount++;
+          afterDiffIndex--;
+        }
+      }
+      for (const indexToDisplay of indexToDisplaySet) {
+        indexToDisplayArray.push(indexToDisplay);
+      }
+      indexToDisplayArray.sort();
+    }
+    return renderEntriesMultiline(node, props, { indexToDisplayArray });
+  }
+  if (node.isCompatibleWithSingleLineDiff) {
+    return renderEntriesWithoutDiffOneLiner(node, props);
+  }
+  return renderEntriesMultiline(node, props, {
+    indexToDisplayArray: [0],
+  });
+};
+const getNodeDepth = (node, props) => {
+  if (node.name === "actual") {
+    return node.depth - props.startActualNode.depth;
+  }
+  return node.depth - props.startExpectNode.depth;
+};
+
+const renderEntriesOneLiner = (node, props) => {
+  node.hasIndentBeforeEntries = false;
+  let columnsRemaining = props.columnsRemaining;
+  let focusedEntryIndex = -1; // TODO: take first one with a diff
+  const entryKeys = node.value;
+  const { startMarker, endMarker } = node;
+  const { overflowStartMarker, overflowEndMarker } = node;
+  // columnsRemaining -= overflowStartMarker;
+  // columnsRemaining -= overflowEndMarker;
+  columnsRemaining -= startMarker.length;
+  columnsRemaining -= endMarker.length;
+
+  let focusedEntryKey = entryKeys[focusedEntryIndex];
+  if (!focusedEntryKey) {
+    focusedEntryIndex = entryKeys.length - 1;
+    focusedEntryKey = entryKeys[focusedEntryIndex];
+  }
+  const focusedEntry = node.childNodeMap.get(focusedEntryKey);
+  let focusedEntryDiff = "";
+  if (focusedEntry) {
+    if (entryKeys.length === 1) {
+      // TODO: ideally something better as in oneLinerWithoutDiff
+      // where we restore endMarker + append it when we got
+      // many
+      focusedEntry.endMarker = "";
+    }
+    focusedEntryDiff = focusedEntry.render(props);
+    columnsRemaining -= stringWidth(focusedEntryDiff);
+  }
+
+  const overflowStartWidth = overflowStartMarker.length;
+  const overflowEndWidth = overflowEndMarker.length;
+  let tryBeforeFirst = true;
+  let previousChildAttempt = 0;
+  let nextChildAttempt = 0;
+  const beforeDiffArray = [];
+  const afterDiffArray = [];
+  let hasStartOverflow;
+  let hasEndOverflow;
+  while (columnsRemaining) {
+    const previousEntryIndex = focusedEntryIndex - previousChildAttempt - 1;
+    const nextEntryIndex = focusedEntryIndex + nextChildAttempt + 1;
+    let hasPreviousEntry = previousEntryIndex >= 0;
+    const hasNextEntry = nextEntryIndex < entryKeys.length;
+    if (!hasPreviousEntry && !hasNextEntry) {
+      break;
+    }
+    if (!tryBeforeFirst && hasNextEntry) {
+      hasPreviousEntry = false;
+    }
+    let entryIndex;
+    if (hasPreviousEntry) {
+      previousChildAttempt++;
+      entryIndex = previousEntryIndex;
+    } else if (hasNextEntry) {
+      nextChildAttempt++;
+      entryIndex = nextEntryIndex;
+    }
+    const entryKey = entryKeys[entryIndex];
+    const entryNode = node.childNodeMap.get(entryKey);
+    if (!entryNode) {
+      debugger; // to keep to see if that is hit while running all of string.test.js
+      // if not remove it
+      continue;
+    }
+    if (tryBeforeFirst && hasPreviousEntry) {
+      tryBeforeFirst = false;
+    }
+    const entryDiff = entryNode.render(props);
+    const entryDiffWidth = measureLastLineColumns(entryDiff);
+    let nextWidth = entryDiffWidth;
+    hasStartOverflow = focusedEntryIndex - previousChildAttempt > 0;
+    hasEndOverflow =
+      focusedEntryIndex + nextChildAttempt < entryKeys.length - 1;
+    if (hasStartOverflow) {
+      nextWidth += overflowStartWidth;
+    }
+    if (hasEndOverflow) {
+      nextWidth += overflowEndWidth;
+    }
+    if (nextWidth > columnsRemaining) {
+      if (hasPreviousEntry) {
+        previousChildAttempt--;
+      } else {
+        nextChildAttempt--;
+      }
+      break;
+    }
+    columnsRemaining -= entryDiffWidth;
+    if (entryIndex < focusedEntryIndex) {
+      beforeDiffArray.push(entryDiff);
+    } else {
+      afterDiffArray.push(entryDiff);
+    }
+  }
+  let diff = "";
+  if (hasStartOverflow) {
+    diff += setColor(overflowStartMarker, node.color);
+  }
+  if (startMarker) {
+    diff += setColor(startMarker, node.color);
+  }
+  diff += beforeDiffArray.reverse().join("");
+  diff += focusedEntryDiff;
+  diff += afterDiffArray.join("");
+  if (endMarker) {
+    diff += setColor(endMarker, node.color);
+  }
+  if (hasEndOverflow) {
+    diff += setColor(overflowEndMarker, node.color);
+  }
+  return diff;
+};
+const renderEntriesWithoutDiffOneLiner = (node, props) => {
+  const { startMarker, endMarker } = node;
+  const entryKeys = node.value;
+  let columnsRemaining = props.columnsRemaining;
+  let boilerplate = `${startMarker} ... ${endMarker}`;
+  columnsRemaining -= boilerplate.length;
+  let diff = "";
+  let entriesDiff = "";
+  let lastEntryDisplayed = null;
+  node.hasIndentBeforeEntries = false;
+  for (const entryKey of entryKeys) {
+    const entryNode = node.childNodeMap.get(entryKey);
+    const entryNodeEndMarker = entryNode.endMarker;
+    entryNode.endMarker = "";
+    const entryDiff = entryNode.render({
+      ...props,
+      columnsRemaining,
+    });
+    entryNode.endMarker = entryNodeEndMarker;
+    const entryDiffWidth = measureLastLineColumns(entryDiff);
+    if (entryDiffWidth > columnsRemaining) {
+      if (lastEntryDisplayed) {
+        diff += setColor(startMarker, node.color);
+        diff += entriesDiff;
+        diff += setColor(
+          node.hasSpacingAroundEntries
+            ? ` ... ${endMarker}`
+            : ` ...${endMarker}`,
+          node.color,
+        );
+        return diff;
+      }
+      diff += setColor(
+        node.hasSpacingAroundEntries
+          ? `${startMarker} ... ${endMarker}`
+          : `${startMarker}...${endMarker}`,
+        node.color,
+      );
+      return diff;
+    }
+    if (lastEntryDisplayed) {
+      entriesDiff += setColor(
+        lastEntryDisplayed.endMarker,
+        lastEntryDisplayed.color,
+      );
+      entriesDiff += " ";
+    }
+    lastEntryDisplayed = entryNode;
+    entriesDiff += entryDiff;
+    columnsRemaining -= entryDiffWidth;
+  }
+  if (!lastEntryDisplayed) {
+    if (node.hasMarkersWhenEmpty) {
+      return setColor(`${startMarker}${endMarker}`, node.color);
+    }
+    return "";
+  }
+  diff += setColor(startMarker, node.color);
+  if (node.hasSpacingAroundEntries) {
+    diff += " ";
+  }
+  diff += entriesDiff;
+  if (node.hasSpacingAroundEntries) {
+    diff += " ";
+  }
+  diff += setColor(endMarker, node.color);
+  return diff;
+};
+const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
+  const entryKeys = node.value;
+  const { startMarker, endMarker } = node;
+  let atLeastOneEntryDisplayed = null;
+  let diff = "";
+  let entriesDiff = "";
+  const appendEntry = (entryDiff) => {
+    if (atLeastOneEntryDisplayed) {
+      entriesDiff += "\n";
+      entriesDiff += entryDiff;
+    } else {
+      entriesDiff += entryDiff;
+      atLeastOneEntryDisplayed = true;
+    }
+  };
+  const appendSkippedEntries = (skipCount, skipPosition) => {
+    let skippedDiff = "";
+    if (node.hasIndentBeforeEntries) {
+      skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
+    }
+    if (node.skippedEntrySummary) {
+      const { skippedEntryNames } = node.skippedEntrySummary;
+      const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
+      skippedDiff += setColor(sign, node.color);
+      skippedDiff += " ";
+      skippedDiff += setColor(String(skipCount), node.color);
+      skippedDiff += " ";
+      skippedDiff += setColor(
+        skippedEntryNames[skipCount === 1 ? 0 : 1],
+        node.color,
+      );
+      skippedDiff += " ";
+      skippedDiff += setColor(sign, node.color);
+      appendEntry(skippedDiff);
+      return;
+    }
+  };
+  let previousIndexDisplayed = -1;
+  let canResetMaxColumns = node.hasNewLineAroundEntries;
+  for (const indexToDisplay of indexToDisplayArray) {
+    if (previousIndexDisplayed === -1) {
+      if (indexToDisplay > 0) {
+        appendSkippedEntries(indexToDisplay, "start");
+      }
+    } else {
+      const intermediateSkippedCount =
+        indexToDisplay - previousIndexDisplayed - 1;
+      if (intermediateSkippedCount) {
+        appendSkippedEntries(intermediateSkippedCount, "between");
+      }
+    }
+    const entryKey = entryKeys[indexToDisplay];
+    const entryNode = node.childNodeMap.get(entryKey);
+    const entryDiff = entryNode.render({
+      ...props,
+      columnsRemaining: canResetMaxColumns
+        ? props.MAX_COLUMNS
+        : props.columnsRemaining,
+    });
+    canResetMaxColumns = true; // because we'll append \n on next entry
+    appendEntry(entryDiff);
+    previousIndexDisplayed = indexToDisplay;
+  }
+  const lastIndexDisplayed = previousIndexDisplayed;
+  if (lastIndexDisplayed > -1) {
+    const lastSkippedCount = entryKeys.length - 1 - lastIndexDisplayed;
+    if (lastSkippedCount) {
+      appendSkippedEntries(lastSkippedCount, "end");
+    }
+  }
+  if (!atLeastOneEntryDisplayed) {
+    if (node.hasMarkersWhenEmpty) {
+      return setColor(`${startMarker}${endMarker}`, node.color);
+    }
+    return "";
+  }
+  diff += setColor(startMarker, node.color);
+  if (node.hasNewLineAroundEntries) {
+    diff += "\n";
+  }
+  diff += entriesDiff;
+  if (node.hasNewLineAroundEntries) {
+    diff += "\n";
+    diff += "  ".repeat(getNodeDepth(node, props));
+  }
+  diff += setColor(endMarker, node.color);
+  return diff;
+};
+const renderEntry = (node, props) => {
+  const hasIndentBeforeEntries = node.parent.hasIndentBeforeEntries;
+  const { endMarker } = node;
+  let entryDiff = "";
+  let columnsRemaining = props.columnsRemaining;
+  if (hasIndentBeforeEntries) {
+    const indent = "  ".repeat(getNodeDepth(node, props) + 1);
+    columnsRemaining -= stringWidth(indent);
+    entryDiff += indent;
+  }
+  const entryKeyNode = node.childNodeMap.get("entry_key");
+  if (endMarker) {
+    columnsRemaining -= endMarker.length;
+  }
+  let columnsRemainingForValue = columnsRemaining;
+
+  const staticKeywordNode = node.childNodeMap.get("static_keyword");
+  if (staticKeywordNode && !staticKeywordNode.isHidden) {
+    const staticKeywordDiff = staticKeywordNode.render({
+      ...props,
+      columnsRemaining,
+    });
+    columnsRemaining -= measureLastLineColumns(staticKeywordDiff);
+    columnsRemaining -= " ".length;
+    entryDiff += staticKeywordDiff;
+    entryDiff += " ";
+  }
+  if (!entryKeyNode.isHidden) {
+    const entryKeyDiff = entryKeyNode.render({
+      ...props,
+      columnsRemaining,
+    });
+    columnsRemainingForValue -= measureLastLineColumns(entryKeyDiff);
+    entryDiff += entryKeyDiff;
+    const { middleMarker } = node;
+    if (columnsRemainingForValue > middleMarker.length) {
+      columnsRemainingForValue -= middleMarker.length;
+      entryDiff += setColor(middleMarker, node.color);
+    } else {
+      columnsRemainingForValue = 0;
+    }
+  }
+  if (columnsRemainingForValue > 0) {
+    const entryValueNode = node.childNodeMap.get("entry_value");
+    entryDiff += entryValueNode.render({
+      ...props,
+      columnsRemaining: columnsRemainingForValue,
+    });
+    if (endMarker) {
+      entryDiff += setColor(endMarker, node.color);
+    }
+  } else if (endMarker) {
+    entryDiff += setColor(endMarker, node.color);
+  }
+  return entryDiff;
+};
 
 const DOUBLE_QUOTE = `"`;
 const SINGLE_QUOTE = `'`;
