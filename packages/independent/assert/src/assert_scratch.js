@@ -1332,45 +1332,10 @@ let createRootNode;
       node.isPrimitive = true;
       return node;
     }
-    if (subgroup === "set_entries" || subgroup === "map_entries") {
+    if (group === "entries") {
       return node;
     }
-    if (subgroup === "array_entries") {
-      return node;
-    }
-    if (subgroup === "property_entries") {
-      return node;
-    }
-    if (subgroup === "line_entries") {
-      return node;
-    }
-    if (subgroup === "line_entry") {
-      return node;
-    }
-    if (subgroup === "line_entry_value") {
-      return node;
-    }
-    if (subgroup === "char_entry") {
-      return node;
-    }
-    if (subgroup === "char_entry_value") {
-      node.isPrimitive = true;
-      node.isString = true;
-      return node;
-    }
-    if (subgroup === "set_entry" || subgroup === "map_entry") {
-      return node;
-    }
-    if (subgroup === "array_entry") {
-      return node;
-    }
-    if (subgroup === "constructor_call_entry") {
-      return node;
-    }
-    if (subgroup === "property_entry") {
-      return node;
-    }
-    if (subgroup === "constructor_call") {
+    if (group === "entry") {
       return node;
     }
     if (
@@ -1381,6 +1346,11 @@ let createRootNode;
     ) {
       node.isPrimitive = true;
       node.isNumber = true;
+      return node;
+    }
+    if (subgroup === "char_entry_value") {
+      node.isPrimitive = true;
+      node.isString = true;
       return node;
     }
     if (value === null) {
