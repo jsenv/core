@@ -90,7 +90,7 @@ await startSnapshotTesting("wrapped_value", {
       },
     });
   },
-  ["valueOf with object tag"]: () => {
+  ["valueOf with object tag vs primitive"]: () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
@@ -99,6 +99,40 @@ await startSnapshotTesting("wrapped_value", {
         },
       },
       expect: false,
+    });
+  },
+  ["valueOf with object tag "]: () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => {
+          return 10;
+        },
+      },
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => {
+          return 11;
+        },
+      },
+    });
+  },
+  ["no diff on valueOf in constructor"]: () => {
+    assert({
+      actual: {
+        a: true,
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => {
+          return 10;
+        },
+      },
+      expect: {
+        a: false,
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => {
+          return 10;
+        },
+      },
     });
   },
 });

@@ -479,6 +479,7 @@ export const assert = ({
       return indexToDisplayArray;
     };
     const renderEntriesOneLiner = (node, props) => {
+      node.hasIndentBeforeEntries = false;
       let columnsRemaining = props.columnsRemaining;
       let focusedEntryIndex = -1; // TODO: take first one with a diff
       const entryKeys = node.value;
@@ -1679,6 +1680,10 @@ let createRootNode;
                 group: "entries",
                 subgroup: "constructor_call",
                 value: [],
+                isCompatibleWithMultilineDiff: true,
+                isCompatibleWithSingleLineDiff: true,
+                hasNewLineAroundEntries: true,
+                hasIndentBeforeEntries: true,
                 startMarker: "(",
                 endMarker: ")",
                 childGenerator: () => {

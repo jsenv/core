@@ -131,7 +131,7 @@ assert({
 
 ![img](<./wrapped_value/valueOf(10) vs valueOf(10).svg>)
 
-# valueOf with object tag
+# valueOf with object tag vs primitive
 
 ```js
 assert({
@@ -145,5 +145,49 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf with object tag.svg>)
+![img](<./wrapped_value/valueOf with object tag vs primitive.svg>)
+
+# valueOf with object tag 
+
+```js
+assert({
+  actual: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => {
+      return 10;
+    },
+  },
+  expect: {
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => {
+      return 11;
+    },
+  },
+});
+```
+
+![img](<./wrapped_value/valueOf with object tag .svg>)
+
+# no diff on valueOf in constructor
+
+```js
+assert({
+  actual: {
+    a: true,
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => {
+      return 10;
+    },
+  },
+  expect: {
+    a: false,
+    [Symbol.toStringTag]: "Signal",
+    valueOf: () => {
+      return 10;
+    },
+  },
+});
+```
+
+![img](<./wrapped_value/no diff on valueOf in constructor.svg>)
 
