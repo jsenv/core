@@ -568,6 +568,10 @@ export const assert = ({
   throw diff;
 };
 
+assert.not = (value) => {
+  return value;
+};
+
 let createRootNode;
 /*
  * Node represent any js value.
@@ -696,12 +700,6 @@ let createRootNode;
       hasIndentBeforeEntries,
       color: "",
     };
-    if (value === PLACEHOLDER_FOR_NOTHING) {
-      return node;
-    }
-    if (value === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
-      return node;
-    }
     child_node_map: {
       const childNodeMap = new Map();
       let childrenGenerated = false;
