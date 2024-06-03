@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - remove trailing comma for constructor call
- *
  * - assert.not()
  * - assert.any()
  * - ref
@@ -667,6 +665,7 @@ let createRootNode;
     hasNewLineAroundEntries = false,
     hasSpacingAroundEntries = false,
     hasIndentBeforeEntries = false,
+    hasTrailingSeparator = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -724,6 +723,7 @@ let createRootNode;
       hasNewLineAroundEntries,
       hasSpacingAroundEntries,
       hasIndentBeforeEntries,
+      hasTrailingSeparator,
       color: "",
     };
     child_node_map: {
@@ -935,6 +935,7 @@ let createRootNode;
             hasMarkersWhenEmpty: true,
             hasNewLineAroundEntries: true,
             hasIndentBeforeEntries: true,
+            hasTrailingSeparator: true,
             skippedEntrySummary: {
               skippedEntryNames: ["value", "values"],
             },
@@ -1028,6 +1029,7 @@ let createRootNode;
               isCompatibleWithSingleLineDiff: true,
               hasNewLineAroundEntries: true,
               hasIndentBeforeEntries: true,
+              hasTrailingSeparator: true,
               skippedEntrySummary: {
                 skippedEntryNames: ["value", "values"],
               },
@@ -1193,6 +1195,7 @@ let createRootNode;
                   hasSpacingAroundEntries: true,
                   hasNewLineAroundEntries: true,
                   hasIndentBeforeEntries: true,
+                  hasTrailingSeparator: true,
                 }),
             hasMarkersWhenEmpty,
             childGenerator: () => {
@@ -2015,6 +2018,9 @@ const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
     }
     const entryKey = entryKeys[indexToDisplay];
     const entryNode = node.childNodeMap.get(entryKey);
+    if (!node.hasTrailingSeparator && indexToDisplay === entryKeys.length - 1) {
+      entryNode.endMarker = "";
+    }
     const entryDiff = entryNode.render({
       ...props,
       columnsRemaining: canResetMaxColumns
