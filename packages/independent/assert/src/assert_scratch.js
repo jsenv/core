@@ -1514,19 +1514,15 @@ const renderString = (node, props) => {
   return truncateAndAppyColor(diff.slice(1, -1), node, props);
 };
 const renderChar = (node, props) => {
-  let diff = "";
   const char = node.value;
   if (char === node.parent.parent.parent.parent.startMarker) {
-    diff = `\\${char}`;
-  } else {
-    const point = char.charCodeAt(0);
-    if (point === 92 || point < 32 || (point > 126 && point < 160)) {
-      diff = CHAR_TO_ESCAPED_CHAR[point];
-    } else {
-      diff = char;
-    }
+    return truncateAndAppyColor(`\\${char}`, node, props);
   }
-  return truncateAndAppyColor(diff, node, props);
+  const point = char.charCodeAt(0);
+  if (point === 92 || point < 32 || (point > 126 && point < 160)) {
+    return truncateAndAppyColor(CHAR_TO_ESCAPED_CHAR[point], node, props);
+  }
+  return truncateAndAppyColor(char, node, props);
 };
 const renderInteger = (node, props) => {
   let diff = JSON.stringify(node.value);
