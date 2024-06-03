@@ -1,6 +1,8 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - remove trailing comma for constructor call
+ *
  * - assert.not()
  * - assert.any()
  * - ref
@@ -161,6 +163,12 @@ export const assert = ({
    *   descriptorValueNode
    */
   const compare = (actualNode, expectNode, parent = null) => {
+    if (actualNode.ignore) {
+      return actualNode.comparison;
+    }
+    if (expectNode.ignore) {
+      return expectNode.comparison;
+    }
     const reasons = createReasons();
     const comparison = {
       isComparison: true,
@@ -172,6 +180,12 @@ export const assert = ({
       reasons,
       done: false,
     };
+    if (!actualNode.placeholder) {
+      actualNode.otherNode = expectNode;
+    }
+    if (!expectNode.placeholder) {
+      expectNode.otherNode = actualNode;
+    }
 
     const onSelfDiff = (reason) => {
       reasons.self.modified.add(reason);
@@ -297,6 +311,15 @@ export const assert = ({
     };
 
     const visitDuo = (actualNode, expectNode) => {
+      if (actualNode.comparison) {
+        throw new Error(`actualNode (${actualNode.subgroup}) already compared`);
+      }
+      actualNode.comparison = comparison;
+      if (expectNode.comparison) {
+        throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
+      }
+      expectNode.comparison = comparison;
+
       if (actualNode.isPrimitive) {
         if (actualNode.value === expectNode.value) {
           let compared = false;
@@ -352,6 +375,10 @@ export const assert = ({
       subcompareChilNodesDuo(actualNode, expectNode);
     };
     const visitSolo = (node, placeholderNode) => {
+      if (node.comparison) {
+        throw new Error(`node (${node.subgroup}) already compared`);
+      }
+      node.comparison = comparison;
       subcompareChildNodesSolo(node, placeholderNode);
     };
 
@@ -382,12 +409,20 @@ export const assert = ({
         onSelfDiff("should_be_composite");
         const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
         if (expectAsPrimitiveNode) {
+          const primitiveComparison = subcompareDuo(
+            actualNode,
+            expectAsPrimitiveNode,
+          );
+          // actualSkipSettle so that it's the comparison with expectAsPrimitive
+          // who sets diffType + color of actualNode
           actualSkipSettle = true;
-          visitDuo(actualNode, expectAsPrimitiveNode);
+          expectAsPrimitiveNode.ignore = true;
+          expectAsPrimitiveNode.comparison = primitiveComparison;
+          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         } else {
           visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
+          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         }
-        visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         break visit;
       }
       // composite vs primitive
@@ -395,40 +430,28 @@ export const assert = ({
         onSelfDiff("should_be_primitive");
         const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
         if (actualAsPrimitiveNode) {
+          const primitiveComparison = subcompareDuo(
+            actualAsPrimitiveNode,
+            expectNode,
+          );
+          // expectSkipSettle so that it's the comparison with expectAsPrimitive
+          // who sets diffType + color of expectNode
           expectSkipSettle = true;
-          visitDuo(actualAsPrimitiveNode, expectNode);
+          actualAsPrimitiveNode.ignore = true;
+          actualAsPrimitiveNode.comparison = primitiveComparison;
+          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         } else {
           visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         }
-        visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         break visit;
       }
       if (expectNode.placeholder) {
-        if (actualNode.isAsPrimitiveValue) {
-          const otherNode = getOtherNodeHoldingSomething(
-            actualNode,
-            comparison,
-          );
-          if (otherNode && otherNode.isPrimitive) {
-            expectNode = otherNode;
-            break visit;
-          }
-        }
         visitSolo(actualNode, expectNode);
         onAdded(getAddedOrRemovedReason(actualNode));
         break visit;
       }
       if (actualNode.placeholder) {
-        if (expectNode.isAsPrimitiveValue) {
-          const otherNode = getOtherNodeHoldingSomething(
-            expectNode,
-            comparison,
-          );
-          if (otherNode && otherNode.isPrimitive) {
-            actualNode = otherNode;
-            break visit;
-          }
-        }
         visitSolo(expectNode, actualNode);
         onRemoved(getAddedOrRemovedReason(expectNode));
         break visit;
@@ -453,9 +476,9 @@ export const assert = ({
 
     const updateColor = (node) => {
       node.color = {
-        "solo": node.colorWhenSolo,
-        "modified": node.colorWhenModified,
-        "": node.colorWhenSame,
+        solo: node.colorWhenSolo,
+        modified: node.colorWhenModified,
+        same: node.colorWhenSame,
       }[node.diffType];
     };
 
@@ -477,6 +500,8 @@ export const assert = ({
         updateColor(expectNode);
       }
     } else {
+      actualNode.diffType = "same";
+      expectNode.diffType = "same";
       updateColor(actualNode);
       updateColor(expectNode);
     }
@@ -626,7 +651,6 @@ let createRootNode;
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
-    isAsPrimitiveValue = false,
     isValueOfReturnValue = false,
     render,
     methodName = "",
@@ -661,7 +685,6 @@ let createRootNode;
       path,
       isSourceCode,
       isClassPrototype,
-      isAsPrimitiveValue,
       isValueOfReturnValue,
       // info
       isPrimitive: false,
@@ -682,8 +705,11 @@ let createRootNode;
       methodName,
       isHidden,
       // START will be set by comparison
+      ignore: false,
+      comparison: null,
       comparisonDiffMap: null,
       diffType: "",
+      otherNode: null,
       // END will be set by comparison
       hasQuotes: false,
       startMarker,
@@ -1050,11 +1076,13 @@ let createRootNode;
           ) {
             ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
             const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
-            propertyLikeCallbackSet.add((appendPropertyNode) => {
-              appendPropertyNode(SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY, {
-                value: toPrimitiveReturnValue,
-                isAsPrimitiveValue: true,
-              });
+            propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+              appendPropertyEntryNode(
+                SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+                {
+                  value: toPrimitiveReturnValue,
+                },
+              );
             });
           }
         }
@@ -1065,10 +1093,6 @@ let createRootNode;
           ) {
             ownPropertyNameToIgnoreSet.add("valueOf");
             const valueOfReturnValue = value.valueOf();
-            const isAsPrimitiveValue =
-              valueOfReturnValue &&
-              typeof valueOfReturnValue !== "object" &&
-              typeof valueOfReturnValue !== "function";
             if (hasObjectTag) {
               hasConstructorCall = true;
               const constructorCallNode = node.appendChild("constructor_call", {
@@ -1086,7 +1110,7 @@ let createRootNode;
                   const appendArgEntry = (
                     argIndex,
                     argValue,
-                    { path, depth, isAsPrimitiveValue },
+                    { path, depth },
                   ) => {
                     constructorCallNode.value.push(argIndex);
                     const argEntryNode = constructorCallNode.appendChild(
@@ -1112,22 +1136,19 @@ let createRootNode;
                       value: argValue,
                       path,
                       depth,
-                      isAsPrimitiveValue,
                       isValueOfReturnValue: true,
                     });
                   };
                   appendArgEntry(0, valueOfReturnValue, {
                     path: node.path.append("valueOf()"),
                     depth: node.depth,
-                    isAsPrimitiveValue,
                   });
                 },
               });
             } else {
-              propertyLikeCallbackSet.add((appendPropertyNode) => {
-                appendPropertyNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
+              propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
                   value: valueOfReturnValue,
-                  isAsPrimitiveValue,
                 });
               });
             }
@@ -1183,7 +1204,6 @@ let createRootNode;
                   isClassStaticProperty,
                   isFunctionPrototype,
                   isClassPrototype,
-                  isAsPrimitiveValue,
                 },
               ) => {
                 propertyEntriesNode.value.push(key);
@@ -1215,7 +1235,6 @@ let createRootNode;
                         isSourceCode,
                         isFunctionPrototype,
                         isClassPrototype,
-                        isAsPrimitiveValue,
                         methodName: key,
                       });
                     if (isClassStaticProperty && !isClassPrototype) {
@@ -1553,16 +1572,14 @@ const renderComposite = (node, props) => {
     return diff;
   }
   let maxDepthReached = false;
-  if (node.diffType) {
-    if (typeof props.firstDiffDepth === "number") {
-      maxDepthReached =
-        node.depth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
-    } else {
-      props.firstDiffDepth = node.depth;
-      maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
-    }
-  } else {
+  if (node.diffType === "same") {
     maxDepthReached = node.depth > props.MAX_DEPTH;
+  } else if (typeof props.firstDiffDepth === "number") {
+    maxDepthReached =
+      node.depth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
+  } else {
+    props.firstDiffDepth = node.depth;
+    maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
   }
   if (maxDepthReached) {
     if (indexedEntriesNode) {
@@ -2120,19 +2137,6 @@ const asPrimitiveNode = (node) => {
     return valueOfReturnValueNode;
   }
   return null;
-};
-const getOtherNodeHoldingSomething = (node, comparison) => {
-  let comparisonHoldingSomething;
-  if (node.parent.subgroup === "constructor_call") {
-    comparisonHoldingSomething = comparison.parent.parent;
-  } else {
-    // type === "property_entry_value"
-    comparisonHoldingSomething = comparison.parent.parent.parent;
-  }
-  if (node.name === "actual") {
-    return comparisonHoldingSomething.expectNode;
-  }
-  return comparisonHoldingSomething.actualNode;
 };
 const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");
