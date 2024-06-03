@@ -603,7 +603,7 @@ assert.not = (value) => {
     value,
     parse: (node) => {
       node.childGenerator = () => {
-        node.appendChild(
+        const assertNotCallNode = node.appendChild(
           "assert_not_call",
           createMethodCallNode(node, {
             objectName: "assert",
@@ -611,10 +611,12 @@ assert.not = (value) => {
             args: [{ value }],
           }),
         );
+        node.wrappedNode = assertNotCallNode.childNodeMap
+          .get("method_call")
+          .childNodeMap.get(0)
+          .get("entry_value");
       };
     },
-    // il faut aussi une custom comparaison
-    // et la je sais pas trop
     render: (node, props) => {
       let diff = "";
       const assertNotCallNode = node.childNodeMap.get("assert_not_call");
@@ -2118,7 +2120,6 @@ const createMethodCallNode = (node, { objectName, methodName, args }) => {
     },
     group: "entries",
     subgroup: "method_call",
-    value: [],
     childGenerator: (methodCallNode) => {
       methodCallNode.appendChild("object_name", {
         render: renderGrammar,
@@ -2219,15 +2220,55 @@ const getAddedOrRemovedReason = (node) => {
   }
   return "unknown";
 };
+
+const asCompositeNode = (node) => {
+  const wrappedNode = node.wrappedNode;
+  if (wrappedNode) {
+    if (wrappedNode.isComposite) {
+      return wrappedNode;
+    }
+    // can happen if wrappedNode is not a real value
+    // like assert.not(assert.any(String))
+    const nested = asCompositeNode(wrappedNode);
+    if (nested) {
+      return nested;
+    }
+  }
+  const valueOfReturnValueNode = getValueOfReturnValueNode(node);
+  if (valueOfReturnValueNode) {
+    if (valueOfReturnValueNode.isComposite) {
+      return valueOfReturnValueNode;
+    }
+    return asCompositeNode(valueOfReturnValueNode);
+  }
+  return null;
+};
 const asPrimitiveNode = (node) => {
+  const wrappedNode = node.wrappedNode;
+  if (wrappedNode) {
+    if (wrappedNode.isPrimitive) {
+      return wrappedNode;
+    }
+    const nested = asPrimitiveNode(wrappedNode);
+    if (nested) {
+      return nested;
+    }
+  }
   const symbolToPrimitiveReturnValueNode =
     getSymbolToPrimitiveReturnValueNode(node);
   if (symbolToPrimitiveReturnValueNode) {
     return symbolToPrimitiveReturnValueNode;
   }
   const valueOfReturnValueNode = getValueOfReturnValueNode(node);
-  if (valueOfReturnValueNode && valueOfReturnValueNode.isPrimitive) {
-    return valueOfReturnValueNode;
+  if (valueOfReturnValueNode) {
+    if (valueOfReturnValueNode.isPrimitive) {
+      return valueOfReturnValueNode;
+    }
+    // can happen for
+    // valueOf: () => {
+    //   return { valueOf: () => 10 }
+    // }
+    return asPrimitiveNode(valueOfReturnValueNode);
   }
   return null;
 };
