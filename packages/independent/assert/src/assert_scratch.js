@@ -98,6 +98,13 @@ const measureLastLineColumns = (string) => {
   return stringWidth(string);
 };
 
+const customExpectationSymbol = Symbol.for("jsenv_assert_custom_expectation");
+const createCustomExpectation = () => {
+  return {
+    [customExpectationSymbol]: true,
+  };
+};
+
 export const assert = ({
   actual,
   expect,
@@ -592,7 +599,16 @@ export const assert = ({
 };
 
 assert.not = (value) => {
-  return value;
+  return createCustomExpectation({
+    value,
+    render: (node) => {
+      let diff = "";
+      diff += setColor("assert.not(");
+      diff += setColor(")");
+      node.childNodeMap.get(0);
+      return diff;
+    },
+  });
 };
 
 let createRootNode;
@@ -737,7 +753,7 @@ let createRootNode;
         if (!node.childGenerator) {
           return;
         }
-        node.childGenerator();
+        node.childGenerator(node);
         node.childGenerator = null;
       };
       node.childNodeMap = new Proxy(childNodeMap, {
@@ -777,7 +793,7 @@ let createRootNode;
       subgroup === "array_entry_key" ||
       subgroup === "line_entry_key" ||
       subgroup === "char_entry_key" ||
-      subgroup === "constructor_call_entry_key"
+      subgroup === "function_call_entry_key"
     ) {
       node.isPrimitive = true;
       node.isNumber = true;
@@ -1097,56 +1113,18 @@ let createRootNode;
             const valueOfReturnValue = value.valueOf();
             if (hasObjectTag) {
               hasConstructorCall = true;
-              const constructorCallNode = node.appendChild("constructor_call", {
-                render: renderEntries,
-                group: "entries",
-                subgroup: "constructor_call",
-                value: [],
-                isCompatibleWithMultilineDiff: true,
-                isCompatibleWithSingleLineDiff: true,
-                hasNewLineAroundEntries: true,
-                hasIndentBeforeEntries: true,
-                startMarker: "(",
-                endMarker: ")",
-                childGenerator: () => {
-                  const appendArgEntry = (
-                    argIndex,
-                    argValue,
-                    { path, depth },
-                  ) => {
-                    constructorCallNode.value.push(argIndex);
-                    const argEntryNode = constructorCallNode.appendChild(
-                      argIndex,
-                      {
-                        render: renderEntry,
-                        group: "entry",
-                        subgroup: "constructor_call_entry",
-                        endMarker: ",",
-                      },
-                    );
-                    argEntryNode.appendChild("entry_key", {
-                      render: renderInteger,
-                      group: "entry_key",
-                      subgroup: "constructor_call_entry_key",
-                      value: argIndex,
-                      isHidden: true,
-                    });
-                    argEntryNode.appendChild("entry_value", {
-                      render: renderValue,
-                      group: "entry_value",
-                      subgroup: "constructor_call_entry_value",
-                      value: argValue,
-                      path,
-                      depth,
+              node.appendChild(
+                "constructor_call",
+                createFunctionCallNode(node, {
+                  args: [
+                    {
+                      key: "valueOf()",
+                      value: valueOfReturnValue,
                       isValueOfReturnValue: true,
-                    });
-                  };
-                  appendArgEntry(0, valueOfReturnValue, {
-                    path: node.path.append("valueOf()"),
-                    depth: node.depth,
-                  });
-                },
-              });
+                    },
+                  ],
+                }),
+              );
             } else {
               propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
                 appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
@@ -2111,6 +2089,60 @@ const renderEntry = (node, props) => {
     entryDiff += setColor(endMarker, node.color);
   }
   return entryDiff;
+};
+
+const createFunctionCallNode = (node, { args }) => {
+  return {
+    render: renderEntries,
+    group: "entries",
+    subgroup: "function_call",
+    value: [],
+    isCompatibleWithMultilineDiff: true,
+    isCompatibleWithSingleLineDiff: true,
+    hasNewLineAroundEntries: true,
+    hasIndentBeforeEntries: true,
+    startMarker: "(",
+    endMarker: ")",
+    childGenerator: (functionCallNode) => {
+      const appendArgEntry = (
+        argIndex,
+        argValue,
+        { key, isValueOfReturnValue },
+      ) => {
+        functionCallNode.value.push(argIndex);
+        const argEntryNode = functionCallNode.appendChild(argIndex, {
+          render: renderEntry,
+          group: "entry",
+          subgroup: "function_call_entry",
+          endMarker: ",",
+        });
+        argEntryNode.appendChild("entry_key", {
+          render: renderInteger,
+          group: "entry_key",
+          subgroup: "function_call_entry_key",
+          value: argIndex,
+          isHidden: true,
+        });
+        argEntryNode.appendChild("entry_value", {
+          render: renderValue,
+          group: "entry_value",
+          subgroup: "function_call_entry_value",
+          value: argValue,
+          path: node.path.append(key || argIndex),
+          depth: node.depth,
+          ...isValueOfReturnValue,
+        });
+      };
+      let argIndex = 0;
+      for (const { value, key, isValueOfReturnValue } of args) {
+        appendArgEntry(argIndex, value, {
+          key,
+          isValueOfReturnValue,
+        });
+        argIndex++;
+      }
+    },
+  };
 };
 
 const DOUBLE_QUOTE = `"`;
