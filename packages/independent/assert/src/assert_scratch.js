@@ -601,11 +601,24 @@ export const assert = ({
 assert.not = (value) => {
   return createCustomExpectation({
     value,
-    render: (node) => {
+    parse: (node) => {
+      node.childGenerator = () => {
+        node.appendChild(
+          "assert_not_call",
+          createMethodCallNode(node, {
+            objectName: "assert",
+            methodName: "not",
+            args: [{ value }],
+          }),
+        );
+      };
+    },
+    // il faut aussi une custom comparaison
+    // et la je sais pas trop
+    render: (node, props) => {
       let diff = "";
-      diff += setColor("assert.not(");
-      diff += setColor(")");
-      node.childNodeMap.get(0);
+      const assertNotCallNode = node.childNodeMap.get("assert_not_call");
+      diff += assertNotCallNode.render(props);
       return diff;
     },
   });
@@ -1527,9 +1540,7 @@ const renderInteger = (node, props) => {
   return truncateAndAppyColor(diff, node, props);
 };
 const renderGrammar = (node, props) => {
-  let diff = JSON.stringify(node.value);
-  diff = diff.slice(1, -1);
-  return truncateAndAppyColor(diff, node, props);
+  return truncateAndAppyColor(node.value, node, props);
 };
 const truncateAndAppyColor = (diff, node, props) => {
   if (diff.length > props.columnsRemaining) {
@@ -2089,6 +2100,50 @@ const renderEntry = (node, props) => {
     entryDiff += setColor(endMarker, node.color);
   }
   return entryDiff;
+};
+
+const createMethodCallNode = (node, { objectName, methodName, args }) => {
+  return {
+    render: (node, props) => {
+      let diff = "";
+      const objectNameNode = node.childNodeMap.get("object_name");
+      diff += objectNameNode.render(props);
+      const methodDotNode = node.childNodeMap.get("method_dot");
+      diff += methodDotNode.render(props);
+      const methodNameNode = node.childNodeMap.get("method_name");
+      diff += methodNameNode.render(props);
+      const methodCallNode = node.childNodeMap.get("method_call");
+      diff += methodCallNode.render(props);
+      return diff;
+    },
+    group: "entries",
+    subgroup: "method_call",
+    value: [],
+    childGenerator: (methodCallNode) => {
+      methodCallNode.appendChild("object_name", {
+        render: renderGrammar,
+        group: "grammar",
+        subgroup: "method_call_object_name",
+        value: objectName,
+      });
+      methodCallNode.appendChild("method_dot", {
+        render: renderGrammar,
+        group: "grammar",
+        subgroup: "method_call_dot",
+        value: ".",
+      });
+      methodCallNode.appendChild("method_name", {
+        render: renderGrammar,
+        group: "grammar",
+        subgroup: "method_call_method_name",
+        value: methodName,
+      });
+      methodCallNode.appendChild(
+        "method_call",
+        createFunctionCallNode(methodCallNode, { args }),
+      );
+    },
+  };
 };
 
 const createFunctionCallNode = (node, { args }) => {
