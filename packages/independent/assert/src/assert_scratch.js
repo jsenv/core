@@ -655,21 +655,8 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { getExpectationNode, renderOnlyArgs },
+  { renderOnlyArgs },
 ) => {
-  // if (customCompare === undefined) {
-  //   customCompare = (expectNode, actualNode, { subcompareDuo }) => {
-  //     const callEntriesNode = expectNode.childNodeMap
-  //       .get("assert_method_call")
-  //       .childNodeMap.get("method_call");
-  //     for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
-  //       const callArgValueNode =
-  //         callArgEntrygNode.childNodeMap.get("entry_value");
-  //       subcompareDuo(actualNode, callArgValueNode);
-  //     }
-  //   };
-  // }
-
   return createCustomExpectation(`assert.${methodName}`, {
     parse: (node) => {
       node.childGenerator = () => {
@@ -688,15 +675,22 @@ const createAssertMethodCustomExpectation = (
       expectNode,
       { subcompareSolo, subcompareDuo },
     ) => {
-      const expectationChildNode = getExpectationNode(expectNode);
-      expectationChildNode.ignore = true;
-      const childComparison = subcompareDuo(actualNode, expectationChildNode);
-      if (childComparison.hasAnyDiff) {
-        subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
-        return false;
+      const callEntriesNode = expectNode.childNodeMap
+        .get("assert_method_call")
+        .childNodeMap.get("method_call");
+      let hasAnyDiff = false;
+      for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
+        const callArgValueNode =
+          callArgEntrygNode.childNodeMap.get("entry_value");
+        callArgValueNode.ignore = true;
+        const childComparison = subcompareDuo(actualNode, callArgValueNode);
+        hasAnyDiff = childComparison.hasAnyDiff;
       }
-      subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-      return true;
+      if (hasAnyDiff) {
+        subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
+      } else {
+        subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+      }
     },
     render: (node, props) => {
       let diff = "";
@@ -737,64 +731,57 @@ assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
     ],
     {
       renderOnlyArgs,
-      getExpectationNode: (expectNode) => {
-        return expectNode.childNodeMap
-          .get("assert_method_call")
-          .childNodeMap.get("method_call")
-          .childNodeMap.get(0)
-          .childNodeMap.get("entry_value");
-      },
     },
   );
 };
-// assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
-//   if (typeof value !== "number") {
-//     throw new TypeError(
-//       `assert.aboveOrEquals 1st argument must be number, received ${value}`,
-//     );
-//   }
-//   return createAssertMethodCustomExpectation(
-//     "aboveOrEquals",
-//     [
-//       {
-//         value,
-//         customCompare: createBasicCustomCompare((actualNode) => {
-//           if (!actualNode.isNumber) {
-//             return "should_be_a_number";
-//           }
-//           if (actualNode.value < value) {
-//             return `should_be_greater_or_equals_to_${value}`;
-//           }
-//           return null;
-//         }),
-//       },
-//     ],
-//     {
-//       renderOnlyArgs,
-//     },
-//   );
-// };
-// assert.between = (minValue, maxValue) => {
-//   if (typeof minValue !== "number") {
-//     throw new TypeError(
-//       `assert.between 1st argument must be number, received ${minValue}`,
-//     );
-//   }
-//   if (typeof maxValue !== "number") {
-//     throw new TypeError(
-//       `assert.between 2nd argument must be number, received ${maxValue}`,
-//     );
-//   }
-//   if (minValue > maxValue) {
-//     throw new Error(
-//       `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
-//     );
-//   }
-//   return createAssertMethodCustomExpectation("between", [
-//     assert.aboveOrEquals(minValue, { renderOnlyArgs: true }),
-//     assert.belowOrEquals(maxValue, { renderOnlyArgs: true }),
-//   ]);
-// };
+assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
+  if (typeof value !== "number") {
+    throw new TypeError(
+      `assert.aboveOrEquals 1st argument must be number, received ${value}`,
+    );
+  }
+  return createAssertMethodCustomExpectation(
+    "aboveOrEquals",
+    [
+      {
+        value,
+        getSelfDiffReason: (actualNode) => {
+          if (!actualNode.isNumber) {
+            return "should_be_a_number";
+          }
+          if (actualNode.value < value) {
+            return `should_be_greater_or_equals_to_${value}`;
+          }
+          return null;
+        },
+      },
+    ],
+    {
+      renderOnlyArgs,
+    },
+  );
+};
+assert.between = (minValue, maxValue) => {
+  if (typeof minValue !== "number") {
+    throw new TypeError(
+      `assert.between 1st argument must be number, received ${minValue}`,
+    );
+  }
+  if (typeof maxValue !== "number") {
+    throw new TypeError(
+      `assert.between 2nd argument must be number, received ${maxValue}`,
+    );
+  }
+  if (minValue > maxValue) {
+    throw new Error(
+      `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
+    );
+  }
+  return createAssertMethodCustomExpectation("between", [
+    assert.aboveOrEquals(minValue, { renderOnlyArgs: true }),
+    assert.belowOrEquals(maxValue, { renderOnlyArgs: true }),
+  ]);
+};
 // assert.not = (value) => {
 //   return createAssertMethodCustomExpectation(
 //     "not",
