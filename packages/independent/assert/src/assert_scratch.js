@@ -71,6 +71,9 @@ const PLACEHOLDER_FOR_NOTHING = {
 const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
   placeholder: "added_or_removed",
 };
+const PLACEHOLDER_FOR_SAME = {
+  placeholder: "same",
+};
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
 const VALUE_OF_RETURN_VALUE_ENTRY_KEY = { key: "valueOf()" };
@@ -166,7 +169,7 @@ export const assert = ({
    *   descriptorKeyNode
    *   descriptorValueNode
    */
-  const compare = (actualNode, expectNode) => {
+  const compare = (actualNode, expectNode, { isNot } = {}) => {
     if (actualNode.ignore) {
       return actualNode.comparison;
     }
@@ -200,11 +203,15 @@ export const assert = ({
       causeSet.add(comparison);
     };
 
-    const subcompareDuo = (actualChildNode, expectChildNode) => {
+    const subcompareDuo = (
+      actualChildNode,
+      expectChildNode,
+      compareOptions,
+    ) => {
       const childComparison = compare(
         actualChildNode,
         expectChildNode,
-        comparison,
+        compareOptions,
       );
       appendReasonGroup(
         comparison.reasons.inside,
@@ -212,11 +219,11 @@ export const assert = ({
       );
       return childComparison;
     };
-    const subcompareSolo = (childNode, placeholderNode) => {
+    const subcompareSolo = (childNode, placeholderNode, compareOptions) => {
       if (childNode.name === "actual") {
-        return subcompareDuo(childNode, placeholderNode);
+        return subcompareDuo(childNode, placeholderNode, compareOptions);
       }
-      return subcompareDuo(placeholderNode, childNode);
+      return subcompareDuo(placeholderNode, childNode, compareOptions);
     };
     const subcompareChilNodesDuo = (actualNode, expectNode) => {
       const isSetEntriesComparison =
@@ -447,24 +454,22 @@ export const assert = ({
       }
       if (
         (actualNode.isPrimitive || actualNode.isComposite) &&
-        expectNode.isCustomExpectation
+        expectNode.customCompare
       ) {
-        const expectAsNode = getWrappedNode(expectNode, () => true);
-        if (expectAsNode) {
-          // ici on veut on truc bien spécial
-          // qu'on va surement déplacer dans la custom expect du coup
-          // on fait la comparaison mais avec des couleurs désactivé (ça se sera que pour not)
-          // et si la sous-comparaison marche alors on visite assert.not
-          // en mode PLACHOLDER_FOR_NOTHING en ignorant le noeud dans assert.not()
-          // si la comparaison échoue alors on visit assert.not() avec un placeholder
-          // pour considérer qu'il a fonctionné
-          const customComparison = subcompareDuo(actualNode, expectNode);
-          expectSkipSettle = true;
-          expectAsNode.ignore = true;
-          expectAsNode.comparison = customComparison;
-          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
-          break visit;
-        }
+        expectSkipSettle = true;
+        expectNode.customCompare(expectNode, actualNode, {
+          subcompareDuo,
+          subcompareSolo,
+        });
+        break visit;
+      }
+      if (actualNode === PLACEHOLDER_FOR_SAME) {
+        visitSolo(expectNode, actualNode);
+        break visit;
+      }
+      if (expectNode === PLACEHOLDER_FOR_SAME) {
+        visitSolo(actualNode, expectNode);
+        break visit;
       }
       if (expectNode.placeholder) {
         visitSolo(actualNode, expectNode);
@@ -495,6 +500,10 @@ export const assert = ({
     comparison.done = true;
 
     const updateColor = (node) => {
+      if (isNot) {
+        node.color = node.colorWhenSame;
+        return;
+      }
       node.color = {
         solo: node.colorWhenSolo,
         modified: node.colorWhenModified,
@@ -504,11 +513,19 @@ export const assert = ({
 
     if (actualNode.placeholder) {
       expectNode.diffType =
-        actualNode === PLACEHOLDER_FOR_NOTHING ? "modified" : "solo";
+        actualNode === PLACEHOLDER_FOR_NOTHING
+          ? "modified"
+          : actualNode === PLACEHOLDER_FOR_SAME
+            ? "same"
+            : "solo";
       updateColor(expectNode);
     } else if (expectNode.placeholder) {
       actualNode.diffType =
-        expectNode === PLACEHOLDER_FOR_NOTHING ? "modified" : "solo";
+        expectNode === PLACEHOLDER_FOR_NOTHING
+          ? "modified"
+          : expectNode === PLACEHOLDER_FOR_SAME
+            ? "same"
+            : "solo";
       updateColor(actualNode);
     } else if (comparison.selfHasModification) {
       if (!actualSkipSettle) {
@@ -660,6 +677,26 @@ assert.not = (value) => {
           .get("entry_value");
       };
     },
+    customCompare: (
+      expectNode,
+      actualNode,
+      { subcompareDuo, subcompareSolo },
+    ) => {
+      const expectAsNode = getWrappedNode(expectNode, () => true);
+      const notValueComparison = subcompareDuo(actualNode, expectAsNode, {
+        isNot: true,
+      });
+      if (notValueComparison.hasAnyDiff) {
+        // we should also "revert" side effects of all diff inside expectAsNode
+        // - adding to causeSet
+        // - colors (should be done during comparison)
+        subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+      } else {
+        expectAsNode.ignore = true;
+        expectAsNode.comparison = notValueComparison;
+        subcompareSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+      }
+    },
     render: (node, props) => {
       let diff = "";
       const assertNotCallNode = node.childNodeMap.get("assert_not_call");
@@ -769,6 +806,7 @@ let createRootNode;
       // info
       isPrimitive: false,
       isComposite: false,
+      isCustomExpectation: false,
       // info/primitive
       isUndefined: false,
       isString: false,
@@ -785,6 +823,7 @@ let createRootNode;
       methodName,
       isHidden,
       // START will be set by comparison
+      customCompare: null,
       ignore: false,
       comparison: null,
       comparisonDiffMap: null,
@@ -840,11 +879,12 @@ let createRootNode;
     }
     Object.preventExtensions(node);
     if (value && value[customExpectationSymbol]) {
-      const { parse, render, group, subgroup } = value;
+      const { parse, render, customCompare, group, subgroup } = value;
       node.isCustomExpectation = true;
       if (parse) {
         parse(node);
       }
+      node.customCompare = customCompare;
       node.render = render;
       node.group = group;
       node.subgroup = subgroup;
