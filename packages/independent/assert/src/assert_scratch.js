@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - assert.between()
  * - assert.any()
  * - ref
  * - url string and url object
@@ -376,6 +375,7 @@ export const assert = ({
         expectNode.customCompare(actualNode, expectNode, {
           subcompareDuo,
           subcompareSolo,
+          onSelfDiff,
         });
         break visit;
       }
@@ -652,7 +652,7 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { renderOnlyArgs } = {},
+  { isNot, renderOnlyArgs } = {},
 ) => {
   return createCustomExpectation(`assert.${methodName}`, {
     parse: (node) => {
@@ -670,25 +670,48 @@ const createAssertMethodCustomExpectation = (
     customCompare: (
       actualNode,
       expectNode,
-      { subcompareSolo, subcompareDuo },
+      { subcompareSolo, subcompareDuo, onSelfDiff },
     ) => {
       const assertMethod = expectNode.childNodeMap.get("assert_method_call");
       const callEntriesNode = assertMethod.childNodeMap.get("method_call");
-      let hasAnyDiff = false;
-      for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
-        const callArgValueNode =
-          callArgEntrygNode.childNodeMap.get("entry_value");
-        callArgValueNode.ignore = true;
-        if (hasAnyDiff) {
-          subcompareSolo(PLACEHOLDER_FOR_FAILED, callArgValueNode);
-        } else {
-          const childComparison = subcompareDuo(actualNode, callArgValueNode);
-          hasAnyDiff = childComparison.hasAnyDiff;
+      const argIterator = callEntriesNode.childNodeMap[Symbol.iterator]();
+      function* argValueGenerator() {
+        let argIteratorResult;
+        while ((argIteratorResult = argIterator.next())) {
+          if (argIteratorResult.done) {
+            break;
+          }
+          const [, callArgEntryNode] = argIteratorResult.value;
+          const callArgValueNode =
+            callArgEntryNode.childNodeMap.get("entry_value");
+          yield callArgValueNode;
         }
       }
-      if (hasAnyDiff) {
-        subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
-      } else {
+      for (const argValueNode of argValueGenerator()) {
+        argValueNode.ignore = true;
+        const childComparison = subcompareDuo(actualNode, argValueNode, {
+          isNot,
+        });
+        if (isNot) {
+          if (childComparison.hasAnyDiff) {
+            // we should also "revert" side effects of all diff inside expectAsNode
+            // - adding to causeSet
+            // - colors (should be done during comparison)
+            subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+            return;
+          }
+          onSelfDiff("sould_have_diff");
+          subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
+          return;
+        }
+        if (childComparison.hasAnyDiff) {
+          subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
+          for (const remainingArgValueNode of argValueGenerator()) {
+            remainingArgValueNode.ignore = true;
+            subcompareSolo(PLACEHOLDER_FOR_FAILED, remainingArgValueNode);
+          }
+          return;
+        }
         subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
       }
     },
@@ -782,37 +805,19 @@ assert.between = (minValue, maxValue) => {
     { value: assert.belowOrEquals(maxValue, { renderOnlyArgs: true }) },
   ]);
 };
-// assert.not = (value) => {
-//   return createAssertMethodCustomExpectation(
-//     "not",
-//     [
-//       {
-//         value,
-//       },
-//     ],
-//     {
-//       getExpectationNode: (expectNode) => {
-//         return expectNode.childNodeMap
-//           .get("assert_method_call")
-//           .childNodeMap.get("method_call")
-//           .childNodeMap.get(0)
-//           .childNodeMap.get("entry_value");
-//       },
-//       comparer: (actualNode, expectValueNode, { subcompareDuo }) => {
-//         const notValueComparison = subcompareDuo(actualNode, expectValueNode, {
-//           isNot: true,
-//         });
-//         if (notValueComparison.hasAnyDiff) {
-//           // we should also "revert" side effects of all diff inside expectAsNode
-//           // - adding to causeSet
-//           // - colors (should be done during comparison)
-//           return null;
-//         }
-//         return "sould_have_diff";
-//       },
-//     },
-//   );
-// };
+assert.not = (value) => {
+  return createAssertMethodCustomExpectation(
+    "not",
+    [
+      {
+        value,
+      },
+    ],
+    {
+      isNot: true,
+    },
+  );
+};
 
 let createRootNode;
 /*
