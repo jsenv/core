@@ -103,74 +103,6 @@ const measureLastLineColumns = (string) => {
   return stringWidth(string);
 };
 
-const customExpectationSymbol = Symbol.for("jsenv_assert_custom_expectation");
-const createCustomExpectation = (name, props) => {
-  return {
-    [Symbol.toStringTag]: name,
-    [customExpectationSymbol]: true,
-    group: "custom_expectation",
-    subgroup: name,
-    ...props,
-  };
-};
-const createAssertMethodCustomExpectation = (
-  methodName,
-  args,
-  { customCompare, renderOnlyArgs } = {},
-) => {
-  if (customCompare === undefined) {
-    customCompare = (expectNode, actualNode, { subcompareDuo }) => {
-      const callEntriesNode = expectNode.childNodeMap
-        .get("assert_method_call")
-        .childNodeMap.get("method_call");
-      for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
-        const callArgValueNode =
-          callArgEntrygNode.childNodeMap.get("entry_value");
-        subcompareDuo(actualNode, callArgValueNode);
-      }
-    };
-  }
-
-  return createCustomExpectation(`assert.${methodName}`, {
-    parse: (node) => {
-      node.childGenerator = () => {
-        node.appendChild(
-          "assert_method_call",
-          createMethodCallNode(node, {
-            objectName: "assert",
-            methodName,
-            args,
-          }),
-        );
-      };
-    },
-    customCompare,
-    render: (node, props) => {
-      let diff = "";
-      const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
-      if (renderOnlyArgs) {
-        const callNode = assertMethodCallNode.childNodeMap.get("method_call");
-        callNode.startMarker = "";
-        callNode.endMarker = "";
-        diff += callNode.render(props);
-      } else {
-        diff += assertMethodCallNode.render(props);
-      }
-      return diff;
-    },
-  });
-};
-const createBasicCustomCompare = (basicComparer) => {
-  return (expectNode, actualNode, { onSelfDiff }) => {
-    const basicComparerResult = basicComparer(actualNode);
-    if (basicComparerResult) {
-      onSelfDiff(basicComparerResult);
-      return false;
-    }
-    return true;
-  };
-};
-
 export const assert = ({
   actual,
   expect,
@@ -409,7 +341,6 @@ export const assert = ({
           onSelfDiff("primitive_value");
           subcompareChilNodesDuo(actualNode, expectNode);
         }
-
         return;
       }
       if (actualNode.isComposite) {
@@ -457,24 +388,17 @@ export const assert = ({
         (actualNode.isPrimitive || actualNode.isComposite) &&
         expectNode.customCompare
       ) {
+        // actualNode.comparison = comparison;
+        // expectNode.comparison = comparison;
         expectSkipSettle = true;
-        const customCompareResult = expectNode.customCompare(
-          expectNode,
-          actualNode,
-          {
-            onSelfDiff,
-            subcompareDuo,
-            subcompareSolo,
-          },
-        );
-        if (customCompareResult) {
-          subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-        } else {
-          subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
-        }
+        expectNode.comparison = comparison;
+        expectNode.customCompare(actualNode, expectNode, {
+          onSelfDiff,
+          subcompareDuo,
+          subcompareSolo,
+        });
         break visit;
       }
-
       // comparing primitives
       if (actualNode.isPrimitive && expectNode.isPrimitive) {
         visitDuo(actualNode, expectNode);
@@ -722,85 +646,79 @@ export const assert = ({
   throw diff;
 };
 
-assert.not = (value) => {
-  return createAssertMethodCustomExpectation(
-    "not",
-    [
-      {
-        value,
-      },
-    ],
-    {
-      customCompare: (expectNode, actualNode, { subcompareDuo }) => {
-        const expectValueNode = expectNode.childNodeMap
-          .get("assert_method_call")
-          .childNodeMap.get("method_call")
-          .childNodeMap.get(0)
-          .childNodeMap.get("entry_value");
-        const notValueComparison = subcompareDuo(actualNode, expectValueNode, {
-          isNot: true,
-        });
-        expectValueNode.ignore = true;
-        if (notValueComparison.hasAnyDiff) {
-          // we should also "revert" side effects of all diff inside expectAsNode
-          // - adding to causeSet
-          // - colors (should be done during comparison)
-          return true;
-        }
+const customExpectationSymbol = Symbol.for("jsenv_assert_custom_expectation");
+const createCustomExpectation = (name, props) => {
+  return {
+    [Symbol.toStringTag]: name,
+    [customExpectationSymbol]: true,
+    group: "custom_expectation",
+    subgroup: name,
+    ...props,
+  };
+};
+const createAssertMethodCustomExpectation = (
+  methodName,
+  args,
+  { comparer, getExpectationNode, renderOnlyArgs },
+) => {
+  // if (customCompare === undefined) {
+  //   customCompare = (expectNode, actualNode, { subcompareDuo }) => {
+  //     const callEntriesNode = expectNode.childNodeMap
+  //       .get("assert_method_call")
+  //       .childNodeMap.get("method_call");
+  //     for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
+  //       const callArgValueNode =
+  //         callArgEntrygNode.childNodeMap.get("entry_value");
+  //       subcompareDuo(actualNode, callArgValueNode);
+  //     }
+  //   };
+  // }
+
+  return createCustomExpectation(`assert.${methodName}`, {
+    parse: (node) => {
+      node.childGenerator = () => {
+        node.appendChild(
+          "assert_method_call",
+          createMethodCallNode(node, {
+            objectName: "assert",
+            methodName,
+            args,
+          }),
+        );
+      };
+    },
+    customCompare: (
+      actualNode,
+      expectNode,
+      { subcompareSolo, subcompareDuo, onSelfDiff },
+    ) => {
+      const expectationChildNode = getExpectationNode(expectNode);
+      expectationChildNode.ignore = true;
+      const childComparison = subcompareDuo(actualNode, expectationChildNode);
+      if (childComparison.hasAnyDiff) {
+        // onSelfDiff(comparerResult);
+        subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
         return false;
-      },
+      }
+      subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+      return true;
     },
-  );
-};
-assert.between = (minValue, maxValue) => {
-  if (typeof minValue !== "number") {
-    throw new TypeError(
-      `assert.between 1st argument must be number, received ${minValue}`,
-    );
-  }
-  if (typeof maxValue !== "number") {
-    throw new TypeError(
-      `assert.between 2nd argument must be number, received ${maxValue}`,
-    );
-  }
-  if (minValue > maxValue) {
-    throw new Error(
-      `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
-    );
-  }
-  return createAssertMethodCustomExpectation("between", [
-    assert.aboveOrEquals(minValue, { renderOnlyArgs: true }),
-    assert.belowOrEquals(maxValue, { renderOnlyArgs: true }),
-  ]);
-};
-assert.aboveOrEquals = (value, { renderOnlyArgs }) => {
-  if (typeof value !== "number") {
-    throw new TypeError(
-      `assert.aboveOrEquals 1st argument must be number, received ${value}`,
-    );
-  }
-  return createAssertMethodCustomExpectation(
-    "aboveOrEquals",
-    [
-      {
-        value,
-        customCompare: createBasicCustomCompare((actualNode) => {
-          if (!actualNode.isNumber) {
-            return "should_be_a_number";
-          }
-          if (actualNode.value < value) {
-            return `should_be_greater_or_equals_to_${value}`;
-          }
-          return null;
-        }),
-      },
-    ],
-    {
-      renderOnlyArgs,
+    render: (node, props) => {
+      let diff = "";
+      const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
+      if (renderOnlyArgs) {
+        const callNode = assertMethodCallNode.childNodeMap.get("method_call");
+        callNode.startMarker = "";
+        callNode.endMarker = "";
+        diff += callNode.render(props);
+      } else {
+        diff += assertMethodCallNode.render(props);
+      }
+      return diff;
     },
-  );
+  });
 };
-assert.belowOrEquals = (value, { renderOnlyArgs }) => {
+assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
   if (typeof value !== "number") {
     throw new TypeError(
       `assert.belowOrEquals 1st argument must be number, received ${value}`,
@@ -811,22 +729,110 @@ assert.belowOrEquals = (value, { renderOnlyArgs }) => {
     [
       {
         value,
-        customCompare: createBasicCustomCompare((actualNode) => {
+        customCompare: (actualNode, _, { onSelfDiff }) => {
           if (!actualNode.isNumber) {
-            return "should_be_a_number";
+            onSelfDiff("should_be_a_number");
+            return;
           }
           if (actualNode.value > value) {
-            return `should_be_below_or_equals_to_${value}`;
+            onSelfDiff(`should_be_below_or_equals_to_${value}`);
+            return;
           }
-          return null;
-        }),
+          return;
+        },
       },
     ],
     {
       renderOnlyArgs,
+      getExpectationNode: (expectNode) => {
+        return expectNode.childNodeMap
+          .get("assert_method_call")
+          .childNodeMap.get("method_call")
+          .childNodeMap.get(0)
+          .childNodeMap.get("entry_value");
+      },
     },
   );
 };
+// assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
+//   if (typeof value !== "number") {
+//     throw new TypeError(
+//       `assert.aboveOrEquals 1st argument must be number, received ${value}`,
+//     );
+//   }
+//   return createAssertMethodCustomExpectation(
+//     "aboveOrEquals",
+//     [
+//       {
+//         value,
+//         customCompare: createBasicCustomCompare((actualNode) => {
+//           if (!actualNode.isNumber) {
+//             return "should_be_a_number";
+//           }
+//           if (actualNode.value < value) {
+//             return `should_be_greater_or_equals_to_${value}`;
+//           }
+//           return null;
+//         }),
+//       },
+//     ],
+//     {
+//       renderOnlyArgs,
+//     },
+//   );
+// };
+// assert.between = (minValue, maxValue) => {
+//   if (typeof minValue !== "number") {
+//     throw new TypeError(
+//       `assert.between 1st argument must be number, received ${minValue}`,
+//     );
+//   }
+//   if (typeof maxValue !== "number") {
+//     throw new TypeError(
+//       `assert.between 2nd argument must be number, received ${maxValue}`,
+//     );
+//   }
+//   if (minValue > maxValue) {
+//     throw new Error(
+//       `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
+//     );
+//   }
+//   return createAssertMethodCustomExpectation("between", [
+//     assert.aboveOrEquals(minValue, { renderOnlyArgs: true }),
+//     assert.belowOrEquals(maxValue, { renderOnlyArgs: true }),
+//   ]);
+// };
+// assert.not = (value) => {
+//   return createAssertMethodCustomExpectation(
+//     "not",
+//     [
+//       {
+//         value,
+//       },
+//     ],
+//     {
+//       getExpectationNode: (expectNode) => {
+//         return expectNode.childNodeMap
+//           .get("assert_method_call")
+//           .childNodeMap.get("method_call")
+//           .childNodeMap.get(0)
+//           .childNodeMap.get("entry_value");
+//       },
+//       comparer: (actualNode, expectValueNode, { subcompareDuo }) => {
+//         const notValueComparison = subcompareDuo(actualNode, expectValueNode, {
+//           isNot: true,
+//         });
+//         if (notValueComparison.hasAnyDiff) {
+//           // we should also "revert" side effects of all diff inside expectAsNode
+//           // - adding to causeSet
+//           // - colors (should be done during comparison)
+//           return null;
+//         }
+//         return "sould_have_diff";
+//       },
+//     },
+//   );
+// };
 
 let createRootNode;
 /*
@@ -1553,6 +1559,11 @@ let createRootNode;
     }
 
     node.isPrimitive = true;
+    if (typeofResult === "number") {
+      node.isPrimitive = true;
+      node.isNumber = true;
+      return node;
+    }
     if (typeofResult === "string") {
       node.isString = true;
       if (group === "grammar") {
