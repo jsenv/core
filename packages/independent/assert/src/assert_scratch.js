@@ -28,8 +28,6 @@ import {
 } from "./function_analysis.js";
 import { tokenizeString } from "./tokenize_string.js";
 
-// ANSI.supported = false;
-
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.YELLOW;
@@ -339,20 +337,19 @@ export const assert = ({
       }
       if (actualNode.isPrimitive || actualNode.isComposite) {
         if (actualNode.value === expectNode.value) {
-          let compared = false;
+          const actualRender = actualNode.render;
+          const expectRender = expectNode.render;
           actualNode.render = (props) => {
-            if (!compared) {
-              compared = true;
-              subcompareChilNodesDuo(actualNode, expectNode);
-            }
-            return renderValue(actualNode, props);
+            actualNode.render = actualRender;
+            expectNode.render = expectRender;
+            subcompareChilNodesDuo(actualNode, expectNode);
+            return actualRender(props);
           };
           expectNode.render = (props) => {
-            if (!compared) {
-              compared = true;
-              subcompareChilNodesDuo(actualNode, expectNode);
-            }
-            return renderValue(expectNode, props);
+            actualNode.render = actualRender;
+            expectNode.render = expectRender;
+            subcompareChilNodesDuo(actualNode, expectNode);
+            return expectRender(props);
           };
           return;
         }
@@ -655,7 +652,7 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { renderOnlyArgs },
+  { renderOnlyArgs } = {},
 ) => {
   return createCustomExpectation(`assert.${methodName}`, {
     parse: (node) => {
@@ -675,16 +672,19 @@ const createAssertMethodCustomExpectation = (
       expectNode,
       { subcompareSolo, subcompareDuo },
     ) => {
-      const callEntriesNode = expectNode.childNodeMap
-        .get("assert_method_call")
-        .childNodeMap.get("method_call");
+      const assertMethod = expectNode.childNodeMap.get("assert_method_call");
+      const callEntriesNode = assertMethod.childNodeMap.get("method_call");
       let hasAnyDiff = false;
       for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
         const callArgValueNode =
           callArgEntrygNode.childNodeMap.get("entry_value");
         callArgValueNode.ignore = true;
-        const childComparison = subcompareDuo(actualNode, callArgValueNode);
-        hasAnyDiff = childComparison.hasAnyDiff;
+        if (hasAnyDiff) {
+          subcompareSolo(PLACEHOLDER_FOR_FAILED, callArgValueNode);
+        } else {
+          const childComparison = subcompareDuo(actualNode, callArgValueNode);
+          hasAnyDiff = childComparison.hasAnyDiff;
+        }
       }
       if (hasAnyDiff) {
         subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
@@ -778,8 +778,8 @@ assert.between = (minValue, maxValue) => {
     );
   }
   return createAssertMethodCustomExpectation("between", [
-    assert.aboveOrEquals(minValue, { renderOnlyArgs: true }),
-    assert.belowOrEquals(maxValue, { renderOnlyArgs: true }),
+    { value: assert.aboveOrEquals(minValue, { renderOnlyArgs: true }) },
+    { value: assert.belowOrEquals(maxValue, { renderOnlyArgs: true }) },
   ]);
 };
 // assert.not = (value) => {
@@ -2054,10 +2054,10 @@ const renderEntriesOneLiner = (node, props) => {
   const focusedEntry = node.childNodeMap.get(focusedEntryKey);
   let focusedEntryDiff = "";
   if (focusedEntry) {
-    if (entryKeys.length === 1) {
-      // TODO: ideally something better as in oneLinerWithoutDiff
-      // where we restore endMarker + append it when we got
-      // many
+    if (
+      entryKeys.length === 1 ||
+      (!node.hasTrailingSeparator && focusedEntryIndex === entryKeys.length - 1)
+    ) {
       focusedEntry.endMarker = "";
     }
     focusedEntryDiff = focusedEntry.render(props);
@@ -2101,6 +2101,9 @@ const renderEntriesOneLiner = (node, props) => {
     }
     if (tryBeforeFirst && hasPreviousEntry) {
       tryBeforeFirst = false;
+    }
+    if (!node.hasTrailingSeparator && entryIndex === entryKeys.length - 1) {
+      entryNode.endMarker = "";
     }
     const entryDiff = entryNode.render(props);
     const entryDiffWidth = measureLastLineColumns(entryDiff);
@@ -2156,6 +2159,7 @@ const renderEntriesWithoutDiffOneLiner = (node, props) => {
   let diff = "";
   let entriesDiff = "";
   let lastEntryDisplayed = null;
+  let lastEntryDisplayedIndex = 0;
   node.hasIndentBeforeEntries = false;
   for (const entryKey of entryKeys) {
     const entryNode = node.childNodeMap.get(entryKey);
@@ -2188,13 +2192,19 @@ const renderEntriesWithoutDiffOneLiner = (node, props) => {
       return diff;
     }
     if (lastEntryDisplayed) {
-      entriesDiff += setColor(
-        lastEntryDisplayed.endMarker,
-        lastEntryDisplayed.color,
-      );
+      if (
+        node.hasTrailingSeparator ||
+        lastEntryDisplayedIndex !== entryKeys.length - 1
+      ) {
+        entriesDiff += setColor(
+          lastEntryDisplayed.endMarker,
+          lastEntryDisplayed.color,
+        );
+      }
       entriesDiff += " ";
     }
     lastEntryDisplayed = entryNode;
+    lastEntryDisplayedIndex = entryKeys.indexOf(entryKey);
     entriesDiff += entryDiff;
     columnsRemaining -= entryDiffWidth;
   }
@@ -2412,7 +2422,7 @@ const createFunctionCallNode = (node, { args }) => {
     group: "entries",
     subgroup: "function_call",
     value: [],
-    isCompatibleWithMultilineDiff: true,
+    // isCompatibleWithMultilineDiff: true,
     isCompatibleWithSingleLineDiff: true,
     // hasNewLineAroundEntries: true,
     // hasIndentBeforeEntries: true,

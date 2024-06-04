@@ -2,3 +2,7 @@
 actual: 50
 expect: assert.belowOrEquals(25)
 
+# 50 is too small
+actual: 50
+expect: assert.between(100,200)
+

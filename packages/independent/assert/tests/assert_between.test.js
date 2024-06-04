@@ -8,12 +8,12 @@ await startSnapshotTesting("assert_between", {
       expect: assert.belowOrEquals(25),
     });
   },
-  // "50 is too small": () => {
-  //   assert({
-  //     actual: 50,
-  //     expect: assert.between(100, 200),
-  //   });
-  // },
+  "50 is too small": () => {
+    assert({
+      actual: 50,
+      expect: assert.between(100, 200),
+    });
+  },
   // "250 is too big": () => {
   //   assert({
   //     actual: 42,
