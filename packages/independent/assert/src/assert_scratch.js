@@ -102,9 +102,12 @@ const measureLastLineColumns = (string) => {
 };
 
 const customExpectationSymbol = Symbol.for("jsenv_assert_custom_expectation");
-const createCustomExpectation = (props) => {
+const createCustomExpectation = (name, props) => {
   return {
+    [Symbol.toStringTag]: name,
     [customExpectationSymbol]: true,
+    group: "custom_expectation",
+    subgroup: name,
     ...props,
   };
 };
@@ -172,6 +175,9 @@ export const assert = ({
   const compare = (actualNode, expectNode, { isNot } = {}) => {
     if (actualNode.ignore) {
       return actualNode.comparison;
+    }
+    if (!expectNode) {
+      debugger;
     }
     if (expectNode.ignore) {
       return expectNode.comparison;
@@ -657,7 +663,8 @@ export const assert = ({
 };
 
 assert.not = (value) => {
-  return createCustomExpectation({
+  return createCustomExpectation("assert.not", {
+    valueOf: () => value,
     parse: (node) => {
       node.childGenerator = () => {
         node.appendChild(
@@ -669,13 +676,13 @@ assert.not = (value) => {
           }),
         );
       };
-      node.appendWrappedNodeGetter = () => {
+      node.appendWrappedNodeGetter(() => {
         return node.childNodeMap
           .get("assert_not_call")
-          .get("method_call")
+          .childNodeMap.get("method_call")
           .childNodeMap.get(0)
-          .get("entry_value");
-      };
+          .childNodeMap.get("entry_value");
+      });
     },
     customCompare: (
       expectNode,
@@ -694,7 +701,7 @@ assert.not = (value) => {
       } else {
         expectAsNode.ignore = true;
         expectAsNode.comparison = notValueComparison;
-        subcompareSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+        subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
       }
     },
     render: (node, props) => {
@@ -703,8 +710,6 @@ assert.not = (value) => {
       diff += assertNotCallNode.render(props);
       return diff;
     },
-    group: "custom_expectation",
-    subgroup: "assert_not",
     value,
   });
 };
@@ -885,7 +890,7 @@ let createRootNode;
         parse(node);
       }
       node.customCompare = customCompare;
-      node.render = render;
+      node.render = (props) => render(node, props);
       node.group = group;
       node.subgroup = subgroup;
       return node;

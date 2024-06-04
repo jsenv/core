@@ -1,0 +1,6 @@
+# 42 and not(42)
+actual: 42
+expect: assert.not(
+  42
+)
+
