@@ -1,13 +1,19 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("assert_not", {
-  "50 is too small": () => {
+await startSnapshotTesting("assert_between", {
+  "below or equals": () => {
     assert({
-      actual: 42,
-      expect: assert.between(100, 200),
+      actual: 50,
+      expect: assert.belowOrEquals(25),
     });
   },
+  // "50 is too small": () => {
+  //   assert({
+  //     actual: 50,
+  //     expect: assert.between(100, 200),
+  //   });
+  // },
   // "250 is too big": () => {
   //   assert({
   //     actual: 42,

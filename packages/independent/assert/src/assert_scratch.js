@@ -76,6 +76,9 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 const PLACEHOLDER_FOR_SAME = {
   placeholder: "same",
 };
+const PLACEHOLDER_FOR_FAILED = {
+  placeholder: "failed",
+};
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
 const VALUE_OF_RETURN_VALUE_ENTRY_KEY = { key: "valueOf()" };
@@ -164,10 +167,10 @@ export const assert = ({
    *   descriptorValueNode
    */
   const compare = (actualNode, expectNode, { isNot } = {}) => {
-    if (actualNode.ignore) {
+    if (actualNode.ignore && actualNode.comparison) {
       return actualNode.comparison;
     }
-    if (expectNode.ignore) {
+    if (expectNode.ignore && expectNode.comparison) {
       return expectNode.comparison;
     }
     const reasons = createReasons();
@@ -319,8 +322,22 @@ export const assert = ({
         throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
       }
       expectNode.comparison = comparison;
-
-      if (actualNode.isPrimitive) {
+      if (actualNode.group === "entries") {
+        if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
+          actualNode.hasMarkersWhenEmpty =
+            expectNode.hasMarkersWhenEmpty = true;
+        }
+      }
+      const selfDiffReason = expectNode.getSelfDiffReason(
+        actualNode,
+        expectNode,
+      );
+      if (selfDiffReason) {
+        onSelfDiff(selfDiffReason);
+        subcompareChilNodesDuo(actualNode, expectNode);
+        return;
+      }
+      if (actualNode.isPrimitive || actualNode.isComposite) {
         if (actualNode.value === expectNode.value) {
           let compared = false;
           actualNode.render = (props) => {
@@ -328,47 +345,16 @@ export const assert = ({
               compared = true;
               subcompareChilNodesDuo(actualNode, expectNode);
             }
-            return renderPrimitive(actualNode, props);
+            return renderValue(actualNode, props);
           };
           expectNode.render = (props) => {
             if (!compared) {
               compared = true;
               subcompareChilNodesDuo(actualNode, expectNode);
             }
-            return renderPrimitive(expectNode, props);
+            return renderValue(expectNode, props);
           };
-        } else {
-          onSelfDiff("primitive_value");
-          subcompareChilNodesDuo(actualNode, expectNode);
-        }
-        return;
-      }
-      if (actualNode.isComposite) {
-        let compared = false;
-        if (actualNode.value === expectNode.value) {
-          actualNode.render = (props) => {
-            if (!compared) {
-              compared = true;
-              subcompareChilNodesDuo(actualNode, expectNode);
-            }
-            return renderComposite(actualNode, props);
-          };
-          expectNode.render = (props) => {
-            if (!compared) {
-              compared = true;
-              subcompareChilNodesDuo(actualNode, expectNode);
-            }
-            return renderComposite(expectNode, props);
-          };
-        } else {
-          subcompareChilNodesDuo(actualNode, expectNode);
-        }
-        return;
-      }
-      if (actualNode.group === "entries") {
-        if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
-          actualNode.hasMarkersWhenEmpty =
-            expectNode.hasMarkersWhenEmpty = true;
+          return;
         }
       }
       subcompareChilNodesDuo(actualNode, expectNode);
@@ -388,12 +374,9 @@ export const assert = ({
         (actualNode.isPrimitive || actualNode.isComposite) &&
         expectNode.customCompare
       ) {
-        // actualNode.comparison = comparison;
-        // expectNode.comparison = comparison;
+        actualSkipSettle = true;
         expectSkipSettle = true;
-        expectNode.comparison = comparison;
         expectNode.customCompare(actualNode, expectNode, {
-          onSelfDiff,
           subcompareDuo,
           subcompareSolo,
         });
@@ -453,14 +436,21 @@ export const assert = ({
         break visit;
       }
 
-      if (actualNode === PLACEHOLDER_FOR_SAME) {
+      if (
+        actualNode === PLACEHOLDER_FOR_SAME ||
+        actualNode === PLACEHOLDER_FOR_FAILED
+      ) {
         visitSolo(expectNode, actualNode);
         break visit;
       }
-      if (expectNode === PLACEHOLDER_FOR_SAME) {
+      if (
+        expectNode === PLACEHOLDER_FOR_SAME ||
+        expectNode === PLACEHOLDER_FOR_FAILED
+      ) {
         visitSolo(actualNode, expectNode);
         break visit;
       }
+
       if (expectNode.placeholder) {
         visitSolo(actualNode, expectNode);
         onAdded(getAddedOrRemovedReason(actualNode));
@@ -503,7 +493,8 @@ export const assert = ({
 
     if (actualNode.placeholder) {
       expectNode.diffType =
-        actualNode === PLACEHOLDER_FOR_NOTHING
+        actualNode === PLACEHOLDER_FOR_NOTHING ||
+        actualNode === PLACEHOLDER_FOR_FAILED
           ? "modified"
           : actualNode === PLACEHOLDER_FOR_SAME
             ? "same"
@@ -511,7 +502,8 @@ export const assert = ({
       updateColor(expectNode);
     } else if (expectNode.placeholder) {
       actualNode.diffType =
-        expectNode === PLACEHOLDER_FOR_NOTHING
+        expectNode === PLACEHOLDER_FOR_NOTHING ||
+        expectNode === PLACEHOLDER_FOR_FAILED
           ? "modified"
           : expectNode === PLACEHOLDER_FOR_SAME
             ? "same"
@@ -527,10 +519,14 @@ export const assert = ({
         updateColor(expectNode);
       }
     } else {
-      actualNode.diffType = "same";
-      expectNode.diffType = "same";
-      updateColor(actualNode);
-      updateColor(expectNode);
+      if (!actualSkipSettle) {
+        actualNode.diffType = "same";
+        updateColor(actualNode);
+      }
+      if (!expectSkipSettle) {
+        expectNode.diffType = "same";
+        updateColor(expectNode);
+      }
     }
     return comparison;
   };
@@ -659,7 +655,7 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { comparer, getExpectationNode, renderOnlyArgs },
+  { getExpectationNode, renderOnlyArgs },
 ) => {
   // if (customCompare === undefined) {
   //   customCompare = (expectNode, actualNode, { subcompareDuo }) => {
@@ -690,14 +686,13 @@ const createAssertMethodCustomExpectation = (
     customCompare: (
       actualNode,
       expectNode,
-      { subcompareSolo, subcompareDuo, onSelfDiff },
+      { subcompareSolo, subcompareDuo },
     ) => {
       const expectationChildNode = getExpectationNode(expectNode);
       expectationChildNode.ignore = true;
       const childComparison = subcompareDuo(actualNode, expectationChildNode);
       if (childComparison.hasAnyDiff) {
-        // onSelfDiff(comparerResult);
-        subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
+        subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
         return false;
       }
       subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
@@ -729,16 +724,14 @@ assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
     [
       {
         value,
-        customCompare: (actualNode, _, { onSelfDiff }) => {
+        getSelfDiffReason: (actualNode) => {
           if (!actualNode.isNumber) {
-            onSelfDiff("should_be_a_number");
-            return;
+            return "should_be_a_number";
           }
           if (actualNode.value > value) {
-            onSelfDiff(`should_be_below_or_equals_to_${value}`);
-            return;
+            return `should_be_below_or_equals_to_${value}`;
           }
-          return;
+          return null;
         },
       },
     ],
@@ -890,6 +883,7 @@ let createRootNode;
     isClassPrototype = false,
     isValueOfReturnValue = false,
     customCompare,
+    getSelfDiffReason,
     render,
     methodName = "",
     isHidden = false,
@@ -949,6 +943,14 @@ let createRootNode;
       methodName,
       isHidden,
       // START will be set by comparison
+      getSelfDiffReason:
+        getSelfDiffReason ||
+        ((actualNode, expectNode) => {
+          if (actualNode.isPrimitive && actualNode.value !== expectNode.value) {
+            return "primitive_value";
+          }
+          return null;
+        }),
       customCompare,
       ignore: false,
       comparison: null,
@@ -2430,11 +2432,7 @@ const createFunctionCallNode = (node, { args }) => {
     startMarker: "(",
     endMarker: ")",
     childGenerator: (functionCallNode) => {
-      const appendArgEntry = (
-        argIndex,
-        argValue,
-        { key, isValueOfReturnValue, customCompare },
-      ) => {
+      const appendArgEntry = (argIndex, argValue, { key, ...valueParams }) => {
         functionCallNode.value.push(argIndex);
         const argEntryNode = functionCallNode.appendChild(argIndex, {
           render: renderEntry,
@@ -2456,8 +2454,7 @@ const createFunctionCallNode = (node, { args }) => {
           value: argValue,
           path: node.path.append(key || argIndex),
           depth: node.depth,
-          isValueOfReturnValue,
-          customCompare,
+          ...valueParams,
         });
       };
       let argIndex = 0;
