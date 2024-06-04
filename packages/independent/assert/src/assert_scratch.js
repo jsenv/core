@@ -1,7 +1,7 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - assert.not()
+ * - assert.between()
  * - assert.any()
  * - ref
  * - url string and url object
@@ -113,6 +113,63 @@ const createCustomExpectation = (name, props) => {
     ...props,
   };
 };
+const createAssertMethodCustomExpectation = (
+  methodName,
+  args,
+  { customCompare, renderOnlyArgs } = {},
+) => {
+  if (customCompare === undefined) {
+    customCompare = (expectNode, actualNode, { subcompareDuo }) => {
+      const callEntriesNode = expectNode.childNodeMap
+        .get("assert_method_call")
+        .childNodeMap.get("method_call");
+      for (const [, callArgEntrygNode] of callEntriesNode.childNodeMap) {
+        const callArgValueNode =
+          callArgEntrygNode.childNodeMap.get("entry_value");
+        subcompareDuo(actualNode, callArgValueNode);
+      }
+    };
+  }
+
+  return createCustomExpectation(`assert.${methodName}`, {
+    parse: (node) => {
+      node.childGenerator = () => {
+        node.appendChild(
+          "assert_method_call",
+          createMethodCallNode(node, {
+            objectName: "assert",
+            methodName,
+            args,
+          }),
+        );
+      };
+    },
+    customCompare,
+    render: (node, props) => {
+      let diff = "";
+      const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
+      if (renderOnlyArgs) {
+        const callNode = assertMethodCallNode.childNodeMap.get("method_call");
+        callNode.startMarker = "";
+        callNode.endMarker = "";
+        diff += callNode.render(props);
+      } else {
+        diff += assertMethodCallNode.render(props);
+      }
+      return diff;
+    },
+  });
+};
+const createBasicCustomCompare = (basicComparer) => {
+  return (expectNode, actualNode, { onSelfDiff }) => {
+    const basicComparerResult = basicComparer(actualNode);
+    if (basicComparerResult) {
+      onSelfDiff(basicComparerResult);
+      return false;
+    }
+    return true;
+  };
+};
 
 export const assert = ({
   actual,
@@ -177,9 +234,6 @@ export const assert = ({
   const compare = (actualNode, expectNode, { isNot } = {}) => {
     if (actualNode.ignore) {
       return actualNode.comparison;
-    }
-    if (!expectNode) {
-      debugger;
     }
     if (expectNode.ignore) {
       return expectNode.comparison;
@@ -399,6 +453,28 @@ export const assert = ({
     let actualSkipSettle = false;
     let expectSkipSettle = false;
     visit: {
+      if (
+        (actualNode.isPrimitive || actualNode.isComposite) &&
+        expectNode.customCompare
+      ) {
+        expectSkipSettle = true;
+        const customCompareResult = expectNode.customCompare(
+          expectNode,
+          actualNode,
+          {
+            onSelfDiff,
+            subcompareDuo,
+            subcompareSolo,
+          },
+        );
+        if (customCompareResult) {
+          subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+        } else {
+          subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
+        }
+        break visit;
+      }
+
       // comparing primitives
       if (actualNode.isPrimitive && expectNode.isPrimitive) {
         visitDuo(actualNode, expectNode);
@@ -423,15 +499,11 @@ export const assert = ({
         onSelfDiff("should_be_composite");
         const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
         if (expectAsPrimitiveNode) {
-          const primitiveComparison = subcompareDuo(
-            actualNode,
-            expectAsPrimitiveNode,
-          );
+          subcompareDuo(actualNode, expectAsPrimitiveNode);
           // actualSkipSettle so that it's the comparison with expectAsPrimitive
           // who sets diffType + color of actualNode
           actualSkipSettle = true;
           expectAsPrimitiveNode.ignore = true;
-          expectAsPrimitiveNode.comparison = primitiveComparison;
           visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         } else {
           visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
@@ -444,15 +516,11 @@ export const assert = ({
         onSelfDiff("should_be_primitive");
         const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
         if (actualAsPrimitiveNode) {
-          const primitiveComparison = subcompareDuo(
-            actualAsPrimitiveNode,
-            expectNode,
-          );
+          subcompareDuo(actualAsPrimitiveNode, expectNode);
           // expectSkipSettle so that it's the comparison with expectAsPrimitive
           // who sets diffType + color of expectNode
           expectSkipSettle = true;
           actualAsPrimitiveNode.ignore = true;
-          actualAsPrimitiveNode.comparison = primitiveComparison;
           visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         } else {
           visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
@@ -460,17 +528,7 @@ export const assert = ({
         }
         break visit;
       }
-      if (
-        (actualNode.isPrimitive || actualNode.isComposite) &&
-        expectNode.customCompare
-      ) {
-        expectSkipSettle = true;
-        expectNode.customCompare(expectNode, actualNode, {
-          subcompareDuo,
-          subcompareSolo,
-        });
-        break visit;
-      }
+
       if (actualNode === PLACEHOLDER_FOR_SAME) {
         visitSolo(expectNode, actualNode);
         break visit;
@@ -665,57 +723,109 @@ export const assert = ({
 };
 
 assert.not = (value) => {
-  return createCustomExpectation("assert.not", {
-    valueOf: () => value,
-    parse: (node) => {
-      node.childGenerator = () => {
-        node.appendChild(
-          "assert_not_call",
-          createMethodCallNode(node, {
-            objectName: "assert",
-            methodName: "not",
-            args: [{ value }],
-          }),
-        );
-      };
-      node.appendWrappedNodeGetter(() => {
-        return node.childNodeMap
-          .get("assert_not_call")
+  return createAssertMethodCustomExpectation(
+    "not",
+    [
+      {
+        value,
+      },
+    ],
+    {
+      customCompare: (expectNode, actualNode, { subcompareDuo }) => {
+        const expectValueNode = expectNode.childNodeMap
+          .get("assert_method_call")
           .childNodeMap.get("method_call")
           .childNodeMap.get(0)
           .childNodeMap.get("entry_value");
-      });
+        const notValueComparison = subcompareDuo(actualNode, expectValueNode, {
+          isNot: true,
+        });
+        expectValueNode.ignore = true;
+        if (notValueComparison.hasAnyDiff) {
+          // we should also "revert" side effects of all diff inside expectAsNode
+          // - adding to causeSet
+          // - colors (should be done during comparison)
+          return true;
+        }
+        return false;
+      },
     },
-    customCompare: (
-      expectNode,
-      actualNode,
-      { subcompareDuo, subcompareSolo },
-    ) => {
-      const expectAsNode = getWrappedNode(expectNode, () => true);
-      const notValueComparison = subcompareDuo(actualNode, expectAsNode, {
-        isNot: true,
-      });
-      if (notValueComparison.hasAnyDiff) {
-        // we should also "revert" side effects of all diff inside expectAsNode
-        // - adding to causeSet
-        // - colors (should be done during comparison)
-        expectAsNode.ignore = true;
-        expectAsNode.comparison = notValueComparison;
-        subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-      } else {
-        expectAsNode.ignore = true;
-        expectAsNode.comparison = notValueComparison;
-        subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
-      }
+  );
+};
+assert.between = (minValue, maxValue) => {
+  if (typeof minValue !== "number") {
+    throw new TypeError(
+      `assert.between 1st argument must be number, received ${minValue}`,
+    );
+  }
+  if (typeof maxValue !== "number") {
+    throw new TypeError(
+      `assert.between 2nd argument must be number, received ${maxValue}`,
+    );
+  }
+  if (minValue > maxValue) {
+    throw new Error(
+      `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
+    );
+  }
+  return createAssertMethodCustomExpectation("between", [
+    assert.aboveOrEquals(minValue, { renderOnlyArgs: true }),
+    assert.belowOrEquals(maxValue, { renderOnlyArgs: true }),
+  ]);
+};
+assert.aboveOrEquals = (value, { renderOnlyArgs }) => {
+  if (typeof value !== "number") {
+    throw new TypeError(
+      `assert.aboveOrEquals 1st argument must be number, received ${value}`,
+    );
+  }
+  return createAssertMethodCustomExpectation(
+    "aboveOrEquals",
+    [
+      {
+        value,
+        customCompare: createBasicCustomCompare((actualNode) => {
+          if (!actualNode.isNumber) {
+            return "should_be_a_number";
+          }
+          if (actualNode.value < value) {
+            return `should_be_greater_or_equals_to_${value}`;
+          }
+          return null;
+        }),
+      },
+    ],
+    {
+      renderOnlyArgs,
     },
-    render: (node, props) => {
-      let diff = "";
-      const assertNotCallNode = node.childNodeMap.get("assert_not_call");
-      diff += assertNotCallNode.render(props);
-      return diff;
+  );
+};
+assert.belowOrEquals = (value, { renderOnlyArgs }) => {
+  if (typeof value !== "number") {
+    throw new TypeError(
+      `assert.belowOrEquals 1st argument must be number, received ${value}`,
+    );
+  }
+  return createAssertMethodCustomExpectation(
+    "belowOrEquals",
+    [
+      {
+        value,
+        customCompare: createBasicCustomCompare((actualNode) => {
+          if (!actualNode.isNumber) {
+            return "should_be_a_number";
+          }
+          if (actualNode.value > value) {
+            return `should_be_below_or_equals_to_${value}`;
+          }
+          return null;
+        }),
+      },
+    ],
+    {
+      renderOnlyArgs,
     },
-    value,
-  });
+  );
 };
 
 let createRootNode;
@@ -773,6 +883,7 @@ let createRootNode;
     isFunctionPrototype = false,
     isClassPrototype = false,
     isValueOfReturnValue = false,
+    customCompare,
     render,
     methodName = "",
     isHidden = false,
@@ -832,7 +943,7 @@ let createRootNode;
       methodName,
       isHidden,
       // START will be set by comparison
-      customCompare: null,
+      customCompare,
       ignore: false,
       comparison: null,
       comparisonDiffMap: null,
@@ -2311,7 +2422,7 @@ const createFunctionCallNode = (node, { args }) => {
       const appendArgEntry = (
         argIndex,
         argValue,
-        { key, isValueOfReturnValue },
+        { key, isValueOfReturnValue, customCompare },
       ) => {
         functionCallNode.value.push(argIndex);
         const argEntryNode = functionCallNode.appendChild(argIndex, {
@@ -2335,14 +2446,12 @@ const createFunctionCallNode = (node, { args }) => {
           path: node.path.append(key || argIndex),
           depth: node.depth,
           isValueOfReturnValue,
+          customCompare,
         });
       };
       let argIndex = 0;
-      for (const { value, key, isValueOfReturnValue } of args) {
-        appendArgEntry(argIndex, value, {
-          key,
-          isValueOfReturnValue,
-        });
+      for (const { value, ...argParams } of args) {
+        appendArgEntry(argIndex, value, argParams);
         argIndex++;
       }
     },
