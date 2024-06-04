@@ -115,7 +115,7 @@ export const assert = ({
   MAX_DIFF_PER_OBJECT = 2,
   MAX_COLUMNS = 100,
 }) => {
-  const rootActualNode = createRootNode({
+  const actualRootNode = createRootNode({
     colorWhenSolo: addedColor,
     colorWhenSame: sameColor,
     colorWhenModified: unexpectColor,
@@ -125,7 +125,7 @@ export const assert = ({
     // otherValue: expect,
     render: renderValue,
   });
-  const rootExpectNode = createRootNode({
+  const expectRootNode = createRootNode({
     colorWhenSolo: removedColor,
     colorWhenSame: sameColor,
     colorWhenModified: expectColor,
@@ -137,8 +137,6 @@ export const assert = ({
   });
 
   const causeSet = new Set();
-  let startActualNode = rootActualNode;
-  let startExpectNode = rootExpectNode;
 
   /*
    * Comparison are objects used to compare actualNode and expectNode
@@ -513,7 +511,7 @@ export const assert = ({
     return comparison;
   };
 
-  const rootComparison = compare(rootActualNode, rootExpectNode);
+  const rootComparison = compare(actualRootNode, expectRootNode);
   if (!rootComparison.hasAnyDiff) {
     return;
   }
@@ -521,42 +519,70 @@ export const assert = ({
   let diff = ``;
   const infos = [];
 
+  let actualStartNode;
+  let expectStartNode;
   start_on_max_depth: {
     if (rootComparison.selfHasModification) {
+      actualStartNode = actualRootNode;
+      expectStartNode = expectRootNode;
       break start_on_max_depth;
     }
-    let topMostComparisonWithDiff = null;
-    for (const comparisonWithDiff of causeSet) {
-      if (
-        !topMostComparisonWithDiff ||
-        comparisonWithDiff.depth < topMostComparisonWithDiff.depth
-      ) {
-        topMostComparisonWithDiff = comparisonWithDiff;
-      }
-    }
-    if (topMostComparisonWithDiff.depth < MAX_DEPTH) {
-      break start_on_max_depth;
-    }
-    let currentComparison = topMostComparisonWithDiff;
-    let startDepth = topMostComparisonWithDiff.depth - MAX_DEPTH;
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const parentComparison = currentComparison.parent;
-      if (parentComparison) {
-        if (
-          !parentComparison.isContainer &&
-          parentComparison.depth === startDepth
-        ) {
-          startActualNode = parentComparison.actualNode;
-          startExpectNode = parentComparison.expectNode;
-          const path = startActualNode.path || startExpectNode.path;
-          infos.push(`diff starts at ${ANSI.color(path, ANSI.YELLOW)}`);
-          break;
+    const getStartNode = (rootNode) => {
+      let topMostNodeWithDiff = null;
+      for (const comparisonWithDiff of causeSet) {
+        const node =
+          comparisonWithDiff[
+            rootNode.name === "actual" ? "actualNode" : "expectNode"
+          ];
+        if (!topMostNodeWithDiff || node.depth < topMostNodeWithDiff.depth) {
+          topMostNodeWithDiff = node;
         }
-        currentComparison = parentComparison;
-      } else {
-        break;
       }
+      if (topMostNodeWithDiff.depth < MAX_DEPTH) {
+        return rootNode;
+      }
+      let currentNode = topMostNodeWithDiff;
+      let startDepth = topMostNodeWithDiff.depth - MAX_DEPTH;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const parentNode = currentNode.parent;
+        if (!parentNode) {
+          return rootNode;
+        }
+        if (!parentNode.isContainer && parentNode.depth === startDepth) {
+          return parentNode;
+        }
+        currentNode = parentNode;
+      }
+    };
+    actualStartNode = getStartNode(actualRootNode);
+    expectStartNode = getStartNode(expectRootNode);
+    if (
+      actualStartNode !== actualRootNode &&
+      expectStartNode !== expectRootNode
+    ) {
+      const actualStartNodePath = actualStartNode.path.toString();
+      const expectStartNodePath = expectStartNode.path.toString();
+      if (actualStartNodePath === expectStartNodePath) {
+        infos.push(
+          `diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
+        );
+      } else {
+        infos.push(
+          `actual diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
+        );
+        infos.push(
+          `expect diff starts at ${ANSI.color(expectStartNodePath, ANSI.YELLOW)}`,
+        );
+      }
+    } else if (actualStartNode !== actualRootNode) {
+      infos.push(
+        `actual diff starts at ${ANSI.color(actualStartNode.path, ANSI.YELLOW)}`,
+      );
+    } else if (expectStartNode !== expectRootNode) {
+      infos.push(
+        `expect diff starts at ${ANSI.color(expectStartNode.path, ANSI.YELLOW)}`,
+      );
     }
   }
 
@@ -570,7 +596,7 @@ export const assert = ({
 
   diff += ANSI.color("actual:", sameColor);
   diff += " ";
-  diff += startActualNode.render({
+  diff += actualStartNode.render({
     MAX_ENTRY_BEFORE_MULTILINE_DIFF,
     MAX_ENTRY_AFTER_MULTILINE_DIFF,
     MAX_DEPTH,
@@ -578,13 +604,12 @@ export const assert = ({
     MAX_DIFF_PER_OBJECT,
     MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "actual: ".length,
-    startActualNode,
-    startExpectNode,
+    startNode: actualStartNode,
   });
   diff += `\n`;
   diff += ANSI.color("expect:", sameColor);
   diff += " ";
-  diff += startExpectNode.render({
+  diff += expectStartNode.render({
     MAX_ENTRY_BEFORE_MULTILINE_DIFF,
     MAX_ENTRY_AFTER_MULTILINE_DIFF,
     MAX_DEPTH,
@@ -592,8 +617,7 @@ export const assert = ({
     MAX_DIFF_PER_OBJECT,
     MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "expect: ".length,
-    startActualNode,
-    startExpectNode,
+    startNode: expectStartNode,
   });
   throw diff;
 };
@@ -1769,10 +1793,7 @@ const renderEntries = (node, props) => {
   });
 };
 const getNodeDepth = (node, props) => {
-  if (node.name === "actual") {
-    return node.depth - props.startActualNode.depth;
-  }
-  return node.depth - props.startExpectNode.depth;
+  return node.depth - props.startNode.depth;
 };
 
 const renderEntriesOneLiner = (node, props) => {
