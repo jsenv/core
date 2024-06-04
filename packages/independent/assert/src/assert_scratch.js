@@ -808,7 +808,7 @@ let createRootNode;
       subgroup === "array_entry_key" ||
       subgroup === "line_entry_key" ||
       subgroup === "char_entry_key" ||
-      subgroup === "function_call_entry_key"
+      subgroup === "function_call_arg_entry_key"
     ) {
       node.isPrimitive = true;
       node.isNumber = true;
@@ -2169,24 +2169,24 @@ const createFunctionCallNode = (node, { args }) => {
         const argEntryNode = functionCallNode.appendChild(argIndex, {
           render: renderEntry,
           group: "entry",
-          subgroup: "function_call_entry",
+          subgroup: "function_call_arg_entry",
           endMarker: ",",
         });
         argEntryNode.appendChild("entry_key", {
           render: renderInteger,
           group: "entry_key",
-          subgroup: "function_call_entry_key",
+          subgroup: "function_call_arg_entry_key",
           value: argIndex,
           isHidden: true,
         });
         argEntryNode.appendChild("entry_value", {
           render: renderValue,
           group: "entry_value",
-          subgroup: "function_call_entry_value",
+          subgroup: "function_call_arg_entry_value",
           value: argValue,
           path: node.path.append(key || argIndex),
           depth: node.depth,
-          ...isValueOfReturnValue,
+          isValueOfReturnValue,
         });
       };
       let argIndex = 0;
@@ -2222,55 +2222,34 @@ const getAddedOrRemovedReason = (node) => {
 };
 
 const asCompositeNode = (node) => {
-  const wrappedNode = node.wrappedNode;
-  if (wrappedNode) {
-    if (wrappedNode.isComposite) {
-      return wrappedNode;
-    }
-    // can happen if wrappedNode is not a real value
-    // like assert.not(assert.any(String))
-    const nested = asCompositeNode(wrappedNode);
-    if (nested) {
-      return nested;
-    }
+  const wrappedNode = getValueOfReturnValueNode(node);
+  if (!wrappedNode) {
+    return null;
   }
-  const valueOfReturnValueNode = getValueOfReturnValueNode(node);
-  if (valueOfReturnValueNode) {
-    if (valueOfReturnValueNode.isComposite) {
-      return valueOfReturnValueNode;
-    }
-    return asCompositeNode(valueOfReturnValueNode);
+  if (wrappedNode.isComposite) {
+    return wrappedNode;
   }
-  return null;
+  // can happen for
+  // valueOf: () => {
+  //   return { valueOf: () => {} }
+  // }
+  return asCompositeNode(wrappedNode);
 };
 const asPrimitiveNode = (node) => {
-  const wrappedNode = node.wrappedNode;
-  if (wrappedNode) {
-    if (wrappedNode.isPrimitive) {
-      return wrappedNode;
-    }
-    const nested = asPrimitiveNode(wrappedNode);
-    if (nested) {
-      return nested;
-    }
+  const wrappedNode =
+    getSymbolToPrimitiveReturnValueNode(node) ||
+    getValueOfReturnValueNode(node);
+  if (!wrappedNode) {
+    return null;
   }
-  const symbolToPrimitiveReturnValueNode =
-    getSymbolToPrimitiveReturnValueNode(node);
-  if (symbolToPrimitiveReturnValueNode) {
-    return symbolToPrimitiveReturnValueNode;
+  if (wrappedNode.isPrimitive) {
+    return wrappedNode;
   }
-  const valueOfReturnValueNode = getValueOfReturnValueNode(node);
-  if (valueOfReturnValueNode) {
-    if (valueOfReturnValueNode.isPrimitive) {
-      return valueOfReturnValueNode;
-    }
-    // can happen for
-    // valueOf: () => {
-    //   return { valueOf: () => 10 }
-    // }
-    return asPrimitiveNode(valueOfReturnValueNode);
-  }
-  return null;
+  // can happen for
+  // valueOf: () => {
+  //   return { valueOf: () => 10 }
+  // }
+  return asPrimitiveNode(wrappedNode);
 };
 const getSymbolToPrimitiveReturnValueNode = (node) => {
   const propertyEntriesNode = node.childNodeMap.get("property_entries");
