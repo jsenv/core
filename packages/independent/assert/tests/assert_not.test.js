@@ -20,4 +20,22 @@ await startSnapshotTesting("assert_not", {
       },
     });
   },
+  "object and not (object)": () => {
+    assert({
+      actual: { a: true },
+      expect: assert.not({ a: true }),
+    });
+  },
+  "object and not(object)": () => {
+    assert({
+      actual: {
+        a: true,
+        b: { b2: true },
+      },
+      expect: {
+        a: true,
+        b: assert.not({ b2: false }),
+      },
+    });
+  },
 });

@@ -26,3 +26,31 @@ assert({
 
 ![img](<./assert_not/41 and not(42).svg>)
 
+# object and not (object)
+
+```js
+assert({
+  actual: { a: true },
+  expect: assert.not({ a: true }),
+});
+```
+
+![img](<./assert_not/object and not (object).svg>)
+
+# object and not(object)
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: { b2: true },
+  },
+  expect: {
+    a: true,
+    b: assert.not({ b2: false }),
+  },
+});
+```
+
+![img](<./assert_not/object and not(object).svg>)
+

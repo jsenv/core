@@ -63,18 +63,12 @@ expect: {
 }
 
 # valueOf with object tag vs primitive
-actual: Signal(
-  10
-)
+actual: Signal(10)
 expect: false
 
 # valueOf with object tag 
-actual: Signal(
-  10
-)
-expect: Signal(
-  11
-)
+actual: Signal(10)
+expect: Signal(11)
 
 # no diff on valueOf in constructor
 actual: Signal(10) {

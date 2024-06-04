@@ -28,6 +28,8 @@ import {
 } from "./function_analysis.js";
 import { tokenizeString } from "./tokenize_string.js";
 
+// ANSI.supported = false;
+
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.YELLOW;
@@ -2301,8 +2303,8 @@ const createFunctionCallNode = (node, { args }) => {
     value: [],
     isCompatibleWithMultilineDiff: true,
     isCompatibleWithSingleLineDiff: true,
-    hasNewLineAroundEntries: true,
-    hasIndentBeforeEntries: true,
+    // hasNewLineAroundEntries: true,
+    // hasIndentBeforeEntries: true,
     startMarker: "(",
     endMarker: ")",
     childGenerator: (functionCallNode) => {
