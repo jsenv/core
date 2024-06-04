@@ -99,9 +99,10 @@ const measureLastLineColumns = (string) => {
 };
 
 const customExpectationSymbol = Symbol.for("jsenv_assert_custom_expectation");
-const createCustomExpectation = () => {
+const createCustomExpectation = (props) => {
   return {
     [customExpectationSymbol]: true,
+    ...props,
   };
 };
 
@@ -449,6 +450,27 @@ export const assert = ({
         }
         break visit;
       }
+      if (
+        (actualNode.isPrimitive || actualNode.isComposite) &&
+        expectNode.isCustomExpectation
+      ) {
+        const expectAsNode = getWrappedNode(expectNode, () => true);
+        if (expectAsNode) {
+          // ici on veut on truc bien spécial
+          // qu'on va surement déplacer dans la custom expect du coup
+          // on fait la comparaison mais avec des couleurs désactivé (ça se sera que pour not)
+          // et si la sous-comparaison marche alors on visite assert.not
+          // en mode PLACHOLDER_FOR_NOTHING en ignorant le noeud dans assert.not()
+          // si la comparaison échoue alors on visit assert.not() avec un placeholder
+          // pour considérer qu'il a fonctionné
+          const customComparison = subcompareDuo(actualNode, expectNode);
+          expectSkipSettle = true;
+          expectAsNode.ignore = true;
+          expectAsNode.comparison = customComparison;
+          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+          break visit;
+        }
+      }
       if (expectNode.placeholder) {
         visitSolo(actualNode, expectNode);
         onAdded(getAddedOrRemovedReason(actualNode));
@@ -624,10 +646,9 @@ export const assert = ({
 
 assert.not = (value) => {
   return createCustomExpectation({
-    value,
     parse: (node) => {
       node.childGenerator = () => {
-        const assertNotCallNode = node.appendChild(
+        node.appendChild(
           "assert_not_call",
           createMethodCallNode(node, {
             objectName: "assert",
@@ -635,7 +656,10 @@ assert.not = (value) => {
             args: [{ value }],
           }),
         );
-        node.wrappedNode = assertNotCallNode.childNodeMap
+      };
+      node.appendWrappedNodeGetter = () => {
+        return node.childNodeMap
+          .get("assert_not_call")
           .get("method_call")
           .childNodeMap.get(0)
           .get("entry_value");
@@ -647,6 +671,9 @@ assert.not = (value) => {
       diff += assertNotCallNode.render(props);
       return diff;
     },
+    group: "custom_expectation",
+    subgroup: "assert_not",
+    value,
   });
 };
 
@@ -734,6 +761,10 @@ let createRootNode;
       childNodeMap: null,
       appendChild: (childKey, params) =>
         appendChildNodeGeneric(node, childKey, params),
+      wrappedNodeGetterSet: new Set(),
+      appendWrappedNodeGetter: (getter) => {
+        node.wrappedNodeGetterSet.add(getter);
+      },
       parent,
       depth,
       path,
@@ -813,6 +844,17 @@ let createRootNode;
       });
     }
     Object.preventExtensions(node);
+    if (value && value[customExpectationSymbol]) {
+      const { parse, render, group, subgroup } = value;
+      node.isCustomExpectation = true;
+      if (parse) {
+        parse(node);
+      }
+      node.render = render;
+      node.group = group;
+      node.subgroup = subgroup;
+      return node;
+    }
     if (
       value === SOURCE_CODE_ENTRY_KEY ||
       value === VALUE_OF_RETURN_VALUE_ENTRY_KEY ||
@@ -1311,6 +1353,47 @@ let createRootNode;
           });
         }
       };
+
+      node.appendWrappedNodeGetter(() => {
+        const propertyEntriesNode = node.childNodeMap.get("property_entries");
+        if (!propertyEntriesNode) {
+          return null;
+        }
+        const symbolToPrimitiveReturnValuePropertyNode =
+          propertyEntriesNode.childNodeMap.get(
+            SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+          );
+        if (!symbolToPrimitiveReturnValuePropertyNode) {
+          return null;
+        }
+        return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
+          "entry_value",
+        );
+      });
+      node.appendWrappedNodeGetter(() => {
+        const constructorCallNode = node.childNodeMap.get("constructor_call");
+        if (constructorCallNode) {
+          const firstArgEntryNode = constructorCallNode.childNodeMap.get(0);
+          if (
+            firstArgEntryNode &&
+            firstArgEntryNode.childNodeMap.get("entry_value")
+              .isValueOfReturnValue
+          ) {
+            return firstArgEntryNode.childNodeMap.get("entry_value");
+          }
+        }
+        const propertyEntriesNode = node.childNodeMap.get("property_entries");
+        if (!propertyEntriesNode) {
+          return null;
+        }
+        const valueOfReturnValuePropertyNode =
+          propertyEntriesNode.childNodeMap.get(VALUE_OF_RETURN_VALUE_ENTRY_KEY);
+        if (!valueOfReturnValuePropertyNode) {
+          return null;
+        }
+        return valueOfReturnValuePropertyNode.childNodeMap.get("entry_value");
+      });
+
       return node;
     }
 
@@ -2242,75 +2325,36 @@ const getAddedOrRemovedReason = (node) => {
   return "unknown";
 };
 
-const asCompositeNode = (node) => {
-  const wrappedNode = getValueOfReturnValueNode(node);
-  if (!wrappedNode) {
-    return null;
-  }
-  if (wrappedNode.isComposite) {
-    return wrappedNode;
-  }
-  // can happen for
-  // valueOf: () => {
-  //   return { valueOf: () => {} }
-  // }
-  return asCompositeNode(wrappedNode);
-};
-const asPrimitiveNode = (node) => {
-  const wrappedNode =
-    getSymbolToPrimitiveReturnValueNode(node) ||
-    getValueOfReturnValueNode(node);
-  if (!wrappedNode) {
-    return null;
-  }
-  if (wrappedNode.isPrimitive) {
-    return wrappedNode;
-  }
-  // can happen for
-  // valueOf: () => {
-  //   return { valueOf: () => 10 }
-  // }
-  return asPrimitiveNode(wrappedNode);
-};
-const getSymbolToPrimitiveReturnValueNode = (node) => {
-  const propertyEntriesNode = node.childNodeMap.get("property_entries");
-  if (!propertyEntriesNode) {
-    return null;
-  }
-  const symbolToPrimitiveReturnValuePropertyNode =
-    propertyEntriesNode.childNodeMap.get(
-      SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
-    );
-  if (!symbolToPrimitiveReturnValuePropertyNode) {
-    return null;
-  }
-  return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
-    "entry_value",
-  );
-};
-const getValueOfReturnValueNode = (node) => {
-  const constructorCallNode = node.childNodeMap.get("constructor_call");
-  if (constructorCallNode) {
-    const firstArgEntryNode = constructorCallNode.childNodeMap.get(0);
-    if (
-      firstArgEntryNode &&
-      firstArgEntryNode.childNodeMap.get("entry_value").isValueOfReturnValue
-    ) {
-      return firstArgEntryNode.childNodeMap.get("entry_value");
+const getWrappedNode = (node, predicate) => {
+  for (const wrappedNodeGetter of node.wrappedNodeGetterSet) {
+    const wrappedNode = wrappedNodeGetter();
+    if (!wrappedNode) {
+      continue;
+    }
+    if (predicate(wrappedNode)) {
+      return wrappedNode;
+    }
+    // can happen for
+    // valueOf: () => {
+    //   return { valueOf: () => 10 }
+    // }
+    const nested = wrappedNode.getWrappedNode(node, predicate);
+    if (nested) {
+      return nested;
     }
   }
-  const propertyEntriesNode = node.childNodeMap.get("property_entries");
-  if (!propertyEntriesNode) {
-    return null;
-  }
-  const valueOfReturnValuePropertyNode = propertyEntriesNode.childNodeMap.get(
-    VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-  );
-  if (!valueOfReturnValuePropertyNode) {
-    return null;
-  }
-  return valueOfReturnValuePropertyNode.childNodeMap.get("entry_value");
+  return null;
 };
+// const asCompositeNode = (node) =>
+//   getWrappedNode(
+//     node,
+//     (wrappedNodeCandidate) => wrappedNodeCandidate.isComposite,
+//   );
+const asPrimitiveNode = (node) =>
+  getWrappedNode(
+    node,
+    (wrappedNodeCandidate) => wrappedNodeCandidate.isPrimitive,
+  );
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
   if (ownPropertyName === "prototype") {
