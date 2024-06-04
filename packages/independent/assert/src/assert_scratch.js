@@ -166,7 +166,7 @@ export const assert = ({
    *   descriptorKeyNode
    *   descriptorValueNode
    */
-  const compare = (actualNode, expectNode, parent = null) => {
+  const compare = (actualNode, expectNode) => {
     if (actualNode.ignore) {
       return actualNode.comparison;
     }
@@ -175,12 +175,8 @@ export const assert = ({
     }
     const reasons = createReasons();
     const comparison = {
-      isComparison: true,
       actualNode,
       expectNode,
-      depth: actualNode.depth || expectNode.depth,
-      group: actualNode.group || expectNode.group,
-      parent,
       reasons,
       done: false,
     };
@@ -210,7 +206,6 @@ export const assert = ({
         expectChildNode,
         comparison,
       );
-      childComparison.parent = comparison;
       appendReasonGroup(
         comparison.reasons.inside,
         childComparison.reasons.overall,
