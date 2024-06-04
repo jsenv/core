@@ -8,16 +8,16 @@ await startSnapshotTesting("assert_not", {
       expect: assert.not(42),
     });
   },
-  //   "41 and not(42)": () => {
-  //     assert({
-  //       actual: {
-  //         a: true,
-  //         b: 41,
-  //       },
-  //       expected: {
-  //         a: false,
-  //         b: assert.not(42),
-  //       },
-  //     });
-  //   },
+  "41 and not(42)": () => {
+    assert({
+      actual: {
+        a: true,
+        b: 41,
+      },
+      expect: {
+        a: false,
+        b: assert.not(42),
+      },
+    });
+  },
 });

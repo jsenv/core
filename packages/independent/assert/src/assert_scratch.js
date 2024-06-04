@@ -697,6 +697,8 @@ assert.not = (value) => {
         // we should also "revert" side effects of all diff inside expectAsNode
         // - adding to causeSet
         // - colors (should be done during comparison)
+        expectAsNode.ignore = true;
+        expectAsNode.comparison = notValueComparison;
         subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
       } else {
         expectAsNode.ignore = true;
