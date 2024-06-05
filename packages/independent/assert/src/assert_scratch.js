@@ -221,7 +221,7 @@ export const assert = ({
       }
       return subcompareDuo(placeholderNode, childNode, compareOptions);
     };
-    const subcompareChilNodesDuo = (actualNode, expectNode) => {
+    const subcompareChildNodesDuo = (actualNode, expectNode) => {
       const isSetEntriesComparison =
         actualNode.subgroup === "set_entries" &&
         expectNode.subgroup === "set_entries";
@@ -333,7 +333,7 @@ export const assert = ({
       );
       if (selfDiffReason) {
         onSelfDiff(selfDiffReason);
-        subcompareChilNodesDuo(actualNode, expectNode);
+        subcompareChildNodesDuo(actualNode, expectNode);
         return;
       }
       if (actualNode.isPrimitive || actualNode.isComposite) {
@@ -343,19 +343,19 @@ export const assert = ({
           actualNode.render = (props) => {
             actualNode.render = actualRender;
             expectNode.render = expectRender;
-            subcompareChilNodesDuo(actualNode, expectNode);
+            subcompareChildNodesDuo(actualNode, expectNode);
             return actualRender(props);
           };
           expectNode.render = (props) => {
             actualNode.render = actualRender;
             expectNode.render = expectRender;
-            subcompareChilNodesDuo(actualNode, expectNode);
+            subcompareChildNodesDuo(actualNode, expectNode);
             return expectRender(props);
           };
           return;
         }
       }
-      subcompareChilNodesDuo(actualNode, expectNode);
+      subcompareChildNodesDuo(actualNode, expectNode);
     };
     const visitSolo = (node, placeholderNode) => {
       if (node.comparison) {
@@ -368,18 +368,19 @@ export const assert = ({
     let actualSkipSettle = false;
     let expectSkipSettle = false;
     visit: {
-      if (
-        (actualNode.isPrimitive || actualNode.isComposite) &&
-        expectNode.customCompare
-      ) {
-        actualSkipSettle = true;
-        expectSkipSettle = true;
-        expectNode.customCompare(actualNode, expectNode, {
-          subcompareDuo,
-          subcompareSolo,
-          onSelfDiff,
-        });
-        break visit;
+      if (actualNode.isPrimitive || actualNode.isComposite) {
+        if (expectNode.customCompare) {
+          actualSkipSettle = true;
+          expectSkipSettle = true;
+          expectNode.customCompare(actualNode, expectNode, {
+            subcompareChildNodesDuo,
+            subcompareChildNodesSolo,
+            subcompareDuo,
+            subcompareSolo,
+            onSelfDiff,
+          });
+          break visit;
+        }
       }
       // comparing primitives
       if (actualNode.isPrimitive && expectNode.isPrimitive) {
@@ -689,6 +690,7 @@ const createAssertMethodCustomExpectation = (
           yield callArgValueNode;
         }
       }
+      let hasFailure = false;
       for (const argValueNode of argValueGenerator()) {
         argValueNode.ignore = true;
         const childComparison = subcompareDuo(actualNode, argValueNode, {
@@ -700,20 +702,22 @@ const createAssertMethodCustomExpectation = (
             // - adding to causeSet
             // - colors (should be done during comparison)
             subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-            return;
+          } else {
+            hasFailure = true;
+            onSelfDiff("sould_have_diff");
           }
-          onSelfDiff("sould_have_diff");
-          subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
-          return;
+        } else if (childComparison.hasAnyDiff) {
+          hasFailure = true;
         }
-        if (childComparison.hasAnyDiff) {
-          subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
-          for (const remainingArgValueNode of argValueGenerator()) {
-            remainingArgValueNode.ignore = true;
-            subcompareSolo(PLACEHOLDER_FOR_FAILED, remainingArgValueNode);
-          }
-          return;
-        }
+      }
+      if (hasFailure) {
+        subcompareSolo(
+          expectNode,
+          isAssertNot
+            ? PLACEHOLDER_WHEN_ADDED_OR_REMOVED
+            : PLACEHOLDER_FOR_FAILED,
+        );
+      } else {
         subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
       }
     },
@@ -830,6 +834,20 @@ assert.any = (constructor) => {
   return createAssertMethodCustomExpectation("any", [
     {
       value: constructor,
+      customCompare: (
+        actualNode,
+        expectNode,
+        { subcompareChildNodesDuo, subcompareChildNodesSolo, onSelfDiff },
+      ) => {
+        const t = expectNode.getSelfDiffReason(actualNode);
+        if (t) {
+          onSelfDiff(t);
+          subcompareChildNodesDuo(actualNode, expectNode);
+          return;
+        }
+        subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
+        subcompareChildNodesSolo(expectNode, PLACEHOLDER_FOR_SAME);
+      },
       getSelfDiffReason: constructorName
         ? (actualNode) => {
             for (const proto of objectPrototypeChainGenerator(
