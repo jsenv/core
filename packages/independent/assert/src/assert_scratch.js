@@ -673,8 +673,8 @@ const createAssertMethodCustomExpectation = (
       { subcompareSolo, subcompareDuo, onSelfDiff },
     ) => {
       const assertMethod = expectNode.childNodeMap.get("assert_method_call");
-      const callEntriesNode = assertMethod.childNodeMap.get("method_call");
-      const argIterator = callEntriesNode.childNodeMap[Symbol.iterator]();
+      const callNode = assertMethod.childNodeMap.get("call");
+      const argIterator = callNode.childNodeMap[Symbol.iterator]();
       function* argValueGenerator() {
         let argIteratorResult;
         while ((argIteratorResult = argIterator.next())) {
@@ -719,7 +719,7 @@ const createAssertMethodCustomExpectation = (
       let diff = "";
       const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
       if (renderOnlyArgs) {
-        const callNode = assertMethodCallNode.childNodeMap.get("method_call");
+        const callNode = assertMethodCallNode.childNodeMap.get("call");
         callNode.startMarker = "";
         callNode.endMarker = "";
         diff += callNode.render(props);
@@ -1029,7 +1029,7 @@ let createRootNode;
       subgroup === "array_entry_key" ||
       subgroup === "line_entry_key" ||
       subgroup === "char_entry_key" ||
-      subgroup === "function_call_arg_entry_key"
+      subgroup === "call_arg_entry_key"
     ) {
       node.isPrimitive = true;
       node.isNumber = true;
@@ -1351,7 +1351,7 @@ let createRootNode;
               hasConstructorCall = true;
               node.appendChild(
                 "constructor_call",
-                createFunctionCallNode(node, {
+                createCallNode(node, {
                   args: [
                     {
                       key: "valueOf()",
@@ -1972,7 +1972,7 @@ const renderEntries = (node, props) => {
   if (node.comparisonDiffMap.size > 0) {
     const indexToDisplayArray = [];
     index_to_display: {
-      const entryKeys = node.value;
+      const entryKeys = Array.from(node.childNodeMap.keys());
       if (entryKeys.length === 0) {
         break index_to_display;
       }
@@ -2043,7 +2043,7 @@ const renderEntriesOneLiner = (node, props) => {
   node.hasIndentBeforeEntries = false;
   let columnsRemaining = props.columnsRemaining;
   let focusedEntryIndex = -1; // TODO: take first one with a diff
-  const entryKeys = node.value;
+  const entryKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
   const { overflowStartMarker, overflowEndMarker } = node;
   // columnsRemaining -= overflowStartMarker;
@@ -2060,8 +2060,8 @@ const renderEntriesOneLiner = (node, props) => {
   let focusedEntryDiff = "";
   if (focusedEntry) {
     if (
-      entryKeys.length === 1 ||
-      (!node.hasTrailingSeparator && focusedEntryIndex === entryKeys.length - 1)
+      !node.hasTrailingSeparator &&
+      focusedEntryIndex === entryKeys.length - 1
     ) {
       focusedEntry.endMarker = "";
     }
@@ -2076,8 +2076,8 @@ const renderEntriesOneLiner = (node, props) => {
   let nextChildAttempt = 0;
   const beforeDiffArray = [];
   const afterDiffArray = [];
-  let hasStartOverflow;
-  let hasEndOverflow;
+  let hasStartOverflow = false;
+  let hasEndOverflow = false;
   while (columnsRemaining) {
     const previousEntryIndex = focusedEntryIndex - previousChildAttempt - 1;
     const nextEntryIndex = focusedEntryIndex + nextChildAttempt + 1;
@@ -2157,7 +2157,7 @@ const renderEntriesOneLiner = (node, props) => {
 };
 const renderEntriesWithoutDiffOneLiner = (node, props) => {
   const { startMarker, endMarker } = node;
-  const entryKeys = node.value;
+  const entryKeys = Array.from(node.childNodeMap.keys());
   let columnsRemaining = props.columnsRemaining;
   let boilerplate = `${startMarker} ... ${endMarker}`;
   columnsRemaining -= boilerplate.length;
@@ -2231,7 +2231,7 @@ const renderEntriesWithoutDiffOneLiner = (node, props) => {
   return diff;
 };
 const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
-  const entryKeys = node.value;
+  const entryKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
   let atLeastOneEntryDisplayed = null;
   let diff = "";
@@ -2380,79 +2380,73 @@ const renderEntry = (node, props) => {
 
 const createMethodCallNode = (node, { objectName, methodName, args }) => {
   return {
-    render: (node, props) => {
-      let diff = "";
-      const objectNameNode = node.childNodeMap.get("object_name");
-      diff += objectNameNode.render(props);
-      const methodDotNode = node.childNodeMap.get("method_dot");
-      diff += methodDotNode.render(props);
-      const methodNameNode = node.childNodeMap.get("method_name");
-      diff += methodNameNode.render(props);
-      const methodCallNode = node.childNodeMap.get("method_call");
-      diff += methodCallNode.render(props);
-      return diff;
-    },
+    render: renderEntriesOneLiner,
+    isCompatibleWithSingleLineDiff: true,
+    hasTrailingSeparator: true,
     group: "entries",
     subgroup: "method_call",
     childGenerator: (methodCallNode) => {
       methodCallNode.appendChild("object_name", {
         render: renderGrammar,
         group: "grammar",
-        subgroup: "method_call_object_name",
+        subgroup: "object_name",
         value: objectName,
       });
-      methodCallNode.appendChild("method_dot", {
-        render: renderGrammar,
-        group: "grammar",
-        subgroup: "method_call_dot",
-        value: ".",
-      });
-      methodCallNode.appendChild("method_name", {
-        render: renderGrammar,
-        group: "grammar",
-        subgroup: "method_call_method_name",
-        value: methodName,
-      });
+      if (methodName) {
+        methodCallNode.appendChild("method_dot", {
+          render: renderGrammar,
+          group: "grammar",
+          subgroup: "method_dot",
+          value: ".",
+        });
+        methodCallNode.appendChild("method_name", {
+          render: renderGrammar,
+          group: "grammar",
+          subgroup: "method_name",
+          value: methodName,
+        });
+      }
       methodCallNode.appendChild(
-        "method_call",
-        createFunctionCallNode(methodCallNode, { args }),
+        "call",
+        createCallNode(methodCallNode, { args }),
       );
     },
   };
 };
 
-const createFunctionCallNode = (node, { args }) => {
+const createCallNode = (node, { args }) => {
   return {
-    render: renderEntries,
+    render: renderEntriesOneLiner,
     group: "entries",
-    subgroup: "function_call",
+    subgroup: "call",
     value: [],
     // isCompatibleWithMultilineDiff: true,
     isCompatibleWithSingleLineDiff: true,
+    hasSpacingAroundEntries: true,
     // hasNewLineAroundEntries: true,
     // hasIndentBeforeEntries: true,
     startMarker: "(",
     endMarker: ")",
-    childGenerator: (functionCallNode) => {
+    childGenerator: (callNode) => {
       const appendArgEntry = (argIndex, argValue, { key, ...valueParams }) => {
-        functionCallNode.value.push(argIndex);
-        const argEntryNode = functionCallNode.appendChild(argIndex, {
+        callNode.value.push(argIndex);
+        const argEntryNode = callNode.appendChild(argIndex, {
           render: renderEntry,
           group: "entry",
-          subgroup: "function_call_arg_entry",
+          subgroup: "call_arg_entry",
           endMarker: ",",
         });
         argEntryNode.appendChild("entry_key", {
           render: renderInteger,
           group: "entry_key",
-          subgroup: "function_call_arg_entry_key",
+          subgroup: "call_arg_entry_key",
           value: argIndex,
           isHidden: true,
         });
         argEntryNode.appendChild("entry_value", {
           render: renderValue,
           group: "entry_value",
-          subgroup: "function_call_arg_entry_value",
+          subgroup: "call_arg_entry_value",
           value: argValue,
           path: node.path.append(key || argIndex),
           depth: node.depth,
