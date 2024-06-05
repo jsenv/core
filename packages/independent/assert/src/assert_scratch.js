@@ -202,11 +202,10 @@ export const assert = ({
       expectChildNode,
       compareOptions,
     ) => {
-      const childComparison = compare(
-        actualChildNode,
-        expectChildNode,
-        compareOptions,
-      );
+      const childComparison = compare(actualChildNode, expectChildNode, {
+        isNot,
+        ...compareOptions,
+      });
       appendReasonGroup(
         comparison.reasons.inside,
         childComparison.reasons.overall,
@@ -689,9 +688,7 @@ const createAssertMethodCustomExpectation = (
       }
       for (const argValueNode of argValueGenerator()) {
         argValueNode.ignore = true;
-        const childComparison = subcompareDuo(actualNode, argValueNode, {
-          isNot,
-        });
+        const childComparison = subcompareDuo(actualNode, argValueNode);
         if (isNot) {
           if (childComparison.hasAnyDiff) {
             // we should also "revert" side effects of all diff inside expectAsNode
