@@ -8,24 +8,24 @@ await startSnapshotTesting("assert_any", {
       expect: assert.any(String),
     });
   },
-  // [`"foo" and any(String)`]: () => {
-  //   assert({
-  //     actual: {
-  //       a: true,
-  //       b: "foo",
-  //     },
-  //     expect: {
-  //       a: false,
-  //       b: assert.any(String),
-  //     },
-  //   });
-  // },
-  // [`"foo" and not(any(String))`]: () => {
-  //   assert({
-  //     actual: "foo",
-  //     expect: assert.not(assert.any(String)),
-  //   });
-  // },
+  [`"foo" and any(String)`]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: "foo",
+      },
+      expect: {
+        a: false,
+        b: assert.any(String),
+      },
+    });
+  },
+  [`"foo" and not(any(String))`]: () => {
+    assert({
+      actual: "foo",
+      expect: assert.not(assert.any(String)),
+    });
+  },
   //   any_array_cross_realm: async () => {
   //     assert({
   //       actual: await executeInNewContext("[]"),
