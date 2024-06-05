@@ -818,6 +818,42 @@ assert.not = (value) => {
     },
   );
 };
+assert.any = (constructor) => {
+  if (typeof constructor !== "function") {
+    throw new TypeError(
+      `assert.any 1st argument must be a function, received ${constructor}`,
+    );
+  }
+  const constructorName = constructor.name;
+  return createAssertMethodCustomExpectation("any", [
+    {
+      value: constructor,
+      getSelfDiffReason: constructorName
+        ? (actualNode) => {
+            for (const proto of objectPrototypeChainGenerator(
+              actualNode.value,
+            )) {
+              const protoConstructor = proto.constructor;
+              if (protoConstructor.name === constructorName) {
+                return null;
+              }
+            }
+            return `should_have_constructor_${constructorName}`;
+          }
+        : (actualNode) => {
+            for (const proto of objectPrototypeChainGenerator(
+              actualNode.value,
+            )) {
+              const protoConstructor = proto.constructor;
+              if (protoConstructor === constructor) {
+                return null;
+              }
+            }
+            return `should_have_constructor_${constructor.toString()}`;
+          },
+    },
+  ]);
+};
 
 let createRootNode;
 /*
@@ -1832,6 +1868,10 @@ const renderComposite = (node, props) => {
     diff = setColor("…", node.color);
     return diff;
   }
+  if (node.value === String) {
+    return truncateAndAppyColor("String", node, props);
+  }
+
   let maxDepthReached = false;
   if (node.diffType === "same") {
     maxDepthReached = node.depth > props.MAX_DEPTH;

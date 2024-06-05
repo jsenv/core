@@ -1,0 +1,4 @@
+# 10 and any(String)
+actual: 10
+expect: assert.any(String)
+
