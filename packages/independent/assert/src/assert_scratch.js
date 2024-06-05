@@ -670,57 +670,10 @@ const createAssertMethodCustomExpectation = (
         );
       };
     },
-    customCompare: (
-      actualNode,
-      expectNode,
-      { subcompareSolo, subcompareDuo, onSelfDiff },
-    ) => {
-      const assertMethod = expectNode.childNodeMap.get("assert_method_call");
-      const callNode = assertMethod.childNodeMap.get("call");
-      const argIterator = callNode.childNodeMap[Symbol.iterator]();
-      function* argValueGenerator() {
-        let argIteratorResult;
-        while ((argIteratorResult = argIterator.next())) {
-          if (argIteratorResult.done) {
-            break;
-          }
-          const [, callArgEntryNode] = argIteratorResult.value;
-          const callArgValueNode =
-            callArgEntryNode.childNodeMap.get("entry_value");
-          yield callArgValueNode;
-        }
-      }
-      let hasFailure = false;
-      for (const argValueNode of argValueGenerator()) {
-        argValueNode.ignore = true;
-        const childComparison = subcompareDuo(actualNode, argValueNode, {
-          revertNot: isAssertNot,
-        });
-        if (isAssertNot) {
-          if (childComparison.hasAnyDiff) {
-            // we should also "revert" side effects of all diff inside expectAsNode
-            // - adding to causeSet
-            // - colors (should be done during comparison)
-            subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-          } else {
-            hasFailure = true;
-            onSelfDiff("sould_have_diff");
-          }
-        } else if (childComparison.hasAnyDiff) {
-          hasFailure = true;
-        }
-      }
-      if (hasFailure) {
-        subcompareSolo(
-          expectNode,
-          isAssertNot
-            ? PLACEHOLDER_WHEN_ADDED_OR_REMOVED
-            : PLACEHOLDER_FOR_FAILED,
-        );
-      } else {
-        subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-      }
-    },
+    customCompare:
+      args.length === 1
+        ? createAssertMethodOneArgCustomCompare({ isAssertNot })
+        : createAssertMethodMutiArgCustomCompare(),
     render: (node, props) => {
       let diff = "";
       const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
@@ -735,6 +688,78 @@ const createAssertMethodCustomExpectation = (
       return diff;
     },
   });
+};
+const createAssertMethodOneArgCustomCompare = ({ isAssertNot } = {}) => {
+  return (
+    actualNode,
+    expectNode,
+    { subcompareDuo, subcompareSolo, onSelfDiff },
+  ) => {
+    const assertMethod = expectNode.childNodeMap.get("assert_method_call");
+    const callNode = assertMethod.childNodeMap.get("call");
+    const firstArgValueNode = callNode.childNodeMap
+      .get(0)
+      .childNodeMap.get("entry_value");
+
+    firstArgValueNode.ignore = true;
+    // le truc c'est qu'ici le argValue possede un getSelfDiffReason
+    // mais devrait aussi avoir un customCompare
+    // ou en tous cas devrait parcourir ses enfants d'une maniere solo
+    // lorsque getSelfDiffReason se termine
+    const firstArgComparison = subcompareDuo(actualNode, firstArgValueNode, {
+      revertNot: isAssertNot,
+    });
+    if (isAssertNot) {
+      if (firstArgComparison.hasAnyDiff) {
+        // we should also "revert" side effects of all diff inside expectAsNode
+        // - adding to causeSet
+        // - colors (should be done during comparison)
+        subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+      } else {
+        onSelfDiff("sould_have_diff");
+        subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
+      }
+      return;
+    }
+    if (firstArgComparison.hasAnyDiff) {
+      subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
+      return;
+    }
+    subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+  };
+};
+const createAssertMethodMutiArgCustomCompare = () => {
+  return (actualNode, expectNode, { subcompareDuo, subcompareSolo }) => {
+    const assertMethod = expectNode.childNodeMap.get("assert_method_call");
+    const callNode = assertMethod.childNodeMap.get("call");
+    const argIterator = callNode.childNodeMap[Symbol.iterator]();
+    function* argValueGenerator() {
+      let argIteratorResult;
+      while ((argIteratorResult = argIterator.next())) {
+        if (argIteratorResult.done) {
+          break;
+        }
+        const [, callArgEntryNode] = argIteratorResult.value;
+        const callArgValueNode =
+          callArgEntryNode.childNodeMap.get("entry_value");
+        yield callArgValueNode;
+      }
+    }
+    let hasFailure = false;
+    for (const argValueNode of argValueGenerator()) {
+      argValueNode.ignore = true;
+      const childComparison = subcompareDuo(actualNode, argValueNode);
+      if (childComparison.hasAnyDiff) {
+        hasFailure = true;
+      }
+    }
+    if (hasFailure) {
+      subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
+      return;
+    }
+    subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+    return;
+  };
 };
 assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
   if (typeof value !== "number") {
@@ -834,20 +859,6 @@ assert.any = (constructor) => {
   return createAssertMethodCustomExpectation("any", [
     {
       value: constructor,
-      customCompare: (
-        actualNode,
-        expectNode,
-        { subcompareChildNodesDuo, subcompareChildNodesSolo, onSelfDiff },
-      ) => {
-        const t = expectNode.getSelfDiffReason(actualNode);
-        if (t) {
-          onSelfDiff(t);
-          subcompareChildNodesDuo(actualNode, expectNode);
-          return;
-        }
-        subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
-        subcompareChildNodesSolo(expectNode, PLACEHOLDER_FOR_SAME);
-      },
       getSelfDiffReason: constructorName
         ? (actualNode) => {
             for (const proto of objectPrototypeChainGenerator(
