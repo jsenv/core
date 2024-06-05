@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - assert.any()
  * - ref
  * - url string and url object
  * - well known
@@ -635,7 +634,7 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { renderOnlyArgs, isAssertNot } = {},
+  { argsCanBeComparedInParallel, renderOnlyArgs, isAssertNot } = {},
 ) => {
   return createCustomExpectation(`assert.${methodName}`, {
     parse: (node) => {
@@ -653,7 +652,9 @@ const createAssertMethodCustomExpectation = (
     customCompare:
       args.length === 1
         ? createAssertMethodOneArgCustomCompare({ isAssertNot })
-        : createAssertMethodMutiArgCustomCompare(),
+        : createAssertMethodMutiArgCustomCompare({
+            argsCanBeComparedInParallel,
+          }),
     render: (node, props) => {
       let diff = "";
       const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
@@ -737,7 +738,9 @@ const createAssertMethodOneArgCustomCompare = ({ isAssertNot } = {}) => {
     subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
   };
 };
-const createAssertMethodMutiArgCustomCompare = () => {
+const createAssertMethodMutiArgCustomCompare = ({
+  argsCanBeComparedInParallel,
+}) => {
   return (actualNode, expectNode, { subcompareDuo, subcompareSolo }) => {
     const assertMethod = expectNode.childNodeMap.get("assert_method_call");
     const callNode = assertMethod.childNodeMap.get("call");
@@ -760,6 +763,13 @@ const createAssertMethodMutiArgCustomCompare = () => {
       const childComparison = subcompareDuo(actualNode, argValueNode);
       if (childComparison.hasAnyDiff) {
         hasFailure = true;
+        if (!argsCanBeComparedInParallel) {
+          for (const remainingArgValueNode of argValueGenerator()) {
+            remainingArgValueNode.ignore = true;
+            subcompareSolo(PLACEHOLDER_FOR_MODIFIED, remainingArgValueNode);
+          }
+          break;
+        }
       }
     }
     if (hasFailure) {
