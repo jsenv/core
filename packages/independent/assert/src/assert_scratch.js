@@ -635,7 +635,20 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { argsCanBeComparedInParallel, renderOnlyArgs, isAssertNot } = {},
+  {
+    customCompare = createAssertMethodCustomCompare(
+      (actualNode, expectArgValueNode, { subcompareDuo }) => {
+        const expectArgComparison = subcompareDuo(
+          actualNode,
+          expectArgValueNode,
+        );
+        return expectArgComparison.hasAnyDiff
+          ? PLACEHOLDER_FOR_MODIFIED
+          : PLACEHOLDER_FOR_SAME;
+      },
+    ),
+    renderOnlyArgs,
+  } = {},
 ) => {
   return createCustomExpectation(`assert.${methodName}`, {
     parse: (node) => {
@@ -650,12 +663,7 @@ const createAssertMethodCustomExpectation = (
         );
       };
     },
-    customCompare:
-      args.length === 1
-        ? createAssertMethodOneArgCustomCompare({ isAssertNot })
-        : createAssertMethodMutiArgCustomCompare({
-            argsCanBeComparedInParallel,
-          }),
+    customCompare,
     render: (node, props) => {
       let diff = "";
       const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
@@ -671,76 +679,42 @@ const createAssertMethodCustomExpectation = (
     },
   });
 };
-const createAssertMethodCustomBasicComparer = (methodName, args, options) => {
-  return createAssertMethodCustomExpectation(
-    methodName,
-    args.map((arg) => {
-      const { comparer, ...rest } = arg;
-      return {
-        ...rest,
-        customCompare: (
-          actualNode,
-          expectNode,
-          { onSelfDiff, subcompareChildNodesSolo },
-        ) => {
-          const selfDiff = comparer(actualNode);
-          if (selfDiff) {
-            onSelfDiff(selfDiff);
-            subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
-            return;
-          }
-          subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
-        },
-      };
-    }),
-    options,
-  );
-};
-const createAssertMethodOneArgCustomCompare = ({ isAssertNot } = {}) => {
-  return (
-    actualNode,
-    expectNode,
-    { subcompareDuo, subcompareSolo, onSelfDiff },
-  ) => {
-    // prettier-ignore
-    const expectFirsArgValueNode = expectNode
-      .childNodeMap.get("assert_method_call")
-      .childNodeMap.get("call")
-      .childNodeMap.get(0)
-      .childNodeMap.get("entry_value");
-    expectFirsArgValueNode.ignore = true;
-    const expectFirstArgComparison = subcompareDuo(
-      actualNode,
-      expectFirsArgValueNode,
-      {
-        revertNot: isAssertNot,
-      },
-    );
-    if (isAssertNot) {
-      if (expectFirstArgComparison.hasAnyDiff) {
-        // we should also "revert" side effects of all diff inside expectAsNode
-        // - adding to causeSet
-        // - colors (should be done during comparison)
-        subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
-      } else {
-        onSelfDiff("sould_have_diff");
-        subcompareSolo(expectNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
-      }
+const createValueCustomCompare = (comparer) => {
+  return (actualNode, expectNode, { onSelfDiff, subcompareChildNodesSolo }) => {
+    const selfDiff = comparer(actualNode);
+    if (selfDiff) {
+      onSelfDiff(selfDiff);
+      subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
       return;
     }
-    if (expectFirstArgComparison.hasAnyDiff) {
-      subcompareSolo(expectNode, PLACEHOLDER_FOR_MODIFIED);
-      return;
-    }
-    subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+    subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
   };
 };
-const createAssertMethodMutiArgCustomCompare = ({
-  argsCanBeComparedInParallel,
-}) => {
-  return (actualNode, expectNode, { subcompareDuo, subcompareSolo }) => {
+const createAssertMethodCustomCompare = (
+  comparer,
+  { argsCanBeComparedInParallel } = {},
+) => {
+  return (actualNode, expectNode, options) => {
+    // prettier-ignore
     const assertMethod = expectNode.childNodeMap.get("assert_method_call");
     const callNode = assertMethod.childNodeMap.get("call");
+    const childNodeKeys = Array.from(callNode.childNodeMap.keys());
+    if (childNodeKeys.length === 0) {
+      return;
+    }
+    if (childNodeKeys.length === 1) {
+      const expectFirsArgValueNode = callNode.childNodeMap
+        .get(0)
+        .childNodeMap.get("entry_value");
+      expectFirsArgValueNode.ignore = true;
+      const comparerResult = comparer(
+        actualNode,
+        expectFirsArgValueNode,
+        options,
+      );
+      options.subcompareSolo(expectNode, comparerResult);
+      return;
+    }
     const argIterator = callNode.childNodeMap[Symbol.iterator]();
     function* argValueGenerator() {
       let argIteratorResult;
@@ -757,38 +731,42 @@ const createAssertMethodMutiArgCustomCompare = ({
     let hasFailure = false;
     for (const argValueNode of argValueGenerator()) {
       argValueNode.ignore = true;
-      const childComparison = subcompareDuo(actualNode, argValueNode);
+      const childComparison = options.subcompareDuo(actualNode, argValueNode);
       if (childComparison.hasAnyDiff) {
         hasFailure = true;
         if (!argsCanBeComparedInParallel) {
           for (const remainingArgValueNode of argValueGenerator()) {
             remainingArgValueNode.ignore = true;
-            subcompareSolo(PLACEHOLDER_FOR_MODIFIED, remainingArgValueNode);
+            options.subcompareSolo(
+              PLACEHOLDER_FOR_MODIFIED,
+              remainingArgValueNode,
+            );
           }
           break;
         }
       }
     }
     if (hasFailure) {
-      subcompareSolo(expectNode, PLACEHOLDER_FOR_MODIFIED);
+      options.subcompareSolo(expectNode, PLACEHOLDER_FOR_MODIFIED);
       return;
     }
-    subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+    options.subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
     return;
   };
 };
+
 assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
   if (typeof value !== "number") {
     throw new TypeError(
       `assert.belowOrEquals 1st argument must be number, received ${value}`,
     );
   }
-  return createAssertMethodCustomBasicComparer(
+  return createAssertMethodCustomExpectation(
     "belowOrEquals",
     [
       {
         value,
-        comparer: (actualNode) => {
+        customCompare: createValueCustomCompare((actualNode) => {
           if (!actualNode.isNumber) {
             return "should_be_a_number";
           }
@@ -796,7 +774,7 @@ assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
             return `should_be_below_or_equals_to_${value}`;
           }
           return null;
-        },
+        }),
       },
     ],
     {
@@ -810,12 +788,12 @@ assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
       `assert.aboveOrEquals 1st argument must be number, received ${value}`,
     );
   }
-  return createAssertMethodCustomBasicComparer(
+  return createAssertMethodCustomExpectation(
     "aboveOrEquals",
     [
       {
         value,
-        comparer: (actualNode) => {
+        customCompare: createValueCustomCompare((actualNode) => {
           if (!actualNode.isNumber) {
             return "should_be_a_number";
           }
@@ -823,7 +801,7 @@ assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
             return `should_be_greater_or_equals_to_${value}`;
           }
           return null;
-        },
+        }),
       },
     ],
     {
@@ -861,7 +839,25 @@ assert.not = (value) => {
       },
     ],
     {
-      isAssertNot: true,
+      customCompare: createAssertMethodCustomCompare(
+        (actualNode, expectFirsArgValueNode, { subcompareDuo, onSelfDiff }) => {
+          const expectFirstArgComparison = subcompareDuo(
+            actualNode,
+            expectFirsArgValueNode,
+            {
+              revertNot: true,
+            },
+          );
+          if (expectFirstArgComparison.hasAnyDiff) {
+            // we should also "revert" side effects of all diff inside expectAsNode
+            // - adding to causeSet
+            // - colors (should be done during comparison)
+            return PLACEHOLDER_FOR_SAME;
+          }
+          onSelfDiff("sould_have_diff");
+          return PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
+        },
+      ),
     },
   );
 };
@@ -872,32 +868,34 @@ assert.any = (constructor) => {
     );
   }
   const constructorName = constructor.name;
-  return createAssertMethodCustomBasicComparer("any", [
+  return createAssertMethodCustomExpectation("any", [
     {
       value: constructor,
-      comparer: constructorName
-        ? (actualNode) => {
-            for (const proto of objectPrototypeChainGenerator(
-              actualNode.value,
-            )) {
-              const protoConstructor = proto.constructor;
-              if (protoConstructor.name === constructorName) {
-                return null;
+      customCompare: createValueCustomCompare(
+        constructorName
+          ? (actualNode) => {
+              for (const proto of objectPrototypeChainGenerator(
+                actualNode.value,
+              )) {
+                const protoConstructor = proto.constructor;
+                if (protoConstructor.name === constructorName) {
+                  return null;
+                }
               }
+              return `should_have_constructor_${constructorName}`;
             }
-            return `should_have_constructor_${constructorName}`;
-          }
-        : (actualNode) => {
-            for (const proto of objectPrototypeChainGenerator(
-              actualNode.value,
-            )) {
-              const protoConstructor = proto.constructor;
-              if (protoConstructor === constructor) {
-                return null;
+          : (actualNode) => {
+              for (const proto of objectPrototypeChainGenerator(
+                actualNode.value,
+              )) {
+                const protoConstructor = proto.constructor;
+                if (protoConstructor === constructor) {
+                  return null;
+                }
               }
-            }
-            return `should_have_constructor_${constructor.toString()}`;
-          },
+              return `should_have_constructor_${constructor.toString()}`;
+            },
+      ),
     },
   ]);
 };
