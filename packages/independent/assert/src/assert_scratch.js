@@ -326,10 +326,11 @@ export const assert = ({
             expectNode.hasMarkersWhenEmpty = true;
         }
       }
-      const selfDiffReason = expectNode.getSelfDiffReason(
-        actualNode,
-        expectNode,
-      );
+
+      let selfDiffReason = "";
+      if (actualNode.isPrimitive && actualNode.value !== expectNode.value) {
+        selfDiffReason = "primitive_value";
+      }
       if (selfDiffReason) {
         onSelfDiff(selfDiffReason);
         subcompareChildNodesDuo(actualNode, expectNode);
@@ -670,23 +671,19 @@ const createAssertMethodCustomExpectation = (
     },
   });
 };
-const createAssertMethodSingleCustomExpectation = (
-  methodName,
-  value,
-  getSelfDiffReason,
-  options,
-) => {
+const createAssertMethodCustomBasicComparer = (methodName, args, options) => {
   return createAssertMethodCustomExpectation(
     methodName,
-    [
-      {
-        value,
+    args.map((arg) => {
+      const { comparer, ...rest } = arg;
+      return {
+        ...rest,
         customCompare: (
           actualNode,
           expectNode,
           { onSelfDiff, subcompareChildNodesSolo },
         ) => {
-          const selfDiff = getSelfDiffReason(actualNode);
+          const selfDiff = comparer(actualNode);
           if (selfDiff) {
             onSelfDiff(selfDiff);
             subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
@@ -694,8 +691,8 @@ const createAssertMethodSingleCustomExpectation = (
           }
           subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
         },
-      },
-    ],
+      };
+    }),
     options,
   );
 };
@@ -786,18 +783,22 @@ assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
       `assert.belowOrEquals 1st argument must be number, received ${value}`,
     );
   }
-  return createAssertMethodSingleCustomExpectation(
+  return createAssertMethodCustomBasicComparer(
     "belowOrEquals",
-    value,
-    (actualNode) => {
-      if (!actualNode.isNumber) {
-        return "should_be_a_number";
-      }
-      if (actualNode.value > value) {
-        return `should_be_below_or_equals_to_${value}`;
-      }
-      return null;
-    },
+    [
+      {
+        value,
+        comparer: (actualNode) => {
+          if (!actualNode.isNumber) {
+            return "should_be_a_number";
+          }
+          if (actualNode.value > value) {
+            return `should_be_below_or_equals_to_${value}`;
+          }
+          return null;
+        },
+      },
+    ],
     {
       renderOnlyArgs,
     },
@@ -809,18 +810,22 @@ assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
       `assert.aboveOrEquals 1st argument must be number, received ${value}`,
     );
   }
-  return createAssertMethodSingleCustomExpectation(
+  return createAssertMethodCustomBasicComparer(
     "aboveOrEquals",
-    value,
-    (actualNode) => {
-      if (!actualNode.isNumber) {
-        return "should_be_a_number";
-      }
-      if (actualNode.value < value) {
-        return `should_be_greater_or_equals_to_${value}`;
-      }
-      return null;
-    },
+    [
+      {
+        value,
+        comparer: (actualNode) => {
+          if (!actualNode.isNumber) {
+            return "should_be_a_number";
+          }
+          if (actualNode.value < value) {
+            return `should_be_greater_or_equals_to_${value}`;
+          }
+          return null;
+        },
+      },
+    ],
     {
       renderOnlyArgs,
     },
@@ -867,29 +872,34 @@ assert.any = (constructor) => {
     );
   }
   const constructorName = constructor.name;
-  return createAssertMethodSingleCustomExpectation(
-    "any",
-    constructor,
-    constructorName
-      ? (actualNode) => {
-          for (const proto of objectPrototypeChainGenerator(actualNode.value)) {
-            const protoConstructor = proto.constructor;
-            if (protoConstructor.name === constructorName) {
-              return null;
+  return createAssertMethodCustomBasicComparer("any", [
+    {
+      value: constructor,
+      comparer: constructorName
+        ? (actualNode) => {
+            for (const proto of objectPrototypeChainGenerator(
+              actualNode.value,
+            )) {
+              const protoConstructor = proto.constructor;
+              if (protoConstructor.name === constructorName) {
+                return null;
+              }
             }
+            return `should_have_constructor_${constructorName}`;
           }
-          return `should_have_constructor_${constructorName}`;
-        }
-      : (actualNode) => {
-          for (const proto of objectPrototypeChainGenerator(actualNode.value)) {
-            const protoConstructor = proto.constructor;
-            if (protoConstructor === constructor) {
-              return null;
+        : (actualNode) => {
+            for (const proto of objectPrototypeChainGenerator(
+              actualNode.value,
+            )) {
+              const protoConstructor = proto.constructor;
+              if (protoConstructor === constructor) {
+                return null;
+              }
             }
-          }
-          return `should_have_constructor_${constructor.toString()}`;
-        },
-  );
+            return `should_have_constructor_${constructor.toString()}`;
+          },
+    },
+  ]);
 };
 
 let createRootNode;
@@ -948,7 +958,6 @@ let createRootNode;
     isClassPrototype = false,
     isValueOfReturnValue = false,
     customCompare,
-    getSelfDiffReason,
     render,
     methodName = "",
     isHidden = false,
@@ -1008,14 +1017,6 @@ let createRootNode;
       methodName,
       isHidden,
       // START will be set by comparison
-      getSelfDiffReason:
-        getSelfDiffReason ||
-        ((actualNode, expectNode) => {
-          if (actualNode.isPrimitive && actualNode.value !== expectNode.value) {
-            return "primitive_value";
-          }
-          return null;
-        }),
       customCompare,
       ignore: false,
       comparison: null,
