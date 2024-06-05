@@ -728,29 +728,24 @@ const createAssertMethodCustomCompare = (
         yield callArgValueNode;
       }
     }
-    let hasFailure = false;
+    let result = PLACEHOLDER_FOR_SAME;
     for (const argValueNode of argValueGenerator()) {
       argValueNode.ignore = true;
-      const childComparison = options.subcompareDuo(actualNode, argValueNode);
-      if (childComparison.hasAnyDiff) {
-        hasFailure = true;
-        if (!argsCanBeComparedInParallel) {
-          for (const remainingArgValueNode of argValueGenerator()) {
-            remainingArgValueNode.ignore = true;
-            options.subcompareSolo(
-              PLACEHOLDER_FOR_MODIFIED,
-              remainingArgValueNode,
-            );
-          }
-          break;
-        }
+      const comparerResult = comparer(actualNode, argValueNode, options);
+      if (comparerResult === PLACEHOLDER_FOR_SAME) {
+        continue;
       }
+      result = comparerResult;
+      if (argsCanBeComparedInParallel) {
+        continue;
+      }
+      for (const remainingArgValueNode of argValueGenerator()) {
+        remainingArgValueNode.ignore = true;
+        options.subcompareSolo(comparerResult, remainingArgValueNode);
+      }
+      break;
     }
-    if (hasFailure) {
-      options.subcompareSolo(expectNode, PLACEHOLDER_FOR_MODIFIED);
-      return;
-    }
-    options.subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
+    options.subcompareSolo(expectNode, result);
     return;
   };
 };
