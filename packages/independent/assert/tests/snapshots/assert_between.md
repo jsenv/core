@@ -9,6 +9,23 @@ assert({
 
 ![img](<./assert_between/below or equals.svg>)
 
+# below or equals ok
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: 25,
+  },
+  expect: {
+    a: false,
+    b: assert.belowOrEquals(25),
+  },
+});
+```
+
+![img](<./assert_between/below or equals ok.svg>)
+
 # 50 is too small
 
 ```js

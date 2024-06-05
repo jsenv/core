@@ -2,6 +2,16 @@
 actual: 50
 expect: assert.belowOrEquals(25)
 
+# below or equals ok
+actual: {
+  a: true,
+  b: 25,
+}
+expect: {
+  a: false,
+  b: assert.belowOrEquals(25),
+}
+
 # 50 is too small
 actual: 50
 expect: assert.between(100,200)
