@@ -53,7 +53,7 @@
         <text x="43.61" y="71.55" fill="#7f7f7f">b</text>
         <text x="52.01" y="71.55" fill="#7f7f7f">2</text>
         <text x="60.41" y="71.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="71.55" fill="#cd5555">true</text>
+        <text x="77.21" y="71.55" fill="#7f7f7f">true</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="90.55" fill="#7f7f7f">}</text>
         <text x="35.2" y="90.55" fill="#7f7f7f">,</text>
@@ -74,7 +74,7 @@
         <text x="43.61" y="185.55" fill="#7f7f7f">b</text>
         <text x="52.01" y="185.55" fill="#7f7f7f">2</text>
         <text x="60.41" y="185.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="185.55" fill="#11bc79">false</text>
+        <text x="77.21" y="185.55" fill="#7f7f7f">false</text>
         <text x="119.22" y="185.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="204.55" fill="#7f7f7f">}</text>
         <text x="35.2" y="204.55" fill="#7f7f7f">)</text>

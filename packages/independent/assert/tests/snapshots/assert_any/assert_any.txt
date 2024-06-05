@@ -1,7 +1,3 @@
-# 10 and any(String)
-actual: 10
-expect: assert.any(String)
-
 # "foo" and not(any(String))
 actual: "foo"
 expect: assert.not(assert.any(String))

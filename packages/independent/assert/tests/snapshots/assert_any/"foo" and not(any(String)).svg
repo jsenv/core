@@ -46,12 +46,12 @@
         <text x="127.62" y="33.55" fill="#7f7f7f">.</text>
         <text x="136.02" y="33.55" fill="#7f7f7f">not</text>
         <text x="161.22" y="33.55" fill="#7f7f7f">(</text>
-        <text x="169.63" y="33.55" fill="#11bc79">assert</text>
-        <text x="220.03" y="33.55" fill="#11bc79">.</text>
-        <text x="228.44" y="33.55" fill="#11bc79">any</text>
-        <text x="253.64" y="33.55" fill="#11bc79">(</text>
+        <text x="169.63" y="33.55" fill="#7f7f7f">assert</text>
+        <text x="220.03" y="33.55" fill="#7f7f7f">.</text>
+        <text x="228.44" y="33.55" fill="#7f7f7f">any</text>
+        <text x="253.64" y="33.55" fill="#7f7f7f">(</text>
         <text x="262.04" y="33.55" fill="#11bc79">String</text>
-        <text x="312.45" y="33.55" fill="#11bc79">)</text>
+        <text x="312.45" y="33.55" fill="#7f7f7f">)</text>
         <text x="320.85" y="33.55" fill="#7f7f7f">)</text>
       </g>
     </svg>

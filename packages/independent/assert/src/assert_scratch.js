@@ -688,7 +688,9 @@ const createAssertMethodCustomExpectation = (
       }
       for (const argValueNode of argValueGenerator()) {
         argValueNode.ignore = true;
-        const childComparison = subcompareDuo(actualNode, argValueNode);
+        const childComparison = subcompareDuo(actualNode, argValueNode, {
+          isNot,
+        });
         if (isNot) {
           if (childComparison.hasAnyDiff) {
             // we should also "revert" side effects of all diff inside expectAsNode
