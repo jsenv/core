@@ -46,7 +46,7 @@ assert({
     b: { b2: true },
   },
   expect: {
-    a: true,
+    a: false,
     b: assert.not({ b2: false }),
   },
 });

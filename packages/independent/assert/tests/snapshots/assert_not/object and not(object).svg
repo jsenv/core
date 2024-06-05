@@ -45,7 +45,7 @@
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="33.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="33.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="33.55" fill="#7f7f7f">true</text>
+        <text x="52.01" y="33.55" fill="#cd5555">true</text>
         <text x="85.61" y="33.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="52.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="52.55" fill="#7f7f7f">: </text>
@@ -62,8 +62,8 @@
         <text x="77.21" y="128.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="147.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="147.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="147.55" fill="#7f7f7f">true</text>
-        <text x="85.61" y="147.55" fill="#7f7f7f">,</text>
+        <text x="52.01" y="147.55" fill="#11bc79">false</text>
+        <text x="94.01" y="147.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="166.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="166.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="166.55" fill="#7f7f7f">assert</text>
