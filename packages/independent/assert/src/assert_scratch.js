@@ -1177,7 +1177,7 @@ let createRootNode;
         let canHaveInternalEntries = false;
         internal_entries: {
           const internalEntriesParams = {
-            render: renderEntries,
+            render: renderChildren,
             group: "entries",
             value: [],
             startMarker: "(",
@@ -1270,7 +1270,7 @@ let createRootNode;
           if (node.isArray) {
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
-              render: renderEntries,
+              render: renderChildren,
               group: "entries",
               subgroup: "array_entries",
               value: [],
@@ -1392,7 +1392,7 @@ let createRootNode;
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const propertyEntriesNode = node.appendChild("property_entries", {
-            render: renderEntries,
+            render: renderChildren,
             group: "entries",
             subgroup: "property_entries",
             value: [],
@@ -1571,7 +1571,7 @@ let createRootNode;
         }
         node.childGenerator = () => {
           const lineEntriesNode = node.appendChild("line_entries", {
-            render: renderEntries,
+            render: renderChildren,
             group: "entries",
             subgroup: "line_entries",
             value: [],
@@ -1600,7 +1600,7 @@ let createRootNode;
                 const lineEntryValueNode = lineEntryNode.appendChild(
                   "entry_value",
                   {
-                    render: renderEntries,
+                    render: renderChildren,
                     group: "entries",
                     subgroup: "line_entry_value",
                     value: [],
@@ -1953,9 +1953,9 @@ const renderFunction = (node, props) => {
   }
   return diff;
 };
-const renderEntries = (node, props) => {
+const renderChildren = (node, props) => {
   if (!node.isCompatibleWithMultilineDiff) {
-    return renderEntriesOneLiner(node, props);
+    return renderChildrenOneLiner(node, props);
   }
   if (node.diffType === "solo") {
     const indexToDisplayArray = [];
@@ -1967,7 +1967,7 @@ const renderEntries = (node, props) => {
       indexToDisplayArray.push(entryIndex);
     }
     indexToDisplayArray.sort();
-    return renderEntriesMultiline(node, props, { indexToDisplayArray });
+    return renderChildrenMultiline(node, props, { indexToDisplayArray });
   }
   if (node.comparisonDiffMap.size > 0) {
     const indexToDisplayArray = [];
@@ -2026,12 +2026,12 @@ const renderEntries = (node, props) => {
       }
       indexToDisplayArray.sort();
     }
-    return renderEntriesMultiline(node, props, { indexToDisplayArray });
+    return renderChildrenMultiline(node, props, { indexToDisplayArray });
   }
   if (node.isCompatibleWithSingleLineDiff) {
-    return renderEntriesWithoutDiffOneLiner(node, props);
+    return renderChildrenWithoutDiffOneLiner(node, props);
   }
-  return renderEntriesMultiline(node, props, {
+  return renderChildrenMultiline(node, props, {
     indexToDisplayArray: [0],
   });
 };
@@ -2039,7 +2039,7 @@ const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
 };
 
-const renderEntriesOneLiner = (node, props) => {
+const renderChildrenOneLiner = (node, props) => {
   node.hasIndentBeforeEntries = false;
   let columnsRemaining = props.columnsRemaining;
   let focusedEntryIndex = -1; // TODO: take first one with a diff
@@ -2155,7 +2155,7 @@ const renderEntriesOneLiner = (node, props) => {
   }
   return diff;
 };
-const renderEntriesWithoutDiffOneLiner = (node, props) => {
+const renderChildrenWithoutDiffOneLiner = (node, props) => {
   const { startMarker, endMarker } = node;
   const entryKeys = Array.from(node.childNodeMap.keys());
   let columnsRemaining = props.columnsRemaining;
@@ -2230,7 +2230,7 @@ const renderEntriesWithoutDiffOneLiner = (node, props) => {
   diff += setColor(endMarker, node.color);
   return diff;
 };
-const renderEntriesMultiline = (node, props, { indexToDisplayArray }) => {
+const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
   const entryKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
   let atLeastOneEntryDisplayed = null;
@@ -2380,7 +2380,7 @@ const renderEntry = (node, props) => {
 
 const createMethodCallNode = (node, { objectName, methodName, args }) => {
   return {
-    render: renderEntriesOneLiner,
+    render: renderChildrenOneLiner,
     isCompatibleWithSingleLineDiff: true,
     hasTrailingSeparator: true,
     group: "entries",
@@ -2416,7 +2416,7 @@ const createMethodCallNode = (node, { objectName, methodName, args }) => {
 
 const createCallNode = (node, { args }) => {
   return {
-    render: renderEntriesOneLiner,
+    render: renderChildrenOneLiner,
     group: "entries",
     subgroup: "call",
     value: [],
