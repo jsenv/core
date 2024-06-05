@@ -365,13 +365,9 @@ export const assert = ({
       subcompareChildNodesSolo(node, placeholderNode);
     };
 
-    let actualSkipSettle = false;
-    let expectSkipSettle = false;
     visit: {
       if (actualNode.isPrimitive || actualNode.isComposite) {
         if (expectNode.customCompare) {
-          // actualSkipSettle = true;
-          expectSkipSettle = true;
           expectNode.customCompare(actualNode, expectNode, {
             subcompareChildNodesDuo,
             subcompareChildNodesSolo,
@@ -407,9 +403,6 @@ export const assert = ({
         const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
         if (expectAsPrimitiveNode) {
           subcompareDuo(actualNode, expectAsPrimitiveNode);
-          // actualSkipSettle so that it's the comparison with expectAsPrimitive
-          // who sets diffType + color of actualNode
-          actualSkipSettle = true;
           expectAsPrimitiveNode.ignore = true;
           visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
         } else {
@@ -424,9 +417,6 @@ export const assert = ({
         const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
         if (actualAsPrimitiveNode) {
           subcompareDuo(actualAsPrimitiveNode, expectNode);
-          // expectSkipSettle so that it's the comparison with expectAsPrimitive
-          // who sets diffType + color of expectNode
-          expectSkipSettle = true;
           actualAsPrimitiveNode.ignore = true;
           visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
         } else {
@@ -487,55 +477,37 @@ export const assert = ({
     comparison.hasAnyDiff = overall.any.size > 0;
     comparison.done = true;
 
-    const updateColor = (node) => {
-      if (isNot) {
-        node.color = node.colorWhenSame;
+    const updateNodeDiffType = (node, otherNode) => {
+      if (node.diffType !== "") {
         return;
       }
-      node.color = {
-        solo: node.colorWhenSolo,
-        modified: node.colorWhenModified,
-        same: node.colorWhenSame,
-      }[node.diffType];
+      let diffType = "";
+      if (otherNode === PLACEHOLDER_FOR_NOTHING) {
+        diffType = "modified";
+      } else if (otherNode === PLACEHOLDER_FOR_MODIFIED) {
+        diffType = "modified";
+      } else if (otherNode === PLACEHOLDER_FOR_SAME) {
+        diffType = "same";
+      } else if (otherNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
+        diffType = "solo";
+      } else if (comparison.selfHasModification) {
+        diffType = "modified";
+      } else {
+        diffType = "same";
+      }
+      node.diffType = diffType;
+      if (isNot) {
+        node.color = node.colorWhenSame;
+      } else {
+        node.color = {
+          solo: node.colorWhenSolo,
+          modified: node.colorWhenModified,
+          same: node.colorWhenSame,
+        }[diffType];
+      }
     };
-
-    if (actualNode.placeholder) {
-      expectNode.diffType =
-        actualNode === PLACEHOLDER_FOR_NOTHING ||
-        actualNode === PLACEHOLDER_FOR_MODIFIED
-          ? "modified"
-          : actualNode === PLACEHOLDER_FOR_SAME
-            ? "same"
-            : "solo";
-      updateColor(expectNode);
-    } else if (expectNode.placeholder) {
-      actualNode.diffType =
-        expectNode === PLACEHOLDER_FOR_NOTHING ||
-        expectNode === PLACEHOLDER_FOR_MODIFIED
-          ? "modified"
-          : expectNode === PLACEHOLDER_FOR_SAME
-            ? "same"
-            : "solo";
-      updateColor(actualNode);
-    } else if (comparison.selfHasModification) {
-      if (!actualSkipSettle) {
-        actualNode.diffType = "modified";
-        updateColor(actualNode);
-      }
-      if (!expectSkipSettle) {
-        expectNode.diffType = "modified";
-        updateColor(expectNode);
-      }
-    } else {
-      if (!actualSkipSettle) {
-        actualNode.diffType = "same";
-        updateColor(actualNode);
-      }
-      if (!expectSkipSettle) {
-        expectNode.diffType = "same";
-        updateColor(expectNode);
-      }
-    }
+    updateNodeDiffType(actualNode, expectNode);
+    updateNodeDiffType(expectNode, actualNode);
     return comparison;
   };
 

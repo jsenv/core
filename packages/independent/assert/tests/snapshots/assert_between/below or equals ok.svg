@@ -49,7 +49,7 @@
         <text x="85.61" y="33.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="52.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="52.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="52.55" fill="#7f7f7f">25</text>
+        <text x="52.01" y="52.55">25</text>
         <text x="68.81" y="52.55" fill="#7f7f7f">,</text>
         <text x="10" y="71.55" fill="#7f7f7f">}</text>
         <text x="10" y="90.55" fill="#7f7f7f">expect:</text>
