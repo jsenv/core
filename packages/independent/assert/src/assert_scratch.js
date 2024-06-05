@@ -163,7 +163,8 @@ export const assert = ({
    *   descriptorKeyNode
    *   descriptorValueNode
    */
-  const compare = (actualNode, expectNode, { isNot } = {}) => {
+  let isNot = false;
+  const compare = (actualNode, expectNode) => {
     if (actualNode.ignore && actualNode.comparison) {
       return actualNode.comparison;
     }
@@ -200,12 +201,14 @@ export const assert = ({
     const subcompareDuo = (
       actualChildNode,
       expectChildNode,
-      compareOptions,
+      { revertNot } = {},
     ) => {
-      const childComparison = compare(actualChildNode, expectChildNode, {
-        isNot,
-        ...compareOptions,
-      });
+      let isNotPrevious = isNot;
+      if (revertNot) {
+        isNot = !isNot;
+      }
+      const childComparison = compare(actualChildNode, expectChildNode);
+      isNot = isNotPrevious;
       appendReasonGroup(
         comparison.reasons.inside,
         childComparison.reasons.overall,
@@ -651,7 +654,7 @@ const createCustomExpectation = (name, props) => {
 const createAssertMethodCustomExpectation = (
   methodName,
   args,
-  { isNot, renderOnlyArgs } = {},
+  { renderOnlyArgs, isAssertNot } = {},
 ) => {
   return createCustomExpectation(`assert.${methodName}`, {
     parse: (node) => {
@@ -689,9 +692,9 @@ const createAssertMethodCustomExpectation = (
       for (const argValueNode of argValueGenerator()) {
         argValueNode.ignore = true;
         const childComparison = subcompareDuo(actualNode, argValueNode, {
-          isNot,
+          revertNot: isAssertNot,
         });
-        if (isNot) {
+        if (isAssertNot) {
           if (childComparison.hasAnyDiff) {
             // we should also "revert" side effects of all diff inside expectAsNode
             // - adding to causeSet
@@ -813,7 +816,7 @@ assert.not = (value) => {
       },
     ],
     {
-      isNot: true,
+      isAssertNot: true,
     },
   );
 };

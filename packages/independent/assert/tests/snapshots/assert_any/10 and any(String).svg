@@ -28,7 +28,7 @@
   </g>
   <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
     <svg
-      width="339.25"
+      width="238.44"
       height="41.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -36,23 +36,14 @@
     >
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="14.55" fill="#7f7f7f">f</text>
-        <text x="94.01" y="14.55" fill="#7f7f7f">o</text>
-        <text x="102.42" y="14.55" fill="#7f7f7f">o</text>
-        <text x="110.82" y="14.55" fill="#7f7f7f">&#x22;</text>
+        <text x="77.21" y="14.55" fill="#cd5555">10</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="33.55" fill="#7f7f7f">assert</text>
-        <text x="127.62" y="33.55" fill="#7f7f7f">.</text>
-        <text x="136.02" y="33.55" fill="#7f7f7f">not</text>
-        <text x="161.22" y="33.55" fill="#7f7f7f">(</text>
-        <text x="169.63" y="33.55" fill="#7f7f7f">assert</text>
-        <text x="220.03" y="33.55" fill="#7f7f7f">.</text>
-        <text x="228.44" y="33.55" fill="#7f7f7f">any</text>
-        <text x="253.64" y="33.55" fill="#7f7f7f">(</text>
-        <text x="262.04" y="33.55" fill="#7f7f7f">String</text>
-        <text x="312.45" y="33.55" fill="#7f7f7f">)</text>
-        <text x="320.85" y="33.55" fill="#7f7f7f">)</text>
+        <text x="77.21" y="33.55" fill="#11bc79">assert</text>
+        <text x="127.62" y="33.55" fill="#11bc79">.</text>
+        <text x="136.02" y="33.55" fill="#11bc79">any</text>
+        <text x="161.22" y="33.55" fill="#11bc79">(</text>
+        <text x="169.63" y="33.55" fill="#11bc79">String</text>
+        <text x="220.03" y="33.55" fill="#11bc79">)</text>
       </g>
     </svg>
   </foreignObject>
