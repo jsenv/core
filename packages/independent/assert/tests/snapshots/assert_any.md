@@ -1,17 +1,11 @@
-# "foo" and any(String)
+# 10 and any(String)
 
 ```js
 assert({
-  actual: {
-    a: true,
-    b: "foo",
-  },
-  expect: {
-    a: false,
-    b: assert.any(String),
-  },
+  actual: 10,
+  expect: assert.any(String),
 });
 ```
 
-![img](<./assert_any/"foo" and any(String).svg>)
+![img](<./assert_any/10 and any(String).svg>)
 

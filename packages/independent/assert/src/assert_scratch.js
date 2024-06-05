@@ -73,8 +73,8 @@ const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
 const PLACEHOLDER_FOR_SAME = {
   placeholder: "same",
 };
-const PLACEHOLDER_FOR_FAILED = {
-  placeholder: "failed",
+const PLACEHOLDER_FOR_MODIFIED = {
+  placeholder: "modified",
 };
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
@@ -370,7 +370,7 @@ export const assert = ({
     visit: {
       if (actualNode.isPrimitive || actualNode.isComposite) {
         if (expectNode.customCompare) {
-          actualSkipSettle = true;
+          // actualSkipSettle = true;
           expectSkipSettle = true;
           expectNode.customCompare(actualNode, expectNode, {
             subcompareChildNodesDuo,
@@ -435,30 +435,38 @@ export const assert = ({
         }
         break visit;
       }
-
+      // not found in expected (added or expect cannot have this type of value)
       if (
-        actualNode === PLACEHOLDER_FOR_SAME ||
-        actualNode === PLACEHOLDER_FOR_FAILED
+        actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
+        actualNode === PLACEHOLDER_FOR_NOTHING
       ) {
         visitSolo(expectNode, actualNode);
+        onRemoved(getAddedOrRemovedReason(expectNode));
         break visit;
       }
+      // not found in actual (removed or actual cannot have this type of value)
       if (
-        expectNode === PLACEHOLDER_FOR_SAME ||
-        expectNode === PLACEHOLDER_FOR_FAILED
+        expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
+        expectNode === PLACEHOLDER_FOR_NOTHING
       ) {
-        visitSolo(actualNode, expectNode);
-        break visit;
-      }
-
-      if (expectNode.placeholder) {
         visitSolo(actualNode, expectNode);
         onAdded(getAddedOrRemovedReason(actualNode));
         break visit;
       }
-      if (actualNode.placeholder) {
+      // force actual to be same/modified
+      if (
+        actualNode === PLACEHOLDER_FOR_SAME ||
+        actualNode === PLACEHOLDER_FOR_MODIFIED
+      ) {
         visitSolo(expectNode, actualNode);
-        onRemoved(getAddedOrRemovedReason(expectNode));
+        break visit;
+      }
+      // force expect to be same/modified
+      if (
+        expectNode === PLACEHOLDER_FOR_SAME ||
+        expectNode === PLACEHOLDER_FOR_MODIFIED
+      ) {
+        visitSolo(actualNode, expectNode);
         break visit;
       }
       throw new Error(
@@ -494,7 +502,7 @@ export const assert = ({
     if (actualNode.placeholder) {
       expectNode.diffType =
         actualNode === PLACEHOLDER_FOR_NOTHING ||
-        actualNode === PLACEHOLDER_FOR_FAILED
+        actualNode === PLACEHOLDER_FOR_MODIFIED
           ? "modified"
           : actualNode === PLACEHOLDER_FOR_SAME
             ? "same"
@@ -503,7 +511,7 @@ export const assert = ({
     } else if (expectNode.placeholder) {
       actualNode.diffType =
         expectNode === PLACEHOLDER_FOR_NOTHING ||
-        expectNode === PLACEHOLDER_FOR_FAILED
+        expectNode === PLACEHOLDER_FOR_MODIFIED
           ? "modified"
           : expectNode === PLACEHOLDER_FOR_SAME
             ? "same"
@@ -689,28 +697,57 @@ const createAssertMethodCustomExpectation = (
     },
   });
 };
+const createAssertMethodSingleCustomExpectation = (
+  methodName,
+  value,
+  getSelfDiffReason,
+  options,
+) => {
+  return createAssertMethodCustomExpectation(
+    methodName,
+    [
+      {
+        value,
+        customCompare: (
+          actualNode,
+          expectNode,
+          { onSelfDiff, subcompareChildNodesSolo },
+        ) => {
+          const selfDiff = getSelfDiffReason(actualNode);
+          if (selfDiff) {
+            onSelfDiff(selfDiff);
+            subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
+            return;
+          }
+          subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
+        },
+      },
+    ],
+    options,
+  );
+};
 const createAssertMethodOneArgCustomCompare = ({ isAssertNot } = {}) => {
   return (
     actualNode,
     expectNode,
     { subcompareDuo, subcompareSolo, onSelfDiff },
   ) => {
-    const assertMethod = expectNode.childNodeMap.get("assert_method_call");
-    const callNode = assertMethod.childNodeMap.get("call");
-    const firstArgValueNode = callNode.childNodeMap
-      .get(0)
+    // prettier-ignore
+    const expectFirsArgValueNode = expectNode
+      .childNodeMap.get("assert_method_call")
+      .childNodeMap.get("call")
+      .childNodeMap.get(0)
       .childNodeMap.get("entry_value");
-
-    firstArgValueNode.ignore = true;
-    // le truc c'est qu'ici le argValue possede un getSelfDiffReason
-    // mais devrait aussi avoir un customCompare
-    // ou en tous cas devrait parcourir ses enfants d'une maniere solo
-    // lorsque getSelfDiffReason se termine
-    const firstArgComparison = subcompareDuo(actualNode, firstArgValueNode, {
-      revertNot: isAssertNot,
-    });
+    expectFirsArgValueNode.ignore = true;
+    const expectFirstArgComparison = subcompareDuo(
+      actualNode,
+      expectFirsArgValueNode,
+      {
+        revertNot: isAssertNot,
+      },
+    );
     if (isAssertNot) {
-      if (firstArgComparison.hasAnyDiff) {
+      if (expectFirstArgComparison.hasAnyDiff) {
         // we should also "revert" side effects of all diff inside expectAsNode
         // - adding to causeSet
         // - colors (should be done during comparison)
@@ -721,8 +758,8 @@ const createAssertMethodOneArgCustomCompare = ({ isAssertNot } = {}) => {
       }
       return;
     }
-    if (firstArgComparison.hasAnyDiff) {
-      subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
+    if (expectFirstArgComparison.hasAnyDiff) {
+      subcompareSolo(expectNode, PLACEHOLDER_FOR_MODIFIED);
       return;
     }
     subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
@@ -754,7 +791,7 @@ const createAssertMethodMutiArgCustomCompare = () => {
       }
     }
     if (hasFailure) {
-      subcompareSolo(expectNode, PLACEHOLDER_FOR_FAILED);
+      subcompareSolo(expectNode, PLACEHOLDER_FOR_MODIFIED);
       return;
     }
     subcompareSolo(expectNode, PLACEHOLDER_FOR_SAME);
@@ -767,22 +804,18 @@ assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
       `assert.belowOrEquals 1st argument must be number, received ${value}`,
     );
   }
-  return createAssertMethodCustomExpectation(
+  return createAssertMethodSingleCustomExpectation(
     "belowOrEquals",
-    [
-      {
-        value,
-        getSelfDiffReason: (actualNode) => {
-          if (!actualNode.isNumber) {
-            return "should_be_a_number";
-          }
-          if (actualNode.value > value) {
-            return `should_be_below_or_equals_to_${value}`;
-          }
-          return null;
-        },
-      },
-    ],
+    value,
+    (actualNode) => {
+      if (!actualNode.isNumber) {
+        return "should_be_a_number";
+      }
+      if (actualNode.value > value) {
+        return `should_be_below_or_equals_to_${value}`;
+      }
+      return null;
+    },
     {
       renderOnlyArgs,
     },
@@ -794,22 +827,18 @@ assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
       `assert.aboveOrEquals 1st argument must be number, received ${value}`,
     );
   }
-  return createAssertMethodCustomExpectation(
+  return createAssertMethodSingleCustomExpectation(
     "aboveOrEquals",
-    [
-      {
-        value,
-        getSelfDiffReason: (actualNode) => {
-          if (!actualNode.isNumber) {
-            return "should_be_a_number";
-          }
-          if (actualNode.value < value) {
-            return `should_be_greater_or_equals_to_${value}`;
-          }
-          return null;
-        },
-      },
-    ],
+    value,
+    (actualNode) => {
+      if (!actualNode.isNumber) {
+        return "should_be_a_number";
+      }
+      if (actualNode.value < value) {
+        return `should_be_greater_or_equals_to_${value}`;
+      }
+      return null;
+    },
     {
       renderOnlyArgs,
     },
@@ -856,34 +885,29 @@ assert.any = (constructor) => {
     );
   }
   const constructorName = constructor.name;
-  return createAssertMethodCustomExpectation("any", [
-    {
-      value: constructor,
-      getSelfDiffReason: constructorName
-        ? (actualNode) => {
-            for (const proto of objectPrototypeChainGenerator(
-              actualNode.value,
-            )) {
-              const protoConstructor = proto.constructor;
-              if (protoConstructor.name === constructorName) {
-                return null;
-              }
+  return createAssertMethodSingleCustomExpectation(
+    "any",
+    constructor,
+    constructorName
+      ? (actualNode) => {
+          for (const proto of objectPrototypeChainGenerator(actualNode.value)) {
+            const protoConstructor = proto.constructor;
+            if (protoConstructor.name === constructorName) {
+              return null;
             }
-            return `should_have_constructor_${constructorName}`;
           }
-        : (actualNode) => {
-            for (const proto of objectPrototypeChainGenerator(
-              actualNode.value,
-            )) {
-              const protoConstructor = proto.constructor;
-              if (protoConstructor === constructor) {
-                return null;
-              }
+          return `should_have_constructor_${constructorName}`;
+        }
+      : (actualNode) => {
+          for (const proto of objectPrototypeChainGenerator(actualNode.value)) {
+            const protoConstructor = proto.constructor;
+            if (protoConstructor === constructor) {
+              return null;
             }
-            return `should_have_constructor_${constructor.toString()}`;
-          },
-    },
-  ]);
+          }
+          return `should_have_constructor_${constructor.toString()}`;
+        },
+  );
 };
 
 let createRootNode;
