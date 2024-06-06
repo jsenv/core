@@ -922,6 +922,45 @@ let createRootNode;
     value,
     render,
   }) => {
+    /*
+     * Il est possible pour actual de ref des valeurs de expect et inversement tel que
+     * - Object.prototype
+     * - Un ancetre commun
+     * - Peu importe en fait
+     * Il est aussi possible de découvrir une ref dans l'un plus tot que dans l'autre
+     * (l'ordre des prop des object n'est pas garanti nottament)
+     * Pour cette raison il y a un referenceMap par arbre (actual/expect)
+     * Au final on regardera juste le path ou se trouve une ref pour savoir si elle sont les meme
+     *
+     * Une ref peut etre découverte apres
+     * - ordre des props
+     * - caché par maxColumns
+     * - caché par MAX_ENTRY_BEFORE_MULTILINE_DIFF
+     * - ...
+     * Et que la découverte lazy des child (childGenerator) ne garantie pas de trouver la ref
+     * des le départ
+     * ALORS
+     * On ne peut pas utiliser la notation suivante:
+     * actual: {
+     *   a: <ref #1> { toto: true },
+     *   b: <ref #1>
+     * }
+     * expect: {
+     *   a: <ref #1> { toto: true },
+     *   b: <ref #1>
+     * }
+     *
+     * on va lui préférer:
+     * actual: {
+     *   a: { toto: true },
+     *   b: actual.a,
+     * }
+     * expect: {
+     *   a: { toto: true },
+     *   b: expect.a,
+     * }
+     */
+
     const referenceMap = new Map();
     let nodeId = 1;
 
