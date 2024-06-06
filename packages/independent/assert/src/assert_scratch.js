@@ -328,8 +328,12 @@ export const assert = ({
       }
 
       let selfDiffReason = "";
-      if (actualNode.isPrimitive && actualNode.value !== expectNode.value) {
-        selfDiffReason = "primitive_value";
+      if (actualNode.isPrimitive) {
+        if (actualNode.value !== expectNode.value) {
+          selfDiffReason = "primitive_value";
+        }
+      } else if (actualNode.isComposite) {
+        // should be compare ref here?
       }
       if (selfDiffReason) {
         onSelfDiff(selfDiffReason);
@@ -918,7 +922,11 @@ let createRootNode;
     value,
     render,
   }) => {
+    const referenceMap = new Map();
+    let nodeId = 1;
+
     const rootNode = createNode({
+      id: nodeId,
       colorWhenSolo,
       colorWhenSame,
       colorWhenModified,
@@ -929,6 +937,11 @@ let createRootNode;
       depth: 0,
       path: createValuePath(),
       render,
+      referenceMap,
+      nextId: () => {
+        nodeId++;
+        return nodeId;
+      },
     });
 
     return rootNode;
@@ -943,6 +956,8 @@ let createRootNode;
     subgroup = group,
     value,
     parent,
+    referenceMap,
+    nextId,
     depth,
     path,
     childGenerator,
@@ -985,6 +1000,8 @@ let createRootNode;
         node.wrappedNodeGetterSet.add(getter);
       },
       parent,
+      referenceMap,
+      nextId,
       depth,
       path,
       isSourceCode,
@@ -1005,6 +1022,7 @@ let createRootNode;
       isArray: false,
       isMap: false,
       isSet: false,
+      referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
       methodName,
@@ -1115,6 +1133,14 @@ let createRootNode;
     const isObject = typeofResult === "object";
     const isFunction = typeofResult === "function";
     if (isObject || isFunction) {
+      node.referenceFromOthersSet = new Set();
+      const reference = node.referenceMap.get(value);
+      if (reference) {
+        node.reference = reference;
+        reference.referenceFromOthersSet.add(node);
+      } else {
+        node.referenceMap.set(value, node);
+      }
       node.isComposite = true;
       if (isFunction) {
         node.isFunction = true;
@@ -1139,6 +1165,17 @@ let createRootNode;
         }
       }
       node.childGenerator = function () {
+        if (node.reference) {
+          node.appendChild("reference", {
+            render: () => {
+              const refId = 1;
+              return `<ref #${refId}>`;
+            },
+            group: "grammar",
+            subgroup: "reference",
+            value: node.reference.path.toString(),
+          });
+        }
         // function child nodes
         if (node.isFunction) {
           if (node.functionAnalysis.type === "class") {
@@ -1817,14 +1854,19 @@ let createRootNode;
     return node;
   };
 
+  const referenceFromOthersSetDefault = new Set();
+
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
+      id: node.nextId(),
       colorWhenSolo: node.colorWhenSolo,
       colorWhenSame: node.colorWhenSame,
       colorWhenModified: node.colorWhenModified,
       name: node.name,
       parent: node,
       path: node.path,
+      referenceMap: node.referenceMap,
+      nextId: node.nextId,
       depth:
         params.group === "entries" ||
         params.group === "entry" ||
