@@ -1266,13 +1266,30 @@ let createRootNode;
               ...internalEntriesParams,
               subgroup: "map_entries",
               childGenerator: () => {
+                const objectTagCounterMap = new Map();
                 for (const [mapEntryKey, mapEntryValue] of value) {
                   mapEntriesNode.value.push(mapEntryKey);
+                  let pathPart;
+                  if (isComposite(mapEntryKey)) {
+                    const keyObjectTag = getObjectTag(mapEntryKey);
+                    if (objectTagCounterMap.has(keyObjectTag)) {
+                      const objectTagCount =
+                        objectTagCounterMap.get(keyObjectTag) + 1;
+                      objectTagCounterMap.set(keyObjectTag, objectTagCount);
+                      pathPart = `${keyObjectTag}#${objectTagCount}`;
+                    } else {
+                      objectTagCounterMap.set(keyObjectTag, 1);
+                      pathPart = `${keyObjectTag}#1`;
+                    }
+                  } else {
+                    pathPart = String(mapEntryKey);
+                  }
+
                   const mapEntryNode = mapEntriesNode.appendChild(mapEntryKey, {
                     render: renderEntry,
                     group: "entry",
                     subgroup: "map_entry",
-                    // TODO: map path
+                    path: node.path.append(pathPart),
                     middleMarker: " => ",
                     endMarker: ",",
                   });
@@ -1289,6 +1306,7 @@ let createRootNode;
                     value: mapEntryValue,
                   });
                 }
+                objectTagCounterMap.clear();
               },
             });
           }
@@ -2755,3 +2773,10 @@ const CHAR_TO_ESCAPED_CHAR = [
   '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
   '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
 ];
+
+const isComposite = (value) => {
+  if (value === null) return false;
+  if (typeof value === "object") return true;
+  if (typeof value === "function") return true;
+  return false;
+};
