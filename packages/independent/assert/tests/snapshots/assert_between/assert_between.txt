@@ -2,6 +2,12 @@
 actual: 50
 expect: assert.belowOrEquals(25)
 
+# below or equals when removed
+actual: {}
+expect: {
+  a: assert.belowOrEquals(25),
+}
+
 # below or equals ok
 actual: {
   a: true,

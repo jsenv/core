@@ -8,6 +8,14 @@ await startSnapshotTesting("assert_between", {
       expect: assert.belowOrEquals(25),
     });
   },
+  "below or equals when removed": () => {
+    assert({
+      actual: {},
+      expect: {
+        a: assert.belowOrEquals(25),
+      },
+    });
+  },
   "below or equals ok": () => {
     assert({
       actual: {

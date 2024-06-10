@@ -9,6 +9,19 @@ assert({
 
 ![img](<./assert_between/below or equals.svg>)
 
+# below or equals when removed
+
+```js
+assert({
+  actual: {},
+  expect: {
+    a: assert.belowOrEquals(25),
+  },
+});
+```
+
+![img](<./assert_between/below or equals when removed.svg>)
+
 # below or equals ok
 
 ```js
