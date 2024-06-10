@@ -52,7 +52,7 @@
         <text x="43.61" y="52.55" fill="#7f7f7f">l</text>
         <text x="52.01" y="52.55" fill="#7f7f7f">f</text>
         <text x="60.41" y="52.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="52.55" fill="#cd5555">actual</text>
+        <text x="77.21" y="52.55" fill="#7f7f7f">actual</text>
         <text x="127.62" y="52.55" fill="#7f7f7f">,</text>
         <text x="10" y="71.55" fill="#7f7f7f">}</text>
         <text x="10" y="90.55" fill="#7f7f7f">expect:</text>
@@ -66,7 +66,7 @@
         <text x="43.61" y="128.55" fill="#7f7f7f">l</text>
         <text x="52.01" y="128.55" fill="#7f7f7f">f</text>
         <text x="60.41" y="128.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="128.55" fill="#11bc79">expect</text>
+        <text x="77.21" y="128.55" fill="#7f7f7f">expect</text>
         <text x="127.62" y="128.55" fill="#7f7f7f">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
