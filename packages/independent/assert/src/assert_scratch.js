@@ -981,7 +981,12 @@ let createRootNode;
       value,
       parent: null,
       depth: 0,
-      path: createValuePath(),
+      path: createValuePath([
+        {
+          type: "identifier",
+          value: name,
+        },
+      ]),
       render,
       referenceMap,
       nextId: () => {
@@ -1223,9 +1228,9 @@ let createRootNode;
               let index = 0;
               for (const path of node.reference.path) {
                 referenceNode.appendChild(index, {
-                  value: path,
+                  value: path.value,
                   render: renderGrammar,
-                  endMarker: ".",
+                  //  endMarker: ".",
                   group: "grammar",
                   subgroup: "path",
                 });
@@ -2016,17 +2021,21 @@ const renderComposite = (node, props) => {
   // because composite also got a prototype
   // and a constructor that might differ
   let diff = "";
-  const internalEntriesNode = node.childNodeMap.get("internal_entries");
-  const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
-  const propertyEntriesNode = node.childNodeMap.get("property_entries");
   if (props.columnsRemaining < 2) {
     diff = setColor("…", node.color);
     return diff;
+  }
+  const referenceNode = node.childNodeMap.get("reference");
+  if (referenceNode) {
+    return referenceNode.render(props);
   }
   if (node.value === String) {
     return truncateAndAppyColor("String", node, props);
   }
 
+  const internalEntriesNode = node.childNodeMap.get("internal_entries");
+  const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
+  const propertyEntriesNode = node.childNodeMap.get("property_entries");
   let maxDepthReached = false;
   if (node.diffType === "same") {
     maxDepthReached = node.depth > props.MAX_DEPTH;

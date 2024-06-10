@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="120.82"
+      width="171.22"
       height="136.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -63,7 +63,10 @@
         <text x="35.2" y="109.55" fill="#11bc79">a</text>
         <text x="43.61" y="109.55" fill="#11bc79">r</text>
         <text x="52.01" y="109.55" fill="#11bc79">: </text>
-        <text x="68.81" y="109.55" fill="#11bc79">,</text>
+        <text x="68.81" y="109.55" fill="#11bc79">expect</text>
+        <text x="119.22" y="109.55" fill="#11bc79">.</text>
+        <text x="127.62" y="109.55" fill="#11bc79">foo</text>
+        <text x="152.82" y="109.55" fill="#11bc79">,</text>
         <text x="10" y="128.55" fill="#11bc79">}</text>
       </g>
     </svg>

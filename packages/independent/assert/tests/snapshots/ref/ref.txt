@@ -4,6 +4,6 @@ expect: {
   foo: {
     id: "a",
   },
-  bar: ,
+  bar: expect.foo,
 }
 
