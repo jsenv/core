@@ -353,27 +353,39 @@ export const assert = (firstArg) => {
         throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
       }
       expectNode.comparison = comparison;
-      const { result, reason } = expectNode.comparer(actualNode, expectNode);
+      const { result, reason, propagate } = expectNode.comparer(
+        actualNode,
+        expectNode,
+      );
       if (result === "failure") {
         onSelfDiff(reason);
+        if (propagate) {
+          subcompareChildNodesSolo(actualNode, propagate);
+          subcompareChildNodesSolo(expectNode, propagate);
+          return;
+        }
         subcompareChildNodesDuo(actualNode, expectNode);
         return;
       }
-      if (result === "success_by_identity") {
-        const actualRender = actualNode.render;
-        const expectRender = expectNode.render;
-        actualNode.render = (props) => {
-          actualNode.render = actualRender;
-          // expectNode.render = expectRender;
-          subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
-          return actualRender(props);
-        };
-        expectNode.render = (props) => {
-          // actualNode.render = actualRender;
-          expectNode.render = expectRender;
-          subcompareChildNodesSolo(expectNode, PLACEHOLDER_FOR_SAME);
-          return expectRender(props);
-        };
+      if (result === "success") {
+        if (propagate) {
+          const actualRender = actualNode.render;
+          const expectRender = expectNode.render;
+          actualNode.render = (props) => {
+            actualNode.render = actualRender;
+            // expectNode.render = expectRender;
+            subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
+            return actualRender(props);
+          };
+          expectNode.render = (props) => {
+            // actualNode.render = actualRender;
+            expectNode.render = expectRender;
+            subcompareChildNodesSolo(expectNode, PLACEHOLDER_FOR_SAME);
+            return expectRender(props);
+          };
+          return;
+        }
+        subcompareChildNodesDuo(actualNode, expectNode);
         return;
       }
       subcompareChildNodesDuo(actualNode, expectNode);
@@ -1935,13 +1947,22 @@ let createRootNode;
   const comparerDefault = (actualNode, expectNode) => {
     if (actualNode.category === "primitive") {
       if (actualNode.value === expectNode.value) {
-        return { result: "success_by_identity" };
+        return {
+          result: "success",
+          propagate: PLACEHOLDER_FOR_SAME,
+        };
       }
-      return { result: "failure", reason: "primitive_value" };
+      return {
+        result: "failure",
+        reason: "primitive_value",
+      };
     }
     if (actualNode.category === "composite") {
       if (actualNode.value === expectNode.value) {
-        return { result: "success_by_identity" };
+        return {
+          result: "success",
+          propagate: PLACEHOLDER_FOR_SAME,
+        };
       }
       return { result: "" };
     }
@@ -1949,9 +1970,16 @@ let createRootNode;
       const actualRefPathString = actualNode.value.pop().toString();
       const expectRefPathString = expectNode.value.pop().toString();
       if (actualRefPathString !== expectRefPathString) {
-        return { result: "failure", reason: "ref_path" };
+        return {
+          result: "failure",
+          reason: "ref_path",
+          propagate: PLACEHOLDER_FOR_MODIFIED,
+        };
       }
-      return { result: "success_by_identity" };
+      return {
+        result: "success",
+        propagate: PLACEHOLDER_FOR_SAME,
+      };
     }
     if (actualNode.category === "entries") {
       if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
