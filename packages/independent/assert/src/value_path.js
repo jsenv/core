@@ -3,6 +3,9 @@ import { isDotNotationAllowed } from "./property_identifier.js";
 export const createValuePath = (parts = []) => {
   return {
     parts,
+    [Symbol.iterator]() {
+      return parts[Symbol.iterator]();
+    },
     toString: () => parts.map((part) => part.value).join(""),
     valueOf: () => parts.map((part) => part.value).join(""),
     append: (

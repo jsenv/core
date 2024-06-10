@@ -2,6 +2,13 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - ref
+ * - single node for function
+ * - ability to control focused child when rendering children
+ *   like for a string we want to fallback at end of the string
+ *   when no diff
+ *   focusedChildWhenSame = 'start', 'start', 'end', 'middle'
+ *   pour string ce sera end
+ *   mais pour certain on pourrait imaginer start genre pour les properties
  * - url string and url object
  * - well known
  * - symbols
@@ -1039,6 +1046,7 @@ let createRootNode;
         node.wrappedNodeGetterSet.add(getter);
       },
       parent,
+      reference: null,
       referenceMap,
       nextId,
       depth,
@@ -1206,64 +1214,81 @@ let createRootNode;
       node.childGenerator = function () {
         if (node.reference) {
           node.appendChild("reference", {
-            render: () => {
-              const refId = 1;
-              return `<ref #${refId}>`;
-            },
-            group: "grammar",
-            subgroup: "reference",
             value: node.reference.path.toString(),
+            render: renderChildren,
+            isCompatibleWithSingleLineDiff: true,
+            group: "entries",
+            subgroup: "reference",
+            childGenerator(referenceNode) {
+              let index = 0;
+              for (const path of node.reference.path) {
+                referenceNode.appendChild(index, {
+                  value: path,
+                  render: renderGrammar,
+                  endMarker: ".",
+                  group: "grammar",
+                  subgroup: "path",
+                });
+                index++;
+              }
+            },
           });
+          return;
         }
         // function child nodes
         if (node.isFunction) {
+          // TODO: put this into a single childNode
+          // that would have all function parts as child itself
+          // so that we can use renderChildNodes on it
+          // and the "renderFunction" would become just a
+          // renderChildNodes call
           if (node.functionAnalysis.type === "class") {
             node.appendChild("class_keyword", {
+              value: "class",
               render: renderGrammar,
               group: "grammar",
               subgroup: "class_keyword",
-              value: "class",
             });
             const extendedClassName = node.functionAnalysis.extendedClassName;
             if (extendedClassName) {
               node.appendChild("class_extends_keyword", {
+                value: "extends",
                 render: renderGrammar,
                 group: "grammar",
                 subgroup: "class_extends_keyword",
-                value: "extends",
               });
               node.appendChild("class_extended_name", {
+                value: extendedClassName,
                 render: renderGrammar,
                 group: "grammar",
                 subgroup: "class_extended_name",
-                value: extendedClassName,
               });
             }
           }
           if (node.functionAnalysis.isAsync) {
             node.appendChild("function_async_keyword", {
+              value: "async",
               render: renderGrammar,
               group: "grammar",
               subgroup: "function_async_keyword",
-              value: "async",
             });
           }
           if (node.functionAnalysis.type === "classic") {
             node.appendChild("function_keyword", {
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "function_keyword",
               value: node.functionAnalysis.isGenerator
                 ? "function*"
                 : "function",
+              render: renderGrammar,
+              group: "grammar",
+              subgroup: "function_keyword",
             });
           }
           if (node.functionAnalysis.name) {
             node.appendChild("function_name", {
+              value: node.functionAnalysis.name,
               render: renderGrammar,
               group: "grammar",
               subgroup: "function_name",
-              value: node.functionAnalysis.name,
             });
           }
           function_body_prefix: {
@@ -1274,30 +1299,30 @@ let createRootNode;
             };
             if (node.functionAnalysis.type === "arrow") {
               node.appendChild("function_body_prefix", {
-                ...functionBodyPrefixParams,
                 value: "() =>",
+                ...functionBodyPrefixParams,
               });
             } else if (node.functionAnalysis.type === "method") {
               if (node.functionAnalysis.getterName) {
                 node.appendChild("function_body_prefix", {
-                  ...functionBodyPrefixParams,
                   value: `get ${methodName}()`,
+                  ...functionBodyPrefixParams,
                 });
               }
               if (node.functionAnalysis.setterName) {
                 node.appendChild("function_body_prefix", {
-                  ...functionBodyPrefixParams,
                   value: `set ${methodName}()`,
+                  ...functionBodyPrefixParams,
                 });
               }
               node.appendChild("function_body_prefix", {
-                ...functionBodyPrefixParams,
                 value: `${methodName}()`,
+                ...functionBodyPrefixParams,
               });
             } else if (node.functionAnalysis.type === "classic") {
               node.appendChild("function_body_prefix", {
-                ...functionBodyPrefixParams,
                 value: "()",
+                ...functionBodyPrefixParams,
               });
             }
           }
@@ -1309,10 +1334,10 @@ let createRootNode;
           if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
             hasObjectTag = true;
             node.appendChild("object_tag", {
+              value: objectTag,
               render: renderGrammar,
               group: "grammar",
               subgroup: "object_tag",
-              value: objectTag,
               path: node.path.append("[[ObjectTag]]"),
             });
           }
@@ -1320,9 +1345,9 @@ let createRootNode;
         let canHaveInternalEntries = false;
         internal_entries: {
           const internalEntriesParams = {
+            value: [],
             render: renderChildren,
             group: "entries",
-            value: [],
             startMarker: "(",
             endMarker: ")",
             isCompatibleWithMultilineDiff: true,
@@ -1431,10 +1456,10 @@ let createRootNode;
           if (node.isArray) {
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
+              value: [],
               render: renderChildren,
               group: "entries",
               subgroup: "array_entries",
-              value: [],
               startMarker: "[",
               endMarker: "]",
               hasMarkersWhenEmpty: true,
@@ -1462,19 +1487,19 @@ let createRootNode;
                   endMarker: ",",
                 });
                 arrayEntryNode.appendChild("entry_key", {
+                  value: index,
                   render: renderInteger,
                   group: "entry_key",
                   subgroup: "array_entry_key",
-                  value: index,
                   isHidden: true,
                 });
                 arrayEntryNode.appendChild("entry_value", {
-                  render: renderValue,
-                  group: "entry_value",
-                  subgroup: "array_entry_value",
                   value: Object.hasOwn(value, index)
                     ? value[index]
                     : ARRAY_EMPTY_VALUE,
+                  render: renderValue,
+                  group: "entry_value",
+                  subgroup: "array_entry_value",
                 });
                 index++;
               }
@@ -1553,10 +1578,10 @@ let createRootNode;
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const propertyEntriesNode = node.appendChild("property_entries", {
+            value: [],
             render: renderChildren,
             group: "entries",
             subgroup: "property_entries",
-            value: [],
             isCompatibleWithMultilineDiff: true,
             isCompatibleWithSingleLineDiff: true,
             skippedEntrySummary: {
@@ -1732,10 +1757,10 @@ let createRootNode;
         }
         node.childGenerator = () => {
           const lineEntriesNode = node.appendChild("line_entries", {
+            value: [],
             render: renderChildren,
             group: "entries",
             subgroup: "line_entries",
-            value: [],
             isCompatibleWithMultilineDiff: true,
             skippedEntrySummary: {
               skippedEntryNames: ["line", "lines"],
@@ -1751,20 +1776,20 @@ let createRootNode;
                 const lineEntryKeyNode = lineEntryNode.appendChild(
                   "entry_key",
                   {
+                    value: lineIndex,
                     render: renderInteger,
                     group: "entry_key",
                     subgroup: "line_entry_key",
-                    value: lineIndex,
                     isHidden: true,
                   },
                 );
                 const lineEntryValueNode = lineEntryNode.appendChild(
                   "entry_value",
                   {
+                    value: [],
                     render: renderChildren,
                     group: "entries",
                     subgroup: "line_entry_value",
-                    value: [],
                     overflowStartMarker: "…",
                     overflowEndMarker: "…",
                   },
@@ -1780,17 +1805,17 @@ let createRootNode;
                     },
                   );
                   charEntryNode.appendChild("entry_key", {
+                    value: charIndex,
                     render: renderInteger,
                     group: "entry_key",
                     subgroup: "char_entry_key",
-                    value: charIndex,
                     isHidden: true,
                   });
                   charEntryNode.appendChild("entry_value", {
+                    value: char,
                     render: renderChar,
                     group: "entry_value",
                     subgroup: "char_entry_value",
-                    value: char,
                   });
                 };
 
