@@ -44,24 +44,24 @@ expect: {
 actual: {
   a: true,
   b: {},
-  ↓ 1 prop ↓
+  toto: actual.b,
 }
 expect: {
   a: false,
   b: {},
-  ↓ 1 prop ↓
+  toto: expect.b,
 }
 
 # same ref to value before
 actual: {
   a: true,
   toto: {},
-  ↓ 1 prop ↓
+  b: actual.toto,
 }
 expect: {
   a: false,
   toto: {},
-  ↓ 1 prop ↓
+  b: expect.toto,
 }
 
 # ref changed

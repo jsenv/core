@@ -113,7 +113,11 @@ const expect = {
   b: toto,
   toto,
 };
-assert({ actual, expect });
+assert({
+  actual,
+  expect,
+  MAX_ENTRY_AFTER_MULTILINE_DIFF: 4,
+});
 ```
 
 ![img](<./ref/same ref to value after.svg>)
@@ -132,7 +136,11 @@ const expect = {
   toto,
   b: toto,
 };
-assert({ actual, expect });
+assert({
+  actual,
+  expect,
+  MAX_ENTRY_AFTER_MULTILINE_DIFF: 4,
+});
 ```
 
 ![img](<./ref/same ref to value before.svg>)

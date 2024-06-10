@@ -2287,7 +2287,7 @@ const renderChildren = (node, props) => {
           }
           indexToDisplaySet.add(afterDiffIndex);
           afterCount++;
-          afterDiffIndex--;
+          afterDiffIndex++;
         }
       }
       for (const indexToDisplay of indexToDisplaySet) {
