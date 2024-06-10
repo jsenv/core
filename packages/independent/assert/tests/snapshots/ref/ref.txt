@@ -20,6 +20,50 @@ expect: {
   self: expect,
 }
 
+# same ref to self 2
+actual: {
+  a: true,
+  object: { self: actual, self2: actual },
+}
+expect: {
+  a: false,
+  object: { self: expect, self2: expect },
+}
+
+# same ref to parent
+actual: {
+  a: true,
+  object: { parent: actual },
+}
+expect: {
+  a: false,
+  object: { parent: expect },
+}
+
+# same ref to value after
+actual: {
+  a: true,
+  b: {},
+  ↓ 1 prop ↓
+}
+expect: {
+  a: false,
+  b: {},
+  ↓ 1 prop ↓
+}
+
+# same ref to value before
+actual: {
+  a: true,
+  toto: {},
+  ↓ 1 prop ↓
+}
+expect: {
+  a: false,
+  toto: {},
+  ↓ 1 prop ↓
+}
+
 # ref changed
 actual: {
   object: {

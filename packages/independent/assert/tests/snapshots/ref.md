@@ -51,6 +51,92 @@ assert({
 
 ![img](<./ref/same ref to self.svg>)
 
+# same ref to self 2
+
+```js
+const actual = {
+  a: true,
+  object: {
+    self: null,
+    self2: null,
+  },
+};
+actual.object.self = actual;
+actual.object.self2 = actual;
+const expect = {
+  a: false,
+  object: {
+    self: null,
+    self2: null,
+  },
+};
+expect.object.self = expect;
+expect.object.self2 = expect;
+assert({ actual, expect });
+```
+
+![img](<./ref/same ref to self 2.svg>)
+
+# same ref to parent
+
+```js
+const actual = {
+  a: true,
+  object: {
+    parent: null,
+  },
+};
+actual.object.parent = actual;
+const expect = {
+  a: false,
+  object: {
+    parent: null,
+  },
+};
+expect.object.parent = expect;
+assert({ actual, expect });
+```
+
+![img](<./ref/same ref to parent.svg>)
+
+# same ref to value after
+
+```js
+const toto = {};
+const actual = {
+  a: true,
+  b: toto,
+  toto,
+};
+const expect = {
+  a: false,
+  b: toto,
+  toto,
+};
+assert({ actual, expect });
+```
+
+![img](<./ref/same ref to value after.svg>)
+
+# same ref to value before
+
+```js
+const toto = {};
+const actual = {
+  a: true,
+  toto,
+  b: toto,
+};
+const expect = {
+  a: false,
+  toto,
+  b: toto,
+};
+assert({ actual, expect });
+```
+
+![img](<./ref/same ref to value before.svg>)
+
 # ref changed
 
 ```js

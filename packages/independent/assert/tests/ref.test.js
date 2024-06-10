@@ -40,6 +40,78 @@ await startSnapshotTesting("ref", {
       expect,
     });
   },
+  "same ref to self 2": () => {
+    const actual = {
+      a: true,
+      object: {
+        self: null,
+        self2: null,
+      },
+    };
+    actual.object.self = actual;
+    actual.object.self2 = actual;
+    const expect = {
+      a: false,
+      object: {
+        self: null,
+        self2: null,
+      },
+    };
+    expect.object.self = expect;
+    expect.object.self2 = expect;
+    assert({ actual, expect });
+  },
+  "same ref to parent": () => {
+    const actual = {
+      a: true,
+      object: {
+        parent: null,
+      },
+    };
+    actual.object.parent = actual;
+    const expect = {
+      a: false,
+      object: {
+        parent: null,
+      },
+    };
+    expect.object.parent = expect;
+    assert({ actual, expect });
+  },
+  "same ref to value after": () => {
+    const toto = {};
+    const actual = {
+      a: true,
+      b: toto,
+      toto,
+    };
+    const expect = {
+      a: false,
+      b: toto,
+      toto,
+    };
+    assert({
+      actual,
+      expect,
+    });
+  },
+  "same ref to value before": () => {
+    const toto = {};
+    const actual = {
+      a: true,
+      toto,
+      b: toto,
+    };
+    const expect = {
+      a: false,
+      toto,
+      b: toto,
+    };
+    assert({
+      actual,
+      expect,
+    });
+  },
   "ref changed": () => {
     const actual = {
       object: {
@@ -81,27 +153,6 @@ await startSnapshotTesting("ref", {
       expect,
     });
   },
-  // same_parent_ref: () => {
-  //   const actual = {};
-  //   actual.object = { parent: actual };
-  //   const expected = {};
-  //   expected.object = { parent: expected };
-  //   assert({ actual, expected });
-  // },
-  // same_ref_twice: () => {
-  //   const actual = {};
-  //   actual.object = { self: actual, self2: actual };
-  //   const expected = {};
-  //   expected.object = { self: expected, self2: expected };
-  //   assert({ actual, expected });
-  // },
-  // fail_should_not_be_a_reference_nested: () => {
-  //   const actual = { object: {} };
-  //   actual.object.self = {};
-  //   const expected = { object: {} };
-  //   expected.object.self = expected.object;
-  //   assert({ actual, expected });
-  // },
   ["true should be object using ref"]: () => {
     const item = { id: "a" };
     assert({
