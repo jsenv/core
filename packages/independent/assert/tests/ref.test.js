@@ -12,13 +12,19 @@ await startSnapshotTesting("ref", {
       },
     });
   },
-  // TODO: more tests
-  // same_ref: () => {
-  //   const actual = {};
+  // "same ref to self": () => {
+  //   const actual = {
+  //     a: true,
+  //   };
   //   actual.self = actual;
-  //   const expected = {};
-  //   expected.self = expected;
-  //   assert({ actual, expected });
+  //   const expect = {
+  //     a: false,
+  //   };
+  //   expect.self = expect;
+  //   assert({
+  //     actual,
+  //     expect,
+  //   });
   // },
   // same_parent_ref: () => {
   //   const actual = {};

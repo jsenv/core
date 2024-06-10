@@ -429,7 +429,6 @@ const anonymousExpectClass = (function () {
   };
 })();
 assert({
-  colors: false,
   actual: anonymousActualClass,
   expect: anonymousExpectClass,
 });

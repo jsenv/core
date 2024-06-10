@@ -109,16 +109,40 @@ const measureLastLineColumns = (string) => {
   return stringWidth(string);
 };
 
-export const assert = ({
-  actual,
-  expect,
-  MAX_ENTRY_BEFORE_MULTILINE_DIFF = 2,
-  MAX_ENTRY_AFTER_MULTILINE_DIFF = 2,
-  MAX_DEPTH = 5,
-  MAX_DEPTH_INSIDE_DIFF = 1,
-  MAX_DIFF_PER_OBJECT = 2,
-  MAX_COLUMNS = 100,
-}) => {
+const defaultOptions = {
+  actual: undefined,
+  expect: undefined,
+  MAX_ENTRY_BEFORE_MULTILINE_DIFF: 2,
+  MAX_ENTRY_AFTER_MULTILINE_DIFF: 2,
+  MAX_DEPTH: 5,
+  MAX_DEPTH_INSIDE_DIFF: 1,
+  MAX_DIFF_PER_OBJECT: 2,
+  MAX_COLUMNS: 100,
+};
+
+export const assert = (firstArg) => {
+  const unexpectedParamNames = Object.keys(firstArg).filter(
+    (key) => !Object.hasOwn(defaultOptions, key),
+  );
+  if (unexpectedParamNames.length > 0) {
+    throw new TypeError(
+      `"${unexpectedParamNames.join(",")}": there is no such param`,
+    );
+  }
+  const {
+    actual,
+    expect,
+    MAX_ENTRY_BEFORE_MULTILINE_DIFF,
+    MAX_ENTRY_AFTER_MULTILINE_DIFF,
+    MAX_DEPTH,
+    MAX_DEPTH_INSIDE_DIFF,
+    MAX_DIFF_PER_OBJECT,
+    MAX_COLUMNS,
+  } = {
+    ...defaultOptions,
+    ...firstArg,
+  };
+
   const actualRootNode = createRootNode({
     colorWhenSolo: addedColor,
     colorWhenSame: sameColor,
@@ -1230,7 +1254,6 @@ let createRootNode;
                 referenceNode.appendChild(index, {
                   value: path.value,
                   render: renderGrammar,
-                  //  endMarker: ".",
                   group: "grammar",
                   subgroup: "path",
                 });

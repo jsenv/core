@@ -330,7 +330,6 @@ await startSnapshotTesting("function", {
       };
     })();
     assert({
-      colors: false,
       actual: anonymousActualClass,
       expect: anonymousExpectClass,
     });

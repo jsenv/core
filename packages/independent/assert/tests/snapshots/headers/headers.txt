@@ -1,8 +1,0 @@
-# content-type added
-AssertionError: actual and expect have 1 difference:
-
-actual: Headers {
-  "content-type" => ["text/xml"],
-}
-expect: Headers {}
-
