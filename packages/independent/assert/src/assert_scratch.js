@@ -351,27 +351,16 @@ export const assert = (firstArg) => {
         throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
       }
       expectNode.comparison = comparison;
-      if (actualNode.group === "entries") {
-        if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
-          actualNode.hasMarkersWhenEmpty =
-            expectNode.hasMarkersWhenEmpty = true;
-        }
-      }
-
-      let selfDiffReason = "";
-      if (actualNode.isPrimitive) {
-        if (actualNode.value !== expectNode.value) {
-          selfDiffReason = "primitive_value";
-        }
-      } else if (actualNode.isComposite) {
-        // should be compare ref here?
-      }
-      if (selfDiffReason) {
-        onSelfDiff(selfDiffReason);
+      let comparerResult = expectNode.comparer(actualNode, expectNode);
+      if (comparerResult) {
+        onSelfDiff(comparerResult);
         subcompareChildNodesDuo(actualNode, expectNode);
         return;
       }
-      if (actualNode.isPrimitive || actualNode.isComposite) {
+      if (
+        actualNode.category === "primitive" ||
+        actualNode.category === "composite"
+      ) {
         if (actualNode.value === expectNode.value) {
           const actualRender = actualNode.render;
           const expectRender = expectNode.render;
@@ -401,63 +390,8 @@ export const assert = (firstArg) => {
     };
 
     visit: {
-      if (actualNode.isPrimitive || actualNode.isComposite) {
-        if (expectNode.customCompare) {
-          expectNode.customCompare(actualNode, expectNode, {
-            subcompareChildNodesDuo,
-            subcompareChildNodesSolo,
-            subcompareDuo,
-            subcompareSolo,
-            onSelfDiff,
-          });
-          break visit;
-        }
-      }
-      // comparing primitives
-      if (actualNode.isPrimitive && expectNode.isPrimitive) {
+      if (actualNode.category === expectNode.category) {
         visitDuo(actualNode, expectNode);
-        break visit;
-      }
-      // comparing composites
-      if (actualNode.isComposite && expectNode.isComposite) {
-        visitDuo(actualNode, expectNode);
-        break visit;
-      }
-      // comparing entries/entry
-      if (actualNode.group === "entries" && expectNode.group === "entries") {
-        visitDuo(actualNode, expectNode);
-        break visit;
-      }
-      if (actualNode.group === "entry" && expectNode.group === "entry") {
-        visitDuo(actualNode, expectNode);
-        break visit;
-      }
-      // primitive vs composite
-      if (actualNode.isPrimitive && expectNode.isComposite) {
-        onSelfDiff("should_be_composite");
-        const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
-        if (expectAsPrimitiveNode) {
-          subcompareDuo(actualNode, expectAsPrimitiveNode);
-          expectAsPrimitiveNode.ignore = true;
-          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
-        } else {
-          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
-          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
-        }
-        break visit;
-      }
-      // composite vs primitive
-      if (actualNode.isComposite && expectNode.isPrimitive) {
-        onSelfDiff("should_be_primitive");
-        const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
-        if (actualAsPrimitiveNode) {
-          subcompareDuo(actualAsPrimitiveNode, expectNode);
-          actualAsPrimitiveNode.ignore = true;
-          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
-        } else {
-          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
-          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
-        }
         break visit;
       }
       // not found in expected (added or expect cannot have this type of value)
@@ -494,9 +428,53 @@ export const assert = (firstArg) => {
         visitSolo(actualNode, expectNode);
         break visit;
       }
-      throw new Error(
-        `compare not implemented for ${actualNode.subgroup} and ${expectNode.subgroup}`,
-      );
+      // custom comparison
+      if (
+        actualNode.category === "primitive" ||
+        actualNode.category === "composite"
+      ) {
+        if (expectNode.customCompare) {
+          expectNode.customCompare(actualNode, expectNode, {
+            subcompareChildNodesDuo,
+            subcompareChildNodesSolo,
+            subcompareDuo,
+            subcompareSolo,
+            onSelfDiff,
+          });
+          break visit;
+        }
+      }
+
+      // not same category
+      onSelfDiff(`should_be_${expect.category}`);
+      // primitive expected
+      if (
+        expectNode.category === "primitive" &&
+        actualNode.category === "composite"
+      ) {
+        const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
+        if (actualAsPrimitiveNode) {
+          subcompareDuo(actualAsPrimitiveNode, expectNode);
+          actualAsPrimitiveNode.ignore = true;
+          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
+          break visit;
+        }
+      }
+      // composite expected
+      else if (
+        expectNode.category === "composite" &&
+        actualNode.category === "primitive"
+      ) {
+        const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
+        if (expectAsPrimitiveNode) {
+          subcompareDuo(actualNode, expectAsPrimitiveNode);
+          expectAsPrimitiveNode.ignore = true;
+          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+          break visit;
+        }
+      }
+      visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
+      visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
     }
 
     const { self, inside, overall } = comparison.reasons;
@@ -714,9 +692,9 @@ const createAssertMethodCustomExpectation = (
     },
   });
 };
-const createValueCustomCompare = (comparer) => {
+const createValueCustomCompare = (customComparer) => {
   return (actualNode, expectNode, { onSelfDiff, subcompareChildNodesSolo }) => {
-    const selfDiff = comparer(actualNode);
+    const selfDiff = customComparer(actualNode, expectNode);
     if (selfDiff) {
       onSelfDiff(selfDiff);
       subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
@@ -726,7 +704,7 @@ const createValueCustomCompare = (comparer) => {
   };
 };
 const createAssertMethodCustomCompare = (
-  comparer,
+  customComparer,
   { argsCanBeComparedInParallel } = {},
 ) => {
   return (actualNode, expectNode, options) => {
@@ -742,12 +720,12 @@ const createAssertMethodCustomCompare = (
         .get(0)
         .childNodeMap.get("entry_value");
       expectFirsArgValueNode.ignore = true;
-      const comparerResult = comparer(
+      const customComparerResult = customComparer(
         actualNode,
         expectFirsArgValueNode,
         options,
       );
-      options.subcompareSolo(expectNode, comparerResult);
+      options.subcompareSolo(expectNode, customComparerResult);
       return;
     }
     const argIterator = callNode.childNodeMap[Symbol.iterator]();
@@ -766,17 +744,21 @@ const createAssertMethodCustomCompare = (
     let result = PLACEHOLDER_FOR_SAME;
     for (const argValueNode of argValueGenerator()) {
       argValueNode.ignore = true;
-      const comparerResult = comparer(actualNode, argValueNode, options);
-      if (comparerResult === PLACEHOLDER_FOR_SAME) {
+      const customComparerResult = customComparer(
+        actualNode,
+        argValueNode,
+        options,
+      );
+      if (customComparerResult === PLACEHOLDER_FOR_SAME) {
         continue;
       }
-      result = comparerResult;
+      result = customComparerResult;
       if (argsCanBeComparedInParallel) {
         continue;
       }
       for (const remainingArgValueNode of argValueGenerator()) {
         remainingArgValueNode.ignore = true;
-        options.subcompareSolo(comparerResult, remainingArgValueNode);
+        options.subcompareSolo(customComparerResult, remainingArgValueNode);
       }
       break;
     }
@@ -1029,6 +1011,7 @@ let createRootNode;
     name,
     group,
     subgroup = group,
+    category = group,
     value,
     parent,
     referenceMap,
@@ -1036,6 +1019,7 @@ let createRootNode;
     depth,
     path,
     childGenerator,
+    comparer = comparerDefault,
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
@@ -1063,9 +1047,11 @@ let createRootNode;
       colorWhenSame,
       colorWhenModified,
       name,
+      value,
       group,
       subgroup,
-      value,
+      category,
+      comparer,
       childGenerator,
       childNodeMap: null,
       appendChild: (childKey, params) =>
@@ -1084,8 +1070,6 @@ let createRootNode;
       isClassPrototype,
       isValueOfReturnValue,
       // info
-      isPrimitive: false,
-      isComposite: false,
       isCustomExpectation: false,
       // info/primitive
       isUndefined: false,
@@ -1176,7 +1160,7 @@ let createRootNode;
       value === VALUE_OF_RETURN_VALUE_ENTRY_KEY ||
       value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY
     ) {
-      node.isPrimitive = true;
+      node.category = "primitive";
       node.isString = true;
       return node;
     }
@@ -1192,17 +1176,17 @@ let createRootNode;
       subgroup === "char_entry_key" ||
       subgroup === "call_arg_entry_key"
     ) {
-      node.isPrimitive = true;
+      node.category = "primitive";
       node.isNumber = true;
       return node;
     }
     if (subgroup === "char_entry_value") {
-      node.isPrimitive = true;
+      node.category = "primitive";
       node.isString = true;
       return node;
     }
     if (value === null) {
-      node.isPrimitive = true;
+      node.category = "primitive";
       return node;
     }
     const typeofResult = typeof value;
@@ -1217,7 +1201,7 @@ let createRootNode;
       } else {
         node.referenceMap.set(value, node);
       }
-      node.isComposite = true;
+      node.category = "composite";
       if (isFunction) {
         node.isFunction = true;
         node.functionAnalysis = analyseFunction(value);
@@ -1242,13 +1226,13 @@ let createRootNode;
       }
       node.childGenerator = function () {
         if (node.reference) {
-          node.appendChild("reference", {
+          const referenceNode = node.appendChild("reference", {
             value: node.reference.path.toString(),
             render: renderChildren,
             isCompatibleWithSingleLineDiff: true,
             group: "entries",
             subgroup: "reference",
-            childGenerator(referenceNode) {
+            childGenerator() {
               let index = 0;
               for (const path of node.reference.path) {
                 referenceNode.appendChild(index, {
@@ -1430,7 +1414,7 @@ let createRootNode;
                   });
                   mapEntryNode.appendChild("entry_value", {
                     render: renderValue,
-                    childType: "entry_value",
+                    group: "entry_value",
                     subgroup: "map_entry_value",
                     value: mapEntryValue,
                   });
@@ -1766,9 +1750,8 @@ let createRootNode;
       return node;
     }
 
-    node.isPrimitive = true;
+    node.category = "primitive";
     if (typeofResult === "number") {
-      node.isPrimitive = true;
       node.isNumber = true;
       return node;
     }
@@ -1948,6 +1931,38 @@ let createRootNode;
 
   const referenceFromOthersSetDefault = new Set();
 
+  const comparerDefault = (actualNode, expectNode) => {
+    if (actualNode.category === "primitive") {
+      if (actualNode.value !== expectNode.value) {
+        return "primitive_value";
+      }
+      return null;
+    }
+    if (actualNode.category === "composite") {
+      if (actualNode.reference && !expectNode.reference) {
+        return "should_be_value";
+      }
+      if (expectNode.reference && !actualNode.reference) {
+        return "should_be_a_ref";
+      }
+      if (actualNode.reference && expectNode.reference) {
+        const actualRefPathString = actualNode.reference.path.pop().toString();
+        const expectRefPathString = expectNode.reference.path.pop().toString();
+        if (actualRefPathString !== expectRefPathString) {
+          return "ref_path";
+        }
+        return null;
+      }
+    }
+    if (actualNode.category === "entries") {
+      if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
+        actualNode.hasMarkersWhenEmpty = expectNode.hasMarkersWhenEmpty = true;
+      }
+      return null;
+    }
+    return null;
+  };
+
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
       id: node.nextId(),
@@ -1975,7 +1990,7 @@ let createRootNode;
 }
 
 const renderValue = (node, props) => {
-  if (node.isPrimitive) {
+  if (node.category === "primitive") {
     return renderPrimitive(node, props);
   }
   return renderComposite(node, props);
@@ -2694,13 +2709,13 @@ const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
 
 const getAddedOrRemovedReason = (node) => {
-  if (node.group === "entry") {
+  if (node.category === "entry") {
     return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
   }
-  if (node.group === "entry_key") {
+  if (node.category === "entry_key") {
     return node.value;
   }
-  if (node.group === "entry_value") {
+  if (node.category === "entry_value") {
     return getAddedOrRemovedReason(node.parent);
   }
   if (node.subgroup === "value_of_return_value") {
@@ -2722,7 +2737,7 @@ const getWrappedNode = (node, predicate) => {
     // valueOf: () => {
     //   return { valueOf: () => 10 }
     // }
-    const nested = wrappedNode.getWrappedNode(node, predicate);
+    const nested = getWrappedNode(wrappedNode, predicate);
     if (nested) {
       return nested;
     }
@@ -2732,12 +2747,12 @@ const getWrappedNode = (node, predicate) => {
 // const asCompositeNode = (node) =>
 //   getWrappedNode(
 //     node,
-//     (wrappedNodeCandidate) => wrappedNodeCandidate.isComposite,
+//     (wrappedNodeCandidate) => wrappedNodeCandidate.group === "composite",
 //   );
 const asPrimitiveNode = (node) =>
   getWrappedNode(
     node,
-    (wrappedNodeCandidate) => wrappedNodeCandidate.isPrimitive,
+    (wrappedNodeCandidate) => wrappedNodeCandidate.category === "primitive",
   );
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
@@ -2758,8 +2773,7 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
     if (node.isAsyncFunction && !node.isGeneratorFunction) {
       return prototypeValue === undefined;
     }
-    const prototypeValueIsComposite = typeof prototypeValue === "object";
-    if (!prototypeValueIsComposite) {
+    if (!isComposite(prototypeValue)) {
       return false;
     }
     const constructorDescriptor = Object.getOwnPropertyDescriptor(

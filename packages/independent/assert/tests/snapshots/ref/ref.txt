@@ -7,3 +7,13 @@ expect: {
   bar: expect.foo,
 }
 
+# same ref to self
+actual: {
+  a: true,
+  self: actual,
+}
+expect: {
+  a: false,
+  self: expect,
+}
+

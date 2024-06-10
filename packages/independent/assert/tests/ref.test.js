@@ -12,20 +12,24 @@ await startSnapshotTesting("ref", {
       },
     });
   },
-  // "same ref to self": () => {
-  //   const actual = {
-  //     a: true,
-  //   };
-  //   actual.self = actual;
-  //   const expect = {
-  //     a: false,
-  //   };
-  //   expect.self = expect;
-  //   assert({
-  //     actual,
-  //     expect,
-  //   });
-  // },
+  "same ref to self": () => {
+    const actual = {
+      a: true,
+    };
+    actual.self = actual;
+    const expect = {
+      a: false,
+    };
+    expect.self = expect;
+    assert({
+      actual,
+      expect,
+    });
+  },
+  // ref fully added
+  // ref fully removed
+  // value becomes a ref
+  // ref becomes a value
   // same_parent_ref: () => {
   //   const actual = {};
   //   actual.object = { parent: actual };

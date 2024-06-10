@@ -8,6 +8,9 @@ export const createValuePath = (parts = []) => {
     },
     toString: () => parts.map((part) => part.value).join(""),
     valueOf: () => parts.map((part) => part.value).join(""),
+    pop: () => {
+      return createValuePath(parts.slice(1));
+    },
     append: (
       property,
       { isIndexedEntry, isPropertyDescriptor, isMeta } = {},
