@@ -1,11 +1,14 @@
-# true should be object using ref
-actual: true
+# reference removed
+actual: {}
 expect: {
-  foo: {
-    id: "a",
-  },
-  bar: expect.foo,
+  self: expect,
 }
+
+# reference added
+actual: {
+  self: actual,
+}
+expect: {}
 
 # same ref to self
 actual: {
@@ -15,5 +18,42 @@ actual: {
 expect: {
   a: false,
   self: expect,
+}
+
+# ref changed
+actual: {
+  object: {
+    self: actual,
+  },
+}
+expect: {
+  object: {
+    self: expect.object,
+  },
+}
+
+# true should be a ref to self
+actual: {
+  self: true,
+}
+expect: {
+  self: expect,
+}
+
+# ref to self should be true
+actual: {
+  self: actual,
+}
+expect: {
+  self: true,
+}
+
+# true should be object using ref
+actual: true
+expect: {
+  foo: {
+    id: "a",
+  },
+  bar: expect.foo,
 }
 
