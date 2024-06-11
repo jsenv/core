@@ -50,3 +50,17 @@ expect: "http://example.com/?foo=a&foo=a&foo=a"
 actual: "http://example.com/?foo=a"
 expect: "http://example.com/?foo=a&foo=b"
 
+# url search param + vs space
+actual: {
+  a: "http://example.com/?a=+&b=1",
+  b: true,
+}
+expect: {
+  a: "http://example.com/?a= &b=1",
+  b: false,
+}
+
+# url search param quotes
+actual: 'http://example.com/?name="dam"'
+expect: 'http://example.com/?name="seb"'
+

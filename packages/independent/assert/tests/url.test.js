@@ -80,30 +80,24 @@ await startSnapshotTesting("url", {
       expect: "http://example.com?foo=a&foo=b",
     });
   },
-  // ["url search param + vs space"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: `http://example.com?a=+&b=1`,
-  //       b: true,
-  //     },
-  //     expect: {
-  //       a: `http://example.com?a= &b=1`,
-  //       b: false,
-  //     },
-  //   });
-  // },
-  // ["url search param quotes"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: `http://example.com?name="dam"`,
-  //       b: true,
-  //     },
-  //     expect: {
-  //       a: `http://example.com?name="seb"`,
-  //       b: false,
-  //     },
-  //   });
-  // },
+  ["url search param + vs space"]: () => {
+    assert({
+      actual: {
+        a: `http://example.com?a=+&b=1`,
+        b: true,
+      },
+      expect: {
+        a: `http://example.com?a= &b=1`,
+        b: false,
+      },
+    });
+  },
+  ["url search param quotes"]: () => {
+    assert({
+      actual: `http://example.com?name="dam"`,
+      expect: `http://example.com?name="seb"`,
+    });
+  },
   // TODO: restore when string diff works (focusedChildNode targets node with a diff)
   // ["url search param modified, middle of long params"]: () => {
   //   assert({

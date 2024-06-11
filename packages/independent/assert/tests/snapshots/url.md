@@ -141,3 +141,31 @@ assert({
 
 ![img](<./url/removing multi search.svg>)
 
+# url search param + vs space
+
+```js
+assert({
+  actual: {
+    a: `http://example.com?a=+&b=1`,
+    b: true,
+  },
+  expect: {
+    a: `http://example.com?a= &b=1`,
+    b: false,
+  },
+});
+```
+
+![img](<./url/url search param + vs space.svg>)
+
+# url search param quotes
+
+```js
+assert({
+  actual: `http://example.com?name="dam"`,
+  expect: `http://example.com?name="seb"`,
+});
+```
+
+![img](<./url/url search param quotes.svg>)
+

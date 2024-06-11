@@ -2,8 +2,13 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - url
- *   - url object
- *   - url search params
+ *   - improve node.hasQuotes
+ *    (a priori disparait au profit de startMarker/endMarker)
+ *    and how the presence of a quote
+ *    in a child node can influence the quote used in the parent
+ *    au lieu de faire .parent.parent.parent machin
+ *    en gros l'enfant fera quoteRef.current et en hérite du parent
+ *    pour savoir quelle est la quote actuellement en cours d'utilisation
  * - well known
  * - symbols
  * - numbers
@@ -1314,19 +1319,18 @@ let createRootNode;
                         childGenerator() {
                           const searchParamsMap = tokenizeUrlSearch(search);
                           let searchEntryIndex = 0;
-                          for (const [key, value] of searchParamsMap) {
+                          for (const [key, values] of searchParamsMap) {
                             const urlSearchEntryNode =
                               urlSearchNode.appendChild(key, {
                                 key: searchEntryIndex,
-                                value,
                                 render: renderChildrenOneLiner,
                                 path: node.path.append(key),
                                 group: "entries",
                                 subgroup: "url_search_entry",
                                 childGenerator() {
                                   let valueIndex = 0;
-                                  const isMultiValue = value.length > 1;
-                                  while (valueIndex < value.length) {
+                                  const isMultiValue = values.length > 1;
+                                  while (valueIndex < values.length) {
                                     const entryNode =
                                       urlSearchEntryNode.appendChild(
                                         valueIndex,
@@ -1355,7 +1359,7 @@ let createRootNode;
                                       subgroup: "url_search_entry_key",
                                     });
                                     entryNode.appendChild("entry_value", {
-                                      value: value[valueIndex],
+                                      value: values[valueIndex],
                                       render: renderValue,
                                       group: "entry_value",
                                       subgroup: "url_search_entry_value",
@@ -1383,6 +1387,26 @@ let createRootNode;
                 subgroup: "url_internal_properties",
               },
             );
+
+            let doubleQuoteCount = 0;
+            let singleQuoteCount = 0;
+            let backtickCount = 0;
+            for (const char of value) {
+              if (char === DOUBLE_QUOTE) {
+                doubleQuoteCount++;
+              } else if (char === SINGLE_QUOTE) {
+                singleQuoteCount++;
+              } else if (char === BACKTICK) {
+                backtickCount++;
+              }
+            }
+            const bestQuote = pickBestQuote({
+              doubleQuoteCount,
+              singleQuoteCount,
+              backtickCount,
+            });
+            urlInternalPropertiesNode.startMarker =
+              urlInternalPropertiesNode.endMarker = bestQuote;
           };
         } else {
           node.childGenerator = () => {
@@ -1501,20 +1525,11 @@ let createRootNode;
                 if (isDone) {
                   // single line
                   if (node.hasQuotes) {
-                    let bestQuote;
-                    if (doubleQuoteCount === 0) {
-                      bestQuote = DOUBLE_QUOTE;
-                    } else if (singleQuoteCount === 0) {
-                      bestQuote = SINGLE_QUOTE;
-                    } else if (backtickCount === 0) {
-                      bestQuote = BACKTICK;
-                    } else if (singleQuoteCount > doubleQuoteCount) {
-                      bestQuote = DOUBLE_QUOTE;
-                    } else if (doubleQuoteCount > singleQuoteCount) {
-                      bestQuote = SINGLE_QUOTE;
-                    } else {
-                      bestQuote = DOUBLE_QUOTE;
-                    }
+                    const bestQuote = pickBestQuote({
+                      doubleQuoteCount,
+                      singleQuoteCount,
+                      backtickCount,
+                    });
                     firstLineEntryValueNode.startMarker =
                       firstLineEntryValueNode.endMarker = bestQuote;
                     lineEntriesNode.hasMarkersWhenEmpty = true;
@@ -2239,11 +2254,22 @@ const renderString = (node, props) => {
   if (lineEntriesNode) {
     return lineEntriesNode.render(props);
   }
-  let diff = JSON.stringify(node.value);
-  if (node.hasQuotes) {
-    return truncateAndAppyColor(diff, node, props);
+
+  let diff = "";
+  for (const char of node.value) {
+    if (
+      node.subgroup === "url_search_entry_value" &&
+      char === node.parent.parent.parent.parent.startMarker
+    ) {
+      diff += `\\${char}`;
+    } else {
+      diff += char;
+    }
   }
-  return truncateAndAppyColor(diff.slice(1, -1), node, props);
+  if (node.hasQuotes) {
+    return truncateAndAppyColor(`"${diff}"`, node, props);
+  }
+  return truncateAndAppyColor(diff, node, props);
 };
 const renderChar = (node, props) => {
   const char = node.value;
@@ -2889,6 +2915,28 @@ const createArgEntriesNode = (node, { args }) => {
 const DOUBLE_QUOTE = `"`;
 const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
+const pickBestQuote = ({
+  doubleQuoteCount,
+  singleQuoteCount,
+  backtickCount,
+}) => {
+  if (doubleQuoteCount === 0) {
+    return DOUBLE_QUOTE;
+  }
+  if (singleQuoteCount === 0) {
+    return SINGLE_QUOTE;
+  }
+  if (backtickCount === 0) {
+    return BACKTICK;
+  }
+  if (singleQuoteCount > doubleQuoteCount) {
+    return DOUBLE_QUOTE;
+  }
+  if (doubleQuoteCount > singleQuoteCount) {
+    return SINGLE_QUOTE;
+  }
+  return DOUBLE_QUOTE;
+};
 
 const getAddedOrRemovedReason = (node) => {
   if (node.group === "url_internal_prop") {
