@@ -1060,10 +1060,7 @@ let createRootNode;
       childNodeMap: null,
       appendChild: (childKey, params) =>
         appendChildNodeGeneric(node, childKey, params),
-      wrappedNodeGetterSet: new Set(),
-      appendWrappedNodeGetter: (getter) => {
-        node.wrappedNodeGetterSet.add(getter);
-      },
+      wrappedNodeGetter: () => {},
       parent,
       reference: null,
       referenceMap,
@@ -1743,23 +1740,28 @@ let createRootNode;
         }
       };
 
-      node.appendWrappedNodeGetter(() => {
+      node.wrappedNodeGetter = () => {
         const propertyEntriesNode = node.childNodeMap.get("property_entries");
-        if (!propertyEntriesNode) {
-          return null;
+        if (propertyEntriesNode) {
+          const symbolToPrimitiveReturnValuePropertyNode =
+            propertyEntriesNode.childNodeMap.get(
+              SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+            );
+          if (symbolToPrimitiveReturnValuePropertyNode) {
+            return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
+              "entry_value",
+            );
+          }
+          const valueOfReturnValuePropertyNode =
+            propertyEntriesNode.childNodeMap.get(
+              VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+            );
+          if (valueOfReturnValuePropertyNode) {
+            return valueOfReturnValuePropertyNode.childNodeMap.get(
+              "entry_value",
+            );
+          }
         }
-        const symbolToPrimitiveReturnValuePropertyNode =
-          propertyEntriesNode.childNodeMap.get(
-            SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
-          );
-        if (!symbolToPrimitiveReturnValuePropertyNode) {
-          return null;
-        }
-        return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
-          "entry_value",
-        );
-      });
-      node.appendWrappedNodeGetter(() => {
         const constructNode = node.childNodeMap.get("construct");
         if (constructNode) {
           const constructCallNode = constructNode.childNodeMap.get("call");
@@ -1772,18 +1774,8 @@ let createRootNode;
             }
           }
         }
-        const propertyEntriesNode = node.childNodeMap.get("property_entries");
-        if (!propertyEntriesNode) {
-          return null;
-        }
-        const valueOfReturnValuePropertyNode =
-          propertyEntriesNode.childNodeMap.get(VALUE_OF_RETURN_VALUE_ENTRY_KEY);
-        if (!valueOfReturnValuePropertyNode) {
-          return null;
-        }
-        return valueOfReturnValuePropertyNode.childNodeMap.get("entry_value");
-      });
-
+        return null;
+      };
       return node;
     }
 
@@ -2846,22 +2838,20 @@ const getAddedOrRemovedReason = (node) => {
 };
 
 const getWrappedNode = (node, predicate) => {
-  for (const wrappedNodeGetter of node.wrappedNodeGetterSet) {
-    const wrappedNode = wrappedNodeGetter();
-    if (!wrappedNode) {
-      continue;
-    }
-    if (predicate(wrappedNode)) {
-      return wrappedNode;
-    }
-    // can happen for
-    // valueOf: () => {
-    //   return { valueOf: () => 10 }
-    // }
-    const nested = getWrappedNode(wrappedNode, predicate);
-    if (nested) {
-      return nested;
-    }
+  const wrappedNode = node.wrappedNodeGetter();
+  if (!wrappedNode) {
+    return null;
+  }
+  if (predicate(wrappedNode)) {
+    return wrappedNode;
+  }
+  // can happen for
+  // valueOf: () => {
+  //   return { valueOf: () => 10 }
+  // }
+  const nested = getWrappedNode(wrappedNode, predicate);
+  if (nested) {
+    return nested;
   }
   return null;
 };
