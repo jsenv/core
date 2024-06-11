@@ -26,13 +26,60 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com?foo=b"),
     });
   },
-  // ["url search param modified, middle of long params"]: () => {
-  //   assert({
-  //     actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
-  //     expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
-  //     maxColumns: 30,
-  //   });
-  // },
+  ["url search param added"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a"),
+      expect: new URL("http://example.com"),
+    });
+  },
+  ["url search param added 2"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a&bar=b"),
+      expect: new URL("http://example.com?foo=a"),
+    });
+  },
+  ["url search param removed"]: () => {
+    assert({
+      actual: new URL("http://example.com"),
+      expect: new URL("http://example.com?foo=a"),
+    });
+  },
+  ["url search param removed 2"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a"),
+      expect: new URL("http://example.com?foo=a&bar=b"),
+    });
+  },
+  ["multi search param 2nd value modified"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=b&foo=a",
+      expect: "http://example.com?foo=a&foo=a&foo=a",
+    });
+  },
+  ["adding multi search"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=b",
+      expect: "http://example.com?foo=a",
+    });
+  },
+  ["multi search adding a 3rd param"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=a&foo=a",
+      expect: "http://example.com?foo=a&foo=a",
+    });
+  },
+  ["multi search removing a 3rd param"]: () => {
+    assert({
+      actual: "http://example.com?foo=a&foo=a",
+      expect: "http://example.com?foo=a&foo=a&foo=a",
+    });
+  },
+  ["removing multi search"]: () => {
+    assert({
+      actual: "http://example.com?foo=a",
+      expect: "http://example.com?foo=a&foo=b",
+    });
+  },
   // ["url search param + vs space"]: () => {
   //   assert({
   //     actual: {
@@ -57,58 +104,12 @@ await startSnapshotTesting("url", {
   //     },
   //   });
   // },
-  // ["url search param added"]: () => {
+  // TODO: restore when string diff works (focusedChildNode targets node with a diff)
+  // ["url search param modified, middle of long params"]: () => {
   //   assert({
-  //     actual: new URL("http://example.com?foo=a"),
-  //     expect: new URL("http://example.com"),
-  //   });
-  // },
-  // ["url search param added 2"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com?foo=a&bar=b"),
-  //     expect: new URL("http://example.com?foo=a"),
-  //   });
-  // },
-  // ["url search param removed"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com"),
-  //     expect: new URL("http://example.com?foo=a"),
-  //   });
-  // },
-  // ["url search param removed 2"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com?foo=a"),
-  //     expect: new URL("http://example.com?foo=a&bar=b"),
-  //   });
-  // },
-  // ["multi search param 2nd value modified"]: () => {
-  //   assert({
-  //     actual: "http://example.com?foo=a&foo=b&foo=a",
-  //     expect: "http://example.com?foo=a&foo=a&foo=a",
-  //   });
-  // },
-  // ["adding multi search"]: () => {
-  //   assert({
-  //     actual: "http://example.com?foo=a&foo=b",
-  //     expect: "http://example.com?foo=a",
-  //   });
-  // },
-  // ["multi search adding a 3rd param"]: () => {
-  //   assert({
-  //     actual: "http://example.com?foo=a&foo=a&foo=a",
-  //     expect: "http://example.com?foo=a&foo=a",
-  //   });
-  // },
-  // ["multi search removing a 3rd param"]: () => {
-  //   assert({
-  //     actual: "http://example.com?foo=a&foo=a",
-  //     expect: "http://example.com?foo=a&foo=a&foo=a",
-  //   });
-  // },
-  // ["removing multi search"]: () => {
-  //   assert({
-  //     actual: "http://example.com?foo=a",
-  //     expect: "http://example.com?foo=a&foo=b",
+  //     actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
+  //     expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
+  //     MAX_COLUMNS: 30,
   //   });
   // },
   // ["url hash modified"]: () => {

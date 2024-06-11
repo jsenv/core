@@ -1340,17 +1340,17 @@ let createRootNode;
                                                 { isIndexedEntry: true },
                                               )
                                             : undefined,
-                                          startMarker:
-                                            urlSearchEntryNode.key === 0 &&
-                                            valueIndex === 0
-                                              ? ""
-                                              : "&",
                                           middleMarker: "=",
                                         },
                                       );
                                     entryNode.appendChild("entry_key", {
                                       value: key,
                                       render: renderValue,
+                                      startMarker:
+                                        urlSearchEntryNode.key === 0 &&
+                                        valueIndex === 0
+                                          ? ""
+                                          : "&",
                                       group: "entry_key",
                                       subgroup: "url_search_entry_key",
                                     });
