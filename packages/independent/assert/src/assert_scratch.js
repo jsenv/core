@@ -26,6 +26,7 @@ import {
   defaultFunctionAnalysis,
 } from "./function_analysis.js";
 import { tokenizeString } from "./tokenize_string.js";
+import { tokenizeUrlSearch } from "./tokenize_url_search.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -1016,6 +1017,7 @@ let createRootNode;
     subgroup = group,
     category = group,
     value,
+    key,
     parent,
     referenceMap,
     nextId,
@@ -1052,6 +1054,7 @@ let createRootNode;
       colorWhenModified,
       name,
       value,
+      key,
       group,
       subgroup,
       category,
@@ -1192,14 +1195,334 @@ let createRootNode;
       node.isString = true;
       return node;
     }
+    if (group === "url_search_entry") {
+      node.category = "composite";
+      return node;
+    }
     if (value === null) {
       node.category = "primitive";
       return node;
     }
+    if (value === undefined) {
+      node.category = "primitive";
+      node.isUndefined = true;
+      return node;
+    }
     const typeofResult = typeof value;
+    if (typeofResult === "number") {
+      node.category = "primitive";
+      node.isNumber = true;
+      return node;
+    }
+    if (typeofResult === "string") {
+      node.category = "primitive";
+      node.isString = true;
+      if (group === "grammar") {
+        // no quote around grammar
+      } else if (group === "url_internal_prop") {
+        // no quote around url internal properties
+      } else if (group === "url_search_entry_value") {
+        // no quote around url search values
+      } else {
+        if (subgroup === "property_entry_key") {
+          if (!isValidPropertyIdentifier(value)) {
+            node.hasQuotes = true;
+          }
+        } else {
+          node.hasQuotes = true;
+        }
+        if (canParseUrl(value)) {
+          node.isStringForUrl = true;
+          node.childGenerator = () => {
+            const urlObject = new URL(value);
+            const urlInternalPropertiesNode = node.appendChild(
+              "url_internal_properties",
+              {
+                render: renderChildrenOneLiner,
+                startMarker: DOUBLE_QUOTE,
+                endMarker: DOUBLE_QUOTE,
+                childGenerator() {
+                  const {
+                    protocol,
+                    username,
+                    password,
+                    hostname,
+                    port,
+                    pathname,
+                    search,
+                    hash,
+                  } = urlObject;
+                  urlInternalPropertiesNode.appendChild("protocol", {
+                    value: protocol,
+                    render: renderValue,
+                    endMarker: "//",
+                    group: "url_internal_prop",
+                    subgroup: "url_protocol",
+                  });
+                  if (username) {
+                    urlInternalPropertiesNode.appendChild("username", {
+                      value: username,
+                      render: renderValue,
+                      endMarker: password ? ":" : "@",
+                      group: "url_internal_prop",
+                      subgroup: "url_username",
+                    });
+                    if (password) {
+                      urlInternalPropertiesNode.appendChild("password", {
+                        value: password,
+                        render: renderValue,
+                        endMarker: "@",
+                        group: "url_internal_prop",
+                        subgroup: "url_password",
+                      });
+                    }
+                  }
+                  urlInternalPropertiesNode.appendChild("hostname", {
+                    value: hostname,
+                    render: renderValue,
+                    group: "url_internal_prop",
+                    subgroup: "url_hostname",
+                  });
+                  if (port) {
+                    urlInternalPropertiesNode.appendChild("port", {
+                      value: parseInt(port),
+                      render: renderValue,
+                      startMarker: ":",
+                      group: "url_internal_prop",
+                      subgroup: "url_port",
+                    });
+                  }
+                  if (pathname) {
+                    urlInternalPropertiesNode.appendChild("pathname", {
+                      value: pathname,
+                      render: renderValue,
+                      group: "url_internal_prop",
+                      subgroup: "url_pathname",
+                    });
+                  }
+                  if (search) {
+                    const urlSearchNode = urlInternalPropertiesNode.appendChild(
+                      "search",
+                      {
+                        value: null,
+                        render: renderChildrenOneLiner,
+                        // startMarker: "?",
+                        group: "url_internal_prop",
+                        subgroup: "url_search",
+                        childGenerator() {
+                          const searchParamsMap = tokenizeUrlSearch(search);
+                          let searchEntryIndex = 0;
+                          for (const [key, value] of searchParamsMap) {
+                            const urlSearchEntryNode =
+                              urlSearchNode.appendChild(key, {
+                                key: searchEntryIndex,
+                                value,
+                                render: renderChildrenOneLiner,
+                                childGenerator() {
+                                  let valueIndex = 0;
+                                  while (valueIndex < value.length) {
+                                    urlSearchEntryNode.appendChild(valueIndex, {
+                                      key: valueIndex,
+                                      value: value[valueIndex],
+                                      render: renderValue,
+                                      startMarker:
+                                        urlSearchEntryNode.key === 0 &&
+                                        valueIndex === 0
+                                          ? `?${key}=`
+                                          : `&${key}=`,
+                                      group: "url_search_entry_value",
+                                      path: node.path.append(valueIndex, {
+                                        isIndexedEntry: true,
+                                      }),
+                                    });
+                                    valueIndex++;
+                                  }
+                                },
+                                group: "url_search_entry",
+                              });
+                            searchEntryIndex++;
+                          }
+                        },
+                      },
+                    );
+                  }
+                  if (hash) {
+                    urlInternalPropertiesNode.appendChild("hash", {
+                      value: hash,
+                      render: renderValue,
+                      group: "url_internal_prop",
+                      subgroup: "url_hash",
+                    });
+                  }
+                },
+                group: "entries",
+                subgroup: "url_internal_properties",
+              },
+            );
+          };
+        } else {
+          node.childGenerator = () => {
+            const lineEntriesNode = node.appendChild("line_entries", {
+              value: [],
+              render: renderChildren,
+              group: "entries",
+              subgroup: "line_entries",
+              isCompatibleWithMultilineDiff: true,
+              skippedEntrySummary: {
+                skippedEntryNames: ["line", "lines"],
+              },
+              childGenerator: () => {
+                const appendLineEntry = (lineIndex) => {
+                  lineEntriesNode.value.push(lineIndex);
+                  const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+                    render: renderEntry,
+                    group: "entry",
+                    subgroup: "line_entry",
+                  });
+                  const lineEntryKeyNode = lineEntryNode.appendChild(
+                    "entry_key",
+                    {
+                      value: lineIndex,
+                      render: renderInteger,
+                      group: "entry_key",
+                      subgroup: "line_entry_key",
+                      isHidden: true,
+                    },
+                  );
+                  const lineEntryValueNode = lineEntryNode.appendChild(
+                    "entry_value",
+                    {
+                      value: [],
+                      render: renderChildrenOneLiner,
+                      focusedChildWhenSame: "end",
+                      group: "entries",
+                      subgroup: "line_entry_value",
+                      overflowStartMarker: "…",
+                      overflowEndMarker: "…",
+                    },
+                  );
+                  const appendCharEntry = (charIndex, char) => {
+                    lineEntryValueNode.value.push(charIndex);
+                    const charEntryNode = lineEntryValueNode.appendChild(
+                      charIndex,
+                      {
+                        render: renderEntry,
+                        group: "entry",
+                        subgroup: "char_entry",
+                      },
+                    );
+                    charEntryNode.appendChild("entry_key", {
+                      value: charIndex,
+                      render: renderInteger,
+                      group: "entry_key",
+                      subgroup: "char_entry_key",
+                      isHidden: true,
+                    });
+                    charEntryNode.appendChild("entry_value", {
+                      value: char,
+                      render: renderChar,
+                      group: "entry_value",
+                      subgroup: "char_entry_value",
+                    });
+                  };
+
+                  return {
+                    lineEntryNode,
+                    lineEntryKeyNode,
+                    lineEntryValueNode,
+                    appendCharEntry,
+                  };
+                };
+
+                let isDone = false;
+                let firstLineCharIndex = 0;
+                let doubleQuoteCount = 0;
+                let singleQuoteCount = 0;
+                let backtickCount = 0;
+                const chars = tokenizeString(node.value);
+                const charIterator = chars[Symbol.iterator]();
+                function* charGeneratorUntilNewLine() {
+                  // eslint-disable-next-line no-constant-condition
+                  while (true) {
+                    const charIteratorResult = charIterator.next();
+                    if (charIteratorResult.done) {
+                      isDone = true;
+                      return;
+                    }
+                    const char = charIteratorResult.value;
+                    if (char === "\n") {
+                      break;
+                    }
+                    yield char;
+                  }
+                }
+
+                // first line
+                const {
+                  lineEntryValueNode: firstLineEntryValueNode,
+                  appendCharEntry: appendFirstLineCharEntry,
+                } = appendLineEntry(0);
+                for (const char of charGeneratorUntilNewLine()) {
+                  if (char === DOUBLE_QUOTE) {
+                    doubleQuoteCount++;
+                  } else if (char === SINGLE_QUOTE) {
+                    singleQuoteCount++;
+                  } else if (char === BACKTICK) {
+                    backtickCount++;
+                  }
+                  appendFirstLineCharEntry(firstLineCharIndex, char);
+                  firstLineCharIndex++;
+                }
+
+                if (isDone) {
+                  // single line
+                  if (node.hasQuotes) {
+                    let bestQuote;
+                    if (doubleQuoteCount === 0) {
+                      bestQuote = DOUBLE_QUOTE;
+                    } else if (singleQuoteCount === 0) {
+                      bestQuote = SINGLE_QUOTE;
+                    } else if (backtickCount === 0) {
+                      bestQuote = BACKTICK;
+                    } else if (singleQuoteCount > doubleQuoteCount) {
+                      bestQuote = DOUBLE_QUOTE;
+                    } else if (doubleQuoteCount > singleQuoteCount) {
+                      bestQuote = SINGLE_QUOTE;
+                    } else {
+                      bestQuote = DOUBLE_QUOTE;
+                    }
+                    firstLineEntryValueNode.startMarker =
+                      firstLineEntryValueNode.endMarker = bestQuote;
+                    lineEntriesNode.hasMarkersWhenEmpty = true;
+                  }
+                  lineEntriesNode.hasMarkersWhenEmpty = true;
+                  return;
+                }
+                // remaining lines
+                let lineIndex = 1;
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                  const { appendCharEntry } = appendLineEntry(lineIndex);
+                  let columnIndex = 0;
+                  for (const char of charGeneratorUntilNewLine()) {
+                    appendCharEntry(columnIndex, char);
+                    columnIndex++;
+                  }
+                  if (isDone) {
+                    break;
+                  }
+                  lineIndex++;
+                }
+              },
+            });
+          };
+        }
+      }
+    }
     const isObject = typeofResult === "object";
     const isFunction = typeofResult === "function";
     if (isObject || isFunction) {
+      node.category = "composite";
       node.referenceFromOthersSet = new Set();
       const reference = node.referenceMap.get(value);
       if (reference) {
@@ -1208,7 +1531,6 @@ let createRootNode;
       } else {
         node.referenceMap.set(value, node);
       }
-      node.category = "composite";
       if (isFunction) {
         node.isFunction = true;
         node.functionAnalysis = analyseFunction(value);
@@ -1259,7 +1581,6 @@ let createRootNode;
           });
           return;
         }
-
         let objectConstructNode = null;
         let objectConstructArgs = null;
         // function child nodes
@@ -1739,7 +2060,6 @@ let createRootNode;
           });
         }
       };
-
       node.wrappedNodeGetter = () => {
         const constructNode = node.childNodeMap.get("construct");
         if (constructNode) {
@@ -1779,280 +2099,7 @@ let createRootNode;
       };
       return node;
     }
-
     node.category = "primitive";
-    if (typeofResult === "number") {
-      node.isNumber = true;
-      return node;
-    }
-    if (typeofResult === "string") {
-      node.isString = true;
-      if (group === "grammar") {
-        // no quote around grammar
-      } else if (group === "url_internal_prop") {
-        // no quote around url internal properties
-      } else {
-        if (subgroup === "property_entry_key") {
-          if (!isValidPropertyIdentifier(value)) {
-            node.hasQuotes = true;
-          }
-        } else {
-          node.hasQuotes = true;
-        }
-        if (canParseUrl(value)) {
-          node.isStringForUrl = true;
-          node.childGenerator = () => {
-            const urlObject = new URL(value);
-            const urlInternalPropertiesNode = node.appendChild(
-              "url_internal_properties",
-              {
-                render: renderChildrenOneLiner,
-                startMarker: DOUBLE_QUOTE,
-                endMarker: DOUBLE_QUOTE,
-                childGenerator() {
-                  const {
-                    protocol,
-                    username,
-                    password,
-                    hostname,
-                    port,
-                    pathname,
-                    search,
-                    hash,
-                  } = urlObject;
-                  urlInternalPropertiesNode.appendChild("protocol", {
-                    value: protocol,
-                    render: renderValue,
-                    endMarker: "//",
-                    group: "url_internal_prop",
-                    subgroup: "url_protocol",
-                  });
-                  if (username) {
-                    urlInternalPropertiesNode.appendChild("username", {
-                      value: username,
-                      render: renderValue,
-                      endMarker: password ? ":" : "@",
-                      group: "url_internal_prop",
-                      subgroup: "url_username",
-                    });
-                    if (password) {
-                      urlInternalPropertiesNode.appendChild("password", {
-                        value: password,
-                        render: renderValue,
-                        endMarker: "@",
-                        group: "url_internal_prop",
-                        subgroup: "url_password",
-                      });
-                    }
-                  }
-                  urlInternalPropertiesNode.appendChild("hostname", {
-                    value: hostname,
-                    render: renderValue,
-                    group: "url_internal_prop",
-                    subgroup: "url_hostname",
-                  });
-                  if (port) {
-                    urlInternalPropertiesNode.appendChild("port", {
-                      value: parseInt(port),
-                      render: renderValue,
-                      startMarker: ":",
-                      group: "url_internal_prop",
-                      subgroup: "url_port",
-                    });
-                  }
-                  if (pathname) {
-                    urlInternalPropertiesNode.appendChild("pathname", {
-                      value: pathname,
-                      render: renderValue,
-                      group: "url_internal_prop",
-                      subgroup: "url_pathname",
-                    });
-                  }
-                  if (search) {
-                    urlInternalPropertiesNode.appendChild("search", {
-                      value: search,
-                      render: renderValue,
-                      group: "url_internal_prop",
-                      subgroup: "url_search",
-                    });
-                  }
-                  if (hash) {
-                    urlInternalPropertiesNode.appendChild("hash", {
-                      value: hash,
-                      render: renderValue,
-                      group: "url_internal_prop",
-                      subgroup: "url_hash",
-                    });
-                  }
-                },
-                group: "entries",
-                subgroup: "url_internal_properties",
-              },
-            );
-          };
-        } else {
-          node.childGenerator = () => {
-            const lineEntriesNode = node.appendChild("line_entries", {
-              value: [],
-              render: renderChildren,
-              group: "entries",
-              subgroup: "line_entries",
-              isCompatibleWithMultilineDiff: true,
-              skippedEntrySummary: {
-                skippedEntryNames: ["line", "lines"],
-              },
-              childGenerator: () => {
-                const appendLineEntry = (lineIndex) => {
-                  lineEntriesNode.value.push(lineIndex);
-                  const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
-                    render: renderEntry,
-                    group: "entry",
-                    subgroup: "line_entry",
-                  });
-                  const lineEntryKeyNode = lineEntryNode.appendChild(
-                    "entry_key",
-                    {
-                      value: lineIndex,
-                      render: renderInteger,
-                      group: "entry_key",
-                      subgroup: "line_entry_key",
-                      isHidden: true,
-                    },
-                  );
-                  const lineEntryValueNode = lineEntryNode.appendChild(
-                    "entry_value",
-                    {
-                      value: [],
-                      render: renderChildrenOneLiner,
-                      focusedChildWhenSame: "end",
-                      group: "entries",
-                      subgroup: "line_entry_value",
-                      overflowStartMarker: "…",
-                      overflowEndMarker: "…",
-                    },
-                  );
-                  const appendCharEntry = (charIndex, char) => {
-                    lineEntryValueNode.value.push(charIndex);
-                    const charEntryNode = lineEntryValueNode.appendChild(
-                      charIndex,
-                      {
-                        render: renderEntry,
-                        group: "entry",
-                        subgroup: "char_entry",
-                      },
-                    );
-                    charEntryNode.appendChild("entry_key", {
-                      value: charIndex,
-                      render: renderInteger,
-                      group: "entry_key",
-                      subgroup: "char_entry_key",
-                      isHidden: true,
-                    });
-                    charEntryNode.appendChild("entry_value", {
-                      value: char,
-                      render: renderChar,
-                      group: "entry_value",
-                      subgroup: "char_entry_value",
-                    });
-                  };
-
-                  return {
-                    lineEntryNode,
-                    lineEntryKeyNode,
-                    lineEntryValueNode,
-                    appendCharEntry,
-                  };
-                };
-
-                let isDone = false;
-                let firstLineCharIndex = 0;
-                let doubleQuoteCount = 0;
-                let singleQuoteCount = 0;
-                let backtickCount = 0;
-                const chars = tokenizeString(node.value);
-                const charIterator = chars[Symbol.iterator]();
-                function* charGeneratorUntilNewLine() {
-                  // eslint-disable-next-line no-constant-condition
-                  while (true) {
-                    const charIteratorResult = charIterator.next();
-                    if (charIteratorResult.done) {
-                      isDone = true;
-                      return;
-                    }
-                    const char = charIteratorResult.value;
-                    if (char === "\n") {
-                      break;
-                    }
-                    yield char;
-                  }
-                }
-
-                // first line
-                const {
-                  lineEntryValueNode: firstLineEntryValueNode,
-                  appendCharEntry: appendFirstLineCharEntry,
-                } = appendLineEntry(0);
-                for (const char of charGeneratorUntilNewLine()) {
-                  if (char === DOUBLE_QUOTE) {
-                    doubleQuoteCount++;
-                  } else if (char === SINGLE_QUOTE) {
-                    singleQuoteCount++;
-                  } else if (char === BACKTICK) {
-                    backtickCount++;
-                  }
-                  appendFirstLineCharEntry(firstLineCharIndex, char);
-                  firstLineCharIndex++;
-                }
-
-                if (isDone) {
-                  // single line
-                  if (node.hasQuotes) {
-                    let bestQuote;
-                    if (doubleQuoteCount === 0) {
-                      bestQuote = DOUBLE_QUOTE;
-                    } else if (singleQuoteCount === 0) {
-                      bestQuote = SINGLE_QUOTE;
-                    } else if (backtickCount === 0) {
-                      bestQuote = BACKTICK;
-                    } else if (singleQuoteCount > doubleQuoteCount) {
-                      bestQuote = DOUBLE_QUOTE;
-                    } else if (doubleQuoteCount > singleQuoteCount) {
-                      bestQuote = SINGLE_QUOTE;
-                    } else {
-                      bestQuote = DOUBLE_QUOTE;
-                    }
-                    firstLineEntryValueNode.startMarker =
-                      firstLineEntryValueNode.endMarker = bestQuote;
-                    lineEntriesNode.hasMarkersWhenEmpty = true;
-                  }
-                  lineEntriesNode.hasMarkersWhenEmpty = true;
-                  return;
-                }
-                // remaining lines
-                let lineIndex = 1;
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                  const { appendCharEntry } = appendLineEntry(lineIndex);
-                  let columnIndex = 0;
-                  for (const char of charGeneratorUntilNewLine()) {
-                    appendCharEntry(columnIndex, char);
-                    columnIndex++;
-                  }
-                  if (isDone) {
-                    break;
-                  }
-                  lineIndex++;
-                }
-              },
-            });
-          };
-        }
-      }
-    }
-    if (value === undefined) {
-      node.isUndefined = true;
-    }
-
     return node;
   };
 

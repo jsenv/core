@@ -10,3 +10,7 @@ expect: "http://example.com:8000/"
 actual: "http://example.com/"
 expect: URL("http://example.com:8000/")
 
+# url search param modified
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=b")
+

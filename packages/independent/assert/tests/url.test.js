@@ -20,12 +20,12 @@ await startSnapshotTesting("url", {
       expect: new URL("http://example.com:8000"),
     });
   },
-  // ["url search param modified"]: () => {
-  //   assert({
-  //     actual: new URL("http://example.com?foo=a"),
-  //     expect: new URL("http://example.com?foo=b"),
-  //   });
-  // },
+  ["url search param modified"]: () => {
+    assert({
+      actual: new URL("http://example.com?foo=a"),
+      expect: new URL("http://example.com?foo=b"),
+    });
+  },
   // ["url search param modified, middle of long params"]: () => {
   //   assert({
   //     actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",

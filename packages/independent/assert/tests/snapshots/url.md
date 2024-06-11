@@ -31,3 +31,14 @@ assert({
 
 ![img](<./url/url string vs url object port.svg>)
 
+# url search param modified
+
+```js
+assert({
+  actual: new URL("http://example.com?foo=a"),
+  expect: new URL("http://example.com?foo=b"),
+});
+```
+
+![img](<./url/url search param modified.svg>)
+
