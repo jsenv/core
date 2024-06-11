@@ -1077,6 +1077,7 @@ let createRootNode;
       // info/primitive
       isUndefined: false,
       isString: false,
+      // isStringForUrl: false,
       isNumber: false,
       isSymbol: false,
       // info/composite
@@ -1789,161 +1790,236 @@ let createRootNode;
         } else {
           node.hasQuotes = true;
         }
-        node.childGenerator = () => {
-          const lineEntriesNode = node.appendChild("line_entries", {
-            value: [],
-            render: renderChildren,
-            group: "entries",
-            subgroup: "line_entries",
-            isCompatibleWithMultilineDiff: true,
-            skippedEntrySummary: {
-              skippedEntryNames: ["line", "lines"],
-            },
-            childGenerator: () => {
-              const appendLineEntry = (lineIndex) => {
-                lineEntriesNode.value.push(lineIndex);
-                const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
-                  render: renderEntry,
-                  group: "entry",
-                  subgroup: "line_entry",
-                });
-                const lineEntryKeyNode = lineEntryNode.appendChild(
-                  "entry_key",
-                  {
-                    value: lineIndex,
-                    render: renderInteger,
-                    group: "entry_key",
-                    subgroup: "line_entry_key",
-                    isHidden: true,
-                  },
-                );
-                const lineEntryValueNode = lineEntryNode.appendChild(
-                  "entry_value",
-                  {
-                    value: [],
-                    render: renderChildrenOneLiner,
-                    focusedChildWhenSame: "end",
-                    group: "entries",
-                    subgroup: "line_entry_value",
-                    overflowStartMarker: "…",
-                    overflowEndMarker: "…",
-                  },
-                );
-                const appendCharEntry = (charIndex, char) => {
-                  lineEntryValueNode.value.push(charIndex);
-                  const charEntryNode = lineEntryValueNode.appendChild(
-                    charIndex,
+        if (canParseUrl(value)) {
+          // node.isStringForUrl = true;
+          node.childGenerator = () => {
+            const urlObject = new URL(value);
+            const urlInternalPropertiesNode = node.appendChild(
+              "url_internal_properties",
+              {
+                render: renderChildrenOneLiner,
+                group: "entries",
+                subgroup: "url_internal_properties",
+                childGenerator() {
+                  const {
+                    protocol,
+                    username,
+                    password,
+                    hostname,
+                    port,
+                    pathname,
+                    search,
+                    hash,
+                  } = urlObject;
+                  urlInternalPropertiesNode.appendChild("protocol", {
+                    value: protocol,
+                    render: renderValue,
+                    endMarker: "//",
+                  });
+                  if (username) {
+                    urlInternalPropertiesNode.appendChild("username", {
+                      value: username,
+                      render: renderValue,
+                      endMarker: password ? ":" : "@",
+                    });
+                    if (password) {
+                      urlInternalPropertiesNode.appendChild("password", {
+                        value: password,
+                        render: renderValue,
+                        endMarker: "@",
+                      });
+                    }
+                  }
+                  urlInternalPropertiesNode.appendChild("hostname", {
+                    value: hostname,
+                    render: renderValue,
+                  });
+                  if (port) {
+                    urlInternalPropertiesNode.appendChild("port", {
+                      value: parseInt(port),
+                      render: renderValue,
+                      startMarker: ":",
+                    });
+                  }
+                  if (pathname) {
+                    urlInternalPropertiesNode.appendChild("pathname", {
+                      value: pathname,
+                      render: renderValue,
+                    });
+                  }
+                  if (search) {
+                    urlInternalPropertiesNode.appendChild("search", {
+                      value: search,
+                      render: renderValue,
+                    });
+                  }
+                  if (hash) {
+                    urlInternalPropertiesNode.appendChild("hash", {
+                      value: hash,
+                      render: renderValue,
+                    });
+                  }
+                },
+              },
+            );
+          };
+        } else {
+          node.childGenerator = () => {
+            const lineEntriesNode = node.appendChild("line_entries", {
+              value: [],
+              render: renderChildren,
+              group: "entries",
+              subgroup: "line_entries",
+              isCompatibleWithMultilineDiff: true,
+              skippedEntrySummary: {
+                skippedEntryNames: ["line", "lines"],
+              },
+              childGenerator: () => {
+                const appendLineEntry = (lineIndex) => {
+                  lineEntriesNode.value.push(lineIndex);
+                  const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+                    render: renderEntry,
+                    group: "entry",
+                    subgroup: "line_entry",
+                  });
+                  const lineEntryKeyNode = lineEntryNode.appendChild(
+                    "entry_key",
                     {
-                      render: renderEntry,
-                      group: "entry",
-                      subgroup: "char_entry",
+                      value: lineIndex,
+                      render: renderInteger,
+                      group: "entry_key",
+                      subgroup: "line_entry_key",
+                      isHidden: true,
                     },
                   );
-                  charEntryNode.appendChild("entry_key", {
-                    value: charIndex,
-                    render: renderInteger,
-                    group: "entry_key",
-                    subgroup: "char_entry_key",
-                    isHidden: true,
-                  });
-                  charEntryNode.appendChild("entry_value", {
-                    value: char,
-                    render: renderChar,
-                    group: "entry_value",
-                    subgroup: "char_entry_value",
-                  });
+                  const lineEntryValueNode = lineEntryNode.appendChild(
+                    "entry_value",
+                    {
+                      value: [],
+                      render: renderChildrenOneLiner,
+                      focusedChildWhenSame: "end",
+                      group: "entries",
+                      subgroup: "line_entry_value",
+                      overflowStartMarker: "…",
+                      overflowEndMarker: "…",
+                    },
+                  );
+                  const appendCharEntry = (charIndex, char) => {
+                    lineEntryValueNode.value.push(charIndex);
+                    const charEntryNode = lineEntryValueNode.appendChild(
+                      charIndex,
+                      {
+                        render: renderEntry,
+                        group: "entry",
+                        subgroup: "char_entry",
+                      },
+                    );
+                    charEntryNode.appendChild("entry_key", {
+                      value: charIndex,
+                      render: renderInteger,
+                      group: "entry_key",
+                      subgroup: "char_entry_key",
+                      isHidden: true,
+                    });
+                    charEntryNode.appendChild("entry_value", {
+                      value: char,
+                      render: renderChar,
+                      group: "entry_value",
+                      subgroup: "char_entry_value",
+                    });
+                  };
+
+                  return {
+                    lineEntryNode,
+                    lineEntryKeyNode,
+                    lineEntryValueNode,
+                    appendCharEntry,
+                  };
                 };
 
-                return {
-                  lineEntryNode,
-                  lineEntryKeyNode,
-                  lineEntryValueNode,
-                  appendCharEntry,
-                };
-              };
+                let isDone = false;
+                let firstLineCharIndex = 0;
+                let doubleQuoteCount = 0;
+                let singleQuoteCount = 0;
+                let backtickCount = 0;
+                const chars = tokenizeString(node.value);
+                const charIterator = chars[Symbol.iterator]();
+                function* charGeneratorUntilNewLine() {
+                  // eslint-disable-next-line no-constant-condition
+                  while (true) {
+                    const charIteratorResult = charIterator.next();
+                    if (charIteratorResult.done) {
+                      isDone = true;
+                      return;
+                    }
+                    const char = charIteratorResult.value;
+                    if (char === "\n") {
+                      break;
+                    }
+                    yield char;
+                  }
+                }
 
-              let isDone = false;
-              let firstLineCharIndex = 0;
-              let doubleQuoteCount = 0;
-              let singleQuoteCount = 0;
-              let backtickCount = 0;
-              const chars = tokenizeString(node.value);
-              const charIterator = chars[Symbol.iterator]();
-              function* charGeneratorUntilNewLine() {
+                // first line
+                const {
+                  lineEntryValueNode: firstLineEntryValueNode,
+                  appendCharEntry: appendFirstLineCharEntry,
+                } = appendLineEntry(0);
+                for (const char of charGeneratorUntilNewLine()) {
+                  if (char === DOUBLE_QUOTE) {
+                    doubleQuoteCount++;
+                  } else if (char === SINGLE_QUOTE) {
+                    singleQuoteCount++;
+                  } else if (char === BACKTICK) {
+                    backtickCount++;
+                  }
+                  appendFirstLineCharEntry(firstLineCharIndex, char);
+                  firstLineCharIndex++;
+                }
+
+                if (isDone) {
+                  // single line
+                  if (node.hasQuotes) {
+                    let bestQuote;
+                    if (doubleQuoteCount === 0) {
+                      bestQuote = DOUBLE_QUOTE;
+                    } else if (singleQuoteCount === 0) {
+                      bestQuote = SINGLE_QUOTE;
+                    } else if (backtickCount === 0) {
+                      bestQuote = BACKTICK;
+                    } else if (singleQuoteCount > doubleQuoteCount) {
+                      bestQuote = DOUBLE_QUOTE;
+                    } else if (doubleQuoteCount > singleQuoteCount) {
+                      bestQuote = SINGLE_QUOTE;
+                    } else {
+                      bestQuote = DOUBLE_QUOTE;
+                    }
+                    firstLineEntryValueNode.startMarker =
+                      firstLineEntryValueNode.endMarker = bestQuote;
+                    lineEntriesNode.hasMarkersWhenEmpty = true;
+                  }
+                  lineEntriesNode.hasMarkersWhenEmpty = true;
+                  return;
+                }
+                // remaining lines
+                let lineIndex = 1;
                 // eslint-disable-next-line no-constant-condition
                 while (true) {
-                  const charIteratorResult = charIterator.next();
-                  if (charIteratorResult.done) {
-                    isDone = true;
-                    return;
+                  const { appendCharEntry } = appendLineEntry(lineIndex);
+                  let columnIndex = 0;
+                  for (const char of charGeneratorUntilNewLine()) {
+                    appendCharEntry(columnIndex, char);
+                    columnIndex++;
                   }
-                  const char = charIteratorResult.value;
-                  if (char === "\n") {
+                  if (isDone) {
                     break;
                   }
-                  yield char;
+                  lineIndex++;
                 }
-              }
-
-              // first line
-              const {
-                lineEntryValueNode: firstLineEntryValueNode,
-                appendCharEntry: appendFirstLineCharEntry,
-              } = appendLineEntry(0);
-              for (const char of charGeneratorUntilNewLine()) {
-                if (char === DOUBLE_QUOTE) {
-                  doubleQuoteCount++;
-                } else if (char === SINGLE_QUOTE) {
-                  singleQuoteCount++;
-                } else if (char === BACKTICK) {
-                  backtickCount++;
-                }
-                appendFirstLineCharEntry(firstLineCharIndex, char);
-                firstLineCharIndex++;
-              }
-
-              if (isDone) {
-                // single line
-                if (node.hasQuotes) {
-                  let bestQuote;
-                  if (doubleQuoteCount === 0) {
-                    bestQuote = DOUBLE_QUOTE;
-                  } else if (singleQuoteCount === 0) {
-                    bestQuote = SINGLE_QUOTE;
-                  } else if (backtickCount === 0) {
-                    bestQuote = BACKTICK;
-                  } else if (singleQuoteCount > doubleQuoteCount) {
-                    bestQuote = DOUBLE_QUOTE;
-                  } else if (doubleQuoteCount > singleQuoteCount) {
-                    bestQuote = SINGLE_QUOTE;
-                  } else {
-                    bestQuote = DOUBLE_QUOTE;
-                  }
-                  firstLineEntryValueNode.startMarker =
-                    firstLineEntryValueNode.endMarker = bestQuote;
-                  lineEntriesNode.hasMarkersWhenEmpty = true;
-                }
-                lineEntriesNode.hasMarkersWhenEmpty = true;
-                return;
-              }
-              // remaining lines
-              let lineIndex = 1;
-              // eslint-disable-next-line no-constant-condition
-              while (true) {
-                const { appendCharEntry } = appendLineEntry(lineIndex);
-                let columnIndex = 0;
-                for (const char of charGeneratorUntilNewLine()) {
-                  appendCharEntry(columnIndex, char);
-                  columnIndex++;
-                }
-                if (isDone) {
-                  break;
-                }
-                lineIndex++;
-              }
-            },
-          });
-        };
+              },
+            });
+          };
+        }
       }
     }
     if (value === undefined) {
@@ -2084,6 +2160,13 @@ const renderGrammar = (node, props) => {
   return truncateAndAppyColor(node.value, node, props);
 };
 const truncateAndAppyColor = (diff, node, props) => {
+  const { startMarker, endMarker } = node;
+  if (startMarker) {
+    diff = `${setColor(startMarker, node.color)}${diff}`;
+  }
+  if (endMarker) {
+    diff += setColor(endMarker, node.color);
+  }
   if (diff.length > props.columnsRemaining) {
     diff = setColor(diff.slice(0, props.columnsRemaining - 1), node.color);
     diff += setColor("…", node.color);
@@ -2920,6 +3003,18 @@ const CHAR_TO_ESCAPED_CHAR = [
   '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
   '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
 ];
+
+const canParseUrl =
+  URL.canParse ||
+  (() => {
+    try {
+      // eslint-disable-next-line no-new, no-undef
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  });
 
 const isComposite = (value) => {
   if (value === null) return false;
