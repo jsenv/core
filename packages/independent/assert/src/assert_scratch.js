@@ -1195,7 +1195,7 @@ let createRootNode;
       node.isString = true;
       return node;
     }
-    if (group === "url_search_entry") {
+    if (subgroup === "url_search_entry") {
       node.category = "composite";
       return node;
     }
@@ -1221,8 +1221,10 @@ let createRootNode;
         // no quote around grammar
       } else if (group === "url_internal_prop") {
         // no quote around url internal properties
-      } else if (group === "url_search_entry_value") {
-        // no quote around url search values
+      } else if (subgroup === "url_search_entry_key") {
+        // no quote around key in "?key=value"
+      } else if (subgroup === "url_search_entry_value") {
+        // no quote around value in "?key=value"
       } else {
         if (subgroup === "property_entry_key") {
           if (!isValidPropertyIdentifier(value)) {
@@ -1306,8 +1308,8 @@ let createRootNode;
                       {
                         value: null,
                         render: renderChildrenOneLiner,
-                        // startMarker: "?",
-                        group: "url_internal_prop",
+                        startMarker: "?",
+                        group: "entries",
                         subgroup: "url_search",
                         childGenerator() {
                           const searchParamsMap = tokenizeUrlSearch(search);
@@ -1318,27 +1320,49 @@ let createRootNode;
                                 key: searchEntryIndex,
                                 value,
                                 render: renderChildrenOneLiner,
+                                path: node.path.append(key),
+                                group: "entries",
+                                subgroup: "url_search_entry",
                                 childGenerator() {
                                   let valueIndex = 0;
+                                  const isMultiValue = value.length > 1;
                                   while (valueIndex < value.length) {
-                                    urlSearchEntryNode.appendChild(valueIndex, {
-                                      key: valueIndex,
+                                    const entryNode =
+                                      urlSearchEntryNode.appendChild(
+                                        valueIndex,
+                                        {
+                                          group: "entry",
+                                          subgroup: "url_search_value_entry",
+                                          render: renderEntry,
+                                          path: isMultiValue
+                                            ? urlSearchEntryNode.path.append(
+                                                valueIndex,
+                                                { isIndexedEntry: true },
+                                              )
+                                            : undefined,
+                                          startMarker:
+                                            urlSearchEntryNode.key === 0 &&
+                                            valueIndex === 0
+                                              ? ""
+                                              : "&",
+                                          middleMarker: "=",
+                                        },
+                                      );
+                                    entryNode.appendChild("entry_key", {
+                                      value: key,
+                                      render: renderValue,
+                                      group: "entry_key",
+                                      subgroup: "url_search_entry_key",
+                                    });
+                                    entryNode.appendChild("entry_value", {
                                       value: value[valueIndex],
                                       render: renderValue,
-                                      startMarker:
-                                        urlSearchEntryNode.key === 0 &&
-                                        valueIndex === 0
-                                          ? `?${key}=`
-                                          : `&${key}=`,
-                                      group: "url_search_entry_value",
-                                      path: node.path.append(valueIndex, {
-                                        isIndexedEntry: true,
-                                      }),
+                                      group: "entry_value",
+                                      subgroup: "url_search_entry_value",
                                     });
                                     valueIndex++;
                                   }
                                 },
-                                group: "url_search_entry",
                               });
                             searchEntryIndex++;
                           }
