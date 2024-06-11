@@ -1,12 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - ability to control focused child when rendering children
- *   like for a string we want to fallback at end of the string
- *   when no diff
- *   focusedChildWhenSame = 'start', 'start', 'end', 'middle'
- *   pour string ce sera end
- *   mais pour certain on pourrait imaginer start genre pour les properties
  * - url string and url object
  * - well known
  * - symbols
@@ -1042,6 +1036,7 @@ let createRootNode;
     overflowEndMarker = "",
     isCompatibleWithMultilineDiff = false,
     isCompatibleWithSingleLineDiff = false,
+    focusedChildWhenSame = "first",
     skippedEntrySummary = null,
     hasMarkersWhenEmpty = false,
     hasNewLineAroundEntries = false,
@@ -1111,6 +1106,7 @@ let createRootNode;
       overflowEndMarker,
       isCompatibleWithMultilineDiff,
       isCompatibleWithSingleLineDiff,
+      focusedChildWhenSame,
       skippedEntrySummary,
       hasMarkersWhenEmpty,
       hasNewLineAroundEntries,
@@ -1825,7 +1821,8 @@ let createRootNode;
                   "entry_value",
                   {
                     value: [],
-                    render: renderChildren,
+                    render: renderChildrenOneLiner,
+                    focusedChildWhenSame: "end",
                     group: "entries",
                     subgroup: "line_entry_value",
                     overflowStartMarker: "…",
@@ -2259,10 +2256,6 @@ const renderChildren = (node, props) => {
     indexToDisplayArray: [0],
   });
 };
-const getNodeDepth = (node, props) => {
-  return node.depth - props.startNode.depth;
-};
-
 const renderChildrenOneLiner = (node, props) => {
   node.hasIndentBeforeEntries = false;
   let columnsRemaining = props.columnsRemaining;
@@ -2277,7 +2270,12 @@ const renderChildrenOneLiner = (node, props) => {
 
   let focusedEntryKey = entryKeys[focusedEntryIndex];
   if (!focusedEntryKey) {
-    focusedEntryIndex = entryKeys.length - 1;
+    focusedEntryIndex =
+      node.focusedChildWhenSame === "first"
+        ? 0
+        : node.focusedChildWhenSame === "last"
+          ? entryKeys.length - 1
+          : Math.floor(entryKeys.length / 2);
     focusedEntryKey = entryKeys[focusedEntryIndex];
   }
   const entryDiffArray = [];
@@ -2612,6 +2610,9 @@ const renderEntry = (node, props) => {
     entryDiff += setColor(endMarker, node.color);
   }
   return entryDiff;
+};
+const getNodeDepth = (node, props) => {
+  return node.depth - props.startNode.depth;
 };
 
 const createMethodCallNode = (node, { objectName, methodName, args }) => {
