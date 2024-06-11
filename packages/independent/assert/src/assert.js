@@ -5889,3 +5889,10 @@ const groupDigits = (digitsAsString) => {
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_a_valid_code_point
 // const isValidCodePoint = (number) => number > 0 && number < 1_114_111;
+
+// ANSI.supported = false;
+// const assert = createAssert();
+// assert({
+//   actual: "http://example.com",
+//   expect: "http://example.com:8000",
+// });

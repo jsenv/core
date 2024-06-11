@@ -2,12 +2,12 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("url", {
-  // ["url port"]: () => {
-  //   assert({
-  //     actual: "http://example.com",
-  //     expect: "http://example.com:8000",
-  //   });
-  // },
+  ["url port"]: () => {
+    assert({
+      actual: "http://example.com",
+      expect: "http://example.com:8000",
+    });
+  },
   // ["url search param modified"]: () => {
   //   assert({
   //     actual: new URL("http://example.com?foo=a"),

@@ -1077,7 +1077,7 @@ let createRootNode;
       // info/primitive
       isUndefined: false,
       isString: false,
-      // isStringForUrl: false,
+      isStringForUrl: false,
       isNumber: false,
       isSymbol: false,
       // info/composite
@@ -1782,6 +1782,9 @@ let createRootNode;
     if (typeofResult === "string") {
       node.isString = true;
       if (group === "grammar") {
+        // no quote around grammar
+      } else if (group === "url_internal_prop") {
+        // no quote around url internal properties
       } else {
         if (subgroup === "property_entry_key") {
           if (!isValidPropertyIdentifier(value)) {
@@ -1791,15 +1794,15 @@ let createRootNode;
           node.hasQuotes = true;
         }
         if (canParseUrl(value)) {
-          // node.isStringForUrl = true;
+          node.isStringForUrl = true;
           node.childGenerator = () => {
             const urlObject = new URL(value);
             const urlInternalPropertiesNode = node.appendChild(
               "url_internal_properties",
               {
                 render: renderChildrenOneLiner,
-                group: "entries",
-                subgroup: "url_internal_properties",
+                startMarker: DOUBLE_QUOTE,
+                endMarker: DOUBLE_QUOTE,
                 childGenerator() {
                   const {
                     protocol,
@@ -1815,51 +1818,69 @@ let createRootNode;
                     value: protocol,
                     render: renderValue,
                     endMarker: "//",
+                    group: "url_internal_prop",
+                    subgroup: "url_protocol",
                   });
                   if (username) {
                     urlInternalPropertiesNode.appendChild("username", {
                       value: username,
                       render: renderValue,
                       endMarker: password ? ":" : "@",
+                      group: "url_internal_prop",
+                      subgroup: "url_username",
                     });
                     if (password) {
                       urlInternalPropertiesNode.appendChild("password", {
                         value: password,
                         render: renderValue,
                         endMarker: "@",
+                        group: "url_internal_prop",
+                        subgroup: "url_password",
                       });
                     }
                   }
                   urlInternalPropertiesNode.appendChild("hostname", {
                     value: hostname,
                     render: renderValue,
+                    group: "url_internal_prop",
+                    subgroup: "url_hostname",
                   });
                   if (port) {
                     urlInternalPropertiesNode.appendChild("port", {
                       value: parseInt(port),
                       render: renderValue,
                       startMarker: ":",
+                      group: "url_internal_prop",
+                      subgroup: "url_port",
                     });
                   }
                   if (pathname) {
                     urlInternalPropertiesNode.appendChild("pathname", {
                       value: pathname,
                       render: renderValue,
+                      group: "url_internal_prop",
+                      subgroup: "url_pathname",
                     });
                   }
                   if (search) {
                     urlInternalPropertiesNode.appendChild("search", {
                       value: search,
                       render: renderValue,
+                      group: "url_internal_prop",
+                      subgroup: "url_search",
                     });
                   }
                   if (hash) {
                     urlInternalPropertiesNode.appendChild("hash", {
                       value: hash,
                       render: renderValue,
+                      group: "url_internal_prop",
+                      subgroup: "url_hash",
                     });
                   }
                 },
+                group: "entries",
+                subgroup: "url_internal_properties",
               },
             );
           };
@@ -2130,6 +2151,12 @@ const renderString = (node, props) => {
   }
   if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
     return truncateAndAppyColor("[Symbol.toPrimitive()]", node, props);
+  }
+  if (node.isStringForUrl) {
+    const urlInternalPropertiesNode = node.childNodeMap.get(
+      "url_internal_properties",
+    );
+    return urlInternalPropertiesNode.render(props);
   }
   const lineEntriesNode = node.childNodeMap.get("line_entries");
   if (lineEntriesNode) {
