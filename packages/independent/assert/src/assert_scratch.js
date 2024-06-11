@@ -684,10 +684,10 @@ const createAssertMethodCustomExpectation = (
       let diff = "";
       const assertMethodCallNode = node.childNodeMap.get("assert_method_call");
       if (renderOnlyArgs) {
-        const callNode = assertMethodCallNode.childNodeMap.get("call");
-        callNode.startMarker = "";
-        callNode.endMarker = "";
-        diff += callNode.render(props);
+        const argEntriesNode = assertMethodCallNode.childNodeMap.get("args");
+        argEntriesNode.startMarker = "";
+        argEntriesNode.endMarker = "";
+        diff += argEntriesNode.render(props);
       } else {
         diff += assertMethodCallNode.render(props);
       }
@@ -713,13 +713,13 @@ const createAssertMethodCustomCompare = (
   return (actualNode, expectNode, options) => {
     // prettier-ignore
     const assertMethod = expectNode.childNodeMap.get("assert_method_call");
-    const callNode = assertMethod.childNodeMap.get("call");
-    const childNodeKeys = Array.from(callNode.childNodeMap.keys());
+    const argEntriesNode = assertMethod.childNodeMap.get("args");
+    const childNodeKeys = Array.from(argEntriesNode.childNodeMap.keys());
     if (childNodeKeys.length === 0) {
       return;
     }
     if (childNodeKeys.length === 1) {
-      const expectFirsArgValueNode = callNode.childNodeMap
+      const expectFirsArgValueNode = argEntriesNode.childNodeMap
         .get(0)
         .childNodeMap.get("entry_value");
       expectFirsArgValueNode.ignore = true;
@@ -731,7 +731,7 @@ const createAssertMethodCustomCompare = (
       options.subcompareSolo(expectNode, customComparerResult);
       return;
     }
-    const argIterator = callNode.childNodeMap[Symbol.iterator]();
+    const argIterator = argEntriesNode.childNodeMap[Symbol.iterator]();
     function* argValueGenerator() {
       let argIteratorResult;
       while ((argIteratorResult = argIterator.next())) {
@@ -1181,7 +1181,7 @@ let createRootNode;
       subgroup === "array_entry_key" ||
       subgroup === "line_entry_key" ||
       subgroup === "char_entry_key" ||
-      subgroup === "call_arg_entry_key"
+      subgroup === "arg_entry_key"
     ) {
       node.category = "primitive";
       node.isNumber = true;
@@ -1741,6 +1741,19 @@ let createRootNode;
       };
 
       node.wrappedNodeGetter = () => {
+        const constructNode = node.childNodeMap.get("construct");
+        if (constructNode) {
+          const constructCallNode = constructNode.childNodeMap.get("call");
+          if (constructCallNode) {
+            const argEntriesNode = constructCallNode.childNodeMap.get("args");
+            const firstArgNode = argEntriesNode.childNodeMap.get(0);
+            if (firstArgNode) {
+              const firstArgValueNode =
+                firstArgNode.childNodeMap.get("entry_value");
+              return firstArgValueNode;
+            }
+          }
+        }
         const propertyEntriesNode = node.childNodeMap.get("property_entries");
         if (propertyEntriesNode) {
           const symbolToPrimitiveReturnValuePropertyNode =
@@ -1760,18 +1773,6 @@ let createRootNode;
             return valueOfReturnValuePropertyNode.childNodeMap.get(
               "entry_value",
             );
-          }
-        }
-        const constructNode = node.childNodeMap.get("construct");
-        if (constructNode) {
-          const constructCallNode = constructNode.childNodeMap.get("call");
-          if (constructCallNode) {
-            const firstArgNode = constructCallNode.childNodeMap.get(0);
-            if (firstArgNode) {
-              const firstArgValueNode =
-                firstArgNode.childNodeMap.get("entry_value");
-              return firstArgValueNode;
-            }
           }
         }
         return null;
@@ -2759,18 +2760,18 @@ const createMethodCallNode = (node, { objectName, methodName, args }) => {
         });
       }
       methodCallNode.appendChild(
-        "call",
-        createCallNode(methodCallNode, { args }),
+        "args",
+        createArgEntriesNode(methodCallNode, { args }),
       );
     },
   };
 };
 
-const createCallNode = (node, { args }) => {
+const createArgEntriesNode = (node, { args }) => {
   return {
     render: renderChildrenOneLiner,
     group: "entries",
-    subgroup: "call",
+    subgroup: "arg_entries",
     value: [],
     // isCompatibleWithMultilineDiff: true,
     isCompatibleWithSingleLineDiff: true,
@@ -2785,20 +2786,20 @@ const createCallNode = (node, { args }) => {
         const argEntryNode = callNode.appendChild(argIndex, {
           render: renderEntry,
           group: "entry",
-          subgroup: "call_arg_entry",
+          subgroup: "arg_entry",
           endMarker: ",",
         });
         argEntryNode.appendChild("entry_key", {
           render: renderInteger,
           group: "entry_key",
-          subgroup: "call_arg_entry_key",
+          subgroup: "arg_entry_key",
           value: argIndex,
           isHidden: true,
         });
         argEntryNode.appendChild("entry_value", {
           render: renderValue,
           group: "entry_value",
-          subgroup: "call_arg_entry_value",
+          subgroup: "arg_entry_value",
           value: argValue,
           path: node.path.append(key || argIndex),
           depth: node.depth,
