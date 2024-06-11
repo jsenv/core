@@ -2280,6 +2280,7 @@ const renderChildrenOneLiner = (node, props) => {
     focusedEntryIndex = entryKeys.length - 1;
     focusedEntryKey = entryKeys[focusedEntryIndex];
   }
+  const entryDiffArray = [];
   const focusedEntry = node.childNodeMap.get(focusedEntryKey);
   let focusedEntryDiff = "";
   if (focusedEntry) {
@@ -2290,6 +2291,7 @@ const renderChildrenOneLiner = (node, props) => {
       focusedEntry.endMarker = "";
     }
     focusedEntryDiff = focusedEntry.render(props);
+    entryDiffArray.push(focusedEntryDiff);
     columnsRemaining -= stringWidth(focusedEntryDiff);
   }
 
@@ -2298,8 +2300,6 @@ const renderChildrenOneLiner = (node, props) => {
   let tryBeforeFirst = true;
   let previousChildAttempt = 0;
   let nextChildAttempt = 0;
-  const beforeDiffArray = [];
-  const afterDiffArray = [];
   let hasStartOverflow = false;
   let hasEndOverflow = false;
   while (columnsRemaining) {
@@ -2363,9 +2363,9 @@ const renderChildrenOneLiner = (node, props) => {
       columnsRemaining -= " ".length;
     }
     if (entryIndex < focusedEntryIndex) {
-      beforeDiffArray.push(entryDiff);
+      entryDiffArray.unshift(entryDiff);
     } else {
-      afterDiffArray.push(entryDiff);
+      entryDiffArray.push(entryDiff);
     }
   }
   let diff = "";
@@ -2375,11 +2375,6 @@ const renderChildrenOneLiner = (node, props) => {
   if (startMarker) {
     diff += setColor(startMarker, node.color);
   }
-  const entryDiffArray = [
-    ...beforeDiffArray.reverse(),
-    focusedEntryDiff,
-    ...afterDiffArray,
-  ];
   let index = 0;
   for (const entryDiff of entryDiffArray) {
     diff += entryDiff;
