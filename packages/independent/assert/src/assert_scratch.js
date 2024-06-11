@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - ref
- * - single node for function
  * - ability to control focused child when rendering children
  *   like for a string we want to fallback at end of the string
  *   when no diff
@@ -1048,6 +1046,7 @@ let createRootNode;
     hasMarkersWhenEmpty = false,
     hasNewLineAroundEntries = false,
     hasSpacingAroundEntries = false,
+    hasSpacingBetweenEntries = false,
     hasIndentBeforeEntries = false,
     hasTrailingSeparator = false,
   }) => {
@@ -1116,6 +1115,7 @@ let createRootNode;
       hasMarkersWhenEmpty,
       hasNewLineAroundEntries,
       hasSpacingAroundEntries,
+      hasSpacingBetweenEntries,
       hasIndentBeforeEntries,
       hasTrailingSeparator,
       color: "",
@@ -1260,110 +1260,132 @@ let createRootNode;
           });
           return;
         }
+
+        let objectConstructNode = null;
+        let objectConstructArgs = null;
         // function child nodes
         if (node.isFunction) {
-          // TODO: put this into a single childNode
-          // that would have all function parts as child itself
-          // so that we can use renderChildNodes on it
-          // and the "renderFunction" would become just a
-          // renderChildNodes call
-          if (node.functionAnalysis.type === "class") {
-            node.appendChild("class_keyword", {
-              value: "class",
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "class_keyword",
-            });
-            const extendedClassName = node.functionAnalysis.extendedClassName;
-            if (extendedClassName) {
-              node.appendChild("class_extends_keyword", {
-                value: "extends",
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "class_extends_keyword",
-              });
-              node.appendChild("class_extended_name", {
-                value: extendedClassName,
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "class_extended_name",
-              });
-            }
-          }
-          if (node.functionAnalysis.isAsync) {
-            node.appendChild("function_async_keyword", {
-              value: "async",
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "function_async_keyword",
-            });
-          }
-          if (node.functionAnalysis.type === "classic") {
-            node.appendChild("function_keyword", {
-              value: node.functionAnalysis.isGenerator
-                ? "function*"
-                : "function",
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "function_keyword",
-            });
-          }
-          if (node.functionAnalysis.name) {
-            node.appendChild("function_name", {
-              value: node.functionAnalysis.name,
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "function_name",
-            });
-          }
-          function_body_prefix: {
-            const functionBodyPrefixParams = {
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "function_body_prefix",
-            };
-            if (node.functionAnalysis.type === "arrow") {
-              node.appendChild("function_body_prefix", {
-                value: "() =>",
-                ...functionBodyPrefixParams,
-              });
-            } else if (node.functionAnalysis.type === "method") {
-              if (node.functionAnalysis.getterName) {
-                node.appendChild("function_body_prefix", {
-                  value: `get ${methodName}()`,
-                  ...functionBodyPrefixParams,
+          const functionConstructNode = node.appendChild("construct", {
+            value: null,
+            render: renderChildrenOneLiner,
+            hasSpacingBetweenEntries: true,
+            group: "entries",
+            subgroup: "function_construct",
+            childGenerator() {
+              if (node.functionAnalysis.type === "class") {
+                functionConstructNode.appendChild("class_keyword", {
+                  value: "class",
+                  render: renderGrammar,
+                  group: "grammar",
+                  subgroup: "class_keyword",
+                });
+                if (node.functionAnalysis.name) {
+                  functionConstructNode.appendChild("function_name", {
+                    value: node.functionAnalysis.name,
+                    render: renderGrammar,
+                    group: "grammar",
+                    subgroup: "function_name",
+                  });
+                }
+                const extendedClassName =
+                  node.functionAnalysis.extendedClassName;
+                if (extendedClassName) {
+                  functionConstructNode.appendChild("class_extends_keyword", {
+                    value: "extends",
+                    render: renderGrammar,
+                    group: "grammar",
+                    subgroup: "class_extends_keyword",
+                  });
+                  functionConstructNode.appendChild("class_extended_name", {
+                    value: extendedClassName,
+                    render: renderGrammar,
+                    group: "grammar",
+                    subgroup: "class_extended_name",
+                  });
+                }
+                return;
+              }
+              if (node.functionAnalysis.isAsync) {
+                functionConstructNode.appendChild("function_async_keyword", {
+                  value: "async",
+                  render: renderGrammar,
+                  group: "grammar",
+                  subgroup: "function_async_keyword",
                 });
               }
-              if (node.functionAnalysis.setterName) {
-                node.appendChild("function_body_prefix", {
-                  value: `set ${methodName}()`,
-                  ...functionBodyPrefixParams,
+              if (node.functionAnalysis.type === "classic") {
+                functionConstructNode.appendChild("function_keyword", {
+                  value: node.functionAnalysis.isGenerator
+                    ? "function*"
+                    : "function",
+                  render: renderGrammar,
+                  group: "grammar",
+                  subgroup: "function_keyword",
                 });
               }
-              node.appendChild("function_body_prefix", {
-                value: `${methodName}()`,
-                ...functionBodyPrefixParams,
-              });
-            } else if (node.functionAnalysis.type === "classic") {
-              node.appendChild("function_body_prefix", {
-                value: "()",
-                ...functionBodyPrefixParams,
-              });
-            }
-          }
-        }
-        let hasObjectTag = false;
-        // object_tag
-        if (!node.isFunction && !isFunctionPrototype) {
+              if (node.functionAnalysis.name) {
+                functionConstructNode.appendChild("function_name", {
+                  value: node.functionAnalysis.name,
+                  render: renderGrammar,
+                  group: "grammar",
+                  subgroup: "function_name",
+                });
+              }
+              function_body_prefix: {
+                const appendFunctionBodyPrefix = (prefix) => {
+                  functionConstructNode.appendChild("function_body_prefix", {
+                    value: prefix,
+                    render: renderGrammar,
+                    group: "grammar",
+                    subgroup: "function_body_prefix",
+                  });
+                };
+
+                if (node.functionAnalysis.type === "arrow") {
+                  appendFunctionBodyPrefix("() =>");
+                } else if (node.functionAnalysis.type === "method") {
+                  if (node.functionAnalysis.getterName) {
+                    appendFunctionBodyPrefix(`get ${methodName}()`);
+                  } else if (node.functionAnalysis.setterName) {
+                    appendFunctionBodyPrefix(`set ${methodName}()`);
+                  } else {
+                    appendFunctionBodyPrefix(`${methodName}()`);
+                  }
+                } else if (node.functionAnalysis.type === "classic") {
+                  appendFunctionBodyPrefix("()");
+                }
+              }
+            },
+          });
+        } else if (isFunctionPrototype) {
+        } else {
           const objectTag = getObjectTag(value);
           if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
-            hasObjectTag = true;
-            node.appendChild("object_tag", {
-              value: objectTag,
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "object_tag",
-              path: node.path.append("[[ObjectTag]]"),
+            objectConstructNode = node.appendChild("construct", {
+              value: null,
+              render: renderChildrenOneLiner,
+              hasSpacingBetweenEntries: true,
+              group: "entries",
+              subgroup: "object_construct",
+              childGenerator() {
+                if (objectConstructArgs) {
+                  objectConstructNode.appendChild(
+                    "call",
+                    createMethodCallNode(objectConstructNode, {
+                      objectName: objectTag,
+                      args: objectConstructArgs,
+                    }),
+                  );
+                } else {
+                  objectConstructNode.appendChild("object_tag", {
+                    value: objectTag,
+                    render: renderGrammar,
+                    group: "grammar",
+                    subgroup: "object_tag",
+                    path: node.path.append("[[ObjectTag]]"),
+                  });
+                }
+              },
             });
           }
         }
@@ -1532,7 +1554,6 @@ let createRootNode;
             arrayEntyGenerator();
           }
         }
-        let hasConstructorCall;
         const propertyLikeCallbackSet = new Set();
         symbol_to_primitive: {
           if (
@@ -1558,20 +1579,14 @@ let createRootNode;
           ) {
             ownPropertyNameToIgnoreSet.add("valueOf");
             const valueOfReturnValue = value.valueOf();
-            if (hasObjectTag) {
-              hasConstructorCall = true;
-              node.appendChild(
-                "constructor_call",
-                createCallNode(node, {
-                  args: [
-                    {
-                      key: "valueOf()",
-                      value: valueOfReturnValue,
-                      isValueOfReturnValue: true,
-                    },
-                  ],
-                }),
-              );
+            if (objectConstructNode) {
+              objectConstructArgs = [
+                {
+                  value: valueOfReturnValue,
+                  key: "valueOf()",
+                  isValueOfReturnValue: true,
+                },
+              ];
             } else {
               propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
                 appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
@@ -1598,8 +1613,7 @@ let createRootNode;
             break own_properties;
           }
           const hasMarkersWhenEmpty =
-            !hasObjectTag &&
-            !hasConstructorCall &&
+            !objectConstructNode &&
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const propertyEntriesNode = node.appendChild("property_entries", {
@@ -2122,26 +2136,11 @@ const renderComposite = (node, props) => {
     return diff;
   }
   let columnsRemaining = props.columnsRemaining;
-  if (node.isFunction) {
-    const functionDiff = renderFunction(node, props);
-    columnsRemaining -= measureLastLineColumns(functionDiff);
-    diff += functionDiff;
-  } else {
-    const objectTagNode = node.childNodeMap.get("object_tag");
-    if (objectTagNode) {
-      const objectTagDiff = objectTagNode.render(props);
-      columnsRemaining -= measureLastLineColumns(objectTagDiff);
-      diff += objectTagDiff;
-    }
-    const constructorCallNode = node.childNodeMap.get("constructor_call");
-    if (constructorCallNode) {
-      const constructorCallDiff = constructorCallNode.render({
-        ...props,
-        columnsRemaining,
-      });
-      columnsRemaining -= measureLastLineColumns(constructorCallDiff);
-      diff += constructorCallDiff;
-    }
+  const constructNode = node.childNodeMap.get("construct");
+  if (constructNode) {
+    const constructDiff = constructNode.render(props);
+    columnsRemaining -= measureLastLineColumns(constructDiff);
+    diff += constructDiff;
   }
   if (internalEntriesNode) {
     const internalEntriesDiff = internalEntriesNode.render({
@@ -2175,50 +2174,6 @@ const renderComposite = (node, props) => {
       }
       diff += propertiesDiff;
     }
-  }
-  return diff;
-};
-const renderFunction = (node, props) => {
-  let diff = "";
-  const classKeywordNode = node.childNodeMap.get("class_keyword");
-  if (classKeywordNode) {
-    diff += classKeywordNode.render(props);
-  } else {
-    const asyncKeywordNode = node.childNodeMap.get("function_async_keyword");
-    if (asyncKeywordNode) {
-      diff += asyncKeywordNode.render(props);
-    }
-  }
-  const functionKeywordNode = node.childNodeMap.get("function_keyword");
-  if (functionKeywordNode) {
-    if (diff) {
-      diff += " ";
-    }
-    diff += functionKeywordNode.render(props);
-  }
-  const functionNameNode = node.childNodeMap.get("function_name");
-  if (functionNameNode) {
-    if (diff) {
-      diff += " ";
-    }
-    diff += functionNameNode.render(props);
-  }
-  const classExtendedNameNode = node.childNodeMap.get("class_extended_name");
-  if (classExtendedNameNode) {
-    const classExtendsKeywordNode = node.childNodeMap.get(
-      "class_extends_keyword",
-    );
-    diff += " ";
-    diff += classExtendsKeywordNode.render(props);
-    diff += " ";
-    diff += classExtendedNameNode.render(props);
-  }
-  const functionBodyPrefixNode = node.childNodeMap.get("function_body_prefix");
-  if (functionBodyPrefixNode) {
-    if (diff) {
-      diff += " ";
-    }
-    diff += functionBodyPrefixNode.render(props);
   }
   return diff;
 };
@@ -2400,6 +2355,13 @@ const renderChildrenOneLiner = (node, props) => {
       break;
     }
     columnsRemaining -= entryDiffWidth;
+    if (
+      node.hasSpacingBetweenEntries &&
+      entryIndex > 0 &&
+      entryIndex < entryKeys.length - 1
+    ) {
+      columnsRemaining -= " ".length;
+    }
     if (entryIndex < focusedEntryIndex) {
       beforeDiffArray.push(entryDiff);
     } else {
@@ -2413,9 +2375,19 @@ const renderChildrenOneLiner = (node, props) => {
   if (startMarker) {
     diff += setColor(startMarker, node.color);
   }
-  diff += beforeDiffArray.reverse().join("");
-  diff += focusedEntryDiff;
-  diff += afterDiffArray.join("");
+  const entryDiffArray = [
+    ...beforeDiffArray.reverse(),
+    focusedEntryDiff,
+    ...afterDiffArray,
+  ];
+  let index = 0;
+  for (const entryDiff of entryDiffArray) {
+    diff += entryDiff;
+    if (node.hasSpacingBetweenEntries && index < entryDiffArray.length - 1) {
+      diff += " ";
+    }
+    index++;
+  }
   if (endMarker) {
     diff += setColor(endMarker, node.color);
   }
