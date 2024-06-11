@@ -2189,10 +2189,10 @@ const renderGrammar = (node, props) => {
 const truncateAndAppyColor = (diff, node, props) => {
   const { startMarker, endMarker } = node;
   if (startMarker) {
-    diff = `${setColor(startMarker, node.color)}${diff}`;
+    diff = `${startMarker}${diff}`;
   }
   if (endMarker) {
-    diff += setColor(endMarker, node.color);
+    diff += endMarker;
   }
   if (diff.length > props.columnsRemaining) {
     diff = setColor(diff.slice(0, props.columnsRemaining - 1), node.color);
@@ -2814,6 +2814,9 @@ const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
 
 const getAddedOrRemovedReason = (node) => {
+  if (node.group === "url_internal_prop") {
+    return node.subgroup;
+  }
   if (node.category === "entry") {
     return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
   }
