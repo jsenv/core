@@ -1,7 +1,9 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - url string and url object
+ * - url
+ *   - url object
+ *   - url search params
  * - well known
  * - symbols
  * - numbers
@@ -1024,7 +1026,6 @@ let createRootNode;
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
-    isValueOfReturnValue = false,
     customCompare,
     render,
     methodName = "",
@@ -1071,7 +1072,6 @@ let createRootNode;
       path,
       isSourceCode,
       isClassPrototype,
-      isValueOfReturnValue,
       // info
       isCustomExpectation: false,
       // info/primitive
@@ -1086,6 +1086,7 @@ let createRootNode;
       isArray: false,
       isMap: false,
       isSet: false,
+      isURL: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
@@ -1230,6 +1231,10 @@ let createRootNode;
         }
         if (parentConstructor.name === "Set") {
           node.isSet = true;
+          continue;
+        }
+        if (parentConstructor.name === "URL") {
+          node.isURL = true;
           continue;
         }
       }
@@ -1569,28 +1574,35 @@ let createRootNode;
             });
           }
         }
-        value_of: {
-          if (
-            typeof value.valueOf === "function" &&
-            value.valueOf !== Object.prototype.valueOf
-          ) {
-            ownPropertyNameToIgnoreSet.add("valueOf");
-            const valueOfReturnValue = value.valueOf();
-            if (objectConstructNode) {
-              objectConstructArgs = [
-                {
-                  value: valueOfReturnValue,
-                  key: "valueOf()",
-                  isValueOfReturnValue: true,
-                },
-              ];
-            } else {
-              propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
-                  value: valueOfReturnValue,
-                });
+        // toString()
+        if (node.isURL) {
+          objectConstructArgs = [
+            {
+              value: value.href,
+              key: "toString()",
+            },
+          ];
+        }
+        // valueOf()
+        else if (
+          typeof value.valueOf === "function" &&
+          value.valueOf !== Object.prototype.valueOf
+        ) {
+          ownPropertyNameToIgnoreSet.add("valueOf");
+          const valueOfReturnValue = value.valueOf();
+          if (objectConstructNode) {
+            objectConstructArgs = [
+              {
+                value: valueOfReturnValue,
+                key: "valueOf()",
+              },
+            ];
+          } else {
+            propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+              appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
+                value: valueOfReturnValue,
               });
-            }
+            });
           }
         }
         own_properties: {
@@ -1748,15 +1760,16 @@ let createRootNode;
         );
       });
       node.appendWrappedNodeGetter(() => {
-        const constructorCallNode = node.childNodeMap.get("constructor_call");
-        if (constructorCallNode) {
-          const firstArgEntryNode = constructorCallNode.childNodeMap.get(0);
-          if (
-            firstArgEntryNode &&
-            firstArgEntryNode.childNodeMap.get("entry_value")
-              .isValueOfReturnValue
-          ) {
-            return firstArgEntryNode.childNodeMap.get("entry_value");
+        const constructNode = node.childNodeMap.get("construct");
+        if (constructNode) {
+          const constructCallNode = constructNode.childNodeMap.get("call");
+          if (constructCallNode) {
+            const firstArgNode = constructCallNode.childNodeMap.get(0);
+            if (firstArgNode) {
+              const firstArgValueNode =
+                firstArgNode.childNodeMap.get("entry_value");
+              return firstArgValueNode;
+            }
           }
         }
         const propertyEntriesNode = node.childNodeMap.get("property_entries");

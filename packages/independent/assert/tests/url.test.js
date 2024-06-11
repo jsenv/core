@@ -2,10 +2,22 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("url", {
-  ["url port"]: () => {
+  ["url object port"]: () => {
+    assert({
+      actual: new URL("http://example.com"),
+      expect: new URL("http://example.com:8000"),
+    });
+  },
+  ["url string port"]: () => {
     assert({
       actual: "http://example.com",
       expect: "http://example.com:8000",
+    });
+  },
+  ["url string vs url object port"]: () => {
+    assert({
+      actual: "http://example.com",
+      expect: new URL("http://example.com:8000"),
     });
   },
   // ["url search param modified"]: () => {
@@ -109,12 +121,6 @@ await startSnapshotTesting("url", {
   //   assert({
   //     actual: new URL("http://example.com"),
   //     expect: new URL("http://example.com#bar"),
-  //   });
-  // },
-  // ["url string and url"]: () => {
-  //   assert({
-  //     actual: "http://example.com",
-  //     expect: new URL("http://example.com:8000"),
   //   });
   // },
   // ["long url diff at end"]: () => {

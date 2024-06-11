@@ -1,4 +1,12 @@
-# url port
+# url object port
+actual: URL("http://example.com/")
+expect: URL("http://example.com:8000/")
+
+# url string port
 actual: "http://example.com/"
 expect: "http://example.com:8000/"
+
+# url string vs url object port
+actual: "http://example.com/"
+expect: URL("http://example.com:8000/")
 
