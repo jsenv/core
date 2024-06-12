@@ -1046,12 +1046,12 @@ let createRootNode;
     isCompatibleWithMultilineDiff = false,
     isCompatibleWithSingleLineDiff = false,
     focusedChildWhenSame = "first",
-    skippedEntrySummary = null,
+    skippedSummary = null,
     hasMarkersWhenEmpty = false,
-    hasNewLineAroundEntries = false,
-    hasSpacingAroundEntries = false,
-    hasSpacingBetweenEntries = false,
-    hasIndentBeforeEntries = false,
+    hasNewLineAroundChildren = false,
+    hasSpacingAroundChildren = false,
+    hasSpacingBetweenEachChild = false,
+    hasIndentBeforeEachChild = false,
     hasTrailingSeparator = false,
   }) => {
     const node = {
@@ -1115,12 +1115,12 @@ let createRootNode;
       isCompatibleWithMultilineDiff,
       isCompatibleWithSingleLineDiff,
       focusedChildWhenSame,
-      skippedEntrySummary,
+      skippedSummary,
       hasMarkersWhenEmpty,
-      hasNewLineAroundEntries,
-      hasSpacingAroundEntries,
-      hasSpacingBetweenEntries,
-      hasIndentBeforeEntries,
+      hasNewLineAroundChildren,
+      hasSpacingAroundChildren,
+      hasSpacingBetweenEachChild,
+      hasIndentBeforeEachChild,
       hasTrailingSeparator,
       color: "",
     };
@@ -1433,8 +1433,8 @@ let createRootNode;
               subgroup: "line_entries",
               isCompatibleWithMultilineDiff: true,
               hasTrailingSeparator: true,
-              skippedEntrySummary: {
-                skippedEntryNames: ["line", "lines"],
+              skippedSummary: {
+                skippedNames: ["line", "lines"],
               },
               childGenerator: () => {
                 const appendLineEntry = (lineIndex) => {
@@ -1592,7 +1592,7 @@ let createRootNode;
           const functionConstructNode = node.appendChild("construct", {
             value: null,
             render: renderChildrenOneLiner,
-            hasSpacingBetweenEntries: true,
+            hasSpacingBetweenEachChild: true,
             group: "entries",
             subgroup: "function_construct",
             childGenerator() {
@@ -1688,7 +1688,7 @@ let createRootNode;
             objectConstructNode = node.appendChild("construct", {
               value: null,
               render: renderChildrenOneLiner,
-              hasSpacingBetweenEntries: true,
+              hasSpacingBetweenEachChild: true,
               group: "entries",
               subgroup: "object_construct",
               childGenerator() {
@@ -1724,11 +1724,11 @@ let createRootNode;
             isCompatibleWithMultilineDiff: true,
             isCompatibleWithSingleLineDiff: true,
             hasMarkersWhenEmpty: true,
-            hasNewLineAroundEntries: true,
-            hasIndentBeforeEntries: true,
+            hasNewLineAroundChildren: true,
+            hasIndentBeforeEachChild: true,
             hasTrailingSeparator: true,
-            skippedEntrySummary: {
-              skippedEntryNames: ["value", "values"],
+            skippedSummary: {
+              skippedNames: ["value", "values"],
             },
           };
 
@@ -1836,11 +1836,11 @@ let createRootNode;
               hasMarkersWhenEmpty: true,
               isCompatibleWithMultilineDiff: true,
               isCompatibleWithSingleLineDiff: true,
-              hasNewLineAroundEntries: true,
-              hasIndentBeforeEntries: true,
+              hasNewLineAroundChildren: true,
+              hasIndentBeforeEachChild: true,
               hasTrailingSeparator: true,
-              skippedEntrySummary: {
-                skippedEntryNames: ["value", "values"],
+              skippedSummary: {
+                skippedNames: ["value", "values"],
               },
             });
             const arrayEntyGenerator = () => {
@@ -1954,17 +1954,17 @@ let createRootNode;
             subgroup: "property_entries",
             isCompatibleWithMultilineDiff: true,
             isCompatibleWithSingleLineDiff: true,
-            skippedEntrySummary: {
-              skippedEntryNames: ["prop", "props"],
+            skippedSummary: {
+              skippedNames: ["prop", "props"],
             },
             ...(node.isClassPrototype
               ? {}
               : {
                   startMarker: "{",
                   endMarker: "}",
-                  hasSpacingAroundEntries: true,
-                  hasNewLineAroundEntries: true,
-                  hasIndentBeforeEntries: true,
+                  hasSpacingAroundChildren: true,
+                  hasNewLineAroundChildren: true,
+                  hasIndentBeforeEachChild: true,
                   hasTrailingSeparator: true,
                 }),
             hasMarkersWhenEmpty,
@@ -2433,7 +2433,7 @@ const renderChildren = (node, props) => {
   });
 };
 const renderChildrenOneLiner = (node, props) => {
-  node.hasIndentBeforeEntries = false;
+  node.hasIndentBeforeEachChild = false;
   let columnsRemaining = props.columnsRemaining;
   let focusedEntryIndex = -1; // TODO: take first one with a diff
   const entryKeys = Array.from(node.childNodeMap.keys());
@@ -2530,7 +2530,7 @@ const renderChildrenOneLiner = (node, props) => {
     }
     columnsRemaining -= entryDiffWidth;
     if (
-      node.hasSpacingBetweenEntries &&
+      node.hasSpacingBetweenEachChild &&
       entryIndex > 0 &&
       entryIndex < entryKeys.length - 1
     ) {
@@ -2552,7 +2552,7 @@ const renderChildrenOneLiner = (node, props) => {
   let index = 0;
   for (const entryDiff of entryDiffArray) {
     diff += entryDiff;
-    if (node.hasSpacingBetweenEntries && index < entryDiffArray.length - 1) {
+    if (node.hasSpacingBetweenEachChild && index < entryDiffArray.length - 1) {
       diff += " ";
     }
     index++;
@@ -2575,7 +2575,7 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
   let entriesDiff = "";
   let lastEntryDisplayed = null;
   let lastEntryDisplayedIndex = 0;
-  node.hasIndentBeforeEntries = false;
+  node.hasIndentBeforeEachChild = false;
   for (const entryKey of entryKeys) {
     const entryNode = node.childNodeMap.get(entryKey);
     const entryNodeEndMarker = entryNode.endMarker;
@@ -2591,7 +2591,7 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
         diff += setColor(startMarker, node.color);
         diff += entriesDiff;
         diff += setColor(
-          node.hasSpacingAroundEntries
+          node.hasSpacingAroundChildren
             ? ` ... ${endMarker}`
             : ` ...${endMarker}`,
           node.color,
@@ -2599,7 +2599,7 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
         return diff;
       }
       diff += setColor(
-        node.hasSpacingAroundEntries
+        node.hasSpacingAroundChildren
           ? `${startMarker} ... ${endMarker}`
           : `${startMarker}...${endMarker}`,
         node.color,
@@ -2630,11 +2630,11 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
     return "";
   }
   diff += setColor(startMarker, node.color);
-  if (node.hasSpacingAroundEntries) {
+  if (node.hasSpacingAroundChildren) {
     diff += " ";
   }
   diff += entriesDiff;
-  if (node.hasSpacingAroundEntries) {
+  if (node.hasSpacingAroundChildren) {
     diff += " ";
   }
   diff += setColor(endMarker, node.color);
@@ -2655,20 +2655,20 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
       atLeastOneEntryDisplayed = true;
     }
   };
-  const appendSkippedEntries = (skipCount, skipPosition) => {
+  const appendSkippedSection = (skipCount, skipPosition) => {
     let skippedDiff = "";
-    if (node.hasIndentBeforeEntries) {
+    if (node.hasIndentBeforeEachChild) {
       skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
     }
-    if (node.skippedEntrySummary) {
-      const { skippedEntryNames } = node.skippedEntrySummary;
+    if (node.skippedSummary) {
+      const { skippedNames } = node.skippedSummary;
       const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
       skippedDiff += setColor(sign, node.color);
       skippedDiff += " ";
       skippedDiff += setColor(String(skipCount), node.color);
       skippedDiff += " ";
       skippedDiff += setColor(
-        skippedEntryNames[skipCount === 1 ? 0 : 1],
+        skippedNames[skipCount === 1 ? 0 : 1],
         node.color,
       );
       skippedDiff += " ";
@@ -2678,17 +2678,17 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     }
   };
   let previousIndexDisplayed = -1;
-  let canResetMaxColumns = node.hasNewLineAroundEntries;
+  let canResetMaxColumns = node.hasNewLineAroundChildren;
   for (const indexToDisplay of indexToDisplayArray) {
     if (previousIndexDisplayed === -1) {
       if (indexToDisplay > 0) {
-        appendSkippedEntries(indexToDisplay, "start");
+        appendSkippedSection(indexToDisplay, "start");
       }
     } else {
       const intermediateSkippedCount =
         indexToDisplay - previousIndexDisplayed - 1;
       if (intermediateSkippedCount) {
-        appendSkippedEntries(intermediateSkippedCount, "between");
+        appendSkippedSection(intermediateSkippedCount, "between");
       }
     }
     const entryKey = entryKeys[indexToDisplay];
@@ -2710,7 +2710,7 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
   if (lastIndexDisplayed > -1) {
     const lastSkippedCount = entryKeys.length - 1 - lastIndexDisplayed;
     if (lastSkippedCount) {
-      appendSkippedEntries(lastSkippedCount, "end");
+      appendSkippedSection(lastSkippedCount, "end");
     }
   }
   if (!atLeastOneEntryDisplayed) {
@@ -2720,11 +2720,11 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     return "";
   }
   diff += setColor(startMarker, node.color);
-  if (node.hasNewLineAroundEntries) {
+  if (node.hasNewLineAroundChildren) {
     diff += "\n";
   }
   diff += entriesDiff;
-  if (node.hasNewLineAroundEntries) {
+  if (node.hasNewLineAroundChildren) {
     diff += "\n";
     diff += "  ".repeat(getNodeDepth(node, props));
   }
@@ -2732,11 +2732,11 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
   return diff;
 };
 const renderEntry = (node, props) => {
-  const hasIndentBeforeEntries = node.parent.hasIndentBeforeEntries;
+  const hasIndentBeforeEachChild = node.parent.hasIndentBeforeEachChild;
   const { endMarker } = node;
   let entryDiff = "";
   let columnsRemaining = props.columnsRemaining;
-  if (hasIndentBeforeEntries) {
+  if (hasIndentBeforeEachChild) {
     const indent = "  ".repeat(getNodeDepth(node, props) + 1);
     columnsRemaining -= stringWidth(indent);
     entryDiff += indent;
@@ -2835,9 +2835,9 @@ const createArgEntriesNode = (node, { args }) => {
     value: [],
     // isCompatibleWithMultilineDiff: true,
     isCompatibleWithSingleLineDiff: true,
-    hasSpacingAroundEntries: true,
-    // hasNewLineAroundEntries: true,
-    // hasIndentBeforeEntries: true,
+    hasSpacingAroundChildren: true,
+    // hasNewLineAroundChildren: true,
+    // hasIndentBeforeEachChild: true,
     startMarker: "(",
     endMarker: ")",
     childGenerator: (callNode) => {
