@@ -8,6 +8,12 @@ await startSnapshotTesting("string", {
       expect: "b",
     });
   },
+  ["string contains escaped double quote"]: () => {
+    assert({
+      actual: 'I\\"m dam',
+      expect: 'I\\"m seb',
+    });
+  },
   // ["diff end of string"]: () => {
   //   assert({
   //     actual: "hello world",

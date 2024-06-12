@@ -2,3 +2,7 @@
 actual: "a"
 expect: "b"
 
+# string contains escaped double quote
+actual: "I\\\"m dam"
+expect: "I\\\"m seb"
+

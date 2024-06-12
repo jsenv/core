@@ -1,9 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - multiline diff and single line diff options au lieu de true
- *   (comme ça on repérer bien quelle option est lié a quel type de rendu et on dupliaue ce qui est commun)
- * - test quotes
  * - well known
  * - symbols
  * - numbers
@@ -13,7 +10,12 @@
  * - property descriptors
  * - errors
  * - prototype
- *
+ * - quote in
+ *    - property name
+ *    - url search param name
+ *    - url search param value
+ *    - url pathname
+ *    - ensure backtick cannot be used for object property key
  */
 
 import stringWidth from "string-width";
@@ -1193,16 +1195,24 @@ let createRootNode;
           } else {
             canUseBacktick = true;
           }
+          let backslashCount = 0;
           let doubleQuoteCount = 0;
           let singleQuoteCount = 0;
           let backtickCount = 0;
           for (const char of value) {
-            if (char === DOUBLE_QUOTE) {
-              doubleQuoteCount++;
-            } else if (char === SINGLE_QUOTE) {
-              singleQuoteCount++;
-            } else if (char === BACKTICK) {
-              backtickCount++;
+            if (char === "\\") {
+              backslashCount++;
+            } else {
+              if (backslashCount % 2 > 0) {
+                // it's escaped
+              } else if (char === DOUBLE_QUOTE) {
+                doubleQuoteCount++;
+              } else if (char === SINGLE_QUOTE) {
+                singleQuoteCount++;
+              } else if (char === BACKTICK) {
+                backtickCount++;
+              }
+              backslashCount = 0;
             }
           }
           bestQuote = (() => {
