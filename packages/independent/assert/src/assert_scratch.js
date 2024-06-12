@@ -1186,12 +1186,7 @@ let createRootNode;
     if (group === "entry") {
       return node;
     }
-    if (
-      subgroup === "array_entry_key" ||
-      subgroup === "line_entry_key" ||
-      subgroup === "char_entry_key" ||
-      subgroup === "arg_entry_key"
-    ) {
+    if (subgroup === "array_entry_key" || subgroup === "arg_entry_key") {
       node.category = "primitive";
       node.isNumber = true;
       return node;
@@ -1437,6 +1432,7 @@ let createRootNode;
               group: "entries",
               subgroup: "line_entries",
               isCompatibleWithMultilineDiff: true,
+              hasTrailingSeparator: true,
               skippedEntrySummary: {
                 skippedEntryNames: ["line", "lines"],
               },
@@ -1444,35 +1440,15 @@ let createRootNode;
                 const appendLineEntry = (lineIndex) => {
                   lineEntriesNode.value.push(lineIndex);
                   const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
-                    render: renderEntry,
-                    group: "entry",
-                    subgroup: "line_entry",
+                    render: renderChildrenOneLiner,
+                    focusedChildWhenSame: "end",
+                    group: "entries",
+                    subgroup: "line_entry_value",
+                    overflowStartMarker: "…",
+                    overflowEndMarker: "…",
                   });
-                  const lineEntryKeyNode = lineEntryNode.appendChild(
-                    "entry_key",
-                    {
-                      value: lineIndex,
-                      render: renderInteger,
-                      group: "entry_key",
-                      subgroup: "line_entry_key",
-                      isHidden: true,
-                    },
-                  );
-                  const lineEntryValueNode = lineEntryNode.appendChild(
-                    "entry_value",
-                    {
-                      value: [],
-                      render: renderChildrenOneLiner,
-                      focusedChildWhenSame: "end",
-                      group: "entries",
-                      subgroup: "line_entry_value",
-                      overflowStartMarker: "…",
-                      overflowEndMarker: "…",
-                    },
-                  );
                   const appendCharEntry = (charIndex, char) => {
-                    lineEntryValueNode.value.push(charIndex);
-                    lineEntryValueNode.appendChild(charIndex, {
+                    lineEntryNode.appendChild(charIndex, {
                       value: char,
                       render: renderChar,
                       quoteMarkerRef,
@@ -1483,8 +1459,6 @@ let createRootNode;
 
                   return {
                     lineEntryNode,
-                    lineEntryKeyNode,
-                    lineEntryValueNode,
                     appendCharEntry,
                   };
                 };
@@ -1511,7 +1485,7 @@ let createRootNode;
 
                 // first line
                 const {
-                  lineEntryValueNode: firstLineEntryValueNode,
+                  lineEntryNode: firstLineEntryNode,
                   appendCharEntry: appendFirstLineCharEntry,
                 } = appendLineEntry(0);
                 for (const char of charGeneratorUntilNewLine()) {
@@ -1523,8 +1497,8 @@ let createRootNode;
                   // single line
                   if (bestQuote) {
                     lineEntriesNode.hasMarkersWhenEmpty = true;
-                    firstLineEntryValueNode.startMarker =
-                      firstLineEntryValueNode.endMarker = bestQuote;
+                    firstLineEntryNode.startMarker =
+                      firstLineEntryNode.endMarker = bestQuote;
                   }
                   return;
                 }
