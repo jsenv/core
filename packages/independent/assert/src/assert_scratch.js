@@ -2008,11 +2008,7 @@ let createRootNode;
           if (constructCallNode) {
             const argEntriesNode = constructCallNode.childNodeMap.get("args");
             const firstArgNode = argEntriesNode.childNodeMap.get(0);
-            if (firstArgNode) {
-              const firstArgValueNode =
-                firstArgNode.childNodeMap.get("entry_value");
-              return firstArgValueNode;
-            }
+            return firstArgNode;
           }
         }
         const propertyEntriesNode = node.childNodeMap.get("property_entries");
