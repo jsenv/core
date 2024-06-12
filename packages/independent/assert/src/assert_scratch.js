@@ -2435,8 +2435,8 @@ const renderChildren = (node, props) => {
 const renderChildrenOneLiner = (node, props) => {
   node.hasIndentBeforeEachChild = false;
   let columnsRemaining = props.columnsRemaining;
-  let focusedEntryIndex = -1; // TODO: take first one with a diff
-  const entryKeys = Array.from(node.childNodeMap.keys());
+  let focusedChildIndex = -1; // TODO: take first one with a diff
+  const childrenKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
   const { overflowStartMarker, overflowEndMarker } = node;
   // columnsRemaining -= overflowStartMarker;
@@ -2444,29 +2444,29 @@ const renderChildrenOneLiner = (node, props) => {
   columnsRemaining -= startMarker.length;
   columnsRemaining -= endMarker.length;
 
-  let focusedEntryKey = entryKeys[focusedEntryIndex];
-  if (!focusedEntryKey) {
-    focusedEntryIndex =
+  let focusedChildKey = childrenKeys[focusedChildIndex];
+  if (!focusedChildKey) {
+    focusedChildIndex =
       node.focusedChildWhenSame === "first"
         ? 0
         : node.focusedChildWhenSame === "last"
-          ? entryKeys.length - 1
-          : Math.floor(entryKeys.length / 2);
-    focusedEntryKey = entryKeys[focusedEntryIndex];
+          ? childrenKeys.length - 1
+          : Math.floor(childrenKeys.length / 2);
+    focusedChildKey = childrenKeys[focusedChildIndex];
   }
-  const entryDiffArray = [];
-  const focusedEntry = node.childNodeMap.get(focusedEntryKey);
-  let focusedEntryDiff = "";
-  if (focusedEntry) {
+  const childDiffArray = [];
+  const focusedChildNode = node.childNodeMap.get(focusedChildKey);
+  let focusedChildDiff = "";
+  if (focusedChildNode) {
     if (
       !node.hasTrailingSeparator &&
-      focusedEntryIndex === entryKeys.length - 1
+      focusedChildIndex === childrenKeys.length - 1
     ) {
-      focusedEntry.endMarker = "";
+      focusedChildNode.endMarker = "";
     }
-    focusedEntryDiff = focusedEntry.render(props);
-    entryDiffArray.push(focusedEntryDiff);
-    columnsRemaining -= stringWidth(focusedEntryDiff);
+    focusedChildDiff = focusedChildNode.render(props);
+    childDiffArray.push(focusedChildDiff);
+    columnsRemaining -= stringWidth(focusedChildDiff);
   }
 
   const overflowStartWidth = overflowStartMarker.length;
@@ -2477,43 +2477,43 @@ const renderChildrenOneLiner = (node, props) => {
   let hasStartOverflow = false;
   let hasEndOverflow = false;
   while (columnsRemaining) {
-    const previousEntryIndex = focusedEntryIndex - previousChildAttempt - 1;
-    const nextEntryIndex = focusedEntryIndex + nextChildAttempt + 1;
-    let hasPreviousEntry = previousEntryIndex >= 0;
-    const hasNextEntry = nextEntryIndex < entryKeys.length;
-    if (!hasPreviousEntry && !hasNextEntry) {
+    const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
+    const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
+    let hasPreviousChild = previousChildIndex >= 0;
+    const hasNextChild = nextChildIndex < childrenKeys.length;
+    if (!hasPreviousChild && !hasNextChild) {
       break;
     }
-    if (!tryBeforeFirst && hasNextEntry) {
-      hasPreviousEntry = false;
+    if (!tryBeforeFirst && hasNextChild) {
+      hasPreviousChild = false;
     }
-    let entryIndex;
-    if (hasPreviousEntry) {
+    let childIndex;
+    if (hasPreviousChild) {
       previousChildAttempt++;
-      entryIndex = previousEntryIndex;
-    } else if (hasNextEntry) {
+      childIndex = previousChildIndex;
+    } else if (hasNextChild) {
       nextChildAttempt++;
-      entryIndex = nextEntryIndex;
+      childIndex = nextChildIndex;
     }
-    const entryKey = entryKeys[entryIndex];
-    const entryNode = node.childNodeMap.get(entryKey);
-    if (!entryNode) {
+    const childKey = childrenKeys[childIndex];
+    const childNode = node.childNodeMap.get(childKey);
+    if (!childNode) {
       debugger; // to keep to see if that is hit while running all of string.test.js
       // if not remove it
       continue;
     }
-    if (tryBeforeFirst && hasPreviousEntry) {
+    if (tryBeforeFirst && hasPreviousChild) {
       tryBeforeFirst = false;
     }
-    if (!node.hasTrailingSeparator && entryIndex === entryKeys.length - 1) {
-      entryNode.endMarker = "";
+    if (!node.hasTrailingSeparator && childIndex === childrenKeys.length - 1) {
+      childNode.endMarker = "";
     }
-    const entryDiff = entryNode.render(props);
-    const entryDiffWidth = measureLastLineColumns(entryDiff);
-    let nextWidth = entryDiffWidth;
-    hasStartOverflow = focusedEntryIndex - previousChildAttempt > 0;
+    const childDiff = childNode.render(props);
+    const childDiffWidth = measureLastLineColumns(childDiff);
+    let nextWidth = childDiffWidth;
+    hasStartOverflow = focusedChildIndex - previousChildAttempt > 0;
     hasEndOverflow =
-      focusedEntryIndex + nextChildAttempt < entryKeys.length - 1;
+      focusedChildIndex + nextChildAttempt < childrenKeys.length - 1;
     if (hasStartOverflow) {
       nextWidth += overflowStartWidth;
     }
@@ -2521,25 +2521,25 @@ const renderChildrenOneLiner = (node, props) => {
       nextWidth += overflowEndWidth;
     }
     if (nextWidth > columnsRemaining) {
-      if (hasPreviousEntry) {
+      if (hasPreviousChild) {
         previousChildAttempt--;
       } else {
         nextChildAttempt--;
       }
       break;
     }
-    columnsRemaining -= entryDiffWidth;
+    columnsRemaining -= childDiffWidth;
     if (
       node.hasSpacingBetweenEachChild &&
-      entryIndex > 0 &&
-      entryIndex < entryKeys.length - 1
+      childIndex > 0 &&
+      childIndex < childrenKeys.length - 1
     ) {
       columnsRemaining -= " ".length;
     }
-    if (entryIndex < focusedEntryIndex) {
-      entryDiffArray.unshift(entryDiff);
+    if (childIndex < focusedChildIndex) {
+      childDiffArray.unshift(childDiff);
     } else {
-      entryDiffArray.push(entryDiff);
+      childDiffArray.push(childDiff);
     }
   }
   let diff = "";
@@ -2550,9 +2550,9 @@ const renderChildrenOneLiner = (node, props) => {
     diff += setColor(startMarker, node.color);
   }
   let index = 0;
-  for (const entryDiff of entryDiffArray) {
-    diff += entryDiff;
-    if (node.hasSpacingBetweenEachChild && index < entryDiffArray.length - 1) {
+  for (const childDiff of childDiffArray) {
+    diff += childDiff;
+    if (node.hasSpacingBetweenEachChild && index < childDiffArray.length - 1) {
       diff += " ";
     }
     index++;
