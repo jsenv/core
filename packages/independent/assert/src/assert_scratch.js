@@ -2567,29 +2567,29 @@ const renderChildrenOneLiner = (node, props) => {
 };
 const renderChildrenWithoutDiffOneLiner = (node, props) => {
   const { startMarker, endMarker } = node;
-  const entryKeys = Array.from(node.childNodeMap.keys());
+  const childrenKeys = Array.from(node.childNodeMap.keys());
   let columnsRemaining = props.columnsRemaining;
   let boilerplate = `${startMarker} ... ${endMarker}`;
   columnsRemaining -= boilerplate.length;
   let diff = "";
-  let entriesDiff = "";
-  let lastEntryDisplayed = null;
-  let lastEntryDisplayedIndex = 0;
+  let childrenDiff = "";
+  let lastChildDisplayed = null;
+  let lastChildDisplayedIndex = 0;
   node.hasIndentBeforeEachChild = false;
-  for (const entryKey of entryKeys) {
-    const entryNode = node.childNodeMap.get(entryKey);
-    const entryNodeEndMarker = entryNode.endMarker;
-    entryNode.endMarker = "";
-    const entryDiff = entryNode.render({
+  for (const childKey of childrenKeys) {
+    const childNode = node.childNodeMap.get(childKey);
+    const childNodeEndMarker = childNode.endMarker;
+    childNode.endMarker = "";
+    const childDiff = childNode.render({
       ...props,
       columnsRemaining,
     });
-    entryNode.endMarker = entryNodeEndMarker;
-    const entryDiffWidth = measureLastLineColumns(entryDiff);
-    if (entryDiffWidth > columnsRemaining) {
-      if (lastEntryDisplayed) {
+    childNode.endMarker = childNodeEndMarker;
+    const childDiffWidth = measureLastLineColumns(childDiff);
+    if (childDiffWidth > columnsRemaining) {
+      if (lastChildDisplayed) {
         diff += setColor(startMarker, node.color);
-        diff += entriesDiff;
+        diff += childrenDiff;
         diff += setColor(
           node.hasSpacingAroundChildren
             ? ` ... ${endMarker}`
@@ -2606,24 +2606,24 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
       );
       return diff;
     }
-    if (lastEntryDisplayed) {
+    if (lastChildDisplayed) {
       if (
         node.hasTrailingSeparator ||
-        lastEntryDisplayedIndex !== entryKeys.length - 1
+        lastChildDisplayedIndex !== childrenKeys.length - 1
       ) {
-        entriesDiff += setColor(
-          lastEntryDisplayed.endMarker,
-          lastEntryDisplayed.color,
+        childrenDiff += setColor(
+          lastChildDisplayed.endMarker,
+          lastChildDisplayed.color,
         );
       }
-      entriesDiff += " ";
+      childrenDiff += " ";
     }
-    lastEntryDisplayed = entryNode;
-    lastEntryDisplayedIndex = entryKeys.indexOf(entryKey);
-    entriesDiff += entryDiff;
-    columnsRemaining -= entryDiffWidth;
+    lastChildDisplayed = childNode;
+    lastChildDisplayedIndex = childrenKeys.indexOf(childKey);
+    childrenDiff += childDiff;
+    columnsRemaining -= childDiffWidth;
   }
-  if (!lastEntryDisplayed) {
+  if (!lastChildDisplayed) {
     if (node.hasMarkersWhenEmpty) {
       return setColor(`${startMarker}${endMarker}`, node.color);
     }
@@ -2633,7 +2633,7 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
   if (node.hasSpacingAroundChildren) {
     diff += " ";
   }
-  diff += entriesDiff;
+  diff += childrenDiff;
   if (node.hasSpacingAroundChildren) {
     diff += " ";
   }
@@ -2641,17 +2641,17 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
   return diff;
 };
 const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
-  const entryKeys = Array.from(node.childNodeMap.keys());
+  const childrenKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
   let atLeastOneEntryDisplayed = null;
   let diff = "";
-  let entriesDiff = "";
-  const appendEntry = (entryDiff) => {
+  let childrenDiff = "";
+  const appendChildDiff = (childDiff) => {
     if (atLeastOneEntryDisplayed) {
-      entriesDiff += "\n";
-      entriesDiff += entryDiff;
+      childrenDiff += "\n";
+      childrenDiff += childDiff;
     } else {
-      entriesDiff += entryDiff;
+      childrenDiff += childDiff;
       atLeastOneEntryDisplayed = true;
     }
   };
@@ -2673,7 +2673,7 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
       );
       skippedDiff += " ";
       skippedDiff += setColor(sign, node.color);
-      appendEntry(skippedDiff);
+      appendChildDiff(skippedDiff);
       return;
     }
   };
@@ -2691,24 +2691,27 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
         appendSkippedSection(intermediateSkippedCount, "between");
       }
     }
-    const entryKey = entryKeys[indexToDisplay];
-    const entryNode = node.childNodeMap.get(entryKey);
-    if (!node.hasTrailingSeparator && indexToDisplay === entryKeys.length - 1) {
-      entryNode.endMarker = "";
+    const childKey = childrenKeys[indexToDisplay];
+    const childNode = node.childNodeMap.get(childKey);
+    if (
+      !node.hasTrailingSeparator &&
+      indexToDisplay === childrenKeys.length - 1
+    ) {
+      childNode.endMarker = "";
     }
-    const entryDiff = entryNode.render({
+    const childDiff = childNode.render({
       ...props,
       columnsRemaining: canResetMaxColumns
         ? props.MAX_COLUMNS
         : props.columnsRemaining,
     });
     canResetMaxColumns = true; // because we'll append \n on next entry
-    appendEntry(entryDiff);
+    appendChildDiff(childDiff);
     previousIndexDisplayed = indexToDisplay;
   }
   const lastIndexDisplayed = previousIndexDisplayed;
   if (lastIndexDisplayed > -1) {
-    const lastSkippedCount = entryKeys.length - 1 - lastIndexDisplayed;
+    const lastSkippedCount = childrenKeys.length - 1 - lastIndexDisplayed;
     if (lastSkippedCount) {
       appendSkippedSection(lastSkippedCount, "end");
     }
@@ -2723,7 +2726,7 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
   if (node.hasNewLineAroundChildren) {
     diff += "\n";
   }
-  diff += entriesDiff;
+  diff += childrenDiff;
   if (node.hasNewLineAroundChildren) {
     diff += "\n";
     diff += "  ".repeat(getNodeDepth(node, props));
