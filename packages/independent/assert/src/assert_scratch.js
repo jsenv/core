@@ -1105,7 +1105,6 @@ let createRootNode;
       diffType: "",
       otherNode: null,
       // END will be set by comparison
-      hasQuotes: false,
       startMarker,
       middleMarker,
       endMarker,
@@ -1231,13 +1230,49 @@ let createRootNode;
       } else if (subgroup === "url_search_entry_value") {
         // no quote around value in "?key=value"
       } else {
-        if (subgroup === "property_entry_key") {
-          if (!isValidPropertyIdentifier(value)) {
-            node.hasQuotes = true;
+        let bestQuote;
+        best_quote: {
+          let canUseBacktick = false;
+          if (subgroup === "property_entry_key") {
+            if (isValidPropertyIdentifier(value)) {
+              // no quote around valid property identifier
+              break best_quote;
+            }
+          } else {
+            canUseBacktick = true;
           }
-        } else {
-          node.hasQuotes = true;
+          let doubleQuoteCount = 0;
+          let singleQuoteCount = 0;
+          let backtickCount = 0;
+          for (const char of value) {
+            if (char === DOUBLE_QUOTE) {
+              doubleQuoteCount++;
+            } else if (char === SINGLE_QUOTE) {
+              singleQuoteCount++;
+            } else if (char === BACKTICK) {
+              backtickCount++;
+            }
+          }
+          bestQuote = (() => {
+            if (doubleQuoteCount === 0) {
+              return DOUBLE_QUOTE;
+            }
+            if (singleQuoteCount === 0) {
+              return SINGLE_QUOTE;
+            }
+            if (canUseBacktick && backtickCount === 0) {
+              return BACKTICK;
+            }
+            if (singleQuoteCount > doubleQuoteCount) {
+              return DOUBLE_QUOTE;
+            }
+            if (doubleQuoteCount > singleQuoteCount) {
+              return SINGLE_QUOTE;
+            }
+            return DOUBLE_QUOTE;
+          })();
         }
+
         if (canParseUrl(value)) {
           node.isStringForUrl = true;
           node.childGenerator = () => {
@@ -1246,8 +1281,8 @@ let createRootNode;
               "url_internal_properties",
               {
                 render: renderChildrenOneLiner,
-                startMarker: DOUBLE_QUOTE,
-                endMarker: DOUBLE_QUOTE,
+                startMarker: bestQuote,
+                endMarker: bestQuote,
                 childGenerator() {
                   const {
                     protocol,
@@ -1387,26 +1422,6 @@ let createRootNode;
                 subgroup: "url_internal_properties",
               },
             );
-
-            let doubleQuoteCount = 0;
-            let singleQuoteCount = 0;
-            let backtickCount = 0;
-            for (const char of value) {
-              if (char === DOUBLE_QUOTE) {
-                doubleQuoteCount++;
-              } else if (char === SINGLE_QUOTE) {
-                singleQuoteCount++;
-              } else if (char === BACKTICK) {
-                backtickCount++;
-              }
-            }
-            const bestQuote = pickBestQuote({
-              doubleQuoteCount,
-              singleQuoteCount,
-              backtickCount,
-            });
-            urlInternalPropertiesNode.startMarker =
-              urlInternalPropertiesNode.endMarker = bestQuote;
           };
         } else {
           node.childGenerator = () => {
@@ -1484,9 +1499,6 @@ let createRootNode;
 
                 let isDone = false;
                 let firstLineCharIndex = 0;
-                let doubleQuoteCount = 0;
-                let singleQuoteCount = 0;
-                let backtickCount = 0;
                 const chars = tokenizeString(node.value);
                 const charIterator = chars[Symbol.iterator]();
                 function* charGeneratorUntilNewLine() {
@@ -1511,30 +1523,17 @@ let createRootNode;
                   appendCharEntry: appendFirstLineCharEntry,
                 } = appendLineEntry(0);
                 for (const char of charGeneratorUntilNewLine()) {
-                  if (char === DOUBLE_QUOTE) {
-                    doubleQuoteCount++;
-                  } else if (char === SINGLE_QUOTE) {
-                    singleQuoteCount++;
-                  } else if (char === BACKTICK) {
-                    backtickCount++;
-                  }
                   appendFirstLineCharEntry(firstLineCharIndex, char);
                   firstLineCharIndex++;
                 }
 
                 if (isDone) {
                   // single line
-                  if (node.hasQuotes) {
-                    const bestQuote = pickBestQuote({
-                      doubleQuoteCount,
-                      singleQuoteCount,
-                      backtickCount,
-                    });
+                  if (bestQuote) {
+                    lineEntriesNode.hasMarkersWhenEmpty = true;
                     firstLineEntryValueNode.startMarker =
                       firstLineEntryValueNode.endMarker = bestQuote;
-                    lineEntriesNode.hasMarkersWhenEmpty = true;
                   }
-                  lineEntriesNode.hasMarkersWhenEmpty = true;
                   return;
                 }
                 // remaining lines
@@ -2266,9 +2265,6 @@ const renderString = (node, props) => {
       diff += char;
     }
   }
-  if (node.hasQuotes) {
-    return truncateAndAppyColor(`"${diff}"`, node, props);
-  }
   return truncateAndAppyColor(diff, node, props);
 };
 const renderChar = (node, props) => {
@@ -2915,28 +2911,6 @@ const createArgEntriesNode = (node, { args }) => {
 const DOUBLE_QUOTE = `"`;
 const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
-const pickBestQuote = ({
-  doubleQuoteCount,
-  singleQuoteCount,
-  backtickCount,
-}) => {
-  if (doubleQuoteCount === 0) {
-    return DOUBLE_QUOTE;
-  }
-  if (singleQuoteCount === 0) {
-    return SINGLE_QUOTE;
-  }
-  if (backtickCount === 0) {
-    return BACKTICK;
-  }
-  if (singleQuoteCount > doubleQuoteCount) {
-    return DOUBLE_QUOTE;
-  }
-  if (doubleQuoteCount > singleQuoteCount) {
-    return SINGLE_QUOTE;
-  }
-  return DOUBLE_QUOTE;
-};
 
 const getAddedOrRemovedReason = (node) => {
   if (node.group === "url_internal_prop") {
