@@ -1042,6 +1042,7 @@ let createRootNode;
     endMarker = "",
     overflowStartMarker = "",
     overflowEndMarker = "",
+    quoteMarkerRef,
     isCompatibleWithMultilineDiff = false,
     isCompatibleWithSingleLineDiff = false,
     focusedChildWhenSame = "first",
@@ -1110,6 +1111,7 @@ let createRootNode;
       endMarker,
       overflowStartMarker,
       overflowEndMarker,
+      quoteMarkerRef,
       isCompatibleWithMultilineDiff,
       isCompatibleWithSingleLineDiff,
       focusedChildWhenSame,
@@ -1230,6 +1232,7 @@ let createRootNode;
       } else if (subgroup === "url_search_entry_value") {
         // no quote around value in "?key=value"
       } else {
+        let quoteMarkerRef = { current: null };
         let bestQuote;
         best_quote: {
           let canUseBacktick = false;
@@ -1272,6 +1275,7 @@ let createRootNode;
             return DOUBLE_QUOTE;
           })();
         }
+        quoteMarkerRef.current = bestQuote;
 
         if (canParseUrl(value)) {
           node.isStringForUrl = true;
@@ -1385,6 +1389,7 @@ let createRootNode;
                                     entryNode.appendChild("entry_key", {
                                       value: key,
                                       render: renderValue,
+                                      quoteMarkerRef,
                                       startMarker:
                                         urlSearchEntryNode.key === 0 &&
                                         valueIndex === 0
@@ -1396,6 +1401,7 @@ let createRootNode;
                                     entryNode.appendChild("entry_value", {
                                       value: values[valueIndex],
                                       render: renderValue,
+                                      quoteMarkerRef,
                                       group: "entry_value",
                                       subgroup: "url_search_entry_value",
                                     });
@@ -1466,24 +1472,10 @@ let createRootNode;
                   );
                   const appendCharEntry = (charIndex, char) => {
                     lineEntryValueNode.value.push(charIndex);
-                    const charEntryNode = lineEntryValueNode.appendChild(
-                      charIndex,
-                      {
-                        render: renderEntry,
-                        group: "entry",
-                        subgroup: "char_entry",
-                      },
-                    );
-                    charEntryNode.appendChild("entry_key", {
-                      value: charIndex,
-                      render: renderInteger,
-                      group: "entry_key",
-                      subgroup: "char_entry_key",
-                      isHidden: true,
-                    });
-                    charEntryNode.appendChild("entry_value", {
+                    lineEntryValueNode.appendChild(charIndex, {
                       value: char,
                       render: renderChar,
+                      quoteMarkerRef,
                       group: "entry_value",
                       subgroup: "char_entry_value",
                     });
@@ -2254,22 +2246,23 @@ const renderString = (node, props) => {
     return lineEntriesNode.render(props);
   }
 
-  let diff = "";
-  for (const char of node.value) {
-    if (
-      node.subgroup === "url_search_entry_value" &&
-      char === node.parent.parent.parent.parent.startMarker
-    ) {
-      diff += `\\${char}`;
-    } else {
-      diff += char;
+  const quoteToEscape = node.quoteMarkerRef?.current;
+  if (quoteToEscape) {
+    let diff = "";
+    for (const char of node.value) {
+      if (char === quoteToEscape) {
+        diff += `\\${char}`;
+      } else {
+        diff += char;
+      }
     }
+    return truncateAndAppyColor(diff, node, props);
   }
-  return truncateAndAppyColor(diff, node, props);
+  return truncateAndAppyColor(node.value, node, props);
 };
 const renderChar = (node, props) => {
   const char = node.value;
-  if (char === node.parent.parent.parent.parent.startMarker) {
+  if (char === node.quoteMarkerRef.current) {
     return truncateAndAppyColor(`\\${char}`, node, props);
   }
   const point = char.charCodeAt(0);
