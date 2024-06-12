@@ -3,13 +3,62 @@ import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", {
+  ["string open quote"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 9,
+    });
+  },
+  ["string first char"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 10,
+    });
+  },
+  ["string second char"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 11,
+    });
+  },
+  ["string third char"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 12,
+    });
+  },
+  ["string fourth char"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 13,
+    });
+  },
+  ["string last char"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 19,
+    });
+  },
+  ["string close quote"]: () => {
+    assert({
+      actual: "abcdefghij",
+      expect: "ABCDEFGHIJ",
+      MAX_COLUMNS: 20,
+    });
+  },
   ["at property value"]: () => {
     assert({
       actual: {
-        foo: "abcdefghijklmn",
+        zzz: "abcdefghijklmn",
       },
       expect: {
-        foo: "ABCDEFGHIJKLMN",
+        zzz: "ABCDEFGHIJKLMN",
       },
       MAX_COLUMNS: 20,
     });

@@ -1,9 +1,37 @@
+# string open quote
+actual: …
+expect: …
+
+# string first char
+actual: …
+expect: …
+
+# string second char
+actual: …
+expect: …
+
+# string third char
+actual: …
+expect: …
+
+# string fourth char
+actual: …"ij"
+expect: …"IJ"
+
+# string last char
+actual: …"cdefghij"
+expect: …"CDEFGHIJ"
+
+# string close quote
+actual: "abcdefghij"
+expect: "ABCDEFGHIJ"
+
 # at property value
 actual: {
-  foo: …"fghijklmn",
+  zzz: …"fghijklmn",
 }
 expect: {
-  foo: …"FGHIJKLMN",
+  zzz: …"FGHIJKLMN",
 }
 
 # at property key

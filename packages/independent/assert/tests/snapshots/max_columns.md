@@ -1,12 +1,96 @@
+# string open quote
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 9,
+});
+```
+
+![img](<./max_columns/string open quote.svg>)
+
+# string first char
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 10,
+});
+```
+
+![img](<./max_columns/string first char.svg>)
+
+# string second char
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 11,
+});
+```
+
+![img](<./max_columns/string second char.svg>)
+
+# string third char
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 12,
+});
+```
+
+![img](<./max_columns/string third char.svg>)
+
+# string fourth char
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 13,
+});
+```
+
+![img](<./max_columns/string fourth char.svg>)
+
+# string last char
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 19,
+});
+```
+
+![img](<./max_columns/string last char.svg>)
+
+# string close quote
+
+```js
+assert({
+  actual: "abcdefghij",
+  expect: "ABCDEFGHIJ",
+  MAX_COLUMNS: 20,
+});
+```
+
+![img](<./max_columns/string close quote.svg>)
+
 # at property value
 
 ```js
 assert({
   actual: {
-    foo: "abcdefghijklmn",
+    zzz: "abcdefghijklmn",
   },
   expect: {
-    foo: "ABCDEFGHIJKLMN",
+    zzz: "ABCDEFGHIJKLMN",
   },
   MAX_COLUMNS: 20,
 });

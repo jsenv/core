@@ -13,8 +13,12 @@ expect: Set(
 )
 
 # compare set and map
-actual: Map(0 => "a")
-expect: Set("a")
+actual: Map(
+  0 => "a",
+)
+expect: Set(
+  "a",
+)
 
 # compare set and array
 actual: [

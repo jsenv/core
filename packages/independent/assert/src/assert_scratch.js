@@ -1,14 +1,9 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - url
- *   - improve node.hasQuotes
- *    (a priori disparait au profit de startMarker/endMarker)
- *    and how the presence of a quote
- *    in a child node can influence the quote used in the parent
- *    au lieu de faire .parent.parent.parent machin
- *    en gros l'enfant fera quoteRef.current et en hérite du parent
- *    pour savoir quelle est la quote actuellement en cours d'utilisation
+ * - multiline diff and single line diff options au lieu de true
+ *   (comme ça on repérer bien quelle option est lié a quel type de rendu et on dupliaue ce qui est commun)
+ * - test quotes
  * - well known
  * - symbols
  * - numbers
@@ -255,26 +250,15 @@ export const assert = (firstArg) => {
       const isSetEntriesComparison =
         actualNode.subgroup === "set_entries" &&
         expectNode.subgroup === "set_entries";
-      const isSetEntryComparison =
-        actualNode.subgroup === "set_entry" &&
-        expectNode.subgroup === "set_entry";
       const comparisonResultMap = new Map();
       const comparisonDiffMap = new Map();
       for (let [childName, actualChildNode] of actualNode.childNodeMap) {
-        if (isSetEntryComparison) {
-          if (childName === "entry_key") {
-            continue;
-          }
-        }
         let expectChildNode;
         if (isSetEntriesComparison) {
-          const actualSetValueNode =
-            actualChildNode.childNodeMap.get("entry_value");
-          for (const [, expectSetEntryNode] of expectNode.childNodeMap) {
-            const expectSetValueNode =
-              expectSetEntryNode.childNodeMap.get("entry_value");
+          const actualSetValueNode = actualChildNode;
+          for (const [, expectSetValueNode] of expectNode.childNodeMap) {
             if (expectSetValueNode.value === actualSetValueNode.value) {
-              expectChildNode = expectSetEntryNode;
+              expectChildNode = expectSetValueNode;
               break;
             }
           }
@@ -300,18 +284,10 @@ export const assert = (firstArg) => {
         }
       }
       for (let [childName, expectChildNode] of expectNode.childNodeMap) {
-        if (isSetEntryComparison) {
-          if (childName === "entry_key") {
-            continue;
-          }
-        }
         if (isSetEntriesComparison) {
-          const expectSetValueNode =
-            expectChildNode.childNodeMap.get("entry_value");
+          const expectSetValueNode = expectChildNode;
           let hasEntry;
-          for (const [, actualSetEntryNode] of actualNode.childNodeMap) {
-            const actualSetValueNode =
-              actualSetEntryNode.childNodeMap.get("entry_value");
+          for (const [, actualSetValueNode] of actualNode.childNodeMap) {
             if (actualSetValueNode.value === expectSetValueNode.value) {
               hasEntry = true;
               break;
@@ -725,9 +701,7 @@ const createAssertMethodCustomCompare = (
       return;
     }
     if (childNodeKeys.length === 1) {
-      const expectFirsArgValueNode = argEntriesNode.childNodeMap
-        .get(0)
-        .childNodeMap.get("entry_value");
+      const expectFirsArgValueNode = argEntriesNode.childNodeMap.get(0);
       expectFirsArgValueNode.ignore = true;
       const customComparerResult = customComparer(
         actualNode,
@@ -744,10 +718,7 @@ const createAssertMethodCustomCompare = (
         if (argIteratorResult.done) {
           break;
         }
-        const [, callArgEntryNode] = argIteratorResult.value;
-        const callArgValueNode =
-          callArgEntryNode.childNodeMap.get("entry_value");
-        yield callArgValueNode;
+        yield argIteratorResult.value[1];
       }
     }
     let result = PLACEHOLDER_FOR_SAME;
@@ -1040,19 +1011,9 @@ let createRootNode;
     startMarker = "",
     middleMarker = "",
     endMarker = "",
-    overflowStartMarker = "",
-    overflowEndMarker = "",
     quoteMarkerRef,
-    isCompatibleWithMultilineDiff = false,
-    isCompatibleWithSingleLineDiff = false,
-    focusedChildWhenSame = "first",
-    skippedSummary = null,
-    hasMarkersWhenEmpty = false,
-    hasNewLineAroundChildren = false,
-    hasSpacingAroundChildren = false,
-    hasSpacingBetweenEachChild = false,
-    hasIndentBeforeEachChild = false,
-    hasTrailingSeparator = false,
+    onelineDiff = null,
+    multilineDiff = null,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1109,19 +1070,9 @@ let createRootNode;
       startMarker,
       middleMarker,
       endMarker,
-      overflowStartMarker,
-      overflowEndMarker,
       quoteMarkerRef,
-      isCompatibleWithMultilineDiff,
-      isCompatibleWithSingleLineDiff,
-      focusedChildWhenSame,
-      skippedSummary,
-      hasMarkersWhenEmpty,
-      hasNewLineAroundChildren,
-      hasSpacingAroundChildren,
-      hasSpacingBetweenEachChild,
-      hasIndentBeforeEachChild,
-      hasTrailingSeparator,
+      onelineDiff,
+      multilineDiff,
       color: "",
     };
     child_node_map: {
@@ -1149,6 +1100,9 @@ let createRootNode;
         get: (target, prop, receiver) => {
           if (!childrenGenerated) {
             generateChildren();
+          }
+          if (prop === "size") {
+            return target[prop];
           }
           let value = Reflect.get(target, prop, receiver);
           return typeof value === "function" ? value.bind(target) : value;
@@ -1280,6 +1234,7 @@ let createRootNode;
               "url_internal_properties",
               {
                 render: renderChildrenOneLiner,
+                onelineDiff: {},
                 startMarker: bestQuote,
                 endMarker: bestQuote,
                 childGenerator() {
@@ -1347,6 +1302,7 @@ let createRootNode;
                       {
                         value: null,
                         render: renderChildrenOneLiner,
+                        onelineDiff: {},
                         startMarker: "?",
                         group: "entries",
                         subgroup: "url_search",
@@ -1358,6 +1314,7 @@ let createRootNode;
                               urlSearchNode.appendChild(key, {
                                 key: searchEntryIndex,
                                 render: renderChildrenOneLiner,
+                                onelineDiff: {},
                                 path: node.path.append(key),
                                 group: "entries",
                                 subgroup: "url_search_entry",
@@ -1427,25 +1384,27 @@ let createRootNode;
         } else {
           node.childGenerator = () => {
             const lineEntriesNode = node.appendChild("line_entries", {
-              value: [],
               render: renderChildren,
+              multilineDiff: {
+                hasMarkersWhenEmpty: false, // will be set to true for single line
+                hasTrailingSeparator: true,
+                skippedSummary: {
+                  skippedNames: ["line", "lines"],
+                },
+              },
               group: "entries",
               subgroup: "line_entries",
-              isCompatibleWithMultilineDiff: true,
-              hasTrailingSeparator: true,
-              skippedSummary: {
-                skippedNames: ["line", "lines"],
-              },
               childGenerator: () => {
                 const appendLineEntry = (lineIndex) => {
-                  lineEntriesNode.value.push(lineIndex);
                   const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
                     render: renderChildrenOneLiner,
-                    focusedChildWhenSame: "end",
+                    onelineDiff: {
+                      focusedChildWhenSame: "last",
+                      overflowStartMarker: "…",
+                      overflowEndMarker: "…",
+                    },
                     group: "entries",
                     subgroup: "line_entry_value",
-                    overflowStartMarker: "…",
-                    overflowEndMarker: "…",
                   });
                   const appendCharEntry = (charIndex, char) => {
                     lineEntryNode.appendChild(charIndex, {
@@ -1456,7 +1415,6 @@ let createRootNode;
                       subgroup: "char_entry_value",
                     });
                   };
-
                   return {
                     lineEntryNode,
                     appendCharEntry,
@@ -1496,7 +1454,7 @@ let createRootNode;
                 if (isDone) {
                   // single line
                   if (bestQuote) {
-                    lineEntriesNode.hasMarkersWhenEmpty = true;
+                    lineEntriesNode.multilineDiff.hasMarkersWhenEmpty = true;
                     firstLineEntryNode.startMarker =
                       firstLineEntryNode.endMarker = bestQuote;
                   }
@@ -1566,7 +1524,7 @@ let createRootNode;
           const referenceNode = node.appendChild("reference", {
             value: node.reference.path,
             render: renderChildren,
-            isCompatibleWithSingleLineDiff: true,
+            onelineDiff: {},
             category: "reference",
             group: "entries",
             subgroup: "reference",
@@ -1592,7 +1550,9 @@ let createRootNode;
           const functionConstructNode = node.appendChild("construct", {
             value: null,
             render: renderChildrenOneLiner,
-            hasSpacingBetweenEachChild: true,
+            onelineDiff: {
+              separatorBetweenEachChild: " ",
+            },
             group: "entries",
             subgroup: "function_construct",
             childGenerator() {
@@ -1688,7 +1648,9 @@ let createRootNode;
             objectConstructNode = node.appendChild("construct", {
               value: null,
               render: renderChildrenOneLiner,
-              hasSpacingBetweenEachChild: true,
+              onelineDiff: {
+                separatorBetweenEachChild: " ",
+              },
               group: "entries",
               subgroup: "object_construct",
               childGenerator() {
@@ -1716,20 +1678,24 @@ let createRootNode;
         let canHaveInternalEntries = false;
         internal_entries: {
           const internalEntriesParams = {
-            value: [],
             render: renderChildren,
-            group: "entries",
             startMarker: "(",
             endMarker: ")",
-            isCompatibleWithMultilineDiff: true,
-            isCompatibleWithSingleLineDiff: true,
-            hasMarkersWhenEmpty: true,
-            hasNewLineAroundChildren: true,
-            hasIndentBeforeEachChild: true,
-            hasTrailingSeparator: true,
-            skippedSummary: {
-              skippedNames: ["value", "values"],
+            onelineDiff: {
+              hasMarkersWhenEmpty: true,
+              separatorBetweenEachChild: ",",
             },
+            multilineDiff: {
+              hasMarkersWhenEmpty: true,
+              separatorBetweenEachChild: ",",
+              hasTrailingSeparator: true,
+              hasNewLineAroundChildren: true,
+              hasIndentBeforeEachChild: true,
+              skippedSummary: {
+                skippedNames: ["value", "values"],
+              },
+            },
+            group: "entries",
           };
 
           if (node.isMap) {
@@ -1740,7 +1706,6 @@ let createRootNode;
               childGenerator: () => {
                 const objectTagCounterMap = new Map();
                 for (const [mapEntryKey, mapEntryValue] of value) {
-                  mapEntriesNode.value.push(mapEntryKey);
                   let pathPart;
                   if (isComposite(mapEntryKey)) {
                     const keyObjectTag = getObjectTag(mapEntryKey);
@@ -1763,19 +1728,18 @@ let createRootNode;
                     subgroup: "map_entry",
                     path: node.path.append(pathPart),
                     middleMarker: " => ",
-                    endMarker: ",",
                   });
                   mapEntryNode.appendChild("entry_key", {
+                    value: mapEntryKey,
                     render: renderValue,
                     group: "entry_key",
                     subgroup: "map_entry_key",
-                    value: mapEntryKey,
                   });
                   mapEntryNode.appendChild("entry_value", {
+                    value: mapEntryValue,
                     render: renderValue,
                     group: "entry_value",
                     subgroup: "map_entry_value",
-                    value: mapEntryValue,
                   });
                 }
                 objectTagCounterMap.clear();
@@ -1790,29 +1754,14 @@ let createRootNode;
               childGenerator: () => {
                 let index = 0;
                 for (const [setValue] of value) {
-                  setEntriesNode.value.push(index);
-                  const setEntryNode = setEntriesNode.appendChild(index, {
-                    render: renderEntry,
-                    group: "entry",
+                  setEntriesNode.appendChild(index, {
+                    value: setValue,
+                    render: renderValue,
+                    group: "entry_value",
                     subgroup: "set_entry",
                     path: setEntriesNode.path.append(index, {
                       isIndexedEntry: true,
                     }),
-                    middleMarker: " => ",
-                    endMarker: ",",
-                  });
-                  setEntryNode.appendChild("entry_key", {
-                    render: renderInteger,
-                    group: "entry_key",
-                    subgroup: "set_entry_key",
-                    value: index,
-                    isHidden: true,
-                  });
-                  setEntryNode.appendChild("entry_value", {
-                    render: renderValue,
-                    group: "entry_value",
-                    subgroup: "set_entry_value",
-                    value: setValue,
                   });
                   index++;
                 }
@@ -1827,50 +1776,41 @@ let createRootNode;
           if (node.isArray) {
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
-              value: [],
               render: renderChildren,
               group: "entries",
               subgroup: "array_entries",
               startMarker: "[",
               endMarker: "]",
-              hasMarkersWhenEmpty: true,
-              isCompatibleWithMultilineDiff: true,
-              isCompatibleWithSingleLineDiff: true,
-              hasNewLineAroundChildren: true,
-              hasIndentBeforeEachChild: true,
-              hasTrailingSeparator: true,
-              skippedSummary: {
-                skippedNames: ["value", "values"],
+              onelineDiff: {
+                hasMarkersWhenEmpty: true,
+                separatorBetweenEachChild: ",",
+                hasTrailingSeparator: true,
+              },
+              multilineDiff: {
+                hasMarkersWhenEmpty: true,
+                separatorBetweenEachChild: ",",
+                hasTrailingSeparator: true,
+                hasNewLineAroundChildren: true,
+                hasIndentBeforeEachChild: true,
+                skippedSummary: {
+                  skippedNames: ["value", "values"],
+                },
               },
             });
             const arrayEntyGenerator = () => {
               let index = 0;
               while (index < value.length) {
                 ownPropertyNameToIgnoreSet.add(String(index));
-                arrayEntriesNode.value.push(index);
-                const arrayEntryNode = arrayEntriesNode.appendChild(index, {
-                  render: renderEntry,
-                  group: "entry",
-                  subgroup: "array_entry",
-                  path: arrayEntriesNode.path.append(index, {
-                    isIndexedEntry: true,
-                  }),
-                  endMarker: ",",
-                });
-                arrayEntryNode.appendChild("entry_key", {
-                  value: index,
-                  render: renderInteger,
-                  group: "entry_key",
-                  subgroup: "array_entry_key",
-                  isHidden: true,
-                });
-                arrayEntryNode.appendChild("entry_value", {
+                arrayEntriesNode.appendChild(index, {
                   value: Object.hasOwn(value, index)
                     ? value[index]
                     : ARRAY_EMPTY_VALUE,
                   render: renderValue,
                   group: "entry_value",
                   subgroup: "array_entry_value",
+                  path: arrayEntriesNode.path.append(index, {
+                    isIndexedEntry: true,
+                  }),
                 });
                 index++;
               }
@@ -1948,56 +1888,49 @@ let createRootNode;
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const propertyEntriesNode = node.appendChild("property_entries", {
-            value: [],
             render: renderChildren,
             group: "entries",
             subgroup: "property_entries",
-            isCompatibleWithMultilineDiff: true,
-            isCompatibleWithSingleLineDiff: true,
-            skippedSummary: {
-              skippedNames: ["prop", "props"],
-            },
             ...(node.isClassPrototype
-              ? {}
+              ? {
+                  onelineDiff: { hasMarkersWhenEmpty },
+                  multilineDiff: { hasMarkersWhenEmpty },
+                }
               : {
                   startMarker: "{",
                   endMarker: "}",
-                  hasSpacingAroundChildren: true,
-                  hasNewLineAroundChildren: true,
-                  hasIndentBeforeEachChild: true,
-                  hasTrailingSeparator: true,
+                  onelineDiff: {
+                    hasMarkersWhenEmpty,
+                    hasSpacingAroundChildren: true,
+                    separatorBetweenEachChild:
+                      node.functionAnalysis.type === "class" ? ";" : ",",
+                  },
+                  multilineDiff: {
+                    hasMarkersWhenEmpty,
+                    separatorBetweenEachChild:
+                      node.functionAnalysis.type === "class" ? ";" : ",",
+                    hasTrailingSeparator: true,
+                    hasNewLineAroundChildren: true,
+                    hasIndentBeforeEachChild: true,
+                    skippedSummary: {
+                      skippedNames: ["prop", "props"],
+                    },
+                  },
                 }),
-            hasMarkersWhenEmpty,
             childGenerator: () => {
               const appendPropertyEntryNode = (
                 key,
-                {
-                  value,
-                  isSourceCode,
-                  isClassStaticProperty,
-                  isFunctionPrototype,
-                  isClassPrototype,
-                },
+                { value, isSourceCode, isFunctionPrototype, isClassPrototype },
               ) => {
-                propertyEntriesNode.value.push(key);
                 const propertyEntryNode = propertyEntriesNode.appendChild(key, {
                   render: renderEntry,
-                  group: "entry",
-                  subgroup: "property_entry",
-                  path: node.path.append(key),
+                  middleMarker: node.isClassPrototype
+                    ? ""
+                    : node.functionAnalysis.type === "class"
+                      ? " = "
+                      : ": ",
                   isFunctionPrototype,
                   isClassPrototype,
-                  ...(node.isClassPrototype
-                    ? {}
-                    : isClassStaticProperty
-                      ? {
-                          middleMarker: " = ",
-                          endMarker: ";",
-                        }
-                      : {
-                          middleMarker: ": ",
-                          endMarker: ",",
-                        }),
                   childGenerator: () => {
                     const propertyEntryValueNode =
                       propertyEntryNode.appendChild("entry_value", {
@@ -2010,7 +1943,10 @@ let createRootNode;
                         isClassPrototype,
                         methodName: key,
                       });
-                    if (isClassStaticProperty && !isClassPrototype) {
+                    if (
+                      node.functionAnalysis.type === "class" &&
+                      !isClassPrototype
+                    ) {
                       propertyEntryNode.appendChild("static_keyword", {
                         render: renderGrammar,
                         group: "grammar",
@@ -2034,6 +1970,9 @@ let createRootNode;
                         isClassPrototype,
                     });
                   },
+                  group: "entry",
+                  subgroup: "property_entry",
+                  path: node.path.append(key),
                 });
                 return propertyEntryNode;
               };
@@ -2042,14 +1981,12 @@ let createRootNode;
                 appendPropertyEntryNode(SOURCE_CODE_ENTRY_KEY, {
                   value: node.functionAnalysis.argsAndBodySource,
                   isSourceCode: true,
-                  isClassStaticProperty: node.functionAnalysis.type === "class",
                 });
               }
               for (const ownPropertyName of ownPropertyNames) {
                 const ownPropertyValue = node.value[ownPropertyName];
                 appendPropertyEntryNode(ownPropertyName, {
                   value: ownPropertyValue,
-                  isClassStaticProperty: node.functionAnalysis.type === "class",
                   isFunctionPrototype:
                     ownPropertyName === "prototype" && node.isFunction,
                   isClassPrototype:
@@ -2147,8 +2084,23 @@ let createRootNode;
       };
     }
     if (actualNode.category === "entries") {
-      if (actualNode.hasMarkersWhenEmpty !== expectNode.hasMarkersWhenEmpty) {
-        actualNode.hasMarkersWhenEmpty = expectNode.hasMarkersWhenEmpty = true;
+      if (
+        actualNode.multilineDiff &&
+        expectNode.multilineDiff &&
+        actualNode.multilineDiff.hasMarkersWhenEmpty !==
+          expectNode.multilineDiff.hasMarkersWhenEmpty
+      ) {
+        actualNode.multilineDiff.hasMarkersWhenEmpty =
+          expectNode.multilineDiff.hasMarkersWhenEmpty = true;
+      }
+      if (
+        actualNode.onelineDiff &&
+        expectNode.onelineDiff &&
+        actualNode.onelineDiff.hasMarkersWhenEmpty !==
+          expectNode.onelineDiff.hasMarkersWhenEmpty
+      ) {
+        actualNode.onelineDiff.hasMarkersWhenEmpty =
+          expectNode.onelineDiff.hasMarkersWhenEmpty = true;
       }
       return { result: "" };
     }
@@ -2245,10 +2197,10 @@ const renderChar = (node, props) => {
   }
   return truncateAndAppyColor(char, node, props);
 };
-const renderInteger = (node, props) => {
-  let diff = JSON.stringify(node.value);
-  return truncateAndAppyColor(diff, node, props);
-};
+// const renderInteger = (node, props) => {
+//   let diff = JSON.stringify(node.value);
+//   return truncateAndAppyColor(diff, node, props);
+// };
 const renderGrammar = (node, props) => {
   return truncateAndAppyColor(node.value, node, props);
 };
@@ -2300,11 +2252,11 @@ const renderComposite = (node, props) => {
   }
   if (maxDepthReached) {
     if (indexedEntriesNode) {
-      const arrayLength = indexedEntriesNode.value.length;
+      const arrayLength = indexedEntriesNode.childNodeMap.size;
       diff += setColor(`Array(${arrayLength})`, node.color);
       return diff;
     }
-    const propertyNameCount = propertyEntriesNode.value.length;
+    const propertyNameCount = propertyEntriesNode.childNodeMap.size;
     diff += setColor(`Object(${propertyNameCount})`, node.color);
     return diff;
   }
@@ -2351,17 +2303,19 @@ const renderComposite = (node, props) => {
   return diff;
 };
 const renderChildren = (node, props) => {
-  if (!node.isCompatibleWithMultilineDiff) {
+  const { onelineDiff, multilineDiff } = node;
+  if (!multilineDiff) {
     return renderChildrenOneLiner(node, props);
   }
   if (node.diffType === "solo") {
     const indexToDisplayArray = [];
-    for (const [entryKey] of node.comparisonDiffMap) {
+    const childrenKeys = Array.from(node.childNodeMap.keys());
+    for (const [childKey] of node.comparisonDiffMap) {
       if (indexToDisplayArray.length >= props.MAX_DIFF_PER_OBJECT) {
         break;
       }
-      const entryIndex = node.value.indexOf(entryKey);
-      indexToDisplayArray.push(entryIndex);
+      const childIndex = childrenKeys.indexOf(childKey);
+      indexToDisplayArray.push(childIndex);
     }
     indexToDisplayArray.sort();
     return renderChildrenMultiline(node, props, { indexToDisplayArray });
@@ -2369,17 +2323,17 @@ const renderChildren = (node, props) => {
   if (node.comparisonDiffMap.size > 0) {
     const indexToDisplayArray = [];
     index_to_display: {
-      const entryKeys = Array.from(node.childNodeMap.keys());
-      if (entryKeys.length === 0) {
+      const childrenKeys = Array.from(node.childNodeMap.keys());
+      if (childrenKeys.length === 0) {
         break index_to_display;
       }
       const diffIndexArray = [];
-      for (const [entryKey] of node.comparisonDiffMap) {
-        const entryIndex = entryKeys.indexOf(entryKey);
-        if (entryIndex === -1) {
+      for (const [childKey] of node.comparisonDiffMap) {
+        const childIndex = childrenKeys.indexOf(childKey);
+        if (childIndex === -1) {
           // happens when removed/added
         } else {
-          diffIndexArray.push(entryIndex);
+          diffIndexArray.push(childIndex);
         }
       }
       if (diffIndexArray.length === 0) {
@@ -2409,7 +2363,7 @@ const renderChildren = (node, props) => {
         indexToDisplaySet.add(diffIndex);
         let afterDiffIndex = diffIndex + 1;
         let afterCount = 0;
-        while (afterDiffIndex < entryKeys.length) {
+        while (afterDiffIndex < childrenKeys.length) {
           if (afterCount === props.MAX_ENTRY_AFTER_MULTILINE_DIFF) {
             break;
           }
@@ -2425,7 +2379,7 @@ const renderChildren = (node, props) => {
     }
     return renderChildrenMultiline(node, props, { indexToDisplayArray });
   }
-  if (node.isCompatibleWithSingleLineDiff) {
+  if (onelineDiff) {
     return renderChildrenWithoutDiffOneLiner(node, props);
   }
   return renderChildrenMultiline(node, props, {
@@ -2433,49 +2387,78 @@ const renderChildren = (node, props) => {
   });
 };
 const renderChildrenOneLiner = (node, props) => {
-  node.hasIndentBeforeEachChild = false;
+  const {
+    separatorBetweenEachChild,
+    hasTrailingSeparator,
+    focusedChildWhenSame = "first",
+    overflowStartMarker = "",
+    overflowEndMarker = "",
+  } = node.onelineDiff;
+
   let columnsRemaining = props.columnsRemaining;
-  let focusedChildIndex = -1; // TODO: take first one with a diff
-  const childrenKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
-  const { overflowStartMarker, overflowEndMarker } = node;
-  // columnsRemaining -= overflowStartMarker;
-  // columnsRemaining -= overflowEndMarker;
+  const overflowStartWidth = overflowStartMarker.length;
+  const overflowEndWidth = overflowEndMarker.length;
+  const boilerplate = `${overflowStartMarker}${startMarker}${endMarker}${overflowEndMarker}`;
+  if (columnsRemaining < boilerplate.length) {
+    return setColor("…", node.color);
+  }
+  if (columnsRemaining === boilerplate.length) {
+    return setColor("…", node.color);
+  }
   columnsRemaining -= startMarker.length;
   columnsRemaining -= endMarker.length;
-
+  const childrenKeys = Array.from(node.childNodeMap.keys());
+  const appendChildDiff = (childNode, childIndex) => {
+    const childSeparator = getChildSeparator({
+      separatorBetweenEachChild,
+      hasTrailingSeparator,
+      childIndex,
+      childrenKeys,
+    });
+    if (!childSeparator) {
+      const childDiff = childNode.render(props);
+      return childDiff;
+    }
+    let columnsRemainingForChild = props.columnsRemaining;
+    const childSeparatorWidth = stringWidth(childSeparator);
+    columnsRemainingForChild -= childSeparatorWidth;
+    let childDiff = childNode.render({
+      ...props,
+      columnsRemaining: columnsRemainingForChild,
+    });
+    childDiff += setColor(
+      childSeparator,
+      childNode.diffType === "solo" ? childNode.color : node.color,
+    );
+    return childDiff;
+  };
+  let focusedChildIndex = -1; // TODO: take first one with a diff
   let focusedChildKey = childrenKeys[focusedChildIndex];
   if (!focusedChildKey) {
     focusedChildIndex =
-      node.focusedChildWhenSame === "first"
+      focusedChildWhenSame === "first"
         ? 0
-        : node.focusedChildWhenSame === "last"
+        : focusedChildWhenSame === "last"
           ? childrenKeys.length - 1
           : Math.floor(childrenKeys.length / 2);
     focusedChildKey = childrenKeys[focusedChildIndex];
   }
   const childDiffArray = [];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
-  let focusedChildDiff = "";
   if (focusedChildNode) {
-    if (
-      !node.hasTrailingSeparator &&
-      focusedChildIndex === childrenKeys.length - 1
-    ) {
-      focusedChildNode.endMarker = "";
-    }
-    focusedChildDiff = focusedChildNode.render(props);
-    childDiffArray.push(focusedChildDiff);
+    const focusedChildDiff = appendChildDiff(
+      focusedChildNode,
+      focusedChildIndex,
+    );
     columnsRemaining -= stringWidth(focusedChildDiff);
+    childDiffArray.push(focusedChildDiff);
   }
-
-  const overflowStartWidth = overflowStartMarker.length;
-  const overflowEndWidth = overflowEndMarker.length;
   let tryBeforeFirst = true;
   let previousChildAttempt = 0;
   let nextChildAttempt = 0;
-  let hasStartOverflow = false;
-  let hasEndOverflow = false;
+  let hasStartOverflow = focusedChildIndex > 0;
+  let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
   while (columnsRemaining) {
     const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
     const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
@@ -2505,10 +2488,7 @@ const renderChildrenOneLiner = (node, props) => {
     if (tryBeforeFirst && hasPreviousChild) {
       tryBeforeFirst = false;
     }
-    if (!node.hasTrailingSeparator && childIndex === childrenKeys.length - 1) {
-      childNode.endMarker = "";
-    }
-    const childDiff = childNode.render(props);
+    const childDiff = appendChildDiff(childNode, childIndex);
     const childDiffWidth = measureLastLineColumns(childDiff);
     let nextWidth = childDiffWidth;
     hasStartOverflow = focusedChildIndex - previousChildAttempt > 0;
@@ -2529,13 +2509,6 @@ const renderChildrenOneLiner = (node, props) => {
       break;
     }
     columnsRemaining -= childDiffWidth;
-    if (
-      node.hasSpacingBetweenEachChild &&
-      childIndex > 0 &&
-      childIndex < childrenKeys.length - 1
-    ) {
-      columnsRemaining -= " ".length;
-    }
     if (childIndex < focusedChildIndex) {
       childDiffArray.unshift(childDiff);
     } else {
@@ -2549,14 +2522,7 @@ const renderChildrenOneLiner = (node, props) => {
   if (startMarker) {
     diff += setColor(startMarker, node.color);
   }
-  let index = 0;
-  for (const childDiff of childDiffArray) {
-    diff += childDiff;
-    if (node.hasSpacingBetweenEachChild && index < childDiffArray.length - 1) {
-      diff += " ";
-    }
-    index++;
-  }
+  diff += childDiffArray.join("");
   if (endMarker) {
     diff += setColor(endMarker, node.color);
   }
@@ -2566,6 +2532,13 @@ const renderChildrenOneLiner = (node, props) => {
   return diff;
 };
 const renderChildrenWithoutDiffOneLiner = (node, props) => {
+  const {
+    separatorBetweenEachChild,
+    hasTrailingSeparator,
+    hasSpacingAroundChildren,
+    hasMarkersWhenEmpty,
+  } = node.onelineDiff;
+
   const { startMarker, endMarker } = node;
   const childrenKeys = Array.from(node.childNodeMap.keys());
   let columnsRemaining = props.columnsRemaining;
@@ -2574,17 +2547,29 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
   let diff = "";
   let childrenDiff = "";
   let lastChildDisplayed = null;
-  let lastChildDisplayedIndex = 0;
-  node.hasIndentBeforeEachChild = false;
+  let childIndex = 0;
   for (const childKey of childrenKeys) {
     const childNode = node.childNodeMap.get(childKey);
-    const childNodeEndMarker = childNode.endMarker;
-    childNode.endMarker = "";
-    const childDiff = childNode.render({
-      ...props,
-      columnsRemaining,
+    const childSeparator = getChildSeparator({
+      separatorBetweenEachChild,
+      hasTrailingSeparator,
+      childIndex,
+      childrenKeys,
     });
-    childNode.endMarker = childNodeEndMarker;
+    let columnsRemainingForChild = columnsRemaining;
+    if (childSeparator) {
+      columnsRemainingForChild -= stringWidth(childSeparator);
+    }
+    let childDiff = childNode.render({
+      ...props,
+      columnsRemaining: columnsRemainingForChild,
+    });
+    if (childSeparator) {
+      childDiff += setColor(
+        childSeparator,
+        childNode.diffType === "solo" ? childNode.color : node.color,
+      );
+    }
     const childDiffWidth = measureLastLineColumns(childDiff);
     if (childDiffWidth > columnsRemaining) {
       if (lastChildDisplayed) {
@@ -2599,7 +2584,7 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
         return diff;
       }
       diff += setColor(
-        node.hasSpacingAroundChildren
+        hasSpacingAroundChildren
           ? `${startMarker} ... ${endMarker}`
           : `${startMarker}...${endMarker}`,
         node.color,
@@ -2607,40 +2592,40 @@ const renderChildrenWithoutDiffOneLiner = (node, props) => {
       return diff;
     }
     if (lastChildDisplayed) {
-      if (
-        node.hasTrailingSeparator ||
-        lastChildDisplayedIndex !== childrenKeys.length - 1
-      ) {
-        childrenDiff += setColor(
-          lastChildDisplayed.endMarker,
-          lastChildDisplayed.color,
-        );
-      }
       childrenDiff += " ";
     }
     lastChildDisplayed = childNode;
-    lastChildDisplayedIndex = childrenKeys.indexOf(childKey);
     childrenDiff += childDiff;
     columnsRemaining -= childDiffWidth;
+    childIndex++;
   }
   if (!lastChildDisplayed) {
-    if (node.hasMarkersWhenEmpty) {
+    if (hasMarkersWhenEmpty) {
       return setColor(`${startMarker}${endMarker}`, node.color);
     }
     return "";
   }
   diff += setColor(startMarker, node.color);
-  if (node.hasSpacingAroundChildren) {
+  if (hasSpacingAroundChildren) {
     diff += " ";
   }
   diff += childrenDiff;
-  if (node.hasSpacingAroundChildren) {
+  if (hasSpacingAroundChildren) {
     diff += " ";
   }
   diff += setColor(endMarker, node.color);
   return diff;
 };
 const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
+  const {
+    separatorBetweenEachChild = "",
+    hasTrailingSeparator,
+    hasNewLineAroundChildren,
+    hasIndentBeforeEachChild,
+    hasMarkersWhenEmpty,
+    skippedSummary,
+  } = node.multilineDiff;
+
   const childrenKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
   let atLeastOneEntryDisplayed = null;
@@ -2657,11 +2642,11 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
   };
   const appendSkippedSection = (skipCount, skipPosition) => {
     let skippedDiff = "";
-    if (node.hasIndentBeforeEachChild) {
+    if (hasIndentBeforeEachChild) {
       skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
     }
-    if (node.skippedSummary) {
-      const { skippedNames } = node.skippedSummary;
+    if (skippedSummary) {
+      const { skippedNames } = skippedSummary;
       const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
       skippedDiff += setColor(sign, node.color);
       skippedDiff += " ";
@@ -2678,36 +2663,52 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     }
   };
   let previousIndexDisplayed = -1;
-  let canResetMaxColumns = node.hasNewLineAroundChildren;
-  for (const indexToDisplay of indexToDisplayArray) {
+  let canResetMaxColumns = hasNewLineAroundChildren;
+  for (const childIndex of indexToDisplayArray) {
     if (previousIndexDisplayed === -1) {
-      if (indexToDisplay > 0) {
-        appendSkippedSection(indexToDisplay, "start");
+      if (childIndex > 0) {
+        appendSkippedSection(childIndex, "start");
       }
     } else {
-      const intermediateSkippedCount =
-        indexToDisplay - previousIndexDisplayed - 1;
+      const intermediateSkippedCount = childIndex - previousIndexDisplayed - 1;
       if (intermediateSkippedCount) {
         appendSkippedSection(intermediateSkippedCount, "between");
       }
     }
-    const childKey = childrenKeys[indexToDisplay];
+    const childKey = childrenKeys[childIndex];
     const childNode = node.childNodeMap.get(childKey);
-    if (
-      !node.hasTrailingSeparator &&
-      indexToDisplay === childrenKeys.length - 1
-    ) {
-      childNode.endMarker = "";
+
+    let childDiff = "";
+    let columnsRemainingForChild = canResetMaxColumns
+      ? props.MAX_COLUMNS
+      : props.columnsRemaining;
+    if (hasIndentBeforeEachChild) {
+      const indent = "  ".repeat(getNodeDepth(node, props) + 1);
+      columnsRemainingForChild -= stringWidth(indent);
+      childDiff += indent;
     }
-    const childDiff = childNode.render({
-      ...props,
-      columnsRemaining: canResetMaxColumns
-        ? props.MAX_COLUMNS
-        : props.columnsRemaining,
+    const childSeparator = getChildSeparator({
+      separatorBetweenEachChild,
+      hasTrailingSeparator,
+      childIndex,
+      childrenKeys,
     });
+    if (childSeparator) {
+      columnsRemainingForChild -= stringWidth(childSeparator);
+    }
+    childDiff += childNode.render({
+      ...props,
+      columnsRemaining: columnsRemainingForChild,
+    });
+    if (childSeparator) {
+      childDiff += setColor(
+        childSeparator,
+        childNode.diffType === "solo" ? childNode.color : node.color,
+      );
+    }
     canResetMaxColumns = true; // because we'll append \n on next entry
     appendChildDiff(childDiff);
-    previousIndexDisplayed = indexToDisplay;
+    previousIndexDisplayed = childIndex;
   }
   const lastIndexDisplayed = previousIndexDisplayed;
   if (lastIndexDisplayed > -1) {
@@ -2717,33 +2718,47 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     }
   }
   if (!atLeastOneEntryDisplayed) {
-    if (node.hasMarkersWhenEmpty) {
+    if (hasMarkersWhenEmpty) {
       return setColor(`${startMarker}${endMarker}`, node.color);
     }
     return "";
   }
   diff += setColor(startMarker, node.color);
-  if (node.hasNewLineAroundChildren) {
+  if (hasNewLineAroundChildren) {
     diff += "\n";
   }
   diff += childrenDiff;
-  if (node.hasNewLineAroundChildren) {
+  if (hasNewLineAroundChildren) {
     diff += "\n";
     diff += "  ".repeat(getNodeDepth(node, props));
   }
   diff += setColor(endMarker, node.color);
   return diff;
 };
+const getChildSeparator = ({
+  separatorBetweenEachChild,
+  hasTrailingSeparator,
+  childIndex,
+  childrenKeys,
+}) => {
+  if (!separatorBetweenEachChild) {
+    return "";
+  }
+  if (hasTrailingSeparator) {
+    return separatorBetweenEachChild;
+  }
+  if (childIndex === 0) {
+    return childrenKeys.length > 1 ? separatorBetweenEachChild : "";
+  }
+  if (childIndex !== childrenKeys.length - 1) {
+    return separatorBetweenEachChild;
+  }
+  return "";
+};
 const renderEntry = (node, props) => {
-  const hasIndentBeforeEachChild = node.parent.hasIndentBeforeEachChild;
   const { endMarker } = node;
   let entryDiff = "";
   let columnsRemaining = props.columnsRemaining;
-  if (hasIndentBeforeEachChild) {
-    const indent = "  ".repeat(getNodeDepth(node, props) + 1);
-    columnsRemaining -= stringWidth(indent);
-    entryDiff += indent;
-  }
   const entryKeyNode = node.childNodeMap.get("entry_key");
   if (endMarker) {
     columnsRemaining -= endMarker.length;
@@ -2797,8 +2812,9 @@ const getNodeDepth = (node, props) => {
 const createMethodCallNode = (node, { objectName, methodName, args }) => {
   return {
     render: renderChildrenOneLiner,
-    isCompatibleWithSingleLineDiff: true,
-    hasTrailingSeparator: true,
+    onelineDiff: {
+      hasTrailingSeparator: true,
+    },
     group: "entries",
     subgroup: "method_call",
     childGenerator: (methodCallNode) => {
@@ -2832,38 +2848,28 @@ const createMethodCallNode = (node, { objectName, methodName, args }) => {
 
 const createArgEntriesNode = (node, { args }) => {
   return {
-    render: renderChildrenOneLiner,
-    group: "entries",
-    subgroup: "arg_entries",
-    value: [],
-    // isCompatibleWithMultilineDiff: true,
-    isCompatibleWithSingleLineDiff: true,
-    hasSpacingAroundChildren: true,
-    // hasNewLineAroundChildren: true,
-    // hasIndentBeforeEachChild: true,
     startMarker: "(",
     endMarker: ")",
+    render: renderChildrenOneLiner,
+    onelineDiff: {
+      hasSpacingAroundChildren: true,
+      separatorBetweenEachChild: ",",
+    },
+    // multilineDiff: {
+    //   hasSpacingAroundChildren: true,
+    //    separatorBetweenEachChild: ",",
+    //   hasNewLineAroundChildren: true,
+    //   hasIndentBeforeEachChild: true,
+    // },
+    group: "entries",
+    subgroup: "arg_entries",
     childGenerator: (callNode) => {
       const appendArgEntry = (argIndex, argValue, { key, ...valueParams }) => {
-        callNode.value.push(argIndex);
-        const argEntryNode = callNode.appendChild(argIndex, {
-          render: renderEntry,
-          group: "entry",
-          subgroup: "arg_entry",
-          endMarker: ",",
-        });
-        argEntryNode.appendChild("entry_key", {
-          render: renderInteger,
-          group: "entry_key",
-          subgroup: "arg_entry_key",
-          value: argIndex,
-          isHidden: true,
-        });
-        argEntryNode.appendChild("entry_value", {
+        callNode.appendChild(argIndex, {
+          value: argValue,
           render: renderValue,
           group: "entry_value",
           subgroup: "arg_entry_value",
-          value: argValue,
           path: node.path.append(key || argIndex),
           depth: node.depth,
           ...valueParams,
