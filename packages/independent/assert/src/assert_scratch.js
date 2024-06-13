@@ -1,21 +1,28 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - withoutDiffOneLiner is just a special case of oneLiner
+ *   we could merge it
  * - well known
  * - symbols
- * - numbers
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
+ * - lots of test on max columns
+ * - array typed
  * - property descriptors
  * - errors
  * - prototype
+ * - more wrapped value tests (from internal_value.xtest.js)
+ * - numbers
  * - quote in
  *    - property name
  *    - url search param name
  *    - url search param value
  *    - url pathname
  *    - ensure backtick cannot be used for object property key
+ *  - date
+ *  - object integrity
  */
 
 import stringWidth from "string-width";
@@ -1412,6 +1419,7 @@ let createRootNode;
                       focusedChildWhenSame: "last",
                       overflowStartMarker: "…",
                       overflowEndMarker: "…",
+                      overflowMarkersPlacement: "outside",
                     },
                     group: "entries",
                     subgroup: "line_entry_value",
@@ -2399,22 +2407,76 @@ const renderChildrenOneLiner = (node, props) => {
     focusedChildWhenSame = "first",
     overflowStartMarker = "",
     overflowEndMarker = "",
+    overflowMarkersPlacement = "inside",
+    hasMarkersWhenEmpty,
+    hasSpacingAroundChildren,
   } = node.onelineDiff;
 
   let columnsRemaining = props.columnsRemaining;
+  if (columnsRemaining < 1) {
+    return setColor("…", node.color);
+  }
+  const childrenKeys = Array.from(node.childNodeMap.keys());
   const { startMarker, endMarker } = node;
+  if (childrenKeys.length === 0) {
+    return hasMarkersWhenEmpty
+      ? setColor(`${startMarker}${endMarker}`, node.color)
+      : "";
+  }
+  let focusedChildIndex = -1;
+  // TODO: re-enable this later
+  // eslint-disable-next-line no-constant-condition
+  if (node.comparisonDiffMap.size > 0 && false) {
+    for (const [childKey] of node.comparisonDiffMap) {
+      const childIndex = childrenKeys.indexOf(childKey);
+      if (childIndex === -1) {
+        // happens when removed/added
+      } else {
+        focusedChildIndex = childIndex;
+        break;
+      }
+    }
+  } else {
+    focusedChildIndex =
+      focusedChildWhenSame === "first"
+        ? 0
+        : focusedChildWhenSame === "last"
+          ? childrenKeys.length - 1
+          : Math.floor(childrenKeys.length / 2);
+  }
+  let hasStartOverflow = focusedChildIndex > 0;
+  let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
   const overflowStartWidth = overflowStartMarker.length;
   const overflowEndWidth = overflowEndMarker.length;
-  const boilerplate = `${overflowStartMarker}${startMarker}${endMarker}${overflowEndMarker}`;
+  let boilerplate = "";
+  if (hasStartOverflow) {
+    if (overflowMarkersPlacement === "inside") {
+      boilerplate = `${startMarker}${hasSpacingAroundChildren ? " " : ""}${overflowStartMarker}`;
+    } else {
+      boilerplate = `${overflowStartMarker}${startMarker}`;
+    }
+  } else {
+    boilerplate = startMarker;
+  }
+  if (hasEndOverflow) {
+    if (overflowMarkersPlacement === "inside") {
+      boilerplate += `${overflowEndMarker}${hasSpacingAroundChildren ? " " : ""}${endMarker}`;
+    } else {
+      boilerplate = `${endMarker}${overflowEndMarker}`;
+    }
+  } else {
+    boilerplate += endMarker;
+  }
+
   if (columnsRemaining < boilerplate.length) {
     return setColor("…", node.color);
   }
   if (columnsRemaining === boilerplate.length) {
-    return setColor("…", node.color);
+    return overflowMarkersPlacement === "inside"
+      ? setColor(boilerplate, node.color)
+      : setColor("…", node.color);
   }
-  columnsRemaining -= startMarker.length;
-  columnsRemaining -= endMarker.length;
-  const childrenKeys = Array.from(node.childNodeMap.keys());
+
   const appendChildDiff = (childNode, childIndex) => {
     const childSeparator = getChildSeparator({
       separatorBetweenEachChild,
@@ -2439,18 +2501,10 @@ const renderChildrenOneLiner = (node, props) => {
     );
     return childDiff;
   };
-  let focusedChildIndex = -1; // TODO: take first one with a diff
-  let focusedChildKey = childrenKeys[focusedChildIndex];
-  if (!focusedChildKey) {
-    focusedChildIndex =
-      focusedChildWhenSame === "first"
-        ? 0
-        : focusedChildWhenSame === "last"
-          ? childrenKeys.length - 1
-          : Math.floor(childrenKeys.length / 2);
-    focusedChildKey = childrenKeys[focusedChildIndex];
-  }
+  columnsRemaining -= startMarker.length;
+  columnsRemaining -= endMarker.length;
   const childDiffArray = [];
+  const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
   if (focusedChildNode) {
     const focusedChildDiff = appendChildDiff(
@@ -2463,8 +2517,6 @@ const renderChildrenOneLiner = (node, props) => {
   let tryBeforeFirst = true;
   let previousChildAttempt = 0;
   let nextChildAttempt = 0;
-  let hasStartOverflow = focusedChildIndex > 0;
-  let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
   while (columnsRemaining) {
     const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
     const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
@@ -2523,17 +2575,41 @@ const renderChildrenOneLiner = (node, props) => {
   }
   let diff = "";
   if (hasStartOverflow) {
-    diff += setColor(overflowStartMarker, node.color);
-  }
-  if (startMarker) {
+    if (overflowMarkersPlacement === "inside") {
+      if (startMarker) {
+        diff += setColor(startMarker, node.color);
+      }
+      diff += setColor(overflowStartMarker, node.color);
+    } else {
+      diff += setColor(overflowStartMarker, node.color);
+      if (startMarker) {
+        diff += setColor(startMarker, node.color);
+      }
+    }
+  } else if (startMarker) {
     diff += setColor(startMarker, node.color);
   }
+  if (hasSpacingAroundChildren) {
+    diff += " ";
+  }
   diff += childDiffArray.join("");
-  if (endMarker) {
-    diff += setColor(endMarker, node.color);
+  if (hasSpacingAroundChildren) {
+    diff += " ";
   }
   if (hasEndOverflow) {
-    diff += setColor(overflowEndMarker, node.color);
+    if (overflowMarkersPlacement === "inside") {
+      diff += setColor(overflowEndMarker, node.color);
+      if (endMarker) {
+        diff += setColor(endMarker, node.color);
+      }
+    } else {
+      if (endMarker) {
+        diff += setColor(endMarker, node.color);
+      }
+      diff += setColor(overflowEndMarker, node.color);
+    }
+  } else if (endMarker) {
+    diff += setColor(endMarker, node.color);
   }
   return diff;
 };
@@ -2858,7 +2934,6 @@ const createArgEntriesNode = (node, { args }) => {
     endMarker: ")",
     render: renderChildrenOneLiner,
     onelineDiff: {
-      hasSpacingAroundChildren: true,
       separatorBetweenEachChild: ",",
     },
     // multilineDiff: {
