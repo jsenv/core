@@ -25,13 +25,15 @@
 
 import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
+
+import { isComposite } from "./is_composite.js";
 import { isValidPropertyIdentifier } from "./property_identifier.js";
 import { createValuePath } from "./value_path.js";
 import { getObjectTag, objectPrototypeChainGenerator } from "./object_tag.js";
 import {
-  analyseFunction,
+  tokenizeFunction,
   defaultFunctionAnalysis,
-} from "./function_analysis.js";
+} from "./tokenize_function.js";
 import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
 
@@ -1511,7 +1513,7 @@ let createRootNode;
       }
       if (isFunction) {
         node.isFunction = true;
-        node.functionAnalysis = analyseFunction(value);
+        node.functionAnalysis = tokenizeFunction(value);
       }
       for (const proto of objectPrototypeChainGenerator(value)) {
         const parentConstructor = proto.constructor;
@@ -3137,10 +3139,3 @@ const canParseUrl =
       return false;
     }
   });
-
-const isComposite = (value) => {
-  if (value === null) return false;
-  if (typeof value === "object") return true;
-  if (typeof value === "function") return true;
-  return false;
-};

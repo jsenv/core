@@ -1,9 +1,9 @@
 /* eslint-disable accessor-pairs */
 
-import { analyseFunction } from "@jsenv/assert/src/function_analysis.js";
+import { tokenizeFunction } from "@jsenv/assert/src/tokenize_function.js";
 
 const test = (fn, expectedScan) => {
-  const actual = analyseFunction(fn);
+  const actual = tokenizeFunction(fn);
   for (const key of Object.keys(expectedScan)) {
     const expectedValue = expectedScan[key];
     const actualValue = actual[key];

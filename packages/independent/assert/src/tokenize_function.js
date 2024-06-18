@@ -1,4 +1,4 @@
-export const analyseFunction = (fn) => {
+export const tokenizeFunction = (fn) => {
   const fnSource = String(fn);
 
   arrow: {

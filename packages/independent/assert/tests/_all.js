@@ -10,4 +10,5 @@ await import("./ref.test.js");
 await import("./set.test.js");
 await import("./string.test.js");
 await import("./url.test.js");
+await import("./well_known.test.js");
 await import("./wrapped_value.test.js");

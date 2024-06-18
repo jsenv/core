@@ -2,7 +2,7 @@ import stringWidth from "string-width";
 import Graphemer from "graphemer";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
-import { analyseFunction } from "./function_analysis.js";
+import { tokenizeFunction } from "./tokenize_function.js";
 import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
 import { tokenizeHeaderValue } from "./tokenize_header_value.js";
 
@@ -1637,7 +1637,7 @@ let createValueNode;
               isFunction = true;
               constructorCallOpenDelimiter = "{";
               constructorCallCloseDelimiter = "}";
-              functionAnalysis = analyseFunction(value);
+              functionAnalysis = tokenizeFunction(value);
               if (functionAnalysis.type === "arrow") {
                 if (functionAnalysis.isAsync) {
                   subtype = functionAnalysis.isGenerator
