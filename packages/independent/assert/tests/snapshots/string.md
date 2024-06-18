@@ -180,3 +180,47 @@ assert({
 
 ![img](<./string/diff at middle of long string, start + end truncated.svg>)
 
+# single quote best in actual
+
+```js
+assert({
+  actual: `My name is "dam"`,
+  expect: `My name is ZdamZ`,
+});
+```
+
+![img](<./string/single quote best in actual.svg>)
+
+# single quote best in expect
+
+```js
+assert({
+  actual: `My name is ZdamZ`,
+  expect: `My name is "dam"`,
+});
+```
+
+![img](<./string/single quote best in expect.svg>)
+
+# template quote best in expect
+
+```js
+assert({
+  actual: `I'm "zac"`,
+  expect: `I'm "dam"`,
+});
+```
+
+![img](<./string/template quote best in expect.svg>)
+
+# double best and must be escaped
+
+```js
+assert({
+  actual: `START "dam" \`''' END`,
+  expect: `START "zac" \`''' END`,
+});
+```
+
+![img](<./string/double best and must be escaped.svg>)
+

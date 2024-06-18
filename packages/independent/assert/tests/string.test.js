@@ -104,30 +104,30 @@ await startSnapshotTesting("string", {
       MAX_COLUMNS: 15,
     });
   },
-  //   ["single quote best in actual"]: () => {
-  //     assert({
-  //       actual: `My name is "dam"`,
-  //       expect: `My name is ZdamZ`,
-  //     });
-  //   },
-  //   ["single quote best in expect"]: () => {
-  //     assert({
-  //       actual: `My name is ZdamZ`,
-  //       expect: `My name is "dam"`,
-  //     });
-  //   },
-  //   ["template quote best in expect"]: () => {
-  //     assert({
-  //       actual: `I'm "zac"`,
-  //       expect: `I'm "dam"`,
-  //     });
-  //   },
-  //   ["double best and must be escaped"]: () => {
-  //     assert({
-  //       actual: `START "dam" \`''' END`,
-  //       expect: `START "zac" \`''' END`,
-  //     });
-  //   },
+  ["single quote best in actual"]: () => {
+    assert({
+      actual: `My name is "dam"`,
+      expect: `My name is ZdamZ`,
+    });
+  },
+  ["single quote best in expect"]: () => {
+    assert({
+      actual: `My name is ZdamZ`,
+      expect: `My name is "dam"`,
+    });
+  },
+  ["template quote best in expect"]: () => {
+    assert({
+      actual: `I'm "zac"`,
+      expect: `I'm "dam"`,
+    });
+  },
+  ["double best and must be escaped"]: () => {
+    assert({
+      actual: `START "dam" \`''' END`,
+      expect: `START "zac" \`''' END`,
+    });
+  },
 });
 
 await startSnapshotTesting("string_multline", {

@@ -62,3 +62,19 @@ expect: "a3cdefY"…
 actual: …"h5j"…
 expect: …"h6j"…
 
+# single quote best in actual
+actual: 'My name is "dam"'
+expect: "My name is ZdamZ"
+
+# single quote best in expect
+actual: "My name is ZdamZ"
+expect: 'My name is "dam"'
+
+# template quote best in expect
+actual: `I'm "zac"`
+expect: `I'm "dam"`
+
+# double best and must be escaped
+actual: "START \"dam\" `''' END"
+expect: "START \"zac\" `''' END"
+

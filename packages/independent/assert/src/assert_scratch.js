@@ -537,7 +537,15 @@ export const assert = (firstArg) => {
         enableMultilineDiff(expectNode);
       } else if (!actualIsMultiline && expectIsMultiline) {
         enableMultilineDiff(actualNode);
+      } else if (!actualIsMultiline && !expectIsMultiline) {
+        forceSameQuotes(actualNode, expectNode);
       }
+    }
+    if (
+      actualNode.subgroup === "url_internal_properties" &&
+      expectNode.subgroup === "url_internal_properties"
+    ) {
+      forceSameQuotes(actualNode, expectNode);
     }
 
     return comparison;
@@ -1284,6 +1292,7 @@ let createRootNode;
                 onelineDiff: {},
                 startMarker: bestQuote,
                 endMarker: bestQuote,
+                quoteMarkerRef,
                 childGenerator() {
                   const {
                     protocol,
@@ -1439,6 +1448,7 @@ let createRootNode;
                 },
                 maxDiff: 1,
               },
+              quoteMarkerRef,
               group: "entries",
               subgroup: "line_entries",
               childGenerator: () => {
@@ -3057,6 +3067,20 @@ const enableMultilineDiff = (lineEntriesNode) => {
       );
     }
   };
+};
+const forceSameQuotes = (actualNode, expectNode) => {
+  return;
+  const actualQuoteMarkerRef = actualNode.quoteMarkerRef;
+  const expectQuoteMarkerRef = expectNode.quoteMarkerRef;
+  const actualQuote = actualQuoteMarkerRef.current;
+  const expectQuote = expectQuoteMarkerRef.current;
+  if (actualQuote === '"' && expectQuote !== '"') {
+    actualQuoteMarkerRef.current = expectQuote;
+    actualNode.startMarker = actualNode.endMarker = expectQuote;
+  } else if (actualQuote !== expectQuote) {
+    expectQuoteMarkerRef.current = actualQuote;
+    expectNode.startMarker = expectNode.endMarker = actualQuote;
+  }
 };
 const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
   let lineStartMarker = "";
