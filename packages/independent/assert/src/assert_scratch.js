@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - withoutDiffOneLiner is just a special case of oneLiner
- *   we could merge it
  * - well known
  * - symbols
  * - strings avec multiline
@@ -1569,7 +1567,7 @@ let createRootNode;
             value: null,
             render: renderChildrenOneLiner,
             onelineDiff: {
-              separatorBetweenEachChild: " ",
+              hasSpacingBetweenEachChild: true,
             },
             group: "entries",
             subgroup: "function_construct",
@@ -1667,7 +1665,7 @@ let createRootNode;
               value: null,
               render: renderChildrenOneLiner,
               onelineDiff: {
-                separatorBetweenEachChild: " ",
+                hasSpacingBetweenEachChild: true,
               },
               group: "entries",
               subgroup: "object_construct",
@@ -1702,6 +1700,7 @@ let createRootNode;
             onelineDiff: {
               hasMarkersWhenEmpty: true,
               separatorBetweenEachChild: ",",
+              hasSpacingBetweenEachChild: true,
             },
             multilineDiff: {
               hasMarkersWhenEmpty: true,
@@ -1803,6 +1802,7 @@ let createRootNode;
                 hasMarkersWhenEmpty: true,
                 separatorBetweenEachChild: ",",
                 hasTrailingSeparator: true,
+                hasSpacingBetweenEachChild: true,
               },
               multilineDiff: {
                 hasMarkersWhenEmpty: true,
@@ -1920,6 +1920,7 @@ let createRootNode;
                   onelineDiff: {
                     hasMarkersWhenEmpty,
                     hasSpacingAroundChildren: true,
+                    hasSpacingBetweenEachChild: true,
                     separatorBetweenEachChild:
                       node.functionAnalysis.type === "class" ? ";" : ",",
                   },
@@ -2394,7 +2395,7 @@ const renderChildren = (node, props) => {
     return renderChildrenMultiline(node, props, { indexToDisplayArray });
   }
   if (onelineDiff) {
-    return renderChildrenWithoutDiffOneLiner(node, props);
+    return renderChildrenOneLiner(node, props);
   }
   return renderChildrenMultiline(node, props, {
     indexToDisplayArray: [0],
@@ -2410,6 +2411,7 @@ const renderChildrenOneLiner = (node, props) => {
     overflowMarkersPlacement = "inside",
     hasMarkersWhenEmpty,
     hasSpacingAroundChildren,
+    hasSpacingBetweenEachChild,
   } = node.onelineDiff;
 
   let columnsRemaining = props.columnsRemaining;
@@ -2451,7 +2453,11 @@ const renderChildrenOneLiner = (node, props) => {
   let boilerplate = "";
   if (hasStartOverflow) {
     if (overflowMarkersPlacement === "inside") {
-      boilerplate = `${startMarker}${hasSpacingAroundChildren ? " " : ""}${overflowStartMarker}`;
+      if (hasSpacingAroundChildren) {
+        boilerplate = `${startMarker} ${overflowStartMarker}`;
+      } else {
+        boilerplate = `${startMarker}${overflowStartMarker}`;
+      }
     } else {
       boilerplate = `${overflowStartMarker}${startMarker}`;
     }
@@ -2460,7 +2466,11 @@ const renderChildrenOneLiner = (node, props) => {
   }
   if (hasEndOverflow) {
     if (overflowMarkersPlacement === "inside") {
-      boilerplate += `${overflowEndMarker}${hasSpacingAroundChildren ? " " : ""}${endMarker}`;
+      if (hasSpacingAroundChildren) {
+        boilerplate += `${overflowEndMarker} ${endMarker}`;
+      } else {
+        boilerplate += `${overflowEndMarker}${endMarker}`;
+      }
     } else {
       boilerplate = `${endMarker}${overflowEndMarker}`;
     }
@@ -2477,7 +2487,7 @@ const renderChildrenOneLiner = (node, props) => {
       : setColor("…", node.color);
   }
 
-  const appendChildDiff = (childNode, childIndex) => {
+  const renderChildDiff = (childNode, childIndex) => {
     const childSeparator = getChildSeparator({
       separatorBetweenEachChild,
       hasTrailingSeparator,
@@ -2503,11 +2513,14 @@ const renderChildrenOneLiner = (node, props) => {
   };
   columnsRemaining -= startMarker.length;
   columnsRemaining -= endMarker.length;
+  if (hasSpacingAroundChildren) {
+    columnsRemaining -= "  ".length;
+  }
   const childDiffArray = [];
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
   if (focusedChildNode) {
-    const focusedChildDiff = appendChildDiff(
+    const focusedChildDiff = renderChildDiff(
       focusedChildNode,
       focusedChildIndex,
     );
@@ -2546,7 +2559,7 @@ const renderChildrenOneLiner = (node, props) => {
     if (tryBeforeFirst && hasPreviousChild) {
       tryBeforeFirst = false;
     }
-    const childDiff = appendChildDiff(childNode, childIndex);
+    const childDiff = renderChildDiff(childNode, childIndex);
     const childDiffWidth = measureLastLineColumns(childDiff);
     let nextWidth = childDiffWidth;
     hasStartOverflow = focusedChildIndex - previousChildAttempt > 0;
@@ -2567,6 +2580,13 @@ const renderChildrenOneLiner = (node, props) => {
       break;
     }
     columnsRemaining -= childDiffWidth;
+    if (
+      hasSpacingBetweenEachChild &&
+      childIndex > 0 &&
+      childIndex < childrenKeys.length - 1
+    ) {
+      columnsRemaining -= " ".length;
+    }
     if (childIndex < focusedChildIndex) {
       childDiffArray.unshift(childDiff);
     } else {
@@ -2592,7 +2612,9 @@ const renderChildrenOneLiner = (node, props) => {
   if (hasSpacingAroundChildren) {
     diff += " ";
   }
-  diff += childDiffArray.join("");
+  diff += hasSpacingBetweenEachChild
+    ? childDiffArray.join(" ")
+    : childDiffArray.join("");
   if (hasSpacingAroundChildren) {
     diff += " ";
   }
@@ -2611,91 +2633,6 @@ const renderChildrenOneLiner = (node, props) => {
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);
   }
-  return diff;
-};
-const renderChildrenWithoutDiffOneLiner = (node, props) => {
-  const {
-    separatorBetweenEachChild,
-    hasTrailingSeparator,
-    hasSpacingAroundChildren,
-    hasMarkersWhenEmpty,
-  } = node.onelineDiff;
-
-  const { startMarker, endMarker } = node;
-  const childrenKeys = Array.from(node.childNodeMap.keys());
-  let columnsRemaining = props.columnsRemaining;
-  let boilerplate = `${startMarker} ... ${endMarker}`;
-  columnsRemaining -= boilerplate.length;
-  let diff = "";
-  let childrenDiff = "";
-  let lastChildDisplayed = null;
-  let childIndex = 0;
-  for (const childKey of childrenKeys) {
-    const childNode = node.childNodeMap.get(childKey);
-    const childSeparator = getChildSeparator({
-      separatorBetweenEachChild,
-      hasTrailingSeparator,
-      childIndex,
-      childrenKeys,
-    });
-    let columnsRemainingForChild = columnsRemaining;
-    if (childSeparator) {
-      columnsRemainingForChild -= stringWidth(childSeparator);
-    }
-    let childDiff = childNode.render({
-      ...props,
-      columnsRemaining: columnsRemainingForChild,
-    });
-    if (childSeparator) {
-      childDiff += setColor(
-        childSeparator,
-        childNode.diffType === "solo" ? childNode.color : node.color,
-      );
-    }
-    const childDiffWidth = measureLastLineColumns(childDiff);
-    if (childDiffWidth > columnsRemaining) {
-      if (lastChildDisplayed) {
-        diff += setColor(startMarker, node.color);
-        diff += childrenDiff;
-        diff += setColor(
-          node.hasSpacingAroundChildren
-            ? ` ... ${endMarker}`
-            : ` ...${endMarker}`,
-          node.color,
-        );
-        return diff;
-      }
-      diff += setColor(
-        hasSpacingAroundChildren
-          ? `${startMarker} ... ${endMarker}`
-          : `${startMarker}...${endMarker}`,
-        node.color,
-      );
-      return diff;
-    }
-    if (lastChildDisplayed) {
-      childrenDiff += " ";
-    }
-    lastChildDisplayed = childNode;
-    childrenDiff += childDiff;
-    columnsRemaining -= childDiffWidth;
-    childIndex++;
-  }
-  if (!lastChildDisplayed) {
-    if (hasMarkersWhenEmpty) {
-      return setColor(`${startMarker}${endMarker}`, node.color);
-    }
-    return "";
-  }
-  diff += setColor(startMarker, node.color);
-  if (hasSpacingAroundChildren) {
-    diff += " ";
-  }
-  diff += childrenDiff;
-  if (hasSpacingAroundChildren) {
-    diff += " ";
-  }
-  diff += setColor(endMarker, node.color);
   return diff;
 };
 const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
@@ -2935,6 +2872,7 @@ const createArgEntriesNode = (node, { args }) => {
     render: renderChildrenOneLiner,
     onelineDiff: {
       separatorBetweenEachChild: ",",
+      hasSpacingBetweenEachChild: true,
     },
     // multilineDiff: {
     //   hasSpacingAroundChildren: true,

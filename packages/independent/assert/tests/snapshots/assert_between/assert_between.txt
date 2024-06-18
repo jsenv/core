@@ -20,5 +20,5 @@ expect: {
 
 # 50 is too small
 actual: 50
-expect: assert.between(100,200)
+expect: assert.between(100, 200)
 
