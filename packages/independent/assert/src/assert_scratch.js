@@ -4,6 +4,7 @@
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
+ * - url breakable diff tests
  * - lots of test on max columns
  * - array typed
  * - property descriptors
@@ -1085,6 +1086,9 @@ let createRootNode;
       methodName,
       isHidden,
       isHiddenWhenSame,
+      beforeRender: null,
+      childrenKeys: null,
+      indexToDisplayArray: null,
       // START will be set by comparison
       customCompare,
       ignore: false,
@@ -1431,6 +1435,7 @@ let createRootNode;
               childGenerator: () => {
                 const appendLineEntry = (lineIndex) => {
                   const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+                    key: lineIndex,
                     render: renderChildrenOneLiner,
                     onelineDiff: {
                       focusedChildWhenSame: "last",
@@ -1495,11 +1500,43 @@ let createRootNode;
                   }
                   return;
                 }
+                lineEntriesNode.beforeRender = () => {
+                  let biggestDisplayedLineIndex = 0;
+                  for (const index of lineEntriesNode.indexToDisplayArray) {
+                    if (index > biggestDisplayedLineIndex) {
+                      biggestDisplayedLineIndex = index;
+                    }
+                  }
+                  const renderLineStartMarker = (lineNode) => {
+                    let lineStartMarker = "";
+                    const lineNumberString = String(lineNode.key + 1);
+                    if (
+                      biggestDisplayedLineIndex &&
+                      String(biggestDisplayedLineIndex + 1).length >
+                        lineNumberString.length
+                    ) {
+                      lineStartMarker += " ";
+                    }
+                    lineStartMarker += ANSI.color(
+                      lineNumberString,
+                      lineNode.color,
+                    );
+                    // lineDiff += " ";
+                    lineStartMarker += ANSI.color("|", lineNode.color);
+                    lineStartMarker += " ";
+                    return lineStartMarker;
+                  };
+                  for (const index of lineEntriesNode.indexToDisplayArray) {
+                    const lineNode = lineEntriesNode.childNodeMap.get(index);
+                    lineNode.startMarker = renderLineStartMarker(lineNode);
+                  }
+                };
                 // remaining lines
                 let lineIndex = 1;
                 // eslint-disable-next-line no-constant-condition
                 while (true) {
                   const { appendCharEntry } = appendLineEntry(lineIndex);
+
                   let columnIndex = 0;
                   for (const char of charGeneratorUntilNewLine()) {
                     appendCharEntry(columnIndex, char);
@@ -2460,8 +2497,8 @@ const renderChildren = (node, props) => {
     return renderChildrenOneLiner(node, props);
   }
   if (node.diffType === "solo") {
-    const indexToDisplayArray = [];
     const childrenKeys = getChildrenKeys(node);
+    const indexToDisplayArray = [];
     for (const [childKey] of node.comparisonDiffMap) {
       if (indexToDisplayArray.length >= props.MAX_DIFF_PER_OBJECT) {
         break;
@@ -2470,12 +2507,14 @@ const renderChildren = (node, props) => {
       indexToDisplayArray.push(childIndex);
     }
     indexToDisplayArray.sort();
-    return renderChildrenMultiline(node, props, { indexToDisplayArray });
+    node.childrenKeys = childrenKeys;
+    node.indexToDisplayArray = indexToDisplayArray;
+    return renderChildrenMultiline(node, props);
   }
   if (node.comparisonDiffMap.size > 0) {
+    const childrenKeys = getChildrenKeys(node);
     const indexToDisplayArray = [];
     index_to_display: {
-      const childrenKeys = getChildrenKeys(node);
       if (childrenKeys.length === 0) {
         break index_to_display;
       }
@@ -2529,14 +2568,16 @@ const renderChildren = (node, props) => {
       }
       indexToDisplayArray.sort();
     }
-    return renderChildrenMultiline(node, props, { indexToDisplayArray });
+    node.childrenKeys = childrenKeys;
+    node.indexToDisplayArray = indexToDisplayArray;
+    return renderChildrenMultiline(node, props);
   }
   if (onelineDiff) {
     return renderChildrenOneLiner(node, props);
   }
-  return renderChildrenMultiline(node, props, {
-    indexToDisplayArray: [0],
-  });
+  node.childrenKeys = getChildrenKeys(node);
+  node.indexToDisplayArray = [0];
+  return renderChildrenMultiline(node, props);
 };
 const renderChildrenOneLiner = (node, props) => {
   const {
@@ -2770,7 +2811,7 @@ const renderChildrenOneLiner = (node, props) => {
   }
   return diff;
 };
-const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
+const renderChildrenMultiline = (node, props) => {
   const {
     separatorBetweenEachChild = "",
     hasTrailingSeparator,
@@ -2780,8 +2821,10 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     skippedSummary,
   } = node.multilineDiff;
 
-  const childrenKeys = getChildrenKeys(node);
-  const { startMarker, endMarker } = node;
+  if (node.beforeRender) {
+    node.beforeRender(props);
+  }
+  const { childrenKeys, indexToDisplayArray, startMarker, endMarker } = node;
   let atLeastOneEntryDisplayed = null;
   let diff = "";
   let childrenDiff = "";
@@ -2853,6 +2896,7 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     childDiff += childNode.render({
       ...props,
       columnsRemaining: columnsRemainingForChild,
+      indexToDisplayArray,
     });
     if (childSeparator) {
       childDiff += setColor(
