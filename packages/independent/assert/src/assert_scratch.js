@@ -1440,6 +1440,7 @@ let createRootNode;
                 skippedSummary: {
                   skippedNames: ["line", "lines"],
                 },
+                maxDiff: 1,
               },
               group: "entries",
               subgroup: "line_entries",
@@ -1831,6 +1832,7 @@ let createRootNode;
               skippedSummary: {
                 skippedNames: ["value", "values"],
               },
+              maxDiff: "MAX_DIFF_PER_OBJECT",
             },
             group: "entries",
           };
@@ -1933,6 +1935,7 @@ let createRootNode;
                 skippedSummary: {
                   skippedNames: ["value", "values"],
                 },
+                maxDiff: "MAX_DIFF_PER_OBJECT",
               },
             });
             const arrayEntyGenerator = () => {
@@ -2063,6 +2066,7 @@ let createRootNode;
                     skippedSummary: {
                       skippedNames: ["prop", "props"],
                     },
+                    maxDiff: "MAX_DIFF_PER_OBJECT",
                   },
                 }),
             childGenerator: () => {
@@ -2477,11 +2481,15 @@ const renderChildren = (node, props) => {
   if (!multilineDiff) {
     return renderChildrenOneLiner(node, props);
   }
+  const maxDiff =
+    typeof multilineDiff.maxDiff === "number"
+      ? multilineDiff.maxDiff
+      : props[multilineDiff.maxDiff];
   if (node.diffType === "solo") {
     const childrenKeys = getChildrenKeys(node);
     const indexToDisplayArray = [];
     for (const [childKey] of node.comparisonDiffMap) {
-      if (indexToDisplayArray.length >= props.MAX_DIFF_PER_OBJECT) {
+      if (indexToDisplayArray.length >= maxDiff) {
         break;
       }
       const childIndex = childrenKeys.indexOf(childKey);
@@ -2518,7 +2526,7 @@ const renderChildren = (node, props) => {
       const indexToDisplaySet = new Set();
       let diffCount = 0;
       for (const diffIndex of diffIndexArray) {
-        if (diffCount >= props.MAX_DIFF_PER_OBJECT) {
+        if (diffCount >= maxDiff) {
           break;
         }
         diffCount++;

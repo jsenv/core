@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="179.63"
+      width="171.22"
       height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -71,15 +71,10 @@
         <text x="110.82" y="90.55" fill="#DAA520">o</text>
         <text x="119.22" y="90.55" fill="#DAA520">u</text>
         <text x="127.62" y="90.55" fill="#DAA520">r</text>
-        <text x="77.21" y="109.55" fill="#DAA520">5</text>
-        <text x="85.61" y="109.55" fill="#DAA520">|</text>
-        <text x="102.42" y="109.55" fill="#DAA520">f</text>
-        <text x="110.82" y="109.55" fill="#DAA520">i</text>
-        <text x="119.22" y="109.55" fill="#DAA520">v</text>
-        <text x="127.62" y="109.55" fill="#DAA520">e</text>
-        <text x="144.42" y="109.55" fill="#DAA520">s</text>
-        <text x="152.82" y="109.55" fill="#DAA520">i</text>
-        <text x="161.22" y="109.55" fill="#DAA520">x</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">&#x2193;</text>
+        <text x="94.01" y="109.55" fill="#7f7f7f">1</text>
+        <text x="110.82" y="109.55" fill="#7f7f7f">line</text>
+        <text x="152.82" y="109.55" fill="#7f7f7f">&#x2193;</text>
       </g>
     </svg>
   </foreignObject>

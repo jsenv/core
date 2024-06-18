@@ -187,6 +187,8 @@ four/false
 five
 six
 seven/1`,
+      MAX_ENTRY_BEFORE_MULTILINE_DIFF: 1,
+      MAX_ENTRY_AFTER_MULTILINE_DIFF: 1,
     });
   },
   ["many lines added"]: () => {
