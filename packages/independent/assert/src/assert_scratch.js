@@ -1,9 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - strings avec multiline
- *   souligne les chars ayant des diffs?
- *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
  * - url breakable diff tests
  * - lots of test on max columns
  * - array typed

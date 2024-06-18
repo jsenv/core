@@ -6,3 +6,59 @@ expect: "b"
 actual: "I\\\"m dam"
 expect: "I\\\"m seb"
 
+# diff end of string
+actual: "hello world"
+expect: "hello france"
+
+# one char should be empty
+actual: "a"
+expect: ""
+
+# empty should be one char
+actual: ""
+expect: "a"
+
+# tab vs space
+actual: "\t"
+expect: "  "
+
+# blank char should be empty
+actual: "\x7F"
+expect: ""
+
+# diff unicode
+actual: "⚫️"
+expect: "⚪️"
+
+# diff emoticon
+actual: "👨‍👩‍👧‍👧"
+expect: "😍"
+
+# diff special char
+actual: "ñ"
+expect: "n"
+
+# added char
+actual: "ab"
+expect: "a"
+
+# removed char
+actual: "a"
+expect: "ab"
+
+# diff at end of long string, start truncated
+actual: …"efghijk"
+expect: …"efghijj"
+
+# diff at start of long string, end truncated
+actual: "a2cdefg"…
+expect: "a3cdefg"…
+
+# many diff in long string, only first is shown truncated
+actual: "a2cdefZ"…
+expect: "a3cdefY"…
+
+# diff at middle of long string, start + end truncated
+actual: …"h5j"…
+expect: …"h6j"…
+
