@@ -1535,7 +1535,11 @@ let createRootNode;
             createMethodCallNode(node, {
               objectName: "Symbol",
               methodName: "for",
-              args: [symbolKey],
+              args: [
+                {
+                  value: symbolKey,
+                },
+              ],
             }),
           );
           return;
@@ -1544,7 +1548,11 @@ let createRootNode;
           "symbol_construct",
           createMethodCallNode(node, {
             objectName: "Symbol",
-            args: [symbolToDescription(value)],
+            args: [
+              {
+                value: symbolToDescription(value),
+              },
+            ],
           }),
         );
       };

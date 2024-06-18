@@ -20,4 +20,10 @@ await startSnapshotTesting("well_known", {
       expect: Symbol.toPrimitive,
     });
   },
+  [`Symbol.for("a") and Symbol.for("b")`]: () => {
+    assert({
+      actual: Symbol.for("a"),
+      expect: Symbol.for("b"),
+    });
+  },
 });

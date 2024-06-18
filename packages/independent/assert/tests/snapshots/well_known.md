@@ -31,3 +31,14 @@ assert({
 
 ![img](<./well_known/Symbol.iterator and Symbol.toPrimitive.svg>)
 
+# Symbol.for("a") and Symbol.for("b")
+
+```js
+assert({
+  actual: Symbol.for("a"),
+  expect: Symbol.for("b"),
+});
+```
+
+![img](<./well_known/Symbol.for("a") and Symbol.for("b").svg>)
+

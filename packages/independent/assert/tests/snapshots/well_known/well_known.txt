@@ -10,3 +10,7 @@ expect: 5e-324
 actual: Symbol.iterator
 expect: Symbol.toPrimitive
 
+# Symbol.for("a") and Symbol.for("b")
+actual: Symbol.for("a")
+expect: Symbol.for("b")
+
