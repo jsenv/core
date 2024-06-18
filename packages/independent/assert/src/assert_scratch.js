@@ -368,6 +368,12 @@ export const assert = (firstArg) => {
             subcompareChildNodesSolo(expectNode, PLACEHOLDER_FOR_SAME);
             return expectRender(props);
           };
+          if (actualNode.isHiddenWhenSame) {
+            actualNode.isHidden = true;
+          }
+          if (expectNode.isHiddenWhenSame) {
+            expectNode.isHidden = true;
+          }
           return;
         }
         subcompareChildNodesDuo(actualNode, expectNode);
@@ -515,6 +521,16 @@ export const assert = (firstArg) => {
     };
     updateNodeDiffType(actualNode, expectNode);
     updateNodeDiffType(expectNode, actualNode);
+
+    if (comparison.reasons.overall.any.size === 0) {
+      if (actualNode.isHiddenWhenSame) {
+        actualNode.isHidden = true;
+      }
+      if (expectNode.isHiddenWhenSame) {
+        expectNode.isHidden = true;
+      }
+    }
+
     return comparison;
   };
 
@@ -1017,6 +1033,7 @@ let createRootNode;
     render,
     methodName = "",
     isHidden = false,
+    isHiddenWhenSame = false,
     startMarker = "",
     middleMarker = "",
     endMarker = "",
@@ -1068,6 +1085,7 @@ let createRootNode;
       render: (props) => render(node, props),
       methodName,
       isHidden,
+      isHiddenWhenSame,
       // START will be set by comparison
       customCompare,
       ignore: false,
@@ -2033,7 +2051,13 @@ let createRootNode;
             childGenerator: () => {
               const appendPropertyEntryNode = (
                 key,
-                { value, isSourceCode, isFunctionPrototype, isClassPrototype },
+                {
+                  value,
+                  isSourceCode,
+                  isFunctionPrototype,
+                  isClassPrototype,
+                  isHiddenWhenSame,
+                },
               ) => {
                 const ownPropertyNode = ownPropertiesNode.appendChild(key, {
                   render: renderEntry,
@@ -2044,6 +2068,7 @@ let createRootNode;
                       : ": ",
                   isFunctionPrototype,
                   isClassPrototype,
+                  isHiddenWhenSame,
                   childGenerator: () => {
                     const ownPropertyValueNode = ownPropertyNode.appendChild(
                       "entry_value",
@@ -2102,6 +2127,7 @@ let createRootNode;
                 const ownPropertySymbolValue = node.value[ownPropertySymbol];
                 appendPropertyEntryNode(ownPropertySymbol, {
                   value: ownPropertySymbolValue,
+                  isHiddenWhenSame: true,
                 });
               }
               for (const ownPropertyName of ownPropertyNames) {
@@ -2436,7 +2462,7 @@ const renderChildren = (node, props) => {
   }
   if (node.diffType === "solo") {
     const indexToDisplayArray = [];
-    const childrenKeys = Array.from(node.childNodeMap.keys());
+    const childrenKeys = getChildrenKeys(node);
     for (const [childKey] of node.comparisonDiffMap) {
       if (indexToDisplayArray.length >= props.MAX_DIFF_PER_OBJECT) {
         break;
@@ -2450,7 +2476,7 @@ const renderChildren = (node, props) => {
   if (node.comparisonDiffMap.size > 0) {
     const indexToDisplayArray = [];
     index_to_display: {
-      const childrenKeys = Array.from(node.childNodeMap.keys());
+      const childrenKeys = getChildrenKeys(node);
       if (childrenKeys.length === 0) {
         break index_to_display;
       }
@@ -2530,7 +2556,7 @@ const renderChildrenOneLiner = (node, props) => {
   if (columnsRemaining < 1) {
     return setColor("…", node.color);
   }
-  const childrenKeys = Array.from(node.childNodeMap.keys());
+  const childrenKeys = getChildrenKeys(node);
   const { startMarker, endMarker } = node;
   if (childrenKeys.length === 0) {
     return hasMarkersWhenEmpty
@@ -2757,7 +2783,7 @@ const renderChildrenMultiline = (node, props, { indexToDisplayArray }) => {
     skippedSummary,
   } = node.multilineDiff;
 
-  const childrenKeys = Array.from(node.childNodeMap.keys());
+  const childrenKeys = getChildrenKeys(node);
   const { startMarker, endMarker } = node;
   let atLeastOneEntryDisplayed = null;
   let diff = "";
@@ -2885,6 +2911,16 @@ const getChildSeparator = ({
     return separatorBetweenEachChild;
   }
   return "";
+};
+const getChildrenKeys = (node) => {
+  const childrenKeys = [];
+  for (const [childKey, childNode] of node.childNodeMap) {
+    if (childNode.isHidden) {
+      continue;
+    }
+    childrenKeys.push(childKey);
+  }
+  return childrenKeys;
 };
 const renderEntry = (node, props) => {
   const { endMarker } = node;

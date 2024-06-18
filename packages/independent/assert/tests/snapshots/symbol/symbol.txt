@@ -20,11 +20,9 @@ expect: {
 
 # Symbol.for() property no diff
 actual: {
-  Symbol.for("foo"): true,
   a: true,
 }
 expect: {
-  Symbol.for("foo"): true,
   a: false,
 }
 
