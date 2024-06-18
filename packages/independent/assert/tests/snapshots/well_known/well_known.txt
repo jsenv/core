@@ -1,38 +1,12 @@
 # String and Object
 actual: String
-expect: function Object () {
-  [source code],
-  prototype: {
-    __defineGetter__: Object(1),
-    __defineSetter__: Object(1),
-    hasOwnProperty: Object(1),
-    __lookupGetter__: Object(1),
-    ↓ 7 props ↓
-  },
-  ↕ 8 props ↕
-  seal: function seal () {
-    [source code],
-  },
-  create: function create () {
-    [source code],
-  },
-  defineProperties: function defineProperties () {
-    [source code],
-  },
-  ↕ -11 props ↕
-  assign: function assign () {
-    [source code],
-  },
-  getOwnPropertyDescriptor: function getOwnPropertyDescriptor () {
-    [source code],
-  },
-  ↕ 4 props ↕
-  is: function is () {
-    [source code],
-  },
-  preventExtensions: function preventExtensions () {
-    [source code],
-  },
-  ↓ 14 props ↓
-}
+expect: Object
+
+# Number.MAX_VALUE and Number.MIN_VALUE
+actual: 1.7976931348623157e+308
+expect: 5e-324
+
+# Symbol.iterator and Symbol.toPrimitive
+actual: Symbol.iterator
+expect: Symbol.toPrimitive
 

@@ -36,6 +36,7 @@ import {
 } from "./tokenize_function.js";
 import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
+import { getWellKnownValuePath } from "./well_known_value.js";
 
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
@@ -1499,6 +1500,57 @@ let createRootNode;
         }
       }
     }
+    if (typeofResult === "symbol") {
+      node.category = "primitive";
+      node.isSymbol = true;
+      node.childGenerator = () => {
+        const wellKnownPath = getWellKnownValuePath(value);
+        if (wellKnownPath) {
+          const wellKnownNode = node.appendChild("well_known", {
+            value: wellKnownPath,
+            render: renderChildren,
+            onelineDiff: {},
+            category: "well_known",
+            group: "entries",
+            subgroup: "well_known",
+            childGenerator() {
+              let index = 0;
+              for (const part of wellKnownPath) {
+                wellKnownNode.appendChild(index, {
+                  value: part.value,
+                  render: renderGrammar,
+                  group: "grammar",
+                  subgroup: "path",
+                });
+                index++;
+              }
+            },
+          });
+          return;
+        }
+
+        const symbolKey = Symbol.keyFor(value);
+        if (symbolKey) {
+          node.appendChild(
+            "symbol_construct",
+            createMethodCallNode(node, {
+              objectName: "Symbol",
+              methodName: "for",
+              args: [symbolKey],
+            }),
+          );
+          return;
+        }
+        node.appendChild(
+          "symbol_construct",
+          createMethodCallNode(node, {
+            objectName: "Symbol",
+            args: [symbolToDescription(value)],
+          }),
+        );
+      };
+      return node;
+    }
     const isObject = typeofResult === "object";
     const isFunction = typeofResult === "function";
     if (isObject || isFunction) {
@@ -1551,6 +1603,30 @@ let createRootNode;
               for (const path of node.reference.path) {
                 referenceNode.appendChild(index, {
                   value: path.value,
+                  render: renderGrammar,
+                  group: "grammar",
+                  subgroup: "path",
+                });
+                index++;
+              }
+            },
+          });
+          return;
+        }
+        const wellKnownPath = getWellKnownValuePath(value);
+        if (wellKnownPath) {
+          const wellKnownNode = node.appendChild("well_known", {
+            value: wellKnownPath,
+            render: renderChildren,
+            onelineDiff: {},
+            category: "well_known",
+            group: "entries",
+            subgroup: "well_known",
+            childGenerator() {
+              let index = 0;
+              for (const part of wellKnownPath) {
+                wellKnownNode.appendChild(index, {
+                  value: part.value,
                   render: renderGrammar,
                   group: "grammar",
                   subgroup: "path",
@@ -2169,6 +2245,9 @@ const renderPrimitive = (node, props) => {
   if (node.isString) {
     return renderString(node, props);
   }
+  if (node.isSymbol) {
+    return renderSymbol(node, props);
+  }
   return truncateAndAppyColor(JSON.stringify(node.value), node, props);
 };
 const renderString = (node, props) => {
@@ -2218,6 +2297,14 @@ const renderChar = (node, props) => {
 //   let diff = JSON.stringify(node.value);
 //   return truncateAndAppyColor(diff, node, props);
 // };
+const renderSymbol = (node, props) => {
+  const wellKnownNode = node.childNodeMap.get("well_known");
+  if (wellKnownNode) {
+    return wellKnownNode.render(props);
+  }
+  const symbolConstructNode = node.childNodeMap.get("symbol_construct");
+  return symbolConstructNode.render(props);
+};
 const renderGrammar = (node, props) => {
   return truncateAndAppyColor(node.value, node, props);
 };
@@ -2250,8 +2337,9 @@ const renderComposite = (node, props) => {
   if (referenceNode) {
     return referenceNode.render(props);
   }
-  if (node.value === String) {
-    return truncateAndAppyColor("String", node, props);
+  const wellKnownNode = node.childNodeMap.get("well_known");
+  if (wellKnownNode) {
+    return wellKnownNode.render(props);
   }
 
   const internalEntriesNode = node.childNodeMap.get("internal_entries");
@@ -3139,3 +3227,14 @@ const canParseUrl =
       return false;
     }
   });
+
+const symbolToDescription = (symbol) => {
+  const toStringResult = symbol.toString();
+  const openingParenthesisIndex = toStringResult.indexOf("(");
+  const closingParenthesisIndex = toStringResult.indexOf(")");
+  return toStringResult.slice(
+    openingParenthesisIndex + 1,
+    closingParenthesisIndex,
+  );
+  // return symbol.description // does not work on node
+};

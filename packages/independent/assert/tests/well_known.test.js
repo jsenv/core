@@ -8,4 +8,16 @@ await startSnapshotTesting("well_known", {
       expect: Object,
     });
   },
+  ["Number.MAX_VALUE and Number.MIN_VALUE"]: () => {
+    assert({
+      actual: Number.MAX_VALUE,
+      expect: Number.MIN_VALUE,
+    });
+  },
+  ["Symbol.iterator and Symbol.toPrimitive"]: () => {
+    assert({
+      actual: Symbol.iterator,
+      expect: Symbol.toPrimitive,
+    });
+  },
 });
