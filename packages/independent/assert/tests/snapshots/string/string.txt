@@ -64,10 +64,10 @@ expect: …"h6j"…
 
 # single quote best in actual
 actual: 'My name is "dam"'
-expect: "My name is ZdamZ"
+expect: '"My name is ZdamZ"'
 
 # single quote best in expect
-actual: "My name is ZdamZ"
+actual: '"My name is ZdamZ"'
 expect: 'My name is "dam"'
 
 # template quote best in expect

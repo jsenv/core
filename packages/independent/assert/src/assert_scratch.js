@@ -1227,6 +1227,8 @@ let createRootNode;
         // no quote around key in "?key=value"
       } else if (subgroup === "url_search_entry_value") {
         // no quote around value in "?key=value"
+      } else if (isSourceCode) {
+        // no need for quote or split lines on source code
       } else {
         let quoteMarkerRef = { current: null };
         let bestQuote;
@@ -1587,15 +1589,18 @@ let createRootNode;
           );
           return;
         }
+        const description = symbolToDescription(value);
         node.appendChild(
           "symbol_construct",
           createMethodCallNode(node, {
             objectName: "Symbol",
-            args: [
-              {
-                value: symbolToDescription(value),
-              },
-            ],
+            args: description
+              ? [
+                  {
+                    value: symbolToDescription(value),
+                  },
+                ]
+              : [],
           }),
         );
       };
@@ -3069,7 +3074,6 @@ const enableMultilineDiff = (lineEntriesNode) => {
   };
 };
 const forceSameQuotes = (actualNode, expectNode) => {
-  return;
   const actualQuoteMarkerRef = actualNode.quoteMarkerRef;
   const expectQuoteMarkerRef = expectNode.quoteMarkerRef;
   const actualQuote = actualQuoteMarkerRef.current;
@@ -3141,6 +3145,7 @@ const createArgEntriesNode = (node, { args }) => {
     endMarker: ")",
     render: renderChildrenOneLiner,
     onelineDiff: {
+      hasMarkersWhenEmpty: true,
       separatorBetweenEachChild: ",",
       hasSpacingBetweenEachChild: true,
     },
