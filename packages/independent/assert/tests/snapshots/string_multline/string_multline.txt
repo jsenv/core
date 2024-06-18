@@ -8,3 +8,58 @@ actual: 1|
 expect: 1| 
         2| 
 
+# one line vs two lines
+actual: 1| Hel
+expect: 1| Hello
+        2| world
+
+# second line contains extra chars
+actual: {
+  foo: 1| Hello,
+        2| my name is Benjamin
+        3| and my brother is joe,
+}
+expect: {
+  foo: 1| Hello,
+        2| my name is Ben
+        3| and my brother is joe,
+}
+
+# second line differs
+actual: 1| Hello
+        2| world
+expect: 1| Hello
+        2| france
+
+# too many lines before and after
+actual: ↑ 1 line ↑
+2| two
+        3| three
+        4| four/true
+        5| five
+        6| six
+        7| seven/0
+expect: ↑ 1 line ↑
+2| two
+        3| three
+        4| four/false
+        5| five
+        6| six
+        7| seven/1
+
+# many lines added
+actual: 1| one
+        2| two
+        3| three
+        4| four
+        5| five six
+expect: 1| one
+
+# many lines removed
+actual: 1| one
+expect: 1| one
+        2| two
+        3| three
+        4| four
+        5| five six
+

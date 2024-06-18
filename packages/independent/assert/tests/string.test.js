@@ -126,65 +126,6 @@ import { startSnapshotTesting } from "./start_snapshot_testing.js";
 //   //       expect: `START "zac" \`''' END`,
 //   //     });
 //   //   },
-//   //   ["second line contains extra chars"]: () => {
-//   //     assert({
-//   //       actual: {
-//   //         foo: `Hello,
-//   // my name is Benjamin
-//   // and my brother is joe`,
-//   //       },
-//   //       expect: {
-//   //         foo: `Hello,
-//   // my name is Ben
-//   // and my brother is joe`,
-//   //       },
-//   //     });
-//   //   },
-//   //   ["second line differs"]: () => {
-//   //     assert({
-//   //       actual: `Hello
-//   // world`,
-//   //       expect: `Hello
-//   // france`,
-//   //     });
-//   //   },
-//   //   ["too many lines before and after"]: () => {
-//   //     assert({
-//   //       actual: `one
-//   // two
-//   // three
-//   // four/true
-//   // five
-//   // six
-//   // seven/0`,
-//   //       expect: `one
-//   // two
-//   // three
-//   // four/false
-//   // five
-//   // six
-//   // seven/1`,
-//   //     });
-//   //   },
-//   //   ["many lines added"]: () => {
-//   //     assert({
-//   //       actual: `one
-//   // two
-//   // three
-//   // four
-//   // five six`,
-//   //       expect: `one`,
-//   //     });
-//   //   },
-//   //   ["many lines removed"]: () => {
-//   //     assert({
-//   //       actual: `one`,
-//   //       expect: `one
-//   // two
-//   // three
-//   // four
-//   // five six`,
-//   //     });
 //   //   },
 // });
 
@@ -201,11 +142,71 @@ await startSnapshotTesting("string_multline", {
       expect: `\n`,
     });
   },
-  //   ["one line vs two lines"]: () => {
-  //     assert({
-  //       actual: "Hel",
-  //       expect: `Hello
-  // world`,
-  //     });
-  //   },
+  ["one line vs two lines"]: () => {
+    assert({
+      actual: "Hel",
+      expect: `Hello
+world`,
+    });
+  },
+  ["second line contains extra chars"]: () => {
+    assert({
+      actual: {
+        foo: `Hello,
+my name is Benjamin
+and my brother is joe`,
+      },
+      expect: {
+        foo: `Hello,
+my name is Ben
+and my brother is joe`,
+      },
+    });
+  },
+  ["second line differs"]: () => {
+    assert({
+      actual: `Hello
+world`,
+      expect: `Hello
+france`,
+    });
+  },
+  ["too many lines before and after"]: () => {
+    assert({
+      actual: `one
+two
+three
+four/true
+five
+six
+seven/0`,
+      expect: `one
+two
+three
+four/false
+five
+six
+seven/1`,
+    });
+  },
+  ["many lines added"]: () => {
+    assert({
+      actual: `one
+two
+three
+four
+five six`,
+      expect: `one`,
+    });
+  },
+  ["many lines removed"]: () => {
+    assert({
+      actual: `one`,
+      expect: `one
+two
+three
+four
+five six`,
+    });
+  },
 });
