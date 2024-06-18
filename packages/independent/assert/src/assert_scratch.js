@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - well known
  * - symbols
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
@@ -1964,6 +1963,7 @@ let createRootNode;
           }
         }
         own_properties: {
+          const ownPropertySymbols = Object.getOwnPropertySymbols(value);
           const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
             (ownPropertyName) => {
               return (
@@ -1974,6 +1974,7 @@ let createRootNode;
           );
           const skipOwnProperties =
             canHaveIndexedEntries &&
+            ownPropertySymbols.length === 0 &&
             ownPropertyNames.length === 0 &&
             propertyLikeCallbackSet.size === 0;
           if (skipOwnProperties) {
@@ -1983,10 +1984,10 @@ let createRootNode;
             !objectConstructNode &&
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
-          const propertyEntriesNode = node.appendChild("property_entries", {
+          const ownPropertiesNode = node.appendChild("own_properties", {
             render: renderChildren,
             group: "entries",
-            subgroup: "property_entries",
+            subgroup: "own_properties",
             ...(node.isClassPrototype
               ? {
                   onelineDiff: { hasMarkersWhenEmpty },
@@ -2019,7 +2020,7 @@ let createRootNode;
                 key,
                 { value, isSourceCode, isFunctionPrototype, isClassPrototype },
               ) => {
-                const propertyEntryNode = propertyEntriesNode.appendChild(key, {
+                const ownPropertyNode = ownPropertiesNode.appendChild(key, {
                   render: renderEntry,
                   middleMarker: node.isClassPrototype
                     ? ""
@@ -2029,8 +2030,9 @@ let createRootNode;
                   isFunctionPrototype,
                   isClassPrototype,
                   childGenerator: () => {
-                    const propertyEntryValueNode =
-                      propertyEntryNode.appendChild("entry_value", {
+                    const ownPropertyValueNode = ownPropertyNode.appendChild(
+                      "entry_value",
+                      {
                         render: renderValue,
                         group: "entry_value",
                         subgroup: "property_entry_value",
@@ -2039,30 +2041,31 @@ let createRootNode;
                         isFunctionPrototype,
                         isClassPrototype,
                         methodName: key,
-                      });
+                      },
+                    );
                     if (
                       node.functionAnalysis.type === "class" &&
                       !isClassPrototype
                     ) {
-                      propertyEntryNode.appendChild("static_keyword", {
+                      ownPropertyNode.appendChild("static_keyword", {
                         render: renderGrammar,
                         group: "grammar",
                         subgroup: "static_keyword",
                         value: "static",
                         isHidden:
                           isSourceCode ||
-                          propertyEntryValueNode.functionAnalysis.type ===
+                          ownPropertyValueNode.functionAnalysis.type ===
                             "method",
                       });
                     }
-                    propertyEntryNode.appendChild("entry_key", {
+                    ownPropertyNode.appendChild("entry_key", {
                       render: renderString,
                       group: "entry_key",
                       subgroup: "property_entry_key",
                       value: key,
                       isHidden:
                         isSourceCode ||
-                        propertyEntryValueNode.functionAnalysis.type ===
+                        ownPropertyValueNode.functionAnalysis.type ===
                           "method" ||
                         isClassPrototype,
                     });
@@ -2071,7 +2074,7 @@ let createRootNode;
                   subgroup: "property_entry",
                   path: node.path.append(key),
                 });
-                return propertyEntryNode;
+                return ownPropertyNode;
               };
 
               if (node.isFunction) {
@@ -2108,10 +2111,10 @@ let createRootNode;
             return firstArgNode;
           }
         }
-        const propertyEntriesNode = node.childNodeMap.get("property_entries");
-        if (propertyEntriesNode) {
+        const ownPropertiesNode = node.childNodeMap.get("own_properties");
+        if (ownPropertiesNode) {
           const symbolToPrimitiveReturnValuePropertyNode =
-            propertyEntriesNode.childNodeMap.get(
+            ownPropertiesNode.childNodeMap.get(
               SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
             );
           if (symbolToPrimitiveReturnValuePropertyNode) {
@@ -2120,9 +2123,7 @@ let createRootNode;
             );
           }
           const valueOfReturnValuePropertyNode =
-            propertyEntriesNode.childNodeMap.get(
-              VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-            );
+            ownPropertiesNode.childNodeMap.get(VALUE_OF_RETURN_VALUE_ENTRY_KEY);
           if (valueOfReturnValuePropertyNode) {
             return valueOfReturnValuePropertyNode.childNodeMap.get(
               "entry_value",
@@ -2344,7 +2345,7 @@ const renderComposite = (node, props) => {
 
   const internalEntriesNode = node.childNodeMap.get("internal_entries");
   const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
-  const propertyEntriesNode = node.childNodeMap.get("property_entries");
+  const ownPropertiesNode = node.childNodeMap.get("own_properties");
   let maxDepthReached = false;
   if (node.diffType === "same") {
     maxDepthReached = node.depth > props.MAX_DEPTH;
@@ -2361,8 +2362,8 @@ const renderComposite = (node, props) => {
       diff += setColor(`Array(${arrayLength})`, node.color);
       return diff;
     }
-    const propertyNameCount = propertyEntriesNode.childNodeMap.size;
-    diff += setColor(`Object(${propertyNameCount})`, node.color);
+    const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
+    diff += setColor(`Object(${ownPropertyCount})`, node.color);
     return diff;
   }
   let columnsRemaining = props.columnsRemaining;
@@ -2392,17 +2393,17 @@ const renderComposite = (node, props) => {
     columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
     diff += indexedEntriesDiff;
   }
-  if (propertyEntriesNode) {
-    const propertiesDiff = propertyEntriesNode.render({
+  if (ownPropertiesNode) {
+    const ownPropertiesDiff = ownPropertiesNode.render({
       ...props,
       columnsRemaining,
     });
-    if (propertiesDiff) {
+    if (ownPropertiesDiff) {
       if (diff) {
         columnsRemaining -= " ".length;
         diff += " ";
       }
-      diff += propertiesDiff;
+      diff += ownPropertiesDiff;
     }
   }
   return diff;

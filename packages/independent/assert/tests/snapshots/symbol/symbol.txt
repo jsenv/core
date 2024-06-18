@@ -1,0 +1,56 @@
+# Symbol.for() property no diff
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+
+# named Symbol() property no diff
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+
+# Symbol.toStringTag property value modified
+actual: a
+expect: b
+
+# well known symbol diff
+actual: Symbol.iterator
+expect: Symbol.toStringTag
+
+# Symbol() description modified
+actual: Symbol(undefined)
+expect: Symbol(undefined)
+
+# Symbol.for() key modified
+actual: Symbol.for(undefined)
+expect: Symbol.for(undefined)
+
+# named Symbol() vs anonymous symbol
+actual: Symbol(undefined)
+expect: Symbol(undefined)
+
+# anonymous symbol vs named Symbol()
+actual: Symbol(undefined)
+expect: Symbol(undefined)
+
+# named Symbol() vs Symbol.for()
+actual: Symbol(undefined)
+expect: Symbol.for(undefined)
+
+# Symbol.for() vs named Symbol()
+actual: Symbol.for(undefined)
+expect: Symbol(undefined)
+
+# symbol diff comes first
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+
