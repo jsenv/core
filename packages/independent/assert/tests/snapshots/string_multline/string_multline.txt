@@ -1,0 +1,10 @@
+# add empty line
+actual: 1| 
+        2| 
+expect: 1| 
+
+# remove empty line
+actual: 1| 
+expect: 1| 
+        2| 
+

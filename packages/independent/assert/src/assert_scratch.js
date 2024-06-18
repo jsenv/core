@@ -530,6 +530,18 @@ export const assert = (firstArg) => {
         expectNode.isHidden = true;
       }
     }
+    if (
+      actualNode.subgroup === "line_entries" &&
+      expectNode.subgroup === "line_entries"
+    ) {
+      const actualIsMultiline = actualNode.childNodeMap.size > 1;
+      const expectIsMultiline = expectNode.childNodeMap.size > 1;
+      if (actualIsMultiline && !expectIsMultiline) {
+        enableMultilineDiff(expectNode);
+      } else if (!actualIsMultiline && expectIsMultiline) {
+        enableMultilineDiff(actualNode);
+      }
+    }
 
     return comparison;
   };
@@ -1424,7 +1436,6 @@ let createRootNode;
             const lineEntriesNode = node.appendChild("line_entries", {
               render: renderChildren,
               multilineDiff: {
-                hasMarkersWhenEmpty: false, // will be set to true for single line
                 hasTrailingSeparator: true,
                 skippedSummary: {
                   skippedNames: ["line", "lines"],
@@ -1438,6 +1449,7 @@ let createRootNode;
                     key: lineIndex,
                     render: renderChildrenOneLiner,
                     onelineDiff: {
+                      hasMarkersWhenEmpty: false, // will be set to true for single line
                       focusedChildWhenSame: "last",
                       overflowStartMarker: "…",
                       overflowEndMarker: "…",
@@ -1494,49 +1506,18 @@ let createRootNode;
                 if (isDone) {
                   // single line
                   if (bestQuote) {
-                    lineEntriesNode.multilineDiff.hasMarkersWhenEmpty = true;
+                    firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = true;
                     firstLineEntryNode.startMarker =
                       firstLineEntryNode.endMarker = bestQuote;
                   }
                   return;
                 }
-                lineEntriesNode.beforeRender = () => {
-                  let biggestDisplayedLineIndex = 0;
-                  for (const index of lineEntriesNode.indexToDisplayArray) {
-                    if (index > biggestDisplayedLineIndex) {
-                      biggestDisplayedLineIndex = index;
-                    }
-                  }
-                  const renderLineStartMarker = (lineNode) => {
-                    let lineStartMarker = "";
-                    const lineNumberString = String(lineNode.key + 1);
-                    if (
-                      biggestDisplayedLineIndex &&
-                      String(biggestDisplayedLineIndex + 1).length >
-                        lineNumberString.length
-                    ) {
-                      lineStartMarker += " ";
-                    }
-                    lineStartMarker += ANSI.color(
-                      lineNumberString,
-                      lineNode.color,
-                    );
-                    // lineDiff += " ";
-                    lineStartMarker += ANSI.color("|", lineNode.color);
-                    lineStartMarker += " ";
-                    return lineStartMarker;
-                  };
-                  for (const index of lineEntriesNode.indexToDisplayArray) {
-                    const lineNode = lineEntriesNode.childNodeMap.get(index);
-                    lineNode.startMarker = renderLineStartMarker(lineNode);
-                  }
-                };
+                enableMultilineDiff(lineEntriesNode);
                 // remaining lines
                 let lineIndex = 1;
                 // eslint-disable-next-line no-constant-condition
                 while (true) {
                   const { appendCharEntry } = appendLineEntry(lineIndex);
-
                   let columnIndex = 0;
                   for (const char of charGeneratorUntilNewLine()) {
                     appendCharEntry(columnIndex, char);
@@ -2817,6 +2798,7 @@ const renderChildrenMultiline = (node, props) => {
     hasTrailingSeparator,
     hasNewLineAroundChildren,
     hasIndentBeforeEachChild,
+    hasIndentBetweenEachChild,
     hasMarkersWhenEmpty,
     skippedSummary,
   } = node.multilineDiff;
@@ -2841,6 +2823,9 @@ const renderChildrenMultiline = (node, props) => {
     let skippedDiff = "";
     if (hasIndentBeforeEachChild) {
       skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
+    }
+    if (hasIndentBetweenEachChild && skipPosition !== "start") {
+      skippedDiff += " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
     }
     if (skippedSummary) {
       const { skippedNames } = skippedSummary;
@@ -2881,6 +2866,11 @@ const renderChildrenMultiline = (node, props) => {
       : props.columnsRemaining;
     if (hasIndentBeforeEachChild) {
       const indent = "  ".repeat(getNodeDepth(node, props) + 1);
+      columnsRemainingForChild -= stringWidth(indent);
+      childDiff += indent;
+    }
+    if (hasIndentBetweenEachChild && previousIndexDisplayed > -1) {
+      const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
       columnsRemainingForChild -= stringWidth(indent);
       childDiff += indent;
     }
@@ -3015,6 +3005,44 @@ const renderEntry = (node, props) => {
 };
 const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
+};
+const enableMultilineDiff = (lineEntriesNode) => {
+  const firstLineEntryNode = lineEntriesNode.childNodeMap.get(0);
+  firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = false;
+  firstLineEntryNode.startMarker = firstLineEntryNode.endMarker = "";
+
+  lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
+  lineEntriesNode.beforeRender = () => {
+    let biggestDisplayedLineIndex = 0;
+    for (const index of lineEntriesNode.indexToDisplayArray) {
+      if (index > biggestDisplayedLineIndex) {
+        biggestDisplayedLineIndex = index;
+      }
+    }
+    for (const index of lineEntriesNode.indexToDisplayArray) {
+      const lineNode = lineEntriesNode.childNodeMap.get(index);
+      lineNode.onelineDiff.hasMarkersWhenEmpty = true;
+      lineNode.startMarker = renderLineStartMarker(
+        lineNode,
+        biggestDisplayedLineIndex,
+      );
+    }
+  };
+};
+const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
+  let lineStartMarker = "";
+  const lineNumberString = String(lineNode.key + 1);
+  const biggestDisplayedLineNumberString = String(
+    biggestDisplayedLineIndex + 1,
+  );
+  if (biggestDisplayedLineNumberString.length > lineNumberString.length) {
+    lineStartMarker += " ";
+  }
+  lineStartMarker += ANSI.color(lineNumberString, lineNode.color);
+  // lineDiff += " ";
+  lineStartMarker += ANSI.color("|", lineNode.color);
+  lineStartMarker += " ";
+  return lineStartMarker;
 };
 
 const createMethodCallNode = (node, { objectName, methodName, args }) => {
