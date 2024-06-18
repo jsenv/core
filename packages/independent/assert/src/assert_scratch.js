@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - symbols
  * - strings avec multiline
  *   souligne les chars ayant des diffs?
  *   ça aiderais a voir ou est le diff (évite de trop compter sur la couleur)
@@ -2564,9 +2563,7 @@ const renderChildrenOneLiner = (node, props) => {
       : "";
   }
   let focusedChildIndex = -1;
-  // TODO: re-enable this later
-  // eslint-disable-next-line no-constant-condition
-  if (node.comparisonDiffMap.size > 0 && false) {
+  if (node.comparisonDiffMap.size > 0) {
     for (const [childKey] of node.comparisonDiffMap) {
       const childIndex = childrenKeys.indexOf(childKey);
       if (childIndex === -1) {
@@ -2610,7 +2607,7 @@ const renderChildrenOneLiner = (node, props) => {
         boilerplate += `${overflowEndMarker}${endMarker}`;
       }
     } else {
-      boilerplate = `${endMarker}${overflowEndMarker}`;
+      boilerplate += `${endMarker}${overflowEndMarker}`;
     }
   } else {
     boilerplate += endMarker;
