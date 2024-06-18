@@ -1963,7 +1963,14 @@ let createRootNode;
           }
         }
         own_properties: {
-          const ownPropertySymbols = Object.getOwnPropertySymbols(value);
+          const ownPropertySymbols = Object.getOwnPropertySymbols(value).filter(
+            (ownPropertySymbol) => {
+              return (
+                !ownPropertSymbolToIgnoreSet.has(ownPropertySymbol) &&
+                !shouldIgnoreOwnPropertySymbol(node, ownPropertySymbol)
+              );
+            },
+          );
           const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
             (ownPropertyName) => {
               return (
@@ -2059,7 +2066,7 @@ let createRootNode;
                       });
                     }
                     ownPropertyNode.appendChild("entry_key", {
-                      render: renderString,
+                      render: renderPrimitive,
                       group: "entry_key",
                       subgroup: "property_entry_key",
                       value: key,
@@ -2081,6 +2088,12 @@ let createRootNode;
                 appendPropertyEntryNode(SOURCE_CODE_ENTRY_KEY, {
                   value: node.functionAnalysis.argsAndBodySource,
                   isSourceCode: true,
+                });
+              }
+              for (const ownPropertySymbol of ownPropertySymbols) {
+                const ownPropertySymbolValue = node.value[ownPropertySymbol];
+                appendPropertyEntryNode(ownPropertySymbol, {
+                  value: ownPropertySymbolValue,
                 });
               }
               for (const ownPropertyName of ownPropertyNames) {
@@ -3111,6 +3124,49 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
   }
   if (ownPropertyName === "stack") {
     return node.isError;
+  }
+  return false;
+};
+const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
+  if (ownPropertySymbol === Symbol.toPrimitive) {
+    if (
+      node.childNodes.wrappedValue &&
+      node.childNodes.wrappedValue.key === "Symbol.toPrimitive()"
+    ) {
+      return true;
+    }
+    return false;
+  }
+  if (ownPropertySymbol === Symbol.toStringTag) {
+    const propertySymbolDescriptor = Object.getOwnPropertyDescriptor(
+      node.value,
+      Symbol.toStringTag,
+    );
+    if (Object.hasOwn(propertySymbolDescriptor, "value")) {
+      // toStringTag is already reflected on subtype
+      return true;
+    }
+    return false;
+  }
+  if (node.isPromise) {
+    if (
+      !Symbol.keyFor(ownPropertySymbol) &&
+      symbolToDescription(ownPropertySymbol) === "async_id_symbol"
+    ) {
+      // nodejs runtime puts a custom Symbol on promise
+      return true;
+    }
+    return false;
+  }
+  if (node.isHeaders) {
+    if (
+      !Symbol.keyFor(ownPropertySymbol) &&
+      ["guard", "headers list"].includes(symbolToDescription(ownPropertySymbol))
+    ) {
+      // nodejs runtime put custom symbols on Headers
+      return true;
+    }
+    return false;
   }
   return false;
 };

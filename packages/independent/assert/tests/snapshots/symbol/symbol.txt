@@ -1,17 +1,65 @@
+# named Symbol() property added
+actual: {
+  Symbol(undefined): true,
+}
+expect: {}
+
+# named Symbol() property removed
+actual: {}
+expect: {
+  Symbol(undefined): true,
+}
+
+# Symbol.for() property value modified
+actual: {
+  Symbol.for(undefined): true,
+}
+expect: {
+  Symbol.for(undefined): false,
+}
+
 # Symbol.for() property no diff
 actual: {
+  Symbol.for(undefined): true,
   a: true,
 }
 expect: {
+  Symbol.for(undefined): true,
   a: false,
+}
+
+# named Symbol() property value modified
+actual: {
+  Symbol(undefined): true,
+}
+expect: {
+  Symbol(undefined): false,
 }
 
 # named Symbol() property no diff
 actual: {
+  Symbol(undefined): true,
   a: true,
 }
 expect: {
+  Symbol(undefined): true,
   a: false,
+}
+
+# anonymous Symbol() property value modified
+actual: {
+  Symbol(undefined): true,
+}
+expect: {
+  Symbol(undefined): false,
+}
+
+# Symbol.iterator property value modified
+actual: {
+  Symbol.iterator: true,
+}
+expect: {
+  Symbol.iterator: false,
 }
 
 # Symbol.toStringTag property value modified
@@ -48,9 +96,11 @@ expect: Symbol(undefined)
 
 # symbol diff comes first
 actual: {
+  Symbol.for(undefined): true,
   a: true,
 }
 expect: {
+  Symbol.for(undefined): false,
   a: false,
 }
 

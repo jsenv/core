@@ -1,3 +1,44 @@
+# named Symbol() property added
+
+```js
+assert({
+  actual: {
+    [Symbol("foo")]: true,
+  },
+  expect: {},
+});
+```
+
+![img](<./symbol/named Symbol() property added.svg>)
+
+# named Symbol() property removed
+
+```js
+assert({
+  actual: {},
+  expect: {
+    [Symbol("foo")]: true,
+  },
+});
+```
+
+![img](<./symbol/named Symbol() property removed.svg>)
+
+# Symbol.for() property value modified
+
+```js
+assert({
+  actual: {
+    [Symbol.for("foo")]: true,
+  },
+  expect: {
+    [Symbol.for("foo")]: false,
+  },
+});
+```
+
+![img](<./symbol/Symbol.for() property value modified.svg>)
+
 # Symbol.for() property no diff
 
 ```js
@@ -15,6 +56,21 @@ assert({
 
 ![img](<./symbol/Symbol.for() property no diff.svg>)
 
+# named Symbol() property value modified
+
+```js
+assert({
+  actual: {
+    [Symbol("foo")]: true,
+  },
+  expect: {
+    [Symbol("foo")]: false,
+  },
+});
+```
+
+![img](<./symbol/named Symbol() property value modified.svg>)
+
 # named Symbol() property no diff
 
 ```js
@@ -31,6 +87,36 @@ assert({
 ```
 
 ![img](<./symbol/named Symbol() property no diff.svg>)
+
+# anonymous Symbol() property value modified
+
+```js
+assert({
+  actual: {
+    [Symbol()]: true,
+  },
+  expect: {
+    [Symbol()]: false,
+  },
+});
+```
+
+![img](<./symbol/anonymous Symbol() property value modified.svg>)
+
+# Symbol.iterator property value modified
+
+```js
+assert({
+  actual: {
+    [Symbol.iterator]: true,
+  },
+  expect: {
+    [Symbol.iterator]: false,
+  },
+});
+```
+
+![img](<./symbol/Symbol.iterator property value modified.svg>)
 
 # Symbol.toStringTag property value modified
 
