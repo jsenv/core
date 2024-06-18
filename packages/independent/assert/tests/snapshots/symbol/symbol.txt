@@ -1,57 +1,57 @@
 # named Symbol() property added
 actual: {
-  Symbol(undefined): true,
+  Symbol("foo"): true,
 }
 expect: {}
 
 # named Symbol() property removed
 actual: {}
 expect: {
-  Symbol(undefined): true,
+  Symbol("foo"): true,
 }
 
 # Symbol.for() property value modified
 actual: {
-  Symbol.for(undefined): true,
+  Symbol.for("foo"): true,
 }
 expect: {
-  Symbol.for(undefined): false,
+  Symbol.for("foo"): false,
 }
 
 # Symbol.for() property no diff
 actual: {
-  Symbol.for(undefined): true,
+  Symbol.for("foo"): true,
   a: true,
 }
 expect: {
-  Symbol.for(undefined): true,
+  Symbol.for("foo"): true,
   a: false,
 }
 
 # named Symbol() property value modified
 actual: {
-  Symbol(undefined): true,
+  Symbol("foo"): true,
 }
 expect: {
-  Symbol(undefined): false,
+  Symbol("foo"): false,
 }
 
 # named Symbol() property no diff
 actual: {
-  Symbol(undefined): true,
+  Symbol("foo"): true,
   a: true,
 }
 expect: {
-  Symbol(undefined): true,
+  Symbol("foo"): true,
   a: false,
 }
 
 # anonymous Symbol() property value modified
 actual: {
-  Symbol(undefined): true,
+  Symbol(): true,
 }
 expect: {
-  Symbol(undefined): false,
+  Symbol(): false,
 }
 
 # Symbol.iterator property value modified
@@ -71,36 +71,36 @@ actual: Symbol.iterator
 expect: Symbol.toStringTag
 
 # Symbol() description modified
-actual: Symbol(undefined)
-expect: Symbol(undefined)
+actual: Symbol("a")
+expect: Symbol("b")
 
 # Symbol.for() key modified
-actual: Symbol.for(undefined)
-expect: Symbol.for(undefined)
+actual: Symbol.for("a")
+expect: Symbol.for("b")
 
 # named Symbol() vs anonymous symbol
-actual: Symbol(undefined)
-expect: Symbol(undefined)
+actual: Symbol("a")
+expect: Symbol()
 
 # anonymous symbol vs named Symbol()
-actual: Symbol(undefined)
-expect: Symbol(undefined)
+actual: Symbol()
+expect: Symbol("b")
 
 # named Symbol() vs Symbol.for()
-actual: Symbol(undefined)
-expect: Symbol.for(undefined)
+actual: Symbol("a")
+expect: Symbol.for("a")
 
 # Symbol.for() vs named Symbol()
-actual: Symbol.for(undefined)
-expect: Symbol(undefined)
+actual: Symbol.for("b")
+expect: Symbol("a")
 
 # symbol diff comes first
 actual: {
-  Symbol.for(undefined): true,
+  Symbol.for("a"): true,
   a: true,
 }
 expect: {
-  Symbol.for(undefined): false,
+  Symbol.for("a"): false,
   a: false,
 }
 

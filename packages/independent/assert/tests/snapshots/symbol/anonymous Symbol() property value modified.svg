@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="246.84"
+      width="171.22"
       height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -45,21 +45,19 @@
         <text x="77.21" y="14.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="33.55" fill="#DAA520">Symbol</text>
         <text x="77.21" y="33.55" fill="#DAA520">(</text>
-        <text x="85.61" y="33.55" fill="#DAA520">undefined</text>
-        <text x="161.22" y="33.55" fill="#DAA520">)</text>
-        <text x="169.63" y="33.55" fill="#DAA520">: </text>
-        <text x="186.43" y="33.55" fill="#DAA520">true</text>
-        <text x="220.03" y="33.55" fill="#DAA520">,</text>
+        <text x="85.61" y="33.55" fill="#DAA520">)</text>
+        <text x="94.01" y="33.55" fill="#DAA520">: </text>
+        <text x="110.82" y="33.55" fill="#DAA520">true</text>
+        <text x="144.42" y="33.55" fill="#DAA520">,</text>
         <text x="10" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="90.55" fill="#DAA520">Symbol</text>
         <text x="77.21" y="90.55" fill="#DAA520">(</text>
-        <text x="85.61" y="90.55" fill="#DAA520">undefined</text>
-        <text x="161.22" y="90.55" fill="#DAA520">)</text>
-        <text x="169.63" y="90.55" fill="#DAA520">: </text>
-        <text x="186.43" y="90.55" fill="#DAA520">false</text>
-        <text x="228.44" y="90.55" fill="#DAA520">,</text>
+        <text x="85.61" y="90.55" fill="#DAA520">)</text>
+        <text x="94.01" y="90.55" fill="#DAA520">: </text>
+        <text x="110.82" y="90.55" fill="#DAA520">false</text>
+        <text x="152.82" y="90.55" fill="#DAA520">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

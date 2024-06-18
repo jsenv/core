@@ -28,7 +28,7 @@
   </g>
   <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
     <svg
-      width="263.64"
+      width="213.23"
       height="41.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -40,13 +40,17 @@
         <text x="127.62" y="14.55" fill="#DAA520">.</text>
         <text x="136.02" y="14.55" fill="#DAA520">for</text>
         <text x="161.22" y="14.55" fill="#7f7f7f">(</text>
-        <text x="169.63" y="14.55" fill="#7f7f7f">undefined</text>
-        <text x="245.24" y="14.55" fill="#7f7f7f">)</text>
+        <text x="169.63" y="14.55" fill="#7f7f7f">&#x22;</text>
+        <text x="178.03" y="14.55" fill="#cd5555">b</text>
+        <text x="186.43" y="14.55" fill="#7f7f7f">&#x22;</text>
+        <text x="194.83" y="14.55" fill="#7f7f7f">)</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">Symbol</text>
         <text x="127.62" y="33.55" fill="#7f7f7f">(</text>
-        <text x="136.02" y="33.55" fill="#7f7f7f">undefined</text>
-        <text x="211.63" y="33.55" fill="#7f7f7f">)</text>
+        <text x="136.02" y="33.55" fill="#7f7f7f">&#x22;</text>
+        <text x="144.42" y="33.55" fill="#11bc79">a</text>
+        <text x="152.82" y="33.55" fill="#7f7f7f">&#x22;</text>
+        <text x="161.22" y="33.55" fill="#7f7f7f">)</text>
       </g>
     </svg>
   </foreignObject>
