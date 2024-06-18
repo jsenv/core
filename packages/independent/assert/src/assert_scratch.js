@@ -3013,6 +3013,27 @@ const enableMultilineDiff = (lineEntriesNode) => {
   const firstLineEntryNode = lineEntriesNode.childNodeMap.get(0);
   firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = false;
   firstLineEntryNode.startMarker = firstLineEntryNode.endMarker = "";
+  if (lineEntriesNode.parent.subgroup === "property_entry_value") {
+    // When multiline string appear as property value
+    // 1. It becomes hard to see if "," is part of the string or the separator
+    // 2. "," would appear twice if multiline string ends with ","
+    // {
+    //   foo: 1| line 1
+    //        2| line 2,,
+    //   bar: true,
+    // }
+    // Fortunately the line break already helps to split properties (foo and bar)
+    // so the following is readable
+    // {
+    //   foo: 1| line 1
+    //        2| line 2,
+    //   bar: true,
+    // }
+    // -> The separator is removed for multiline
+    const ownPropertiesNode = lineEntriesNode.parent.parent.parent;
+    ownPropertiesNode.onelineDiff.separatorBetweenEachChild =
+      ownPropertiesNode.multilineDiff.separatorBetweenEachChild = "";
+  }
 
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
   lineEntriesNode.beforeRender = () => {

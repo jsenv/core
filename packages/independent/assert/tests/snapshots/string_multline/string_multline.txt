@@ -16,13 +16,13 @@ expect: 1| Hello
 # second line contains extra chars
 actual: {
   foo: 1| Hello,
-        2| my name is Benjamin
-        3| and my brother is joe,
+       2| my name is Benjamin
+       3| and my brother is joe
 }
 expect: {
   foo: 1| Hello,
-        2| my name is Ben
-        3| and my brother is joe,
+       2| my name is Ben
+       3| and my brother is joe
 }
 
 # second line differs
