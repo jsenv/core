@@ -2846,10 +2846,12 @@ const renderChildrenMultiline = (node, props) => {
   };
   let previousIndexDisplayed = -1;
   let canResetMaxColumns = hasNewLineAroundChildren;
+  let somethingDisplayed = false;
   for (const childIndex of indexToDisplayArray) {
     if (previousIndexDisplayed === -1) {
       if (childIndex > 0) {
         appendSkippedSection(childIndex, "start");
+        somethingDisplayed = true;
       }
     } else {
       const intermediateSkippedCount = childIndex - previousIndexDisplayed - 1;
@@ -2869,7 +2871,7 @@ const renderChildrenMultiline = (node, props) => {
       columnsRemainingForChild -= stringWidth(indent);
       childDiff += indent;
     }
-    if (hasIndentBetweenEachChild && previousIndexDisplayed > -1) {
+    if (hasIndentBetweenEachChild && somethingDisplayed) {
       const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
       columnsRemainingForChild -= stringWidth(indent);
       childDiff += indent;
@@ -2897,6 +2899,7 @@ const renderChildrenMultiline = (node, props) => {
     canResetMaxColumns = true; // because we'll append \n on next entry
     appendChildDiff(childDiff);
     previousIndexDisplayed = childIndex;
+    somethingDisplayed = true;
   }
   const lastIndexDisplayed = previousIndexDisplayed;
   if (lastIndexDisplayed > -1) {
