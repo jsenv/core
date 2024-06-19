@@ -2804,17 +2804,6 @@ const renderChildrenOneLiner = (node, props) => {
 
   let childrenDiff = "";
   const renderChildDiff = (childNode, childIndex) => {
-    // TODO:
-    // une logique qui autorise un enfant donné
-    // a ne pas passer par le chemin classique
-    // en gros a avoir une short notation
-    // genre
-    // prop,
-    // au lieu de prop: ...
-    // pour se faire il s'agit de donner au child
-    // un espace plus important
-    // au moment de le render
-    // et s'il dépasse d'utiliser alors cette short notation
     updateChildSeparatorMarkerRef(childNode, {
       hasSeparatorBetweenEachChild,
       hasTrailingSeparator,
