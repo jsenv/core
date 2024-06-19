@@ -1061,7 +1061,7 @@ let createRootNode;
     separatorMarkerOwner = separatorMarkerRef
       ? parent
       : parent?.separatorMarkerOwner,
-    separatorMarkerRefInside,
+    separatorMarkerInsideRef,
     onelineDiff = null,
     multilineDiff = null,
   }) => {
@@ -1126,7 +1126,7 @@ let createRootNode;
       quoteMarkerRef,
       separatorMarkerRef,
       separatorMarkerOwner,
-      separatorMarkerRefInside,
+      separatorMarkerInsideRef,
       onelineDiff,
       multilineDiff,
       color: "",
@@ -1559,10 +1559,10 @@ let createRootNode;
 
                 if (isDone) {
                   // single line
-                  firstLineEntryNode.separatorMarkerRef =
-                    node.separatorMarkerRef;
-                  firstLineEntryNode.separatorMarkerOwner =
-                    node.separatorMarkerOwner || node;
+                  Object.assign(
+                    firstLineEntryNode,
+                    getInheritedSeparatorParams(node),
+                  );
                   if (bestQuote) {
                     firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = true;
                     firstLineEntryNode.startMarker =
@@ -1605,8 +1605,7 @@ let createRootNode;
               hasSeparatorBetweenEachChild: true,
               hasTrailingSeparator: true,
             },
-            separatorMarkerRef: node.separatorMarkerRef,
-            separatorMarkerOwner: node.separatorMarkerOwner || node,
+            ...getInheritedSeparatorParams(node),
             category: "well_known",
             group: "entries",
             subgroup: "well_known",
@@ -1736,8 +1735,7 @@ let createRootNode;
               hasSeparatorBetweenEachChild: true,
               hasTrailingSeparator: true,
             },
-            separatorMarkerRef: node.separatorMarkerRef,
-            separatorMarkerOwner: node.separatorMarkerOwner || node,
+            ...getInheritedSeparatorParams(node),
             category: "well_known",
             group: "entries",
             subgroup: "well_known",
@@ -2000,8 +1998,7 @@ let createRootNode;
               render: renderChildren,
               startMarker: "[",
               endMarker: "]",
-              separatorMarkerRef: node.separatorMarkerRef,
-              separatorMarkerOwner: node.separatorMarkerOwner || node,
+              ...getInheritedSeparatorParams(node),
               onelineDiff: {
                 hasMarkersWhenEmpty: true,
                 hasSeparatorBetweenEachChild: true,
@@ -2173,7 +2170,7 @@ let createRootNode;
                     hasTrailingSeparator: true,
                   },
                   focusedChildIndex: 0,
-                  separatorMarkerRefInside: valueSeparatorMarkerRef,
+                  separatorMarkerInsideRef: valueSeparatorMarkerRef,
                   isFunctionPrototype,
                   isClassPrototype,
                   isHiddenWhenSame,
@@ -2203,6 +2200,7 @@ let createRootNode;
                             ? " = "
                             : ": ",
                       },
+                      separatorMarkerInsideRef,
                       group: "entry_key",
                       subgroup: "property_entry_key",
                       value: key,
@@ -3087,9 +3085,9 @@ const updateChildSeparatorMarkerRef = (
     childrenKeys,
   },
 ) => {
-  const { separatorMarkerRef, separatorMarkerRefInside } = childNode;
+  const { separatorMarkerRef, separatorMarkerInsideRef } = childNode;
   const selfOrNestedSeparatorMarkerRef =
-    separatorMarkerRef || separatorMarkerRefInside;
+    separatorMarkerRef || separatorMarkerInsideRef;
   if (!selfOrNestedSeparatorMarkerRef) {
     return;
   }
@@ -3195,8 +3193,7 @@ const createMethodCallNode = (
       hasSeparatorBetweenEachChild: true,
       hasTrailingSeparator: true,
     },
-    separatorMarkerRef: node.separatorMarkerRef,
-    separatorMarkerOwner: node.separatorMarkerOwner || node,
+    ...getInheritedSeparatorParams(node),
     group: "entries",
     subgroup: "method_call",
     childGenerator: (methodCallNode) => {
@@ -3231,6 +3228,13 @@ const createMethodCallNode = (
     },
   };
 };
+const getInheritedSeparatorParams = (node) => {
+  return {
+    separatorMarkerRef: node.separatorMarkerRef,
+    separatorMarkerOwner: node.separatorMarkerOwner || node,
+    // separatorMarkerInsideRef: node.separatorMarkerInsideRef,
+  };
+};
 
 const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
   return {
@@ -3244,8 +3248,7 @@ const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
     },
     ...(renderOnlyArgs
       ? {
-          separatorMarkerRef: node.separatorMarkerRef,
-          separatorMarkerOwner: node.separatorMarkerOwner || node,
+          ...getInheritedSeparatorParams(node),
         }
       : {}),
     group: "entries",
