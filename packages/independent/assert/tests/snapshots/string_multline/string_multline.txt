@@ -59,3 +59,17 @@ expect: 1| one
         4| four
         ↓ 1 line ↓
 
+# prop before and after
+actual: {
+  a: true
+  b: 1| a
+     2| b
+  c: true
+}
+expect: {
+  a: true
+  b: 1| a
+     2| c
+  c: true
+}
+

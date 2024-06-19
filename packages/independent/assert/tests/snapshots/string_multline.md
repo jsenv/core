@@ -119,3 +119,22 @@ five six`,
 
 ![img](<./string_multline/many lines removed.svg>)
 
+# prop before and after
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: `a\nb`,
+    c: true,
+  },
+  expect: {
+    a: true,
+    b: `a\nc`,
+    c: true,
+  },
+});
+```
+
+![img](<./string_multline/prop before and after.svg>)
+

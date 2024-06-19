@@ -212,4 +212,19 @@ four
 five six`,
     });
   },
+  // goal here is to ensure "," is preserved around multiline
+  ["prop before and after"]: () => {
+    assert({
+      actual: {
+        a: true,
+        b: `a\nb`,
+        c: true,
+      },
+      expect: {
+        a: true,
+        b: `a\nc`,
+        c: true,
+      },
+    });
+  },
 });
