@@ -86,12 +86,12 @@ expect: {
 # multiline without diff
 actual: {
   a: 1| a
-     ↓ 1 line ↓,
+     ↓ 1 line ↓
   b: true,
 }
 expect: {
   a: 1| a
-     ↓ 1 line ↓,
+     ↓ 1 line ↓
   b: false,
 }
 

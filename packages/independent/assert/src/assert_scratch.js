@@ -1,6 +1,7 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - fix max columns
  * - url breakable diff tests
  * - lots of test on max columns
  * - array typed
@@ -700,6 +701,7 @@ const createAssertMethodCustomExpectation = (
             objectName: "assert",
             methodName,
             args,
+            renderOnlyArgs,
           }),
         );
       };
@@ -1049,16 +1051,19 @@ let createRootNode;
     isClassPrototype = false,
     customCompare,
     render,
-    methodName = "",
     isHidden = false,
     isHiddenWhenSame = false,
+    focusedChildIndex = -1,
     startMarker = "",
-    middleMarker = "",
     endMarker = "",
     quoteMarkerRef,
+    separatorMarkerRef,
+    separatorMarkerOwner = separatorMarkerRef
+      ? parent
+      : parent?.separatorMarkerOwner,
+    separatorMarkerRefInside,
     onelineDiff = null,
     multilineDiff = null,
-    isPreventingSeparator = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1102,10 +1107,9 @@ let createRootNode;
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
-      methodName,
       isHidden,
       isHiddenWhenSame,
-      isPreventingSeparator,
+      focusedChildIndex,
       beforeRender: null,
       childrenKeys: null,
       indexToDisplayArray: null,
@@ -1118,9 +1122,11 @@ let createRootNode;
       otherNode: null,
       // END will be set by comparison
       startMarker,
-      middleMarker,
       endMarker,
       quoteMarkerRef,
+      separatorMarkerRef,
+      separatorMarkerOwner,
+      separatorMarkerRefInside,
       onelineDiff,
       multilineDiff,
       color: "",
@@ -1233,7 +1239,6 @@ let createRootNode;
       } else if (isSourceCode) {
         // no need for quote or split lines on source code
       } else {
-        let quoteMarkerRef = { current: null };
         let bestQuote;
         best_quote: {
           let canUseBacktick = false;
@@ -1284,7 +1289,7 @@ let createRootNode;
             return DOUBLE_QUOTE;
           })();
         }
-        quoteMarkerRef.current = bestQuote;
+        const quoteMarkerRef = { current: bestQuote };
 
         if (canParseUrl(value)) {
           node.isStringForUrl = true;
@@ -1294,10 +1299,14 @@ let createRootNode;
               "url_internal_properties",
               {
                 render: renderChildrenOneLiner,
-                onelineDiff: {},
+                onelineDiff: {
+                  hasSeparatorBetweenEachChild: true,
+                  hasTrailingSeparator: true,
+                },
                 startMarker: bestQuote,
                 endMarker: bestQuote,
                 quoteMarkerRef,
+                separatorMarkerRef: node.separatorMarkerRef,
                 childGenerator() {
                   const {
                     protocol,
@@ -1363,7 +1372,10 @@ let createRootNode;
                       {
                         value: null,
                         render: renderChildrenOneLiner,
-                        onelineDiff: {},
+                        onelineDiff: {
+                          hasSeparatorBetweenEachChild: true,
+                          hasTrailingSeparator: true,
+                        },
                         startMarker: "?",
                         group: "entries",
                         subgroup: "url_search",
@@ -1375,7 +1387,10 @@ let createRootNode;
                               urlSearchNode.appendChild(key, {
                                 key: searchEntryIndex,
                                 render: renderChildrenOneLiner,
-                                onelineDiff: {},
+                                onelineDiff: {
+                                  hasSeparatorBetweenEachChild: true,
+                                  hasTrailingSeparator: true,
+                                },
                                 path: node.path.append(key),
                                 group: "entries",
                                 subgroup: "url_search_entry",
@@ -1387,27 +1402,31 @@ let createRootNode;
                                       urlSearchEntryNode.appendChild(
                                         valueIndex,
                                         {
+                                          render: renderChildrenOneLiner,
+                                          onelineDiff: {
+                                            hasSeparatorBetweenEachChild: true,
+                                            hasTrailingSeparator: true,
+                                          },
                                           group: "entry",
                                           subgroup: "url_search_value_entry",
-                                          render: renderEntry,
                                           path: isMultiValue
                                             ? urlSearchEntryNode.path.append(
                                                 valueIndex,
                                                 { isIndexedEntry: true },
                                               )
                                             : undefined,
-                                          middleMarker: "=",
                                         },
                                       );
                                     entryNode.appendChild("entry_key", {
                                       value: key,
                                       render: renderValue,
-                                      quoteMarkerRef,
                                       startMarker:
                                         urlSearchEntryNode.key === 0 &&
                                         valueIndex === 0
                                           ? ""
                                           : "&",
+                                      separatorMarkerRef: { current: "=" },
+                                      quoteMarkerRef,
                                       group: "entry_key",
                                       subgroup: "url_search_entry_key",
                                     });
@@ -1441,12 +1460,18 @@ let createRootNode;
                 subgroup: "url_internal_properties",
               },
             );
+            // because the string might differ but
+            // after comparing all url props it's still the same url
+            // under the hood (see spaces in search params)
+            urlInternalPropertiesNode.separatorMarkerOwner =
+              urlInternalPropertiesNode;
           };
         } else {
           node.childGenerator = () => {
             const lineEntriesNode = node.appendChild("line_entries", {
               render: renderChildren,
               multilineDiff: {
+                hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
                 skippedSummary: {
                   skippedNames: ["line", "lines"],
@@ -1462,11 +1487,28 @@ let createRootNode;
                     key: lineIndex,
                     render: renderChildrenOneLiner,
                     onelineDiff: {
+                      hasSeparatorBetweenEachChild: true,
                       focusedChildWhenSame: "last",
                       overflowStartMarker: "…",
                       overflowEndMarker: "…",
                       overflowMarkersPlacement: "outside",
                     },
+                    // When multiline string appear as property value
+                    // 1. It becomes hard to see if "," is part of the string or the separator
+                    // 2. "," would appear twice if multiline string ends with ","
+                    // {
+                    //   foo: 1| line 1
+                    //        2| line 2,,
+                    //   bar: true,
+                    // }
+                    // Fortunately the line break already helps to split properties (foo and bar)
+                    // so the following is readable
+                    // {
+                    //   foo: 1| line 1
+                    //        2| line 2,
+                    //   bar: true,
+                    // }
+                    // -> The separator is not present for multiline
                     group: "entries",
                     subgroup: "line_entry_value",
                   });
@@ -1517,6 +1559,10 @@ let createRootNode;
 
                 if (isDone) {
                   // single line
+                  firstLineEntryNode.separatorMarkerRef =
+                    node.separatorMarkerRef;
+                  firstLineEntryNode.separatorMarkerOwner =
+                    node.separatorMarkerOwner || node;
                   if (bestQuote) {
                     firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = true;
                     firstLineEntryNode.startMarker =
@@ -1555,7 +1601,12 @@ let createRootNode;
           const wellKnownNode = node.appendChild("well_known", {
             value: wellKnownPath,
             render: renderChildren,
-            onelineDiff: {},
+            onelineDiff: {
+              hasSeparatorBetweenEachChild: true,
+              hasTrailingSeparator: true,
+            },
+            separatorMarkerRef: node.separatorMarkerRef,
+            separatorMarkerOwner: node.separatorMarkerOwner || node,
             category: "well_known",
             group: "entries",
             subgroup: "well_known",
@@ -1651,7 +1702,13 @@ let createRootNode;
           const referenceNode = node.appendChild("reference", {
             value: node.reference.path,
             render: renderChildren,
-            onelineDiff: {},
+            onelineDiff: {
+              hasSeparatorBetweenEachChild: true,
+              hasTrailingSeparator: true,
+            },
+            separatorMarkerRef: node.separatorMarkerRef,
+            separatorMarkerOwner:
+              node.reference.separatorMarkerOwner || node.reference,
             category: "reference",
             group: "entries",
             subgroup: "reference",
@@ -1675,7 +1732,12 @@ let createRootNode;
           const wellKnownNode = node.appendChild("well_known", {
             value: wellKnownPath,
             render: renderChildren,
-            onelineDiff: {},
+            onelineDiff: {
+              hasSeparatorBetweenEachChild: true,
+              hasTrailingSeparator: true,
+            },
+            separatorMarkerRef: node.separatorMarkerRef,
+            separatorMarkerOwner: node.separatorMarkerOwner || node,
             category: "well_known",
             group: "entries",
             subgroup: "well_known",
@@ -1780,11 +1842,11 @@ let createRootNode;
                   appendFunctionBodyPrefix("() =>");
                 } else if (node.functionAnalysis.type === "method") {
                   if (node.functionAnalysis.getterName) {
-                    appendFunctionBodyPrefix(`get ${methodName}()`);
+                    appendFunctionBodyPrefix(`get ${key}()`);
                   } else if (node.functionAnalysis.setterName) {
-                    appendFunctionBodyPrefix(`set ${methodName}()`);
+                    appendFunctionBodyPrefix(`set ${key}()`);
                   } else {
-                    appendFunctionBodyPrefix(`${methodName}()`);
+                    appendFunctionBodyPrefix(`${key}()`);
                   }
                 } else if (node.functionAnalysis.type === "classic") {
                   appendFunctionBodyPrefix("()");
@@ -1834,12 +1896,12 @@ let createRootNode;
             endMarker: ")",
             onelineDiff: {
               hasMarkersWhenEmpty: true,
-              separatorBetweenEachChild: ",",
+              hasSeparatorBetweenEachChild: true,
               hasSpacingBetweenEachChild: true,
             },
             multilineDiff: {
               hasMarkersWhenEmpty: true,
-              separatorBetweenEachChild: ",",
+              hasSeparatorBetweenEachChild: true,
               hasTrailingSeparator: true,
               hasNewLineAroundChildren: true,
               hasIndentBeforeEachChild: true,
@@ -1876,21 +1938,26 @@ let createRootNode;
                   }
 
                   const mapEntryNode = mapEntriesNode.appendChild(mapEntryKey, {
-                    render: renderEntry,
+                    render: renderChildrenOneLiner,
+                    onelineDiff: {
+                      hasSeparatorBetweenEachChild: true,
+                      hasTrailingSeparator: true,
+                    },
                     group: "entry",
                     subgroup: "map_entry",
                     path: node.path.append(pathPart),
-                    middleMarker: " => ",
                   });
                   mapEntryNode.appendChild("entry_key", {
                     value: mapEntryKey,
                     render: renderValue,
+                    separatorMarkerRef: { current: " => " },
                     group: "entry_key",
                     subgroup: "map_entry_key",
                   });
                   mapEntryNode.appendChild("entry_value", {
                     value: mapEntryValue,
                     render: renderValue,
+                    separatorMarkerRef: { current: "," },
                     group: "entry_value",
                     subgroup: "map_entry_value",
                   });
@@ -1910,6 +1977,7 @@ let createRootNode;
                   setEntriesNode.appendChild(index, {
                     value: setValue,
                     render: renderValue,
+                    separatorMarkerRef: { current: "," },
                     group: "entry_value",
                     subgroup: "set_entry",
                     path: setEntriesNode.path.append(index, {
@@ -1930,19 +1998,19 @@ let createRootNode;
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
               render: renderChildren,
-              group: "entries",
-              subgroup: "array_entries",
               startMarker: "[",
               endMarker: "]",
+              separatorMarkerRef: node.separatorMarkerRef,
+              separatorMarkerOwner: node.separatorMarkerOwner || node,
               onelineDiff: {
                 hasMarkersWhenEmpty: true,
-                separatorBetweenEachChild: ",",
+                hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
                 hasSpacingBetweenEachChild: true,
               },
               multilineDiff: {
                 hasMarkersWhenEmpty: true,
-                separatorBetweenEachChild: ",",
+                hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
                 hasNewLineAroundChildren: true,
                 hasIndentBeforeEachChild: true,
@@ -1951,6 +2019,8 @@ let createRootNode;
                 },
                 maxDiff: "MAX_DIFF_PER_OBJECT",
               },
+              group: "entries",
+              subgroup: "array_entries",
             });
             const arrayEntyGenerator = () => {
               let index = 0;
@@ -1961,6 +2031,7 @@ let createRootNode;
                     ? value[index]
                     : ARRAY_EMPTY_VALUE,
                   render: renderValue,
+                  separatorMarkerRef: { current: "," },
                   group: "entry_value",
                   subgroup: "array_entry_value",
                   path: arrayEntriesNode.path.append(index, {
@@ -2065,15 +2136,13 @@ let createRootNode;
                   endMarker: "}",
                   onelineDiff: {
                     hasMarkersWhenEmpty,
+                    hasSeparatorBetweenEachChild: true,
                     hasSpacingAroundChildren: true,
                     hasSpacingBetweenEachChild: true,
-                    separatorBetweenEachChild:
-                      node.functionAnalysis.type === "class" ? ";" : ",",
                   },
                   multilineDiff: {
                     hasMarkersWhenEmpty,
-                    separatorBetweenEachChild:
-                      node.functionAnalysis.type === "class" ? ";" : ",",
+                    hasSeparatorBetweenEachChild: true,
                     hasTrailingSeparator: true,
                     hasNewLineAroundChildren: true,
                     hasIndentBeforeEachChild: true,
@@ -2094,55 +2163,64 @@ let createRootNode;
                   isHiddenWhenSame,
                 },
               ) => {
+                const valueSeparatorMarkerRef = {
+                  current: node.functionAnalysis.type === "class" ? ";" : ",",
+                };
                 const ownPropertyNode = ownPropertiesNode.appendChild(key, {
-                  render: renderEntry,
-                  middleMarker: node.isClassPrototype
-                    ? ""
-                    : node.functionAnalysis.type === "class"
-                      ? " = "
-                      : ": ",
+                  render: renderChildrenOneLiner,
+                  onelineDiff: {
+                    hasSeparatorBetweenEachChild: true,
+                    hasTrailingSeparator: true,
+                  },
+                  focusedChildIndex: 0,
+                  separatorMarkerRefInside: valueSeparatorMarkerRef,
                   isFunctionPrototype,
                   isClassPrototype,
                   isHiddenWhenSame,
                   childGenerator: () => {
-                    const ownPropertyValueNode = ownPropertyNode.appendChild(
-                      "entry_value",
-                      {
-                        render: renderValue,
-                        group: "entry_value",
-                        subgroup: "property_entry_value",
-                        value,
-                        isSourceCode,
-                        isFunctionPrototype,
-                        isClassPrototype,
-                        methodName: key,
-                      },
-                    );
+                    const valueFunctionAnalysis = tokenizeFunction(value);
                     if (
                       node.functionAnalysis.type === "class" &&
                       !isClassPrototype
                     ) {
                       ownPropertyNode.appendChild("static_keyword", {
                         render: renderGrammar,
+                        separatorMarkerRef: { current: " " },
                         group: "grammar",
                         subgroup: "static_keyword",
                         value: "static",
                         isHidden:
                           isSourceCode ||
-                          ownPropertyValueNode.functionAnalysis.type ===
-                            "method",
+                          valueFunctionAnalysis.type === "method",
                       });
                     }
                     ownPropertyNode.appendChild("entry_key", {
                       render: renderPrimitive,
+                      separatorMarkerRef: {
+                        current: node.isClassPrototype
+                          ? ""
+                          : node.functionAnalysis.type === "class"
+                            ? " = "
+                            : ": ",
+                      },
                       group: "entry_key",
                       subgroup: "property_entry_key",
                       value: key,
                       isHidden:
                         isSourceCode ||
-                        ownPropertyValueNode.functionAnalysis.type ===
-                          "method" ||
+                        valueFunctionAnalysis.type === "method" ||
                         isClassPrototype,
+                    });
+                    ownPropertyNode.appendChild("entry_value", {
+                      key,
+                      value,
+                      render: renderValue,
+                      separatorMarkerRef: valueSeparatorMarkerRef,
+                      group: "entry_value",
+                      subgroup: "property_entry_value",
+                      isSourceCode,
+                      isFunctionPrototype,
+                      isClassPrototype,
                     });
                   },
                   group: "entry",
@@ -2367,7 +2445,8 @@ const renderString = (node, props) => {
 };
 const renderChar = (node, props) => {
   const char = node.value;
-  if (char === node.quoteMarkerRef.current) {
+  const { quoteMarkerRef } = node;
+  if (quoteMarkerRef && char === quoteMarkerRef.current) {
     return truncateAndApplyColor(`\\${char}`, node, props);
   }
   const point = char.charCodeAt(0);
@@ -2392,17 +2471,32 @@ const renderGrammar = (node, props) => {
   return truncateAndApplyColor(node.value, node, props);
 };
 const truncateAndApplyColor = (valueDiff, node, props) => {
-  let columnsRemainingForValue = props.columnsRemaining;
+  const { columnsRemaining } = props;
+  const { separatorMarkerRef } = node;
+  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
+  if (separatorMarker) {
+    if (columnsRemaining < 2) {
+      return renderSeparatorMarker(node, props);
+    }
+    if (columnsRemaining === 2) {
+      let diff = setColor("…", node.color);
+      diff += renderSeparatorMarker(node, props);
+      return diff;
+    }
+  }
+  if (columnsRemaining < 1) {
+    return setColor("…", node.color);
+  }
+  let columnsRemainingForValue = columnsRemaining;
   const { startMarker, endMarker } = node;
-  const { endSeparator } = props;
   if (startMarker) {
     columnsRemainingForValue -= startMarker.length;
   }
   if (endMarker) {
     columnsRemainingForValue -= endMarker.length;
   }
-  if (endSeparator && !node.isPreventingSeparator) {
-    columnsRemainingForValue -= endSeparator.length;
+  if (separatorMarker) {
+    columnsRemainingForValue -= separatorMarker.length;
   }
   if (columnsRemainingForValue < 1) {
     return setColor("…", node.color);
@@ -2420,8 +2514,8 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
     diff += endMarker;
   }
   diff = setColor(diff, node.color);
-  if (endSeparator) {
-    diff += renderEndSeparator(node, props);
+  if (separatorMarker) {
+    diff += renderSeparatorMarker(node, props);
   }
   return diff;
 };
@@ -2460,22 +2554,25 @@ const renderComposite = (node, props) => {
   const ownPropertiesNode = node.childNodeMap.get("own_properties");
   const childProps = {
     ...props,
-    endSeparator: "",
   };
   if (maxDepthReached) {
+    node.startMarker = node.endMarker = "";
+    // const { separatorMarkerRef } = node;
+    // if (separatorMarkerRef) {
+    //   separatorMarkerRef.current = "";
+    // }
     if (indexedEntriesNode) {
       const arrayLength = indexedEntriesNode.childNodeMap.size;
-      node.startMarker = node.endMarker = "";
       return truncateAndApplyColor(`Array(${arrayLength})`, node, props);
     }
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
-    node.startMarker = node.endMarker = "";
     return truncateAndApplyColor(`Object(${ownPropertyCount})`, node, props);
   }
   let columnsRemaining = props.columnsRemaining;
-  const { endSeparator } = props;
-  if (endSeparator) {
-    columnsRemaining -= endSeparator.length;
+  const { separatorMarkerRef } = node;
+  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
+  if (separatorMarker) {
+    columnsRemaining -= separatorMarker.length;
   }
   if (constructNode) {
     const constructDiff = constructNode.render(childProps);
@@ -2515,8 +2612,8 @@ const renderComposite = (node, props) => {
       diff += ownPropertiesDiff;
     }
   }
-  if (endSeparator) {
-    diff += renderEndSeparator(node, props);
+  if (separatorMarker) {
+    diff += renderSeparatorMarker(node, props);
   }
   return diff;
 };
@@ -2615,7 +2712,7 @@ const renderChildren = (node, props) => {
 const renderChildrenOneLiner = (node, props) => {
   const {
     focusedChildWhenSame = "first",
-    separatorBetweenEachChild,
+    hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
     overflowStartMarker = "",
     overflowEndMarker = "",
@@ -2630,32 +2727,34 @@ const renderChildrenOneLiner = (node, props) => {
     return setColor("…", node.color);
   }
   const childrenKeys = getChildrenKeys(node);
-  const { startMarker, endMarker } = node;
-  const { endSeparator = "" } = props;
+  const { startMarker, endMarker, separatorMarkerRef } = node;
+  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
       node.startMarker = node.endMarker = "";
     }
     return truncateAndApplyColor("", node, props);
   }
-  let focusedChildIndex = -1;
-  if (node.comparisonDiffMap.size > 0) {
-    for (const [childKey] of node.comparisonDiffMap) {
-      const childIndex = childrenKeys.indexOf(childKey);
-      if (childIndex === -1) {
-        // happens when removed/added
-      } else {
-        focusedChildIndex = childIndex;
-        break;
+  let focusedChildIndex = node.focusedChildIndex;
+  if (focusedChildIndex === -1) {
+    if (node.comparisonDiffMap.size > 0) {
+      for (const [childKey] of node.comparisonDiffMap) {
+        const childIndex = childrenKeys.indexOf(childKey);
+        if (childIndex === -1) {
+          // happens when removed/added
+        } else {
+          focusedChildIndex = childIndex;
+          break;
+        }
       }
+    } else {
+      focusedChildIndex =
+        focusedChildWhenSame === "first"
+          ? 0
+          : focusedChildWhenSame === "last"
+            ? childrenKeys.length - 1
+            : Math.floor(childrenKeys.length / 2);
     }
-  } else {
-    focusedChildIndex =
-      focusedChildWhenSame === "first"
-        ? 0
-        : focusedChildWhenSame === "last"
-          ? childrenKeys.length - 1
-          : Math.floor(childrenKeys.length / 2);
   }
   let hasStartOverflow = focusedChildIndex > 0;
   let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
@@ -2689,8 +2788,8 @@ const renderChildrenOneLiner = (node, props) => {
   } else {
     boilerplate += endMarker;
   }
-  if (endSeparator) {
-    boilerplate += endSeparator;
+  if (separatorMarker) {
+    boilerplate += separatorMarker;
   }
   const columnsRemainingForChildrenConsideringBoilerplate =
     columnsRemainingForChildren - boilerplate.length;
@@ -2704,26 +2803,24 @@ const renderChildrenOneLiner = (node, props) => {
   }
 
   const renderChildDiff = (childNode, childIndex) => {
-    const childSeparator = getChildSeparator({
-      separatorBetweenEachChild,
+    updateChildSeparatorMarkerRef(childNode, {
+      hasSeparatorBetweenEachChild,
       hasTrailingSeparator,
-      childNode,
       childIndex,
       childrenKeys,
     });
     const childDiff = childNode.render({
       ...props,
-      endSeparator: childSeparator,
-      endSeparatorOwner: node,
+      columnsRemaining: columnsRemainingForChildren,
     });
     return childDiff;
   };
   if (hasSpacingAroundChildren) {
-    columnsRemainingForChildren -= `${startMarker}  ${endMarker}${endSeparator}`
-      .length;
+    columnsRemainingForChildren -=
+      `${startMarker}  ${endMarker}${separatorMarker}`.length;
   } else {
-    columnsRemainingForChildren -= `${startMarker}${endMarker}${endSeparator}`
-      .length;
+    columnsRemainingForChildren -=
+      `${startMarker}${endMarker}${separatorMarker}`.length;
   }
   const childDiffArray = [];
   const focusedChildKey = childrenKeys[focusedChildIndex];
@@ -2842,14 +2939,14 @@ const renderChildrenOneLiner = (node, props) => {
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);
   }
-  if (endSeparator) {
-    diff += renderEndSeparator(node, props);
+  if (separatorMarker) {
+    diff += renderSeparatorMarker(node, props);
   }
   return diff;
 };
 const renderChildrenMultiline = (node, props) => {
   const {
-    separatorBetweenEachChild = "",
+    hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
     hasNewLineAroundChildren,
     hasIndentBeforeEachChild,
@@ -2861,8 +2958,14 @@ const renderChildrenMultiline = (node, props) => {
   if (node.beforeRender) {
     node.beforeRender(props);
   }
-  const { childrenKeys, indexToDisplayArray, startMarker, endMarker } = node;
-  const { endSeparator } = props;
+  const {
+    childrenKeys,
+    indexToDisplayArray,
+    startMarker,
+    endMarker,
+    separatorMarkerRef,
+  } = node;
+  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
       node.startMarker = node.endMarker = "";
@@ -2934,18 +3037,18 @@ const renderChildrenMultiline = (node, props) => {
       columnsRemainingForChild -= stringWidth(indent);
       childDiff += indent;
     }
-    const childSeparator = getChildSeparator({
-      separatorBetweenEachChild,
+    if (separatorMarker) {
+      columnsRemainingForChild -= separatorMarker.length;
+    }
+    updateChildSeparatorMarkerRef(childNode, {
+      hasSeparatorBetweenEachChild,
       hasTrailingSeparator,
-      childNode,
       childIndex,
       childrenKeys,
     });
     childDiff += childNode.render({
       ...props,
       columnsRemaining: columnsRemainingForChild,
-      endSeparator: childSeparator,
-      endSeparatorOwner: node,
       indexToDisplayArray,
     });
     canResetMaxColumns = true; // because we'll append \n on next entry
@@ -2970,34 +3073,45 @@ const renderChildrenMultiline = (node, props) => {
     diff += "  ".repeat(getNodeDepth(node, props));
   }
   diff += setColor(endMarker, node.color);
-  if (endSeparator) {
-    diff += renderEndSeparator(node, props);
+  if (separatorMarker) {
+    diff += renderSeparatorMarker(node, props);
   }
   return diff;
 };
-const getChildSeparator = ({
-  separatorBetweenEachChild,
-  hasTrailingSeparator,
+const updateChildSeparatorMarkerRef = (
   childNode,
-  childIndex,
-  childrenKeys,
-}) => {
-  if (!separatorBetweenEachChild) {
-    return "";
+  {
+    hasSeparatorBetweenEachChild,
+    hasTrailingSeparator,
+    childIndex,
+    childrenKeys,
+  },
+) => {
+  const { separatorMarkerRef, separatorMarkerRefInside } = childNode;
+  const selfOrNestedSeparatorMarkerRef =
+    separatorMarkerRef || separatorMarkerRefInside;
+  if (!selfOrNestedSeparatorMarkerRef) {
+    return;
   }
-  if (childNode.isPreventingSeparator) {
-    return "";
+  const separatorMarker = selfOrNestedSeparatorMarkerRef.current;
+  if (!separatorMarker) {
+    return;
+  }
+  if (!hasSeparatorBetweenEachChild) {
+    selfOrNestedSeparatorMarkerRef.current = "";
+    return;
   }
   if (hasTrailingSeparator) {
-    return separatorBetweenEachChild;
+    return;
   }
-  if (childIndex === 0) {
-    return childrenKeys.length > 1 ? separatorBetweenEachChild : "";
+  if (childrenKeys.length === 1) {
+    selfOrNestedSeparatorMarkerRef.current = "";
+    return;
   }
-  if (childIndex !== childrenKeys.length - 1) {
-    return separatorBetweenEachChild;
+  if (childIndex === childrenKeys.length - 1) {
+    selfOrNestedSeparatorMarkerRef.current = "";
+    return;
   }
-  return "";
 };
 const getChildrenKeys = (node) => {
   const childrenKeys = [];
@@ -3009,58 +3123,6 @@ const getChildrenKeys = (node) => {
   }
   return childrenKeys;
 };
-const renderEntry = (node, props) => {
-  const { endMarker } = node;
-  let entryDiff = "";
-  let columnsRemaining = props.columnsRemaining;
-  const entryKeyNode = node.childNodeMap.get("entry_key");
-  if (endMarker) {
-    columnsRemaining -= endMarker.length;
-  }
-  let columnsRemainingForValue = columnsRemaining;
-
-  const staticKeywordNode = node.childNodeMap.get("static_keyword");
-  if (staticKeywordNode && !staticKeywordNode.isHidden) {
-    const staticKeywordDiff = staticKeywordNode.render({
-      ...props,
-      columnsRemaining,
-      endSeparator: "",
-    });
-    columnsRemaining -= measureLastLineColumns(staticKeywordDiff);
-    columnsRemaining -= " ".length;
-    entryDiff += staticKeywordDiff;
-    entryDiff += " ";
-  }
-  if (!entryKeyNode.isHidden) {
-    const entryKeyDiff = entryKeyNode.render({
-      ...props,
-      columnsRemaining,
-      endSeparator: "",
-    });
-    columnsRemainingForValue -= measureLastLineColumns(entryKeyDiff);
-    entryDiff += entryKeyDiff;
-    const { middleMarker } = node;
-    if (columnsRemainingForValue > middleMarker.length) {
-      columnsRemainingForValue -= middleMarker.length;
-      entryDiff += setColor(middleMarker, node.color);
-    } else {
-      columnsRemainingForValue = 0;
-    }
-  }
-  if (columnsRemainingForValue > 0) {
-    const entryValueNode = node.childNodeMap.get("entry_value");
-    entryDiff += entryValueNode.render({
-      ...props,
-      columnsRemaining: columnsRemainingForValue,
-    });
-    if (endMarker) {
-      entryDiff += setColor(endMarker, node.color);
-    }
-  } else if (endMarker) {
-    entryDiff += setColor(endMarker, node.color);
-  }
-  return entryDiff;
-};
 const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
 };
@@ -3068,27 +3130,6 @@ const enableMultilineDiff = (lineEntriesNode) => {
   const firstLineEntryNode = lineEntriesNode.childNodeMap.get(0);
   firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = false;
   firstLineEntryNode.startMarker = firstLineEntryNode.endMarker = "";
-  if (lineEntriesNode.parent.subgroup === "property_entry_value") {
-    // When multiline string appear as property value
-    // 1. It becomes hard to see if "," is part of the string or the separator
-    // 2. "," would appear twice if multiline string ends with ","
-    // {
-    //   foo: 1| line 1
-    //        2| line 2,,
-    //   bar: true,
-    // }
-    // Fortunately the line break already helps to split properties (foo and bar)
-    // so the following is readable
-    // {
-    //   foo: 1| line 1
-    //        2| line 2,
-    //   bar: true,
-    // }
-    // -> The separator is removed for multiline
-    const ownPropertyNode = lineEntriesNode.parent.parent;
-    ownPropertyNode.isPreventingSeparator = true;
-  }
-
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
   lineEntriesNode.beforeRender = () => {
     let biggestDisplayedLineIndex = 0;
@@ -3110,8 +3151,8 @@ const enableMultilineDiff = (lineEntriesNode) => {
 const forceSameQuotes = (actualNode, expectNode) => {
   const actualQuoteMarkerRef = actualNode.quoteMarkerRef;
   const expectQuoteMarkerRef = expectNode.quoteMarkerRef;
-  const actualQuote = actualQuoteMarkerRef.current;
-  const expectQuote = expectQuoteMarkerRef.current;
+  const actualQuote = actualQuoteMarkerRef ? actualQuoteMarkerRef.current : "";
+  const expectQuote = expectQuoteMarkerRef ? expectQuoteMarkerRef.current : "";
   if (actualQuote === '"' && expectQuote !== '"') {
     actualQuoteMarkerRef.current = expectQuote;
     actualNode.startMarker = actualNode.endMarker = expectQuote;
@@ -3135,67 +3176,78 @@ const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
   lineStartMarker += " ";
   return lineStartMarker;
 };
-const renderEndSeparator = (node, props) => {
-  const { endSeparator, endSeparatorOwner } = props;
+const renderSeparatorMarker = (node) => {
+  const { separatorMarkerRef, separatorMarkerOwner } = node;
+  const separatorMarker = separatorMarkerRef.current;
   if (node.diffType === "solo") {
-    return setColor(endSeparator, node.color);
+    return setColor(separatorMarker, node.color);
   }
-  return setColor(endSeparator, endSeparatorOwner.color);
+  return setColor(separatorMarker, separatorMarkerOwner.color);
 };
 
-const createMethodCallNode = (node, { objectName, methodName, args }) => {
+const createMethodCallNode = (
+  node,
+  { objectName, methodName, args, renderOnlyArgs },
+) => {
   return {
     render: renderChildrenOneLiner,
     onelineDiff: {
+      hasSeparatorBetweenEachChild: true,
       hasTrailingSeparator: true,
     },
+    separatorMarkerRef: node.separatorMarkerRef,
+    separatorMarkerOwner: node.separatorMarkerOwner || node,
     group: "entries",
     subgroup: "method_call",
     childGenerator: (methodCallNode) => {
       methodCallNode.appendChild("object_name", {
+        value: objectName,
         render: renderGrammar,
         group: "grammar",
         subgroup: "object_name",
-        value: objectName,
       });
       if (methodName) {
         methodCallNode.appendChild("method_dot", {
+          value: ".",
           render: renderGrammar,
           group: "grammar",
           subgroup: "method_dot",
-          value: ".",
         });
         methodCallNode.appendChild("method_name", {
+          value: methodName,
           render: renderGrammar,
           group: "grammar",
           subgroup: "method_name",
-          value: methodName,
         });
       }
+
       methodCallNode.appendChild(
         "args",
-        createArgEntriesNode(methodCallNode, { args }),
+        createArgEntriesNode(methodCallNode, {
+          renderOnlyArgs,
+          args,
+        }),
       );
     },
   };
 };
 
-const createArgEntriesNode = (node, { args }) => {
+const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
   return {
+    render: renderChildrenOneLiner,
     startMarker: "(",
     endMarker: ")",
-    render: renderChildrenOneLiner,
     onelineDiff: {
       hasMarkersWhenEmpty: true,
-      separatorBetweenEachChild: ",",
       hasSpacingBetweenEachChild: true,
+      hasSeparatorBetweenEachChild: true,
     },
-    // multilineDiff: {
-    //   hasSpacingAroundChildren: true,
-    //    separatorBetweenEachChild: ",",
-    //   hasNewLineAroundChildren: true,
-    //   hasIndentBeforeEachChild: true,
-    // },
+    ...(renderOnlyArgs
+      ? {
+          separatorMarkerRef: node.separatorMarkerRef,
+          separatorMarkerOwner: node.separatorMarkerOwner || node,
+        }
+      : {}),
     group: "entries",
     subgroup: "arg_entries",
     childGenerator: (callNode) => {
@@ -3203,6 +3255,7 @@ const createArgEntriesNode = (node, { args }) => {
         callNode.appendChild(argIndex, {
           value: argValue,
           render: renderValue,
+          separatorMarkerRef: { current: "," },
           group: "entry_value",
           subgroup: "arg_entry_value",
           path: node.path.append(key || argIndex),

@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="154.42"
+      width="146.02"
       height="193.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -52,7 +52,6 @@
         <text x="68.81" y="52.55" fill="#7f7f7f">1</text>
         <text x="85.61" y="52.55" fill="#7f7f7f">line</text>
         <text x="127.62" y="52.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="136.02" y="52.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="71.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="71.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="71.55" fill="#cd5555">true</text>
@@ -69,7 +68,6 @@
         <text x="68.81" y="147.55" fill="#7f7f7f">1</text>
         <text x="85.61" y="147.55" fill="#7f7f7f">line</text>
         <text x="127.62" y="147.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="136.02" y="147.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="166.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="166.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="166.55" fill="#11bc79">false</text>
