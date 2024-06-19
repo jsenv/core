@@ -2800,7 +2800,19 @@ const renderChildrenOneLiner = (node, props) => {
       : setColor("…", node.color);
   }
 
+  let childrenDiff = "";
   const renderChildDiff = (childNode, childIndex) => {
+    // TODO:
+    // une logique qui autorise un enfant donné
+    // a ne pas passer par le chemin classique
+    // en gros a avoir une short notation
+    // genre
+    // prop,
+    // au lieu de prop: ...
+    // pour se faire il s'agit de donner au child
+    // un espace plus important
+    // au moment de le render
+    // et s'il dépasse d'utiliser alors cette short notation
     updateChildSeparatorMarkerRef(childNode, {
       hasSeparatorBetweenEachChild,
       hasTrailingSeparator,
@@ -2820,7 +2832,6 @@ const renderChildrenOneLiner = (node, props) => {
     columnsRemainingForChildren -=
       `${startMarker}${endMarker}${separatorMarker}`.length;
   }
-  const childDiffArray = [];
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
   if (focusedChildNode) {
@@ -2829,7 +2840,7 @@ const renderChildrenOneLiner = (node, props) => {
       focusedChildIndex,
     );
     columnsRemainingForChildren -= stringWidth(focusedChildDiff);
-    childDiffArray.push(focusedChildDiff);
+    childrenDiff = focusedChildDiff;
   }
   let tryBeforeFirst = true;
   let previousChildAttempt = 0;
@@ -2884,18 +2895,31 @@ const renderChildrenOneLiner = (node, props) => {
       break;
     }
     columnsRemainingForChildren -= childDiffWidth;
-    if (
-      hasSpacingBetweenEachChild &&
-      childIndex > 0 &&
-      childIndex < childrenKeys.length - 1
-    ) {
-      columnsRemainingForChildren -= " ".length;
-    }
     if (childIndex < focusedChildIndex) {
-      childDiffArray.unshift(childDiff);
-    } else {
-      childDiffArray.push(childDiff);
+      const shouldInjectSpacing =
+        hasSpacingBetweenEachChild && (childIndex > 0 || focusedChildIndex > 0);
+      if (shouldInjectSpacing) {
+        childrenDiff = `${childDiff} ${childrenDiff}`;
+        columnsRemainingForChildren -= " ".length;
+        continue;
+      }
+      if (childrenDiff) {
+        childrenDiff = `${childDiff}${childrenDiff}`;
+        continue;
+      }
+      childrenDiff = childDiff;
+      continue;
     }
+    if (hasSpacingBetweenEachChild && childrenDiff) {
+      columnsRemainingForChildren -= " ".length;
+      childrenDiff = `${childrenDiff} ${childDiff}`;
+      continue;
+    }
+    if (childrenDiff) {
+      childrenDiff = `${childrenDiff}${childDiff}`;
+      continue;
+    }
+    childrenDiff = childDiff;
   }
   let diff = "";
   if (hasStartOverflow) {
@@ -2916,9 +2940,7 @@ const renderChildrenOneLiner = (node, props) => {
   if (hasSpacingAroundChildren) {
     diff += " ";
   }
-  diff += hasSpacingBetweenEachChild
-    ? childDiffArray.join(" ")
-    : childDiffArray.join("");
+  diff += childrenDiff;
   if (hasSpacingAroundChildren) {
     diff += " ";
   }
