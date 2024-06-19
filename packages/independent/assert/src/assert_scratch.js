@@ -34,6 +34,7 @@ import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
 import { getWellKnownValuePath } from "./well_known_value.js";
 
+// ANSI.supported = false;
 const sameColor = ANSI.GREY;
 const removedColor = ANSI.YELLOW;
 const addedColor = ANSI.YELLOW;
@@ -1057,6 +1058,7 @@ let createRootNode;
     quoteMarkerRef,
     onelineDiff = null,
     multilineDiff = null,
+    isPreventingSeparator = false,
   }) => {
     const node = {
       colorWhenSolo,
@@ -1103,6 +1105,7 @@ let createRootNode;
       methodName,
       isHidden,
       isHiddenWhenSame,
+      isPreventingSeparator,
       beforeRender: null,
       childrenKeys: null,
       indexToDisplayArray: null,
@@ -1459,7 +1462,6 @@ let createRootNode;
                     key: lineIndex,
                     render: renderChildrenOneLiner,
                     onelineDiff: {
-                      hasMarkersWhenEmpty: false, // will be set to true for single line
                       focusedChildWhenSame: "last",
                       overflowStartMarker: "…",
                       overflowEndMarker: "…",
@@ -2318,10 +2320,10 @@ const renderPrimitive = (node, props) => {
     return setColor("…", node.color);
   }
   if (node.isSourceCode) {
-    return truncateAndAppyColor("[source code]", node, props);
+    return truncateAndApplyColor("[source code]", node, props);
   }
   if (node.isUndefined) {
-    return truncateAndAppyColor("undefined", node, props);
+    return truncateAndApplyColor("undefined", node, props);
   }
   if (node.isString) {
     return renderString(node, props);
@@ -2329,14 +2331,14 @@ const renderPrimitive = (node, props) => {
   if (node.isSymbol) {
     return renderSymbol(node, props);
   }
-  return truncateAndAppyColor(JSON.stringify(node.value), node, props);
+  return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
 const renderString = (node, props) => {
   if (node.value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
-    return truncateAndAppyColor("valueOf()", node, props);
+    return truncateAndApplyColor("valueOf()", node, props);
   }
   if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
-    return truncateAndAppyColor("[Symbol.toPrimitive()]", node, props);
+    return truncateAndApplyColor("[Symbol.toPrimitive()]", node, props);
   }
   if (node.isStringForUrl) {
     const urlInternalPropertiesNode = node.childNodeMap.get(
@@ -2359,20 +2361,20 @@ const renderString = (node, props) => {
         diff += char;
       }
     }
-    return truncateAndAppyColor(diff, node, props);
+    return truncateAndApplyColor(diff, node, props);
   }
-  return truncateAndAppyColor(node.value, node, props);
+  return truncateAndApplyColor(node.value, node, props);
 };
 const renderChar = (node, props) => {
   const char = node.value;
   if (char === node.quoteMarkerRef.current) {
-    return truncateAndAppyColor(`\\${char}`, node, props);
+    return truncateAndApplyColor(`\\${char}`, node, props);
   }
   const point = char.charCodeAt(0);
   if (point === 92 || point < 32 || (point > 126 && point < 160)) {
-    return truncateAndAppyColor(CHAR_TO_ESCAPED_CHAR[point], node, props);
+    return truncateAndApplyColor(CHAR_TO_ESCAPED_CHAR[point], node, props);
   }
-  return truncateAndAppyColor(char, node, props);
+  return truncateAndApplyColor(char, node, props);
 };
 // const renderInteger = (node, props) => {
 //   let diff = JSON.stringify(node.value);
@@ -2387,22 +2389,41 @@ const renderSymbol = (node, props) => {
   return symbolConstructNode.render(props);
 };
 const renderGrammar = (node, props) => {
-  return truncateAndAppyColor(node.value, node, props);
+  return truncateAndApplyColor(node.value, node, props);
 };
-const truncateAndAppyColor = (diff, node, props) => {
+const truncateAndApplyColor = (valueDiff, node, props) => {
+  let columnsRemainingForValue = props.columnsRemaining;
   const { startMarker, endMarker } = node;
+  const { endSeparator } = props;
   if (startMarker) {
-    diff = `${startMarker}${diff}`;
+    columnsRemainingForValue -= startMarker.length;
   }
+  if (endMarker) {
+    columnsRemainingForValue -= endMarker.length;
+  }
+  if (endSeparator && !node.isPreventingSeparator) {
+    columnsRemainingForValue -= endSeparator.length;
+  }
+  if (columnsRemainingForValue < 1) {
+    return setColor("…", node.color);
+  }
+  if (valueDiff.length > columnsRemainingForValue) {
+    valueDiff = valueDiff.slice(0, columnsRemainingForValue - "…".length);
+    valueDiff += "…";
+  }
+  let diff = "";
+  if (startMarker) {
+    diff += startMarker;
+  }
+  diff += valueDiff;
   if (endMarker) {
     diff += endMarker;
   }
-  if (diff.length > props.columnsRemaining) {
-    diff = setColor(diff.slice(0, props.columnsRemaining - 1), node.color);
-    diff += setColor("…", node.color);
-    return diff;
+  diff = setColor(diff, node.color);
+  if (endSeparator) {
+    diff += renderEndSeparator(node, props);
   }
-  return setColor(diff, node.color);
+  return diff;
 };
 
 const renderComposite = (node, props) => {
@@ -2423,9 +2444,6 @@ const renderComposite = (node, props) => {
     return wellKnownNode.render(props);
   }
 
-  const internalEntriesNode = node.childNodeMap.get("internal_entries");
-  const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
-  const ownPropertiesNode = node.childNodeMap.get("own_properties");
   let maxDepthReached = false;
   if (node.diffType === "same") {
     maxDepthReached = node.depth > props.MAX_DEPTH;
@@ -2436,26 +2454,37 @@ const renderComposite = (node, props) => {
     props.firstDiffDepth = node.depth;
     maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
   }
+  const constructNode = node.childNodeMap.get("construct");
+  const internalEntriesNode = node.childNodeMap.get("internal_entries");
+  const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
+  const ownPropertiesNode = node.childNodeMap.get("own_properties");
+  const childProps = {
+    ...props,
+    endSeparator: "",
+  };
   if (maxDepthReached) {
     if (indexedEntriesNode) {
       const arrayLength = indexedEntriesNode.childNodeMap.size;
-      diff += setColor(`Array(${arrayLength})`, node.color);
-      return diff;
+      node.startMarker = node.endMarker = "";
+      return truncateAndApplyColor(`Array(${arrayLength})`, node, props);
     }
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
-    diff += setColor(`Object(${ownPropertyCount})`, node.color);
-    return diff;
+    node.startMarker = node.endMarker = "";
+    return truncateAndApplyColor(`Object(${ownPropertyCount})`, node, props);
   }
   let columnsRemaining = props.columnsRemaining;
-  const constructNode = node.childNodeMap.get("construct");
+  const { endSeparator } = props;
+  if (endSeparator) {
+    columnsRemaining -= endSeparator.length;
+  }
   if (constructNode) {
-    const constructDiff = constructNode.render(props);
+    const constructDiff = constructNode.render(childProps);
     columnsRemaining -= measureLastLineColumns(constructDiff);
     diff += constructDiff;
   }
   if (internalEntriesNode) {
     const internalEntriesDiff = internalEntriesNode.render({
-      ...props,
+      ...childProps,
       columnsRemaining,
     });
     columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
@@ -2467,7 +2496,7 @@ const renderComposite = (node, props) => {
       diff += " ";
     }
     const indexedEntriesDiff = indexedEntriesNode.render({
-      ...props,
+      ...childProps,
       columnsRemaining,
     });
     columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
@@ -2475,7 +2504,7 @@ const renderComposite = (node, props) => {
   }
   if (ownPropertiesNode) {
     const ownPropertiesDiff = ownPropertiesNode.render({
-      ...props,
+      ...childProps,
       columnsRemaining,
     });
     if (ownPropertiesDiff) {
@@ -2485,6 +2514,9 @@ const renderComposite = (node, props) => {
       }
       diff += ownPropertiesDiff;
     }
+  }
+  if (endSeparator) {
+    diff += renderEndSeparator(node, props);
   }
   return diff;
 };
@@ -2582,9 +2614,9 @@ const renderChildren = (node, props) => {
 };
 const renderChildrenOneLiner = (node, props) => {
   const {
+    focusedChildWhenSame = "first",
     separatorBetweenEachChild,
     hasTrailingSeparator,
-    focusedChildWhenSame = "first",
     overflowStartMarker = "",
     overflowEndMarker = "",
     overflowMarkersPlacement = "inside",
@@ -2593,16 +2625,18 @@ const renderChildrenOneLiner = (node, props) => {
     hasSpacingBetweenEachChild,
   } = node.onelineDiff;
 
-  let columnsRemaining = props.columnsRemaining;
-  if (columnsRemaining < 1) {
+  let columnsRemainingForChildren = props.columnsRemaining;
+  if (columnsRemainingForChildren < 1) {
     return setColor("…", node.color);
   }
   const childrenKeys = getChildrenKeys(node);
   const { startMarker, endMarker } = node;
+  const { endSeparator = "" } = props;
   if (childrenKeys.length === 0) {
-    return hasMarkersWhenEmpty
-      ? setColor(`${startMarker}${endMarker}`, node.color)
-      : "";
+    if (!hasMarkersWhenEmpty) {
+      node.startMarker = node.endMarker = "";
+    }
+    return truncateAndApplyColor("", node, props);
   }
   let focusedChildIndex = -1;
   if (node.comparisonDiffMap.size > 0) {
@@ -2627,6 +2661,7 @@ const renderChildrenOneLiner = (node, props) => {
   let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
   const overflowStartWidth = overflowStartMarker.length;
   const overflowEndWidth = overflowEndMarker.length;
+
   let boilerplate = "";
   if (hasStartOverflow) {
     if (overflowMarkersPlacement === "inside") {
@@ -2654,11 +2689,15 @@ const renderChildrenOneLiner = (node, props) => {
   } else {
     boilerplate += endMarker;
   }
-
-  if (columnsRemaining < boilerplate.length) {
+  if (endSeparator) {
+    boilerplate += endSeparator;
+  }
+  const columnsRemainingForChildrenConsideringBoilerplate =
+    columnsRemainingForChildren - boilerplate.length;
+  if (columnsRemainingForChildrenConsideringBoilerplate < 0) {
     return setColor("…", node.color);
   }
-  if (columnsRemaining === boilerplate.length) {
+  if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
     return overflowMarkersPlacement === "inside"
       ? setColor(boilerplate, node.color)
       : setColor("…", node.color);
@@ -2668,30 +2707,23 @@ const renderChildrenOneLiner = (node, props) => {
     const childSeparator = getChildSeparator({
       separatorBetweenEachChild,
       hasTrailingSeparator,
+      childNode,
       childIndex,
       childrenKeys,
     });
-    if (!childSeparator) {
-      const childDiff = childNode.render(props);
-      return childDiff;
-    }
-    let columnsRemainingForChild = props.columnsRemaining;
-    const childSeparatorWidth = stringWidth(childSeparator);
-    columnsRemainingForChild -= childSeparatorWidth;
-    let childDiff = childNode.render({
+    const childDiff = childNode.render({
       ...props,
-      columnsRemaining: columnsRemainingForChild,
+      endSeparator: childSeparator,
+      endSeparatorOwner: node,
     });
-    childDiff += setColor(
-      childSeparator,
-      childNode.diffType === "solo" ? childNode.color : node.color,
-    );
     return childDiff;
   };
-  columnsRemaining -= startMarker.length;
-  columnsRemaining -= endMarker.length;
   if (hasSpacingAroundChildren) {
-    columnsRemaining -= "  ".length;
+    columnsRemainingForChildren -= `${startMarker}  ${endMarker}${endSeparator}`
+      .length;
+  } else {
+    columnsRemainingForChildren -= `${startMarker}${endMarker}${endSeparator}`
+      .length;
   }
   const childDiffArray = [];
   const focusedChildKey = childrenKeys[focusedChildIndex];
@@ -2701,13 +2733,13 @@ const renderChildrenOneLiner = (node, props) => {
       focusedChildNode,
       focusedChildIndex,
     );
-    columnsRemaining -= stringWidth(focusedChildDiff);
+    columnsRemainingForChildren -= stringWidth(focusedChildDiff);
     childDiffArray.push(focusedChildDiff);
   }
   let tryBeforeFirst = true;
   let previousChildAttempt = 0;
   let nextChildAttempt = 0;
-  while (columnsRemaining) {
+  while (columnsRemainingForChildren) {
     const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
     const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
     let hasPreviousChild = previousChildIndex >= 0;
@@ -2748,7 +2780,7 @@ const renderChildrenOneLiner = (node, props) => {
     if (hasEndOverflow) {
       nextWidth += overflowEndWidth;
     }
-    if (nextWidth > columnsRemaining) {
+    if (nextWidth > columnsRemainingForChildren) {
       if (hasPreviousChild) {
         previousChildAttempt--;
       } else {
@@ -2756,13 +2788,13 @@ const renderChildrenOneLiner = (node, props) => {
       }
       break;
     }
-    columnsRemaining -= childDiffWidth;
+    columnsRemainingForChildren -= childDiffWidth;
     if (
       hasSpacingBetweenEachChild &&
       childIndex > 0 &&
       childIndex < childrenKeys.length - 1
     ) {
-      columnsRemaining -= " ".length;
+      columnsRemainingForChildren -= " ".length;
     }
     if (childIndex < focusedChildIndex) {
       childDiffArray.unshift(childDiff);
@@ -2810,6 +2842,9 @@ const renderChildrenOneLiner = (node, props) => {
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);
   }
+  if (endSeparator) {
+    diff += renderEndSeparator(node, props);
+  }
   return diff;
 };
 const renderChildrenMultiline = (node, props) => {
@@ -2827,6 +2862,13 @@ const renderChildrenMultiline = (node, props) => {
     node.beforeRender(props);
   }
   const { childrenKeys, indexToDisplayArray, startMarker, endMarker } = node;
+  const { endSeparator } = props;
+  if (childrenKeys.length === 0) {
+    if (!hasMarkersWhenEmpty) {
+      node.startMarker = node.endMarker = "";
+    }
+    return truncateAndApplyColor("", node, props);
+  }
   let atLeastOneEntryDisplayed = null;
   let diff = "";
   let childrenDiff = "";
@@ -2847,22 +2889,18 @@ const renderChildrenMultiline = (node, props) => {
     if (hasIndentBetweenEachChild && skipPosition !== "start") {
       skippedDiff += " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
     }
-    if (skippedSummary) {
-      const { skippedNames } = skippedSummary;
-      const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
-      skippedDiff += setColor(sign, node.color);
-      skippedDiff += " ";
-      skippedDiff += setColor(String(skipCount), node.color);
-      skippedDiff += " ";
-      skippedDiff += setColor(
-        skippedNames[skipCount === 1 ? 0 : 1],
-        node.color,
-      );
-      skippedDiff += " ";
-      skippedDiff += setColor(sign, node.color);
-      appendChildDiff(skippedDiff);
-      return;
-    }
+    const { skippedNames } = skippedSummary || {
+      skippedNames: ["value", "values"],
+    };
+    const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
+    skippedDiff += setColor(sign, node.color);
+    skippedDiff += " ";
+    skippedDiff += setColor(String(skipCount), node.color);
+    skippedDiff += " ";
+    skippedDiff += setColor(skippedNames[skipCount === 1 ? 0 : 1], node.color);
+    skippedDiff += " ";
+    skippedDiff += setColor(sign, node.color);
+    appendChildDiff(skippedDiff);
   };
   let previousIndexDisplayed = -1;
   let canResetMaxColumns = hasNewLineAroundChildren;
@@ -2899,23 +2937,17 @@ const renderChildrenMultiline = (node, props) => {
     const childSeparator = getChildSeparator({
       separatorBetweenEachChild,
       hasTrailingSeparator,
+      childNode,
       childIndex,
       childrenKeys,
     });
-    if (childSeparator) {
-      columnsRemainingForChild -= stringWidth(childSeparator);
-    }
     childDiff += childNode.render({
       ...props,
       columnsRemaining: columnsRemainingForChild,
+      endSeparator: childSeparator,
+      endSeparatorOwner: node,
       indexToDisplayArray,
     });
-    if (childSeparator) {
-      childDiff += setColor(
-        childSeparator,
-        childNode.diffType === "solo" ? childNode.color : node.color,
-      );
-    }
     canResetMaxColumns = true; // because we'll append \n on next entry
     appendChildDiff(childDiff);
     previousIndexDisplayed = childIndex;
@@ -2928,12 +2960,6 @@ const renderChildrenMultiline = (node, props) => {
       appendSkippedSection(lastSkippedCount, "end");
     }
   }
-  if (!atLeastOneEntryDisplayed) {
-    if (hasMarkersWhenEmpty) {
-      return setColor(`${startMarker}${endMarker}`, node.color);
-    }
-    return "";
-  }
   diff += setColor(startMarker, node.color);
   if (hasNewLineAroundChildren) {
     diff += "\n";
@@ -2944,15 +2970,22 @@ const renderChildrenMultiline = (node, props) => {
     diff += "  ".repeat(getNodeDepth(node, props));
   }
   diff += setColor(endMarker, node.color);
+  if (endSeparator) {
+    diff += renderEndSeparator(node, props);
+  }
   return diff;
 };
 const getChildSeparator = ({
   separatorBetweenEachChild,
   hasTrailingSeparator,
+  childNode,
   childIndex,
   childrenKeys,
 }) => {
   if (!separatorBetweenEachChild) {
+    return "";
+  }
+  if (childNode.isPreventingSeparator) {
     return "";
   }
   if (hasTrailingSeparator) {
@@ -2991,6 +3024,7 @@ const renderEntry = (node, props) => {
     const staticKeywordDiff = staticKeywordNode.render({
       ...props,
       columnsRemaining,
+      endSeparator: "",
     });
     columnsRemaining -= measureLastLineColumns(staticKeywordDiff);
     columnsRemaining -= " ".length;
@@ -3001,6 +3035,7 @@ const renderEntry = (node, props) => {
     const entryKeyDiff = entryKeyNode.render({
       ...props,
       columnsRemaining,
+      endSeparator: "",
     });
     columnsRemainingForValue -= measureLastLineColumns(entryKeyDiff);
     entryDiff += entryKeyDiff;
@@ -3050,9 +3085,8 @@ const enableMultilineDiff = (lineEntriesNode) => {
     //   bar: true,
     // }
     // -> The separator is removed for multiline
-    const ownPropertiesNode = lineEntriesNode.parent.parent.parent;
-    ownPropertiesNode.onelineDiff.separatorBetweenEachChild =
-      ownPropertiesNode.multilineDiff.separatorBetweenEachChild = "";
+    const ownPropertyNode = lineEntriesNode.parent.parent;
+    ownPropertyNode.isPreventingSeparator = true;
   }
 
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
@@ -3100,6 +3134,13 @@ const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
   lineStartMarker += ANSI.color("|", lineNode.color);
   lineStartMarker += " ";
   return lineStartMarker;
+};
+const renderEndSeparator = (node, props) => {
+  const { endSeparator, endSeparatorOwner } = props;
+  if (node.diffType === "solo") {
+    return setColor(endSeparator, node.color);
+  }
+  return setColor(endSeparator, endSeparatorOwner.color);
 };
 
 const createMethodCallNode = (node, { objectName, methodName, args }) => {
