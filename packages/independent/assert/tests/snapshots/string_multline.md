@@ -138,3 +138,37 @@ assert({
 
 ![img](<./string_multline/prop before and after.svg>)
 
+# new line escaped
+
+```js
+assert({
+  actual: {
+    a: `\\n`,
+    b: true,
+  },
+  expect: {
+    a: `\\n`,
+    b: false,
+  },
+});
+```
+
+![img](<./string_multline/new line escaped.svg>)
+
+# multiline without diff
+
+```js
+assert({
+  actual: {
+    a: "a\nb",
+    b: true,
+  },
+  expect: {
+    a: `a\nb`,
+    b: false,
+  },
+});
+```
+
+![img](<./string_multline/multiline without diff.svg>)
+

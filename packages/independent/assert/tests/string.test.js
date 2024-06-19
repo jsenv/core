@@ -227,4 +227,28 @@ five six`,
       },
     });
   },
+  ["new line escaped"]: () => {
+    assert({
+      actual: {
+        a: `\\n`,
+        b: true,
+      },
+      expect: {
+        a: `\\n`,
+        b: false,
+      },
+    });
+  },
+  ["multiline without diff"]: () => {
+    assert({
+      actual: {
+        a: "a\nb",
+        b: true,
+      },
+      expect: {
+        a: `a\nb`,
+        b: false,
+      },
+    });
+  },
 });

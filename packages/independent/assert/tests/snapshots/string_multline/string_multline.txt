@@ -61,15 +61,37 @@ expect: 1| one
 
 # prop before and after
 actual: {
-  a: true
+  a: true,
   b: 1| a
      2| b
-  c: true
+  c: true,
 }
 expect: {
-  a: true
+  a: true,
   b: 1| a
      2| c
-  c: true
+  c: true,
+}
+
+# new line escaped
+actual: {
+  a: "\\n",
+  b: true,
+}
+expect: {
+  a: "\\n",
+  b: false,
+}
+
+# multiline without diff
+actual: {
+  a: 1| a
+     ↓ 1 line ↓,
+  b: true,
+}
+expect: {
+  a: 1| a
+     ↓ 1 line ↓,
+  b: false,
 }
 
