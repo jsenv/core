@@ -52,8 +52,7 @@
         <text x="77.21" y="33.55" fill="#7f7f7f">g</text>
         <text x="85.61" y="33.55" fill="#7f7f7f">h</text>
         <text x="94.01" y="33.55" fill="#7f7f7f">: </text>
-        <text x="110.82" y="33.55" fill="#cd5555">t</text>
-        <text x="119.22" y="33.55" fill="#cd5555">&#x2026;</text>
+        <text x="110.82" y="33.55" fill="#cd5555">t&#x2026;</text>
         <text x="127.62" y="33.55" fill="#7f7f7f">,</text>
         <text x="10" y="52.55" fill="#7f7f7f">}</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
@@ -67,8 +66,7 @@
         <text x="77.21" y="90.55" fill="#7f7f7f">g</text>
         <text x="85.61" y="90.55" fill="#7f7f7f">h</text>
         <text x="94.01" y="90.55" fill="#7f7f7f">: </text>
-        <text x="110.82" y="90.55" fill="#11bc79">f</text>
-        <text x="119.22" y="90.55" fill="#11bc79">&#x2026;</text>
+        <text x="110.82" y="90.55" fill="#11bc79">f&#x2026;</text>
         <text x="127.62" y="90.55" fill="#7f7f7f">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
       </g>

@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - fix max columns
  * - url breakable diff tests
  * - lots of test on max columns
  * - array typed
@@ -1058,6 +1057,7 @@ let createRootNode;
     endMarker = "",
     quoteMarkerRef,
     separatorMarkerRef,
+    shortSeparatorMarkerRef,
     separatorMarkerOwner = separatorMarkerRef
       ? parent
       : parent?.separatorMarkerOwner,
@@ -1125,6 +1125,7 @@ let createRootNode;
       endMarker,
       quoteMarkerRef,
       separatorMarkerRef,
+      shortSeparatorMarkerRef,
       separatorMarkerOwner,
       separatorMarkerInsideRef,
       onelineDiff,
@@ -2200,6 +2201,13 @@ let createRootNode;
                             ? " = "
                             : ": ",
                       },
+                      shortSeparatorMarkerRef: {
+                        current: node.isClassPrototype
+                          ? ""
+                          : node.functionAnalysis.type === "class"
+                            ? ";"
+                            : ",",
+                      },
                       separatorMarkerInsideRef,
                       group: "entry_key",
                       subgroup: "property_entry_key",
@@ -2472,16 +2480,6 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
   const { separatorMarkerRef } = node;
   const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
-  if (separatorMarker) {
-    if (columnsRemaining < 2) {
-      return renderSeparatorMarker(node, props);
-    }
-    if (columnsRemaining === 2) {
-      let diff = setColor("…", node.color);
-      diff += renderSeparatorMarker(node, props);
-      return diff;
-    }
-  }
   if (columnsRemaining < 1) {
     return setColor("…", node.color);
   }
@@ -2725,8 +2723,7 @@ const renderChildrenOneLiner = (node, props) => {
     return setColor("…", node.color);
   }
   const childrenKeys = getChildrenKeys(node);
-  const { startMarker, endMarker, separatorMarkerRef } = node;
-  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
+  const { startMarker, endMarker } = node;
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
       node.startMarker = node.endMarker = "";
@@ -2758,6 +2755,11 @@ const renderChildrenOneLiner = (node, props) => {
   let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
   const overflowStartWidth = overflowStartMarker.length;
   const overflowEndWidth = overflowEndMarker.length;
+  const { separatorMarkerRef, shortSeparatorMarkerRef } = node;
+  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
+  const shortSeparatorMarker = shortSeparatorMarkerRef
+    ? shortSeparatorMarkerRef.current
+    : "";
 
   let boilerplate = "";
   if (hasStartOverflow) {
@@ -2822,15 +2824,20 @@ const renderChildrenOneLiner = (node, props) => {
     const childDiff = childNode.render({
       ...props,
       columnsRemaining: columnsRemainingForChildren,
+      onShortNotationUsed: () => {
+        columnsRemainingForChildren -= 2;
+      },
     });
     return childDiff;
   };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
-      `${startMarker}  ${endMarker}${separatorMarker}`.length;
+      `${startMarker}  ${endMarker}${shortSeparatorMarker || separatorMarker}`
+        .length;
   } else {
     columnsRemainingForChildren -=
-      `${startMarker}${endMarker}${separatorMarker}`.length;
+      `${startMarker}${endMarker}${shortSeparatorMarker || separatorMarker}`
+        .length;
   }
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
@@ -2960,7 +2967,15 @@ const renderChildrenOneLiner = (node, props) => {
     diff += setColor(endMarker, node.color);
   }
   if (separatorMarker) {
-    diff += renderSeparatorMarker(node, props);
+    if (
+      shortSeparatorMarker &&
+      columnsRemainingForChildren < separatorMarker.length + 1
+    ) {
+      props.onShortNotationUsed();
+      diff += renderSeparatorMarker(node, props, { preferShort: true });
+    } else {
+      diff += renderSeparatorMarker(node, props);
+    }
   }
   return diff;
 };
@@ -3196,9 +3211,12 @@ const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
   lineStartMarker += " ";
   return lineStartMarker;
 };
-const renderSeparatorMarker = (node) => {
-  const { separatorMarkerRef, separatorMarkerOwner } = node;
-  const separatorMarker = separatorMarkerRef.current;
+const renderSeparatorMarker = (node, props, { preferShort } = {}) => {
+  const { separatorMarkerRef, shortSeparatorMarkerRef, separatorMarkerOwner } =
+    node;
+  const separatorMarker = preferShort
+    ? shortSeparatorMarkerRef.current
+    : separatorMarkerRef.current;
   if (node.diffType === "solo") {
     return setColor(separatorMarker, node.color);
   }
@@ -3253,6 +3271,7 @@ const createMethodCallNode = (
 const getInheritedSeparatorParams = (node) => {
   return {
     separatorMarkerRef: node.separatorMarkerRef,
+    shortSeparatorMarkerRef: node.shortSeparatorMarkerRef,
     separatorMarkerOwner: node.separatorMarkerOwner || node,
     // separatorMarkerInsideRef: node.separatorMarkerInsideRef,
   };
