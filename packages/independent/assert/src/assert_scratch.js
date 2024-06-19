@@ -1057,7 +1057,7 @@ let createRootNode;
     endMarker = "",
     quoteMarkerRef,
     separatorMarkerRef,
-    shortSeparatorMarkerRef,
+    separatorMarkerWhenTruncatedRef,
     separatorMarkerOwner = separatorMarkerRef
       ? parent
       : parent?.separatorMarkerOwner,
@@ -1125,7 +1125,7 @@ let createRootNode;
       endMarker,
       quoteMarkerRef,
       separatorMarkerRef,
-      shortSeparatorMarkerRef,
+      separatorMarkerWhenTruncatedRef,
       separatorMarkerOwner,
       separatorMarkerInsideRef,
       onelineDiff,
@@ -2201,7 +2201,7 @@ let createRootNode;
                             ? " = "
                             : ": ",
                       },
-                      shortSeparatorMarkerRef: {
+                      separatorMarkerWhenTruncatedRef: {
                         current: node.isClassPrototype
                           ? ""
                           : node.functionAnalysis.type === "class"
@@ -2755,10 +2755,10 @@ const renderChildrenOneLiner = (node, props) => {
   let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
   const overflowStartWidth = overflowStartMarker.length;
   const overflowEndWidth = overflowEndMarker.length;
-  const { separatorMarkerRef, shortSeparatorMarkerRef } = node;
+  const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
   const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
-  const shortSeparatorMarker = shortSeparatorMarkerRef
-    ? shortSeparatorMarkerRef.current
+  const separatorMarkerWhenTruncated = separatorMarkerWhenTruncatedRef
+    ? separatorMarkerWhenTruncatedRef.current
     : "";
 
   let boilerplate = "";
@@ -2813,19 +2813,19 @@ const renderChildrenOneLiner = (node, props) => {
     const childDiff = childNode.render({
       ...props,
       columnsRemaining: columnsRemainingForChildren,
-      onShortNotationUsed: () => {
-        columnsRemainingForChildren -= 2;
+      onTruncatedNotationUsed: () => {
+        columnsRemainingForChildren = 0;
       },
     });
     return childDiff;
   };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
-      `${startMarker}  ${endMarker}${shortSeparatorMarker || separatorMarker}`
+      `${startMarker}  ${endMarker}${separatorMarkerWhenTruncated || separatorMarker}`
         .length;
   } else {
     columnsRemainingForChildren -=
-      `${startMarker}${endMarker}${shortSeparatorMarker || separatorMarker}`
+      `${startMarker}${endMarker}${separatorMarkerWhenTruncated || separatorMarker}`
         .length;
   }
   const focusedChildKey = childrenKeys[focusedChildIndex];
@@ -2957,11 +2957,11 @@ const renderChildrenOneLiner = (node, props) => {
   }
   if (separatorMarker) {
     if (
-      shortSeparatorMarker &&
+      separatorMarkerWhenTruncated &&
       columnsRemainingForChildren < separatorMarker.length + 1
     ) {
-      props.onShortNotationUsed();
-      diff += renderSeparatorMarker(node, props, { preferShort: true });
+      props.onTruncatedNotationUsed();
+      diff += renderSeparatorMarker(node, props, { truncated: true });
     } else {
       diff += renderSeparatorMarker(node, props);
     }
@@ -3200,11 +3200,14 @@ const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
   lineStartMarker += " ";
   return lineStartMarker;
 };
-const renderSeparatorMarker = (node, props, { preferShort } = {}) => {
-  const { separatorMarkerRef, shortSeparatorMarkerRef, separatorMarkerOwner } =
-    node;
-  const separatorMarker = preferShort
-    ? shortSeparatorMarkerRef.current
+const renderSeparatorMarker = (node, props, { truncated } = {}) => {
+  const {
+    separatorMarkerRef,
+    separatorMarkerWhenTruncatedRef,
+    separatorMarkerOwner,
+  } = node;
+  const separatorMarker = truncated
+    ? separatorMarkerWhenTruncatedRef.current
     : separatorMarkerRef.current;
   if (node.diffType === "solo") {
     return setColor(separatorMarker, node.color);
@@ -3260,7 +3263,7 @@ const createMethodCallNode = (
 const getInheritedSeparatorParams = (node) => {
   return {
     separatorMarkerRef: node.separatorMarkerRef,
-    shortSeparatorMarkerRef: node.shortSeparatorMarkerRef,
+    separatorMarkerWhenTruncatedRef: node.separatorMarkerWhenTruncatedRef,
     separatorMarkerOwner: node.separatorMarkerOwner || node,
     // separatorMarkerInsideRef: node.separatorMarkerInsideRef,
   };
