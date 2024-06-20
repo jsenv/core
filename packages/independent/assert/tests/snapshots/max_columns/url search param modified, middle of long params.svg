@@ -28,7 +28,7 @@
   </g>
   <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
     <svg
-      width="272.04"
+      width="280.44"
       height="41.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -37,22 +37,24 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="14.55" fill="#7f7f7f">?</text>
-        <text x="94.01" y="14.55" fill="#7f7f7f">this_is_rel&#x2026;</text>
-        <text x="194.83" y="14.55" fill="#7f7f7f">=</text>
-        <text x="203.23" y="14.55" fill="#7f7f7f">&#x26;foo</text>
-        <text x="236.84" y="14.55" fill="#7f7f7f">=</text>
-        <text x="245.24" y="14.55" fill="#cd5555">a</text>
-        <text x="253.64" y="14.55" fill="#7f7f7f">&#x22;</text>
+        <text x="85.61" y="14.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="94.01" y="14.55" fill="#7f7f7f">?</text>
+        <text x="102.42" y="14.55" fill="#7f7f7f">this_is_rel&#x2026;</text>
+        <text x="203.23" y="14.55" fill="#7f7f7f">=</text>
+        <text x="211.63" y="14.55" fill="#7f7f7f">&#x26;foo</text>
+        <text x="245.24" y="14.55" fill="#7f7f7f">=</text>
+        <text x="253.64" y="14.55" fill="#cd5555">a</text>
+        <text x="262.04" y="14.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="33.55" fill="#7f7f7f">?</text>
-        <text x="94.01" y="33.55" fill="#7f7f7f">this_is_rel&#x2026;</text>
-        <text x="194.83" y="33.55" fill="#7f7f7f">=</text>
-        <text x="203.23" y="33.55" fill="#7f7f7f">&#x26;foo</text>
-        <text x="236.84" y="33.55" fill="#7f7f7f">=</text>
-        <text x="245.24" y="33.55" fill="#11bc79">b</text>
-        <text x="253.64" y="33.55" fill="#7f7f7f">&#x22;</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="94.01" y="33.55" fill="#7f7f7f">?</text>
+        <text x="102.42" y="33.55" fill="#7f7f7f">this_is_rel&#x2026;</text>
+        <text x="203.23" y="33.55" fill="#7f7f7f">=</text>
+        <text x="211.63" y="33.55" fill="#7f7f7f">&#x26;foo</text>
+        <text x="245.24" y="33.55" fill="#7f7f7f">=</text>
+        <text x="253.64" y="33.55" fill="#11bc79">b</text>
+        <text x="262.04" y="33.55" fill="#7f7f7f">&#x22;</text>
       </g>
     </svg>
   </foreignObject>

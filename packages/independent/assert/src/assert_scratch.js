@@ -1320,6 +1320,8 @@ let createRootNode;
               onelineDiff: {
                 hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
+                overflowStartMarker: "…",
+                overflowEndMarker: "…",
               },
               startMarker: bestQuote,
               endMarker: bestQuote,
@@ -2741,7 +2743,7 @@ const renderChildrenOneLiner = (node, props) => {
 
   let columnsRemainingForChildren = props.columnsRemaining;
   if (columnsRemainingForChildren < 1) {
-    return setColor("…", node.color);
+    return overflowStartMarker ? setColor(overflowStartMarker, node.color) : "";
   }
   const childrenKeys = getChildrenKeys(node);
   const { startMarker, endMarker } = node;
